@@ -1,0 +1,43 @@
+// Copyright (c) Microsoft Corporation
+// The Microsoft Corporation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Tracing;
+using Microsoft.PowerToys.Telemetry.Events;
+
+namespace Microsoft.PowerToys.Telemetry
+{
+    /// <summary>
+    /// Telemetry helper class for PowerToys.
+    /// </summary>
+    public class PowerToysTelemetry : TelemetryBase
+    {
+        /// <summary>
+        /// Name for ETW event.
+        /// </summary>
+        private const string EventSourceName = "Microsoft.PowerToys";
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PowerToysTelemetry"/> class.
+        /// </summary>
+        public PowerToysTelemetry()
+            : base(EventSourceName)
+        {
+        }
+
+        /// <summary>
+        /// Gets an instance of the <see cref="PowerToysTelemetry"/> class.
+        /// </summary>
+        public static PowerToysTelemetry Log { get; } = new PowerToysTelemetry();
+
+        /// <summary>
+        /// Retained as a no-op compatibility surface because telemetry is disabled in Kit.
+        /// </summary>
+        [UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCode", Justification = "We will ensure the public properties won't be trimmed by ourself.")]
+        public void WriteEvent<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>(T telemetryEvent)
+            where T : EventBase, IEvent
+        {
+        }
+    }
+}

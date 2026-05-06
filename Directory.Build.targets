@@ -1,0 +1,135 @@
+<Project>
+  <Import Project="Sdk.targets" Sdk="Microsoft.Build.CopyOnWrite" Version="1.0.282" Condition="'$(PowerToysSkipCopyOnWriteSdk)' != 'true'" />
+
+  <Import Project="$(MSBuildCachePackageRoot)\build\$(MSBuildCachePackageName).targets" Condition="'$(MSBuildCacheEnabled)' == 'true'" />
+  <Import Project="$(MSBuildCacheSharedCompilationPackageRoot)\build\Microsoft.MSBuildCache.SharedCompilation.targets" Condition="'$(MSBuildCacheEnabled)' == 'true'" />
+
+  <!-- Override ManifestTool to the x64 host tool under WindowsSdkDir for all projects once the SDK path is known. -->
+  <PropertyGroup Label="ManifestToolOverride">
+    <ManifestTool Condition="Exists('$(WindowsSdkDir)bin\x64\mt.exe')">$(WindowsSdkDir)bin\x64\mt.exe</ManifestTool>
+  </PropertyGroup>
+
+  <!-- Common.Dotnet.CsWinRT.props sets Release DebugType back to pdbonly after Directory.Build.props. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectExtension)' == '.csproj'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <Target Name="KitRemoveReleasePdbsFromCsprojOutput"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectExtension)' == '.csproj' and '$(OutDir)' != ''">
+    <ItemGroup>
+      <KitReleasePdbsInOutput Include="$(OutDir)**\*.pdb" />
+    </ItemGroup>
+
+    <Delete Files="@(KitReleasePdbsInOutput)" TreatErrorsAsWarnings="true" />
+  </Target>
+
+  <Target Name="KitRemoveNonEnglishSatelliteDirsFromCsprojOutput"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectExtension)' == '.csproj' and '$(OutDir)' != ''">
+    <ItemGroup>
+      <KitNonEnglishSatelliteLanguage Include="af-ZA;am-ET;ar-SA;as-IN;az-Latn-AZ;bg-BG;bn-IN;bs-Latn-BA;ca-ES;ca-Es-VALENCIA;cs-CZ;cy-GB;da-DK;de-DE;el-GR;en-GB;es-ES;es-MX;et-EE;eu-ES;fa-IR;fi-FI;fil-PH;fr-CA;fr-FR;ga-IE;gd-gb;gl-ES;gu-IN;he-IL;hi-IN;hr-HR;hu-HU;hy-AM;id-ID;is-IS;it-IT;ja-JP;ka-GE;kk-KZ;km-KH;kn-IN;kok-IN;ko-KR;lb-LU;lo-LA;lt-LT;lv-LV;mi-NZ;mk-MK;ml-IN;mr-IN;ms-MY;mt-MT;nb-NO;ne-NP;nl-NL;nn-NO;or-IN;pa-IN;pl-PL;pt-BR;pt-PT;quz-PE;ro-RO;ru-RU;sk-SK;sl-SI;sq-AL;sr-Cyrl-BA;sr-Cyrl-RS;sr-Latn-RS;sv-SE;ta-IN;te-IN;th-TH;tr-TR;tt-RU;ug-CN;uk-UA;ur-PK;uz-Latn-UZ;vi-VN;zh-CN;zh-TW" />
+      <KitNonEnglishSatelliteDirectories Include="@(KitNonEnglishSatelliteLanguage->'$(OutDir)%(Identity)')" />
+    </ItemGroup>
+
+    <RemoveDir Directories="@(KitNonEnglishSatelliteDirectories)" Condition="'@(KitNonEnglishSatelliteDirectories)' != ''" />
+  </Target>
+
+  <Target Name="KitRemoveStaticLibArtifactsFromRuntimeOutput"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectName)' == 'Kit' and '$(OutDir)' != ''">
+    <ItemGroup>
+      <KitStaticLibArtifacts Include="$(OutDir)**\*.lib;$(OutDir)**\*.exp;$(OutDir)**\*.lib.lastcodeanalysissucceeded" />
+    </ItemGroup>
+
+    <Delete Files="@(KitStaticLibArtifacts)" TreatErrorsAsWarnings="true" />
+  </Target>
+
+  <Target Name="KitRemoveInactiveModelProviderArtifactsFromRuntimeOutput"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectName)' == 'Kit' and '$(OutDir)' != ''">
+    <ItemGroup>
+      <KitInactiveModelProviderArtifacts Include="$(OutDir)**\Assets\Settings\Icons\Models\*.svg;$(OutDir)**\*Foundry*" />
+    </ItemGroup>
+
+    <Delete Files="@(KitInactiveModelProviderArtifacts)" TreatErrorsAsWarnings="true" />
+  </Target>
+
+  <Target Name="KitRemoveNonEnglishSatelliteDirsFromRuntimeOutput"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectName)' == 'Kit' and '$(OutDir)' != ''">
+    <ItemGroup>
+      <KitRuntimeNonEnglishSatelliteLanguage Include="af-ZA;am-ET;ar-SA;as-IN;az-Latn-AZ;bg-BG;bn-IN;bs-Latn-BA;ca-ES;ca-Es-VALENCIA;cs-CZ;cy-GB;da-DK;de-DE;el-GR;en-GB;es-ES;es-MX;et-EE;eu-ES;fa-IR;fi-FI;fil-PH;fr-CA;fr-FR;ga-IE;gd-gb;gl-ES;gu-IN;he-IL;hi-IN;hr-HR;hu-HU;hy-AM;id-ID;is-IS;it-IT;ja-JP;ka-GE;kk-KZ;km-KH;kn-IN;kok-IN;ko-KR;lb-LU;lo-LA;lt-LT;lv-LV;mi-NZ;mk-MK;ml-IN;mr-IN;ms-MY;mt-MT;nb-NO;ne-NP;nl-NL;nn-NO;or-IN;pa-IN;pl-PL;pt-BR;pt-PT;quz-PE;ro-RO;ru-RU;sk-SK;sl-SI;sq-AL;sr-Cyrl-BA;sr-Cyrl-RS;sr-Latn-RS;sv-SE;ta-IN;te-IN;th-TH;tr-TR;tt-RU;ug-CN;uk-UA;ur-PK;uz-Latn-UZ;vi-VN;zh-CN;zh-TW" />
+      <KitRuntimeNonEnglishSatelliteDirectories Include="@(KitRuntimeNonEnglishSatelliteLanguage->'$(OutDir)%(Identity)')" />
+    </ItemGroup>
+
+    <RemoveDir Directories="@(KitRuntimeNonEnglishSatelliteDirectories)" Condition="'@(KitRuntimeNonEnglishSatelliteDirectories)' != ''" />
+  </Target>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectExtension)' == '.vcxproj'">
+    <ClCompile>
+      <DebugInformationFormat>None</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- Auto-restore NuGet for native vcxproj (PackageReference) when building inside VS -->
+  <Target Name="EnsureNuGetRestoreForVcxproj" BeforeTargets="PrepareForBuild" Condition="
+            '$(BuildingInsideVisualStudio)' == 'true'
+            and '$(DesignTimeBuild)' != 'true'
+            and '$(RestoreInProgress)' != 'true'
+            and '$(MSBuildProjectExtension)' == '.vcxproj'
+            and '$(RestoreProjectStyle)' == 'PackageReference'
+            and '$(MSBuildProjectExtensionsPath)' != ''
+            and !Exists('$(MSBuildProjectExtensionsPath)project.assets.json')
+          ">
+
+    <Message Importance="normal" Text="NuGet assets missing for $(MSBuildProjectName); running Restore...; IntDir=$(IntDir); BaseIntermediateOutputPath=$(BaseIntermediateOutputPath)" />
+
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Restore" Properties="RestoreInProgress=true" BuildInParallel="false" />
+  </Target>
+
+  <PropertyGroup Condition="'$(IgnoreExperimentalWarnings)' == 'true'">
+    <NoWarn>$(NoWarn);CS8305;SA1500;CA1852</NoWarn>
+  </PropertyGroup>
+
+  <!-- Skipped test projects when BuildTests=false: no-op build and remove references.
+       This must be in targets (not props) so it runs AFTER the project file adds its items. -->
+  <PropertyGroup Condition="'$(_IsSkippedTestProject)' == 'true'">
+    <BuildDependsOn />
+    <CoreBuildDependsOn />
+    <RebuildDependsOn />
+  </PropertyGroup>
+
+  <!-- For C# projects: remove all items -->
+  <ItemGroup Condition="'$(_IsSkippedTestProject)' == 'true' and '$(MSBuildProjectExtension)' == '.csproj'">
+    <PackageReference Remove="@(PackageReference)" />
+    <ProjectReference Remove="@(ProjectReference)" />
+    <Reference Remove="@(Reference)" />
+    <Compile Remove="@(Compile)" />
+    <Content Remove="@(Content)" />
+    <EmbeddedResource Remove="@(EmbeddedResource)" />
+    <None Remove="@(None)" />
+    <Using Remove="@(Using)" />
+    <GlobalUsing Remove="@(GlobalUsing)" />
+  </ItemGroup>
+
+  <!-- For C++ projects (vcxproj): remove all compile/link items to prevent build -->
+  <ItemGroup Condition="'$(_IsSkippedTestProject)' == 'true' and '$(MSBuildProjectExtension)' == '.vcxproj'">
+    <ClCompile Remove="@(ClCompile)" />
+    <ClInclude Remove="@(ClInclude)" />
+    <Link Remove="@(Link)" />
+    <Lib Remove="@(Lib)" />
+    <ProjectReference Remove="@(ProjectReference)" />
+    <None Remove="@(None)" />
+    <ResourceCompile Remove="@(ResourceCompile)" />
+    <Midl Remove="@(Midl)" />
+  </ItemGroup>
+
+  <!-- Note: For C++ skipped test projects, build is effectively skipped by removing all compile items above.
+       We don't define empty Build/Rebuild/Clean targets here because MSBuild Target definitions with Condition
+       on the Target element still override the default targets even when condition is false. -->
+</Project>

@@ -1,0 +1,9 @@
+<Project>
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<PreprocessorDefinitions>SPDLOG_WCHAR_TO_UTF8_SUPPORT;SPDLOG_COMPILED_LIB;SPDLOG_WCHAR_FILENAMES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+		</ClCompile>
+	</ItemDefinitionGroup>
+</Project>

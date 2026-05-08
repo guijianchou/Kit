@@ -299,8 +299,9 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         private void ShellPage_Loaded(object sender, RoutedEventArgs e)
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
+                await Task.Delay(1000);
                 SearchIndexService.BuildIndex();
             })
             .ContinueWith(_ => { });

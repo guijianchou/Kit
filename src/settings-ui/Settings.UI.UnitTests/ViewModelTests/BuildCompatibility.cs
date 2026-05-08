@@ -447,6 +447,48 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitStartupShouldAvoidInactiveOobeScoobeAndUpdaterDiskReads()
+        {
+            var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
+            var settingsApp = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
+
+            Assert.IsFalse(runnerMain.Contains("get_oobe_opened_state", StringComparison.Ordinal), "Kit startup should not read disabled OOBE state.");
+            Assert.IsFalse(runnerMain.Contains("get_last_version_run", StringComparison.Ordinal), "Kit startup should not read disabled SCOOBE/update version state.");
+            Assert.IsFalse(runnerMain.Contains("save_last_version_run", StringComparison.Ordinal), "Kit startup should not write last-version state when SCOOBE is disabled.");
+            Assert.IsFalse(trayIcon.Contains("UpdateState::read", StringComparison.Ordinal), "Kit tray startup should not read updater state when updater UI is disabled.");
+            Assert.IsFalse(settingsApp.Contains("OobeShellViewModel { get; } = new()", StringComparison.Ordinal), "Kit Settings should not eagerly construct OOBE state when OOBE windows are stubbed.");
+        }
+
+        [TestMethod]
+        public void KitSettingsFirstFrameShouldDeferGeneralPageMaintenanceWork()
+        {
+            var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
+            var generalPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml.cs"));
+            var shellPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+
+            Assert.IsFalse(generalPage.Contains("doRefreshBackupRestoreStatus(100);", StringComparison.Ordinal), "Backup dry-run should not be scheduled from the GeneralPage constructor before the first frame.");
+            StringAssert.Contains(generalViewModel, "RunDeferredStartupMaintenance");
+            StringAssert.Contains(generalViewModel, "Task.Run(DeleteOldDiagnosticData)");
+            StringAssert.Contains(shellPage, "await Task.Delay(1000)");
+            StringAssert.Contains(shellPage, "SearchIndexService.BuildIndex()");
+        }
+
+        [TestMethod]
+        public void KitRunnerShouldReuseStartupGeneralSettingsForInitialModuleEnablement()
+        {
+            var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var generalSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
+            var generalSettingsHeader = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.h"));
+
+            StringAssert.Contains(runnerMain, "const json::JsonObject& startupGeneralSettings");
+            StringAssert.Contains(runnerMain, "start_enabled_powertoys(startupGeneralSettings)");
+            StringAssert.Contains(generalSettingsHeader, "void start_enabled_powertoys(const json::JsonObject& general_settings);");
+            StringAssert.Contains(generalSettings, "void start_enabled_powertoys(const json::JsonObject& general_settings)");
+            Assert.IsFalse(generalSettings.Contains("general_settings = load_general_settings();", StringComparison.Ordinal), "Initial module enablement should reuse the already-loaded settings object instead of re-reading settings.json.");
+        }
+
+        [TestMethod]
         public void KitRunnerExecutableShouldBePrimaryNameWithPowerToysFallbacks()
         {
             var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));

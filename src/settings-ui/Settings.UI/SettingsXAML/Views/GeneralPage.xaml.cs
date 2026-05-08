@@ -21,6 +21,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
     {
         private static DateTime OkToHideBackupAndRestoreMessageTime { get; set; }
 
+        private bool _backupStatusRefreshQueued;
+
         /// <summary>
         /// Gets or sets view model.
         /// </summary>
@@ -83,9 +85,15 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
             DataContext = ViewModel;
 
-            doRefreshBackupRestoreStatus(100);
-
-            this.Loaded += (s, e) => ViewModel.OnPageLoaded();
+            this.Loaded += (s, e) =>
+            {
+                ViewModel.OnPageLoaded();
+                if (!_backupStatusRefreshQueued)
+                {
+                    _backupStatusRefreshQueued = true;
+                    doRefreshBackupRestoreStatus(500);
+                }
+            };
         }
 
         private void OpenColorsSettings_Click(object sender, RoutedEventArgs e)

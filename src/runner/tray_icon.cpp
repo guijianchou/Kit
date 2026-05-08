@@ -17,7 +17,6 @@
 #include <common/Themes/theme_listener.h>
 #include <common/Themes/theme_helpers.h>
 #include "bug_report.h"
-#include <common/updating/updateState.h>
 
 namespace
 {
@@ -386,8 +385,7 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
     theme_adaptive_enabled = theme_adaptive;
     auto h_instance = reinterpret_cast<HINSTANCE>(&__ImageBase);
 
-    auto state = UpdateState::read();
-    update_available = (state.state == UpdateState::readyToDownload || state.state == UpdateState::readyToInstall);
+    update_available = false;
 
     HICON const icon = theme_adaptive
                            ? get_icon(ThemeHelpers::GetSystemTheme())

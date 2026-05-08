@@ -91,15 +91,16 @@ namespace ViewModelTests
             var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
             var updateState = File.ReadAllText(FindSourceFile("src", "common", "updating", "updateState.cpp"));
 
-            StringAssert.Contains(trayIcon, "auto state = UpdateState::read();");
-            StringAssert.Contains(trayIcon, "state.state == UpdateState::readyToDownload || state.state == UpdateState::readyToInstall");
+            Assert.IsFalse(trayIcon.Contains("#include <common/updating/updateState.h>", StringComparison.Ordinal), "Tray startup should not depend on update state disk I/O.");
+            Assert.IsFalse(trayIcon.Contains("UpdateState::read", StringComparison.Ordinal), "Tray startup should not read update state when the updater is disabled.");
+            StringAssert.Contains(trayIcon, "update_available = false;");
             StringAssert.Contains(trayIcon, "LoadIcon(h_instance, MAKEINTRESOURCE(update_available ? APPICON_UPDATE : APPICON))");
             StringAssert.Contains(trayIcon, "InsertMenuW(h_sub_menu, 0, MF_BYPOSITION | MF_STRING, ID_UPDATE_MENU_COMMAND");
             StringAssert.Contains(trayIcon, "void set_tray_icon_update_available(bool available)");
             StringAssert.Contains(trayIcon, "update_available = available;");
             StringAssert.Contains(trayIcon, "LoadIcon(h_instance, MAKEINTRESOURCE(available ? APPICON_UPDATE : APPICON))");
             StringAssert.Contains(trayIcon, "Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);");
-            StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp");
+            Assert.IsFalse(runnerProject.Contains(@"..\common\updating\updateState.cpp", StringComparison.Ordinal), "Runner should not compile update-state storage just to keep the badge API.");
             StringAssert.Contains(updateState, @"Local\\KitRunnerUpdateStateMutex");
             Assert.IsFalse(runnerProject.Contains(@"..\common\updating\updating.vcxproj", StringComparison.Ordinal), "Runner should not restore the GitHub updater project reference just to show the badge.");
             Assert.IsFalse(updateState.Contains("PowerToysRunnerUpdateStateMutex", StringComparison.Ordinal), "Kit update-state mutex must not share the PowerToys runner mutex.");

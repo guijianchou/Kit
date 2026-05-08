@@ -10,9 +10,18 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `1.1.1`.
+Current Kit version: `1.1.2`.
 
 ## Changelog
+
+### 1.1.2
+
+- Startup: Reduced startup and first-frame work by reusing the already-loaded general settings object for initial module enablement instead of reading settings twice.
+- Startup: Removed inactive OOBE/SCOOBE version-state reads and writes from Kit runner startup.
+- Tray: Stopped reading `UpdateState.json` during tray initialization while keeping the update-badge API available for any future explicit updater-state integration.
+- Settings: Deferred General page diagnostic cleanup, backup dry-run refresh, and search-index construction until after the first frame.
+- Home: Hid Monitor's status-only activation rows from the Home Shortcuts card so Monitor no longer appears as a shortcut-only module, while it remains available in the module list, Settings page, and Quick Access settings fallback.
+- Tests: Added regression coverage for the startup/load optimization boundary, Monitor Home Shortcuts filtering, and updated version metadata checks for `1.1.2`.
 
 ### 1.1.1
 

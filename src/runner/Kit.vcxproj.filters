@@ -36,9 +36,6 @@
     <ClCompile Include="..\common\interop\two_way_pipe_message_ipc.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\updating\updateState.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
     <ClCompile Include="settings_telemetry.cpp">
       <Filter>Utils</Filter>
     </ClCompile>

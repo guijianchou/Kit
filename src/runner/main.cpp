@@ -216,7 +216,7 @@ void open_menu_from_another_instance(std::optional<std::string> settings_window)
     SetForegroundWindow(hwnd_main); // Bring the settings window to the front
 }
 
-int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, bool openOobe, bool openScoobe, bool showRestartNotificationAfterUpdate)
+int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, bool openOobe, bool openScoobe, bool showRestartNotificationAfterUpdate, const json::JsonObject& startupGeneralSettings)
 {
     Logger::info("Runner is starting. Elevated={} openOobe={} openScoobe={} showRestartNotificationAfterUpdate={}", isProcessElevated, openOobe, openScoobe, showRestartNotificationAfterUpdate);
     DPIAware::EnableDPIAwarenessForThisProcess();
@@ -228,8 +228,6 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 #endif
     Trace::RegisterProvider();
 
-    // Load settings from file before reading them
-    load_general_settings();
     auto const settings = get_general_settings();
     start_tray_icon(isProcessElevated, settings.showThemeAdaptiveTrayIcon);
 
@@ -311,10 +309,9 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
             }
         }
         // Start initial Kit modules
-        start_enabled_powertoys();
+        start_enabled_powertoys(startupGeneralSettings);
         std::wstring product_version = get_product_version();
         Trace::EventLaunch(product_version, isProcessElevated);
-        PTSettingsHelper::save_last_version_run(product_version);
 
         if (openSettings)
         {
@@ -497,30 +494,9 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         return 0;
     }
 
-    bool openOobe = false;
-    try
-    {
-        openOobe = !PTSettingsHelper::get_oobe_opened_state();
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("Failed to get or save OOBE state with an exception: {}", e.what());
-    }
-
-    bool openScoobe = false;
-    bool showRestartNotificationAfterUpdate = false;
-    try
-    {
-        std::wstring last_version_run = PTSettingsHelper::get_last_version_run();
-        const auto product_version = get_product_version();
-        openScoobe = false;
-        showRestartNotificationAfterUpdate = false;
-        Logger::info(L"Scoobe: product_version={} last_version_run={}", product_version, last_version_run);
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("Failed to get last version with an exception: {}", e.what());
-    }
+    const bool openOobe = false;
+    const bool openScoobe = false;
+    const bool showRestartNotificationAfterUpdate = false;
 
     int result = 0;
     try
@@ -537,16 +513,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         const bool with_dont_elevate_arg = cmdLine.find("--dont-elevate") != std::string::npos;
         const bool run_elevated_setting = general_settings.GetNamedBoolean(L"run_elevated", false);
         const bool with_restartedElevated_arg = cmdLine.find("--restartedElevated") != std::string::npos;
-
-        // Update scoobe behavior based on setting and gpo
-        bool scoobeSettingDisabled = general_settings.GetNamedBoolean(L"show_whats_new_after_updates", false) == false;
-        bool scoobeDisabledByGpo = powertoys_gpo::getDisableShowWhatsNewAfterUpdatesValue() == powertoys_gpo::gpo_rule_configured_enabled;
-        if (openScoobe && (scoobeSettingDisabled || scoobeDisabledByGpo))
-        {
-            // Scoobe should show after an update, but is disabled by policy or setting
-            Logger::info(L"Scoobe: Showing scoobe after updates is disabled by setting or by GPO.");
-            openScoobe = false;
-        }
 
         bool dataDiagnosticsDisabledByGpo = powertoys_gpo::getAllowDataDiagnosticsValue() == powertoys_gpo::gpo_rule_configured_disabled;
         if (dataDiagnosticsDisabledByGpo)
@@ -569,7 +535,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
                 Logger::info("Restart as elevated failed. Running non-elevated.");
             }
 
-            result = runner(elevated, open_settings, settings_window, openOobe, openScoobe, showRestartNotificationAfterUpdate);
+            result = runner(elevated, open_settings, settings_window, openOobe, openScoobe, showRestartNotificationAfterUpdate, general_settings);
 
             if (result == 0)
             {

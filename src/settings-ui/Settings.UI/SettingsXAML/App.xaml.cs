@@ -12,9 +12,6 @@ using System.Threading.Tasks;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Telemetry.Events;
-using Microsoft.PowerToys.Settings.UI.OOBE.Enums;
-using Microsoft.PowerToys.Settings.UI.OOBE.ViewModel;
 using Microsoft.PowerToys.Settings.UI.SerializationContext;
 using Microsoft.PowerToys.Settings.UI.Services;
 using Microsoft.PowerToys.Settings.UI.SettingsXAML.Controls.Dashboard;
@@ -30,8 +27,6 @@ namespace Microsoft.PowerToys.Settings.UI
 {
     public partial class App : Application
     {
-        public static OobeShellViewModel OobeShellViewModel { get; } = new();
-
         private ShortcutConflictWindow shortcutConflictWindow;
 
         private enum Arguments

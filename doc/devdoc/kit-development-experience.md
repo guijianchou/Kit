@@ -86,6 +86,20 @@ This pass moved Kit from the 1.1.0 PowerDisplay baseline to the 1.1.1 build-alig
 - `Settings.UI.UnitTests` now covers the .NET 10 build-layer expectations, README version metadata, and the no-updater/no-telemetry boundary.
 - Verification used Visual Studio 18 MSBuild for Settings unit tests, Quick Access, UITestAutomation, and the runner, plus VSTest for the full Settings test assembly.
 
+## 2026-05-08 Startup And Settings Load Optimization And 1.1.2 Release Notes
+
+This pass moved Kit from the 1.1.1 build-alignment baseline to the 1.1.2 startup/load optimization baseline.
+
+- Runner startup now loads general settings once in `WinMain`, applies them, and passes the same JSON object into initial module enablement.
+- `start_enabled_powertoys` no longer calls `load_general_settings` internally, avoiding a duplicate settings-file read on the startup path.
+- Kit startup no longer reads disabled OOBE/SCOOBE state or writes last-version state when those experiences remain inactive.
+- The tray keeps the existing update-badge API but no longer reads `UpdateState.json` during initialization; the runner also no longer compiles update-state storage just for tray startup.
+- Settings startup no longer eagerly constructs the OOBE shell view model.
+- General Settings defers diagnostic ETW cleanup and backup dry-run refresh until after page load, and Shell page search indexing is delayed off the first frame.
+- Home now filters Monitor's status-only activation rows out of the Shortcuts card. Monitor remains in the Home module list and keeps the normal Settings/Quick Access fallback, but it no longer appears beside modules that expose real shortcut actions.
+- `Settings.UI.UnitTests` now covers the 1.1.2 version metadata, README changelog, development log entry, startup disk-I/O boundary, first-frame deferral, settings reuse contract, and Monitor Home Shortcuts filtering.
+- Verification used Visual Studio 18 MSBuild for `Settings.UI.UnitTests.csproj` and `Kit.vcxproj`, plus VSTest for targeted startup/load tests, `BuildCompatibility`, `FrameworkPrivacyDefaults`, the Monitor Home Shortcuts regression, and the full Settings test assembly.
+
 ## 2026-04-29 Privacy, Updater, And Worktree Review
 
 This review re-checked the trimmed Kit shell for product-service behavior that should not run in a local self-use fork:

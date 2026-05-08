@@ -3,12 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.Library.Helpers;
+using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ViewModelTests
@@ -121,6 +125,36 @@ namespace ViewModelTests
             StringAssert.Contains(resources, "Monitor_RunInBackgroundSettingsCard.Header");
             StringAssert.Contains(resources, "Monitor_DownloadsPathSettingsCard.Header");
             StringAssert.Contains(resources, "Monitor_ScanIntervalSeconds.Header");
+        }
+
+        [TestMethod]
+        public void HomeShortcutsShouldHideMonitorActivationItems()
+        {
+            var filterMethod = typeof(DashboardViewModel).GetMethod("GetShortcutItemsForDashboardModule", BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.IsNotNull(filterMethod, "Dashboard shortcut projection should be filtered without removing Monitor from the module list.");
+
+            var monitorModule = CreateDashboardModule(ModuleType.Monitor, new DashboardModuleActivationItem() { Label = "Run in background", Activation = "Off" });
+            var awakeModule = CreateDashboardModule(ModuleType.Awake, new DashboardModuleActivationItem() { Label = "Mode", Activation = "Indefinite" });
+            var lightSwitchModule = CreateDashboardModule(ModuleType.LightSwitch, new DashboardModuleShortcutItem() { Label = "Toggle theme", Shortcut = new List<object>() });
+
+            Assert.AreEqual(0, InvokeShortcutItemsFilter(filterMethod, monitorModule).Count, "Monitor status items should not appear in Home Shortcuts.");
+            Assert.AreEqual(1, InvokeShortcutItemsFilter(filterMethod, awakeModule).Count, "Existing activation-based modules should remain in Home Shortcuts.");
+            Assert.AreEqual(1, InvokeShortcutItemsFilter(filterMethod, lightSwitchModule).Count, "Real shortcut items should remain in Home Shortcuts.");
+        }
+
+        private static DashboardListItem CreateDashboardModule(ModuleType moduleType, params DashboardModuleItem[] items)
+        {
+            return new DashboardListItem()
+            {
+                Tag = moduleType,
+                DashboardModuleItems = new ObservableCollection<DashboardModuleItem>(items),
+            };
+        }
+
+        private static List<DashboardModuleItem> InvokeShortcutItemsFilter(MethodInfo filterMethod, DashboardListItem module)
+        {
+            return (List<DashboardModuleItem>)filterMethod.Invoke(null, new object[] { module });
         }
 
         [TestMethod]

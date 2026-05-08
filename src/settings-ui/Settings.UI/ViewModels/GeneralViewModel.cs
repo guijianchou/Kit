@@ -75,6 +75,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private ISettingsRepository<GeneralSettings> _settingsRepository;
         private Microsoft.UI.Dispatching.DispatcherQueue _dispatcherQueue;
+        private bool _deferredStartupMaintenanceQueued;
 
         private Func<Task<string>> PickSingleFolderDialog { get; }
 
@@ -175,13 +176,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             _experimentationIsGpoDisallowed = GPOWrapper.GetAllowExperimentationValue() == GpoRuleConfigured.Disabled;
             _showWhatsNewAfterUpdatesIsGpoDisabled = GPOWrapper.GetDisableShowWhatsNewAfterUpdatesValue() == GpoRuleConfigured.Enabled;
             _enableDataDiagnosticsIsGpoDisallowed = GPOWrapper.GetAllowDataDiagnosticsValue() == GpoRuleConfigured.Disabled;
-
-            // Diagnostic data retention policy
-            string etwDirPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit", "etw");
-            DeleteDiagnosticDataOlderThan28Days(etwDirPath);
-
-            string localLowEtwDirPath = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), "AppData", "LocalLow", "Kit", "etw");
-            DeleteDiagnosticDataOlderThan28Days(localLowEtwDirPath);
 
             InitializeLanguages();
         }
@@ -1189,6 +1183,32 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         public void RefreshUpdatingState()
         {
             // Update state is fixed to no-update values for Kit.
+        }
+
+        public override void OnPageLoaded()
+        {
+            base.OnPageLoaded();
+            RunDeferredStartupMaintenance();
+        }
+
+        private void RunDeferredStartupMaintenance()
+        {
+            if (_deferredStartupMaintenanceQueued)
+            {
+                return;
+            }
+
+            _deferredStartupMaintenanceQueued = true;
+            _ = Task.Run(DeleteOldDiagnosticData);
+        }
+
+        private void DeleteOldDiagnosticData()
+        {
+            string etwDirPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit", "etw");
+            DeleteDiagnosticDataOlderThan28Days(etwDirPath);
+
+            string localLowEtwDirPath = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), "AppData", "LocalLow", "Kit", "etw");
+            DeleteDiagnosticDataOlderThan28Days(localLowEtwDirPath);
         }
 
         private void InitializeLanguages()

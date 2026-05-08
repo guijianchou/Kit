@@ -400,7 +400,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse111ReleaseMetadata()
+        public void KitAboutVersionShouldUse112ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionHeader = File.ReadAllText(FindSourceFile("src", "common", "version", "Generated Files", "version_gen.h"));
@@ -408,22 +408,24 @@ namespace ViewModelTests
             var helper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Utilities", "Helper.cs"));
             var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
             var readme = File.ReadAllText(FindSourceFile("README.md"));
+            var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>1.1.1</Version>");
+            StringAssert.Contains(versionProps, "<Version>1.1.2</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
             StringAssert.Contains(generalViewModel, "Helper.GetProductDisplayVersion()");
             StringAssert.Contains(versionHeader, "#define VERSION_MAJOR 1");
             StringAssert.Contains(versionHeader, "#define VERSION_MINOR 1");
-            StringAssert.Contains(versionHeader, "#define VERSION_REVISION 1");
-            StringAssert.Contains(readme, "Current Kit version: `1.1.1`.");
+            StringAssert.Contains(versionHeader, "#define VERSION_REVISION 2");
+            StringAssert.Contains(readme, "Current Kit version: `1.1.2`.");
             StringAssert.Contains(readme, "## Changelog");
-            StringAssert.Contains(readme, "### 1.1.1");
-            StringAssert.Contains(readme, "Aligned the Kit Settings/Common UI build layer");
+            StringAssert.Contains(readme, "### 1.1.2");
+            StringAssert.Contains(readme, "Reduced startup and first-frame work");
+            StringAssert.Contains(developmentLog, "## 2026-05-08 Startup And Settings Load Optimization And 1.1.2 Release Notes");
 
-            Assert.AreEqual("v1.1.1", Helper.GetProductDisplayVersion("v1.1.1", string.Empty));
-            Assert.AreEqual("v1.1.1", Helper.GetProductDisplayVersion("v1.1.1", "Local"));
+            Assert.AreEqual("v1.1.2", Helper.GetProductDisplayVersion("v1.1.2", string.Empty));
+            Assert.AreEqual("v1.1.2", Helper.GetProductDisplayVersion("v1.1.2", "Local"));
         }
 
         [TestMethod]

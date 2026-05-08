@@ -296,9 +296,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             foreach (var module in AllModules.Where(x => x.IsEnabled))
             {
-                var shortcutItems = module.DashboardModuleItems
-                    .Where(m => m is DashboardModuleShortcutItem || m is DashboardModuleActivationItem)
-                    .ToList();
+                var shortcutItems = GetShortcutItemsForDashboardModule(module);
 
                 if (shortcutItems.Count != 0)
                 {
@@ -314,6 +312,13 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     ActionModules.Add(CreateModuleProjection(module, actionItems));
                 }
             }
+        }
+
+        private static List<DashboardModuleItem> GetShortcutItemsForDashboardModule(DashboardListItem module)
+        {
+            return module.DashboardModuleItems
+                .Where(m => m is DashboardModuleShortcutItem || (module.Tag != ModuleType.Monitor && m is DashboardModuleActivationItem))
+                .ToList();
         }
 
         private static DashboardListItem CreateModuleProjection(DashboardListItem source, List<DashboardModuleItem> items)

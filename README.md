@@ -1,5 +1,9 @@
 # Kit
 
+**Language / 语言:** English | [中文](README_zh.md)
+
+---
+
 Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. It exists so selected PowerToys utilities can be modified, isolated, and compared against an installed official PowerToys build on the same machine.
 
 ## Project Goal

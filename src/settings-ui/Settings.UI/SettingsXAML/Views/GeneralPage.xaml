@@ -259,12 +259,31 @@
                     Severity="{x:Bind ViewModel.BackupRestoreMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}}" />
 
                 <controls:SettingsGroup x:Uid="General_About">
-                    <TextBlock
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        IsTextSelectionEnabled="True"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Text="{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}"
-                        TextWrapping="WrapWholeWords" />
+                    <tkcontrols:SettingsCard ContentAlignment="Left">
+                        <StackPanel Orientation="Vertical" Spacing="8">
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                IsTextSelectionEnabled="True"
+                                Style="{StaticResource BodyTextBlockStyle}"
+                                Text="{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}"
+                                TextWrapping="WrapWholeWords" />
+                            <TextBlock Style="{StaticResource BodyTextBlockStyle}">
+                                <Hyperlink NavigateUri="https://github.com/guijianchou/Kit">
+                                    <Run x:Uid="General_Repository" />
+                                </Hyperlink>
+                            </TextBlock>
+                            <Button
+                                x:Uid="GeneralPage_CheckForUpdates"
+                                HorizontalAlignment="Left"
+                                Command="{Binding CheckForUpdatesEventHandler}" />
+                            <InfoBar
+                                Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
+                                IsClosable="False"
+                                IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                                IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                                Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}" />
+                        </StackPanel>
+                    </tkcontrols:SettingsCard>
                 </controls:SettingsGroup>
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>

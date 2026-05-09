@@ -135,6 +135,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         public static int SendCheckForUpdatesIPCMessage(string msg)
         {
+            CheckForUpdatesMsgCallback?.Invoke(msg);
             return 0;
         }
 

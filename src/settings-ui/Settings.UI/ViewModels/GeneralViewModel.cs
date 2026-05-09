@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using global::PowerToys.GPOWrapper;
@@ -26,6 +27,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
     public partial class GeneralViewModel : PageViewModelBase
     {
         private const bool IsDataDiagnosticsEnabledInKit = false;
+        private static readonly int[] UpdateCheckRefreshDelaysMilliseconds = { 1000, 2000, 3000, 5000 };
 
         protected override string ModuleName => "GeneralSettings";
 
@@ -76,6 +78,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private ISettingsRepository<GeneralSettings> _settingsRepository;
         private Microsoft.UI.Dispatching.DispatcherQueue _dispatcherQueue;
         private bool _deferredStartupMaintenanceQueued;
+        private int _updateCheckRefreshVersion;
 
         private Func<Task<string>> PickSingleFolderDialog { get; }
 
@@ -234,6 +237,9 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private string _newAvailableVersion = string.Empty;
         private string _newAvailableVersionLink = string.Empty;
         private string _updateCheckedDate = string.Empty;
+        private string _updateCheckMessage = string.Empty;
+        private string _updateCheckMessageSeverity = "Informational";
+        private bool _updateCheckMessageVisible;
 
         private bool _isNewVersionDownloading;
         private bool _isBugReportRunning;
@@ -641,7 +647,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             get
             {
-                return string.Empty;
+                return _updateCheckedDate;
             }
 
             set
@@ -649,7 +655,58 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 if (_updateCheckedDate != value)
                 {
                     _updateCheckedDate = value;
-                    NotifyPropertyChanged();
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string UpdateCheckMessage
+        {
+            get
+            {
+                return _updateCheckMessage;
+            }
+
+            private set
+            {
+                if (_updateCheckMessage != value)
+                {
+                    _updateCheckMessage = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string UpdateCheckMessageSeverity
+        {
+            get
+            {
+                return _updateCheckMessageSeverity;
+            }
+
+            private set
+            {
+                if (_updateCheckMessageSeverity != value)
+                {
+                    _updateCheckMessageSeverity = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool UpdateCheckMessageVisible
+        {
+            get
+            {
+                return _updateCheckMessageVisible;
+            }
+
+            private set
+            {
+                if (_updateCheckMessageVisible != value)
+                {
+                    _updateCheckMessageVisible = value;
+                    OnPropertyChanged();
                 }
             }
         }
@@ -807,7 +864,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             get
             {
-                return UpdatingSettings.UpdatingState.UpToDate;
+                return _updatingState;
             }
 
             private set
@@ -815,7 +872,9 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 if (value != _updatingState)
                 {
                     _updatingState = value;
-                    NotifyPropertyChanged();
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsNewVersionCheckedAndUpToDate));
+                    OnPropertyChanged(nameof(IsNoNetwork));
                 }
             }
         }
@@ -824,7 +883,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             get
             {
-                return string.Empty;
+                return _newAvailableVersion;
             }
 
             private set
@@ -832,7 +891,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 if (value != _newAvailableVersion)
                 {
                     _newAvailableVersion = value;
-                    NotifyPropertyChanged();
+                    OnPropertyChanged();
                 }
             }
         }
@@ -841,7 +900,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             get
             {
-                return string.Empty;
+                return _newAvailableVersionLink;
             }
 
             private set
@@ -849,7 +908,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 if (value != _newAvailableVersionLink)
                 {
                     _newAvailableVersionLink = value;
-                    NotifyPropertyChanged();
+                    OnPropertyChanged();
                 }
             }
         }
@@ -875,7 +934,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             get
             {
-                return false;
+                return _updatingState == UpdatingSettings.UpdatingState.UpToDate && !string.IsNullOrEmpty(_updateCheckedDate);
             }
         }
 
@@ -883,7 +942,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             get
             {
-                return false;
+                return _updatingState == UpdatingSettings.UpdatingState.NetworkError;
             }
         }
 
@@ -1101,7 +1160,58 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private void CheckForUpdatesClick()
         {
-            // Update checks are disabled for Kit.
+            var requestedAt = DateTime.Now.AddSeconds(-2);
+            var refreshVersion = Interlocked.Increment(ref _updateCheckRefreshVersion);
+            ShowUpdateCheckMessage(GetResourceString("General_CheckingForUpdates/Text"), "Informational", true);
+
+            var dataToSend = JsonSerializer.Serialize(ActionMessage.Create("check_for_updates"), SourceGenerationContextContext.Default.ActionMessage);
+            SendCheckForUpdatesConfigMSG(dataToSend);
+            QueueUpdateCheckResultRefresh(requestedAt, refreshVersion);
+        }
+
+        private void QueueUpdateCheckResultRefresh(DateTime requestedAt, int refreshVersion)
+        {
+            _ = Task.Run(async () =>
+            {
+                foreach (var delay in UpdateCheckRefreshDelaysMilliseconds)
+                {
+                    await Task.Delay(delay).ConfigureAwait(false);
+
+                    if (refreshVersion != _updateCheckRefreshVersion)
+                    {
+                        return;
+                    }
+
+                    var updateSettings = UpdatingSettings.LoadSettings();
+                    if (updateSettings?.LastCheckedDateTime >= requestedAt)
+                    {
+                        RunOnViewModelThread(() => RefreshUpdatingState(updateSettings));
+                        return;
+                    }
+                }
+
+                if (refreshVersion == _updateCheckRefreshVersion)
+                {
+                    RunOnViewModelThread(() => ShowUpdateCheckMessage(GetResourceString("General_CantCheck/Title"), "Warning", true));
+                }
+            });
+        }
+
+        private void RunOnViewModelThread(Action action)
+        {
+            if (_dispatcherQueue != null && _dispatcherQueue.TryEnqueue(() => action()))
+            {
+                return;
+            }
+
+            action();
+        }
+
+        private void ShowUpdateCheckMessage(string message, string severity, bool visible)
+        {
+            UpdateCheckMessageSeverity = severity;
+            UpdateCheckMessage = message;
+            UpdateCheckMessageVisible = visible;
         }
 
         private void UpdateNowClick()
@@ -1182,7 +1292,45 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         public void RefreshUpdatingState()
         {
-            // Update state is fixed to no-update values for Kit.
+            var updateSettings = UpdatingSettings.LoadSettings();
+            RefreshUpdatingState(updateSettings);
+        }
+
+        public void RefreshUpdatingState(UpdatingSettings updateSettings)
+        {
+            if (updateSettings == null)
+            {
+                return;
+            }
+
+            UpdatingSettingsConfig = updateSettings;
+            PowerToysUpdatingState = updateSettings.State;
+            PowerToysNewAvailableVersion = updateSettings.NewVersion;
+            PowerToysNewAvailableVersionLink = updateSettings.ReleasePageLink ?? string.Empty;
+            UpdateCheckedDate = updateSettings.LastCheckedDateLocalized;
+
+            switch (updateSettings.State)
+            {
+                case UpdatingSettings.UpdatingState.ReadyToDownload:
+                case UpdatingSettings.UpdatingState.ReadyToInstall:
+                    var version = string.IsNullOrEmpty(updateSettings.NewVersion) ? string.Empty : $" {updateSettings.NewVersion}";
+                    ShowUpdateCheckMessage($"{GetResourceString("General_NewVersionAvailable/Title")}{version}", "Success", true);
+                    break;
+
+                case UpdatingSettings.UpdatingState.NetworkError:
+                case UpdatingSettings.UpdatingState.ErrorDownloading:
+                    ShowUpdateCheckMessage(GetResourceString("General_CantCheck/Title"), "Error", true);
+                    break;
+
+                case UpdatingSettings.UpdatingState.UpToDate:
+                default:
+                    if (updateSettings.LastCheckedDateTime.HasValue || UpdateCheckMessageVisible)
+                    {
+                        ShowUpdateCheckMessage(GetResourceString("General_UpToDate/Title"), "Success", true);
+                    }
+
+                    break;
+            }
         }
 
         public override void OnPageLoaded()

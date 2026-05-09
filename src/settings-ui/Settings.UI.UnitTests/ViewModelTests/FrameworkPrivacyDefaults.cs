@@ -78,10 +78,43 @@ namespace ViewModelTests
             var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
 
             Assert.IsFalse(runnerProject.Contains(@"..\common\updating\updating.vcxproj", StringComparison.Ordinal), "Runner should not link the GitHub updater library.");
-            Assert.IsFalse(runnerProject.Contains("UpdateUtils.cpp", StringComparison.Ordinal), "Runner should not compile the updater implementation.");
+            StringAssert.Contains(runnerProject, "UpdateUtils.cpp", "Runner should compile Kit's check-only release notification worker.");
             Assert.IsFalse(runnerMain.Contains("uninstall_previous_msix_version_async", StringComparison.Ordinal), "Runner startup should not enter updater cleanup paths.");
             Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "UpdateUtils should not download installers.");
             Assert.IsFalse(updateUtils.Contains("PowerToys.Update.exe", StringComparison.Ordinal), "UpdateUtils should not launch the updater executable.");
+        }
+
+        [TestMethod]
+        public void GeneralAboutShouldExposeKitGitHubRepository()
+        {
+            var generalPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            StringAssert.Contains(generalPage, "General_Repository");
+            StringAssert.Contains(generalPage, "https://github.com/guijianchou/Kit");
+            StringAssert.Contains(resources, "GitHub repository");
+        }
+
+        [TestMethod]
+        public void RunnerShouldCheckKitReleasesOncePerDayWithoutAutoUpdating()
+        {
+            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+            var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
+
+            StringAssert.Contains(runnerProject, "UpdateUtils.cpp");
+            StringAssert.Contains(runnerMain, "PeriodicUpdateWorker();");
+            StringAssert.Contains(updateUtils, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
+            StringAssert.Contains(updateUtils, "html_url");
+            StringAssert.Contains(updateUtils, "githubUpdateLastCheckedDate");
+            StringAssert.Contains(updateUtils, "std::chrono::hours(24)");
+            StringAssert.Contains(updateUtils, "set_tray_icon_update_available(true)");
+            StringAssert.Contains(updateUtils, "notifications::show_toast_with_activations");
+            StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
+            StringAssert.Contains(updateUtils, "void save_network_error()");
+            StringAssert.Contains(updateUtils, "save_network_error();");
+            Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "Kit release check must not download installers.");
+            Assert.IsFalse(updateUtils.Contains("LaunchPowerToysUpdate", StringComparison.Ordinal) && updateUtils.Contains("ShellExecuteEx", StringComparison.Ordinal), "Kit release check must not launch an updater.");
         }
 
         [TestMethod]

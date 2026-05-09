@@ -14,9 +14,17 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `1.1.2`.
+Current Kit version: `1.1.3`.
 
 ## Changelog
+
+### 1.1.3
+
+- General: Added an About GitHub repository link and a manual check-for-updates entry point aligned with the version text.
+- Updates: Added a check-only GitHub release check against `https://github.com/guijianchou/Kit/releases`, with a daily background check and toast only when a newer release is available.
+- Updates: Kept Kit's updater boundary check-only; it does not automatically download, install, or launch an updater.
+- Settings: Increased the About version and repository text size from caption text to body text.
+- Tests: Added regression coverage for the Kit release-check IPC path, About feedback state, and `1.1.3` README/version metadata.
 
 ### 1.1.2
 

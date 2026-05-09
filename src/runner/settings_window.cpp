@@ -8,6 +8,7 @@
 #include <common/interop/two_way_pipe_message_ipc.h>
 #include <common/interop/shared_constants.h>
 #include "tray_icon.h"
+#include "UpdateUtils.h"
 #include "general_settings.h"
 #include "restart_elevated.h"
 #include "centralized_kb_hook.h"
@@ -100,6 +101,10 @@ std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObjec
                         schedule_restart_as_non_elevated(true);
                         PostQuitMessage(1);
                     }
+                }
+                else if (action == L"check_for_updates")
+                {
+                    CheckForUpdatesCallback();
                 }
             }
             catch (...)

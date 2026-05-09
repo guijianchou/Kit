@@ -9,6 +9,7 @@
 #include "general_settings.h"
 #include "restart_elevated.h"
 #include "RestartManagement.h"
+#include "UpdateUtils.h"
 #include "Generated files/resource.h"
 
 #include <common/comUtils/comUtils.h>
@@ -230,6 +231,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 
     auto const settings = get_general_settings();
     start_tray_icon(isProcessElevated, settings.showThemeAdaptiveTrayIcon);
+    PeriodicUpdateWorker();
 
     if (settings.enableQuickAccess)
     {

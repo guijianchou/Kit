@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -59,7 +60,8 @@ namespace ViewModelTests
 
         private TestGeneralViewModel CreateViewModel(
             ISettingsRepository<GeneralSettings> settingsRepository = null,
-            Func<string, int> sendMockIPCConfigMSG = null)
+            Func<string, int> sendMockIPCConfigMSG = null,
+            Func<string, int> sendCheckForUpdatesIPCMessage = null)
         {
             return new TestGeneralViewModel(
                 settingsRepository: settingsRepository ?? SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
@@ -69,7 +71,7 @@ namespace ViewModelTests
                 isAdmin: false,
                 ipcMSGCallBackFunc: sendMockIPCConfigMSG ?? (_ => 0),
                 ipcMSGRestartAsAdminMSGCallBackFunc: _ => 0,
-                ipcMSGCheckForUpdatesCallBackFunc: _ => 0,
+                ipcMSGCheckForUpdatesCallBackFunc: sendCheckForUpdatesIPCMessage ?? (_ => 0),
                 configFileSubfolder: GeneralSettingsFileName);
         }
 
@@ -79,6 +81,13 @@ namespace ViewModelTests
             repository.SetupProperty(x => x.SettingsConfig, settings);
             repository.Setup(x => x.ReloadSettings()).Returns(true);
             return repository.Object;
+        }
+
+        private static T GetViewModelProperty<T>(GeneralViewModel viewModel, string propertyName)
+        {
+            var property = typeof(GeneralViewModel).GetProperty(propertyName);
+            Assert.IsNotNull(property, $"{propertyName} should be exposed by GeneralViewModel.");
+            return (T)property.GetValue(viewModel);
         }
 
         private static string FindSourceFile(params string[] relativePathParts)
@@ -121,6 +130,101 @@ namespace ViewModelTests
             Assert.IsFalse(xaml.Contains("GeneralPage_ShowNewUpdatesToast", StringComparison.Ordinal));
             Assert.IsFalse(xaml.Contains("GeneralPage_ReportBugPackage", StringComparison.Ordinal));
             Assert.IsFalse(xaml.Contains("ReleaseNotes", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitGeneralAboutShouldAlignRepositoryWithVersionAndExposeCheckUpdateButton()
+        {
+            var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            var aboutIndex = xaml.IndexOf("x:Uid=\"General_About\"", StringComparison.Ordinal);
+            Assert.IsTrue(aboutIndex >= 0, "General About section should be present.");
+
+            var aboutXaml = xaml.Substring(aboutIndex);
+            StringAssert.Contains(aboutXaml, "ContentAlignment=\"Left\"");
+            StringAssert.Contains(aboutXaml, "<TextBlock");
+            StringAssert.Contains(aboutXaml, "Text=\"{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}\"");
+            StringAssert.Contains(aboutXaml, "BodyTextBlockStyle");
+            StringAssert.Contains(aboutXaml, "<Hyperlink NavigateUri=\"https://github.com/guijianchou/Kit\">");
+            StringAssert.Contains(aboutXaml, "<Run x:Uid=\"General_Repository\" />");
+            Assert.IsFalse(aboutXaml.Contains("<HyperlinkButton", StringComparison.Ordinal), "Repository link should use text-inline hyperlink so it aligns with the version text.");
+            StringAssert.Contains(aboutXaml, "x:Uid=\"GeneralPage_CheckForUpdates\"");
+            StringAssert.Contains(aboutXaml, "Command=\"{Binding CheckForUpdatesEventHandler}\"");
+            StringAssert.Contains(aboutXaml, "Title=\"{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}\"");
+            StringAssert.Contains(aboutXaml, "IsOpen=\"{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}\"");
+            StringAssert.Contains(aboutXaml, "Severity=\"{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}\"");
+            StringAssert.Contains(resources, "General_Repository.Text");
+        }
+
+        [TestMethod]
+        public void CheckForUpdatesCommandShouldSendKitReleaseCheckAction()
+        {
+            string sentMessage = null;
+            var viewModel = CreateViewModel(sendCheckForUpdatesIPCMessage: msg =>
+            {
+                sentMessage = msg;
+                return 0;
+            });
+
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+
+            Assert.IsNotNull(sentMessage);
+            StringAssert.Contains(sentMessage, "\"action_name\":\"check_for_updates\"");
+        }
+
+        [TestMethod]
+        public void CheckForUpdatesCommandShouldShowImmediateVisibleStatus()
+        {
+            string sentMessage = null;
+            var viewModel = CreateViewModel(sendCheckForUpdatesIPCMessage: msg =>
+            {
+                sentMessage = msg;
+                return 0;
+            });
+
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+
+            Assert.IsNotNull(sentMessage);
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            Assert.AreEqual("General_CheckingForUpdates/Text", GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"));
+            Assert.AreEqual("Informational", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+        }
+
+        [TestMethod]
+        public void RefreshUpdatingStateShouldShowKitReleaseCheckResult()
+        {
+            var viewModel = CreateViewModel();
+            var updateSettings = new UpdatingSettings
+            {
+                State = UpdatingSettings.UpdatingState.ReadyToDownload,
+                ReleasePageLink = "https://github.com/guijianchou/Kit/releases/tag/v9.9.9",
+                LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+            };
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+
+            Assert.IsNotNull(refreshMethod, "GeneralViewModel should support refreshing from a loaded Kit update state.");
+
+            refreshMethod.Invoke(viewModel, new object[] { updateSettings });
+
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            StringAssert.Contains(GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"), "General_NewVersionAvailable/Title");
+            StringAssert.Contains(GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"), "v9.9.9");
+            Assert.AreEqual("Success", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+        }
+
+        [TestMethod]
+        public void CheckForUpdatesIpcShouldReachRunnerKitReleaseCallback()
+        {
+            var shellPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+            var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
+            var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
+
+            StringAssert.Contains(shellPage, "CheckForUpdatesMsgCallback?.Invoke(msg);");
+            StringAssert.Contains(settingsWindow, "action == L\"check_for_updates\"");
+            StringAssert.Contains(settingsWindow, "CheckForUpdatesCallback();");
+            StringAssert.Contains(updateUtils, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
+            StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
         }
 
         [TestMethod]
@@ -377,19 +481,22 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitGeneralAboutShouldOnlyKeepVersionEntryPoint()
+        public void KitGeneralAboutShouldKeepKitVersionRepositoryAndCheckUpdateEntryPoints()
         {
             var generalXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
             var generalCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml.cs"));
             var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
 
             var aboutIndex = generalXaml.IndexOf("x:Uid=\"General_About\"", StringComparison.Ordinal);
-            Assert.IsTrue(aboutIndex >= 0, "General page should keep the About group for the version number.");
-            StringAssert.Contains(generalXaml.Substring(aboutIndex), "Text=\"{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}\"");
-            StringAssert.Contains(generalXaml.Substring(aboutIndex), "CaptionTextBlockStyle");
-            Assert.IsFalse(generalXaml.Substring(aboutIndex).Contains("SettingsCard", StringComparison.Ordinal), "About should render the version as small text, not a standalone settings card.");
-            Assert.IsFalse(generalXaml.Substring(aboutIndex).Contains("HyperlinkButton", StringComparison.Ordinal), "About should not expose external links.");
-            Assert.IsFalse(generalXaml.Substring(aboutIndex).Contains("Button", StringComparison.Ordinal), "About should not expose actions.");
+            Assert.IsTrue(aboutIndex >= 0, "General page should keep the About group.");
+            var aboutXaml = generalXaml.Substring(aboutIndex);
+            StringAssert.Contains(aboutXaml, "ContentAlignment=\"Left\"");
+            StringAssert.Contains(aboutXaml, "Text=\"{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}\"");
+            StringAssert.Contains(aboutXaml, "BodyTextBlockStyle");
+            StringAssert.Contains(aboutXaml, "https://github.com/guijianchou/Kit");
+            StringAssert.Contains(aboutXaml, "GeneralPage_CheckForUpdates");
+            Assert.IsFalse(aboutXaml.Contains("HyperlinkButton", StringComparison.Ordinal), "About should not use padded hyperlink buttons for text links.");
+            Assert.IsFalse(aboutXaml.Contains("ReleaseNotes", StringComparison.Ordinal), "About should not restore upstream release-note actions.");
 
             Assert.IsFalse(generalCodeBehind.Contains("InitializeReportBugLink", StringComparison.Ordinal), "General page should not prepare About bug-report links.");
             Assert.IsFalse(generalCodeBehind.Contains("BugReportToolClicked", StringComparison.Ordinal), "General page should not keep hidden About bug-report actions.");
@@ -400,32 +507,33 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse112ReleaseMetadata()
+        public void KitAboutVersionShouldUse113ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
-            var versionHeader = File.ReadAllText(FindSourceFile("src", "common", "version", "Generated Files", "version_gen.h"));
+            var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
             var directoryBuildProps = File.ReadAllText(FindSourceFile("Directory.Build.props"));
             var helper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Utilities", "Helper.cs"));
             var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
             var readme = File.ReadAllText(FindSourceFile("README.md"));
-            var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
+            var readmeZh = File.ReadAllText(FindSourceFile("README_zh.md"));
 
-            StringAssert.Contains(versionProps, "<Version>1.1.2</Version>");
+            StringAssert.Contains(versionProps, "<Version>1.1.3</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
             StringAssert.Contains(generalViewModel, "Helper.GetProductDisplayVersion()");
-            StringAssert.Contains(versionHeader, "#define VERSION_MAJOR 1");
-            StringAssert.Contains(versionHeader, "#define VERSION_MINOR 1");
-            StringAssert.Contains(versionHeader, "#define VERSION_REVISION 2");
-            StringAssert.Contains(readme, "Current Kit version: `1.1.2`.");
+            StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
+            StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
+            StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
+            StringAssert.Contains(readme, "Current Kit version: `1.1.3`.");
             StringAssert.Contains(readme, "## Changelog");
-            StringAssert.Contains(readme, "### 1.1.2");
-            StringAssert.Contains(readme, "Reduced startup and first-frame work");
-            StringAssert.Contains(developmentLog, "## 2026-05-08 Startup And Settings Load Optimization And 1.1.2 Release Notes");
+            StringAssert.Contains(readme, "### 1.1.3");
+            StringAssert.Contains(readme, "GitHub release check");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.1.3`。");
+            StringAssert.Contains(readmeZh, "### 1.1.3");
 
-            Assert.AreEqual("v1.1.2", Helper.GetProductDisplayVersion("v1.1.2", string.Empty));
-            Assert.AreEqual("v1.1.2", Helper.GetProductDisplayVersion("v1.1.2", "Local"));
+            Assert.AreEqual("v1.1.3", Helper.GetProductDisplayVersion("v1.1.3", string.Empty));
+            Assert.AreEqual("v1.1.3", Helper.GetProductDisplayVersion("v1.1.3", "Local"));
         }
 
         [TestMethod]

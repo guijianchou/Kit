@@ -77,6 +77,7 @@
     <ClCompile Include="settings_window.cpp" />
     <ClCompile Include="trace.cpp" />
     <ClCompile Include="tray_icon.cpp" />
+    <ClCompile Include="UpdateUtils.cpp" />
     <ClCompile Include="unhandled_exception_handler.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -96,6 +97,7 @@
     <ClInclude Include="settings_window.h" />
     <ClInclude Include="trace.h" />
     <ClInclude Include="tray_icon.h" />
+    <ClInclude Include="UpdateUtils.h" />
     <ClInclude Include="unhandled_exception_handler.h" />
   </ItemGroup>
   <ItemGroup>

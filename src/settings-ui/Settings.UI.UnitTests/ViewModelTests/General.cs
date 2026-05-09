@@ -148,13 +148,18 @@ namespace ViewModelTests
             StringAssert.Contains(aboutXaml, "BodyTextBlockStyle");
             StringAssert.Contains(aboutXaml, "<Hyperlink NavigateUri=\"https://github.com/guijianchou/Kit\">");
             StringAssert.Contains(aboutXaml, "<Run x:Uid=\"General_Repository\" />");
-            Assert.IsFalse(aboutXaml.Contains("<HyperlinkButton", StringComparison.Ordinal), "Repository link should use text-inline hyperlink so it aligns with the version text.");
+            Assert.IsFalse(aboutXaml.Contains("<HyperlinkButton NavigateUri=\"https://github.com/guijianchou/Kit\"", StringComparison.Ordinal), "Repository link should use text-inline hyperlink so it aligns with the version text.");
             StringAssert.Contains(aboutXaml, "x:Uid=\"GeneralPage_CheckForUpdates\"");
             StringAssert.Contains(aboutXaml, "Command=\"{Binding CheckForUpdatesEventHandler}\"");
             StringAssert.Contains(aboutXaml, "Title=\"{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}\"");
             StringAssert.Contains(aboutXaml, "IsOpen=\"{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}\"");
             StringAssert.Contains(aboutXaml, "Severity=\"{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}\"");
+            StringAssert.Contains(aboutXaml, "x:Uid=\"GeneralPage_ViewRelease\"");
+            StringAssert.Contains(aboutXaml, "NavigateUri=\"{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}\"");
+            StringAssert.Contains(aboutXaml, "Visibility=\"{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}\"");
+            StringAssert.Contains(aboutXaml, "IsEnabled=\"{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}\"");
             StringAssert.Contains(resources, "General_Repository.Text");
+            StringAssert.Contains(resources, "GeneralPage_ViewRelease.Content");
         }
 
         [TestMethod]
@@ -187,6 +192,78 @@ namespace ViewModelTests
 
             Assert.IsNotNull(sentMessage);
             Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            Assert.AreEqual("General_CheckingForUpdates/Text", GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"));
+            Assert.AreEqual("Informational", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
+        }
+
+        [TestMethod]
+        public void PowerToysNewAvailableVersionUriShouldBeNullWhenLinkIsEmptyAndAbsoluteWhenSet()
+        {
+            var viewModel = CreateViewModel();
+
+            Assert.IsNull(GetViewModelProperty<Uri>(viewModel, "PowerToysNewAvailableVersionUri"));
+            Assert.IsFalse(viewModel.IsUpdateAvailable);
+
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.ReadyToDownload,
+                    ReleasePageLink = "https://github.com/guijianchou/Kit/releases/tag/v9.9.9",
+                    LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            var uri = GetViewModelProperty<Uri>(viewModel, "PowerToysNewAvailableVersionUri");
+            Assert.IsNotNull(uri);
+            Assert.IsTrue(uri.IsAbsoluteUri);
+            Assert.AreEqual("https://github.com/guijianchou/Kit/releases/tag/v9.9.9", uri.AbsoluteUri);
+            Assert.IsTrue(viewModel.IsUpdateAvailable);
+        }
+
+        [TestMethod]
+        public void RefreshUpdatingStateUpToDateMessageShouldIncludeCurrentVersion()
+        {
+            var viewModel = CreateViewModel();
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.UpToDate,
+                    LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            var message = GetViewModelProperty<string>(viewModel, "UpdateCheckMessage");
+            StringAssert.Contains(message, "General_UpToDate/Title");
+            StringAssert.Contains(message, "v" + Helper.GetProductVersion().TrimStart('v'));
+            StringAssert.Contains(message, "General_VersionLastChecked/Text");
+        }
+
+        [TestMethod]
+        public void RefreshUpdatingStateAloneShouldNotTouchCheckingFlag()
+        {
+            var viewModel = CreateViewModel();
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+
+            // OnPageLoaded reads cached UpdateState.json via RefreshUpdatingState; it should not
+            // race with an in-flight check by clearing the flag (the polling task owns that).
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.UpToDate,
+                    LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
             Assert.AreEqual("General_CheckingForUpdates/Text", GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"));
             Assert.AreEqual("Informational", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
         }
@@ -225,6 +302,9 @@ namespace ViewModelTests
             StringAssert.Contains(settingsWindow, "CheckForUpdatesCallback();");
             StringAssert.Contains(updateUtils, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
             StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
+            StringAssert.Contains(updateUtils, "HttpCacheReadBehavior::NoCache");
+            StringAssert.Contains(updateUtils, "HttpCacheWriteBehavior::NoCache");
+            StringAssert.Contains(updateUtils, "Cache-Control");
         }
 
         [TestMethod]
@@ -495,7 +575,7 @@ namespace ViewModelTests
             StringAssert.Contains(aboutXaml, "BodyTextBlockStyle");
             StringAssert.Contains(aboutXaml, "https://github.com/guijianchou/Kit");
             StringAssert.Contains(aboutXaml, "GeneralPage_CheckForUpdates");
-            Assert.IsFalse(aboutXaml.Contains("HyperlinkButton", StringComparison.Ordinal), "About should not use padded hyperlink buttons for text links.");
+            Assert.IsFalse(aboutXaml.Contains("HyperlinkButton NavigateUri=\"https://github.com/guijianchou/Kit\"", StringComparison.Ordinal), "About repository link should be inline text, not a padded HyperlinkButton.");
             Assert.IsFalse(aboutXaml.Contains("ReleaseNotes", StringComparison.Ordinal), "About should not restore upstream release-note actions.");
 
             Assert.IsFalse(generalCodeBehind.Contains("InitializeReportBugLink", StringComparison.Ordinal), "General page should not prepare About bug-report links.");
@@ -507,7 +587,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse113ReleaseMetadata()
+        public void KitAboutVersionShouldUse114ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -516,8 +596,9 @@ namespace ViewModelTests
             var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
             var readme = File.ReadAllText(FindSourceFile("README.md"));
             var readmeZh = File.ReadAllText(FindSourceFile("README_zh.md"));
+            var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>1.1.3</Version>");
+            StringAssert.Contains(versionProps, "<Version>1.1.4</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -525,15 +606,16 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `1.1.3`.");
+            StringAssert.Contains(readme, "Current Kit version: `1.1.4`.");
             StringAssert.Contains(readme, "## Changelog");
-            StringAssert.Contains(readme, "### 1.1.3");
+            StringAssert.Contains(readme, "### 1.1.4");
             StringAssert.Contains(readme, "GitHub release check");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.1.3`。");
-            StringAssert.Contains(readmeZh, "### 1.1.3");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.1.4`。");
+            StringAssert.Contains(readmeZh, "### 1.1.4");
+            StringAssert.Contains(developmentLog, "## 2026-05-09 Update Check Reliability And 1.1.4 Release Notes");
 
-            Assert.AreEqual("v1.1.3", Helper.GetProductDisplayVersion("v1.1.3", string.Empty));
-            Assert.AreEqual("v1.1.3", Helper.GetProductDisplayVersion("v1.1.3", "Local"));
+            Assert.AreEqual("v1.1.4", Helper.GetProductDisplayVersion("v1.1.4", string.Empty));
+            Assert.AreEqual("v1.1.4", Helper.GetProductDisplayVersion("v1.1.4", "Local"));
         }
 
         [TestMethod]

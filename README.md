@@ -14,9 +14,16 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `1.1.3`.
+Current Kit version: `1.1.4`.
 
 ## Changelog
+
+### 1.1.4
+
+- Updates: Forced GitHub release checks to bypass HTTP cache so offline manual checks cannot reuse stale cached responses and report "up to date".
+- Settings: Kept manual checks in "Checking for updates" until a fresh result or timeout arrives, preventing cached update state from replacing an in-flight check.
+- Settings: Disabled repeated Check for updates clicks while a check is running and kept the release link visible only when a newer release is available.
+- Tests: Added regression coverage for no-cache release checks, cached-state race protection, and `1.1.4` README/version/development-log metadata.
 
 ### 1.1.3
 

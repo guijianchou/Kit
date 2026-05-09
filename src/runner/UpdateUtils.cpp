@@ -6,7 +6,6 @@
 #include <common/SettingsAPI/settings_helpers.h>
 #include <common/logger/logger.h>
 #include <common/notifications/notifications.h>
-#include <common/utils/HttpClient.h>
 #include <common/utils/json.h>
 #include <common/utils/timeutil.h>
 #include <common/version/helper.h>
@@ -17,12 +16,16 @@
 #include <optional>
 
 #include <winrt/Windows.Data.Json.h>
+#include <winrt/Windows.Web.Http.h>
+#include <winrt/Windows.Web.Http.Filters.h>
+#include <winrt/Windows.Web.Http.Headers.h>
 
 namespace
 {
     constexpr wchar_t KitLatestReleaseEndpoint[] = L"https://api.github.com/repos/guijianchou/Kit/releases/latest";
     constexpr wchar_t KitReleasesPage[] = L"https://github.com/guijianchou/Kit/releases";
     constexpr wchar_t GitHubHtmlUrlField[] = L"html_url";
+    constexpr wchar_t KitReleaseCheckUserAgent[] = L"Kit release checker";
     constexpr wchar_t LastCheckedField[] = L"githubUpdateLastCheckedDate";
     constexpr wchar_t ReleasePageField[] = L"releasePageUrl";
     constexpr wchar_t StateField[] = L"state";
@@ -182,10 +185,29 @@ namespace
         }
     }
 
+    winrt::hstring fetch_latest_release_body()
+    {
+        namespace filters = winrt::Windows::Web::Http::Filters;
+        namespace http = winrt::Windows::Web::Http;
+
+        filters::HttpBaseProtocolFilter filter;
+        filter.CacheControl().ReadBehavior(filters::HttpCacheReadBehavior::NoCache);
+        filter.CacheControl().WriteBehavior(filters::HttpCacheWriteBehavior::NoCache);
+
+        http::HttpClient client{ filter };
+        auto headers = client.DefaultRequestHeaders();
+        headers.UserAgent().TryParseAdd(KitReleaseCheckUserAgent);
+        headers.TryAppendWithoutValidation(L"Cache-Control", L"no-cache, no-store");
+        headers.TryAppendWithoutValidation(L"Pragma", L"no-cache");
+
+        auto response = client.GetAsync(winrt::Windows::Foundation::Uri{ KitLatestReleaseEndpoint }).get();
+        (void)response.EnsureSuccessStatusCode();
+        return response.Content().ReadAsStringAsync().get();
+    }
+
     std::optional<LatestReleaseInfo> fetch_latest_release()
     {
-        http::HttpClient client;
-        const auto body = client.request(winrt::Windows::Foundation::Uri{ KitLatestReleaseEndpoint }).get();
+        const auto body = fetch_latest_release_body();
         const auto releaseObject = json::JsonValue::Parse(body).GetObjectW();
 
         const std::wstring tag = releaseObject.GetNamedString(L"tag_name", L"").c_str();

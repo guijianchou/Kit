@@ -2,6 +2,15 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-05-09 Update Check Reliability And 1.1.4 Release Notes
+
+This pass moved Kit from 1.1.3 to 1.1.4 and fixed the manual update check path that could report "up to date" from cached data while the machine was offline.
+
+- Runner release checks now use a WinRT HTTP client with no-cache read and write behavior, plus `Cache-Control` and `Pragma` no-cache headers for GitHub's latest release API.
+- Settings captures the pre-click update-state timestamp and accepts only a newer result for the current manual check, so page-load cached state cannot overwrite the visible in-flight "Checking for updates" status.
+- The Check for updates button is disabled while a check is polling, and timeout or network failure now surfaces the existing cannot-check message instead of silently reusing an old up-to-date state.
+- README, README_zh, Version.props, and the version metadata regression test now use Kit version `1.1.4`.
+
 ## Phase One Result
 
 Kit now has a small, explicit module surface:

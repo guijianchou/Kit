@@ -275,13 +275,21 @@
                             <Button
                                 x:Uid="GeneralPage_CheckForUpdates"
                                 HorizontalAlignment="Left"
-                                Command="{Binding CheckForUpdatesEventHandler}" />
+                                Command="{Binding CheckForUpdatesEventHandler}"
+                                IsEnabled="{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}" />
                             <InfoBar
                                 Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
                                 IsClosable="False"
                                 IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
                                 IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
-                                Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}" />
+                                Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}">
+                                <InfoBar.ActionButton>
+                                    <HyperlinkButton
+                                        x:Uid="GeneralPage_ViewRelease"
+                                        NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
+                                        Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+                                </InfoBar.ActionButton>
+                            </InfoBar>
                         </StackPanel>
                     </tkcontrols:SettingsCard>
                 </controls:SettingsGroup>

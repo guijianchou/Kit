@@ -927,6 +927,9 @@ opera.exe</value>
   <data name="GeneralPage_CheckForUpdates.Content" xml:space="preserve">
     <value>Check for updates</value>
   </data>
+  <data name="GeneralPage_ViewRelease.Content" xml:space="preserve">
+    <value>View release</value>
+  </data>
   <data name="General_SettingsBackupAndRestoreLocationText.Header" xml:space="preserve">
     <value>Location</value>
   </data>

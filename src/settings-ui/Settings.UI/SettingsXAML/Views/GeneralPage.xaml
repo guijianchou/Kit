@@ -20,6 +20,60 @@
     <controls:SettingsPageControl x:Uid="General" ModuleImageSource="ms-appx:///Assets/Settings/Modules/PT.png">
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
+                <controls:SettingsGroup x:Uid="General_VersionAndUpdate" Margin="0,-32,0,0">
+                    <tkcontrols:SettingsExpander Header="{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}" HeaderIcon="{ui:FontIcon Glyph=&#xE895;}">
+                        <tkcontrols:SettingsExpander.Description>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Style="{StaticResource SecondaryTextStyle}">
+                                    <Run x:Uid="General_VersionLastChecked" />
+                                    <Run Text="{x:Bind ViewModel.UpdateCheckedDate, Mode=OneWay}" />
+                                </TextBlock>
+                                <HyperlinkButton
+                                    x:Uid="ReleaseNotes"
+                                    Margin="0,2,0,0"
+                                    FontWeight="SemiBold"
+                                    NavigateUri="https://github.com/guijianchou/Kit/releases/" />
+                            </StackPanel>
+                        </tkcontrols:SettingsExpander.Description>
+                        <Grid Visibility="{x:Bind ViewModel.IsUpdatePanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                Spacing="18"
+                                Visibility="{x:Bind ViewModel.IsCheckingForUpdates, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                <ProgressRing Width="24" Height="24" />
+                                <TextBlock
+                                    x:Uid="General_CheckingForUpdates"
+                                    VerticalAlignment="Center"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <Button
+                                x:Uid="GeneralPage_CheckForUpdates"
+                                HorizontalAlignment="Right"
+                                Command="{Binding CheckForUpdatesEventHandler}"
+                                IsEnabled="{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}"
+                                Visibility="{Binding Mode=OneWay, Path=IsCheckingForUpdates, Converter={StaticResource BoolNegationConverter}}" />
+                        </Grid>
+                    </tkcontrols:SettingsExpander>
+
+                    <StackPanel Orientation="Vertical">
+                        <InfoBar
+                            Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
+                            IsClosable="False"
+                            IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                            IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                            Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}">
+                            <InfoBar.ActionButton>
+                                <HyperlinkButton
+                                    x:Uid="GeneralPage_ViewRelease"
+                                    NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
+                                    Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+                            </InfoBar.ActionButton>
+                        </InfoBar>
+                    </StackPanel>
+                </controls:SettingsGroup>
+
                 <controls:SettingsGroup x:Uid="Admin_Mode">
                     <tkcontrols:SettingsExpander
                         x:Name="AdminModeRunningAs"
@@ -257,42 +311,6 @@
                     IsOpen="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
                     IsTabStop="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
                     Severity="{x:Bind ViewModel.BackupRestoreMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}}" />
-
-                <controls:SettingsGroup x:Uid="General_About">
-                    <tkcontrols:SettingsCard ContentAlignment="Left">
-                        <StackPanel Orientation="Vertical" Spacing="8">
-                            <TextBlock
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                IsTextSelectionEnabled="True"
-                                Style="{StaticResource BodyTextBlockStyle}"
-                                Text="{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}"
-                                TextWrapping="WrapWholeWords" />
-                            <TextBlock Style="{StaticResource BodyTextBlockStyle}">
-                                <Hyperlink NavigateUri="https://github.com/guijianchou/Kit">
-                                    <Run x:Uid="General_Repository" />
-                                </Hyperlink>
-                            </TextBlock>
-                            <Button
-                                x:Uid="GeneralPage_CheckForUpdates"
-                                HorizontalAlignment="Left"
-                                Command="{Binding CheckForUpdatesEventHandler}"
-                                IsEnabled="{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}" />
-                            <InfoBar
-                                Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
-                                IsClosable="False"
-                                IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
-                                IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
-                                Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}">
-                                <InfoBar.ActionButton>
-                                    <HyperlinkButton
-                                        x:Uid="GeneralPage_ViewRelease"
-                                        NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
-                                        Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
-                                </InfoBar.ActionButton>
-                            </InfoBar>
-                        </StackPanel>
-                    </tkcontrols:SettingsCard>
-                </controls:SettingsGroup>
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>
     </controls:SettingsPageControl>

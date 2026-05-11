@@ -14,9 +14,17 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `1.1.5`.
+Current Kit version: `1.1.6`.
 
 ## Changelog
+
+### 1.1.6
+
+- General: Restored the PowerToys-main-style version/update section at the top of General while keeping Kit's updater boundary check-only.
+- General: Moved update result messaging below the version/update expander so the in-progress "Checking for updates" row follows the upstream layout.
+- General: Removed the bottom About card because the version is already shown in the update section.
+- Updates: Kept Kit release links on `https://github.com/guijianchou/Kit/releases` and kept automatic download/install actions hidden.
+- Tests: Updated version metadata coverage for `1.1.6` and added regression checks for the cleaned General update/About layout.
 
 ### 1.1.5
 

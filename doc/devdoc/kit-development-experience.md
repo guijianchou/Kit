@@ -2,6 +2,16 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-05-11 General Update Layout Cleanup And 1.1.6 Release Notes
+
+This pass moved Kit from 1.1.5 to 1.1.6 and cleaned up the General page update surface after aligning release checking with the local PowerToys-main pattern.
+
+- General again uses a top `General_VersionAndUpdate` section for version and update state. The version is no longer repeated in a bottom About card.
+- The manual "Checking for updates" row now lives inside the version/update expander, while the update result InfoBar sits below the expander like PowerToys-main.
+- Kit keeps the update flow check-only: no automatic download, `Download & install`, `Install now`, or updater launch UI is restored.
+- Release links continue to point at `https://github.com/guijianchou/Kit/releases`.
+- README, README_zh, Version.props, and the version metadata regression test now use Kit version `1.1.6`.
+
 ## 2026-05-11 Update Check Architecture And 1.1.5 Release Notes
 
 This pass moved Kit from 1.1.4 to 1.1.5 and removed the patch-on-patch update-check flow that had drifted away from the local PowerToys-main shape.

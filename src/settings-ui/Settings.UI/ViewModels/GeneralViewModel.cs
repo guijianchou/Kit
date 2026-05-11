@@ -1056,7 +1056,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             get
             {
-                return false;
+                return true;
             }
         }
 

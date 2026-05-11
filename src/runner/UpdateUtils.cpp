@@ -112,7 +112,7 @@ namespace
         set_tray_icon_update_available(available);
     }
 
-    winrt::hstring fetch_latest_release_body()
+    std::optional<winrt::hstring> fetch_latest_release_body()
     {
         namespace filters = winrt::Windows::Web::Http::Filters;
         namespace http = winrt::Windows::Web::Http;
@@ -127,15 +127,25 @@ namespace
         headers.TryAppendWithoutValidation(L"Cache-Control", L"no-cache, no-store");
         headers.TryAppendWithoutValidation(L"Pragma", L"no-cache");
 
-        auto response = client.GetAsync(winrt::Windows::Foundation::Uri{ KitLatestReleaseEndpoint }).get();
-        (void)response.EnsureSuccessStatusCode();
+        const auto response = client.GetAsync(winrt::Windows::Foundation::Uri{ KitLatestReleaseEndpoint }).get();
+        if (!response.IsSuccessStatusCode())
+        {
+            Logger::warn(L"Kit update check GitHub request failed with HTTP status {}.", static_cast<uint32_t>(response.StatusCode()));
+            return std::nullopt;
+        }
+
         return response.Content().ReadAsStringAsync().get();
     }
 
     std::optional<LatestReleaseInfo> fetch_latest_release()
     {
         const auto body = fetch_latest_release_body();
-        const auto releaseObject = json::JsonValue::Parse(body).GetObjectW();
+        if (!body.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const auto releaseObject = json::JsonValue::Parse(*body).GetObjectW();
 
         const std::wstring tag = releaseObject.GetNamedString(L"tag_name", L"").c_str();
         const auto version = VersionHelper::fromString(tag);

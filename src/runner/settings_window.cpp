@@ -1,7 +1,9 @@
 ﻿#include "pch.h"
 #include <WinSafer.h>
 #include <Sddl.h>
+#include <atomic>
 #include <sstream>
+#include <thread>
 #include <aclapi.h>
 
 #include "powertoy_module.h"
@@ -34,6 +36,7 @@
 TwoWayPipeMessageIPC* current_settings_ipc = NULL;
 std::mutex ipc_mutex;
 std::atomic_bool g_isLaunchInProgress = false;
+std::atomic_bool isUpdateCheckThreadRunning = false;
 HANDLE g_terminateSettingsEvent = CreateEventW(nullptr, false, false, CommonSharedConstants::TERMINATE_SETTINGS_SHARED_EVENT);
 
 json::JsonObject get_power_toys_settings()
@@ -104,7 +107,22 @@ std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObjec
                 }
                 else if (action == L"check_for_updates")
                 {
-                    CheckForUpdatesCallback();
+                    bool expected_isUpdateCheckThreadRunning = false;
+                    if (isUpdateCheckThreadRunning.compare_exchange_strong(expected_isUpdateCheckThreadRunning, true))
+                    {
+                        std::thread([]() {
+                            try
+                            {
+                                CheckForUpdatesCallback();
+                            }
+                            catch (...)
+                            {
+                                Logger::error("Manual Kit update check failed before completion.");
+                            }
+
+                            isUpdateCheckThreadRunning.store(false);
+                        }).detach();
+                    }
                 }
             }
             catch (...)

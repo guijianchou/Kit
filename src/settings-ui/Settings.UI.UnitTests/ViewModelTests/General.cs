@@ -90,6 +90,13 @@ namespace ViewModelTests
             return (T)property.GetValue(viewModel);
         }
 
+        private static void SetViewModelField<T>(GeneralViewModel viewModel, string fieldName, T value)
+        {
+            var field = typeof(GeneralViewModel).GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.IsNotNull(field, $"{fieldName} should be present on GeneralViewModel.");
+            field.SetValue(viewModel, value);
+        }
+
         private static string FindSourceFile(params string[] relativePathParts)
         {
             DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -158,6 +165,8 @@ namespace ViewModelTests
             StringAssert.Contains(aboutXaml, "NavigateUri=\"{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}\"");
             StringAssert.Contains(aboutXaml, "Visibility=\"{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}\"");
             StringAssert.Contains(aboutXaml, "IsEnabled=\"{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}\"");
+            Assert.IsFalse(aboutXaml.Contains("InstallUpdateEventHandler", StringComparison.Ordinal), "About should not expose an install-update action for Kit.");
+            Assert.IsFalse(aboutXaml.Contains("GeneralPage_AutoDownloadAndInstallUpdates", StringComparison.Ordinal), "About should not restore automatic update options.");
             StringAssert.Contains(resources, "General_Repository.Text");
             StringAssert.Contains(resources, "GeneralPage_ViewRelease.Content");
         }
@@ -199,6 +208,24 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void CheckForUpdatesCommandShouldIgnoreRepeatedClicksWhileRunning()
+        {
+            var sentCount = 0;
+            var viewModel = CreateViewModel(sendCheckForUpdatesIPCMessage: msg =>
+            {
+                sentCount++;
+                return 0;
+            });
+
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+
+            Assert.AreEqual(1, sentCount);
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
+        }
+
+        [TestMethod]
         public void PowerToysNewAvailableVersionUriShouldBeNullWhenLinkIsEmptyAndAbsoluteWhenSet()
         {
             var viewModel = CreateViewModel();
@@ -225,7 +252,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void RefreshUpdatingStateUpToDateMessageShouldIncludeCurrentVersion()
+        public void RefreshUpdatingStateShouldIgnoreCachedUpToDateStatusUntilManualCheck()
         {
             var viewModel = CreateViewModel();
             var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
@@ -238,32 +265,56 @@ namespace ViewModelTests
                 },
             });
 
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+        }
+
+        [TestMethod]
+        public void ManualRefreshUpdatingStateShouldShowFreshUpToDateStatus()
+        {
+            var viewModel = CreateViewModel();
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+            SetViewModelField<DateTime?>(viewModel, "_manualUpdateCheckBaselineLastChecked", DateTime.Now.AddMinutes(-1));
+
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.UpToDate,
+                    LastCheckedDate = DateTimeOffset.Now.AddMinutes(1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            Assert.AreEqual("Success", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
             var message = GetViewModelProperty<string>(viewModel, "UpdateCheckMessage");
             StringAssert.Contains(message, "General_UpToDate/Title");
             StringAssert.Contains(message, "v" + Helper.GetProductVersion().TrimStart('v'));
             StringAssert.Contains(message, "General_VersionLastChecked/Text");
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
         }
 
         [TestMethod]
-        public void RefreshUpdatingStateAloneShouldNotTouchCheckingFlag()
+        public void ManualRefreshUpdatingStateShouldNotAcceptStaleUpToDateStatus()
         {
             var viewModel = CreateViewModel();
             viewModel.CheckForUpdatesEventHandler.Execute(null);
-            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            SetViewModelField<DateTime?>(viewModel, "_manualUpdateCheckBaselineLastChecked", DateTime.Now);
 
-            // OnPageLoaded reads cached UpdateState.json via RefreshUpdatingState; it should not
-            // race with an in-flight check by clearing the flag (the polling task owns that).
             var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
             refreshMethod.Invoke(viewModel, new object[]
             {
                 new UpdatingSettings
                 {
                     State = UpdatingSettings.UpdatingState.UpToDate,
-                    LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                    LastCheckedDate = DateTimeOffset.Now.AddMinutes(-1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
                 },
             });
 
             Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
             Assert.AreEqual("General_CheckingForUpdates/Text", GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"));
             Assert.AreEqual("Informational", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
         }
@@ -288,6 +339,11 @@ namespace ViewModelTests
             StringAssert.Contains(GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"), "General_NewVersionAvailable/Title");
             StringAssert.Contains(GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"), "v9.9.9");
             Assert.AreEqual("Success", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+            Assert.IsFalse(viewModel.IsDownloadAllowed);
+            Assert.IsFalse(viewModel.IsUpdatePanelVisible);
+            Assert.IsFalse(viewModel.AutoDownloadUpdates);
+            Assert.IsFalse(viewModel.ShowNewUpdatesToastNotification);
+            Assert.IsFalse(viewModel.ShowWhatsNewAfterUpdates);
         }
 
         [TestMethod]
@@ -296,15 +352,38 @@ namespace ViewModelTests
             var shellPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
             var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
             var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
+            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+            var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
+            var updatingSettings = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "UpdatingSettings.cs"));
 
             StringAssert.Contains(shellPage, "CheckForUpdatesMsgCallback?.Invoke(msg);");
             StringAssert.Contains(settingsWindow, "action == L\"check_for_updates\"");
+            StringAssert.Contains(settingsWindow, "isUpdateCheckThreadRunning.compare_exchange_strong");
             StringAssert.Contains(settingsWindow, "CheckForUpdatesCallback();");
             StringAssert.Contains(updateUtils, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
             StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
             StringAssert.Contains(updateUtils, "HttpCacheReadBehavior::NoCache");
             StringAssert.Contains(updateUtils, "HttpCacheWriteBehavior::NoCache");
             StringAssert.Contains(updateUtils, "Cache-Control");
+            StringAssert.Contains(updateUtils, "#include <common/updating/updateState.h>");
+            StringAssert.Contains(updateUtils, "UpdateState::read()");
+            StringAssert.Contains(updateUtils, "UpdateState::store");
+            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Manual)");
+            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Periodic)");
+            StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic");
+            StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp");
+            StringAssert.Contains(generalViewModel, "Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile");
+            StringAssert.Contains(generalViewModel, "UpdatingSettings.LoadSettings()");
+            StringAssert.Contains(generalViewModel, "ManualUpdateCheckTimeoutMs");
+            StringAssert.Contains(generalViewModel, "IsResultNewerThanBaseline");
+            StringAssert.Contains(generalViewModel, "IsCheckForUpdatesButtonEnabled");
+            StringAssert.Contains(updatingSettings, "FileShare.ReadWrite | FileShare.Delete");
+            Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "Kit release checks must not download installers.");
+            Assert.IsFalse(updateUtils.Contains("PowerToys.Update.exe", StringComparison.Ordinal), "Kit release checks must not launch the updater executable.");
+            Assert.IsFalse(updateUtils.Contains("ShellExecuteEx", StringComparison.Ordinal), "Kit release checks must not launch external updater processes.");
+            Assert.IsFalse(updateUtils.Contains("#include <common/updating/updating.h>", StringComparison.Ordinal), "Kit should reuse only the update-state file model, not the full updater library.");
+            Assert.IsFalse(generalViewModel.Contains("QueueUpdateCheckResultRefresh", StringComparison.Ordinal), "Settings should rely on the existing UpdateState.json watcher instead of a manual polling loop.");
+            Assert.IsFalse(generalViewModel.Contains("UpdateCheckMinimumDisplayMs", StringComparison.Ordinal), "Settings should not add artificial update-check timing.");
         }
 
         [TestMethod]
@@ -587,7 +666,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse114ReleaseMetadata()
+        public void KitAboutVersionShouldUse115ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -598,7 +677,7 @@ namespace ViewModelTests
             var readmeZh = File.ReadAllText(FindSourceFile("README_zh.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>1.1.4</Version>");
+            StringAssert.Contains(versionProps, "<Version>1.1.5</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -606,16 +685,16 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `1.1.4`.");
+            StringAssert.Contains(readme, "Current Kit version: `1.1.5`.");
             StringAssert.Contains(readme, "## Changelog");
-            StringAssert.Contains(readme, "### 1.1.4");
+            StringAssert.Contains(readme, "### 1.1.5");
             StringAssert.Contains(readme, "GitHub release check");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.1.4`。");
-            StringAssert.Contains(readmeZh, "### 1.1.4");
-            StringAssert.Contains(developmentLog, "## 2026-05-09 Update Check Reliability And 1.1.4 Release Notes");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.1.5`。");
+            StringAssert.Contains(readmeZh, "### 1.1.5");
+            StringAssert.Contains(developmentLog, "## 2026-05-11 Update Check Architecture And 1.1.5 Release Notes");
 
-            Assert.AreEqual("v1.1.4", Helper.GetProductDisplayVersion("v1.1.4", string.Empty));
-            Assert.AreEqual("v1.1.4", Helper.GetProductDisplayVersion("v1.1.4", "Local"));
+            Assert.AreEqual("v1.1.5", Helper.GetProductDisplayVersion("v1.1.5", string.Empty));
+            Assert.AreEqual("v1.1.5", Helper.GetProductDisplayVersion("v1.1.5", "Local"));
         }
 
         [TestMethod]
@@ -637,7 +716,7 @@ namespace ViewModelTests
             Assert.IsFalse(viewModel.IsShowWhatsNewAfterUpdatesCardEnabled);
             Assert.IsFalse(viewModel.IsDownloadAllowed);
             Assert.IsFalse(viewModel.IsUpdatePanelVisible);
-            Assert.AreEqual(string.Empty, viewModel.UpdateCheckedDate);
+            Assert.IsTrue(string.IsNullOrEmpty(viewModel.PowerToysNewAvailableVersion) || viewModel.PowerToysNewAvailableVersion.StartsWith('v'), "A cached update-state file may populate version metadata, but it must not enable updater UI.");
         }
 
         [TestMethod]

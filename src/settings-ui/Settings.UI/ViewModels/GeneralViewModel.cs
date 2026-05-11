@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
@@ -27,18 +28,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
     public partial class GeneralViewModel : PageViewModelBase
     {
         private const bool IsDataDiagnosticsEnabledInKit = false;
-
-        // Two-stage poll: tight 250 ms ticks for the first ~4 s (covers the common fast GitHub
-        // response), then 1 s ticks out to ~30 s for slow networks. Total wall clock ≤ 30 s.
-        private const int UpdateCheckFastPollIntervalMs = 250;
-        private const int UpdateCheckFastPollDurationMs = 4000;
-        private const int UpdateCheckSlowPollIntervalMs = 1000;
-        private const int UpdateCheckTotalTimeoutMs = 30000;
-
-        // Keep the "Checking for updates…" status visible for at least this long even when the
-        // runner answers in a few hundred ms; otherwise the user sees an instant flash that
-        // looks like nothing actually happened.
-        private const int UpdateCheckMinimumDisplayMs = 1200;
+        private const int ManualUpdateCheckTimeoutMs = 30000;
 
         protected override string ModuleName => "GeneralSettings";
 
@@ -86,8 +76,10 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private ISettingsRepository<GeneralSettings> _settingsRepository;
         private Microsoft.UI.Dispatching.DispatcherQueue _dispatcherQueue;
+        private IFileSystemWatcher _fileWatcher;
         private bool _deferredStartupMaintenanceQueued;
-        private int _updateCheckRefreshVersion;
+        private int _manualUpdateCheckRequestId;
+        private DateTime? _manualUpdateCheckBaselineLastChecked;
 
         private Func<Task<string>> PickSingleFolderDialog { get; }
 
@@ -114,7 +106,11 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             _dispatcherQueue = GetDispatcherQueue();
 
             GeneralSettingsConfig = settingsRepository.SettingsConfig;
-            UpdatingSettingsConfig = new UpdatingSettings();
+            UpdatingSettingsConfig = UpdatingSettings.LoadSettings();
+            if (UpdatingSettingsConfig == null)
+            {
+                UpdatingSettingsConfig = new UpdatingSettings();
+            }
 
             // set the callback functions value to handle outgoing IPC message.
             SendConfigMSG = ipcMSGCallBackFunc;
@@ -177,16 +173,21 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             _isAdmin = isAdmin;
 
-            _updatingState = UpdatingSettings.UpdatingState.UpToDate;
-            _newAvailableVersion = string.Empty;
-            _newAvailableVersionLink = string.Empty;
-            _updateCheckedDate = string.Empty;
+            _updatingState = UpdatingSettingsConfig.State;
+            _newAvailableVersion = UpdatingSettingsConfig.NewVersion;
+            _newAvailableVersionLink = UpdatingSettingsConfig.ReleasePageLink ?? string.Empty;
+            _updateCheckedDate = UpdatingSettingsConfig.LastCheckedDateLocalized;
 
             _newUpdatesToastIsGpoDisabled = GPOWrapper.GetDisableNewUpdateToastValue() == GpoRuleConfigured.Enabled;
             _autoDownloadUpdatesIsGpoDisabled = GPOWrapper.GetDisableAutomaticUpdateDownloadValue() == GpoRuleConfigured.Enabled;
             _experimentationIsGpoDisallowed = GPOWrapper.GetAllowExperimentationValue() == GpoRuleConfigured.Disabled;
             _showWhatsNewAfterUpdatesIsGpoDisabled = GPOWrapper.GetDisableShowWhatsNewAfterUpdatesValue() == GpoRuleConfigured.Enabled;
             _enableDataDiagnosticsIsGpoDisallowed = GPOWrapper.GetAllowDataDiagnosticsValue() == GpoRuleConfigured.Disabled;
+
+            if (dispatcherAction != null)
+            {
+                _fileWatcher = Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile, dispatcherAction);
+            }
 
             InitializeLanguages();
         }
@@ -720,6 +721,29 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
         }
 
+        public bool IsCheckingForUpdates
+        {
+            get
+            {
+                return _isCheckingForUpdates;
+            }
+
+            private set
+            {
+                if (_isCheckingForUpdates != value)
+                {
+                    _isCheckingForUpdates = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsCheckForUpdatesButtonEnabled));
+                }
+            }
+        }
+
+        public bool IsCheckForUpdatesButtonEnabled
+        {
+            get => !IsCheckingForUpdates;
+        }
+
         public string LastSettingsBackupDate
         {
             get
@@ -897,29 +921,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                         || _updatingState == UpdatingSettings.UpdatingState.ReadyToInstall)
                         && PowerToysNewAvailableVersionUri != null;
             }
-        }
-
-        public bool IsCheckingForUpdates
-        {
-            get
-            {
-                return _isCheckingForUpdates;
-            }
-
-            private set
-            {
-                if (_isCheckingForUpdates != value)
-                {
-                    _isCheckingForUpdates = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(IsCheckForUpdatesButtonEnabled));
-                }
-            }
-        }
-
-        public bool IsCheckForUpdatesButtonEnabled
-        {
-            get => !_isCheckingForUpdates;
         }
 
         public string PowerToysNewAvailableVersion
@@ -1216,93 +1217,90 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private void CheckForUpdatesClick()
         {
-            // Capture the timestamp the runner had written before this click. We will only accept a
-            // result whose LastCheckedDateTime is strictly newer than this baseline — otherwise the
-            // periodic worker (or a previous click) could let us show a stale "Up to date" instantly,
-            // which makes the button feel like it's lying.
-            var baselineLastChecked = UpdatingSettings.LoadSettings()?.LastCheckedDateTime;
-            var refreshVersion = Interlocked.Increment(ref _updateCheckRefreshVersion);
+            if (IsCheckingForUpdates)
+            {
+                return;
+            }
+
+            _manualUpdateCheckBaselineLastChecked = UpdatingSettings.LoadSettings()?.LastCheckedDateTime;
+            var requestId = Interlocked.Increment(ref _manualUpdateCheckRequestId);
             IsCheckingForUpdates = true;
             ShowUpdateCheckMessage(GetResourceString("General_CheckingForUpdates/Text"), "Informational", true);
 
             var dataToSend = JsonSerializer.Serialize(ActionMessage.Create("check_for_updates"), SourceGenerationContextContext.Default.ActionMessage);
-            SendCheckForUpdatesConfigMSG(dataToSend);
-            QueueUpdateCheckResultRefresh(baselineLastChecked, refreshVersion);
+            try
+            {
+                SendCheckForUpdatesConfigMSG(dataToSend);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to send Kit update check IPC message.", ex);
+                CompleteManualUpdateCheckAsFailed(requestId);
+                return;
+            }
+
+            QueueManualUpdateCheckTimeout(requestId, _manualUpdateCheckBaselineLastChecked);
         }
 
-        private void QueueUpdateCheckResultRefresh(DateTime? baselineLastChecked, int refreshVersion)
+        private void ShowUpdateCheckMessage(string message, string severity, bool visible)
+        {
+            UpdateCheckMessageSeverity = severity;
+            UpdateCheckMessage = message;
+            UpdateCheckMessageVisible = visible;
+        }
+
+        private void QueueManualUpdateCheckTimeout(int requestId, DateTime? baselineLastChecked)
         {
             _ = Task.Run(async () =>
             {
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                UpdatingSettings freshResult = null;
+                await Task.Delay(ManualUpdateCheckTimeoutMs).ConfigureAwait(false);
+                var updateSettings = LoadUpdatingSettingsWithRetry();
 
-                while (stopwatch.ElapsedMilliseconds < UpdateCheckTotalTimeoutMs)
+                RunOnViewModelThread(() =>
                 {
-                    var delay = stopwatch.ElapsedMilliseconds < UpdateCheckFastPollDurationMs
-                        ? UpdateCheckFastPollIntervalMs
-                        : UpdateCheckSlowPollIntervalMs;
-
-                    await Task.Delay(delay).ConfigureAwait(false);
-
-                    if (refreshVersion != _updateCheckRefreshVersion)
+                    if (requestId != _manualUpdateCheckRequestId || !IsCheckingForUpdates)
                     {
                         return;
                     }
 
-                    var updateSettings = UpdatingSettings.LoadSettings();
                     if (IsResultNewerThanBaseline(updateSettings, baselineLastChecked))
                     {
-                        freshResult = updateSettings;
-                        break;
+                        RefreshUpdatingState(updateSettings);
                     }
-                }
-
-                if (refreshVersion != _updateCheckRefreshVersion)
-                {
-                    return;
-                }
-
-                // Hold the "Checking…" status long enough for the user to register that work happened,
-                // even if GitHub came back in 200 ms.
-                var remaining = UpdateCheckMinimumDisplayMs - (int)stopwatch.ElapsedMilliseconds;
-                if (remaining > 0)
-                {
-                    await Task.Delay(remaining).ConfigureAwait(false);
-                    if (refreshVersion != _updateCheckRefreshVersion)
+                    else
                     {
-                        return;
+                        CompleteManualUpdateCheckAsFailed(requestId);
                     }
-                }
-
-                if (freshResult != null)
-                {
-                    RunOnViewModelThread(() =>
-                    {
-                        RefreshUpdatingState(freshResult, true);
-                        IsCheckingForUpdates = false;
-                    });
-                }
-                else
-                {
-                    RunOnViewModelThread(() =>
-                    {
-                        ShowUpdateCheckMessage(GetResourceString("General_CantCheck/Title"), "Warning", true);
-                        IsCheckingForUpdates = false;
-                    });
-                }
+                });
             });
         }
 
-        private static bool IsResultNewerThanBaseline(UpdatingSettings updateSettings, DateTime? baseline)
+        private void CompleteManualUpdateCheckAsFailed(int requestId)
         {
-            var current = updateSettings?.LastCheckedDateTime;
-            if (!current.HasValue)
+            if (requestId != _manualUpdateCheckRequestId)
+            {
+                return;
+            }
+
+            ShowUpdateCheckMessage(GetResourceString("General_CantCheck/Title"), "Error", true);
+            CompleteManualUpdateCheck();
+        }
+
+        private void CompleteManualUpdateCheck()
+        {
+            _manualUpdateCheckBaselineLastChecked = null;
+            IsCheckingForUpdates = false;
+        }
+
+        private static bool IsResultNewerThanBaseline(UpdatingSettings updateSettings, DateTime? baselineLastChecked)
+        {
+            var lastChecked = updateSettings?.LastCheckedDateTime;
+            if (!lastChecked.HasValue)
             {
                 return false;
             }
 
-            return !baseline.HasValue || current.Value > baseline.Value;
+            return !baselineLastChecked.HasValue || lastChecked.Value > baselineLastChecked.Value;
         }
 
         private void RunOnViewModelThread(Action action)
@@ -1313,13 +1311,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
 
             action();
-        }
-
-        private void ShowUpdateCheckMessage(string message, string severity, bool visible)
-        {
-            UpdateCheckMessageSeverity = severity;
-            UpdateCheckMessage = message;
-            UpdateCheckMessageVisible = visible;
         }
 
         /// <summary>
@@ -1396,16 +1387,33 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         public void RefreshUpdatingState()
         {
+            _ = RefreshUpdatingStateFromDiskAsync();
+        }
+
+        private async Task RefreshUpdatingStateFromDiskAsync()
+        {
+            var updateSettings = await Task.Run(LoadUpdatingSettingsWithRetry).ConfigureAwait(false);
+            if (updateSettings == null)
+            {
+                return;
+            }
+
+            RunOnViewModelThread(() => RefreshUpdatingState(updateSettings));
+        }
+
+        private static UpdatingSettings LoadUpdatingSettingsWithRetry()
+        {
             var updateSettings = UpdatingSettings.LoadSettings();
-            RefreshUpdatingState(updateSettings);
+            for (int i = 0; i < 3 && updateSettings == null; i++)
+            {
+                Thread.Sleep(100);
+                updateSettings = UpdatingSettings.LoadSettings();
+            }
+
+            return updateSettings;
         }
 
         public void RefreshUpdatingState(UpdatingSettings updateSettings)
-        {
-            RefreshUpdatingState(updateSettings, false);
-        }
-
-        private void RefreshUpdatingState(UpdatingSettings updateSettings, bool isCurrentManualCheckResult)
         {
             if (updateSettings == null)
             {
@@ -1417,13 +1425,14 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             PowerToysNewAvailableVersion = updateSettings.NewVersion;
             PowerToysNewAvailableVersionLink = updateSettings.ReleasePageLink ?? string.Empty;
             UpdateCheckedDate = updateSettings.LastCheckedDateLocalized;
-            var shouldUpdateStatusMessage = isCurrentManualCheckResult || !IsCheckingForUpdates;
+            var isManualCheckResult = IsCheckingForUpdates && IsResultNewerThanBaseline(updateSettings, _manualUpdateCheckBaselineLastChecked);
+            var canShowCachedUpdate = !IsCheckingForUpdates || isManualCheckResult;
 
             switch (updateSettings.State)
             {
                 case UpdatingSettings.UpdatingState.ReadyToDownload:
                 case UpdatingSettings.UpdatingState.ReadyToInstall:
-                    if (shouldUpdateStatusMessage)
+                    if (canShowCachedUpdate)
                     {
                         var version = string.IsNullOrEmpty(updateSettings.NewVersion) ? string.Empty : $" {updateSettings.NewVersion}";
                         ShowUpdateCheckMessage($"{GetResourceString("General_NewVersionAvailable/Title")}{version}", "Success", true);
@@ -1433,7 +1442,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
                 case UpdatingSettings.UpdatingState.NetworkError:
                 case UpdatingSettings.UpdatingState.ErrorDownloading:
-                    if (shouldUpdateStatusMessage)
+                    if (isManualCheckResult)
                     {
                         ShowUpdateCheckMessage(GetResourceString("General_CantCheck/Title"), "Error", true);
                     }
@@ -1442,12 +1451,17 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
                 case UpdatingSettings.UpdatingState.UpToDate:
                 default:
-                    if (shouldUpdateStatusMessage && (updateSettings.LastCheckedDateTime.HasValue || UpdateCheckMessageVisible))
+                    if (isManualCheckResult)
                     {
                         ShowUpdateCheckMessage(BuildUpToDateMessage(updateSettings), "Success", true);
                     }
 
                     break;
+            }
+
+            if (isManualCheckResult)
+            {
+                CompleteManualUpdateCheck();
             }
         }
 
@@ -1467,8 +1481,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             base.OnPageLoaded();
 
-            // Reflect whatever the runner's periodic update worker has cached, so the user sees
-            // an existing "update available" / network-error state without first clicking Check.
             var cached = UpdatingSettings.LoadSettings();
             if (cached != null)
             {

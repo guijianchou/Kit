@@ -3,17 +3,18 @@
 #include "UpdateUtils.h"
 #include "tray_icon.h"
 
-#include <common/SettingsAPI/settings_helpers.h>
 #include <common/logger/logger.h>
 #include <common/notifications/notifications.h>
+#include <common/updating/updateState.h>
 #include <common/utils/json.h>
 #include <common/utils/timeutil.h>
 #include <common/version/helper.h>
 #include <common/version/version.h>
 
-#include <filesystem>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <thread>
 
 #include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.Web.Http.h>
@@ -26,20 +27,14 @@ namespace
     constexpr wchar_t KitReleasesPage[] = L"https://github.com/guijianchou/Kit/releases";
     constexpr wchar_t GitHubHtmlUrlField[] = L"html_url";
     constexpr wchar_t KitReleaseCheckUserAgent[] = L"Kit release checker";
-    constexpr wchar_t LastCheckedField[] = L"githubUpdateLastCheckedDate";
-    constexpr wchar_t ReleasePageField[] = L"releasePageUrl";
-    constexpr wchar_t StateField[] = L"state";
-    constexpr wchar_t UpdateStateFileName[] = L"UpdateState.json";
     constexpr std::wstring_view KitUpdateToastTag = L"KitUpdateAvailable";
     constexpr auto checkInterval = std::chrono::hours(24);
+    constexpr auto idlePollInterval = std::chrono::hours(1);
 
-    enum class UpdatingState
+    enum class UpdateCheckMode
     {
-        UpToDate = 0,
-        ErrorDownloading = 1,
-        ReadyToDownload = 2,
-        ReadyToInstall = 3,
-        NetworkError = 4,
+        Periodic,
+        Manual,
     };
 
     struct LatestReleaseInfo
@@ -50,53 +45,6 @@ namespace
     };
 
     std::mutex updateCheckMutex;
-
-    std::filesystem::path get_update_state_path()
-    {
-        std::filesystem::path path{ PTSettingsHelper::get_root_save_folder_location() };
-        path.append(UpdateStateFileName);
-        return path;
-    }
-
-    json::JsonObject load_update_state()
-    {
-        const auto state = json::from_file(get_update_state_path().wstring());
-        return state.has_value() ? *state : json::JsonObject{};
-    }
-
-    void save_update_state(const json::JsonObject& state)
-    {
-        json::to_file(get_update_state_path().wstring(), state);
-    }
-
-    std::optional<std::time_t> get_last_checked(const json::JsonObject& state)
-    {
-        try
-        {
-            return timeutil::from_string(state.GetNamedString(LastCheckedField, L"").c_str());
-        }
-        catch (...)
-        {
-            return std::nullopt;
-        }
-    }
-
-    void stamp_last_checked(json::JsonObject& state)
-    {
-        state.SetNamedValue(LastCheckedField, json::value(timeutil::to_string(timeutil::now())));
-    }
-
-    bool should_check_now(const json::JsonObject& state)
-    {
-        const auto lastChecked = get_last_checked(state);
-        if (!lastChecked.has_value())
-        {
-            return true;
-        }
-
-        const auto lastCheckedTime = std::chrono::system_clock::from_time_t(*lastChecked);
-        return std::chrono::system_clock::now() - lastCheckedTime >= checkInterval;
-    }
 
     VersionHelper current_version()
     {
@@ -114,58 +62,44 @@ namespace
         return VersionHelper::fromString(std::wstring_view{ releasePage }.substr(lastSlash + 1));
     }
 
-    bool is_saved_update_available(const json::JsonObject& state)
+    bool is_update_available(const UpdateState& state)
     {
-        try
-        {
-            const auto stateValue = static_cast<UpdatingState>(static_cast<int>(state.GetNamedNumber(StateField, 0)));
-            if (stateValue != UpdatingState::ReadyToDownload && stateValue != UpdatingState::ReadyToInstall)
-            {
-                return false;
-            }
-
-            const std::wstring releasePage = state.GetNamedString(ReleasePageField, L"").c_str();
-            const auto savedVersion = version_from_release_page(releasePage);
-            return savedVersion.has_value() && *savedVersion > current_version();
-        }
-        catch (...)
+        if (state.state != UpdateState::readyToDownload && state.state != UpdateState::readyToInstall)
         {
             return false;
         }
+
+        const auto savedVersion = version_from_release_page(state.releasePageUrl);
+        return savedVersion.has_value() && *savedVersion > current_version();
     }
 
-    bool is_same_saved_update(const json::JsonObject& state, const VersionHelper& version)
+    bool is_same_saved_update(const UpdateState& state, const VersionHelper& version)
     {
-        try
-        {
-            const auto stateValue = static_cast<UpdatingState>(static_cast<int>(state.GetNamedNumber(StateField, 0)));
-            if (stateValue != UpdatingState::ReadyToDownload && stateValue != UpdatingState::ReadyToInstall)
-            {
-                return false;
-            }
-
-            const std::wstring releasePage = state.GetNamedString(ReleasePageField, L"").c_str();
-            const auto savedVersion = version_from_release_page(releasePage);
-            return savedVersion.has_value() && *savedVersion == version;
-        }
-        catch (...)
+        if (state.state != UpdateState::readyToDownload && state.state != UpdateState::readyToInstall)
         {
             return false;
         }
+
+        const auto savedVersion = version_from_release_page(state.releasePageUrl);
+        return savedVersion.has_value() && *savedVersion == version;
+    }
+
+    bool should_check_now(const UpdateState& state)
+    {
+        if (!state.githubUpdateLastCheckedDate.has_value())
+        {
+            return true;
+        }
+
+        const auto lastCheckedTime = std::chrono::system_clock::from_time_t(*state.githubUpdateLastCheckedDate);
+        return std::chrono::system_clock::now() - lastCheckedTime >= checkInterval;
     }
 
     void set_update_badge(bool available)
     {
         const auto apply = [](PVOID data) {
             std::unique_ptr<bool> value{ static_cast<bool*>(data) };
-            if (*value)
-            {
-                set_tray_icon_update_available(true);
-            }
-            else
-            {
-                set_tray_icon_update_available(false);
-            }
+            set_tray_icon_update_available(*value);
         };
 
         auto value = std::make_unique<bool>(available);
@@ -175,14 +109,7 @@ namespace
             return;
         }
 
-        if (available)
-        {
-            set_tray_icon_update_available(true);
-        }
-        else
-        {
-            set_tray_icon_update_available(false);
-        }
+        set_tray_icon_update_available(available);
     }
 
     winrt::hstring fetch_latest_release_body()
@@ -228,32 +155,36 @@ namespace
 
     void save_update_available(const LatestReleaseInfo& release)
     {
-        json::JsonObject state;
-        state.SetNamedValue(StateField, json::value(static_cast<int>(UpdatingState::ReadyToDownload)));
-        state.SetNamedValue(ReleasePageField, json::value(release.releasePage));
-        state.SetNamedValue(L"downloadedInstallerFilename", json::value(L""));
-        stamp_last_checked(state);
-        save_update_state(state);
+        UpdateState::store([&](UpdateState& state) {
+            state.state = UpdateState::readyToDownload;
+            state.releasePageUrl = release.releasePage;
+            state.downloadedInstallerFilename = {};
+            state.githubUpdateLastCheckedDate.emplace(timeutil::now());
+        });
     }
 
     void save_up_to_date()
     {
-        json::JsonObject state;
-        state.SetNamedValue(StateField, json::value(static_cast<int>(UpdatingState::UpToDate)));
-        state.SetNamedValue(ReleasePageField, json::value(L""));
-        state.SetNamedValue(L"downloadedInstallerFilename", json::value(L""));
-        stamp_last_checked(state);
-        save_update_state(state);
+        UpdateState::store([](UpdateState& state) {
+            state.state = UpdateState::upToDate;
+            state.releasePageUrl = {};
+            state.downloadedInstallerFilename = {};
+            state.githubUpdateLastCheckedDate.emplace(timeutil::now());
+        });
     }
 
-    void save_network_error()
+    void save_check_failure(UpdateCheckMode mode)
     {
-        json::JsonObject state;
-        state.SetNamedValue(StateField, json::value(static_cast<int>(UpdatingState::NetworkError)));
-        state.SetNamedValue(ReleasePageField, json::value(L""));
-        state.SetNamedValue(L"downloadedInstallerFilename", json::value(L""));
-        stamp_last_checked(state);
-        save_update_state(state);
+        UpdateState::store([&](UpdateState& state) {
+            if (mode == UpdateCheckMode::Manual)
+            {
+                state.state = UpdateState::networkError;
+                state.releasePageUrl = {};
+                state.downloadedInstallerFilename = {};
+            }
+
+            state.githubUpdateLastCheckedDate.emplace(timeutil::now());
+        });
     }
 
     void show_update_available_toast(const LatestReleaseInfo& release)
@@ -271,14 +202,14 @@ namespace
             release.releasePage);
     }
 
-    void check_for_updates(bool force)
+    void check_for_updates(UpdateCheckMode mode)
     {
         std::scoped_lock lock{ updateCheckMutex };
 
-        auto previousState = load_update_state();
-        if (!force && !should_check_now(previousState))
+        const auto previousState = UpdateState::read();
+        if (mode == UpdateCheckMode::Periodic && !should_check_now(previousState))
         {
-            set_update_badge(is_saved_update_available(previousState));
+            set_update_badge(is_update_available(previousState));
             return;
         }
 
@@ -288,8 +219,8 @@ namespace
             if (!latestRelease.has_value())
             {
                 Logger::warn(L"Kit update check did not return a parseable release.");
-                save_network_error();
-                set_update_badge(is_saved_update_available(previousState));
+                save_check_failure(mode);
+                set_update_badge(is_update_available(previousState));
                 return;
             }
 
@@ -306,7 +237,7 @@ namespace
             save_update_available(*latestRelease);
             set_update_badge(true);
 
-            if (!alreadyNotified)
+            if (mode == UpdateCheckMode::Periodic && !alreadyNotified)
             {
                 show_update_available_toast(*latestRelease);
             }
@@ -314,8 +245,8 @@ namespace
         catch (...)
         {
             Logger::warn(L"Kit update check failed.");
-            save_network_error();
-            set_update_badge(is_saved_update_available(previousState));
+            save_check_failure(mode);
+            set_update_badge(is_update_available(previousState));
         }
     }
 }
@@ -325,22 +256,20 @@ void PeriodicUpdateWorker()
     std::thread([] {
         winrt::init_apartment(winrt::apartment_type::multi_threaded);
 
-        set_update_badge(is_saved_update_available(load_update_state()));
+        set_update_badge(is_update_available(UpdateState::read()));
 
         while (true)
         {
-            check_for_updates(false);
-            std::this_thread::sleep_for(std::chrono::hours(1));
+            check_for_updates(UpdateCheckMode::Periodic);
+            std::this_thread::sleep_for(idlePollInterval);
         }
     }).detach();
 }
 
 void CheckForUpdatesCallback()
 {
-    std::thread([] {
-        winrt::init_apartment(winrt::apartment_type::multi_threaded);
-        check_for_updates(true);
-    }).detach();
+    winrt::init_apartment(winrt::apartment_type::multi_threaded);
+    check_for_updates(UpdateCheckMode::Manual);
 }
 
 SHELLEXECUTEINFOW LaunchPowerToysUpdate(const wchar_t*)

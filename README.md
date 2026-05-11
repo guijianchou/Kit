@@ -14,16 +14,23 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `1.1.4`.
+Current Kit version: `1.1.5`.
 
 ## Changelog
+
+### 1.1.5
+
+- Updates: Reworked release checking back onto the upstream `UpdateState.json` boundary: the runner checks GitHub and writes state, while Settings watches/reloads that state.
+- Settings: Kept manual checks in "Checking for updates" until the watched update-state file reports a newer result or the request times out, preventing cached update state from replacing an in-flight check.
+- Settings: Disabled repeated Check for updates clicks while a check is running and kept the release link visible only when a newer release is available.
+- Build: Made the shared update-state storage compile cleanly in the runner without pulling in the full updater project.
+- Tests: Added regression coverage for the upstream-style update-state boundary, cached-state race protection, and `1.1.5` README/version/development-log metadata.
 
 ### 1.1.4
 
 - Updates: Forced GitHub release checks to bypass HTTP cache so offline manual checks cannot reuse stale cached responses and report "up to date".
-- Settings: Kept manual checks in "Checking for updates" until a fresh result or timeout arrives, preventing cached update state from replacing an in-flight check.
-- Settings: Disabled repeated Check for updates clicks while a check is running and kept the release link visible only when a newer release is available.
-- Tests: Added regression coverage for no-cache release checks, cached-state race protection, and `1.1.4` README/version/development-log metadata.
+- Settings: Prevented stale cached "up to date" state from replacing an in-flight manual check result.
+- Tests: Added regression coverage for no-cache release checks and `1.1.4` README/version/development-log metadata.
 
 ### 1.1.3
 
@@ -170,7 +177,7 @@ The latest settings pass keeps the active module behavior closer to upstream Pow
 
 ## General and Home UI Scope
 
-General keeps the useful PowerToys settings structure but removes automatic update and telemetry controls. The About section is intentionally reduced to small version text at the bottom. Home uses the PowerToys-style intro, module list, Quick Access, and shortcuts layout, but only for Kit modules.
+General keeps the useful PowerToys settings structure but removes automatic update and telemetry controls. The About section shows the Kit version, GitHub repository, and a check-only release prompt. Home uses the PowerToys-style intro, module list, Quick Access, and shortcuts layout, but only for Kit modules.
 
 Visible UI should use English Kit text. Keep `PowerToys` only where it is still required for build-facing namespaces, assembly names, module interface names, upstream compatibility, or origin attribution.
 
@@ -187,8 +194,8 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 - Repair or exclude stale upstream tests only when the missing production surface is intentionally removed. `Settings.UI.UnitTests` now excludes ViewModel tests for PowerToys modules that are not part of the active Kit Settings surface.
 - Keep UI state derived from real settings and module state. Home should show enabled modules consistently, and each Quick Access command should either perform a real action or navigate to the module settings page.
 - Keep Kit storage, backup, window title, and visible text separate from the installed official PowerToys app.
-- Do not re-enable automatic update or telemetry behavior in Kit.
-- Keep updater entry points and settings telemetry inert. The runner updater callbacks are no-ops, update toast/menu actions return without launching an updater, and the old settings telemetry source remains unstarted unless a future change deliberately replaces it with a local-only path.
+- Do not re-enable automatic download/install or telemetry behavior in Kit.
+- Keep installer/updater entry points and settings telemetry inert. The runner may check GitHub releases and write `UpdateState.json`, but `update_now`, installer staging, updater executable launch paths, and the old settings telemetry source must remain inactive unless a future change deliberately replaces them with local-only behavior.
 - Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
 - Run C++ module-interface verification sequentially, or through the solution scheduler, when projects share native outputs such as `Version.pdb` and `PowerToys.Interop` tracking logs. Independent parallel MSBuild invocations can race those shared files and report false build failures.
 - Keep documentation close to the implementation after each stabilization pass. The module-registration lists are intentionally manual, so stale docs are a real integration risk.

@@ -100,6 +100,7 @@ namespace ViewModelTests
         {
             var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
             var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
 
             StringAssert.Contains(runnerProject, "UpdateUtils.cpp");
@@ -108,11 +109,14 @@ namespace ViewModelTests
             StringAssert.Contains(updateUtils, "html_url");
             StringAssert.Contains(updateUtils, "githubUpdateLastCheckedDate");
             StringAssert.Contains(updateUtils, "std::chrono::hours(24)");
-            StringAssert.Contains(updateUtils, "set_tray_icon_update_available(true)");
+            StringAssert.Contains(updateUtils, "set_update_badge(true)");
             StringAssert.Contains(updateUtils, "notifications::show_toast_with_activations");
             StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
-            StringAssert.Contains(updateUtils, "void save_network_error()");
-            StringAssert.Contains(updateUtils, "save_network_error();");
+            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Periodic)");
+            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Manual)");
+            StringAssert.Contains(updateUtils, "UpdateState::store");
+            StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic");
+            StringAssert.Contains(settingsWindow, "isUpdateCheckThreadRunning.compare_exchange_strong");
             Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "Kit release check must not download installers.");
             Assert.IsFalse(updateUtils.Contains("LaunchPowerToysUpdate", StringComparison.Ordinal) && updateUtils.Contains("ShellExecuteEx", StringComparison.Ordinal), "Kit release check must not launch an updater.");
         }
@@ -133,7 +137,7 @@ namespace ViewModelTests
             StringAssert.Contains(trayIcon, "update_available = available;");
             StringAssert.Contains(trayIcon, "LoadIcon(h_instance, MAKEINTRESOURCE(available ? APPICON_UPDATE : APPICON))");
             StringAssert.Contains(trayIcon, "Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);");
-            Assert.IsFalse(runnerProject.Contains(@"..\common\updating\updateState.cpp", StringComparison.Ordinal), "Runner should not compile update-state storage just to keep the badge API.");
+            StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp", "Runner should reuse upstream's update-state file boundary so Settings can watch UpdateState.json.");
             StringAssert.Contains(updateState, @"Local\\KitRunnerUpdateStateMutex");
             Assert.IsFalse(runnerProject.Contains(@"..\common\updating\updating.vcxproj", StringComparison.Ordinal), "Runner should not restore the GitHub updater project reference just to show the badge.");
             Assert.IsFalse(updateState.Contains("PowerToysRunnerUpdateStateMutex", StringComparison.Ordinal), "Kit update-state mutex must not share the PowerToys runner mutex.");

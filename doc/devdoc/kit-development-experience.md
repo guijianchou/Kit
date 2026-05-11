@@ -2,13 +2,22 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-05-11 Update Check Architecture And 1.1.5 Release Notes
+
+This pass moved Kit from 1.1.4 to 1.1.5 and removed the patch-on-patch update-check flow that had drifted away from the local PowerToys-main shape.
+
+- Runner owns the active release check and writes the same upstream-style `UpdateState.json` contract that Settings already knows how to watch. Settings no longer writes update results or owns a polling loop.
+- Manual checks and daily checks share the same runner code path, guarded so repeated clicks cannot queue parallel GitHub requests.
+- Settings captures the pre-click update-state timestamp and accepts only a newer result for the current manual check. File watcher refreshes normally complete the visible "Checking for updates" state; the timeout path only prevents a lost IPC/file event from leaving the UI stuck forever.
+- The release-check boundary remains GitHub prompt only: no automatic download, installer staging, updater executable, or `update_now` flow is restored.
+- README, README_zh, Version.props, and the version metadata regression test now use Kit version `1.1.5`.
+
 ## 2026-05-09 Update Check Reliability And 1.1.4 Release Notes
 
 This pass moved Kit from 1.1.3 to 1.1.4 and fixed the manual update check path that could report "up to date" from cached data while the machine was offline.
 
 - Runner release checks now use a WinRT HTTP client with no-cache read and write behavior, plus `Cache-Control` and `Pragma` no-cache headers for GitHub's latest release API.
-- Settings captures the pre-click update-state timestamp and accepts only a newer result for the current manual check, so page-load cached state cannot overwrite the visible in-flight "Checking for updates" status.
-- The Check for updates button is disabled while a check is polling, and timeout or network failure now surfaces the existing cannot-check message instead of silently reusing an old up-to-date state.
+- Settings prevents page-load cached state from overwriting the visible in-flight "Checking for updates" status.
 - README, README_zh, Version.props, and the version metadata regression test now use Kit version `1.1.4`.
 
 ## Phase One Result
@@ -91,7 +100,7 @@ This pass moved Kit from the 1.1.0 PowerDisplay baseline to the 1.1.1 build-alig
 - `Directory.Packages.props` now follows the local PowerToys-main .NET 10 central package pins, including .NET 10 `Microsoft.Extensions.*`, `System.*`, WindowsAppSDK, and analyzer package versions.
 - Settings build entry points were adjusted so targeted Settings builds restore and build `Settings.UI.XamlIndexBuilder` correctly after the net10 migration.
 - Build scripts and developer docs now reference the .NET 10 Settings target framework and PowerToys Run plugin target framework.
-- The 1.1.1 changelog explicitly keeps Kit's updater boundary: the tray can render an update badge from an existing Kit update state, but periodic checks, downloads, updater launches, and telemetry remain disabled.
+- The 1.1.1 changelog originally kept Kit's updater boundary fully inert. Starting in 1.1.3, only GitHub release checking is active; downloads, updater launches, and telemetry remain disabled.
 - `Settings.UI.UnitTests` now covers the .NET 10 build-layer expectations, README version metadata, and the no-updater/no-telemetry boundary.
 - Verification used Visual Studio 18 MSBuild for Settings unit tests, Quick Access, UITestAutomation, and the runner, plus VSTest for the full Settings test assembly.
 
@@ -102,7 +111,7 @@ This pass moved Kit from the 1.1.1 build-alignment baseline to the 1.1.2 startup
 - Runner startup now loads general settings once in `WinMain`, applies them, and passes the same JSON object into initial module enablement.
 - `start_enabled_powertoys` no longer calls `load_general_settings` internally, avoiding a duplicate settings-file read on the startup path.
 - Kit startup no longer reads disabled OOBE/SCOOBE state or writes last-version state when those experiences remain inactive.
-- The tray keeps the existing update-badge API but no longer reads `UpdateState.json` during initialization; the runner also no longer compiles update-state storage just for tray startup.
+- The tray keeps the existing update-badge API but no longer reads `UpdateState.json` during initialization. Current release checking compiles the shared update-state storage in the runner so Settings can watch the same file boundary.
 - Settings startup no longer eagerly constructs the OOBE shell view model.
 - General Settings defers diagnostic ETW cleanup and backup dry-run refresh until after page load, and Shell page search indexing is delayed off the first frame.
 - Home now filters Monitor's status-only activation rows out of the Shortcuts card. Monitor remains in the Home module list and keeps the normal Settings/Quick Access fallback, but it no longer appears beside modules that expose real shortcut actions.
@@ -113,9 +122,9 @@ This pass moved Kit from the 1.1.1 build-alignment baseline to the 1.1.2 startup
 
 This review re-checked the trimmed Kit shell for product-service behavior that should not run in a local self-use fork:
 
-- General Settings keeps the About group as small version text rather than a standalone settings card. The old About links and product-service surfaces are not part of the visible Kit page.
-- Automatic update UI remains removed from General. The backing ViewModel pins update notifications, automatic downloads, and What's New after updates to disabled values; check-for-update, install-update, and update-state refresh handlers are no-ops.
-- Runner updater callbacks are inert. `UpdateUtils.cpp` keeps compatibility symbols, but the periodic worker, callback, and launch helper do not start an update flow.
+- General Settings keeps the About group small and local-purpose: Kit version, GitHub repository, and check-only release status. Product-service surfaces are not part of the visible Kit page.
+- Automatic download/install UI remains removed from General. The backing ViewModel pins update notifications, automatic downloads, and What's New after updates to disabled values; install-update and updater launch handlers are inert.
+- Runner update behavior is limited to GitHub release checking and `UpdateState.json` writes. `UpdateUtils.cpp` keeps compatibility symbols, but the launch helper does not start an updater flow.
 - The update toast URI handler returns an error for `update_now/`, so a stale notification payload cannot launch the updater.
 - Settings telemetry source files still exist from upstream, but `settings_telemetry::init()` is not called by the runner. Do not wire it back in unless a future local-only diagnostics design replaces the upstream send path.
 - ETW trace scaffolding is still present around runner lifetime. Treat it as local trace infrastructure, not as an opt-in telemetry feature; any future removal should be done separately from module compatibility work.

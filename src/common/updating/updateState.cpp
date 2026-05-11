@@ -7,6 +7,8 @@
 #include <common/version/version.h>
 #include <common/SettingsAPI/settings_helpers.h>
 
+#include <filesystem>
+
 namespace
 {
     const wchar_t PERSISTENT_STATE_FILENAME[] = L"\\UpdateState.json";
@@ -68,7 +70,7 @@ UpdateState UpdateState::read()
     else
     {
         std::error_code _;
-        fs::remove(filename, _);
+        std::filesystem::remove(filename, _);
         UpdateState new_state;
         json::to_file(filename, serialize(new_state));
 

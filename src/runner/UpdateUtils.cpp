@@ -28,8 +28,8 @@ namespace
     constexpr wchar_t GitHubHtmlUrlField[] = L"html_url";
     constexpr wchar_t KitReleaseCheckUserAgent[] = L"Kit release checker";
     constexpr std::wstring_view KitUpdateToastTag = L"KitUpdateAvailable";
-    constexpr auto checkInterval = std::chrono::hours(24);
-    constexpr auto idlePollInterval = std::chrono::hours(1);
+    constexpr auto periodicCheckInterval = std::chrono::hours(24);
+    constexpr auto failedRetryInterval = std::chrono::hours(2);
 
     enum class UpdateCheckMode
     {
@@ -92,7 +92,7 @@ namespace
         }
 
         const auto lastCheckedTime = std::chrono::system_clock::from_time_t(*state.githubUpdateLastCheckedDate);
-        return std::chrono::system_clock::now() - lastCheckedTime >= checkInterval;
+        return std::chrono::system_clock::now() - lastCheckedTime >= periodicCheckInterval;
     }
 
     void set_update_badge(bool available)
@@ -191,9 +191,8 @@ namespace
                 state.state = UpdateState::networkError;
                 state.releasePageUrl = {};
                 state.downloadedInstallerFilename = {};
+                state.githubUpdateLastCheckedDate.emplace(timeutil::now());
             }
-
-            state.githubUpdateLastCheckedDate.emplace(timeutil::now());
         });
     }
 
@@ -212,7 +211,7 @@ namespace
             release.releasePage);
     }
 
-    void check_for_updates(UpdateCheckMode mode)
+    bool check_for_updates(UpdateCheckMode mode)
     {
         std::scoped_lock lock{ updateCheckMutex };
 
@@ -220,7 +219,7 @@ namespace
         if (mode == UpdateCheckMode::Periodic && !should_check_now(previousState))
         {
             set_update_badge(is_update_available(previousState));
-            return;
+            return true;
         }
 
         try
@@ -231,7 +230,7 @@ namespace
                 Logger::warn(L"Kit update check did not return a parseable release.");
                 save_check_failure(mode);
                 set_update_badge(is_update_available(previousState));
-                return;
+                return false;
             }
 
             if (latestRelease->version <= current_version())
@@ -239,7 +238,7 @@ namespace
                 Logger::info(L"Kit update check found no newer version.");
                 save_up_to_date();
                 set_update_badge(false);
-                return;
+                return true;
             }
 
             const bool alreadyNotified = is_same_saved_update(previousState, latestRelease->version);
@@ -251,12 +250,15 @@ namespace
             {
                 show_update_available_toast(*latestRelease);
             }
+
+            return true;
         }
         catch (...)
         {
             Logger::warn(L"Kit update check failed.");
             save_check_failure(mode);
             set_update_badge(is_update_available(previousState));
+            return false;
         }
     }
 }
@@ -268,10 +270,28 @@ void PeriodicUpdateWorker()
 
         set_update_badge(is_update_available(UpdateState::read()));
 
+        bool retryAfterFailure = false;
         while (true)
         {
-            check_for_updates(UpdateCheckMode::Periodic);
-            std::this_thread::sleep_for(idlePollInterval);
+            if (retryAfterFailure)
+            {
+                std::this_thread::sleep_for(failedRetryInterval);
+            }
+            else
+            {
+                const auto state = UpdateState::read();
+                if (state.githubUpdateLastCheckedDate.has_value())
+                {
+                    const auto lastCheckedTime = std::chrono::system_clock::from_time_t(*state.githubUpdateLastCheckedDate);
+                    const auto elapsed = std::chrono::system_clock::now() - lastCheckedTime;
+                    if (elapsed > std::chrono::system_clock::duration::zero() && elapsed < periodicCheckInterval)
+                    {
+                        std::this_thread::sleep_for(periodicCheckInterval - elapsed);
+                    }
+                }
+            }
+
+            retryAfterFailure = !check_for_updates(UpdateCheckMode::Periodic);
         }
     }).detach();
 }

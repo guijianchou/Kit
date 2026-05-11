@@ -375,6 +375,11 @@ namespace ViewModelTests
             StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Manual)");
             StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Periodic)");
             StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic");
+            StringAssert.Contains(updateUtils, "periodicCheckInterval = std::chrono::hours(24)");
+            StringAssert.Contains(updateUtils, "failedRetryInterval = std::chrono::hours(2)");
+            StringAssert.Contains(updateUtils, "retryAfterFailure = !check_for_updates(UpdateCheckMode::Periodic)");
+            StringAssert.Contains(updateUtils, "std::this_thread::sleep_for(failedRetryInterval)");
+            Assert.IsFalse(updateUtils.Contains("idlePollInterval", StringComparison.Ordinal), "Periodic checks should sleep until the next meaningful check instead of waking every hour.");
             StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp");
             StringAssert.Contains(generalViewModel, "Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile");
             StringAssert.Contains(generalViewModel, "UpdatingSettings.LoadSettings()");

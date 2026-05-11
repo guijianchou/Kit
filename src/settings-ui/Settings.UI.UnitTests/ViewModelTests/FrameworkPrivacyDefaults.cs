@@ -85,14 +85,14 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void GeneralAboutShouldExposeKitGitHubRepository()
+        public void GeneralShouldExposeKitReleasesWithoutBottomAbout()
         {
             var generalPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
-            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
 
-            StringAssert.Contains(generalPage, "General_Repository");
-            StringAssert.Contains(generalPage, "https://github.com/guijianchou/Kit");
-            StringAssert.Contains(resources, "GitHub repository");
+            StringAssert.Contains(generalPage, "General_VersionAndUpdate");
+            StringAssert.Contains(generalPage, "https://github.com/guijianchou/Kit/releases/");
+            Assert.IsFalse(generalPage.Contains("General_About", StringComparison.Ordinal), "General should not keep a bottom About section.");
+            Assert.IsFalse(generalPage.Contains("General_Repository", StringComparison.Ordinal), "General should not keep repository links in a removed About section.");
         }
 
         [TestMethod]
@@ -109,14 +109,18 @@ namespace ViewModelTests
             StringAssert.Contains(updateUtils, "html_url");
             StringAssert.Contains(updateUtils, "githubUpdateLastCheckedDate");
             StringAssert.Contains(updateUtils, "std::chrono::hours(24)");
+            StringAssert.Contains(updateUtils, "std::chrono::hours(2)");
             StringAssert.Contains(updateUtils, "set_update_badge(true)");
             StringAssert.Contains(updateUtils, "notifications::show_toast_with_activations");
             StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
             StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Periodic)");
             StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Manual)");
+            StringAssert.Contains(updateUtils, "retryAfterFailure = !check_for_updates(UpdateCheckMode::Periodic)");
+            StringAssert.Contains(updateUtils, "std::this_thread::sleep_for(failedRetryInterval)");
             StringAssert.Contains(updateUtils, "UpdateState::store");
             StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic");
             StringAssert.Contains(settingsWindow, "isUpdateCheckThreadRunning.compare_exchange_strong");
+            Assert.IsFalse(updateUtils.Contains("idlePollInterval", StringComparison.Ordinal), "Runner should not wake every hour when the next update check time is known.");
             Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "Kit release check must not download installers.");
             Assert.IsFalse(updateUtils.Contains("LaunchPowerToysUpdate", StringComparison.Ordinal) && updateUtils.Contains("ShellExecuteEx", StringComparison.Ordinal), "Kit release check must not launch an updater.");
         }

@@ -92,7 +92,8 @@ namespace
         }
 
         const auto lastCheckedTime = std::chrono::system_clock::from_time_t(*state.githubUpdateLastCheckedDate);
-        return std::chrono::system_clock::now() - lastCheckedTime >= periodicCheckInterval;
+        const auto elapsed = std::chrono::system_clock::now() - lastCheckedTime;
+        return elapsed < std::chrono::system_clock::duration::zero() || elapsed >= periodicCheckInterval;
     }
 
     void set_update_badge(bool available)

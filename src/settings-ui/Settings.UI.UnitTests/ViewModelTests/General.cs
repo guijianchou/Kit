@@ -684,6 +684,7 @@ namespace ViewModelTests
             var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
             var readme = File.ReadAllText(FindSourceFile("README.md"));
             var readmeZh = File.ReadAllText(FindSourceFile("README_zh.md"));
+            var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
             StringAssert.Contains(versionProps, "<Version>1.1.6</Version>");
@@ -696,10 +697,11 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
             StringAssert.Contains(readme, "Current Kit version: `1.1.6`.");
             StringAssert.Contains(readme, "## Changelog");
-            StringAssert.Contains(readme, "### 1.1.6");
-            StringAssert.Contains(readme, "PowerToys-main-style version/update section");
+            StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
             StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.1.6`。");
-            StringAssert.Contains(readmeZh, "### 1.1.6");
+            StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
+            StringAssert.Contains(changelog, "### 1.1.6");
+            StringAssert.Contains(changelog, "PowerToys-main-style version/update section");
             StringAssert.Contains(developmentLog, "## 2026-05-11 General Update Layout Cleanup And 1.1.6 Release Notes");
 
             Assert.AreEqual("v1.1.6", Helper.GetProductDisplayVersion("v1.1.6", string.Empty));

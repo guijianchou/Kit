@@ -115,6 +115,7 @@ namespace ViewModelTests
             StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
             StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Periodic)");
             StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Manual)");
+            StringAssert.Contains(updateUtils, "elapsed < std::chrono::system_clock::duration::zero()");
             StringAssert.Contains(updateUtils, "retryAfterFailure = !check_for_updates(UpdateCheckMode::Periodic)");
             StringAssert.Contains(updateUtils, "std::this_thread::sleep_for(failedRetryInterval)");
             StringAssert.Contains(updateUtils, "UpdateState::store");

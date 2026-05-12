@@ -6,6 +6,13 @@
 
 ## English
 
+### 1.2.0
+
+- Version: Bumped Kit to `1.2.0`.
+- Updates: Hardened the check-only Kit release scheduler so future-dated last-check values trigger a fresh check instead of causing a tight background loop.
+- Docs: Kept README version metadata and changelog release notes aligned with the source version.
+- Tests: Updated version metadata coverage for the README-to-changelog documentation split.
+
 ### 1.1.6
 
 - General: Restored the PowerToys-main-style version/update section at the top of General while keeping Kit's updater boundary check-only.
@@ -84,6 +91,13 @@
 ## 中文
 
 ## 更新日志
+
+### 1.2.0
+
+- 版本：将 Kit 提升到 `1.2.0`。
+- 更新：加固仅检查更新的 Kit release 调度逻辑，遇到未来时间的 last-check 值会重新检查，而不是触发后台紧循环。
+- 文档：同步 README 版本元数据和 changelog 发布记录。
+- 测试：更新 README 到 changelog 文档拆分后的版本元数据覆盖。
 
 ### 1.1.6
 

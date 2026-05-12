@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `1.1.6`.
+Current Kit version: `1.2.0`.
 
 ## Changelog
 

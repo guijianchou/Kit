@@ -2,6 +2,14 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-05-12 Version 1.2.0 Release Metadata
+
+This pass moved Kit from 1.1.6 to 1.2.0 after the update-check scheduler hardening and documentation cleanup.
+
+- Version.props, README, README_zh, changelog, and the version metadata regression test now use Kit version `1.2.0`.
+- The changelog remains the source for release notes after the README cleanup.
+- The check-only update boundary remains unchanged: Kit checks `https://github.com/guijianchou/Kit/releases` and does not auto-download or launch an updater.
+
 ## 2026-05-11 General Update Layout Cleanup And 1.1.6 Release Notes
 
 This pass moved Kit from 1.1.5 to 1.1.6 and cleaned up the General page update surface after aligning release checking with the local PowerToys-main pattern.

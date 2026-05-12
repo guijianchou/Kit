@@ -675,7 +675,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse116ReleaseMetadata()
+        public void KitAboutVersionShouldUse120ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -687,7 +687,7 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>1.1.6</Version>");
+            StringAssert.Contains(versionProps, "<Version>1.2.0</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -695,17 +695,17 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `1.1.6`.");
+            StringAssert.Contains(readme, "Current Kit version: `1.2.0`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.1.6`。");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.2.0`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
-            StringAssert.Contains(changelog, "### 1.1.6");
-            StringAssert.Contains(changelog, "PowerToys-main-style version/update section");
-            StringAssert.Contains(developmentLog, "## 2026-05-11 General Update Layout Cleanup And 1.1.6 Release Notes");
+            StringAssert.Contains(changelog, "### 1.2.0");
+            StringAssert.Contains(changelog, "Bumped Kit to `1.2.0`");
+            StringAssert.Contains(developmentLog, "## 2026-05-12 Version 1.2.0 Release Metadata");
 
-            Assert.AreEqual("v1.1.6", Helper.GetProductDisplayVersion("v1.1.6", string.Empty));
-            Assert.AreEqual("v1.1.6", Helper.GetProductDisplayVersion("v1.1.6", "Local"));
+            Assert.AreEqual("v1.2.0", Helper.GetProductDisplayVersion("v1.2.0", string.Empty));
+            Assert.AreEqual("v1.2.0", Helper.GetProductDisplayVersion("v1.2.0", "Local"));
         }
 
         [TestMethod]

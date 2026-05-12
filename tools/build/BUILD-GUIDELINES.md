@@ -26,13 +26,6 @@ Tip: Add `D:\PowerToys\tools\build` to your PATH to use the wrappers anywhere.
    - Restore only:
      - `./tools/build/build.ps1 -RestoreOnly`
 
-3) `build-installer.ps1` (use with caution)
-   - Full local packaging pipeline (restore, build, sign MSIX, WiX v5 MSI/bootstrapper).
-   - Auto-inits VS Dev environment. Cleans some output (keeps *.exe) under `installer/`.
-   - Key options: `-PerUser true|false`, `-InstallerSuffix wix5|vnext`.
-   - Example:
-     - `./tools/build/build-installer.ps1 -Platform x64 -Configuration Release -PerUser true -InstallerSuffix wix5`
-
 ## Logs and troubleshooting
 - On failure, see logs next to the solution/project being built:
   - `build.<configuration>.<platform>.all.log` — full text log

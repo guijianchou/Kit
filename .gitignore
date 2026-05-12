@@ -213,8 +213,6 @@ src/settings/settings-html/200.html
 src/settings/settings-html/404.html
 src/common/Telemetry/*.etl
 /src/settings-ui/Settings.UI/Assets/Settings/search.index.json
-/installer/PowerToysSetupVNext/MonacoSRC.wxs
-installer/*/*.wxs.bk
 /MSBuildCacheLogs/
 /src/modules/previewpane/SvgThumbnailProvider/$(SolutionDir)$(Platform)/$(Configuration)/modules/FileExplorerPreview/SvgThumbnailProvider.xml
 /src/modules/powerrename/ui/RCa24464

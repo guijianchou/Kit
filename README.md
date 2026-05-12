@@ -18,78 +18,7 @@ Current Kit version: `1.1.6`.
 
 ## Changelog
 
-### 1.1.6
-
-- General: Restored the PowerToys-main-style version/update section at the top of General while keeping Kit's updater boundary check-only.
-- General: Moved update result messaging below the version/update expander so the in-progress "Checking for updates" row follows the upstream layout.
-- General: Removed the bottom About card because the version is already shown in the update section.
-- Updates: Kept Kit release links on `https://github.com/guijianchou/Kit/releases` and kept automatic download/install actions hidden.
-- Tests: Updated version metadata coverage for `1.1.6` and added regression checks for the cleaned General update/About layout.
-
-### 1.1.5
-
-- Updates: Reworked release checking back onto the upstream `UpdateState.json` boundary: the runner checks GitHub and writes state, while Settings watches/reloads that state.
-- Settings: Kept manual checks in "Checking for updates" until the watched update-state file reports a newer result or the request times out, preventing cached update state from replacing an in-flight check.
-- Settings: Disabled repeated Check for updates clicks while a check is running and kept the release link visible only when a newer release is available.
-- Build: Made the shared update-state storage compile cleanly in the runner without pulling in the full updater project.
-- Tests: Added regression coverage for the upstream-style update-state boundary, cached-state race protection, and `1.1.5` README/version/development-log metadata.
-
-### 1.1.4
-
-- Updates: Forced GitHub release checks to bypass HTTP cache so offline manual checks cannot reuse stale cached responses and report "up to date".
-- Settings: Prevented stale cached "up to date" state from replacing an in-flight manual check result.
-- Tests: Added regression coverage for no-cache release checks and `1.1.4` README/version/development-log metadata.
-
-### 1.1.3
-
-- General: Added an About GitHub repository link and a manual check-for-updates entry point aligned with the version text.
-- Updates: Added a check-only GitHub release check against `https://github.com/guijianchou/Kit/releases`, with a daily background check and toast only when a newer release is available.
-- Updates: Kept Kit's updater boundary check-only; it does not automatically download, install, or launch an updater.
-- Settings: Increased the About version and repository text size from caption text to body text.
-- Tests: Added regression coverage for the Kit release-check IPC path, About feedback state, and `1.1.3` README/version metadata.
-
-### 1.1.2
-
-- Startup: Reduced startup and first-frame work by reusing the already-loaded general settings object for initial module enablement instead of reading settings twice.
-- Startup: Removed inactive OOBE/SCOOBE version-state reads and writes from Kit runner startup.
-- Tray: Stopped reading `UpdateState.json` during tray initialization while keeping the update-badge API available for any future explicit updater-state integration.
-- Settings: Deferred General page diagnostic cleanup, backup dry-run refresh, and search-index construction until after the first frame.
-- Home: Hid Monitor's status-only activation rows from the Home Shortcuts card so Monitor no longer appears as a shortcut-only module, while it remains available in the module list, Settings page, and Quick Access settings fallback.
-- Tests: Added regression coverage for the startup/load optimization boundary, Monitor Home Shortcuts filtering, and updated version metadata checks for `1.1.2`.
-
-### 1.1.1
-
-- Build: Aligned the Kit Settings/Common UI build layer with the local PowerToys-main .NET 10 baseline, including shared CsWinRT target framework, Quick Access, Settings UI Controls, Common UI Controls, UITestAutomation, and central package pins.
-- Build scripts and developer docs now reference the .NET 10 target framework for Settings publishing and PowerToys Run plugin checklist guidance.
-- Settings: Added regression coverage so the .NET 10 build layer, README version metadata, and Kit's disabled updater/telemetry boundaries do not silently drift.
-- Updater boundary: Kit keeps system tray update-badge rendering for an existing Kit update state, but automatic update checks, downloads, update launches, and telemetry remain disabled.
-
-### 1.1.0
-
-- Imported PowerDisplay into the active Kit module set with runner loading, solution build entries, Settings navigation, Dashboard metadata, Quick Access actions, serialization, and LightSwitch profile routing.
-- Settings: Multiple UI and usability improvements across different utilities.
-- General: Streamlined default module states so new installations start with a lighter initial experience.
-- System tray icon: Updated the monochrome PowerToys system tray icon and retained update-badge rendering for an existing Kit update state; automatic update checks and downloads remain disabled.
-- PowerDisplay now uses Kit app-data paths and Kit-prefixed runtime events so it does not share state or named events with an installed official PowerToys build.
-
-### 1.0.4
-
-- Monitor Scan Now now follows worker-reported progress from `%LOCALAPPDATA%\Kit\Monitor\scan-progress.json` and the named scan-completed event instead of relying on a Settings-local progress timer.
-- Monitor clears stale manual-scan progress before each Scan Now request so the Settings page cannot reuse an old completed or temporary progress state.
-- Monitor worker writes progress snapshots from the scan pipeline, including phase, processed/total file counts, completion time, and final record count.
-- Monitor module interface now resolves the worker from the module output directory and falls back to `dotnet.exe "PowerToys.Monitor.dll"` when the Debug output has no apphost `PowerToys.Monitor.exe`.
-- Added regression coverage for Monitor progress file reporting, Settings progress consumption, and the module-interface worker launch fallback.
-
-### 1.0.3
-
-- Release builds prune native link artifacts (`*.lib`, `*.exp`, and static-library analysis markers) from the runtime output after `Kit.exe` builds.
-- Release builds remove non-English runtime satellite folders and inactive AI model-provider artifacts from the active Kit output, matching the managed satellite trim.
-- Added `tools\build\clean-stale-versions.ps1` for explicit cleanup of old versioned output folders while preserving the active version, `Debug`, and `Release`.
-- Added `tools\build\verify-runtime-artifacts.ps1` to check versioned or `Release` outputs for link artifacts, PDBs, Foundry assets, and non-English locale folders.
-- Removed unused WPF/WinForms dependencies from `Common.UI` so Settings and Quick Access do not pull WPF runtime assemblies through that shared library.
-- Deleted inactive Settings module source/XAML files instead of keeping them hidden behind `Compile Remove` and `Page Remove` rules.
-- Trimmed inactive common, DSC, and unused Awake service projects from `Kit.slnx` while keeping `Common.Search` because Settings search still uses it.
-- Quick Access now opens a module's Settings page when a visible tile has no direct launcher action, including Monitor.
+See [changelog.md](changelog.md) for the full version history.
 
 ## Phase One Closeout
 

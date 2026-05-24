@@ -19,13 +19,6 @@ namespace Microsoft.PowerToys.Tools.XamlIndexBuilder
             "ShellPage.xaml",
         };
 
-        // Hardcoded panel-to-page mapping (temporary until generic panel host mapping is needed)
-        // Key: panel file base name (without .xaml), Value: owning page base name
-        private static readonly Dictionary<string, string> PanelPageMapping = new(StringComparer.OrdinalIgnoreCase)
-        {
-            { "MouseJumpPanel", "MouseUtilsPage" },
-        };
-
         private static JsonSerializerOptions serializeOption = new()
         {
             WriteIndented = true,
@@ -80,18 +73,6 @@ namespace Microsoft.PowerToys.Tools.XamlIndexBuilder
                         Debug.WriteLine($"Processing: {fileName}");
                         var elements = ExtractSearchableElements(xamlFile);
 
-                        // Apply hardcoded panel mapping override
-                        var baseName = Path.GetFileNameWithoutExtension(xamlFile);
-                        if (PanelPageMapping.TryGetValue(baseName, out var hostPage))
-                        {
-                            for (int i = 0; i < elements.Count; i++)
-                            {
-                                var entry = elements[i];
-                                entry.PageTypeName = hostPage;
-                                elements[i] = entry;
-                            }
-                        }
-
                         searchableElements.AddRange(elements);
                         processedFiles.Add(fullPath);
                     }
@@ -106,52 +87,6 @@ namespace Microsoft.PowerToys.Tools.XamlIndexBuilder
 
                 // Fallback: also scan root directly (in case some XAML lives at root level)
                 ScanDirectory(xamlRootDirectory);
-
-                // -----------------------------------------------------------------------------
-                // Explicit include section: add specific XAML files that we always want indexed
-                // even if future logic excludes them or they live outside typical scan patterns.
-                // Add future files to the ExplicitExtraXamlFiles array below.
-                // -----------------------------------------------------------------------------
-                string[] explicitExtraXamlFiles = new[]
-                {
-                    "MouseJumpPanel.xaml", // Mouse Jump settings panel
-                };
-
-                foreach (var extraFileName in explicitExtraXamlFiles)
-                {
-                    try
-                    {
-                        var matches = Directory.GetFiles(xamlRootDirectory, extraFileName, SearchOption.AllDirectories);
-                        foreach (var match in matches)
-                        {
-                            var full = Path.GetFullPath(match);
-                            if (processedFiles.Contains(full))
-                            {
-                                continue; // already processed in general scan
-                            }
-
-                            Debug.WriteLine($"Processing (explicit include): {extraFileName}");
-                            var elements = ExtractSearchableElements(full);
-                            var baseName = Path.GetFileNameWithoutExtension(full);
-                            if (PanelPageMapping.TryGetValue(baseName, out var hostPage))
-                            {
-                                for (int i = 0; i < elements.Count; i++)
-                                {
-                                    var entry = elements[i];
-                                    entry.PageTypeName = hostPage;
-                                    elements[i] = entry;
-                                }
-                            }
-
-                            searchableElements.AddRange(elements);
-                            processedFiles.Add(full);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Explicit include failed for {extraFileName}: {ex.Message}");
-                    }
-                }
 
                 searchableElements = searchableElements.OrderBy(e => e.PageTypeName).ThenBy(e => e.ElementName).ToList();
 

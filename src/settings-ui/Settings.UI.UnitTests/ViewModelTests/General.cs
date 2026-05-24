@@ -708,6 +708,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Deleted the legacy sibling Settings asset tree");
             StringAssert.Contains(changelog, "Deleted the inactive standalone module_loader utility");
             StringAssert.Contains(changelog, "Quick Access now uses the current WinUI SystemBackdrop API");
+            StringAssert.Contains(changelog, "XAML search index builder no longer carries inactive upstream module icon and panel fallbacks");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -716,7 +717,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "legacy sibling Settings asset tree");
             StringAssert.Contains(developmentLog, "inactive standalone module_loader utility");
             StringAssert.Contains(developmentLog, "Quick Access window now uses the current WinUI SystemBackdrop API");
-            StringAssert.Contains(developmentLog, "137/137 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "XAML search index builder now derives icons from active Settings XAML only");
+            StringAssert.Contains(developmentLog, "138/138 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

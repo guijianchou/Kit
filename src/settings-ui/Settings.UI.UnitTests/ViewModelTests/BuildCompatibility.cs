@@ -1317,6 +1317,33 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitXamlIndexBuilderShouldNotCarryInactiveModuleFallbacks()
+        {
+            var xamlIndexBuilderProgram = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.XamlIndexBuilder", "Program.cs"));
+            var moduleIconResolver = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.XamlIndexBuilder", "ModuleIconResolver.cs"));
+
+            Assert.IsFalse(xamlIndexBuilderProgram.Contains("PanelPageMapping", StringComparison.Ordinal), "Kit has no active Settings panels, so search indexing should not carry inactive panel-to-page fallback mappings.");
+            Assert.IsFalse(xamlIndexBuilderProgram.Contains("MouseJumpPanel", StringComparison.Ordinal), "Kit search indexing should not explicitly include deleted Mouse Jump panels.");
+            Assert.IsFalse(moduleIconResolver.Contains("FileNameOverrides", StringComparison.Ordinal), "Kit search indexing should derive active page icons from XAML instead of carrying inactive upstream page overrides.");
+
+            string[] inactiveSearchIndexFallbacks =
+            {
+                "FancyZones",
+                "FileLocksmith",
+                "CmdNotFound",
+                "CommandNotFound",
+                "PowerLauncher",
+                "PowerToysRun",
+            };
+
+            foreach (var inactiveFallback in inactiveSearchIndexFallbacks)
+            {
+                Assert.IsFalse(xamlIndexBuilderProgram.Contains(inactiveFallback, StringComparison.Ordinal), $"XamlIndexBuilder Program.cs should not reference inactive module fallback '{inactiveFallback}'.");
+                Assert.IsFalse(moduleIconResolver.Contains(inactiveFallback, StringComparison.Ordinal), $"ModuleIconResolver.cs should not reference inactive module fallback '{inactiveFallback}'.");
+            }
+        }
+
+        [TestMethod]
         public void KitRunnerShouldReuseStartupGeneralSettingsForInitialModuleEnablement()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));

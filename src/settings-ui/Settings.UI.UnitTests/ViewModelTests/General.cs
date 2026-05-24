@@ -464,6 +464,8 @@ namespace ViewModelTests
             StringAssert.Contains(backupUtils, "\"Kit_settings_\"");
             Assert.IsFalse(backupUtils.Contains("Software\\\\Microsoft\\\\PowerToys", StringComparison.Ordinal));
             Assert.IsFalse(backupUtils.Contains("\"PowerToys\\\\Backup\"", StringComparison.Ordinal));
+            Assert.IsFalse(backupUtils.Contains("PowerToys Run hack fix-up", StringComparison.Ordinal), "Kit backup code should not keep inactive PowerToys Run plugin fix-up branches.");
+            Assert.IsFalse(backupUtils.Contains("GetPTRunIgnoredSettings", StringComparison.Ordinal), "Kit backup code should not keep inactive PowerToys Run plugin fix-up helpers.");
 
             StringAssert.Contains(backupManifest, "*Kit\\\\log_settings.json");
             Assert.IsFalse(backupManifest.Contains("*Kit\\\\oobe_settings.json", StringComparison.Ordinal), "Kit should not keep an OOBE state backup rule after OOBE launch state is deleted.");

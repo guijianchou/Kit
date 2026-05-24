@@ -850,47 +850,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 jsonWriter.WriteEndObject();
             }
 
-            if (settingFileKey.Equals("\\PowerToys Run\\settings.json", StringComparison.OrdinalIgnoreCase))
-            {
-                // PowerToys Run hack fix-up
-                var ptRunIgnoredSettings = GetPTRunIgnoredSettings(backupRestoreSettings);
-                var ptrSettings = JsonNode.Parse(Encoding.UTF8.GetString(outputBuffer.WrittenSpan));
-
-                foreach (JsonObject pluginToChange in ptRunIgnoredSettings)
-                {
-                    foreach (JsonObject plugin in (JsonArray)ptrSettings["plugins"])
-                    {
-                        if (plugin["Id"].ToString() == pluginToChange["Id"].ToString())
-                        {
-                            foreach (var nameOfPropertyToRemove in (JsonArray)pluginToChange["Names"])
-                            {
-                                plugin.Remove(nameOfPropertyToRemove.ToString());
-                            }
-                        }
-                    }
-                }
-
-                return ptrSettings.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-            }
-            else
-            {
-                return JsonNode.Parse(Encoding.UTF8.GetString(outputBuffer.WrittenSpan)).ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-            }
-        }
-
-        /// <summary>
-        /// Method <c>GetPTRunIgnoredSettings</c> gets the 'Run-Plugin-level' settings we should ignore because they are problematic to backup/restore.
-        /// </summary>
-        private static JsonArray GetPTRunIgnoredSettings(JsonNode backupRestoreSettings)
-        {
-            ArgumentNullException.ThrowIfNull(backupRestoreSettings);
-
-            if (backupRestoreSettings["IgnoredPTRunSettings"] != null)
-            {
-                return (JsonArray)backupRestoreSettings["IgnoredPTRunSettings"];
-            }
-
-            return new JsonArray();
+            return JsonNode.Parse(Encoding.UTF8.GetString(outputBuffer.WrittenSpan)).ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         }
 
         /// <summary>

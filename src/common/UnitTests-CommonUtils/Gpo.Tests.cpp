@@ -39,16 +39,15 @@ namespace UnitTestsCommonUtils
                           result == gpo_rule_configured_unavailable);
         }
 
-        // Utility enabled getters - these all follow the same pattern
         TEST_METHOD(GetAllowExperimentationValue_ReturnsValidState)
         {
             auto result = getAllowExperimentationValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredAlwaysOnTopEnabledValue_ReturnsValidState)
+        TEST_METHOD(GetAllowDataDiagnosticsValue_ReturnsValidState)
         {
-            auto result = getConfiguredAlwaysOnTopEnabledValue();
+            auto result = getAllowDataDiagnosticsValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
@@ -58,129 +57,39 @@ namespace UnitTestsCommonUtils
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredColorPickerEnabledValue_ReturnsValidState)
+        TEST_METHOD(GetConfiguredLightSwitchEnabledValue_ReturnsValidState)
         {
-            auto result = getConfiguredColorPickerEnabledValue();
+            auto result = getConfiguredLightSwitchEnabledValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredFancyZonesEnabledValue_ReturnsValidState)
+        TEST_METHOD(GetConfiguredPowerDisplayEnabledValue_ReturnsValidState)
         {
-            auto result = getConfiguredFancyZonesEnabledValue();
+            auto result = getConfiguredPowerDisplayEnabledValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredFileLocksmithEnabledValue_ReturnsValidState)
+        TEST_METHOD(GetConfiguredRunAtStartupValue_ReturnsValidState)
         {
-            auto result = getConfiguredFileLocksmithEnabledValue();
+            auto result = getConfiguredRunAtStartupValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredImageResizerEnabledValue_ReturnsValidState)
+        TEST_METHOD(GetDisableAutomaticUpdateDownloadValue_ReturnsValidState)
         {
-            auto result = getConfiguredImageResizerEnabledValue();
+            auto result = getDisableAutomaticUpdateDownloadValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredKeyboardManagerEnabledValue_ReturnsValidState)
+        TEST_METHOD(GetDisableNewUpdateToastValue_ReturnsValidState)
         {
-            auto result = getConfiguredKeyboardManagerEnabledValue();
+            auto result = getDisableNewUpdateToastValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredPowerRenameEnabledValue_ReturnsValidState)
+        TEST_METHOD(GetDisableShowWhatsNewAfterUpdatesValue_ReturnsValidState)
         {
-            auto result = getConfiguredPowerRenameEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredPowerLauncherEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredPowerLauncherEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredShortcutGuideEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredShortcutGuideEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredTextExtractorEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredTextExtractorEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredHostsFileEditorEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredHostsFileEditorEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredMousePointerCrosshairsEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredMousePointerCrosshairsEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredMouseHighlighterEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredMouseHighlighterEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredMouseJumpEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredMouseJumpEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredFindMyMouseEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredFindMyMouseEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredMouseWithoutBordersEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredMouseWithoutBordersEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredAdvancedPasteEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredAdvancedPasteEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredPeekEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredPeekEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredRegistryPreviewEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredRegistryPreviewEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredScreenRulerEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredScreenRulerEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredCropAndLockEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredCropAndLockEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
-        TEST_METHOD(GetConfiguredEnvironmentVariablesEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredEnvironmentVariablesEnabledValue();
+            auto result = getDisableShowWhatsNewAfterUpdatesValue();
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
@@ -188,29 +97,14 @@ namespace UnitTestsCommonUtils
         TEST_METHOD(AllGpoFunctions_DoNotCrash)
         {
             getAllowExperimentationValue();
-            getConfiguredAlwaysOnTopEnabledValue();
+            getAllowDataDiagnosticsValue();
             getConfiguredAwakeEnabledValue();
-            getConfiguredColorPickerEnabledValue();
-            getConfiguredFancyZonesEnabledValue();
-            getConfiguredFileLocksmithEnabledValue();
-            getConfiguredImageResizerEnabledValue();
-            getConfiguredKeyboardManagerEnabledValue();
-            getConfiguredPowerRenameEnabledValue();
-            getConfiguredPowerLauncherEnabledValue();
-            getConfiguredShortcutGuideEnabledValue();
-            getConfiguredTextExtractorEnabledValue();
-            getConfiguredHostsFileEditorEnabledValue();
-            getConfiguredMousePointerCrosshairsEnabledValue();
-            getConfiguredMouseHighlighterEnabledValue();
-            getConfiguredMouseJumpEnabledValue();
-            getConfiguredFindMyMouseEnabledValue();
-            getConfiguredMouseWithoutBordersEnabledValue();
-            getConfiguredAdvancedPasteEnabledValue();
-            getConfiguredPeekEnabledValue();
-            getConfiguredRegistryPreviewEnabledValue();
-            getConfiguredScreenRulerEnabledValue();
-            getConfiguredCropAndLockEnabledValue();
-            getConfiguredEnvironmentVariablesEnabledValue();
+            getConfiguredLightSwitchEnabledValue();
+            getConfiguredPowerDisplayEnabledValue();
+            getConfiguredRunAtStartupValue();
+            getDisableAutomaticUpdateDownloadValue();
+            getDisableNewUpdateToastValue();
+            getDisableShowWhatsNewAfterUpdatesValue();
 
             Assert::IsTrue(true);
         }

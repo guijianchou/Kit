@@ -661,6 +661,92 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitGpoPolicySurfaceShouldStayInActiveModuleSurface()
+        {
+            var gpoIdl = File.ReadAllText(FindSourceFile("src", "common", "GPOWrapper", "GPOWrapper.idl"));
+            var gpoHeader = File.ReadAllText(FindSourceFile("src", "common", "GPOWrapper", "GPOWrapper.h"));
+            var gpoImplementation = File.ReadAllText(FindSourceFile("src", "common", "GPOWrapper", "GPOWrapper.cpp"));
+            var gpoUtilities = File.ReadAllText(FindSourceFile("src", "common", "utils", "gpo.h"));
+            var gpoTests = File.ReadAllText(FindSourceFile("src", "common", "UnitTests-CommonUtils", "Gpo.Tests.cpp"));
+
+            string[] retainedPolicies =
+            {
+                "GetConfiguredAwakeEnabledValue",
+                "GetConfiguredLightSwitchEnabledValue",
+                "GetConfiguredPowerDisplayEnabledValue",
+                "GetDisableAutomaticUpdateDownloadValue",
+                "GetDisableNewUpdateToastValue",
+                "GetDisableShowWhatsNewAfterUpdatesValue",
+                "GetAllowExperimentationValue",
+                "GetAllowDataDiagnosticsValue",
+                "GetConfiguredRunAtStartupValue",
+            };
+
+            foreach (var retainedPolicy in retainedPolicies)
+            {
+                StringAssert.Contains(gpoIdl, retainedPolicy);
+                StringAssert.Contains(gpoHeader, retainedPolicy);
+                StringAssert.Contains(gpoImplementation, retainedPolicy);
+            }
+
+            string[] inactivePolicyTokens =
+            {
+                "AlwaysOnTop",
+                "AdvancedPaste",
+                "Bgcode",
+                "CmdNotFound",
+                "CmdPal",
+                "ColorPicker",
+                "CropAndLock",
+                "CursorWrap",
+                "EnvironmentVariables",
+                "FancyZones",
+                "FileLocksmith",
+                "FindMyMouse",
+                "Gcode",
+                "GrabAndMove",
+                "HostsFileEditor",
+                "ImageResizer",
+                "KeyboardManager",
+                "MarkdownPreview",
+                "MonacoPreview",
+                "MouseHighlighter",
+                "MouseJump",
+                "MousePointerCrosshairs",
+                "MouseWithoutBorders",
+                "Mwb",
+                "NewPlus",
+                "Pdf",
+                "Peek",
+                "PowerLauncher",
+                "PowerRename",
+                "Qoi",
+                "QuickAccent",
+                "RegistryPreview",
+                "RunPlugin",
+                "ScreenRuler",
+                "ShortcutGuide",
+                "Stl",
+                "Svg",
+                "TextExtractor",
+                "Workspaces",
+                "ZoomIt",
+            };
+
+            foreach (var inactivePolicyToken in inactivePolicyTokens)
+            {
+                Assert.IsFalse(gpoIdl.Contains(inactivePolicyToken, StringComparison.Ordinal), $"GPO IDL should not expose inactive policy token {inactivePolicyToken}.");
+                Assert.IsFalse(gpoHeader.Contains(inactivePolicyToken, StringComparison.Ordinal), $"GPO header should not expose inactive policy token {inactivePolicyToken}.");
+                Assert.IsFalse(gpoImplementation.Contains(inactivePolicyToken, StringComparison.Ordinal), $"GPO implementation should not expose inactive policy token {inactivePolicyToken}.");
+                Assert.IsFalse(gpoUtilities.Contains(inactivePolicyToken, StringComparison.Ordinal), $"gpo.h should not expose inactive policy token {inactivePolicyToken}.");
+                Assert.IsFalse(gpoTests.Contains(inactivePolicyToken, StringComparison.Ordinal), $"Common GPO tests should not keep inactive policy token {inactivePolicyToken}.");
+            }
+
+            Assert.IsFalse(gpoUtilities.Contains("PerUserInstallationDisabled", StringComparison.Ordinal), "Kit runtime GPO utilities should not keep installer-only policy readers.");
+            Assert.IsFalse(gpoUtilities.Contains("SuspendNewUpdateAvailableToast", StringComparison.Ordinal), "Kit runtime GPO utilities should not keep inactive update-toast policy readers.");
+        }
+
+        [TestMethod]
         public void KitSettingsShouldDeleteInactiveModuleAssetsInsteadOfProjectExcludingThem()
         {
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");

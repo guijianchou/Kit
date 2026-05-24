@@ -726,6 +726,8 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Pruned backup/restore defaults to the active Kit settings surface");
             StringAssert.Contains(changelog, "Removed the remaining no-op managed telemetry calls and event source classes from Awake and PowerDisplay");
             StringAssert.Contains(changelog, "Removed PowerDisplay's settings telemetry IPC event and module-interface signaling path");
+            StringAssert.Contains(changelog, "Pruned `PowerToys.Interop` WinRT and shared IPC constants to Kit's active runtime surface");
+            StringAssert.Contains(changelog, "trimmed `PowerToys.Interop` IPC constant surface");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
@@ -755,7 +757,9 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "ModuleTemplate no-op trace defaults");
             StringAssert.Contains(developmentLog, "Awake README telemetry-free documentation");
             StringAssert.Contains(developmentLog, "PowerDisplay no longer exposes or listens to a settings telemetry IPC event");
-            StringAssert.Contains(developmentLog, "149/149 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "`PowerToys.Interop` now exposes only Kit's active runtime constants");
+            StringAssert.Contains(developmentLog, "trimmed `PowerToys.Interop` IPC constant surface");
+            StringAssert.Contains(developmentLog, "150/150 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

@@ -409,5 +409,165 @@ namespace ViewModelTests
                 Assert.IsFalse(header.Contains("TraceBase", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not inherit telemetry compatibility base classes.");
             }
         }
+
+        [TestMethod]
+        public void KitInteropConstantsShouldNotExposeInactiveRuntimeIpc()
+        {
+            var interopConstantsIdl = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.idl"));
+            var interopConstantsHeader = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.h"));
+            var interopConstantsCpp = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.cpp"));
+            var sharedConstants = File.ReadAllText(FindSourceFile("src", "common", "interop", "shared_constants.h"));
+
+            string[] inactiveProjectionMembers =
+            {
+                "PowerLauncherSharedEvent",
+                "PowerLauncherCentralizedHookSharedEvent",
+                "RunSendSettingsTelemetryEvent",
+                "RunExitEvent",
+                "FZEExitEvent",
+                "FZEToggleEvent",
+                "ColorPickerSendSettingsTelemetryEvent",
+                "ShowColorPickerSharedEvent",
+                "TerminateColorPickerSharedEvent",
+                "AdvancedPasteShowUIMessage",
+                "AdvancedPasteMarkdownMessage",
+                "AdvancedPasteJsonMessage",
+                "AdvancedPasteAdditionalActionMessage",
+                "AdvancedPasteCustomActionMessage",
+                "AdvancedPasteTerminateAppMessage",
+                "AdvancedPasteShowUIEvent",
+                "AlwaysOnTopPinEvent",
+                "FindMyMouseTriggerEvent",
+                "MouseHighlighterTriggerEvent",
+                "MouseCrosshairsTriggerEvent",
+                "CursorWrapTriggerEvent",
+                "ZoomItZoomEvent",
+                "ZoomItDrawEvent",
+                "ZoomItBreakEvent",
+                "ZoomItLiveZoomEvent",
+                "ZoomItSnipEvent",
+                "ZoomItRecordEvent",
+                "ShowPowerOCRSharedEvent",
+                "TerminatePowerOCRSharedEvent",
+                "MouseJumpShowPreviewEvent",
+                "TerminateMouseJumpSharedEvent",
+                "ShowPeekEvent",
+                "TerminatePeekEvent",
+                "PowerAccentExitEvent",
+                "ShortcutGuideTriggerEvent",
+                "RegistryPreviewTriggerEvent",
+                "MeasureToolTriggerEvent",
+                "GcodePreviewResizeEvent",
+                "BgcodePreviewResizeEvent",
+                "QoiPreviewResizeEvent",
+                "DevFilesPreviewResizeEvent",
+                "MarkdownPreviewResizeEvent",
+                "PdfPreviewResizeEvent",
+                "SvgPreviewResizeEvent",
+                "ShowHostsSharedEvent",
+                "ShowHostsAdminSharedEvent",
+                "TerminateHostsSharedEvent",
+                "CropAndLockThumbnailEvent",
+                "CropAndLockReparentEvent",
+                "CropAndLockScreenshotEvent",
+                "ShowEnvironmentVariablesSharedEvent",
+                "ShowEnvironmentVariablesAdminSharedEvent",
+                "WorkspacesLaunchEditorEvent",
+                "WorkspacesHotkeyEvent",
+                "ShowCmdPalEvent",
+                "MWBToggleEasyMouseEvent",
+                "MWBReconnectEvent",
+                "OpenNewKeyboardManagerEvent",
+                "KeyboardManagerEngineInstanceMutex",
+            };
+
+            foreach (var member in inactiveProjectionMembers)
+            {
+                Assert.IsFalse(interopConstantsIdl.Contains(member, StringComparison.Ordinal), $"Constants.idl should not expose inactive member {member}.");
+                Assert.IsFalse(interopConstantsHeader.Contains(member, StringComparison.Ordinal), $"Constants.h should not expose inactive member {member}.");
+                Assert.IsFalse(interopConstantsCpp.Contains(member, StringComparison.Ordinal), $"Constants.cpp should not expose inactive member {member}.");
+            }
+
+            string[] inactiveSharedSymbols =
+            {
+                "KEYBOARDMANAGER_INJECTED_FLAG",
+                "POWER_LAUNCHER_SHARED_EVENT",
+                "POWER_LAUNCHER_CENTRALIZED_HOOK_SHARED_EVENT",
+                "RUN_SEND_SETTINGS_TELEMETRY_EVENT",
+                "RUN_EXIT_EVENT",
+                "FZE_EXIT_EVENT",
+                "FANCY_ZONES_EDITOR_TOGGLE_EVENT",
+                "COLOR_PICKER_SEND_SETTINGS_TELEMETRY_EVENT",
+                "ADVANCED_PASTE_SHOW_UI_MESSAGE",
+                "ADVANCED_PASTE_MARKDOWN_MESSAGE",
+                "ADVANCED_PASTE_JSON_MESSAGE",
+                "ADVANCED_PASTE_ADDITIONAL_ACTION_MESSAGE",
+                "ADVANCED_PASTE_CUSTOM_ACTION_MESSAGE",
+                "ADVANCED_PASTE_TERMINATE_APP_MESSAGE",
+                "ADVANCED_PASTE_SHOW_UI_EVENT",
+                "SHOW_COLOR_PICKER_SHARED_EVENT",
+                "TERMINATE_COLOR_PICKER_SHARED_EVENT",
+                "SHORTCUT_GUIDE_TRIGGER_EVENT",
+                "SHORTCUT_GUIDE_EXIT_EVENT",
+                "SHOW_HOSTS_EVENT",
+                "SHOW_HOSTS_ADMIN_EVENT",
+                "TERMINATE_HOSTS_EVENT",
+                "FIND_MY_MOUSE_TRIGGER_EVENT",
+                "MOUSE_HIGHLIGHTER_TRIGGER_EVENT",
+                "MOUSE_CROSSHAIRS_TRIGGER_EVENT",
+                "CURSOR_WRAP_TRIGGER_EVENT",
+                "ALWAYS_ON_TOP_PIN_EVENT",
+                "ALWAYS_ON_TOP_TERMINATE_EVENT",
+                "ALWAYS_ON_TOP_INCREASE_OPACITY_EVENT",
+                "ALWAYS_ON_TOP_DECREASE_OPACITY_EVENT",
+                "POWERACCENT_EXIT_EVENT",
+                "SHOW_POWEROCR_SHARED_EVENT",
+                "TERMINATE_POWEROCR_SHARED_EVENT",
+                "MOUSE_JUMP_SHOW_PREVIEW_EVENT",
+                "TERMINATE_MOUSE_JUMP_SHARED_EVENT",
+                "REGISTRY_PREVIEW_TRIGGER_EVENT",
+                "MEASURE_TOOL_TRIGGER_EVENT",
+                "GCODE_PREVIEW_RESIZE_EVENT",
+                "BGCODE_PREVIEW_RESIZE_EVENT",
+                "QOI_PREVIEW_RESIZE_EVENT",
+                "DEV_FILES_PREVIEW_RESIZE_EVENT",
+                "MARKDOWN_PREVIEW_RESIZE_EVENT",
+                "PDF_PREVIEW_RESIZE_EVENT",
+                "SVG_PREVIEW_RESIZE_EVENT",
+                "SHOW_PEEK_SHARED_EVENT",
+                "TERMINATE_PEEK_SHARED_EVENT",
+                "TERMINATE_KBM_SHARED_EVENT",
+                "CROP_AND_LOCK_REPARENT_EVENT",
+                "CROP_AND_LOCK_THUMBNAIL_EVENT",
+                "CROP_AND_LOCK_SCREENSHOT_EVENT",
+                "CROP_AND_LOCK_EXIT_EVENT",
+                "SHOW_ENVIRONMENT_VARIABLES_EVENT",
+                "SHOW_ENVIRONMENT_VARIABLES_ADMIN_EVENT",
+                "ZOOMIT_REFRESH_SETTINGS_EVENT",
+                "GRABANDMOVE_REFRESH_SETTINGS_EVENT",
+                "GRABANDMOVE_EXIT_EVENT",
+                "ZOOMIT_EXIT_EVENT",
+                "ZOOMIT_ZOOM_EVENT",
+                "ZOOMIT_DRAW_EVENT",
+                "ZOOMIT_BREAK_EVENT",
+                "ZOOMIT_LIVEZOOM_EVENT",
+                "ZOOMIT_SNIP_EVENT",
+                "ZOOMIT_SNIPOCR_EVENT",
+                "ZOOMIT_RECORD_EVENT",
+                "OPEN_NEW_KEYBOARD_MANAGER_EVENT",
+                "KEYBOARD_MANAGER_ENGINE_INSTANCE_MUTEX",
+                "CMDPAL_SHOW_EVENT",
+                "CMDPAL_EXIT_EVENT",
+                "MWB_TOGGLE_EASY_MOUSE_EVENT",
+                "MWB_RECONNECT_EVENT",
+                "WORKSPACES_LAUNCH_EDITOR_EVENT",
+                "WORKSPACES_HOTKEY_EVENT",
+            };
+
+            foreach (var symbol in inactiveSharedSymbols)
+            {
+                Assert.IsFalse(sharedConstants.Contains(symbol, StringComparison.Ordinal), $"shared_constants.h should not keep inactive IPC symbol {symbol}.");
+            }
+        }
     }
 }

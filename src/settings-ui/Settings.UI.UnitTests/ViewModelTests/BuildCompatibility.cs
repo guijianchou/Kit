@@ -528,12 +528,102 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitSettingsShouldNotPublishInactiveOobeAssets()
+        public void KitSettingsShouldDeleteInactiveModuleAssetsInsteadOfProjectExcludingThem()
         {
-            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProject = File.ReadAllText(settingsProjectPath);
+            var settingsRoot = Path.GetDirectoryName(settingsProjectPath);
+            var moduleAssetsRoot = Path.Combine(settingsRoot!, "Assets", "Settings", "Modules");
+            var modelIconsRoot = Path.Combine(settingsRoot!, "Assets", "Settings", "Icons", "Models");
+            var imagesRoot = Path.Combine(settingsRoot!, "Images");
 
-            StringAssert.Contains(settingsProject, @"<Content Remove=""Assets\Settings\Modules\OOBE\**\*"" />");
-            StringAssert.Contains(settingsProject, @"<None Remove=""Assets\Settings\Modules\OOBE\**\*"" />");
+            string[] activeModuleAssets =
+            {
+                "Awake.png",
+                "LightSwitch.png",
+                "PowerDisplay.png",
+                "PT.png",
+            };
+
+            foreach (var activeAsset in activeModuleAssets)
+            {
+                Assert.IsTrue(File.Exists(Path.Combine(moduleAssetsRoot, activeAsset)), $"Active Settings module asset should remain: {activeAsset}");
+            }
+
+            string[] inactiveModuleAssets =
+            {
+                "AdvancedPaste.png",
+                "AlwaysOnTop.png",
+                "CmdNotFound.png",
+                "CmdPal.png",
+                "ColorPicker.png",
+                "CropAndLock.png",
+                "EnvironmentVariables.png",
+                "FancyZones.png",
+                "FileExplorerPreview.png",
+                "FileLocksmith.png",
+                "GrabAndMove.png",
+                "HostsFileEditor.png",
+                "ImageResizer.png",
+                "KBM.png",
+                "MouseUtils.png",
+                "MouseWithoutBorders.png",
+                "NewPlus.png",
+                "Peek.png",
+                "PowerLauncher.png",
+                "PowerRename.png",
+                "QuickAccent.png",
+                "RegistryPreview.png",
+                "Run.png",
+                "ScreenRuler.png",
+                "ShortcutGuide.png",
+                "TextExtractor.png",
+                "Wallpaper.png",
+                "Workspaces.png",
+                "ZoomIt.png",
+            };
+
+            foreach (var inactiveAsset in inactiveModuleAssets)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(moduleAssetsRoot, inactiveAsset)), $"Inactive Settings module asset should be deleted: {inactiveAsset}");
+            }
+
+            string[] inactiveModelIcons =
+            {
+                "Azure.svg",
+                "AzureAI.svg",
+                "FoundryLocal.svg",
+                "Gemini.svg",
+                "Mistral.svg",
+                "Ollama.svg",
+                "Onnx.svg",
+                "OpenAI.dark.svg",
+                "OpenAI.light.svg",
+                "WindowsML.svg",
+            };
+
+            foreach (var inactiveModelIcon in inactiveModelIcons)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(modelIconsRoot, inactiveModelIcon)), $"Inactive AI model icon should be deleted: {inactiveModelIcon}");
+            }
+
+            AssertNoFiles(moduleAssetsRoot, Path.Combine("OOBE", "*"));
+            Assert.IsFalse(File.Exists(Path.Combine(imagesRoot, "MouseJump-Desktop.png")), "Inactive Mouse Jump preview image should be deleted.");
+            StringAssert.Contains(settingsProject, "KitRemoveInactiveSettingsAssetsFromOutput");
+            StringAssert.Contains(settingsProject, "KitInactiveSettingsModuleAssets");
+            StringAssert.Contains(settingsProject, @"$(OutDir)Assets\Settings\Modules\*.png");
+            StringAssert.Contains(settingsProject, @"$(OutDir)Assets\Settings\Modules\OOBE\**\*");
+            StringAssert.Contains(settingsProject, @"$(OutDir)Assets\Settings\Icons\Models\*.svg");
+            Assert.IsFalse(settingsProject.Contains(@"<Content Remove=""Assets\Settings\Modules\OOBE", StringComparison.Ordinal), "Deleted OOBE assets should not stay hidden behind project exclusions.");
+            Assert.IsFalse(settingsProject.Contains(@"<None Remove=""Assets\Settings\Modules\OOBE", StringComparison.Ordinal), "Deleted OOBE assets should not stay hidden behind project exclusions.");
+            Assert.IsFalse(settingsProject.Contains(@"<None Remove=""Assets\Settings\Icons\Models\", StringComparison.Ordinal), "Deleted AI model icons should not stay hidden behind project exclusions.");
+            Assert.IsFalse(settingsProject.Contains(@"<Content Include=""Assets\Settings\Icons\Models\", StringComparison.Ordinal), "Deleted AI model icons should not be re-added as content.");
+            Assert.IsFalse(settingsProject.Contains(@"Assets\Settings\Modules\APDialog", StringComparison.Ordinal), "Deleted Advanced Paste dialog assets should not stay hidden behind project exclusions.");
+            Assert.IsFalse(settingsProject.Contains(@"<None Remove=""Assets\Settings\Modules\LightSwitch.png", StringComparison.Ordinal), "Active LightSwitch asset should not be removed from the project by exclusion.");
+            Assert.IsFalse(settingsProject.Contains(@"<EmbeddedResource Include=""Images\MouseJump-Desktop.png", StringComparison.Ordinal), "Deleted Mouse Jump preview should not stay embedded.");
+            Assert.IsFalse(settingsProject.Contains(@"SettingsXAML\OOBE\Views\OobeWorkspaces.xaml", StringComparison.Ordinal), "Deleted OOBE pages should not keep XAML metadata.");
+            Assert.IsFalse(settingsProject.Contains(@"SettingsXAML\Panels\MouseJumpPanel.xaml", StringComparison.Ordinal), "Deleted Mouse Jump panel should not keep XAML metadata.");
+            Assert.IsFalse(settingsProject.Contains(@"SettingsXAML\Views\WorkspacesPage.xaml", StringComparison.Ordinal), "Deleted Workspaces page should not keep XAML metadata.");
         }
 
         [TestMethod]

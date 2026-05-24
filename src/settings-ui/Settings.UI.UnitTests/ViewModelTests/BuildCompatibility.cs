@@ -1319,6 +1319,32 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsPackageReferencesShouldNotDocumentInactiveModuleHacks()
+        {
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+
+            var packageReferenceBlockStart = settingsProject.IndexOf("<ItemGroup>", StringComparison.Ordinal);
+            var packageReferenceBlockEnd = settingsProject.IndexOf("<Manifest Include=\"$(ApplicationManifest)\" />", StringComparison.Ordinal);
+            Assert.IsTrue(packageReferenceBlockStart >= 0, "Settings project should keep package references in the first item group.");
+            Assert.IsTrue(packageReferenceBlockEnd > packageReferenceBlockStart, "Settings project package references should appear before the application manifest entry.");
+
+            var packageReferenceBlock = settingsProject[packageReferenceBlockStart..packageReferenceBlockEnd];
+            string[] inactiveModuleCommentTokens =
+            {
+                "CmdPal",
+                "MWB",
+                "Mouse Without Borders",
+                "Advanced Paste",
+                "AdvancedPaste",
+            };
+
+            foreach (var inactiveModuleCommentToken in inactiveModuleCommentTokens)
+            {
+                Assert.IsFalse(packageReferenceBlock.Contains(inactiveModuleCommentToken, StringComparison.Ordinal), $"Settings package-reference comments should not explain active dependency pins through inactive module '{inactiveModuleCommentToken}'.");
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));

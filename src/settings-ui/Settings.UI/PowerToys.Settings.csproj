@@ -70,9 +70,9 @@
 		<!-- HACK: To make sure the version pulled in by Microsoft.Extensions.Hosting is current. -->
 		<!-- This line forces the WebView2 version used by Windows App SDK to be the one we expect from Directory.Packages.props . -->
 		<PackageReference Include="Microsoft.Web.WebView2" />
-		<!-- HACK: CmdPal uses CommunityToolkit.Common directly. Align the version. -->
+		<!-- Keep CommunityToolkit.Common aligned with the WinUI toolkit packages restored into the flattened install directory. -->
 		<PackageReference Include="CommunityToolkit.Common" />
-		<!-- HACK: MWB and Advanced Paste. Align the version.  got flagged when https://github.com/microsoft/PowerToys/pull/38779 was done -->
+		<!-- Keep Microsoft.Bcl.AsyncInterfaces aligned with the .NET 10 package baseline used by the Settings runtime closure. -->
 		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
 		<Manifest Include="$(ApplicationManifest)" />
 	</ItemGroup>

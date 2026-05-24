@@ -103,15 +103,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         {
             try
             {
-                // MouseWithoutBorders and Peek settings may be changed by the logic in the utility as machines connect.
-                // We need to get a fresh version every time instead of using a repository.
-                if (string.Equals(moduleKey, MouseWithoutBordersSettings.ModuleName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(moduleKey, PeekSettings.ModuleName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return _settingsFactory.GetFreshSettings(moduleKey);
-                }
-
-                // For other modules, get the settings from SettingsRepository
                 return _settingsFactory.GetSettings(moduleKey);
             }
             catch (Exception ex)
@@ -243,15 +234,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     // No need to save settings here, the runner will call module interface to save it
                     // SaveSettingsToFile(settings);
 
-                    // For PowerToys Run, we should set the 'HotkeyChanged' property here to avoid issue #41468
-                    if (string.Equals(moduleName, PowerLauncherSettings.ModuleName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (settings is PowerLauncherSettings powerLauncherSettings)
-                        {
-                            powerLauncherSettings.Properties.HotkeyChanged = true;
-                        }
-                    }
-
                     // Send IPC notification using the same format as other ViewModels
                     SendConfigMSG(settingsConfig, moduleName);
 
@@ -331,13 +313,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private string GetHotkeyLocalizationHeader(string moduleName, int hotkeyID, string headerKey)
         {
-            // Handle AdvancedPaste custom actions
-            if (string.Equals(moduleName, AdvancedPasteSettings.ModuleName, StringComparison.OrdinalIgnoreCase)
-                && hotkeyID > 9)
-            {
-                return headerKey;
-            }
-
             try
             {
                 return resourceLoader.GetString($"{headerKey}/Header");

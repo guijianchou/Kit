@@ -630,6 +630,28 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitShortcutConflictWindowShouldNotSpecialCaseInactiveModuleSettings()
+        {
+            var shortcutConflictViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "ShortcutConflictViewModel.cs"));
+
+            string[] inactiveSettingsTypeNames =
+            {
+                "AdvancedPasteSettings",
+                "MouseWithoutBordersSettings",
+                "PeekSettings",
+                "PowerLauncherSettings",
+            };
+
+            foreach (var inactiveSettingsTypeName in inactiveSettingsTypeNames)
+            {
+                Assert.IsFalse(shortcutConflictViewModel.Contains(inactiveSettingsTypeName, StringComparison.Ordinal), $"Shortcut conflict UI should not special-case inactive settings type {inactiveSettingsTypeName}.");
+            }
+
+            Assert.IsFalse(shortcutConflictViewModel.Contains("HotkeyChanged", StringComparison.Ordinal), "Shortcut conflict UI should not keep the inactive PowerToys Run HotkeyChanged workaround.");
+            Assert.IsFalse(shortcutConflictViewModel.Contains("AdvancedPaste custom actions", StringComparison.Ordinal), "Shortcut conflict UI should not keep inactive AdvancedPaste custom-action label branches.");
+        }
+
+        [TestMethod]
         public void KitQuickAccessAllAppsShouldOnlyListActiveModules()
         {
             var allAppsViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "AllAppsViewModel.cs"));

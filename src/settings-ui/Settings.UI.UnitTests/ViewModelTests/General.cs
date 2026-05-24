@@ -734,6 +734,8 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "provider UI metadata/helpers");
             StringAssert.Contains(changelog, "non-serialized AI enum helpers");
             StringAssert.Contains(changelog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
+            StringAssert.Contains(changelog, "Removed Shortcut Conflict window special cases for inactive AdvancedPaste, Mouse Without Borders, Peek, and PowerToys Run settings");
+            StringAssert.Contains(changelog, "removed Shortcut Conflict inactive-module special cases");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
@@ -774,7 +776,9 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "non-serialized AI enum helpers");
             StringAssert.Contains(developmentLog, "historical settings serialization models remain");
             StringAssert.Contains(developmentLog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
-            StringAssert.Contains(developmentLog, "151/151 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "Shortcut Conflict window no longer keeps inactive AdvancedPaste, Mouse Without Borders, Peek, or PowerToys Run settings special cases");
+            StringAssert.Contains(developmentLog, "removed Shortcut Conflict inactive-module special cases");
+            StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

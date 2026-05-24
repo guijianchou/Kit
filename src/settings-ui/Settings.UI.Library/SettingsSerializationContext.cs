@@ -162,29 +162,13 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
     // IPC Send Message Wrapper Classes (Snd*)
     [JsonSerializable(typeof(SndAwakeSettings))]
-    [JsonSerializable(typeof(SndCursorWrapSettings))]
-    [JsonSerializable(typeof(SndFindMyMouseSettings))]
     [JsonSerializable(typeof(SndLightSwitchSettings))]
     [JsonSerializable(typeof(SndMonitorSettings))]
-    [JsonSerializable(typeof(SndMouseHighlighterSettings))]
-    [JsonSerializable(typeof(SndMousePointerCrosshairsSettings))]
-    [JsonSerializable(typeof(SndPowerAccentSettings))]
-    [JsonSerializable(typeof(SndPowerPreviewSettings))]
-    [JsonSerializable(typeof(SndPowerRenameSettings))]
-    [JsonSerializable(typeof(SndShortcutGuideSettings))]
 
     // IPC Message Generic Wrapper Types (SndModuleSettings<T>)
     [JsonSerializable(typeof(SndModuleSettings<SndAwakeSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndCursorWrapSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndFindMyMouseSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndLightSwitchSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndMonitorSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndMouseHighlighterSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndMousePointerCrosshairsSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndPowerAccentSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndPowerPreviewSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndPowerRenameSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndShortcutGuideSettings>))]
 
     public partial class SettingsSerializationContext : JsonSerializerContext
     {

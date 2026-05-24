@@ -283,6 +283,52 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsDeepLinksShouldOnlyExposeActiveWindows()
+        {
+            var settingsDeepLink = File.ReadAllText(FindSourceFile("src", "common", "Common.UI", "SettingsDeepLink.cs"));
+
+            string[] activeWindows =
+            {
+                "Dashboard",
+                "Overview",
+                "Awake",
+                "LightSwitch",
+                "Monitor",
+                "PowerDisplay",
+            };
+
+            foreach (var activeWindow in activeWindows)
+            {
+                Assert.IsTrue(
+                    settingsDeepLink.Contains($"{activeWindow},", StringComparison.Ordinal) || settingsDeepLink.Contains($"{activeWindow} =", StringComparison.Ordinal),
+                    $"Settings deep links should expose active {activeWindow} window.");
+                StringAssert.Contains(settingsDeepLink, $"return \"{activeWindow}\";");
+            }
+
+            string[] inactiveWindows =
+            {
+                "AdvancedPaste",
+                "AlwaysOnTop",
+                "ColorPicker",
+                "FancyZones",
+                "ImageResizer",
+                "KBM",
+                "MouseUtils",
+                "MouseWithoutBorders",
+                "PowerLauncher",
+                "PowerRename",
+                "Workspaces",
+                "ZoomIt",
+            };
+
+            foreach (var inactiveWindow in inactiveWindows)
+            {
+                Assert.IsFalse(settingsDeepLink.Contains($"{inactiveWindow},", StringComparison.Ordinal), $"Settings deep links should not expose inactive {inactiveWindow} windows.");
+                Assert.IsFalse(settingsDeepLink.Contains($"return \"{inactiveWindow}\";", StringComparison.Ordinal), $"Settings deep links should not route inactive {inactiveWindow} windows.");
+            }
+        }
+
+        [TestMethod]
         public void KitSettingsShouldRegisterPowerDisplaySerializationAndModels()
         {
             var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
@@ -326,6 +372,56 @@ namespace ViewModelTests
             foreach (var fileName in inactiveSourceFiles)
             {
                 Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, fileName)), $"Inactive Settings library source file should be deleted: {fileName}");
+            }
+        }
+
+        [TestMethod]
+        public void KitSettingsLibraryShouldNotKeepInactiveIpcWrappers()
+        {
+            var settingsLibraryProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj");
+            var settingsLibraryRoot = Path.GetDirectoryName(settingsLibraryProjectPath);
+            var serializationContext = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "SettingsSerializationContext.cs"));
+
+            string[] activeIpcTypes =
+            {
+                "SndAwakeSettings",
+                "SndLightSwitchSettings",
+                "SndMonitorSettings",
+            };
+
+            foreach (var activeIpcType in activeIpcTypes)
+            {
+                StringAssert.Contains(serializationContext, $"[JsonSerializable(typeof({activeIpcType}))]");
+                StringAssert.Contains(serializationContext, $"[JsonSerializable(typeof(SndModuleSettings<{activeIpcType}>))]");
+            }
+
+            string[] inactiveIpcFiles =
+            {
+                "FindMyMouseSettingsIPCMessage.cs",
+                "MouseHighlighterSettingsIPCMessage.cs",
+                "MousePointerCrosshairsSettingsIPCMessage.cs",
+                "PowerRenameSettingsIPCMessage.cs",
+                "ShortcutGuideSettingsIPCMessage.cs",
+                "SndCursorWrapSettings.cs",
+                "SndFindMyMouseSettings.cs",
+                "SndGrabAndMoveSettings.cs",
+                "SndImageResizerSettings.cs",
+                "SndKeyboardManagerSettings.cs",
+                "SndMouseHighlighterSettings.cs",
+                "SndMousePointerCrosshairsSettings.cs",
+                "SndPowerAccentSettings.cs",
+                "SndPowerOcrSettings.cs",
+                "SndPowerPreviewSettings.cs",
+                "SndPowerRenameSettings.cs",
+                "SndRegistryPreviewSettings.cs",
+                "SndShortcutGuideSettings.cs",
+            };
+
+            foreach (var fileName in inactiveIpcFiles)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, fileName)), $"Inactive IPC wrapper source file should be deleted: {fileName}");
+                var typeName = Path.GetFileNameWithoutExtension(fileName);
+                Assert.IsFalse(serializationContext.Contains(typeName, StringComparison.Ordinal), $"Inactive IPC wrapper should not be registered in SettingsSerializationContext: {typeName}");
             }
         }
 

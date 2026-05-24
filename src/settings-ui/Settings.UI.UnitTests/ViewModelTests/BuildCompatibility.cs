@@ -652,6 +652,41 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsFactoryShouldResolveOnlyActiveHotkeySettings()
+        {
+            var settingsFactory = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "SettingsFactory.cs"));
+
+            StringAssert.Contains(settingsFactory, "GeneralSettingsModuleKey");
+            StringAssert.Contains(settingsFactory, "LightSwitchSettings.ModuleName");
+            StringAssert.Contains(settingsFactory, "PowerDisplaySettings.ModuleName");
+
+            string[] inactiveSettingsTypeNames =
+            {
+                "AdvancedPasteSettings",
+                "AlwaysOnTopSettings",
+                "ColorPickerSettings",
+                "MouseWithoutBordersSettings",
+                "PeekSettings",
+                "PowerLauncherSettings",
+                "ShortcutGuideSettings",
+                "WorkspacesSettings",
+            };
+
+            foreach (var inactiveSettingsTypeName in inactiveSettingsTypeNames)
+            {
+                Assert.IsFalse(settingsFactory.Contains(inactiveSettingsTypeName, StringComparison.Ordinal), $"SettingsFactory should not resolve inactive hotkey settings type {inactiveSettingsTypeName}.");
+            }
+
+            Assert.IsFalse(settingsFactory.Contains("Assembly.GetAssembly", StringComparison.Ordinal), "SettingsFactory should not scan the Settings.UI.Library assembly for every historical IHotkeyConfig.");
+            Assert.IsFalse(settingsFactory.Contains(".GetTypes()", StringComparison.Ordinal), "SettingsFactory should not discover inactive settings types with Assembly.GetTypes().");
+            Assert.IsFalse(settingsFactory.Contains("MakeGenericType", StringComparison.Ordinal), "SettingsFactory should not use reflection to instantiate repositories for inactive module settings.");
+            Assert.IsFalse(settingsFactory.Contains("GetFreshSettings", StringComparison.Ordinal), "SettingsFactory should not expose unused fresh-settings loading paths.");
+            Assert.IsFalse(settingsFactory.Contains("GetAvailableModuleNames", StringComparison.Ordinal), "SettingsFactory should not expose inactive module enumeration APIs.");
+            Assert.IsFalse(settingsFactory.Contains("GetAllHotkeySettings", StringComparison.Ordinal), "SettingsFactory should not expose broad hotkey enumeration APIs.");
+            Assert.IsFalse(settingsFactory.Contains("GetRepository<", StringComparison.Ordinal), "SettingsFactory should not expose generic repository access outside its shortcut-conflict responsibility.");
+        }
+
+        [TestMethod]
         public void KitQuickAccessAllAppsShouldOnlyListActiveModules()
         {
             var allAppsViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "AllAppsViewModel.cs"));

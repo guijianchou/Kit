@@ -736,10 +736,14 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
             StringAssert.Contains(changelog, "Removed Shortcut Conflict window special cases for inactive AdvancedPaste, Mouse Without Borders, Peek, and PowerToys Run settings");
             StringAssert.Contains(changelog, "removed Shortcut Conflict inactive-module special cases");
+            StringAssert.Contains(changelog, "Narrowed `SettingsFactory` to explicit Quick Access, LightSwitch, and PowerDisplay hotkey settings");
+            StringAssert.Contains(changelog, "explicit SettingsFactory hotkey boundary");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
+            StringAssert.Contains(readme, "Shortcut Conflict hotkey lookup is explicit for Quick Access, LightSwitch, and PowerDisplay");
             StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
+            StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access、LightSwitch 和 PowerDisplay");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -778,7 +782,10 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
             StringAssert.Contains(developmentLog, "Shortcut Conflict window no longer keeps inactive AdvancedPaste, Mouse Without Borders, Peek, or PowerToys Run settings special cases");
             StringAssert.Contains(developmentLog, "removed Shortcut Conflict inactive-module special cases");
+            StringAssert.Contains(developmentLog, "`SettingsFactory` now resolves only Quick Access, LightSwitch, and PowerDisplay hotkey settings");
+            StringAssert.Contains(developmentLog, "explicit SettingsFactory hotkey boundary");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

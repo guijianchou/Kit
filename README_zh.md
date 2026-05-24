@@ -163,6 +163,7 @@ Monitor 是第一个直接针对 PowerToys 模块形状开发的 Kit 模块。�
 - 在本地迭代开发期间，如果磁盘空间允许，保留 `src\kit\packages`。它可以防止由于缺少包（如 WIL 和 C++/WinRT）而导致的冷构建失败和缓慢恢复。
 - 如果 `packages` 被删除，在判断缺少头文件或 WinMD 投影的编译错误之前，运行 Visual Studio `Restore NuGet Packages` 或执行完整解决方案构建。
 - 发布构建仅保留 `en-US` 卫星资源，从运行时输出中删除生成的调试符号和本机链接工件，清理非活动 Settings 模块资产、图标、资源字符串、OOBE/模型资产以及陈旧的非活动控件 XBF 输出，并且不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper。
+- Shortcut Conflict 热键查找显式限定为 Quick Access、LightSwitch 和 PowerDisplay，不再扫描 PowerToys 衍生库中的所有历史 `IHotkeyConfig` settings 模型。
 - WindowsAppSDK 1.8 仍然通过 `Microsoft.WindowsAppSDK` 元包贡献其自己的 Windows AI/Onnx 运行时文件。删除这些将需要用细粒度的 WindowsAppSDK 包引用替换元包，因此推迟到可以更广泛地验证设置兼容性。
 
 在源大小清理后，`src\kit` 应该看起来接近仅源大小：源和文档保留，而 `x64`、`Release`、`.vs`、`packages` 和项目 `bin`/`obj` 目录应该不存在，直到下一次恢复/构建。

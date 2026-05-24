@@ -60,9 +60,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             }
         }
 
-        [JsonIgnore]
-        public AIServiceType ActiveServiceTypeKind => ActiveProvider?.ServiceTypeKind ?? AIServiceType.OpenAI;
-
         public override string ToString()
             => JsonSerializer.Serialize(this, SettingsSerializationContext.Default.PasteAIConfiguration);
 

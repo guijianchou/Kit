@@ -1186,6 +1186,8 @@ namespace ViewModelTests
             var settingsUiRoot = Path.GetDirectoryName(settingsProjectPath);
             var settingsLibraryProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj");
             var settingsLibraryRoot = Path.GetDirectoryName(settingsLibraryProjectPath);
+            var pasteAiProviderDefinition = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "PasteAIProviderDefinition.cs"));
+            var pasteAiConfiguration = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "PasteAIConfiguration.cs"));
             var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
             var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
             var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
@@ -1207,6 +1209,12 @@ namespace ViewModelTests
             Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "AIServiceTypeMetadata.cs")), "Settings library should delete UI-only AdvancedPaste AI provider metadata.");
             Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "AIServiceTypeRegistry.cs")), "Settings library should delete UI-only AdvancedPaste AI provider registry metadata.");
             Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "PasteAIProviderDefaults.cs")), "Settings library should delete AdvancedPaste AI provider default model helpers after removing the provider UI.");
+            Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "AIServiceType.cs")), "Settings library should not keep an AdvancedPaste AI enum after the provider UI helpers are deleted.");
+            Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "AIServiceTypeExtensions.cs")), "Settings library should not keep AdvancedPaste AI enum normalization helpers after the provider UI helpers are deleted.");
+            StringAssert.Contains(pasteAiProviderDefinition, @"JsonPropertyName(""service-type"")");
+            Assert.IsFalse(pasteAiProviderDefinition.Contains("ServiceTypeKind", StringComparison.Ordinal), "Paste AI compatibility DTOs should keep persisted strings without carrying non-serialized AI enum helper properties.");
+            StringAssert.Contains(pasteAiConfiguration, @"JsonPropertyName(""active-provider-id"")");
+            Assert.IsFalse(pasteAiConfiguration.Contains("ActiveServiceTypeKind", StringComparison.Ordinal), "Paste AI compatibility DTOs should not carry non-serialized AI enum helper properties.");
             Assert.IsFalse(resources.Contains("FoundryLocal_RestartRequiredNote", StringComparison.Ordinal), "Settings resources should not keep Foundry Local UI strings after deleting the model picker.");
 
             string[] inactiveAiPackagePins =

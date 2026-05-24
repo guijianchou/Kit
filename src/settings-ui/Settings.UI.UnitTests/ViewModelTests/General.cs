@@ -732,11 +732,12 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Kit-named Settings termination projection");
             StringAssert.Contains(changelog, "Deleted the inactive AdvancedPaste-only `LanguageModelProvider` source tree");
             StringAssert.Contains(changelog, "provider UI metadata/helpers");
-            StringAssert.Contains(changelog, "deleted AdvancedPaste AI provider source/package/UI helper remnants");
+            StringAssert.Contains(changelog, "non-serialized AI enum helpers");
+            StringAssert.Contains(changelog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
-            StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, or provider UI metadata/helpers");
-            StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin 或 provider UI metadata/helper");
+            StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
+            StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -770,8 +771,9 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "Kit-named Settings termination projection");
             StringAssert.Contains(developmentLog, "inactive AdvancedPaste-only `LanguageModelProvider` source tree was deleted");
             StringAssert.Contains(developmentLog, "provider UI metadata/helpers");
+            StringAssert.Contains(developmentLog, "non-serialized AI enum helpers");
             StringAssert.Contains(developmentLog, "historical settings serialization models remain");
-            StringAssert.Contains(developmentLog, "deleted AdvancedPaste AI provider source/package/UI helper remnants");
+            StringAssert.Contains(developmentLog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
             StringAssert.Contains(developmentLog, "151/151 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));

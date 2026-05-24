@@ -50,13 +50,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             }
         }
 
-        [JsonIgnore]
-        public AIServiceType ServiceTypeKind
-        {
-            get => ServiceType.ToAIServiceType();
-            set => ServiceType = value.ToConfigurationString();
-        }
-
         [JsonPropertyName("model-name")]
         public string ModelName
         {

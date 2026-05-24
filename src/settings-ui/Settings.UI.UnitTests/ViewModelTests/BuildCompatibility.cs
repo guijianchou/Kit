@@ -654,6 +654,81 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsShouldDeleteInactiveIconAssetsInsteadOfShippingThem()
+        {
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProject = File.ReadAllText(settingsProjectPath);
+            var quickAccessProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "PowerToys.QuickAccess.csproj"));
+            var settingsRoot = Path.GetDirectoryName(settingsProjectPath);
+            var iconAssetsRoot = Path.Combine(settingsRoot!, "Assets", "Settings", "Icons");
+
+            string[] activeIconAssets =
+            {
+                "Awake.png",
+                "LightSwitch.png",
+                "PowerDisplay.png",
+                "PowerToys.png",
+            };
+
+            foreach (var activeIcon in activeIconAssets)
+            {
+                Assert.IsTrue(File.Exists(Path.Combine(iconAssetsRoot, activeIcon)), $"Active Settings icon asset should remain: {activeIcon}");
+                StringAssert.Contains(quickAccessProject, $@"..\Settings.UI\Assets\Settings\Icons\{activeIcon}");
+            }
+
+            string[] inactiveIconAssets =
+            {
+                "Advanced.png",
+                "AdvancedPaste.png",
+                "AlwaysOnTop.png",
+                "CmdPal.png",
+                "ColorPicker.png",
+                "CommandNotFound.png",
+                "CropAndLock.png",
+                "CursorWrap.png",
+                "EnvironmentVariables.png",
+                "FancyZones.png",
+                "FileExplorerPreview.png",
+                "FileLocksmith.png",
+                "FileManagement.png",
+                "FindMyMouse.png",
+                "GrabAndMove.png",
+                "Hosts.png",
+                "ImageResizer.png",
+                "InputOutput.png",
+                "KeyboardManager.png",
+                "MouseCrosshairs.png",
+                "MouseHighlighter.png",
+                "MouseJump.png",
+                "MouseUtils.png",
+                "MouseWithoutBorders.png",
+                "NewPlus.png",
+                "Peek.png",
+                "PowerRename.png",
+                "PowerToysRun.png",
+                "QuickAccent.png",
+                "RegistryPreview.png",
+                "ScreenRuler.png",
+                "SemanticKernel.png",
+                "ShortcutGuide.png",
+                "SystemTools.png",
+                "TextExtractor.png",
+                "WindowingAndLayouts.png",
+                "Workspaces.png",
+                "ZoomIt.png",
+            };
+
+            foreach (var inactiveIcon in inactiveIconAssets)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(iconAssetsRoot, inactiveIcon)), $"Inactive Settings icon asset should be deleted: {inactiveIcon}");
+            }
+
+            StringAssert.Contains(settingsProject, "KitInactiveSettingsIconAssets");
+            StringAssert.Contains(settingsProject, @"$(OutDir)Assets\Settings\Icons\*.png");
+            Assert.IsFalse(quickAccessProject.Contains(@"..\Settings.UI\Assets\Settings\Icons\**\*", StringComparison.Ordinal), "Quick Access should not copy the full inactive Settings icon tree.");
+        }
+
+        [TestMethod]
         public void KitSettingsShouldNotBuildAdvancedPasteLanguageModelProvider()
         {
             var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));

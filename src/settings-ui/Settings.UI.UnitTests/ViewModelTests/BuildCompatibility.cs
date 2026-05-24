@@ -396,6 +396,42 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitQuickAccessFlyoutDefaultsAndGpoShouldStayInActiveModuleSurface()
+        {
+            var flyoutMenuItem = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "FlyoutMenuItem.cs"));
+            var quickAccessGpoHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Helpers", "ModuleGpoHelper.cs"));
+
+            StringAssert.Contains(flyoutMenuItem, "ModuleType.Awake");
+            Assert.IsFalse(flyoutMenuItem.Contains("ModuleType.PowerLauncher", StringComparison.Ordinal), "Quick Access flyout item fallback should not use inactive Power Launcher.");
+            StringAssert.Contains(quickAccessGpoHelper, "ModuleType.Awake => GPOWrapper.GetConfiguredAwakeEnabledValue()");
+            StringAssert.Contains(quickAccessGpoHelper, "ModuleType.LightSwitch => GPOWrapper.GetConfiguredLightSwitchEnabledValue()");
+            StringAssert.Contains(quickAccessGpoHelper, "ModuleType.PowerDisplay => GPOWrapper.GetConfiguredPowerDisplayEnabledValue()");
+
+            string[] inactiveModules =
+            {
+                "AdvancedPaste",
+                "AlwaysOnTop",
+                "CmdPal",
+                "ColorPicker",
+                "CropAndLock",
+                "EnvironmentVariables",
+                "FancyZones",
+                "FileLocksmith",
+                "ImageResizer",
+                "KeyboardManager",
+                "PowerLauncher",
+                "PowerRename",
+                "Workspaces",
+                "ZoomIt",
+            };
+
+            foreach (var inactiveModule in inactiveModules)
+            {
+                Assert.IsFalse(quickAccessGpoHelper.Contains($"ModuleType.{inactiveModule} =>", StringComparison.Ordinal), $"Quick Access GPO helper should not keep inactive {inactiveModule} branches.");
+            }
+        }
+
+        [TestMethod]
         public void KitSettingsShouldNotPublishInactiveOobeAssets()
         {
             var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));

@@ -687,6 +687,18 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitPageViewModelBaseShouldNotCarryInactiveMouseUtilsConflictBranches()
+        {
+            var pageViewModelBase = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "PageViewModelBase.cs"));
+
+            Assert.IsFalse(pageViewModelBase.Contains("ProcessMouseUtilsConflictGroup", StringComparison.Ordinal), "Active Settings page base should not carry a deleted MouseUtils page conflict helper.");
+            Assert.IsFalse(pageViewModelBase.Contains("\"MouseUtils\"", StringComparison.Ordinal), "Active Settings page base should not branch on the deleted MouseUtils page name.");
+            Assert.IsFalse(pageViewModelBase.Contains("FindMyMouseSettings", StringComparison.Ordinal), "Active Settings page base should not reference inactive MouseUtils settings models.");
+            Assert.IsFalse(pageViewModelBase.Contains("MouseHighlighterSettings", StringComparison.Ordinal), "Active Settings page base should not reference inactive MouseUtils settings models.");
+            Assert.IsFalse(pageViewModelBase.Contains("MousePointerCrosshairsSettings", StringComparison.Ordinal), "Active Settings page base should not reference inactive MouseUtils settings models.");
+        }
+
+        [TestMethod]
         public void KitQuickAccessAllAppsShouldOnlyListActiveModules()
         {
             var allAppsViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "AllAppsViewModel.cs"));

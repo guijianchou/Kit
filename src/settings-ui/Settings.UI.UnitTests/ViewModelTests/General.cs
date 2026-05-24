@@ -738,6 +738,8 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "removed Shortcut Conflict inactive-module special cases");
             StringAssert.Contains(changelog, "Narrowed `SettingsFactory` to explicit Quick Access, LightSwitch, and PowerDisplay hotkey settings");
             StringAssert.Contains(changelog, "explicit SettingsFactory hotkey boundary");
+            StringAssert.Contains(changelog, "Removed the inactive MouseUtils conflict special branch from `PageViewModelBase`");
+            StringAssert.Contains(changelog, "removed inactive MouseUtils page conflict branch");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
@@ -784,8 +786,11 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "removed Shortcut Conflict inactive-module special cases");
             StringAssert.Contains(developmentLog, "`SettingsFactory` now resolves only Quick Access, LightSwitch, and PowerDisplay hotkey settings");
             StringAssert.Contains(developmentLog, "explicit SettingsFactory hotkey boundary");
+            StringAssert.Contains(developmentLog, "PageViewModelBase` no longer carries the inactive MouseUtils conflict special branch");
+            StringAssert.Contains(developmentLog, "removed inactive MouseUtils page conflict branch");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
             StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
+            StringAssert.Contains(developmentLog, "154/154 passing Settings UI tests after deleting the inactive MouseUtils conflict branch");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

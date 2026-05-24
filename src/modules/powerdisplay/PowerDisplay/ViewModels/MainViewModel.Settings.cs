@@ -8,14 +8,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Telemetry;
 using PowerDisplay.Common.Models;
 using PowerDisplay.Common.Services;
 using PowerDisplay.Common.Utils;
 using PowerDisplay.Models;
 using PowerDisplay.Serialization;
 using PowerDisplay.Services;
-using PowerDisplay.Telemetry.Events;
 using PowerToys.Interop;
 
 namespace PowerDisplay.ViewModels;
@@ -501,34 +499,5 @@ public partial class MainViewModel
         }
 
         return result;
-    }
-
-    /// <summary>
-    /// Send settings telemetry event (triggered by Runner via send_settings_telemetry())
-    /// </summary>
-    public void SendSettingsTelemetry()
-    {
-        try
-        {
-            // Load current settings to get hotkey and tray icon status
-            var settings = _settingsUtils.GetSettingsOrDefault<PowerDisplaySettings>(PowerDisplaySettings.ModuleName);
-
-            // Load profiles to get count
-            var profilesData = ProfileService.LoadProfiles();
-
-            var telemetryEvent = new PowerDisplaySettingsTelemetryEvent
-            {
-                HotkeyEnabled = settings.Properties.ActivationShortcut?.IsValid() ?? false,
-                TrayIconEnabled = settings.Properties.ShowSystemTrayIcon,
-                MonitorCount = Monitors.Count,
-                ProfileCount = profilesData?.Profiles?.Count ?? 0,
-            };
-
-            PowerToysTelemetry.Log.WriteEvent(telemetryEvent);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError($"[Telemetry] Failed to send settings telemetry: {ex.Message}");
-        }
     }
 }

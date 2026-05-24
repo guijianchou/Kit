@@ -20,7 +20,6 @@ using Awake.Core.Native;
 using Awake.Properties;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Telemetry;
 using Microsoft.Win32;
 
 namespace Awake.Core
@@ -213,8 +212,6 @@ namespace Awake.Core
 
         internal static void SetIndefiniteKeepAwake(bool keepDisplayOn = false, int processId = 0, [CallerMemberName] string callerName = "")
         {
-            PowerToysTelemetry.Log.WriteEvent(new Telemetry.AwakeIndefinitelyKeepAwakeEvent());
-
             CancelExistingThread();
 
             if (IsUsingPowerToysConfig)
@@ -257,7 +254,6 @@ namespace Awake.Core
         internal static void SetExpirableKeepAwake(DateTimeOffset expireAt, bool keepDisplayOn = true, [CallerMemberName] string callerName = "")
         {
             Logger.LogInfo($"Expirable keep-awake invoked by {callerName}. Expected expiration date/time: {expireAt} with display on setting set to {keepDisplayOn}.");
-            PowerToysTelemetry.Log.WriteEvent(new Telemetry.AwakeExpirableKeepAwakeEvent());
 
             CancelExistingThread();
 
@@ -315,7 +311,6 @@ namespace Awake.Core
         internal static void SetTimedKeepAwake(uint seconds, bool keepDisplayOn = true, [CallerMemberName] string callerName = "")
         {
             Logger.LogInfo($"Timed keep-awake invoked by {callerName}. Expected runtime: {seconds} seconds with display on setting set to {keepDisplayOn}.");
-            PowerToysTelemetry.Log.WriteEvent(new Telemetry.AwakeTimedKeepAwakeEvent());
 
             CancelExistingThread();
 
@@ -487,7 +482,6 @@ namespace Awake.Core
         internal static void SetPassiveKeepAwake(bool updateSettings = true, [CallerMemberName] string callerName = "")
         {
             Logger.LogInfo($"Operating in passive mode (computer's standard power plan). Invoked by {callerName}. No custom keep awake settings enabled.");
-            PowerToysTelemetry.Log.WriteEvent(new Telemetry.AwakeNoKeepAwakeEvent());
 
             CancelExistingThread();
 

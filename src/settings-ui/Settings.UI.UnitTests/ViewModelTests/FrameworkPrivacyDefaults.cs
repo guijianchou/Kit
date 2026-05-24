@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ViewModelTests
@@ -30,6 +31,28 @@ namespace ViewModelTests
             }
 
             Assert.Fail($"Could not find source file: {Path.Combine(relativePathParts)}");
+            return string.Empty;
+        }
+
+        private static string FindSourceDirectory(params string[] relativePathParts)
+        {
+            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null)
+            {
+                var pathParts = new string[relativePathParts.Length + 1];
+                pathParts[0] = directory.FullName;
+                Array.Copy(relativePathParts, 0, pathParts, 1, relativePathParts.Length);
+
+                var candidate = Path.Combine(pathParts);
+                if (Directory.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                directory = directory.Parent;
+            }
+
+            Assert.Fail($"Could not find source directory: {Path.Combine(relativePathParts)}");
             return string.Empty;
         }
 
@@ -122,6 +145,61 @@ namespace ViewModelTests
                 Assert.IsFalse(content.Contains("PowerToysTelemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not send managed telemetry.");
                 Assert.IsFalse(content.Contains("Microsoft.PowerToys.Telemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not import managed telemetry.");
             }
+        }
+
+        [TestMethod]
+        public void ActiveManagedModulesShouldNotSendManagedTelemetry()
+        {
+            string[][] activeManagedModuleRoots =
+            {
+                new[] { "src", "modules", "awake", "Awake" },
+                new[] { "src", "modules", "powerdisplay", "PowerDisplay" },
+            };
+
+            foreach (var rootParts in activeManagedModuleRoots)
+            {
+                var moduleRoot = FindSourceDirectory(rootParts);
+                var telemetryDirectory = Path.Combine(moduleRoot, "Telemetry");
+                if (Directory.Exists(telemetryDirectory))
+                {
+                    Assert.IsFalse(Directory.EnumerateFiles(telemetryDirectory, "*.cs", SearchOption.AllDirectories).Any(), $"{Path.Combine(rootParts)} should not keep telemetry event source files.");
+                }
+
+                foreach (var sourceFile in Directory.EnumerateFiles(moduleRoot, "*.cs", SearchOption.AllDirectories))
+                {
+                    var relativePath = Path.GetRelativePath(moduleRoot, sourceFile);
+                    if (relativePath.Split(Path.DirectorySeparatorChar).Any(part => part is "bin" or "obj"))
+                    {
+                        continue;
+                    }
+
+                    var content = File.ReadAllText(sourceFile);
+                    Assert.IsFalse(content.Contains("Microsoft.PowerToys.Telemetry", StringComparison.Ordinal), $"{sourceFile} should not import managed telemetry.");
+                    Assert.IsFalse(content.Contains("PowerToysTelemetry.Log.WriteEvent", StringComparison.Ordinal), $"{sourceFile} should not send managed telemetry.");
+                }
+            }
+        }
+
+        [TestMethod]
+        public void PowerDisplayShouldNotKeepSettingsTelemetryIpc()
+        {
+            var moduleInterface = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "dllmain.cpp"));
+            var app = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplayXAML", "App.xaml.cs"));
+            var viewModelSettings = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "ViewModels", "MainViewModel.Settings.cs"));
+            var sharedConstants = File.ReadAllText(FindSourceFile("src", "common", "interop", "shared_constants.h"));
+            var interopConstantsCpp = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.cpp"));
+            var interopConstantsHeader = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.h"));
+            var interopConstantsIdl = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.idl"));
+
+            Assert.IsFalse(moduleInterface.Contains("m_hSendSettingsTelemetryEvent", StringComparison.Ordinal), "PowerDisplay module interface should not create a settings telemetry event handle.");
+            Assert.IsFalse(moduleInterface.Contains("POWER_DISPLAY_SEND_SETTINGS_TELEMETRY_EVENT", StringComparison.Ordinal), "PowerDisplay module interface should not signal settings telemetry IPC.");
+            Assert.IsFalse(moduleInterface.Contains("send_settings_telemetry: Signaling", StringComparison.Ordinal), "PowerDisplay send_settings_telemetry should stay inert in Kit.");
+            Assert.IsFalse(app.Contains("PowerDisplaySendSettingsTelemetryEvent", StringComparison.Ordinal), "PowerDisplay app should not listen for settings telemetry IPC.");
+            Assert.IsFalse(viewModelSettings.Contains("SendSettingsTelemetry", StringComparison.Ordinal), "PowerDisplay view model should not keep settings telemetry collection.");
+            Assert.IsFalse(sharedConstants.Contains("POWER_DISPLAY_SEND_SETTINGS_TELEMETRY_EVENT", StringComparison.Ordinal), "Interop constants should not expose PowerDisplay settings telemetry events.");
+            Assert.IsFalse(interopConstantsCpp.Contains("PowerDisplaySendSettingsTelemetryEvent", StringComparison.Ordinal), "Interop C++ projection should not expose PowerDisplay settings telemetry events.");
+            Assert.IsFalse(interopConstantsHeader.Contains("PowerDisplaySendSettingsTelemetryEvent", StringComparison.Ordinal), "Interop header should not expose PowerDisplay settings telemetry events.");
+            Assert.IsFalse(interopConstantsIdl.Contains("PowerDisplaySendSettingsTelemetryEvent", StringComparison.Ordinal), "Interop IDL should not expose PowerDisplay settings telemetry events.");
         }
 
         [TestMethod]

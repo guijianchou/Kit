@@ -13,6 +13,8 @@
 - Privacy: Removed managed telemetry sends, telemetry event sources, and `ManagedTelemetry` project references from the managed Settings and Quick Access layer.
 - Privacy: Reduced `ManagedTelemetry` to a no-op compatibility shim and removed the unused TraceEvent runtime package pin.
 - Privacy: Converted Awake and PowerDisplay native module trace providers into no-op compatibility hooks, matching Light Switch.
+- Privacy: Removed the remaining no-op managed telemetry calls and event source classes from Awake and PowerDisplay.
+- Privacy: Removed PowerDisplay's settings telemetry IPC event and module-interface signaling path after deleting the runner settings telemetry worker.
 - Slimming: Deleted the legacy sibling Settings asset tree and inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
 - Policy: Trimmed ADMX/ADML policy assets to the same Kit 1.2.2 active policy surface.
@@ -32,7 +34,7 @@
 - Slimming: Pruned backup/restore defaults to the active Kit settings surface by deleting inactive Keyboard Manager, FancyZones, Workspaces, PowerToys Run restore rules, and the PowerToys Run plugin fix-up code path.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
-- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, the managed telemetry compatibility shim, and active native module no-op trace providers.
+- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, the managed telemetry compatibility shim, active native module no-op trace providers, and PowerDisplay's removed settings telemetry IPC.
 
 ### 1.2.0
 
@@ -127,6 +129,8 @@
 - 隐私：从托管 Settings 和 Quick Access 层移除 telemetry 发送、telemetry 事件源和 `ManagedTelemetry` 项目引用。
 - 隐私：将 `ManagedTelemetry` 收敛为 no-op 兼容 shim，并移除未使用的 TraceEvent runtime 包版本固定。
 - 隐私：将 Awake 和 PowerDisplay native module trace provider 改为 no-op 兼容钩子，与 Light Switch 保持一致。
+- 隐私：从 Awake 和 PowerDisplay 移除剩余的 no-op 托管 telemetry 调用和事件源类。
+- 隐私：删除 runner settings telemetry worker 后，移除 PowerDisplay 的 settings telemetry IPC 事件和 module-interface 信号路径。
 - 瘦身：删除旧 sibling Settings 资产树以及非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。
 - 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 1.2.2 活动策略表面。
@@ -146,7 +150,7 @@
 - 瘦身：将备份/恢复默认值裁剪到活动 Kit 设置表面，删除非活动的 Keyboard Manager、FancyZones、Workspaces、PowerToys Run 恢复规则以及 PowerToys Run 插件修正代码路径。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
-- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、托管 telemetry 兼容 shim、活动 native module no-op trace provider 的回归覆盖。
+- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、托管 telemetry 兼容 shim、活动 native module no-op trace provider，以及 PowerDisplay settings telemetry IPC 删除的回归覆盖。
 
 ### 1.2.0
 

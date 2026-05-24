@@ -267,10 +267,6 @@ namespace winrt::PowerToys::Interop::implementation
     {
         return CommonSharedConstants::SETTINGS_UPDATED_POWER_DISPLAY_EVENT;
     }
-    hstring Constants::PowerDisplaySendSettingsTelemetryEvent()
-    {
-        return CommonSharedConstants::POWER_DISPLAY_SEND_SETTINGS_TELEMETRY_EVENT;
-    }
     hstring Constants::HotkeyUpdatedPowerDisplayEvent()
     {
         return CommonSharedConstants::HOTKEY_UPDATED_POWER_DISPLAY_EVENT;
@@ -305,4 +301,3 @@ namespace winrt::PowerToys::Interop::implementation
         return CommonSharedConstants::KEYBOARD_MANAGER_ENGINE_INSTANCE_MUTEX;
     }
 }
-

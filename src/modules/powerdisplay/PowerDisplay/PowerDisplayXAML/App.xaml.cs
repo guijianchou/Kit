@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
@@ -43,17 +42,6 @@ namespace PowerDisplay
 
             // Note: Logger is already initialized in Program.cs before App constructor
             Logger.LogTrace("App constructor: InitializeComponent completed");
-
-            // Initialize PowerToys telemetry
-            try
-            {
-                PowerToysTelemetry.Log.WriteEvent(new Telemetry.Events.PowerDisplayStartEvent());
-                Logger.LogTrace("App constructor: Telemetry event sent");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"App constructor: Telemetry failed: {ex.Message}");
-            }
 
             // Initialize language settings
             string appLanguage = LanguageHelper.LoadLanguage();
@@ -110,7 +98,6 @@ namespace PowerDisplay
                     Constants.HotkeyUpdatedPowerDisplayEvent(),
                     mw => mw.ReloadHotkeySettings(),
                     "HotkeyUpdated");
-                RegisterViewModelEvent(Constants.PowerDisplaySendSettingsTelemetryEvent(), vm => vm.SendSettingsTelemetry(), "SendSettingsTelemetry");
 
                 // LightSwitch integration - apply profiles when theme changes
                 RegisterViewModelEvent(PathConstants.LightSwitchLightThemeEventName, vm => vm.ApplyLightSwitchProfile(isLightMode: true), "LightSwitch-Light");

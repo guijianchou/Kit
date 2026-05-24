@@ -169,7 +169,6 @@ namespace CommonSharedConstants
     const wchar_t TERMINATE_POWER_DISPLAY_EVENT[] = L"Local\\KitPowerDisplay-TerminateEvent-7b9c2e1f-8a5d-4c3e-9f6b-2a1d8c5e3b7a";
     const wchar_t REFRESH_POWER_DISPLAY_MONITORS_EVENT[] = L"Local\\KitPowerDisplay-RefreshMonitorsEvent-a3f5c8e7-9d1b-4e2f-8c6a-3b5d7e9f1a2c";
     const wchar_t SETTINGS_UPDATED_POWER_DISPLAY_EVENT[] = L"Local\\KitPowerDisplay-SettingsUpdatedEvent-2e4d6f8a-1c3b-5e7f-9a1d-4c6e8f0b2d3e";
-    const wchar_t POWER_DISPLAY_SEND_SETTINGS_TELEMETRY_EVENT[] = L"Local\\KitPowerDisplay-SettingsTelemetryEvent-8c4f2a1d-5e3b-7f9c-1a6d-3b8e5f2c9a7d";
     const wchar_t HOTKEY_UPDATED_POWER_DISPLAY_EVENT[] = L"Local\\KitPowerDisplay-HotkeyUpdatedEvent-9d5f3a2b-7e1c-4b8a-6f3d-2a9e5c7b1d4f";
 
     // IPC Messages used in PowerDisplay (Named Pipe communication)

@@ -10,7 +10,9 @@ This pass moved Kit from 1.2.0 to 1.2.2 while comparing the current Kit docs, te
 - Quick Access and Settings serialization now reference only the active Kit module set: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
 - Managed Settings and Quick Access no longer keep telemetry send paths, telemetry event source files, or `ManagedTelemetry` project references.
 - `ManagedTelemetry` is now a no-op compatibility shim only; it no longer references the TraceEvent runtime package, starts TraceEvent sessions, or enables managed EventSource listeners.
+- Awake and PowerDisplay no longer keep managed telemetry write calls or module-local telemetry event source classes.
 - Awake and PowerDisplay native module interfaces now keep only no-op trace compatibility hooks, matching Light Switch and avoiding active-module TraceLogging providers or writes.
+- PowerDisplay no longer exposes or listens to a settings telemetry IPC event; this matches Kit's removed runner settings telemetry worker instead of carrying an event with no active consumer.
 - Inactive Settings models, source files, unit tests, assets, icons, controls, converters, OOBE view models, and the legacy sibling Settings asset tree were deleted instead of being kept behind project exclusions.
 - GPOWrapper and module GPO helpers now expose only active module policies plus the retained startup, update, and diagnostics rules; inactive module and installer/update-toast policy readers were deleted from runtime and tests. ADMX/ADML policy assets now match the same Kit 1.2.2 policy surface.
 - The upstream BugReportTool source and launch paths were deleted from `tools`, runner tray/menu code, General, and Quick Access because the tool collects inactive PowerToys module state.
@@ -28,8 +30,8 @@ This pass moved Kit from 1.2.0 to 1.2.2 while comparing the current Kit docs, te
 - Unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles were removed so startup and backup no longer carry state for deleted windows.
 - Backup/restore defaults were pruned to generic active Kit settings rules by deleting inactive Keyboard Manager, FancyZones, Workspaces, PowerToys Run restore entries, and the PowerToys Run plugin fix-up branch.
 - Settings and Quick Access now clean stale inactive Settings payloads from the shared WinUI output; Quick Access copies only active Settings icons.
-- Regression coverage now guards the four-module Quick Access boundary, deleted inactive Settings surfaces, GPO policy trimming, ADMX/ADML policy assets, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, the no-op managed telemetry shim, and active native module no-op trace providers.
-- Verification for this refactor used Visual Studio 18 MSBuild for `Kit.vcxproj`, `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, `GPOWrapper.vcxproj`, `UnitTests-CommonUtils.vcxproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 426/426 passing CommonUtils tests in the broader 1.2.2 pass and 143/143 passing Settings UI tests after the managed/native telemetry slimming pass.
+- Regression coverage now guards the four-module Quick Access boundary, deleted inactive Settings surfaces, GPO policy trimming, ADMX/ADML policy assets, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, the no-op managed telemetry shim, active native module no-op trace providers, and PowerDisplay's removed settings telemetry IPC.
+- Verification for this refactor used Visual Studio 18 MSBuild for `Kit.vcxproj`, `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, `GPOWrapper.vcxproj`, `UnitTests-CommonUtils.vcxproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 426/426 passing CommonUtils tests in the broader 1.2.2 pass and 145/145 passing Settings UI tests after the active-module managed/native telemetry slimming pass.
 
 ## 2026-05-12 Version 1.2.0 Release Metadata
 

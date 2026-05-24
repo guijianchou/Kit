@@ -70,7 +70,6 @@ namespace winrt::PowerToys::Interop::implementation
         static hstring TerminatePowerDisplayEvent();
         static hstring RefreshPowerDisplayMonitorsEvent();
         static hstring SettingsUpdatedPowerDisplayEvent();
-        static hstring PowerDisplaySendSettingsTelemetryEvent();
         static hstring HotkeyUpdatedPowerDisplayEvent();
         static hstring PowerDisplayToggleMessage();
         static hstring PowerDisplayApplyProfileMessage();
@@ -88,4 +87,3 @@ namespace winrt::PowerToys::Interop::factory_implementation
     {
     };
 }
-

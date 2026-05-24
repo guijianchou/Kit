@@ -44,11 +44,10 @@ private:
     // Process manager handles Named Pipe communication and process lifecycle
     PowerDisplayProcessManager m_processManager;
 
-    // Windows Events for Settings UI triggered events (these are still needed)
+    // Windows Events for Settings UI triggered events.
     // Note: These events are created on-demand by EventHelper.SignalEvent() in Settings UI
     // and NativeEventWaiter.WaitForEventLoop() in PowerDisplay.exe.
     HANDLE m_hRefreshEvent = nullptr;
-    HANDLE m_hSendSettingsTelemetryEvent = nullptr;
 
     // Toggle event handle and listener thread for Quick Access support
     HANDLE m_hToggleEvent = nullptr;
@@ -66,8 +65,6 @@ public:
         Logger::trace(L"Creating Windows Events for Settings UI IPC...");
         m_hRefreshEvent = CreateDefaultEvent(CommonSharedConstants::REFRESH_POWER_DISPLAY_MONITORS_EVENT);
         Logger::trace(L"Created REFRESH_MONITORS_EVENT: handle={}", reinterpret_cast<void*>(m_hRefreshEvent));
-        m_hSendSettingsTelemetryEvent = CreateDefaultEvent(CommonSharedConstants::POWER_DISPLAY_SEND_SETTINGS_TELEMETRY_EVENT);
-        Logger::trace(L"Created SEND_SETTINGS_TELEMETRY_EVENT: handle={}", reinterpret_cast<void*>(m_hSendSettingsTelemetryEvent));
 
         // Create Toggle event for Quick Access support
         // Listener registration is tied to enable()/disable() so activation still
@@ -79,11 +76,10 @@ public:
         m_hStopEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         Logger::trace(L"Created STOP_EVENT: handle={}", reinterpret_cast<void*>(m_hStopEvent));
 
-        if (!m_hRefreshEvent || !m_hSendSettingsTelemetryEvent || !m_hToggleEvent || !m_hStopEvent)
+        if (!m_hRefreshEvent || !m_hToggleEvent || !m_hStopEvent)
         {
-            Logger::error(L"Failed to create one or more event handles: Refresh={}, SettingsTelemetry={}, Toggle={}, Stop={}",
+            Logger::error(L"Failed to create one or more event handles: Refresh={}, Toggle={}, Stop={}",
                          reinterpret_cast<void*>(m_hRefreshEvent),
-                         reinterpret_cast<void*>(m_hSendSettingsTelemetryEvent),
                          reinterpret_cast<void*>(m_hToggleEvent),
                          reinterpret_cast<void*>(m_hStopEvent));
         }
@@ -106,11 +102,6 @@ public:
         {
             CloseHandle(m_hRefreshEvent);
             m_hRefreshEvent = nullptr;
-        }
-        if (m_hSendSettingsTelemetryEvent)
-        {
-            CloseHandle(m_hSendSettingsTelemetryEvent);
-            m_hSendSettingsTelemetryEvent = nullptr;
         }
         if (m_hToggleEvent)
         {
@@ -376,18 +367,6 @@ public:
         return 0;
     }
 
-    virtual void send_settings_telemetry() override
-    {
-        Logger::trace(L"send_settings_telemetry: Signaling settings telemetry event");
-        if (m_hSendSettingsTelemetryEvent)
-        {
-            SetEvent(m_hSendSettingsTelemetryEvent);
-        }
-        else
-        {
-            Logger::warn(L"send_settings_telemetry: Event handle is null");
-        }
-    }
 };
 
 extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()

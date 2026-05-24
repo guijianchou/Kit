@@ -724,6 +724,8 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Removed disabled OOBE/SCOOBE launch flag plumbing from the runner and Settings entry point");
             StringAssert.Contains(changelog, "Removed unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles");
             StringAssert.Contains(changelog, "Pruned backup/restore defaults to the active Kit settings surface");
+            StringAssert.Contains(changelog, "Removed the remaining no-op managed telemetry calls and event source classes from Awake and PowerDisplay");
+            StringAssert.Contains(changelog, "Removed PowerDisplay's settings telemetry IPC event and module-interface signaling path");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
@@ -745,7 +747,9 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "Disabled OOBE/SCOOBE launch flag plumbing was removed");
             StringAssert.Contains(developmentLog, "Unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles were removed");
             StringAssert.Contains(developmentLog, "Backup/restore defaults were pruned to generic active Kit settings rules");
-            StringAssert.Contains(developmentLog, "141/141 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "Awake and PowerDisplay no longer keep managed telemetry write calls");
+            StringAssert.Contains(developmentLog, "PowerDisplay no longer exposes or listens to a settings telemetry IPC event");
+            StringAssert.Contains(developmentLog, "145/145 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

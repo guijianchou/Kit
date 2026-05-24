@@ -19,10 +19,8 @@ using Awake.Core;
 using Awake.Core.Models;
 using Awake.Core.Native;
 using Awake.Properties;
-using Awake.Telemetry;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Telemetry;
 
 namespace Awake
 {
@@ -36,8 +34,6 @@ namespace Awake
         private static readonly string[] _aliasesParentPidOption = ["--use-parent-pid", "-u"];
 
         private static readonly JsonSerializerOptions _serializerOptions = new() { IncludeFields = true };
-        private static readonly ETWTrace _etwTrace = new();
-
         private static FileSystemWatcher? _watcher;
         private static SettingsUtils? _settingsUtils;
         private static EventWaitHandle? _exitEventHandle;
@@ -69,7 +65,6 @@ namespace Awake
             if (parseResult.Errors.Count > 0)
             {
                 // Shows errors and returns non-zero.
-                LogCLITelemetry(successful: false);
                 return rootCommand.Invoke(args);
             }
 
@@ -98,7 +93,6 @@ namespace Awake
             {
                 // Awake is already running - there is no need for us to process
                 // anything further
-                LogCLITelemetry(successful: false);
                 Exit(Core.Constants.AppName + " is already running! Exiting the application.", 1);
                 return 1;
             }
@@ -106,7 +100,6 @@ namespace Awake
             {
                 if (PowerToys.GPOWrapper.GPOWrapper.GetConfiguredAwakeEnabledValue() == PowerToys.GPOWrapper.GpoRuleConfigured.Disabled)
                 {
-                    LogCLITelemetry(successful: false);
                     Exit("PowerToys.Awake tried to start with a group policy setting that disables the tool. Please contact your system administrator.", 1);
                     return 1;
                 }
@@ -130,7 +123,6 @@ namespace Awake
                     Logger.LogInfo(JsonSerializer.Serialize(_powerCapabilities, _serializerOptions));
 
                     var result = await rootCommand.InvokeAsync(args);
-                    LogCLITelemetry(successful: result == 0);
                     return result;
                 }
             }
@@ -222,22 +214,6 @@ namespace Awake
             return rootCommand;
         }
 
-        private static void LogCLITelemetry(bool successful)
-        {
-            try
-            {
-                PowerToysTelemetry.Log.WriteEvent(new AwakeCLICommandEvent
-                {
-                    CommandName = "awake",
-                    Successful = successful,
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Failed to log CLI telemetry: {ex.Message}");
-            }
-        }
-
         private static void AwakeUnhandledExceptionCatcher(object sender, UnhandledExceptionEventArgs e)
         {
             if (e.ExceptionObject is Exception exception)
@@ -256,7 +232,6 @@ namespace Awake
 
         private static void Exit(string message, int exitCode)
         {
-            _etwTrace?.Dispose();
             DisposeFileSystemWatcher();
             _registeredWaitHandle?.Unregister(null);
             _exitEventHandle?.Dispose();

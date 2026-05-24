@@ -788,6 +788,28 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitGlobalSuppressionsShouldNotCarryInactiveModuleTargets()
+        {
+            var globalSuppressions = File.ReadAllText(FindSourceFile("src", "codeAnalysis", "GlobalSuppressions.cs"));
+
+            StringAssert.Contains(globalSuppressions, "SuppressMessage");
+
+            foreach (var inactiveTarget in new[]
+            {
+                "MouseWithoutBorders",
+                "AdvancedPaste",
+                "EnvironmentVariablesUILib",
+                "HostsUILib",
+                "Peek.",
+                "Microsoft.PowerToys.Run.Plugin",
+                "RegistryPreviewUILib",
+            })
+            {
+                Assert.IsFalse(globalSuppressions.Contains(inactiveTarget, StringComparison.Ordinal), $"Global code-analysis suppressions should not carry inactive module target {inactiveTarget}.");
+            }
+        }
+
+        [TestMethod]
         public void KitSettingsShouldDeleteInactiveModuleAssetsInsteadOfProjectExcludingThem()
         {
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");

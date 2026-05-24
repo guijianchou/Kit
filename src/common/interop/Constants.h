@@ -10,7 +10,7 @@ namespace winrt::PowerToys::Interop::implementation
         static hstring AppDataPath();
         static hstring LightSwitchToggleEvent();
         static hstring AwakeExitEvent();
-        static hstring PowerToysRunnerTerminateSettingsEvent();
+        static hstring KitRunnerTerminateSettingsEvent();
         static hstring TogglePowerDisplayEvent();
         static hstring TerminatePowerDisplayEvent();
         static hstring RefreshPowerDisplayMonitorsEvent();

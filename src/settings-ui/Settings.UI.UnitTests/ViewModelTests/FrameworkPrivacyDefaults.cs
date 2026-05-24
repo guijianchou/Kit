@@ -569,5 +569,24 @@ namespace ViewModelTests
                 Assert.IsFalse(sharedConstants.Contains(symbol, StringComparison.Ordinal), $"shared_constants.h should not keep inactive IPC symbol {symbol}.");
             }
         }
+
+        [TestMethod]
+        public void SettingsTerminationIpcShouldUseKitNamedProjection()
+        {
+            var interopConstantsIdl = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.idl"));
+            var interopConstantsHeader = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.h"));
+            var interopConstantsCpp = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.cpp"));
+            var settingsApp = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
+
+            StringAssert.Contains(interopConstantsIdl, "KitRunnerTerminateSettingsEvent");
+            StringAssert.Contains(interopConstantsHeader, "KitRunnerTerminateSettingsEvent");
+            StringAssert.Contains(interopConstantsCpp, "Constants::KitRunnerTerminateSettingsEvent");
+            StringAssert.Contains(settingsApp, "Constants.KitRunnerTerminateSettingsEvent()");
+
+            Assert.IsFalse(interopConstantsIdl.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Interop IDL should not expose Kit's active Settings termination event through a PowerToys-named method.");
+            Assert.IsFalse(interopConstantsHeader.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Interop header should not expose Kit's active Settings termination event through a PowerToys-named method.");
+            Assert.IsFalse(interopConstantsCpp.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Interop C++ projection should not expose Kit's active Settings termination event through a PowerToys-named method.");
+            Assert.IsFalse(settingsApp.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Settings should consume the Kit-named Settings termination event projection.");
+        }
     }
 }

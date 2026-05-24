@@ -7,7 +7,7 @@ namespace PowerToys
             static String AppDataPath();
             static String LightSwitchToggleEvent();
             static String AwakeExitEvent();
-            static String PowerToysRunnerTerminateSettingsEvent();
+            static String KitRunnerTerminateSettingsEvent();
             static String TogglePowerDisplayEvent();
             static String TerminatePowerDisplayEvent();
             static String RefreshPowerDisplayMonitorsEvent();

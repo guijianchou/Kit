@@ -27,7 +27,7 @@ namespace winrt::PowerToys::Interop::implementation
     {
         return CommonSharedConstants::AWAKE_EXIT_EVENT;
     }
-    hstring Constants::PowerToysRunnerTerminateSettingsEvent()
+    hstring Constants::KitRunnerTerminateSettingsEvent()
     {
         return CommonSharedConstants::TERMINATE_SETTINGS_SHARED_EVENT;
     }

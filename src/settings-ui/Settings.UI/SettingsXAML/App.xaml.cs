@@ -77,7 +77,7 @@ namespace Microsoft.PowerToys.Settings.UI
             UnhandledException += App_UnhandledException;
 
             NativeEventWaiter.WaitForEventLoop(
-                Constants.PowerToysRunnerTerminateSettingsEvent(), () =>
+                Constants.KitRunnerTerminateSettingsEvent(), () =>
             {
                 Environment.Exit(0);
             });

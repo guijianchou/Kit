@@ -708,6 +708,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
             StringAssert.Contains(changelog, "Deleted the inactive settings telemetry worker source and runner project filters");
             StringAssert.Contains(changelog, "Deleted the inactive Settings UI test project that still targeted removed OOBE and PowerToys surfaces");
+            StringAssert.Contains(changelog, "Deleted the inactive DSC source tree and manifest generation script");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -721,6 +722,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "keyboard hook window registration no-op was deleted");
             StringAssert.Contains(developmentLog, "inactive settings telemetry worker source files were deleted");
             StringAssert.Contains(developmentLog, "inactive Settings UI test project was deleted");
+            StringAssert.Contains(developmentLog, "inactive DSC source tree and manifest generation script were deleted");
             StringAssert.Contains(developmentLog, "140/140 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));

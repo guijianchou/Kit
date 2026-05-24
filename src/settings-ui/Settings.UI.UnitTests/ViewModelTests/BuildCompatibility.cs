@@ -338,6 +338,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(solution, "src/common/Common.Search/Common.Search.csproj");
             AssertNoFiles(repoRoot!, Path.Combine("src", "common", "GPOWrapperProjection", "*"));
+            Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot!, "src", "dsc")), "Kit should delete the inactive DSC source tree after removing DSC projects from the solution.");
+            Assert.IsFalse(File.Exists(Path.Combine(repoRoot!, "tools", "build", "generate-dsc-manifests.ps1")), "Kit should delete the inactive DSC manifest generation script after removing DSC projects from the solution.");
         }
 
         [TestMethod]

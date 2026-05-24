@@ -22,6 +22,7 @@
 - Runtime: Removed the no-op keyboard hook window registration after deleting pressed-key timers.
 - Privacy: Deleted the inactive settings telemetry worker source and runner project filters.
 - Tests: Deleted the inactive Settings UI test project that still targeted removed OOBE and PowerToys surfaces.
+- Build: Deleted the inactive DSC source tree and manifest generation script after removing DSC projects from `Kit.slnx`.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
 - Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, and telemetry-free managed app projects.
@@ -128,6 +129,7 @@
 - 运行时：删除 pressed-key 定时器后，移除键盘钩子的 no-op 窗口注册路径。
 - 隐私：删除非活动的 settings telemetry worker 源文件和 runner 项目 filters 条目。
 - 测试：删除仍指向已移除 OOBE 和 PowerToys 表面的非活动 Settings UI test 项目。
+- 构建：从 `Kit.slnx` 移除 DSC 项目后，删除非活动的 DSC 源码树和 manifest 生成脚本。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
 - 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用的回归覆盖。

@@ -102,6 +102,17 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void RunnerHelperShouldCloseProcessHandlesAfterWaiting()
+        {
+            var runnerHelper = File.ReadAllText(FindSourceFile("src", "common", "ManagedCommon", "RunnerHelper.cs"));
+
+            StringAssert.Contains(runnerHelper, "NativeMethods.CloseHandle(powerToysProcHandle)");
+            StringAssert.Contains(runnerHelper, "NativeMethods.CloseHandle(hProcess)");
+            StringAssert.Contains(runnerHelper, "hProcess = IntPtr.Zero;");
+            StringAssert.Contains(runnerHelper, "NativeMethods.CloseHandle(runnerHandle)");
+        }
+
+        [TestMethod]
         public void KitMainSolutionShouldNotBuildAutoUpdaterExecutable()
         {
             var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));

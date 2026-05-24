@@ -21,10 +21,23 @@ namespace ManagedCommon
                 const uint SYNCHRONIZE = 0x00100000;
 
                 IntPtr powerToysProcHandle = NativeMethods.OpenProcess(SYNCHRONIZE, false, powerToysPID);
-                if (NativeMethods.WaitForSingleObject(powerToysProcHandle, INFINITE) == WAIT_OBJECT_0)
+                if (powerToysProcHandle == IntPtr.Zero)
                 {
-                    Logger.LogDebug($"[{assembly}][{memberName}]WaitForPowerToysRunner Event Notified powerToysPID={powerToysPID}");
-                    act.Invoke();
+                    Logger.LogWarning($"[{assembly}][{memberName}]WaitForPowerToysRunner could not open runner process powerToysPID={powerToysPID}");
+                    return;
+                }
+
+                try
+                {
+                    if (NativeMethods.WaitForSingleObject(powerToysProcHandle, INFINITE) == WAIT_OBJECT_0)
+                    {
+                        Logger.LogDebug($"[{assembly}][{memberName}]WaitForPowerToysRunner Event Notified powerToysPID={powerToysPID}");
+                        act.Invoke();
+                    }
+                }
+                finally
+                {
+                    NativeMethods.CloseHandle(powerToysProcHandle);
                 }
             });
         }
@@ -46,17 +59,33 @@ namespace ManagedCommon
             foreach (var processId in processIds)
             {
                 IntPtr hProcess = NativeMethods.OpenProcess(handleAccess, false, processId);
-                System.Text.StringBuilder name = new System.Text.StringBuilder(1024);
-                uint length = 1024;
-                if (hProcess == IntPtr.Zero || !NativeMethods.QueryFullProcessImageName(hProcess, 0, name, ref length))
+                if (hProcess == IntPtr.Zero)
                 {
                     continue;
                 }
 
-                if (Array.IndexOf(RunnerProcessNames, System.IO.Path.GetFileName(name.ToString())) >= 0)
+                System.Text.StringBuilder name = new System.Text.StringBuilder(1024);
+                uint length = 1024;
+                try
                 {
-                    runnerHandle = hProcess;
-                    break;
+                    if (!NativeMethods.QueryFullProcessImageName(hProcess, 0, name, ref length))
+                    {
+                        continue;
+                    }
+
+                    if (Array.IndexOf(RunnerProcessNames, System.IO.Path.GetFileName(name.ToString())) >= 0)
+                    {
+                        runnerHandle = hProcess;
+                        hProcess = IntPtr.Zero;
+                        break;
+                    }
+                }
+                finally
+                {
+                    if (hProcess != IntPtr.Zero)
+                    {
+                        NativeMethods.CloseHandle(hProcess);
+                    }
                 }
             }
 
@@ -70,14 +99,19 @@ namespace ManagedCommon
             {
                 const int STILL_ACTIVE = 0x103;
                 uint exit_status;
-                do
+                try
                 {
-                    System.Threading.Thread.Sleep(1000);
-                    NativeMethods.GetExitCodeProcess(runnerHandle, out exit_status);
+                    do
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                        NativeMethods.GetExitCodeProcess(runnerHandle, out exit_status);
+                    }
+                    while (exit_status == STILL_ACTIVE);
                 }
-                while (exit_status == STILL_ACTIVE);
-
-                NativeMethods.CloseHandle(runnerHandle);
+                finally
+                {
+                    NativeMethods.CloseHandle(runnerHandle);
+                }
 
                 act.Invoke();
             });

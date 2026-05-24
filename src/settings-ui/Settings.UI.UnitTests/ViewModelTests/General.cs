@@ -742,6 +742,8 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "removed inactive MouseUtils page conflict branch");
             StringAssert.Contains(changelog, "Replaced stale Settings package-reference comments");
             StringAssert.Contains(changelog, "Settings package-reference comment cleanup");
+            StringAssert.Contains(changelog, "Removed the unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin");
+            StringAssert.Contains(changelog, "Registry Preview-only SkiaSharp package pin removal");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
@@ -792,10 +794,13 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "removed inactive MouseUtils page conflict branch");
             StringAssert.Contains(developmentLog, "Settings package-reference comments now describe current dependency alignment");
             StringAssert.Contains(developmentLog, "Settings package-reference comment cleanup");
+            StringAssert.Contains(developmentLog, "The unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin was removed");
+            StringAssert.Contains(developmentLog, "Registry Preview-only SkiaSharp package pin removal");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
             StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
             StringAssert.Contains(developmentLog, "154/154 passing Settings UI tests after deleting the inactive MouseUtils conflict branch");
             StringAssert.Contains(developmentLog, "155/155 passing Settings UI tests after cleaning Settings package-reference comments");
+            StringAssert.Contains(developmentLog, "156/156 passing Settings UI tests after removing the Registry Preview-only SkiaSharp package pin");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

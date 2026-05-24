@@ -1345,6 +1345,27 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepRegistryPreviewOnlySkiaSharpPin()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+
+            Assert.IsFalse(centralPackages.Contains(@"PackageVersion Include=""SkiaSharp.Views.WinUI""", StringComparison.Ordinal), "Kit should not keep the Registry Preview-only SkiaSharp.Views.WinUI central package pin.");
+            Assert.IsFalse(centralPackages.Contains("Registry Preview", StringComparison.Ordinal), "Central package comments should not explain package pins through inactive Registry Preview behavior.");
+            Assert.IsFalse(centralPackages.Contains("HexBox", StringComparison.Ordinal), "Central package comments should not keep inactive Registry Preview HexBox details.");
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                Assert.IsFalse(project.Contains(@"PackageReference Include=""SkiaSharp.Views.WinUI""", StringComparison.Ordinal), $"Kit project should not reference the Registry Preview-only SkiaSharp.Views.WinUI package: {projectFile}");
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));

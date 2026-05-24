@@ -25,6 +25,7 @@
 - UI: Narrowed `SettingsFactory` to explicit Quick Access, LightSwitch, and PowerDisplay hotkey settings, deleting broad `IHotkeyConfig` reflection discovery and unused factory APIs from the shortcut-conflict path.
 - UI: Removed the inactive MouseUtils conflict special branch from `PageViewModelBase`, so active Settings pages use the same module-name conflict path.
 - Build: Replaced stale Settings package-reference comments that cited inactive CmdPal, Mouse Without Borders, and Advanced Paste with current dependency-alignment notes for the active Settings runtime closure.
+- Slimming: Removed the unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin after confirming no Kit project references it.
 - Slimming: Deleted the legacy sibling Settings asset tree and inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
 - Policy: Trimmed ADMX/ADML policy assets to the same Kit 1.2.2 active policy surface.
@@ -44,7 +45,7 @@
 - Slimming: Pruned backup/restore defaults to the active Kit settings surface by deleting inactive Keyboard Manager, FancyZones, Workspaces, PowerToys Run restore rules, and the PowerToys Run plugin fix-up code path.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
-- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, and Settings package-reference comment cleanup.
+- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, and Registry Preview-only SkiaSharp package pin removal.
 
 ### 1.2.0
 
@@ -151,6 +152,7 @@
 - UI：将 `SettingsFactory` 收窄为显式的 Quick Access、LightSwitch 和 PowerDisplay 热键 settings，删除 shortcut-conflict 路径中的宽泛 `IHotkeyConfig` 反射发现和未使用 factory API。
 - UI：从 `PageViewModelBase` 删除非活动 MouseUtils 冲突特殊分支，让活动 Settings 页面统一使用模块名匹配的冲突路径。
 - 构建：将仍引用非活动 CmdPal、Mouse Without Borders 和 Advanced Paste 的 Settings 包引用注释改为当前 Settings 运行时依赖对齐说明。
+- 瘦身：确认没有 Kit 项目引用后，移除仅服务于非活动 Registry Preview 的 `SkiaSharp.Views.WinUI` central package pin。
 - 瘦身：删除旧 sibling Settings 资产树以及非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。
 - 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 1.2.2 活动策略表面。
@@ -170,7 +172,7 @@
 - 瘦身：将备份/恢复默认值裁剪到活动 Kit 设置表面，删除非活动的 Keyboard Manager、FancyZones、Workspaces、PowerToys Run 恢复规则以及 PowerToys Run 插件修正代码路径。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
-- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影、AdvancedPaste AI provider 源码/包/UI/enum helper 残留删除、Shortcut Conflict 非活动模块特殊分支移除、显式 SettingsFactory 热键边界、非活动 MouseUtils page conflict branch 删除，以及 Settings 包引用注释清理的回归覆盖。
+- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影、AdvancedPaste AI provider 源码/包/UI/enum helper 残留删除、Shortcut Conflict 非活动模块特殊分支移除、显式 SettingsFactory 热键边界、非活动 MouseUtils page conflict branch 删除、Settings 包引用注释清理，以及仅供 Registry Preview 使用的 SkiaSharp 包 pin 移除的回归覆盖。
 
 ### 1.2.0
 

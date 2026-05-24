@@ -287,6 +287,58 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsResourcesShouldDeleteInactiveModuleAndOobeStrings()
+        {
+            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            string[] inactiveResourceNamePrefixes =
+            {
+                "AdvancedPaste",
+                "Alternate_OOBE",
+                "CmdPal",
+                "ColorPicker",
+                "FancyZones",
+                "FileLocksmith",
+                "GPO_AdvancedPasteAi",
+                "ImageResizer",
+                "Launch_ShortcutGuide",
+                "LearnMore_AdvancedPaste",
+                "LearnMore_CmdPal",
+                "LearnMore_ColorPicker",
+                "LearnMore_FancyZones",
+                "LearnMore_FileLocksmith",
+                "LearnMore_ImageResizer",
+                "LearnMore_MouseWithoutBorders",
+                "LearnMore_PowerRename",
+                "LearnMore_ShortcutGuide",
+                "MouseWithoutBorders",
+                "OOBE_",
+                "Oobe",
+                "OobeWindow",
+                "PowerLauncher",
+                "PowerRename",
+                "Run_CheckOutCmdPal",
+                "Run_NavigateCmdPalSettings",
+                "Shell_AdvancedPaste",
+                "Shell_CmdPal",
+                "Shell_ColorPicker",
+                "Shell_FancyZones",
+                "Shell_FileLocksmith",
+                "Shell_ImageResizer",
+                "Shell_MouseWithoutBorders",
+                "Shell_PowerLauncher",
+                "Shell_PowerRename",
+                "Shell_ShortcutGuide",
+                "ShortcutGuide",
+            };
+
+            foreach (var prefix in inactiveResourceNamePrefixes)
+            {
+                Assert.IsFalse(resources.Contains($"name=\"{prefix}", StringComparison.Ordinal), $"Inactive Settings resource prefix should be deleted: {prefix}");
+            }
+        }
+
+        [TestMethod]
         public void KitSettingsTestsShouldDeleteInactiveModuleTestsInsteadOfProjectExcludingThem()
         {
             var settingsTestsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.UnitTests", "Settings.UI.UnitTests.csproj");

@@ -712,7 +712,9 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Deleted the inactive Settings UI test project that still targeted removed OOBE and PowerToys surfaces");
             StringAssert.Contains(changelog, "Deleted the inactive DSC source tree and manifest generation script");
             StringAssert.Contains(changelog, "Deleted the DSC-only Settings `setAdditional` command-line entry point");
+            StringAssert.Contains(changelog, "Deleted inactive Settings UI resource strings for removed module pages and OOBE surfaces");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
+            StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
             StringAssert.Contains(developmentLog, "ADMX/ADML policy assets now match");
@@ -727,6 +729,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "inactive Settings UI test project was deleted");
             StringAssert.Contains(developmentLog, "inactive DSC source tree and manifest generation script were deleted");
             StringAssert.Contains(developmentLog, "DSC-only Settings `setAdditional` command-line entry point was deleted");
+            StringAssert.Contains(developmentLog, "Inactive Settings UI resource strings for removed module pages and OOBE surfaces were deleted");
             StringAssert.Contains(developmentLog, "140/140 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));

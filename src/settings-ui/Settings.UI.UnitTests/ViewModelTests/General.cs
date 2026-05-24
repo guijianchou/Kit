@@ -713,6 +713,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Deleted the inactive DSC source tree and manifest generation script");
             StringAssert.Contains(changelog, "Deleted the DSC-only Settings `setAdditional` command-line entry point");
             StringAssert.Contains(changelog, "Deleted inactive Settings UI resource strings for removed module pages and OOBE surfaces");
+            StringAssert.Contains(changelog, "Removed disabled OOBE/SCOOBE launch flag plumbing from the runner and Settings entry point");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
@@ -730,7 +731,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "inactive DSC source tree and manifest generation script were deleted");
             StringAssert.Contains(developmentLog, "DSC-only Settings `setAdditional` command-line entry point was deleted");
             StringAssert.Contains(developmentLog, "Inactive Settings UI resource strings for removed module pages and OOBE surfaces were deleted");
-            StringAssert.Contains(developmentLog, "140/140 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "Disabled OOBE/SCOOBE launch flag plumbing was removed");
+            StringAssert.Contains(developmentLog, "141/141 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

@@ -25,6 +25,7 @@
 - Build: Deleted the inactive DSC source tree and manifest generation script after removing DSC projects from `Kit.slnx`.
 - Build: Deleted the DSC-only Settings `setAdditional` command-line entry point after removing DSC generation.
 - Slimming: Deleted inactive Settings UI resource strings for removed module pages and OOBE surfaces.
+- Runtime: Removed disabled OOBE/SCOOBE launch flag plumbing from the runner and Settings entry point.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
 - Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, and telemetry-free managed app projects.
@@ -134,6 +135,7 @@
 - 构建：从 `Kit.slnx` 移除 DSC 项目后，删除非活动的 DSC 源码树和 manifest 生成脚本。
 - 构建：删除只供 DSC 使用的 Settings `setAdditional` 命令行入口，因为 DSC 生成已移除。
 - 瘦身：删除已移除模块页面和 OOBE 表面的非活动 Settings UI 资源字符串。
+- 运行时：从 runner 和 Settings 入口点移除已禁用的 OOBE/SCOOBE 启动标志管线。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
 - 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用的回归覆盖。

@@ -410,7 +410,7 @@ BOOL run_settings_non_elevated(LPCWSTR executable_path, LPWSTR executable_args, 
 
 DWORD g_settings_process_id = 0;
 
-void run_settings_window(bool show_oobe_window, bool show_scoobe_window, std::optional<std::wstring> settings_window)
+void run_settings_window(std::optional<std::wstring> settings_window)
 {
     g_isLaunchInProgress = true;
 
@@ -474,22 +474,16 @@ void run_settings_window(bool show_oobe_window, bool show_scoobe_window, std::op
     bool isAdmin{ save_settings.isAdmin };
     std::wstring settings_isUserAnAdmin = isAdmin ? L"true" : L"false";
 
-    // Arg 8: should oobe window be shown
-    std::wstring settings_showOobe = show_oobe_window ? L"true" : L"false";
-
-    // Arg 9: should scoobe window be shown
-    std::wstring settings_showScoobe = show_scoobe_window ? L"true" : L"false";
-
-    // Arg 10: contains if there's a settings window argument. If true, will add one extra argument with the value to the call.
+    // Arg 8: contains if there's a settings window argument. If true, will add one extra argument with the value to the call.
     std::wstring settings_containsSettingsWindow = settings_window.has_value() ? L"true" : L"false";
 
-    // Args 11, .... : Optional arguments depending on the options presented before. All by the same value.
+    // Args 9, .... : Optional arguments depending on the options presented before. All by the same value.
 
     // create general settings file to initialize the settings file with installation configurations like :
     // 1. Run on start up.
     PTSettingsHelper::save_general_settings(save_settings.to_json());
 
-    std::wstring executable_args = fmt::format(L"\"{}\" {} {} {} {} {} {} {} {} {}",
+    std::wstring executable_args = fmt::format(L"\"{}\" {} {} {} {} {} {} {}",
                                                executable_path,
                                                powertoys_pipe_name,
                                                settings_pipe_name,
@@ -497,8 +491,6 @@ void run_settings_window(bool show_oobe_window, bool show_scoobe_window, std::op
                                                settings_theme,
                                                settings_elevatedStatus,
                                                settings_isUserAnAdmin,
-                                               settings_showOobe,
-                                               settings_showScoobe,
                                                settings_containsSettingsWindow);
 
     if (settings_window.has_value())
@@ -672,7 +664,7 @@ void open_settings_window(std::optional<std::wstring> settings_window)
         if (!g_isLaunchInProgress)
         {
             std::thread([settings_window]() {
-                run_settings_window(false, false, settings_window);
+                run_settings_window(settings_window);
             }).detach();
         }
     }
@@ -690,20 +682,6 @@ void close_settings_window()
             TerminateProcess(proc.get(), 0);
         }
     }
-}
-
-void open_oobe_window()
-{
-    std::thread([]() {
-        run_settings_window(true, false, std::nullopt);
-    }).detach();
-}
-
-void open_scoobe_window()
-{
-    std::thread([]() {
-        run_settings_window(false, true, std::nullopt);
-    }).detach();
 }
 
 std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)

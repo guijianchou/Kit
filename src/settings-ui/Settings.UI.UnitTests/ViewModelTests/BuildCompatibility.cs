@@ -330,6 +330,7 @@ namespace ViewModelTests
                 "Shell_PowerRename",
                 "Shell_ShortcutGuide",
                 "ShortcutGuide",
+                "ScoobeWindow",
             };
 
             foreach (var prefix in inactiveResourceNamePrefixes)
@@ -1391,14 +1392,29 @@ namespace ViewModelTests
         public void KitStartupShouldAvoidInactiveOobeScoobeAndUpdaterDiskReads()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
+            var settingsWindowHeader = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.h"));
             var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
             var settingsApp = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
 
             Assert.IsFalse(runnerMain.Contains("get_oobe_opened_state", StringComparison.Ordinal), "Kit startup should not read disabled OOBE state.");
             Assert.IsFalse(runnerMain.Contains("get_last_version_run", StringComparison.Ordinal), "Kit startup should not read disabled SCOOBE/update version state.");
             Assert.IsFalse(runnerMain.Contains("save_last_version_run", StringComparison.Ordinal), "Kit startup should not write last-version state when SCOOBE is disabled.");
+            Assert.IsFalse(runnerMain.Contains("save_oobe_opened_state", StringComparison.Ordinal), "Kit startup should not write disabled OOBE state.");
+            Assert.IsFalse(runnerMain.Contains("openOobe", StringComparison.Ordinal), "Kit runner should not keep disabled OOBE launch plumbing.");
+            Assert.IsFalse(runnerMain.Contains("openScoobe", StringComparison.Ordinal), "Kit runner should not keep disabled SCOOBE launch plumbing.");
+            Assert.IsFalse(settingsWindow.Contains("show_oobe_window", StringComparison.Ordinal), "Kit Settings launcher should not pass disabled OOBE arguments.");
+            Assert.IsFalse(settingsWindow.Contains("show_scoobe_window", StringComparison.Ordinal), "Kit Settings launcher should not pass disabled SCOOBE arguments.");
+            Assert.IsFalse(settingsWindow.Contains("open_oobe_window", StringComparison.Ordinal), "Kit Settings launcher should not expose disabled OOBE windows.");
+            Assert.IsFalse(settingsWindow.Contains("open_scoobe_window", StringComparison.Ordinal), "Kit Settings launcher should not expose disabled SCOOBE windows.");
+            Assert.IsFalse(settingsWindowHeader.Contains("open_oobe_window", StringComparison.Ordinal), "Kit Settings launcher header should not expose disabled OOBE windows.");
+            Assert.IsFalse(settingsWindowHeader.Contains("open_scoobe_window", StringComparison.Ordinal), "Kit Settings launcher header should not expose disabled SCOOBE windows.");
             Assert.IsFalse(trayIcon.Contains("UpdateState::read", StringComparison.Ordinal), "Kit tray startup should not read updater state when updater UI is disabled.");
             Assert.IsFalse(settingsApp.Contains("OobeShellViewModel { get; } = new()", StringComparison.Ordinal), "Kit Settings should not eagerly construct OOBE state when OOBE windows are stubbed.");
+            Assert.IsFalse(settingsApp.Contains("ShowOobe", StringComparison.Ordinal), "Kit Settings should not keep disabled OOBE launch flags.");
+            Assert.IsFalse(settingsApp.Contains("ShowScoobe", StringComparison.Ordinal), "Kit Settings should not keep disabled SCOOBE launch flags.");
+            Assert.IsFalse(settingsApp.Contains("OpenOobe", StringComparison.Ordinal), "Kit Settings should not keep disabled OOBE launch methods.");
+            Assert.IsFalse(settingsApp.Contains("OpenScoobe", StringComparison.Ordinal), "Kit Settings should not keep disabled SCOOBE launch methods.");
         }
 
         [TestMethod]

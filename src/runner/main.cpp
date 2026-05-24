@@ -129,9 +129,9 @@ void open_menu_from_another_instance(std::optional<std::string> settings_window)
     SetForegroundWindow(hwnd_main); // Bring the settings window to the front
 }
 
-int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, bool openOobe, bool openScoobe, bool showRestartNotificationAfterUpdate, const json::JsonObject& startupGeneralSettings)
+int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, bool showRestartNotificationAfterUpdate, const json::JsonObject& startupGeneralSettings)
 {
-    Logger::info("Runner is starting. Elevated={} openOobe={} openScoobe={} showRestartNotificationAfterUpdate={}", isProcessElevated, openOobe, openScoobe, showRestartNotificationAfterUpdate);
+    Logger::info("Runner is starting. Elevated={} showRestartNotificationAfterUpdate={}", isProcessElevated, showRestartNotificationAfterUpdate);
     DPIAware::EnableDPIAwarenessForThisProcess();
 
 #if _DEBUG && _WIN64
@@ -156,7 +156,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
     int result = -1;
     try
     {
-        if (!openOobe && showRestartNotificationAfterUpdate)
+        if (showRestartNotificationAfterUpdate)
         {
             std::thread{
                 [] {
@@ -219,16 +219,6 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
                 window = winrt::to_hstring(settingsWindow);
             }
             open_settings_window(window);
-        }
-
-        if (openOobe)
-        {
-            PTSettingsHelper::save_oobe_opened_state();
-            open_oobe_window();
-        }
-        else if (openScoobe)
-        {
-            open_scoobe_window();
         }
 
         result = run_message_loop();
@@ -392,8 +382,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         return 0;
     }
 
-    const bool openOobe = false;
-    const bool openScoobe = false;
     const bool showRestartNotificationAfterUpdate = false;
 
     int result = 0;
@@ -433,7 +421,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
                 Logger::info("Restart as elevated failed. Running non-elevated.");
             }
 
-            result = runner(elevated, open_settings, settings_window, openOobe, openScoobe, showRestartNotificationAfterUpdate, general_settings);
+            result = runner(elevated, open_settings, settings_window, showRestartNotificationAfterUpdate, general_settings);
 
             if (result == 0)
             {

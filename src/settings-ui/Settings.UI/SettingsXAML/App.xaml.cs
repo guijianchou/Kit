@@ -36,15 +36,13 @@ namespace Microsoft.PowerToys.Settings.UI
             Theme, // used in the old settings
             ElevatedStatus,
             IsUserAdmin,
-            ShowOobeWindow,
-            ShowScoobeWindow,
             ContainsSettingsWindow,
         }
 
         private const int RequiredArgumentsSetSettingQty = 4;
         private const int RequiredArgumentsGetSettingQty = 3;
 
-        private const int RequiredArgumentsLaunchedFromRunnerQty = 10;
+        private const int RequiredArgumentsLaunchedFromRunnerQty = 8;
 
         // Create an instance of the  IPC wrapper.
         private static TwoWayPipeMessageIPCManaged ipcmanager;
@@ -54,10 +52,6 @@ namespace Microsoft.PowerToys.Settings.UI
         public static bool IsUserAnAdmin { get; set; }
 
         public static int PowerToysPID { get; set; }
-
-        public bool ShowOobe { get; set; }
-
-        public bool ShowScoobe { get; set; }
 
         public Type StartupPage { get; set; } = typeof(Views.GeneralPage);
 
@@ -162,8 +156,6 @@ namespace Microsoft.PowerToys.Settings.UI
 
             IsElevated = cmdArgs[(int)Arguments.ElevatedStatus] == "true";
             IsUserAnAdmin = cmdArgs[(int)Arguments.IsUserAdmin] == "true";
-            ShowOobe = cmdArgs[(int)Arguments.ShowOobeWindow] == "true";
-            ShowScoobe = cmdArgs[(int)Arguments.ShowScoobeWindow] == "true";
             bool containsSettingsWindow = cmdArgs[(int)Arguments.ContainsSettingsWindow] == "true";
 
             // To keep track of variable arguments
@@ -197,32 +189,13 @@ namespace Microsoft.PowerToys.Settings.UI
                 return 0;
             });
 
-            if (!ShowOobe && !ShowScoobe)
-            {
-                settingsWindow = new MainWindow();
-                settingsWindow.Activate();
-                settingsWindow.NavigateToSection(StartupPage);
+            settingsWindow = new MainWindow();
+            settingsWindow.Activate();
+            settingsWindow.NavigateToSection(StartupPage);
 
-                // https://github.com/microsoft/microsoft-ui-xaml/issues/7595 - Activate doesn't bring window to the foreground
-                // Need to call SetForegroundWindow to actually gain focus.
-                WindowHelpers.BringToForeground(settingsWindow.GetWindowHandle());
-            }
-            else
-            {
-                // Create the Settings window hidden so that it's fully initialized and
-                // it will be ready to receive the notification if the user opens
-                // the Settings from the tray icon.
-                settingsWindow = new MainWindow(true);
-
-                if (ShowOobe)
-                {
-                    OpenOobe();
-                }
-                else if (ShowScoobe)
-                {
-                    OpenScoobe();
-                }
-            }
+            // https://github.com/microsoft/microsoft-ui-xaml/issues/7595 - Activate doesn't bring window to the foreground
+            // Need to call SetForegroundWindow to actually gain focus.
+            WindowHelpers.BringToForeground(settingsWindow.GetWindowHandle());
         }
 
         /// <summary>
@@ -306,14 +279,6 @@ namespace Microsoft.PowerToys.Settings.UI
         {
             var app = (App)Current;
             return app.shortcutConflictWindow != null;
-        }
-
-        public void OpenScoobe()
-        {
-        }
-
-        public void OpenOobe()
-        {
         }
 
         public void OpenShortcutConflictWindow()

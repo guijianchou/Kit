@@ -1289,6 +1289,34 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitRunnerShouldNotKeepInactiveShortcutGuideWinKeyTrackingPath()
+        {
+            var powertoyModule = File.ReadAllText(FindSourceFile("src", "runner", "powertoy_module.cpp"));
+            var centralizedKeyboardHook = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.cpp"));
+            var centralizedKeyboardHookHeader = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.h"));
+            var moduleInterface = File.ReadAllText(FindSourceFile("src", "modules", "interface", "powertoy_module_interface.h"));
+
+            string[] inactiveWinKeyTrackingTokens =
+            {
+                "keep_track_of_pressed_win_key",
+                "milliseconds_win_key_must_be_pressed",
+                "AddPressedKeyAction",
+                "PressedKeyDescriptor",
+                "PressedKeyTimerProc",
+                "pressedKeyDescriptors",
+                "Shortcut Guide",
+            };
+
+            foreach (var inactiveToken in inactiveWinKeyTrackingTokens)
+            {
+                Assert.IsFalse(powertoyModule.Contains(inactiveToken, StringComparison.Ordinal), $"Runner module wrapper should not keep inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
+                Assert.IsFalse(centralizedKeyboardHook.Contains(inactiveToken, StringComparison.Ordinal), $"Centralized keyboard hook should not keep inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
+                Assert.IsFalse(centralizedKeyboardHookHeader.Contains(inactiveToken, StringComparison.Ordinal), $"Centralized keyboard hook header should not expose inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
+                Assert.IsFalse(moduleInterface.Contains(inactiveToken, StringComparison.Ordinal), $"Module interface should not expose inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
+            }
+        }
+
+        [TestMethod]
         public void KitStartupShouldAvoidInactiveOobeScoobeAndUpdaterDiskReads()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));

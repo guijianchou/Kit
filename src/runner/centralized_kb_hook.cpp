@@ -149,8 +149,4 @@ namespace CentralizedKeyboardHook
             hHook = NULL;
         }
     }
-
-    void RegisterWindow(HWND /*hwnd*/) noexcept
-    {
-    }
 }

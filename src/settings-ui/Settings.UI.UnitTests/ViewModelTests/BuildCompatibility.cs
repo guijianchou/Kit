@@ -1317,6 +1317,19 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitRunnerShouldNotKeepNoOpKeyboardHookWindowRegistration()
+        {
+            var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
+            var centralizedKeyboardHook = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.cpp"));
+            var centralizedKeyboardHookHeader = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.h"));
+
+            StringAssert.Contains(trayIcon, "CentralizedHotkeys::RegisterWindow(hwnd)");
+            Assert.IsFalse(trayIcon.Contains("CentralizedKeyboardHook::RegisterWindow", StringComparison.Ordinal), "Tray initialization should not call a no-op keyboard hook window registration after pressed-key timers are deleted.");
+            Assert.IsFalse(centralizedKeyboardHook.Contains("RegisterWindow(HWND", StringComparison.Ordinal), "Keyboard hook implementation should not keep a no-op window-registration method.");
+            Assert.IsFalse(centralizedKeyboardHookHeader.Contains("RegisterWindow(HWND", StringComparison.Ordinal), "Keyboard hook header should not expose a no-op window-registration method.");
+        }
+
+        [TestMethod]
         public void KitStartupShouldAvoidInactiveOobeScoobeAndUpdaterDiskReads()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));

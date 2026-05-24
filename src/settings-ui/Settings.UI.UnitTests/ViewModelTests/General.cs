@@ -710,6 +710,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Quick Access now uses the current WinUI SystemBackdrop API");
             StringAssert.Contains(changelog, "XAML search index builder no longer carries inactive upstream module icon and panel fallbacks");
             StringAssert.Contains(changelog, "Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface");
+            StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -720,7 +721,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "Quick Access window now uses the current WinUI SystemBackdrop API");
             StringAssert.Contains(developmentLog, "XAML search index builder now derives icons from active Settings XAML only");
             StringAssert.Contains(developmentLog, "runner keyboard hook no longer carries Shortcut Guide Win-key tracking");
-            StringAssert.Contains(developmentLog, "139/139 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "keyboard hook window registration no-op was deleted");
+            StringAssert.Contains(developmentLog, "140/140 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

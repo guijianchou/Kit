@@ -396,7 +396,6 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
                                   nullptr);
         WINRT_VERIFY(hwnd);
         CentralizedHotkeys::RegisterWindow(hwnd);
-        CentralizedKeyboardHook::RegisterWindow(hwnd);
         memset(&tray_icon_data, 0, sizeof(tray_icon_data));
         tray_icon_data.cbSize = sizeof(tray_icon_data);
         tray_icon_data.hIcon = icon;

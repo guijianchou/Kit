@@ -19,6 +19,7 @@
 - UI: Quick Access now uses the current WinUI SystemBackdrop API, clearing deprecated WinUIEx backdrop build warnings.
 - Build: XAML search index builder no longer carries inactive upstream module icon and panel fallbacks; active page icons are derived from Settings XAML.
 - Runtime: Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface.
+- Runtime: Removed the no-op keyboard hook window registration after deleting pressed-key timers.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
 - Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, and telemetry-free managed app projects.
@@ -122,6 +123,7 @@
 - UI：Quick Access 现在使用当前 WinUI SystemBackdrop API，清除了已弃用 WinUIEx backdrop 造成的构建警告。
 - 构建：XAML search index builder 不再携带非活动上游模块图标和 panel 兜底，活动页面图标改为从 Settings XAML 派生。
 - 运行时：从 runner 键盘钩子和模块接口中移除非活动的 Shortcut Guide Win-key 跟踪路径。
+- 运行时：删除 pressed-key 定时器后，移除键盘钩子的 no-op 窗口注册路径。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
 - 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用的回归覆盖。

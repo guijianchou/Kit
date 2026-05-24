@@ -5,7 +5,7 @@ This source tree keeps the PowerToys project layout so copied modules can contin
 ## Code Organization
 
 - `runner` starts Kit, loads the maintained module interface DLL list, owns module lifetime, and coordinates settings IPC.
-- `modules` contains the active utilities. The current Kit module set is Awake, Light Switch, and Monitor.
+- `modules` contains the active utilities. The current Kit module set is Awake, Light Switch, Monitor, and PowerDisplay.
 - `settings-ui` contains the WinUI Settings app, shared Settings controls, settings models, serialization, backup and restore helpers, and focused Settings tests.
 - `common` contains shared native and managed infrastructure used by the runner, modules, and Settings.
 

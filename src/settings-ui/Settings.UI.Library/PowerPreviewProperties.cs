@@ -1,13 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
-using Microsoft.PowerToys.Settings.Telemetry;
-using Microsoft.PowerToys.Telemetry;
 using Settings.UI.Library.Enumerations;
 
 namespace Microsoft.PowerToys.Settings.UI.Library
@@ -32,7 +28,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableSvgPreview)
                 {
-                    LogTelemetryEvent(value);
                     enableSvgPreview = value;
                 }
             }
@@ -58,7 +53,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableSvgThumbnail)
                 {
-                    LogTelemetryEvent(value);
                     enableSvgThumbnail = value;
                 }
             }
@@ -75,7 +69,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableMdPreview)
                 {
-                    LogTelemetryEvent(value);
                     enableMdPreview = value;
                 }
             }
@@ -92,7 +85,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableMonacoPreview)
                 {
-                    LogTelemetryEvent(value);
                     enableMonacoPreview = value;
                 }
             }
@@ -109,7 +101,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != monacoPreviewWordWrap)
                 {
-                    LogTelemetryEvent(value);
                     monacoPreviewWordWrap = value;
                 }
             }
@@ -126,7 +117,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != monacoPreviewTryFormat)
                 {
-                    LogTelemetryEvent(value);
                     monacoPreviewTryFormat = value;
                 }
             }
@@ -149,7 +139,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != monacoPreviewStickyScroll)
                 {
-                    LogTelemetryEvent(value);
                     monacoPreviewStickyScroll = value;
                 }
             }
@@ -166,7 +155,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != monacoPreviewMinimap)
                 {
-                    LogTelemetryEvent(value);
                     monacoPreviewMinimap = value;
                 }
             }
@@ -183,7 +171,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enablePdfPreview)
                 {
-                    LogTelemetryEvent(value);
                     enablePdfPreview = value;
                 }
             }
@@ -200,7 +187,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enablePdfThumbnail)
                 {
-                    LogTelemetryEvent(value);
                     enablePdfThumbnail = value;
                 }
             }
@@ -217,7 +203,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableGcodePreview)
                 {
-                    LogTelemetryEvent(value);
                     enableGcodePreview = value;
                 }
             }
@@ -234,7 +219,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableBgcodePreview)
                 {
-                    LogTelemetryEvent(value);
                     enableBgcodePreview = value;
                 }
             }
@@ -251,7 +235,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableGcodeThumbnail)
                 {
-                    LogTelemetryEvent(value);
                     enableGcodeThumbnail = value;
                 }
             }
@@ -268,7 +251,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableBgcodeThumbnail)
                 {
-                    LogTelemetryEvent(value);
                     enableBgcodeThumbnail = value;
                 }
             }
@@ -285,7 +267,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableStlThumbnail)
                 {
-                    LogTelemetryEvent(value);
                     enableStlThumbnail = value;
                 }
             }
@@ -305,7 +286,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableQoiPreview)
                 {
-                    LogTelemetryEvent(value);
                     enableQoiPreview = value;
                 }
             }
@@ -322,7 +302,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (value != enableQoiThumbnail)
                 {
-                    LogTelemetryEvent(value);
                     enableQoiThumbnail = value;
                 }
             }
@@ -341,16 +320,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         public override string ToString()
         {
             return JsonSerializer.Serialize(this, SettingsSerializationContext.Default.PowerPreviewProperties);
-        }
-
-        private static void LogTelemetryEvent(bool value, [CallerMemberName] string propertyName = null)
-        {
-            var dataEvent = new SettingsEnabledEvent()
-            {
-                Value = value,
-                Name = propertyName,
-            };
-            PowerToysTelemetry.Log.WriteEvent(dataEvent);
         }
     }
 }

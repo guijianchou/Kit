@@ -16,7 +16,6 @@ using Microsoft.PowerToys.Settings.UI.SerializationContext;
 using Microsoft.PowerToys.Settings.UI.Services;
 using Microsoft.PowerToys.Settings.UI.SettingsXAML.Controls.Dashboard;
 using Microsoft.PowerToys.Settings.UI.Views;
-using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI.Xaml;
 using PowerToys.Interop;
 using Windows.UI.Popups;
@@ -65,8 +64,6 @@ namespace Microsoft.PowerToys.Settings.UI
 
         public static Action<string> IPCMessageReceivedCallback { get; set; }
 
-        public ETWTrace EtwTrace { get; private set; } = new ETWTrace();
-
         /// <summary>
         /// Initializes a new instance of the <see cref="App"/> class.
         /// Initializes the singleton application object. This is the first line of authored code
@@ -89,7 +86,6 @@ namespace Microsoft.PowerToys.Settings.UI
             NativeEventWaiter.WaitForEventLoop(
                 Constants.PowerToysRunnerTerminateSettingsEvent(), () =>
             {
-                EtwTrace?.Dispose();
                 Environment.Exit(0);
             });
         }

@@ -20,16 +20,9 @@
     <ItemGroup>
         <ProjectReference Include="..\..\common\interop\PowerToys.Interop.vcxproj" />
         <ProjectReference Include="..\..\common\ManagedCommon\ManagedCommon.csproj" />
-        <ProjectReference Include="..\..\common\ManagedTelemetry\Telemetry\ManagedTelemetry.csproj" />
         <ProjectReference Include="..\..\modules\powerdisplay\PowerDisplay.Models\PowerDisplay.Models.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <Compile Remove="MouseJumpProperties.cs" />
-        <Compile Remove="MouseJumpSettings.cs" />
-        <Compile Remove="MouseJumpThumbnailSize.cs" />
-        <Compile Remove="SndMouseJumpSettings.cs" />
-    </ItemGroup>
     <ItemGroup>
         <Compile Update="Resources\Resources.Designer.cs">
             <DependentUpon>Resources.resx</DependentUpon>

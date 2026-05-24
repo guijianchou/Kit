@@ -3,12 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
-using Microsoft.PowerToys.Settings.Telemetry;
-using Microsoft.PowerToys.Telemetry;
 
 namespace Microsoft.PowerToys.Settings.UI.Library
 {
@@ -33,7 +29,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (fancyZones != value)
                 {
-                    LogTelemetryEvent(value);
                     fancyZones = value;
                     NotifyChange();
                 }
@@ -50,7 +45,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (imageResizer != value)
                 {
-                    LogTelemetryEvent(value);
                     imageResizer = value;
                 }
             }
@@ -66,7 +60,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (fileExplorerPreview != value)
                 {
-                    LogTelemetryEvent(value);
                     fileExplorerPreview = value;
                 }
             }
@@ -82,7 +75,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (shortcutGuide != value)
                 {
-                    LogTelemetryEvent(value);
                     shortcutGuide = value;
                     NotifyChange();
                 }
@@ -98,7 +90,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (powerRename != value)
                 {
-                    LogTelemetryEvent(value);
                     powerRename = value;
                 }
             }
@@ -114,7 +105,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (keyboardManager != value)
                 {
-                    LogTelemetryEvent(value);
                     keyboardManager = value;
                 }
             }
@@ -130,7 +120,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (powerLauncher != value)
                 {
-                    LogTelemetryEvent(value);
                     powerLauncher = value;
                     NotifyChange();
                 }
@@ -147,7 +136,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (colorPicker != value)
                 {
-                    LogTelemetryEvent(value);
                     colorPicker = value;
                     NotifyChange();
                 }
@@ -164,7 +152,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (cropAndLock != value)
                 {
-                    LogTelemetryEvent(value);
                     cropAndLock = value;
                     NotifyChange();
                 }
@@ -181,7 +168,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (awake != value)
                 {
-                    LogTelemetryEvent(value);
                     awake = value;
                 }
             }
@@ -197,7 +183,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (mouseWithoutBorders != value)
                 {
-                    LogTelemetryEvent(value);
                     mouseWithoutBorders = value;
                 }
             }
@@ -213,7 +198,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (findMyMouse != value)
                 {
-                    LogTelemetryEvent(value);
                     findMyMouse = value;
                 }
             }
@@ -229,7 +213,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (mouseHighlighter != value)
                 {
-                    LogTelemetryEvent(value);
                     mouseHighlighter = value;
                 }
             }
@@ -245,7 +228,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (mouseJump != value)
                 {
-                    LogTelemetryEvent(value);
                     mouseJump = value;
                 }
             }
@@ -261,7 +243,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (alwaysOnTop != value)
                 {
-                    LogTelemetryEvent(value);
                     alwaysOnTop = value;
                 }
             }
@@ -277,7 +258,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (mousePointerCrosshairs != value)
                 {
-                    LogTelemetryEvent(value);
                     mousePointerCrosshairs = value;
                 }
             }
@@ -293,7 +273,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (powerAccent != value)
                 {
-                    LogTelemetryEvent(value);
                     powerAccent = value;
                 }
             }
@@ -309,7 +288,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (powerOCR != value)
                 {
-                    LogTelemetryEvent(value);
                     powerOCR = value;
                     NotifyChange();
                 }
@@ -326,7 +304,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (advancedPaste != value)
                 {
-                    LogTelemetryEvent(value);
                     advancedPaste = value;
                     NotifyChange();
                 }
@@ -343,7 +320,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (measureTool != value)
                 {
-                    LogTelemetryEvent(value);
                     measureTool = value;
                     NotifyChange();
                 }
@@ -360,7 +336,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (hosts != value)
                 {
-                    LogTelemetryEvent(value);
                     hosts = value;
                     NotifyChange();
                 }
@@ -377,7 +352,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (fileLocksmith != value)
                 {
-                    LogTelemetryEvent(value);
                     fileLocksmith = value;
                 }
             }
@@ -393,7 +367,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (peek != value)
                 {
-                    LogTelemetryEvent(value);
                     peek = value;
                 }
             }
@@ -409,7 +382,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (registryPreview != value)
                 {
-                    LogTelemetryEvent(value);
                     registryPreview = value;
                 }
             }
@@ -425,7 +397,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (cmdNotFound != value)
                 {
-                    LogTelemetryEvent(value);
                     cmdNotFound = value;
                     NotifyChange();
                 }
@@ -442,7 +413,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (environmentVariables != value)
                 {
-                    LogTelemetryEvent(value);
                     environmentVariables = value;
                 }
             }
@@ -458,7 +428,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (newPlus != value)
                 {
-                    LogTelemetryEvent(value);
                     newPlus = value;
                 }
             }
@@ -474,7 +443,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (workspaces != value)
                 {
-                    LogTelemetryEvent(value);
                     workspaces = value;
                     NotifyChange();
                 }
@@ -491,7 +459,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (cmdPal != value)
                 {
-                    LogTelemetryEvent(value);
                     cmdPal = value;
                 }
             }
@@ -507,7 +474,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (zoomIt != value)
                 {
-                    LogTelemetryEvent(value);
                     zoomIt = value;
                     NotifyChange();
                 }
@@ -524,7 +490,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (cursorWrap != value)
                 {
-                    LogTelemetryEvent(value);
                     cursorWrap = value;
                 }
             }
@@ -540,7 +505,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (lightSwitch != value)
                 {
-                    LogTelemetryEvent(value);
                     lightSwitch = value;
                     NotifyChange();
                 }
@@ -557,7 +521,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (monitor != value)
                 {
-                    LogTelemetryEvent(value);
                     monitor = value;
                     NotifyChange();
                 }
@@ -574,7 +537,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (powerDisplay != value)
                 {
-                    LogTelemetryEvent(value);
                     powerDisplay = value;
                     NotifyChange();
                 }
@@ -591,7 +553,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             {
                 if (grabAndMove != value)
                 {
-                    LogTelemetryEvent(value);
                     grabAndMove = value;
                     NotifyChange();
                 }
@@ -606,16 +567,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         public string ToJsonString()
         {
             return JsonSerializer.Serialize(this);
-        }
-
-        private static void LogTelemetryEvent(bool value, [CallerMemberName] string moduleName = null)
-        {
-            var dataEvent = new SettingsEnabledEvent()
-            {
-                Value = value,
-                Name = moduleName,
-            };
-            PowerToysTelemetry.Log.WriteEvent(dataEvent);
         }
 
         internal void AddEnabledModuleChangeNotification(Action callBack)

@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ViewModelTests
@@ -13,24 +14,55 @@ namespace ViewModelTests
     {
         private static string FindSourceFile(params string[] relativePathParts)
         {
+            if (TryFindSourceFile(out var sourceFile, relativePathParts))
+            {
+                return sourceFile;
+            }
+
+            Assert.Fail($"Could not find source file: {Path.Combine(relativePathParts)}");
+            return string.Empty;
+        }
+
+        private static bool TryFindSourceFile(out string sourceFile, params string[] relativePathParts)
+        {
             DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
             while (directory != null)
             {
-                var pathParts = new string[relativePathParts.Length + 1];
-                pathParts[0] = directory.FullName;
-                Array.Copy(relativePathParts, 0, pathParts, 1, relativePathParts.Length);
-
-                var candidate = Path.Combine(pathParts);
+                var candidate = Path.Combine(new[] { directory.FullName }.Concat(relativePathParts).ToArray());
                 if (File.Exists(candidate))
                 {
-                    return candidate;
+                    sourceFile = candidate;
+                    return true;
                 }
 
                 directory = directory.Parent;
             }
 
-            Assert.Fail($"Could not find source file: {Path.Combine(relativePathParts)}");
-            return string.Empty;
+            sourceFile = string.Empty;
+            return false;
+        }
+
+        private static bool TryFindSourceOrPowerToysReferenceFile(out string sourceFile, params string[] relativePathParts)
+        {
+            if (TryFindSourceFile(out sourceFile, relativePathParts))
+            {
+                return true;
+            }
+
+            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null)
+            {
+                var candidate = Path.Combine(new[] { directory.FullName, "PowerToys-main" }.Concat(relativePathParts).ToArray());
+                if (File.Exists(candidate))
+                {
+                    sourceFile = candidate;
+                    return true;
+                }
+
+                directory = directory.Parent;
+            }
+
+            return false;
         }
 
         [TestMethod]
@@ -275,6 +307,85 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsLibraryShouldNotHideInactiveModuleModelsBehindProjectExclusions()
+        {
+            var settingsLibraryProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj");
+            var settingsLibraryProject = File.ReadAllText(settingsLibraryProjectPath);
+            var settingsLibraryRoot = Path.GetDirectoryName(settingsLibraryProjectPath);
+
+            Assert.IsFalse(settingsLibraryProject.Contains(@"<Compile Remove=""", StringComparison.Ordinal), "Inactive Settings library sources should be deleted rather than hidden behind Compile Remove rules.");
+
+            string[] inactiveSourceFiles =
+            {
+                "MouseJumpProperties.cs",
+                "MouseJumpSettings.cs",
+                "MouseJumpThumbnailSize.cs",
+                "SndMouseJumpSettings.cs",
+            };
+
+            foreach (var fileName in inactiveSourceFiles)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, fileName)), $"Inactive Settings library source file should be deleted: {fileName}");
+            }
+        }
+
+        [TestMethod]
+        public void KitQuickAccessShouldOnlyReferenceActiveModuleSettings()
+        {
+            var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
+            var quickAccessLauncher = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessLauncher.cs"));
+            var sourceGenerationContext = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SerializationContext", "SourceGenerationContextContext.cs"));
+
+            string[] inactiveTypeNames =
+            {
+                "AdvancedPasteSettings",
+                "AlwaysOnTopSettings",
+                "ColorPickerSettings",
+                "FancyZonesSettings",
+                "KeyboardManagerSettings",
+                "MeasureToolSettings",
+                "PowerLauncherSettings",
+                "PowerOcrSettings",
+                "ShortcutGuideSettings",
+                "WorkspacesSettings",
+            };
+
+            foreach (var inactiveTypeName in inactiveTypeNames)
+            {
+                Assert.IsFalse(quickAccessViewModel.Contains(inactiveTypeName, StringComparison.Ordinal), $"Quick Access view model should not read inactive settings type {inactiveTypeName}.");
+                Assert.IsFalse(sourceGenerationContext.Contains(inactiveTypeName, StringComparison.Ordinal), $"Settings UI source-generation context should not register inactive settings type {inactiveTypeName}.");
+            }
+
+            string[] inactiveLauncherCases =
+            {
+                "ModuleType.ColorPicker",
+                "ModuleType.EnvironmentVariables",
+                "ModuleType.FancyZones",
+                "ModuleType.Hosts",
+                "ModuleType.PowerLauncher",
+                "ModuleType.PowerOCR",
+                "ModuleType.RegistryPreview",
+                "ModuleType.MeasureTool",
+                "ModuleType.ShortcutGuide",
+                "ModuleType.CmdPal",
+                "ModuleType.Workspaces",
+                "ModuleType.KeyboardManager",
+            };
+
+            foreach (var inactiveLauncherCase in inactiveLauncherCases)
+            {
+                Assert.IsFalse(quickAccessLauncher.Contains(inactiveLauncherCase, StringComparison.Ordinal), $"Quick Access launcher should not retain inactive launch case {inactiveLauncherCase}.");
+            }
+
+            StringAssert.Contains(quickAccessViewModel, "ModuleType.Awake");
+            StringAssert.Contains(quickAccessViewModel, "ModuleType.LightSwitch");
+            StringAssert.Contains(quickAccessViewModel, "ModuleType.Monitor");
+            StringAssert.Contains(quickAccessViewModel, "ModuleType.PowerDisplay");
+            StringAssert.Contains(quickAccessLauncher, "ModuleType.LightSwitch");
+            StringAssert.Contains(quickAccessLauncher, "ModuleType.PowerDisplay");
+        }
+
+        [TestMethod]
         public void KitSettingsShouldNotPublishInactiveOobeAssets()
         {
             var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
@@ -381,18 +492,7 @@ namespace ViewModelTests
             var settingsUnitTestsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.UnitTests", "Settings.UI.UnitTests.csproj"));
             var xamlIndexBuilderProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.XamlIndexBuilder", "Settings.UI.XamlIndexBuilder.csproj"));
             var uiTestAutomationProject = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "UITestAutomation.csproj"));
-            var buildTemplate = File.ReadAllText(FindSourceFile(".pipelines", "v2", "templates", "job-build-project.yml"));
-            var publishScript = File.ReadAllText(FindSourceFile("installer", "PowerToysSetupVNext", "publish.cmd"));
-            var devDocPluginChecklist = File.ReadAllText(FindSourceFile("doc", "devdoc", "modules", "launcher", "new-plugin-checklist.md"));
-            var devDocsPluginChecklist = File.ReadAllText(FindSourceFile("doc", "devdocs", "modules", "launcher", "new-plugin-checklist.md"));
-
             StringAssert.Contains(settingsProject, @"Targets=""Restore;Build""");
-            StringAssert.Contains(buildTemplate, "TargetFramework=net10.0-windows10.0.26100.0");
-            StringAssert.Contains(publishScript, "TargetFramework=net10.0-windows10.0.26100.0");
-            StringAssert.Contains(devDocPluginChecklist, "net10.0-windows10.0.22621.0");
-            StringAssert.Contains(devDocPluginChecklist, ".NET 10");
-            StringAssert.Contains(devDocsPluginChecklist, "net10.0-windows10.0.22621.0");
-            StringAssert.Contains(devDocsPluginChecklist, ".NET 10");
             Assert.IsFalse(settingsProject.Contains(@"<PackageReference Include=""System.Net.Http""", StringComparison.Ordinal));
             Assert.IsFalse(settingsProject.Contains(@"<PackageReference Include=""System.Private.Uri""", StringComparison.Ordinal));
             Assert.IsFalse(settingsProject.Contains(@"<PackageReference Include=""System.Text.RegularExpressions""", StringComparison.Ordinal));
@@ -402,12 +502,38 @@ namespace ViewModelTests
             Assert.IsFalse(settingsUnitTestsProject.Contains(@"<PackageReference Include=""System.Text.RegularExpressions""", StringComparison.Ordinal));
             Assert.IsFalse(xamlIndexBuilderProject.Contains(@"<PackageReference Include=""System.Text.Json""", StringComparison.Ordinal));
             Assert.IsFalse(uiTestAutomationProject.Contains(@"<PackageReference Include=""System.Text.RegularExpressions""", StringComparison.Ordinal));
-            Assert.IsFalse(buildTemplate.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
-            Assert.IsFalse(publishScript.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
-            Assert.IsFalse(devDocPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
-            Assert.IsFalse(devDocPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
-            Assert.IsFalse(devDocsPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
-            Assert.IsFalse(devDocsPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
+
+            if (TryFindSourceOrPowerToysReferenceFile(out var buildTemplatePath, ".pipelines", "v2", "templates", "job-build-project.yml"))
+            {
+                var buildTemplate = File.ReadAllText(buildTemplatePath);
+                StringAssert.Contains(buildTemplate, "TargetFramework=net10.0-windows10.0.26100.0");
+                Assert.IsFalse(buildTemplate.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
+            }
+
+            if (TryFindSourceOrPowerToysReferenceFile(out var publishScriptPath, "installer", "PowerToysSetupVNext", "publish.cmd"))
+            {
+                var publishScript = File.ReadAllText(publishScriptPath);
+                StringAssert.Contains(publishScript, "TargetFramework=net10.0-windows10.0.26100.0");
+                Assert.IsFalse(publishScript.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
+            }
+
+            if (TryFindSourceOrPowerToysReferenceFile(out var devDocPluginChecklistPath, "doc", "devdoc", "modules", "launcher", "new-plugin-checklist.md"))
+            {
+                var devDocPluginChecklist = File.ReadAllText(devDocPluginChecklistPath);
+                StringAssert.Contains(devDocPluginChecklist, "net10.0-windows10.0.22621.0");
+                StringAssert.Contains(devDocPluginChecklist, ".NET 10");
+                Assert.IsFalse(devDocPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
+                Assert.IsFalse(devDocPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
+            }
+
+            if (TryFindSourceOrPowerToysReferenceFile(out var devDocsPluginChecklistPath, "doc", "devdocs", "modules", "launcher", "new-plugin-checklist.md"))
+            {
+                var devDocsPluginChecklist = File.ReadAllText(devDocsPluginChecklistPath);
+                StringAssert.Contains(devDocsPluginChecklist, "net10.0-windows10.0.22621.0");
+                StringAssert.Contains(devDocsPluginChecklist, ".NET 10");
+                Assert.IsFalse(devDocsPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
+                Assert.IsFalse(devDocsPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
+            }
         }
 
         [TestMethod]

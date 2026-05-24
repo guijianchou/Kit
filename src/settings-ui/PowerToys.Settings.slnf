@@ -8,7 +8,6 @@
       "src\\common\\GPOWrapper\\GPOWrapper.vcxproj",
       "src\\common\\ManagedCommon\\ManagedCommon.csproj",
       "src\\common\\ManagedCsWin32\\ManagedCsWin32.csproj",
-      "src\\common\\ManagedTelemetry\\Telemetry\\ManagedTelemetry.csproj",
       "src\\common\\SettingsAPI\\SettingsAPI.vcxproj",
       "src\\common\\interop\\PowerToys.Interop.vcxproj",
       "src\\common\\logger\\logger.vcxproj",

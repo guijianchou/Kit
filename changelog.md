@@ -6,6 +6,14 @@
 
 ## English
 
+### 1.2.2
+
+- Version: Bumped Kit to `1.2.2`.
+- Refactor: Trimmed Quick Access and Settings serialization to the active four-module surface: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
+- Privacy: Removed managed telemetry sends, telemetry event sources, and `ManagedTelemetry` project references from the managed Settings and Quick Access layer.
+- Slimming: Deleted inactive hidden MouseJump settings models instead of keeping them behind project exclusions.
+- Tests: Added regression coverage for active-module Quick Access boundaries, removed hidden settings sources, and telemetry-free managed app projects.
+
 ### 1.2.0
 
 - Version: Bumped Kit to `1.2.0`.
@@ -91,6 +99,14 @@
 ## 中文
 
 ## 更新日志
+
+### 1.2.2
+
+- 版本：将 Kit 提升到 `1.2.2`。
+- 重构：将 Quick Access 和 Settings 序列化收敛到四个活动模块：`Awake`、`Light Switch`、`Monitor` 和 `PowerDisplay`。
+- 隐私：从托管 Settings 和 Quick Access 层移除 telemetry 发送、telemetry 事件源和 `ManagedTelemetry` 项目引用。
+- 瘦身：删除非活动的隐藏 MouseJump settings 模型，不再把它们保留在项目排除规则后面。
+- 测试：新增活动模块 Quick Access 边界、隐藏 settings 源删除、托管应用无 telemetry 引用的回归覆盖。
 
 ### 1.2.0
 

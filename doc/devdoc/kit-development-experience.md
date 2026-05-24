@@ -2,6 +2,16 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-05-24 Version 1.2.2 Stability Refactor
+
+This pass moved Kit from 1.2.0 to 1.2.2 while comparing the current Kit docs, tests, and Settings code against the local PowerToys-main reference.
+
+- Version.props, README, README_zh, changelog, this development log, and the version metadata regression test now use Kit version `1.2.2`.
+- Quick Access and Settings serialization now reference only the active Kit module set: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
+- Managed Settings and Quick Access no longer keep telemetry send paths, telemetry event source files, or `ManagedTelemetry` project references.
+- Inactive hidden MouseJump settings models were deleted instead of being kept behind project exclusions.
+- Regression coverage now guards the four-module Quick Access boundary, absence of hidden inactive settings sources, and telemetry-free managed app projects.
+
 ## 2026-05-12 Version 1.2.0 Release Metadata
 
 This pass moved Kit from 1.1.6 to 1.2.0 after the update-check scheduler hardening and documentation cleanup.
@@ -144,7 +154,7 @@ This review re-checked the trimmed Kit shell for product-service behavior that s
 - Automatic download/install UI remains removed from General. The backing ViewModel pins update notifications, automatic downloads, and What's New after updates to disabled values; install-update and updater launch handlers are inert.
 - Runner update behavior is limited to GitHub release checking and `UpdateState.json` writes. `UpdateUtils.cpp` keeps compatibility symbols, but the launch helper does not start an updater flow.
 - The update toast URI handler returns an error for `update_now/`, so a stale notification payload cannot launch the updater.
-- Settings telemetry source files still exist from upstream, but `settings_telemetry::init()` is not called by the runner. Do not wire it back in unless a future local-only diagnostics design replaces the upstream send path.
+- Native settings telemetry scaffolding still exists from upstream, but `settings_telemetry::init()` is not called by the runner and the managed Settings telemetry event layer has been removed. Do not wire telemetry back in unless a future local-only diagnostics design replaces the upstream send path.
 - ETW trace scaffolding is still present around runner lifetime. Treat it as local trace infrastructure, not as an opt-in telemetry feature; any future removal should be done separately from module compatibility work.
 
 The same pass cleaned Git's stale worktree metadata with `git worktree prune`. Before pruning, Git reported `C:\Users\Zen\Repo\Codings\Kit\.worktrees\kit-phase1-host` as prunable because its gitdir pointed to a non-existent location. After pruning, `git worktree list --porcelain` reports only the current `C:\Users\Zen\Repo\Codes\Kit` worktree.
@@ -155,7 +165,7 @@ The same pass cleaned Git's stale worktree metadata with `git worktree prune`. B
 - Quick Access can safely show modules without direct quick actions if it falls back to opening the module settings page.
 - Empty states must be based on visible item count, not raw item count, because disabled or GPO-hidden modules can still exist in collections.
 - Settings cards that host inline progress or mixed controls should use `HorizontalContentAlignment="Stretch"` and a two-column `Grid` so the middle space is usable instead of opening a second row.
-- Cross-module UI should tolerate intentionally removed modules. Light Switch can expose its PowerDisplay profile bridge, but the Settings app must remain stable when the PowerDisplay module itself is not part of the active Kit module set.
+- Cross-module UI should tolerate intentionally removed or future modules. Light Switch can expose its active PowerDisplay profile bridge, but similar bridges must not assume unrelated inactive modules are present.
 - UI text should stay English and Kit-branded. Keep `PowerToys` only where build-facing names, namespaces, assembly names, module interface DLL names, or origin attribution still require it.
 
 ## Build And Test Lessons

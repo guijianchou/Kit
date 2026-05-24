@@ -4,9 +4,7 @@
 
 using System.ComponentModel;
 using Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts;
-using Microsoft.PowerToys.Settings.UI.Library.Telemetry.Events;
 using Microsoft.PowerToys.Settings.UI.SettingsXAML.Controls.Dashboard;
-using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.ApplicationModel.Resources;
@@ -16,8 +14,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
     public sealed partial class ShortcutConflictControl : UserControl, INotifyPropertyChanged
     {
         private static readonly ResourceLoader ResourceLoader = Helpers.ResourceLoaderInstance.ResourceLoader;
-
-        private static bool _telemetryEventSent;
 
         public static readonly DependencyProperty AllHotkeyConflictsDataProperty =
             DependencyProperty.Register(
@@ -112,17 +108,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             {
                 VisualStateManager.GoToState(this, "NoConflictState", true);
             }
-
-            if (!_telemetryEventSent && HasConflicts)
-            {
-                // Log telemetry event when conflicts are detected
-                PowerToysTelemetry.Log.WriteEvent(new ShortcutConflictDetectedEvent()
-                {
-                    ConflictCount = ConflictCount,
-                });
-
-                _telemetryEventSent = true;
-            }
         }
 
         private void OnPropertyChanged(string propertyName)
@@ -144,12 +129,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             {
                 return;
             }
-
-            // Log telemetry event when user clicks the shortcut conflict button
-            PowerToysTelemetry.Log.WriteEvent(new ShortcutConflictControlClickedEvent()
-            {
-                ConflictCount = this.ConflictCount,
-            });
 
             ((App)App.Current)!.OpenShortcutConflictWindow();
         }

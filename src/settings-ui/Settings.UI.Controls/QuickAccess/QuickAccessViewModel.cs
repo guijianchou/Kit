@@ -19,10 +19,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
     public partial class QuickAccessViewModel : Observable
     {
         private readonly ISettingsRepository<GeneralSettings> _settingsRepository;
-
-        // Pulling in KBMSettingsRepository separately as we need to listen to changes in the
-        // UseNewEditor property to determine the visibility of the KeyboardManager quick access item.
-        private readonly SettingsRepository<KeyboardManagerSettings> _kbmSettingsRepository;
         private readonly IQuickAccessLauncher _launcher;
         private readonly Func<ModuleType, bool> _isModuleGpoDisabled;
         private readonly Func<ModuleType, bool> _isModuleGpoEnabled;
@@ -63,9 +59,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             _generalSettings = _settingsRepository.SettingsConfig;
             _generalSettings.AddEnabledModuleChangeNotification(ModuleEnabledChanged);
             _settingsRepository.SettingsChanged += OnSettingsChanged;
-
-            _kbmSettingsRepository = SettingsRepository<KeyboardManagerSettings>.GetInstance(SettingsUtils.Default);
-            _kbmSettingsRepository.SettingsChanged += OnKbmSettingsChanged;
 
             InitializeItems();
         }
@@ -150,29 +143,10 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             VisibleItemCount = Items.Count(item => item.Visible);
         }
 
-        private void OnKbmSettingsChanged(KeyboardManagerSettings newSettings)
-        {
-            if (_dispatcherQueue != null)
-            {
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    RefreshItemsVisibility();
-                });
-            }
-        }
-
         private bool GetItemVisibility(ModuleType moduleType)
         {
             // Generally, if gpo is enabled or if module enabled, then quick access item is visible.
-            bool visible = _isModuleGpoEnabled(moduleType) || Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType);
-
-            // For KeyboardManager Quick Access item is only shown when using the new editor
-            if (moduleType == ModuleType.KeyboardManager)
-            {
-                visible = visible && _kbmSettingsRepository.SettingsConfig.Properties.UseNewEditor;
-            }
-
-            return visible;
+            return _isModuleGpoEnabled(moduleType) || Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType);
         }
 
         private string GetModuleToolTip(ModuleType moduleType)
@@ -180,17 +154,9 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             return moduleType switch
             {
                 ModuleType.Awake => GetAwakeModeToolTip(),
-                ModuleType.ColorPicker => SettingsRepository<ColorPickerSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ActivationShortcut.ToString(),
-                ModuleType.FancyZones => SettingsRepository<FancyZonesSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.FancyzonesEditorHotkey.Value.ToString(),
-                ModuleType.KeyboardManager => SettingsRepository<KeyboardManagerSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.DefaultEditorShortcut.ToString(),
                 ModuleType.LightSwitch => SettingsRepository<LightSwitchSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ToggleThemeHotkey.Value.ToString(),
                 ModuleType.Monitor => SettingsRepository<MonitorSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.DownloadsPath.Value,
                 ModuleType.PowerDisplay => SettingsRepository<PowerDisplaySettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ActivationShortcut.ToString(),
-                ModuleType.PowerLauncher => SettingsRepository<PowerLauncherSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.OpenPowerLauncher.ToString(),
-                ModuleType.PowerOCR => SettingsRepository<PowerOcrSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ActivationShortcut.ToString(),
-                ModuleType.Workspaces => SettingsRepository<WorkspacesSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.Hotkey.Value.ToString(),
-                ModuleType.MeasureTool => SettingsRepository<MeasureToolSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ActivationShortcut.ToString(),
-                ModuleType.ShortcutGuide => GetShortcutGuideToolTip(),
                 _ => string.Empty,
             };
         }
@@ -206,14 +172,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
                 AwakeMode.EXPIRABLE => _resourceLoader.GetString("Awake_ExpirableKeepAwakeSelector/Content"),
                 _ => _resourceLoader.GetString("Awake_NoKeepAwakeSelector/Content"),
             };
-        }
-
-        private string GetShortcutGuideToolTip()
-        {
-            var shortcutGuideSettings = SettingsRepository<ShortcutGuideSettings>.GetInstance(SettingsUtils.Default).SettingsConfig;
-            return shortcutGuideSettings.Properties.UseLegacyPressWinKeyBehavior.Value
-                ? "Win"
-                : shortcutGuideSettings.Properties.OpenShortcutGuide.ToString();
         }
     }
 }

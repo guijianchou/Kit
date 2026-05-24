@@ -2,13 +2,9 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Threading;
 using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Controls;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Telemetry.Events;
-using Microsoft.PowerToys.Telemetry;
-using PowerToys.Interop;
 
 namespace Microsoft.PowerToys.QuickAccess.Services
 {
@@ -29,12 +25,6 @@ namespace Microsoft.PowerToys.QuickAccess.Services
             if (moduleRun)
             {
                 _coordinator?.OnModuleLaunched(moduleType);
-
-                // Send telemetry event for module launch from Quick Access
-                if (moduleType == ModuleType.KeyboardManager)
-                {
-                    PowerToysTelemetry.Log.WriteEvent(new ModuleLaunchedFromSettingsEvent("KeyboardManagerWinUI"));
-                }
             }
 
             _coordinator?.HideFlyout();

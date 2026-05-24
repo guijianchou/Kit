@@ -62,6 +62,46 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitManagedAppsShouldNotReferenceManagedTelemetry()
+        {
+            string[][] projectPaths =
+            {
+                new[] { "Kit.slnx" },
+                new[] { "src", "common", "ManagedCommon", "ManagedCommon.csproj" },
+                new[] { "src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj" },
+                new[] { "src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj" },
+                new[] { "src", "settings-ui", "QuickAccess.UI", "PowerToys.QuickAccess.csproj" },
+                new[] { "src", "settings-ui", "PowerToys.Settings.slnf" },
+            };
+
+            foreach (var pathParts in projectPaths)
+            {
+                var content = File.ReadAllText(FindSourceFile(pathParts));
+                Assert.IsFalse(content.Contains("ManagedTelemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not reference the managed telemetry project.");
+            }
+
+            string[][] sourcePaths =
+            {
+                new[] { "src", "common", "ManagedCommon", "RunnerHelper.cs" },
+                new[] { "src", "settings-ui", "Settings.UI.Library", "EnabledModules.cs" },
+                new[] { "src", "settings-ui", "Settings.UI.Library", "PowerPreviewProperties.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "MainWindow.xaml.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "ShortcutControl", "ShortcutControl.xaml.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "Dashboard", "ShortcutConflictControl.xaml.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "OOBE", "ViewModel", "OobePowerToysModule.cs" },
+                new[] { "src", "settings-ui", "QuickAccess.UI", "Services", "QuickAccessLauncher.cs" },
+            };
+
+            foreach (var pathParts in sourcePaths)
+            {
+                var content = File.ReadAllText(FindSourceFile(pathParts));
+                Assert.IsFalse(content.Contains("PowerToysTelemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not send managed telemetry.");
+                Assert.IsFalse(content.Contains("Microsoft.PowerToys.Telemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not import managed telemetry.");
+            }
+        }
+
+        [TestMethod]
         public void KitMainSolutionShouldNotBuildAutoUpdaterExecutable()
         {
             var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));

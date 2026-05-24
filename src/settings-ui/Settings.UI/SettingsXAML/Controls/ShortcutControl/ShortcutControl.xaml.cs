@@ -7,13 +7,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using CommunityToolkit.WinUI;
+using ManagedCommon;
 using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Telemetry.Events;
 using Microsoft.PowerToys.Settings.UI.Services;
 using Microsoft.PowerToys.Settings.UI.SettingsXAML.Controls.Dashboard;
 using Microsoft.PowerToys.Settings.UI.Views;
-using Microsoft.PowerToys.Telemetry;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -93,17 +92,9 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             var oldValue = (bool)(e.OldValue ?? false);
             var newValue = (bool)(e.NewValue ?? false);
 
-            // General conflict resolution telemetry (for all sources)
             if (oldValue && !newValue)
             {
-                // Determine the actual source based on the control's context
-                var actualSource = DetermineControlSource(control);
-
-                // Conflict was resolved - send general telemetry
-                PowerToysTelemetry.Log.WriteEvent(new ShortcutConflictResolvedEvent()
-                {
-                    Source = actualSource.ToString(),
-                });
+                Logger.LogDebug($"Shortcut conflict resolved from {DetermineControlSource(control)}.");
             }
         }
 

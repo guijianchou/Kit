@@ -28,6 +28,7 @@
 - Slimming: Removed the unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin after confirming no Kit project references it.
 - Slimming: Removed the unused Command Palette extension central package pin after confirming no Kit project references `Microsoft.CommandPalette.Extensions`.
 - Slimming: Removed the unused Command Palette Adaptive Cards central package pins and stale AdaptiveCards third-party notice entries after confirming no Kit project references `AdaptiveCards.ObjectModel.WinUI3`, `AdaptiveCards.Rendering.WinUI3`, `AdaptiveCards.Templating`, or `Microsoft.Bot.AdaptiveExpressions.Core`.
+- Slimming: Removed the unused Command Palette WinGet interop central package pin after confirming no Kit project references `Microsoft.WindowsPackageManager.ComInterop`.
 - Slimming: Deleted the legacy sibling Settings asset tree and inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
 - Policy: Trimmed ADMX/ADML policy assets to the same Kit 1.2.2 active policy surface.
@@ -47,7 +48,7 @@
 - Slimming: Pruned backup/restore defaults to the active Kit settings surface by deleting inactive Keyboard Manager, FancyZones, Workspaces, PowerToys Run restore rules, and the PowerToys Run plugin fix-up code path.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
-- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, Registry Preview-only SkiaSharp package pin removal, Command Palette extension package pin removal, and Command Palette Adaptive Cards package pin removal.
+- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, Registry Preview-only SkiaSharp package pin removal, Command Palette extension package pin removal, Command Palette Adaptive Cards package pin removal, and Command Palette WinGet interop package pin removal.
 
 ### 1.2.0
 
@@ -157,6 +158,7 @@
 - 瘦身：确认没有 Kit 项目引用后，移除仅服务于非活动 Registry Preview 的 `SkiaSharp.Views.WinUI` central package pin。
 - 瘦身：确认没有 Kit 项目引用 `Microsoft.CommandPalette.Extensions` 后，移除未使用的 Command Palette extension central package pin。
 - 瘦身：确认没有 Kit 项目引用 `AdaptiveCards.ObjectModel.WinUI3`、`AdaptiveCards.Rendering.WinUI3`、`AdaptiveCards.Templating` 或 `Microsoft.Bot.AdaptiveExpressions.Core` 后，移除未使用的 Command Palette Adaptive Cards central package pins 和陈旧 AdaptiveCards 第三方 notice 条目。
+- 瘦身：确认没有 Kit 项目引用 `Microsoft.WindowsPackageManager.ComInterop` 后，移除未使用的 Command Palette WinGet interop central package pin。
 - 瘦身：删除旧 sibling Settings 资产树以及非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。
 - 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 1.2.2 活动策略表面。
@@ -176,7 +178,7 @@
 - 瘦身：将备份/恢复默认值裁剪到活动 Kit 设置表面，删除非活动的 Keyboard Manager、FancyZones、Workspaces、PowerToys Run 恢复规则以及 PowerToys Run 插件修正代码路径。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
-- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影、AdvancedPaste AI provider 源码/包/UI/enum helper 残留删除、Shortcut Conflict 非活动模块特殊分支移除、显式 SettingsFactory 热键边界、非活动 MouseUtils page conflict branch 删除、Settings 包引用注释清理、仅供 Registry Preview 使用的 SkiaSharp 包 pin 移除、Command Palette extension 包 pin 移除，以及 Command Palette Adaptive Cards 包 pin 移除的回归覆盖。
+- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影、AdvancedPaste AI provider 源码/包/UI/enum helper 残留删除、Shortcut Conflict 非活动模块特殊分支移除、显式 SettingsFactory 热键边界、非活动 MouseUtils page conflict branch 删除、Settings 包引用注释清理、仅供 Registry Preview 使用的 SkiaSharp 包 pin 移除、Command Palette extension 包 pin 移除、Command Palette Adaptive Cards 包 pin 移除，以及 Command Palette WinGet interop 包 pin 移除的回归覆盖。
 
 ### 1.2.0
 

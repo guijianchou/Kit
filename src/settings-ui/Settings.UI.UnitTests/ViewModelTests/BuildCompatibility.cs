@@ -1419,6 +1419,26 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepCommandPaletteWinGetInteropPin()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+
+            Assert.IsFalse(centralPackages.Contains(@"PackageVersion Include=""Microsoft.WindowsPackageManager.ComInterop""", StringComparison.Ordinal), "Kit should not keep the inactive Command Palette WinGet interop central package pin.");
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                Assert.IsFalse(project.Contains(@"PackageReference Include=""Microsoft.WindowsPackageManager.ComInterop""", StringComparison.Ordinal), $"Kit project should not reference the inactive Command Palette WinGet interop package: {projectFile}");
+                Assert.IsFalse(project.Contains("PkgMicrosoft_WindowsPackageManager_ComInterop", StringComparison.Ordinal), $"Kit project should not keep generated path-property usage for the inactive Command Palette WinGet interop package: {projectFile}");
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));

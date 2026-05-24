@@ -2,7 +2,6 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -70,13 +69,8 @@ public sealed class AllAppsViewModel : Observable
     private void BuildFlyoutMenuItems()
     {
         _allFlyoutMenuItems.Clear();
-        foreach (ModuleType moduleType in Enum.GetValues<ModuleType>())
+        foreach (ModuleType moduleType in KitModuleCatalog.ActiveModules)
         {
-            if (moduleType == ModuleType.GeneralSettings)
-            {
-                continue;
-            }
-
             _allFlyoutMenuItems.Add(new FlyoutMenuItem
             {
                 Tag = moduleType,

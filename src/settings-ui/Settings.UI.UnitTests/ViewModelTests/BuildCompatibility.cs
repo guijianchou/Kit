@@ -386,6 +386,16 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitQuickAccessAllAppsShouldOnlyListActiveModules()
+        {
+            var allAppsViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "AllAppsViewModel.cs"));
+
+            StringAssert.Contains(allAppsViewModel, "KitModuleCatalog.ActiveModules");
+            Assert.IsFalse(allAppsViewModel.Contains("Enum.GetValues<ModuleType>()", StringComparison.Ordinal), "Quick Access All apps should not expose every upstream PowerToys module in Kit.");
+            Assert.IsFalse(allAppsViewModel.Contains("moduleType == ModuleType.GeneralSettings", StringComparison.Ordinal), "Filtering only GeneralSettings is too broad for Kit's trimmed module surface.");
+        }
+
+        [TestMethod]
         public void KitSettingsShouldNotPublishInactiveOobeAssets()
         {
             var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));

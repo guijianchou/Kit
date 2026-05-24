@@ -750,9 +750,12 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "inactive `ManagedTelemetry` source tree and managed telemetry base file were deleted");
             StringAssert.Contains(developmentLog, "Awake and PowerDisplay no longer keep managed telemetry write calls");
             StringAssert.Contains(developmentLog, "stale `PowerToys.ManagedTelemetry` and TraceEvent support binaries");
+            StringAssert.Contains(developmentLog, "LightSwitchService, MonitorModuleInterface, and ModuleTemplate trace sources now keep no-op runtime hooks");
+            StringAssert.Contains(developmentLog, "All active native module-interface trace headers and projects no longer inherit `TraceBase`");
+            StringAssert.Contains(developmentLog, "ModuleTemplate no-op trace defaults");
             StringAssert.Contains(developmentLog, "Awake README telemetry-free documentation");
             StringAssert.Contains(developmentLog, "PowerDisplay no longer exposes or listens to a settings telemetry IPC event");
-            StringAssert.Contains(developmentLog, "146/146 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "149/149 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

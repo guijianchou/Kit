@@ -337,15 +337,76 @@ namespace ViewModelTests
                 new[] { "src", "modules", "awake", "AwakeModuleInterface", "trace.cpp" },
                 new[] { "src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "Trace.cpp" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "trace.cpp" },
+                new[] { "src", "modules", "lightswitch", "LightSwitchService", "trace.cpp" },
+                new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "trace.cpp" },
             };
 
             foreach (var pathParts in activeModuleTraceFiles)
             {
                 var traceSource = File.ReadAllText(FindSourceFile(pathParts));
                 Assert.IsFalse(traceSource.Contains("TRACELOGGING_DEFINE_PROVIDER", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not define an ETW provider in Kit.");
+                Assert.IsFalse(traceSource.Contains("TraceLoggingRegister", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not register an ETW provider in Kit.");
+                Assert.IsFalse(traceSource.Contains("TraceLoggingUnregister", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not unregister an ETW provider in Kit.");
                 Assert.IsFalse(traceSource.Contains("TraceLoggingWriteWrapper", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not emit ETW events in Kit.");
                 Assert.IsFalse(traceSource.Contains("TraceLoggingWrite(", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not emit ETW events in Kit.");
                 Assert.IsFalse(traceSource.Contains("TraceLoggingOptionProjectTelemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not carry PowerToys telemetry provider metadata in Kit.");
+                Assert.IsFalse(traceSource.Contains("ProjectTelemetryPrivacyDataTag", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not tag telemetry events in Kit.");
+            }
+        }
+
+        [TestMethod]
+        public void ModuleTemplateTraceShouldDefaultToNoOp()
+        {
+            var templateTrace = File.ReadAllText(FindSourceFile("tools", "project_template", "ModuleTemplate", "trace.cpp"));
+
+            Assert.IsFalse(templateTrace.Contains("TRACELOGGING_DEFINE_PROVIDER", StringComparison.Ordinal), "New Kit module template should not define an ETW provider by default.");
+            Assert.IsFalse(templateTrace.Contains("TraceLoggingRegister", StringComparison.Ordinal), "New Kit module template should not register an ETW provider by default.");
+            Assert.IsFalse(templateTrace.Contains("TraceLoggingWriteWrapper", StringComparison.Ordinal), "New Kit module template should not emit ETW events by default.");
+            Assert.IsFalse(templateTrace.Contains("TraceLoggingWrite(", StringComparison.Ordinal), "New Kit module template should not emit ETW events by default.");
+            Assert.IsFalse(templateTrace.Contains("TraceLoggingOptionProjectTelemetry", StringComparison.Ordinal), "New Kit module template should not carry PowerToys telemetry provider metadata by default.");
+            Assert.IsFalse(templateTrace.Contains("ProjectTelemetryPrivacyDataTag", StringComparison.Ordinal), "New Kit module template should not tag telemetry events by default.");
+        }
+
+        [TestMethod]
+        public void ActiveNativeTraceProjectsShouldNotDependOnTelemetryBuildTargets()
+        {
+            string[][] projectPaths =
+            {
+                new[] { "src", "modules", "awake", "AwakeModuleInterface", "AwakeModuleInterface.vcxproj" },
+                new[] { "src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayModuleInterface.vcxproj" },
+                new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "LightSwitchModuleInterface.vcxproj" },
+                new[] { "src", "modules", "lightswitch", "LightSwitchService", "LightSwitchService.vcxproj" },
+                new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "MonitorModuleInterface.vcxproj" },
+                new[] { "tools", "project_template", "ModuleTemplate", "ModuleTemplate.vcxproj" },
+                new[] { "tools", "project_template", "ModuleTemplate", "ModuleTemplateCompileTest.vcxproj" },
+            };
+
+            foreach (var pathParts in projectPaths)
+            {
+                var project = File.ReadAllText(FindSourceFile(pathParts));
+                Assert.IsFalse(project.Contains(@"common\Telemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not keep telemetry include paths.");
+                Assert.IsFalse(project.Contains("EtwTrace.vcxproj", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not reference the inactive ETW trace project.");
+            }
+        }
+
+        [TestMethod]
+        public void ActiveNativeTraceHeadersShouldNotDependOnTelemetryBase()
+        {
+            string[][] headerPaths =
+            {
+                new[] { "src", "modules", "awake", "AwakeModuleInterface", "trace.h" },
+                new[] { "src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "Trace.h" },
+                new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "trace.h" },
+                new[] { "src", "modules", "lightswitch", "LightSwitchService", "trace.h" },
+                new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "trace.h" },
+                new[] { "tools", "project_template", "ModuleTemplate", "trace.h" },
+            };
+
+            foreach (var pathParts in headerPaths)
+            {
+                var header = File.ReadAllText(FindSourceFile(pathParts));
+                Assert.IsFalse(header.Contains("common/Telemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not include telemetry headers.");
+                Assert.IsFalse(header.Contains("TraceBase", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not inherit telemetry compatibility base classes.");
             }
         }
     }

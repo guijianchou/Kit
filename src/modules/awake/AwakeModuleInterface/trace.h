@@ -1,10 +1,11 @@
 #pragma once
 
-#include <common/Telemetry/TraceBase.h>
-
-class Trace : public telemetry::TraceBase
+class Trace
 {
 public:
+    static void RegisterProvider();
+    static void UnregisterProvider();
+
     // Compatibility hook for the original PowerToys module interface.
     static void EnableAwake(const bool enabled) noexcept;
 };

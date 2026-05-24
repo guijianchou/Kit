@@ -9,8 +9,10 @@ This pass moved Kit from 1.2.0 to 1.2.2 while comparing the current Kit docs, te
 - Version.props, README, README_zh, changelog, this development log, and the version metadata regression test now use Kit version `1.2.2`.
 - Quick Access and Settings serialization now reference only the active Kit module set: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
 - Managed Settings and Quick Access no longer keep telemetry send paths, telemetry event source files, or `ManagedTelemetry` project references.
-- Inactive hidden MouseJump settings models were deleted instead of being kept behind project exclusions.
-- Regression coverage now guards the four-module Quick Access boundary, absence of hidden inactive settings sources, and telemetry-free managed app projects.
+- Inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models were deleted instead of being kept behind project exclusions.
+- Settings and Quick Access now clean stale inactive Settings payloads from the shared WinUI output; Quick Access copies only active Settings icons.
+- Regression coverage now guards the four-module Quick Access boundary, deleted inactive Settings surfaces, stale output cleanup, and telemetry-free managed app projects.
+- Verification for this refactor used Visual Studio 18 MSBuild for `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 128/128 passing Settings UI tests.
 
 ## 2026-05-12 Version 1.2.0 Release Metadata
 

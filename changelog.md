@@ -11,8 +11,9 @@
 - Version: Bumped Kit to `1.2.2`.
 - Refactor: Trimmed Quick Access and Settings serialization to the active four-module surface: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
 - Privacy: Removed managed telemetry sends, telemetry event sources, and `ManagedTelemetry` project references from the managed Settings and Quick Access layer.
-- Slimming: Deleted inactive hidden MouseJump settings models instead of keeping them behind project exclusions.
-- Tests: Added regression coverage for active-module Quick Access boundaries, removed hidden settings sources, and telemetry-free managed app projects.
+- Slimming: Deleted inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
+- Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
+- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, stale output cleanup, and telemetry-free managed app projects.
 
 ### 1.2.0
 
@@ -105,8 +106,9 @@
 - 版本：将 Kit 提升到 `1.2.2`。
 - 重构：将 Quick Access 和 Settings 序列化收敛到四个活动模块：`Awake`、`Light Switch`、`Monitor` 和 `PowerDisplay`。
 - 隐私：从托管 Settings 和 Quick Access 层移除 telemetry 发送、telemetry 事件源和 `ManagedTelemetry` 项目引用。
-- 瘦身：删除非活动的隐藏 MouseJump settings 模型，不再把它们保留在项目排除规则后面。
-- 测试：新增活动模块 Quick Access 边界、隐藏 settings 源删除、托管应用无 telemetry 引用的回归覆盖。
+- 瘦身：删除非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
+- 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
+- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、陈旧输出清理、托管应用无 telemetry 引用的回归覆盖。
 
 ### 1.2.0
 

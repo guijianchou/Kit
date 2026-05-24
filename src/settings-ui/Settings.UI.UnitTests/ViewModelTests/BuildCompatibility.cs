@@ -601,6 +601,62 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsGpoHelperShouldStayInActiveModuleSurface()
+        {
+            var settingsGpoHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "ModuleGpoHelper.cs"));
+            var gpoConfigurationStart = settingsGpoHelper.IndexOf("public static GpoRuleConfigured GetModuleGpoConfiguration", StringComparison.Ordinal);
+            var pageTypeStart = settingsGpoHelper.IndexOf("public static System.Type GetModulePageType", StringComparison.Ordinal);
+
+            Assert.AreNotEqual(-1, gpoConfigurationStart, "Settings GPO helper should expose GetModuleGpoConfiguration.");
+            Assert.AreNotEqual(-1, pageTypeStart, "Settings GPO helper should expose GetModulePageType.");
+
+            var gpoConfiguration = settingsGpoHelper.Substring(gpoConfigurationStart, pageTypeStart - gpoConfigurationStart);
+
+            AssertHasGpoBranch(gpoConfiguration, "Awake");
+            AssertHasGpoBranch(gpoConfiguration, "LightSwitch");
+            AssertHasGpoBranch(gpoConfiguration, "PowerDisplay");
+            Assert.IsFalse(HasGpoBranch(gpoConfiguration, "Monitor"), "Settings GPO helper should not expose a Monitor GPO branch until a Monitor GPO rule exists.");
+
+            string[] inactiveModules =
+            {
+                "AdvancedPaste",
+                "AlwaysOnTop",
+                "CmdPal",
+                "ColorPicker",
+                "CropAndLock",
+                "CursorWrap",
+                "EnvironmentVariables",
+                "FancyZones",
+                "FileLocksmith",
+                "FindMyMouse",
+                "Hosts",
+                "ImageResizer",
+                "KeyboardManager",
+                "MouseHighlighter",
+                "MouseJump",
+                "MousePointerCrosshairs",
+                "MouseWithoutBorders",
+                "NewPlus",
+                "Peek",
+                "PowerAccent",
+                "PowerLauncher",
+                "PowerOCR",
+                "PowerRename",
+                "RegistryPreview",
+                "MeasureTool",
+                "ShortcutGuide",
+                "Workspaces",
+                "ZoomIt",
+                "GrabAndMove",
+            };
+
+            foreach (var inactiveModule in inactiveModules)
+            {
+                Assert.IsFalse(HasGpoBranch(gpoConfiguration, inactiveModule), $"Settings GPO helper should not keep inactive {inactiveModule} branches.");
+            }
+        }
+
+        [TestMethod]
         public void KitSettingsShouldDeleteInactiveModuleAssetsInsteadOfProjectExcludingThem()
         {
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
@@ -1182,6 +1238,17 @@ namespace ViewModelTests
         {
             StringAssert.Contains(xaml, $"x:Name=\"{elementName}\"");
             Assert.IsFalse(xaml.Contains($" Name=\"{elementName}\"", StringComparison.Ordinal), $"{elementName} should use x:Name so Release XAML compilation emits a backing field.");
+        }
+
+        private static void AssertHasGpoBranch(string gpoConfiguration, string moduleName)
+        {
+            Assert.IsTrue(HasGpoBranch(gpoConfiguration, moduleName), $"Settings GPO helper should keep active {moduleName} branch.");
+        }
+
+        private static bool HasGpoBranch(string gpoConfiguration, string moduleName)
+        {
+            return gpoConfiguration.Contains($"case ModuleType.{moduleName}:", StringComparison.Ordinal) ||
+                   gpoConfiguration.Contains($"ModuleType.{moduleName} =>", StringComparison.Ordinal);
         }
 
         private static void AssertNoFiles(string root, string pattern)

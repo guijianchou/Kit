@@ -1584,7 +1584,6 @@ SOFTWARE.
 - NLog.Extensions.Logging
 - NLog.Schema
 - Polly.Core
-- ReverseMarkdown
 - ScipBe.Common.Office.OneNote
 - SharpCompress
 - Shmuelie.WinRTServer

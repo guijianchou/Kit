@@ -751,6 +751,9 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Command Palette Adaptive Cards package pin removal");
             StringAssert.Contains(changelog, "Removed the unused Command Palette WinGet interop central package pin");
             StringAssert.Contains(changelog, "Command Palette WinGet interop package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused AdvancedPaste Markdown conversion central package pins");
+            StringAssert.Contains(changelog, "stale ReverseMarkdown third-party notice entry");
+            StringAssert.Contains(changelog, "AdvancedPaste Markdown conversion package pin removal");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
@@ -810,6 +813,9 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "Command Palette Adaptive Cards package pin removal");
             StringAssert.Contains(developmentLog, "The unused Command Palette WinGet interop central package pin was removed");
             StringAssert.Contains(developmentLog, "Command Palette WinGet interop package pin removal");
+            StringAssert.Contains(developmentLog, "The unused AdvancedPaste Markdown conversion central package pins were removed");
+            StringAssert.Contains(developmentLog, "stale ReverseMarkdown third-party notice entry");
+            StringAssert.Contains(developmentLog, "AdvancedPaste Markdown conversion package pin removal");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
             StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
             StringAssert.Contains(developmentLog, "154/154 passing Settings UI tests after deleting the inactive MouseUtils conflict branch");
@@ -818,6 +824,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "157/157 passing Settings UI tests after removing the Command Palette extension package pin");
             StringAssert.Contains(developmentLog, "158/158 passing Settings UI tests after removing the Command Palette Adaptive Cards package pins");
             StringAssert.Contains(developmentLog, "159/159 passing Settings UI tests after removing the Command Palette WinGet interop package pin");
+            StringAssert.Contains(developmentLog, "160/160 passing Settings UI tests after removing the AdvancedPaste Markdown conversion package pins");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

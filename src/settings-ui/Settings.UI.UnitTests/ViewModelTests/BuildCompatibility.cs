@@ -1608,6 +1608,44 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepDeletedUtilityPackagePins()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
+            string[] deletedUtilityPackages =
+            {
+                "CommunityToolkit.WinUI.Collections",
+                "CommunityToolkit.WinUI.UI.Controls.DataGrid",
+                "ControlzEx",
+                "Interop.Microsoft.Office.Interop.OneNote",
+                "LazyCache",
+                "Microsoft.Toolkit.Uwp.Notifications",
+                "RtfPipe",
+                "WPF-UI",
+            };
+
+            foreach (var packageName in deletedUtilityPackages)
+            {
+                Assert.IsFalse(centralPackages.Contains($@"PackageVersion Include=""{packageName}""", StringComparison.Ordinal), $"Kit should not keep central package pins for utilities that only served deleted PowerToys modules: {packageName}");
+                Assert.IsFalse(notice.Contains($"- {packageName}", StringComparison.Ordinal), $"Third-party notices should not list utility package dependencies that only served deleted PowerToys modules: {packageName}");
+            }
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                foreach (var packageName in deletedUtilityPackages)
+                {
+                    Assert.IsFalse(project.Contains($@"PackageReference Include=""{packageName}""", StringComparison.Ordinal), $"Kit project should not reference the deleted-utility-only package {packageName}: {projectFile}");
+                }
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));

@@ -765,6 +765,9 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Removed the deleted-module-only central package pins for DSC, Workspaces/FancyZones, Peek, and PowerToys Run OneNote");
             StringAssert.Contains(changelog, "no Kit project references `ModernWpfUI`, `NJsonSchema`, `ScipBe.Common.Office.OneNote`, or `SharpCompress`");
             StringAssert.Contains(changelog, "deleted-module package pin removal");
+            StringAssert.Contains(changelog, "Removed the deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths");
+            StringAssert.Contains(changelog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
+            StringAssert.Contains(changelog, "deleted-utility package pin removal");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
@@ -838,6 +841,9 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "The deleted-module-only DSC, Workspaces/FancyZones, Peek, and PowerToys Run OneNote central package pins were removed");
             StringAssert.Contains(developmentLog, "no Kit project references `ModernWpfUI`, `NJsonSchema`, `ScipBe.Common.Office.OneNote`, or `SharpCompress`");
             StringAssert.Contains(developmentLog, "deleted-module package pin removal");
+            StringAssert.Contains(developmentLog, "The deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths were removed");
+            StringAssert.Contains(developmentLog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
+            StringAssert.Contains(developmentLog, "deleted-utility package pin removal");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
             StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
             StringAssert.Contains(developmentLog, "154/154 passing Settings UI tests after deleting the inactive MouseUtils conflict branch");
@@ -851,6 +857,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "162/162 passing Settings UI tests after removing the PreviewPane STL and PowerAccent package pins");
             StringAssert.Contains(developmentLog, "163/163 passing Settings UI tests after removing the Command Palette toolkit and host package pins");
             StringAssert.Contains(developmentLog, "164/164 passing Settings UI tests after removing the deleted-module package pins");
+            StringAssert.Contains(developmentLog, "165/165 passing Settings UI tests after removing the deleted-utility package pins");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

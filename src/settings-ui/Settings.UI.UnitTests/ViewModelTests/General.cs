@@ -695,6 +695,8 @@ namespace ViewModelTests
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
             StringAssert.Contains(readmeZh, "当前 Kit 版本：`1.2.2`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
+            StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
+            StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
             StringAssert.Contains(changelog, "### 1.2.2");
             StringAssert.Contains(changelog, "Bumped Kit to `1.2.2`");
             StringAssert.Contains(changelog, "Trimmed GPOWrapper and Settings GPO helper policy surface");
@@ -709,6 +711,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Deleted the inactive settings telemetry worker source and runner project filters");
             StringAssert.Contains(changelog, "Deleted the inactive Settings UI test project that still targeted removed OOBE and PowerToys surfaces");
             StringAssert.Contains(changelog, "Deleted the inactive DSC source tree and manifest generation script");
+            StringAssert.Contains(changelog, "Deleted the DSC-only Settings `setAdditional` command-line entry point");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -723,6 +726,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "inactive settings telemetry worker source files were deleted");
             StringAssert.Contains(developmentLog, "inactive Settings UI test project was deleted");
             StringAssert.Contains(developmentLog, "inactive DSC source tree and manifest generation script were deleted");
+            StringAssert.Contains(developmentLog, "DSC-only Settings `setAdditional` command-line entry point was deleted");
             StringAssert.Contains(developmentLog, "140/140 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));

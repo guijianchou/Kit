@@ -42,7 +42,6 @@ namespace Microsoft.PowerToys.Settings.UI
         }
 
         private const int RequiredArgumentsSetSettingQty = 4;
-        private const int RequiredArgumentsSetAdditionalSettingsQty = 4;
         private const int RequiredArgumentsGetSettingQty = 3;
 
         private const int RequiredArgumentsLaunchedFromRunnerQty = 10;
@@ -128,25 +127,6 @@ namespace Microsoft.PowerToys.Settings.UI
             catch (Exception ex)
             {
                 Logger.LogError($"SetSettingCommandLineCommand exception: '{settingName}' setting couldn't be set to {settingValue}", ex);
-            }
-
-            Exit();
-        }
-
-        private void OnLaunchedToSetAdditionalSetting(string[] cmdArgs)
-        {
-            var moduleName = cmdArgs[2];
-            var ipcFileName = cmdArgs[3];
-            try
-            {
-                using (var settings = JsonDocument.Parse(File.ReadAllText(ipcFileName)))
-                {
-                    SetAdditionalSettingsCommandLineCommand.Execute(moduleName, settings, SettingsUtils.Default);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"SetAdditionalSettingsCommandLineCommand exception: couldn't set additional settings for '{moduleName}'", ex);
             }
 
             Exit();
@@ -261,10 +241,6 @@ namespace Microsoft.PowerToys.Settings.UI
             else if (cmdArgs?.Length == RequiredArgumentsSetSettingQty && cmdArgs[1] == "set")
             {
                 OnLaunchedToSetSetting(cmdArgs);
-            }
-            else if (cmdArgs?.Length == RequiredArgumentsSetAdditionalSettingsQty && cmdArgs[1] == "setAdditional")
-            {
-                OnLaunchedToSetAdditionalSetting(cmdArgs);
             }
             else if (cmdArgs?.Length == RequiredArgumentsGetSettingQty && cmdArgs[1] == "get")
             {

@@ -105,6 +105,7 @@ Kit 还没有活动的第三方插件主机。实际的第一步是 PowerToys �
 - 不要在 Kit 中重新启用自动下载/安装或遥测行为。
 - 保持安装器/更新程序入口点和设置遥测惰性。runner 可以检查 GitHub releases 并写入 `UpdateState.json`，但 `update_now`、安装器暂存、更新程序可执行文件启动路径和旧的设置遥测源必须保持不活动，除非未来的更改明确用仅本地行为替换它们。
 - 将 GPO 策略包装器和 ADMX/ADML 策略资产限制在活动模块以及仍保留的产品级启动/更新/诊断规则内。不要在 Kit 中携带非活动 PowerToys 模块策略、仅安装器策略读取器或陈旧的更新 toast 读取器。
+- 不要在 Kit 中保留只供 DSC 使用的 Settings 命令行入口。当前保留的 Settings 命令行表面只有活动的 `set`/`get` 兼容路径；除非 DSC 生成重新成为活动功能，否则不要恢复 `setAdditional`。
 - 保持上游 BugReportTool 不进入活动 Kit 运行时。它的收集模型是广泛的 PowerToys 诊断状态，包括 Kit 不交付的非活动模块。
 - 在明确导入之前，不要在 Kit 中保留非活动 Command Palette 和独立 module-loader 开发表面。孤立的 CmdPal 版本 props 和 `tools/module_loader` 应直接删除，而不是继续复制。
 - 保持新模块拆分为可测试的核心库、工作器进程、本机模块接口、设置模型、设置页面、主页元数据和静态注册测试。

@@ -318,6 +318,7 @@ namespace ViewModelTests
         {
             var solutionPath = FindSourceFile("Kit.slnx");
             var solution = File.ReadAllText(solutionPath);
+            var app = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
             var repoRoot = Path.GetDirectoryName(solutionPath);
 
             string[] inactiveProjects =
@@ -340,6 +341,9 @@ namespace ViewModelTests
             AssertNoFiles(repoRoot!, Path.Combine("src", "common", "GPOWrapperProjection", "*"));
             Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot!, "src", "dsc")), "Kit should delete the inactive DSC source tree after removing DSC projects from the solution.");
             Assert.IsFalse(File.Exists(Path.Combine(repoRoot!, "tools", "build", "generate-dsc-manifests.ps1")), "Kit should delete the inactive DSC manifest generation script after removing DSC projects from the solution.");
+            Assert.IsFalse(File.Exists(Path.Combine(repoRoot!, "src", "settings-ui", "Settings.UI.Library", "Utilities", "SetAdditionalSettingsCommandLineCommand.cs")), "Kit should delete the DSC-only additional settings command once DSC generation is removed.");
+            Assert.IsFalse(app.Contains("setAdditional", StringComparison.Ordinal), "Settings should not keep the DSC-only setAdditional command-line entry point.");
+            Assert.IsFalse(app.Contains("SetAdditionalSettingsCommandLineCommand", StringComparison.Ordinal), "Settings should not reference the deleted DSC-only additional settings command.");
         }
 
         [TestMethod]

@@ -744,6 +744,7 @@ namespace ViewModelTests
 
             Assert.IsFalse(gpoUtilities.Contains("PerUserInstallationDisabled", StringComparison.Ordinal), "Kit runtime GPO utilities should not keep installer-only policy readers.");
             Assert.IsFalse(gpoUtilities.Contains("SuspendNewUpdateAvailableToast", StringComparison.Ordinal), "Kit runtime GPO utilities should not keep inactive update-toast policy readers.");
+            Assert.IsFalse(gpoUtilities.Contains("ConfigureGlobalUtilityEnabledState", StringComparison.Ordinal), "Kit runtime GPO utilities should not keep the upstream all-utilities policy reader.");
         }
 
         [TestMethod]
@@ -784,6 +785,73 @@ namespace ViewModelTests
                 Assert.IsFalse(source.Contains("bugreport", StringComparison.Ordinal), "Kit active runtime IPC should not keep bug report launch messages.");
                 Assert.IsFalse(source.Contains("REPORT_BUG", StringComparison.Ordinal), "Kit tray resources should not keep bug report commands.");
                 Assert.IsFalse(source.Contains("PowerToys.BugReportTool", StringComparison.Ordinal), "Kit should not launch the upstream PowerToys bug report executable.");
+            }
+        }
+
+        [TestMethod]
+        public void KitGpoPolicyAssetsShouldStayInActiveModuleSurface()
+        {
+            var admx = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "PowerToys.admx"));
+            var adml = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "en-US", "PowerToys.adml"));
+
+            foreach (var activePolicy in new[]
+            {
+                "ConfigureEnabledUtilityAwake",
+                "ConfigureEnabledUtilityLightSwitch",
+                "ConfigureEnabledUtilityPowerDisplay",
+                "DisableAutomaticUpdateDownload",
+                "DisableNewUpdateToast",
+                "DoNotShowWhatsNewAfterUpdates",
+                "AllowExperimentation",
+                "AllowDiagnosticData",
+                "ConfigureRunAtStartup",
+            })
+            {
+                StringAssert.Contains(admx, activePolicy);
+                StringAssert.Contains(adml, activePolicy);
+            }
+
+            StringAssert.Contains(admx, "SUPPORTED_KIT_1_2_2");
+            StringAssert.Contains(adml, "SUPPORTED_KIT_1_2_2");
+
+            foreach (var inactivePolicyToken in new[]
+            {
+                "ConfigureAllUtilityGlobalEnabledState",
+                "ConfigureEnabledUtilityAdvancedPaste",
+                "ConfigureEnabledUtilityAlwaysOnTop",
+                "ConfigureEnabledUtilityCmdNotFound",
+                "ConfigureEnabledUtilityCmdPal",
+                "ConfigureEnabledUtilityColorPicker",
+                "ConfigureEnabledUtilityCropAndLock",
+                "ConfigureEnabledUtilityEnvironmentVariables",
+                "ConfigureEnabledUtilityFancyZones",
+                "ConfigureEnabledUtilityFile",
+                "ConfigureEnabledUtilityFindMyMouse",
+                "ConfigureEnabledUtilityHostsFileEditor",
+                "ConfigureEnabledUtilityImageResizer",
+                "ConfigureEnabledUtilityKeyboardManager",
+                "ConfigureEnabledUtilityMouse",
+                "ConfigureEnabledUtilityNewPlus",
+                "ConfigureEnabledUtilityPeek",
+                "ConfigureEnabledUtilityPowerLauncher",
+                "ConfigureEnabledUtilityPowerRename",
+                "ConfigureEnabledUtilityQuickAccent",
+                "ConfigureEnabledUtilityRegistryPreview",
+                "ConfigureEnabledUtilityScreenRuler",
+                "ConfigureEnabledUtilityShortcutGuide",
+                "ConfigureEnabledUtilityTextExtractor",
+                "ConfigureEnabledUtilityVideoConferenceMute",
+                "ConfigureEnabledUtilityWorkspaces",
+                "ConfigureEnabledUtilityZoomIt",
+                "DisablePerUserInstallation",
+                "SuspendNewUpdateToast",
+                "PowerToysRun",
+                "AdvancedPaste",
+                "MouseWithoutBorders",
+            })
+            {
+                Assert.IsFalse(admx.Contains(inactivePolicyToken, StringComparison.Ordinal), $"Kit ADMX should not expose inactive policy token {inactivePolicyToken}.");
+                Assert.IsFalse(adml.Contains(inactivePolicyToken, StringComparison.Ordinal), $"Kit ADML should not localize inactive policy token {inactivePolicyToken}.");
             }
         }
 

@@ -18,7 +18,6 @@ namespace powertoys_gpo
     const HKEY POLICIES_SCOPE_MACHINE = HKEY_LOCAL_MACHINE;
     const HKEY POLICIES_SCOPE_USER = HKEY_CURRENT_USER;
 
-    const std::wstring POLICY_CONFIGURE_ENABLED_GLOBAL_ALL_UTILITIES = L"ConfigureGlobalUtilityEnabledState";
     const std::wstring POLICY_CONFIGURE_ENABLED_AWAKE = L"ConfigureEnabledUtilityAwake";
     const std::wstring POLICY_CONFIGURE_ENABLED_LIGHT_SWITCH = L"ConfigureEnabledUtilityLightSwitch";
     const std::wstring POLICY_CONFIGURE_ENABLED_POWER_DISPLAY = L"ConfigureEnabledUtilityPowerDisplay";
@@ -87,14 +86,7 @@ namespace powertoys_gpo
 
     inline gpo_rule_configured_t getUtilityEnabledValue(const std::wstring& utility_name)
     {
-        auto individual_value = getConfiguredValue(utility_name);
-
-        if (individual_value == gpo_rule_configured_disabled || individual_value == gpo_rule_configured_enabled)
-        {
-            return individual_value;
-        }
-
-        return getConfiguredValue(POLICY_CONFIGURE_ENABLED_GLOBAL_ALL_UTILITIES);
+        return getConfiguredValue(utility_name);
     }
 
     inline gpo_rule_configured_t getConfiguredAwakeEnabledValue()

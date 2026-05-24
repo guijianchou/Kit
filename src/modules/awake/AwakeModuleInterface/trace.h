@@ -5,6 +5,6 @@
 class Trace : public telemetry::TraceBase
 {
 public:
-    // Log if the user has Awake enabled or disabled
+    // Compatibility hook for the original PowerToys module interface.
     static void EnableAwake(const bool enabled) noexcept;
 };

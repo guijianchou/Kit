@@ -69,6 +69,23 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void ManagedTelemetryCompatibilitySurfaceShouldNotCarryTraceEventRuntime()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var managedTelemetryProject = File.ReadAllText(FindSourceFile("src", "common", "ManagedTelemetry", "Telemetry", "ManagedTelemetry.csproj"));
+            var etwTrace = File.ReadAllText(FindSourceFile("src", "common", "ManagedTelemetry", "Telemetry", "EtwTrace.cs"));
+
+            Assert.IsFalse(centralPackages.Contains("Microsoft.Diagnostics.Tracing.TraceEvent", StringComparison.Ordinal), "Kit should not keep a central package pin for the removed TraceEvent runtime.");
+            Assert.IsFalse(managedTelemetryProject.Contains("Microsoft.Diagnostics.Tracing.TraceEvent", StringComparison.Ordinal), "Kit's no-op managed telemetry shim should not restore the TraceEvent package.");
+            Assert.IsFalse(etwTrace.Contains("Microsoft.Diagnostics.Tracing.Session", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not reference TraceEvent sessions.");
+            Assert.IsFalse(etwTrace.Contains("TraceEventSession", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not create TraceEvent sessions.");
+            Assert.IsFalse(etwTrace.Contains("EnableEvents", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not enable managed EventSource listeners.");
+            Assert.IsFalse(etwTrace.Contains("EnableProvider", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not enable ETW providers.");
+            StringAssert.Contains(etwTrace, "public void Start()");
+            StringAssert.Contains(etwTrace, "public void Stop()");
+        }
+
+        [TestMethod]
         public void KitManagedAppsShouldNotReferenceManagedTelemetry()
         {
             string[][] projectPaths =
@@ -227,6 +244,26 @@ namespace ViewModelTests
 
             Assert.IsFalse(lightSwitchTrace.Contains("TraceLoggingRegister", StringComparison.Ordinal));
             Assert.IsFalse(lightSwitchTrace.Contains("TraceLoggingWrite(", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void ActiveNativeModuleTracesShouldStayNoOp()
+        {
+            string[][] activeModuleTraceFiles =
+            {
+                new[] { "src", "modules", "awake", "AwakeModuleInterface", "trace.cpp" },
+                new[] { "src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "Trace.cpp" },
+                new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "trace.cpp" },
+            };
+
+            foreach (var pathParts in activeModuleTraceFiles)
+            {
+                var traceSource = File.ReadAllText(FindSourceFile(pathParts));
+                Assert.IsFalse(traceSource.Contains("TRACELOGGING_DEFINE_PROVIDER", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not define an ETW provider in Kit.");
+                Assert.IsFalse(traceSource.Contains("TraceLoggingWriteWrapper", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not emit ETW events in Kit.");
+                Assert.IsFalse(traceSource.Contains("TraceLoggingWrite(", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not emit ETW events in Kit.");
+                Assert.IsFalse(traceSource.Contains("TraceLoggingOptionProjectTelemetry", StringComparison.Ordinal), $"{Path.Combine(pathParts)} should not carry PowerToys telemetry provider metadata in Kit.");
+            }
         }
     }
 }

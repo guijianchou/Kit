@@ -1540,6 +1540,40 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepCommandPaletteToolkitAndHostPins()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
+            string[] commandPalettePackages =
+            {
+                "Shmuelie.WinRTServer",
+                "ToolGood.Words.Pinyin",
+            };
+
+            foreach (var packageName in commandPalettePackages)
+            {
+                Assert.IsFalse(centralPackages.Contains($@"PackageVersion Include=""{packageName}""", StringComparison.Ordinal), $"Kit should not keep the inactive Command Palette toolkit or host central package pin: {packageName}");
+                Assert.IsFalse(notice.Contains($"- {packageName}", StringComparison.Ordinal), $"Third-party notices should not list the removed Command Palette toolkit or host package dependency: {packageName}");
+            }
+
+            Assert.IsFalse(notice.Contains("### ToolGood.Words.Pinyin", StringComparison.Ordinal), "Third-party notices should not keep the removed Command Palette ToolGood.Words.Pinyin license section.");
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                foreach (var packageName in commandPalettePackages)
+                {
+                    Assert.IsFalse(project.Contains($@"PackageReference Include=""{packageName}""", StringComparison.Ordinal), $"Kit project should not reference the inactive Command Palette toolkit or host package {packageName}: {projectFile}");
+                }
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));

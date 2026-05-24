@@ -759,6 +759,9 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "PowerToys Run package pin removal");
             StringAssert.Contains(changelog, "Removed the unused PreviewPane STL and PowerAccent central package pins");
             StringAssert.Contains(changelog, "PreviewPane STL and PowerAccent package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused Command Palette toolkit and host central package pins");
+            StringAssert.Contains(changelog, "stale ToolGood.Words.Pinyin third-party notice section");
+            StringAssert.Contains(changelog, "Command Palette toolkit and host package pin removal");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
@@ -826,6 +829,9 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "PowerToys Run package pin removal");
             StringAssert.Contains(developmentLog, "The unused PreviewPane STL and PowerAccent central package pins were removed");
             StringAssert.Contains(developmentLog, "PreviewPane STL and PowerAccent package pin removal");
+            StringAssert.Contains(developmentLog, "The unused Command Palette toolkit and host central package pins were removed");
+            StringAssert.Contains(developmentLog, "stale ToolGood.Words.Pinyin third-party notice section");
+            StringAssert.Contains(developmentLog, "Command Palette toolkit and host package pin removal");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
             StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
             StringAssert.Contains(developmentLog, "154/154 passing Settings UI tests after deleting the inactive MouseUtils conflict branch");
@@ -837,6 +843,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "160/160 passing Settings UI tests after removing the AdvancedPaste Markdown conversion package pins");
             StringAssert.Contains(developmentLog, "161/161 passing Settings UI tests after removing the PowerToys Run package pins");
             StringAssert.Contains(developmentLog, "162/162 passing Settings UI tests after removing the PreviewPane STL and PowerAccent package pins");
+            StringAssert.Contains(developmentLog, "163/163 passing Settings UI tests after removing the Command Palette toolkit and host package pins");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

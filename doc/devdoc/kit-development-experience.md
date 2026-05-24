@@ -23,6 +23,7 @@ This pass moved Kit from 1.2.0 to 1.2.2 while comparing the current Kit docs, te
 - The DSC-only Settings `setAdditional` command-line entry point was deleted after DSC generation was removed; Settings now keeps only the retained `set` and `get` command paths.
 - Inactive Settings UI resource strings for removed module pages and OOBE surfaces were deleted from the English resource file, with regression coverage for stale resource prefixes.
 - Disabled OOBE/SCOOBE launch flag plumbing was removed from runner startup, the Settings launcher, and the Settings command-line entry point after the corresponding windows and resources were deleted.
+- Unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles were removed so startup and backup no longer carry state for deleted windows.
 - Settings and Quick Access now clean stale inactive Settings payloads from the shared WinUI output; Quick Access copies only active Settings icons.
 - Regression coverage now guards the four-module Quick Access boundary, deleted inactive Settings surfaces, GPO policy trimming, ADMX/ADML policy assets, BugReportTool removal, stale output cleanup, and telemetry-free managed app projects.
 - Verification for this refactor used Visual Studio 18 MSBuild for `Kit.vcxproj`, `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, `GPOWrapper.vcxproj`, `UnitTests-CommonUtils.vcxproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 426/426 passing CommonUtils tests and 141/141 passing Settings UI tests.

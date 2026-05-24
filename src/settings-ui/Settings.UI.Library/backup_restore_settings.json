@@ -9,8 +9,7 @@
     "*Workspaces\\workspaces.json"
   ],
   "IgnoreFiles": [
-    "*Kit\\log_settings.json",
-    "*Kit\\oobe_settings.json"
+    "*Kit\\log_settings.json"
   ],
   "IgnoredPTRunSettings": [
     {

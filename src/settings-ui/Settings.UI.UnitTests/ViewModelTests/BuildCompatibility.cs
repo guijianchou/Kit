@@ -330,6 +330,7 @@ namespace ViewModelTests
                 "Shell_PowerRename",
                 "Shell_ShortcutGuide",
                 "ShortcutGuide",
+                "Scoobe",
                 "ScoobeWindow",
             };
 
@@ -1396,6 +1397,9 @@ namespace ViewModelTests
             var settingsWindowHeader = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.h"));
             var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
             var settingsApp = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
+            var textBlockStyles = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Styles", "TextBlock.xaml"));
+            var settingsHelpers = File.ReadAllText(FindSourceFile("src", "common", "SettingsAPI", "settings_helpers.cpp"));
+            var settingsHelpersHeader = File.ReadAllText(FindSourceFile("src", "common", "SettingsAPI", "settings_helpers.h"));
 
             Assert.IsFalse(runnerMain.Contains("get_oobe_opened_state", StringComparison.Ordinal), "Kit startup should not read disabled OOBE state.");
             Assert.IsFalse(runnerMain.Contains("get_last_version_run", StringComparison.Ordinal), "Kit startup should not read disabled SCOOBE/update version state.");
@@ -1415,6 +1419,24 @@ namespace ViewModelTests
             Assert.IsFalse(settingsApp.Contains("ShowScoobe", StringComparison.Ordinal), "Kit Settings should not keep disabled SCOOBE launch flags.");
             Assert.IsFalse(settingsApp.Contains("OpenOobe", StringComparison.Ordinal), "Kit Settings should not keep disabled OOBE launch methods.");
             Assert.IsFalse(settingsApp.Contains("OpenScoobe", StringComparison.Ordinal), "Kit Settings should not keep disabled SCOOBE launch methods.");
+            Assert.IsFalse(textBlockStyles.Contains("OobeSubtitleStyle", StringComparison.Ordinal), "Kit Settings should not keep styles used only by deleted OOBE pages.");
+
+            string[] staleSettingsStateHelpers =
+            {
+                "get_oobe_opened_state",
+                "save_oobe_opened_state",
+                "get_last_version_run",
+                "save_last_version_run",
+                "oobe_settings.json",
+                "last_version_run.json",
+                "opened_at_first_launch",
+            };
+
+            foreach (var staleHelper in staleSettingsStateHelpers)
+            {
+                Assert.IsFalse(settingsHelpers.Contains(staleHelper, StringComparison.Ordinal), $"SettingsAPI should not keep disabled OOBE/SCOOBE state helper: {staleHelper}");
+                Assert.IsFalse(settingsHelpersHeader.Contains(staleHelper, StringComparison.Ordinal), $"SettingsAPI header should not expose disabled OOBE/SCOOBE state helper: {staleHelper}");
+            }
         }
 
         [TestMethod]

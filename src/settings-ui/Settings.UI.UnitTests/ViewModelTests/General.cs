@@ -466,7 +466,7 @@ namespace ViewModelTests
             Assert.IsFalse(backupUtils.Contains("\"PowerToys\\\\Backup\"", StringComparison.Ordinal));
 
             StringAssert.Contains(backupManifest, "*Kit\\\\log_settings.json");
-            StringAssert.Contains(backupManifest, "*Kit\\\\oobe_settings.json");
+            Assert.IsFalse(backupManifest.Contains("*Kit\\\\oobe_settings.json", StringComparison.Ordinal), "Kit should not keep an OOBE state backup rule after OOBE launch state is deleted.");
             Assert.IsFalse(backupManifest.Contains("*PowerToys\\\\log_settings.json", StringComparison.Ordinal));
             Assert.IsFalse(backupManifest.Contains("*PowerToys\\\\oobe_settings.json", StringComparison.Ordinal));
         }
@@ -714,6 +714,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Deleted the DSC-only Settings `setAdditional` command-line entry point");
             StringAssert.Contains(changelog, "Deleted inactive Settings UI resource strings for removed module pages and OOBE surfaces");
             StringAssert.Contains(changelog, "Removed disabled OOBE/SCOOBE launch flag plumbing from the runner and Settings entry point");
+            StringAssert.Contains(changelog, "Removed unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
@@ -732,6 +733,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "DSC-only Settings `setAdditional` command-line entry point was deleted");
             StringAssert.Contains(developmentLog, "Inactive Settings UI resource strings for removed module pages and OOBE surfaces were deleted");
             StringAssert.Contains(developmentLog, "Disabled OOBE/SCOOBE launch flag plumbing was removed");
+            StringAssert.Contains(developmentLog, "Unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles were removed");
             StringAssert.Contains(developmentLog, "141/141 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));

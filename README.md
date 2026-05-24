@@ -104,6 +104,8 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 - Keep Kit storage, backup, window title, and visible text separate from the installed official PowerToys app.
 - Do not re-enable automatic download/install or telemetry behavior in Kit.
 - Keep installer/updater entry points and settings telemetry inert. The runner may check GitHub releases and write `UpdateState.json`, but `update_now`, installer staging, updater executable launch paths, and the old settings telemetry source must remain inactive unless a future change deliberately replaces them with local-only behavior.
+- Keep GPO policy wrappers scoped to active modules and retained product-wide startup/update/diagnostics rules. Do not carry inactive PowerToys module policies, installer-only policy readers, or stale update-toast readers in Kit.
+- Keep the upstream BugReportTool out of the active Kit runtime. Its collection model is broad PowerToys diagnostic state, including inactive modules that Kit does not ship.
 - Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
 - Run C++ module-interface verification sequentially, or through the solution scheduler, when projects share native outputs such as `Version.pdb` and `PowerToys.Interop` tracking logs. Independent parallel MSBuild invocations can race those shared files and report false build failures.
 - Keep documentation close to the implementation after each stabilization pass. The module-registration lists are intentionally manual, so stale docs are a real integration risk.

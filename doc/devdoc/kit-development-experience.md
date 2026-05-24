@@ -10,9 +10,11 @@ This pass moved Kit from 1.2.0 to 1.2.2 while comparing the current Kit docs, te
 - Quick Access and Settings serialization now reference only the active Kit module set: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
 - Managed Settings and Quick Access no longer keep telemetry send paths, telemetry event source files, or `ManagedTelemetry` project references.
 - Inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models were deleted instead of being kept behind project exclusions.
+- GPOWrapper and module GPO helpers now expose only active module policies plus the retained startup, update, and diagnostics rules; inactive module and installer/update-toast policy readers were deleted from runtime and tests.
+- The upstream BugReportTool source and launch paths were deleted from `tools`, runner tray/menu code, General, and Quick Access because the tool collects inactive PowerToys module state.
 - Settings and Quick Access now clean stale inactive Settings payloads from the shared WinUI output; Quick Access copies only active Settings icons.
-- Regression coverage now guards the four-module Quick Access boundary, deleted inactive Settings surfaces, stale output cleanup, and telemetry-free managed app projects.
-- Verification for this refactor used Visual Studio 18 MSBuild for `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 128/128 passing Settings UI tests.
+- Regression coverage now guards the four-module Quick Access boundary, deleted inactive Settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, and telemetry-free managed app projects.
+- Verification for this refactor used Visual Studio 18 MSBuild for `Kit.vcxproj`, `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, `GPOWrapper.vcxproj`, `UnitTests-CommonUtils.vcxproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 426/426 passing CommonUtils tests and 132/132 passing Settings UI tests.
 
 ## 2026-05-12 Version 1.2.0 Release Metadata
 

@@ -1551,9 +1551,6 @@ SOFTWARE.
 
 ## NuGet Packages used by PowerToys
 
-- AdaptiveCards.ObjectModel.WinUI3
-- AdaptiveCards.Rendering.WinUI3
-- AdaptiveCards.Templating
 - Appium.WebDriver
 - CoenM.ImageSharp.ImageHash
 - CommunityToolkit.Common

@@ -55,7 +55,6 @@
   </Folder>
   <Folder Name="/common/Telemetry/">
     <File Path="src/common/Telemetry/ProjectTelemetry.h" />
-    <File Path="src/common/Telemetry/TelemetryBase.cs" />
     <File Path="src/common/Telemetry/TraceBase.h" />
     <File Path="src/common/Telemetry/TraceLoggingDefines.h" />
     <Project Path="src/common/Telemetry/EtwTrace/EtwTrace.vcxproj" Id="8f021b46-362b-485c-bfba-ccf83e820cbd" />

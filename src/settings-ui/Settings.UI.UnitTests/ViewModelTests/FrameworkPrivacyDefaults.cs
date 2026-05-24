@@ -75,14 +75,10 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void TelemetryCompatibilitySurfacesShouldStayNoOp()
+        public void NativeTelemetryCompatibilitySurfacesShouldStayNoOp()
         {
-            var managedTelemetry = File.ReadAllText(FindSourceFile("src", "common", "ManagedTelemetry", "Telemetry", "PowerToysTelemetry.cs"));
             var nativeTraceBase = File.ReadAllText(FindSourceFile("src", "common", "Telemetry", "TraceBase.h"));
             var runnerTrace = File.ReadAllText(FindSourceFile("src", "runner", "trace.cpp"));
-
-            StringAssert.Contains(managedTelemetry, "Retained as a no-op compatibility surface because telemetry is disabled in Kit.");
-            Assert.IsFalse(managedTelemetry.Contains("base.WriteEvent", StringComparison.Ordinal), "Managed telemetry must not forward events to EventSource.");
 
             StringAssert.Contains(nativeTraceBase, "static bool IsDataDiagnosticsEnabled()");
             StringAssert.Contains(nativeTraceBase, "return false;");
@@ -92,20 +88,19 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void ManagedTelemetryCompatibilitySurfaceShouldNotCarryTraceEventRuntime()
+        public void ManagedTelemetryCompatibilitySourceShouldBeDeleted()
         {
+            var solutionPath = FindSourceFile("Kit.slnx");
+            var repoRoot = Path.GetDirectoryName(solutionPath)!;
+            var managedTelemetryRoot = Path.Combine(repoRoot, "src", "common", "ManagedTelemetry");
+            var telemetryBase = Path.Combine(repoRoot, "src", "common", "Telemetry", "TelemetryBase.cs");
             var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
-            var managedTelemetryProject = File.ReadAllText(FindSourceFile("src", "common", "ManagedTelemetry", "Telemetry", "ManagedTelemetry.csproj"));
-            var etwTrace = File.ReadAllText(FindSourceFile("src", "common", "ManagedTelemetry", "Telemetry", "EtwTrace.cs"));
+            var solution = File.ReadAllText(solutionPath);
 
             Assert.IsFalse(centralPackages.Contains("Microsoft.Diagnostics.Tracing.TraceEvent", StringComparison.Ordinal), "Kit should not keep a central package pin for the removed TraceEvent runtime.");
-            Assert.IsFalse(managedTelemetryProject.Contains("Microsoft.Diagnostics.Tracing.TraceEvent", StringComparison.Ordinal), "Kit's no-op managed telemetry shim should not restore the TraceEvent package.");
-            Assert.IsFalse(etwTrace.Contains("Microsoft.Diagnostics.Tracing.Session", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not reference TraceEvent sessions.");
-            Assert.IsFalse(etwTrace.Contains("TraceEventSession", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not create TraceEvent sessions.");
-            Assert.IsFalse(etwTrace.Contains("EnableEvents", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not enable managed EventSource listeners.");
-            Assert.IsFalse(etwTrace.Contains("EnableProvider", StringComparison.Ordinal), "Kit's no-op ETWTrace shim should not enable ETW providers.");
-            StringAssert.Contains(etwTrace, "public void Start()");
-            StringAssert.Contains(etwTrace, "public void Stop()");
+            Assert.IsFalse(Directory.Exists(managedTelemetryRoot), "Kit should delete the inactive ManagedTelemetry source tree instead of keeping a no-op shim.");
+            Assert.IsFalse(File.Exists(telemetryBase), "Kit should delete the managed TelemetryBase loose source once ManagedTelemetry is inactive.");
+            Assert.IsFalse(solution.Contains("src/common/Telemetry/TelemetryBase.cs", StringComparison.Ordinal), "Kit.slnx should not keep a loose entry for deleted managed telemetry source.");
         }
 
         [TestMethod]
@@ -178,6 +173,16 @@ namespace ViewModelTests
                     Assert.IsFalse(content.Contains("PowerToysTelemetry.Log.WriteEvent", StringComparison.Ordinal), $"{sourceFile} should not send managed telemetry.");
                 }
             }
+        }
+
+        [TestMethod]
+        public void AwakeReadmeShouldDocumentTelemetryFreeKitBehavior()
+        {
+            var readme = File.ReadAllText(FindSourceFile("src", "modules", "awake", "README.md"));
+
+            StringAssert.Contains(readme, "Kit's Awake module does not emit telemetry events.");
+            Assert.IsFalse(readme.Contains("Microsoft.PowerToys.Telemetry", StringComparison.Ordinal), "Awake README should not document the removed managed telemetry package.");
+            Assert.IsFalse(readme.Contains("The module emits telemetry events", StringComparison.Ordinal), "Awake README should not claim Kit emits telemetry events.");
         }
 
         [TestMethod]

@@ -139,6 +139,12 @@ namespace ViewModelTests
             StringAssert.Contains(directoryBuildTargets, @"$(OutDir)**\*.lib;$(OutDir)**\*.exp;$(OutDir)**\*.lib.lastcodeanalysissucceeded");
             StringAssert.Contains(directoryBuildTargets, "KitRemoveInactiveModelProviderArtifactsFromRuntimeOutput");
             StringAssert.Contains(directoryBuildTargets, @"$(OutDir)**\Assets\Settings\Icons\Models\*.svg;$(OutDir)**\*Foundry*");
+            StringAssert.Contains(directoryBuildTargets, "KitRemoveInactiveManagedTelemetryArtifactsFromOutput");
+            StringAssert.Contains(directoryBuildTargets, @"$(OutDir)**\PowerToys.ManagedTelemetry.*");
+            StringAssert.Contains(directoryBuildTargets, @"$(OutDir)**\Dia2Lib.dll");
+            StringAssert.Contains(directoryBuildTargets, @"$(OutDir)**\TraceReloggerLib.dll");
+            StringAssert.Contains(directoryBuildTargets, @"$(OutDir)**\KernelTraceControl.dll");
+            StringAssert.Contains(directoryBuildTargets, @"$(OutDir)**\msdia140.dll");
             StringAssert.Contains(cppBuildProps, "<DebugInformationFormat>None</DebugInformationFormat>");
             StringAssert.Contains(cppBuildProps, "<GenerateDebugInformation>false</GenerateDebugInformation>");
             StringAssert.Contains(commonUiProject, "<UseWPF>false</UseWPF>");
@@ -161,6 +167,11 @@ namespace ViewModelTests
             StringAssert.Contains(verifyRuntimeArtifactsScript, "*.lib");
             StringAssert.Contains(verifyRuntimeArtifactsScript, "*.pdb");
             StringAssert.Contains(verifyRuntimeArtifactsScript, "*Foundry*");
+            StringAssert.Contains(verifyRuntimeArtifactsScript, "PowerToys.ManagedTelemetry.*");
+            StringAssert.Contains(verifyRuntimeArtifactsScript, "Dia2Lib.dll");
+            StringAssert.Contains(verifyRuntimeArtifactsScript, "TraceReloggerLib.dll");
+            StringAssert.Contains(verifyRuntimeArtifactsScript, "KernelTraceControl.dll");
+            StringAssert.Contains(verifyRuntimeArtifactsScript, "msdia140.dll");
             StringAssert.Contains(verifyRuntimeArtifactsScript, "$OutputRoot");
             StringAssert.Contains(verifyRuntimeArtifactsScript, "Join-Path $platformRoot 'Release'");
             StringAssert.Contains(verifyRuntimeArtifactsScript, "Non-English locale directory");

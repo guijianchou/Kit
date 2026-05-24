@@ -747,9 +747,12 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "Disabled OOBE/SCOOBE launch flag plumbing was removed");
             StringAssert.Contains(developmentLog, "Unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles were removed");
             StringAssert.Contains(developmentLog, "Backup/restore defaults were pruned to generic active Kit settings rules");
+            StringAssert.Contains(developmentLog, "inactive `ManagedTelemetry` source tree and managed telemetry base file were deleted");
             StringAssert.Contains(developmentLog, "Awake and PowerDisplay no longer keep managed telemetry write calls");
+            StringAssert.Contains(developmentLog, "stale `PowerToys.ManagedTelemetry` and TraceEvent support binaries");
+            StringAssert.Contains(developmentLog, "Awake README telemetry-free documentation");
             StringAssert.Contains(developmentLog, "PowerDisplay no longer exposes or listens to a settings telemetry IPC event");
-            StringAssert.Contains(developmentLog, "145/145 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "146/146 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

@@ -56,6 +56,16 @@
     <Delete Files="@(KitInactiveModelProviderArtifacts)" TreatErrorsAsWarnings="true" />
   </Target>
 
+  <Target Name="KitRemoveInactiveManagedTelemetryArtifactsFromOutput"
+          AfterTargets="Build"
+          Condition="'$(OutDir)' != ''">
+    <ItemGroup>
+      <KitInactiveManagedTelemetryArtifacts Include="$(OutDir)**\PowerToys.ManagedTelemetry.*;$(OutDir)**\Dia2Lib.dll;$(OutDir)**\TraceReloggerLib.dll;$(OutDir)**\KernelTraceControl.dll;$(OutDir)**\msdia140.dll" />
+    </ItemGroup>
+
+    <Delete Files="@(KitInactiveManagedTelemetryArtifacts)" TreatErrorsAsWarnings="true" />
+  </Target>
+
   <Target Name="KitRemoveNonEnglishSatelliteDirsFromRuntimeOutput"
           AfterTargets="Build"
           Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectName)' == 'Kit' and '$(OutDir)' != ''">

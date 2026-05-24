@@ -73,6 +73,13 @@ foreach ($pattern in @('*.lib', '*.exp', '*.pdb', '*.lib.lastcodeanalysissucceed
     }
 }
 
+foreach ($pattern in @('PowerToys.ManagedTelemetry.*', 'Dia2Lib.dll', 'TraceReloggerLib.dll', 'KernelTraceControl.dll', 'msdia140.dll')) {
+    $matches = Get-ChildItem -LiteralPath $outputRoot -Recurse -File -Filter $pattern -ErrorAction SilentlyContinue
+    foreach ($match in $matches) {
+        $failures.Add("Unexpected inactive managed telemetry artifact: $($match.FullName)")
+    }
+}
+
 $foundryMatches = Get-ChildItem -LiteralPath $outputRoot -Recurse -File -Filter '*Foundry*' -ErrorAction SilentlyContinue
 foreach ($match in $foundryMatches) {
     $failures.Add("Unexpected Foundry artifact: $($match.FullName)")

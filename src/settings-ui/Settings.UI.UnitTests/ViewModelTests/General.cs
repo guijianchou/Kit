@@ -598,18 +598,13 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitUiTestsShouldUseKitDashboardModuleList()
+        public void KitShouldDeleteInactiveSettingsUiTestProject()
         {
-            var uiTests = File.ReadAllText(FindSourceFile("src", "settings-ui", "UITest-Settings", "SettingsTests.cs"));
+            var repoRoot = Path.GetDirectoryName(FindSourceFile(".gitignore"));
+            var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
 
-            StringAssert.Contains(uiTests, "\"Awake\"");
-            StringAssert.Contains(uiTests, "\"Light Switch\"");
-            StringAssert.Contains(uiTests, "\"PowerToys.Awake\"");
-            Assert.IsFalse(uiTests.Contains("\"Advanced Paste\"", StringComparison.Ordinal));
-            Assert.IsFalse(uiTests.Contains("\"Color Picker\"", StringComparison.Ordinal));
-            Assert.IsFalse(uiTests.Contains("\"PowerToys Run\"", StringComparison.Ordinal));
-            Assert.IsFalse(uiTests.Contains("\"PowerToys.AdvancedPaste\"", StringComparison.Ordinal));
-            Assert.IsFalse(uiTests.Contains("\"PowerToys.Run\"", StringComparison.Ordinal));
+            Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot!, "src", "settings-ui", "UITest-Settings")), "Kit should delete the inactive Settings UI test project because it is not part of the solution and still targets removed OOBE/PowerToys surfaces.");
+            Assert.IsFalse(solution.Contains("UITest-Settings", StringComparison.Ordinal), "Kit solution should not include the inactive Settings UI test project.");
         }
 
         [TestMethod]
@@ -712,6 +707,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface");
             StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
             StringAssert.Contains(changelog, "Deleted the inactive settings telemetry worker source and runner project filters");
+            StringAssert.Contains(changelog, "Deleted the inactive Settings UI test project that still targeted removed OOBE and PowerToys surfaces");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -724,6 +720,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "runner keyboard hook no longer carries Shortcut Guide Win-key tracking");
             StringAssert.Contains(developmentLog, "keyboard hook window registration no-op was deleted");
             StringAssert.Contains(developmentLog, "inactive settings telemetry worker source files were deleted");
+            StringAssert.Contains(developmentLog, "inactive Settings UI test project was deleted");
             StringAssert.Contains(developmentLog, "140/140 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));

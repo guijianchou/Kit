@@ -1184,6 +1184,9 @@ namespace ViewModelTests
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
             var settingsProject = File.ReadAllText(settingsProjectPath);
             var settingsUiRoot = Path.GetDirectoryName(settingsProjectPath);
+            var settingsLibraryProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj");
+            var settingsLibraryRoot = Path.GetDirectoryName(settingsLibraryProjectPath);
+            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
             var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
             var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
 
@@ -1199,6 +1202,12 @@ namespace ViewModelTests
             Assert.IsFalse(File.Exists(Path.Combine(settingsUiRoot!, "SettingsXAML", "Controls", "ModelPicker", "FoundryLocalModelPicker.xaml")));
             Assert.IsFalse(File.Exists(Path.Combine(settingsUiRoot!, "SettingsXAML", "Controls", "ModelPicker", "FoundryLocalModelPicker.xaml.cs")));
             Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot, "src", "common", "LanguageModelProvider")), "Kit should delete the inactive AdvancedPaste-only LanguageModelProvider source tree instead of only removing it from build graphs.");
+            Assert.IsFalse(File.Exists(Path.Combine(settingsUiRoot!, "Converters", "ServiceTypeToIconConverter.cs")), "Settings UI should delete the AdvancedPaste AI provider icon converter after deleting the AdvancedPaste page and model icons.");
+            Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "AdvancedPasteMigrationHelper.cs")), "Settings library should delete AdvancedPaste AI migration helpers that only served the removed UI/module.");
+            Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "AIServiceTypeMetadata.cs")), "Settings library should delete UI-only AdvancedPaste AI provider metadata.");
+            Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "AIServiceTypeRegistry.cs")), "Settings library should delete UI-only AdvancedPaste AI provider registry metadata.");
+            Assert.IsFalse(File.Exists(Path.Combine(settingsLibraryRoot!, "PasteAIProviderDefaults.cs")), "Settings library should delete AdvancedPaste AI provider default model helpers after removing the provider UI.");
+            Assert.IsFalse(resources.Contains("FoundryLocal_RestartRequiredNote", StringComparison.Ordinal), "Settings resources should not keep Foundry Local UI strings after deleting the model picker.");
 
             string[] inactiveAiPackagePins =
             {

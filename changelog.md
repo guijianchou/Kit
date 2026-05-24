@@ -20,7 +20,7 @@
 - Build: Active outputs now remove stale `PowerToys.ManagedTelemetry` and TraceEvent support binaries left by old build graphs.
 - Slimming: Pruned `PowerToys.Interop` WinRT and shared IPC constants to Kit's active runtime surface, removing inactive PowerToys Run, FancyZones, Advanced Paste, CmdPal, Keyboard Manager, Mouse utilities, preview, Hosts, Workspaces, and telemetry event names.
 - Runtime: Renamed the active Settings termination WinRT projection from `PowerToysRunnerTerminateSettingsEvent` to `KitRunnerTerminateSettingsEvent` while keeping the underlying Kit named event unchanged.
-- Slimming: Deleted the inactive AdvancedPaste-only `LanguageModelProvider` source tree and removed its AI provider package pins and stale `OpenAI` third-party notice entry.
+- Slimming: Deleted the inactive AdvancedPaste-only `LanguageModelProvider` source tree and removed its AI provider package pins, provider UI metadata/helpers, stale Foundry Local UI string, and stale `OpenAI` third-party notice entry while preserving historical settings serialization models.
 - Slimming: Deleted the legacy sibling Settings asset tree and inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
 - Policy: Trimmed ADMX/ADML policy assets to the same Kit 1.2.2 active policy surface.
@@ -40,7 +40,7 @@
 - Slimming: Pruned backup/restore defaults to the active Kit settings surface by deleting inactive Keyboard Manager, FancyZones, Workspaces, PowerToys Run restore rules, and the PowerToys Run plugin fix-up code path.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
-- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, and deleted AdvancedPaste AI provider source/package remnants.
+- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, and deleted AdvancedPaste AI provider source/package/UI helper remnants.
 
 ### 1.2.0
 
@@ -142,7 +142,7 @@
 - 构建：活动输出现在会移除旧构建图遗留的 `PowerToys.ManagedTelemetry` 和 TraceEvent 支持二进制。
 - 瘦身：将 `PowerToys.Interop` WinRT 和共享 IPC 常量裁剪到 Kit 的活动运行时表面，移除非活动 PowerToys Run、FancyZones、Advanced Paste、CmdPal、Keyboard Manager、鼠标工具、预览、Hosts、Workspaces 和 telemetry 事件名。
 - 运行时：将活动的 Settings 终止 WinRT 投影从 `PowerToysRunnerTerminateSettingsEvent` 重命名为 `KitRunnerTerminateSettingsEvent`，底层 Kit 命名事件保持不变。
-- 瘦身：删除非活动且仅供 AdvancedPaste 使用的 `LanguageModelProvider` 源码树，并移除其 AI provider 包 pin 和陈旧的 `OpenAI` 第三方 notice 条目。
+- 瘦身：删除非活动且仅供 AdvancedPaste 使用的 `LanguageModelProvider` 源码树，并移除其 AI provider 包 pin、provider UI metadata/helper、陈旧的 Foundry Local UI 字符串和陈旧的 `OpenAI` 第三方 notice 条目，同时保留历史 settings 序列化模型。
 - 瘦身：删除旧 sibling Settings 资产树以及非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。
 - 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 1.2.2 活动策略表面。
@@ -162,7 +162,7 @@
 - 瘦身：将备份/恢复默认值裁剪到活动 Kit 设置表面，删除非活动的 Keyboard Manager、FancyZones、Workspaces、PowerToys Run 恢复规则以及 PowerToys Run 插件修正代码路径。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
-- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影，以及 AdvancedPaste AI provider 源码/包残留删除的回归覆盖。
+- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影，以及 AdvancedPaste AI provider 源码/包/UI helper 残留删除的回归覆盖。
 
 ### 1.2.0
 

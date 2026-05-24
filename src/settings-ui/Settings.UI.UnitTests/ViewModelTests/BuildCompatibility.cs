@@ -747,6 +747,47 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitShouldNotExposeUpstreamBugReportTool()
+        {
+            var repoRoot = Path.GetDirectoryName(FindSourceFile(".gitignore"));
+            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+            var runnerFilters = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj.filters"));
+            var runnerResource = File.ReadAllText(FindSourceFile("src", "runner", "resource.base.h"));
+            var runnerMenu = File.ReadAllText(FindSourceFile("src", "runner", "runner.base.rc"));
+            var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
+            var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
+            var launchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "QuickAccessXAML", "Flyout", "LaunchPage.xaml"));
+            var launchPageCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "QuickAccessXAML", "Flyout", "LaunchPage.xaml.cs"));
+            var coordinatorInterface = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Services", "IQuickAccessCoordinator.cs"));
+            var coordinator = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Services", "QuickAccessCoordinator.cs"));
+
+            Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot!, "tools", "BugReportTool")), "Kit should delete the upstream bug report tool source because it collects inactive PowerToys module state.");
+            Assert.IsFalse(File.Exists(Path.Combine(repoRoot!, "src", "runner", "bug_report.cpp")), "Kit runner should delete the upstream bug report launcher implementation.");
+            Assert.IsFalse(File.Exists(Path.Combine(repoRoot!, "src", "runner", "bug_report.h")), "Kit runner should delete the upstream bug report launcher header.");
+
+            foreach (var source in new[]
+            {
+                runnerProject,
+                runnerFilters,
+                runnerResource,
+                runnerMenu,
+                trayIcon,
+                settingsWindow,
+                launchPage,
+                launchPageCodeBehind,
+                coordinatorInterface,
+                coordinator,
+            })
+            {
+                Assert.IsFalse(source.Contains("BugReport", StringComparison.Ordinal), "Kit active runtime UI should not expose the upstream bug report tool.");
+                Assert.IsFalse(source.Contains("bug_report", StringComparison.Ordinal), "Kit active runtime IPC should not keep bug report status plumbing.");
+                Assert.IsFalse(source.Contains("bugreport", StringComparison.Ordinal), "Kit active runtime IPC should not keep bug report launch messages.");
+                Assert.IsFalse(source.Contains("REPORT_BUG", StringComparison.Ordinal), "Kit tray resources should not keep bug report commands.");
+                Assert.IsFalse(source.Contains("PowerToys.BugReportTool", StringComparison.Ordinal), "Kit should not launch the upstream PowerToys bug report executable.");
+            }
+        }
+
+        [TestMethod]
         public void KitSettingsShouldDeleteInactiveModuleAssetsInsteadOfProjectExcludingThem()
         {
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");

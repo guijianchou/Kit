@@ -252,7 +252,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private bool _isCheckingForUpdates;
 
         private bool _isNewVersionDownloading;
-        private bool _isBugReportRunning;
 
         private bool _settingsBackupRestoreMessageVisible;
         private string _settingsBackupMessage;
@@ -1000,23 +999,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             get
             {
                 return _updatingState == UpdatingSettings.UpdatingState.NetworkError;
-            }
-        }
-
-        public bool IsBugReportRunning
-        {
-            get
-            {
-                return _isBugReportRunning;
-            }
-
-            set
-            {
-                if (value != _isBugReportRunning)
-                {
-                    _isBugReportRunning = value;
-                    NotifyPropertyChanged();
-                }
             }
         }
 

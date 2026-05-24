@@ -3986,12 +3986,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="BackLabel.Text" xml:space="preserve">
     <value>Back</value>
   </data>
-  <data name="BugReportBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Bug report</value>
-  </data>
-  <data name="BugReportTooltip.Text" xml:space="preserve">
-    <value>Bug report</value>
-  </data>
   <data name="DocsBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Documentation</value>
   </data>
@@ -5046,15 +5040,6 @@ The break timer font matches the text font.</value>
   </data>
   <data name="Help_hueOklch" xml:space="preserve">
     <value>hue (Oklch)</value>
-  </data>
-  <data name="GeneralPage_ReportBugPackage.Header" xml:space="preserve">
-    <value>Generate bug report package</value>
-  </data>
-  <data name="GeneralPage_ReportBugPackage.Description" xml:space="preserve">
-    <value>Log files will be zipped to your desktop</value>
-  </data>
-  <data name="GeneralPageReportBugPackage.Content" xml:space="preserve">
-    <value>Generate package</value>
   </data>
   <data name="FileExplorerPreview_ToggleSwitch_Preview_BGCODE.Header" xml:space="preserve">
     <value>Binary Geometric Code</value>

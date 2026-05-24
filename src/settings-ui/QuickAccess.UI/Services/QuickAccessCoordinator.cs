@@ -73,14 +73,6 @@ internal sealed class QuickAccessCoordinator : IQuickAccessCoordinator, IDisposa
     public bool UpdateModuleEnabled(ModuleType moduleType, bool isEnabled)
         => TrySendIpcMessage($"{{\"module_status\": {{\"{ModuleHelper.GetModuleKey(moduleType)}\": {isEnabled.ToString().ToLowerInvariant()}}}}}", "module status update");
 
-    public void ReportBug()
-    {
-        if (!TrySendIpcMessage("{\"bugreport\": 0 }", "bug report request"))
-        {
-            Logger.LogWarning("QuickAccessCoordinator: failed to dispatch bug report request; IPC unavailable.");
-        }
-    }
-
     public void OnModuleLaunched(ModuleType moduleType)
     {
         Logger.LogInfo($"QuickAccessLauncher invoked module {moduleType}.");

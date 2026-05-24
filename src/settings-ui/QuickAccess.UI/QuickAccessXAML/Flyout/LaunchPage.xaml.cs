@@ -68,11 +68,6 @@ public sealed partial class LaunchPage : Page
         Frame.Navigate(typeof(AppsListPage), context, new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromRight });
     }
 
-    public void ReportBugBtn_Click(object sender, RoutedEventArgs e)
-    {
-        _coordinator?.ReportBug();
-    }
-
     private void UpdateInfoBar_Tapped(object sender, TappedRoutedEventArgs e)
     {
         _coordinator?.OpenGeneralSettingsForUpdates();

@@ -27,7 +27,5 @@ public interface IQuickAccessCoordinator
 
     void SendSortOrderUpdate(GeneralSettings generalSettings);
 
-    void ReportBug();
-
     void OnModuleLaunched(ModuleType moduleType);
 }

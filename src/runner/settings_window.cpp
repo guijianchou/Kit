@@ -29,7 +29,6 @@
 #include <common/utils/winapi_error.h>
 #include <common/themes/windows_colors.h>
 #include "settings_window.h"
-#include "bug_report.h"
 
 #define BUFSIZE 1024
 
@@ -245,18 +244,6 @@ void dispatch_received_json(const std::wstring& json_to_parse)
                         current_settings_ipc->send(result.value());
                 }
             }
-        }
-        else if (name == L"bugreport")
-        {
-            launch_bug_report();
-        }
-        else if (name == L"bug_report_status")
-        {
-            json::JsonObject result;
-            result.SetNamedValue(L"bug_report_running", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(is_bug_report_running()));
-            std::unique_lock lock{ ipc_mutex };
-            if (current_settings_ipc)
-                current_settings_ipc->send(result.Stringify().c_str());
         }
         else if (name == L"killrunner")
         {
@@ -575,15 +562,6 @@ void run_settings_window(bool show_oobe_window, bool show_scoobe_window, std::op
         current_settings_ipc = new TwoWayPipeMessageIPC(powertoys_pipe_name, settings_pipe_name, receive_json_send_to_main_thread);
         current_settings_ipc->start(hToken);
 
-        // Register callback for bug report status changes
-        BugReportManager::instance().register_callback([](bool isRunning) {
-            json::JsonObject result;
-            result.SetNamedValue(L"bug_report_running", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(isRunning));
-
-            std::unique_lock lock{ ipc_mutex };
-            if (current_settings_ipc)
-                current_settings_ipc->send(result.Stringify().c_str());
-        });
     }
 
     g_settings_process_id = process_info.dwProcessId;

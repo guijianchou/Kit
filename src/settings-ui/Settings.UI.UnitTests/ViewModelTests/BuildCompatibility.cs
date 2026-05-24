@@ -1366,6 +1366,25 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepCommandPaletteOnlyExtensionPin()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+
+            Assert.IsFalse(centralPackages.Contains(@"PackageVersion Include=""Microsoft.CommandPalette.Extensions""", StringComparison.Ordinal), "Kit should not keep the unused Command Palette extension central package pin.");
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                Assert.IsFalse(project.Contains(@"PackageReference Include=""Microsoft.CommandPalette.Extensions""", StringComparison.Ordinal), $"Kit project should not reference the inactive Command Palette extension package: {projectFile}");
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));
@@ -1394,7 +1413,6 @@ namespace ViewModelTests
             {
                 @"<PackageVersion Include=""Microsoft.Bcl.AsyncInterfaces"" Version=""10.0.7"" />",
                 @"<PackageVersion Include=""Microsoft.CodeAnalysis.NetAnalyzers"" Version=""10.0.102"" />",
-                @"<PackageVersion Include=""Microsoft.CommandPalette.Extensions"" Version=""0.9.260303001"" />",
                 @"<PackageVersion Include=""Microsoft.Data.Sqlite"" Version=""10.0.7"" />",
                 @"<PackageVersion Include=""Microsoft.Extensions.Caching.Abstractions"" Version=""10.0.7"" />",
                 @"<PackageVersion Include=""Microsoft.Extensions.Caching.Memory"" Version=""10.0.7"" />",

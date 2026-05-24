@@ -1471,6 +1471,42 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepPowerToysRunPackagePins()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
+            string[] powerToysRunPackages =
+            {
+                "hyjiacan.pinyin4net",
+                "Mages",
+                "UnitsNet",
+            };
+
+            foreach (var packageName in powerToysRunPackages)
+            {
+                Assert.IsFalse(centralPackages.Contains($@"PackageVersion Include=""{packageName}""", StringComparison.Ordinal), $"Kit should not keep the inactive PowerToys Run central package pin: {packageName}");
+                Assert.IsFalse(notice.Contains($"- {packageName}", StringComparison.Ordinal), $"Third-party notices should not list the removed PowerToys Run package dependency: {packageName}");
+            }
+
+            Assert.IsFalse(notice.Contains("## Utility: PowerToys Run built-in extensions", StringComparison.Ordinal), "Third-party notices should not keep the removed PowerToys Run extension notice section.");
+            Assert.IsFalse(notice.Contains("#### Mages", StringComparison.Ordinal), "Third-party notices should not keep the removed PowerToys Run Mages license section.");
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                foreach (var packageName in powerToysRunPackages)
+                {
+                    Assert.IsFalse(project.Contains($@"PackageReference Include=""{packageName}""", StringComparison.Ordinal), $"Kit project should not reference the inactive PowerToys Run package {packageName}: {projectFile}");
+                }
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));

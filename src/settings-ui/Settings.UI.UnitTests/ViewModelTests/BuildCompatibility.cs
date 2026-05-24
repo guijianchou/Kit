@@ -789,6 +789,17 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitShouldDeleteInactiveCmdPalDevelopmentSurfaces()
+        {
+            var repoRoot = Path.GetDirectoryName(FindSourceFile(".gitignore"));
+            var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
+
+            Assert.IsFalse(File.Exists(Path.Combine(repoRoot!, "src", "CmdPalVersion.props")), "Kit should delete the orphaned CmdPal version props file until Command Palette is an active module.");
+            Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot!, "tools", "module_loader")), "Kit should delete the inactive upstream standalone module loader tool instead of carrying non-shipping PowerToys module development surfaces.");
+            Assert.IsFalse(solution.Contains("ModuleLoader", StringComparison.Ordinal), "Kit solution should not build the inactive standalone module loader.");
+        }
+
+        [TestMethod]
         public void KitGpoPolicyAssetsShouldStayInActiveModuleSurface()
         {
             var admx = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "PowerToys.admx"));

@@ -12,9 +12,10 @@ This pass moved Kit from 1.2.0 to 1.2.2 while comparing the current Kit docs, te
 - Inactive Settings models, source files, unit tests, assets, icons, controls, converters, OOBE view models, and the legacy sibling Settings asset tree were deleted instead of being kept behind project exclusions.
 - GPOWrapper and module GPO helpers now expose only active module policies plus the retained startup, update, and diagnostics rules; inactive module and installer/update-toast policy readers were deleted from runtime and tests. ADMX/ADML policy assets now match the same Kit 1.2.2 policy surface.
 - The upstream BugReportTool source and launch paths were deleted from `tools`, runner tray/menu code, General, and Quick Access because the tool collects inactive PowerToys module state.
+- The inactive standalone module_loader utility and orphaned CmdPal version props were deleted because Command Palette is not part of the active Kit module set.
 - Settings and Quick Access now clean stale inactive Settings payloads from the shared WinUI output; Quick Access copies only active Settings icons.
 - Regression coverage now guards the four-module Quick Access boundary, deleted inactive Settings surfaces, GPO policy trimming, ADMX/ADML policy assets, BugReportTool removal, stale output cleanup, and telemetry-free managed app projects.
-- Verification for this refactor used Visual Studio 18 MSBuild for `Kit.vcxproj`, `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, `GPOWrapper.vcxproj`, `UnitTests-CommonUtils.vcxproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 426/426 passing CommonUtils tests and 135/135 passing Settings UI tests.
+- Verification for this refactor used Visual Studio 18 MSBuild for `Kit.vcxproj`, `PowerToys.Settings.csproj`, `PowerToys.QuickAccess.csproj`, `GPOWrapper.vcxproj`, `UnitTests-CommonUtils.vcxproj`, and `Settings.UI.UnitTests.csproj`; `vstest.console.exe` reported 426/426 passing CommonUtils tests and 136/136 passing Settings UI tests.
 
 ## 2026-05-12 Version 1.2.0 Release Metadata
 

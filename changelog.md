@@ -15,6 +15,7 @@
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
 - Policy: Trimmed ADMX/ADML policy assets to the same Kit 1.2.2 active policy surface.
 - Runtime: Removed the upstream BugReportTool source and runner, tray, General, and Quick Access launch paths so Kit no longer collects inactive PowerToys module state.
+- Build: Deleted the inactive standalone module_loader utility and orphaned CmdPal version props until Command Palette becomes an active Kit module.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
 - Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, and telemetry-free managed app projects.
@@ -114,6 +115,7 @@
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。
 - 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 1.2.2 活动策略表面。
 - 运行时：删除上游 BugReportTool 源码，以及 runner、托盘、General 和 Quick Access 的启动路径，避免 Kit 收集非活动 PowerToys 模块状态。
+- 构建：删除非活动的独立 module_loader 工具和孤立的 CmdPal 版本 props，直到 Command Palette 成为活动 Kit 模块。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
 - 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用的回归覆盖。

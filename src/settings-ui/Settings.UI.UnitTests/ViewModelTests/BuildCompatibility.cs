@@ -316,12 +316,15 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSolutionShouldNotDirectlyBuildInactiveCommonAndDscProjects()
         {
-            var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
+            var solutionPath = FindSourceFile("Kit.slnx");
+            var solution = File.ReadAllText(solutionPath);
+            var repoRoot = Path.GetDirectoryName(solutionPath);
 
             string[] inactiveProjects =
             {
                 "src/common/CalculatorEngineCommon/CalculatorEngineCommon.vcxproj",
                 "src/common/FilePreviewCommon/FilePreviewCommon.csproj",
+                "src/common/GPOWrapperProjection/GPOWrapperProjection.csproj",
                 "src/common/PowerToys.ModuleContracts/PowerToys.ModuleContracts.csproj",
                 "src/common/UITestAutomation/UITestAutomation.csproj",
                 "src/dsc/",
@@ -334,6 +337,7 @@ namespace ViewModelTests
             }
 
             StringAssert.Contains(solution, "src/common/Common.Search/Common.Search.csproj");
+            AssertNoFiles(repoRoot!, Path.Combine("src", "common", "GPOWrapperProjection", "*"));
         }
 
         [TestMethod]

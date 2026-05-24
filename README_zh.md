@@ -99,12 +99,12 @@ Kit 还没有活动的第三方插件主机。实际的第一步是 PowerToys �
 - 在扩大到整个解决方案构建之前，保持设置、运行器、模块接口项目、快速访问和复制的模块项目可独立构建。
 - 保持运行器构建依赖项与运行时启动的 UI 应用对齐。`Kit.exe` 可以启动并显示托盘图标，即使 `WinUI3Apps\PowerToys.Settings.exe` 缺失；调试输出可以用陈旧文件隐藏该问题，因此干净的发布验证必须确认设置和快速访问可执行文件都已重新生成。
 - 为复制的模块保持 PowerToys CsWinRT 元数据稳定。`PowerToys.Interop.winmd` 和 `PowerToys.GPOWrapper.winmd` 由本机项目发布到 `$(RepoRoot)$(Platform)\$(Configuration)`，`Common.Dotnet.CsWinRT.props` 在先前失败或清理的构建没有留下生成的投影源时使陈旧的 `cswinrt.rsp` 文件无效。这防止导入的模块（如 `Awake` 和快速访问）在其 `PowerToys.*` 投影重新生成之前编译。
-- 对于有意删除的上游测试和源码，优先直接删除，不再把它们隐藏在项目排除规则后面。`Settings.UI.UnitTests` 现在用 `BuildCompatibility` 覆盖非活动 Settings 源码、单元测试、资产、图标、控件、转换器以及陈旧 WinUI 输出清理。
+- 对于有意删除的上游测试和源码，优先直接删除，不再把它们隐藏在项目排除规则后面。`Settings.UI.UnitTests` 现在用 `BuildCompatibility` 覆盖非活动 Settings 源码、单元测试、资产、图标、控件、转换器、旧 sibling Settings 资产树以及陈旧 WinUI 输出清理。
 - 保持 UI 状态从真实设置和模块状态派生。主页应一致显示启用的模块，每个快速访问命令应执行真实操作或导航到模块设置页面。
 - 保持 Kit 存储、备份、窗口标题和可见文本与已安装的官方 PowerToys 应用分离。
 - 不要在 Kit 中重新启用自动下载/安装或遥测行为。
 - 保持安装器/更新程序入口点和设置遥测惰性。runner 可以检查 GitHub releases 并写入 `UpdateState.json`，但 `update_now`、安装器暂存、更新程序可执行文件启动路径和旧的设置遥测源必须保持不活动，除非未来的更改明确用仅本地行为替换它们。
-- 将 GPO 策略包装器限制在活动模块以及仍保留的产品级启动/更新/诊断规则内。不要在 Kit 中携带非活动 PowerToys 模块策略、仅安装器策略读取器或陈旧的更新 toast 读取器。
+- 将 GPO 策略包装器和 ADMX/ADML 策略资产限制在活动模块以及仍保留的产品级启动/更新/诊断规则内。不要在 Kit 中携带非活动 PowerToys 模块策略、仅安装器策略读取器或陈旧的更新 toast 读取器。
 - 保持上游 BugReportTool 不进入活动 Kit 运行时。它的收集模型是广泛的 PowerToys 诊断状态，包括 Kit 不交付的非活动模块。
 - 保持新模块拆分为可测试的核心库、工作器进程、本机模块接口、设置模型、设置页面、主页元数据和静态注册测试。
 - 当项目共享本机输出（如 `Version.pdb` 和 `PowerToys.Interop` 跟踪日志）时，按顺序或通过解决方案调度程序运行 C++ 模块接口验证。独立的并行 MSBuild 调用可能会竞争这些共享文件并报告错误的构建失败。

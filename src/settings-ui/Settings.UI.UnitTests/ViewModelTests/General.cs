@@ -703,10 +703,14 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "### 1.2.2");
             StringAssert.Contains(changelog, "Bumped Kit to `1.2.2`");
             StringAssert.Contains(changelog, "Trimmed GPOWrapper and Settings GPO helper policy surface");
+            StringAssert.Contains(changelog, "Trimmed ADMX/ADML policy assets");
             StringAssert.Contains(changelog, "Removed the upstream BugReportTool source");
+            StringAssert.Contains(changelog, "Deleted the legacy sibling Settings asset tree");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
+            StringAssert.Contains(developmentLog, "ADMX/ADML policy assets now match");
             StringAssert.Contains(developmentLog, "upstream BugReportTool source and launch paths were deleted");
+            StringAssert.Contains(developmentLog, "legacy sibling Settings asset tree");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

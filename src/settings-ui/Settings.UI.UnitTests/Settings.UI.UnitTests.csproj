@@ -28,15 +28,4 @@
     <ProjectReference Include="..\Settings.UI\PowerToys.Settings.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Kit only wires Settings UI for General plus active modules. Keep removed PowerToys module tests out of this trimmed baseline. -->
-    <Compile Remove="ViewModelTests\ColorPicker.cs" />
-    <Compile Remove="ViewModelTests\FancyZones.cs" />
-    <Compile Remove="ViewModelTests\ImageResizer.cs" />
-    <Compile Remove="ViewModelTests\KeyboardManager.cs" />
-    <Compile Remove="ViewModelTests\PowerLauncherViewModelTest.cs" />
-    <Compile Remove="ViewModelTests\PowerPreview.cs" />
-    <Compile Remove="ViewModelTests\PowerRename.cs" />
-    <Compile Remove="ViewModelTests\ShortcutGuide.cs" />
-  </ItemGroup>
 </Project>

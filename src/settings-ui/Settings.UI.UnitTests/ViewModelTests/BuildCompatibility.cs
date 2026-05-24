@@ -241,6 +241,33 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsTestsShouldDeleteInactiveModuleTestsInsteadOfProjectExcludingThem()
+        {
+            var settingsTestsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.UnitTests", "Settings.UI.UnitTests.csproj");
+            var settingsTestsProject = File.ReadAllText(settingsTestsProjectPath);
+            var settingsTestsRoot = Path.GetDirectoryName(settingsTestsProjectPath);
+
+            string[] inactiveTestFiles =
+            {
+                Path.Combine("ViewModelTests", "ColorPicker.cs"),
+                Path.Combine("ViewModelTests", "FancyZones.cs"),
+                Path.Combine("ViewModelTests", "ImageResizer.cs"),
+                Path.Combine("ViewModelTests", "KeyboardManager.cs"),
+                Path.Combine("ViewModelTests", "PowerLauncherViewModelTest.cs"),
+                Path.Combine("ViewModelTests", "PowerPreview.cs"),
+                Path.Combine("ViewModelTests", "PowerRename.cs"),
+                Path.Combine("ViewModelTests", "ShortcutGuide.cs"),
+            };
+
+            Assert.IsFalse(settingsTestsProject.Contains(@"<Compile Remove=""ViewModelTests\", StringComparison.Ordinal), "Inactive module tests should be deleted rather than hidden behind Compile Remove rules.");
+
+            foreach (var inactiveTestFile in inactiveTestFiles)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(settingsTestsRoot!, inactiveTestFile)), $"Inactive module test file should be deleted: {inactiveTestFile}");
+            }
+        }
+
+        [TestMethod]
         public void KitSolutionShouldNotDirectlyBuildInactiveCommonAndDscProjects()
         {
             var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));

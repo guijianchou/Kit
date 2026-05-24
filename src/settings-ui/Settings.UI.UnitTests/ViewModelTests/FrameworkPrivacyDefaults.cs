@@ -37,11 +37,18 @@ namespace ViewModelTests
         public void RunnerShouldNotStartSettingsTelemetryWorker()
         {
             var main = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
-            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+            var runnerProjectPath = FindSourceFile("src", "runner", "Kit.vcxproj");
+            var runnerProject = File.ReadAllText(runnerProjectPath);
+            var runnerProjectFilters = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj.filters"));
+            var runnerRoot = Path.GetDirectoryName(runnerProjectPath)!;
 
             Assert.IsFalse(main.Contains("settings_telemetry::init();", StringComparison.Ordinal));
             Assert.IsFalse(runnerProject.Contains("settings_telemetry.cpp", StringComparison.Ordinal), "Runner should not compile the settings telemetry worker.");
             Assert.IsFalse(runnerProject.Contains("settings_telemetry.h", StringComparison.Ordinal), "Runner should not include the settings telemetry worker header.");
+            Assert.IsFalse(runnerProjectFilters.Contains("settings_telemetry.cpp", StringComparison.Ordinal), "Runner filters should not keep deleted settings telemetry worker source entries.");
+            Assert.IsFalse(runnerProjectFilters.Contains("settings_telemetry.h", StringComparison.Ordinal), "Runner filters should not keep deleted settings telemetry worker header entries.");
+            Assert.IsFalse(File.Exists(Path.Combine(runnerRoot, "settings_telemetry.cpp")), "Runner should delete the inactive settings telemetry worker source file.");
+            Assert.IsFalse(File.Exists(Path.Combine(runnerRoot, "settings_telemetry.h")), "Runner should delete the inactive settings telemetry worker header file.");
         }
 
         [TestMethod]

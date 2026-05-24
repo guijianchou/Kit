@@ -36,9 +36,6 @@
     <ClCompile Include="..\common\interop\two_way_pipe_message_ipc.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="settings_telemetry.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
     <ClCompile Include="centralized_hotkeys.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
@@ -88,9 +85,6 @@
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="centralized_kb_hook.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="settings_telemetry.h">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="centralized_hotkeys.h">

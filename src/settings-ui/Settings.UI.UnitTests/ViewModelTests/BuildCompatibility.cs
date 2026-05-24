@@ -1479,6 +1479,17 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void QuickAccessWindowShouldUseCurrentWinUiSystemBackdropApi()
+        {
+            var quickAccessMainWindow = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "QuickAccessXAML", "MainWindow.xaml"));
+
+            StringAssert.Contains(quickAccessMainWindow, "<Window.SystemBackdrop>");
+            StringAssert.Contains(quickAccessMainWindow, "<DesktopAcrylicBackdrop");
+            Assert.IsFalse(quickAccessMainWindow.Contains("WindowEx.Backdrop", StringComparison.Ordinal), "Quick Access should not use the deprecated WinUIEx Backdrop attached property.");
+            Assert.IsFalse(quickAccessMainWindow.Contains("AcrylicSystemBackdrop", StringComparison.Ordinal), "Quick Access should not use the deprecated WinUIEx AcrylicSystemBackdrop type.");
+        }
+
+        [TestMethod]
         public void MonitorActionSwitchesShouldAppearBeforeRunInBackground()
         {
             var monitorPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml"));

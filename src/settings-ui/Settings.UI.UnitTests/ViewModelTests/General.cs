@@ -707,6 +707,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Removed the upstream BugReportTool source");
             StringAssert.Contains(changelog, "Deleted the legacy sibling Settings asset tree");
             StringAssert.Contains(changelog, "Deleted the inactive standalone module_loader utility");
+            StringAssert.Contains(changelog, "Quick Access now uses the current WinUI SystemBackdrop API");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -714,6 +715,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "upstream BugReportTool source and launch paths were deleted");
             StringAssert.Contains(developmentLog, "legacy sibling Settings asset tree");
             StringAssert.Contains(developmentLog, "inactive standalone module_loader utility");
+            StringAssert.Contains(developmentLog, "Quick Access window now uses the current WinUI SystemBackdrop API");
+            StringAssert.Contains(developmentLog, "137/137 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

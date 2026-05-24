@@ -170,11 +170,12 @@
 		<ItemGroup>
 			<KitInactiveSettingsModuleAssets Include="$(OutDir)Assets\Settings\Modules\*.png" Exclude="$(OutDir)Assets\Settings\Modules\Awake.png;$(OutDir)Assets\Settings\Modules\LightSwitch.png;$(OutDir)Assets\Settings\Modules\PowerDisplay.png;$(OutDir)Assets\Settings\Modules\PT.png" />
 			<KitInactiveSettingsIconAssets Include="$(OutDir)Assets\Settings\Icons\*.png" Exclude="$(OutDir)Assets\Settings\Icons\Awake.png;$(OutDir)Assets\Settings\Icons\LightSwitch.png;$(OutDir)Assets\Settings\Icons\PowerDisplay.png;$(OutDir)Assets\Settings\Icons\PowerToys.png" />
+			<KitInactiveSettingsXamlOutputs Include="$(OutDir)SettingsXAML\Controls\ColorFormatEditor.xbf;$(OutDir)SettingsXAML\Controls\ColorPickerButton.xbf;$(OutDir)SettingsXAML\Controls\FancyZonesPreviewControl.xbf;$(OutDir)SettingsXAML\Controls\OOBEPageControl.xbf;$(OutDir)SettingsXAML\Controls\PowerAccentShortcutControl.xbf" />
 			<KitInactiveSettingsAssets Include="$(OutDir)Assets\Settings\Modules\OOBE\**\*;$(OutDir)Assets\Settings\Icons\Models\*.svg;$(OutDir)Images\MouseJump-Desktop.png" />
 			<KitInactiveSettingsAssetDirectories Include="$(OutDir)Assets\Settings\Modules\OOBE;$(OutDir)Assets\Settings\Icons\Models" />
 		</ItemGroup>
 
-		<Delete Files="@(KitInactiveSettingsModuleAssets);@(KitInactiveSettingsIconAssets);@(KitInactiveSettingsAssets)" TreatErrorsAsWarnings="true" />
+		<Delete Files="@(KitInactiveSettingsModuleAssets);@(KitInactiveSettingsIconAssets);@(KitInactiveSettingsXamlOutputs);@(KitInactiveSettingsAssets)" TreatErrorsAsWarnings="true" />
 		<RemoveDir Directories="@(KitInactiveSettingsAssetDirectories)" Condition="'@(KitInactiveSettingsAssetDirectories)' != ''" />
 	</Target>
 

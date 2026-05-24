@@ -241,6 +241,52 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsShouldDeleteInactiveControlsConvertersAndOobeViewModels()
+        {
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProject = File.ReadAllText(settingsProjectPath);
+            var settingsUiRoot = Path.GetDirectoryName(settingsProjectPath);
+
+            string[] inactiveSourceFiles =
+            {
+                Path.Combine("Converters", "ImageResizerDoubleToAutoConverter.cs"),
+                Path.Combine("Converters", "ImageResizerFitToIntConverter.cs"),
+                Path.Combine("Converters", "ImageResizerFitToStringConverter.cs"),
+                Path.Combine("Converters", "ImageResizerNumberBoxValueConverter.cs"),
+                Path.Combine("Converters", "ImageResizerSizeToAccessibleTextConverter.cs"),
+                Path.Combine("Converters", "ImageResizerUnitToIntConverter.cs"),
+                Path.Combine("Converters", "ImageResizerUnitToStringConverter.cs"),
+                Path.Combine("Converters", "ImageResizerZeroToEmptyStringNumberFormatter.cs"),
+                Path.Combine("Converters", "ZoomItInitialZoomConverter.cs"),
+                Path.Combine("Converters", "ZoomItOpacitySliderConverter.cs"),
+                Path.Combine("Converters", "ZoomItTypeSpeedSliderConverter.cs"),
+                Path.Combine("OOBE", "Enums", "PowerToysModules.cs"),
+                Path.Combine("OOBE", "ViewModel", "OobePowerToysModule.cs"),
+                Path.Combine("OOBE", "ViewModel", "OobeShellViewModel.cs"),
+                Path.Combine("SettingsXAML", "Controls", "ColorFormatEditor.xaml"),
+                Path.Combine("SettingsXAML", "Controls", "ColorFormatEditor.xaml.cs"),
+                Path.Combine("SettingsXAML", "Controls", "ColorPickerButton.xaml"),
+                Path.Combine("SettingsXAML", "Controls", "ColorPickerButton.xaml.cs"),
+                Path.Combine("SettingsXAML", "Controls", "FancyZonesPreviewControl.xaml"),
+                Path.Combine("SettingsXAML", "Controls", "FancyZonesPreviewControl.xaml.cs"),
+                Path.Combine("SettingsXAML", "Controls", "ImageResizerDimensionsNumberBox.cs"),
+                Path.Combine("SettingsXAML", "Controls", "OOBEPageControl.xaml"),
+                Path.Combine("SettingsXAML", "Controls", "OOBEPageControl.xaml.cs"),
+                Path.Combine("SettingsXAML", "Controls", "PowerAccentShortcutControl.xaml"),
+                Path.Combine("SettingsXAML", "Controls", "PowerAccentShortcutControl.xaml.cs"),
+            };
+
+            foreach (var relativePath in inactiveSourceFiles)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(settingsUiRoot!, relativePath)), $"Inactive Settings UI source should be deleted: {relativePath}");
+            }
+
+            StringAssert.Contains(settingsProject, "KitInactiveSettingsXamlOutputs");
+            StringAssert.Contains(settingsProject, @"$(OutDir)SettingsXAML\Controls\ColorFormatEditor.xbf");
+            StringAssert.Contains(settingsProject, @"$(OutDir)SettingsXAML\Controls\OOBEPageControl.xbf");
+        }
+
+        [TestMethod]
         public void KitSettingsTestsShouldDeleteInactiveModuleTestsInsteadOfProjectExcludingThem()
         {
             var settingsTestsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.UnitTests", "Settings.UI.UnitTests.csproj");

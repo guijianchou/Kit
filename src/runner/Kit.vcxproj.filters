@@ -87,9 +87,6 @@
     <ClInclude Include="ActionRunnerUtils.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="ai_detection.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Utils</Filter>
     </ClInclude>

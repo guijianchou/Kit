@@ -607,15 +607,22 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitRunnerShouldOnlyRunImageResizerAiDetectionWhenImageResizerIsActive()
+        public void KitRunnerShouldNotKeepInactiveImageResizerAiDetectionPath()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var generalSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
+            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+            var runnerProjectFilters = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj.filters"));
 
             StringAssert.Contains(runnerMain, "KitKnownModules");
             StringAssert.Contains(runnerMain, "is_known_module_registered");
-            StringAssert.Contains(runnerMain, "is_image_resizer_registered_for_kit");
-            StringAssert.Contains(runnerMain, "package::IsWin11OrGreater() && is_image_resizer_registered_for_kit()");
-            StringAssert.Contains(runnerMain, "AI capability detection skipped: Image Resizer is not an active Kit module");
+            Assert.IsFalse(runnerMain.Contains("DetectAiCapabilitiesAsync", StringComparison.Ordinal), "Kit runner should not keep inactive Image Resizer AI detection code.");
+            Assert.IsFalse(runnerMain.Contains("is_image_resizer_registered_for_kit", StringComparison.Ordinal), "Kit runner should not probe inactive Image Resizer registration.");
+            Assert.IsFalse(runnerMain.Contains("package::IsWin11OrGreater()", StringComparison.Ordinal), "Kit startup should not run an OS check solely for inactive Image Resizer AI detection.");
+            Assert.IsFalse(generalSettings.Contains("DetectAiCapabilitiesAsync", StringComparison.Ordinal), "General settings updates should not trigger inactive Image Resizer AI detection.");
+            Assert.IsFalse(generalSettings.Contains("Image Resizer", StringComparison.Ordinal), "General settings module updates should stay scoped to loaded Kit modules.");
+            Assert.IsFalse(runnerProject.Contains("ai_detection.h", StringComparison.Ordinal), "Runner project should not keep inactive Image Resizer AI detection headers.");
+            Assert.IsFalse(runnerProjectFilters.Contains("ai_detection.h", StringComparison.Ordinal), "Runner project filters should not keep inactive Image Resizer AI detection headers.");
         }
 
         [TestMethod]

@@ -1533,8 +1533,6 @@ SOFTWARE.
 - CommunityToolkit.WinUI.Extensions
 - CommunityToolkit.WinUI.UI.Controls.DataGrid
 - ControlzEx
-- HelixToolkit
-- HelixToolkit.Core.Wpf
 - Interop.Microsoft.Office.Interop.OneNote
 - LazyCache
 - Markdig.Signed
@@ -1555,7 +1553,6 @@ SOFTWARE.
 - StreamJsonRpc
 - StyleCop.Analyzers
 - ToolGood.Words.Pinyin
-- UnicodeInformation
 - UTF.Unknown
 - WinUIEx
 - WmiLight

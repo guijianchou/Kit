@@ -1574,6 +1574,40 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepDeletedModulePackagePins()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
+            string[] deletedModulePackages =
+            {
+                "ModernWpfUI",
+                "NJsonSchema",
+                "ScipBe.Common.Office.OneNote",
+                "SharpCompress",
+            };
+
+            foreach (var packageName in deletedModulePackages)
+            {
+                Assert.IsFalse(centralPackages.Contains($@"PackageVersion Include=""{packageName}""", StringComparison.Ordinal), $"Kit should not keep central package pins that only served deleted PowerToys modules: {packageName}");
+                Assert.IsFalse(notice.Contains($"- {packageName}", StringComparison.Ordinal), $"Third-party notices should not list package dependencies that only served deleted PowerToys modules: {packageName}");
+            }
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                foreach (var packageName in deletedModulePackages)
+                {
+                    Assert.IsFalse(project.Contains($@"PackageReference Include=""{packageName}""", StringComparison.Ordinal), $"Kit project should not reference the deleted-module-only package {packageName}: {projectFile}");
+                }
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));

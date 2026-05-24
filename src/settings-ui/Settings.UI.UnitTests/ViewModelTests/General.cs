@@ -730,8 +730,12 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "trimmed `PowerToys.Interop` IPC constant surface");
             StringAssert.Contains(changelog, "Renamed the active Settings termination WinRT projection from `PowerToysRunnerTerminateSettingsEvent` to `KitRunnerTerminateSettingsEvent`");
             StringAssert.Contains(changelog, "Kit-named Settings termination projection");
+            StringAssert.Contains(changelog, "Deleted the inactive AdvancedPaste-only `LanguageModelProvider` source tree");
+            StringAssert.Contains(changelog, "deleted AdvancedPaste AI provider source/package remnants");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
+            StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree or AI provider package pins");
+            StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树或 AI provider 包 pin");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
             StringAssert.Contains(developmentLog, "## 2026-05-24 Version 1.2.2 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -763,6 +767,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "trimmed `PowerToys.Interop` IPC constant surface");
             StringAssert.Contains(developmentLog, "active Settings termination WinRT projection is now `KitRunnerTerminateSettingsEvent`");
             StringAssert.Contains(developmentLog, "Kit-named Settings termination projection");
+            StringAssert.Contains(developmentLog, "inactive AdvancedPaste-only `LanguageModelProvider` source tree was deleted");
+            StringAssert.Contains(developmentLog, "deleted AdvancedPaste AI provider source/package remnants");
             StringAssert.Contains(developmentLog, "151/151 passing Settings UI tests");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));

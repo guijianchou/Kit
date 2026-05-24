@@ -1175,13 +1175,17 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitSettingsShouldNotBuildAdvancedPasteLanguageModelProvider()
+        public void KitSettingsShouldDeleteAdvancedPasteLanguageModelProvider()
         {
-            var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
+            var solutionPath = FindSourceFile("Kit.slnx");
+            var repoRoot = Path.GetDirectoryName(solutionPath)!;
+            var solution = File.ReadAllText(solutionPath);
             var settingsFilter = File.ReadAllText(FindSourceFile("src", "settings-ui", "PowerToys.Settings.slnf"));
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
             var settingsProject = File.ReadAllText(settingsProjectPath);
             var settingsUiRoot = Path.GetDirectoryName(settingsProjectPath);
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
 
             Assert.IsFalse(solution.Contains("LanguageModelProvider", StringComparison.Ordinal), "Kit.slnx should not build the AdvancedPaste-only LanguageModelProvider project.");
             Assert.IsFalse(settingsFilter.Contains("LanguageModelProvider", StringComparison.Ordinal), "Settings solution filter should not build LanguageModelProvider.");
@@ -1194,6 +1198,28 @@ namespace ViewModelTests
             Assert.IsFalse(settingsProject.Contains(@"Content Include=""Assets\Settings\Icons\Models\*.svg""", StringComparison.Ordinal), "Removed AI model provider icons should not be re-added as Content.");
             Assert.IsFalse(File.Exists(Path.Combine(settingsUiRoot!, "SettingsXAML", "Controls", "ModelPicker", "FoundryLocalModelPicker.xaml")));
             Assert.IsFalse(File.Exists(Path.Combine(settingsUiRoot!, "SettingsXAML", "Controls", "ModelPicker", "FoundryLocalModelPicker.xaml.cs")));
+            Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot, "src", "common", "LanguageModelProvider")), "Kit should delete the inactive AdvancedPaste-only LanguageModelProvider source tree instead of only removing it from build graphs.");
+
+            string[] inactiveAiPackagePins =
+            {
+                @"PackageVersion Include=""Microsoft.Extensions.AI""",
+                @"PackageVersion Include=""Microsoft.Extensions.AI.OpenAI""",
+                @"PackageVersion Include=""Microsoft.AI.Foundry.Local""",
+                @"PackageVersion Include=""Microsoft.SemanticKernel""",
+                @"PackageVersion Include=""Microsoft.SemanticKernel.Connectors.OpenAI""",
+                @"PackageVersion Include=""Microsoft.SemanticKernel.Connectors.AzureAIInference""",
+                @"PackageVersion Include=""Microsoft.SemanticKernel.Connectors.Google""",
+                @"PackageVersion Include=""Microsoft.SemanticKernel.Connectors.MistralAI""",
+                @"PackageVersion Include=""Microsoft.SemanticKernel.Connectors.Ollama""",
+                @"PackageVersion Include=""OpenAI""",
+            };
+
+            foreach (var packagePin in inactiveAiPackagePins)
+            {
+                Assert.IsFalse(centralPackages.Contains(packagePin, StringComparison.Ordinal), $"Central packages should not keep inactive AdvancedPaste AI package pin: {packagePin}");
+            }
+
+            Assert.IsFalse(notice.Contains("- OpenAI", StringComparison.Ordinal), "Third-party notices should not list the removed OpenAI package dependency.");
         }
 
         [TestMethod]

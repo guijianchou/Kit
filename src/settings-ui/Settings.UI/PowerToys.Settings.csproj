@@ -131,21 +131,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="Assets\Settings\Scripts\CheckCmdNotFoundRequirements.ps1">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Settings\Scripts\InstallWinGetClientModule.ps1">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Settings\Scripts\InstallPowerShell7.ps1">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Settings\Scripts\EnableModule.ps1">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Settings\Scripts\DisableModule.ps1">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
 		<Page Update="SettingsXAML\Controls\TitleBar\TitleBar.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</Page>
@@ -171,8 +156,8 @@
 			<KitInactiveSettingsModuleAssets Include="$(OutDir)Assets\Settings\Modules\*.png" Exclude="$(OutDir)Assets\Settings\Modules\Awake.png;$(OutDir)Assets\Settings\Modules\LightSwitch.png;$(OutDir)Assets\Settings\Modules\PowerDisplay.png;$(OutDir)Assets\Settings\Modules\PT.png" />
 			<KitInactiveSettingsIconAssets Include="$(OutDir)Assets\Settings\Icons\*.png" Exclude="$(OutDir)Assets\Settings\Icons\Awake.png;$(OutDir)Assets\Settings\Icons\LightSwitch.png;$(OutDir)Assets\Settings\Icons\PowerDisplay.png;$(OutDir)Assets\Settings\Icons\PowerToys.png" />
 			<KitInactiveSettingsXamlOutputs Include="$(OutDir)SettingsXAML\Controls\ColorFormatEditor.xbf;$(OutDir)SettingsXAML\Controls\ColorPickerButton.xbf;$(OutDir)SettingsXAML\Controls\FancyZonesPreviewControl.xbf;$(OutDir)SettingsXAML\Controls\OOBEPageControl.xbf;$(OutDir)SettingsXAML\Controls\PowerAccentShortcutControl.xbf" />
-			<KitInactiveSettingsAssets Include="$(OutDir)Assets\Settings\Modules\OOBE\**\*;$(OutDir)Assets\Settings\Icons\Models\*.svg;$(OutDir)Images\MouseJump-Desktop.png" />
-			<KitInactiveSettingsAssetDirectories Include="$(OutDir)Assets\Settings\Modules\OOBE;$(OutDir)Assets\Settings\Icons\Models" />
+			<KitInactiveSettingsAssets Include="$(OutDir)Assets\Settings\Modules\OOBE\**\*;$(OutDir)Assets\Settings\Icons\Models\*.svg;$(OutDir)Assets\Settings\CmdPal\**\*;$(OutDir)Assets\Settings\Scripts\*.ps1;$(OutDir)Images\MouseJump-Desktop.png" />
+			<KitInactiveSettingsAssetDirectories Include="$(OutDir)Assets\Settings\Modules\OOBE;$(OutDir)Assets\Settings\Icons\Models;$(OutDir)Assets\Settings\CmdPal;$(OutDir)Assets\Settings\Scripts" />
 		</ItemGroup>
 
 		<Delete Files="@(KitInactiveSettingsModuleAssets);@(KitInactiveSettingsIconAssets);@(KitInactiveSettingsXamlOutputs);@(KitInactiveSettingsAssets)" TreatErrorsAsWarnings="true" />

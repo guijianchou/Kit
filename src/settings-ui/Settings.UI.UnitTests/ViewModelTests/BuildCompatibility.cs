@@ -756,6 +756,37 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsShouldDeleteInactiveAuxiliaryPayloadsInsteadOfShippingThem()
+        {
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProject = File.ReadAllText(settingsProjectPath);
+            var settingsRoot = Path.GetDirectoryName(settingsProjectPath);
+
+            AssertNoFiles(settingsRoot!, Path.Combine("Assets", "Settings", "CmdPal", "*"));
+
+            string[] inactiveScriptPayloads =
+            {
+                Path.Combine("Assets", "Settings", "Scripts", "CheckCmdNotFoundRequirements.ps1"),
+                Path.Combine("Assets", "Settings", "Scripts", "DisableModule.ps1"),
+                Path.Combine("Assets", "Settings", "Scripts", "EnableModule.ps1"),
+                Path.Combine("Assets", "Settings", "Scripts", "InstallPowerShell7.ps1"),
+                Path.Combine("Assets", "Settings", "Scripts", "InstallWinGetClientModule.ps1"),
+                Path.Combine("Assets", "Settings", "Scripts", "UpgradeModule.ps1"),
+            };
+
+            foreach (var inactiveScriptPayload in inactiveScriptPayloads)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(settingsRoot!, inactiveScriptPayload)), $"Inactive script payload should be deleted: {inactiveScriptPayload}");
+            }
+
+            Assert.IsFalse(settingsProject.Contains(@"<None Update=""Assets\Settings\Scripts\", StringComparison.Ordinal), "Inactive Settings scripts should not be copied to output.");
+            Assert.IsFalse(settingsProject.Contains(@"<Content Include=""Assets\Settings\CmdPal", StringComparison.Ordinal), "Inactive CmdPal assets should not be copied to output.");
+            StringAssert.Contains(settingsProject, @"$(OutDir)Assets\Settings\CmdPal\**\*");
+            StringAssert.Contains(settingsProject, @"$(OutDir)Assets\Settings\Scripts\*.ps1");
+            StringAssert.Contains(settingsProject, @"$(OutDir)Assets\Settings\CmdPal;$(OutDir)Assets\Settings\Scripts");
+        }
+
+        [TestMethod]
         public void KitSettingsShouldDeleteInactiveIconAssetsInsteadOfShippingThem()
         {
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");

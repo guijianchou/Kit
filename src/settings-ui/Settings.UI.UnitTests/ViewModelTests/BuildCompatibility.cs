@@ -977,6 +977,16 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSettingsShouldDeleteLegacySiblingAssetTree()
+        {
+            var settingsUiRoot = Path.GetDirectoryName(FindSourceFile("src", "settings-ui", "PowerToys.Settings.slnf"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+
+            Assert.IsFalse(Directory.Exists(Path.Combine(settingsUiRoot!, "Assets")), "Kit should delete the legacy sibling Settings asset tree instead of keeping an unused full upstream copy beside Settings.UI.");
+            Assert.IsFalse(settingsProject.Contains(@"..\Assets\", StringComparison.Ordinal), "Settings.UI should not depend on the deleted sibling asset tree.");
+        }
+
+        [TestMethod]
         public void KitSettingsShouldDeleteInactiveAuxiliaryPayloadsInsteadOfShippingThem()
         {
             var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");

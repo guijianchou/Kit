@@ -1348,10 +1348,12 @@ namespace ViewModelTests
         public void KitCentralPackagesShouldNotKeepRegistryPreviewOnlySkiaSharpPin()
         {
             var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
 
             Assert.IsFalse(centralPackages.Contains(@"PackageVersion Include=""SkiaSharp.Views.WinUI""", StringComparison.Ordinal), "Kit should not keep the Registry Preview-only SkiaSharp.Views.WinUI central package pin.");
             Assert.IsFalse(centralPackages.Contains("Registry Preview", StringComparison.Ordinal), "Central package comments should not explain package pins through inactive Registry Preview behavior.");
             Assert.IsFalse(centralPackages.Contains("HexBox", StringComparison.Ordinal), "Central package comments should not keep inactive Registry Preview HexBox details.");
+            Assert.IsFalse(notice.Contains("- SkiaSharp.Views.WinUI", StringComparison.Ordinal), "Third-party notices should not list dependencies that only served deleted Registry Preview paths.");
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
@@ -1646,6 +1648,47 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitCentralPackagesShouldNotKeepDeletedLauncherAiAndCmdPalPins()
+        {
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
+            string[] deletedLauncherAiAndCmdPalPackages =
+            {
+                "Microsoft.Data.Sqlite",
+                "Microsoft.Graphics.Win2D",
+                "Microsoft.WindowsAppSDK.AI",
+                "NLog",
+                "NLog.Extensions.Logging",
+                "NLog.Schema",
+                "System.ClientModel",
+                "System.Numerics.Tensors",
+                "WyHash",
+            };
+
+            foreach (var packageName in deletedLauncherAiAndCmdPalPackages)
+            {
+                Assert.IsFalse(centralPackages.Contains($@"PackageVersion Include=""{packageName}""", StringComparison.Ordinal), $"Kit should not keep central package pins for deleted Launcher, AI, or CmdPal paths: {packageName}");
+                Assert.IsFalse(notice.Contains($"- {packageName}", StringComparison.Ordinal), $"Third-party notices should not list dependencies that only served deleted Launcher, AI, or CmdPal paths: {packageName}");
+            }
+
+            Assert.IsFalse(notice.Contains("### wyhash", StringComparison.OrdinalIgnoreCase), "Third-party notices should not keep the removed CmdPal WyHash license section.");
+
+            foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
+            {
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var project = File.ReadAllText(projectFile);
+                foreach (var packageName in deletedLauncherAiAndCmdPalPackages)
+                {
+                    Assert.IsFalse(project.Contains($@"PackageReference Include=""{packageName}""", StringComparison.Ordinal), $"Kit project should not reference the deleted Launcher, AI, or CmdPal package {packageName}: {projectFile}");
+                }
+            }
+        }
+
+        [TestMethod]
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));
@@ -1674,7 +1717,6 @@ namespace ViewModelTests
             {
                 @"<PackageVersion Include=""Microsoft.Bcl.AsyncInterfaces"" Version=""10.0.7"" />",
                 @"<PackageVersion Include=""Microsoft.CodeAnalysis.NetAnalyzers"" Version=""10.0.102"" />",
-                @"<PackageVersion Include=""Microsoft.Data.Sqlite"" Version=""10.0.7"" />",
                 @"<PackageVersion Include=""Microsoft.Extensions.Caching.Abstractions"" Version=""10.0.7"" />",
                 @"<PackageVersion Include=""Microsoft.Extensions.Caching.Memory"" Version=""10.0.7"" />",
                 @"<PackageVersion Include=""Microsoft.Extensions.DependencyInjection"" Version=""10.0.7"" />",

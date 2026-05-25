@@ -742,7 +742,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "removed inactive MouseUtils page conflict branch");
             StringAssert.Contains(changelog, "Replaced stale Settings package-reference comments");
             StringAssert.Contains(changelog, "Settings package-reference comment cleanup");
-            StringAssert.Contains(changelog, "Removed the unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin");
+            StringAssert.Contains(changelog, "Removed the unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin and stale third-party notice entry");
             StringAssert.Contains(changelog, "Registry Preview-only SkiaSharp package pin removal");
             StringAssert.Contains(changelog, "Removed the unused Command Palette extension central package pin");
             StringAssert.Contains(changelog, "Command Palette extension package pin removal");
@@ -768,6 +768,10 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Removed the deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths");
             StringAssert.Contains(changelog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
             StringAssert.Contains(changelog, "deleted-utility package pin removal");
+            StringAssert.Contains(changelog, "Removed the deleted Launcher, AI, and CmdPal central package pins");
+            StringAssert.Contains(changelog, "no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(changelog, "stale CmdPal WyHash third-party notice section");
+            StringAssert.Contains(changelog, "deleted Launcher/AI/CmdPal package pin removal");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
@@ -818,7 +822,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "removed inactive MouseUtils page conflict branch");
             StringAssert.Contains(developmentLog, "Settings package-reference comments now describe current dependency alignment");
             StringAssert.Contains(developmentLog, "Settings package-reference comment cleanup");
-            StringAssert.Contains(developmentLog, "The unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin was removed");
+            StringAssert.Contains(developmentLog, "The unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin and stale third-party notice entry were removed");
             StringAssert.Contains(developmentLog, "Registry Preview-only SkiaSharp package pin removal");
             StringAssert.Contains(developmentLog, "The unused Command Palette extension central package pin was removed");
             StringAssert.Contains(developmentLog, "Command Palette extension package pin removal");
@@ -844,6 +848,10 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "The deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths were removed");
             StringAssert.Contains(developmentLog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
             StringAssert.Contains(developmentLog, "deleted-utility package pin removal");
+            StringAssert.Contains(developmentLog, "The deleted Launcher, AI, and CmdPal central package pins were removed");
+            StringAssert.Contains(developmentLog, "no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(developmentLog, "stale CmdPal WyHash third-party notice section");
+            StringAssert.Contains(developmentLog, "deleted Launcher/AI/CmdPal package pin removal");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
             StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
             StringAssert.Contains(developmentLog, "154/154 passing Settings UI tests after deleting the inactive MouseUtils conflict branch");
@@ -858,6 +866,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "163/163 passing Settings UI tests after removing the Command Palette toolkit and host package pins");
             StringAssert.Contains(developmentLog, "164/164 passing Settings UI tests after removing the deleted-module package pins");
             StringAssert.Contains(developmentLog, "165/165 passing Settings UI tests after removing the deleted-utility package pins");
+            StringAssert.Contains(developmentLog, "166/166 passing Settings UI tests after removing the deleted Launcher, AI, and CmdPal package pins");
 
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", string.Empty));
             Assert.AreEqual("v1.2.2", Helper.GetProductDisplayVersion("v1.2.2", "Local"));

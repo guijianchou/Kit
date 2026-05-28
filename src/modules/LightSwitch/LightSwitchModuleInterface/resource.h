@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by CalculatorEngineCommon.rc
+// Used by LightSwitchModuleInterface.rc
 
 //////////////////////////////
 // Non-localizable

@@ -412,6 +412,134 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitShouldDeleteInactivePreviewAndCmdPalSharedAssets()
+        {
+            var solutionPath = FindSourceFile("Kit.slnx");
+            var repoRoot = Path.GetDirectoryName(solutionPath);
+            var solution = File.ReadAllText(solutionPath);
+            var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
+            var loggerSettings = File.ReadAllText(FindSourceFile("src", "common", "logger", "logger_settings.h"));
+            var commonUtilsTestsProject = File.ReadAllText(FindSourceFile("src", "common", "UnitTests-CommonUtils", "UnitTests-CommonUtils.vcxproj"));
+            var commonUtilsTestsFilters = File.ReadAllText(FindSourceFile("src", "common", "UnitTests-CommonUtils", "UnitTests-CommonUtils.vcxproj.filters"));
+
+            string[] inactiveFiles =
+            {
+                Path.Combine("src", "common", "CalculatorEngineCommon", "CalculatorEngineCommon.vcxproj"),
+                Path.Combine("src", "common", "CalculatorEngineCommon", "Calculator.cpp"),
+                Path.Combine("src", "common", "FilePreviewCommon", "FilePreviewCommon.csproj"),
+                Path.Combine("src", "common", "FilePreviewCommon", "MonacoHelper.cs"),
+                Path.Combine("src", "Monaco", "index.html"),
+                Path.Combine("src", "Monaco", "monacoSRC", "min", "vs", "loader.js"),
+                Path.Combine("src", "Monaco.props"),
+                Path.Combine("src", "common", "utils", "shell_ext_registration.h"),
+                Path.Combine("src", "common", "utils", "modulesRegistry.h"),
+                Path.Combine("src", "common", "UnitTests-CommonUtils", "ModulesRegistry.Tests.cpp"),
+            };
+
+            foreach (var relativePath in inactiveFiles)
+            {
+                Assert.IsFalse(File.Exists(Path.Combine(repoRoot!, relativePath)), $"Kit should delete inactive upstream shared source file: {relativePath}");
+            }
+
+            Assert.IsFalse(solution.Contains("src/Monaco.props", StringComparison.Ordinal), "Kit.slnx should not list deleted Monaco assets as solution items.");
+            Assert.IsFalse(commonUtilsTestsProject.Contains("ModulesRegistry.Tests.cpp", StringComparison.Ordinal), "CommonUtils tests should not build deleted File Explorer shell-extension registry tests.");
+            Assert.IsFalse(commonUtilsTestsFilters.Contains("ModulesRegistry.Tests.cpp", StringComparison.Ordinal), "CommonUtils test filters should not list deleted File Explorer shell-extension registry tests.");
+            Assert.IsFalse(centralPackages.Contains(@"PackageVersion Include=""UTF.Unknown""", StringComparison.Ordinal), "Kit should not keep the FilePreviewCommon-only UTF.Unknown central package pin.");
+
+            string[] inactiveLoggerTokens =
+            {
+                "fileExplorerLoggerName",
+                "fileExplorerLogPath",
+                "launcherLoggerName",
+                "launcherLogPath",
+                "mouseWithoutBordersLoggerName",
+                "mouseWithoutBordersLogPath",
+                "powerAccentLogPath",
+                "fancyZonesLoggerName",
+                "fancyZonesLogPath",
+                "fancyZonesOldLogPath",
+                "shortcutGuideLoggerName",
+                "shortcutGuideLogPath",
+                "powerOcrLogPath",
+                "keyboardManagerLoggerName",
+                "keyboardManagerLogPath",
+                "findMyMouseLoggerName",
+                "mouseHighlighterLoggerName",
+                "mouseJumpLoggerName",
+                "mousePointerCrosshairsLoggerName",
+                "cursorWrapLoggerName",
+                "imageResizerLoggerName",
+                "powerRenameLoggerName",
+                "alwaysOnTopLoggerName",
+                "powerOcrLoggerName",
+                "fileLocksmithLoggerName",
+                "alwaysOnTopLogPath",
+                "hostsLoggerName",
+                "hostsLogPath",
+                "registryPreviewLoggerName",
+                "registryPreviewLogPath",
+                "environmentVariablesLoggerName",
+                "cmdNotFoundLogPath",
+                "cmdNotFoundLoggerName",
+                "newLoggerName",
+                "workspacesLauncherLoggerName",
+                "workspacesLauncherLogPath",
+                "workspacesWindowArrangerLoggerName",
+                "workspacesWindowArrangerLogPath",
+                "workspacesSnapshotToolLoggerName",
+                "workspacesSnapshotToolLogPath",
+                "zoomItLoggerName",
+                "grabAndMoveLoggerName",
+                "GcodePrevHandler",
+                "GcodeThumbnailProvider",
+                "bgcodePrevHandler",
+                "BgcodeThumbnailProvider",
+                "MDPrevHandler",
+                "MonacoPrevHandler",
+                "PdfPrevHandler",
+                "PdfThumbnailProvider",
+                "QoiPrevHandler",
+                "QoiThumbnailProvider",
+                "StlThumbnailProvider",
+                "SvgPrevHandler",
+                "SvgThumbnailProvider",
+                "FileExplorer_localLow",
+            };
+
+            foreach (var token in inactiveLoggerTokens)
+            {
+                Assert.IsFalse(loggerSettings.Contains(token, StringComparison.Ordinal), $"Logger settings should not keep deleted File Explorer add-in token: {token}");
+            }
+
+            StringAssert.Contains(loggerSettings, "awakeLoggerName");
+            var awakeModule = File.ReadAllText(FindSourceFile("src", "modules", "awake", "AwakeModuleInterface", "dllmain.cpp"));
+            Assert.IsFalse(awakeModule.Contains("launcherLoggerName", StringComparison.Ordinal), "Awake should not initialize its active module logger with the deleted launcher logger name.");
+            Assert.IsFalse(awakeModule.Contains("Launcher object is constructing", StringComparison.Ordinal), "Awake startup logging should not use stale Launcher wording.");
+
+            string[] inactiveNoticeTokens =
+            {
+                "- Command Palette",
+                "- File Explorer Add-ins",
+                "- Peek",
+                "## Utility: Command palette built-in extensions",
+                "## Utility: File Explorer add-ins",
+                "## Utility: Peek",
+                "#### exprtk",
+                "### Monaco Editor",
+                "### The Quite OK image format reference decoder",
+                "UTF.Unknown",
+                "phoboslab/qoi",
+                "CharsetDetector/UTF-unknown",
+            };
+
+            foreach (var token in inactiveNoticeTokens)
+            {
+                Assert.IsFalse(notice.Contains(token, StringComparison.Ordinal), $"Third-party notices should not keep deleted Preview/Peek/CmdPal dependency token: {token}");
+            }
+        }
+
+        [TestMethod]
         public void KitQuickAccessFlyoutShouldOpenSettingsForModulesWithoutDirectActions()
         {
             var launcherViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "LauncherViewModel.cs"));

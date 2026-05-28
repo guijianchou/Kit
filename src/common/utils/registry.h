@@ -12,7 +12,6 @@
 
 #include "../logger/logger.h"
 #include "../utils/winapi_error.h"
-#include "../version/version.h"
 
 namespace registry
 {
@@ -440,100 +439,4 @@ namespace registry
     };
 
     const inline std::wstring DOTNET_COMPONENT_CATEGORY_CLSID = L"{62C8FE65-4EBB-45E7-B440-6E39B2CDBF29}";
-    const inline std::wstring ITHUMBNAIL_PROVIDER_CLSID = L"{E357FCCD-A995-4576-B01F-234630154E96}";
-    const inline std::wstring IPREVIEW_HANDLER_CLSID = L"{8895b1c6-b41f-4c1c-a562-0d564250836f}";
-
-    namespace shellex
-    {
-        enum PreviewHandlerType
-        {
-            preview,
-            thumbnail
-        };
-
-        inline registry::ChangeSet generatePreviewHandler(const PreviewHandlerType handlerType,
-                                                          const bool perUser,
-                                                          std::wstring handlerClsid,
-                                                          std::wstring powertoysVersion,
-                                                          std::wstring fullPathToHandler,
-                                                          std::wstring className,
-                                                          std::wstring displayName,
-                                                          std::vector<std::wstring> fileTypes,
-                                                          std::wstring perceivedType = L"",
-                                                          std::wstring fileKindType = L"")
-        {
-            const HKEY scope = perUser ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE;
-
-            std::wstring clsidPath = L"Software\\Classes\\CLSID";
-            clsidPath += L'\\';
-            clsidPath += handlerClsid;
-
-            std::wstring inprocServerPath = clsidPath;
-            inprocServerPath += L'\\';
-            inprocServerPath += L"InprocServer32";
-
-            std::wstring assemblyKeyValue;
-            if (const auto lastDotPos = className.rfind(L'.'); lastDotPos != std::wstring::npos)
-            {
-                assemblyKeyValue = L"PowerToys." + className.substr(lastDotPos + 1);
-            }
-            else
-            {
-                assemblyKeyValue = L"PowerToys." + className;
-            }
-
-            assemblyKeyValue += L", Version=";
-            assemblyKeyValue += powertoysVersion;
-            assemblyKeyValue += L", Culture=neutral";
-
-            std::wstring versionPath = inprocServerPath;
-            versionPath += L'\\';
-            versionPath += powertoysVersion;
-
-            using vec_t = std::vector<registry::ValueChange>;
-            // TODO: verify that we actually need all of those
-            vec_t changes = { { scope, clsidPath, L"DisplayName", displayName },
-                              { scope, clsidPath, std::nullopt, className },
-                              { scope, inprocServerPath, std::nullopt, fullPathToHandler },
-                              { scope, inprocServerPath, L"Assembly", assemblyKeyValue },
-                              { scope, inprocServerPath, L"Class", className },
-                              { scope, inprocServerPath, L"ThreadingModel", L"Apartment" } };
-
-            for (const auto& fileType : fileTypes)
-            {
-                std::wstring fileTypePath = L"Software\\Classes\\" + fileType;
-                std::wstring fileAssociationPath = fileTypePath + L"\\shellex\\";
-                fileAssociationPath += handlerType == PreviewHandlerType::preview ? IPREVIEW_HANDLER_CLSID : ITHUMBNAIL_PROVIDER_CLSID;
-                changes.push_back({ scope, fileAssociationPath, std::nullopt, handlerClsid });
-                if (!fileKindType.empty())
-                {
-                    // Registering a file type as a kind needs to be done at the HKEY_LOCAL_MACHINE level.
-                    // Make it optional as well so that we don't fail registering the handler if we can't write to HKEY_LOCAL_MACHINE.
-                    std::wstring kindMapPath = L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\KindMap";
-                    changes.push_back({ HKEY_LOCAL_MACHINE, kindMapPath, fileType, fileKindType, false});
-                }
-                if (!perceivedType.empty())
-                {
-                    changes.push_back({ scope, fileTypePath, L"PerceivedType", perceivedType });
-                }
-                if (handlerType == PreviewHandlerType::preview && fileType == L".reg")
-                {
-                    // this regfile registry key has precedence over Software\Classes\.reg for .reg files
-                    std::wstring regfilePath = L"Software\\Classes\\regfile\\shellex\\" + IPREVIEW_HANDLER_CLSID + L"\\";
-                    changes.push_back({ scope, regfilePath, std::nullopt, handlerClsid });
-                }
-            }
-
-            if (handlerType == PreviewHandlerType::preview)
-            {
-                const std::wstring previewHostClsid = L"{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}";
-                const std::wstring previewHandlerListPath = LR"(Software\Microsoft\Windows\CurrentVersion\PreviewHandlers)";
-
-                changes.push_back({ scope, clsidPath, L"AppID", previewHostClsid });
-                changes.push_back({ scope, previewHandlerListPath, handlerClsid, displayName });
-            }
-
-            return registry::ChangeSet{ .changes = std::move(changes) };
-        }
-    }
 }

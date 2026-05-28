@@ -62,7 +62,6 @@
     <ClCompile Include="ExcludedApps.Tests.cpp" />
     <ClCompile Include="HDropIterator.Tests.cpp" />
     <ClCompile Include="LoggerHelper.Tests.cpp" />
-    <ClCompile Include="ModulesRegistry.Tests.cpp" />
     <ClCompile Include="MsWindowsSettings.Tests.cpp" />
     <ClCompile Include="Package.Tests.cpp" />
     <ClCompile Include="ProcessApi.Tests.cpp" />

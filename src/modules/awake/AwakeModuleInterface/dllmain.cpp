@@ -79,8 +79,8 @@ public:
         app_key = AwakeConstants::ModuleKey;
         std::filesystem::path logFilePath(PTSettingsHelper::get_module_save_folder_location(this->app_key));
         logFilePath.append(LogSettings::awakeLogPath);
-        Logger::init(LogSettings::launcherLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
-        Logger::info("Launcher object is constructing");
+        Logger::init(LogSettings::awakeLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
+        Logger::info("Awake module is constructing");
     };
 
     // Return the configured status for the gpo policy for the module

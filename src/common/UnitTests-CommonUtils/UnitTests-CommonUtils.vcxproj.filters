@@ -90,9 +90,6 @@
     <ClCompile Include="Gpo.Tests.cpp">
       <Filter>Source Files\Registry</Filter>
     </ClCompile>
-    <ClCompile Include="ModulesRegistry.Tests.cpp">
-      <Filter>Source Files\Registry</Filter>
-    </ClCompile>
     <ClCompile Include="Elevation.Tests.cpp">
       <Filter>Source Files\Integration</Filter>
     </ClCompile>

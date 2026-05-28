@@ -75,7 +75,6 @@
     <File Path="src/common/utils/json.h" />
     <File Path="src/common/utils/language_helper.h" />
     <File Path="src/common/utils/logger_helper.h" />
-    <File Path="src/common/utils/modulesRegistry.h" />
     <File Path="src/common/utils/MsiUtils.h" />
     <File Path="src/common/utils/MsWindowsSettings.h" />
     <File Path="src/common/utils/OnThreadExecutor.h" />
@@ -86,7 +85,6 @@
     <File Path="src/common/utils/registry.h" />
     <File Path="src/common/utils/resources.h" />
     <File Path="src/common/utils/serialized.h" />
-    <File Path="src/common/utils/shell_ext_registration.h" />
     <File Path="src/common/utils/string_utils.h" />
     <File Path="src/common/utils/timeutil.h" />
     <File Path="src/common/utils/UnhandledExceptionHandler.h" />
@@ -192,7 +190,6 @@
     <File Path="src/Common.Dotnet.AotCompatibility.props" />
     <File Path="src/Common.Dotnet.CsWinRT.props" />
     <File Path="src/Common.SelfContained.props" />
-    <File Path="src/Monaco.props" />
     <File Path="src/Solution.props" />
     <File Path="src/Version.props" />
   </Folder>

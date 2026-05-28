@@ -678,7 +678,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse301ReleaseMetadata()
+        public void KitAboutVersionShouldUse201ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -690,7 +690,7 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>3.0.1</Version>");
+            StringAssert.Contains(versionProps, "<Version>2.0.1</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -698,21 +698,23 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `3.0.1`.");
+            StringAssert.Contains(readme, "Current Kit version: `2.0.1`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`3.0.1`。");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.1`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
             StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
             StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
-            StringAssert.Contains(changelog, "### 3.0.1");
-            StringAssert.Contains(changelog, "Bumped Kit to `3.0.1`");
+            StringAssert.Contains(changelog, "### 2.0.1");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.1`");
             StringAssert.Contains(changelog, "Trimmed GPOWrapper and Settings GPO helper policy surface");
             StringAssert.Contains(changelog, "Trimmed ADMX/ADML policy assets");
             StringAssert.Contains(changelog, "Removed the upstream BugReportTool source");
             StringAssert.Contains(changelog, "Deleted the legacy sibling Settings asset tree");
             StringAssert.Contains(changelog, "Deleted the inactive standalone module_loader utility");
             StringAssert.Contains(changelog, "Quick Access now uses the current WinUI SystemBackdrop API");
+            StringAssert.Contains(changelog, "Renamed the Quick Access window title from the upstream `PowerToys Quick Access (Preview)` label to `Kit Quick Access`");
+            StringAssert.Contains(changelog, "runtime code no longer documents inactive AdvancedPaste or PowerToys Run special cases as current behavior");
             StringAssert.Contains(changelog, "XAML search index builder no longer carries inactive upstream module icon and panel fallbacks");
             StringAssert.Contains(changelog, "Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface");
             StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
@@ -781,13 +783,15 @@ namespace ViewModelTests
             StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
             StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access、LightSwitch 和 PowerDisplay");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
-            StringAssert.Contains(developmentLog, "## 2026-05-28 Version 3.0.1 Stability Refactor");
+            StringAssert.Contains(developmentLog, "## 2026-05-28 Version 2.0.1 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
             StringAssert.Contains(developmentLog, "ADMX/ADML policy assets now match");
             StringAssert.Contains(developmentLog, "upstream BugReportTool source and launch paths were deleted");
             StringAssert.Contains(developmentLog, "legacy sibling Settings asset tree");
             StringAssert.Contains(developmentLog, "inactive standalone module_loader utility");
             StringAssert.Contains(developmentLog, "Quick Access window now uses the current WinUI SystemBackdrop API");
+            StringAssert.Contains(developmentLog, "Quick Access window title is now `Kit Quick Access`");
+            StringAssert.Contains(developmentLog, "Shared module-interface and Settings dispatch comments no longer describe inactive AdvancedPaste or PowerToys Run special cases");
             StringAssert.Contains(developmentLog, "XAML search index builder now derives icons from active Settings XAML only");
             StringAssert.Contains(developmentLog, "runner keyboard hook no longer carries Shortcut Guide Win-key tracking");
             StringAssert.Contains(developmentLog, "keyboard hook window registration no-op was deleted");
@@ -871,9 +875,10 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "164/164 passing Settings UI tests after removing the deleted-module package pins");
             StringAssert.Contains(developmentLog, "165/165 passing Settings UI tests after removing the deleted-utility package pins");
             StringAssert.Contains(developmentLog, "166/166 passing Settings UI tests after removing the deleted Launcher, AI, and CmdPal package pins");
+            StringAssert.Contains(developmentLog, "168/168 passing Settings UI tests after the Quick Access title, runtime comment, and 2.0.1 metadata finalization");
 
-            Assert.AreEqual("v3.0.1", Helper.GetProductDisplayVersion("v3.0.1", string.Empty));
-            Assert.AreEqual("v3.0.1", Helper.GetProductDisplayVersion("v3.0.1", "Local"));
+            Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", string.Empty));
+            Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", "Local"));
         }
 
         [TestMethod]

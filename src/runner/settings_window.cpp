@@ -160,9 +160,9 @@ void dispatch_json_config_to_modules(const json::JsonObject& powertoys_configs)
     {
         const auto element = powertoy_element.Value().Stringify();
 
-        /* As PowerToys Run hotkeys are not registered by the runner, hotkey updates are
-         * triggered only when hotkey properties change to avoid incorrect conflict detection; 
-         * otherwise, the existing logic remains.
+        /* Some retained compatibility settings can opt out of hotkey refreshes unless
+         * hotkey properties change, avoiding incorrect conflict detection for modules
+         * whose hotkeys are not runner-registered.
          */
         auto settings = powertoy_element.Value().GetObjectW();
         bool hotkeyUpdated = true;
@@ -170,7 +170,7 @@ void dispatch_json_config_to_modules(const json::JsonObject& powertoys_configs)
         {
             const auto properties = settings.GetNamedObject(L"properties");
 
-            // Currently, only PowerToys Run settings use the 'hotkey_changed' property.
+            // Retained compatibility settings can use this property to avoid unnecessary hotkey refreshes.
             if (properties.HasKey(L"hotkey_changed"))
             {
                 json::get(properties, L"hotkey_changed", hotkeyUpdated, true);

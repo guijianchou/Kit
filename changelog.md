@@ -6,9 +6,9 @@
 
 ## English
 
-### 3.0.1
+### 2.0.1
 
-- Version: Bumped Kit to `3.0.1`.
+- Version: Bumped Kit to `2.0.1`.
 - Refactor: Trimmed Quick Access and Settings serialization to the active four-module surface: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
 - Privacy: Removed managed telemetry sends, telemetry event sources, and `ManagedTelemetry` project references from the managed Settings and Quick Access layer.
 - Privacy: Deleted the inactive `ManagedTelemetry` source tree and managed telemetry base file after removing all active project references.
@@ -40,10 +40,12 @@
 - Slimming: Deleted inactive CmdPal Calculator and File Explorer/Peek shared assets after confirming `PowerToys-main` only uses `CalculatorEngineCommon`, `FilePreviewCommon`, Monaco assets, `modulesRegistry.h`, and shell-extension registration helpers from deleted CmdPal, PreviewPane, Peek, installer, or Registry Preview paths; the unused `UTF.Unknown` package pin, stale NOTICE sections, File Explorer logger constants, and stale Awake launcher logger name were removed with them.
 - Slimming: Deleted the legacy sibling Settings asset tree and inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
-- Policy: Trimmed ADMX/ADML policy assets to the same Kit 3.0.1 active policy surface.
+- Policy: Trimmed ADMX/ADML policy assets to the same Kit 2.0.1 active policy surface.
 - Runtime: Removed the upstream BugReportTool source and runner, tray, General, and Quick Access launch paths so Kit no longer collects inactive PowerToys module state.
 - Build: Deleted the inactive standalone module_loader utility and orphaned CmdPal version props until Command Palette becomes an active Kit module.
 - UI: Quick Access now uses the current WinUI SystemBackdrop API, clearing deprecated WinUIEx backdrop build warnings.
+- UI: Renamed the Quick Access window title from the upstream `PowerToys Quick Access (Preview)` label to `Kit Quick Access`.
+- Refactor: Reworded shared module-interface and settings-dispatch comments so runtime code no longer documents inactive AdvancedPaste or PowerToys Run special cases as current behavior.
 - Build: XAML search index builder no longer carries inactive upstream module icon and panel fallbacks; active page icons are derived from Settings XAML.
 - Runtime: Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface.
 - Runtime: Removed the no-op keyboard hook window registration after deleting pressed-key timers.
@@ -145,9 +147,9 @@
 
 ## 更新日志
 
-### 3.0.1
+### 2.0.1
 
-- 版本：将 Kit 提升到 `3.0.1`。
+- 版本：将 Kit 提升到 `2.0.1`。
 - 重构：将 Quick Access 和 Settings 序列化收敛到四个活动模块：`Awake`、`Light Switch`、`Monitor` 和 `PowerDisplay`。
 - 隐私：从托管 Settings 和 Quick Access 层移除 telemetry 发送、telemetry 事件源和 `ManagedTelemetry` 项目引用。
 - 隐私：删除非活动的 `ManagedTelemetry` 源码树和托管 telemetry base 文件，此前所有活动项目引用已移除。
@@ -179,10 +181,12 @@
 - 瘦身：确认 `PowerToys-main` 只在已删除 CmdPal、PreviewPane、Peek、installer 或 Registry Preview 路径中使用 `CalculatorEngineCommon`、`FilePreviewCommon`、Monaco 资产、`modulesRegistry.h` 和 shell-extension 注册 helper 后，删除这些 CmdPal Calculator 与 File Explorer/Peek 共享资产；同时移除未使用的 `UTF.Unknown` package pin、陈旧 NOTICE 段、File Explorer logger 常量，以及 Awake 中陈旧的 launcher logger 命名。
 - 瘦身：删除旧 sibling Settings 资产树以及非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。
-- 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 3.0.1 活动策略表面。
+- 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 2.0.1 活动策略表面。
 - 运行时：删除上游 BugReportTool 源码，以及 runner、托盘、General 和 Quick Access 的启动路径，避免 Kit 收集非活动 PowerToys 模块状态。
 - 构建：删除非活动的独立 module_loader 工具和孤立的 CmdPal 版本 props，直到 Command Palette 成为活动 Kit 模块。
 - UI：Quick Access 现在使用当前 WinUI SystemBackdrop API，清除了已弃用 WinUIEx backdrop 造成的构建警告。
+- UI：将 Quick Access 窗口标题从上游 `PowerToys Quick Access (Preview)` 改为 `Kit Quick Access`。
+- 重构：改写共享模块接口和 Settings 分发注释，避免运行时代码继续把非活动 AdvancedPaste 或 PowerToys Run 特殊分支描述为当前行为。
 - 构建：XAML search index builder 不再携带非活动上游模块图标和 panel 兜底，活动页面图标改为从 Settings XAML 派生。
 - 运行时：从 runner 键盘钩子和模块接口中移除非活动的 Shortcut Guide Win-key 跟踪路径。
 - 运行时：删除 pressed-key 定时器后，移除键盘钩子的 no-op 窗口注册路径。

@@ -1090,11 +1090,13 @@ namespace ViewModelTests
                 StringAssert.Contains(adml, activePolicy);
             }
 
-            StringAssert.Contains(admx, "SUPPORTED_KIT_3_0_1");
-            StringAssert.Contains(adml, "SUPPORTED_KIT_3_0_1");
-            const string PreviousKitSupportMarker = "SUPPORTED_KIT_1" + "_2_2";
-            Assert.IsFalse(admx.Contains(PreviousKitSupportMarker, StringComparison.Ordinal), "GPO ADMX should not keep the previous support marker after the version bump.");
-            Assert.IsFalse(adml.Contains(PreviousKitSupportMarker, StringComparison.Ordinal), "GPO ADML should not keep the previous support marker after the version bump.");
+            StringAssert.Contains(admx, "SUPPORTED_KIT_2_0_1");
+            StringAssert.Contains(adml, "SUPPORTED_KIT_2_0_1");
+            foreach (var obsoleteSupportMarker in new[] { "SUPPORTED_KIT_1" + "_2_2", "SUPPORTED_KIT_3" + "_0_1" })
+            {
+                Assert.IsFalse(admx.Contains(obsoleteSupportMarker, StringComparison.Ordinal), $"GPO ADMX should not keep obsolete support marker after the version bump: {obsoleteSupportMarker}");
+                Assert.IsFalse(adml.Contains(obsoleteSupportMarker, StringComparison.Ordinal), $"GPO ADML should not keep obsolete support marker after the version bump: {obsoleteSupportMarker}");
+            }
 
             foreach (var inactivePolicyToken in new[]
             {
@@ -2009,6 +2011,17 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitRuntimeCommentsShouldNotDescribeInactiveModuleSpecialCases()
+        {
+            var moduleInterface = File.ReadAllText(FindSourceFile("src", "modules", "interface", "powertoy_module_interface.h"));
+            var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
+
+            Assert.IsFalse(moduleInterface.Contains("AdvancedPaste", StringComparison.Ordinal), "Shared module interface comments should not describe inactive AdvancedPaste special cases.");
+            Assert.IsFalse(settingsWindow.Contains("PowerToys Run hotkeys", StringComparison.Ordinal), "Runner settings comments should not describe inactive PowerToys Run hotkey behavior as current.");
+            Assert.IsFalse(settingsWindow.Contains("PowerToys Run settings", StringComparison.Ordinal), "Runner settings comments should not describe inactive PowerToys Run settings as current.");
+        }
+
+        [TestMethod]
         public void KitRunnerShouldNotKeepNoOpKeyboardHookWindowRegistration()
         {
             var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
@@ -2278,11 +2291,18 @@ namespace ViewModelTests
         public void QuickAccessWindowShouldUseCurrentWinUiSystemBackdropApi()
         {
             var quickAccessMainWindow = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "QuickAccessXAML", "MainWindow.xaml"));
+            var quickAccessMainWindowCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "QuickAccessXAML", "MainWindow.xaml.cs"));
 
             StringAssert.Contains(quickAccessMainWindow, "<Window.SystemBackdrop>");
             StringAssert.Contains(quickAccessMainWindow, "<DesktopAcrylicBackdrop");
+            StringAssert.Contains(quickAccessMainWindow, "Title=\"Kit Quick Access\"");
+            StringAssert.Contains(quickAccessMainWindowCodeBehind, "Title = \"Kit Quick Access\";");
             Assert.IsFalse(quickAccessMainWindow.Contains("WindowEx.Backdrop", StringComparison.Ordinal), "Quick Access should not use the deprecated WinUIEx Backdrop attached property.");
             Assert.IsFalse(quickAccessMainWindow.Contains("AcrylicSystemBackdrop", StringComparison.Ordinal), "Quick Access should not use the deprecated WinUIEx AcrylicSystemBackdrop type.");
+            Assert.IsFalse(quickAccessMainWindow.Contains("PowerToys Quick Access", StringComparison.Ordinal), "Quick Access window XAML title should not keep the upstream PowerToys brand.");
+            Assert.IsFalse(quickAccessMainWindowCodeBehind.Contains("PowerToys Quick Access", StringComparison.Ordinal), "Quick Access runtime title should not keep the upstream PowerToys brand.");
+            Assert.IsFalse(quickAccessMainWindow.Contains("Quick Access (Preview)", StringComparison.Ordinal), "Quick Access window title should not keep the upstream preview label.");
+            Assert.IsFalse(quickAccessMainWindowCodeBehind.Contains("Quick Access (Preview)", StringComparison.Ordinal), "Quick Access runtime title should not keep the upstream preview label.");
         }
 
         [TestMethod]

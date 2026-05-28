@@ -47,7 +47,7 @@ public:
         unsigned char key = 0;
         // The id is used to identify the hotkey in the module. The order in module interface should be the same as in the settings.
         int id = 0;
-        // Currently, this is only used by AdvancedPaste to determine if the hotkey is shown in the settings.
+        // Used by modules to hide implementation hotkeys from settings while still registering them with the runner.
         bool isShown = true;
 
         std::strong_ordering operator<=>(const Hotkey& other) const
@@ -147,8 +147,8 @@ public:
         return powertoys_gpo::gpo_rule_configured_not_configured;
     }
 
-    // Some actions like AdvancedPaste generate new inputs, which we don't want to catch again.
-    // The flag was purposefully chose to not collide with other keyboard manager flags.
+    // Some module actions can generate synthetic inputs, which we don't want to catch again.
+    // The flag was purposefully chosen to avoid colliding with legacy keyboard manager flags.
     const static inline ULONG_PTR CENTRALIZED_KEYBOARD_HOOK_DONT_TRIGGER_FLAG = 0x110;
 
 protected:

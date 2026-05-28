@@ -6,7 +6,7 @@
     xmlns:flyout="using:Microsoft.PowerToys.QuickAccess.Flyout"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:winuiEx="using:WinUIEx"
-    Title="PowerToys Quick Access (Preview)"
+    Title="Kit Quick Access"
     Width="400"
     Height="516"
     MinWidth="400"

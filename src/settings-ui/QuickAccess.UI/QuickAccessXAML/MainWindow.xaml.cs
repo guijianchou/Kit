@@ -77,7 +77,7 @@ public sealed partial class MainWindow : WindowEx, IDisposable
         _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         _hwnd = WindowNative.GetWindowHandle(this);
         _appWindow = InitializeAppWindow(_hwnd);
-        Title = "PowerToys Quick Access (Preview)";
+        Title = "Kit Quick Access";
 
         // Capture XAML design size NOW, before any user-driven DPI changes can
         // perturb WindowEx.Width / WindowEx.Height. These are the source of truth

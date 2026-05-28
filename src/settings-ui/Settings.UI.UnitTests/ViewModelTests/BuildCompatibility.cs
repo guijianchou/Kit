@@ -962,8 +962,11 @@ namespace ViewModelTests
                 StringAssert.Contains(adml, activePolicy);
             }
 
-            StringAssert.Contains(admx, "SUPPORTED_KIT_1_2_2");
-            StringAssert.Contains(adml, "SUPPORTED_KIT_1_2_2");
+            StringAssert.Contains(admx, "SUPPORTED_KIT_3_0_1");
+            StringAssert.Contains(adml, "SUPPORTED_KIT_3_0_1");
+            const string PreviousKitSupportMarker = "SUPPORTED_KIT_1" + "_2_2";
+            Assert.IsFalse(admx.Contains(PreviousKitSupportMarker, StringComparison.Ordinal), "GPO ADMX should not keep the previous support marker after the version bump.");
+            Assert.IsFalse(adml.Contains(PreviousKitSupportMarker, StringComparison.Ordinal), "GPO ADML should not keep the previous support marker after the version bump.");
 
             foreach (var inactivePolicyToken in new[]
             {
@@ -1354,6 +1357,10 @@ namespace ViewModelTests
             Assert.IsFalse(centralPackages.Contains("Registry Preview", StringComparison.Ordinal), "Central package comments should not explain package pins through inactive Registry Preview behavior.");
             Assert.IsFalse(centralPackages.Contains("HexBox", StringComparison.Ordinal), "Central package comments should not keep inactive Registry Preview HexBox details.");
             Assert.IsFalse(notice.Contains("- SkiaSharp.Views.WinUI", StringComparison.Ordinal), "Third-party notices should not list dependencies that only served deleted Registry Preview paths.");
+            Assert.IsFalse(notice.Contains("- Registry Preview", StringComparison.Ordinal), "Third-party notices should not list deleted Registry Preview as a utility with active third-party material.");
+            Assert.IsFalse(notice.Contains("## Utility: Registry Preview", StringComparison.Ordinal), "Third-party notices should not keep deleted Registry Preview utility sections.");
+            Assert.IsFalse(notice.Contains("### HexBox.WinUI", StringComparison.Ordinal), "Third-party notices should not keep the deleted Registry Preview HexBox license section.");
+            Assert.IsFalse(notice.Contains("hotkidfamily/HexBox.WinUI", StringComparison.Ordinal), "Third-party notices should not link deleted Registry Preview HexBox sources.");
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
@@ -1492,6 +1499,12 @@ namespace ViewModelTests
 
             Assert.IsFalse(notice.Contains("## Utility: PowerToys Run built-in extensions", StringComparison.Ordinal), "Third-party notices should not keep the removed PowerToys Run extension notice section.");
             Assert.IsFalse(notice.Contains("#### Mages", StringComparison.Ordinal), "Third-party notices should not keep the removed PowerToys Run Mages license section.");
+            Assert.IsFalse(notice.Contains("- PowerToys Run", StringComparison.Ordinal), "Third-party notices should not list deleted PowerToys Run as a utility with active third-party material.");
+            Assert.IsFalse(notice.Contains("## Utility: PowerToys Run", StringComparison.Ordinal), "Third-party notices should not keep deleted PowerToys Run utility sections.");
+            Assert.IsFalse(notice.Contains("### Wox license", StringComparison.Ordinal), "Third-party notices should not keep the deleted PowerToys Run Wox license section.");
+            Assert.IsFalse(notice.Contains("Wox-launcher/Wox", StringComparison.Ordinal), "Third-party notices should not link deleted PowerToys Run Wox sources.");
+            Assert.IsFalse(notice.Contains("### Beta Tadele's Window Walker license", StringComparison.Ordinal), "Third-party notices should not keep the deleted PowerToys Run Window Walker license section.");
+            Assert.IsFalse(notice.Contains("betsegaw/windowwalker", StringComparison.Ordinal), "Third-party notices should not link deleted PowerToys Run Window Walker sources.");
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {

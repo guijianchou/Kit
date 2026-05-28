@@ -6,9 +6,9 @@
 
 ## English
 
-### 1.2.2
+### 3.0.1
 
-- Version: Bumped Kit to `1.2.2`.
+- Version: Bumped Kit to `3.0.1`.
 - Refactor: Trimmed Quick Access and Settings serialization to the active four-module surface: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
 - Privacy: Removed managed telemetry sends, telemetry event sources, and `ManagedTelemetry` project references from the managed Settings and Quick Access layer.
 - Privacy: Deleted the inactive `ManagedTelemetry` source tree and managed telemetry base file after removing all active project references.
@@ -31,6 +31,7 @@
 - Slimming: Removed the unused Command Palette WinGet interop central package pin after confirming no Kit project references `Microsoft.WindowsPackageManager.ComInterop`.
 - Slimming: Removed the unused AdvancedPaste Markdown conversion central package pins and stale ReverseMarkdown third-party notice entry after confirming no Kit project references `HtmlAgilityPack` or `ReverseMarkdown`.
 - Slimming: Removed the unused PowerToys Run central package pins and stale PowerToys Run Mages third-party notice section after confirming no Kit project references `hyjiacan.pinyin4net`, `Mages`, or `UnitsNet`.
+- Slimming: Removed stale PowerToys Run Wox/Window Walker and Registry Preview HexBox utility notice sections after confirming the local PowerToys-main reference uses them only for deleted Launcher/CmdPal and Registry Preview paths.
 - Slimming: Removed the unused PreviewPane STL and PowerAccent central package pins after confirming no Kit project references `HelixToolkit`, `HelixToolkit.Core.Wpf`, or `UnicodeInformation`.
 - Slimming: Removed the unused Command Palette toolkit and host central package pins and stale ToolGood.Words.Pinyin third-party notice section after confirming no Kit project references `Shmuelie.WinRTServer` or `ToolGood.Words.Pinyin`.
 - Slimming: Removed the deleted-module-only central package pins for DSC, Workspaces/FancyZones, Peek, and PowerToys Run OneNote after confirming no Kit project references `ModernWpfUI`, `NJsonSchema`, `ScipBe.Common.Office.OneNote`, or `SharpCompress`.
@@ -38,7 +39,7 @@
 - Slimming: Removed the deleted Launcher, AI, and CmdPal central package pins after confirming no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`, and removed the stale CmdPal WyHash third-party notice section.
 - Slimming: Deleted the legacy sibling Settings asset tree and inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
-- Policy: Trimmed ADMX/ADML policy assets to the same Kit 1.2.2 active policy surface.
+- Policy: Trimmed ADMX/ADML policy assets to the same Kit 3.0.1 active policy surface.
 - Runtime: Removed the upstream BugReportTool source and runner, tray, General, and Quick Access launch paths so Kit no longer collects inactive PowerToys module state.
 - Build: Deleted the inactive standalone module_loader utility and orphaned CmdPal version props until Command Palette becomes an active Kit module.
 - UI: Quick Access now uses the current WinUI SystemBackdrop API, clearing deprecated WinUIEx backdrop build warnings.
@@ -55,7 +56,7 @@
 - Slimming: Pruned backup/restore defaults to the active Kit settings surface by deleting inactive Keyboard Manager, FancyZones, Workspaces, PowerToys Run restore rules, and the PowerToys Run plugin fix-up code path.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
-- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, Registry Preview-only SkiaSharp package pin removal, Command Palette extension package pin removal, Command Palette Adaptive Cards package pin removal, Command Palette WinGet interop package pin removal, AdvancedPaste Markdown conversion package pin removal, PowerToys Run package pin removal, PreviewPane STL and PowerAccent package pin removal, Command Palette toolkit and host package pin removal, deleted-module package pin removal, deleted-utility package pin removal, and deleted Launcher/AI/CmdPal package pin removal.
+- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, Registry Preview-only SkiaSharp package pin removal, Command Palette extension package pin removal, Command Palette Adaptive Cards package pin removal, Command Palette WinGet interop package pin removal, AdvancedPaste Markdown conversion package pin removal, PowerToys Run package pin removal, deleted PowerToys Run and Registry Preview utility notice sections, PreviewPane STL and PowerAccent package pin removal, Command Palette toolkit and host package pin removal, deleted-module package pin removal, deleted-utility package pin removal, and deleted Launcher/AI/CmdPal package pin removal.
 
 ### 1.2.0
 
@@ -143,9 +144,9 @@
 
 ## 更新日志
 
-### 1.2.2
+### 3.0.1
 
-- 版本：将 Kit 提升到 `1.2.2`。
+- 版本：将 Kit 提升到 `3.0.1`。
 - 重构：将 Quick Access 和 Settings 序列化收敛到四个活动模块：`Awake`、`Light Switch`、`Monitor` 和 `PowerDisplay`。
 - 隐私：从托管 Settings 和 Quick Access 层移除 telemetry 发送、telemetry 事件源和 `ManagedTelemetry` 项目引用。
 - 隐私：删除非活动的 `ManagedTelemetry` 源码树和托管 telemetry base 文件，此前所有活动项目引用已移除。
@@ -168,6 +169,7 @@
 - 瘦身：确认没有 Kit 项目引用 `Microsoft.WindowsPackageManager.ComInterop` 后，移除未使用的 Command Palette WinGet interop central package pin。
 - 瘦身：确认没有 Kit 项目引用 `HtmlAgilityPack` 或 `ReverseMarkdown` 后，移除未使用的 AdvancedPaste Markdown conversion central package pins 和陈旧 ReverseMarkdown 第三方 notice 条目。
 - 瘦身：确认没有 Kit 项目引用 `hyjiacan.pinyin4net`、`Mages` 或 `UnitsNet` 后，移除未使用的 PowerToys Run central package pins 和陈旧 PowerToys Run Mages 第三方 notice 段。
+- 瘦身：确认本地 PowerToys-main 参考中 Wox/Window Walker 仅服务已删除 Launcher/CmdPal 路径、HexBox 仅服务已删除 Registry Preview 路径后，移除陈旧的 PowerToys Run Wox/Window Walker 和 Registry Preview HexBox utility notice 段。
 - 瘦身：确认没有 Kit 项目引用 `HelixToolkit`、`HelixToolkit.Core.Wpf` 或 `UnicodeInformation` 后，移除未使用的 PreviewPane STL 和 PowerAccent central package pins。
 - 瘦身：确认没有 Kit 项目引用 `Shmuelie.WinRTServer` 或 `ToolGood.Words.Pinyin` 后，移除未使用的 Command Palette toolkit/host central package pins 和陈旧 ToolGood.Words.Pinyin 第三方 notice 段。
 - 瘦身：确认没有 Kit 项目引用 `ModernWpfUI`、`NJsonSchema`、`ScipBe.Common.Office.OneNote` 或 `SharpCompress` 后，移除仅服务于已删除 DSC、Workspaces/FancyZones、Peek 和 PowerToys Run OneNote 路径的 central package pins。
@@ -175,7 +177,7 @@
 - 瘦身：确认没有 Kit 项目引用 `Microsoft.Data.Sqlite`、`Microsoft.Graphics.Win2D`、`Microsoft.WindowsAppSDK.AI`、`NLog`、`NLog.Extensions.Logging`、`NLog.Schema`、`System.ClientModel`、`System.Numerics.Tensors` 或 `WyHash` 后，移除仅服务于已删除 Launcher、AI 和 CmdPal 路径的 central package pins，并删除陈旧 CmdPal WyHash 第三方 notice 段。
 - 瘦身：删除旧 sibling Settings 资产树以及非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。
-- 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 1.2.2 活动策略表面。
+- 策略：将 ADMX/ADML 策略资产裁剪到同一套 Kit 3.0.1 活动策略表面。
 - 运行时：删除上游 BugReportTool 源码，以及 runner、托盘、General 和 Quick Access 的启动路径，避免 Kit 收集非活动 PowerToys 模块状态。
 - 构建：删除非活动的独立 module_loader 工具和孤立的 CmdPal 版本 props，直到 Command Palette 成为活动 Kit 模块。
 - UI：Quick Access 现在使用当前 WinUI SystemBackdrop API，清除了已弃用 WinUIEx backdrop 造成的构建警告。
@@ -192,7 +194,7 @@
 - 瘦身：将备份/恢复默认值裁剪到活动 Kit 设置表面，删除非活动的 Keyboard Manager、FancyZones、Workspaces、PowerToys Run 恢复规则以及 PowerToys Run 插件修正代码路径。
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
-- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影、AdvancedPaste AI provider 源码/包/UI/enum helper 残留删除、Shortcut Conflict 非活动模块特殊分支移除、显式 SettingsFactory 热键边界、非活动 MouseUtils page conflict branch 删除、Settings 包引用注释清理、仅供 Registry Preview 使用的 SkiaSharp 包 pin 移除、Command Palette extension 包 pin 移除、Command Palette Adaptive Cards 包 pin 移除、Command Palette WinGet interop 包 pin 移除、AdvancedPaste Markdown conversion 包 pin 移除、PowerToys Run 包 pin 移除、PreviewPane STL 和 PowerAccent 包 pin 移除、Command Palette toolkit/host 包 pin 移除、deleted-module package pin removal、deleted-utility package pin removal，以及 deleted Launcher/AI/CmdPal package pin removal 的回归覆盖。
+- 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影、AdvancedPaste AI provider 源码/包/UI/enum helper 残留删除、Shortcut Conflict 非活动模块特殊分支移除、显式 SettingsFactory 热键边界、非活动 MouseUtils page conflict branch 删除、Settings 包引用注释清理、仅供 Registry Preview 使用的 SkiaSharp 包 pin 移除、Command Palette extension 包 pin 移除、Command Palette Adaptive Cards 包 pin 移除、Command Palette WinGet interop 包 pin 移除、AdvancedPaste Markdown conversion 包 pin 移除、PowerToys Run 包 pin 移除、已删除 PowerToys Run 和 Registry Preview utility notice 段、PreviewPane STL 和 PowerAccent 包 pin 移除、Command Palette toolkit/host 包 pin 移除、deleted-module package pin removal、deleted-utility package pin removal，以及 deleted Launcher/AI/CmdPal package pin removal 的回归覆盖。
 
 ### 1.2.0
 

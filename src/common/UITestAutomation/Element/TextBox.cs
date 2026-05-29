@@ -42,9 +42,8 @@ namespace Microsoft.PowerToys.UITest
                 Task.Delay(500).Wait();
             }
 
-            // TODO: CmdPal bug – when inputting text, characters are swallowed too quickly.
-            // This should be fixed within CmdPal itself.
-            // Temporary workaround: introduce a delay between character inputs to avoid the issue
+            // Some UI automation targets can swallow characters when text is sent too quickly.
+            // Temporary workaround: introduce a delay between character inputs to avoid the issue.
             if (charDelayMS > 0 || EnvironmentConfig.IsInPipeline)
             {
                 // Send text character by character with delay (if specified or in pipeline)

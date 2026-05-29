@@ -1,6 +1,7 @@
 param (
     [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
-    [string[]]$TargetPaths = "C:\PowerToys\ARM64\Release\WinUI3Apps\CmdPal\AppPackages\Microsoft.CmdPal.UI_0.0.1.0_Test\Microsoft.CmdPal.UI_0.0.1.0_arm64.msix"
+    [Parameter(Mandatory = $true)]
+    [string[]]$TargetPaths
 )
 
 . "$PSScriptRoot\cert-management.ps1"
@@ -18,12 +19,24 @@ if (-not $TargetPaths -or $TargetPaths.Count -eq 0) {
     exit 1
 }
 
+$signedCount = 0
 foreach ($filePath in $TargetPaths) {
     if (-not (Test-Path $filePath)) {
-        Write-Warning "Skipping: File does not exist - $filePath"
-        continue
+        Write-Error "Target file does not exist: $filePath"
+        exit 1
     }
 
     Write-Host "Signing: $filePath"
     & signtool sign /sha1 $($cert.Thumbprint) /fd SHA256 /t http://timestamp.digicert.com "$filePath"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Signing failed for: $filePath"
+        exit $LASTEXITCODE
+    }
+
+    $signedCount++
+}
+
+if ($signedCount -eq 0) {
+    Write-Error "No files were signed."
+    exit 1
 }

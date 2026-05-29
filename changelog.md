@@ -49,6 +49,11 @@
 - Refactor: Removed stale Color Picker, ImageResizer, and PowerRename third-party notice sections after confirming those deleted utility sources are not shipped by Kit.
 - Refactor: Reworded PowerDisplay, Light Switch, and runner comments/logs so active runtime code no longer describes inactive CmdPal, PowerToys Runner, or telemetry behavior as current Kit behavior.
 - Build: Trimmed the active sparse package manifest to the retained Settings identity entry and removed deleted PowerOCR, ImageResizer, and Command Palette app identities.
+- Build: Aligned the checked-in sparse package manifest version with Kit `2.0.1`, removed stale CmdPal signing-helper defaults, kept local signing examples on Kit paths, and made signing helpers fail when no package is signed.
+- Build: Updated the fast build essentials helper so it builds Quick Access along with the runner and Settings, matching the UI executables that `Kit.exe` launches at runtime.
+- Refactor: Pruned inactive FancyZones, Hosts, Workspaces, PowerRename, Command Palette, and Screen Ruler launch targets from `UITestAutomation` while keeping the Light Switch UI-test dependency.
+- Refactor: Narrowed `ModuleHelper` enabled-state, icon, and label behavior to the active Kit modules plus General settings while preserving historical module-key mappings for old settings JSON and IPC compatibility.
+- Docs: Updated the first-plugin development note to name all four active modules, including `PowerDisplay`.
 - Build: XAML search index builder no longer carries inactive upstream module icon and panel fallbacks; active page icons are derived from Settings XAML.
 - Runtime: Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface.
 - Runtime: Removed the no-op keyboard hook window registration after deleting pressed-key timers.

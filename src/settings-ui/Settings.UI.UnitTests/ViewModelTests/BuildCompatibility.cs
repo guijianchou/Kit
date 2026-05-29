@@ -156,6 +156,7 @@ namespace ViewModelTests
         {
             var cleanStaleVersionsScript = File.ReadAllText(FindSourceFile("tools", "build", "clean-stale-versions.ps1"));
             var verifyRuntimeArtifactsScript = File.ReadAllText(FindSourceFile("tools", "build", "verify-runtime-artifacts.ps1"));
+            var buildEssentialsScript = File.ReadAllText(FindSourceFile("tools", "build", "build-essentials.ps1"));
 
             StringAssert.Contains(cleanStaleVersionsScript, "Version.props");
             StringAssert.Contains(cleanStaleVersionsScript, "-WhatIf");
@@ -176,6 +177,10 @@ namespace ViewModelTests
             StringAssert.Contains(verifyRuntimeArtifactsScript, "Join-Path $platformRoot 'Release'");
             StringAssert.Contains(verifyRuntimeArtifactsScript, "Non-English locale directory");
             StringAssert.Contains(verifyRuntimeArtifactsScript, "exit 1");
+
+            StringAssert.Contains(buildEssentialsScript, @".\src\runner\Kit.vcxproj");
+            StringAssert.Contains(buildEssentialsScript, @".\src\settings-ui\Settings.UI\PowerToys.Settings.csproj");
+            StringAssert.Contains(buildEssentialsScript, @".\src\settings-ui\QuickAccess.UI\PowerToys.QuickAccess.csproj");
         }
 
         [TestMethod]
@@ -1071,14 +1076,27 @@ namespace ViewModelTests
         public void KitSparsePackageIdentityShouldNotDeclareDeletedModuleApps()
         {
             var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
+            var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var manifest = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "AppxManifest.xml"));
             var readme = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "readme.md"));
             var buildScript = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "BuildSparsePackage.ps1"));
+            var certSignPackageScript = File.ReadAllText(FindSourceFile("tools", "build", "cert-sign-package.ps1"));
+            var selfSignScript = File.ReadAllText(FindSourceFile("tools", "build", "self-sign.ps1"));
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
+            StringAssert.Contains(versionProps, "<Version>2.0.1</Version>");
+            StringAssert.Contains(manifest, "Version=\"2.0.1.0\"");
+            StringAssert.Contains(readme, "Debug builds use `-NoSign`");
             StringAssert.Contains(manifest, "PowerToys.SettingsUI");
             StringAssert.Contains(manifest, @"WinUI3Apps\PowerToys.Settings.exe");
+            StringAssert.Contains(certSignPackageScript, "exit 1");
+            StringAssert.Contains(certSignPackageScript, "$signedCount++");
+            StringAssert.Contains(certSignPackageScript, "$LASTEXITCODE");
+            StringAssert.Contains(selfSignScript, "PowerToysSparse.msix");
+            StringAssert.Contains(selfSignScript, "exit 1");
+            StringAssert.Contains(selfSignScript, "$signedCount++");
+            StringAssert.Contains(selfSignScript, "$LASTEXITCODE");
 
             string[] inactiveSparseIdentityTokens =
             {
@@ -1107,13 +1125,177 @@ namespace ViewModelTests
                 "imageresizer",
                 "Command Palette",
                 "CmdPal",
+                "Microsoft.CmdPal",
+                @"C:\PowerToys",
+                "C:/git/PowerToys",
             };
 
             foreach (var inactiveReadmeExample in inactiveReadmeExamples)
             {
                 Assert.IsFalse(readme.Contains(inactiveReadmeExample, StringComparison.OrdinalIgnoreCase), $"PackageIdentity docs should not use inactive sparse package examples: {inactiveReadmeExample}");
                 Assert.IsFalse(buildScript.Contains(inactiveReadmeExample, StringComparison.OrdinalIgnoreCase), $"PackageIdentity build script comments should not use inactive sparse package examples: {inactiveReadmeExample}");
+                Assert.IsFalse(certSignPackageScript.Contains(inactiveReadmeExample, StringComparison.OrdinalIgnoreCase), $"Package signing helper should not default to inactive sparse package examples: {inactiveReadmeExample}");
+                Assert.IsFalse(selfSignScript.Contains(inactiveReadmeExample, StringComparison.OrdinalIgnoreCase), $"Package signing helper should not default to inactive sparse package examples: {inactiveReadmeExample}");
             }
+        }
+
+        [TestMethod]
+        public void KitUiTestAutomationShouldOnlyCarryActiveKitModuleLaunchTargets()
+        {
+            var moduleConfigData = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "ModuleConfigData.cs"));
+            var sessionHelper = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "SessionHelper.cs"));
+            var uiTestBase = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "UITestBase.cs"));
+            var settingsConfigHelper = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "SettingsConfigHelper.cs"));
+            var textBox = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "Element", "TextBox.cs"));
+            var lightSwitchUiTestsProject = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "Tests", "LightSwitch.UITests", "LightSwitch.UITests.csproj"));
+
+            StringAssert.Contains(moduleConfigData, "PowerToysSettings");
+            StringAssert.Contains(moduleConfigData, "Runner");
+            StringAssert.Contains(moduleConfigData, "LightSwitch");
+            StringAssert.Contains(lightSwitchUiTestsProject, @"common\UITestAutomation\UITestAutomation.csproj");
+
+            string[] inactiveModuleConfigTokens =
+            {
+                "FancyZone",
+                "Hosts",
+                "Workspaces",
+                "PowerRename",
+                "CommandPalette",
+                "ScreenRuler",
+                "PowerToys.FancyZonesEditor.exe",
+                "PowerToys.Hosts.exe",
+                "PowerToys.WorkspacesEditor.exe",
+                "PowerToys.PowerRename.exe",
+                "Microsoft.CmdPal.UI.exe",
+                "PowerToys.MeasureToolUI.exe",
+            };
+
+            foreach (var inactiveToken in inactiveModuleConfigTokens)
+            {
+                Assert.IsFalse(moduleConfigData.Contains(inactiveToken, StringComparison.Ordinal), $"UITestAutomation module config should not carry inactive module launch target: {inactiveToken}");
+            }
+
+            foreach (var inactiveSessionToken in new[]
+            {
+                "PowerToysModule.CommandPalette",
+                "TryLaunchCommandPalette",
+                "Microsoft.CmdPal.UI",
+                "Microsoft.CommandPalette_8wekyb3d8bbwe",
+                "Command Palette",
+            })
+            {
+                Assert.IsFalse(sessionHelper.Contains(inactiveSessionToken, StringComparison.Ordinal), $"UITestAutomation session helper should not carry inactive Command Palette launch or cleanup token: {inactiveSessionToken}");
+            }
+
+            Assert.IsFalse(uiTestBase.Contains("PowerToys.FancyZonesEditor", StringComparison.Ordinal), "UITestAutomation cleanup should not target inactive FancyZones Editor.");
+            Assert.IsFalse(settingsConfigHelper.Contains("\"Peek\"", StringComparison.Ordinal), "UITestAutomation settings examples should not cite inactive Peek.");
+            Assert.IsFalse(settingsConfigHelper.Contains("\"FancyZones\"", StringComparison.Ordinal), "UITestAutomation settings examples should not cite inactive FancyZones.");
+            Assert.IsFalse(textBox.Contains("CmdPal", StringComparison.Ordinal), "Generic UI test controls should not document inactive CmdPal-specific workarounds.");
+        }
+
+        [TestMethod]
+        public void KitModuleHelperShouldOnlyExposeActiveKitModuleBehavior()
+        {
+            var moduleHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Helpers", "ModuleHelper.cs"));
+
+            foreach (var activeToken in new[]
+            {
+                "ModuleType.Awake",
+                "ModuleType.LightSwitch",
+                "ModuleType.Monitor",
+                "ModuleType.PowerDisplay",
+                "ModuleType.GeneralSettings",
+            })
+            {
+                StringAssert.Contains(moduleHelper, activeToken);
+            }
+
+            foreach (var compatibilityModuleKey in new[]
+            {
+                "AdvancedPasteSettings.ModuleName",
+                "AlwaysOnTopSettings.ModuleName",
+                "ColorPickerSettings.ModuleName",
+                "CropAndLockSettings.ModuleName",
+                "CursorWrapSettings.ModuleName",
+                "EnvironmentVariablesSettings.ModuleName",
+                "FancyZonesSettings.ModuleName",
+                "FileLocksmithSettings.ModuleName",
+                "FindMyMouseSettings.ModuleName",
+                "HostsSettings.ModuleName",
+                "ImageResizerSettings.ModuleName",
+                "KeyboardManagerSettings.ModuleName",
+                "MouseHighlighterSettings.ModuleName",
+                "\"MouseJump\"",
+                "MousePointerCrosshairsSettings.ModuleName",
+                "MouseWithoutBordersSettings.ModuleName",
+                "NewPlusSettings.ModuleName",
+                "PeekSettings.ModuleName",
+                "PowerRenameSettings.ModuleName",
+                "PowerLauncherSettings.ModuleName",
+                "PowerAccentSettings.ModuleName",
+                "RegistryPreviewSettings.ModuleName",
+                "MeasureToolSettings.ModuleName",
+                "ShortcutGuideSettings.ModuleName",
+                "PowerOcrSettings.ModuleName",
+                "WorkspacesSettings.ModuleName",
+                "GrabAndMoveSettings.ModuleName",
+                "ZoomItSettings.ModuleName",
+                "\"CmdPal\"",
+            })
+            {
+                StringAssert.Contains(moduleHelper, compatibilityModuleKey);
+            }
+
+            foreach (var inactiveModuleArm in new[]
+            {
+                "ModuleType.AdvancedPaste",
+                "ModuleType.AlwaysOnTop",
+                "ModuleType.CmdPal",
+                "ModuleType.ColorPicker",
+                "ModuleType.CropAndLock",
+                "ModuleType.CursorWrap",
+                "ModuleType.EnvironmentVariables",
+                "ModuleType.FancyZones",
+                "ModuleType.FileLocksmith",
+                "ModuleType.FindMyMouse",
+                "ModuleType.Hosts",
+                "ModuleType.ImageResizer",
+                "ModuleType.KeyboardManager",
+                "ModuleType.MouseHighlighter",
+                "ModuleType.MouseJump",
+                "ModuleType.MousePointerCrosshairs",
+                "ModuleType.MouseWithoutBorders",
+                "ModuleType.NewPlus",
+                "ModuleType.Peek",
+                "ModuleType.PowerRename",
+                "ModuleType.PowerLauncher",
+                "ModuleType.PowerAccent",
+                "ModuleType.RegistryPreview",
+                "ModuleType.MeasureTool",
+                "ModuleType.ShortcutGuide",
+                "ModuleType.PowerOCR",
+                "ModuleType.Workspaces",
+                "ModuleType.GrabAndMove",
+                "ModuleType.ZoomIt",
+            })
+            {
+                Assert.IsFalse(moduleHelper.Contains($"{inactiveModuleArm} => generalSettingsConfig.Enabled", StringComparison.Ordinal), $"ModuleHelper should not expose inactive enabled-state behavior: {inactiveModuleArm}");
+                Assert.IsFalse(moduleHelper.Contains($"{inactiveModuleArm} => $\"ms-appx", StringComparison.Ordinal), $"ModuleHelper should not expose inactive icon behavior: {inactiveModuleArm}");
+                Assert.IsFalse(moduleHelper.Contains($"{inactiveModuleArm} => $\"{{moduleType}}/ModuleTitle", StringComparison.Ordinal), $"ModuleHelper should not expose inactive label behavior: {inactiveModuleArm}");
+            }
+        }
+
+        [TestMethod]
+        public void KitFirstPluginDocsShouldNameTheFullActiveModuleSet()
+        {
+            var pluginDoc = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-first-plugin.md"));
+
+            foreach (var activeModule in new[] { "Awake", "LightSwitch", "Monitor", "PowerDisplay" })
+            {
+                StringAssert.Contains(pluginDoc, activeModule);
+            }
+
+            StringAssert.Contains(pluginDoc, "four active modules");
         }
 
         [TestMethod]

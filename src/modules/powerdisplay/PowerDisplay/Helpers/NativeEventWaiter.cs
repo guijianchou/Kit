@@ -10,8 +10,7 @@ using Microsoft.UI.Dispatching;
 namespace PowerDisplay.Helpers
 {
     /// <summary>
-    /// Helper class for waiting on Windows Named Events (Awake pattern)
-    /// Based on Peek.UI implementation
+    /// Helper class for waiting on Windows Named Events.
     /// </summary>
     public static class NativeEventWaiter
     {

@@ -5,7 +5,8 @@
 
 param (
     [string]$architecture = "x64", # Default to x64 if not provided
-    [string]$buildConfiguration = "Debug"  # Default to Debug if not provided
+    [string]$buildConfiguration = "Debug",  # Default to Debug if not provided
+    [string]$directoryPath
 )
 
 $signToolPath = $null
@@ -138,9 +139,10 @@ Write-Host "Using certificate with thumbprint: $($cert.Thumbprint)"
 
 $rootDirectory = (Split-Path -Parent(Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
 
-# Dynamically build the directory path based on architecture and build configuration
-# $directoryPath = Join-Path $rootDirectory "$architecture\$buildConfiguration\WinUI3Apps\CmdPal\"
-$directoryPath = Join-Path $rootDirectory "$architecture\$buildConfiguration\WinUI3Apps\CmdPal\"
+# Dynamically build the directory path based on architecture and build configuration.
+if ([string]::IsNullOrWhiteSpace($directoryPath)) {
+    $directoryPath = Join-Path $rootDirectory "$architecture\$buildConfiguration\"
+}
 
 if (-not (Test-Path $directoryPath)) {
     Write-Error "Path to search for msix files does not exist: $directoryPath"
@@ -149,30 +151,35 @@ if (-not (Test-Path $directoryPath)) {
 
 Write-Host "Directory path to search for .msix and .appx files: $directoryPath"
 
-# Get all .msix and .appx files from the specified directory
+# Get all .msix and .appx files from the specified directory. Sparse packages such as
+# PowerToysSparse.msix do not include the architecture in the file name.
 $filePaths = Get-ChildItem -Path $directoryPath -Recurse | Where-Object {
-    ($_.Extension -eq ".msix" -or $_.Extension -eq ".appx") -and
-    ($_.Name -like "*$architecture*")
+    $_.Extension -eq ".msix" -or $_.Extension -eq ".appx"
 }
 
 if ($filePaths.Count -eq 0) {
-    Write-Host "No .msix or .appx files found in the directory."
+    Write-Error "No .msix or .appx files found in the directory."
+    exit 1
 }
 else {
+    $signedCount = 0
+
     # Iterate through each file and sign it
     foreach ($file in $filePaths) {
         Write-Host "Signing file: $($file.FullName)"
-        
-        # Use SignTool to sign the file
-        $signToolCommand = "& `"$signToolPath`" sign /sha1 $($cert.Thumbprint) /fd SHA256 /t http://timestamp.digicert.com `"$($file.FullName)`""
 
-        # Execute the sign command
-        try {
-            Invoke-Expression $signToolCommand
+        & $signToolPath sign /sha1 $($cert.Thumbprint) /fd SHA256 /t http://timestamp.digicert.com $file.FullName
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Signing failed for: $($file.FullName)"
+            exit $LASTEXITCODE
         }
-        catch {
-            Write-Host "Error signing file $($file.Name): $_"
-        }
+
+        $signedCount++
+    }
+
+    if ($signedCount -eq 0) {
+        Write-Error "No files were signed."
+        exit 1
     }
 }
 

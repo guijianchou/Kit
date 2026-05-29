@@ -14,7 +14,6 @@ namespace PowerDisplay.Helpers;
 
 /// <summary>
 /// Processes messages from the Module DLL via Named Pipe.
-/// Based on AdvancedPaste NamedPipeProcessor pattern.
 /// </summary>
 public static class NamedPipeProcessor
 {

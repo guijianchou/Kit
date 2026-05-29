@@ -26,7 +26,7 @@ namespace Microsoft.PowerToys.UITest
         /// <summary>
         /// Configures global PowerToys settings to enable only specified modules and disable all others.
         /// </summary>
-        /// <param name="modulesToEnable">Array of module names to enable (e.g., "Peek", "FancyZones"). All other modules will be disabled. If null or empty, all modules will be disabled.</param>
+        /// <param name="modulesToEnable">Array of module names to enable (e.g., "Awake", "LightSwitch"). All other modules will be disabled. If null or empty, all modules will be disabled.</param>
         /// <exception cref="InvalidOperationException">Thrown when settings file operations fail.</exception>
         [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "This is test code and will not be trimmed")]
         [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "This is test code and will not be AOT compiled")]
@@ -91,7 +91,7 @@ namespace Microsoft.PowerToys.UITest
         /// Updates a module's settings file. If the file doesn't exist, creates it with default content.
         /// If the file exists, reads it and applies the provided update function to modify the settings.
         /// </summary>
-        /// <param name="moduleName">The name of the module (e.g., "Peek", "FancyZones").</param>
+        /// <param name="moduleName">The name of the module (e.g., "Awake", "LightSwitch").</param>
         /// <param name="defaultSettingsContent">The default JSON content to use if the settings file doesn't exist.</param>
         /// <param name="updateSettingsAction">
         /// A callback function that modifies the settings dictionary. The function receives the deserialized settings

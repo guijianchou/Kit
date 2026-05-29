@@ -799,7 +799,6 @@ namespace Microsoft.PowerToys.UITest
             {
                 "PowerToys",
                 "PowerToys.Settings",
-                "PowerToys.FancyZonesEditor",
             };
             foreach (var processName in processNamesToClose)
             {

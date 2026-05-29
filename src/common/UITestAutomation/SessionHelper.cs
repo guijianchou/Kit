@@ -142,10 +142,6 @@ namespace Microsoft.PowerToys.UITest
             {
                 TryLaunchPowerToysSettings(opts);
             }
-            else if (scope == PowerToysModule.CommandPalette && UseInstallerForTest)
-            {
-                TryLaunchCommandPalette(opts);
-            }
             else
             {
                 opts.AddAdditionalCapability("app", appPath);
@@ -209,8 +205,6 @@ namespace Microsoft.PowerToys.UITest
 
                     if (WaitForWindowAndSetCapability(opts, "PowerToys Settings", delayMs, maxRetries))
                     {
-                        // Exit CmdPal UI before launching new process if use installer for test
-                        ExitExeByName("Microsoft.CmdPal.UI");
                         return;
                     }
 
@@ -233,36 +227,6 @@ namespace Microsoft.PowerToys.UITest
             }
 
             throw new InvalidOperationException($"Failed to launch PowerToys Settings: Window not found after {maxTries} attempts.");
-        }
-
-        private void TryLaunchCommandPalette(AppiumOptions opts)
-        {
-            try
-            {
-                // Exit any existing CmdPal UI process
-                ExitExeByName("Microsoft.CmdPal.UI");
-
-                var processStartInfo = new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/c start shell:appsFolder\\Microsoft.CommandPalette_8wekyb3d8bbwe!App",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                };
-
-                var process = Process.Start(processStartInfo);
-                process?.WaitForExit();
-
-                if (!WaitForWindowAndSetCapability(opts, "Command Palette", 5000, 10))
-                {
-                    throw new TimeoutException("Failed to find Command Palette window after multiple attempts.");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to launch Command Palette: {ex.Message}", ex);
-            }
         }
 
         private bool WaitForWindowAndSetCapability(AppiumOptions opts, string windowName, int delayMs, int maxRetries)
@@ -374,7 +338,7 @@ namespace Microsoft.PowerToys.UITest
 
         private void KillPowerToysProcesses()
         {
-            var powerToysProcessNames = new[] { "PowerToys", "Microsoft.CmdPal.UI" };
+            var powerToysProcessNames = new[] { "PowerToys" };
 
             foreach (var processName in powerToysProcessNames)
             {

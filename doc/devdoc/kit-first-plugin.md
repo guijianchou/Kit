@@ -1,6 +1,6 @@
 # Kit First Plugin Development
 
-Kit currently follows the PowerToys module model. `Awake`, `LightSwitch`, and `Monitor` are the active modules, and module exposure is controlled by maintained lists instead of filesystem probing.
+Kit currently follows the PowerToys module model. The four active modules are `Awake`, `LightSwitch`, `Monitor`, and `PowerDisplay`, and module exposure is controlled by maintained lists instead of filesystem probing.
 
 ## Recommended First Step
 

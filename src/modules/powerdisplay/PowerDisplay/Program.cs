@@ -41,8 +41,7 @@ namespace PowerDisplay
                 return 0;
             }
 
-            // Single instance check BEFORE logger initialization to avoid creating extra log files
-            // Command Palette pattern: check for existing instance first
+            // Single instance check BEFORE logger initialization to avoid creating extra log files.
             var activationArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
             var keyInstance = AppInstance.FindOrRegisterForKey("PowerToys_PowerDisplay_Instance");
 
@@ -90,7 +89,7 @@ namespace PowerDisplay
         }
 
         /// <summary>
-        /// Redirect activation to existing instance (Command Palette pattern)
+        /// Redirect activation to existing instance.
         /// Called BEFORE logger is initialized, so no logging here
         /// </summary>
         private static void RedirectActivationTo(AppActivationArguments args, AppInstance keyInstance)

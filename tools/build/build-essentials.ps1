@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-Build essential native Kit projects (runner and settings), restoring NuGet packages first.
+Build essential Kit projects (runner, settings, and Quick Access), restoring NuGet packages first.
 
 .DESCRIPTION
-Lightweight script to build a small set of essential C++ projects used by Kit's runner and native modules. This script first restores NuGet packages for the full solution (`Kit.slnx`) and then builds the runner and settings projects. Intended for fast local builds during development.
+Lightweight script to build the projects needed by Kit's runner, settings, and Quick Access surfaces. This script first restores NuGet packages for the full solution (`Kit.slnx`) and then builds the essential projects. Intended for fast local builds during development.
 
 .PARAMETER Platform
 Target platform for the build (for example: 'x64', 'arm64'). If omitted the script will attempt to auto-detect the host platform.
@@ -65,8 +65,12 @@ if (-not $Platform -or $Platform -eq '') {
 # Ensure solution packages are restored
 RestoreThenBuild 'Kit.slnx' '' $Platform $Configuration $true
 
-# Build both runner and settings
-$ProjectsToBuild = @(".\src\runner\Kit.vcxproj", ".\src\settings-ui\Settings.UI\PowerToys.Settings.csproj")
+# Build the runner, settings, and Quick Access surfaces that the runner expects at runtime.
+$ProjectsToBuild = @(
+    ".\src\runner\Kit.vcxproj",
+    ".\src\settings-ui\Settings.UI\PowerToys.Settings.csproj",
+    ".\src\settings-ui\QuickAccess.UI\PowerToys.QuickAccess.csproj"
+)
 $ExtraArgs = "/p:SolutionDir=$repoRoot\"
 foreach ($proj in $ProjectsToBuild) {
     Write-Host ("[BUILD-ESSENTIALS] Building {0}" -f $proj)

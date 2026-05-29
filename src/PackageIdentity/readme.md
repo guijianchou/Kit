@@ -39,7 +39,7 @@ When `-NoSign` is not used the script generates (or reuses) a development certif
 2. Install the `.cer` into `CurrentUser` → `TrustedPeople` (and `TrustedRoot`, if necessary) so Windows trusts the signature:
 
    ```powershell
-   $repoRoot = "C:/git/PowerToys"
+   $repoRoot = "C:/git/Kit"
    Import-Certificate -FilePath "$repoRoot/src/PackageIdentity/.user/PowerToysSparse.certificate.sample.cer" -CertStoreLocation Cert:\CurrentUser\TrustedPeople
    ```
 
@@ -67,7 +67,7 @@ Get-AppxPackage -Name Microsoft.PowerToys.SparseApp | Remove-AppxPackage
 ## CI-specific guidance
 
 - Pass `-CIBuild` to `BuildSparsePackage.ps1` (or build with `msbuild PackageIdentity.vcxproj /p:CIBuild=true`). This prevents the script from rewriting the manifest publisher to the local dev certificate subject.
-- The project automatically adds `-NoSign` only when `$(CIBuild)` is `true`. Local Debug and Release builds are signed with the development certificate.
+- Debug builds use `-NoSign` by default so local edit/build loops do not require certificate setup. Release builds are signed with the development certificate unless `-NoSign` is passed explicitly. CI builds also pass `-NoSign` through `$(CIBuild)`.
 - Make sure the agent trusts whichever certificate signs the package. If the package remains unsigned (`-NoSign`) it cannot be installed on test machines until it is signed.
 
 ## Consuming the identity from other components

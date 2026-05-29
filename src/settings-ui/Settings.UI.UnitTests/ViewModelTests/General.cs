@@ -715,6 +715,15 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Quick Access now uses the current WinUI SystemBackdrop API");
             StringAssert.Contains(changelog, "Renamed the Quick Access window title from the upstream `PowerToys Quick Access (Preview)` label to `Kit Quick Access`");
             StringAssert.Contains(changelog, "runtime code no longer documents inactive AdvancedPaste or PowerToys Run special cases as current behavior");
+            StringAssert.Contains(changelog, "sparse package manifest");
+            StringAssert.Contains(changelog, "Kit `2.0.1`");
+            StringAssert.Contains(changelog, "signing helpers");
+            StringAssert.Contains(changelog, "no package is signed");
+            StringAssert.Contains(changelog, "build essentials");
+            StringAssert.Contains(changelog, "`UITestAutomation`");
+            StringAssert.Contains(changelog, "`ModuleHelper`");
+            StringAssert.Contains(changelog, "historical module-key mappings");
+            StringAssert.Contains(changelog, "four active modules");
             StringAssert.Contains(changelog, "XAML search index builder no longer carries inactive upstream module icon and panel fallbacks");
             StringAssert.Contains(changelog, "Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface");
             StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
@@ -792,6 +801,14 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "Quick Access window now uses the current WinUI SystemBackdrop API");
             StringAssert.Contains(developmentLog, "Quick Access window title is now `Kit Quick Access`");
             StringAssert.Contains(developmentLog, "Shared module-interface and Settings dispatch comments no longer describe inactive AdvancedPaste or PowerToys Run special cases");
+            StringAssert.Contains(developmentLog, "sparse package manifest");
+            StringAssert.Contains(developmentLog, "signing helpers");
+            StringAssert.Contains(developmentLog, "no package was signed");
+            StringAssert.Contains(developmentLog, "build-essentials.ps1");
+            StringAssert.Contains(developmentLog, "`UITestAutomation`");
+            StringAssert.Contains(developmentLog, "`ModuleHelper`");
+            StringAssert.Contains(developmentLog, "old settings JSON and IPC compatibility");
+            StringAssert.Contains(developmentLog, "four-module active set");
             StringAssert.Contains(developmentLog, "XAML search index builder now derives icons from active Settings XAML only");
             StringAssert.Contains(developmentLog, "runner keyboard hook no longer carries Shortcut Guide Win-key tracking");
             StringAssert.Contains(developmentLog, "keyboard hook window registration no-op was deleted");
@@ -878,6 +895,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "168/168 passing Settings UI tests after the Quick Access title, runtime comment, and 2.0.1 metadata finalization");
             StringAssert.Contains(developmentLog, "169/169 passing Settings UI tests after deleting stale utility NOTICE sections and rewording current Kit runtime logs/comments");
             StringAssert.Contains(developmentLog, "170/170 passing Settings UI tests after trimming the sparse package manifest to active app identities");
+            StringAssert.Contains(developmentLog, "active Kit UI-test launch targets");
 
             Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", string.Empty));
             Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", "Local"));

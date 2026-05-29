@@ -13,7 +13,6 @@
 
 /// <summary>
 /// Manages the PowerDisplay.exe process and Named Pipe communication.
-/// Based on AdvancedPasteProcessManager pattern.
 /// </summary>
 class PowerDisplayProcessManager
 {

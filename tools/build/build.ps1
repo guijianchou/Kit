@@ -42,7 +42,7 @@ Only restores packages for local projects; ExtraArgs still forwarded to msbuild'
 
 .NOTES
 - This file expects `build-common.ps1` to be located in the same folder and dot-sources it to load helper functions.
-- ExtraArgs are captured using PowerShell's ValueFromRemainingArguments and joined before being passed to the helpers.
+- ExtraArgs are captured using PowerShell's ValueFromRemainingArguments and forwarded as an array so quoted MSBuild values keep their boundaries.
 #>
 
 param (
@@ -75,6 +75,16 @@ if ($positionalExtra.Count -gt 0) {
     $ExtraArgs = $positionalExtra + $ExtraArgs
 }
 
+if (-not ($ExtraArgs | Where-Object { $_ -match '^/p:PowerToysSkipCopyOnWriteSdk=' -or $_ -match '^-p:PowerToysSkipCopyOnWriteSdk=' })) {
+    if (-not $ExtraArgs) { $ExtraArgs = @() }
+    $ExtraArgs += '/p:PowerToysSkipCopyOnWriteSdk=true'
+}
+
+if (-not ($ExtraArgs | Where-Object { $_ -match '^/p:PowerToysSkipRunVSTestSdk=' -or $_ -match '^-p:PowerToysSkipRunVSTestSdk=' })) {
+    if (-not $ExtraArgs) { $ExtraArgs = @() }
+    $ExtraArgs += '/p:PowerToysSkipRunVSTestSdk=true'
+}
+
 # Auto-detect platform when not provided
 if (-not $Platform -or $Platform -eq '') {
     try {
@@ -91,10 +101,7 @@ $cwd = if ($Path -ne '') {
 } else {
     (Get-Location).ProviderPath
 }
-$extraArgsString = $null
-if ($ExtraArgs -and $ExtraArgs.Count -gt 0) { $extraArgsString = ($ExtraArgs -join ' ') }
-
-$built = BuildProjectsInDirectory -DirectoryPath $cwd -ExtraArgs $extraArgsString -Platform $Platform -Configuration $Configuration -RestoreOnly:$RestoreOnly
+$built = BuildProjectsInDirectory -DirectoryPath $cwd -ExtraArgs $ExtraArgs -Platform $Platform -Configuration $Configuration -RestoreOnly:$RestoreOnly
 if ($built) {
     Write-Host "[BUILD] Local projects built; exiting."
     exit 0

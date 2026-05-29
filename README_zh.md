@@ -31,6 +31,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 - 保持通用和主页使用英语 Kit 措辞，删除自动更新和遥测界面。
 - 保持 Monitor 的工作器无头。用户操作和进度应通过设置/主页显示，而不是工作器窗口。
 - 保持设置扫描进度与工作器进度/完成状态绑定。避免独立于工作器推进的扫描完成 UI。
+- 保持 Kit UI 自动化指向 Kit 的运行器、设置窗口、安装根目录和四个活动模块可执行文件，避免意外附着到已安装的上游 PowerToys。
 - 在交接前清理构建工件，以便下一次 Visual Studio 构建从源状态开始。
 - 工作区可以在稳定交接后减少回源大小。本地 `Debug`、`Release`、`x64`、`bin`、`obj`、`TestResults`、`.vs` 和恢复的 `packages` 目录是可丢弃的构建状态。
 
@@ -111,6 +112,8 @@ Kit 还没有活动的第三方插件主机。实际的第一步是 PowerToys �
 - 在明确导入之前，不要在 Kit 中保留非活动 Command Palette 和独立 module-loader 开发表面。孤立的 CmdPal 版本 props 和 `tools/module_loader` 应直接删除，而不是继续复制。
 - 保持新模块拆分为可测试的核心库、工作器进程、本机模块接口、设置模型、设置页面、主页元数据和静态注册测试。
 - 当项目共享本机输出（如 `Version.pdb` 和 `PowerToys.Interop` 跟踪日志）时，按顺序或通过解决方案调度程序运行 C++ 模块接口验证。独立的并行 MSBuild 调用可能会竞争这些共享文件并报告错误的构建失败。
+- 保持本地构建脚本适合非 VS shell。MSBuild 参数应以数组转发，导入 Visual Studio 环境后缓存解析出的 MSBuild 路径，归一化 `VsDevCmd.bat` 带来的重复 `PATH`/`Path` 值，并在包源映射阻止 SDK restore 时默认跳过本地 CopyOnWrite/RunVSTest SDK resolver 导入。
+- 保持开发签名范围明确。当前用户证书信任是默认本地路径；机器级根信任、递归包签名和非 sparse 包签名都应显式选择。
 - 在每次稳定化传递后保持文档接近实现。模块注册列表是有意手动的，因此陈旧的文档是真正的集成风险。
 
 ## Monitor 实现
@@ -192,6 +195,7 @@ Git 工作树仅在需要隔离分支工作区时使用。在 2026-04-29，`git 
 - Monitor 的模块启用路径在启动工作器之前读取 `runInBackground`。模块可以保持启用以进行设置/主页/手动操作，而无需启动持久工作器。
 - Monitor 的设置页面现在将 `OrganizeDownloads`、`CleanInstallers` 和 `Run in background` 放置在手动扫描正下方，与设置的控制流匹配。
 - Light Switch 保持上游 `Apply monitor settings to` 形状，现在将 PowerDisplay 配置文件选择路由到导入的 PowerDisplay 设置页面。控件从 `GeneralSettings.Enabled.PowerDisplay` 启用，配置文件名称在该文件存在时从 `%LOCALAPPDATA%\Kit\PowerDisplay\profiles.json` 的 Kit 存储加载。加载器对缺失或格式错误的配置文件数据保持容忍。
+- PowerDisplay 的 runner 托管启动现在会在 AppInstance 注册前解析 runner PID 和命名管道，因此 IPC 启动会绕过独立窗口的单实例重定向，而普通用户启动仍会复用现有窗口。设置深链接现在启动 `Kit.exe`。
 - `Settings.UI.UnitTests` 现在具有 Monitor 设置顺序和 Light Switch 的 PowerDisplay 启用/配置文件加载路径的静态回归覆盖。
 
 ## 最近的发布构建回归
@@ -243,7 +247,7 @@ Git 工作树仅在需要隔离分支工作区时使用。在 2026-04-29，`git 
 2026-04-29 的本地验证涵盖了最新的 Monitor/Light Switch 设置传递：
 
 - `Settings.UI.UnitTests.csproj` Debug x64 使用 Visual Studio 18 MSBuild 构建。
-- `dotnet test Settings.UI.UnitTests.csproj -p:Platform=x64 -p:Configuration=Debug --no-build --filter "LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract|MonitorRunInBackgroundShouldBeImmediatelyAfterManualScan"` 运行设置 UI 测试程序集，77/77 测试通过。
+- `vstest.console.exe` 使用 `LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract` 和 `MonitorRunInBackgroundShouldBeImmediatelyAfterManualScan` 过滤器运行 `Settings.UI.UnitTests.dll`，77/77 测试通过。
 - `PowerToys.Settings.csproj` Release x64 成功构建并重新生成 `x64\Release\WinUI3Apps\PowerToys.Settings.dll`。
 - `git worktree prune` 删除了陈旧的外部工作树元数据，`git worktree list --porcelain` 现在仅报告当前 `C:\Users\Zen\Repo\Codes\Kit` 工作树。
 

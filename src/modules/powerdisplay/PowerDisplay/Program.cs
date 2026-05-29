@@ -41,42 +41,37 @@ namespace PowerDisplay
                 return 0;
             }
 
-            // Single instance check BEFORE logger initialization to avoid creating extra log files.
-            var activationArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
-            var keyInstance = AppInstance.FindOrRegisterForKey("PowerToys_PowerDisplay_Instance");
-
-            if (!keyInstance.IsCurrent)
-            {
-                // Another instance exists - redirect and exit WITHOUT initializing logger
-                // This prevents creation of extra log files for short-lived redirect processes
-                RedirectActivationTo(activationArgs, keyInstance);
-                return 0;
-            }
-
-            // This is the primary instance - now initialize logger
-            Logger.InitializeLogger("\\PowerDisplay\\Logs");
-            Logger.LogInfo("PowerDisplay starting");
-
-            // Register activation handler for future redirects
-            keyInstance.Activated += OnActivated;
-
             // Parse command line arguments:
             // args[0] = runner_pid (Awake pattern)
             // args[1] = pipe_name (Named Pipe for IPC with module DLL)
-            int runnerPid = -1;
-            string? pipeName = null;
+            (int runnerPid, string? pipeName) = ParseRunnerArguments(args);
+            bool isRunnerIpcLaunch = runnerPid > 0 && !string.IsNullOrWhiteSpace(pipeName);
 
-            if (args.Length >= 1)
+            AppInstance? keyInstance = null;
+            if (!isRunnerIpcLaunch)
             {
-                if (int.TryParse(args[0], out int parsedPid))
+                // Single instance check BEFORE logger initialization to avoid creating extra log files.
+                var activationArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
+                keyInstance = AppInstance.FindOrRegisterForKey("Kit_PowerDisplay_Instance");
+
+                if (!keyInstance.IsCurrent)
                 {
-                    runnerPid = parsedPid;
+                    // Another standalone instance exists - redirect and exit WITHOUT initializing logger.
+                    // Runner IPC launches skip this path because the C++ module waits for this process to
+                    // connect to a unique named pipe.
+                    RedirectActivationTo(activationArgs, keyInstance);
+                    return 0;
                 }
             }
 
-            if (args.Length >= 2)
+            // This is the primary standalone instance, or a runner-owned IPC instance.
+            Logger.InitializeLogger("\\PowerDisplay\\Logs");
+            Logger.LogInfo("PowerDisplay starting");
+
+            // Register activation handler for future standalone redirects.
+            if (keyInstance != null)
             {
-                pipeName = args[1];
+                keyInstance.Activated += OnActivated;
             }
 
             Microsoft.UI.Xaml.Application.Start((p) =>
@@ -86,6 +81,24 @@ namespace PowerDisplay
                 _app = new App(runnerPid, pipeName);
             });
             return 0;
+        }
+
+        private static (int RunnerPid, string? PipeName) ParseRunnerArguments(string[] args)
+        {
+            int runnerPid = -1;
+            string? pipeName = null;
+
+            if (args.Length >= 1 && int.TryParse(args[0], out int parsedPid))
+            {
+                runnerPid = parsedPid;
+            }
+
+            if (args.Length >= 2)
+            {
+                pipeName = args[1];
+            }
+
+            return (runnerPid, pipeName);
         }
 
         /// <summary>

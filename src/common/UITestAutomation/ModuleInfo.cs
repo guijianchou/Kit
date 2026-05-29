@@ -39,16 +39,16 @@ namespace Microsoft.PowerToys.UITest
         }
 
         /// <summary>
-        /// Gets the installed path for this module based on the PowerToys install directory
+        /// Gets the installed path for this module based on the Kit install directory.
         /// </summary>
-        public string GetInstalledPath(string powerToysInstallPath)
+        public string GetInstalledPath(string kitInstallPath)
         {
             if (string.IsNullOrEmpty(SubDirectory))
             {
-                return Path.Combine(powerToysInstallPath, ExecutableName);
+                return Path.Combine(kitInstallPath, ExecutableName);
             }
 
-            return Path.Combine(powerToysInstallPath, SubDirectory, ExecutableName);
+            return Path.Combine(kitInstallPath, SubDirectory, ExecutableName);
         }
     }
 }

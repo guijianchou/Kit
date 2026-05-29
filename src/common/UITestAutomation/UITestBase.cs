@@ -797,8 +797,12 @@ namespace Microsoft.PowerToys.UITest
             // Close other applications
             var processNamesToClose = new List<string>
             {
-                "PowerToys",
+                "Kit",
                 "PowerToys.Settings",
+                "PowerToys.Awake",
+                "PowerToys.LightSwitchService",
+                "PowerToys.Monitor",
+                "PowerToys.PowerDisplay",
             };
             foreach (var processName in processNamesToClose)
             {

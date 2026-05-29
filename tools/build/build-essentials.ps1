@@ -62,8 +62,13 @@ if (-not $Platform -or $Platform -eq '') {
     }
 }
 
+$DefaultExtraArgs = @(
+    '/p:PowerToysSkipCopyOnWriteSdk=true',
+    '/p:PowerToysSkipRunVSTestSdk=true'
+)
+
 # Ensure solution packages are restored
-RestoreThenBuild 'Kit.slnx' '' $Platform $Configuration $true
+RestoreThenBuild -Solution 'Kit.slnx' -ExtraArgs $DefaultExtraArgs -Platform $Platform -Configuration $Configuration -RestoreOnly:$true
 
 # Build the runner, settings, and Quick Access surfaces that the runner expects at runtime.
 $ProjectsToBuild = @(
@@ -71,8 +76,8 @@ $ProjectsToBuild = @(
     ".\src\settings-ui\Settings.UI\PowerToys.Settings.csproj",
     ".\src\settings-ui\QuickAccess.UI\PowerToys.QuickAccess.csproj"
 )
-$ExtraArgs = "/p:SolutionDir=$repoRoot\"
+$ExtraArgs = @("/p:SolutionDir=$repoRoot\") + $DefaultExtraArgs
 foreach ($proj in $ProjectsToBuild) {
     Write-Host ("[BUILD-ESSENTIALS] Building {0}" -f $proj)
-    RunMSBuild $proj $ExtraArgs $Platform $Configuration
+    RunMSBuild -Solution $proj -ExtraArgs $ExtraArgs -Platform $Platform -Configuration $Configuration
 }

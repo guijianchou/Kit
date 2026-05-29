@@ -1082,6 +1082,10 @@ namespace ViewModelTests
             var buildScript = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "BuildSparsePackage.ps1"));
             var certSignPackageScript = File.ReadAllText(FindSourceFile("tools", "build", "cert-sign-package.ps1"));
             var selfSignScript = File.ReadAllText(FindSourceFile("tools", "build", "self-sign.ps1"));
+            var certManagementScript = File.ReadAllText(FindSourceFile("tools", "build", "cert-management.ps1"));
+            var buildCommonScript = File.ReadAllText(FindSourceFile("tools", "build", "build-common.ps1"));
+            var quickBuildScript = File.ReadAllText(FindSourceFile("tools", "build", "build.ps1"));
+            var essentialsBuildScript = File.ReadAllText(FindSourceFile("tools", "build", "build-essentials.ps1"));
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
@@ -1093,10 +1097,40 @@ namespace ViewModelTests
             StringAssert.Contains(certSignPackageScript, "exit 1");
             StringAssert.Contains(certSignPackageScript, "$signedCount++");
             StringAssert.Contains(certSignPackageScript, "$LASTEXITCODE");
+            StringAssert.Contains(certSignPackageScript, "Get-Command \"signtool\"");
+            StringAssert.Contains(certSignPackageScript, "Windows Kits\\10\\bin");
+            StringAssert.Contains(certSignPackageScript, "& $signToolPath sign");
             StringAssert.Contains(selfSignScript, "PowerToysSparse.msix");
+            StringAssert.Contains(selfSignScript, "Join-Path $directoryPath \"PowerToysSparse.msix\"");
+            StringAssert.Contains(selfSignScript, "[switch]$AllPackages");
+            StringAssert.Contains(selfSignScript, "[switch]$RequireMachineRoot");
             StringAssert.Contains(selfSignScript, "exit 1");
             StringAssert.Contains(selfSignScript, "$signedCount++");
             StringAssert.Contains(selfSignScript, "$LASTEXITCODE");
+            StringAssert.Contains(certManagementScript, "[switch]$RequireMachineRoot");
+            StringAssert.Contains(certManagementScript, "Continuing with CurrentUser certificate trust");
+            StringAssert.Contains(buildCommonScript, "[string[]]$ExtraArgs = @()");
+            StringAssert.Contains(buildCommonScript, "$cmd = $base + $extra");
+            StringAssert.Contains(buildCommonScript, "$script:MSBuildExe");
+            StringAssert.Contains(buildCommonScript, "$envVars['Path']");
+            StringAssert.Contains(buildCommonScript, "$name -ieq 'Path'");
+            StringAssert.Contains(buildCommonScript, "Visual Studio|MSBuild");
+            StringAssert.Contains(buildCommonScript, "Normalize-ProcessPathEnvironment");
+            StringAssert.Contains(buildCommonScript, "SetEnvironmentVariable('PATH', $null, 'Process')");
+            StringAssert.Contains(buildCommonScript, "SetEnvironmentVariable('Path', $pathValue, 'Process')");
+            StringAssert.Contains(buildCommonScript, "/nodeReuse:false");
+            Assert.IsFalse(buildCommonScript.Contains("-split ' '", StringComparison.Ordinal), "Build helper should preserve MSBuild argument boundaries instead of splitting ExtraArgs on spaces.");
+            Assert.IsFalse(quickBuildScript.Contains("$ExtraArgs -join ' '", StringComparison.Ordinal), "Build entry point should forward ExtraArgs as an array.");
+            StringAssert.Contains(essentialsBuildScript, "$ExtraArgs = @(");
+            StringAssert.Contains(essentialsBuildScript, "-ExtraArgs $ExtraArgs");
+            StringAssert.Contains(quickBuildScript, "/p:PowerToysSkipCopyOnWriteSdk=true");
+            StringAssert.Contains(quickBuildScript, "/p:PowerToysSkipRunVSTestSdk=true");
+            StringAssert.Contains(essentialsBuildScript, "/p:PowerToysSkipCopyOnWriteSdk=true");
+            StringAssert.Contains(essentialsBuildScript, "/p:PowerToysSkipRunVSTestSdk=true");
+            Assert.IsFalse(certSignPackageScript.Contains("& signtool sign", StringComparison.Ordinal), "Package signing helper should use resolved SignTool path instead of assuming PATH contains signtool.");
+            Assert.IsFalse(NormalizeLineEndings(certManagementScript).Contains("else {\n        if (-not (ImportAndVerifyCertificate -cerPath $cerPath -storePath \"Cert:\\LocalMachine\\Root\"))", StringComparison.Ordinal), "LocalMachine Root trust should not be attempted during normal current-user development signing.");
+            StringAssert.Contains(NormalizeLineEndings(selfSignScript), "if ($RequireMachineRoot) {\n    if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath \"Cert:\\LocalMachine\\Root\"))");
+            Assert.IsFalse(NormalizeLineEndings(selfSignScript).Contains("Get-ChildItem -Path $directoryPath -Recurse | Where-Object {\n    $_.Extension -eq \".msix\" -or $_.Extension -eq \".appx\"\n}\n\nif ($filePaths.Count -eq 0)", StringComparison.Ordinal), "self-sign should not recursively sign every package by default.");
 
             string[] inactiveSparseIdentityTokens =
             {
@@ -1151,8 +1185,28 @@ namespace ViewModelTests
 
             StringAssert.Contains(moduleConfigData, "PowerToysSettings");
             StringAssert.Contains(moduleConfigData, "Runner");
+            StringAssert.Contains(moduleConfigData, "Awake");
             StringAssert.Contains(moduleConfigData, "LightSwitch");
+            StringAssert.Contains(moduleConfigData, "Monitor");
+            StringAssert.Contains(moduleConfigData, "PowerDisplay");
+            StringAssert.Contains(moduleConfigData, "Kit.exe");
+            StringAssert.Contains(moduleConfigData, "PowerToys.Settings.exe");
+            StringAssert.Contains(moduleConfigData, "PowerToys.Awake.exe");
+            StringAssert.Contains(moduleConfigData, "PowerToys.LightSwitchService.exe");
+            StringAssert.Contains(moduleConfigData, "PowerToys.Monitor.exe");
+            StringAssert.Contains(moduleConfigData, "PowerToys.PowerDisplay.exe");
+            StringAssert.Contains(moduleConfigData, "C:\\Program Files\\Kit");
+            StringAssert.Contains(moduleConfigData, "C:\\Program Files (x86)\\Kit");
+            StringAssert.Contains(moduleConfigData, "%LocalAppData%\\Kit");
             StringAssert.Contains(lightSwitchUiTestsProject, @"common\UITestAutomation\UITestAutomation.csproj");
+            StringAssert.Contains(sessionHelper, "Kit Settings");
+            StringAssert.Contains(sessionHelper, "KillKitProcesses");
+            StringAssert.Contains(uiTestBase, "\"Kit\"");
+            StringAssert.Contains(uiTestBase, "\"PowerToys.Settings\"");
+            StringAssert.Contains(uiTestBase, "\"PowerToys.Awake\"");
+            StringAssert.Contains(uiTestBase, "\"PowerToys.LightSwitchService\"");
+            StringAssert.Contains(uiTestBase, "\"PowerToys.Monitor\"");
+            StringAssert.Contains(uiTestBase, "\"PowerToys.PowerDisplay\"");
 
             string[] inactiveModuleConfigTokens =
             {
@@ -1166,8 +1220,13 @@ namespace ViewModelTests
                 "PowerToys.Hosts.exe",
                 "PowerToys.WorkspacesEditor.exe",
                 "PowerToys.PowerRename.exe",
+                "PowerToys.LightSwitch.exe",
                 "Microsoft.CmdPal.UI.exe",
                 "PowerToys.MeasureToolUI.exe",
+                "\"PowerToys.exe\"",
+                "C:\\Program Files\\PowerToys",
+                "C:\\Program Files (x86)\\PowerToys",
+                "%LocalAppData%\\PowerToys",
             };
 
             foreach (var inactiveToken in inactiveModuleConfigTokens)
@@ -1191,6 +1250,8 @@ namespace ViewModelTests
             Assert.IsFalse(settingsConfigHelper.Contains("\"Peek\"", StringComparison.Ordinal), "UITestAutomation settings examples should not cite inactive Peek.");
             Assert.IsFalse(settingsConfigHelper.Contains("\"FancyZones\"", StringComparison.Ordinal), "UITestAutomation settings examples should not cite inactive FancyZones.");
             Assert.IsFalse(textBox.Contains("CmdPal", StringComparison.Ordinal), "Generic UI test controls should not document inactive CmdPal-specific workarounds.");
+            Assert.IsFalse(moduleConfigData.Contains("PowerToys Settings", StringComparison.Ordinal), "UITestAutomation should attach to Kit's Settings window title, not the upstream PowerToys title.");
+            Assert.IsFalse(sessionHelper.Contains("KillPowerToysProcesses", StringComparison.Ordinal), "UITestAutomation cleanup should use Kit process ownership.");
         }
 
         [TestMethod]
@@ -2519,6 +2580,9 @@ namespace ViewModelTests
             var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
             var quickAccessHost = File.ReadAllText(FindSourceFile("src", "runner", "quick_access_host.cpp"));
             var powerDisplayProcessManager = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayProcessManager.cpp"));
+            var powerDisplayProgram = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "Program.cs"));
+            var powerDisplayApp = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplayXAML", "App.xaml.cs"));
+            var powerDisplayDeepLink = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "Helpers", "SettingsDeepLink.cs"));
 
             StringAssert.Contains(settingsWindow, @"\\\\.\\pipe\\kit_runner_");
             StringAssert.Contains(settingsWindow, @"\\\\.\\pipe\\kit_settings_");
@@ -2526,11 +2590,21 @@ namespace ViewModelTests
             StringAssert.Contains(quickAccessHost, @"\\\\.\\pipe\\kit_quick_access_runner_");
             StringAssert.Contains(quickAccessHost, @"\\\\.\\pipe\\kit_quick_access_ui_");
             StringAssert.Contains(powerDisplayProcessManager, "kit_power_display_");
+            StringAssert.Contains(powerDisplayProcessManager, "std::format(L\"{} {}\", std::to_wstring(powertoys_pid), pipe_name)");
+            StringAssert.Contains(powerDisplayProgram, "ParseRunnerArguments(args)");
+            StringAssert.Contains(powerDisplayProgram, "runnerPid > 0 && !string.IsNullOrWhiteSpace(pipeName)");
+            StringAssert.Contains(powerDisplayProgram, "if (!isRunnerIpcLaunch)");
+            StringAssert.Contains(powerDisplayProgram, "FindOrRegisterForKey(\"Kit_PowerDisplay_Instance\")");
+            StringAssert.Contains(powerDisplayProgram, "App(runnerPid, pipeName)");
+            StringAssert.Contains(powerDisplayApp, "ProcessNamedPipe(_pipeName)");
+            StringAssert.Contains(powerDisplayDeepLink, "\"Kit.exe\"");
             Assert.IsFalse(settingsWindow.Contains(@"\\\\.\\pipe\\powertoys_runner_", StringComparison.Ordinal));
             Assert.IsFalse(settingsWindow.Contains(@"\\\\.\\pipe\\powertoys_settings_", StringComparison.Ordinal));
             Assert.IsFalse(quickAccessHost.Contains("Local\\\\PowerToysQuickAccess_", StringComparison.Ordinal));
             Assert.IsFalse(quickAccessHost.Contains(@"\\\\.\\pipe\\powertoys_quick_access_", StringComparison.Ordinal));
             Assert.IsFalse(powerDisplayProcessManager.Contains("powertoys_power_display_", StringComparison.Ordinal));
+            Assert.IsFalse(powerDisplayProgram.Contains("PowerToys_PowerDisplay_Instance", StringComparison.Ordinal), "Kit PowerDisplay should not share the upstream AppInstance key.");
+            Assert.IsFalse(powerDisplayDeepLink.Contains("\"PowerToys.exe\"", StringComparison.Ordinal), "PowerDisplay settings deep links should launch Kit.exe, not the upstream runner.");
         }
 
         [TestMethod]
@@ -2619,7 +2693,12 @@ namespace ViewModelTests
         private static bool HasGpoBranch(string gpoConfiguration, string moduleName)
         {
             return gpoConfiguration.Contains($"case ModuleType.{moduleName}:", StringComparison.Ordinal) ||
-                   gpoConfiguration.Contains($"ModuleType.{moduleName} =>", StringComparison.Ordinal);
+                gpoConfiguration.Contains($"ModuleType.{moduleName} =>", StringComparison.Ordinal);
+        }
+
+        private static string NormalizeLineEndings(string text)
+        {
+            return text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
         }
 
         private static void AssertNoFiles(string root, string pattern)

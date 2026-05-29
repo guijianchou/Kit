@@ -8,10 +8,10 @@ This script provides two functions:
 1. EnsureCertificate:
    - Searches for an existing code signing certificate by subject name.
    - If not found, creates a new self-signed certificate.
-   - Exports the certificate and attempts to import it into:
+   - Exports the certificate and imports it into:
      - CurrentUser\TrustedPeople
      - CurrentUser\Root
-     - LocalMachine\Root (admin privileges may be required)
+     - LocalMachine\Root only when -RequireMachineRoot is specified (admin privileges may be required)
 
 2. ImportAndVerifyCertificate:
    - Imports a `.cer` file into the specified certificate store if not already present.
@@ -40,14 +40,16 @@ ImportAndVerifyCertificate -cerPath "$env:TEMP\temp_cert.cer" -storePath "Cert:\
 Imports a certificate into the CurrentUser Root store and verifies its presence.
 
 .NOTES
-- For full trust, administrative privileges may be needed to import into LocalMachine\Root.
+- Current-user trust is enough for normal local development signing.
+- For machine-wide trust, pass -RequireMachineRoot; administrative privileges may be needed to import into LocalMachine\Root.
 - Certificates are created using RSA and SHA256 and marked as CodeSigningCert.
 #>
 
 function ImportAndVerifyCertificate {
     param (
         [string]$cerPath,
-        [string]$storePath
+        [string]$storePath,
+        [switch]$AllowElevation
     )
 
     $thumbprint = (Get-PfxCertificate -FilePath $cerPath).Thumbprint
@@ -62,6 +64,11 @@ function ImportAndVerifyCertificate {
         $null = Import-Certificate -FilePath $cerPath -CertStoreLocation $storePath -ErrorAction Stop
     } catch {
         if ($_.Exception.Message -match "Access is denied" -or $_.Exception.InnerException.Message -match "Access is denied") {
+            if (-not $AllowElevation) {
+                Write-Warning "Access denied to $storePath."
+                return $false
+            }
+
             Write-Warning "Access denied to $storePath. Attempting to import with admin privileges..."
             try {
                 Start-Process powershell -ArgumentList "-NoProfile", "-Command", "& { Import-Certificate -FilePath '$cerPath' -CertStoreLocation '$storePath' }" -Verb RunAs -Wait
@@ -87,7 +94,8 @@ function ImportAndVerifyCertificate {
 
 function EnsureCertificate {
     param (
-        [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+        [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        [switch]$RequireMachineRoot
     )
 
     $cert = Get-ChildItem -Path Cert:\CurrentUser\My |
@@ -120,9 +128,14 @@ function EnsureCertificate {
 
     if (-not (ImportAndVerifyCertificate -cerPath $cerPath -storePath "Cert:\CurrentUser\TrustedPeople")) { return $null }
     if (-not (ImportAndVerifyCertificate -cerPath $cerPath -storePath "Cert:\CurrentUser\Root")) { return $null }
-    if (-not (ImportAndVerifyCertificate -cerPath $cerPath -storePath "Cert:\LocalMachine\Root")) {
-        Write-Warning "Failed to import to LocalMachine\Root (admin may be required)"
-        return $null
+    if ($RequireMachineRoot) {
+        if (-not (ImportAndVerifyCertificate -cerPath $cerPath -storePath "Cert:\LocalMachine\Root" -AllowElevation)) {
+            Write-Warning "Failed to import to LocalMachine\Root (admin may be required)"
+            return $null
+        }
+    }
+    else {
+        Write-Host "Continuing with CurrentUser certificate trust. Pass -RequireMachineRoot when machine-wide trust is required."
     }
 
     return $cert

@@ -5,6 +5,47 @@ param (
 )
 
 . "$PSScriptRoot\cert-management.ps1"
+
+function Find-SignTool {
+    $signTool = Get-Command "signtool" -ErrorAction SilentlyContinue
+    if ($signTool) {
+        return $signTool.Source
+    }
+
+    $kitsRootPaths = @(
+        "C:\Program Files (x86)\Windows Kits\10\bin",
+        "C:\Program Files\Windows Kits\10\bin"
+    )
+
+    foreach ($root in $kitsRootPaths) {
+        if (-not (Test-Path $root)) {
+            continue
+        }
+
+        $versions = Get-ChildItem -Path $root -Directory | Where-Object {
+            $_.Name -match '^\d+\.\d+\.\d+\.\d+$'
+        } | Sort-Object Name -Descending
+
+        foreach ($version in $versions) {
+            foreach ($architecture in @("x64", "x86", "arm64")) {
+                $candidatePath = Join-Path -Path $version.FullName -ChildPath $architecture
+                $exePath = Join-Path -Path $candidatePath -ChildPath "signtool.exe"
+                if (Test-Path $exePath) {
+                    return $exePath
+                }
+            }
+        }
+    }
+
+    return $null
+}
+
+$signToolPath = Find-SignTool
+if (-not $signToolPath) {
+    Write-Error "SignTool not found. Please ensure Windows SDK is installed."
+    exit 1
+}
+
 $cert = EnsureCertificate -certSubject $certSubject
 
 if (-not $cert) {
@@ -27,7 +68,7 @@ foreach ($filePath in $TargetPaths) {
     }
 
     Write-Host "Signing: $filePath"
-    & signtool sign /sha1 $($cert.Thumbprint) /fd SHA256 /t http://timestamp.digicert.com "$filePath"
+    & $signToolPath sign /sha1 $($cert.Thumbprint) /fd SHA256 /t http://timestamp.digicert.com "$filePath"
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Signing failed for: $filePath"
         exit $LASTEXITCODE

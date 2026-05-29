@@ -31,6 +31,7 @@ The current stable handoff point is:
 - Keep General and Home in English Kit wording, with automatic update and telemetry surfaces removed.
 - Keep Monitor's worker headless. User actions and progress should be surfaced through Settings/Home, not worker windows.
 - Keep Settings scan progress tied to worker progress/completion state. Avoid scan-completion UI that advances independently from the worker.
+- Keep Kit UI automation pointed at Kit's runner, Settings window, install roots, and the four active module executables. It must not attach to an installed upstream PowerToys build by accident.
 - Clean build artifacts before handoff so the next Visual Studio build starts from source state.
 - The workspace can be reduced back to source size after a stable handoff. Local `Debug`, `Release`, `x64`, `bin`, `obj`, `TestResults`, `.vs`, and restored `packages` directories are disposable build state.
 
@@ -111,6 +112,8 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 - Keep inactive Command Palette and standalone module-loader development surfaces out of Kit until they are intentionally imported. The orphaned CmdPal version props and `tools/module_loader` should be deleted instead of copied forward.
 - Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
 - Run C++ module-interface verification sequentially, or through the solution scheduler, when projects share native outputs such as `Version.pdb` and `PowerToys.Interop` tracking logs. Independent parallel MSBuild invocations can race those shared files and report false build failures.
+- Keep local build scripts friendly to non-VS shells. Forward MSBuild arguments as arrays, cache the resolved MSBuild path after importing the Visual Studio environment, normalize duplicate `PATH`/`Path` values from `VsDevCmd.bat`, and skip local CopyOnWrite/RunVSTest SDK resolver imports by default when package source mapping blocks SDK restore.
+- Keep development signing scoped and explicit. Current-user certificate trust is the default local path; machine-wide root trust, recursive package signing, and non-sparse package signing should be opt-in.
 - Keep documentation close to the implementation after each stabilization pass. The module-registration lists are intentionally manual, so stale docs are a real integration risk.
 
 ## Monitor Implementation
@@ -192,6 +195,7 @@ The latest settings pass keeps the active module behavior closer to upstream Pow
 - Monitor's module enable path reads `runInBackground` before launching the worker. The module can stay enabled for Settings/Home/manual actions without starting a persistent worker.
 - Monitor's Settings page now places `OrganizeDownloads`, `CleanInstallers`, and `Run in background` immediately below Manual scan, matching the setting's control flow.
 - Light Switch keeps the upstream `Apply monitor settings to` shape and now routes PowerDisplay profile selection to the imported PowerDisplay Settings page. The controls are enabled from `GeneralSettings.Enabled.PowerDisplay`, and profile names are loaded from Kit storage at `%LOCALAPPDATA%\Kit\PowerDisplay\profiles.json` when that file exists. The loader remains tolerant of missing or malformed profile data.
+- PowerDisplay runner-managed launches now parse the runner PID and named pipe before AppInstance registration, so IPC launches bypass standalone single-instance redirection while normal user launches still reuse the existing window. Settings deep links now launch `Kit.exe`.
 - `Settings.UI.UnitTests` now has static regression coverage for Monitor settings order and Light Switch's PowerDisplay enable/profile-loading path.
 
 ## Recent Release Build Regression
@@ -243,7 +247,7 @@ After the PowerToys CsWinRT/WinMD compatibility fix, a full `Kit.slnx` Release x
 Local verification on 2026-04-29 covered the latest Monitor/Light Switch Settings pass:
 
 - `Settings.UI.UnitTests.csproj` Debug x64 built with Visual Studio 18 MSBuild.
-- `dotnet test Settings.UI.UnitTests.csproj -p:Platform=x64 -p:Configuration=Debug --no-build --filter "LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract|MonitorRunInBackgroundShouldBeImmediatelyAfterManualScan"` ran the Settings UI test assembly with 77/77 tests passing.
+- `vstest.console.exe` ran `Settings.UI.UnitTests.dll` with a filter for `LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract` and `MonitorRunInBackgroundShouldBeImmediatelyAfterManualScan`; 77/77 tests passed.
 - `PowerToys.Settings.csproj` Release x64 built successfully and regenerated `x64\Release\WinUI3Apps\PowerToys.Settings.dll`.
 - `git worktree prune` removed the stale external worktree metadata, and `git worktree list --porcelain` now reports only the current `C:\Users\Zen\Repo\Codes\Kit` worktree.
 

@@ -274,12 +274,12 @@ namespace PowerDisplay
         }
 
         /// <summary>
-        /// Open PowerDisplay settings in PowerToys Settings UI
+        /// Open PowerDisplay settings in Kit Settings UI
         /// </summary>
         private void OpenSettings()
         {
             // mainExecutableIsOnTheParentFolder = true because PowerDisplay is a WinUI 3 app
-            // deployed in a subfolder (PowerDisplay\) while PowerToys.exe is in the parent folder
+            // deployed in a subfolder (WinUI3Apps\) while Kit.exe is in the parent folder.
             SettingsDeepLink.OpenSettings(true);
         }
 

@@ -6,7 +6,10 @@
 param (
     [string]$architecture = "x64", # Default to x64 if not provided
     [string]$buildConfiguration = "Debug",  # Default to Debug if not provided
-    [string]$directoryPath
+    [string]$directoryPath,
+    [string[]]$TargetPaths,
+    [switch]$AllPackages,
+    [switch]$RequireMachineRoot
 )
 
 $signToolPath = $null
@@ -127,9 +130,13 @@ if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath "Cert:\Curre
 }
 
 # LocalMachine\Root
-if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath "Cert:\LocalMachine\Root")) {
-    Write-Warning "⚠️ Failed to import to LocalMachine\Root (admin may be required)"
-    exit 1
+if ($RequireMachineRoot) {
+    if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath "Cert:\LocalMachine\Root")) {
+        Write-Warning "Failed to import to LocalMachine\Root (admin may be required)"
+        exit 1
+    }
+} else {
+    Write-Host "Continuing with CurrentUser certificate trust. Pass -RequireMachineRoot when machine-wide trust is required."
 }
 
 
@@ -151,10 +158,22 @@ if (-not (Test-Path $directoryPath)) {
 
 Write-Host "Directory path to search for .msix and .appx files: $directoryPath"
 
-# Get all .msix and .appx files from the specified directory. Sparse packages such as
-# PowerToysSparse.msix do not include the architecture in the file name.
-$filePaths = Get-ChildItem -Path $directoryPath -Recurse | Where-Object {
-    $_.Extension -eq ".msix" -or $_.Extension -eq ".appx"
+if ($TargetPaths -and $TargetPaths.Count -gt 0) {
+    $filePaths = @($TargetPaths | ForEach-Object { Get-Item -LiteralPath $_ -ErrorAction Stop })
+}
+elseif ($AllPackages) {
+    $filePaths = Get-ChildItem -Path $directoryPath -Recurse | Where-Object {
+        $_.Extension -eq ".msix" -or $_.Extension -eq ".appx"
+    }
+}
+else {
+    $sparsePackagePath = Join-Path $directoryPath "PowerToysSparse.msix"
+    if (-not (Test-Path $sparsePackagePath)) {
+        Write-Error "Expected sparse package not found: $sparsePackagePath. Pass -TargetPaths for explicit files or -AllPackages to sign every package under the directory."
+        exit 1
+    }
+
+    $filePaths = @(Get-Item -LiteralPath $sparsePackagePath)
 }
 
 if ($filePaths.Count -eq 0) {

@@ -21,7 +21,7 @@ namespace Microsoft.PowerToys.UITest
     /// </summary>
     public class SessionHelper
     {
-        // Default session path is PowerToys settings dashboard
+        // Default session path is Kit settings dashboard.
         private readonly string sessionPath = ModuleConfigData.Instance.GetModulePath(PowerToysModule.PowerToysSettings);
 
         private readonly string runnerPath = ModuleConfigData.Instance.GetModulePath(PowerToysModule.Runner);
@@ -140,7 +140,7 @@ namespace Microsoft.PowerToys.UITest
 
             if (scope == PowerToysModule.PowerToysSettings)
             {
-                TryLaunchPowerToysSettings(opts);
+                TryLaunchKitSettings(opts);
             }
             else
             {
@@ -167,7 +167,7 @@ namespace Microsoft.PowerToys.UITest
             Driver = NewWindowsDriver(opts);
         }
 
-        private void TryLaunchPowerToysSettings(AppiumOptions opts)
+        private void TryLaunchKitSettings(AppiumOptions opts)
         {
             if (opts.ToCapabilities().HasCapability("enableModules"))
             {
@@ -203,30 +203,30 @@ namespace Microsoft.PowerToys.UITest
 
                     runner = Process.Start(runnerProcessInfo);
 
-                    if (WaitForWindowAndSetCapability(opts, "PowerToys Settings", delayMs, maxRetries))
+                    if (WaitForWindowAndSetCapability(opts, ModuleConfigData.Instance.GetModuleWindowName(PowerToysModule.PowerToysSettings), delayMs, maxRetries))
                     {
                         return;
                     }
 
-                    // Window not found, kill all PowerToys processes and retry
+                    // Window not found, kill all Kit processes and retry.
                     if (tryCount < maxTries)
                     {
-                        KillPowerToysProcesses();
+                        KillKitProcesses();
                     }
                 }
                 catch (Exception ex)
                 {
                     if (tryCount == maxTries)
                     {
-                        throw new InvalidOperationException($"Failed to launch PowerToys Settings after {maxTries} attempts: {ex.Message}", ex);
+                        throw new InvalidOperationException($"Failed to launch Kit Settings after {maxTries} attempts: {ex.Message}", ex);
                     }
 
-                    // Kill processes and retry
-                    KillPowerToysProcesses();
+                    // Kill processes and retry.
+                    KillKitProcesses();
                 }
             }
 
-            throw new InvalidOperationException($"Failed to launch PowerToys Settings: Window not found after {maxTries} attempts.");
+            throw new InvalidOperationException($"Failed to launch Kit Settings: Window not found after {maxTries} attempts.");
         }
 
         private bool WaitForWindowAndSetCapability(AppiumOptions opts, string windowName, int delayMs, int maxRetries)
@@ -336,11 +336,19 @@ namespace Microsoft.PowerToys.UITest
             SessionHelper.appDriver = Process.Start(winAppDriverProcessInfo);
         }
 
-        private void KillPowerToysProcesses()
+        private void KillKitProcesses()
         {
-            var powerToysProcessNames = new[] { "PowerToys" };
+            var kitProcessNames = new[]
+            {
+                "Kit",
+                "PowerToys.Settings",
+                "PowerToys.Awake",
+                "PowerToys.LightSwitchService",
+                "PowerToys.Monitor",
+                "PowerToys.PowerDisplay",
+            };
 
-            foreach (var processName in powerToysProcessNames)
+            foreach (var processName in kitProcessNames)
             {
                 try
                 {
@@ -357,7 +365,7 @@ namespace Microsoft.PowerToys.UITest
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[KillPowerToysProcesses] Failed to kill process {processName}: {ex.Message}");
+                    Console.WriteLine($"[KillKitProcesses] Failed to kill process {processName}: {ex.Message}");
                 }
             }
         }

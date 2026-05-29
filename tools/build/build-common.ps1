@@ -28,10 +28,37 @@ When a build fails, check the logs written next to the solution/project folder:
 Do not execute this file directly; dot-source it from `build.ps1` or `build-installer.ps1` so helpers are available in your script scope.
 #>
 
+function Normalize-ProcessPathEnvironment {
+    $processEnvironment = [Environment]::GetEnvironmentVariables('Process')
+    $pathKeys = @($processEnvironment.Keys | Where-Object { $_ -ieq 'Path' })
+    if ($pathKeys.Count -eq 0) {
+        return
+    }
+
+    $pathValue = $null
+    foreach ($pathKey in $pathKeys) {
+        $candidate = [Environment]::GetEnvironmentVariable($pathKey, 'Process')
+        if ([string]::IsNullOrEmpty($candidate)) {
+            continue
+        }
+
+        if (($candidate -match 'Visual Studio|MSBuild') -or [string]::IsNullOrEmpty($pathValue) -or $candidate.Length -gt $pathValue.Length) {
+            $pathValue = $candidate
+        }
+    }
+
+    if ([string]::IsNullOrEmpty($pathValue)) {
+        return
+    }
+
+    [Environment]::SetEnvironmentVariable('PATH', $null, 'Process')
+    [Environment]::SetEnvironmentVariable('Path', $pathValue, 'Process')
+}
+
 function RunMSBuild {
     param (
         [string]$Solution,
-        [string]$ExtraArgs,
+        [string[]]$ExtraArgs = @(),
         [string]$Platform,
         [string]$Configuration
     )
@@ -61,14 +88,27 @@ function RunMSBuild {
         "/fileLoggerParameters2:LogFile=$errorsLog;ErrorsOnly"
         "/bl:$binLog"
         '/nologo'
+        '/nodeReuse:false'
     )
 
-    $cmd = $base + ($ExtraArgs -split ' ')
+    $extra = @($ExtraArgs | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $cmd = $base + $extra
     Write-Host (("[MSBUILD] {0}" -f ($cmd -join ' ')))
+
+    $msbuildExe = $script:MSBuildExe
+    if (-not $msbuildExe) {
+        $msbuildCommand = Get-Command msbuild.exe -ErrorAction SilentlyContinue
+        if ($msbuildCommand) {
+            $msbuildExe = $msbuildCommand.Source
+        }
+        else {
+            $msbuildExe = 'msbuild.exe'
+        }
+    }
 
     Push-Location $script:RepoRoot
     try {
-        & msbuild.exe @cmd
+        & $msbuildExe @cmd
         if ($LASTEXITCODE -ne 0) {
             Write-Error (("Build failed: {0}  {1}`nSee logs:`n  All: {2}`n  Errors: {3}`n  Binlog: {4}" -f $Solution, $ExtraArgs, $allLog, $errorsLog, $binLog))
             exit $LASTEXITCODE
@@ -81,27 +121,25 @@ function RunMSBuild {
 function RestoreThenBuild {
     param (
         [string]$Solution,
-        [string]$ExtraArgs,
+        [string[]]$ExtraArgs = @(),
         [string]$Platform,
         [string]$Configuration,
         [bool]$RestoreOnly=$false
     )
 
-    $restoreArgs = '/t:restore /p:RestorePackagesConfig=true'
-    if ($ExtraArgs) { $restoreArgs = "$restoreArgs $ExtraArgs" }
-    RunMSBuild $Solution $restoreArgs $Platform $Configuration
+    $restoreArgs = @('/t:restore', '/p:RestorePackagesConfig=true') + @($ExtraArgs)
+    RunMSBuild -Solution $Solution -ExtraArgs $restoreArgs -Platform $Platform -Configuration $Configuration
 
     if (-not $RestoreOnly) {
-        $buildArgs = '/m'
-        if ($ExtraArgs) { $buildArgs = "$buildArgs $ExtraArgs" }
-        RunMSBuild $Solution $buildArgs $Platform $Configuration
+        $buildArgs = @('/m') + @($ExtraArgs)
+        RunMSBuild -Solution $Solution -ExtraArgs $buildArgs -Platform $Platform -Configuration $Configuration
     }
 }
 
 function BuildProjectsInDirectory {
     param(
         [string]$DirectoryPath,
-        [string]$ExtraArgs,
+        [string[]]$ExtraArgs = @(),
         [string]$Platform,
         [string]$Configuration,
         [switch]$RestoreOnly
@@ -131,11 +169,10 @@ function BuildProjectsInDirectory {
     foreach ($f in $files) {
         Write-Host ("[LOCAL BUILD] Building {0}" -f $f.FullName)
         if ($f.Extension -eq '.sln' -or $f.Extension -eq '.slnx') {
-            RestoreThenBuild $f.FullName $ExtraArgs $Platform $Configuration $RestoreOnly
+            RestoreThenBuild -Solution $f.FullName -ExtraArgs $ExtraArgs -Platform $Platform -Configuration $Configuration -RestoreOnly:$RestoreOnly
         } else {
-            $buildArgs = '/m'
-            if ($ExtraArgs) { $buildArgs = "$buildArgs $ExtraArgs" }
-            RunMSBuild $f.FullName $buildArgs $Platform $Configuration
+            $buildArgs = @('/m') + @($ExtraArgs)
+            RunMSBuild -Solution $f.FullName -ExtraArgs $buildArgs -Platform $Platform -Configuration $Configuration
         }
     }
 
@@ -179,9 +216,14 @@ function Get-DefaultPlatform {
 function Ensure-VsDevEnvironment {
     $OriginalLocationForVsInit = Get-Location
     try {
+    Normalize-ProcessPathEnvironment
 
     if ($env:VSINSTALLDIR -or $env:VCINSTALLDIR -or $env:DevEnvDir -or $env:VCToolsInstallDir) {
         Write-Host "[VS] VS developer environment already present"
+        $existingMsbuild = Get-Command msbuild.exe -ErrorAction SilentlyContinue
+        if ($existingMsbuild) {
+            $script:MSBuildExe = $existingMsbuild.Source
+        }
         return $true
     }
 
@@ -249,12 +291,48 @@ function Ensure-VsDevEnvironment {
             Write-Host "[VS] Running VsDevCmd.bat and importing environment from $vsDevCmd"
             try {
                 $cmdOut = cmd.exe /c "`"$vsDevCmd`" && set"
+                $envVars = @{}
                 foreach ($line in $cmdOut) {
                     $parts = $line -split('=',2)
                     if ($parts.Length -eq 2) {
-                        try { [Environment]::SetEnvironmentVariable($parts[0], $parts[1], 'Process') } catch {}
+                        $name = $parts[0]
+                        $value = $parts[1]
+                        if ($name -ieq 'Path' -and $envVars.ContainsKey('Path')) {
+                            $existingPath = $envVars['Path']
+                            if (($value -match 'Visual Studio|MSBuild') -or ($existingPath -notmatch 'Visual Studio|MSBuild' -and $value.Length -gt $existingPath.Length)) {
+                                $envVars['Path'] = $value
+                            }
+                        }
+                        elseif ($name -ieq 'Path') {
+                            $envVars['Path'] = $value
+                        }
+                        else {
+                            $envVars[$name] = $value
+                        }
                     }
                 }
+                foreach ($entry in $envVars.GetEnumerator()) {
+                    try { [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process') } catch {}
+                }
+                Normalize-ProcessPathEnvironment
+
+                $msbuildCommand = Get-Command msbuild.exe -ErrorAction SilentlyContinue
+                if (-not $msbuildCommand) {
+                    $msbuildCandidates = @(
+                        (Join-Path $inst 'MSBuild\Current\Bin\amd64\MSBuild.exe'),
+                        (Join-Path $inst 'MSBuild\Current\Bin\MSBuild.exe')
+                    )
+                    $msbuildPath = $msbuildCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+                    if ($msbuildPath) {
+                        $script:MSBuildExe = $msbuildPath
+                        $env:Path = "{0};{1}" -f (Split-Path -Parent $msbuildPath), $env:Path
+                        Normalize-ProcessPathEnvironment
+                    }
+                }
+                else {
+                    $script:MSBuildExe = $msbuildCommand.Source
+                }
+
                 Write-Host "[VS] Imported environment from VsDevCmd.bat at $inst"
                 return $true
             } catch {

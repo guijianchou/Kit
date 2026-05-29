@@ -12,7 +12,7 @@ using System.Runtime.CompilerServices;
 namespace Microsoft.PowerToys.UITest
 {
     /// <summary>
-    /// This file manages the configuration of modules for UI tests.
+    /// This file manages the configuration of Kit modules for UI tests.
     /// </summary>
     /// <remarks>
     /// How to add a new module:
@@ -22,13 +22,16 @@ namespace Microsoft.PowerToys.UITest
     /// </remarks>
 
     /// <summary>
-    /// Represents the modules in PowerToys.
+    /// Represents the active Kit launch targets used by UI tests.
     /// </summary>
     public enum PowerToysModule
     {
         PowerToysSettings,
         Runner,
+        Awake,
         LightSwitch,
+        Monitor,
+        PowerDisplay,
     }
 
     /// <summary>
@@ -93,33 +96,36 @@ namespace Microsoft.PowerToys.UITest
             // Module information including executable name, window name, and optional subdirectory
             ModuleInfo = new Dictionary<PowerToysModule, ModuleInfo>
             {
-                [PowerToysModule.PowerToysSettings] = new ModuleInfo("PowerToys.Settings.exe", "PowerToys Settings", "WinUI3Apps"),
-                [PowerToysModule.Runner] = new ModuleInfo("PowerToys.exe", "PowerToys"),
-                [PowerToysModule.LightSwitch] = new ModuleInfo("PowerToys.LightSwitch.exe", "PowerToys.LightSwitch", "LightSwitchService"),
+                [PowerToysModule.PowerToysSettings] = new ModuleInfo("PowerToys.Settings.exe", "Kit", "WinUI3Apps"),
+                [PowerToysModule.Runner] = new ModuleInfo("Kit.exe", "Kit"),
+                [PowerToysModule.Awake] = new ModuleInfo("PowerToys.Awake.exe", "PowerToys Awake"),
+                [PowerToysModule.LightSwitch] = new ModuleInfo("PowerToys.LightSwitchService.exe", "PowerToys.LightSwitchService", "LightSwitchService"),
+                [PowerToysModule.Monitor] = new ModuleInfo("PowerToys.Monitor.exe", "Kit Monitor"),
+                [PowerToysModule.PowerDisplay] = new ModuleInfo("PowerToys.PowerDisplay.exe", "Power Display", "WinUI3Apps"),
             };
         }
 
-        private string GetPowerToysInstallPath()
+        private string GetKitInstallPath()
         {
             // Try common installation paths
             string[] possiblePaths =
             {
-                @"C:\Program Files\PowerToys",
-                @"C:\Program Files (x86)\PowerToys",
-                Environment.ExpandEnvironmentVariables(@"%LocalAppData%\PowerToys"),
-                Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\PowerToys"),
+                @"C:\Program Files\Kit",
+                @"C:\Program Files (x86)\Kit",
+                Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Kit"),
+                Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Kit"),
             };
 
             foreach (string path in possiblePaths)
             {
-                if (Directory.Exists(path) && File.Exists(Path.Combine(path, "PowerToys.exe")))
+                if (Directory.Exists(path) && File.Exists(Path.Combine(path, "Kit.exe")))
                 {
                     return path;
                 }
             }
 
             // Fallback to Program Files if not found
-            return @"C:\Program Files\PowerToys";
+            return @"C:\Program Files\Kit";
         }
 
         public string GetModulePath(PowerToysModule scope)
@@ -128,8 +134,8 @@ namespace Microsoft.PowerToys.UITest
 
             if (UseInstallerForTest)
             {
-                string powerToysInstallPath = GetPowerToysInstallPath();
-                string installedPath = moduleInfo.GetInstalledPath(powerToysInstallPath);
+                string kitInstallPath = GetKitInstallPath();
+                string installedPath = moduleInfo.GetInstalledPath(kitInstallPath);
 
                 if (File.Exists(installedPath))
                 {

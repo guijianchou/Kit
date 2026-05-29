@@ -1068,6 +1068,55 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitSparsePackageIdentityShouldNotDeclareDeletedModuleApps()
+        {
+            var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
+            var manifest = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "AppxManifest.xml"));
+            var readme = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "readme.md"));
+            var buildScript = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "BuildSparsePackage.ps1"));
+
+            StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
+            StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
+            StringAssert.Contains(manifest, "PowerToys.SettingsUI");
+            StringAssert.Contains(manifest, @"WinUI3Apps\PowerToys.Settings.exe");
+
+            string[] inactiveSparseIdentityTokens =
+            {
+                "PowerToys.OCR",
+                "PowerToys.PowerOCR.exe",
+                "systemAIModels",
+                "PowerToys.ImageResizerUI",
+                "PowerToys.ImageResizer.exe",
+                "PowerToys.ImageResizer",
+                "PowerToys.CmdPalExtension",
+                "Microsoft.CmdPal.Ext.PowerToys.exe",
+                "PowerToys.CommandPaletteExtension",
+                "com.microsoft.commandpalette",
+                "CmdPalProvider",
+            };
+
+            foreach (var inactiveSparseIdentityToken in inactiveSparseIdentityTokens)
+            {
+                Assert.IsFalse(manifest.Contains(inactiveSparseIdentityToken, StringComparison.Ordinal), $"PackageIdentity manifest should not declare inactive sparse package app identity: {inactiveSparseIdentityToken}");
+            }
+
+            string[] inactiveReadmeExamples =
+            {
+                "PowerOCR",
+                "Image Resizer",
+                "imageresizer",
+                "Command Palette",
+                "CmdPal",
+            };
+
+            foreach (var inactiveReadmeExample in inactiveReadmeExamples)
+            {
+                Assert.IsFalse(readme.Contains(inactiveReadmeExample, StringComparison.OrdinalIgnoreCase), $"PackageIdentity docs should not use inactive sparse package examples: {inactiveReadmeExample}");
+                Assert.IsFalse(buildScript.Contains(inactiveReadmeExample, StringComparison.OrdinalIgnoreCase), $"PackageIdentity build script comments should not use inactive sparse package examples: {inactiveReadmeExample}");
+            }
+        }
+
+        [TestMethod]
         public void KitGpoPolicyAssetsShouldStayInActiveModuleSurface()
         {
             var admx = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "PowerToys.admx"));
@@ -2015,10 +2064,50 @@ namespace ViewModelTests
         {
             var moduleInterface = File.ReadAllText(FindSourceFile("src", "modules", "interface", "powertoy_module_interface.h"));
             var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
+            var powerDisplayApp = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplayXAML", "App.xaml.cs"));
+            var powerDisplayMainWindow = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplayXAML", "MainWindow.xaml.cs"));
+            var powerDisplayHotkeyService = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "Helpers", "HotkeyService.cs"));
+            var powerDisplayModuleInterface = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "dllmain.cpp"));
+            var lightSwitchStateManager = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchService", "LightSwitchStateManager.h"));
+            var lightSwitchSettings = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchService", "LightSwitchSettings.cpp"));
+            var runnerTraceHeader = File.ReadAllText(FindSourceFile("src", "runner", "trace.h"));
 
             Assert.IsFalse(moduleInterface.Contains("AdvancedPaste", StringComparison.Ordinal), "Shared module interface comments should not describe inactive AdvancedPaste special cases.");
             Assert.IsFalse(settingsWindow.Contains("PowerToys Run hotkeys", StringComparison.Ordinal), "Runner settings comments should not describe inactive PowerToys Run hotkey behavior as current.");
             Assert.IsFalse(settingsWindow.Contains("PowerToys Run settings", StringComparison.Ordinal), "Runner settings comments should not describe inactive PowerToys Run settings as current.");
+            Assert.IsFalse(powerDisplayApp.Contains("PowerToys Runner", StringComparison.Ordinal), "PowerDisplay runtime logs and comments should describe the Kit runner instead of upstream PowerToys Runner wording.");
+            Assert.IsFalse(powerDisplayMainWindow.Contains("PowerToys mode", StringComparison.Ordinal), "PowerDisplay comments should describe runner mode instead of upstream PowerToys mode.");
+            Assert.IsFalse(powerDisplayMainWindow.Contains("CmdPal pattern", StringComparison.Ordinal), "PowerDisplay comments should describe its in-process hotkey handling directly instead of citing inactive CmdPal.");
+            Assert.IsFalse(powerDisplayHotkeyService.Contains("CmdPal pattern", StringComparison.Ordinal), "PowerDisplay hotkey comments should not cite inactive CmdPal as the current pattern.");
+            Assert.IsFalse(powerDisplayModuleInterface.Contains("CmdPal pattern", StringComparison.Ordinal), "PowerDisplay module-interface comments should not cite inactive CmdPal as the current pattern.");
+            Assert.IsFalse(lightSwitchStateManager.Contains("debugging or telemetry", StringComparison.Ordinal), "LightSwitch comments should not imply telemetry use for exposed state accessors.");
+            Assert.IsFalse(lightSwitchSettings.Contains("log telemetry", StringComparison.Ordinal), "LightSwitch settings comments should describe trace updates without telemetry wording.");
+            Assert.IsFalse(runnerTraceHeader.Contains("Auto-update telemetry", StringComparison.Ordinal), "Runner trace comments should not describe update events as telemetry.");
+            Assert.IsFalse(runnerTraceHeader.Contains("Tray icon interaction telemetry", StringComparison.Ordinal), "Runner trace comments should not describe tray icon events as telemetry.");
+        }
+
+        [TestMethod]
+        public void KitNoticeShouldNotCarryDeletedUtilityLicenseSections()
+        {
+            var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
+
+            string[] deletedUtilityNoticeTokens =
+            {
+                "## Utility: Color Picker",
+                "martinchrzan/ColorPicker",
+                "Copyright (c) 2020 martinchrzan",
+                "## Utility: ImageResizer",
+                "bricelam/ImageResizer",
+                "Brice Lambson",
+                "## Utility: PowerRename",
+                "chrdavis/SmartRename",
+                "Chris Davis",
+            };
+
+            foreach (var deletedUtilityNoticeToken in deletedUtilityNoticeTokens)
+            {
+                Assert.IsFalse(notice.Contains(deletedUtilityNoticeToken, StringComparison.Ordinal), $"NOTICE.md should not carry third-party license surface for deleted utility source: {deletedUtilityNoticeToken}");
+            }
         }
 
         [TestMethod]

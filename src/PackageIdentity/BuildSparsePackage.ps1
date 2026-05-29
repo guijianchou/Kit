@@ -16,9 +16,9 @@ Param(
     [switch]$CIBuild
 )
 
-# PowerToys sparse packaging helper.
+# Kit sparse packaging helper.
 # Generates a sparse MSIX (no payload) that grants package identity to selected Win32 components.
-# Multiple applications (PowerOCR, Settings UI, etc.) can share this single sparse identity.
+# Multiple declared Win32 applications can share this single sparse identity.
 
 $ErrorActionPreference = 'Stop'
 

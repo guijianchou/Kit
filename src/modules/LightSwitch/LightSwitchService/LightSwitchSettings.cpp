@@ -288,7 +288,7 @@ void LightSwitchSettings::LoadSettings()
             }
         }
 
-        // For ChangeSystem/ChangeApps changes, log telemetry
+        // For ChangeSystem/ChangeApps changes, record the trace hook.
         if (themeTargetChanged)
         {
             Trace::LightSwitch::ThemeTargetChanged(m_settings.changeApps, m_settings.changeSystem);

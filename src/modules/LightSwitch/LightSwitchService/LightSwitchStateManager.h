@@ -39,7 +39,7 @@ public:
     // Initial sync at startup to align internal state with system theme
     void SyncInitialThemeState();
 
-    // Accessor for current state (optional, for debugging or telemetry)
+    // Accessor for current state inspection.
     const LightSwitchState& GetState() const { return _state; }
 
 private:

@@ -351,8 +351,8 @@ public:
         return m_enabled;
     }
 
-    // NOTE: Hotkey handling is done in-process by PowerDisplay.exe using RegisterHotKey,
-    // similar to CmdPal pattern. This avoids IPC timing issues where Deactivated event
+    // NOTE: Hotkey handling is done in-process by PowerDisplay.exe using RegisterHotKey.
+    // This avoids IPC timing issues where Deactivated event
     // fires before the Toggle event arrives from Runner.
     virtual bool on_hotkey(size_t /*hotkeyId*/) override
     {

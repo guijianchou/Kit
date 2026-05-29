@@ -118,11 +118,11 @@ namespace PowerDisplay
                 // Monitor Runner process (backup exit mechanism)
                 if (_powerToysRunnerPid > 0)
                 {
-                    Logger.LogInfo($"OnLaunched: PowerDisplay started from PowerToys Runner. Runner pid={_powerToysRunnerPid}");
+                    Logger.LogInfo($"OnLaunched: PowerDisplay started from Kit runner. Runner pid={_powerToysRunnerPid}");
 
                     RunnerHelper.WaitForPowerToysRunner(_powerToysRunnerPid, () =>
                     {
-                        Logger.LogInfo("OnLaunched: PowerToys Runner exited. Exiting PowerDisplay");
+                        Logger.LogInfo("OnLaunched: Kit runner exited. Exiting PowerDisplay");
                         Environment.Exit(0);
                     });
                 }
@@ -159,9 +159,9 @@ namespace PowerDisplay
                 }
                 else
                 {
-                    // PowerToys mode - window remains hidden until show event received
+                    // Runner mode - window remains hidden until show event received
                     // Background initialization runs automatically via MainWindow constructor
-                    Logger.LogInfo("OnLaunched: Window created but hidden, waiting for show/toggle event (PowerToys mode)");
+                    Logger.LogInfo("OnLaunched: Window created but hidden, waiting for show/toggle event (runner mode)");
                 }
 
                 Logger.LogInfo("OnLaunched: Application launch completed");
@@ -292,7 +292,7 @@ namespace PowerDisplay
         }
 
         /// <summary>
-        /// Check if running standalone (not launched from PowerToys Runner)
+        /// Check if running standalone (not launched from the Kit runner)
         /// </summary>
         public bool IsRunningDetachedFromPowerToys()
         {

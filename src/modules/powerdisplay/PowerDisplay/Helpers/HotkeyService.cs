@@ -12,7 +12,7 @@ namespace PowerDisplay.Helpers
     /// <summary>
     /// Service for handling hotkey registration in-process.
     /// Uses RegisterHotKey Win32 API instead of Runner's centralized mechanism
-    /// to avoid IPC timing issues (CmdPal pattern).
+    /// to avoid IPC timing issues when the window deactivates.
     /// </summary>
     internal sealed partial class HotkeyService : IDisposable
     {

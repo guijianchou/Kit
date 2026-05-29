@@ -1,10 +1,10 @@
-# PowerToys sparse package identity
+# Kit sparse package identity
 
-This document describes how to build, sign, register, and consume the shared sparse MSIX package that grants package identity to select Win32 components of PowerToys.
+This document describes how to build, sign, register, and consume the shared sparse MSIX package that grants package identity to selected Kit Win32 components.
 
 ## Package overview
 
-The sparse package lives under `src/PackageIdentity`. It produces a payload-free MSIX whose `Identity` matches `Microsoft.PowerToys.SparseApp`. The manifest contains one entry per Win32 surface that should run with identity (for example Settings, PowerOCR, Image Resizer).
+The sparse package lives under `src/PackageIdentity`. It produces a payload-free MSIX whose `Identity` currently remains `Microsoft.PowerToys.SparseApp` for package compatibility. The manifest is intentionally narrow and currently declares the Settings UI entry that has a corresponding Kit build output.
 
 > The MSIX contains only metadata. When the package is registered you must point `-ExternalLocation` to the output folder that hosts the Win32 binaries (for example `x64\Release`).
 
@@ -16,7 +16,7 @@ Two options are available:
 - Invoke the helper script directly from PowerShell:
 
 ```powershell
-$repoRoot = "C:/git/PowerToys"
+$repoRoot = "C:/git/Kit"
 pwsh "$repoRoot/src/PackageIdentity/BuildSparsePackage.ps1" -Platform x64 -Configuration Release
 ```
 
@@ -51,7 +51,7 @@ After `PowerToysSparse.msix` is generated:
 
 ```powershell
 # First time registration
-$repoRoot = "C:/git/PowerToys"
+$repoRoot = "C:/git/Kit"
 $outputRoot = Join-Path $repoRoot "x64/Release"
 Add-AppxPackage -Path (Join-Path $outputRoot "PowerToysSparse.msix") -ExternalLocation $outputRoot
 
@@ -72,11 +72,11 @@ Get-AppxPackage -Name Microsoft.PowerToys.SparseApp | Remove-AppxPackage
 
 ## Consuming the identity from other components
 
-1. Add a new `<Application>` entry inside `src/PackageIdentity/AppxManifest.xml`. Use a unique `Id` (for example `PowerToys.MyModuleUI`) and set `Executable` to the Win32 binary relative to the `-ExternalLocation` root.
+1. Add a new `<Application>` entry inside `src/PackageIdentity/AppxManifest.xml` only for a Win32 surface that needs package identity and has a corresponding Kit build output. Use a unique `Id` and set `Executable` to the Win32 binary relative to the `-ExternalLocation` root.
 2. Ensure the binary is copied into the platform/configuration output folder (`x64\Release`, `ARM64\Debug`, etc.) so the sparse package can locate it.
-3. Embed a sparse identity manifest in the Win32 binary so it binds to the MSIX identity at runtime. The manifest must declare an `<msix>` element with `packageName="Microsoft.PowerToys.SparseApp"`, `applicationId` matching the `<Application Id>`, and a `publisher` that matches the sparse package. Keep the manifest’s publisher in sync with `src/PackageIdentity/.user/PowerToysSparse.publisher.txt` (emitted by `BuildSparsePackage.ps1`). See `src/modules/imageresizer/ui/ImageResizerUI.csproj` for an example that points `ApplicationManifest` to `ImageResizerUI.dev.manifest` for local builds and switches to `ImageResizerUI.prod.manifest` when `$(CIBuild)` is `true`.
+3. Embed a sparse identity manifest in the Win32 binary so it binds to the MSIX identity at runtime. The manifest must declare an `<msix>` element with `packageName="Microsoft.PowerToys.SparseApp"`, `applicationId` matching the `<Application Id>`, and a `publisher` that matches the sparse package. Keep the manifest's publisher in sync with `src/PackageIdentity/.user/PowerToysSparse.publisher.txt` (emitted by `BuildSparsePackage.ps1`).
 4. Register or re-register the sparse package so Windows learns about the new application Id.
-5. To launch the Win32 surface with identity, use the `shell:AppsFolder` activation form (for example: `shell:AppsFolder\Microsoft.PowerToys.SparseApp_<PackageFamilyName>!PowerToys.MyModuleUI`) or activate it via `IApplicationActivationManager::ActivateApplication` using the same AppUserModelID.
+5. To launch the Win32 surface with identity, use the `shell:AppsFolder` activation form with the package family name and the matching application Id, or activate it via `IApplicationActivationManager::ActivateApplication` using the same AppUserModelID.
 
    - For locally built packages, resolve the `<PackageFamilyName>` with `Get-AppxPackage -Name Microsoft.PowerToys.SparseApp | Select-Object -ExpandProperty PackageFamilyName`.
    - Store-distributed builds use `Microsoft.PowerToys.SparseApp_8wekyb3d8bbwe`. Local developer builds created by this script typically use a different family name derived from the dev certificate.

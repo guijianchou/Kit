@@ -876,6 +876,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "165/165 passing Settings UI tests after removing the deleted-utility package pins");
             StringAssert.Contains(developmentLog, "166/166 passing Settings UI tests after removing the deleted Launcher, AI, and CmdPal package pins");
             StringAssert.Contains(developmentLog, "168/168 passing Settings UI tests after the Quick Access title, runtime comment, and 2.0.1 metadata finalization");
+            StringAssert.Contains(developmentLog, "169/169 passing Settings UI tests after deleting stale utility NOTICE sections and rewording current Kit runtime logs/comments");
+            StringAssert.Contains(developmentLog, "170/170 passing Settings UI tests after trimming the sparse package manifest to active app identities");
 
             Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", string.Empty));
             Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", "Local"));

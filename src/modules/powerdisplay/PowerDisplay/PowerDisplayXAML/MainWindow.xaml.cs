@@ -65,7 +65,7 @@ namespace PowerDisplay
                 RegisterEventHandlers();
                 Logger.LogTrace("MainWindow constructor: Event handlers registered");
 
-                // 5. Initialize HotkeyService for in-process hotkey handling (CmdPal pattern)
+                // 5. Initialize HotkeyService for in-process hotkey handling.
                 Logger.LogTrace("MainWindow constructor: Initializing HotkeyService");
                 var hwnd = this.GetWindowHandle();
                 _hotkeyService = new HotkeyService(_settingsUtils, ToggleWindow);
@@ -169,7 +169,7 @@ namespace PowerDisplay
                 AdjustWindowSizeToContent();
 
                 // CRITICAL: WinUI3 windows must be Activated at least once to display properly.
-                // In PowerToys mode, window is created but never activated until first show.
+                // In runner mode, window is created but never activated until first show.
                 this.Activate();
                 this.Show();
 

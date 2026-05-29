@@ -55,7 +55,7 @@ else {
 Write-Host "`nUsing SignTool: $signToolPath"
 
 # Set the certificate subject and the ECDSA curve
-$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US"
 
 # Check if the certificate already exists in the current user's certificate store
 $existingCert = Get-ChildItem -Path Cert:\CurrentUser\My |

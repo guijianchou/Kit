@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "UpdateUtils.h"
+#include "general_settings.h"
 #include "tray_icon.h"
 
 #include <common/logger/logger.h>
@@ -247,7 +248,7 @@ namespace
             save_update_available(*latestRelease);
             set_update_badge(true);
 
-            if (mode == UpdateCheckMode::Periodic && !alreadyNotified)
+            if (mode == UpdateCheckMode::Periodic && !alreadyNotified && get_general_settings().showNewUpdatesToastNotification)
             {
                 show_update_available_toast(*latestRelease);
             }

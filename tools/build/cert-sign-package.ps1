@@ -1,5 +1,5 @@
 param (
-    [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    [string]$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US",
     [switch]$RequireMachineRoot,
     [Parameter(Mandatory = $true)]
     [string[]]$TargetPaths

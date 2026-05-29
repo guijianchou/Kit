@@ -23,7 +23,7 @@ pwsh "$repoRoot/src/PackageIdentity/BuildSparsePackage.ps1" -Platform x64 -Confi
 Supported switches:
 
 - `-Clean` removes previous `bin`/`obj` outputs and uninstalls existing installation.
-- `-ForceCert` regenerates the local dev certificate (.pfx/.cer/.pwd/.thumbprint) under `src/PackageIdentity/.user`.
+- `-ForceCert` regenerates the local dev certificate (`.cer` and `.thumbprint`) under `src/PackageIdentity/.user`.
 - `-NoSign` skips signing. The MSIX still builds but must be signed before deployment.
 - `-CIBuild` (or setting `$env:CIBuild = 'true'`) keeps the manifest publisher intact and skips the local cert substitution.
 
@@ -55,8 +55,8 @@ $repoRoot = "C:/git/Kit"
 $outputRoot = Join-Path $repoRoot "x64/Release"
 Add-AppxPackage -Path (Join-Path $outputRoot "PowerToysSparse.msix") -ExternalLocation $outputRoot
 
-# Re-register after manifest tweaks only
-Add-AppxPackage -Register (Join-Path $repoRoot "src/PackageIdentity/AppxManifest.xml") -ExternalLocation $outputRoot -ForceApplicationShutdown
+# Re-register after manifest tweaks only; the script writes the publisher-adjusted manifest here for local builds
+Add-AppxPackage -Register (Join-Path $repoRoot "src/PackageIdentity/.user/PowerToysSparse.AppxManifest.xml") -ExternalLocation $outputRoot -ForceApplicationShutdown
 
 # Remove the sparse identity
 Get-AppxPackage -Name Microsoft.PowerToys.SparseApp | Remove-AppxPackage
@@ -86,5 +86,5 @@ Get-AppxPackage -Name Microsoft.PowerToys.SparseApp | Remove-AppxPackage
 ## Troubleshooting tips
 
 - `Program 'makeappx.exe' failed to run`: make sure you are running an x64 PowerShell host. The script now chooses the appropriate makeappx automatically; update your repo if the log still points to an ARM64 binary.
-- `HRESULT 0x800B0109 (trust failure)`: install the development certificate into both `TrustedPeople` and `TrustedRoot` stores for the current user.
+- `HRESULT 0x800B0109 (trust failure)`: install the development certificate into `CurrentUser\TrustedPeople` first; add it to `CurrentUser\TrustedRoot` only if the machine still rejects the signature.
 - Stale registration: remove the package with `Remove-AppxPackage` and re-run the script with `-Clean` to rebuild from scratch.

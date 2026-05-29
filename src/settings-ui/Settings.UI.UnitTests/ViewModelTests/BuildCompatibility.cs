@@ -319,27 +319,38 @@ namespace ViewModelTests
                 "Hosts",
                 "ImageResizer",
                 "KeyboardManager",
+                "Launch_ColorPicker",
                 "Launch_ShortcutGuide",
                 "Launch_Hosts",
                 "LearnMore_AdvancedPaste",
+                "LearnMore_AlwaysOnTop",
                 "LearnMore_CmdPal",
                 "LearnMore_ColorPicker",
+                "LearnMore_CropAndLock",
+                "LearnMore_EnvironmentVariables",
                 "LearnMore_FancyZones",
                 "LearnMore_FileLocksmith",
+                "LearnMore_GrabAndMove",
                 "LearnMore_Hosts",
                 "LearnMore_ImageResizer",
                 "LearnMore_KeyboardManager",
                 "LearnMore_MeasureTool",
+                "LearnMore_MouseUtils",
                 "LearnMore_MouseWithoutBorders",
                 "LearnMore_MouseUtilities",
                 "LearnMore_Peek",
                 "LearnMore_PowerPreview",
+                "LearnMore_RegistryPreview",
                 "LearnMore_PowerRename",
+                "LearnMore_Run",
                 "LearnMore_ShortcutGuide",
                 "LearnMore_Workspaces",
+                "LearnMore_ZoomIt",
                 "MeasureTool",
                 "MouseWithoutBorders",
                 "MouseUtils",
+                "MWB_",
+                "NewPlus",
                 "OOBE_",
                 "Oobe",
                 "OobeWindow",
@@ -347,13 +358,19 @@ namespace ViewModelTests
                 "PowerLauncher",
                 "PowerPreview",
                 "PowerRename",
+                "RegistryPreview",
+                "Run_",
                 "Run_CheckOutCmdPal",
                 "Run_NavigateCmdPalSettings",
+                "Shell_AlwaysOnTop",
                 "Shell_AdvancedPaste",
                 "Shell_CmdPal",
                 "Shell_ColorPicker",
+                "Shell_CropAndLock",
+                "Shell_EnvironmentVariables",
                 "Shell_FancyZones",
                 "Shell_FileLocksmith",
+                "Shell_GrabAndMove",
                 "Shell_Hosts",
                 "Shell_ImageResizer",
                 "Shell_KeyboardManager",
@@ -363,13 +380,16 @@ namespace ViewModelTests
                 "Shell_Peek",
                 "Shell_PowerLauncher",
                 "Shell_PowerPreview",
+                "Shell_RegistryPreview",
                 "Shell_PowerRename",
                 "Shell_ShortcutGuide",
                 "Shell_Workspaces",
+                "Shell_ZoomIt",
                 "ShortcutGuide",
                 "Scoobe",
                 "ScoobeWindow",
                 "Workspaces",
+                "ZoomIt",
             };
 
             foreach (var prefix in inactiveResourceNamePrefixes)
@@ -575,6 +595,7 @@ namespace ViewModelTests
             var launcherViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "LauncherViewModel.cs"));
             var coordinatorInterface = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Services", "IQuickAccessCoordinator.cs"));
             var coordinator = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Services", "QuickAccessCoordinator.cs"));
+            var allAppsViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "AllAppsViewModel.cs"));
             var settingsDeepLink = File.ReadAllText(FindSourceFile("src", "common", "Common.UI", "SettingsDeepLink.cs"));
 
             StringAssert.Contains(launcherViewModel, "fallbackLauncher: OpenModuleSettings");
@@ -586,6 +607,8 @@ namespace ViewModelTests
             StringAssert.Contains(settingsDeepLink, "PowerDisplay,");
             StringAssert.Contains(settingsDeepLink, "return \"Monitor\";");
             StringAssert.Contains(settingsDeepLink, "return \"PowerDisplay\";");
+            StringAssert.Contains(allAppsViewModel, "if (!_coordinator.UpdateModuleEnabled(flyoutItem.Tag, flyoutItem.IsEnabled))");
+            StringAssert.Contains(allAppsViewModel, "flyoutItem.UpdateStatus(!isEnabled)");
         }
 
         [TestMethod]
@@ -873,6 +896,36 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitRunnerShouldHonorQuickAccessSettingAndUpdateToastBoundary()
+        {
+            var generalSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
+            var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
+            var normalizedGeneralSettings = NormalizeLineEndings(generalSettings);
+
+            StringAssert.Contains(generalSettings, "enable_quick_access = loaded.GetNamedBoolean(L\"enable_quick_access\", false);");
+            StringAssert.Contains(generalSettings, "general_configs.GetNamedBoolean(L\"enable_quick_access\", enable_quick_access)");
+            Assert.IsFalse(normalizedGeneralSettings.Contains("\n    enable_quick_access = false;\n", StringComparison.Ordinal), "Runner should not force Quick Access off while Settings exposes the toggle.");
+            Assert.IsFalse(generalSettings.Contains("bool new_enable_quick_access = false;", StringComparison.Ordinal), "Runner should apply the Settings-provided Quick Access value.");
+            StringAssert.Contains(updateUtils, "get_general_settings().showNewUpdatesToastNotification");
+            StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic && !alreadyNotified && get_general_settings().showNewUpdatesToastNotification");
+        }
+
+        [TestMethod]
+        public void AwakeDestroyShouldSignalChildShutdown()
+        {
+            var awakeModule = File.ReadAllText(FindSourceFile("src", "modules", "awake", "AwakeModuleInterface", "dllmain.cpp"));
+
+            StringAssert.Contains(awakeModule, "virtual void destroy() override");
+            StringAssert.Contains(awakeModule, "disable();");
+            StringAssert.Contains(awakeModule, "WaitForSingleObject(p_info.hProcess");
+            StringAssert.Contains(awakeModule, "CloseHandle(p_info.hThread)");
+            StringAssert.Contains(awakeModule, "void terminate_process_if_running()");
+            StringAssert.Contains(awakeModule, "if (!exitEvent)");
+            StringAssert.Contains(awakeModule, "terminate_process_if_running();");
+            StringAssert.Contains(awakeModule, "close_process_handles();");
+        }
+
+        [TestMethod]
         public void KitQuickAccessFlyoutDefaultsAndGpoShouldStayInActiveModuleSurface()
         {
             var flyoutMenuItem = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "ViewModels", "FlyoutMenuItem.cs"));
@@ -1110,6 +1163,7 @@ namespace ViewModelTests
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var manifest = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "AppxManifest.xml"));
             var readme = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "readme.md"));
+            var directoryPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
             var buildScript = File.ReadAllText(FindSourceFile("src", "PackageIdentity", "BuildSparsePackage.ps1"));
             var certSignPackageScript = File.ReadAllText(FindSourceFile("tools", "build", "cert-sign-package.ps1"));
             var selfSignScript = File.ReadAllText(FindSourceFile("tools", "build", "self-sign.ps1"));
@@ -1169,6 +1223,22 @@ namespace ViewModelTests
             StringAssert.Contains(certManagementScript, "[switch]$RequireMachineRoot");
             StringAssert.Contains(certManagementScript, "EnsureCertificate -certSubject $certSubject -RequireMachineRoot:$RequireMachineRoot");
             StringAssert.Contains(selfSignScript, "Current-user trust is used by default");
+            StringAssert.Contains(buildScript, "CertSubject    = 'CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US'");
+            StringAssert.Contains(buildScript, "$currentPublisherHint = $script:Config.CertSubject");
+            StringAssert.Contains(buildScript, "$registerManifestPath = Join-Path $UserFolder \"$($script:Config.CertPrefix).AppxManifest.xml\"");
+            StringAssert.Contains(buildScript, "Copy-Item -Path $manifestStagingPath -Destination $registerManifestPath -Force");
+            StringAssert.Contains(buildScript, "Add-AppxPackage -Register `\"$registerManifestPath`\"");
+            StringAssert.Contains(certSignPackageScript, "[string]$certSubject = \"CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US\"");
+            StringAssert.Contains(certManagementScript, "[string]$certSubject = \"CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US\"");
+            StringAssert.Contains(selfSignScript, "$certSubject = \"CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US\"");
+            StringAssert.Contains(readme, "- `-ForceCert` regenerates the local dev certificate (`.cer` and `.thumbprint`)");
+            Assert.IsFalse(readme.Contains(".pfx/.cer/.pwd/.thumbprint", StringComparison.Ordinal), "PackageIdentity docs should not describe certificate artifacts that BuildSparsePackage no longer creates.");
+            Assert.IsFalse(certSignPackageScript.Contains("CN=Microsoft Corporation, O=Microsoft Corporation", StringComparison.Ordinal), "Package signing helper should not mint local self-signed certs that look like the Microsoft publisher.");
+            Assert.IsFalse(certManagementScript.Contains("CN=Microsoft Corporation, O=Microsoft Corporation", StringComparison.Ordinal), "Certificate helper should not default to the Microsoft publisher subject for local self-signing.");
+            Assert.IsFalse(selfSignScript.Contains("CN=Microsoft Corporation, O=Microsoft Corporation", StringComparison.Ordinal), "self-sign should not default to the Microsoft publisher subject for local self-signing.");
+            Assert.IsFalse(buildScript.IndexOf("$currentPublisherHint = $script:Config.CertSubject", StringComparison.Ordinal) < buildScript.IndexOf("$script:Config = @", StringComparison.Ordinal), "BuildSparsePackage should not read Config.CertSubject before Config is initialized.");
+            Assert.IsFalse(directoryPackages.Contains("Microsoft.VariantAssignment", StringComparison.Ordinal), "Kit should not keep experimentation package pins without active project references.");
+            Assert.IsFalse(directoryPackages.Contains("IsExperimentationLive", StringComparison.Ordinal), "Kit should not keep an unused experimentation package pin condition.");
             Assert.IsFalse(certSignPackageScript.Contains("& signtool sign", StringComparison.Ordinal), "Package signing helper should use resolved SignTool path instead of assuming PATH contains signtool.");
             Assert.IsFalse(NormalizeLineEndings(certManagementScript).Contains("else {\n        if (-not (ImportAndVerifyCertificate -cerPath $cerPath -storePath \"Cert:\\LocalMachine\\Root\"))", StringComparison.Ordinal), "LocalMachine Root trust should not be attempted during normal current-user development signing.");
             StringAssert.Contains(NormalizeLineEndings(selfSignScript), "if ($RequireMachineRoot) {\n    if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath \"Cert:\\LocalMachine\\Root\"))");
@@ -1305,6 +1375,16 @@ namespace ViewModelTests
             Assert.IsFalse(sessionHelper.Contains("KillPowerToysProcesses", StringComparison.Ordinal), "UITestAutomation cleanup should use Kit process ownership.");
             Assert.IsFalse(NormalizeLineEndings(sessionHelper).Contains("foreach (var process in processes)\n                    {\n                        process.Kill();", StringComparison.Ordinal), "SessionHelper should not globally kill every process with a Kit-compatible executable name.");
             Assert.IsFalse(NormalizeLineEndings(uiTestBase).Contains("foreach (var process in Process.GetProcessesByName(processName))\n                {\n                    process.Kill();", StringComparison.Ordinal), "UITestBase cleanup should not globally kill every process with a Kit-compatible executable name.");
+        }
+
+        [TestMethod]
+        public void KitSettingsLibraryShouldNotProbeInactiveCmdPalPackageState()
+        {
+            var cmdPalProperties = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "CmdPalProperties.cs"));
+
+            Assert.IsFalse(cmdPalProperties.Contains("Microsoft.CommandPalette_8wekyb3d8bbwe", StringComparison.Ordinal), "Compatibility DTOs should not probe inactive Command Palette package state.");
+            Assert.IsFalse(cmdPalProperties.Contains("Microsoft.CommandPalette.Dev_8wekyb3d8bbwe", StringComparison.Ordinal), "Compatibility DTOs should not probe inactive Command Palette dev package state.");
+            Assert.IsFalse(cmdPalProperties.Contains("File.ReadAllText", StringComparison.Ordinal), "Compatibility DTOs should not do disk I/O for inactive Command Palette settings.");
         }
 
         [TestMethod]

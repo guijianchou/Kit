@@ -182,7 +182,12 @@ public sealed class AllAppsViewModel : Observable
             return;
         }
 
-        _coordinator.UpdateModuleEnabled(flyoutItem.Tag, flyoutItem.IsEnabled);
+        if (!_coordinator.UpdateModuleEnabled(flyoutItem.Tag, flyoutItem.IsEnabled))
+        {
+            flyoutItem.UpdateStatus(!isEnabled);
+            return;
+        }
+
         SortFlyoutMenuItems();
     }
 }

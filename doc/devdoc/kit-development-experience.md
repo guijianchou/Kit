@@ -255,6 +255,13 @@ This pass continued the PowerToys-main comparison and tightened the places where
 - Local build helpers now treat `.slnf` as solution files for `-RestoreOnly`, respect `/property:` long-form overrides for default skip properties, forward `-RequireMachineRoot` through direct signing entry points, and document that current-user trust is the default signing path.
 - Settings deep links now call a Kit-only install resolver. The upstream-compatible `PowerToys.exe` resolver remains separated for copied-module compatibility helpers, but Kit Settings links do not use it.
 - Remaining unreferenced inactive Settings resources for Keyboard Manager, File Explorer add-ons, Mouse utilities, Screen Ruler, Peek, Workspaces, and Hosts were removed so the resource file matches the active four-module UI surface.
+- Runner now honors the `enable_quick_access` general setting instead of forcing Quick Access off, and periodic update toasts now respect the Settings notification toggle.
+- Quick Access rolls a module toggle back when the runner IPC update fails, keeping the UI state aligned with the actual module state.
+- Awake module destruction now signals the child process, waits for shutdown, uses a bounded terminate fallback when the signal path cannot be established or does not complete, and closes process/thread handles before deleting the module interface.
+- Settings compatibility models no longer probe the inactive Command Palette package path, so deleted CmdPal package state cannot leak into current Settings startup.
+- Local sparse package re-registration now points at the publisher-adjusted `.user/PowerToysSparse.AppxManifest.xml` emitted by `BuildSparsePackage.ps1`, while CI still keeps the checked-in manifest publisher unchanged.
+- Local signing helper defaults use the development certificate subject and current-user trust path; broader machine/root trust remains an explicit opt-in.
+- The remaining inactive Settings resource strings and unused VariantAssignment package pins were removed to keep the active Kit surface aligned with the four retained modules.
 
 Verification for this pass used Visual Studio 18 MSBuild and VSTest:
 
@@ -263,6 +270,11 @@ Verification for this pass used Visual Studio 18 MSBuild and VSTest:
 3. Built `src/modules/powerdisplay/PowerDisplayModuleInterface/PowerDisplayModuleInterface.vcxproj` Debug x64.
 4. Built `src/settings-ui/Settings.UI.UnitTests/Settings.UI.UnitTests.csproj` Debug x64.
 5. Ran `vstest.console.exe` with `FullyQualifiedName~BuildCompatibility`, which reported 74/74 passing tests.
+6. Added failing regression coverage for Quick Access settings/IPC rollback, update-toast notification gating, Awake shutdown cleanup, CmdPal package-probe removal, sparse package helper output, signing helper defaults, inactive resource cleanup, and unused package pin removal.
+7. Rebuilt `Settings.UI.UnitTests.csproj` Debug x64 and ran `FullyQualifiedName~BuildCompatibility`, which reported 77/77 passing tests for the expanded compatibility coverage.
+8. Rebuilt `Kit.vcxproj`, `AwakeModuleInterface.vcxproj`, `PowerToys.QuickAccess.csproj`, `PowerToys.Settings.csproj`, and `PackageIdentity.vcxproj` Debug x64 after the runtime/package changes.
+9. Ran the full `Settings.UI.UnitTests.dll`, which reported 176/176 passing tests.
+10. Ran `BuildSparsePackage.ps1 -Platform x64 -Configuration Debug -NoSign`, which created `x64\Debug\PowerToysSparse.msix` and printed the generated `.user\PowerToysSparse.AppxManifest.xml` re-registration command.
 
 ## Latest Verification Notes
 

@@ -626,51 +626,12 @@
   <data name="ColorFormatEditorHelpline4.Text" xml:space="preserve">
     <value>Example:  %ReX means red value in hex uppercase two digits format.</value>
   </data>
-  <data name="Run_NotAccessibleWarning.Title" xml:space="preserve">
-    <value>Please define an activation command or allow this plugin to be used in the global results.</value>
-  </data>
-  <data name="Run_AllPluginsDisabled.Title" xml:space="preserve">
-    <value>PowerToys Run can't provide any results without plugins</value>
-  </data>
-  <data name="Run_AllPluginsDisabled.Message" xml:space="preserve">
-    <value>Enable at least one plugin to get started</value>
-  </data>
-  <data name="Run_PluginUse.Header" xml:space="preserve">
-    <value>Plugins</value>
-  </data>
-  <data name="Run_PluginUseDescription.Text" xml:space="preserve">
-    <value>Include or remove plugins from the global results, change the direct activation phrase and configure additional options</value>
-  </data>
-  <data name="Run_PositionAppearance_GroupSettings.Header" xml:space="preserve">
-    <value>Position &amp; appearance</value>
-  </data>
-  <data name="Run_PositionHeader.Header" xml:space="preserve">
-    <value>Preferred monitor position</value>
-    <comment>as in Show PowerToys Run on primary monitor</comment>
-  </data>
-  <data name="Run_PositionHeader.Description" xml:space="preserve">
-    <value>If multiple monitors are in use, PowerToys Run can be launched on the desired monitor</value>
-    <comment>as in Show PowerToys Run on primary monitor</comment>
-  </data>
-  <data name="Run_Radio_Position_Cursor.Content" xml:space="preserve">
-    <value>Monitor with mouse cursor</value>
-  </data>
-  <data name="Run_Radio_Position_Focus.Content" xml:space="preserve">
-    <value>Monitor with focused window</value>
-  </data>
-  <data name="Run_Radio_Position_Primary_Monitor.Content" xml:space="preserve">
-    <value>Primary monitor</value>
-  </data>
-  <data name="Run_PluginsLoading.Text" xml:space="preserve">
-    <value>Plugins are loading...</value>
-  </data>
   <data name="Activation_Shortcut.Header" xml:space="preserve">
     <value>Activation shortcut</value>
   </data>
   <data name="Activation_Shortcut.Description" xml:space="preserve">
     <value>Customize the shortcut to activate this module</value>
   </data>
-
 	<data name="PasteAsPlainText_Shortcut.Header" xml:space="preserve">
     <value>Paste as plain text directly</value>
   </data>
@@ -718,9 +679,6 @@
   </data>
   <data name="TranscodeToMp4.Header" xml:space="preserve">
     <value>Transcode to .mp4 (H.264/AAC)</value>
-  </data>
-  <data name="Launch_ColorPicker.Content" xml:space="preserve">
-    <value>Open Color Picker</value>
   </data>
   <data name="ReleaseNotes.Content" xml:space="preserve">
     <value>Release notes</value>
@@ -869,17 +827,6 @@
     <value>Learn more about Keyboard Manager</value>
     <comment>Keyboard Manager is a product name, do not loc</comment>
   </data>
-  <data name="LearnMore_MouseUtils.Text" xml:space="preserve">
-    <value>Learn more about Mouse utilities</value>
-    <comment>Mouse utilities is a product name, do not loc</comment>
-  </data>
-  <data name="LearnMore_Run.Text" xml:space="preserve">
-    <value>Learn more about PowerToys Run</value>
-    <comment>PowerToys Run is a product name, do not loc</comment>
-  </data>
-  <data name="Launch_Run.Content" xml:space="preserve">
-    <value>Open PowerToys Run</value>
-  </data>
   <data name="GeneralPage_Documentation.Text" xml:space="preserve">
     <value>Documentation</value>
   </data>
@@ -961,131 +908,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
     <value>On</value>
     <comment>The state of a ToggleSwitch when it's on</comment>
   </data>
-  <data name="CropAndLock.ModuleDescription" xml:space="preserve">
-    <value>Crop And Lock allows you to crop a current application into a smaller window or just create a thumbnail. Focus the target window and press the shortcut to start cropping.</value>
-    <comment>"Crop And Lock" is the name of the utility</comment>
-  </data>
-  <data name="CropAndLock.ModuleTitle" xml:space="preserve">
-    <value>Crop And Lock </value>
-    <comment>"Crop And Lock" is the name of the utility</comment>
-  </data>
-  <data name="CropAndLock_Activation_GroupSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="CropAndLock_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>Crop And Lock</value>
-    <comment>"Crop And Lock" is the name of the utility</comment>
-  </data>
-  <data name="Shell_CropAndLock.Content" xml:space="preserve">
-    <value>Crop And Lock</value>
-    <comment>"Crop And Lock" is the name of the utility</comment>
-  </data>
-  <data name="LearnMore_CropAndLock.Text" xml:space="preserve">
-    <value>Learn more about Crop And Lock</value>
-    <comment>"Crop And Lock" is the name of the utility</comment>
-  </data>
-  <data name="CropAndLock_ReparentActivation_Shortcut.Header" xml:space="preserve">
-    <value>Reparent shortcut</value>
-  </data>
-  <data name="CropAndLock_ReparentActivation_Shortcut.Description" xml:space="preserve">
-    <value>Creates a cropped version of an application’s window by embedding the original app into a new window. This is experimental and may cause issues due to the reparenting behavior.</value>
-  </data>
-  <data name="CropAndLock_ThumbnailActivation_Shortcut.Header" xml:space="preserve">
-    <value>Thumbnail shortcut</value>
-  </data>
-  <data name="CropAndLock_ThumbnailActivation_Shortcut.Description" xml:space="preserve">
-    <value>Creates a cropped, non-interactive thumbnail of another window. Improves app compatibility.</value>
-  </data>
-  <data name="CropAndLock_ScreenshotActivation_Shortcut.Header" xml:space="preserve">
-    <value>Screenshot shortcut</value>
-  </data>
-  <data name="CropAndLock_ScreenshotActivation_Shortcut.Description" xml:space="preserve">
-    <value>Creates a cropped, static screenshot of another window. The screenshot won't update with the original window's content.</value>
-  </data>
-  <data name="CropAndLock.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-    <comment>giving credit to the projects this utility was based on</comment>
-  </data>
-  <data name="AlwaysOnTop.ModuleDescription" xml:space="preserve">
-    <value>Always On Top is a quick and easy way to pin windows on top.</value>
-  </data>
-  <data name="AlwaysOnTop.ModuleTitle" xml:space="preserve">
-    <value>Always On Top</value>
-  </data>
-  <data name="AlwaysOnTop_Activation_GroupSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="AlwaysOnTop_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>Always On Top</value>
-  </data>
-  <data name="AlwaysOnTop_ExcludedApps.Description" xml:space="preserve">
-    <value>Excludes an application from pinning on top</value>
-  </data>
-  <data name="AlwaysOnTop_ExcludedApps.Header" xml:space="preserve">
-    <value>Excluded apps</value>
-  </data>
-  <data name="AlwaysOnTop_ExcludedApps_TextBoxControl.PlaceholderText" xml:space="preserve">
-    <value>Example: outlook.exe</value>
-  </data>
-  <data name="AlwaysOnTop_FrameColor.Header" xml:space="preserve">
-    <value>Color</value>
-  </data>
-  <data name="AlwaysOnTop_FrameEnabled.Header" xml:space="preserve">
-    <value>Show a border around the pinned window</value>
-  </data>
-  <data name="AlwaysOnTop_FrameThickness.Header" xml:space="preserve">
-    <value>Thickness (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="AlwaysOnTop_Behavior_GroupSettings.Header" xml:space="preserve">
-    <value>Appearance &amp; behavior</value>
-  </data>
-  <data name="AlwaysOnTop_ContextMenuEnabled.Header" xml:space="preserve">
-    <value>Show Always on Top in the title bar context menu</value>
-  </data>
-  <data name="AlwaysOnTop_ContextMenuEnabled.Description" xml:space="preserve">
-    <value>Lets you turn Always on Top mode on or off from the window's title bar right-click menu</value>
-  </data>
-  <data name="Shell_AlwaysOnTop.Content" xml:space="preserve">
-    <value>Always On Top</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="AlwaysOnTop_GameMode.Content" xml:space="preserve">
-    <value>Do not activate when Game Mode is on</value>
-    <comment>Game Mode is a Windows feature</comment>
-  </data>
-  <data name="LearnMore_AlwaysOnTop.Text" xml:space="preserve">
-    <value>Learn more about Always On Top</value>
-    <comment>{Locked="Always On Top"}</comment>
-  </data>
-  <data name="AlwaysOnTop_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="AlwaysOnTop_ActivationShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to pin or unpin an app window</value>
-  </data>
-  <data name="AlwaysOnTop_IncreaseOpacityShortcut.Header" xml:space="preserve">
-    <value>Increase opacity</value>
-  </data>
-  <data name="AlwaysOnTop_IncreaseOpacityShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to increase the opacity of a pinned window</value>
-  </data>
-  <data name="AlwaysOnTop_DecreaseOpacityShortcut.Header" xml:space="preserve">
-    <value>Decrease opacity</value>
-  </data>
-  <data name="AlwaysOnTop_DecreaseOpacityShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to decrease the opacity of a pinned window</value>
-  </data>
-  <data name="AlwaysOnTop_FrameColor_Mode.Header" xml:space="preserve">
-    <value>Color mode</value>
-  </data>
-  <data name="AlwaysOnTop_Radio_Custom_Color.Content" xml:space="preserve">
-    <value>Custom color</value>
-  </data>
-  <data name="AlwaysOnTop_Radio_Windows_Default.Content" xml:space="preserve">
-    <value>Windows default</value>
-    <comment>{Locked="Windows"}</comment>
-  </data>
   <data name="FileExplorerPreview.SecondaryLinksHeader" xml:space="preserve">
     <value>Attribution</value>
     <comment>giving credit to the projects this utility was based on</comment>
@@ -1096,9 +918,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
   </data>
   <data name="Shell_WhatsNew.Content" xml:space="preserve">
     <value>What's new</value>
-  </data>
-  <data name="AlwaysOnTop_RoundCorners.Content" xml:space="preserve">
-    <value>Enable rounded corners</value>
   </data>
   <data name="LearnMore_QuickAccent.Text" xml:space="preserve">
     <value>Learn more about Quick Accent</value>
@@ -1122,9 +941,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="QuickAccent.SecondaryLinksHeader" xml:space="preserve">
     <value>Attribution</value>
   </data>
-  <data name="AlwaysOnTop_ShortDescription" xml:space="preserve">
-    <value>Pin a window</value>
-  </data>
   <data name="LightSwitch_ThemeToggle_Shortcut.Header" xml:space="preserve">
     <value>Theme toggle shortcut</value>
   </data>
@@ -1133,18 +949,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="LightSwitch_ForceDarkMode" xml:space="preserve">
     <value>Toggle theme</value>
-  </data>
-  <data name="CropAndLock_Thumbnail" xml:space="preserve">
-    <value>Crop and create a thumbnail</value>
-  </data>
-  <data name="CropAndLock_Reparent" xml:space="preserve">
-    <value>Crop an app's window into a cropped window</value>
-  </data>
-  <data name="CropAndLock_Screenshot" xml:space="preserve">
-    <value>Crop an app into a screenshot window</value>
-  </data>
-  <data name="Run_ShortDescription" xml:space="preserve">
-    <value>Open Run</value>
   </data>
   <data name="ScreenRuler_ShortDescription" xml:space="preserve">
     <value>Start measurement</value>
@@ -1325,12 +1129,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="FileExplorerPreview_ToggleSwitch_Monaco_Try_Format.Header" xml:space="preserve">
     <value>Try to format the source for preview</value>
   </data>
-  <data name="Run_ConflictingKeywordInfo.Title" xml:space="preserve">
-    <value>Some characters and phrases may conflict with global queries of other plugins if you use them as activation command.</value>
-  </data>
-  <data name="Run_ConflictingKeywordInfo_Link.Content" xml:space="preserve">
-    <value>Learn more about conflicting activation commands</value>
-  </data>
   <data name="QuickAccent_Description_Indicator.Header" xml:space="preserve">
     <value>Show the Unicode code and name of the currently selected character</value>
   </data>
@@ -1496,39 +1294,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="QuickAccent_SelectedLanguage_Welsh" xml:space="preserve">
     <value>Welsh</value>
   </data>
-  <data name="EnvironmentVariables.ModuleDescription" xml:space="preserve">
-    <value>A quick utility for managing environment variables.</value>
-  </data>
-  <data name="EnvironmentVariables.ModuleTitle" xml:space="preserve">
-    <value>Environment Variables</value>
-  </data>
-  <data name="Shell_EnvironmentVariables.Content" xml:space="preserve">
-    <value>Environment Variables</value>
-  </data>
-  <data name="EnvironmentVariables_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>Environment Variables</value>
-  </data>
-  <data name="EnvironmentVariables_Activation_GroupSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="EnvironmentVariables_LaunchButtonControl.Description" xml:space="preserve">
-    <value>Manage your environment variables</value>
-  </data>
-  <data name="EnvironmentVariables_LaunchButtonControl.Header" xml:space="preserve">
-    <value>Open Environment Variables</value>
-  </data>
-  <data name="Launch_EnvironmentVariables.Content" xml:space="preserve">
-    <value>Open Environment Variables</value>
-  </data>
-  <data name="LearnMore_EnvironmentVariables.Text" xml:space="preserve">
-    <value>Learn more about Environment Variables</value>
-  </data>
-  <data name="EnvironmentVariables_Toggle_LaunchAdministrator.Description" xml:space="preserve">
-    <value>Required in order to make changes to the system environment variables</value>
-  </data>
-  <data name="EnvironmentVariables_Toggle_LaunchAdministrator.Header" xml:space="preserve">
-    <value>Open as administrator</value>
-  </data>
   <data name="GPO_SettingIsManaged.Title" xml:space="preserve">
     <value>This setting is managed by your organization.</value>
   </data>
@@ -1647,55 +1412,8 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>The maximum size, in kilobytes, for files to be displayed. This is a safety mechanism to prevent loading large files into RAM.</value>
     <comment>"RAM" refers to random access memory; "size" refers to disk space; "bytes" refer to the measurement unit</comment>
   </data>
-  <data name="RegistryPreview.ModuleDescription" xml:space="preserve">
-    <value>A quick little utility to visualize and edit complex Windows Registry files.</value>
-    <comment>{Locked="Windows"}</comment>
-  </data>
-  <data name="RegistryPreview.ModuleTitle" xml:space="preserve">
-    <value>Registry Preview</value>
-  </data>
-  <data name="Shell_RegistryPreview.Content" xml:space="preserve">
-    <value>Registry Preview</value>
-    <comment>Product name: Navigation view item name for Registry Preview</comment>
-  </data>
-  <data name="RegistryPreview_Enable_RegistryPreview.Header" xml:space="preserve">
-    <value>Registry Preview</value>
-    <comment>Registry Preview is the name of the utility</comment>
-  </data>
-  <data name="LearnMore_RegistryPreview.Text" xml:space="preserve">
-    <value>Learn more about Registry Preview</value>
-    <comment>Registry Preview is a product name, do not loc</comment>
-  </data>
-  <data name="Launch_RegistryPreview.Content" xml:space="preserve">
-    <value>Open Registry Preview</value>
-    <comment>"Registry Preview" is the name of the utility</comment>
-  </data>
-  <data name="RegistryPreview_Launch_GroupSettings.Header" xml:space="preserve">
-    <value>Open</value>
-  </data>
-  <data name="RegistryPreview_LaunchButtonControl.Header" xml:space="preserve">
-    <value>Open Registry Preview</value>
-  </data>
-  <data name="RegistryPreview_DefaultRegApp.Header" xml:space="preserve">
-    <value>Make Registry Preview the default app for .reg files</value>
-  </data>
-  <data name="MWB_PCNameLabel.PlaceholderText" xml:space="preserve">
-    <value>Device name</value>
-  </data>
-  <data name="MWB_SecurityKeyLabel.PlaceholderText" xml:space="preserve">
-    <value>Security key</value>
-  </data>
-  <data name="Run_FindMorePlugins.Text" xml:space="preserve">
-    <value>Find more plugins</value>
-  </data>
-  <data name="Run_PluginUseFindMorePlugins.Content" xml:space="preserve">
-    <value>Find more plugins</value>
-  </data>
   <data name="GPO_SomeRunPluginsAreManaged.Title" xml:space="preserve">
     <value>The enabled state of some plugins is managed by your organization.</value>
-  </data>
-  <data name="AlwaysOnTop_FrameOpacity.Header" xml:space="preserve">
-    <value>Opacity (%)</value>
   </data>
   <data name="SettingsWindow_AdminTitle" xml:space="preserve">
     <value>Administrator: Kit</value>
@@ -1777,429 +1495,17 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>The Command Not Found module is enabled by your organization.</value>
     <comment>"Command Not Found" is a product name</comment>
   </data>
-  <data name="NewPlus.ModuleTitle" xml:space="preserve">
-    <value>New+</value>
-    <comment>New+ is the name of the utility. Localize product name in accordance with Windows New</comment>
-  </data>
-  <data name="NewPlus.ModuleDescription" xml:space="preserve">
-    <value>Create files and folders from a personalized set of templates</value>
-  </data>
-  <data name="NewPlus_Product_Name.Content" xml:space="preserve">
-    <value>New+</value>
-    <comment>New+ is the name of the utility. Localize product name in accordance with Windows New</comment>
-  </data>
-  <data name="NewPlus_Learn_More.Text" xml:space="preserve">
-    <value>Learn more about New+</value>
-    <comment>New+ learn more link. Localize product name in accordance with Windows New</comment>
-  </data>
-  <data name="NewPlus_Enable_Toggle.Header" xml:space="preserve">
-    <value>New+</value>
-    <comment>Localize product name in accordance with Windows New</comment>
-  </data>
-  <data name="NewPlus_TemplatesNotBackupAndRestoreWarning.Title" xml:space="preserve">
-    <value>PowerToys "Back up and Restore" feature doesn't take templates into account at this moment. If you use that feature, templates will have to be copied manually.</value>
-  </data>
-  <data name="NewPlus_Templates.Header" xml:space="preserve">
-    <value>Templates</value>
-    <comment>Templates label</comment>
-  </data>
-  <data name="NewPlus_Templates_Location.Header" xml:space="preserve">
-    <value>Location</value>
-    <comment>Templates Location label</comment>
-  </data>
-  <data name="NewPlus_Templates_Location_Learn_More.Content" xml:space="preserve">
-    <value>Learn more about template location</value>
-    <comment>Read more about templates location</comment>
-  </data>
-  <data name="NewPlus_Templates_Location_Change.Content" xml:space="preserve">
-    <value>Change</value>
-    <comment>Button where user can Change the location of New templates</comment>
-  </data>
-  <data name="NewPlus_Display_Options.Header" xml:space="preserve">
-    <value>Display options</value>
-    <comment>Display options label</comment>
-  </data>
-  <data name="NewPlus_Hide_File_Extension_Toggle.Header" xml:space="preserve">
-    <value>Hide the file extension in template names</value>
-    <comment>Template file name extension settings toggle</comment>
-  </data>
-  <data name="NewPlus_Hide_Starting_Digits_Toggle.Header" xml:space="preserve">
-    <value>Hide leading digits, spaces, and dots in template filenames</value>
-    <comment>Template filename starting digits settings toggle</comment>
-  </data>
-  <data name="NewPlus_Hide_Starting_Digits_Description.Text" xml:space="preserve">
-    <value>Ignores digits, spaces, and dots at the start of filenames—useful for sorting templates without showing those characters</value>
-    <comment>Template filename starting digits settings toggle</comment>
-  </data>
-  <data name="NewPlusHideBuiltInNewToggle.Header" xml:space="preserve">
-    <value>Hide the built-in "New" context menu</value>
-    <comment>Localize New in accordance with Windows New</comment>
-  </data>
-  <data name="NewPlus_BuiltInNewRegistryUpdateError" xml:space="preserve">
-    <value>Couldn't update the built-in "New" context menu setting.</value>
-    <comment>User-facing error shown when New+ fails to update the built-in New registry setting</comment>
-  </data>
-  <data name="NewPlus_behavior.Header" xml:space="preserve">
-    <value>Behavior</value>
-    <comment>New+ behavior related settings label</comment>
-  </data>
-  <data name="NewPlus_Behaviour_Replace_Variables_Toggle.Header" xml:space="preserve">
-    <value>Replace variables in template filename</value>
-    <comment>New+ replace variables in template filename behavior toggle</comment>
-  </data>
-  <data name="NewPlus_Behaviour_Replace_Variables_Learn_More.Content" xml:space="preserve">
-    <value>Learn more about supported variables and see examples</value>
-    <comment>New+ help link to learn more about supported variables and see examples</comment>
-  </data>
-  <data name="NewPlus_Year_YYYY_Variable_Description.Text" xml:space="preserve">
-    <value>Year, represented by a full four or five digits, depending on the calendar used.</value>
-    <comment>New+ description of the year $YYYY variable - casing of $YYYY is important</comment>
-  </data>
-  <data name="NewPlus_Month_MM_Variable_Description.Text" xml:space="preserve">
-    <value>Month, as digits with leading zeros for single-digit months.</value>
-    <comment>New+ description of the month $MM variable - casing of $MM is important</comment>
-  </data>
-  <data name="NewPlus_Day_DD_Variable_Description.Text" xml:space="preserve">
-    <value>Day of the month, as digits with leading zeros for single-digit days.</value>
-    <comment>New+ description of the day $DD variable - casing of $DD is important</comment>
-  </data>
-  <data name="NewPlus_Hour_hh_Variable_Description.Text" xml:space="preserve">
-    <value>Hours, with leading zeros for single-digit hours.</value>
-    <comment>New+ description of the hour $hh variable - casing of $hh is important</comment>
-  </data>
-  <data name="NewPlus_Minute_mm_Variable_Description.Text" xml:space="preserve">
-    <value>Minutes, with leading zeros for single-digit minutes.</value>
-    <comment>New+ description of the minute $mm variable - casing of $mm is important</comment>
-  </data>
-  <data name="NewPlus_Second_ss_Variable_Description.Text" xml:space="preserve">
-    <value>Seconds, with leading zeros for single-digit seconds.</value>
-    <comment>New+ description of the second $ss variable - casing of $ss is important</comment>
-  </data>
-  <data name="NewPlus.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-    <comment>giving credit</comment>
-  </data>
-  <data name="Shell_ZoomIt.Content" xml:space="preserve">
-    <value>ZoomIt</value>
-    <comment>{Locked="ZoomIt"}</comment>
-  </data>
-  <data name="ZoomIt_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>ZoomIt</value>
-    <comment>{Locked="ZoomIt"}</comment>
-  </data>
-  <data name="ZoomIt.ModuleDescription" xml:space="preserve">
-    <value>ZoomIt is a screen zoom, annotation, and recording tool for technical presentations and demos. You can also use ZoomIt to snip screenshots to the clipboard or to a file.</value>
-    <comment>{Locked="ZoomIt"}</comment>
-  </data>
-  <data name="ZoomIt.ModuleTitle" xml:space="preserve">
-    <value>ZoomIt</value>
-    <comment>{Locked="ZoomIt"}</comment>
-  </data>
-  <data name="LearnMore_ZoomIt.Text" xml:space="preserve">
-    <value>Learn more about ZoomIt</value>
-    <comment>{Locked="ZoomIt"}</comment>
-  </data>
-  <data name="ZoomIt.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-    <comment>giving credit to the projects this utility was based on</comment>
-  </data>
-  <data name="ZoomIt_SimultaneousStandaloneZoomItWarning.Title" xml:space="preserve">
-    <value>Running ZoomIt through PowerToys and the classical standalone ZoomIt executable at the same time is not supported. Please exit the original ZoomIt before enabling it here.</value>
-  </data>
-  <data name="ZoomIt_BehaviorGroup.Header" xml:space="preserve">
-    <value>Behavior</value>
-  </data>
-  <data name="ZoomIt_Toggle_ShowTrayIcon.Header" xml:space="preserve">
-    <value>Show tray icon</value>
-  </data>
-  <data name="ZoomIt_ZoomGroup.Header" xml:space="preserve">
-    <value>Zoom</value>
-  </data>
-  <data name="ZoomIt_ZoomGroup.Description" xml:space="preserve">
-    <value>Zoom in or out to enlarge content and make details clearer.</value>
-  </data>
-  <data name="ZoomIt_ZoomFAQ.Text" xml:space="preserve">
-    <value>Press **the mouse wheel** or **the Up / Down arrow keys** to zoom in or out.
-Press **Esc** or **the right mouse button** to exit zoom mode.
-Press **Ctrl + C** to capture the zoomed view, or **Ctrl + S** to save it.
-Press **Ctrl + Shift** to crop before copying or saving.</value>
-  </data>
-  <data name="ZoomIt_Zoom_Shortcut.Header" xml:space="preserve">
-    <value>Zoom activation</value>
-  </data>
-  <data name="ZoomIt_Toggle_AnimateZoom.Content" xml:space="preserve">
-    <value>Animate zoom in and out</value>
-  </data>
-  <data name="ZoomIt_Toggle_SmoothZoomedImage.Content" xml:space="preserve">
-    <value>Smooth the zoomed image</value>
-  </data>
-  <data name="ZoomIt_Slider_InitialMagnification.Header" xml:space="preserve">
-    <value>Initial zoom level</value>
-  </data>
-  <data name="ZoomIt_LiveZoomGroup.Header" xml:space="preserve">
-    <value>Live Zoom</value>
-  </data>
-  <data name="ZoomIt_LiveZoomGroup.Description" xml:space="preserve">
-    <value>Live Zoom keeps windows updating while zoomed.</value>
-  </data>
-  <data name="ZoomIt_LiveZoom_Shortcut.Header" xml:space="preserve">
-    <value>Live Zoom activation</value>
-  </data>
-  <data name="ZoomIt_DrawGroup.Header" xml:space="preserve">
-    <value>Draw</value>
-  </data>
-  <data name="ZoomIt_DrawFAQ.Text" xml:space="preserve">
-    <value>Press **the left mouse button** to toggle drawing mode when zoomed in, and **the right mouse button** to exit.
-Press **Ctrl + Z** to undo, **E** to clear drawings, and **Space** to center the cursor.
-
-**Pen control**
-Press **Ctrl + the mouse wheel** or **Ctrl + Up / Down** to adjust the pen width.
-
-**Colors**
-Press **R** (Red), **G** (Green), **B** (Blue), **O** (Orange), **Y** (Yellow), or **P** (Pink) to switch colors.
-
-**Highlight and blur**
-Press **Shift + a color key** for a translucent highlighter, **X** for blur, or **Shift + X** for a stronger blur.
-
-**Shapes**
-Press **Shift** for a line, **Ctrl** for a rectangle, **Tab** for an ellipse, or **Shift + Ctrl** for an arrow.
-
-**Screen**
-Press **K** or **W** for a black or white sketch pad.
-Press **Ctrl + C** to copy or **Ctrl + S** to save, and **Ctrl + Shift** to crop.
-    </value>
-  </data>
-  <data name="ZoomIt_Draw_Shortcut.Header" xml:space="preserve">
-    <value>Draw without zoom hotkey</value>
-  </data>
-  <data name="ZoomIt_TypeGroup.Header" xml:space="preserve">
-    <value>Type</value>
-  </data>
-  <data name="ZoomIt_TypeGroup.Description" xml:space="preserve">
-    <value>Type text while drawing</value>
-  </data>
-  <data name="ZoomIt_Type_TextFont.Header" xml:space="preserve">
-    <value>Text font</value>
-  </data>
-  <data name="ZoomIt_Type_Font_Button.Content" xml:space="preserve">
-    <value>Choose font</value>
-    <comment>Font refers to text font</comment>
-  </data>
-  <data name="ZoomIt_DemoTypeGroup.Header" xml:space="preserve">
-    <value>DemoType</value>
-  </data>
-  <data name="ZoomIt_DemoTypeGroup.Description" xml:space="preserve">
-    <value>Insert predefined text snippets with a shortcut using a text file.</value>
-  </data>
-  <data name="ZoomIt_DemoTypeFAQ" xml:space="preserve">
-    <value>Text can be pulled from the clipboard when it starts with **[start]**.
-Use **[end]** to separate snippets, **[pause:n]** to insert pauses (in seconds), and **[paste]** / **[/paste]** to send clipboard text.
-Use **[enter]**, **[up]**, **[down]**, **[left]**, and **[right]** to issue keystrokes.
-
-ZoomIt can send text automatically or run in manual mode. Keyboard input is blocked while text is being sent.
-
-In manual mode, press **Space** to unblock keyboard input at the end of a snippet.
-In auto mode, control returns automatically after completion.
-
-At the end of the file, ZoomIt reloads the file and restarts from the beginning.
-Press the hotkey with **Shift** in the opposite mode to step back to the previous **[end]** marker.
-
-Press **{0}** to reset DemoType and start from the beginning.</value>
-  </data>
-  <data name="ZoomIt_DemoType_Shortcut.Header" xml:space="preserve">
-    <value>DemoType activation</value>
-  </data>
-  <data name="ZoomIt_DemoType_File.Header" xml:space="preserve">
-    <value>Input file</value>
-  </data>
-  <data name="ZoomIt_DemoType_File_BrowseButton.Content" xml:space="preserve">
-    <value>Browse</value>
-  </data>
-  <data name="ZoomIt_DemoType_File_Picker_Dialog_Title" xml:space="preserve">
-    <value>Specify DemoType file..</value>
-  </data>
   <data name="FilePicker_AllFilesFilter" xml:space="preserve">
     <value>All Files</value>
   </data>
-  <data name="ZoomIt_DemoType_Toggle_UserDrivenMode.Content" xml:space="preserve">
-    <value>Drive input with typing</value>
-  </data>
-  <data name="ZoomIt_DemoType_SpeedSlider.Header" xml:space="preserve">
-    <value>Typing speed</value>
-  </data>
-  <data name="ZoomIt_DemoType_SpeedSlider_Thumbnail_Explanation" xml:space="preserve">
-    <value>bigger is faster</value>
-  </data>
-  <data name="ZoomIt_BreakGroup.Header" xml:space="preserve">
-    <value>Break</value>
-  </data>
-  <data name="ZoomIt_BreakGroup.Description" xml:space="preserve">
-    <value>Displays a countdown overlay for timed breaks or presentations.</value>
-  </data>
-  <data name="ZoomIt_BreakFAQ.Text" xml:space="preserve">
-    <value>Enter timer mode from the ZoomIt tray icon’s Break menu.
-Press **the arrow keys** to adjust the time. If the timer window loses focus through **Alt + Tab**, press **the left mouse button** on the ZoomIt tray icon to reactivate it.
-
-Press **Esc** to exit timer mode.
-
-Change the break timer color using the same keys as the drawing colors.
-The break timer font matches the text font.</value>
-  </data>
-  <data name="ZoomIt_Break_Shortcut.Header" xml:space="preserve">
-    <value>Break timer activation</value>
-  </data>
-  <data name="ZoomIt_Break_Timeout.Header" xml:space="preserve">
-    <value>Timer (minutes)</value>
-  </data>
-  <data name="ZoomIt_Break_ShowExpiredTime.Content" xml:space="preserve">
-    <value>Show time elapsed after expiration</value>
-  </data>
-  <data name="ZoomIt_Break_PlaySoundsFile.Content" xml:space="preserve">
-    <value>Play sound on expiration</value>
-  </data>
-  <data name="ZoomIt_Break_SoundFile.Header" xml:space="preserve">
-    <value>Alarm sound file</value>
-  </data>
-  <data name="ZoomIt_Break_SoundFile_BrowseButton.Content" xml:space="preserve">
-    <value>Browse</value>
-  </data>
-  <data name="ZoomIt_Break_SoundFile_Picker_Dialog_Title" xml:space="preserve">
-    <value>Specify sound file...</value>
-  </data>
   <data name="FilePicker_ZoomIt_SoundsFilter" xml:space="preserve">
     <value>Sounds</value>
-  </data>
-  <data name="ZoomIt_Break_TimerOpacity.Header" xml:space="preserve">
-    <value>Timer opacity</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition.Header" xml:space="preserve">
-    <value>Timer position</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_TopLeftCorner.Content" xml:space="preserve">
-    <value>Top left corner</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_TopCenter.Content" xml:space="preserve">
-    <value>Top center</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_TopRightCorner.Content" xml:space="preserve">
-    <value>Top right corner</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_Left.Content" xml:space="preserve">
-    <value>Left</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_Center.Content" xml:space="preserve">
-    <value>Center</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_Right.Content" xml:space="preserve">
-    <value>Right</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_BottomLeftCorner.Content" xml:space="preserve">
-    <value>Bottom left corner</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_BottomCenter.Content" xml:space="preserve">
-    <value>Bottom center</value>
-  </data>
-  <data name="ZoomIt_Break_TimerPosition_BottomRightCorner.Content" xml:space="preserve">
-    <value>Bottom right corner</value>
-  </data>
-  <data name="ZoomIt_Break_ShowBackgroundBitmap.Header" xml:space="preserve">
-    <value>Show background bitmap</value>
-  </data>
-  <data name="ZoomIt_Break_ShowFadedDesktop.Content" xml:space="preserve">
-    <value>Faded desktop</value>
-  </data>
-  <data name="ZoomIt_Break_ShowImageFile.Content" xml:space="preserve">
-    <value>Use image file as background</value>
-  </data>
-  <data name="ZoomIt_Break_BackgroundFile.Header" xml:space="preserve">
-    <value>Background image file</value>
-  </data>
-  <data name="ZoomIt_Break_BackgroundFile_BrowseButton.Content" xml:space="preserve">
-    <value>Browse</value>
-  </data>
-  <data name="ZoomIt_Break_BackgroundFile_Picker_Dialog_Title" xml:space="preserve">
-    <value>Specify background file...</value>
   </data>
   <data name="FilePicker_ZoomIt_BitmapFilesFilter" xml:space="preserve">
     <value>Bitmap files</value>
   </data>
   <data name="FilePicker_ZoomIt_AllPicturesFilter" xml:space="preserve">
     <value>All picture files</value>
-  </data>
-  <data name="ZoomIt_Break_BackgroundStretch.Content" xml:space="preserve">
-    <value>Scale to screen</value>
-  </data>
-  <data name="ZoomIt_RecordGroup.Header" xml:space="preserve">
-    <value>Record</value>
-  </data>
-  <data name="ZoomIt_RecordGroup.Description" xml:space="preserve">
-    <value>Record video of the screen.</value>
-  </data>
-  <data name="ZoomIt_Record_Shortcut.Header" xml:space="preserve">
-    <value>Record activation</value>
-  </data>
-  <data name="ZoomIt_Record_Shortcut_FullScreen" xml:space="preserve">
-    <value>Press **{0}** to start or stop screen or zoom recording</value>
-  </data>
-  <data name="ZoomIt_Record_Shortcut_Crop" xml:space="preserve">
-    <value>Press **{0}** to record a portion of the screen</value>
-  </data>
-  <data name="ZoomIt_Record_Shortcut_Window" xml:space="preserve">
-    <value>Press **{0}** to record a specific window</value>
-  </data>
-  <data name="ZoomIt_Record_Scaling.Header" xml:space="preserve">
-    <value>Scaling</value>
-  </data>
-  <data name="ZoomIt_Record_Format.Header" xml:space="preserve">
-    <value>Format</value>
-  </data>
-  <data name="ZoomIt_Record_CaptureSystemAudio.Content" xml:space="preserve">
-    <value>Capture system audio</value>
-  </data>
-  <data name="ZoomIt_Record_CaptureAudio.Content" xml:space="preserve">
-    <value>Capture audio input</value>
-  </data>
-  <data name="ZoomIt_Record_MicMonoMix.Content" xml:space="preserve">
-    <value>Mono</value>
-  </data>
-  <data name="ZoomIt_Record_Microphone.Header" xml:space="preserve">
-    <value>Microphone</value>
-  </data>
-  <data name="ZoomIt_Record_Microphones_Default_Name" xml:space="preserve">
-    <value>Default</value>
-  </data>
-  <data name="ZoomIt_Break_LockWorkstation.Content" xml:space="preserve">
-    <value>Lock workstation during break</value>
-  </data>
-  <data name="ZoomIt_SnipGroup.Header" xml:space="preserve">
-    <value>Snip</value>
-  </data>
-  <data name="ZoomIt_SnipGroup.Description" xml:space="preserve">
-    <value>Copy a selected area of the screen to the clipboard or to a file.</value>
-  </data>
-  <data name="ZoomIt_Snip_Shortcut.Header" xml:space="preserve">
-    <value>Snip activation</value>
-  </data>
-  <data name="ZoomIt_Snip_Shortcut_Save" xml:space="preserve">
-    <value>Press **{0}** to save the snip to a file instead of the clipboard.</value>
-  </data>
-  <data name="ZoomIt_SnipOcr_Shortcut.Header" xml:space="preserve">
-    <value>Snip OCR activation</value>
-  </data>
-  <data name="ZoomIt_SnipOcr_Shortcut.Description" xml:space="preserve">
-    <value>Copy text from the selected region to the clipboard.</value>
-  </data>
-  <data name="ZoomIt_PanoramaGroup.Header" xml:space="preserve">
-    <value>Panorama</value>
-  </data>
-  <data name="ZoomIt_PanoramaGroup.Description" xml:space="preserve">
-    <value>Capture a scrolling panorama of a selected screen region.</value>
-  </data>
-  <data name="ZoomIt_Panorama_Shortcut.Header" xml:space="preserve">
-    <value>Panorama activation</value>
-  </data>
-  <data name="ZoomIt_Panorama_Shortcut.Description" xml:space="preserve">
-    <value>Select the area, then scroll the content. Move slowly and consistently, and do not rewind to previously covered areas. Press the hotkey again or with Shift to save to a file.</value>
   </data>
   <data name="OpenAnimationsSettings.Content" xml:space="preserve">
     <value>Open animation settings</value>
@@ -2387,9 +1693,6 @@ The break timer font matches the text font.</value>
   </data>
   <data name="GeneralPage_EnableDataDiagnosticsText.Text" xml:space="preserve">
     <value>Helps make Kit faster, more stable, and better over time</value>
-  </data>
-  <data name="AlwaysOnTop_Sound.Header" xml:space="preserve">
-    <value>Play a sound when pinning a window</value>
   </data>
   <data name="GeneralPage_EnableViewDiagnosticDataText.Text" xml:space="preserve">
     <value>Stores diagnostic data locally in .xml format; folder may include .etl files as well. May use up 1 GB or more of disk space.</value>
@@ -2976,24 +2279,6 @@ The break timer font matches the text font.</value>
   <data name="LightSwitch_SetLocationButton.Content" xml:space="preserve">
     <value>Set Location</value>
   </data>
-  <data name="ZoomIt_LiveZoom_Shortcut_Draw" xml:space="preserve">
-    <value>Press **{0}** to activate live drawing and **Esc** to clear annotations or to exit.
-
-Press **Ctrl + Up / Down** to adjust the zoom level.
-	</value>
-  </data>
-  <data name="ZoomIt_TypeFAQ.Text" xml:space="preserve">
-    <value>Press **T** to switch to typing when drawing mode is active, and **Shift** for right-aligned text.
-Press **Esc** or **the left mouse button** to exit typing mode.
-Press **the mouse wheel** or **Up / Down** to adjust the font size.
-Text uses the current drawing color.</value>
-  </data>
-  <data name="ZoomIt_DrawGroup.Description" xml:space="preserve">
-    <value>Annotate the screen.</value>
-  </data>
-  <data name="ZoomIt_Break_BackgroundImage_None.Content" xml:space="preserve">
-    <value>None</value>
-  </data>
   <data name="ShowThemeAdaptiveTrayIcon.Content" xml:space="preserve">
     <value>Show a monochrome icon that matches the Windows theme</value>
   </data>
@@ -3026,79 +2311,6 @@ Text uses the current drawing color.</value>
   </data>
   <data name="Shell_Search_ShowAll.Text" xml:space="preserve">
     <value>Show all results</value>
-  </data>
-  <data name="ZoomIt_Type_DemoSample.Text" xml:space="preserve">
-    <value>Sample</value>
-  </data>
-  <data name="GrabAndMove.ModuleDescription" xml:space="preserve">
-    <value>Move and resize windows by holding a modifier key and dragging. Left-click to move, right-click to resize.</value>
-    <comment>"Grab And Move" is the name of the utility</comment>
-  </data>
-  <data name="GrabAndMove.ModuleTitle" xml:space="preserve">
-    <value>Grab And Move</value>
-    <comment>"Grab And Move" is the name of the utility</comment>
-  </data>
-  <data name="Shell_GrabAndMove.Content" xml:space="preserve">
-    <value>Grab And Move</value>
-    <comment>"Grab And Move" is the name of the utility</comment>
-  </data>
-  <data name="GrabAndMove_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>Grab And Move</value>
-    <comment>"Grab And Move" is the name of the utility</comment>
-  </data>
-  <data name="LearnMore_GrabAndMove.Text" xml:space="preserve">
-    <value>Learn more about Grab And Move</value>
-    <comment>"Grab And Move" is the name of the utility</comment>
-  </data>
-  <data name="GrabAndMove_BehaviorSettingsGroup.Header" xml:space="preserve">
-    <value>Behavior</value>
-  </data>
-  <data name="GrabAndMove_ModifierKey.Header" xml:space="preserve">
-    <value>Activation modifier key</value>
-    <comment>Drop-down to choose which modifier key (Alt or Win) activates Grab And Move drag and resize.</comment>
-  </data>
-  <data name="GrabAndMove_ModifierKey_Alt.Content" xml:space="preserve">
-    <value>Alt</value>
-    <comment>The Alt key on the keyboard</comment>
-  </data>
-  <data name="GrabAndMove_ModifierKey_Win.Content" xml:space="preserve">
-    <value>Windows key</value>
-    <comment>The Windows key on the keyboard</comment>
-  </data>
-  <data name="GrabAndMove_ShouldAbsorbAlt.Header" xml:space="preserve">
-    <value>Absorb Alt presses</value>
-    <comment>When enabled, Grab And Move absorbs the Alt keypress so it does not activate the window menu after a drag/resize.</comment>
-  </data>
-  <data name="GrabAndMove_ShouldAbsorbAlt.Description" xml:space="preserve">
-    <value>Prevent Alt from activating the window menu after a drag or resize operation</value>
-  </data>
-  <data name="GrabAndMove_DoNotActivateOnGameMode.Header" xml:space="preserve">
-    <value>Do not activate when Game Mode is on</value>
-    <comment>Game Mode is a Windows feature</comment>
-  </data>
-  <data name="GrabAndMove_ShowGeometry.Header" xml:space="preserve">
-    <value>Show window geometry</value>
-    <comment>When enabled, Grab And Move displays the window position (X, Y) and size (W, H) on the overlay during move and resize.</comment>
-  </data>
-  <data name="GrabAndMove_ShowGeometry.Description" xml:space="preserve">
-    <value>Display the window position and size on the overlay during drag and resize operations</value>
-  </data>
-  <data name="GrabAndMove_UseAltResize.Header" xml:space="preserve">
-    <value>Enable modifier + right-click to resize</value>
-    <comment>When enabled, holding the activation modifier key and right-clicking allows resizing windows by dragging from the closest edge or corner.</comment>
-  </data>
-  <data name="GrabAndMove_UseAltResize.Description" xml:space="preserve">
-    <value>Hold the activation modifier key and right-click to resize a window by dragging from the nearest edge or corner</value>
-  </data>
-  <data name="GrabAndMove_ExcludeApps.Header" xml:space="preserve">
-    <value>Excluded apps</value>
-  </data>
-  <data name="GrabAndMove_ExcludeApps.Description" xml:space="preserve">
-    <value>Excludes an application from being moved or resized by Grab And Move - add one application name per line</value>
-  </data>
-  <data name="GrabAndMove_ExcludeApps_TextBoxControl.PlaceholderText" xml:space="preserve">
-    <value>Example: outlook</value>
-    <comment>{Locked="outlook"}</comment>
   </data>
   <data name="Shell_Monitor.Content" xml:space="preserve">
     <value>Monitor</value>

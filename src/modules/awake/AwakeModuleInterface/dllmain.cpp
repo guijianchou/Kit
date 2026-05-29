@@ -36,6 +36,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD ul_reason_for_call, LPVOID /*lp
 
 const static wchar_t* MODULE_NAME = L"Awake";
 const static wchar_t* MODULE_DESC = L"A module that keeps your computer awake on-demand.";
+const static DWORD AWAKE_SHUTDOWN_WAIT_MS = 5000;
 
 class Awake : public PowertoyModuleIface
 {
@@ -48,7 +49,54 @@ private:
 
     bool is_process_running()
     {
-        return WaitForSingleObject(p_info.hProcess, 0) == WAIT_TIMEOUT;
+        return p_info.hProcess && WaitForSingleObject(p_info.hProcess, 0) == WAIT_TIMEOUT;
+    }
+
+    void close_process_handles()
+    {
+        if (p_info.hThread)
+        {
+            CloseHandle(p_info.hThread);
+            p_info.hThread = nullptr;
+        }
+
+        if (p_info.hProcess)
+        {
+            CloseHandle(p_info.hProcess);
+            p_info.hProcess = nullptr;
+        }
+
+        p_info.dwProcessId = 0;
+        p_info.dwThreadId = 0;
+    }
+
+    void wait_for_process_shutdown()
+    {
+        if (!p_info.hProcess)
+        {
+            return;
+        }
+
+        const DWORD waitResult = WaitForSingleObject(p_info.hProcess, AWAKE_SHUTDOWN_WAIT_MS);
+        if (waitResult == WAIT_TIMEOUT)
+        {
+            Logger::warn(L"PowerToys Awake did not exit after the shutdown signal. Terminating process.");
+            TerminateProcess(p_info.hProcess, 1);
+            WaitForSingleObject(p_info.hProcess, 1000);
+        }
+        else if (waitResult == WAIT_FAILED)
+        {
+            Logger::warn(L"Failed to wait for PowerToys Awake shutdown. {}", get_last_error_or_default(GetLastError()));
+        }
+    }
+
+    void terminate_process_if_running()
+    {
+        if (is_process_running())
+        {
+            TerminateProcess(p_info.hProcess, 1);
+            WaitForSingleObject(p_info.hProcess, 1000);
+        }
     }
 
     void launch_process()
@@ -91,6 +139,7 @@ public:
 
     virtual void destroy() override
     {
+        disable();
         delete this;
     }
 
@@ -150,6 +199,7 @@ public:
             if (!exitEvent)
             {
                 Logger::warn(L"Failed to create exit event for PowerToys Awake. {}", get_last_error_or_default(GetLastError()));
+                terminate_process_if_running();
             }
             else
             {
@@ -160,13 +210,18 @@ public:
 
                     // For some reason, we couldn't process the signal correctly, so we still
                     // need to terminate the Awake process.
-                    TerminateProcess(p_info.hProcess, 1);
+                    terminate_process_if_running();
+                }
+                else
+                {
+                    wait_for_process_shutdown();
                 }
 
                 ResetEvent(exitEvent);
                 CloseHandle(exitEvent);
-                CloseHandle(p_info.hProcess);
             }
+
+            close_process_handles();
         }
 
         m_enabled = false;

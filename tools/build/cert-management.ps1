@@ -21,7 +21,7 @@ This is useful in build or signing pipelines to ensure a valid and trusted certi
 
 .PARAMETER certSubject
 The subject name of the certificate to search for or create. Default is:
-"CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+"CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US"
 
 .PARAMETER cerPath
 (ImportAndVerifyCertificate only) The file path to a `.cer` certificate file to import.
@@ -46,7 +46,7 @@ Imports a certificate into the CurrentUser Root store and verifies its presence.
 #>
 
 param (
-    [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    [string]$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US",
     [switch]$RequireMachineRoot
 )
 
@@ -99,7 +99,7 @@ function ImportAndVerifyCertificate {
 
 function EnsureCertificate {
     param (
-        [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        [string]$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US",
         [switch]$RequireMachineRoot
     )
 

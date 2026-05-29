@@ -135,7 +135,7 @@ json::JsonObject load_general_settings()
     show_whats_new_after_updates = loaded.GetNamedBoolean(L"show_whats_new_after_updates", false);
     enable_experimentation = loaded.GetNamedBoolean(L"enable_experimentation", false);
     enable_warnings_elevated_apps = loaded.GetNamedBoolean(L"enable_warnings_elevated_apps", true);
-    enable_quick_access = false;
+    enable_quick_access = loaded.GetNamedBoolean(L"enable_quick_access", false);
     if (json::has(loaded, L"quick_access_shortcut", json::JsonValueType::Object))
     {
         quick_access_shortcut = PowerToysSettings::HotkeyObject::from_json(loaded.GetNamedObject(L"quick_access_shortcut"));
@@ -295,7 +295,7 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
 
     enable_warnings_elevated_apps = general_configs.GetNamedBoolean(L"enable_warnings_elevated_apps", true);
 
-    bool new_enable_quick_access = false;
+    bool new_enable_quick_access = general_configs.GetNamedBoolean(L"enable_quick_access", enable_quick_access);
     Logger::info(L"apply_general_settings: enable_quick_access={}, new_enable_quick_access={}", enable_quick_access, new_enable_quick_access);
 
     PowerToysSettings::HotkeyObject new_quick_access_shortcut;

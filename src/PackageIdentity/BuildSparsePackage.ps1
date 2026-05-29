@@ -29,8 +29,6 @@ if ($CIBuild.IsPresent) {
     $isCIBuild = $env:CIBuild -ieq 'true'
 }
 
-$currentPublisherHint = $script:Config.CertSubject
-
 # Configuration constants - centralized management
 $script:Config = @{
     IdentityName   = "Microsoft.PowerToys.SparseApp"
@@ -39,6 +37,8 @@ $script:Config = @{
     CertSubject    = 'CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US'
     CertValidMonths = 12
 }
+
+$currentPublisherHint = $script:Config.CertSubject
 
 #region Helper Functions
 
@@ -266,6 +266,7 @@ try {
 
 # Pack sparse MSIX from PackageIdentity folder
 $msixPath = Join-Path $outDir $script:Config.SparseMsixName
+$registerManifestPath = Join-Path $UserFolder "$($script:Config.CertPrefix).AppxManifest.xml"
 
 # Clean up existing MSIX file
 if (Test-Path $msixPath) {
@@ -351,6 +352,8 @@ try {
             if ($manifestChanged) {
                 $manifestXml.Save($manifestStagingPath)
             }
+
+            Copy-Item -Path $manifestStagingPath -Destination $registerManifestPath -Force
         } catch {
             Write-BuildLog ("Unable to adjust manifest metadata: {0}" -f $_) -Level Warning
         }
@@ -419,4 +422,4 @@ if ($NoSign) {
 
 Write-BuildLog "Register sparse package:" -Level Info
 Write-BuildLog "  Add-AppxPackage -Path `"$msixPath`" -ExternalLocation `"$outDir`"" -Level Warning
-Write-BuildLog "(If already installed and you changed manifest only): Add-AppxPackage -Register `"$manifestPath`" -ExternalLocation `"$outDir`" -ForceApplicationShutdown" -Level Warning
+Write-BuildLog "(If already installed and you changed manifest only): Add-AppxPackage -Register `"$registerManifestPath`" -ExternalLocation `"$outDir`" -ForceApplicationShutdown" -Level Warning

@@ -9,6 +9,12 @@
 ### 2.0.1
 
 - Version: Bumped Kit to `2.0.1`.
+- Runtime: Light Switch now reports the module as enabled only after its service process is created, so a failed `SearchPathW`/`CreateProcessW` launch no longer leaves the module marked enabled with tracing on.
+- Runtime: Light Switch now stops its scheduler service when the schedule mode changes to `Off` instead of restarting it, signalling the service-stop event for a graceful exit before the bounded terminate fallback, and restored the `stop_worker_only`/`stop_service_if_running` lifecycle from disabled comments.
+- Runtime: The Light Switch toggle hotkey now toggles the theme directly instead of relaunching a stopped scheduler service, and the now-unused `is_process_running` helper and a dead schedule-mode local were removed.
+- Runtime: Quick Access now builds its launcher, coordinator, and Settings dashboard wiring without the unused runner-elevation state; the direct Light Switch and PowerDisplay toggle actions never used it, so the dead field, coordinator property, interface member, and `App.IsElevated` argument were removed.
+- Refactor: Reworded the Light Switch hotkey parse error to name the active toggle-theme shortcut instead of the removed force-dark action.
+- Tests: Added regression coverage for the Quick Access elevation-state removal, the Light Switch enable-after-launch ordering, the schedule-`Off` service stop, and the toggle-hotkey direct-toggle behavior.
 - Refactor: Trimmed Quick Access and Settings serialization to the active four-module surface: `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay`.
 - Privacy: Removed managed telemetry sends, telemetry event sources, and `ManagedTelemetry` project references from the managed Settings and Quick Access layer.
 - Privacy: Deleted the inactive `ManagedTelemetry` source tree and managed telemetry base file after removing all active project references.
@@ -181,6 +187,12 @@
 ### 2.0.1
 
 - 版本：将 Kit 提升到 `2.0.1`。
+- 运行时：Light Switch 现在只在服务进程成功创建后才将模块标记为已启用，`SearchPathW`/`CreateProcessW` 启动失败时不再让模块保持已启用且 tracing 开启的状态。
+- 运行时：Light Switch 在计划模式切换为 `Off` 时改为停止调度服务而非重启，先发出 service-stop 事件让服务优雅退出，再走有界的 terminate 兜底，并从禁用注释中恢复了 `stop_worker_only`/`stop_service_if_running` 生命周期。
+- 运行时：Light Switch 切换热键现在直接切换主题，而不是重新启动已停止的调度服务，同时移除了现已未使用的 `is_process_running` helper 和一个无用的计划模式局部变量。
+- 运行时：Quick Access 现在在构建 launcher、coordinator 和 Settings dashboard 接线时不再携带未使用的 runner 提权状态；Light Switch 和 PowerDisplay 的直接切换操作从未使用它，因此移除了无用字段、coordinator 属性、接口成员和 `App.IsElevated` 参数。
+- 重构：将 Light Switch 热键解析错误信息改为指向当前的 toggle-theme 快捷键，而非已移除的 force-dark 操作。
+- 测试：为 Quick Access 提权状态移除、Light Switch 启动后再标记启用的顺序、计划 `Off` 时停止服务，以及切换热键直接切换的行为添加回归覆盖。
 - 重构：将 Quick Access 和 Settings 序列化收敛到四个活动模块：`Awake`、`Light Switch`、`Monitor` 和 `PowerDisplay`。
 - 隐私：从托管 Settings 和 Quick Access 层移除 telemetry 发送、telemetry 事件源和 `ManagedTelemetry` 项目引用。
 - 隐私：删除非活动的 `ManagedTelemetry` 源码树和托管 telemetry base 文件，此前所有活动项目引用已移除。

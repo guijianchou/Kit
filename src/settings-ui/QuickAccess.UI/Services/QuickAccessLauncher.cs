@@ -13,7 +13,6 @@ namespace Microsoft.PowerToys.QuickAccess.Services
         private readonly IQuickAccessCoordinator? _coordinator;
 
         public QuickAccessLauncher(IQuickAccessCoordinator? coordinator)
-            : base(coordinator?.IsRunnerElevated ?? false)
         {
             _coordinator = coordinator;
         }

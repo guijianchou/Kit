@@ -10,13 +10,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
 {
     public class QuickAccessLauncher : IQuickAccessLauncher
     {
-        private readonly bool _isElevated;
-
-        public QuickAccessLauncher(bool isElevated)
-        {
-            _isElevated = isElevated;
-        }
-
         public virtual bool Launch(ModuleType moduleType)
         {
             switch (moduleType)

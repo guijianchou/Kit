@@ -30,8 +30,6 @@ internal sealed class QuickAccessCoordinator : IQuickAccessCoordinator, IDisposa
         InitializeIpc();
     }
 
-    public bool IsRunnerElevated => false; // TODO: wire up real elevation state.
-
     public void HideFlyout()
     {
         _window.RequestHide();

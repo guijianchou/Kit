@@ -11,8 +11,6 @@ namespace Microsoft.PowerToys.QuickAccess.Services;
 
 public interface IQuickAccessCoordinator
 {
-    bool IsRunnerElevated { get; }
-
     void HideFlyout();
 
     void OpenSettings();

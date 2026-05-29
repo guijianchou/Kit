@@ -83,7 +83,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             quickAccessViewModel = new QuickAccessViewModel(
                 this.settingsRepository,
-                new QuickAccessLauncher(App.IsElevated),
+                new QuickAccessLauncher(),
                 moduleType => ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Disabled,
                 moduleType => ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Enabled,
                 resourceLoader,

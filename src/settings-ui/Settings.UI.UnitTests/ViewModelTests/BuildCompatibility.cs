@@ -821,6 +821,26 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitQuickAccessShouldNotKeepUnusedElevationState()
+        {
+            var controlsLauncher = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessLauncher.cs"));
+            var flyoutLauncher = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Services", "QuickAccessLauncher.cs"));
+            var coordinatorInterface = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Services", "IQuickAccessCoordinator.cs"));
+            var coordinator = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Services", "QuickAccessCoordinator.cs"));
+            var dashboardViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.cs"));
+
+            StringAssert.Contains(controlsLauncher, "ModuleType.LightSwitch");
+            StringAssert.Contains(controlsLauncher, "ModuleType.PowerDisplay");
+            Assert.IsFalse(controlsLauncher.Contains("_isElevated", StringComparison.Ordinal), "Kit Quick Access direct launch actions do not use elevation state and should not keep a dead field.");
+            Assert.IsFalse(controlsLauncher.Contains("QuickAccessLauncher(bool isElevated)", StringComparison.Ordinal), "Kit Quick Access launcher should not require an unused elevation argument.");
+            Assert.IsFalse(flyoutLauncher.Contains("IsRunnerElevated", StringComparison.Ordinal), "Quick Access flyout should not depend on a coordinator elevation property that is never wired.");
+            Assert.IsFalse(coordinatorInterface.Contains("IsRunnerElevated", StringComparison.Ordinal), "Quick Access coordinator contract should not expose an unused runner elevation state.");
+            Assert.IsFalse(coordinator.Contains("IsRunnerElevated", StringComparison.Ordinal), "Quick Access coordinator should not hard-code runner elevation state.");
+            Assert.IsFalse(coordinator.Contains("TODO: wire up real elevation state", StringComparison.Ordinal), "Quick Access should not keep a TODO for a state path that active Kit actions do not use.");
+            Assert.IsFalse(dashboardViewModel.Contains("new QuickAccessLauncher(App.IsElevated)", StringComparison.Ordinal), "Settings dashboard Quick Access should not pass an unused elevation state.");
+        }
+
+        [TestMethod]
         public void KitShortcutConflictWindowShouldNotSpecialCaseInactiveModuleSettings()
         {
             var shortcutConflictViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "ShortcutConflictViewModel.cs"));
@@ -2758,6 +2778,7 @@ namespace ViewModelTests
             Assert.IsFalse(lightSwitchInterface.Contains("m_force_dark_event_handle", StringComparison.Ordinal), "LightSwitch should not keep unused force-dark event handles.");
             Assert.IsFalse(lightSwitchInterface.Contains("L\"forceLight\"", StringComparison.Ordinal), "LightSwitch module config should not advertise disabled force-light custom actions.");
             Assert.IsFalse(lightSwitchInterface.Contains("L\"forceDark\"", StringComparison.Ordinal), "LightSwitch module config should not advertise disabled force-dark custom actions.");
+            Assert.IsFalse(lightSwitchInterface.Contains("force dark mode shortcut", StringComparison.Ordinal), "LightSwitch settings parse errors should refer to the active toggle-theme shortcut, not the removed force-dark action.");
             Assert.IsFalse(lightSwitchViewModel.Contains("ForceLightCommand", StringComparison.Ordinal), "LightSwitch settings view model should not keep commands for a commented-out force-light UI.");
             Assert.IsFalse(lightSwitchViewModel.Contains("ForceDarkCommand", StringComparison.Ordinal), "LightSwitch settings view model should not keep commands for a commented-out force-dark UI.");
             Assert.IsFalse(lightSwitchViewModel.Contains("SendCustomAction(\"forceLight\")", StringComparison.Ordinal), "LightSwitch settings should not send an unreachable force-light custom action.");
@@ -2765,6 +2786,64 @@ namespace ViewModelTests
             Assert.IsFalse(lightSwitchPage.Contains("Force mode buttons", StringComparison.Ordinal), "LightSwitch page should not keep disabled force-mode UI in comments.");
             Assert.IsFalse(lightSwitchPage.Contains("ForceLightCommand", StringComparison.Ordinal), "LightSwitch page should not bind disabled force-light commands.");
             Assert.IsFalse(lightSwitchPage.Contains("ForceDarkCommand", StringComparison.Ordinal), "LightSwitch page should not bind disabled force-dark commands.");
+        }
+
+        [TestMethod]
+        public void KitLightSwitchScheduleOffShouldStopServiceInsteadOfRestartingIt()
+        {
+            var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
+
+            StringAssert.Contains(lightSwitchInterface, "void stop_worker_only()");
+            StringAssert.Contains(lightSwitchInterface, "void stop_service_if_running()");
+            StringAssert.Contains(lightSwitchInterface, "if (newMode == ScheduleMode::Off)");
+            StringAssert.Contains(lightSwitchInterface, "stop_service_if_running();");
+            StringAssert.Contains(lightSwitchInterface, "start_service_if_needed();");
+            Assert.IsTrue(
+                lightSwitchInterface.IndexOf("if (newMode == ScheduleMode::Off)", StringComparison.Ordinal) <
+                lightSwitchInterface.IndexOf("start_service_if_needed();", StringComparison.Ordinal),
+                "LightSwitch schedule changes should branch on Off before starting the service.");
+            Assert.IsFalse(lightSwitchInterface.Contains("/*virtual void stop_worker_only()", StringComparison.Ordinal), "LightSwitch should not keep disabled stop-worker lifecycle code in comments.");
+            Assert.IsFalse(lightSwitchInterface.Contains("/*virtual void stop_service_if_running()", StringComparison.Ordinal), "LightSwitch should not keep disabled stop-service lifecycle code in comments.");
+        }
+
+        [TestMethod]
+        public void KitLightSwitchEnableShouldReportEnabledOnlyAfterServiceLaunchSucceeds()
+        {
+            var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
+
+            var enableStart = lightSwitchInterface.IndexOf("virtual void enable()", StringComparison.Ordinal);
+            Assert.AreNotEqual(-1, enableStart, "LightSwitch module interface should expose enable().");
+            var enableBody = lightSwitchInterface[enableStart..lightSwitchInterface.IndexOf("// Disable the powertoy", enableStart, StringComparison.Ordinal)];
+
+            StringAssert.Contains(enableBody, "CreateProcessW");
+            StringAssert.Contains(enableBody, "m_enabled = true;");
+            StringAssert.Contains(enableBody, "Trace::Enable(true);");
+            Assert.IsTrue(
+                enableBody.IndexOf("CreateProcessW", StringComparison.Ordinal) <
+                enableBody.IndexOf("m_enabled = true;", StringComparison.Ordinal),
+                "LightSwitch should mark the module enabled only after the service process is created.");
+            Assert.IsTrue(
+                enableBody.IndexOf("m_enabled = true;", StringComparison.Ordinal) <
+                enableBody.IndexOf("Trace::Enable(true);", StringComparison.Ordinal),
+                "LightSwitch enable tracing should reflect a successfully launched service.");
+            Assert.IsFalse(enableBody.TrimStart().StartsWith("virtual void enable()\r\n    {\r\n        m_enabled = true;", StringComparison.Ordinal), "LightSwitch should not set m_enabled before any launch failure path.");
+            Assert.IsFalse(enableBody.Contains("Logger::error(L\"Failed to launch Light Switch process.", StringComparison.Ordinal) && enableBody.Contains("m_enabled = true;\r\n        Logger::info(L\"Enabling Light Switch module...\"", StringComparison.Ordinal), "LightSwitch create-process failure path should not leave m_enabled true.");
+        }
+
+        [TestMethod]
+        public void KitLightSwitchToggleHotkeyShouldToggleThemeWithoutRestartingService()
+        {
+            var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
+
+            var hotkeyStart = lightSwitchInterface.IndexOf("virtual bool on_hotkey(size_t hotkeyId) override", StringComparison.Ordinal);
+            Assert.AreNotEqual(-1, hotkeyStart, "LightSwitch module interface should expose on_hotkey().");
+            var classEnd = lightSwitchInterface.IndexOf("void LightSwitchInterface::EnsureEventHandles()", hotkeyStart, StringComparison.Ordinal);
+            Assert.AreNotEqual(-1, classEnd, "LightSwitch module interface class should close before its out-of-line member definitions.");
+            var hotkeyAndTail = lightSwitchInterface[hotkeyStart..classEnd];
+
+            StringAssert.Contains(hotkeyAndTail, "ToggleTheme();");
+            Assert.IsFalse(hotkeyAndTail.Contains("enable();", StringComparison.Ordinal), "The toggle-theme hotkey should toggle the theme directly, not relaunch the scheduler service when the schedule is Off and the worker has been stopped.");
+            Assert.IsFalse(hotkeyAndTail.Contains("is_process_running", StringComparison.Ordinal), "The toggle-theme hotkey should not gate the theme toggle on a running scheduler service, and the now-unused is_process_running helper should be removed.");
         }
 
         [TestMethod]

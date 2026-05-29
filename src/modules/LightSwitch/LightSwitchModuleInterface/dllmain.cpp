@@ -277,8 +277,6 @@ public:
                 g_settings.m_changeApps = *v;
             }
 
-            auto previousMode = g_settings.m_scheduleMode;
-
             if (auto v = values.get_string_value(L"scheduleMode"))
             {
                 auto newMode = FromString(*v);
@@ -289,7 +287,14 @@ public:
                                  ToString(newMode));
                     g_settings.m_scheduleMode = newMode;
 
-                    start_service_if_needed();
+                    if (newMode == ScheduleMode::Off)
+                    {
+                        stop_service_if_running();
+                    }
+                    else
+                    {
+                        start_service_if_needed();
+                    }
                 }
             }
 
@@ -343,11 +348,17 @@ public:
         }
     }
 
-    /*virtual void stop_worker_only()
+    virtual void stop_worker_only()
     {
         if (m_process)
         {
             Logger::info(L"[LightSwitchInterface] Stopping LightSwitchService (worker only).");
+
+            if (m_service_stop_event_handle)
+            {
+                SetEvent(m_service_stop_event_handle);
+            }
+
             constexpr DWORD timeout_ms = 1500;
             DWORD result = WaitForSingleObject(m_process, timeout_ms);
 
@@ -360,22 +371,20 @@ public:
             CloseHandle(m_process);
             m_process = nullptr;
         }
-    }*/
+    }
 
-    /*virtual void stop_service_if_running()
+    virtual void stop_service_if_running()
     {
         if (m_process)
         {
             Logger::info(L"[LightSwitchInterface] Stopping LightSwitchService due to schedule OFF.");
             stop_worker_only();
         }
-    }*/
+    }
 
     virtual void enable()
     {
-        m_enabled = true;
         Logger::info(L"Enabling Light Switch module...");
-        Trace::Enable(true);
         EnsureEventHandles();
         if (m_service_stop_event_handle)
         {
@@ -436,6 +445,9 @@ public:
         Logger::info(L"Light Switch process launched successfully (PID: {}).", pi.dwProcessId);
         m_process = pi.hProcess;
         CloseHandle(pi.hThread);
+
+        m_enabled = true;
+        Trace::Enable(true);
 
         StartToggleListener();
     }
@@ -500,7 +512,7 @@ public:
             }
             catch (...)
             {
-                Logger::error("Failed to initialize Light Switch force dark mode shortcut from settings. Value will keep unchanged.");
+                Logger::error("Failed to initialize Light Switch toggle-theme shortcut from settings. Value will keep unchanged.");
             }
         }
         else
@@ -520,30 +532,15 @@ public:
 
     virtual bool on_hotkey(size_t hotkeyId) override
     {
-        if (m_enabled)
+        if (m_enabled && hotkeyId == 0)
         {
-            Logger::trace(L"Light Switch hotkey pressed");
+            Logger::info(L"[Light Switch] Hotkey triggered: Toggle Theme");
             Trace::ShortcutInvoked();
-
-            if (!is_process_running())
-            {
-                enable();
-            }
-            else if (hotkeyId == 0)
-            {
-                Logger::info(L"[Light Switch] Hotkey triggered: Toggle Theme");
-                ToggleTheme();
-            }
-
+            ToggleTheme();
             return true;
         }
 
         return false;
-    }
-
-    bool is_process_running()
-    {
-        return WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT;
     }
 
 };

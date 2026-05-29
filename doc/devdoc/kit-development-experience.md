@@ -262,6 +262,10 @@ This pass continued the PowerToys-main comparison and tightened the places where
 - Local sparse package re-registration now points at the publisher-adjusted `.user/PowerToysSparse.AppxManifest.xml` emitted by `BuildSparsePackage.ps1`, while CI still keeps the checked-in manifest publisher unchanged.
 - Local signing helper defaults use the development certificate subject and current-user trust path; broader machine/root trust remains an explicit opt-in.
 - The remaining inactive Settings resource strings and unused VariantAssignment package pins were removed to keep the active Kit surface aligned with the four retained modules.
+- A follow-up resource pass removed inactive File Explorer Preview, Shortcut Guide activation, Screen Ruler, and ZoomIt picker strings that were still present in the active Settings resource file without active XAML references.
+- The XAML search index builder now excludes `SearchResultsPage` and `ShortcutConflictWindow`, preventing generated Settings search data from returning the search page itself or a non-navigable conflict window.
+- Settings launch failure now clears the runner launch-in-progress guard before leaving `run_settings_window`, so a transient `CreateProcessW` failure does not suppress future Settings opens.
+- LightSwitch disable now signals a Kit-named service-stop event before using its bounded terminate fallback, and module destruction closes all event handles created by the interface.
 
 Verification for this pass used Visual Studio 18 MSBuild and VSTest:
 
@@ -275,6 +279,10 @@ Verification for this pass used Visual Studio 18 MSBuild and VSTest:
 8. Rebuilt `Kit.vcxproj`, `AwakeModuleInterface.vcxproj`, `PowerToys.QuickAccess.csproj`, `PowerToys.Settings.csproj`, and `PackageIdentity.vcxproj` Debug x64 after the runtime/package changes.
 9. Ran the full `Settings.UI.UnitTests.dll`, which reported 176/176 passing tests.
 10. Ran `BuildSparsePackage.ps1 -Platform x64 -Configuration Debug -NoSign`, which created `x64\Debug\PowerToysSparse.msix` and printed the generated `.user\PowerToysSparse.AppxManifest.xml` re-registration command.
+11. Added regression coverage for the extra inactive File Explorer Preview, Shortcut Guide activation, Screen Ruler, and ZoomIt picker resource strings, verified the focused resource cleanup test failed first, then passed after deleting the unused resource entries.
+12. Added failing regression coverage for search-index page exclusions, Settings launch guard cleanup, and LightSwitch service-stop/handle lifecycle cleanup before implementing those fixes.
+13. Rebuilt `Settings.UI.UnitTests.csproj`, `Kit.vcxproj`, `LightSwitchModuleInterface.vcxproj`, `LightSwitchService.vcxproj`, and `PowerToys.Settings.csproj` Debug x64 after the cleanup.
+14. Ran the focused search/settings/LightSwitch compatibility filter, which reported 3/3 passing tests; reran `FullyQualifiedName~BuildCompatibility`, which reported 78/78 passing tests; then ran the full `Settings.UI.UnitTests.dll`, which reported 177/177 passing tests.
 
 ## Latest Verification Notes
 

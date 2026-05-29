@@ -536,6 +536,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
                             &startup_info,
                             &process_info))
         {
+            g_isLaunchInProgress = false;
             goto LExit;
         }
         else

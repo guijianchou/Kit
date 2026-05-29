@@ -17,6 +17,8 @@ namespace Microsoft.PowerToys.Tools.XamlIndexBuilder
         private static readonly HashSet<string> ExcludedXamlFiles = new(StringComparer.OrdinalIgnoreCase)
         {
             "ShellPage.xaml",
+            "SearchResultsPage.xaml",
+            "ShortcutConflictWindow.xaml",
         };
 
         private static JsonSerializerOptions serializeOption = new()

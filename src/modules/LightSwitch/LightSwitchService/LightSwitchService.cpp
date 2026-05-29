@@ -19,6 +19,7 @@
 SERVICE_STATUS g_ServiceStatus = {};
 SERVICE_STATUS_HANDLE g_StatusHandle = nullptr;
 HANDLE g_ServiceStopEvent = nullptr;
+const wchar_t LIGHTSWITCH_SERVICE_STOP_EVENT[] = L"KIT_LIGHTSWITCH_SERVICE_STOP";
 static LightSwitchStateManager* g_stateManagerPtr = nullptr;
 
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
@@ -50,7 +51,12 @@ int _tmain(int argc, TCHAR* argv[])
         DWORD err = GetLastError();
         if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) // not launched by SCM
         {
-            g_ServiceStopEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+            g_ServiceStopEvent = CreateEventW(nullptr, TRUE, FALSE, LIGHTSWITCH_SERVICE_STOP_EVENT);
+            if (!g_ServiceStopEvent)
+            {
+                return static_cast<int>(GetLastError());
+            }
+
             HANDLE hThread = CreateThread(
                 nullptr, 0, ServiceWorkerThread, reinterpret_cast<void*>(static_cast<ULONG_PTR>(parentPid)), 0, nullptr);
 
@@ -58,6 +64,7 @@ int _tmain(int argc, TCHAR* argv[])
             WaitForSingleObject(hThread, INFINITE);
             CloseHandle(hThread);
             CloseHandle(g_ServiceStopEvent);
+            g_ServiceStopEvent = nullptr;
             return 0;
         }
         return static_cast<int>(err);
@@ -78,7 +85,7 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR*)
     g_ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
 
-    g_ServiceStopEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    g_ServiceStopEvent = CreateEventW(nullptr, TRUE, FALSE, LIGHTSWITCH_SERVICE_STOP_EVENT);
     if (!g_ServiceStopEvent)
     {
         g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
@@ -86,10 +93,6 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR*)
         SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
         return;
     }
-
-    SECURITY_ATTRIBUTES sa{ sizeof(sa) };
-    sa.bInheritHandle = FALSE;
-    sa.lpSecurityDescriptor = nullptr;
 
     g_ServiceStatus.dwCurrentState = SERVICE_RUNNING;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
@@ -99,6 +102,7 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR*)
     CloseHandle(hThread);
 
     CloseHandle(g_ServiceStopEvent);
+    g_ServiceStopEvent = nullptr;
     g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
     g_ServiceStatus.dwWin32ExitCode = 0;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);

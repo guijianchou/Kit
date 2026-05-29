@@ -215,119 +215,8 @@
   <data name="ExtendedContextMenuInfo.Title" xml:space="preserve">
     <value>Press Shift + right-click on files to open the extended context menu</value>
   </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_MD.Header" xml:space="preserve">
-    <value>Markdown</value>
-    <comment>File type, do not translate</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_MD.Description" xml:space="preserve">
-    <value>.md, .markdown, .mdown, .mkdn, .mkd, .mdwn, .mdtxt, .mdtext</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_Monaco.Header" xml:space="preserve">
-    <value>Source code files (Monaco)</value>
-    <comment>File type, do not translate</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_Monaco.Description" xml:space="preserve">
-    <value>.txt, .cpp, .py, .json, .xml, .csproj, ...</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_SVG.Header" xml:space="preserve">
-    <value>Scalable Vector Graphics</value>
-    <comment>File type, do not translate</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_SVG.Description" xml:space="preserve">
-    <value>.svg</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Color_Mode.Header" xml:space="preserve">
-    <value>Color mode</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Color_Mode_Default.Content" xml:space="preserve">
-    <value>Windows default</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Color_Solid_Color.Content" xml:space="preserve">
-    <value>Solid color</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Checkered_Shade.Content" xml:space="preserve">
-    <value>Checkered pattern</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Background_Color.Header" xml:space="preserve">
-    <value>Color</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Checkered_Shade_Mode.Header" xml:space="preserve">
-    <value>Checkered shade</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Checkered_Shade_1.Content" xml:space="preserve">
-    <value>Light</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Checkered_Shade_2.Content" xml:space="preserve">
-    <value>Medium</value>
-  </data>
-  <data name="FileExplorerPreview_Preview_SVG_Checkered_Shade_3.Content" xml:space="preserve">
-    <value>Dark</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_PDF.Header" xml:space="preserve">
-    <value>Portable Document Format</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_PDF.Description" xml:space="preserve">
-    <value>.pdf</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_SVG.Header" xml:space="preserve">
-    <value>Scalable Vector Graphics</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_SVG.Description" xml:space="preserve">
-    <value>.svg</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_STL.Header" xml:space="preserve">
-    <value>Stereolithography</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_STL.Description" xml:space="preserve">
-    <value>.stl</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_Color_Thumbnail_STL.Header" xml:space="preserve">
-    <value>Color</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_QOI.Header" xml:space="preserve">
-    <value>Quite Ok Image</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_QOI.Description" xml:space="preserve">
-    <value>.qoi</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_QOI.Header" xml:space="preserve">
-    <value>Quite OK Image</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_QOI.Description" xml:space="preserve">
-    <value>.qoi</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_PDF.Header" xml:space="preserve">
-    <value>Portable Document Format</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_PDF.Description" xml:space="preserve">
-    <value>.pdf</value>
-    <comment>{Locked}</comment>
-  </data>
-  <data name="FileExplorerPreview.ModuleDescription" xml:space="preserve">
-    <value>These settings allow you to manage your Windows File Explorer custom preview handlers.</value>
-  </data>
   <data name="OpenSource_Notice.Text" xml:space="preserve">
     <value>Open-source notice</value>
-  </data>
-  <data name="Radio_ShortcutGuide_ActivationMethod_CustomizedShortcut.Content" xml:space="preserve">
-    <value>Custom shortcut</value>
-  </data>
-  <data name="Radio_ShortcutGuide_ActivationMethod_LongPressWindowsKey.Content" xml:space="preserve">
-    <value>Hold down Windows key</value>
   </data>
   <data name="Appearance_Behavior.Header" xml:space="preserve">
     <value>Appearance &amp; behavior</value>
@@ -384,9 +273,6 @@
   <data name="GeneralSettings_RunningAsAdminText" xml:space="preserve">
     <value>Running as administrator</value>
   </data>
-  <data name="FileExplorerPreview.ModuleTitle" xml:space="preserve">
-    <value>File Explorer</value>
-  </data>
   <data name="General_Repository.Text" xml:space="preserve">
     <value>GitHub repository</value>
   </data>
@@ -428,30 +314,6 @@
   </data>
   <data name="General_About.Header" xml:space="preserve">
     <value>About</value>
-  </data>
-  <data name="FileExplorerPreview_IconThumbnail_GroupSettings.Header" xml:space="preserve">
-    <value>Thumbnail icon Preview</value>
-  </data>
-  <data name="FileExplorerPreview_IconThumbnail_GroupSettings.Description" xml:space="preserve">
-    <value>Select the file types for which thumbnail previews must be rendered.</value>
-  </data>
-  <data name="FileExplorerPreview_PreviewPane.Header" xml:space="preserve">
-    <value>Preview Pane</value>
-  </data>
-  <data name="FileExplorerPreview_PreviewPane.Description" xml:space="preserve">
-    <value>Select the file types which must be rendered in the Preview Pane. Ensure that Preview Pane is open by toggling the view with Alt + P in File Explorer.</value>
-    <comment>Preview Pane and File Explorer are app/feature names in Windows. 'Alt + P' is a shortcut</comment>
-  </data>
-  <data name="FileExplorerPreview_RebootRequired.Title" xml:space="preserve">
-    <value>A reboot may be required for changes to these settings to take effect</value>
-  </data>
-  <data name="FileExplorerPreview_PreviewHandlerOutlookIncompatibility.Title" xml:space="preserve">
-    <value>Enabling the preview handlers will override other preview handlers already installed - there have been reports of incompatibility between Outlook and the PDF Preview Handler.</value>
-    <comment>Outlook is the name of a Microsoft product</comment>
-  </data>
-  <data name="FileExplorerPreview_ThumbnailsMightNotAppearOnRemoteFolders.Title" xml:space="preserve">
-    <value>Thumbnails might not appear on paths managed by cloud storage solutions like OneDrive, since these solutions may get their thumbnails from the cloud instead of generating them locally.</value>
-    <comment>OneDrive is the name of a Microsoft product</comment>
   </data>
   <data name="Radio_Theme_Dark.Content" xml:space="preserve">
     <value>Dark</value>
@@ -617,7 +479,7 @@
   <data name="Help_floatWithout" xml:space="preserve">
     <value>float without leading zero</value>
   </data>
-   <data name="ColorFormatEditorHelpline3.Text" xml:space="preserve">
+  <data name="ColorFormatEditorHelpline3.Text" xml:space="preserve">
     <value>The lightness (CIE), chromaticity A (CIE Lab) and chromaticity B (CIE Lab) values can be formatted to the following formats:</value>
   </data>
   <data name="Help_integer" xml:space="preserve">
@@ -632,7 +494,7 @@
   <data name="Activation_Shortcut.Description" xml:space="preserve">
     <value>Customize the shortcut to activate this module</value>
   </data>
-	<data name="PasteAsPlainText_Shortcut.Header" xml:space="preserve">
+  <data name="PasteAsPlainText_Shortcut.Header" xml:space="preserve">
     <value>Paste as plain text directly</value>
   </data>
   <data name="CustomActionDialog.SecondaryButtonText" xml:space="preserve">
@@ -886,20 +748,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
   <data name="ColorModeHeader.Header" xml:space="preserve">
     <value>Theme</value>
   </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_GCODE.Header" xml:space="preserve">
-    <value>Geometric Code</value>
-    <comment>File type, do not translate</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_GCODE.Description" xml:space="preserve">
-    <value>Only .gcode files with embedded thumbnails are supported</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_GCODE.Header" xml:space="preserve">
-    <value>Geometric Code</value>
-    <comment>File type, do not translate</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_GCODE.Description" xml:space="preserve">
-    <value>Only .gcode files with embedded thumbnails are supported</value>
-  </data>
   <data name="ToggleSwitch.OffContent" xml:space="preserve">
     <value>Off</value>
     <comment>The state of a ToggleSwitch when it's off</comment>
@@ -907,14 +755,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
   <data name="ToggleSwitch.OnContent" xml:space="preserve">
     <value>On</value>
     <comment>The state of a ToggleSwitch when it's on</comment>
-  </data>
-  <data name="FileExplorerPreview.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-    <comment>giving credit to the projects this utility was based on</comment>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Monaco_Wrap_Text.Content" xml:space="preserve">
-    <value>Wrap text</value>
-    <comment>Feature on or off</comment>
   </data>
   <data name="Shell_WhatsNew.Content" xml:space="preserve">
     <value>What's new</value>
@@ -949,9 +789,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="LightSwitch_ForceDarkMode" xml:space="preserve">
     <value>Toggle theme</value>
-  </data>
-  <data name="ScreenRuler_ShortDescription" xml:space="preserve">
-    <value>Start measurement</value>
   </data>
   <data name="PowerOcr_ShortDescription" xml:space="preserve">
     <value>Start text extraction</value>
@@ -1122,12 +959,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="TextExtractor.SecondaryLinksHeader" xml:space="preserve">
     <value>Attribution</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Monaco_Try_Format.Description" xml:space="preserve">
-    <value>Applies to json and xml. Files remain unchanged.</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Monaco_Try_Format.Header" xml:space="preserve">
-    <value>Try to format the source for preview</value>
   </data>
   <data name="QuickAccent_Description_Indicator.Header" xml:space="preserve">
     <value>Show the Unicode code and name of the currently selected character</value>
@@ -1404,14 +1235,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="QuickAccessTxt.Text" xml:space="preserve">
     <value>Quick access</value>
   </data>
-  <data name="FileExplorerPreview_Toggle_Monaco_Max_File_Size.Header" xml:space="preserve">
-    <value>Maximum file size to preview</value>
-    <comment>Size refers to the disk space used by a file</comment>
-  </data>
-  <data name="FileExplorerPreview_Toggle_Monaco_Max_File_Size.Description" xml:space="preserve">
-    <value>The maximum size, in kilobytes, for files to be displayed. This is a safety mechanism to prevent loading large files into RAM.</value>
-    <comment>"RAM" refers to random access memory; "size" refers to disk space; "bytes" refer to the measurement unit</comment>
-  </data>
   <data name="GPO_SomeRunPluginsAreManaged.Title" xml:space="preserve">
     <value>The enabled state of some plugins is managed by your organization.</value>
   </data>
@@ -1474,19 +1297,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="GPO_SomeThumbnailProvidersAreManaged.Title" xml:space="preserve">
     <value>The enabled state of some thumbnail handlers is managed by your organization.</value>
   </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Monaco_Sticky_Scroll.Content" xml:space="preserve">
-    <value>Enable sticky scroll</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Monaco_Minimap.Content" xml:space="preserve">
-    <value>Show minimap</value>
-  </data>
-  <data name="FileExplorerPreview_Toggle_Monaco_Font_Size.Description" xml:space="preserve">
-    <value>Font size of the editor in pt. Recommended: 14pt</value>
-    <comment>{Locked="pt"}</comment>
-  </data>
-  <data name="FileExplorerPreview_Toggle_Monaco_Font_Size.Header" xml:space="preserve">
-    <value>Font size </value>
-  </data>
   <data name="GPO_CommandNotFound_ForceDisabled.Title" xml:space="preserve">
     <value>The Command Not Found module is disabled by your organization.</value>
     <comment>"Command Not Found" is a product name</comment>
@@ -1497,15 +1307,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="FilePicker_AllFilesFilter" xml:space="preserve">
     <value>All Files</value>
-  </data>
-  <data name="FilePicker_ZoomIt_SoundsFilter" xml:space="preserve">
-    <value>Sounds</value>
-  </data>
-  <data name="FilePicker_ZoomIt_BitmapFilesFilter" xml:space="preserve">
-    <value>Bitmap files</value>
-  </data>
-  <data name="FilePicker_ZoomIt_AllPicturesFilter" xml:space="preserve">
-    <value>All picture files</value>
   </data>
   <data name="OpenAnimationsSettings.Content" xml:space="preserve">
     <value>Open animation settings</value>
@@ -1634,18 +1435,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Help_hueOklch" xml:space="preserve">
     <value>hue (Oklch)</value>
   </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_BGCODE.Header" xml:space="preserve">
-    <value>Binary Geometric Code</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Preview_BGCODE.Description" xml:space="preserve">
-    <value>.bgcode</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_BGCODE.Description" xml:space="preserve">
-    <value>.bgcode</value>
-  </data>
-  <data name="FileExplorerPreview_ToggleSwitch_Thumbnail_BGCODE.Header" xml:space="preserve">
-    <value>Binary Geometric Code</value>
-  </data>
   <data name="YoureUpToDate.Text" xml:space="preserve">
     <value>You're up to date</value>
   </data>
@@ -1655,7 +1444,7 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="UpdateAvailableInfoBar.Title" xml:space="preserve">
     <value>Update available</value>
   </data>
-	<data name="GeneralVersion.Text" xml:space="preserve">
+  <data name="GeneralVersion.Text" xml:space="preserve">
     <value>Version</value>
   </data>
   <data name="LearnWhatsNew.Text" xml:space="preserve">
@@ -1973,7 +1762,7 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="PowerDisplay_LaunchButtonControl.Header" xml:space="preserve">
     <value>Open Power Display</value>
   </data>
-	<data name="PowerDisplay_LaunchButton.Content" xml:space="preserve">
+  <data name="PowerDisplay_LaunchButton.Content" xml:space="preserve">
     <value>Open Power Display</value>
   </data>
   <data name="PowerDisplay_LaunchButtonControl.Description" xml:space="preserve">
@@ -2207,7 +1996,7 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="PowerDisplay_CustomVcpMappings.Header" xml:space="preserve">
     <value>Custom name mappings</value>
   </data>
-	<data name="PowerDisplayGroupHeader.Header" xml:space="preserve">
+  <data name="PowerDisplayGroupHeader.Header" xml:space="preserve">
     <value>Power Display</value>
   </data>
   <data name="PowerDisplayFlyoutHeader.Header" xml:space="preserve">
@@ -2424,4 +2213,3 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Learn more about Monitor</value>
   </data>
 </root>
-

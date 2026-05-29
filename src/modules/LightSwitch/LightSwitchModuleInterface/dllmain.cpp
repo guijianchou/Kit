@@ -24,6 +24,16 @@ namespace
     const wchar_t JSON_KEY_CODE[] = L"code";
     const wchar_t JSON_KEY_TOGGLE_THEME_HOTKEY[] = L"toggle-theme-hotkey";
     const wchar_t JSON_KEY_VALUE[] = L"value";
+    const wchar_t LIGHTSWITCH_SERVICE_STOP_EVENT[] = L"KIT_LIGHTSWITCH_SERVICE_STOP";
+
+    void CloseHandleIfSet(HANDLE& handle)
+    {
+        if (handle)
+        {
+            CloseHandle(handle);
+            handle = nullptr;
+        }
+    }
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
@@ -103,9 +113,10 @@ private:
     bool m_enabled = false;
 
     HANDLE m_process{ nullptr };
-    HANDLE m_force_light_event_handle;
-    HANDLE m_force_dark_event_handle;
-    HANDLE m_manual_override_event_handle;
+    HANDLE m_force_light_event_handle{ nullptr };
+    HANDLE m_force_dark_event_handle{ nullptr };
+    HANDLE m_manual_override_event_handle{ nullptr };
+    HANDLE m_service_stop_event_handle{ nullptr };
     HANDLE m_toggle_event_handle{ nullptr };
     std::thread m_toggle_thread;
     std::atomic<bool> m_toggle_thread_running{ false };
@@ -118,16 +129,15 @@ private:
     void ToggleTheme();
     void StartToggleListener();
     void StopToggleListener();
+    void EnsureEventHandles();
+    void CloseEventHandles();
 
 public:
     LightSwitchInterface()
     {
         LoggerHelpers::init_logger(L"LightSwitch", L"ModuleInterface", LogSettings::lightSwitchLoggerName);
 
-        m_force_light_event_handle = CreateDefaultEvent(L"KIT_LIGHTSWITCH_FORCE_LIGHT");
-        m_force_dark_event_handle = CreateDefaultEvent(L"KIT_LIGHTSWITCH_FORCE_DARK");
-        m_manual_override_event_handle = CreateEventW(nullptr, TRUE, FALSE, L"KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
-        m_toggle_event_handle = CreateDefaultEvent(CommonSharedConstants::LIGHTSWITCH_TOGGLE_EVENT);
+        EnsureEventHandles();
 
         init_settings();
     };
@@ -142,6 +152,7 @@ public:
     {
         // Ensure worker threads/process handles are cleaned up before destruction
         disable();
+        CloseEventHandles();
         delete this;
     }
 
@@ -407,6 +418,16 @@ public:
         m_enabled = true;
         Logger::info(L"Enabling Light Switch module...");
         Trace::Enable(true);
+        EnsureEventHandles();
+        if (m_service_stop_event_handle)
+        {
+            ResetEvent(m_service_stop_event_handle);
+        }
+        if (m_process && WaitForSingleObject(m_process, 0) != WAIT_TIMEOUT)
+        {
+            CloseHandle(m_process);
+            m_process = nullptr;
+        }
 
         unsigned long powertoys_pid = GetCurrentProcessId();
         std::wstring args = L"--pid " + std::to_wstring(powertoys_pid);
@@ -466,9 +487,15 @@ public:
     {
         Logger::info("Light Switch disabling");
         m_enabled = false;
+        StopToggleListener();
 
         if (m_process)
         {
+            if (m_service_stop_event_handle)
+            {
+                SetEvent(m_service_stop_event_handle);
+            }
+
             constexpr DWORD timeout_ms = 1500;
             DWORD result = WaitForSingleObject(m_process, timeout_ms);
 
@@ -478,15 +505,11 @@ public:
                 TerminateProcess(m_process, 0);
             }
 
-            CloseHandle(m_manual_override_event_handle);
-            m_manual_override_event_handle = nullptr;
-
             CloseHandle(m_process);
             m_process = nullptr;
         }
         
         Trace::Enable(false);
-        StopToggleListener();
     }
 
     // Returns if the powertoys is enabled
@@ -567,6 +590,43 @@ public:
 
 };
 
+void LightSwitchInterface::EnsureEventHandles()
+{
+    if (!m_force_light_event_handle)
+    {
+        m_force_light_event_handle = CreateDefaultEvent(L"KIT_LIGHTSWITCH_FORCE_LIGHT");
+    }
+
+    if (!m_force_dark_event_handle)
+    {
+        m_force_dark_event_handle = CreateDefaultEvent(L"KIT_LIGHTSWITCH_FORCE_DARK");
+    }
+
+    if (!m_manual_override_event_handle)
+    {
+        m_manual_override_event_handle = CreateEventW(nullptr, TRUE, FALSE, L"KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
+    }
+
+    if (!m_service_stop_event_handle)
+    {
+        m_service_stop_event_handle = CreateEventW(nullptr, TRUE, FALSE, LIGHTSWITCH_SERVICE_STOP_EVENT);
+    }
+
+    if (!m_toggle_event_handle)
+    {
+        m_toggle_event_handle = CreateDefaultEvent(CommonSharedConstants::LIGHTSWITCH_TOGGLE_EVENT);
+    }
+}
+
+void LightSwitchInterface::CloseEventHandles()
+{
+    CloseHandleIfSet(m_force_light_event_handle);
+    CloseHandleIfSet(m_force_dark_event_handle);
+    CloseHandleIfSet(m_manual_override_event_handle);
+    CloseHandleIfSet(m_service_stop_event_handle);
+    CloseHandleIfSet(m_toggle_event_handle);
+}
+
 void LightSwitchInterface::ToggleTheme()
 {
     if (g_settings.m_changeSystem)
@@ -578,6 +638,7 @@ void LightSwitchInterface::ToggleTheme()
         SetAppsTheme(!GetCurrentAppsTheme());
     }
 
+    EnsureEventHandles();
     if (!m_manual_override_event_handle)
     {
         m_manual_override_event_handle = OpenEventW(SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, L"KIT_LIGHTSWITCH_MANUAL_OVERRIDE");

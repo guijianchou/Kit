@@ -314,7 +314,9 @@ namespace ViewModelTests
                 "CmdPal",
                 "ColorPicker",
                 "FancyZones",
+                "FileExplorerPreview",
                 "FileLocksmith",
+                "FilePicker_ZoomIt",
                 "GPO_AdvancedPasteAi",
                 "Hosts",
                 "ImageResizer",
@@ -359,6 +361,7 @@ namespace ViewModelTests
                 "PowerPreview",
                 "PowerRename",
                 "RegistryPreview",
+                "Radio_ShortcutGuide",
                 "Run_",
                 "Run_CheckOutCmdPal",
                 "Run_NavigateCmdPalSettings",
@@ -386,6 +389,7 @@ namespace ViewModelTests
                 "Shell_Workspaces",
                 "Shell_ZoomIt",
                 "ShortcutGuide",
+                "ScreenRuler",
                 "Scoobe",
                 "ScoobeWindow",
                 "Workspaces",
@@ -1143,6 +1147,16 @@ namespace ViewModelTests
                 Assert.IsFalse(source.Contains("REPORT_BUG", StringComparison.Ordinal), "Kit tray resources should not keep bug report commands.");
                 Assert.IsFalse(source.Contains("PowerToys.BugReportTool", StringComparison.Ordinal), "Kit should not launch the upstream PowerToys bug report executable.");
             }
+        }
+
+        [TestMethod]
+        public void KitSettingsLaunchFailureShouldNotLeaveLaunchInProgress()
+        {
+            var settingsWindow = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp")));
+
+            StringAssert.Contains(settingsWindow, "g_isLaunchInProgress = true;");
+            StringAssert.Contains(settingsWindow, "if (!CreateProcessW(executable_path.c_str(),");
+            StringAssert.Contains(settingsWindow, "g_isLaunchInProgress = false;\n            goto LExit;");
         }
 
         [TestMethod]
@@ -2570,10 +2584,15 @@ namespace ViewModelTests
         {
             var xamlIndexBuilderProgram = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.XamlIndexBuilder", "Program.cs"));
             var moduleIconResolver = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.XamlIndexBuilder", "ModuleIconResolver.cs"));
+            var searchIndex = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Assets", "Settings", "search.index.json"));
 
             Assert.IsFalse(xamlIndexBuilderProgram.Contains("PanelPageMapping", StringComparison.Ordinal), "Kit has no active Settings panels, so search indexing should not carry inactive panel-to-page fallback mappings.");
             Assert.IsFalse(xamlIndexBuilderProgram.Contains("MouseJumpPanel", StringComparison.Ordinal), "Kit search indexing should not explicitly include deleted Mouse Jump panels.");
             Assert.IsFalse(moduleIconResolver.Contains("FileNameOverrides", StringComparison.Ordinal), "Kit search indexing should derive active page icons from XAML instead of carrying inactive upstream page overrides.");
+            StringAssert.Contains(xamlIndexBuilderProgram, "\"SearchResultsPage.xaml\"");
+            StringAssert.Contains(xamlIndexBuilderProgram, "\"ShortcutConflictWindow.xaml\"");
+            Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"SearchResultsPage\"", StringComparison.Ordinal), "Generated search index should not include the search results page itself.");
+            Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"ShortcutConflictWindow\"", StringComparison.Ordinal), "Generated search index should not include non-Views shortcut conflict window entries.");
 
             string[] inactiveSearchIndexFallbacks =
             {
@@ -2698,7 +2717,19 @@ namespace ViewModelTests
             StringAssert.Contains(sharedConstants, "KitLightSwitch-DarkThemeEvent");
             StringAssert.Contains(lightSwitchInterface, "CommonSharedConstants::LIGHTSWITCH_TOGGLE_EVENT");
             StringAssert.Contains(lightSwitchInterface, "KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
+            StringAssert.Contains(lightSwitchInterface, "KIT_LIGHTSWITCH_SERVICE_STOP");
+            StringAssert.Contains(lightSwitchInterface, "SetEvent(m_service_stop_event_handle)");
+            StringAssert.Contains(lightSwitchInterface, "ResetEvent(m_service_stop_event_handle)");
+            StringAssert.Contains(lightSwitchInterface, "if (m_process && WaitForSingleObject(m_process, 0) != WAIT_TIMEOUT)");
+            StringAssert.Contains(lightSwitchInterface, "CloseEventHandles();");
+            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_force_light_event_handle);");
+            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_force_dark_event_handle);");
+            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_manual_override_event_handle);");
+            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_service_stop_event_handle);");
+            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_toggle_event_handle);");
+            StringAssert.Contains(lightSwitchService, "KIT_LIGHTSWITCH_SERVICE_STOP");
             StringAssert.Contains(lightSwitchService, "KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
+            Assert.IsFalse(lightSwitchInterface.Contains("CloseHandle(m_manual_override_event_handle);\n            m_manual_override_event_handle = nullptr;", StringComparison.Ordinal), "LightSwitch disable should not close one event handle conditionally while leaking the other module event handles.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Kit Settings IPC must not share the PowerToys terminate event.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysAwakeExitEvent", StringComparison.Ordinal), "Kit Awake must not share the PowerToys exit event.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysMonitorExitEvent", StringComparison.Ordinal), "Kit Monitor must not share the PowerToys exit event.");

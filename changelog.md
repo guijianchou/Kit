@@ -68,8 +68,12 @@
 - Runtime: Quick Access rolls a module toggle back when the runner IPC update fails, keeping the UI state aligned with the actual module state.
 - Runtime: Awake module destruction now signals the child process, waits for shutdown, uses a bounded terminate fallback when the signal path fails, and closes process/thread handles before the module interface is deleted.
 - Slimming: Removed the inactive CmdPal package-state probe from Settings compatibility models and deleted the remaining inactive Settings resource strings plus unused VariantAssignment package pins.
+- Slimming: Removed remaining inactive File Explorer Preview, Shortcut Guide activation, Screen Ruler, and ZoomIt picker resource strings from the active Settings resource file.
+- Build: XAML search index generation now excludes `SearchResultsPage` and `ShortcutConflictWindow`, so generated Settings search data only points at navigable Settings pages.
+- Runtime: Settings launch failures now clear the launch-in-progress guard before returning, so a missing or failed Settings process does not block later open attempts.
+- Runtime: LightSwitch now signals a named service-stop event before its bounded terminate fallback and closes all module-owned event handles during module destruction.
 - Tests: Added regression coverage for the PowerDisplay pipe early-connect path, synchronous process-manager stop, bounded redirect wait, Kit-only deep-link resolver, richer UI automation cleanup result reporting, and the expanded inactive resource cleanup.
-- Tests: Added regression coverage for Quick Access settings/IPC rollback, update-toast notification gating, Awake shutdown cleanup, CmdPal package-probe removal, sparse package helper output, signing helper defaults, inactive resource cleanup, and unused package pin removal.
+- Tests: Added regression coverage for Quick Access settings/IPC rollback, update-toast notification gating, Awake shutdown cleanup, CmdPal package-probe removal, sparse package helper output, signing helper defaults, inactive resource cleanup, search-index page exclusions, Settings launch guard cleanup, LightSwitch service-stop lifecycle, and unused package pin removal.
 - Docs: Updated the first-plugin development note to name all four active modules, including `PowerDisplay`.
 - Build: XAML search index builder no longer carries inactive upstream module icon and panel fallbacks; active page icons are derived from Settings XAML.
 - Runtime: Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface.
@@ -230,8 +234,12 @@
 - 运行时：Quick Access 在 runner IPC 更新失败时会回滚模块开关，避免 UI 状态和真实模块状态分离。
 - 运行时：Awake 模块销毁现在会通知子进程退出、等待关闭；信号路径失败时使用有界 terminate fallback，并在 module interface 删除前关闭 process/thread handles。
 - 瘦身：从 Settings 兼容模型中移除非活动 CmdPal package-state 探测，并删除剩余非活动 Settings 资源字符串和未使用的 VariantAssignment package pins。
+- 瘦身：从活动 Settings 资源文件中删除剩余非活动 File Explorer Preview、Shortcut Guide activation、Screen Ruler 和 ZoomIt picker 资源字符串。
+- 构建：XAML search index generation 现在排除 `SearchResultsPage` 和 `ShortcutConflictWindow`，生成的 Settings 搜索数据只指向可导航的 Settings 页面。
+- 运行时：Settings 启动失败时现在会在返回前清理 launch-in-progress guard，避免缺失或启动失败的 Settings 进程阻断后续打开尝试。
+- 运行时：LightSwitch 现在会在有界 terminate fallback 前通知具名 service-stop event，并在模块销毁时关闭所有模块拥有的 event handles。
 - 测试：新增 PowerDisplay 管道早连接、同步 process-manager stop、有界重定向等待、Kit-only 深度链接解析器、更丰富 UI 自动化清理结果报告，以及扩大非活动资源清理范围的回归覆盖。
-- 测试：新增 Quick Access 设置/IPC 回滚、update-toast 通知开关、Awake 关闭清理、CmdPal package 探测移除、sparse package helper 输出、签名 helper 默认值、非活动资源清理和未使用 package pin 移除的回归覆盖。
+- 测试：新增 Quick Access 设置/IPC 回滚、update-toast 通知开关、Awake 关闭清理、CmdPal package 探测移除、sparse package helper 输出、签名 helper 默认值、非活动资源清理、search-index 页面排除、Settings 启动 guard 清理、LightSwitch service-stop 生命周期，以及未使用 package pin 移除的回归覆盖。
 - 构建：XAML search index builder 不再携带非活动上游模块图标和 panel 兜底，活动页面图标改为从 Settings XAML 派生。
 - 运行时：从 runner 键盘钩子和模块接口中移除非活动的 Shortcut Guide Win-key 跟踪路径。
 - 运行时：删除 pressed-key 定时器后，移除键盘钩子的 no-op 窗口注册路径。

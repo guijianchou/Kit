@@ -24,19 +24,28 @@ namespace ManagedCommon
         /// <returns>The path to Kit installation directory, or null if not found.</returns>
         public static string GetPowerToysInstallPath()
         {
+            return GetPowerToysCompatibleInstallPath();
+        }
+
+        /// <summary>
+        /// Gets the Kit installation path without falling back to an installed upstream PowerToys build.
+        /// </summary>
+        /// <returns>The path to Kit installation directory, or null if not found.</returns>
+        public static string GetKitInstallPath()
+        {
 #if DEBUG
             // In debug builds, resolve directly from the running process (no installer/registry involved).
-            return GetPathFromCurrentProcess();
+            return GetPathFromCurrentProcess(kitOnly: true);
 #else
             // Try to get path from Per-User installation first
-            string path = GetPathFromRegistry(RegistryHive.CurrentUser);
+            string path = GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: true);
             if (!string.IsNullOrEmpty(path))
             {
                 return path;
             }
 
             // Fall back to Per-Machine installation
-            path = GetPathFromRegistry(RegistryHive.LocalMachine);
+            path = GetPathFromRegistry(RegistryHive.LocalMachine, kitOnly: true);
             if (!string.IsNullOrEmpty(path))
             {
                 return path;
@@ -46,7 +55,35 @@ namespace ManagedCommon
 #endif
         }
 
-        private static string GetPathFromRegistry(RegistryHive hive)
+        /// <summary>
+        /// Gets the Kit path, with upstream PowerToys fallbacks retained only for copied-module compatibility helpers.
+        /// </summary>
+        /// <returns>The path to a compatible runner installation directory, or null if not found.</returns>
+        public static string GetPowerToysCompatibleInstallPath()
+        {
+#if DEBUG
+            // In debug builds, resolve directly from the running process (no installer/registry involved).
+            return GetPathFromCurrentProcess(kitOnly: false);
+#else
+            // Try to get path from Per-User installation first
+            string path = GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: false);
+            if (!string.IsNullOrEmpty(path))
+            {
+                return path;
+            }
+
+            // Fall back to Per-Machine installation
+            path = GetPathFromRegistry(RegistryHive.LocalMachine, kitOnly: false);
+            if (!string.IsNullOrEmpty(path))
+            {
+                return path;
+            }
+
+            return null;
+#endif
+        }
+
+        private static string GetPathFromRegistry(RegistryHive hive, bool kitOnly)
         {
             try
             {
@@ -59,10 +96,13 @@ namespace ManagedCommon
                 }
 
                 // Keep the upstream PowerToys protocol as a fallback for copied modules and older installs.
-                path = GetPathFromProtocolRegistration(baseKey, PowerToysRegistryKey);
-                if (!string.IsNullOrEmpty(path))
+                if (!kitOnly)
                 {
-                    return path;
+                    path = GetPathFromProtocolRegistration(baseKey, PowerToysRegistryKey);
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        return path;
+                    }
                 }
             }
             catch (Exception)
@@ -96,7 +136,7 @@ namespace ManagedCommon
             return null;
         }
 
-        private static string GetPathFromCurrentProcess()
+        private static string GetPathFromCurrentProcess(bool kitOnly)
         {
             try
             {
@@ -105,7 +145,7 @@ namespace ManagedCommon
                 if (!string.IsNullOrEmpty(processPath))
                 {
                     var processDir = Path.GetDirectoryName(processPath);
-                    if (!string.IsNullOrEmpty(processDir) && ContainsRunnerExecutable(processDir))
+                    if (!string.IsNullOrEmpty(processDir) && ContainsRunnerExecutable(processDir, kitOnly))
                     {
                         return processDir;
                     }
@@ -115,7 +155,7 @@ namespace ManagedCommon
                 var directory = new DirectoryInfo(AppContext.BaseDirectory);
                 while (directory != null)
                 {
-                    if (ContainsRunnerExecutable(directory.FullName))
+                    if (ContainsRunnerExecutable(directory.FullName, kitOnly))
                     {
                         return directory.FullName;
                     }
@@ -131,10 +171,10 @@ namespace ManagedCommon
             return null;
         }
 
-        private static bool ContainsRunnerExecutable(string directory)
+        private static bool ContainsRunnerExecutable(string directory, bool kitOnly)
         {
             return File.Exists(Path.Combine(directory, KitExe))
-                   || File.Exists(Path.Combine(directory, PowerToysExe));
+                   || (!kitOnly && File.Exists(Path.Combine(directory, PowerToysExe)));
         }
 
         private static string ExtractPathFromCommand(string command)

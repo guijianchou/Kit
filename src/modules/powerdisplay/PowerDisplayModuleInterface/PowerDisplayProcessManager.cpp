@@ -45,7 +45,8 @@ void PowerDisplayProcessManager::start()
 void PowerDisplayProcessManager::stop()
 {
     m_enabled = false;
-    submit_task([this]() { refresh(); });
+    const auto stop_task = submit_task([this]() { refresh(); });
+    stop_task.wait();
 }
 
 void PowerDisplayProcessManager::send_message(const std::wstring& message_type, const std::wstring& message_arg)
@@ -88,9 +89,9 @@ bool PowerDisplayProcessManager::is_running() const
     return is_process_running();
 }
 
-void PowerDisplayProcessManager::submit_task(std::function<void()> task)
+std::future<void> PowerDisplayProcessManager::submit_task(std::function<void()> task)
 {
-    m_thread_executor.submit(OnThreadExecutor::task_t{ task });
+    return m_thread_executor.submit(OnThreadExecutor::task_t{ task });
 }
 
 bool PowerDisplayProcessManager::is_process_running() const
@@ -177,9 +178,23 @@ HRESULT PowerDisplayProcessManager::start_named_pipe_server(const std::wstring& 
         return E_FAIL;
     };
 
+    const auto complete_connection = [&]() {
+        CloseHandle(overlapped.hEvent);
+        m_write_pipe = std::make_unique<CAtlFile>(hPipe);
+
+        Logger::trace(L"PowerDisplay successfully connected to named pipe");
+
+        return S_OK;
+    };
+
     if (!ConnectNamedPipe(hPipe, &overlapped))
     {
         const auto lastError = GetLastError();
+
+        if (lastError == ERROR_PIPE_CONNECTED)
+        {
+            return complete_connection();
+        }
 
         if (lastError != ERROR_IO_PENDING && lastError != ERROR_PIPE_CONNECTED)
         {
@@ -197,12 +212,7 @@ HRESULT PowerDisplayProcessManager::start_named_pipe_server(const std::wstring& 
             DWORD bytes_transferred = 0;
             if (GetOverlappedResult(hPipe, &overlapped, &bytes_transferred, FALSE))
             {
-                CloseHandle(overlapped.hEvent);
-                m_write_pipe = std::make_unique<CAtlFile>(hPipe);
-
-                Logger::trace(L"PowerDisplay successfully connected to named pipe");
-
-                return S_OK;
+                return complete_connection();
             }
             else
             {

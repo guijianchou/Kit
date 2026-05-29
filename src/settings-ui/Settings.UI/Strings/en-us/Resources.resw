@@ -1,17 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
+  <!--
+    Microsoft ResX Schema
+
     Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
+
+    The primary goals of this format is to allow a simple XML format
+    that is mostly human readable. The generation and parsing of the
+    various data types are done through the TypeConverter classes
     associated with the data types.
-    
+
     Example:
-    
+
     ... ado.net/XML headers & schema ...
     <resheader name="resmimetype">text/microsoft-resx</resheader>
     <resheader name="version">2.0</resheader>
@@ -26,36 +26,36 @@
         <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
         <comment>This is a comment</comment>
     </data>
-                
-    There are any number of "resheader" rows that contain simple 
+
+    There are any number of "resheader" rows that contain simple
     name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
+
+    Each data row contains a name, and value. The row also contains a
+    type or mimetype. Type corresponds to a .NET class that support
+    text/value conversion through the TypeConverter architecture.
+    Classes that don't support this are serialized and stored with the
     mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
+
+    The mimetype is used for serialized objects, and tells the
+    ResXResourceReader how to depersist the object. This is currently not
     extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
+
+    Note - application/x-microsoft.net.object.binary.base64 is the format
+    that the ResXResourceWriter will generate, however the reader can
     read any of the formats listed below.
-    
+
     mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
             : and then encoded with base64 encoding.
-    
+
     mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
+    value   : The object must be serialized with
             : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
             : and then encoded with base64 encoding.
 
     mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
+    value   : The object must be serialized into a byte array
             : using a System.ComponentModel.TypeConverter
             : and then encoded with base64 encoding.
     -->
@@ -121,36 +121,6 @@
     <value>Inspired by Rooler</value>
     <comment>Rooler is a name of the tool.</comment>
   </data>
-  <data name="Shell_MeasureTool.Content" xml:space="preserve">
-    <value>Screen Ruler</value>
-    <comment>Product name: Navigation view item name for Screen Ruler</comment>
-  </data>
-  <data name="MeasureTool.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-    <comment>giving credit to the projects this utility was based on</comment>
-  </data>
-  <data name="MeasureTool.ModuleDescription" xml:space="preserve">
-    <value>Screen Ruler is a quick and easy way to measure pixels on your screen.</value>
-    <comment>"Screen Ruler" is the name of the utility</comment>
-  </data>
-  <data name="MeasureTool.ModuleTitle" xml:space="preserve">
-    <value>Screen Ruler</value>
-    <comment>"Screen Ruler" is the name of the utility</comment>
-  </data>
-  <data name="MeasureTool_ActivationSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="MeasureTool_Settings.Header" xml:space="preserve">
-    <value>Behavior</value>
-    <comment>"Screen Ruler" is the name of the utility</comment>
-  </data>
-  <data name="MeasureTool_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="MeasureTool_ActivationShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to bring up the command bar</value>
-    <comment>"Screen Ruler" is the name of the utility</comment>
-  </data>
   <data name="Shell_SearchBox.PlaceholderText" xml:space="preserve">
     <value>Search for settings</value>
     <comment>Placeholder in settings search box</comment>
@@ -158,70 +128,6 @@
   <data name="Shell_Search_NoResults" xml:space="preserve">
     <value>No results for</value>
     <comment>Prefix used in the no-results row; the query is appended in code, e.g., "No results for 'abc'"</comment>
-  </data>
-  <data name="MeasureTool_DefaultMeasureStyle.Header" xml:space="preserve">
-    <value>Default mode</value>
-  </data>
-  <data name="MeasureTool_DefaultMeasureStyle.Description" xml:space="preserve">
-    <value>The measuring mode that is used when activated</value>
-  </data>
-  <data name="MeasureTool_DefaultMeasureStyle_None.Content" xml:space="preserve">
-    <value>None</value>
-  </data>
-  <data name="MeasureTool_DefaultMeasureStyle_Bounds.Content" xml:space="preserve">
-    <value>Bounds</value>
-  </data>
-  <data name="MeasureTool_DefaultMeasureStyle_Spacing.Content" xml:space="preserve">
-    <value>Spacing</value>
-  </data>
-  <data name="MeasureTool_DefaultMeasureStyle_Horizontal_Spacing.Content" xml:space="preserve">
-    <value>Horizontal spacing</value>
-  </data>
-  <data name="MeasureTool_DefaultMeasureStyle_Vertical_Spacing.Content" xml:space="preserve">
-    <value>Vertical spacing</value>
-  </data>
-  <data name="MeasureTool_UnitsOfMeasure.Header" xml:space="preserve">
-    <value>Extra units of measurement</value>
-  </data>
-  <data name="MeasureTool_UnitsOfMeasure_Pixels.Content" xml:space="preserve">
-    <value>Show only pixels</value>
-  </data>
-  <data name="MeasureTool_UnitsOfMeasure_Inches.Content" xml:space="preserve">
-    <value>Inches</value>
-  </data>
-  <data name="MeasureTool_UnitsOfMeasure_Centimeters.Content" xml:space="preserve">
-    <value>Centimeters</value>
-  </data>
-  <data name="MeasureTool_UnitsOfMeasure_Millimeters.Content" xml:space="preserve">
-    <value>Millimeters</value>
-  </data>
-  <data name="MeasureTool_PixelTolerance.Header" xml:space="preserve">
-    <value>Pixel tolerance for edge detection</value>
-  </data>
-  <data name="MeasureTool_MeasureCrossColor.Header" xml:space="preserve">
-    <value>Line color</value>
-  </data>
-  <data name="MeasureTool_ContinuousCapture.Header" xml:space="preserve">
-    <value>Capture screen continuously during measuring</value>
-  </data>
-  <data name="MeasureTool_ContinuousCapture.Description" xml:space="preserve">
-    <value>Refresh screen contexts in real-time instead of making a screenshot once</value>
-  </data>
-  <data name="MeasureTool_PerColorChannelEdgeDetection.Header" xml:space="preserve">
-    <value>Per color channel edge detection</value>
-  </data>
-  <data name="MeasureTool_PerColorChannelEdgeDetection.Description" xml:space="preserve">
-    <value>If enabled, test that all color channels are within a tolerance distance from each other. Otherwise, check that the sum of all color channels differences is smaller than the tolerance.</value>
-  </data>
-  <data name="MeasureTool_DrawFeetOnCross.Header" xml:space="preserve">
-    <value>Draw feet on cross</value>
-  </data>
-  <data name="MeasureTool_DrawFeetOnCross.Description" xml:space="preserve">
-    <value>Adds feet to the end of cross lines</value>
-  </data>
-  <data name="MeasureTool_EnableMeasureTool.Header" xml:space="preserve">
-    <value>Screen Ruler</value>
-    <comment>"Screen Ruler" is the name of the utility</comment>
   </data>
   <data name="Shell_General.Content" xml:space="preserve">
     <value>General</value>
@@ -231,21 +137,9 @@
     <value>Awake</value>
     <comment>{Locked}</comment>
   </data>
-  <data name="Shell_PowerPreview.Content" xml:space="preserve">
-    <value>File Explorer Add-ons</value>
-    <comment>Product name: Navigation view item name for File Explorer.  Please use File Explorer as in the context of File Explorer in Windows</comment>
-  </data>
   <data name="Shell_PowerDisplay.Content" xml:space="preserve">
     <value>Power Display</value>
     <comment>Product name: Navigation view item name for Power Display</comment>
-  </data>
-  <data name="Shell_KeyboardManager.Content" xml:space="preserve">
-    <value>Keyboard Manager</value>
-    <comment>Product name: Navigation view item name for Keyboard Manager</comment>
-  </data>
-  <data name="Shell_MouseUtilities.Content" xml:space="preserve">
-    <value>Mouse Utilities</value>
-    <comment>Product name: Navigation view item name for Mouse utilities</comment>
   </data>
   <data name="Shell_NavigationMenu_Announce_Collapse" xml:space="preserve">
     <value>Navigation closed</value>
@@ -255,62 +149,6 @@
     <value>Navigation opened</value>
     <comment>Accessibility announcement when the navigation pane opens</comment>
   </data>
-  <data name="KeyboardManager.ModuleDescription" xml:space="preserve">
-    <value>Reconfigure your keyboard by remapping keys and shortcuts</value>
-    <comment>Keyboard Manager page description</comment>
-  </data>
-  <data name="KeyboardManager_EnableToggle.Header" xml:space="preserve">
-    <value>Keyboard Manager</value>
-    <comment>Keyboard Manager enable toggle header. Do not loc the Product name. Do you want this feature on / off</comment>
-  </data>
-  <data name="KeyboardManager_RemapKeyboardButton.Header" xml:space="preserve">
-    <value>Remap a key</value>
-    <comment>Keyboard Manager remap keyboard button content</comment>
-  </data>
-	<data name="KeyboardManager_Editor.Header" xml:space="preserve">
-    <value>Editor</value>
-    <comment>Keyboard Manager new editor header</comment>
-  </data>
-  <data name="KeyboardManager_Keys.Header" xml:space="preserve">
-    <value>Keys</value>
-    <comment>Keyboard Manager remap keyboard header</comment>
-  </data>
-  <data name="KeyboardManager_RemapShortcutsButton.Header" xml:space="preserve">
-    <value>Remap a shortcut</value>
-    <comment>Keyboard Manager remap shortcuts button</comment>
-  </data>
-  <data name="KeyboardManager_Shortcuts.Header" xml:space="preserve">
-    <value>Shortcuts</value>
-    <comment>Keyboard Manager remap keyboard header</comment>
-  </data>
-  <data name="KeyboardManager_All_Apps_Description" xml:space="preserve">
-    <value>All apps</value>
-    <comment>Should be the same as EditShortcuts_AllApps from keyboard manager editor</comment>
-  </data>
-  <data name="KeyboardManager_TryNewExperience.Header" xml:space="preserve">
-    <value>Try the new editor</value>
-    <comment>Keyboard Manager toggle to switch to the new unified editor</comment>
-  </data>
-  <data name="KeyboardManager_TryNewExperience.Description" xml:space="preserve">
-    <value>Switch to the new editor. You can switch back at any time.</value>
-    <comment>Description for the new experience toggle</comment>
-  </data>
-  <data name="KeyboardManager_OpenNewEditor.Header" xml:space="preserve">
-    <value>Editor</value>
-    <comment>Keyboard Manager button to open the new unified editor</comment>
-  </data>
-  <data name="KeyboardManager_OpenNewEditor.Description" xml:space="preserve">
-    <value>Set and manage your remappings</value>
-    <comment>Description for the new editor button</comment>
-  </data>
-  <data name="Dashboard_KeyboardManager_OpenEditor" xml:space="preserve">
-    <value>Open Keyboard Manager</value>
-    <comment>Label for the Keyboard Manager editor shortcut on the dashboard page</comment>
-  </data>
-  <data name="KeyboardManager_GoBackClassic.Content" xml:space="preserve">
-    <value>Switch back to the classic editor</value>
-    <comment>Keyboard Manager link to switch back to the classic editor UI</comment>
-  </data>
   <data name="Shortcut.Header" xml:space="preserve">
     <value>Shortcut</value>
   </data>
@@ -319,16 +157,6 @@
   </data>
   <data name="RemapShortcutsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Current shortcut remappings</value>
-  </data>
-  <data name="KeyboardManager_RemappedKeysListItem.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Key remapping</value>
-    <comment>key as in keyboard key</comment>
-  </data>
-  <data name="KeyboardManager_RemappedShortcutsListItem.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Shortcut remapping</value>
-  </data>
-  <data name="KeyboardManager_RemappedTo.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Remapped to</value>
   </data>
   <data name="General.ModuleTitle" xml:space="preserve">
     <value>General</value>
@@ -559,9 +387,6 @@
   <data name="FileExplorerPreview.ModuleTitle" xml:space="preserve">
     <value>File Explorer</value>
   </data>
-  <data name="KeyboardManager.ModuleTitle" xml:space="preserve">
-    <value>Keyboard Manager</value>
-  </data>
   <data name="General_Repository.Text" xml:space="preserve">
     <value>GitHub repository</value>
   </data>
@@ -596,12 +421,6 @@
   </data>
   <data name="Encoding.Header" xml:space="preserve">
     <value>Encoding</value>
-  </data>
-  <data name="KeyboardManager_RemapKeyboardButton.Description" xml:space="preserve">
-    <value>Remap keys to other keys, shortcuts or text snippets</value>
-  </data>
-  <data name="KeyboardManager_RemapShortcutsButton.Description" xml:space="preserve">
-    <value>Remap shortcuts to other shortcuts, keys or text snippets for all or specific applications</value>
   </data>
   <data name="General.ModuleDescription" xml:space="preserve">
     <value>Kit is a local PowerToys-derived workspace for comparing behavior, testing focused changes, and running selected utilities side-by-side with an official PowerToys installation.</value>
@@ -851,18 +670,7 @@
   <data name="Activation_Shortcut.Description" xml:space="preserve">
     <value>Customize the shortcut to activate this module</value>
   </data>
-	<data name="KeyboardManager_Editor_Shortcut.Header" xml:space="preserve">
-    <value>Editor shortcut</value>
-  </data>
-	<data name="KeyboardManager_Editor_Open_Shortcut.Header" xml:space="preserve">
-    <value>Open editor shortcut</value>
-  </data>
-	<data name="KeyboardManager_Editor_Open_Shortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to open the Keyboard Manager editor</value>
-  </data>
-	<data name="KeyboardManager_LaunchEditor_Button.Content" xml:space="preserve">
-    <value>Open editor</value>
-  </data>	
+
 	<data name="PasteAsPlainText_Shortcut.Header" xml:space="preserve">
     <value>Paste as plain text directly</value>
   </data>
@@ -1065,71 +873,9 @@
     <value>Learn more about Mouse utilities</value>
     <comment>Mouse utilities is a product name, do not loc</comment>
   </data>
-  <data name="LearnMore_PowerPreview.Text" xml:space="preserve">
-    <value>Learn more about File Explorer add-ons</value>
-    <comment>File Explorer is a product name, localize as Windows does</comment>
-  </data>
-  <data name="LearnMore_Peek.Text" xml:space="preserve">
-    <value>Learn more about Peek</value>
-    <comment>Peek is a product name, do not loc</comment>
-  </data>
   <data name="LearnMore_Run.Text" xml:space="preserve">
     <value>Learn more about PowerToys Run</value>
     <comment>PowerToys Run is a product name, do not loc</comment>
-  </data>
-  <data name="LearnMore_MeasureTool.Text" xml:space="preserve">
-    <value>Learn more about Screen Ruler</value>
-    <comment>Screen Ruler is a product name, do not loc</comment>
-  </data>
-  <data name="MouseUtils_Enable_CursorWrap.Header" xml:space="preserve">
-    <value>CursorWrap</value>
-  </data>
-  <data name="MouseUtils_CursorWrap.Header" xml:space="preserve">
-    <value>CursorWrap</value>
-  </data>
-  <data name="MouseUtils_CursorWrap.Description" xml:space="preserve">
-    <value>Wrap the mouse cursor between monitor edges</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation and behavior</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_DisableWrapDuringDrag.Content" xml:space="preserve">
-    <value>Disable wrapping while dragging</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_DisableOnSingleMonitor.Content" xml:space="preserve">
-    <value>Disable wrapping when using a single monitor</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_WrapMode.Header" xml:space="preserve">
-    <value>Wrap mode</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_WrapMode_VerticalOnly.Content" xml:space="preserve">
-    <value>Vertical only</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_WrapMode_HorizontalOnly.Content" xml:space="preserve">
-    <value>Horizontal only</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_WrapMode_Both.Content" xml:space="preserve">
-    <value>Vertical and horizontal</value>
-  </data>
-  <data name="MouseUtils_CursorWrap_ActivationMode.Header" xml:space="preserve">
-    <value>Wrapping activation</value>
-    <comment>CursorWrap: Label for activation mode dropdown</comment>
-  </data>
-  <data name="MouseUtils_CursorWrap_ActivationMode.Description" xml:space="preserve">
-    <value>Control when cursor wrapping occurs as the pointer reaches the screen edge.</value>
-    <comment>CursorWrap: Description for activation mode dropdown</comment>
-  </data>
-  <data name="MouseUtils_CursorWrap_ActivationMode_Always.Content" xml:space="preserve">
-    <value>Always</value>
-    <comment>CursorWrap: Activation mode - always wrap</comment>
-  </data>
-  <data name="MouseUtils_CursorWrap_ActivationMode_HoldingCtrl.Content" xml:space="preserve">
-    <value>Holding Ctrl</value>
-    <comment>CursorWrap: Activation mode - wrap only when Ctrl held</comment>
-  </data>
-  <data name="MouseUtils_CursorWrap_ActivationMode_HoldingShift.Content" xml:space="preserve">
-    <value>Holding Shift</value>
-    <comment>CursorWrap: Activation mode - wrap only when Shift held</comment>
   </data>
   <data name="Launch_Run.Content" xml:space="preserve">
     <value>Open PowerToys Run</value>
@@ -1143,10 +889,6 @@
   </data>
   <data name="General.SecondaryLinksHeader" xml:space="preserve">
     <value>Related information</value>
-  </data>
-  <data name="MouseUtils.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-    <comment>giving credit to the projects this utility was based on</comment>
   </data>
   <data name="EditTooltip.Text" xml:space="preserve">
     <value>Edit</value>
@@ -1193,219 +935,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
   </data>
   <data name="Awake_ExpirationSettingsExpander.Header" xml:space="preserve">
     <value>End date and time</value>
-  </data>
-  <data name="MouseUtils.ModuleTitle" xml:space="preserve">
-    <value>Mouse utilities</value>
-  </data>
-  <data name="MouseUtils.ModuleDescription" xml:space="preserve">
-    <value>A collection of mouse utilities.</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse.Header" xml:space="preserve">
-    <value>Find My Mouse</value>
-    <comment>Refers to the utility name</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse.Description" xml:space="preserve">
-    <value>Highlight the position of the cursor when pressing the Ctrl key twice, using a custom shortcut or when shaking the mouse.</value>
-    <comment>"Ctrl" is a keyboard key. "Find My Mouse" is the name of the utility</comment>
-  </data>
-  <data name="MouseUtils_Enable_FindMyMouse.Header" xml:space="preserve">
-    <value>Find My Mouse</value>
-    <comment>"Find My Mouse" is the name of the utility.</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ActivationMethod.Header" xml:space="preserve">
-    <value>Activation method</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ActivationDoubleControlPress.Content" xml:space="preserve">
-    <value>Press Left Control twice</value>
-    <comment>Left control is the physical key on the keyboard.</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ActivationShakeMouse.Content" xml:space="preserve">
-    <value>Shake mouse</value>
-    <comment>Mouse is the hardware peripheral.</comment>
-  </data>
-  <data name="MouseUtils_Include_Win_Key.Content" xml:space="preserve">
-    <value>Only activate while holding the Windows key</value>
-    <comment>Specifies that the 'Find My Mouse' will only activate if the Windows key is held down while pressing the Ctrl key twice.</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ExcludedApps.Description" xml:space="preserve">
-    <value>Prevents module activation when an excluded application is the foreground application</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ExcludedApps.Header" xml:space="preserve">
-    <value>Excluded apps</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ExcludedApps_TextBoxControl.PlaceholderText" xml:space="preserve">
-    <value>Example: outlook.exe</value>
-  </data>
-  <data name="MouseUtils_Prevent_Activation_On_Game_Mode.Content" xml:space="preserve">
-    <value>Do not activate when Game Mode is on</value>
-    <comment>"Game mode" is the Windows feature to prevent notification when playing a game.</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_BackgroundColor.Header" xml:space="preserve">
-    <value>Background color</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_SpotlightColor.Header" xml:space="preserve">
-    <value>Spotlight color</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_SpotlightRadius.Header" xml:space="preserve">
-    <value>Spotlight radius (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_SpotlightInitialZoom.Header" xml:space="preserve">
-    <value>Spotlight initial zoom</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_SpotlightInitialZoom.Description" xml:space="preserve">
-    <value>Spotlight zoom factor at the start of the animation</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_AnimationDurationMs.Header" xml:space="preserve">
-    <value>Animation duration (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_AnimationDurationMs.Description" xml:space="preserve">
-    <value>Time before the spotlight appears (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_AnimationDurationMs_Disabled.Title" xml:space="preserve">
-    <value>Animations are disabled in your system settings.</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ShakingMinimumDistance.Header" xml:space="preserve">
-    <value>Minimum shake distance</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ShakingMinimumDistance.Description" xml:space="preserve">
-    <value>The minimum distance the mouse must move to be considered a shake. Lower values increase sensitivity.</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ShakingIntervalMs.Header" xml:space="preserve">
-    <value>Shake detection interval (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ShakingIntervalMs.Description" xml:space="preserve">
-    <value>Time window used to monitor mouse movement for shake detection. Shorter intervals may detect quicker shakes.</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ShakingFactor.Header" xml:space="preserve">
-    <value>Shake sensitivity factor (percent)</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ShakingFactor.Description" xml:space="preserve">
-    <value>Determines how far the pointer must move, relative to the screen diagonal, to count as a shake. Lower values make it more sensitive.</value>
-  </data>
-  <data name="MouseUtils_MouseHighlighter.Header" xml:space="preserve">
-    <value>Mouse Highlighter</value>
-    <comment>Refers to the utility name</comment>
-  </data>
-  <data name="MouseUtils_MouseHighlighter.Description" xml:space="preserve">
-    <value>Highlight mouse clicks.</value>
-    <comment>"Mouse Highlighter" is the name of the utility. Mouse is the hardware mouse.</comment>
-  </data>
-  <data name="MouseUtils_Enable_MouseHighlighter.Header" xml:space="preserve">
-    <value>Mouse Highlighter</value>
-    <comment>"Find My Mouse" is the name of the utility.</comment>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_ActivationShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut used to turn this mode on or off</value>
-    <comment>"Mouse Highlighter" is the name of the utility. Mouse is the hardware mouse.</comment>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_PrimaryButtonClickColor.Header" xml:space="preserve">
-    <value>Primary button highlight color</value>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_SecondaryButtonClickColor.Header" xml:space="preserve">
-    <value>Secondary button highlight color</value>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_HighlightRadius.Header" xml:space="preserve">
-    <value>Radius (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_FadeDelayMs.Header" xml:space="preserve">
-    <value>Fade delay (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_FadeDelayMs.Description" xml:space="preserve">
-    <value>Time before the highlight begins to fade (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_FadeDurationMs.Header" xml:space="preserve">
-    <value>Fade duration (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_FadeDurationMs.Description" xml:space="preserve">
-    <value>Duration of the disappear animation (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs.Header" xml:space="preserve">
-    <value>Mouse Pointer Crosshairs</value>
-    <comment>Refers to the utility name</comment>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs.Description" xml:space="preserve">
-    <value>Draw crosshairs centered on the mouse pointer.</value>
-    <comment>"Mouse Pointer Crosshairs" is the name of the utility. Mouse is the hardware mouse.</comment>
-  </data>
-  <data name="MouseUtils_Enable_MousePointerCrosshairs.Header" xml:space="preserve">
-    <value>Mouse Pointer Crosshairs</value>
-    <comment>"Mouse Pointer Crosshairs" is the name of the utility.</comment>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_ActivationShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to show/hide the crosshairs</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsColor.Header" xml:space="preserve">
-    <value>Crosshairs color</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsOpacity.Header" xml:space="preserve">
-    <value>Crosshairs opacity (%)</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsRadius.Header" xml:space="preserve">
-    <value>Crosshairs center radius (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsThickness.Header" xml:space="preserve">
-    <value>Crosshairs thickness (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsBorderColor.Header" xml:space="preserve">
-    <value>Crosshairs border color</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsBorderSize.Header" xml:space="preserve">
-    <value>Crosshairs border size (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_IsCrosshairsFixedLengthEnabled.Header" xml:space="preserve">
-    <value>Fix crosshairs length</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsFixedLength.Header" xml:space="preserve">
-    <value>Crosshairs fixed length (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsOrientation.Header" xml:space="preserve">
-    <value>Crosshairs orientation</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsOrientation_Both.Content" xml:space="preserve">
-    <value>Vertical and horizontal lines</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsOrientation_Vertical.Content" xml:space="preserve">
-    <value>Vertical only</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsOrientation_Horizontal.Content" xml:space="preserve">
-    <value>Horizontal only</value>
-  </data>
-  <data name="MouseUtils_GlidingCursor.Header" xml:space="preserve">
-    <value>Gliding cursor</value>
-  </data>
-  <data name="MouseUtils_GlidingCursor.Description" xml:space="preserve">
-    <value>An accessibility feature that lets you control the mouse with a single button using guided horizontal and vertical lines</value>
-  </data>
-  <data name="MouseUtils_GlidingCursor_InitialSpeed.Header" xml:space="preserve">
-    <value>Initial line speed</value>
-  </data>
-  <data name="MouseUtils_GlidingCursor_InitialSpeed.Description" xml:space="preserve">
-    <value>Speed of the horizontal or vertical line when it begins moving</value>
-  </data>
-  <data name="MouseUtils_GlidingCursor_DelaySpeed.Header" xml:space="preserve">
-    <value>Reduced line speed</value>
-  </data>
-  <data name="MouseUtils_GlidingCursor_DelaySpeed.Description" xml:space="preserve">
-    <value>Speed after slowing down the line with a second shortcut press</value>
   </data>
   <data name="ColorModeHeader.Header" xml:space="preserve">
     <value>Theme</value>
@@ -1484,9 +1013,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
     <value>Always On Top</value>
   </data>
   <data name="AlwaysOnTop_Activation_GroupSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="Peek_Activation_GroupSettings.Header" xml:space="preserve">
     <value>Activation</value>
   </data>
   <data name="AlwaysOnTop_EnableToggleControl_HeaderText.Header" xml:space="preserve">
@@ -1571,53 +1097,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
   <data name="Shell_WhatsNew.Content" xml:space="preserve">
     <value>What's new</value>
   </data>
-  <data name="Shell_Peek.Content" xml:space="preserve">
-    <value>Peek</value>
-    <comment>Product name: Navigation view item name for Peek</comment>
-  </data>
-  <data name="Peek.ModuleTitle" xml:space="preserve">
-    <value>Peek</value>
-  </data>
-  <data name="Peek.ModuleDescription" xml:space="preserve">
-    <value>Peek is a quick and easy way to preview files. Select a file in File Explorer and press the shortcut to open the file preview.</value>
-  </data>
-  <data name="Peek_EnablePeek.Header" xml:space="preserve">
-    <value>Peek</value>
-    <comment>Peek is a product name, do not loc</comment>
-  </data>
-  <data name="Peek_BehaviorHeader.Header" xml:space="preserve">
-    <value>Behavior</value>
-  </data>
-  <data name="Peek_AlwaysRunNotElevated.Header" xml:space="preserve">
-    <value>Always run without elevation (even if PowerToys is elevated)</value>
-  </data>
-  <data name="Peek_AlwaysRunNotElevated.Description" xml:space="preserve">
-    <value>Runs Peek without admin permissions to improve access to network shares. To apply this change, you must disable and re-enable Peek.</value>
-    <comment>Peek is a product name, do not loc</comment>
-  </data>
-  <data name="Peek_CloseAfterLosingFocus.Header" xml:space="preserve">
-    <value>Automatically close the Peek window after it loses focus</value>
-    <comment>Peek is a product name, do not loc</comment>
-  </data>
-  <data name="Peek_ConfirmFileDelete.Header" xml:space="preserve">
-    <value>Confirm before deleting files</value>
-  </data>
-  <data name="Peek_ConfirmFileDelete.Description" xml:space="preserve">
-    <value>You'll be asked to confirm before files are moved to the Recycle Bin</value>
-  </data>
-  <data name="Peek_ActivationMethod.Header" xml:space="preserve">
-    <value>Activation method</value>
-  </data>
-  <data name="Peek_ActivationMethod.Description" xml:space="preserve">
-    <value>Use a shortcut or press the Spacebar when a file is selected</value>
-    <comment>Spacebar is a physical keyboard key</comment>
-  </data>
-  <data name="Peek_ActivationMethod_CustomizedShortcut.Content" xml:space="preserve">
-    <value>Custom shortcut</value>
-  </data>
-  <data name="Peek_ActivationMethod_SpaceBar.Content" xml:space="preserve">
-    <value>Spacebar</value>
-  </data>
   <data name="AlwaysOnTop_RoundCorners.Content" xml:space="preserve">
     <value>Enable rounded corners</value>
   </data>
@@ -1630,32 +1109,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
   </data>
   <data name="Shell_QuickAccent.Content" xml:space="preserve">
     <value>Quick Accent</value>
-  </data>
-  <data name="Shell_Workspaces.Content" xml:space="preserve">
-    <value>Workspaces</value>
-  </data>
-  <data name="Workspaces_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>Workspaces</value>
-    <comment>"Workspaces" is the name of the utility</comment>
-  </data>
-  <data name="Workspaces_Activation_GroupSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="Workspaces_ActivationShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to launch the Workspaces Editor</value>
-  </data>
-  <data name="Workspaces_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="Workspaces_LaunchEditorButtonControl.Description" xml:space="preserve">
-    <value>Create and manage Workspaces</value>
-  </data>
-  <data name="Workspaces_LaunchEditorButtonControl.Header" xml:space="preserve">
-    <value>Open editor</value>
-  </data>
-  <data name="LearnMore_Workspaces.Text" xml:space="preserve">
-    <value>Learn more about the Workspaces utility</value>
-    <comment> Workspaces is the name of the module. </comment>
   </data>
   <data name="QuickAccent.ModuleDescription" xml:space="preserve">
     <value>Quick Accent is an alternative way to type accented characters, useful for when a keyboard doesn't support that specific accent.
@@ -1689,21 +1142,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="CropAndLock_Screenshot" xml:space="preserve">
     <value>Crop an app into a screenshot window</value>
-  </data>
-  <data name="FindMyMouse_ShortDescription" xml:space="preserve">
-    <value>Find the mouse</value>
-  </data>
-  <data name="MouseHighlighter_ShortDescription" xml:space="preserve">
-    <value>Turn on clicks highlighter</value>
-  </data>
-  <data name="MouseJump_ShortDescription" xml:space="preserve">
-    <value>Quickly move the mouse pointer</value>
-  </data>
-  <data name="MouseCrosshairs_ShortDescription" xml:space="preserve">
-    <value>Draw crosshairs centered on the mouse pointer</value>
-  </data>
-  <data name="Peek_ShortDescription" xml:space="preserve">
-    <value>Preview file</value>
   </data>
   <data name="Run_ShortDescription" xml:space="preserve">
     <value>Open Run</value>
@@ -1893,10 +1331,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Run_ConflictingKeywordInfo_Link.Content" xml:space="preserve">
     <value>Learn more about conflicting activation commands</value>
   </data>
-  <data name="MeasureTool_ContinuousCapture_Information.Title" xml:space="preserve">
-    <value>The continuous capture mode will consume more resources when in use. Also, measurements will be excluded from screenshots and screen capture.</value>
-    <comment>pointer as in mouse pointer. Resources refer to things like CPU, GPU, RAM</comment>
-  </data>
   <data name="QuickAccent_Description_Indicator.Header" xml:space="preserve">
     <value>Show the Unicode code and name of the currently selected character</value>
   </data>
@@ -2062,62 +1496,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="QuickAccent_SelectedLanguage_Welsh" xml:space="preserve">
     <value>Welsh</value>
   </data>
-  <data name="Hosts.ModuleDescription" xml:space="preserve">
-    <value>Quick and simple utility for managing hosts file.</value>
-    <comment>"Hosts" refers to the system hosts file, do not loc</comment>
-  </data>
-  <data name="Hosts.ModuleTitle" xml:space="preserve">
-    <value>Hosts File Editor</value>
-    <comment>"Hosts" refers to the system hosts file, do not loc</comment>
-  </data>
-  <data name="Shell_Hosts.Content" xml:space="preserve">
-    <value>Hosts File Editor</value>
-    <comment>Products name: Navigation view item name for Hosts File Editor</comment>
-  </data>
-  <data name="Hosts_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>Hosts File Editor</value>
-    <comment>"Hosts File Editor" is the name of the utility</comment>
-  </data>
-  <data name="Hosts_Toggle_ShowStartupWarning.Header" xml:space="preserve">
-    <value>Show a warning at startup</value>
-  </data>
-  <data name="Hosts_Activation_GroupSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="Hosts_LaunchButtonControl.Description" xml:space="preserve">
-    <value>Manage your hosts file</value>
-    <comment>"Hosts" refers to the system hosts file, do not loc</comment>
-  </data>
-  <data name="Hosts_LaunchButtonControl.Header" xml:space="preserve">
-    <value>Open Hosts File Editor</value>
-    <comment>"Hosts File Editor" is a product name</comment>
-  </data>
-  <data name="Hosts_AdditionalLinesPosition.Header" xml:space="preserve">
-    <value>Placement of additional content</value>
-  </data>
-  <data name="Hosts_AdditionalLinesPosition_Bottom.Content" xml:space="preserve">
-    <value>Bottom</value>
-  </data>
-  <data name="Hosts_AdditionalLinesPosition_Top.Content" xml:space="preserve">
-    <value>Top</value>
-  </data>
-  <data name="Hosts_Behavior_GroupSettings.Header" xml:space="preserve">
-    <value>Behavior</value>
-  </data>
-  <data name="Launch_Hosts.Content" xml:space="preserve">
-    <value>Open Hosts File Editor</value>
-    <comment>"Hosts File Editor" is the name of the utility</comment>
-  </data>
-  <data name="LearnMore_Hosts.Text" xml:space="preserve">
-    <value>Learn more about Hosts File Editor</value>
-    <comment>"Hosts File Editor" is the name of the utility</comment>
-  </data>
-  <data name="Hosts_Toggle_LaunchAdministrator.Description" xml:space="preserve">
-    <value>Required in order to make changes to the hosts file</value>
-  </data>
-  <data name="Hosts_Toggle_LaunchAdministrator.Header" xml:space="preserve">
-    <value>Open as administrator</value>
-  </data>
   <data name="EnvironmentVariables.ModuleDescription" xml:space="preserve">
     <value>A quick utility for managing environment variables.</value>
   </data>
@@ -2153,9 +1531,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="GPO_SettingIsManaged.Title" xml:space="preserve">
     <value>This setting is managed by your organization.</value>
-  </data>
-  <data name="Hosts_AdditionalLinesPosition.Description" xml:space="preserve">
-    <value>Includes items like the file header and any lines that can’t be parsed</value>
   </data>
   <data name="TextExtractor_Languages.Header" xml:space="preserve">
     <value>Preferred language</value>
@@ -2295,147 +1670,6 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Open Registry Preview</value>
     <comment>"Registry Preview" is the name of the utility</comment>
   </data>
-  <data name="MouseUtils_MouseJump.Header" xml:space="preserve">
-    <value>Mouse Jump</value>
-    <comment>Refers to the utility name</comment>
-  </data>
-  <data name="MouseUtils_MouseJump.Description" xml:space="preserve">
-    <value>Quickly move the mouse pointer long distances.</value>
-    <comment>"Mouse Jump" is the name of the utility. Mouse is the hardware mouse.</comment>
-  </data>
-  <data name="MouseUtils_Enable_MouseJump.Header" xml:space="preserve">
-    <value>Mouse Jump</value>
-    <comment>"Mouse Jump" is the name of the utility.</comment>
-  </data>
-  <data name="MouseUtils_MouseJump_ActivationShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut used to turn this mode on or off</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ThumbnailSize.Header" xml:space="preserve">
-    <value>Thumbnail size</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ThumbnailSize_Description_Prefix.Text" xml:space="preserve">
-    <value>Constrain thumbnail image size to a maximum of</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ThumbnailSize_Description_Suffix.Text" xml:space="preserve">
-    <value>pixels</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ThumbnailSize_Edit_Height.Header" xml:space="preserve">
-    <value>Maximum height (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_MouseJump_ThumbnailSize_Edit_Width.Header" xml:space="preserve">
-    <value>Maximum width (px)</value>
-    <comment>px = pixels</comment>
-  </data>
-  <data name="MouseUtils_MouseJump_Appearance.Header" xml:space="preserve">
-    <value>Appearance</value>
-  </data>
-  <data name="MouseUtils_MouseJump_PreviewType.Header" xml:space="preserve">
-    <value>Preview style</value>
-  </data>
-  <data name="MouseUtils_MouseJump_PreviewType.Description" xml:space="preserve">
-    <value>Select a predefined style, or apply a custom one</value>
-  </data>
-  <data name="MouseUtils_MouseJump_PreviewType_Compact.Text" xml:space="preserve">
-    <value>Compact</value>
-  </data>
-  <data name="MouseUtils_MouseJump_PreviewType_Bezelled.Text" xml:space="preserve">
-    <value>Bezelled</value>
-  </data>
-  <data name="MouseUtils_MouseJump_PreviewType_Custom.Text" xml:space="preserve">
-    <value>Custom</value>
-  </data>
-  <data name="MouseUtils_MouseJump_CopyStyle.Content" xml:space="preserve">
-    <value>Copy to Custom preview style</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BackgroundColor1.Header" xml:space="preserve">
-    <value>Background color 1</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BackgroundColor1.Description" xml:space="preserve">
-    <value>The start color for the background gradient fill on the preview image</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BackgroundColor2.Header" xml:space="preserve">
-    <value>Background color 2</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BackgroundColor2.Description" xml:space="preserve">
-    <value>The end color for the background gradient fill on the preview image</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BorderThickness.Header" xml:space="preserve">
-    <value>Border thickness</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BorderThickness.Description" xml:space="preserve">
-    <value>The thickness (in pixels) of the border that surrounds the preview image</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BorderColor.Header" xml:space="preserve">
-    <value>Border color</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BorderColor.Description" xml:space="preserve">
-    <value>The color of the border that surrounds the preview image</value>
-  </data>
-  <data name="MouseUtils_MouseJump_Border3dDepth.Header" xml:space="preserve">
-    <value>Border 3D depth</value>
-  </data>
-  <data name="MouseUtils_MouseJump_Border3dDepth.Description" xml:space="preserve">
-    <value>The width (in pixels) of the 3d effect on the border that surrounds the preview image</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BorderPadding.Header" xml:space="preserve">
-    <value>Border padding</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BorderPadding.Description" xml:space="preserve">
-    <value>The amount of padding to draw between the border that surrounds the main preview image and the screen images</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BezelThickness.Header" xml:space="preserve">
-    <value>Bezel thickness</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BezelThickness.Description" xml:space="preserve">
-    <value>The thickness (in pixels) of the border that surrounds the individual screen images</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BezelColor.Header" xml:space="preserve">
-    <value>Bezel color</value>
-  </data>
-  <data name="MouseUtils_MouseJump_BezelColor.Description" xml:space="preserve">
-    <value>The color of the border that surrounds the individual screen images</value>
-  </data>
-  <data name="MouseUtils_MouseJump_Bezel3dDepth.Header" xml:space="preserve">
-    <value>Bezel 3D depth</value>
-  </data>
-  <data name="MouseUtils_MouseJump_Bezel3dDepth.Description" xml:space="preserve">
-    <value>The width (in pixels) of the 3d effect on the border that surrounds individual screen images</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ScreenMargin.Header" xml:space="preserve">
-    <value>Screen spacing</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ScreenMargin.Description" xml:space="preserve">
-    <value>The width (in pixels) of the margin drawn between individual screen images</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ScreenColor1.Header" xml:space="preserve">
-    <value>Screen color 1</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ScreenColor1.Description" xml:space="preserve">
-    <value>The start color for the background gradient fill on individual screen images</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ScreenColor2.Header" xml:space="preserve">
-    <value>Screen color 2</value>
-  </data>
-  <data name="MouseUtils_MouseJump_ScreenColor2.Description" xml:space="preserve">
-    <value>The end color for the background gradient fill on individual screen images</value>
-  </data>
-  <data name="MouseUtils_MouseJump_CopyToCustomStyle_MessageBox_Title" xml:space="preserve">
-    <value>Copy to Custom preview style</value>
-  </data>
-  <data name="MouseUtils_MouseJump_CopyToCustomStyle_MessageBox_PrimaryButtonText" xml:space="preserve">
-    <value>Copy</value>
-  </data>
-  <data name="Hosts_Toggle_LoopbackDuplicates.Description" xml:space="preserve">
-    <value>127.0.0.1, ::1, ...</value>
-    <comment>"127.0.0.1 and ::1" are well known loopback addresses, do not loc</comment>
-  </data>
-  <data name="Hosts_Toggle_LoopbackDuplicates.Header" xml:space="preserve">
-    <value>Consider loopback addresses as duplicates</value>
-  </data>
   <data name="RegistryPreview_Launch_GroupSettings.Header" xml:space="preserve">
     <value>Open</value>
   </data>
@@ -2451,28 +1685,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="MWB_SecurityKeyLabel.PlaceholderText" xml:space="preserve">
     <value>Security key</value>
   </data>
-  <data name="Hosts_Encoding.Description" xml:space="preserve">
-    <value>Choose the encoding of the hosts file</value>
-    <comment>"Hosts" refers to the system hosts file, do not loc</comment>
-  </data>
-  <data name="Hosts_Encoding.Header" xml:space="preserve">
-    <value>Encoding</value>
-  </data>
-  <data name="Hosts_Encoding_Utf8.Content" xml:space="preserve">
-    <value>UTF-8</value>
-  </data>
-  <data name="Hosts_Encoding_Utf8Bom.Content" xml:space="preserve">
-    <value>UTF-8 with BOM</value>
-  </data>
-  <data name="MouseUtils_MouseHighlighter_AlwaysColor.Header" xml:space="preserve">
-    <value>Always highlight color</value>
-  </data>
-  <data name="MouseUtils_MousePointerCrosshairs_CrosshairsAutoHide.Content" xml:space="preserve">
-    <value>Automatically hide crosshairs when the mouse pointer is hidden</value>
-  </data>
-  <data name="MouseUtils_AutoActivate.Content" xml:space="preserve">
-    <value>Automatically activate on utility startup</value>
-  </data>
   <data name="Run_FindMorePlugins.Text" xml:space="preserve">
     <value>Find more plugins</value>
   </data>
@@ -2484,19 +1696,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="AlwaysOnTop_FrameOpacity.Header" xml:space="preserve">
     <value>Opacity (%)</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ActivationCustomizedShortcut.Content" xml:space="preserve">
-    <value>Custom shortcut</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ActivationDoubleRightControlPress.Content" xml:space="preserve">
-    <value>Press Right Control twice</value>
-    <comment>Right control is the physical key on the keyboard.</comment>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ActivationShortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut used to turn this mode on or off</value>
-  </data>
-  <data name="MouseUtils_FindMyMouse_ActivationShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
   </data>
   <data name="SettingsWindow_AdminTitle" xml:space="preserve">
     <value>Administrator: Kit</value>
@@ -2522,27 +1721,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="Dashboard_SortBy.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Sort utilities</value>
-  </data>
-  <data name="Peek_Preview_GroupSettings.Header" xml:space="preserve">
-    <value>Preview</value>
-  </data>
-  <data name="Peek_SourceCode_Header.Description" xml:space="preserve">
-    <value>.txt, .cpp, .py, .json, .xml, .csproj, ...</value>
-  </data>
-  <data name="Peek_SourceCode_Header.Header" xml:space="preserve">
-    <value>Source code files (Monaco)</value>
-  </data>
-  <data name="Peek_SourceCode_TryFormat.Description" xml:space="preserve">
-    <value>Applies to json and xml. Files remain unchanged.</value>
-  </data>
-  <data name="Peek_SourceCode_TryFormat.Header" xml:space="preserve">
-    <value>Try to format the source for preview</value>
-  </data>
-  <data name="Peek_SourceCode_WrapText.Content" xml:space="preserve">
-    <value>Wrap text</value>
-  </data>
-  <data name="Peek_SourceCode_Minimap.Content" xml:space="preserve">
-    <value>Show minimap</value>
   </data>
   <data name="ShowPluginsOverview_All.Content" xml:space="preserve">
     <value>All</value>
@@ -2581,9 +1759,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="FileExplorerPreview_ToggleSwitch_Monaco_Sticky_Scroll.Content" xml:space="preserve">
     <value>Enable sticky scroll</value>
   </data>
-  <data name="Peek_SourceCode_StickyScroll.Content" xml:space="preserve">
-    <value>Enable sticky scroll</value>
-  </data>
   <data name="FileExplorerPreview_ToggleSwitch_Monaco_Minimap.Content" xml:space="preserve">
     <value>Show minimap</value>
   </data>
@@ -2593,13 +1768,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="FileExplorerPreview_Toggle_Monaco_Font_Size.Header" xml:space="preserve">
     <value>Font size </value>
-  </data>
-  <data name="Peek_SourceCode_FontSize.Description" xml:space="preserve">
-    <value>Font size of the editor in pt. Recommended: 14pt</value>
-    <comment>{Locked="pt"}</comment>
-  </data>
-  <data name="Peek_SourceCode_FontSize.Header" xml:space="preserve">
-    <value>Font size</value>
   </data>
   <data name="GPO_CommandNotFound_ForceDisabled.Title" xml:space="preserve">
     <value>The Command Not Found module is disabled by your organization.</value>
@@ -2710,15 +1878,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NewPlus.SecondaryLinksHeader" xml:space="preserve">
     <value>Attribution</value>
     <comment>giving credit</comment>
-  </data>
-  <data name="Workspaces.ModuleDescription" xml:space="preserve">
-    <value>Workspaces is a quick and easy way to launch a set of applications to custom positions and configurations with one-click.</value>
-  </data>
-  <data name="Workspaces.ModuleTitle" xml:space="preserve">
-    <value>Workspaces</value>
-  </data>
-  <data name="Workspaces_ShortDescription" xml:space="preserve">
-    <value>Open editor</value>
   </data>
   <data name="Shell_ZoomIt.Content" xml:space="preserve">
     <value>ZoomIt</value>
@@ -3463,12 +2622,6 @@ The break timer font matches the text font.</value>
     <value>{0} conflicts found</value>
     <comment>{0} is replaced with the number of conflicts</comment>
   </data>
-  <data name="Hosts_NoLeadingSpaces.Header" xml:space="preserve">
-    <value>No leading spaces</value>
-  </data>
-  <data name="Hosts_NoLeadingSpaces.Description" xml:space="preserve">
-    <value>Do not prepend spaces to active lines when saving the hosts file</value>
-  </data>
   <data name="Search_ResultsFor" xml:space="preserve">
     <value>Results for</value>
     <comment>Prefix for search string. E.g. "Results for 'shortcut'"</comment>
@@ -3819,50 +2972,6 @@ The break timer font matches the text font.</value>
   </data>
   <data name="PowerDisplay_CustomMapping_Delete_Message" xml:space="preserve">
     <value>This custom name mapping will be permanently removed.</value>
-  </data>
-  <data name="Hosts_Backup_GroupSettings.Header" xml:space="preserve">
-    <value>Backup</value>
-  </data>
-  <data name="Hosts_Backup.Header" xml:space="preserve">
-    <value>Backup hosts file</value>
-    <comment>"Hosts" refers to the system hosts file, do not loc</comment>
-  </data>
-  <data name="Hosts_Backup.Description" xml:space="preserve">
-    <value>Automatically create a backup of the hosts file when you save for the first time in a session</value>
-    <comment>"Hosts" refers to the system hosts file, do not loc</comment>
-  </data>
-  <data name="Hosts_Backup_Location.Header" xml:space="preserve">
-    <value>Location</value>
-  </data>
-  <data name="Hosts_ButtonSelectLocation.Text" xml:space="preserve">
-    <value>Select location</value>
-  </data>
-  <data name="Hosts_Delete_Backup.Header" xml:space="preserve">
-    <value>Automatically delete backups</value>
-  </data>
-  <data name="Hosts_Backup_DaysInput.Header" xml:space="preserve">
-    <value>Days</value>
-  </data>
-  <data name="Hosts_Backup_CountInput_Description" xml:space="preserve">
-    <value>Set the number of backups to keep. Older backups will be deleted once the limit is reached.</value>
-  </data>
-  <data name="Hosts_Backup_DaysInput.Description" xml:space="preserve">
-    <value>Set the number of days to keep backups. Older backups will be deleted once the limit is reached.</value>
-  </data>
-  <data name="Hosts_DeleteBackupMode_Never.Content" xml:space="preserve">
-    <value>Never</value>
-  </data>
-  <data name="Hosts_DeleteBackupMode_CountBased.Content" xml:space="preserve">
-    <value>Based on count</value>
-  </data>
-  <data name="Hosts_DeleteBackupMode_AgeAndCountBased.Content" xml:space="preserve">
-    <value>Based on age and count</value>
-  </data>
-  <data name="Hosts_Backup_CountInput_Age_Description" xml:space="preserve">
-    <value>Set an optional number of backups to always keep despite their age</value>
-  </data>
-  <data name="Hosts_Backup_CountInput_Header" xml:space="preserve">
-    <value>Backup count</value>
   </data>
   <data name="LightSwitch_SetLocationButton.Content" xml:space="preserve">
     <value>Set Location</value>

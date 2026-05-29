@@ -18,7 +18,7 @@ namespace PowerDisplay
 
         // LibraryImport for AOT compatibility - COM wait constants
         private const uint CowaitDefault = 0;
-        private const uint InfiniteTimeout = 0xFFFFFFFF;
+        private const uint RedirectActivationTimeoutMilliseconds = 10000;
 
         [LibraryImport("ole32.dll")]
         private static partial int CoWaitForMultipleObjects(
@@ -107,14 +107,11 @@ namespace PowerDisplay
         /// </summary>
         private static void RedirectActivationTo(AppActivationArguments args, AppInstance keyInstance)
         {
-            // Do the redirection on another thread, and use a non-blocking
-            // wait method to wait for the redirection to complete.
-            using var redirectSemaphore = new Semaphore(0, 1);
-            var redirectTimeout = TimeSpan.FromSeconds(10);
-
-            _ = Task.Run(() =>
+            // Do the redirection on another thread, and use a COM-aware wait
+            // method with a finite timeout while redirection is pending.
+            var redirectTask = Task.Run(() =>
             {
-                using var cts = new CancellationTokenSource(redirectTimeout);
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(RedirectActivationTimeoutMilliseconds));
                 try
                 {
                     keyInstance.RedirectActivationToAsync(args)
@@ -126,17 +123,14 @@ namespace PowerDisplay
                 {
                     // Silently ignore errors - logger not initialized yet
                 }
-                finally
-                {
-                    redirectSemaphore.Release();
-                }
             });
 
             // Use CoWaitForMultipleObjects to pump COM messages while waiting
-            nint[] handles = [redirectSemaphore.SafeWaitHandle.DangerousGetHandle()];
+            var redirectWaitHandle = ((IAsyncResult)redirectTask).AsyncWaitHandle;
+            nint[] handles = [redirectWaitHandle.SafeWaitHandle.DangerousGetHandle()];
             _ = CoWaitForMultipleObjects(
                 CowaitDefault,
-                InfiniteTimeout,
+                RedirectActivationTimeoutMilliseconds,
                 1,
                 handles,
                 out _);

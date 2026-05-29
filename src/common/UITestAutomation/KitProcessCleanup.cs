@@ -11,17 +11,26 @@ namespace Microsoft.PowerToys.UITest
 {
     internal static class KitProcessCleanup
     {
+        public readonly record struct CleanupResult(bool MatchedKnownExecutable, bool KilledAnyProcess, bool FailedAnyProcess)
+        {
+            public bool HandledAnyProcess => KilledAnyProcess || FailedAnyProcess;
+        }
+
         public static void KillKnownKitProcesses()
         {
             foreach (PowerToysModule module in Enum.GetValues<PowerToysModule>())
             {
-                KillByExecutablePath(ModuleConfigData.Instance.GetModulePath(module));
+                KillByExecutablePath(
+                    ModuleConfigData.Instance.GetModulePath(module),
+                    (process, ex) => Console.WriteLine($"[KitProcessCleanup] Failed to terminate process {process.ProcessName} (ID: {process.Id}): {ex.Message}"));
             }
         }
 
-        public static bool KillKnownKitProcessesByName(string processName, Action<Process, Exception>? onError = null)
+        public static CleanupResult KillKnownKitProcessesByName(string processName, Action<Process, Exception>? onError = null)
         {
-            var killedKnownName = false;
+            var matchedKnownExecutable = false;
+            var killedAnyProcess = false;
+            var failedAnyProcess = false;
             foreach (PowerToysModule module in Enum.GetValues<PowerToysModule>())
             {
                 var executablePath = ModuleConfigData.Instance.GetModulePath(module);
@@ -31,27 +40,31 @@ namespace Microsoft.PowerToys.UITest
                     continue;
                 }
 
-                killedKnownName = true;
-                KillByExecutablePath(executablePath, onError);
+                matchedKnownExecutable = true;
+                var result = KillByExecutablePath(executablePath, onError);
+                killedAnyProcess |= result.KilledAnyProcess;
+                failedAnyProcess |= result.FailedAnyProcess;
             }
 
-            return killedKnownName;
+            return new CleanupResult(matchedKnownExecutable, killedAnyProcess, failedAnyProcess);
         }
 
-        public static void KillByExecutablePath(string executablePath, Action<Process, Exception>? onError = null)
+        public static CleanupResult KillByExecutablePath(string executablePath, Action<Process, Exception>? onError = null)
         {
             var resolvedPath = ResolveExecutablePath(executablePath);
             if (string.IsNullOrEmpty(resolvedPath))
             {
-                return;
+                return default;
             }
 
             var processName = Path.GetFileNameWithoutExtension(resolvedPath);
             if (string.IsNullOrWhiteSpace(processName))
             {
-                return;
+                return default;
             }
 
+            var killedAnyProcess = false;
+            var failedAnyProcess = false;
             foreach (var process in Process.GetProcessesByName(processName))
             {
                 using (process)
@@ -66,13 +79,17 @@ namespace Microsoft.PowerToys.UITest
 
                         process.Kill();
                         process.WaitForExit();
+                        killedAnyProcess = true;
                     }
                     catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException)
                     {
+                        failedAnyProcess = true;
                         onError?.Invoke(process, ex);
                     }
                 }
             }
+
+            return new CleanupResult(killedAnyProcess || failedAnyProcess, killedAnyProcess, failedAnyProcess);
         }
 
         private static string ResolveExecutablePath(string executablePath)

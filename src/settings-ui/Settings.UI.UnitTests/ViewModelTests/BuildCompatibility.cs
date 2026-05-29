@@ -316,22 +316,36 @@ namespace ViewModelTests
                 "FancyZones",
                 "FileLocksmith",
                 "GPO_AdvancedPasteAi",
+                "Hosts",
                 "ImageResizer",
+                "KeyboardManager",
                 "Launch_ShortcutGuide",
+                "Launch_Hosts",
                 "LearnMore_AdvancedPaste",
                 "LearnMore_CmdPal",
                 "LearnMore_ColorPicker",
                 "LearnMore_FancyZones",
                 "LearnMore_FileLocksmith",
+                "LearnMore_Hosts",
                 "LearnMore_ImageResizer",
+                "LearnMore_KeyboardManager",
+                "LearnMore_MeasureTool",
                 "LearnMore_MouseWithoutBorders",
+                "LearnMore_MouseUtilities",
+                "LearnMore_Peek",
+                "LearnMore_PowerPreview",
                 "LearnMore_PowerRename",
                 "LearnMore_ShortcutGuide",
+                "LearnMore_Workspaces",
+                "MeasureTool",
                 "MouseWithoutBorders",
+                "MouseUtils",
                 "OOBE_",
                 "Oobe",
                 "OobeWindow",
+                "Peek",
                 "PowerLauncher",
+                "PowerPreview",
                 "PowerRename",
                 "Run_CheckOutCmdPal",
                 "Run_NavigateCmdPalSettings",
@@ -340,14 +354,22 @@ namespace ViewModelTests
                 "Shell_ColorPicker",
                 "Shell_FancyZones",
                 "Shell_FileLocksmith",
+                "Shell_Hosts",
                 "Shell_ImageResizer",
+                "Shell_KeyboardManager",
+                "Shell_MeasureTool",
+                "Shell_MouseUtilities",
                 "Shell_MouseWithoutBorders",
+                "Shell_Peek",
                 "Shell_PowerLauncher",
+                "Shell_PowerPreview",
                 "Shell_PowerRename",
                 "Shell_ShortcutGuide",
+                "Shell_Workspaces",
                 "ShortcutGuide",
                 "Scoobe",
                 "ScoobeWindow",
+                "Workspaces",
             };
 
             foreach (var prefix in inactiveResourceNamePrefixes)
@@ -612,6 +634,8 @@ namespace ViewModelTests
             }
 
             StringAssert.Contains(settingsDeepLink, "\"Kit.exe\"");
+            StringAssert.Contains(settingsDeepLink, "PowerToysPathResolver.GetKitInstallPath()");
+            Assert.IsFalse(settingsDeepLink.Contains("GetPowerToysInstallPath()", StringComparison.Ordinal), "Common Settings deep links should use the Kit-only install resolver.");
             Assert.IsFalse(settingsDeepLink.Contains("\"PowerToys.exe\"", StringComparison.Ordinal), "Common Settings deep links should launch Kit.exe, not the upstream runner.");
             Assert.IsFalse(settingsDeepLink.Contains("Kit or PowerToys exe path", StringComparison.Ordinal), "Common Settings deep-link logging should not describe PowerToys.exe as a supported fallback.");
         }
@@ -1195,6 +1219,7 @@ namespace ViewModelTests
         public void KitUiTestAutomationShouldOnlyCarryActiveKitModuleLaunchTargets()
         {
             var moduleConfigData = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "ModuleConfigData.cs"));
+            var session = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "Session.cs"));
             var sessionHelper = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "SessionHelper.cs"));
             var uiTestBase = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "UITestBase.cs"));
             var kitProcessCleanup = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "KitProcessCleanup.cs"));
@@ -1223,10 +1248,16 @@ namespace ViewModelTests
             StringAssert.Contains(sessionHelper, "KitProcessCleanup.KillByExecutablePath");
             StringAssert.Contains(sessionHelper, "KitProcessCleanup.KillKnownKitProcesses");
             StringAssert.Contains(uiTestBase, "KitProcessCleanup.KillKnownKitProcesses");
+            StringAssert.Contains(kitProcessCleanup, "CleanupResult");
+            StringAssert.Contains(kitProcessCleanup, "HandledAnyProcess");
             StringAssert.Contains(kitProcessCleanup, "KillKnownKitProcessesByName");
+            StringAssert.Contains(kitProcessCleanup, "KilledAnyProcess");
+            StringAssert.Contains(kitProcessCleanup, "FailedAnyProcess");
+            StringAssert.Contains(kitProcessCleanup, "Console.WriteLine($\"[KitProcessCleanup] Failed to terminate process");
             StringAssert.Contains(kitProcessCleanup, "ModuleConfigData.Instance.GetModulePath");
             StringAssert.Contains(kitProcessCleanup, "process.MainModule?.FileName");
             StringAssert.Contains(kitProcessCleanup, "PathMatches");
+            StringAssert.Contains(session, "cleanupResult.MatchedKnownExecutable");
 
             string[] inactiveModuleConfigTokens =
             {
@@ -2511,6 +2542,11 @@ namespace ViewModelTests
             StringAssert.Contains(pathResolver, "PowerToysRegistryKey");
             StringAssert.Contains(pathResolver, "KitExe = \"Kit.exe\"");
             StringAssert.Contains(pathResolver, "PowerToysExe = \"PowerToys.exe\"");
+            StringAssert.Contains(pathResolver, "GetKitInstallPath()");
+            StringAssert.Contains(pathResolver, "GetPowerToysCompatibleInstallPath()");
+            StringAssert.Contains(pathResolver, "GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: true)");
+            StringAssert.Contains(pathResolver, "GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: false)");
+            StringAssert.Contains(pathResolver, "(!kitOnly && File.Exists(Path.Combine(directory, PowerToysExe)))");
         }
 
         [TestMethod]
@@ -2605,6 +2641,7 @@ namespace ViewModelTests
             var quickAccessHost = File.ReadAllText(FindSourceFile("src", "runner", "quick_access_host.cpp"));
             var powerDisplayModuleInterface = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "dllmain.cpp"));
             var powerDisplayProcessManager = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayProcessManager.cpp"));
+            var powerDisplayProcessManagerHeader = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayProcessManager.h"));
             var powerDisplayProgram = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "Program.cs"));
             var powerDisplayApp = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplayXAML", "App.xaml.cs"));
             var powerDisplayDeepLink = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "Helpers", "SettingsDeepLink.cs"));
@@ -2621,9 +2658,21 @@ namespace ViewModelTests
             StringAssert.Contains(powerDisplayProgram, "if (!isRunnerIpcLaunch)");
             StringAssert.Contains(powerDisplayProgram, "FindOrRegisterForKey(\"Kit_PowerDisplay_Instance\")");
             StringAssert.Contains(powerDisplayProgram, "App(runnerPid, pipeName)");
+            StringAssert.Contains(powerDisplayProgram, "private const uint RedirectActivationTimeoutMilliseconds = 10000;");
+            StringAssert.Contains(powerDisplayProgram, "RedirectActivationTimeoutMilliseconds");
+            StringAssert.Contains(powerDisplayProgram, "var redirectTask = Task.Run(() =>");
+            StringAssert.Contains(powerDisplayProgram, "((IAsyncResult)redirectTask).AsyncWaitHandle");
+            Assert.IsFalse(powerDisplayProgram.Contains("InfiniteTimeout", StringComparison.Ordinal), "PowerDisplay standalone activation redirects must not block forever.");
+            Assert.IsFalse(powerDisplayProgram.Contains("redirectSemaphore.Release()", StringComparison.Ordinal), "PowerDisplay redirect waits should not release a disposed semaphore from a background task.");
+            StringAssert.Contains(powerDisplayProcessManagerHeader, "std::future<void> submit_task");
+            StringAssert.Contains(powerDisplayProcessManager, "const auto stop_task = submit_task([this]() { refresh(); });");
+            StringAssert.Contains(powerDisplayProcessManager, "stop_task.wait();");
             StringAssert.Contains(powerDisplayProcessManager, "FAILED(send_named_pipe_message(message_type, message_arg))");
             StringAssert.Contains(powerDisplayProcessManager, "restart_pipe()");
             StringAssert.Contains(powerDisplayProcessManager, "Retrying '{}' message after restarting PowerDisplay IPC");
+            StringAssert.Contains(powerDisplayProcessManager, "const auto complete_connection = [&]()");
+            StringAssert.Contains(powerDisplayProcessManager, "if (lastError == ERROR_PIPE_CONNECTED)");
+            StringAssert.Contains(powerDisplayProcessManager, "return complete_connection();");
             StringAssert.Contains(powerDisplayApp, "ProcessNamedPipe(_pipeName)");
             StringAssert.Contains(powerDisplayApp, "Queue<string> _pendingPipeMessages");
             StringAssert.Contains(powerDisplayApp, "DispatchOrQueueNamedPipeMessage(message)");
@@ -2631,7 +2680,8 @@ namespace ViewModelTests
             StringAssert.Contains(powerDisplayApp, "lock (_pendingPipeMessagesLock)");
             StringAssert.Contains(powerDisplayApp, "while (_pendingPipeMessages.Count > 0)");
             StringAssert.Contains(powerDisplayDeepLink, "\"Kit.exe\"");
-            StringAssert.Contains(powerDisplayDeepLink, "PowerToysPathResolver.GetPowerToysInstallPath()");
+            StringAssert.Contains(powerDisplayDeepLink, "PowerToysPathResolver.GetKitInstallPath()");
+            Assert.IsFalse(powerDisplayDeepLink.Contains("GetPowerToysInstallPath()", StringComparison.Ordinal), "PowerDisplay settings deep links should use the Kit-only install resolver.");
             StringAssert.Contains(powerDisplayDeepLink, "UseShellExecute = false");
             Assert.IsFalse(settingsWindow.Contains(@"\\\\.\\pipe\\powertoys_runner_", StringComparison.Ordinal));
             Assert.IsFalse(settingsWindow.Contains(@"\\\\.\\pipe\\powertoys_settings_", StringComparison.Ordinal));

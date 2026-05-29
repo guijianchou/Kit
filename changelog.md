@@ -60,6 +60,10 @@
 - Refactor: Narrowed `ModuleHelper` enabled-state, icon, label, and IPC/settings module-key behavior to the active Kit modules plus General settings.
 - Tests: Kit UI automation cleanup is path-scoped to the current Kit output or install root, so active-module executable names such as `PowerToys.Settings.exe` no longer cause global process kills against an installed official PowerToys build.
 - Build: `.slnf` local builds now honor `-RestoreOnly`, build-script default-property detection respects `/property:` overrides, direct package-signing entry points can opt into `-RequireMachineRoot`, and the shared native `version.vcxproj` uses `/FS` to avoid `Version.pdb` write races.
+- Runtime: PowerDisplay pipe startup now treats `ERROR_PIPE_CONNECTED` as an already-connected client, module teardown waits for the runner-owned child process stop path to run, and standalone activation redirects use a bounded COM wait instead of an infinite wait.
+- Slimming: Removed remaining inactive Keyboard Manager, File Explorer add-ons, Mouse utilities, Screen Ruler, Peek, Workspaces, and Hosts Settings resource strings that were no longer referenced by active Kit pages.
+- Runtime: Settings deep links now use a Kit-only install resolver; the upstream-compatible `PowerToys.exe` resolver remains separated for copied-module compatibility helpers but is not used by Kit Settings links.
+- Tests: Added regression coverage for the PowerDisplay pipe early-connect path, synchronous process-manager stop, bounded redirect wait, Kit-only deep-link resolver, richer UI automation cleanup result reporting, and the expanded inactive resource cleanup.
 - Docs: Updated the first-plugin development note to name all four active modules, including `PowerDisplay`.
 - Build: XAML search index builder no longer carries inactive upstream module icon and panel fallbacks; active page icons are derived from Settings XAML.
 - Runtime: Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface.
@@ -212,6 +216,10 @@
 - 重构：将 `ModuleHelper` 的启用状态、图标、标签以及 IPC/settings 模块键行为收窄到活动 Kit 模块和 General settings。
 - 测试：Kit UI 自动化清理现在按当前 Kit 输出或安装根目录限定路径，因此 `PowerToys.Settings.exe` 等活动模块可执行文件名不会对已安装的官方 PowerToys 构建执行全局进程终止。
 - 构建：`.slnf` 本地构建现在遵守 `-RestoreOnly`，构建脚本默认属性检测识别 `/property:` 覆盖，直接 package 签名入口可以选择 `-RequireMachineRoot`，共享 native `version.vcxproj` 使用 `/FS` 避免 `Version.pdb` 写入竞争。
+- 运行时：PowerDisplay 管道启动现在将 `ERROR_PIPE_CONNECTED` 视为客户端已连接，模块销毁会等待 runner 拥有的子进程停止路径执行完毕，独立启动重定向也改为有限 COM 等待而不是无限等待。
+- 瘦身：删除剩余未被活动 Kit 页面引用的非活动 Keyboard Manager、File Explorer add-ons、Mouse utilities、Screen Ruler、Peek、Workspaces 和 Hosts Settings 资源字符串。
+- 运行时：Settings 深度链接现在使用 Kit-only 安装路径解析器；保留的上游兼容 `PowerToys.exe` 解析器只用于复制模块兼容 helper，不再被 Kit Settings 链接使用。
+- 测试：新增 PowerDisplay 管道早连接、同步 process-manager stop、有界重定向等待、Kit-only 深度链接解析器、更丰富 UI 自动化清理结果报告，以及扩大非活动资源清理范围的回归覆盖。
 - 构建：XAML search index builder 不再携带非活动上游模块图标和 panel 兜底，活动页面图标改为从 Settings XAML 派生。
 - 运行时：从 runner 键盘钩子和模块接口中移除非活动的 Shortcut Guide Win-key 跟踪路径。
 - 运行时：删除 pressed-key 定时器后，移除键盘钩子的 no-op 窗口注册路径。

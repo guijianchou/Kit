@@ -106,7 +106,7 @@ Kit 还没有活动的第三方插件主机。实际的第一步是 PowerToys �
 - 保持 Kit 存储、备份、窗口标题和可见文本与已安装的官方 PowerToys 应用分离。备份默认值应保持为 Kit 活动模块设置的通用规则，不要携带非活动 PowerToys 模块专用文件或恢复修正。
 - 不要在 Kit 中重新启用自动下载/安装或遥测行为。
 - 保持安装器/更新程序入口点和设置遥测惰性。runner 可以检查 GitHub releases 并写入 `UpdateState.json`，但 `update_now`、安装器暂存、更新程序可执行文件启动路径和旧的设置遥测源必须保持不活动，除非未来的更改明确用仅本地行为替换它们。
-- 将 GPO 策略包装器和 ADMX/ADML 策略资产限制在活动模块以及仍保留的产品级启动/更新/诊断规则内。不要在 Kit 中携带非活动 PowerToys 模块策略、仅安装器策略读取器或陈旧的更新 toast 读取器。
+- 将 GPO 策略包装器和 ADMX/ADML 策略资产限制在当前已有策略规则的活动模块，以及仍保留的产品级启动/更新/诊断规则内。Monitor 是活动模块，但尚未接入策略管理，因此在加入真实 Monitor 策略前应在 Settings 中保持 `Unavailable`。不要在 Kit 中携带非活动 PowerToys 模块策略、仅安装器策略读取器或陈旧的更新 toast 读取器。
 - 不要在 Kit 中保留只供 DSC 使用的 Settings 命令行入口。当前保留的 Settings 命令行表面只有活动的 `set`/`get` 兼容路径；除非 DSC 生成重新成为活动功能，否则不要恢复 `setAdditional`。
 - 在 OOBE/SCOOBE 窗口未交付时，不要在 Kit 中保留其启动和状态路径。除非完整的引导界面重新成为活动功能，否则不要恢复它们的 SettingsAPI helper、备份规则、资源或样式。
 - 保持上游 BugReportTool 不进入活动 Kit 运行时。它的收集模型是广泛的 PowerToys 诊断状态，包括 Kit 不交付的非活动模块。

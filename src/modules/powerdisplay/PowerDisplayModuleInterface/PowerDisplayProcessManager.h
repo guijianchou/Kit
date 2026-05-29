@@ -10,6 +10,7 @@
 #include <atomic>
 #include <memory>
 #include <functional>
+#include <future>
 
 /// <summary>
 /// Manages the PowerDisplay.exe process and Named Pipe communication.
@@ -44,7 +45,7 @@ public:
     bool is_running() const;
 
 private:
-    void submit_task(std::function<void()> task);
+    std::future<void> submit_task(std::function<void()> task);
     bool is_process_running() const;
     void terminate_process();
     HRESULT start_process(const std::wstring& pipe_name);

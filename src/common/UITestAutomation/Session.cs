@@ -604,7 +604,10 @@ namespace Microsoft.PowerToys.UITest
         /// <param name="processName">The name of the process to terminate (without extension, e.g., "notepad").</param>
         public void KillAllProcessesByName(string processName)
         {
-            if (KitProcessCleanup.KillKnownKitProcessesByName(processName))
+            var cleanupResult = KitProcessCleanup.KillKnownKitProcessesByName(
+                processName,
+                (process, ex) => Console.WriteLine($"[KillAllProcessesByName] Failed to terminate process {process.ProcessName} (ID: {process.Id}): {ex.Message}"));
+            if (cleanupResult.MatchedKnownExecutable)
             {
                 return;
             }

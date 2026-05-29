@@ -49,7 +49,7 @@ namespace Common.UI
         {
             try
             {
-                var installPath = PowerToysPathResolver.GetPowerToysInstallPath();
+                var installPath = PowerToysPathResolver.GetKitInstallPath();
                 if (string.IsNullOrEmpty(installPath))
                 {
                     Logger.LogError("Failed to find Kit install path");

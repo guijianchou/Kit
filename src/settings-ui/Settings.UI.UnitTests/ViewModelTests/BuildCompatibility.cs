@@ -2722,8 +2722,6 @@ namespace ViewModelTests
             StringAssert.Contains(lightSwitchInterface, "ResetEvent(m_service_stop_event_handle)");
             StringAssert.Contains(lightSwitchInterface, "if (m_process && WaitForSingleObject(m_process, 0) != WAIT_TIMEOUT)");
             StringAssert.Contains(lightSwitchInterface, "CloseEventHandles();");
-            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_force_light_event_handle);");
-            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_force_dark_event_handle);");
             StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_manual_override_event_handle);");
             StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_service_stop_event_handle);");
             StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_toggle_event_handle);");
@@ -2743,6 +2741,30 @@ namespace ViewModelTests
             Assert.IsFalse(lightSwitchService.Contains("POWERTOYS_LIGHTSWITCH", StringComparison.Ordinal), "Kit LightSwitch service must not use PowerToys event names.");
             StringAssert.Contains(powerDisplayPathConstants, "Path.Combine(_localAppDataPath.Value, \"Kit\")");
             Assert.IsFalse(powerDisplayPathConstants.Contains("\"Microsoft\", \"PowerToys\"", StringComparison.Ordinal), "Kit PowerDisplay must not store module state in the PowerToys app data folder.");
+        }
+
+        [TestMethod]
+        public void KitLightSwitchShouldNotKeepDisabledForceModeActions()
+        {
+            var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
+            var lightSwitchViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "LightSwitchViewModel.cs"));
+            var lightSwitchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml"));
+
+            StringAssert.Contains(lightSwitchInterface, "void ToggleTheme()");
+            StringAssert.Contains(lightSwitchInterface, "SetEvent(m_manual_override_event_handle)");
+            Assert.IsFalse(lightSwitchInterface.Contains("KIT_LIGHTSWITCH_FORCE_LIGHT", StringComparison.Ordinal), "LightSwitch should not create a named force-light event that no code waits on.");
+            Assert.IsFalse(lightSwitchInterface.Contains("KIT_LIGHTSWITCH_FORCE_DARK", StringComparison.Ordinal), "LightSwitch should not create a named force-dark event that no code waits on.");
+            Assert.IsFalse(lightSwitchInterface.Contains("m_force_light_event_handle", StringComparison.Ordinal), "LightSwitch should not keep unused force-light event handles.");
+            Assert.IsFalse(lightSwitchInterface.Contains("m_force_dark_event_handle", StringComparison.Ordinal), "LightSwitch should not keep unused force-dark event handles.");
+            Assert.IsFalse(lightSwitchInterface.Contains("L\"forceLight\"", StringComparison.Ordinal), "LightSwitch module config should not advertise disabled force-light custom actions.");
+            Assert.IsFalse(lightSwitchInterface.Contains("L\"forceDark\"", StringComparison.Ordinal), "LightSwitch module config should not advertise disabled force-dark custom actions.");
+            Assert.IsFalse(lightSwitchViewModel.Contains("ForceLightCommand", StringComparison.Ordinal), "LightSwitch settings view model should not keep commands for a commented-out force-light UI.");
+            Assert.IsFalse(lightSwitchViewModel.Contains("ForceDarkCommand", StringComparison.Ordinal), "LightSwitch settings view model should not keep commands for a commented-out force-dark UI.");
+            Assert.IsFalse(lightSwitchViewModel.Contains("SendCustomAction(\"forceLight\")", StringComparison.Ordinal), "LightSwitch settings should not send an unreachable force-light custom action.");
+            Assert.IsFalse(lightSwitchViewModel.Contains("SendCustomAction(\"forceDark\")", StringComparison.Ordinal), "LightSwitch settings should not send an unreachable force-dark custom action.");
+            Assert.IsFalse(lightSwitchPage.Contains("Force mode buttons", StringComparison.Ordinal), "LightSwitch page should not keep disabled force-mode UI in comments.");
+            Assert.IsFalse(lightSwitchPage.Contains("ForceLightCommand", StringComparison.Ordinal), "LightSwitch page should not bind disabled force-light commands.");
+            Assert.IsFalse(lightSwitchPage.Contains("ForceDarkCommand", StringComparison.Ordinal), "LightSwitch page should not bind disabled force-dark commands.");
         }
 
         [TestMethod]

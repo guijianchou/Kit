@@ -113,8 +113,6 @@ private:
     bool m_enabled = false;
 
     HANDLE m_process{ nullptr };
-    HANDLE m_force_light_event_handle{ nullptr };
-    HANDLE m_force_dark_event_handle{ nullptr };
     HANDLE m_manual_override_event_handle{ nullptr };
     HANDLE m_service_stop_event_handle{ nullptr };
     HANDLE m_toggle_event_handle{ nullptr };
@@ -243,19 +241,6 @@ public:
             L"Your longitude in decimal degrees (e.g. -75.16).",
             g_settings.m_longitude);
 
-        // One-shot actions (buttons)
-        settings.add_custom_action(
-            L"forceLight",
-            L"Switch immediately to light theme",
-            L"Force Light",
-            L"{}");
-
-        settings.add_custom_action(
-            L"forceDark",
-            L"Switch immediately to dark theme",
-            L"Force Dark",
-            L"{}");
-
         // Hotkeys
         PowerToysSettings::HotkeyObject dm_hk = PowerToysSettings::HotkeyObject::from_settings(
             m_toggle_theme_hotkey.win,
@@ -271,33 +256,6 @@ public:
 
         // Serialize to buffer for the PowerToys runner
         return settings.serialize_to_buffer(buffer, buffer_size);
-    }
-
-    // Signal from the Settings editor to call a custom action.
-    // This can be used to spawn more complex editors.
-    void call_custom_action(const wchar_t* action) override
-    {
-        try
-        {
-            auto action_object = PowerToysSettings::CustomActionObject::from_json_string(action);
-
-            if (action_object.get_name() == L"forceLight")
-            {
-                Logger::info(L"[Light Switch] Custom action triggered: Force Light");
-                SetSystemTheme(true);
-                SetAppsTheme(true);
-            }
-            else if (action_object.get_name() == L"forceDark")
-            {
-                Logger::info(L"[Light Switch] Custom action triggered: Force Dark");
-                SetSystemTheme(false);
-                SetAppsTheme(false);
-            }
-        }
-        catch (...)
-        {
-            Logger::error(L"[Light Switch] Invalid custom action JSON");
-        }
     }
 
     // Called by the runner to pass the updated settings values as a serialized JSON.
@@ -592,16 +550,6 @@ public:
 
 void LightSwitchInterface::EnsureEventHandles()
 {
-    if (!m_force_light_event_handle)
-    {
-        m_force_light_event_handle = CreateDefaultEvent(L"KIT_LIGHTSWITCH_FORCE_LIGHT");
-    }
-
-    if (!m_force_dark_event_handle)
-    {
-        m_force_dark_event_handle = CreateDefaultEvent(L"KIT_LIGHTSWITCH_FORCE_DARK");
-    }
-
     if (!m_manual_override_event_handle)
     {
         m_manual_override_event_handle = CreateEventW(nullptr, TRUE, FALSE, L"KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
@@ -620,8 +568,6 @@ void LightSwitchInterface::EnsureEventHandles()
 
 void LightSwitchInterface::CloseEventHandles()
 {
-    CloseHandleIfSet(m_force_light_event_handle);
-    CloseHandleIfSet(m_force_dark_event_handle);
     CloseHandleIfSet(m_manual_override_event_handle);
     CloseHandleIfSet(m_service_stop_event_handle);
     CloseHandleIfSet(m_toggle_event_handle);

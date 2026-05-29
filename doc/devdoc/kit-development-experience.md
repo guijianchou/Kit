@@ -266,6 +266,7 @@ This pass continued the PowerToys-main comparison and tightened the places where
 - The XAML search index builder now excludes `SearchResultsPage` and `ShortcutConflictWindow`, preventing generated Settings search data from returning the search page itself or a non-navigable conflict window.
 - Settings launch failure now clears the runner launch-in-progress guard before leaving `run_settings_window`, so a transient `CreateProcessW` failure does not suppress future Settings opens.
 - LightSwitch disable now signals a Kit-named service-stop event before using its bounded terminate fallback, and module destruction closes all event handles created by the interface.
+- Disabled LightSwitch Force Light/Force Dark UI comments, settings custom-action commands, and unused force-mode named events were removed; the retained immediate action surface is the active toggle hotkey/event path.
 
 Verification for this pass used Visual Studio 18 MSBuild and VSTest:
 
@@ -283,6 +284,7 @@ Verification for this pass used Visual Studio 18 MSBuild and VSTest:
 12. Added failing regression coverage for search-index page exclusions, Settings launch guard cleanup, and LightSwitch service-stop/handle lifecycle cleanup before implementing those fixes.
 13. Rebuilt `Settings.UI.UnitTests.csproj`, `Kit.vcxproj`, `LightSwitchModuleInterface.vcxproj`, `LightSwitchService.vcxproj`, and `PowerToys.Settings.csproj` Debug x64 after the cleanup.
 14. Ran the focused search/settings/LightSwitch compatibility filter, which reported 3/3 passing tests; reran `FullyQualifiedName~BuildCompatibility`, which reported 78/78 passing tests; then ran the full `Settings.UI.UnitTests.dll`, which reported 177/177 passing tests.
+15. Added failing regression coverage for disabled LightSwitch force-mode UI/action/event remnants, then removed them; `LightSwitchModuleInterface.vcxproj` rebuilt successfully, `FullyQualifiedName~BuildCompatibility` reported 79/79 passing tests, and the full `Settings.UI.UnitTests.dll` reported 178/178 passing tests.
 
 ## Latest Verification Notes
 

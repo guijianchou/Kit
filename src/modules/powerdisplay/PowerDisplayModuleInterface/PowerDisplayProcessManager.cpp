@@ -70,7 +70,16 @@ void PowerDisplayProcessManager::send_message(const std::wstring& message_type, 
             }
         }
 
-        send_named_pipe_message(message_type, message_arg);
+        if (FAILED(send_named_pipe_message(message_type, message_arg)))
+        {
+            Logger::warn(L"Retrying '{}' message after restarting PowerDisplay IPC", message_type);
+            m_write_pipe = nullptr;
+
+            if (restart_pipe())
+            {
+                send_named_pipe_message(message_type, message_arg);
+            }
+        }
     });
 }
 
@@ -259,13 +268,54 @@ void PowerDisplayProcessManager::refresh()
     }
 }
 
-void PowerDisplayProcessManager::send_named_pipe_message(const std::wstring& message_type, const std::wstring& message_arg)
+bool PowerDisplayProcessManager::restart_pipe()
 {
-    if (m_write_pipe)
+    if (!m_enabled)
     {
-        const auto message = message_arg.empty() ? std::format(L"{}\r\n", message_type) : std::format(L"{} {}\r\n", message_type, message_arg);
-
-        const CString file_name(message.c_str());
-        m_write_pipe->Write(file_name, file_name.GetLength() * sizeof(TCHAR));
+        return false;
     }
+
+    terminate_process();
+    m_write_pipe = nullptr;
+
+    const auto pipe_name = get_pipe_name(L"kit_power_display_");
+    if (!pipe_name)
+    {
+        return false;
+    }
+
+    if (start_process(pipe_name.value()) != S_OK)
+    {
+        return false;
+    }
+
+    if (start_named_pipe_server(pipe_name.value()) != S_OK)
+    {
+        Logger::error(L"Named pipe restart failed; terminating PowerDisplay process");
+        terminate_process();
+        return false;
+    }
+
+    return true;
+}
+
+HRESULT PowerDisplayProcessManager::send_named_pipe_message(const std::wstring& message_type, const std::wstring& message_arg)
+{
+    if (!m_write_pipe)
+    {
+        Logger::warn(L"Cannot send '{}' message because the PowerDisplay pipe is not connected", message_type);
+        return E_FAIL;
+    }
+
+    const auto message = message_arg.empty() ? std::format(L"{}\r\n", message_type) : std::format(L"{} {}\r\n", message_type, message_arg);
+
+    const CString file_name(message.c_str());
+    const HRESULT result = m_write_pipe->Write(file_name, file_name.GetLength() * sizeof(TCHAR));
+    if (FAILED(result))
+    {
+        Logger::error(L"Failed to send '{}' message to PowerDisplay pipe. HRESULT=0x{:08X}", message_type, static_cast<unsigned int>(result));
+        m_write_pipe = nullptr;
+    }
+
+    return result;
 }

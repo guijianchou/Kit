@@ -236,7 +236,7 @@ namespace Microsoft.PowerToys.Settings.UI
                     return 0;
                 });
 #else
-                /* If we try to run Settings as a standalone app, it will start PowerToys.exe if not running and open Settings again through it in the Dashboard page. */
+                /* If we try to run Settings as a standalone app, it will start Kit.exe if not running and open Settings again through it in the Dashboard page. */
                 global::Common.UI.SettingsDeepLink.OpenSettings(global::Common.UI.SettingsDeepLink.SettingsWindow.Dashboard);
                 Exit();
 #endif

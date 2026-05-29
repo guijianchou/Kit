@@ -2557,7 +2557,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Show the release notes after an update</value>
   </data>
   <data name="ShowSystemTrayIcon.Description" xml:space="preserve">
-    <value>To access settings, run the PowerToys executable again</value>
+    <value>To access settings, run the Kit executable again</value>
   </data>
   <data name="ShowSystemTrayIcon.Header" xml:space="preserve">
     <value>Show system tray icon</value>

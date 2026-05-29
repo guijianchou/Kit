@@ -1,10 +1,11 @@
 param (
     [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    [switch]$RequireMachineRoot,
     [Parameter(Mandatory = $true)]
     [string[]]$TargetPaths
 )
 
-. "$PSScriptRoot\cert-management.ps1"
+. "$PSScriptRoot\cert-management.ps1" -certSubject $certSubject -RequireMachineRoot:$RequireMachineRoot
 
 function Find-SignTool {
     $signTool = Get-Command "signtool" -ErrorAction SilentlyContinue
@@ -46,7 +47,7 @@ if (-not $signToolPath) {
     exit 1
 }
 
-$cert = EnsureCertificate -certSubject $certSubject
+$cert = EnsureCertificate -certSubject $certSubject -RequireMachineRoot:$RequireMachineRoot
 
 if (-not $cert) {
     Write-Error "Failed to prepare certificate."

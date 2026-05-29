@@ -55,7 +55,11 @@
 - Build: Hardened local build helpers so MSBuild arguments stay array-based, Visual Studio environment imports cache the resolved MSBuild path and normalize `PATH`, and local builds skip CopyOnWrite/RunVSTest SDK resolver imports by default.
 - Refactor: Pruned inactive FancyZones, Hosts, Workspaces, PowerRename, Command Palette, and Screen Ruler launch targets from `UITestAutomation`; the harness now targets Kit install roots, `Kit.exe`, Kit Settings, and the four active module executables.
 - Runtime: PowerDisplay runner IPC launches now bypass standalone AppInstance redirection while normal user launches keep single-instance behavior, and Settings deep links launch `Kit.exe`.
-- Refactor: Narrowed `ModuleHelper` enabled-state, icon, and label behavior to the active Kit modules plus General settings while preserving historical module-key mappings for old settings JSON and IPC compatibility.
+- Runtime: PowerDisplay toggles now always use the runner-owned `kit_power_display_` named pipe instead of spawning a no-argument standalone instance, buffer early pipe messages until the WinUI window exists, and retry once after restarting the owned IPC pipe when writes fail.
+- Runtime: Common and PowerDisplay Settings deep links now launch only `Kit.exe`; Kit no longer falls back to an installed upstream `PowerToys.exe` from Settings or module settings links.
+- Refactor: Narrowed `ModuleHelper` enabled-state, icon, label, and IPC/settings module-key behavior to the active Kit modules plus General settings.
+- Tests: Kit UI automation cleanup is path-scoped to the current Kit output or install root, so active-module executable names such as `PowerToys.Settings.exe` no longer cause global process kills against an installed official PowerToys build.
+- Build: `.slnf` local builds now honor `-RestoreOnly`, build-script default-property detection respects `/property:` overrides, direct package-signing entry points can opt into `-RequireMachineRoot`, and the shared native `version.vcxproj` uses `/FS` to avoid `Version.pdb` write races.
 - Docs: Updated the first-plugin development note to name all four active modules, including `PowerDisplay`.
 - Build: XAML search index builder no longer carries inactive upstream module icon and panel fallbacks; active page icons are derived from Settings XAML.
 - Runtime: Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface.
@@ -71,7 +75,7 @@
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
 - Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, Registry Preview-only SkiaSharp package pin removal, Command Palette extension package pin removal, Command Palette Adaptive Cards package pin removal, Command Palette WinGet interop package pin removal, AdvancedPaste Markdown conversion package pin removal, PowerToys Run package pin removal, deleted PowerToys Run and Registry Preview utility notice sections, PreviewPane STL and PowerAccent package pin removal, Command Palette toolkit and host package pin removal, deleted-module package pin removal, deleted-utility package pin removal, deleted Launcher/AI/CmdPal package pin removal, deleted Preview/Peek/CmdPal shared assets, deleted utility NOTICE sections, current Kit runtime wording, and the sparse package active app identity boundary.
-- Tests: Added regression coverage for Kit UI-test launch targets, PowerDisplay runner IPC single-instancing, and build/signing helper stability defaults.
+- Tests: Added regression coverage for Kit UI-test launch targets, path-scoped cleanup, active-module module keys, common and PowerDisplay `Kit.exe` settings links, PowerDisplay runner IPC single-instancing, early pipe-message buffering, pipe-write retry, and build/signing helper stability defaults.
 
 ### 1.2.0
 
@@ -203,6 +207,11 @@
 - 构建：加固签名 helper，加入 Windows SDK `signtool` 查找，默认使用当前用户证书信任，机器级根信任改为显式选择，并且默认只签 sparse package，除非显式指定目标或全部包。
 - 重构：`UITestAutomation` 删除非活动 FancyZones、Hosts、Workspaces、PowerRename、Command Palette 和 Screen Ruler 启动目标；harness 现在指向 Kit 安装根目录、`Kit.exe`、Kit Settings 和四个活动模块可执行文件。
 - 运行时：PowerDisplay runner IPC 启动现在会绕过独立 AppInstance 重定向，普通用户启动仍保留单实例行为；设置深链接现在启动 `Kit.exe`。
+- 运行时：PowerDisplay 切换现在始终使用 runner 拥有的 `kit_power_display_` 命名管道，而不是启动无参数独立实例；WinUI 窗口创建前的早期管道消息会被缓存，并且管道写入失败后会重启自有 IPC 管道再重试一次。
+- 运行时：Common 和 PowerDisplay Settings 深度链接现在只启动 `Kit.exe`；Kit 不再从 Settings 或模块设置链接回退到已安装的上游 `PowerToys.exe`。
+- 重构：将 `ModuleHelper` 的启用状态、图标、标签以及 IPC/settings 模块键行为收窄到活动 Kit 模块和 General settings。
+- 测试：Kit UI 自动化清理现在按当前 Kit 输出或安装根目录限定路径，因此 `PowerToys.Settings.exe` 等活动模块可执行文件名不会对已安装的官方 PowerToys 构建执行全局进程终止。
+- 构建：`.slnf` 本地构建现在遵守 `-RestoreOnly`，构建脚本默认属性检测识别 `/property:` 覆盖，直接 package 签名入口可以选择 `-RequireMachineRoot`，共享 native `version.vcxproj` 使用 `/FS` 避免 `Version.pdb` 写入竞争。
 - 构建：XAML search index builder 不再携带非活动上游模块图标和 panel 兜底，活动页面图标改为从 Settings XAML 派生。
 - 运行时：从 runner 键盘钩子和模块接口中移除非活动的 Shortcut Guide Win-key 跟踪路径。
 - 运行时：删除 pressed-key 定时器后，移除键盘钩子的 no-op 窗口注册路径。
@@ -217,7 +226,7 @@
 - 构建：Settings 和 Quick Access 会从共享 WinUI 输出中移除陈旧的非活动 Settings 资产，Quick Access 只复制活动 Settings 图标。
 - 测试：新增旧 Settings 资产副本删除和 ADMX/ADML 策略资产的回归覆盖。
 - 测试：新增活动模块 Quick Access 边界、非活动 Settings 表面删除、GPO 策略裁剪、BugReportTool 删除、陈旧输出清理、托管应用无 telemetry 引用、活动托管模块无 telemetry 发送、已删除托管 telemetry 源码、活动 native module no-op trace provider、无 telemetry 构建目标和头文件、ModuleTemplate no-op trace 默认值、PowerDisplay settings telemetry IPC 删除、`PowerToys.Interop` IPC 常量表面裁剪、Kit 命名 Settings 终止投影、AdvancedPaste AI provider 源码/包/UI/enum helper 残留删除、Shortcut Conflict 非活动模块特殊分支移除、显式 SettingsFactory 热键边界、非活动 MouseUtils page conflict branch 删除、Settings 包引用注释清理、仅供 Registry Preview 使用的 SkiaSharp 包 pin 移除、Command Palette extension 包 pin 移除、Command Palette Adaptive Cards 包 pin 移除、Command Palette WinGet interop 包 pin 移除、AdvancedPaste Markdown conversion 包 pin 移除、PowerToys Run 包 pin 移除、已删除 PowerToys Run 和 Registry Preview utility notice 段、PreviewPane STL 和 PowerAccent 包 pin 移除、Command Palette toolkit/host 包 pin 移除、deleted-module package pin removal、deleted-utility package pin removal、deleted Launcher/AI/CmdPal package pin removal，以及已删除 Preview/Peek/CmdPal 共享资产的回归覆盖。
-- 测试：新增 Kit UI-test 启动目标、PowerDisplay runner IPC 单实例行为，以及构建/签名 helper 稳定性默认值的回归覆盖。
+- 测试：新增 Kit UI-test 启动目标、按路径限定的清理、活动模块 module key、Common 和 PowerDisplay `Kit.exe` 设置链接、PowerDisplay runner IPC 单实例行为、早期管道消息缓存、管道写入重试，以及构建/签名 helper 稳定性默认值的回归覆盖。
 
 ### 1.2.0
 

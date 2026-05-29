@@ -203,9 +203,7 @@ public:
     }
 
     /// <summary>
-    /// Toggle PowerDisplay window visibility.
-    /// If process is running, launches again to trigger redirect activation (OnActivated handles toggle).
-    /// If process is not running, starts it via Named Pipe and sends toggle message.
+    /// Toggle PowerDisplay window visibility through the runner-owned named pipe.
     /// </summary>
     bool TryTogglePowerDisplay(const wchar_t* source)
     {
@@ -214,20 +212,7 @@ public:
             return false;
         }
 
-        if (m_processManager.is_running())
-        {
-            // Process running - launch to trigger single instance redirect, OnActivated will toggle
-            SHELLEXECUTEINFOW sei{ sizeof(sei) };
-            sei.fMask = SEE_MASK_FLAG_NO_UI;
-            sei.lpFile = L"WinUI3Apps\\PowerToys.PowerDisplay.exe";
-            sei.nShow = SW_SHOWNORMAL;
-            ShellExecuteExW(&sei);
-        }
-        else
-        {
-            // Process not running - start and send toggle via Named Pipe
-            m_processManager.send_message(CommonSharedConstants::POWER_DISPLAY_TOGGLE_MESSAGE);
-        }
+        m_processManager.send_message(CommonSharedConstants::POWER_DISPLAY_TOGGLE_MESSAGE);
         Trace::ActivatePowerDisplay();
         return true;
     }

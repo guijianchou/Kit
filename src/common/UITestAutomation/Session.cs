@@ -604,6 +604,11 @@ namespace Microsoft.PowerToys.UITest
         /// <param name="processName">The name of the process to terminate (without extension, e.g., "notepad").</param>
         public void KillAllProcessesByName(string processName)
         {
+            if (KitProcessCleanup.KillKnownKitProcessesByName(processName))
+            {
+                return;
+            }
+
             foreach (var process in Process.GetProcessesByName(processName))
             {
                 process.Kill();

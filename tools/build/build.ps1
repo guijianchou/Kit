@@ -15,7 +15,7 @@ Build configuration (e.g., 'Debug', 'Release'). Default: 'Debug'.
 Optional directory path containing projects to build. If not specified, uses the current working directory.
 
 .PARAMETER RestoreOnly
-If specified, only perform package restore for local projects and skip the build steps for a solution file (i.e. .sln).
+If specified, only perform package restore for local projects and skip the build steps for a solution file (i.e. .sln, .slnx, or .slnf).
 
 .PARAMETER ExtraArgs
 Any remaining, positional arguments passed to the script are forwarded to MSBuild as additional arguments (e.g., '/p:CIBuild=true').
@@ -75,12 +75,12 @@ if ($positionalExtra.Count -gt 0) {
     $ExtraArgs = $positionalExtra + $ExtraArgs
 }
 
-if (-not ($ExtraArgs | Where-Object { $_ -match '^/p:PowerToysSkipCopyOnWriteSdk=' -or $_ -match '^-p:PowerToysSkipCopyOnWriteSdk=' })) {
+if (-not ($ExtraArgs | Where-Object { $_ -match '^[/-](?:p|property):PowerToysSkipCopyOnWriteSdk=' })) {
     if (-not $ExtraArgs) { $ExtraArgs = @() }
     $ExtraArgs += '/p:PowerToysSkipCopyOnWriteSdk=true'
 }
 
-if (-not ($ExtraArgs | Where-Object { $_ -match '^/p:PowerToysSkipRunVSTestSdk=' -or $_ -match '^-p:PowerToysSkipRunVSTestSdk=' })) {
+if (-not ($ExtraArgs | Where-Object { $_ -match '^[/-](?:p|property):PowerToysSkipRunVSTestSdk=' })) {
     if (-not $ExtraArgs) { $ExtraArgs = @() }
     $ExtraArgs += '/p:PowerToysSkipRunVSTestSdk=true'
 }

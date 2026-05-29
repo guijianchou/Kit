@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCommon;
@@ -23,6 +24,8 @@ namespace PowerDisplay
     public partial class App : Application
     {
         private readonly SettingsUtils _settingsUtils = SettingsUtils.Default;
+        private readonly object _pendingPipeMessagesLock = new();
+        private readonly Queue<string> _pendingPipeMessages = new();
         private Window? _mainWindow;
         private int _powerToysRunnerPid;
         private string? _pipeName;
@@ -135,6 +138,7 @@ namespace PowerDisplay
                 Logger.LogInfo("OnLaunched: Creating MainWindow");
                 _mainWindow = new MainWindow();
                 Logger.LogInfo("OnLaunched: MainWindow created");
+                FlushPendingPipeMessages();
 
                 // Initialize tray icon service
                 Logger.LogTrace("OnLaunched: Initializing TrayIconService");
@@ -314,13 +318,53 @@ namespace PowerDisplay
         /// </summary>
         private void ProcessNamedPipe(string pipeName)
         {
-            void OnMessage(string message) => _mainWindow?.DispatcherQueue.TryEnqueue(async () => await OnNamedPipeMessage(message));
+            void OnMessage(string message) => DispatchOrQueueNamedPipeMessage(message);
 
             Task.Run(async () => await NamedPipeProcessor.ProcessNamedPipeAsync(
                 pipeName,
                 connectTimeout: TimeSpan.FromSeconds(10),
                 OnMessage,
                 CancellationToken.None));
+        }
+
+        private void DispatchOrQueueNamedPipeMessage(string message)
+        {
+            DispatcherQueue? dispatcherQueue;
+            lock (_pendingPipeMessagesLock)
+            {
+                dispatcherQueue = _mainWindow?.DispatcherQueue;
+                if (dispatcherQueue is null)
+                {
+                    _pendingPipeMessages.Enqueue(message);
+                    return;
+                }
+            }
+
+            dispatcherQueue.TryEnqueue(async () => await OnNamedPipeMessage(message));
+        }
+
+        private void FlushPendingPipeMessages()
+        {
+            DispatcherQueue? dispatcherQueue;
+            List<string> messages = new();
+            lock (_pendingPipeMessagesLock)
+            {
+                dispatcherQueue = _mainWindow?.DispatcherQueue;
+                if (dispatcherQueue is null)
+                {
+                    return;
+                }
+
+                while (_pendingPipeMessages.Count > 0)
+                {
+                    messages.Add(_pendingPipeMessages.Dequeue());
+                }
+            }
+
+            foreach (var message in messages)
+            {
+                dispatcherQueue.TryEnqueue(async () => await OnNamedPipeMessage(message));
+            }
         }
 
         /// <summary>

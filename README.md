@@ -32,6 +32,7 @@ The current stable handoff point is:
 - Keep Monitor's worker headless. User actions and progress should be surfaced through Settings/Home, not worker windows.
 - Keep Settings scan progress tied to worker progress/completion state. Avoid scan-completion UI that advances independently from the worker.
 - Keep Kit UI automation pointed at Kit's runner, Settings window, install roots, and the four active module executables. It must not attach to an installed upstream PowerToys build by accident.
+- Keep Settings deep links and module settings links launching `Kit.exe` only. Do not fall back to an installed upstream `PowerToys.exe` from Kit UI.
 - Clean build artifacts before handoff so the next Visual Studio build starts from source state.
 - The workspace can be reduced back to source size after a stable handoff. Local `Debug`, `Release`, `x64`, `bin`, `obj`, `TestResults`, `.vs`, and restored `packages` directories are disposable build state.
 
@@ -113,6 +114,7 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 - Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
 - Run C++ module-interface verification sequentially, or through the solution scheduler, when projects share native outputs such as `Version.pdb` and `PowerToys.Interop` tracking logs. Independent parallel MSBuild invocations can race those shared files and report false build failures.
 - Keep local build scripts friendly to non-VS shells. Forward MSBuild arguments as arrays, cache the resolved MSBuild path after importing the Visual Studio environment, normalize duplicate `PATH`/`Path` values from `VsDevCmd.bat`, and skip local CopyOnWrite/RunVSTest SDK resolver imports by default when package source mapping blocks SDK restore.
+- Keep PowerDisplay runner activation on the runner-owned named pipe. Runner-managed launches bypass standalone AppInstance registration, so toggles must not use no-argument `ShellExecuteExW` activation.
 - Keep development signing scoped and explicit. Current-user certificate trust is the default local path; machine-wide root trust, recursive package signing, and non-sparse package signing should be opt-in.
 - Keep documentation close to the implementation after each stabilization pass. The module-registration lists are intentionally manual, so stale docs are a real integration risk.
 

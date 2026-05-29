@@ -32,6 +32,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 - 保持 Monitor 的工作器无头。用户操作和进度应通过设置/主页显示，而不是工作器窗口。
 - 保持设置扫描进度与工作器进度/完成状态绑定。避免独立于工作器推进的扫描完成 UI。
 - 保持 Kit UI 自动化指向 Kit 的运行器、设置窗口、安装根目录和四个活动模块可执行文件，避免意外附着到已安装的上游 PowerToys。
+- 保持 Settings 深度链接和模块设置链接只启动 `Kit.exe`。不要从 Kit UI 回退到已安装的上游 `PowerToys.exe`。
 - 在交接前清理构建工件，以便下一次 Visual Studio 构建从源状态开始。
 - 工作区可以在稳定交接后减少回源大小。本地 `Debug`、`Release`、`x64`、`bin`、`obj`、`TestResults`、`.vs` 和恢复的 `packages` 目录是可丢弃的构建状态。
 
@@ -113,6 +114,7 @@ Kit 还没有活动的第三方插件主机。实际的第一步是 PowerToys �
 - 保持新模块拆分为可测试的核心库、工作器进程、本机模块接口、设置模型、设置页面、主页元数据和静态注册测试。
 - 当项目共享本机输出（如 `Version.pdb` 和 `PowerToys.Interop` 跟踪日志）时，按顺序或通过解决方案调度程序运行 C++ 模块接口验证。独立的并行 MSBuild 调用可能会竞争这些共享文件并报告错误的构建失败。
 - 保持本地构建脚本适合非 VS shell。MSBuild 参数应以数组转发，导入 Visual Studio 环境后缓存解析出的 MSBuild 路径，归一化 `VsDevCmd.bat` 带来的重复 `PATH`/`Path` 值，并在包源映射阻止 SDK restore 时默认跳过本地 CopyOnWrite/RunVSTest SDK resolver 导入。
+- 保持 PowerDisplay runner 激活走 runner 拥有的命名管道。runner 管理的启动会绕过独立 AppInstance 注册，因此切换操作不能使用无参数 `ShellExecuteExW` 激活。
 - 保持开发签名范围明确。当前用户证书信任是默认本地路径；机器级根信任、递归包签名和非 sparse 包签名都应显式选择。
 - 在每次稳定化传递后保持文档接近实现。模块注册列表是有意手动的，因此陈旧的文档是真正的集成风险。
 

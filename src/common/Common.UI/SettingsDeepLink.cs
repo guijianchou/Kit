@@ -59,12 +59,7 @@ namespace Common.UI
                 var exePath = Path.Combine(installPath, "Kit.exe");
                 if (!File.Exists(exePath))
                 {
-                    exePath = Path.Combine(installPath, "PowerToys.exe");
-                }
-
-                if (exePath == null || !File.Exists(exePath))
-                {
-                    Logger.LogError($"Failed to find Kit or PowerToys exe path, {exePath}");
+                    Logger.LogError($"Failed to find Kit.exe path, {exePath}");
                     return;
                 }
 

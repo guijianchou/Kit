@@ -1,7 +1,7 @@
 #https://learn.microsoft.com/en-us/windows/msix/package/signing-known-issues
 # 1. Build the powertoys as usual.
 # 2. Call this script to sign the msix package.
-# First time run needs admin permission to trust the certificate.
+# Current-user trust is used by default; admin is only needed when -RequireMachineRoot is specified.
 
 param (
     [string]$architecture = "x64", # Default to x64 if not provided

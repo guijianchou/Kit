@@ -7,7 +7,7 @@ This file provides reusable helper functions used by the build scripts:
 - Get-BuildPaths: returns ScriptDir, OriginalCwd, RepoRoot (repo root detection)
 - RunMSBuild: wrapper around msbuild.exe (accepts optional Platform/Configuration)
 - RestoreThenBuild: performs restore and optionally builds the solution/project
-- BuildProjectsInDirectory: discovers and builds local .slnx/.csproj/.vcxproj files
+- BuildProjectsInDirectory: discovers and builds local .sln/.slnx/.slnf/.csproj/.vcxproj files
 - Ensure-VsDevEnvironment: initializes the Visual Studio developer environment when possible.
   It prefers the DevShell PowerShell module (Microsoft.VisualStudio.DevShell.dll / Enter-VsDevShell),
   falls back to running VsDevCmd.bat and importing its environment into the current PowerShell session,
@@ -163,12 +163,13 @@ function BuildProjectsInDirectory {
     $names = ($files | ForEach-Object { $_.Name }) -join ', '
     Write-Host ("[LOCAL BUILD] Found {0} project(s) in {1}: {2}" -f $files.Count, $DirectoryPath, $names)
 
-    $preferredOrder = @('.sln', '.csproj', '.vcxproj')
+    $preferredOrder = @('.sln', '.slnx', '.slnf', '.csproj', '.vcxproj')
+    $solutionExtensions = @('.sln', '.slnx', '.slnf')
     $files = $files | Sort-Object @{Expression = { [array]::IndexOf($preferredOrder, $_.Extension.ToLower()) }}
 
     foreach ($f in $files) {
         Write-Host ("[LOCAL BUILD] Building {0}" -f $f.FullName)
-        if ($f.Extension -eq '.sln' -or $f.Extension -eq '.slnx') {
+        if ($solutionExtensions -contains $f.Extension.ToLowerInvariant()) {
             RestoreThenBuild -Solution $f.FullName -ExtraArgs $ExtraArgs -Platform $Platform -Configuration $Configuration -RestoreOnly:$RestoreOnly
         } else {
             $buildArgs = @('/m') + @($ExtraArgs)

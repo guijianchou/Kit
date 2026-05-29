@@ -98,19 +98,7 @@ namespace Microsoft.PowerToys.UITest
         /// <param name="processName">The path to the application executable.</param>
         public void ExitExeByName(string processName)
         {
-            Process[] processes = Process.GetProcessesByName(processName);
-            foreach (Process process in processes)
-            {
-                try
-                {
-                    process.Kill();
-                    process.WaitForExit(); // Optional: Wait for the process to exit
-                }
-                catch (Exception ex)
-                {
-                    Assert.Fail($"Failed to terminate process {process.ProcessName} (ID: {process.Id}): {ex.Message}");
-                }
-            }
+            Console.WriteLine($"[ExitExeByName] Ignoring unscoped process cleanup request for {processName}. Use ExitExe with an executable path.");
         }
 
         /// <summary>
@@ -119,10 +107,9 @@ namespace Microsoft.PowerToys.UITest
         /// <param name="appPath">The path to the application executable.</param>
         public void ExitExe(string appPath)
         {
-            // Exit Exe
-            string exeName = Path.GetFileNameWithoutExtension(appPath);
-
-            ExitExeByName(exeName);
+            KitProcessCleanup.KillByExecutablePath(
+                appPath,
+                (process, ex) => Assert.Fail($"Failed to terminate process {process.ProcessName} (ID: {process.Id}): {ex.Message}"));
         }
 
         /// <summary>
@@ -196,10 +183,6 @@ namespace Microsoft.PowerToys.UITest
                     };
 
                     ExitExe(runnerProcessInfo.FileName);
-
-                    // Verify process was killed
-                    string exeName = Path.GetFileNameWithoutExtension(runnerProcessInfo.FileName);
-                    var remainingProcesses = Process.GetProcessesByName(exeName);
 
                     runner = Process.Start(runnerProcessInfo);
 
@@ -338,36 +321,7 @@ namespace Microsoft.PowerToys.UITest
 
         private void KillKitProcesses()
         {
-            var kitProcessNames = new[]
-            {
-                "Kit",
-                "PowerToys.Settings",
-                "PowerToys.Awake",
-                "PowerToys.LightSwitchService",
-                "PowerToys.Monitor",
-                "PowerToys.PowerDisplay",
-            };
-
-            foreach (var processName in kitProcessNames)
-            {
-                try
-                {
-                    var processes = Process.GetProcessesByName(processName);
-
-                    foreach (var process in processes)
-                    {
-                        process.Kill();
-                        process.WaitForExit();
-                    }
-
-                    // Verify processes are actually gone
-                    var remainingProcesses = Process.GetProcessesByName(processName);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[KillKitProcesses] Failed to kill process {processName}: {ex.Message}");
-                }
-            }
+            KitProcessCleanup.KillKnownKitProcesses();
         }
     }
 }

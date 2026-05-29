@@ -794,24 +794,7 @@ namespace Microsoft.PowerToys.UITest
 
         private void CloseOtherApplications()
         {
-            // Close other applications
-            var processNamesToClose = new List<string>
-            {
-                "Kit",
-                "PowerToys.Settings",
-                "PowerToys.Awake",
-                "PowerToys.LightSwitchService",
-                "PowerToys.Monitor",
-                "PowerToys.PowerDisplay",
-            };
-            foreach (var processName in processNamesToClose)
-            {
-                foreach (var process in Process.GetProcessesByName(processName))
-                {
-                    process.Kill();
-                    process.WaitForExit();
-                }
-            }
+            KitProcessCleanup.KillKnownKitProcesses();
         }
 
         public class NativeMethods

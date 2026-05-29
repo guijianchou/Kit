@@ -45,6 +45,11 @@ Imports a certificate into the CurrentUser Root store and verifies its presence.
 - Certificates are created using RSA and SHA256 and marked as CodeSigningCert.
 #>
 
+param (
+    [string]$certSubject = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+    [switch]$RequireMachineRoot
+)
+
 function ImportAndVerifyCertificate {
     param (
         [string]$cerPath,
@@ -184,7 +189,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     
     # Ensure certificate exists and is trusted
     Write-Host "Checking for existing certificate or creating new one..." -ForegroundColor Yellow
-    $cert = EnsureCertificate
+    $cert = EnsureCertificate -certSubject $certSubject -RequireMachineRoot:$RequireMachineRoot
     
     if ($cert) {
         # Export the certificate to a .cer file

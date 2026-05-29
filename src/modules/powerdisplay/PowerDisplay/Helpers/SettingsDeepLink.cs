@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.IO;
+using ManagedCommon;
 
 namespace PowerDisplay.Helpers
 {
@@ -13,24 +14,30 @@ namespace PowerDisplay.Helpers
         {
             try
             {
-                var directoryPath = System.AppContext.BaseDirectory;
-                if (mainExecutableIsOnTheParentFolder)
+                var installPath = PowerToysPathResolver.GetPowerToysInstallPath();
+                if (string.IsNullOrEmpty(installPath))
                 {
-                    // Need to go into parent folder for Kit.exe. Likely a WinUI3 App SDK application.
-                    directoryPath = Path.Combine(directoryPath, "..");
-                    directoryPath = Path.Combine(directoryPath, "Kit.exe");
-                }
-                else
-                {
-                    // Kit.exe is in the same path as the application.
-                    directoryPath = Path.Combine(directoryPath, "Kit.exe");
+                    Logger.LogError("Failed to find Kit install path");
+                    return;
                 }
 
-                Process.Start(new ProcessStartInfo(directoryPath) { Arguments = "--open-settings=PowerDisplay" });
+                var exePath = Path.Combine(installPath, "Kit.exe");
+                if (!File.Exists(exePath))
+                {
+                    Logger.LogError($"Failed to find Kit.exe path, {exePath}");
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = "--open-settings=PowerDisplay",
+                    UseShellExecute = false,
+                });
             }
-            catch
+            catch (System.Exception ex)
             {
-                // Silently ignore errors opening settings
+                Logger.LogError(ex.Message);
             }
         }
     }

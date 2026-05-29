@@ -231,7 +231,7 @@ The same pass cleaned Git's stale worktree metadata with `git worktree prune`. B
 - Do not let Debug outputs prove Release packaging. Debug can keep stale `WinUI3Apps` files after earlier successful builds, while a clean Release tree exposes missing build dependencies.
 - The runner can successfully start the tray while the Settings window is unavailable. `settings_window.cpp` launches `WinUI3Apps\PowerToys.Settings.exe` relative to `Kit.exe`, and Quick Access launches `WinUI3Apps\PowerToys.QuickAccess.exe` the same way. Keep `Kit.slnx` runner build dependencies on both UI executable projects so `Kit.slnx /t:Kit` regenerates the full runtime shape.
 - Copied PowerToys modules often depend on CsWinRT projections generated from `PowerToys.Interop.winmd` and `PowerToys.GPOWrapper.winmd`. Clean Release builds can leave a bad intermediate state where `cswinrt.rsp` remains but the generated `.cs` projection files are gone; in that case CsWinRT may skip generation and later C# compilation reports missing `PowerToys.Interop` or `PowerToys.GPOWrapper` namespaces. Kit now invalidates that stale rsp state in `Common.Dotnet.CsWinRT.props`, and both native WinMD projects publish their WinMDs to the shared configuration output.
-- Run native module-interface builds sequentially when building them independently. Shared native outputs such as `Version.pdb` and tracking logs can create false failures under unrelated parallel MSBuild invocations.
+- Run native module-interface builds sequentially when building them independently. Shared native outputs such as `Version.pdb` and tracking logs can create false failures under unrelated parallel MSBuild invocations; `src/common/version/version.vcxproj` now uses `/FS` so the two version sources do not race the same PDB under normal MSBuild scheduling.
 - Keep `Settings.UI.UnitTests` aligned with Kit's trimmed module set. Tests for removed PowerToys pages should not block Kit, but tests for Kit registration points should be strict.
 - Clean generated `Debug`, `Release`, and `TestResults` outputs before handing the tree back for a fresh Visual Studio compile when the goal is to verify a clean build. Remove wider `bin`, `obj`, `x64`, or `AnyCPU` directories only when a full source-clean is intentionally needed.
 - Use `git worktree prune` only for stale worktree metadata already reported as prunable. For live worktree directories, inspect branch and uncommitted status before removing anything.
@@ -239,6 +239,26 @@ The same pass cleaned Git's stale worktree metadata with `git worktree prune`. B
 - Treat `src\kit\packages` as a restore cache. It is ignored by Git and can be deleted before uploading to GitHub, but keeping it locally speeds up rebuilds and avoids confusing cold-build errors from missing WIL, C++/WinRT, or native package imports.
 - If `src\kit\packages` was deleted, run Visual Studio `Restore NuGet Packages` or a full solution build before investigating missing-header or missing-WinMD errors. Partial project builds after package cleanup can produce misleading first errors.
 - Prefer Visual Studio MSBuild for projects that transitively build native `vcxproj` dependencies. `dotnet test` without a prior VS MSBuild build can fail early on missing `$(VCTargetsPath)` before any managed tests run.
+
+## 2026-05-29 Kit 2.0.1 Isolation And IPC Stabilization
+
+This pass continued the PowerToys-main comparison and tightened the places where Kit still behaved like a patch stack over upstream PowerToys:
+
+- Common Settings deep links and the PowerDisplay settings link now resolve the Kit install/debug path and launch only `Kit.exe`. Missing paths are logged instead of silently falling back to an installed upstream `PowerToys.exe`.
+- PowerDisplay runner toggles now stay on the runner-owned `kit_power_display_` named pipe. The module interface no longer uses no-argument `ShellExecuteExW` when the runner-managed process is already alive, because runner IPC launches intentionally bypass standalone AppInstance registration.
+- PowerDisplay buffers named-pipe messages that arrive before `MainWindow` exists and flushes them after window creation, so the first toggle or profile-apply message after process startup is not dropped.
+- PowerDisplay pipe writes now return an `HRESULT`; if the owned child is still present but the pipe is broken, the process manager restarts its owned process, reconnects the pipe, and retries the message once.
+- `ModuleHelper.GetModuleKey` now exposes IPC/settings keys only for `Awake`, `LightSwitch`, `Monitor`, `PowerDisplay`, and General settings. Inactive upstream module keys remain in compatibility settings model types, but are not addressable through the shared helper.
+- UITestAutomation cleanup now resolves active Kit executable paths through `ModuleConfigData` and kills only matching processes at those paths. This keeps names such as `PowerToys.Settings.exe` and `PowerToys.PowerDisplay.exe` usable in Kit outputs without killing an installed official PowerToys build.
+- Local build helpers now treat `.slnf` as solution files for `-RestoreOnly`, respect `/property:` long-form overrides for default skip properties, forward `-RequireMachineRoot` through direct signing entry points, and document that current-user trust is the default signing path.
+
+Verification for this pass used Visual Studio 18 MSBuild and VSTest:
+
+1. Built `src/common/UITestAutomation/UITestAutomation.csproj` Debug x64.
+2. Built `src/modules/powerdisplay/PowerDisplay/PowerDisplay.csproj` Debug x64.
+3. Built `src/modules/powerdisplay/PowerDisplayModuleInterface/PowerDisplayModuleInterface.vcxproj` Debug x64.
+4. Built `src/settings-ui/Settings.UI.UnitTests/Settings.UI.UnitTests.csproj` Debug x64.
+5. Ran `vstest.console.exe` with `FullyQualifiedName~BuildCompatibility`, which reported 74/74 passing tests.
 
 ## Latest Verification Notes
 

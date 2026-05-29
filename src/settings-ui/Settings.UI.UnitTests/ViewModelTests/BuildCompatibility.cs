@@ -354,6 +354,9 @@ namespace ViewModelTests
             {
                 Assert.IsFalse(resources.Contains($"name=\"{prefix}", StringComparison.Ordinal), $"Inactive Settings resource prefix should be deleted: {prefix}");
             }
+
+            StringAssert.Contains(resources, "<value>To access settings, run the Kit executable again</value>");
+            Assert.IsFalse(resources.Contains("PowerToys executable", StringComparison.Ordinal), "Settings resources should not direct users back to the upstream PowerToys executable.");
         }
 
         [TestMethod]
@@ -607,6 +610,10 @@ namespace ViewModelTests
                 Assert.IsFalse(settingsDeepLink.Contains($"{inactiveWindow},", StringComparison.Ordinal), $"Settings deep links should not expose inactive {inactiveWindow} windows.");
                 Assert.IsFalse(settingsDeepLink.Contains($"return \"{inactiveWindow}\";", StringComparison.Ordinal), $"Settings deep links should not route inactive {inactiveWindow} windows.");
             }
+
+            StringAssert.Contains(settingsDeepLink, "\"Kit.exe\"");
+            Assert.IsFalse(settingsDeepLink.Contains("\"PowerToys.exe\"", StringComparison.Ordinal), "Common Settings deep links should launch Kit.exe, not the upstream runner.");
+            Assert.IsFalse(settingsDeepLink.Contains("Kit or PowerToys exe path", StringComparison.Ordinal), "Common Settings deep-link logging should not describe PowerToys.exe as a supported fallback.");
         }
 
         [TestMethod]
@@ -1112,6 +1119,9 @@ namespace ViewModelTests
             StringAssert.Contains(buildCommonScript, "[string[]]$ExtraArgs = @()");
             StringAssert.Contains(buildCommonScript, "$cmd = $base + $extra");
             StringAssert.Contains(buildCommonScript, "$script:MSBuildExe");
+            StringAssert.Contains(buildCommonScript, "$preferredOrder = @('.sln', '.slnx', '.slnf', '.csproj', '.vcxproj')");
+            StringAssert.Contains(buildCommonScript, "$solutionExtensions = @('.sln', '.slnx', '.slnf')");
+            StringAssert.Contains(buildCommonScript, "$solutionExtensions -contains $f.Extension.ToLowerInvariant()");
             StringAssert.Contains(buildCommonScript, "$envVars['Path']");
             StringAssert.Contains(buildCommonScript, "$name -ieq 'Path'");
             StringAssert.Contains(buildCommonScript, "Visual Studio|MSBuild");
@@ -1125,8 +1135,16 @@ namespace ViewModelTests
             StringAssert.Contains(essentialsBuildScript, "-ExtraArgs $ExtraArgs");
             StringAssert.Contains(quickBuildScript, "/p:PowerToysSkipCopyOnWriteSdk=true");
             StringAssert.Contains(quickBuildScript, "/p:PowerToysSkipRunVSTestSdk=true");
+            StringAssert.Contains(quickBuildScript, "'^[/-](?:p|property):PowerToysSkipCopyOnWriteSdk='");
+            StringAssert.Contains(quickBuildScript, "'^[/-](?:p|property):PowerToysSkipRunVSTestSdk='");
             StringAssert.Contains(essentialsBuildScript, "/p:PowerToysSkipCopyOnWriteSdk=true");
             StringAssert.Contains(essentialsBuildScript, "/p:PowerToysSkipRunVSTestSdk=true");
+            StringAssert.Contains(certSignPackageScript, "[switch]$RequireMachineRoot");
+            StringAssert.Contains(certSignPackageScript, @". ""$PSScriptRoot\cert-management.ps1"" -certSubject $certSubject -RequireMachineRoot:$RequireMachineRoot");
+            StringAssert.Contains(certSignPackageScript, "-RequireMachineRoot:$RequireMachineRoot");
+            StringAssert.Contains(certManagementScript, "[switch]$RequireMachineRoot");
+            StringAssert.Contains(certManagementScript, "EnsureCertificate -certSubject $certSubject -RequireMachineRoot:$RequireMachineRoot");
+            StringAssert.Contains(selfSignScript, "Current-user trust is used by default");
             Assert.IsFalse(certSignPackageScript.Contains("& signtool sign", StringComparison.Ordinal), "Package signing helper should use resolved SignTool path instead of assuming PATH contains signtool.");
             Assert.IsFalse(NormalizeLineEndings(certManagementScript).Contains("else {\n        if (-not (ImportAndVerifyCertificate -cerPath $cerPath -storePath \"Cert:\\LocalMachine\\Root\"))", StringComparison.Ordinal), "LocalMachine Root trust should not be attempted during normal current-user development signing.");
             StringAssert.Contains(NormalizeLineEndings(selfSignScript), "if ($RequireMachineRoot) {\n    if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath \"Cert:\\LocalMachine\\Root\"))");
@@ -1179,6 +1197,7 @@ namespace ViewModelTests
             var moduleConfigData = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "ModuleConfigData.cs"));
             var sessionHelper = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "SessionHelper.cs"));
             var uiTestBase = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "UITestBase.cs"));
+            var kitProcessCleanup = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "KitProcessCleanup.cs"));
             var settingsConfigHelper = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "SettingsConfigHelper.cs"));
             var textBox = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "Element", "TextBox.cs"));
             var lightSwitchUiTestsProject = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "Tests", "LightSwitch.UITests", "LightSwitch.UITests.csproj"));
@@ -1201,12 +1220,13 @@ namespace ViewModelTests
             StringAssert.Contains(lightSwitchUiTestsProject, @"common\UITestAutomation\UITestAutomation.csproj");
             StringAssert.Contains(sessionHelper, "Kit Settings");
             StringAssert.Contains(sessionHelper, "KillKitProcesses");
-            StringAssert.Contains(uiTestBase, "\"Kit\"");
-            StringAssert.Contains(uiTestBase, "\"PowerToys.Settings\"");
-            StringAssert.Contains(uiTestBase, "\"PowerToys.Awake\"");
-            StringAssert.Contains(uiTestBase, "\"PowerToys.LightSwitchService\"");
-            StringAssert.Contains(uiTestBase, "\"PowerToys.Monitor\"");
-            StringAssert.Contains(uiTestBase, "\"PowerToys.PowerDisplay\"");
+            StringAssert.Contains(sessionHelper, "KitProcessCleanup.KillByExecutablePath");
+            StringAssert.Contains(sessionHelper, "KitProcessCleanup.KillKnownKitProcesses");
+            StringAssert.Contains(uiTestBase, "KitProcessCleanup.KillKnownKitProcesses");
+            StringAssert.Contains(kitProcessCleanup, "KillKnownKitProcessesByName");
+            StringAssert.Contains(kitProcessCleanup, "ModuleConfigData.Instance.GetModulePath");
+            StringAssert.Contains(kitProcessCleanup, "process.MainModule?.FileName");
+            StringAssert.Contains(kitProcessCleanup, "PathMatches");
 
             string[] inactiveModuleConfigTokens =
             {
@@ -1252,6 +1272,8 @@ namespace ViewModelTests
             Assert.IsFalse(textBox.Contains("CmdPal", StringComparison.Ordinal), "Generic UI test controls should not document inactive CmdPal-specific workarounds.");
             Assert.IsFalse(moduleConfigData.Contains("PowerToys Settings", StringComparison.Ordinal), "UITestAutomation should attach to Kit's Settings window title, not the upstream PowerToys title.");
             Assert.IsFalse(sessionHelper.Contains("KillPowerToysProcesses", StringComparison.Ordinal), "UITestAutomation cleanup should use Kit process ownership.");
+            Assert.IsFalse(NormalizeLineEndings(sessionHelper).Contains("foreach (var process in processes)\n                    {\n                        process.Kill();", StringComparison.Ordinal), "SessionHelper should not globally kill every process with a Kit-compatible executable name.");
+            Assert.IsFalse(NormalizeLineEndings(uiTestBase).Contains("foreach (var process in Process.GetProcessesByName(processName))\n                {\n                    process.Kill();", StringComparison.Ordinal), "UITestBase cleanup should not globally kill every process with a Kit-compatible executable name.");
         }
 
         [TestMethod]
@@ -1304,7 +1326,7 @@ namespace ViewModelTests
                 "\"CmdPal\"",
             })
             {
-                StringAssert.Contains(moduleHelper, compatibilityModuleKey);
+                Assert.IsFalse(moduleHelper.Contains(compatibilityModuleKey, StringComparison.Ordinal), $"ModuleHelper should not expose inactive module key: {compatibilityModuleKey}");
             }
 
             foreach (var inactiveModuleArm in new[]
@@ -2127,9 +2149,11 @@ namespace ViewModelTests
         public void KitDotNetBuildLayerShouldFollowPowerToysNet10Versions()
         {
             var dotnetProps = File.ReadAllText(FindSourceFile("src", "Common.Dotnet.CsWinRT.props"));
+            var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
 
             StringAssert.Contains(dotnetProps, "<CoreTargetFramework>net10.0</CoreTargetFramework>");
             Assert.IsFalse(dotnetProps.Contains("<CoreTargetFramework>net9.0</CoreTargetFramework>", StringComparison.Ordinal), "Shared .NET build props should not leave default CsWinRT projects on net9.");
+            StringAssert.Contains(versionProject, "<AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>");
 
             string[] net10ProjectPaths =
             {
@@ -2579,6 +2603,7 @@ namespace ViewModelTests
         {
             var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
             var quickAccessHost = File.ReadAllText(FindSourceFile("src", "runner", "quick_access_host.cpp"));
+            var powerDisplayModuleInterface = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "dllmain.cpp"));
             var powerDisplayProcessManager = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayProcessManager.cpp"));
             var powerDisplayProgram = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "Program.cs"));
             var powerDisplayApp = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplayXAML", "App.xaml.cs"));
@@ -2596,15 +2621,27 @@ namespace ViewModelTests
             StringAssert.Contains(powerDisplayProgram, "if (!isRunnerIpcLaunch)");
             StringAssert.Contains(powerDisplayProgram, "FindOrRegisterForKey(\"Kit_PowerDisplay_Instance\")");
             StringAssert.Contains(powerDisplayProgram, "App(runnerPid, pipeName)");
+            StringAssert.Contains(powerDisplayProcessManager, "FAILED(send_named_pipe_message(message_type, message_arg))");
+            StringAssert.Contains(powerDisplayProcessManager, "restart_pipe()");
+            StringAssert.Contains(powerDisplayProcessManager, "Retrying '{}' message after restarting PowerDisplay IPC");
             StringAssert.Contains(powerDisplayApp, "ProcessNamedPipe(_pipeName)");
+            StringAssert.Contains(powerDisplayApp, "Queue<string> _pendingPipeMessages");
+            StringAssert.Contains(powerDisplayApp, "DispatchOrQueueNamedPipeMessage(message)");
+            StringAssert.Contains(powerDisplayApp, "FlushPendingPipeMessages()");
+            StringAssert.Contains(powerDisplayApp, "lock (_pendingPipeMessagesLock)");
+            StringAssert.Contains(powerDisplayApp, "while (_pendingPipeMessages.Count > 0)");
             StringAssert.Contains(powerDisplayDeepLink, "\"Kit.exe\"");
+            StringAssert.Contains(powerDisplayDeepLink, "PowerToysPathResolver.GetPowerToysInstallPath()");
+            StringAssert.Contains(powerDisplayDeepLink, "UseShellExecute = false");
             Assert.IsFalse(settingsWindow.Contains(@"\\\\.\\pipe\\powertoys_runner_", StringComparison.Ordinal));
             Assert.IsFalse(settingsWindow.Contains(@"\\\\.\\pipe\\powertoys_settings_", StringComparison.Ordinal));
             Assert.IsFalse(quickAccessHost.Contains("Local\\\\PowerToysQuickAccess_", StringComparison.Ordinal));
             Assert.IsFalse(quickAccessHost.Contains(@"\\\\.\\pipe\\powertoys_quick_access_", StringComparison.Ordinal));
             Assert.IsFalse(powerDisplayProcessManager.Contains("powertoys_power_display_", StringComparison.Ordinal));
+            Assert.IsFalse(powerDisplayModuleInterface.Contains("ShellExecuteExW", StringComparison.Ordinal), "PowerDisplay toggles must use the runner-owned pipe instead of spawning a standalone activation.");
             Assert.IsFalse(powerDisplayProgram.Contains("PowerToys_PowerDisplay_Instance", StringComparison.Ordinal), "Kit PowerDisplay should not share the upstream AppInstance key.");
             Assert.IsFalse(powerDisplayDeepLink.Contains("\"PowerToys.exe\"", StringComparison.Ordinal), "PowerDisplay settings deep links should launch Kit.exe, not the upstream runner.");
+            Assert.IsFalse(NormalizeLineEndings(powerDisplayDeepLink).Contains("catch\n            {", StringComparison.Ordinal), "PowerDisplay settings deep-link failures should be logged instead of silently swallowed.");
         }
 
         [TestMethod]

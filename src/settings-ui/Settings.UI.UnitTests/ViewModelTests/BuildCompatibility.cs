@@ -1174,9 +1174,95 @@ namespace ViewModelTests
         {
             var settingsWindow = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp")));
 
-            StringAssert.Contains(settingsWindow, "g_isLaunchInProgress = true;");
+            StringAssert.Contains(settingsWindow, "g_isLaunchInProgress.compare_exchange_strong");
             StringAssert.Contains(settingsWindow, "if (!CreateProcessW(executable_path.c_str(),");
             StringAssert.Contains(settingsWindow, "g_isLaunchInProgress = false;\n            goto LExit;");
+        }
+
+        [TestMethod]
+        public void KitSettingsLaunchGuardShouldStaySetUntilProcessIsRegistered()
+        {
+            var settingsWindow = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp")));
+
+            var createProcessSuccess = settingsWindow.IndexOf("if (!CreateProcessW(executable_path.c_str(),", StringComparison.Ordinal);
+            var openSettingsWindow = settingsWindow.IndexOf("void open_settings_window(std::optional<std::wstring> settings_window)", StringComparison.Ordinal);
+            var closeSettingsWindow = settingsWindow.IndexOf("void close_settings_window()", openSettingsWindow, StringComparison.Ordinal);
+            var runSettingsWindow = settingsWindow.IndexOf("void run_settings_window(std::optional<std::wstring> settings_window)", StringComparison.Ordinal);
+            var openToken = settingsWindow.IndexOf("if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))", StringComparison.Ordinal);
+            var ipcStart = settingsWindow.IndexOf("current_settings_ipc->start(hToken);", StringComparison.Ordinal);
+            var processIdAssignment = settingsWindow.IndexOf("g_settings_process_id = process_info.dwProcessId;", StringComparison.Ordinal);
+            var processIdAfterCreateProcess = settingsWindow.IndexOf("g_settings_process_id = process_info.dwProcessId;", createProcessSuccess, StringComparison.Ordinal);
+            var launchGuardRelease = settingsWindow.IndexOf("g_isLaunchInProgress = false;", processIdAfterCreateProcess, StringComparison.Ordinal);
+
+            Assert.AreNotEqual(-1, createProcessSuccess, "Settings launch should still use direct CreateProcessW.");
+            Assert.AreNotEqual(-1, openSettingsWindow, "Settings launch should keep the open_settings_window entry point.");
+            Assert.AreNotEqual(-1, closeSettingsWindow, "Settings launch should keep close_settings_window after open_settings_window.");
+            Assert.AreNotEqual(-1, runSettingsWindow, "Settings launch should keep the run_settings_window worker.");
+            Assert.AreNotEqual(-1, openToken, "Settings launch should open the runner token before IPC setup.");
+            Assert.AreNotEqual(-1, ipcStart, "Settings launch should start runner/settings IPC.");
+            Assert.AreNotEqual(-1, processIdAssignment, "Settings launch should register the Settings process id.");
+            Assert.AreNotEqual(-1, processIdAfterCreateProcess, "Settings launch should register the Settings process id after CreateProcessW succeeds.");
+            Assert.AreNotEqual(-1, launchGuardRelease, "Settings launch should release the launch-in-progress guard after registration.");
+
+            var openWindowBody = settingsWindow.Substring(openSettingsWindow, closeSettingsWindow - openSettingsWindow);
+            StringAssert.Contains(openWindowBody, "compare_exchange_strong");
+            StringAssert.Contains(openWindowBody, "g_isLaunchInProgress");
+
+            var launchSetupWindow = settingsWindow.Substring(openToken, processIdAssignment - openToken);
+            Assert.IsFalse(launchSetupWindow.Contains("g_isLaunchInProgress = false;", StringComparison.Ordinal), "Settings launch guard should stay held throughout the CreateProcess success to process-id registration window.");
+            Assert.IsTrue(processIdAssignment < launchGuardRelease, "Settings launch guard should not be released before g_settings_process_id is set.");
+            Assert.IsTrue(ipcStart < launchGuardRelease, "Settings launch guard should not be released before IPC is ready for a follow-up ShowYourself request.");
+            Assert.IsFalse(settingsWindow.Contains("else\n        {\n            g_isLaunchInProgress = false;\n        }", StringComparison.Ordinal), "Settings launch should not clear the guard immediately after CreateProcessW succeeds.");
+        }
+
+        [TestMethod]
+        public void KitSettingsLaunchShouldTerminateCreatedProcessWhenIpcSetupFails()
+        {
+            var settingsWindow = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp")));
+
+            StringAssert.Contains(settingsWindow, "void terminate_created_settings_process(PROCESS_INFORMATION& process_info)");
+            StringAssert.Contains(settingsWindow, "SetEvent(g_terminateSettingsEvent);");
+            StringAssert.Contains(settingsWindow, "constexpr DWORD timeout_ms = 1500;");
+            StringAssert.Contains(settingsWindow, "WaitForSingleObject(process_info.hProcess, timeout_ms)");
+            StringAssert.Contains(settingsWindow, "TerminateProcess(process_info.hProcess, 0)");
+            StringAssert.Contains(settingsWindow, "ResetEvent(g_terminateSettingsEvent)");
+
+            var openTokenFailure = settingsWindow.IndexOf("if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))", StringComparison.Ordinal);
+            var cleanupCall = settingsWindow.IndexOf("terminate_created_settings_process(process_info);", openTokenFailure, StringComparison.Ordinal);
+            var exitJump = settingsWindow.IndexOf("goto LExit;", openTokenFailure, StringComparison.Ordinal);
+
+            Assert.AreNotEqual(-1, openTokenFailure, "Settings launch should keep an OpenProcessToken failure branch.");
+            Assert.AreNotEqual(-1, cleanupCall, "Settings launch should terminate a created Settings child if runner IPC setup cannot continue.");
+            Assert.AreNotEqual(-1, exitJump, "Settings launch should still exit after IPC setup failure.");
+            Assert.IsTrue(cleanupCall < exitJump, "Settings launch should terminate the created Settings process before leaving the failure path.");
+        }
+
+        [TestMethod]
+        public void KitSettingsLaunchShouldCleanUpWhenIpcStartThrows()
+        {
+            var settingsWindow = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp")));
+
+            var ipcStart = settingsWindow.IndexOf("current_settings_ipc->start(hToken);", StringComparison.Ordinal);
+            var processIdAssignment = settingsWindow.IndexOf("g_settings_process_id = process_info.dwProcessId;", ipcStart, StringComparison.Ordinal);
+            Assert.AreNotEqual(-1, ipcStart, "Settings launch should still start runner/settings IPC.");
+            Assert.AreNotEqual(-1, processIdAssignment, "Settings launch should register the Settings process id after IPC setup.");
+
+            var ipcSetupWindow = settingsWindow.Substring(ipcStart, processIdAssignment - ipcStart);
+            StringAssert.Contains(ipcSetupWindow, "catch (const std::exception& ex)");
+            StringAssert.Contains(ipcSetupWindow, "catch (...)");
+            StringAssert.Contains(ipcSetupWindow, "end_settings_ipc();");
+            StringAssert.Contains(ipcSetupWindow, "terminate_created_settings_process(process_info);");
+            StringAssert.Contains(ipcSetupWindow, "goto LExit;");
+        }
+
+        [TestMethod]
+        public void KitTwoWayPipeIpcEndShouldToleratePartialStart()
+        {
+            var twoWayPipeIpc = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "common", "interop", "two_way_pipe_message_ipc.cpp")));
+
+            StringAssert.Contains(twoWayPipeIpc, "if (input_queue_thread.joinable())");
+            StringAssert.Contains(twoWayPipeIpc, "if (output_queue_thread.joinable())");
+            StringAssert.Contains(twoWayPipeIpc, "if (input_pipe_thread.joinable())");
         }
 
         [TestMethod]
@@ -1419,6 +1505,26 @@ namespace ViewModelTests
             Assert.IsFalse(cmdPalProperties.Contains("Microsoft.CommandPalette_8wekyb3d8bbwe", StringComparison.Ordinal), "Compatibility DTOs should not probe inactive Command Palette package state.");
             Assert.IsFalse(cmdPalProperties.Contains("Microsoft.CommandPalette.Dev_8wekyb3d8bbwe", StringComparison.Ordinal), "Compatibility DTOs should not probe inactive Command Palette dev package state.");
             Assert.IsFalse(cmdPalProperties.Contains("File.ReadAllText", StringComparison.Ordinal), "Compatibility DTOs should not do disk I/O for inactive Command Palette settings.");
+        }
+
+        [TestMethod]
+        public void KitSettingsCommandLineShouldOnlyResolveActiveModuleSettings()
+        {
+            var commandLineUtils = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Utilities", "CommandLineUtils.cs"));
+            var setSettingCommandTests = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.UnitTests", "Cmd", "SetSettingCommandTests.cs"));
+
+            StringAssert.Contains(commandLineUtils, "ActiveSettingsModules");
+            StringAssert.Contains(commandLineUtils, "ActiveEnabledModules");
+            foreach (var activeModule in new[] { "AwakeSettings.ModuleName", "LightSwitchSettings.ModuleName", "MonitorSettings.ModuleName", "PowerDisplaySettings.ModuleName" })
+            {
+                StringAssert.Contains(commandLineUtils, activeModule);
+            }
+
+            foreach (var inactiveModule in new[] { "FancyZonesSettings", "PowerLauncherSettings", "MouseWithoutBordersSettings", "PowerRenameSettings", "ColorPickerSettings" })
+            {
+                Assert.IsFalse(setSettingCommandTests.Contains($"typeof({inactiveModule})", StringComparison.Ordinal), $"Settings command-line tests should not preserve inactive {inactiveModule} as callable active surface.");
+                Assert.IsFalse(commandLineUtils.Contains($"{inactiveModule}.ModuleName", StringComparison.Ordinal), $"Settings command-line allowlist should not include inactive {inactiveModule}.");
+            }
         }
 
         [TestMethod]

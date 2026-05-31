@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -12,9 +13,48 @@ namespace Microsoft.PowerToys.Settings.UI.Library;
 
 public class CommandLineUtils
 {
+    private static readonly HashSet<string> ActiveSettingsModules = new(StringComparer.Ordinal)
+    {
+        nameof(GeneralSettings),
+        AwakeSettings.ModuleName,
+        LightSwitchSettings.ModuleName,
+        MonitorSettings.ModuleName,
+        PowerDisplaySettings.ModuleName,
+        "General",
+    };
+
+    private static readonly HashSet<string> ActiveEnabledModules = new(StringComparer.Ordinal)
+    {
+        AwakeSettings.ModuleName,
+        LightSwitchSettings.ModuleName,
+        MonitorSettings.ModuleName,
+        PowerDisplaySettings.ModuleName,
+    };
+
+    public static bool IsGeneralSettingsModule(string moduleName)
+        => moduleName == "General" || moduleName == nameof(GeneralSettings);
+
+    public static void EnsureActiveSettingsModule(string moduleName)
+    {
+        if (!ActiveSettingsModules.Contains(moduleName))
+        {
+            throw new ArgumentException($"Module '{moduleName}' is not active in Kit.");
+        }
+    }
+
+    public static void EnsureActiveEnabledModule(string moduleName)
+    {
+        if (!ActiveEnabledModules.Contains(moduleName))
+        {
+            throw new ArgumentException($"Module '{moduleName}' is not active in Kit.");
+        }
+    }
+
     private static Type GetSettingsConfigType(string moduleName, Assembly settingsLibraryAssembly)
     {
-        var settingsClassName = moduleName == "GeneralSettings" ? moduleName : moduleName + "Settings";
+        EnsureActiveSettingsModule(moduleName);
+
+        var settingsClassName = IsGeneralSettingsModule(moduleName) ? nameof(GeneralSettings) : moduleName + "Settings";
         return settingsLibraryAssembly.GetType(typeof(CommandLineUtils).Namespace + "." + settingsClassName);
     }
 
@@ -67,6 +107,7 @@ public class CommandLineUtils
         if (propertiesType == typeof(GeneralSettings) && propertyName.StartsWith("Enabled.", StringComparison.InvariantCulture))
         {
             var moduleNameToToggle = propertyName.Replace("Enabled.", string.Empty);
+            EnsureActiveEnabledModule(moduleNameToToggle);
             properties = propertiesType.GetProperty("Enabled").GetValue(properties);
             propertiesType = properties.GetType();
             propertyName = moduleNameToToggle;

@@ -62,9 +62,17 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::end()
 {
     closed = true;
     input_queue.interrupt();
-    input_queue_thread.join();
+    if (input_queue_thread.joinable())
+    {
+        input_queue_thread.join();
+    }
+
     output_queue.interrupt();
-    output_queue_thread.join();
+    if (output_queue_thread.joinable())
+    {
+        output_queue_thread.join();
+    }
+
     pipe_connect_handle_mutex.lock();
     if (current_connect_pipe_handle != NULL)
     {
@@ -72,7 +80,10 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::end()
         CancelIoEx(current_connect_pipe_handle, NULL);
     }
     pipe_connect_handle_mutex.unlock();
-    input_pipe_thread.join();
+    if (input_pipe_thread.joinable())
+    {
+        input_pipe_thread.join();
+    }
 }
 
 void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstring message)

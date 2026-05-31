@@ -54,9 +54,12 @@ public sealed class GetSettingCommandLineCommand
 
         foreach (var (moduleName, settings) in settingNamesForModules)
         {
+            CommandLineUtils.EnsureActiveSettingsModule(moduleName);
+
             var moduleSettings = new Dictionary<string, object>();
-            if (moduleName != nameof(GeneralSettings))
+            if (!CommandLineUtils.IsGeneralSettingsModule(moduleName))
             {
+                CommandLineUtils.EnsureActiveEnabledModule(moduleName);
                 moduleSettings.Add("Enabled", typeof(EnabledModules).GetProperty(moduleName).GetValue(enabledModules));
             }
 

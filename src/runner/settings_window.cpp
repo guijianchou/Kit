@@ -2,6 +2,7 @@
 #include <WinSafer.h>
 #include <Sddl.h>
 #include <atomic>
+#include <exception>
 #include <sstream>
 #include <thread>
 #include <aclapi.h>
@@ -410,10 +411,58 @@ BOOL run_settings_non_elevated(LPCWSTR executable_path, LPWSTR executable_args, 
 
 DWORD g_settings_process_id = 0;
 
+void end_settings_ipc()
+{
+    std::unique_lock lock{ ipc_mutex };
+    if (current_settings_ipc)
+    {
+        current_settings_ipc->end();
+        delete current_settings_ipc;
+        current_settings_ipc = nullptr;
+    }
+}
+
+void terminate_created_settings_process(PROCESS_INFORMATION& process_info)
+{
+    if (!process_info.hProcess)
+    {
+        return;
+    }
+
+    SetEvent(g_terminateSettingsEvent);
+
+    constexpr DWORD timeout_ms = 1500;
+    DWORD wait_result = WaitForSingleObject(process_info.hProcess, timeout_ms);
+    if (wait_result == WAIT_TIMEOUT)
+    {
+        Logger::warn(L"Settings launch setup failed after process creation. Terminating orphaned Settings process.");
+        if (TerminateProcess(process_info.hProcess, 0))
+        {
+            wait_result = WaitForSingleObject(process_info.hProcess, timeout_ms);
+            if (wait_result == WAIT_TIMEOUT)
+            {
+                Logger::warn(L"Settings process did not exit after TerminateProcess fallback.");
+            }
+            else if (wait_result == WAIT_FAILED)
+            {
+                Logger::warn(L"Settings launch cleanup wait after TerminateProcess failed. {}", get_last_error_or_default(GetLastError()));
+            }
+        }
+        else
+        {
+            Logger::warn(L"Settings launch setup failed and terminating orphaned Settings process failed. {}", get_last_error_or_default(GetLastError()));
+        }
+    }
+    else if (wait_result == WAIT_FAILED)
+    {
+        Logger::warn(L"Settings launch setup failed and waiting for Settings process failed. {}", get_last_error_or_default(GetLastError()));
+    }
+
+    ResetEvent(g_terminateSettingsEvent);
+}
+
 void run_settings_window(std::optional<std::wstring> settings_window)
 {
-    g_isLaunchInProgress = true;
-
     PROCESS_INFORMATION process_info = { 0 };
     HANDLE hToken = nullptr;
 
@@ -539,25 +588,37 @@ void run_settings_window(std::optional<std::wstring> settings_window)
             g_isLaunchInProgress = false;
             goto LExit;
         }
-        else
-        {
-            g_isLaunchInProgress = false;
-        }
     }
 
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
     {
+        terminate_created_settings_process(process_info);
         goto LExit;
     }
 
+    try
     {
         std::unique_lock lock{ ipc_mutex };
         current_settings_ipc = new TwoWayPipeMessageIPC(powertoys_pipe_name, settings_pipe_name, receive_json_send_to_main_thread);
         current_settings_ipc->start(hToken);
-
+    }
+    catch (const std::exception& ex)
+    {
+        Logger::error("Settings launch IPC setup failed. {}", ex.what());
+        end_settings_ipc();
+        terminate_created_settings_process(process_info);
+        goto LExit;
+    }
+    catch (...)
+    {
+        Logger::error(L"Settings launch IPC setup failed with unknown exception.");
+        end_settings_ipc();
+        terminate_created_settings_process(process_info);
+        goto LExit;
     }
 
     g_settings_process_id = process_info.dwProcessId;
+    g_isLaunchInProgress = false;
 
     if (process_info.hProcess)
     {
@@ -584,21 +645,14 @@ LExit:
     {
         CloseHandle(process_info.hThread);
     }
-    {
-        std::unique_lock lock{ ipc_mutex };
-        if (current_settings_ipc)
-        {
-            current_settings_ipc->end();
-            delete current_settings_ipc;
-            current_settings_ipc = nullptr;
-        }
-    }
+    end_settings_ipc();
 
     if (hToken)
     {
         CloseHandle(hToken);
     }
 
+    g_isLaunchInProgress = false;
     g_settings_process_id = 0;
 }
 
@@ -662,11 +716,20 @@ void open_settings_window(std::optional<std::wstring> settings_window)
     }
     else
     {
-        if (!g_isLaunchInProgress)
+        bool expected_isLaunchInProgress = false;
+        if (g_isLaunchInProgress.compare_exchange_strong(expected_isLaunchInProgress, true))
         {
-            std::thread([settings_window]() {
-                run_settings_window(settings_window);
-            }).detach();
+            try
+            {
+                std::thread([settings_window]() {
+                    run_settings_window(settings_window);
+                }).detach();
+            }
+            catch (...)
+            {
+                g_isLaunchInProgress = false;
+                throw;
+            }
         }
     }
 }
@@ -744,6 +807,3 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
 
     return ESettingsWindowNames::Dashboard;
 }
-
-
-

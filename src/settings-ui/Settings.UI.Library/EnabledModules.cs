@@ -495,7 +495,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             }
         }
 
-        private bool lightSwitch;
+        private bool lightSwitch = true;
 
         [JsonPropertyName("LightSwitch")]
         public bool LightSwitch
@@ -527,7 +527,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             }
         }
 
-        private bool powerDisplay;
+        private bool powerDisplay = true;
 
         [JsonPropertyName("PowerDisplay")]
         public bool PowerDisplay

@@ -1229,19 +1229,16 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void AllModulesAreEnabledByDefault()
+        public void ActiveKitModulesAreEnabledByDefault()
         {
             // arrange
             EnabledModules modules = new EnabledModules();
 
             // Assert
-            Assert.IsTrue(modules.FancyZones);
-            Assert.IsTrue(modules.ImageResizer);
-            Assert.IsTrue(modules.PowerPreview);
-            Assert.IsTrue(modules.ShortcutGuide);
-            Assert.IsTrue(modules.PowerRename);
-            Assert.IsFalse(modules.PowerLauncher);
-            Assert.IsTrue(modules.ColorPicker);
+            Assert.IsTrue(modules.Awake);
+            Assert.IsTrue(modules.LightSwitch);
+            Assert.IsFalse(modules.Monitor);
+            Assert.IsTrue(modules.PowerDisplay);
         }
     }
 }

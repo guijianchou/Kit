@@ -1,0 +1,205 @@
+#https://learn.microsoft.com/en-us/windows/msix/package/signing-known-issues
+# 1. Build the powertoys as usual.
+# 2. Call this script to sign the msix package.
+# Current-user trust is used by default; admin is only needed when -RequireMachineRoot is specified.
+
+param (
+    [string]$architecture = "x64", # Default to x64 if not provided
+    [string]$buildConfiguration = "Debug",  # Default to Debug if not provided
+    [string]$directoryPath,
+    [string[]]$TargetPaths,
+    [switch]$AllPackages,
+    [switch]$RequireMachineRoot
+)
+
+$signToolPath = $null
+$kitsRootPaths = @(
+    "C:\Program Files (x86)\Windows Kits\10\bin",
+    "C:\Program Files\Windows Kits\10\bin"
+)
+
+$signToolAvailable = Get-Command "signtool" -ErrorAction SilentlyContinue
+if ($signToolAvailable) {
+    Write-Host "SignTool is available in the system PATH."
+    $signToolPath = "signtool"
+}
+else {
+    Write-Host "Searching for latest SignTool matching architecture: $architecture"
+
+    foreach ($root in $kitsRootPaths) {
+        if (Test-Path $root) {
+            $versions = Get-ChildItem -Path $root -Directory | Where-Object {
+                $_.Name -match '^\d+\.\d+\.\d+\.\d+$'
+            } | Sort-Object Name -Descending
+
+            foreach ($version in $versions) {
+                $candidatePath = Join-Path -Path $version.FullName -ChildPath "x86"
+                $exePath = Join-Path -Path $candidatePath -ChildPath "signtool.exe"
+                if (Test-Path $exePath) {
+                    Write-Host "Found SignTool at: $exePath"
+                    $signToolPath = $exePath
+                    break
+                }
+            }
+
+            if ($signToolPath) { break }
+        }
+    }
+
+    if (!$signToolPath) {
+        Write-Host "SignTool not found. Please ensure Windows SDK is installed."
+        exit 1
+    }
+}
+
+Write-Host "`nUsing SignTool: $signToolPath"
+
+# Set the certificate subject and the ECDSA curve
+$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US"
+
+# Check if the certificate already exists in the current user's certificate store
+$existingCert = Get-ChildItem -Path Cert:\CurrentUser\My |
+Where-Object { $_.Subject -eq $certSubject } |
+Sort-Object NotAfter -Descending |
+Select-Object -First 1
+
+if ($existingCert) {
+    # If the certificate exists, use the existing certificate
+    Write-Host "Certificate already exists, using the existing certificate"
+    $cert = $existingCert
+}
+else {    
+    # If the certificate doesn't exist, create a new self-signed certificate
+    Write-Host "Certificate does not exist, creating a new certificate..."
+    $cert = New-SelfSignedCertificate -Subject $certSubject `
+        -CertStoreLocation "Cert:\CurrentUser\My" `
+        -KeyAlgorithm RSA `
+        -Type CodeSigningCert `
+        -HashAlgorithm SHA256
+}
+
+function Import-And-VerifyCertificate {
+    param (
+        [string]$cerPath,
+        [string]$storePath
+    )
+
+    $thumbprint = (Get-PfxCertificate -FilePath $cerPath).Thumbprint
+
+    # ✅ Step 1: Check if already exists in store
+    $existingCert = Get-ChildItem -Path $storePath | Where-Object { $_.Thumbprint -eq $thumbprint }
+
+    if ($existingCert) {
+        Write-Host "✅ Certificate already exists in $storePath"
+        return $true
+    }
+
+    # 🚀 Step 2: Try to import if not already there
+    try {
+        $null = Import-Certificate -FilePath $cerPath -CertStoreLocation $storePath -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "❌ Failed to import certificate to $storePath : $_"
+        return $false
+    }
+
+    # 🔁 Step 3: Verify again
+    $imported = Get-ChildItem -Path $storePath | Where-Object { $_.Thumbprint -eq $thumbprint }
+
+    if ($imported) {
+        Write-Host "✅ Certificate successfully imported to $storePath"
+        return $true
+    }
+    else {
+        Write-Warning "❌ Certificate not found in $storePath after import"
+        return $false
+    }
+}
+
+$cerPath = "$env:TEMP\temp_cert.cer"
+Export-Certificate -Cert $cert -FilePath $cerPath -Force
+# used for sign code/msix
+# CurrentUser\TrustedPeople
+if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath "Cert:\CurrentUser\TrustedPeople")) {
+    exit 1
+}
+
+# CurrentUser\Root
+if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath "Cert:\CurrentUser\Root")) {
+    exit 1
+}
+
+# LocalMachine\Root
+if ($RequireMachineRoot) {
+    if (-not (Import-And-VerifyCertificate -cerPath $cerPath -storePath "Cert:\LocalMachine\Root")) {
+        Write-Warning "Failed to import to LocalMachine\Root (admin may be required)"
+        exit 1
+    }
+} else {
+    Write-Host "Continuing with CurrentUser certificate trust. Pass -RequireMachineRoot when machine-wide trust is required."
+}
+
+
+# Output the thumbprint of the certificate (to confirm which certificate is being used)
+Write-Host "Using certificate with thumbprint: $($cert.Thumbprint)"
+
+
+$rootDirectory = (Split-Path -Parent(Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+
+# Dynamically build the directory path based on architecture and build configuration.
+if ([string]::IsNullOrWhiteSpace($directoryPath)) {
+    $directoryPath = Join-Path $rootDirectory "$architecture\$buildConfiguration\"
+}
+
+if (-not (Test-Path $directoryPath)) {
+    Write-Error "Path to search for msix files does not exist: $directoryPath"
+    exit 1
+}
+
+Write-Host "Directory path to search for .msix and .appx files: $directoryPath"
+
+if ($TargetPaths -and $TargetPaths.Count -gt 0) {
+    $filePaths = @($TargetPaths | ForEach-Object { Get-Item -LiteralPath $_ -ErrorAction Stop })
+}
+elseif ($AllPackages) {
+    $filePaths = Get-ChildItem -Path $directoryPath -Recurse | Where-Object {
+        $_.Extension -eq ".msix" -or $_.Extension -eq ".appx"
+    }
+}
+else {
+    $sparsePackagePath = Join-Path $directoryPath "PowerToysSparse.msix"
+    if (-not (Test-Path $sparsePackagePath)) {
+        Write-Error "Expected sparse package not found: $sparsePackagePath. Pass -TargetPaths for explicit files or -AllPackages to sign every package under the directory."
+        exit 1
+    }
+
+    $filePaths = @(Get-Item -LiteralPath $sparsePackagePath)
+}
+
+if ($filePaths.Count -eq 0) {
+    Write-Error "No .msix or .appx files found in the directory."
+    exit 1
+}
+else {
+    $signedCount = 0
+
+    # Iterate through each file and sign it
+    foreach ($file in $filePaths) {
+        Write-Host "Signing file: $($file.FullName)"
+
+        & $signToolPath sign /sha1 $($cert.Thumbprint) /fd SHA256 /t http://timestamp.digicert.com $file.FullName
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Signing failed for: $($file.FullName)"
+            exit $LASTEXITCODE
+        }
+
+        $signedCount++
+    }
+
+    if ($signedCount -eq 0) {
+        Write-Error "No files were signed."
+        exit 1
+    }
+}
+
+Write-Host "Signing process completed."

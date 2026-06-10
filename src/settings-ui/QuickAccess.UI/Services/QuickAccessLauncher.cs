@@ -1,0 +1,34 @@
+// Copyright (c) Microsoft Corporation
+// The Microsoft Corporation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using ManagedCommon;
+using Microsoft.PowerToys.Settings.UI.Controls;
+using Microsoft.PowerToys.Settings.UI.Library;
+
+namespace Microsoft.PowerToys.QuickAccess.Services
+{
+    public class QuickAccessLauncher : Microsoft.PowerToys.Settings.UI.Controls.QuickAccessLauncher
+    {
+        private readonly IQuickAccessCoordinator? _coordinator;
+
+        public QuickAccessLauncher(IQuickAccessCoordinator? coordinator)
+        {
+            _coordinator = coordinator;
+        }
+
+        public override bool Launch(ModuleType moduleType)
+        {
+            bool moduleRun = base.Launch(moduleType);
+
+            if (moduleRun)
+            {
+                _coordinator?.OnModuleLaunched(moduleType);
+            }
+
+            _coordinator?.HideFlyout();
+
+            return moduleRun;
+        }
+    }
+}

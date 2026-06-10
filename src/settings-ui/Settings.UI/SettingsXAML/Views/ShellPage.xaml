@@ -1,0 +1,221 @@
+﻿<UserControl
+    x:Class="Microsoft.PowerToys.Settings.UI.Views.ShellPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:animatedVisuals="using:Microsoft.UI.Xaml.Controls.AnimatedVisuals"
+    xmlns:controls="using:Microsoft.PowerToys.Settings.UI.Controls"
+    xmlns:converters="using:Microsoft.PowerToys.Settings.UI.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:helpers="using:Microsoft.PowerToys.Settings.UI.Helpers"
+    xmlns:i="using:Microsoft.Xaml.Interactivity"
+    xmlns:ic="using:Microsoft.Xaml.Interactions.Core"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:Microsoft.PowerToys.Settings.UI.ViewModels"
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    xmlns:views="using:Microsoft.PowerToys.Settings.UI.Views"
+    HighContrastAdjustment="None"
+    Loaded="ShellPage_Loaded"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <converters:IconConverter x:Key="IconConverter" />
+        <converters:SearchSuggestionTemplateSelector
+            x:Key="SearchSuggestionTemplateSelector"
+            DefaultSuggestionTemplate="{StaticResource DefaultSearchResultTemplate}"
+            NoResultsSuggestionTemplate="{StaticResource NoResultSearchResultTemplate}"
+            ShowAllSuggestionTemplate="{StaticResource ShowAllSearchResultTemplate}" />
+        <DataTemplate x:Key="DefaultSearchResultTemplate" x:DataType="models:SuggestionItem">
+            <Grid Padding="16,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Viewbox
+                    Width="16"
+                    Height="16"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Stretch="Uniform">
+                    <ContentPresenter
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Content="{x:Bind Icon, Converter={StaticResource IconConverter}, ConverterParameter=&#xE713;}" />
+                </Viewbox>
+                <StackPanel
+                    Grid.Column="1"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind Header}" />
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind Subtitle}"
+                        Visibility="{x:Bind Subtitle, Converter={StaticResource StringVisibilityConverter}}" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="NoResultSearchResultTemplate" x:DataType="models:SuggestionItem">
+            <Grid>
+                <TextBlock
+                    Margin="8"
+                    HorizontalAlignment="Center"
+                    Text="{x:Bind Header}"
+                    TextAlignment="Center" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="ShowAllSearchResultTemplate" x:DataType="models:SuggestionItem">
+            <Grid>
+                <Rectangle
+                    Height="1"
+                    Margin="0,-12,0,0"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Top"
+                    Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                <TextBlock
+                    x:Uid="Shell_Search_ShowAll"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    TextAlignment="Center" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+    <i:Interaction.Behaviors>
+        <ic:EventTriggerBehavior EventName="Loaded">
+            <ic:InvokeCommandAction Command="{x:Bind ViewModel.LoadedCommand}" />
+        </ic:EventTriggerBehavior>
+    </i:Interaction.Behaviors>
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <controls:TitleBar
+            x:Name="AppTitleBar"
+            AutoConfigureCustomTitleBar="True"
+            CompactStateBreakpoint="900"
+            IsTabStop="False"
+            PaneButtonClick="PaneToggleBtn_Click">
+            <controls:TitleBar.Resources>
+                <x:Double x:Key="TitleBarContentMinWidth">516</x:Double>
+            </controls:TitleBar.Resources>
+            <controls:TitleBar.Icon>
+                <BitmapIcon ShowAsMonochrome="False" UriSource="/Assets/Settings/icon.ico" />
+            </controls:TitleBar.Icon>
+            <controls:TitleBar.Content>
+                <AutoSuggestBox
+                    x:Name="SearchBox"
+                    x:Uid="Shell_SearchBox"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    GotFocus="SearchBox_GotFocus"
+                    ItemTemplateSelector="{StaticResource SearchSuggestionTemplateSelector}"
+                    QueryIcon="Find"
+                    QuerySubmitted="SearchBox_QuerySubmitted"
+                    SuggestionChosen="SearchBox_SuggestionChosen"
+                    TextChanged="SearchBox_TextChanged"
+                    TextMemberPath="Header"
+                    UpdateTextOnSelect="False">
+                    <AutoSuggestBox.KeyboardAccelerators>
+                        <KeyboardAccelerator
+                            Key="F"
+                            Invoked="CtrlF_Invoked"
+                            Modifiers="Control" />
+                    </AutoSuggestBox.KeyboardAccelerators>
+                </AutoSuggestBox>
+            </controls:TitleBar.Content>
+        </controls:TitleBar>
+        <NavigationView
+            x:Name="navigationView"
+            Grid.Row="1"
+            Canvas.ZIndex="0"
+            CompactModeThresholdWidth="1007"
+            DisplayModeChanged="NavigationView_DisplayModeChanged"
+            ExpandedModeThresholdWidth="1007"
+            IsBackButtonVisible="Collapsed"
+            IsBackEnabled="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}"
+            IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="False"
+            IsTitleBarAutoPaddingEnabled="False"
+            PaneClosed="NavigationView_PaneClosed"
+            PaneOpened="NavigationView_PaneOpened"
+            SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}">
+            <NavigationView.Resources>
+                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+            </NavigationView.Resources>
+            <NavigationView.MenuItems>
+                <NavigationViewItem
+                    x:Name="DashboardNavigationItem"
+                    x:Uid="Shell_Dashboard"
+                    AutomationProperties.AutomationId="DashboardNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xE80F;}" />
+
+                <NavigationViewItem
+                    x:Name="GeneralNavigationItem"
+                    x:Uid="Shell_General"
+                    AutomationProperties.AutomationId="GeneralNavItem">
+                    <NavigationViewItem.Icon>
+                        <AnimatedIcon>
+                            <AnimatedIcon.Source>
+                                <animatedVisuals:AnimatedSettingsVisualSource />
+                            </AnimatedIcon.Source>
+                            <AnimatedIcon.FallbackIconSource>
+                                <SymbolIconSource Symbol="Setting" />
+                            </AnimatedIcon.FallbackIconSource>
+                        </AnimatedIcon>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItemSeparator />
+
+                <NavigationViewItem
+                    x:Name="AwakeNavigationItem"
+                    x:Uid="Shell_Awake"
+                    AutomationProperties.AutomationId="AwakeNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Awake.png}" />
+
+                <NavigationViewItem
+                    x:Name="LightSwitchNavigationItem"
+                    x:Uid="Shell_LightSwitch"
+                    AutomationProperties.AutomationId="LightSwitchNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/LightSwitch.png}" />
+
+                <NavigationViewItem
+                    x:Name="MonitorNavigationItem"
+                    x:Uid="Shell_Monitor"
+                    AutomationProperties.AutomationId="MonitorNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/PowerToys.png}" />
+
+                <NavigationViewItem
+                    x:Name="PowerDisplayNavigationItem"
+                    x:Uid="Shell_PowerDisplay"
+                    AutomationProperties.AutomationId="PowerDisplayNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/PowerDisplay.png}" />
+            </NavigationView.MenuItems>
+            <NavigationView.PaneFooter>
+                <StackPanel Orientation="Vertical">
+                    <NavigationViewItem
+                        x:Name="CloseNavigationItem"
+                        x:Uid="Close_NavViewItem"
+                        AutomationProperties.AutomationId="CloseNavItem"
+                        Icon="{ui:FontIcon Glyph=&#xE7E8;}"
+                        Tapped="Close_Tapped"
+                        Visibility="{x:Bind ViewModel.ShowCloseMenu, Mode=OneWay}" />
+                </StackPanel>
+            </NavigationView.PaneFooter>
+            <i:Interaction.Behaviors>
+                <ic:EventTriggerBehavior EventName="ItemInvoked">
+                    <ic:InvokeCommandAction Command="{x:Bind ViewModel.ItemInvokedCommand}" />
+                </ic:EventTriggerBehavior>
+            </i:Interaction.Behaviors>
+            <Frame x:Name="shellFrame" />
+        </NavigationView>
+        <ContentDialog
+            x:Name="CloseDialog"
+            x:Uid="CloseDialog"
+            IsPrimaryButtonEnabled="True"
+            IsSecondaryButtonEnabled="True"
+            PrimaryButtonClick="CloseDialog_Click"
+            PrimaryButtonStyle="{StaticResource AccentButtonStyle}" />
+    </Grid>
+</UserControl>
+
+

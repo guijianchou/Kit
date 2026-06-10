@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) Microsoft Corporation.
+     Licensed under the MIT License. -->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.20" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>Kit</displayName>
+  <description>Kit policy definitions</description>
+  <resources>
+    <stringTable>
+      <string id="PowerToys">Kit</string>
+      <string id="InstallerUpdates">Installer and Updates</string>
+      <string id="GeneralSettings">General settings</string>
+
+      <string id="SUPPORTED_KIT_2_0_1">Kit version 2.0.1 or later</string>
+
+      <string id="ConfigureEnabledUtilityDescription">This policy configures the enabled state for a Kit utility.
+
+If you enable this setting, the utility will always be enabled and the user will not be able to disable it.
+
+If you disable this setting, the utility will always be disabled and the user will not be able to enable it.
+
+If you do not configure this setting, users can enable or disable the utility.
+</string>
+      <string id="DisableAutomaticUpdateDownloadDescription">This policy configures whether automatic download and installation of available updates is disabled.
+
+If enabled, automatic download and installation is disabled.
+
+If disabled or not configured, the user can control this in settings.
+</string>
+      <string id="DisableNewUpdateToastDescription">This policy configures whether action center notifications for new updates are shown.
+
+If enabled, update notifications are disabled.
+
+If disabled or not configured, the user can control this in settings.
+</string>
+      <string id="DoNotShowWhatsNewAfterUpdatesDescription">This policy configures whether release notes are shown after updates.
+
+If enabled, the release notes window is not shown automatically.
+
+If disabled or not configured, the user can control this in settings.
+</string>
+      <string id="AllowExperimentationDescription">This policy configures whether experimentation is allowed.
+
+If enabled or not configured, the user can control experimentation in settings.
+
+If disabled, experimentation is not allowed.
+</string>
+      <string id="AllowDiagnosticDataDescription">This policy configures whether sending diagnostic data is allowed.
+
+If enabled or not configured, the user can control diagnostic data sending in settings.
+
+If disabled, diagnostic data sending is not allowed.
+</string>
+      <string id="ConfigureRunAtStartupDescription">This policy configures the run at startup setting.
+
+If you enable this setting, run at startup will always be enabled and the user will not be able to disable it.
+
+If you disable this setting, run at startup will always be disabled and the user will not be able to enable it.
+
+If you do not configure this setting, users can enable or disable run at startup.
+</string>
+
+      <string id="ConfigureEnabledUtilityAwake">Awake: Configure enabled state</string>
+      <string id="ConfigureEnabledUtilityLightSwitch">Light Switch: Configure enabled state</string>
+      <string id="ConfigureEnabledUtilityPowerDisplay">PowerDisplay: Configure enabled state</string>
+      <string id="DisableAutomaticUpdateDownload">Disable automatic downloads</string>
+      <string id="DisableNewUpdateToast">Disable Action Center notification for new updates</string>
+      <string id="DoNotShowWhatsNewAfterUpdates">Do not show release notes after updates</string>
+      <string id="AllowExperimentation">Allow Experimentation</string>
+      <string id="AllowDiagnosticData">Allow sending diagnostic data</string>
+      <string id="ConfigureRunAtStartup">Configure the run at startup setting</string>
+    </stringTable>
+    <presentationTable />
+  </resources>
+</policyDefinitionResources>

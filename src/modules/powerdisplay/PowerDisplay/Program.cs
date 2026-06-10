@@ -1,0 +1,164 @@
+// Copyright (c) Microsoft Corporation
+// The Microsoft Corporation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using ManagedCommon;
+using Microsoft.UI.Dispatching;
+using Microsoft.Windows.AppLifecycle;
+
+namespace PowerDisplay
+{
+    public static partial class Program
+    {
+        private static App? _app;
+
+        // LibraryImport for AOT compatibility - COM wait constants
+        private const uint CowaitDefault = 0;
+        private const uint RedirectActivationTimeoutMilliseconds = 10000;
+
+        [LibraryImport("ole32.dll")]
+        private static partial int CoWaitForMultipleObjects(
+            uint dwFlags,
+            uint dwTimeout,
+            int cHandles,
+            nint[] pHandles,
+            out uint lpdwIndex);
+
+        [STAThread]
+        public static int Main(string[] args)
+        {
+            // Initialize COM wrappers first (needed for AppInstance)
+            WinRT.ComWrappersSupport.InitializeComWrappers();
+
+            // Exit before instance registration so a blocked launch cannot redirect
+            // activation to an already-running instance.
+            if (PowerToys.GPOWrapper.GPOWrapper.GetConfiguredPowerDisplayEnabledValue() == PowerToys.GPOWrapper.GpoRuleConfigured.Disabled)
+            {
+                return 0;
+            }
+
+            // Parse command line arguments:
+            // args[0] = runner_pid (Awake pattern)
+            // args[1] = pipe_name (Named Pipe for IPC with module DLL)
+            (int runnerPid, string? pipeName) = ParseRunnerArguments(args);
+            bool isRunnerIpcLaunch = runnerPid > 0 && !string.IsNullOrWhiteSpace(pipeName);
+
+            AppInstance? keyInstance = null;
+            if (!isRunnerIpcLaunch)
+            {
+                // Single instance check BEFORE logger initialization to avoid creating extra log files.
+                var activationArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
+                keyInstance = AppInstance.FindOrRegisterForKey("Kit_PowerDisplay_Instance");
+
+                if (!keyInstance.IsCurrent)
+                {
+                    // Another standalone instance exists - redirect and exit WITHOUT initializing logger.
+                    // Runner IPC launches skip this path because the C++ module waits for this process to
+                    // connect to a unique named pipe.
+                    RedirectActivationTo(activationArgs, keyInstance);
+                    return 0;
+                }
+            }
+
+            // This is the primary standalone instance, or a runner-owned IPC instance.
+            Logger.InitializeLogger("\\PowerDisplay\\Logs");
+            Logger.LogInfo("PowerDisplay starting");
+
+            // Register activation handler for future standalone redirects.
+            if (keyInstance != null)
+            {
+                keyInstance.Activated += OnActivated;
+            }
+
+            Microsoft.UI.Xaml.Application.Start((p) =>
+            {
+                var context = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
+                SynchronizationContext.SetSynchronizationContext(context);
+                _app = new App(runnerPid, pipeName);
+            });
+            return 0;
+        }
+
+        private static (int RunnerPid, string? PipeName) ParseRunnerArguments(string[] args)
+        {
+            int runnerPid = -1;
+            string? pipeName = null;
+
+            if (args.Length >= 1 && int.TryParse(args[0], out int parsedPid))
+            {
+                runnerPid = parsedPid;
+            }
+
+            if (args.Length >= 2)
+            {
+                pipeName = args[1];
+            }
+
+            return (runnerPid, pipeName);
+        }
+
+        /// <summary>
+        /// Redirect activation to existing instance.
+        /// Called BEFORE logger is initialized, so no logging here
+        /// </summary>
+        private static void RedirectActivationTo(AppActivationArguments args, AppInstance keyInstance)
+        {
+            // Do the redirection on another thread, and use a COM-aware wait
+            // method with a finite timeout while redirection is pending.
+            var redirectTask = Task.Run(() =>
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(RedirectActivationTimeoutMilliseconds));
+                try
+                {
+                    keyInstance.RedirectActivationToAsync(args)
+                        .AsTask(cts.Token)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                catch
+                {
+                    // Silently ignore errors - logger not initialized yet
+                }
+            });
+
+            // Use CoWaitForMultipleObjects to pump COM messages while waiting
+            var redirectWaitHandle = ((IAsyncResult)redirectTask).AsyncWaitHandle;
+            nint[] handles = [redirectWaitHandle.SafeWaitHandle.DangerousGetHandle()];
+            _ = CoWaitForMultipleObjects(
+                CowaitDefault,
+                RedirectActivationTimeoutMilliseconds,
+                1,
+                handles,
+                out _);
+        }
+
+        /// <summary>
+        /// Called when an existing instance is activated by another process.
+        /// This happens when Quick Access or other launchers start the process while one is already running.
+        /// We toggle the window to show it - this allows Quick Access launch to work properly.
+        /// </summary>
+        private static void OnActivated(object? sender, AppActivationArguments args)
+        {
+            Logger.LogInfo("OnActivated: Redirect activation received - toggling window");
+
+            // Toggle the main window on redirect activation
+            if (_app?.MainWindow is MainWindow mainWindow)
+            {
+                // Dispatch to UI thread since OnActivated may be called from a different thread
+                mainWindow.DispatcherQueue.TryEnqueue(() =>
+                {
+                    Logger.LogTrace("OnActivated: Toggling window from redirect activation");
+                    mainWindow.ToggleWindow();
+                });
+            }
+            else
+            {
+                Logger.LogWarning("OnActivated: MainWindow not available for toggle");
+            }
+        }
+    }
+}

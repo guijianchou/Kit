@@ -1,0 +1,25 @@
+namespace PowerToys
+{
+    namespace GPOWrapper
+    {
+        enum GpoRuleConfigured
+        {
+            WrongValue = -3,
+            Unavailable = -2,
+            NotConfigured = -1,
+            Disabled = 0,
+            Enabled = 1
+        };
+        [default_interface] static runtimeclass GPOWrapper {
+            static GpoRuleConfigured GetConfiguredAwakeEnabledValue();
+            static GpoRuleConfigured GetConfiguredLightSwitchEnabledValue();
+            static GpoRuleConfigured GetConfiguredPowerDisplayEnabledValue();
+            static GpoRuleConfigured GetDisableNewUpdateToastValue();
+            static GpoRuleConfigured GetDisableAutomaticUpdateDownloadValue();
+            static GpoRuleConfigured GetDisableShowWhatsNewAfterUpdatesValue();
+            static GpoRuleConfigured GetAllowExperimentationValue();
+            static GpoRuleConfigured GetAllowDataDiagnosticsValue();
+            static GpoRuleConfigured GetConfiguredRunAtStartupValue();
+        }
+    }
+}

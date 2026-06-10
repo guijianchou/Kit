@@ -1,0 +1,316 @@
+// Copyright (c) Microsoft Corporation
+// The Microsoft Corporation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using ManagedCommon;
+using Microsoft.PowerToys.Settings.UI.Helpers;
+using Microsoft.PowerToys.Settings.UI.Library;
+using Microsoft.PowerToys.Settings.UI.SerializationContext;
+using Microsoft.PowerToys.Settings.UI.Services;
+using Microsoft.PowerToys.Settings.UI.SettingsXAML.Controls.Dashboard;
+using Microsoft.PowerToys.Settings.UI.Views;
+using Microsoft.UI.Xaml;
+using PowerToys.Interop;
+using Windows.UI.Popups;
+using WinRT.Interop;
+using WinUIEx;
+
+namespace Microsoft.PowerToys.Settings.UI
+{
+    public partial class App : Application
+    {
+        private ShortcutConflictWindow shortcutConflictWindow;
+
+        private enum Arguments
+        {
+            PTPipeName = 1,
+            SettingsPipeName,
+            PTPid,
+            Theme, // used in the old settings
+            ElevatedStatus,
+            IsUserAdmin,
+            ContainsSettingsWindow,
+        }
+
+        private const int RequiredArgumentsSetSettingQty = 4;
+        private const int RequiredArgumentsGetSettingQty = 3;
+
+        private const int RequiredArgumentsLaunchedFromRunnerQty = 8;
+
+        // Create an instance of the  IPC wrapper.
+        private static TwoWayPipeMessageIPCManaged ipcmanager;
+
+        public static bool IsElevated { get; set; }
+
+        public static bool IsUserAnAdmin { get; set; }
+
+        public static int PowerToysPID { get; set; }
+
+        public Type StartupPage { get; set; } = typeof(Views.GeneralPage);
+
+        public static Action<string> IPCMessageReceivedCallback { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="App"/> class.
+        /// Initializes the singleton application object. This is the first line of authored code
+        /// executed, and as such is the logical equivalent of main() or WinMain().
+        /// </summary>
+        public App()
+        {
+            Logger.InitializeLogger(@"\Settings\Logs");
+
+            string appLanguage = LanguageHelper.LoadLanguage();
+            if (!string.IsNullOrEmpty(appLanguage))
+            {
+                Microsoft.Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = appLanguage;
+            }
+
+            InitializeComponent();
+
+            UnhandledException += App_UnhandledException;
+
+            NativeEventWaiter.WaitForEventLoop(
+                Constants.KitRunnerTerminateSettingsEvent(), () =>
+            {
+                Environment.Exit(0);
+            });
+        }
+
+        private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            Logger.LogError("Unhandled exception", e.Exception);
+        }
+
+        public static void OpenSettingsWindow(Type type = null, bool ensurePageIsSelected = false)
+        {
+            if (settingsWindow == null)
+            {
+                settingsWindow = new MainWindow();
+            }
+
+            settingsWindow.Activate();
+
+            if (type != null)
+            {
+                settingsWindow.NavigateToSection(type);
+
+                WindowHelpers.BringToForeground(settingsWindow.GetWindowHandle());
+            }
+
+            if (ensurePageIsSelected)
+            {
+                settingsWindow.EnsurePageIsSelected();
+            }
+        }
+
+        private void OnLaunchedToSetSetting(string[] cmdArgs)
+        {
+            var settingName = cmdArgs[2];
+            var settingValue = cmdArgs[3];
+            try
+            {
+                SetSettingCommandLineCommand.Execute(settingName, settingValue, SettingsUtils.Default);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"SetSettingCommandLineCommand exception: '{settingName}' setting couldn't be set to {settingValue}", ex);
+            }
+
+            Exit();
+        }
+
+        private void OnLaunchedToGetSetting(string[] cmdArgs)
+        {
+            var ipcFileName = cmdArgs[2];
+
+            try
+            {
+                var requestedSettings = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(File.ReadAllText(ipcFileName), SourceGenerationContextContext.Default.DictionaryStringListString);
+                File.WriteAllText(ipcFileName, GetSettingCommandLineCommand.Execute(requestedSettings));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"GetSettingCommandLineCommand exception", ex);
+            }
+
+            Exit();
+        }
+
+        private void OnLaunchedFromRunner(string[] cmdArgs)
+        {
+            // Skip the first argument which is prepended when launched by explorer
+            if (cmdArgs[0].EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase) && cmdArgs[1].EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase) && (cmdArgs.Length >= RequiredArgumentsLaunchedFromRunnerQty + 1))
+            {
+                cmdArgs = cmdArgs.Skip(1).ToArray();
+            }
+
+            _ = int.TryParse(cmdArgs[(int)Arguments.PTPid], out int powerToysPID);
+            PowerToysPID = powerToysPID;
+
+            IsElevated = cmdArgs[(int)Arguments.ElevatedStatus] == "true";
+            IsUserAnAdmin = cmdArgs[(int)Arguments.IsUserAdmin] == "true";
+            bool containsSettingsWindow = cmdArgs[(int)Arguments.ContainsSettingsWindow] == "true";
+
+            // To keep track of variable arguments
+            int currentArgumentIndex = RequiredArgumentsLaunchedFromRunnerQty;
+
+            if (containsSettingsWindow)
+            {
+                // Open specific window
+                StartupPage = GetPage(cmdArgs[currentArgumentIndex]);
+
+                currentArgumentIndex++;
+            }
+
+            RunnerHelper.WaitForPowerToysRunner(PowerToysPID, () =>
+            {
+                Environment.Exit(0);
+            });
+
+            ipcmanager = new TwoWayPipeMessageIPCManaged(cmdArgs[(int)Arguments.SettingsPipeName], cmdArgs[(int)Arguments.PTPipeName], (string message) =>
+            {
+                if (IPCMessageReceivedCallback != null && message.Length > 0)
+                {
+                    IPCMessageReceivedCallback(message);
+                }
+            });
+            ipcmanager.Start();
+
+            GlobalHotkeyConflictManager.Initialize(message =>
+            {
+                ipcmanager.Send(message);
+                return 0;
+            });
+
+            settingsWindow = new MainWindow();
+            settingsWindow.Activate();
+            settingsWindow.NavigateToSection(StartupPage);
+
+            // https://github.com/microsoft/microsoft-ui-xaml/issues/7595 - Activate doesn't bring window to the foreground
+            // Need to call SetForegroundWindow to actually gain focus.
+            WindowHelpers.BringToForeground(settingsWindow.GetWindowHandle());
+        }
+
+        /// <summary>
+        /// Invoked when the application is launched normally by the end user.  Other entry points
+        /// will be used such as when the application is launched to open a specific file.
+        /// </summary>
+        /// <param name="args">Details about the launch request and process.</param>
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
+        {
+            var cmdArgs = Environment.GetCommandLineArgs();
+
+            if (cmdArgs?.Length >= RequiredArgumentsLaunchedFromRunnerQty)
+            {
+                OnLaunchedFromRunner(cmdArgs);
+            }
+            else if (cmdArgs?.Length == RequiredArgumentsSetSettingQty && cmdArgs[1] == "set")
+            {
+                OnLaunchedToSetSetting(cmdArgs);
+            }
+            else if (cmdArgs?.Length == RequiredArgumentsGetSettingQty && cmdArgs[1] == "get")
+            {
+                OnLaunchedToGetSetting(cmdArgs);
+            }
+            else
+            {
+#if DEBUG
+                // For debugging purposes
+                // Window is also needed to show MessageDialog
+                settingsWindow = new MainWindow();
+                settingsWindow.Activate();
+                settingsWindow.NavigateToSection(StartupPage);
+
+                // In DEBUG mode, we might not have IPC set up, so provide a dummy implementation
+                GlobalHotkeyConflictManager.Initialize(message =>
+                {
+                    // In debug mode, just log or do nothing
+                    Debug.WriteLine($"IPC Message: {message}");
+                    return 0;
+                });
+#else
+                /* If we try to run Settings as a standalone app, it will start Kit.exe if not running and open Settings again through it in the Dashboard page. */
+                global::Common.UI.SettingsDeepLink.OpenSettings(global::Common.UI.SettingsDeepLink.SettingsWindow.Dashboard);
+                Exit();
+#endif
+            }
+        }
+
+        public static TwoWayPipeMessageIPCManaged GetTwoWayIPCManager()
+        {
+            return ipcmanager;
+        }
+
+        public static bool IsDarkTheme()
+        {
+            return ThemeService.Theme == ElementTheme.Dark || (ThemeService.Theme == ElementTheme.Default && ThemeHelpers.GetAppTheme() == AppTheme.Dark);
+        }
+
+        public static int UpdateUIThemeMethod(string themeName)
+        {
+            return 0;
+        }
+
+        private static SettingsUtils settingsUtils = SettingsUtils.Default;
+        private static ThemeService themeService = new ThemeService(SettingsRepository<GeneralSettings>.GetInstance(settingsUtils));
+
+        public static ThemeService ThemeService => themeService;
+
+        private static MainWindow settingsWindow;
+
+        public static void ClearSettingsWindow()
+        {
+            settingsWindow = null;
+        }
+
+        public static MainWindow GetSettingsWindow()
+        {
+            return settingsWindow;
+        }
+
+        public static bool IsSecondaryWindowOpen()
+        {
+            var app = (App)Current;
+            return app.shortcutConflictWindow != null;
+        }
+
+        public void OpenShortcutConflictWindow()
+        {
+            if (shortcutConflictWindow == null)
+            {
+                shortcutConflictWindow = new ShortcutConflictWindow();
+
+                shortcutConflictWindow.Closed += (_, _) =>
+                {
+                    shortcutConflictWindow = null;
+                    settingsWindow?.CloseHiddenWindow();
+                };
+
+                shortcutConflictWindow.Activate();
+            }
+            else
+            {
+                WindowHelpers.BringToForeground(shortcutConflictWindow.GetWindowHandle());
+            }
+        }
+
+        public static Type GetPage(string settingWindow)
+        {
+            return settingWindow switch
+            {
+                "Awake" => typeof(AwakePage),
+                "LightSwitch" => typeof(LightSwitchPage),
+                "Monitor" => typeof(MonitorPage),
+                "PowerDisplay" => typeof(PowerDisplayPage),
+                _ => typeof(GeneralPage),
+            };
+        }
+    }
+}

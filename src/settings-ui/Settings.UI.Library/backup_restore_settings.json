@@ -1,0 +1,17 @@
+{
+  "RestartAfterRestore": true,
+  "IncludeFiles": [
+    "*settings.json"
+  ],
+  "IgnoreFiles": [
+    "*Kit\\log_settings.json"
+  ],
+  "IgnoredSettings": {
+    "backup-restore_settings.json": [
+      "RestartAfterRestore"
+    ],
+    "settings.json": [
+      "powertoys_version"
+    ]
+  }
+}

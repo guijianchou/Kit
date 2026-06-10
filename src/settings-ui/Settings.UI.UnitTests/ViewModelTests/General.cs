@@ -1,0 +1,1244 @@
+﻿// Copyright (c) Microsoft Corporation
+// The Microsoft Corporation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+
+using ManagedCommon;
+using Microsoft.PowerToys.Settings.UI.Library;
+using Microsoft.PowerToys.Settings.UI.Library.Helpers;
+using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Microsoft.PowerToys.Settings.UI.UnitTests.BackwardsCompatibility;
+using Microsoft.PowerToys.Settings.UI.UnitTests.Mocks;
+using Microsoft.PowerToys.Settings.UI.ViewModels;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+
+using JsonSerializer = System.Text.Json.JsonSerializer;
+
+namespace ViewModelTests
+{
+    [TestClass]
+    public class General
+    {
+        public const string GeneralSettingsFileName = "Test\\GeneralSettings";
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Monitor", "PowerDisplay" };
+
+        private Mock<SettingsUtils> mockGeneralSettingsUtils;
+
+        [TestInitialize]
+        public void SetUpStubSettingUtils()
+        {
+            mockGeneralSettingsUtils = ISettingsUtilsMocks.GetStubSettingsUtils<GeneralSettings>();
+        }
+
+        private sealed class TestGeneralViewModel : GeneralViewModel
+        {
+            public TestGeneralViewModel(
+                Microsoft.PowerToys.Settings.UI.Library.Interfaces.ISettingsRepository<GeneralSettings> settingsRepository,
+                string runAsAdminText,
+                string runAsUserText,
+                bool isElevated,
+                bool isAdmin,
+                Func<string, int> ipcMSGCallBackFunc,
+                Func<string, int> ipcMSGRestartAsAdminMSGCallBackFunc,
+                Func<string, int> ipcMSGCheckForUpdatesCallBackFunc,
+                string configFileSubfolder = "")
+                : base(settingsRepository, runAsAdminText, runAsUserText, isElevated, isAdmin, ipcMSGCallBackFunc, ipcMSGRestartAsAdminMSGCallBackFunc, ipcMSGCheckForUpdatesCallBackFunc, configFileSubfolder)
+            {
+            }
+
+            protected override Microsoft.UI.Dispatching.DispatcherQueue GetDispatcherQueue()
+            {
+                return null;
+            }
+        }
+
+        private TestGeneralViewModel CreateViewModel(
+            ISettingsRepository<GeneralSettings> settingsRepository = null,
+            Func<string, int> sendMockIPCConfigMSG = null,
+            Func<string, int> sendCheckForUpdatesIPCMessage = null)
+        {
+            return new TestGeneralViewModel(
+                settingsRepository: settingsRepository ?? SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                runAsAdminText: "GeneralSettings_RunningAsAdminText",
+                runAsUserText: "GeneralSettings_RunningAsUserText",
+                isElevated: false,
+                isAdmin: false,
+                ipcMSGCallBackFunc: sendMockIPCConfigMSG ?? (_ => 0),
+                ipcMSGRestartAsAdminMSGCallBackFunc: _ => 0,
+                ipcMSGCheckForUpdatesCallBackFunc: sendCheckForUpdatesIPCMessage ?? (_ => 0),
+                configFileSubfolder: GeneralSettingsFileName);
+        }
+
+        private static ISettingsRepository<GeneralSettings> CreateRepository(GeneralSettings settings)
+        {
+            var repository = new Mock<ISettingsRepository<GeneralSettings>>();
+            repository.SetupProperty(x => x.SettingsConfig, settings);
+            repository.Setup(x => x.ReloadSettings()).Returns(true);
+            return repository.Object;
+        }
+
+        private static T GetViewModelProperty<T>(GeneralViewModel viewModel, string propertyName)
+        {
+            var property = typeof(GeneralViewModel).GetProperty(propertyName);
+            Assert.IsNotNull(property, $"{propertyName} should be exposed by GeneralViewModel.");
+            return (T)property.GetValue(viewModel);
+        }
+
+        private static void SetViewModelField<T>(GeneralViewModel viewModel, string fieldName, T value)
+        {
+            var field = typeof(GeneralViewModel).GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.IsNotNull(field, $"{fieldName} should be present on GeneralViewModel.");
+            field.SetValue(viewModel, value);
+        }
+
+        private static string FindSourceFile(params string[] relativePathParts)
+        {
+            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null)
+            {
+                var pathParts = new string[relativePathParts.Length + 1];
+                pathParts[0] = directory.FullName;
+                Array.Copy(relativePathParts, 0, pathParts, 1, relativePathParts.Length);
+
+                var candidate = Path.Combine(pathParts);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                directory = directory.Parent;
+            }
+
+            Assert.Fail($"Could not find source file: {Path.Combine(relativePathParts)}");
+            return string.Empty;
+        }
+
+        [TestMethod]
+        public void KitGeneralPageShouldExposeRetainedSectionsWithVersionUpdateGroup()
+        {
+            var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+
+            StringAssert.Contains(xaml, "x:Uid=\"General_VersionAndUpdate\"");
+            StringAssert.Contains(xaml, "x:Uid=\"Admin_Mode\"");
+            StringAssert.Contains(xaml, "x:Uid=\"Appearance_Behavior\"");
+            StringAssert.Contains(xaml, "x:Uid=\"General_SettingsBackupAndRestoreTitle\"");
+            StringAssert.Contains(xaml, "x:Uid=\"General_Experimentation\"");
+            StringAssert.Contains(xaml, "x:Uid=\"GeneralPage_EnableQuickAccess\"");
+            StringAssert.Contains(xaml, "x:Uid=\"ShowSystemTrayIcon\"");
+            StringAssert.Contains(xaml, "https://github.com/guijianchou/Kit/releases");
+
+            Assert.IsFalse(xaml.Contains("General_DiagnosticsAndFeedback", StringComparison.Ordinal));
+            Assert.IsFalse(xaml.Contains("GeneralPage_AutoDownloadAndInstallUpdates", StringComparison.Ordinal));
+            Assert.IsFalse(xaml.Contains("GeneralPage_ShowNewUpdatesToast", StringComparison.Ordinal));
+            Assert.IsFalse(xaml.Contains("GeneralPage_ReportBugPackage", StringComparison.Ordinal));
+            Assert.IsFalse(xaml.Contains("github.com/microsoft/PowerToys/releases", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitGeneralShouldRemoveBottomAboutSection()
+        {
+            var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+
+            Assert.IsFalse(xaml.Contains("x:Uid=\"General_About\"", StringComparison.Ordinal), "General should not keep a bottom About section because the version is already shown in the update section.");
+            Assert.IsFalse(xaml.Contains("<Run x:Uid=\"General_Repository\" />", StringComparison.Ordinal), "General should not keep the old repository-only About card.");
+        }
+
+        [TestMethod]
+        public void KitGeneralVersionSectionShouldShowReleaseNotesAndManualCheckOnly()
+        {
+            var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+
+            var versionIndex = xaml.IndexOf("x:Uid=\"General_VersionAndUpdate\"", StringComparison.Ordinal);
+            Assert.IsTrue(versionIndex >= 0, "Version and update section should be present.");
+
+            var versionXaml = xaml.Substring(versionIndex);
+            StringAssert.Contains(versionXaml, "x:Uid=\"ReleaseNotes\"");
+            StringAssert.Contains(versionXaml, "https://github.com/guijianchou/Kit/releases");
+            StringAssert.Contains(versionXaml, "x:Uid=\"GeneralPage_CheckForUpdates\"");
+            StringAssert.Contains(versionXaml, "IsEnabled=\"{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}\"");
+            StringAssert.Contains(versionXaml, "x:Uid=\"GeneralPage_ViewRelease\"");
+            StringAssert.Contains(versionXaml, "NavigateUri=\"{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}\"");
+            StringAssert.Contains(versionXaml, "Visibility=\"{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}\"");
+            Assert.IsTrue(versionXaml.IndexOf("</tkcontrols:SettingsExpander>", StringComparison.Ordinal) < versionXaml.IndexOf("x:Uid=\"GeneralPage_ViewRelease\"", StringComparison.Ordinal), "Update result InfoBar should sit below the expander like PowerToys-main, not inside the expander content.");
+            Assert.IsFalse(versionXaml.Contains("GeneralPage_AutoDownloadAndInstallUpdates", StringComparison.Ordinal), "Kit should not expose auto-download settings.");
+            Assert.IsFalse(versionXaml.Contains("General_DownloadAndInstall", StringComparison.Ordinal), "Kit should not expose installer download actions.");
+            Assert.IsFalse(versionXaml.Contains("General_InstallNow", StringComparison.Ordinal), "Kit should not expose installer install actions.");
+        }
+
+        [TestMethod]
+        public void CheckForUpdatesCommandShouldSendKitReleaseCheckAction()
+        {
+            string sentMessage = null;
+            var viewModel = CreateViewModel(sendCheckForUpdatesIPCMessage: msg =>
+            {
+                sentMessage = msg;
+                return 0;
+            });
+
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+
+            Assert.IsNotNull(sentMessage);
+            StringAssert.Contains(sentMessage, "\"action_name\":\"check_for_updates\"");
+        }
+
+        [TestMethod]
+        public void CheckForUpdatesCommandShouldShowImmediateVisibleStatus()
+        {
+            string sentMessage = null;
+            var viewModel = CreateViewModel(sendCheckForUpdatesIPCMessage: msg =>
+            {
+                sentMessage = msg;
+                return 0;
+            });
+
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+
+            Assert.IsNotNull(sentMessage);
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            Assert.AreEqual("General_CheckingForUpdates/Text", GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"));
+            Assert.AreEqual("Informational", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
+        }
+
+        [TestMethod]
+        public void CheckForUpdatesCommandShouldIgnoreRepeatedClicksWhileRunning()
+        {
+            var sentCount = 0;
+            var viewModel = CreateViewModel(sendCheckForUpdatesIPCMessage: msg =>
+            {
+                sentCount++;
+                return 0;
+            });
+
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+
+            Assert.AreEqual(1, sentCount);
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
+        }
+
+        [TestMethod]
+        public void PowerToysNewAvailableVersionUriShouldBeNullWhenLinkIsEmptyAndAbsoluteWhenSet()
+        {
+            var viewModel = CreateViewModel();
+
+            Assert.IsNull(GetViewModelProperty<Uri>(viewModel, "PowerToysNewAvailableVersionUri"));
+            Assert.IsFalse(viewModel.IsUpdateAvailable);
+
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.ReadyToDownload,
+                    ReleasePageLink = "https://github.com/guijianchou/Kit/releases/tag/v9.9.9",
+                    LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            var uri = GetViewModelProperty<Uri>(viewModel, "PowerToysNewAvailableVersionUri");
+            Assert.IsNotNull(uri);
+            Assert.IsTrue(uri.IsAbsoluteUri);
+            Assert.AreEqual("https://github.com/guijianchou/Kit/releases/tag/v9.9.9", uri.AbsoluteUri);
+            Assert.IsTrue(viewModel.IsUpdateAvailable);
+        }
+
+        [TestMethod]
+        public void RefreshUpdatingStateShouldIgnoreCachedUpToDateStatusUntilManualCheck()
+        {
+            var viewModel = CreateViewModel();
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.UpToDate,
+                    LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+        }
+
+        [TestMethod]
+        public void ManualRefreshUpdatingStateShouldShowFreshUpToDateStatus()
+        {
+            var viewModel = CreateViewModel();
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+            SetViewModelField<DateTime?>(viewModel, "_manualUpdateCheckBaselineLastChecked", DateTime.Now.AddMinutes(-1));
+
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.UpToDate,
+                    LastCheckedDate = DateTimeOffset.Now.AddMinutes(1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            Assert.AreEqual("Success", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+            var message = GetViewModelProperty<string>(viewModel, "UpdateCheckMessage");
+            StringAssert.Contains(message, "General_UpToDate/Title");
+            StringAssert.Contains(message, "v" + Helper.GetProductVersion().TrimStart('v'));
+            StringAssert.Contains(message, "General_VersionLastChecked/Text");
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
+        }
+
+        [TestMethod]
+        public void ManualRefreshUpdatingStateShouldNotAcceptStaleUpToDateStatus()
+        {
+            var viewModel = CreateViewModel();
+            viewModel.CheckForUpdatesEventHandler.Execute(null);
+            SetViewModelField<DateTime?>(viewModel, "_manualUpdateCheckBaselineLastChecked", DateTime.Now);
+
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+            refreshMethod.Invoke(viewModel, new object[]
+            {
+                new UpdatingSettings
+                {
+                    State = UpdatingSettings.UpdatingState.UpToDate,
+                    LastCheckedDate = DateTimeOffset.Now.AddMinutes(-1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                },
+            });
+
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "IsCheckingForUpdates"));
+            Assert.IsFalse(GetViewModelProperty<bool>(viewModel, "IsCheckForUpdatesButtonEnabled"));
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            Assert.AreEqual("General_CheckingForUpdates/Text", GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"));
+            Assert.AreEqual("Informational", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+        }
+
+        [TestMethod]
+        public void RefreshUpdatingStateShouldShowKitReleaseCheckResult()
+        {
+            var viewModel = CreateViewModel();
+            var updateSettings = new UpdatingSettings
+            {
+                State = UpdatingSettings.UpdatingState.ReadyToDownload,
+                ReleasePageLink = "https://github.com/guijianchou/Kit/releases/tag/v9.9.9",
+                LastCheckedDate = DateTimeOffset.Now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+            };
+            var refreshMethod = typeof(GeneralViewModel).GetMethod("RefreshUpdatingState", new[] { typeof(UpdatingSettings) });
+
+            Assert.IsNotNull(refreshMethod, "GeneralViewModel should support refreshing from a loaded Kit update state.");
+
+            refreshMethod.Invoke(viewModel, new object[] { updateSettings });
+
+            Assert.IsTrue(GetViewModelProperty<bool>(viewModel, "UpdateCheckMessageVisible"));
+            StringAssert.Contains(GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"), "General_NewVersionAvailable/Title");
+            StringAssert.Contains(GetViewModelProperty<string>(viewModel, "UpdateCheckMessage"), "v9.9.9");
+            Assert.AreEqual("Success", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
+            Assert.IsFalse(viewModel.IsDownloadAllowed);
+            Assert.IsTrue(viewModel.IsUpdatePanelVisible);
+            Assert.IsFalse(viewModel.AutoDownloadUpdates);
+            Assert.IsFalse(viewModel.ShowNewUpdatesToastNotification);
+            Assert.IsFalse(viewModel.ShowWhatsNewAfterUpdates);
+        }
+
+        [TestMethod]
+        public void CheckForUpdatesIpcShouldReachRunnerKitReleaseCallback()
+        {
+            var shellPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+            var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
+            var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
+            var commonUpdating = File.ReadAllText(FindSourceFile("src", "common", "updating", "updating.cpp"));
+            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+            var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
+            var updatingSettings = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "UpdatingSettings.cs"));
+
+            StringAssert.Contains(shellPage, "CheckForUpdatesMsgCallback?.Invoke(msg);");
+            StringAssert.Contains(settingsWindow, "action == L\"check_for_updates\"");
+            StringAssert.Contains(settingsWindow, "isUpdateCheckThreadRunning.compare_exchange_strong");
+            StringAssert.Contains(settingsWindow, "CheckForUpdatesCallback();");
+            StringAssert.Contains(updateUtils, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
+            StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
+            StringAssert.Contains(commonUpdating, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
+            StringAssert.Contains(commonUpdating, "https://api.github.com/repos/guijianchou/Kit/releases");
+            StringAssert.Contains(updateUtils, "HttpCacheReadBehavior::NoCache");
+            StringAssert.Contains(updateUtils, "HttpCacheWriteBehavior::NoCache");
+            StringAssert.Contains(updateUtils, "Cache-Control");
+            StringAssert.Contains(updateUtils, "response.IsSuccessStatusCode()");
+            StringAssert.Contains(updateUtils, "#include <common/updating/updateState.h>");
+            StringAssert.Contains(updateUtils, "UpdateState::read()");
+            StringAssert.Contains(updateUtils, "UpdateState::store");
+            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Manual)");
+            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Periodic)");
+            StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic");
+            StringAssert.Contains(updateUtils, "periodicCheckInterval = std::chrono::hours(24)");
+            StringAssert.Contains(updateUtils, "failedRetryInterval = std::chrono::hours(2)");
+            StringAssert.Contains(updateUtils, "retryAfterFailure = !check_for_updates(UpdateCheckMode::Periodic)");
+            StringAssert.Contains(updateUtils, "std::this_thread::sleep_for(failedRetryInterval)");
+            Assert.IsFalse(updateUtils.Contains("idlePollInterval", StringComparison.Ordinal), "Periodic checks should sleep until the next meaningful check instead of waking every hour.");
+            StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp");
+            StringAssert.Contains(generalViewModel, "Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile");
+            StringAssert.Contains(generalViewModel, "UpdatingSettings.LoadSettings()");
+            StringAssert.Contains(generalViewModel, "ManualUpdateCheckTimeoutMs");
+            StringAssert.Contains(generalViewModel, "IsResultNewerThanBaseline");
+            StringAssert.Contains(generalViewModel, "IsCheckForUpdatesButtonEnabled");
+            StringAssert.Contains(updatingSettings, "FileShare.ReadWrite | FileShare.Delete");
+            Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "Kit release checks must not download installers.");
+            Assert.IsFalse(updateUtils.Contains("PowerToys.Update.exe", StringComparison.Ordinal), "Kit release checks must not launch the updater executable.");
+            Assert.IsFalse(updateUtils.Contains("ShellExecuteEx", StringComparison.Ordinal), "Kit release checks must not launch external updater processes.");
+            Assert.IsFalse(updateUtils.Contains("#include <common/updating/updating.h>", StringComparison.Ordinal), "Kit should reuse only the update-state file model, not the full updater library.");
+            Assert.IsFalse(updateUtils.Contains("EnsureSuccessStatusCode", StringComparison.Ordinal), "Kit release checks should not throw first-chance WinRT exceptions for expected GitHub HTTP errors such as 403.");
+            Assert.IsFalse(generalViewModel.Contains("QueueUpdateCheckResultRefresh", StringComparison.Ordinal), "Settings should rely on the existing UpdateState.json watcher instead of a manual polling loop.");
+            Assert.IsFalse(generalViewModel.Contains("UpdateCheckMinimumDisplayMs", StringComparison.Ordinal), "Settings should not add artificial update-check timing.");
+        }
+
+        [TestMethod]
+        public void KitGeneralPageShouldPlaceExperimentationBeforeBackupAndRestore()
+        {
+            var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+
+            var experimentationIndex = xaml.IndexOf("x:Uid=\"General_Experimentation\"", StringComparison.Ordinal);
+            var backupAndRestoreIndex = xaml.IndexOf("x:Uid=\"General_SettingsBackupAndRestoreTitle\"", StringComparison.Ordinal);
+
+            Assert.IsTrue(experimentationIndex >= 0, "General Experimentation section should be present.");
+            Assert.IsTrue(backupAndRestoreIndex >= 0, "General Back up & restore section should be present.");
+            Assert.IsTrue(experimentationIndex < backupAndRestoreIndex, "Experimentation should appear before Back up & restore on the General page.");
+        }
+
+        [TestMethod]
+        public void KitIntroTextShouldBeEnglish()
+        {
+            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+            var readme = File.ReadAllText(FindSourceFile("README.md"));
+
+            StringAssert.Contains(resources, "Kit is a local PowerToys-derived workspace");
+            StringAssert.Contains(readme, "Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys.");
+
+            Assert.IsFalse(resources.Contains("应用源于", StringComparison.Ordinal));
+            Assert.IsFalse(resources.Contains("修改自用", StringComparison.Ordinal));
+            Assert.IsFalse(resources.Contains("差分比对", StringComparison.Ordinal));
+            Assert.IsFalse(readme.Contains("应用源于", StringComparison.Ordinal));
+            Assert.IsFalse(readme.Contains("修改自用", StringComparison.Ordinal));
+            Assert.IsFalse(readme.Contains("差分比对", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitDashboardShouldUseEnglishPowerToysStyleHomeWithoutUpdateEntrypoints()
+        {
+            var dashboard = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
+
+            StringAssert.Contains(dashboard, "x:Uid=\"DashboardIntro\"");
+            StringAssert.Contains(dashboard, "ms-appx:///Assets/Settings/Modules/PT.png");
+            StringAssert.Contains(dashboard, "MaxWidth=\"160\"");
+            StringAssert.Contains(dashboard, "QuickAccessList");
+            StringAssert.Contains(dashboard, "ModuleList");
+            StringAssert.Contains(dashboard, "x:Uid=\"QuickAccessTitle\"");
+            StringAssert.Contains(dashboard, "x:Uid=\"ShortcutsOverview\"");
+            StringAssert.Contains(dashboard, "x:Uid=\"UtilitiesHeader\"");
+
+            Assert.IsFalse(dashboard.Contains("应用源于", StringComparison.Ordinal));
+            Assert.IsFalse(dashboard.Contains("修改自用", StringComparison.Ordinal));
+            Assert.IsFalse(dashboard.Contains("差分比对", StringComparison.Ordinal));
+            Assert.IsFalse(dashboard.Contains("CheckUpdateControl", StringComparison.Ordinal));
+            Assert.IsFalse(dashboard.Contains("LearnWhatsNew", StringComparison.Ordinal));
+            Assert.IsFalse(dashboard.Contains("WhatsNewButton_Click", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitSettingsAndBackupPathsShouldUseKitBranding()
+        {
+            var settingPath = new SettingPath();
+            var generalSettingsPath = settingPath.GetSettingsPath(string.Empty);
+            var backupUtils = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "SettingsBackupAndRestoreUtils.cs"));
+            var backupManifest = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "backup_restore_settings.json"));
+
+            StringAssert.Contains(generalSettingsPath, $"{Path.DirectorySeparatorChar}Kit{Path.DirectorySeparatorChar}settings.json");
+            Assert.IsFalse(generalSettingsPath.Contains($"{Path.DirectorySeparatorChar}PowerToys{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
+
+            StringAssert.Contains(backupUtils, "Software\\\\Microsoft\\\\Kit");
+            StringAssert.Contains(backupUtils, "\"Kit\\\\Backup\"");
+            StringAssert.Contains(backupUtils, "\"Kit_settings_\"");
+            Assert.IsFalse(backupUtils.Contains("Software\\\\Microsoft\\\\PowerToys", StringComparison.Ordinal));
+            Assert.IsFalse(backupUtils.Contains("\"PowerToys\\\\Backup\"", StringComparison.Ordinal));
+            Assert.IsFalse(backupUtils.Contains("PowerToys Run hack fix-up", StringComparison.Ordinal), "Kit backup code should not keep inactive PowerToys Run plugin fix-up branches.");
+            Assert.IsFalse(backupUtils.Contains("GetPTRunIgnoredSettings", StringComparison.Ordinal), "Kit backup code should not keep inactive PowerToys Run plugin fix-up helpers.");
+
+            StringAssert.Contains(backupManifest, "*Kit\\\\log_settings.json");
+            Assert.IsFalse(backupManifest.Contains("*Kit\\\\oobe_settings.json", StringComparison.Ordinal), "Kit should not keep an OOBE state backup rule after OOBE launch state is deleted.");
+            Assert.IsFalse(backupManifest.Contains("*PowerToys\\\\log_settings.json", StringComparison.Ordinal));
+            Assert.IsFalse(backupManifest.Contains("*PowerToys\\\\oobe_settings.json", StringComparison.Ordinal));
+            Assert.IsFalse(backupManifest.Contains("Keyboard Manager", StringComparison.Ordinal), "Kit backup defaults should not include inactive Keyboard Manager rules.");
+            Assert.IsFalse(backupManifest.Contains("FancyZones", StringComparison.Ordinal), "Kit backup defaults should not include inactive FancyZones rules.");
+            Assert.IsFalse(backupManifest.Contains("Workspaces", StringComparison.Ordinal), "Kit backup defaults should not include inactive Workspaces rules.");
+            Assert.IsFalse(backupManifest.Contains("PowerToys Run", StringComparison.Ordinal), "Kit backup defaults should not include inactive PowerToys Run rules.");
+            Assert.IsFalse(backupManifest.Contains("IgnoredPTRunSettings", StringComparison.Ordinal), "Kit backup defaults should not keep PowerToys Run plugin fix-up rules.");
+            Assert.IsFalse(backupManifest.Contains("CustomRestoreSettings", StringComparison.Ordinal), "Kit backup defaults should not keep inactive module custom restore rules.");
+        }
+
+        [TestMethod]
+        public void KitDashboardShouldListCopiedModulesAndQuickAccessShouldKeepActionableModules()
+        {
+            var dashboardViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.cs"));
+            var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
+
+            CollectionAssert.AreEqual(
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor, ModuleType.PowerDisplay },
+                KitModuleCatalog.ActiveModules.ToArray());
+            CollectionAssert.AreEqual(
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor, ModuleType.PowerDisplay },
+                KitModuleCatalog.DashboardModules.ToArray());
+            CollectionAssert.AreEqual(
+                new[] { ModuleType.LightSwitch, ModuleType.Monitor, ModuleType.PowerDisplay },
+                KitModuleCatalog.QuickAccessModules.ToArray());
+            Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.Monitor));
+            Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.PowerDisplay));
+            Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.ImageResizer));
+
+            StringAssert.Contains(dashboardViewModel, "KitModuleCatalog.DashboardModules");
+            StringAssert.Contains(dashboardViewModel, "ModuleType.LightSwitch");
+            StringAssert.Contains(dashboardViewModel, "ModuleType.Awake");
+            Assert.IsFalse(dashboardViewModel.Contains("foreach (ModuleType moduleType in Enum.GetValues<ModuleType>())", StringComparison.Ordinal));
+            StringAssert.Contains(dashboardViewModel, "moduleTypes: KitModuleCatalog.DashboardModules");
+            StringAssert.Contains(dashboardViewModel, "fallbackLauncher: OpenModuleSettingsFromQuickAccess");
+            StringAssert.Contains(dashboardViewModel, "ModuleType.Awake => GetModuleItemsAwake()");
+            StringAssert.Contains(dashboardViewModel, "ModuleType.PowerDisplay => GetModuleItemsPowerDisplay()");
+            StringAssert.Contains(dashboardViewModel, "PowerDisplayLaunchClicked");
+            StringAssert.Contains(dashboardViewModel, "new DashboardModuleActivationItem()");
+
+            StringAssert.Contains(quickAccessViewModel, "KitModuleCatalog.QuickAccessModules");
+            StringAssert.Contains(quickAccessViewModel, "ModuleType.LightSwitch");
+            StringAssert.Contains(quickAccessViewModel, "ModuleType.PowerDisplay");
+            StringAssert.Contains(quickAccessViewModel, "IEnumerable<ModuleType>? moduleTypes = null");
+            StringAssert.Contains(quickAccessViewModel, "Func<ModuleType, bool>? fallbackLauncher = null");
+            Assert.IsFalse(dashboardViewModel.Contains("private static readonly ModuleType[] KitDashboardModules", StringComparison.Ordinal));
+            Assert.IsFalse(quickAccessViewModel.Contains("private static readonly ModuleType[] KitQuickAccessModules", StringComparison.Ordinal));
+            Assert.IsFalse(quickAccessViewModel.Contains("AddFlyoutMenuItem(ModuleType.ColorPicker)", StringComparison.Ordinal));
+            Assert.IsFalse(quickAccessViewModel.Contains("AddFlyoutMenuItem(ModuleType.CmdPal)", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitOutgoingGeneralSettingsShouldOnlySerializeActiveModuleEnabledStates()
+        {
+            var settings = new GeneralSettings();
+            settings.Enabled.Awake = false;
+            settings.Enabled.LightSwitch = true;
+            settings.Enabled.Monitor = true;
+            settings.Enabled.PowerDisplay = false;
+
+            var outgoingJson = new OutGoingGeneralSettings(settings).ToString();
+
+            using var document = System.Text.Json.JsonDocument.Parse(outgoingJson);
+            var enabled = document.RootElement.GetProperty("general").GetProperty("enabled");
+            var serializedModuleNames = enabled.EnumerateObject().Select(property => property.Name).ToArray();
+
+            CollectionAssert.AreEquivalent(
+                KitActiveEnabledModuleKeys,
+                serializedModuleNames);
+            Assert.IsFalse(enabled.TryGetProperty("FancyZones", out _));
+            Assert.IsFalse(enabled.TryGetProperty("Image Resizer", out _));
+            Assert.IsFalse(enabled.TryGetProperty("AlwaysOnTop", out _));
+            Assert.AreEqual(false, enabled.GetProperty("Awake").GetBoolean());
+            Assert.AreEqual(true, enabled.GetProperty("LightSwitch").GetBoolean());
+            Assert.AreEqual(true, enabled.GetProperty("Monitor").GetBoolean());
+            Assert.AreEqual(false, enabled.GetProperty("PowerDisplay").GetBoolean());
+        }
+
+        [TestMethod]
+        public void KitRunnerShouldLoadCopiedAwakeModule()
+        {
+            var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
+            var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var runnerSettingsHeader = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.h"));
+            var runnerSettingsSource = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
+            var shellXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml"));
+            var shellCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+            var appCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
+            var moduleGpoHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "ModuleGpoHelper.cs"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+
+            _ = FindSourceFile("src", "modules", "awake", "AwakeModuleInterface", "AwakeModuleInterface.vcxproj");
+            _ = FindSourceFile("src", "modules", "awake", "Awake", "Awake.csproj");
+            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplay.csproj");
+            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay.Lib", "PowerDisplay.Lib.csproj");
+            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay.Models", "PowerDisplay.Models.csproj");
+            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayModuleInterface.vcxproj");
+
+            StringAssert.Contains(solution, "src/modules/awake/Awake/Awake.csproj");
+            StringAssert.Contains(solution, "src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj");
+            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplay/PowerDisplay.csproj");
+            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplay.Lib/PowerDisplay.Lib.csproj");
+            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplay.Models/PowerDisplay.Models.csproj");
+            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplayModuleInterface/PowerDisplayModuleInterface.vcxproj");
+            StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/awake/Awake/Awake.csproj\"");
+            StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj\"");
+            StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/powerdisplay/PowerDisplay/PowerDisplay.csproj\"");
+            StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/powerdisplay/PowerDisplayModuleInterface/PowerDisplayModuleInterface.vcxproj\"");
+            StringAssert.Contains(runnerMain, "KitKnownModules");
+            StringAssert.Contains(runnerMain, "PowerToys.AwakeModuleInterface.dll");
+            StringAssert.Contains(runnerMain, "PowerToys.LightSwitchModuleInterface.dll");
+            StringAssert.Contains(runnerMain, "PowerToys.PowerDisplayModuleInterface.dll");
+            Assert.IsFalse(runnerMain.Contains("directory_iterator", StringComparison.Ordinal));
+            StringAssert.Contains(runnerSettingsHeader, "Awake,");
+            StringAssert.Contains(runnerSettingsHeader, "Monitor,");
+            StringAssert.Contains(runnerSettingsHeader, "PowerDisplay,");
+            StringAssert.Contains(runnerSettingsSource, "return \"Awake\";");
+            StringAssert.Contains(runnerSettingsSource, "value == \"Awake\"");
+            StringAssert.Contains(runnerSettingsSource, "return \"Monitor\";");
+            StringAssert.Contains(runnerSettingsSource, "value == \"Monitor\"");
+            StringAssert.Contains(runnerSettingsSource, "return \"PowerDisplay\";");
+            StringAssert.Contains(runnerSettingsSource, "value == \"PowerDisplay\"");
+            StringAssert.Contains(shellXaml, "AwakeNavigationItem");
+            StringAssert.Contains(shellXaml, "PowerDisplayNavigationItem");
+            StringAssert.Contains(shellCode, "NavHelper.SetNavigateTo(AwakeNavigationItem, typeof(AwakePage));");
+            StringAssert.Contains(shellCode, "NavHelper.SetNavigateTo(PowerDisplayNavigationItem, typeof(PowerDisplayPage));");
+            StringAssert.Contains(appCode, "\"Awake\" => typeof(AwakePage)");
+            StringAssert.Contains(appCode, "\"PowerDisplay\" => typeof(PowerDisplayPage)");
+            StringAssert.Contains(moduleGpoHelper, "ModuleType.Awake => typeof(AwakePage)");
+            StringAssert.Contains(moduleGpoHelper, "ModuleType.PowerDisplay => typeof(PowerDisplayPage)");
+            StringAssert.Contains(settingsProject, @"..\..\modules\powerdisplay\PowerDisplay.Models\PowerDisplay.Models.csproj");
+            Assert.IsFalse(settingsProject.Contains("Compile Remove=\"ViewModels\\Awake*.cs\"", StringComparison.Ordinal));
+            Assert.IsFalse(settingsProject.Contains("Compile Remove=\"SettingsXAML\\Views\\Awake*.xaml.cs\"", StringComparison.Ordinal));
+            Assert.IsFalse(settingsProject.Contains("Page Remove=\"SettingsXAML\\Views\\Awake*.xaml\"", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitShouldDeleteInactiveSettingsUiTestProject()
+        {
+            var repoRoot = Path.GetDirectoryName(FindSourceFile(".gitignore"));
+            var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
+
+            Assert.IsFalse(Directory.Exists(Path.Combine(repoRoot!, "src", "settings-ui", "UITest-Settings")), "Kit should delete the inactive Settings UI test project because it is not part of the solution and still targets removed OOBE/PowerToys surfaces.");
+            Assert.IsFalse(solution.Contains("UITest-Settings", StringComparison.Ordinal), "Kit solution should not include the inactive Settings UI test project.");
+        }
+
+        [TestMethod]
+        public void KitDashboardQuickAccessEmptyStateShouldUseVisibleItemCount()
+        {
+            var dashboard = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
+            var dashboardViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.cs"));
+            var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
+
+            StringAssert.Contains(quickAccessViewModel, "public int VisibleItemCount");
+            StringAssert.Contains(dashboardViewModel, "public int VisibleQuickAccessItemsCount");
+            StringAssert.Contains(dashboard, "ViewModel.VisibleQuickAccessItemsCount");
+            Assert.IsFalse(dashboard.Contains("ViewModel.QuickAccessItems.Count", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitWindowTitleShouldUseKitWithoutDebugSubtitle()
+        {
+            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+            var shell = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+            var titleIndex = resources.IndexOf("data name=\"SettingsWindow_Title\"", StringComparison.Ordinal);
+            var adminTitleIndex = resources.IndexOf("data name=\"SettingsWindow_AdminTitle\"", StringComparison.Ordinal);
+
+            Assert.IsTrue(titleIndex >= 0 && resources.IndexOf("<value>Kit</value>", titleIndex, StringComparison.Ordinal) > titleIndex);
+            Assert.IsTrue(adminTitleIndex >= 0 && resources.IndexOf("<value>Administrator: Kit</value>", adminTitleIndex, StringComparison.Ordinal) > adminTitleIndex);
+            Assert.IsFalse(shell.Contains("AppTitleBar.Subtitle = \"Debug\"", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitGeneralShouldNotKeepAboutAsLastSection()
+        {
+            var general = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+
+            Assert.IsFalse(general.Contains("x:Uid=\"General_About\"", StringComparison.Ordinal), "The bottom About section should be removed.");
+        }
+
+        [TestMethod]
+        public void KitGeneralShouldKeepVersionUpdateSectionAndRemoveAbout()
+        {
+            var generalXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+            var generalCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml.cs"));
+            var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
+
+            var versionIndex = generalXaml.IndexOf("x:Uid=\"General_VersionAndUpdate\"", StringComparison.Ordinal);
+            Assert.IsTrue(versionIndex >= 0, "General page should keep the PowerToys-style version and update group.");
+            var versionXaml = generalXaml.Substring(versionIndex, generalXaml.IndexOf("x:Uid=\"Admin_Mode\"", StringComparison.Ordinal) - versionIndex);
+            StringAssert.Contains(versionXaml, "Header=\"{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}\"");
+            StringAssert.Contains(versionXaml, "https://github.com/guijianchou/Kit/releases/");
+            StringAssert.Contains(versionXaml, "GeneralPage_CheckForUpdates");
+            Assert.IsFalse(versionXaml.Contains("GeneralPage_AutoDownloadAndInstallUpdates", StringComparison.Ordinal), "Kit should not expose automatic update downloads.");
+            Assert.IsFalse(versionXaml.Contains("General_DownloadAndInstall", StringComparison.Ordinal), "Kit should not expose installer download actions.");
+            Assert.IsFalse(versionXaml.Contains("General_InstallNow", StringComparison.Ordinal), "Kit should not expose installer install actions.");
+
+            var aboutIndex = generalXaml.IndexOf("x:Uid=\"General_About\"", StringComparison.Ordinal);
+            Assert.IsTrue(aboutIndex < 0, "General page should remove the bottom About group.");
+
+            Assert.IsFalse(generalCodeBehind.Contains("InitializeReportBugLink", StringComparison.Ordinal), "General page should not prepare About bug-report links.");
+            Assert.IsFalse(generalCodeBehind.Contains("BugReportToolClicked", StringComparison.Ordinal), "General page should not keep hidden About bug-report actions.");
+            Assert.IsFalse(generalCodeBehind.Contains("ViewDiagnosticData_Click", StringComparison.Ordinal), "General page should not keep hidden diagnostics actions.");
+            Assert.IsFalse(generalCodeBehind.Contains("OpenDiagnosticsAndFeedbackSettings_Click", StringComparison.Ordinal), "General page should not keep hidden diagnostics links.");
+            Assert.IsFalse(generalViewModel.Contains("ReportBugLink", StringComparison.Ordinal), "General ViewModel should not keep About bug-report link state.");
+            Assert.IsFalse(generalViewModel.Contains("github.com/microsoft/PowerToys/issues", StringComparison.Ordinal), "General ViewModel should not build upstream issue links for About.");
+        }
+
+        [TestMethod]
+        public void KitAboutVersionShouldUse201ReleaseMetadata()
+        {
+            var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
+            var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
+            var directoryBuildProps = File.ReadAllText(FindSourceFile("Directory.Build.props"));
+            var helper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Utilities", "Helper.cs"));
+            var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
+            var readme = File.ReadAllText(FindSourceFile("README.md"));
+            var readmeZh = File.ReadAllText(FindSourceFile("README_zh.md"));
+            var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
+            var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
+
+            StringAssert.Contains(versionProps, "<Version>2.0.1</Version>");
+            Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
+            StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
+            StringAssert.Contains(helper, "GetProductDisplayVersion");
+            StringAssert.Contains(generalViewModel, "Helper.GetProductDisplayVersion()");
+            StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
+            StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
+            StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
+            StringAssert.Contains(readme, "Current Kit version: `2.0.1`.");
+            StringAssert.Contains(readme, "## Changelog");
+            StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.1`。");
+            StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
+            StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
+            StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
+            StringAssert.Contains(changelog, "### 2.0.1");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.1`");
+            StringAssert.Contains(changelog, "Trimmed GPOWrapper and Settings GPO helper policy surface");
+            StringAssert.Contains(changelog, "Trimmed ADMX/ADML policy assets");
+            StringAssert.Contains(changelog, "Removed the upstream BugReportTool source");
+            StringAssert.Contains(changelog, "Deleted the legacy sibling Settings asset tree");
+            StringAssert.Contains(changelog, "Deleted the inactive standalone module_loader utility");
+            StringAssert.Contains(changelog, "Quick Access now uses the current WinUI SystemBackdrop API");
+            StringAssert.Contains(changelog, "Renamed the Quick Access window title from the upstream `PowerToys Quick Access (Preview)` label to `Kit Quick Access`");
+            StringAssert.Contains(changelog, "runtime code no longer documents inactive AdvancedPaste or PowerToys Run special cases as current behavior");
+            StringAssert.Contains(changelog, "sparse package manifest");
+            StringAssert.Contains(changelog, "Kit `2.0.1`");
+            StringAssert.Contains(changelog, "signing helpers");
+            StringAssert.Contains(changelog, "no package is signed");
+            StringAssert.Contains(changelog, "build essentials");
+            StringAssert.Contains(changelog, "`UITestAutomation`");
+            StringAssert.Contains(changelog, "`ModuleHelper`");
+            StringAssert.Contains(changelog, "historical module-key mappings");
+            StringAssert.Contains(changelog, "four active modules");
+            StringAssert.Contains(changelog, "XAML search index builder no longer carries inactive upstream module icon and panel fallbacks");
+            StringAssert.Contains(changelog, "Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface");
+            StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
+            StringAssert.Contains(changelog, "Deleted the inactive settings telemetry worker source and runner project filters");
+            StringAssert.Contains(changelog, "Deleted the inactive Settings UI test project that still targeted removed OOBE and PowerToys surfaces");
+            StringAssert.Contains(changelog, "Deleted the inactive DSC source tree and manifest generation script");
+            StringAssert.Contains(changelog, "Deleted the DSC-only Settings `setAdditional` command-line entry point");
+            StringAssert.Contains(changelog, "Deleted inactive Settings UI resource strings for removed module pages and OOBE surfaces");
+            StringAssert.Contains(changelog, "Removed disabled OOBE/SCOOBE launch flag plumbing from the runner and Settings entry point");
+            StringAssert.Contains(changelog, "Removed unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles");
+            StringAssert.Contains(changelog, "Pruned backup/restore defaults to the active Kit settings surface");
+            StringAssert.Contains(changelog, "Removed the remaining no-op managed telemetry calls and event source classes from Awake and PowerDisplay");
+            StringAssert.Contains(changelog, "Removed PowerDisplay's settings telemetry IPC event and module-interface signaling path");
+            StringAssert.Contains(changelog, "Pruned `PowerToys.Interop` WinRT and shared IPC constants to Kit's active runtime surface");
+            StringAssert.Contains(changelog, "trimmed `PowerToys.Interop` IPC constant surface");
+            StringAssert.Contains(changelog, "Renamed the active Settings termination WinRT projection from `PowerToysRunnerTerminateSettingsEvent` to `KitRunnerTerminateSettingsEvent`");
+            StringAssert.Contains(changelog, "Kit-named Settings termination projection");
+            StringAssert.Contains(changelog, "Deleted the inactive AdvancedPaste-only `LanguageModelProvider` source tree");
+            StringAssert.Contains(changelog, "provider UI metadata/helpers");
+            StringAssert.Contains(changelog, "non-serialized AI enum helpers");
+            StringAssert.Contains(changelog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
+            StringAssert.Contains(changelog, "Removed Shortcut Conflict window special cases for inactive AdvancedPaste, Mouse Without Borders, Peek, and PowerToys Run settings");
+            StringAssert.Contains(changelog, "removed Shortcut Conflict inactive-module special cases");
+            StringAssert.Contains(changelog, "Narrowed `SettingsFactory` to explicit Quick Access, LightSwitch, and PowerDisplay hotkey settings");
+            StringAssert.Contains(changelog, "explicit SettingsFactory hotkey boundary");
+            StringAssert.Contains(changelog, "Removed the inactive MouseUtils conflict special branch from `PageViewModelBase`");
+            StringAssert.Contains(changelog, "removed inactive MouseUtils page conflict branch");
+            StringAssert.Contains(changelog, "Replaced stale Settings package-reference comments");
+            StringAssert.Contains(changelog, "Settings package-reference comment cleanup");
+            StringAssert.Contains(changelog, "Removed the unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin and stale third-party notice entry");
+            StringAssert.Contains(changelog, "Registry Preview-only SkiaSharp package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused Command Palette extension central package pin");
+            StringAssert.Contains(changelog, "Command Palette extension package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused Command Palette Adaptive Cards central package pins");
+            StringAssert.Contains(changelog, "stale AdaptiveCards third-party notice entries");
+            StringAssert.Contains(changelog, "Command Palette Adaptive Cards package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused Command Palette WinGet interop central package pin");
+            StringAssert.Contains(changelog, "Command Palette WinGet interop package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused AdvancedPaste Markdown conversion central package pins");
+            StringAssert.Contains(changelog, "stale ReverseMarkdown third-party notice entry");
+            StringAssert.Contains(changelog, "AdvancedPaste Markdown conversion package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused PowerToys Run central package pins");
+            StringAssert.Contains(changelog, "stale PowerToys Run Mages third-party notice section");
+            StringAssert.Contains(changelog, "PowerToys Run package pin removal");
+            StringAssert.Contains(changelog, "Removed stale PowerToys Run Wox/Window Walker and Registry Preview HexBox utility notice sections");
+            StringAssert.Contains(changelog, "deleted PowerToys Run and Registry Preview utility notice sections");
+            StringAssert.Contains(changelog, "Removed the unused PreviewPane STL and PowerAccent central package pins");
+            StringAssert.Contains(changelog, "PreviewPane STL and PowerAccent package pin removal");
+            StringAssert.Contains(changelog, "Removed the unused Command Palette toolkit and host central package pins");
+            StringAssert.Contains(changelog, "stale ToolGood.Words.Pinyin third-party notice section");
+            StringAssert.Contains(changelog, "Command Palette toolkit and host package pin removal");
+            StringAssert.Contains(changelog, "Removed the deleted-module-only central package pins for DSC, Workspaces/FancyZones, Peek, and PowerToys Run OneNote");
+            StringAssert.Contains(changelog, "no Kit project references `ModernWpfUI`, `NJsonSchema`, `ScipBe.Common.Office.OneNote`, or `SharpCompress`");
+            StringAssert.Contains(changelog, "deleted-module package pin removal");
+            StringAssert.Contains(changelog, "Removed the deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths");
+            StringAssert.Contains(changelog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
+            StringAssert.Contains(changelog, "deleted-utility package pin removal");
+            StringAssert.Contains(changelog, "Removed the deleted Launcher, AI, and CmdPal central package pins");
+            StringAssert.Contains(changelog, "no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(changelog, "stale CmdPal WyHash third-party notice section");
+            StringAssert.Contains(changelog, "deleted Launcher/AI/CmdPal package pin removal");
+            StringAssert.Contains(readme, "orphaned CmdPal version props");
+            StringAssert.Contains(readme, "resource strings, OOBE/model assets");
+            StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
+            StringAssert.Contains(readme, "Shortcut Conflict hotkey lookup is explicit for Quick Access, LightSwitch, and PowerDisplay");
+            StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
+            StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access、LightSwitch 和 PowerDisplay");
+            StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
+            StringAssert.Contains(developmentLog, "## 2026-05-28 Version 2.0.1 Stability Refactor");
+            StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
+            StringAssert.Contains(developmentLog, "ADMX/ADML policy assets now match");
+            StringAssert.Contains(developmentLog, "upstream BugReportTool source and launch paths were deleted");
+            StringAssert.Contains(developmentLog, "legacy sibling Settings asset tree");
+            StringAssert.Contains(developmentLog, "inactive standalone module_loader utility");
+            StringAssert.Contains(developmentLog, "Quick Access window now uses the current WinUI SystemBackdrop API");
+            StringAssert.Contains(developmentLog, "Quick Access window title is now `Kit Quick Access`");
+            StringAssert.Contains(developmentLog, "Shared module-interface and Settings dispatch comments no longer describe inactive AdvancedPaste or PowerToys Run special cases");
+            StringAssert.Contains(developmentLog, "sparse package manifest");
+            StringAssert.Contains(developmentLog, "signing helpers");
+            StringAssert.Contains(developmentLog, "no package was signed");
+            StringAssert.Contains(developmentLog, "build-essentials.ps1");
+            StringAssert.Contains(developmentLog, "`UITestAutomation`");
+            StringAssert.Contains(developmentLog, "`ModuleHelper`");
+            StringAssert.Contains(developmentLog, "old settings JSON and IPC compatibility");
+            StringAssert.Contains(developmentLog, "four-module active set");
+            StringAssert.Contains(developmentLog, "XAML search index builder now derives icons from active Settings XAML only");
+            StringAssert.Contains(developmentLog, "runner keyboard hook no longer carries Shortcut Guide Win-key tracking");
+            StringAssert.Contains(developmentLog, "keyboard hook window registration no-op was deleted");
+            StringAssert.Contains(developmentLog, "inactive settings telemetry worker source files were deleted");
+            StringAssert.Contains(developmentLog, "inactive Settings UI test project was deleted");
+            StringAssert.Contains(developmentLog, "inactive DSC source tree and manifest generation script were deleted");
+            StringAssert.Contains(developmentLog, "DSC-only Settings `setAdditional` command-line entry point was deleted");
+            StringAssert.Contains(developmentLog, "Inactive Settings UI resource strings for removed module pages and OOBE surfaces were deleted");
+            StringAssert.Contains(developmentLog, "Disabled OOBE/SCOOBE launch flag plumbing was removed");
+            StringAssert.Contains(developmentLog, "Unused OOBE/SCOOBE SettingsAPI state helpers, backup rules, residual resources, and XAML styles were removed");
+            StringAssert.Contains(developmentLog, "Backup/restore defaults were pruned to generic active Kit settings rules");
+            StringAssert.Contains(developmentLog, "inactive `ManagedTelemetry` source tree and managed telemetry base file were deleted");
+            StringAssert.Contains(developmentLog, "Awake and PowerDisplay no longer keep managed telemetry write calls");
+            StringAssert.Contains(developmentLog, "stale `PowerToys.ManagedTelemetry` and TraceEvent support binaries");
+            StringAssert.Contains(developmentLog, "LightSwitchService, MonitorModuleInterface, and ModuleTemplate trace sources now keep no-op runtime hooks");
+            StringAssert.Contains(developmentLog, "All active native module-interface trace headers and projects no longer inherit `TraceBase`");
+            StringAssert.Contains(developmentLog, "ModuleTemplate no-op trace defaults");
+            StringAssert.Contains(developmentLog, "Awake README telemetry-free documentation");
+            StringAssert.Contains(developmentLog, "PowerDisplay no longer exposes or listens to a settings telemetry IPC event");
+            StringAssert.Contains(developmentLog, "`PowerToys.Interop` now exposes only Kit's active runtime constants");
+            StringAssert.Contains(developmentLog, "trimmed `PowerToys.Interop` IPC constant surface");
+            StringAssert.Contains(developmentLog, "active Settings termination WinRT projection is now `KitRunnerTerminateSettingsEvent`");
+            StringAssert.Contains(developmentLog, "Kit-named Settings termination projection");
+            StringAssert.Contains(developmentLog, "inactive AdvancedPaste-only `LanguageModelProvider` source tree was deleted");
+            StringAssert.Contains(developmentLog, "provider UI metadata/helpers");
+            StringAssert.Contains(developmentLog, "non-serialized AI enum helpers");
+            StringAssert.Contains(developmentLog, "historical settings serialization models remain");
+            StringAssert.Contains(developmentLog, "deleted AdvancedPaste AI provider source/package/UI/enum helper remnants");
+            StringAssert.Contains(developmentLog, "Shortcut Conflict window no longer keeps inactive AdvancedPaste, Mouse Without Borders, Peek, or PowerToys Run settings special cases");
+            StringAssert.Contains(developmentLog, "removed Shortcut Conflict inactive-module special cases");
+            StringAssert.Contains(developmentLog, "`SettingsFactory` now resolves only Quick Access, LightSwitch, and PowerDisplay hotkey settings");
+            StringAssert.Contains(developmentLog, "explicit SettingsFactory hotkey boundary");
+            StringAssert.Contains(developmentLog, "PageViewModelBase` no longer carries the inactive MouseUtils conflict special branch");
+            StringAssert.Contains(developmentLog, "removed inactive MouseUtils page conflict branch");
+            StringAssert.Contains(developmentLog, "Settings package-reference comments now describe current dependency alignment");
+            StringAssert.Contains(developmentLog, "Settings package-reference comment cleanup");
+            StringAssert.Contains(developmentLog, "The unused Registry Preview-only `SkiaSharp.Views.WinUI` central package pin and stale third-party notice entry were removed");
+            StringAssert.Contains(developmentLog, "Registry Preview-only SkiaSharp package pin removal");
+            StringAssert.Contains(developmentLog, "The unused Command Palette extension central package pin was removed");
+            StringAssert.Contains(developmentLog, "Command Palette extension package pin removal");
+            StringAssert.Contains(developmentLog, "The unused Command Palette Adaptive Cards central package pins were removed");
+            StringAssert.Contains(developmentLog, "stale AdaptiveCards third-party notice entries");
+            StringAssert.Contains(developmentLog, "Command Palette Adaptive Cards package pin removal");
+            StringAssert.Contains(developmentLog, "The unused Command Palette WinGet interop central package pin was removed");
+            StringAssert.Contains(developmentLog, "Command Palette WinGet interop package pin removal");
+            StringAssert.Contains(developmentLog, "The unused AdvancedPaste Markdown conversion central package pins were removed");
+            StringAssert.Contains(developmentLog, "stale ReverseMarkdown third-party notice entry");
+            StringAssert.Contains(developmentLog, "AdvancedPaste Markdown conversion package pin removal");
+            StringAssert.Contains(developmentLog, "The unused PowerToys Run central package pins were removed");
+            StringAssert.Contains(developmentLog, "stale PowerToys Run Mages third-party notice section");
+            StringAssert.Contains(developmentLog, "PowerToys Run package pin removal");
+            StringAssert.Contains(developmentLog, "The stale PowerToys Run Wox/Window Walker and Registry Preview HexBox utility notice sections were removed");
+            StringAssert.Contains(developmentLog, "deleted PowerToys Run and Registry Preview utility notice sections");
+            StringAssert.Contains(developmentLog, "The unused PreviewPane STL and PowerAccent central package pins were removed");
+            StringAssert.Contains(developmentLog, "PreviewPane STL and PowerAccent package pin removal");
+            StringAssert.Contains(developmentLog, "The unused Command Palette toolkit and host central package pins were removed");
+            StringAssert.Contains(developmentLog, "stale ToolGood.Words.Pinyin third-party notice section");
+            StringAssert.Contains(developmentLog, "Command Palette toolkit and host package pin removal");
+            StringAssert.Contains(developmentLog, "The deleted-module-only DSC, Workspaces/FancyZones, Peek, and PowerToys Run OneNote central package pins were removed");
+            StringAssert.Contains(developmentLog, "no Kit project references `ModernWpfUI`, `NJsonSchema`, `ScipBe.Common.Office.OneNote`, or `SharpCompress`");
+            StringAssert.Contains(developmentLog, "deleted-module package pin removal");
+            StringAssert.Contains(developmentLog, "The deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths were removed");
+            StringAssert.Contains(developmentLog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
+            StringAssert.Contains(developmentLog, "deleted-utility package pin removal");
+            StringAssert.Contains(developmentLog, "The deleted Launcher, AI, and CmdPal central package pins were removed");
+            StringAssert.Contains(developmentLog, "no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(developmentLog, "stale CmdPal WyHash third-party notice section");
+            StringAssert.Contains(developmentLog, "deleted Launcher/AI/CmdPal package pin removal");
+            StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
+            StringAssert.Contains(developmentLog, "153/153 passing Settings UI tests after narrowing SettingsFactory to explicit hotkey settings");
+            StringAssert.Contains(developmentLog, "154/154 passing Settings UI tests after deleting the inactive MouseUtils conflict branch");
+            StringAssert.Contains(developmentLog, "155/155 passing Settings UI tests after cleaning Settings package-reference comments");
+            StringAssert.Contains(developmentLog, "156/156 passing Settings UI tests after removing the Registry Preview-only SkiaSharp package pin");
+            StringAssert.Contains(developmentLog, "157/157 passing Settings UI tests after removing the Command Palette extension package pin");
+            StringAssert.Contains(developmentLog, "158/158 passing Settings UI tests after removing the Command Palette Adaptive Cards package pins");
+            StringAssert.Contains(developmentLog, "159/159 passing Settings UI tests after removing the Command Palette WinGet interop package pin");
+            StringAssert.Contains(developmentLog, "160/160 passing Settings UI tests after removing the AdvancedPaste Markdown conversion package pins");
+            StringAssert.Contains(developmentLog, "161/161 passing Settings UI tests after removing the PowerToys Run package pins");
+            StringAssert.Contains(developmentLog, "162/162 passing Settings UI tests after removing the PreviewPane STL and PowerAccent package pins");
+            StringAssert.Contains(developmentLog, "163/163 passing Settings UI tests after removing the Command Palette toolkit and host package pins");
+            StringAssert.Contains(developmentLog, "164/164 passing Settings UI tests after removing the deleted-module package pins");
+            StringAssert.Contains(developmentLog, "165/165 passing Settings UI tests after removing the deleted-utility package pins");
+            StringAssert.Contains(developmentLog, "166/166 passing Settings UI tests after removing the deleted Launcher, AI, and CmdPal package pins");
+            StringAssert.Contains(developmentLog, "168/168 passing Settings UI tests after the Quick Access title, runtime comment, and 2.0.1 metadata finalization");
+            StringAssert.Contains(developmentLog, "169/169 passing Settings UI tests after deleting stale utility NOTICE sections and rewording current Kit runtime logs/comments");
+            StringAssert.Contains(developmentLog, "170/170 passing Settings UI tests after trimming the sparse package manifest to active app identities");
+            StringAssert.Contains(developmentLog, "active Kit UI-test launch targets");
+
+            Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", string.Empty));
+            Assert.AreEqual("v2.0.1", Helper.GetProductDisplayVersion("v2.0.1", "Local"));
+        }
+
+        [TestMethod]
+        public void KitUpdatePropertiesShouldRemainDisabled()
+        {
+            var settings = new GeneralSettings
+            {
+                AutoDownloadUpdates = true,
+                ShowNewUpdatesToastNotification = true,
+                ShowWhatsNewAfterUpdates = true,
+            };
+            var viewModel = CreateViewModel(CreateRepository(settings));
+
+            Assert.IsFalse(viewModel.AutoDownloadUpdates);
+            Assert.IsFalse(viewModel.ShowNewUpdatesToastNotification);
+            Assert.IsFalse(viewModel.ShowWhatsNewAfterUpdates);
+            Assert.IsFalse(viewModel.IsAutoDownloadUpdatesCardEnabled);
+            Assert.IsFalse(viewModel.IsShowNewUpdatesToastNotificationCardEnabled);
+            Assert.IsFalse(viewModel.IsShowWhatsNewAfterUpdatesCardEnabled);
+            Assert.IsFalse(viewModel.IsDownloadAllowed);
+            Assert.IsTrue(viewModel.IsUpdatePanelVisible);
+            Assert.IsTrue(string.IsNullOrEmpty(viewModel.PowerToysNewAvailableVersion) || viewModel.PowerToysNewAvailableVersion.StartsWith('v'), "A cached update-state file may populate version metadata, but it must not enable updater UI.");
+        }
+
+        [TestMethod]
+        public void KitDiagnosticPropertiesShouldRemainDisabled()
+        {
+            var viewModel = CreateViewModel();
+
+            Assert.IsFalse(viewModel.EnableDataDiagnostics);
+            Assert.IsFalse(viewModel.EnableViewDataDiagnostics);
+
+            viewModel.EnableDataDiagnostics = true;
+            viewModel.EnableViewDataDiagnostics = true;
+
+            Assert.IsFalse(viewModel.EnableDataDiagnostics);
+            Assert.IsFalse(viewModel.EnableViewDataDiagnostics);
+            Assert.IsFalse(viewModel.ViewDiagnosticDataViewerChanged);
+        }
+
+        [TestMethod]
+        [DataRow("v0.18.2")]
+        [DataRow("v0.19.2")]
+        [DataRow("v0.20.1")]
+        [DataRow("v0.21.1")]
+        [DataRow("v0.22.0")]
+        public void OriginalFilesModificationTest(string version)
+        {
+            var settingPathMock = new Mock<SettingPath>();
+            var fileMock = BackCompatTestProperties.GetGeneralSettingsIOProvider(version);
+
+            var mockGeneralSettingsUtils = new SettingsUtils(fileMock.Object, settingPathMock.Object);
+            GeneralSettings originalGeneralSettings = mockGeneralSettingsUtils.GetSettingsOrDefault<GeneralSettings>();
+
+            var generalSettingsRepository = new BackCompatTestProperties.MockSettingsRepository<GeneralSettings>(mockGeneralSettingsUtils);
+
+            // Initialise View Model with test Config files
+            // Arrange
+            Func<string, int> sendMockIPCConfigMSG = msg => 0;
+            Func<string, int> sendRestartAdminIPCMessage = msg => 0;
+            Func<string, int> sendCheckForUpdatesIPCMessage = msg => 0;
+            var viewModel = new TestGeneralViewModel(
+                settingsRepository: generalSettingsRepository,
+                runAsAdminText: "GeneralSettings_RunningAsAdminText",
+                runAsUserText: "GeneralSettings_RunningAsUserText",
+                isElevated: false,
+                isAdmin: false,
+                ipcMSGCallBackFunc: sendMockIPCConfigMSG,
+                ipcMSGRestartAsAdminMSGCallBackFunc: sendRestartAdminIPCMessage,
+                ipcMSGCheckForUpdatesCallBackFunc: sendCheckForUpdatesIPCMessage,
+                configFileSubfolder: string.Empty);
+
+            // Verify that the old settings persisted
+            Assert.AreEqual(originalGeneralSettings.AutoDownloadUpdates, viewModel.AutoDownloadUpdates);
+            Assert.AreEqual(Helper.GetProductDisplayVersion(originalGeneralSettings.PowertoysVersion), viewModel.PowerToysVersion);
+            Assert.AreEqual(originalGeneralSettings.RunElevated, viewModel.RunElevated);
+            Assert.AreEqual(originalGeneralSettings.Startup, viewModel.Startup);
+
+            // Verify that the stub file was used
+            var expectedCallCount = 2;  // once via the view model, and once by the test (GetSettings<T>)
+            BackCompatTestProperties.VerifyGeneralSettingsIOProviderWasRead(fileMock, expectedCallCount);
+        }
+
+        [TestMethod]
+        public void IsElevatedShouldUpdateRunasAdminStatusAttrsWhenSuccessful()
+        {
+            // Arrange
+            Func<string, int> sendMockIPCConfigMSG = msg => { return 0; };
+            Func<string, int> sendRestartAdminIPCMessage = msg => { return 0; };
+            Func<string, int> sendCheckForUpdatesIPCMessage = msg => { return 0; };
+            GeneralViewModel viewModel = new TestGeneralViewModel(
+                settingsRepository: SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                sendMockIPCConfigMSG,
+                sendRestartAdminIPCMessage,
+                sendCheckForUpdatesIPCMessage,
+                GeneralSettingsFileName);
+
+            Assert.AreEqual(viewModel.RunningAsUserDefaultText, viewModel.RunningAsText);
+            Assert.IsFalse(viewModel.IsElevated);
+
+            // Act
+            viewModel.IsElevated = true;
+
+            // Assert
+            Assert.AreEqual(viewModel.RunningAsAdminDefaultText, viewModel.RunningAsText);
+            Assert.IsTrue(viewModel.IsElevated);
+        }
+
+        [TestMethod]
+        public void StartupShouldEnableRunOnStartUpWhenSuccessful()
+        {
+            // Assert
+            bool sawExpectedIpcPayload = false;
+            Func<string, int> sendMockIPCConfigMSG = msg =>
+            {
+                if (string.IsNullOrWhiteSpace(msg))
+                {
+                    return 0;
+                }
+
+                OutGoingGeneralSettings snd = JsonSerializer.Deserialize<OutGoingGeneralSettings>(msg);
+                if (snd?.GeneralSettings is null)
+                {
+                    return 0;
+                }
+
+                Assert.IsTrue(snd.GeneralSettings.Startup);
+                sawExpectedIpcPayload = true;
+                return 0;
+            };
+
+            // Arrange
+            Func<string, int> sendRestartAdminIPCMessage = msg => { return 0; };
+            Func<string, int> sendCheckForUpdatesIPCMessage = msg => { return 0; };
+            GeneralViewModel viewModel = new TestGeneralViewModel(
+                settingsRepository: SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                sendMockIPCConfigMSG,
+                sendRestartAdminIPCMessage,
+                sendCheckForUpdatesIPCMessage,
+                GeneralSettingsFileName);
+            Assert.IsFalse(viewModel.Startup);
+
+            // act
+            viewModel.Startup = true;
+            Assert.IsTrue(sawExpectedIpcPayload);
+        }
+
+        [TestMethod]
+        public void RunElevatedShouldEnableAlwaysRunElevatedWhenSuccessful()
+        {
+            // Assert
+            bool sawExpectedIpcPayload = false;
+            Func<string, int> sendMockIPCConfigMSG = msg =>
+            {
+                if (string.IsNullOrWhiteSpace(msg))
+                {
+                    return 0;
+                }
+
+                OutGoingGeneralSettings snd = JsonSerializer.Deserialize<OutGoingGeneralSettings>(msg);
+                if (snd?.GeneralSettings is null)
+                {
+                    return 0;
+                }
+
+                Assert.IsTrue(snd.GeneralSettings.RunElevated);
+                sawExpectedIpcPayload = true;
+                return 0;
+            };
+
+            Func<string, int> sendRestartAdminIPCMessage = msg => { return 0; };
+            Func<string, int> sendCheckForUpdatesIPCMessage = msg => { return 0; };
+
+            // Arrange
+            GeneralViewModel viewModel = new TestGeneralViewModel(
+                settingsRepository: SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                sendMockIPCConfigMSG,
+                sendRestartAdminIPCMessage,
+                sendCheckForUpdatesIPCMessage,
+                GeneralSettingsFileName);
+
+            Assert.IsFalse(viewModel.RunElevated);
+
+            // act
+            viewModel.RunElevated = true;
+            Assert.IsTrue(sawExpectedIpcPayload);
+        }
+
+        [TestMethod]
+        public void IsLightThemeRadioButtonCheckedShouldThemeToLightWhenSuccessful()
+        {
+            // Arrange
+            GeneralViewModel viewModel = null;
+            bool sawExpectedIpcPayload = false;
+
+            // Assert
+            Func<string, int> sendMockIPCConfigMSG = msg =>
+            {
+                if (string.IsNullOrWhiteSpace(msg))
+                {
+                    return 0;
+                }
+
+                OutGoingGeneralSettings snd = JsonSerializer.Deserialize<OutGoingGeneralSettings>(msg);
+                if (snd?.GeneralSettings is null)
+                {
+                    return 0;
+                }
+
+                Assert.AreEqual("light", snd.GeneralSettings.Theme);
+                sawExpectedIpcPayload = true;
+                return 0;
+            };
+
+            Func<string, int> sendRestartAdminIPCMessage = msg => { return 0; };
+            Func<string, int> sendCheckForUpdatesIPCMessage = msg => { return 0; };
+            viewModel = new TestGeneralViewModel(
+                settingsRepository: SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                sendMockIPCConfigMSG,
+                sendRestartAdminIPCMessage,
+                sendCheckForUpdatesIPCMessage,
+                GeneralSettingsFileName);
+            Assert.AreNotEqual(1, viewModel.ThemeIndex);
+
+            // act
+            viewModel.ThemeIndex = 1;
+            Assert.IsTrue(sawExpectedIpcPayload);
+        }
+
+        [TestMethod]
+        public void IsDarkThemeRadioButtonCheckedShouldThemeToDarkWhenSuccessful()
+        {
+            // Arrange
+            bool sawExpectedIpcPayload = false;
+            Func<string, int> sendMockIPCConfigMSG = msg =>
+            {
+                if (string.IsNullOrWhiteSpace(msg))
+                {
+                    return 0;
+                }
+
+                OutGoingGeneralSettings snd = JsonSerializer.Deserialize<OutGoingGeneralSettings>(msg);
+                if (snd?.GeneralSettings is null)
+                {
+                    return 0;
+                }
+
+                Assert.AreEqual("dark", snd.GeneralSettings.Theme);
+                sawExpectedIpcPayload = true;
+                return 0;
+            };
+
+            Func<string, int> sendRestartAdminIPCMessage = msg => { return 0; };
+            Func<string, int> sendCheckForUpdatesIPCMessage = msg => { return 0; };
+            GeneralViewModel viewModel = new TestGeneralViewModel(
+                settingsRepository: SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                sendMockIPCConfigMSG,
+                sendRestartAdminIPCMessage,
+                sendCheckForUpdatesIPCMessage,
+                GeneralSettingsFileName);
+            Assert.AreNotEqual(0, viewModel.ThemeIndex);
+
+            // act
+            viewModel.ThemeIndex = 0;
+            Assert.IsTrue(sawExpectedIpcPayload);
+        }
+
+        [TestMethod]
+        public void IsShowSysTrayIconEnabledByDefaultShouldDisableWhenSuccessful()
+        {
+            // Arrange
+            bool sawExpectedIpcPayload = false;
+            Func<string, int> sendMockIPCConfigMSG = msg =>
+            {
+                if (string.IsNullOrWhiteSpace(msg))
+                {
+                    return 0;
+                }
+
+                OutGoingGeneralSettings snd = JsonSerializer.Deserialize<OutGoingGeneralSettings>(msg);
+                if (snd?.GeneralSettings is null)
+                {
+                    return 0;
+                }
+
+                Assert.IsFalse(snd.GeneralSettings.ShowSysTrayIcon);
+                sawExpectedIpcPayload = true;
+                return 0;
+            };
+
+            Func<string, int> sendRestartAdminIPCMessage = msg => { return 0; };
+            Func<string, int> sendCheckForUpdatesIPCMessage = msg => { return 0; };
+            GeneralViewModel viewModel = new TestGeneralViewModel(
+                settingsRepository: SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                sendMockIPCConfigMSG,
+                sendRestartAdminIPCMessage,
+                sendCheckForUpdatesIPCMessage,
+                GeneralSettingsFileName);
+            Assert.IsTrue(viewModel.ShowSysTrayIcon);
+
+            // Act
+            viewModel.ShowSysTrayIcon = false;
+            Assert.IsTrue(sawExpectedIpcPayload);
+        }
+
+        [TestMethod]
+        public void ActiveKitModulesAreEnabledByDefault()
+        {
+            // arrange
+            EnabledModules modules = new EnabledModules();
+
+            // Assert
+            Assert.IsTrue(modules.Awake);
+            Assert.IsTrue(modules.LightSwitch);
+            Assert.IsFalse(modules.Monitor);
+            Assert.IsTrue(modules.PowerDisplay);
+        }
+    }
+}

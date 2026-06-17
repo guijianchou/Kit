@@ -46,6 +46,46 @@ public sealed class MonitorInstallerCleanerTests
     }
 
     [TestMethod]
+    public void FindMatchesKeepsHighestConfidenceCandidateForEachInstaller()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string installerPath = Path.Combine(tempDirectory.Path, "contosoapp-setup.exe");
+        File.WriteAllText(installerPath, "installer");
+        string[] softwareNames =
+        {
+            "Contoso",
+            "Contoso App",
+        };
+
+        IReadOnlyList<MonitorInstallerMatch> matches = MonitorInstallerCleaner.FindMatches(tempDirectory.Path, softwareNames);
+
+        Assert.AreEqual(1, matches.Count);
+        Assert.AreEqual(installerPath, matches[0].FilePath);
+        Assert.AreEqual("Contoso App", matches[0].SoftwareName);
+        Assert.IsTrue(matches[0].Confidence >= 0.9);
+    }
+
+    [TestMethod]
+    public void FindMatchesKeepsHighestConfidenceVersionedCandidateForEachInstaller()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string installerPath = Path.Combine(tempDirectory.Path, "contosoapp-1.2.3-setup.exe");
+        File.WriteAllText(installerPath, "installer");
+        MonitorInstalledSoftwareIndex softwareIndex = new(new[]
+        {
+            new MonitorInstalledSoftwareEntry("Contoso", "1.2.3", installDate: null, installLocation: null),
+            new MonitorInstalledSoftwareEntry("Contoso App", "1.2.3", installDate: null, installLocation: null),
+        });
+
+        IReadOnlyList<MonitorInstallerMatch> matches = MonitorInstallerCleaner.FindMatches(tempDirectory.Path, softwareIndex);
+
+        Assert.AreEqual(1, matches.Count);
+        Assert.AreEqual(installerPath, matches[0].FilePath);
+        Assert.AreEqual("Contoso App", matches[0].SoftwareName);
+        Assert.IsTrue(matches[0].Confidence >= 0.9);
+    }
+
+    [TestMethod]
     public void FindMatchesIgnoresArchitectureNumbersWhenMatchingInstalledSoftwareVersion()
     {
         using TemporaryDirectory tempDirectory = new();

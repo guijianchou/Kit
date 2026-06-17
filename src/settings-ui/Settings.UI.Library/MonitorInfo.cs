@@ -367,7 +367,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         /// <summary>
         /// Compare two VcpCodesFormatted lists for equality by content.
-        /// Returns true if both lists have the same VCP codes (by code value).
+        /// Returns true if both lists expose the same codes and value metadata.
         /// </summary>
         private static bool AreVcpCodesEqual(List<VcpCodeDisplayInfo> list1, List<VcpCodeDisplayInfo> list2)
         {
@@ -386,20 +386,33 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 return false;
             }
 
-            // Compare by code values - order matters for our use case
+            // Compare by content - order matters for our use case.
             for (int i = 0; i < list1.Count; i++)
             {
-                if (list1[i].Code != list2[i].Code)
+                VcpCodeDisplayInfo code1 = list1[i];
+                VcpCodeDisplayInfo code2 = list2[i];
+                if (!string.Equals(code1.Code, code2.Code, StringComparison.Ordinal) ||
+                    !string.Equals(code1.Title, code2.Title, StringComparison.Ordinal) ||
+                    !string.Equals(code1.Values, code2.Values, StringComparison.Ordinal) ||
+                    code1.HasValues != code2.HasValues)
                 {
                     return false;
                 }
 
-                // Also compare ValueList count to detect preset changes
-                var values1 = list1[i].ValueList;
-                var values2 = list2[i].ValueList;
+                var values1 = code1.ValueList;
+                var values2 = code2.ValueList;
                 if ((values1?.Count ?? 0) != (values2?.Count ?? 0))
                 {
                     return false;
+                }
+
+                for (int valueIndex = 0; valueIndex < (values1?.Count ?? 0); valueIndex++)
+                {
+                    if (!string.Equals(values1[valueIndex].Value, values2[valueIndex].Value, StringComparison.Ordinal) ||
+                        !string.Equals(values1[valueIndex].Name, values2[valueIndex].Name, StringComparison.Ordinal))
+                    {
+                        return false;
+                    }
                 }
             }
 

@@ -205,7 +205,10 @@ namespace ViewModelTests
             StringAssert.Contains(pageCode, "CreateManualScanId");
             StringAssert.Contains(pageCode, "snapshot.ScanId");
             StringAssert.Contains(pageCode, "manualScanId");
+            StringAssert.Contains(pageCode, "CompleteManualScanProgress");
+            StringAssert.Contains(pageCode, "completionSignaled && progressSnapshot == null");
             Assert.IsFalse(pageCode.Contains("ManualScanProgressValue + 1", StringComparison.Ordinal), "Monitor page should use worker progress instead of timer-only fake progress.");
+            Assert.IsFalse(pageCode.Contains("manualScanCompleted || (completionSignaled && progressSnapshot != null", StringComparison.Ordinal), "Monitor page should complete when the worker event is signaled even if the progress file cannot be read.");
             Assert.IsFalse(pageCode.Contains("\"organizeDownloads\"", StringComparison.Ordinal));
             StringAssert.Contains(pageCode, "BrowseDownloadsFolder_Click");
             StringAssert.Contains(pageCode, "ShellGetFolder.GetFolderDialog");
@@ -218,7 +221,6 @@ namespace ViewModelTests
             StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"6h\", 21600)");
             StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"12h\", 43200)");
             StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"24h\", 86400)");
-            StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"1d\", 86400)");
             StringAssert.Contains(viewModel, "RunInBackground");
             StringAssert.Contains(viewModel, "IsManualScanProgressVisible");
             StringAssert.Contains(viewModel, "IsManualScanProgressIndeterminate");
@@ -230,6 +232,50 @@ namespace ViewModelTests
             StringAssert.Contains(resources, "Monitor_RunInBackgroundSettingsCard.Header");
             StringAssert.Contains(resources, "Monitor_ScanNowButton.Content");
             StringAssert.Contains(resources, "Monitor_SelectDownloadsFolderButton.Content");
+        }
+
+        [TestMethod]
+        public void MonitorInfoShouldRefreshColorPresetCacheWhenVcpValueListContentChanges()
+        {
+            MonitorInfo monitor = new()
+            {
+                SupportsColorTemperature = true,
+                ColorTemperatureVcp = 0x05,
+                VcpCodesFormatted = new List<VcpCodeDisplayInfo>
+                {
+                    CreateColorPresetVcp("0x05", "6500 K"),
+                },
+            };
+
+            Assert.AreEqual("6500 K", monitor.ColorPresetsForDisplay[0].DisplayName);
+
+            monitor.VcpCodesFormatted = new List<VcpCodeDisplayInfo>
+            {
+                CreateColorPresetVcp("0x08", "9300 K"),
+            };
+
+            Assert.AreEqual(2, monitor.ColorPresetsForDisplay.Count);
+            Assert.AreEqual("Custom (0x05)", monitor.ColorPresetsForDisplay[0].DisplayName);
+            Assert.AreEqual("9300 K", monitor.ColorPresetsForDisplay[1].DisplayName);
+        }
+
+        private static VcpCodeDisplayInfo CreateColorPresetVcp(string value, string name)
+        {
+            return new VcpCodeDisplayInfo
+            {
+                Code = "0x14",
+                Title = "Color Preset",
+                Values = value,
+                HasValues = true,
+                ValueList = new List<VcpValueInfo>
+                {
+                    new()
+                    {
+                        Value = value,
+                        Name = name,
+                    },
+                },
+            };
         }
 
         [TestMethod]

@@ -102,6 +102,9 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(commandLineText, "ScanId");
         StringAssert.Contains(commandLineText, "--scan-id");
         StringAssert.Contains(programText, "commandLine.ScanId");
+        StringAssert.Contains(programText, "signalScanCompleted: true");
+        StringAssert.Contains(programText, "signalScanCompleted: false");
+        StringAssert.Contains(programText, "if (signalScanCompleted)");
     }
 
     [TestMethod]

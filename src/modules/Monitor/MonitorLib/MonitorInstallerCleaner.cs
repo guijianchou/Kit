@@ -53,8 +53,7 @@ public static partial class MonitorInstallerCleaner
             .Select(file => (file, ExtractCoreName(Path.GetFileNameWithoutExtension(file.Name))))
             .ToList();
 
-        List<MonitorInstallerMatch> matches = new();
-        HashSet<string> matchedPaths = new(StringComparer.OrdinalIgnoreCase);
+        List<MonitorInstallerMatch> candidates = new();
 
         foreach (string softwareName in installedSoftwareNames)
         {
@@ -69,21 +68,15 @@ public static partial class MonitorInstallerCleaner
             foreach ((FileInfo File, string CoreName) installer in installerTable)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (matchedPaths.Contains(installer.File.FullName))
-                {
-                    continue;
-                }
-
                 double confidence = CalculateSimilarity(installer.CoreName, normalizedSoftwareName, keywords);
                 if (confidence >= 0.5)
                 {
-                    matches.Add(new MonitorInstallerMatch(installer.File.FullName, softwareName, confidence, installer.File.Length));
-                    matchedPaths.Add(installer.File.FullName);
+                    candidates.Add(new MonitorInstallerMatch(installer.File.FullName, softwareName, confidence, installer.File.Length));
                 }
             }
         }
 
-        return matches.OrderByDescending(match => match.Confidence).ToList();
+        return SelectBestMatchPerInstaller(candidates);
     }
 
     /// <summary>
@@ -110,8 +103,7 @@ public static partial class MonitorInstallerCleaner
             .Select(file => (file, ExtractCoreName(Path.GetFileNameWithoutExtension(file.Name)), ExtractVersion(Path.GetFileNameWithoutExtension(file.Name))))
             .ToList();
 
-        List<MonitorInstallerMatch> matches = new();
-        HashSet<string> matchedPaths = new(StringComparer.OrdinalIgnoreCase);
+        List<MonitorInstallerMatch> candidates = new();
 
         foreach (MonitorInstalledSoftwareEntry softwareEntry in installedSoftwareIndex.Entries)
         {
@@ -132,7 +124,7 @@ public static partial class MonitorInstallerCleaner
             foreach ((FileInfo File, string CoreName, string? Version) installer in installerTable)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (matchedPaths.Contains(installer.File.FullName) || !string.Equals(NormalizeVersion(installer.Version), normalizedVersion, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(NormalizeVersion(installer.Version), normalizedVersion, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -140,13 +132,12 @@ public static partial class MonitorInstallerCleaner
                 double confidence = CalculateSimilarity(installer.CoreName, normalizedSoftwareName, keywords);
                 if (confidence >= 0.5)
                 {
-                    matches.Add(new MonitorInstallerMatch(installer.File.FullName, softwareEntry.DisplayName, Math.Min(0.99, confidence + 0.03), installer.File.Length));
-                    matchedPaths.Add(installer.File.FullName);
+                    candidates.Add(new MonitorInstallerMatch(installer.File.FullName, softwareEntry.DisplayName, Math.Min(0.99, confidence + 0.03), installer.File.Length));
                 }
             }
         }
 
-        return matches.OrderByDescending(match => match.Confidence).ToList();
+        return SelectBestMatchPerInstaller(candidates);
     }
 
     /// <summary>
@@ -239,6 +230,19 @@ public static partial class MonitorInstallerCleaner
         {
             yield return file;
         }
+    }
+
+    private static IReadOnlyList<MonitorInstallerMatch> SelectBestMatchPerInstaller(IEnumerable<MonitorInstallerMatch> candidates)
+    {
+        return candidates
+            .GroupBy(match => match.FilePath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderByDescending(match => match.Confidence)
+                .ThenBy(match => match.SoftwareName, StringComparer.OrdinalIgnoreCase)
+                .First())
+            .OrderByDescending(match => match.Confidence)
+            .ThenBy(match => match.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static string ExtractCoreName(string fileName)

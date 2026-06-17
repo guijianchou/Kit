@@ -129,12 +129,24 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
 
             bool manualScanCompleted = string.Equals(progressSnapshot?.Phase, "completed", StringComparison.OrdinalIgnoreCase);
-            if (manualScanCompleted || (completionSignaled && progressSnapshot != null && string.Equals(progressSnapshot.ScanId, _manualScanId, StringComparison.Ordinal)))
+            bool completedWithoutProgressSnapshot = completionSignaled && progressSnapshot == null;
+            bool completedWithMatchingProgressSnapshot = completionSignaled && progressSnapshot != null && string.Equals(progressSnapshot.ScanId, _manualScanId, StringComparison.Ordinal);
+            if (manualScanCompleted || completedWithoutProgressSnapshot || completedWithMatchingProgressSnapshot)
             {
-                ViewModel.IsManualScanProgressIndeterminate = false;
-                ViewModel.ManualScanProgressValue = 100;
-                sender.Stop();
+                if (completedWithoutProgressSnapshot)
+                {
+                    ViewModel.ManualScanProgressDetail = "Complete";
+                }
+
+                CompleteManualScanProgress(sender);
             }
+        }
+
+        private void CompleteManualScanProgress(DispatcherQueueTimer sender)
+        {
+            ViewModel.IsManualScanProgressIndeterminate = false;
+            ViewModel.ManualScanProgressValue = 100;
+            sender.Stop();
         }
 
         private void BrowseDownloadsFolder_Click(object sender, RoutedEventArgs e)

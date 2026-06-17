@@ -41,7 +41,7 @@ public static class Program
             {
                 bool organize = commandLine.UseConfiguredActions ? settings.AutoOrganize : commandLine.Organize;
                 bool cleanInstallers = commandLine.UseConfiguredActions ? settings.AutoCleanInstallers : commandLine.CleanInstallers;
-                RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, ResolveScanId(commandLine.ScanId), CancellationToken.None);
+                RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, ResolveScanId(commandLine.ScanId), signalScanCompleted: true, CancellationToken.None);
                 return 0;
             }
 
@@ -70,7 +70,7 @@ public static class Program
             LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(exitEvent, commandLine.ParentProcessId);
             try
             {
-                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), lifetimeCancellation.Token);
+                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), signalScanCompleted: false, lifetimeCancellation.Token);
             }
             catch (OperationCanceledException) when (lifetimeCancellation.ExitRequested)
             {
@@ -93,7 +93,7 @@ public static class Program
         }
     }
 
-    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, CancellationToken cancellationToken)
+    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, bool signalScanCompleted, CancellationToken cancellationToken)
     {
         MonitorScanProgressFileReporter progressReporter = new(ResolveProgressPath(), TimeSpan.FromMilliseconds(500));
         MonitorWorkerResult result = MonitorWorker.RunOnce(downloadsPath, csvPath, settings, organize, cleanInstallers, progressReporter: progressReporter, cancellationToken: cancellationToken, scanId: scanId);
@@ -124,7 +124,11 @@ public static class Program
 
         Console.WriteLine("Scan complete: " + result.RecordCount.ToString(CultureInfo.InvariantCulture) + " files.");
         Console.WriteLine("CSV: " + result.CsvPath);
-        SignalScanCompleted();
+        if (signalScanCompleted)
+        {
+            SignalScanCompleted();
+        }
+
         return result;
     }
 

@@ -13,7 +13,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         private const string AwakeKey = "Awake";
         private const string LightSwitchKey = "LightSwitch";
         private const string MonitorKey = "Monitor";
-        private const string PowerDisplayKey = "PowerDisplay";
 
         public override EnabledModules Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -59,9 +58,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                     case MonitorKey:
                         modules.Monitor = isEnabled;
                         break;
-                    case PowerDisplayKey:
-                        modules.PowerDisplay = isEnabled;
-                        break;
                 }
             }
 
@@ -77,7 +73,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             writer.WriteBoolean(AwakeKey, value.Awake);
             writer.WriteBoolean(LightSwitchKey, value.LightSwitch);
             writer.WriteBoolean(MonitorKey, value.Monitor);
-            writer.WriteBoolean(PowerDisplayKey, value.PowerDisplay);
             writer.WriteEndObject();
         }
     }

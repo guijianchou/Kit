@@ -184,6 +184,13 @@
       $(USERPROFILE)\AppData\LocalLow\Kit\**;
     </MSBuildCacheAllowFileAccessAfterProjectFinishFilePatterns>
 
+    <!-- dotnet.exe and vbcscompiler.exe can access files after .NET analyzer builds finish. -->
+    <MSBuildCacheAllowFileAccessAfterProjectFinishProcessPatterns>
+      $(MSBuildCacheAllowFileAccessAfterProjectFinishProcessPatterns);
+      \**\dotnet\dotnet.exe;
+      \**\vbcscompiler.exe;
+    </MSBuildCacheAllowFileAccessAfterProjectFinishProcessPatterns>
+
     <!-- 
       This repo uses a common output directory with many projects writing duplicate outputs. Allow everything, but note this costs some performance in the form of requiring
       the cache to use copies instead of hardlinks when pulling from cache.

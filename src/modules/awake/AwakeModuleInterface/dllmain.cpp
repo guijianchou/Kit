@@ -36,7 +36,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD ul_reason_for_call, LPVOID /*lp
 
 const static wchar_t* MODULE_NAME = L"Awake";
 const static wchar_t* MODULE_DESC = L"A module that keeps your computer awake on-demand.";
-const static DWORD AWAKE_SHUTDOWN_WAIT_MS = 5000;
+constexpr DWORD AWAKE_SHUTDOWN_WAIT_MS = 1500;
 
 class Awake : public PowertoyModuleIface
 {
@@ -70,6 +70,23 @@ private:
         p_info.dwThreadId = 0;
     }
 
+    void terminate_process_if_running()
+    {
+        if (!is_process_running())
+        {
+            return;
+        }
+
+        Logger::warn(L"PowerToys Awake did not exit after shutdown signal; terminating process.");
+        if (!TerminateProcess(p_info.hProcess, 1))
+        {
+            Logger::warn(L"Failed to terminate PowerToys Awake. {}", get_last_error_or_default(GetLastError()));
+            return;
+        }
+
+        WaitForSingleObject(p_info.hProcess, AWAKE_SHUTDOWN_WAIT_MS);
+    }
+
     void wait_for_process_shutdown()
     {
         if (!p_info.hProcess)
@@ -77,29 +94,19 @@ private:
             return;
         }
 
-        const DWORD waitResult = WaitForSingleObject(p_info.hProcess, AWAKE_SHUTDOWN_WAIT_MS);
+        DWORD waitResult = WaitForSingleObject(p_info.hProcess, AWAKE_SHUTDOWN_WAIT_MS);
         if (waitResult == WAIT_TIMEOUT)
         {
-            Logger::warn(L"PowerToys Awake did not exit after the shutdown signal. Terminating process.");
-            TerminateProcess(p_info.hProcess, 1);
-            WaitForSingleObject(p_info.hProcess, 1000);
+            terminate_process_if_running();
         }
         else if (waitResult == WAIT_FAILED)
         {
             Logger::warn(L"Failed to wait for PowerToys Awake shutdown. {}", get_last_error_or_default(GetLastError()));
+            terminate_process_if_running();
         }
     }
 
-    void terminate_process_if_running()
-    {
-        if (is_process_running())
-        {
-            TerminateProcess(p_info.hProcess, 1);
-            WaitForSingleObject(p_info.hProcess, 1000);
-        }
-    }
-
-    void launch_process()
+    bool launch_process()
     {
         Logger::trace(L"Launching PowerToys Awake process");
         unsigned long powertoys_pid = GetCurrentProcessId();
@@ -117,7 +124,11 @@ private:
             std::wstring message = L"PowerToys Awake failed to start with error: ";
             message += std::to_wstring(error);
             Logger::error(message);
+            close_process_handles();
+            return false;
         }
+
+        return true;
     }
 
 public:
@@ -183,14 +194,22 @@ public:
 
     virtual void enable()
     {
-        Trace::EnableAwake(true);
-        launch_process();
-        m_enabled = true;
+        if (m_enabled && is_process_running())
+        {
+            return;
+        }
+
+        close_process_handles();
+        if (launch_process())
+        {
+            m_enabled = true;
+            Trace::EnableAwake(true);
+        }
     };
 
     virtual void disable()
     {
-        if (m_enabled)
+        if (m_enabled || p_info.hProcess)
         {
             Trace::EnableAwake(false);
             Logger::trace(L"Disabling Awake...");
@@ -207,23 +226,14 @@ public:
                 if (!SetEvent(exitEvent))
                 {
                     Logger::warn(L"Failed to signal exit event for PowerToys Awake. {}", get_last_error_or_default(GetLastError()));
-
-                    // For some reason, we couldn't process the signal correctly, so we still
-                    // need to terminate the Awake process.
                     terminate_process_if_running();
                 }
-                else
-                {
-                    wait_for_process_shutdown();
-                }
-
-                ResetEvent(exitEvent);
                 CloseHandle(exitEvent);
+                wait_for_process_shutdown();
             }
-
-            close_process_handles();
         }
 
+        close_process_handles();
         m_enabled = false;
     }
 

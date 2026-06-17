@@ -15,6 +15,7 @@ internal sealed record MonitorCommandLine(
     string? DownloadsPath,
     string? CsvPath,
     string? SettingsPath,
+    string? ScanId,
     int? IntervalSeconds,
     int? ParentProcessId)
 {
@@ -28,6 +29,7 @@ internal sealed record MonitorCommandLine(
         string? downloadsPath = null;
         string? csvPath = null;
         string? settingsPath = null;
+        string? scanId = null;
         int? intervalSeconds = null;
         int? parentProcessId = null;
 
@@ -61,6 +63,9 @@ internal sealed record MonitorCommandLine(
                 case "--settings-path":
                     settingsPath = ReadValue(args, ref index, argument);
                     break;
+                case "--scan-id":
+                    scanId = ReadValue(args, ref index, argument);
+                    break;
                 case "--interval-seconds":
                     intervalSeconds = TryParseInt32(ReadValue(args, ref index, argument), argument);
                     break;
@@ -70,7 +75,7 @@ internal sealed record MonitorCommandLine(
             }
         }
 
-        return new MonitorCommandLine(scanOnce, organize, cleanInstallers, useConfiguredActions, showHelp, downloadsPath, csvPath, settingsPath, intervalSeconds, parentProcessId);
+        return new MonitorCommandLine(scanOnce, organize, cleanInstallers, useConfiguredActions, showHelp, downloadsPath, csvPath, settingsPath, scanId, intervalSeconds, parentProcessId);
     }
 
     private static string ReadValue(IReadOnlyList<string> args, ref int index, string argument)

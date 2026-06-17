@@ -3,9 +3,11 @@
 class Trace
 {
 public:
-    static void RegisterProvider();
-    static void UnregisterProvider();
+    static constexpr void RegisterProvider() noexcept {}
+    static constexpr void UnregisterProvider() noexcept {}
 
-    // Compatibility hook for the original PowerToys module interface.
-    static void EnableAwake(const bool enabled) noexcept;
+    static constexpr void EnableAwake(const bool enabled) noexcept
+    {
+        (void)enabled;
+    }
 };

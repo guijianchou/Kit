@@ -26,7 +26,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Utilities
         public static bool AllowRunnerToForeground()
         {
             var result = false;
-            var processes = Process.GetProcessesByName("PowerToys");
+            var processes = Process.GetProcessesByName("Kit");
             if (processes.Length > 0)
             {
                 var pid = processes[0].Id;

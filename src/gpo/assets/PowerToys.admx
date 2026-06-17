@@ -8,7 +8,7 @@
   <resources minRequiredRevision="1.20" />
   <supportedOn>
     <definitions>
-      <definition name="SUPPORTED_KIT_2_0_1" displayName="$(string.SUPPORTED_KIT_2_0_1)" />
+      <definition name="SUPPORTED_KIT_2_0_2" displayName="$(string.SUPPORTED_KIT_2_0_2)" />
     </definitions>
   </supportedOn>
   <categories>
@@ -23,7 +23,7 @@
   <policies>
     <policy name="ConfigureEnabledUtilityAwake" class="Both" displayName="$(string.ConfigureEnabledUtilityAwake)" explainText="$(string.ConfigureEnabledUtilityDescription)" key="Software\Policies\PowerToys" valueName="ConfigureEnabledUtilityAwake">
       <parentCategory ref="PowerToys" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>
@@ -33,17 +33,7 @@
     </policy>
     <policy name="ConfigureEnabledUtilityLightSwitch" class="Both" displayName="$(string.ConfigureEnabledUtilityLightSwitch)" explainText="$(string.ConfigureEnabledUtilityDescription)" key="Software\Policies\PowerToys" valueName="ConfigureEnabledUtilityLightSwitch">
       <parentCategory ref="PowerToys" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
-      <enabledValue>
-        <decimal value="1" />
-      </enabledValue>
-      <disabledValue>
-        <decimal value="0" />
-      </disabledValue>
-    </policy>
-    <policy name="ConfigureEnabledUtilityPowerDisplay" class="Both" displayName="$(string.ConfigureEnabledUtilityPowerDisplay)" explainText="$(string.ConfigureEnabledUtilityDescription)" key="Software\Policies\PowerToys" valueName="ConfigureEnabledUtilityPowerDisplay">
-      <parentCategory ref="PowerToys" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>
@@ -53,7 +43,7 @@
     </policy>
     <policy name="DisableAutomaticUpdateDownload" class="Both" displayName="$(string.DisableAutomaticUpdateDownload)" explainText="$(string.DisableAutomaticUpdateDownloadDescription)" key="Software\Policies\PowerToys" valueName="AutomaticUpdateDownloadDisabled">
       <parentCategory ref="InstallerUpdates" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>
@@ -63,7 +53,7 @@
     </policy>
     <policy name="DisableNewUpdateToast" class="Both" displayName="$(string.DisableNewUpdateToast)" explainText="$(string.DisableNewUpdateToastDescription)" key="Software\Policies\PowerToys" valueName="DisableNewUpdateAvailableToast">
       <parentCategory ref="InstallerUpdates" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>
@@ -73,7 +63,7 @@
     </policy>
     <policy name="DoNotShowWhatsNewAfterUpdates" class="Both" displayName="$(string.DoNotShowWhatsNewAfterUpdates)" explainText="$(string.DoNotShowWhatsNewAfterUpdatesDescription)" key="Software\Policies\PowerToys" valueName="DoNotShowWhatsNewAfterUpdates">
       <parentCategory ref="InstallerUpdates" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>
@@ -83,7 +73,7 @@
     </policy>
     <policy name="AllowExperimentation" class="Both" displayName="$(string.AllowExperimentation)" explainText="$(string.AllowExperimentationDescription)" key="Software\Policies\PowerToys" valueName="AllowExperimentation">
       <parentCategory ref="GeneralSettings" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>
@@ -93,7 +83,7 @@
     </policy>
     <policy name="AllowDiagnosticData" class="Both" displayName="$(string.AllowDiagnosticData)" explainText="$(string.AllowDiagnosticDataDescription)" key="Software\Policies\PowerToys" valueName="AllowDataDiagnostics">
       <parentCategory ref="GeneralSettings" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>
@@ -103,7 +93,7 @@
     </policy>
     <policy name="ConfigureRunAtStartup" class="Both" displayName="$(string.ConfigureRunAtStartup)" explainText="$(string.ConfigureRunAtStartupDescription)" key="Software\Policies\PowerToys" valueName="ConfigureRunAtStartup">
       <parentCategory ref="GeneralSettings" />
-      <supportedOn ref="SUPPORTED_KIT_2_0_1" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_2" />
       <enabledValue>
         <decimal value="1" />
       </enabledValue>

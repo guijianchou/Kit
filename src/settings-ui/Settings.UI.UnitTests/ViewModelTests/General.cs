@@ -26,7 +26,7 @@ namespace ViewModelTests
     public class General
     {
         public const string GeneralSettingsFileName = "Test\\GeneralSettings";
-        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Monitor", "PowerDisplay" };
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Monitor" };
 
         private Mock<SettingsUtils> mockGeneralSettingsUtils;
 
@@ -486,16 +486,16 @@ namespace ViewModelTests
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
 
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor, ModuleType.PowerDisplay },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor },
                 KitModuleCatalog.ActiveModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor, ModuleType.PowerDisplay },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor },
                 KitModuleCatalog.DashboardModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.LightSwitch, ModuleType.Monitor, ModuleType.PowerDisplay },
+                new[] { ModuleType.LightSwitch, ModuleType.Monitor },
                 KitModuleCatalog.QuickAccessModules.ToArray());
             Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.Monitor));
-            Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.PowerDisplay));
+            Assert.IsFalse(Enum.GetNames<ModuleType>().Contains("PowerDisplay", StringComparer.Ordinal));
             Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.ImageResizer));
 
             StringAssert.Contains(dashboardViewModel, "KitModuleCatalog.DashboardModules");
@@ -505,13 +505,13 @@ namespace ViewModelTests
             StringAssert.Contains(dashboardViewModel, "moduleTypes: KitModuleCatalog.DashboardModules");
             StringAssert.Contains(dashboardViewModel, "fallbackLauncher: OpenModuleSettingsFromQuickAccess");
             StringAssert.Contains(dashboardViewModel, "ModuleType.Awake => GetModuleItemsAwake()");
-            StringAssert.Contains(dashboardViewModel, "ModuleType.PowerDisplay => GetModuleItemsPowerDisplay()");
-            StringAssert.Contains(dashboardViewModel, "PowerDisplayLaunchClicked");
+            Assert.IsFalse(dashboardViewModel.Contains("ModuleType.PowerDisplay => GetModuleItemsPowerDisplay()", StringComparison.Ordinal));
+            Assert.IsFalse(dashboardViewModel.Contains("PowerDisplayLaunchClicked", StringComparison.Ordinal));
             StringAssert.Contains(dashboardViewModel, "new DashboardModuleActivationItem()");
 
             StringAssert.Contains(quickAccessViewModel, "KitModuleCatalog.QuickAccessModules");
             StringAssert.Contains(quickAccessViewModel, "ModuleType.LightSwitch");
-            StringAssert.Contains(quickAccessViewModel, "ModuleType.PowerDisplay");
+            Assert.IsFalse(quickAccessViewModel.Contains("ModuleType.PowerDisplay", StringComparison.Ordinal));
             StringAssert.Contains(quickAccessViewModel, "IEnumerable<ModuleType>? moduleTypes = null");
             StringAssert.Contains(quickAccessViewModel, "Func<ModuleType, bool>? fallbackLauncher = null");
             Assert.IsFalse(dashboardViewModel.Contains("private static readonly ModuleType[] KitDashboardModules", StringComparison.Ordinal));
@@ -527,7 +527,6 @@ namespace ViewModelTests
             settings.Enabled.Awake = false;
             settings.Enabled.LightSwitch = true;
             settings.Enabled.Monitor = true;
-            settings.Enabled.PowerDisplay = false;
 
             var outgoingJson = new OutGoingGeneralSettings(settings).ToString();
 
@@ -544,11 +543,11 @@ namespace ViewModelTests
             Assert.AreEqual(false, enabled.GetProperty("Awake").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("LightSwitch").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("Monitor").GetBoolean());
-            Assert.AreEqual(false, enabled.GetProperty("PowerDisplay").GetBoolean());
+            Assert.IsFalse(enabled.TryGetProperty("PowerDisplay", out _));
         }
 
         [TestMethod]
-        public void KitRunnerShouldLoadCopiedAwakeModule()
+        public void KitRunnerShouldLoadCopiedAwakeModuleAndExcludeRemovedPowerDisplay()
         {
             var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
@@ -562,44 +561,35 @@ namespace ViewModelTests
 
             _ = FindSourceFile("src", "modules", "awake", "AwakeModuleInterface", "AwakeModuleInterface.vcxproj");
             _ = FindSourceFile("src", "modules", "awake", "Awake", "Awake.csproj");
-            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplay.csproj");
-            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay.Lib", "PowerDisplay.Lib.csproj");
-            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay.Models", "PowerDisplay.Models.csproj");
-            _ = FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayModuleInterface.vcxproj");
+            Assert.IsFalse(Directory.Exists(Path.Combine(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "src", "modules", "powerdisplay")));
 
             StringAssert.Contains(solution, "src/modules/awake/Awake/Awake.csproj");
             StringAssert.Contains(solution, "src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj");
-            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplay/PowerDisplay.csproj");
-            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplay.Lib/PowerDisplay.Lib.csproj");
-            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplay.Models/PowerDisplay.Models.csproj");
-            StringAssert.Contains(solution, "src/modules/powerdisplay/PowerDisplayModuleInterface/PowerDisplayModuleInterface.vcxproj");
             StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/awake/Awake/Awake.csproj\"");
             StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj\"");
-            StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/powerdisplay/PowerDisplay/PowerDisplay.csproj\"");
-            StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/powerdisplay/PowerDisplayModuleInterface/PowerDisplayModuleInterface.vcxproj\"");
+            Assert.IsFalse(solution.Contains("src/modules/powerdisplay", StringComparison.OrdinalIgnoreCase));
             StringAssert.Contains(runnerMain, "KitKnownModules");
             StringAssert.Contains(runnerMain, "PowerToys.AwakeModuleInterface.dll");
             StringAssert.Contains(runnerMain, "PowerToys.LightSwitchModuleInterface.dll");
-            StringAssert.Contains(runnerMain, "PowerToys.PowerDisplayModuleInterface.dll");
+            Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal));
             Assert.IsFalse(runnerMain.Contains("directory_iterator", StringComparison.Ordinal));
             StringAssert.Contains(runnerSettingsHeader, "Awake,");
             StringAssert.Contains(runnerSettingsHeader, "Monitor,");
-            StringAssert.Contains(runnerSettingsHeader, "PowerDisplay,");
+            Assert.IsFalse(runnerSettingsHeader.Contains("PowerDisplay", StringComparison.Ordinal));
             StringAssert.Contains(runnerSettingsSource, "return \"Awake\";");
             StringAssert.Contains(runnerSettingsSource, "value == \"Awake\"");
             StringAssert.Contains(runnerSettingsSource, "return \"Monitor\";");
             StringAssert.Contains(runnerSettingsSource, "value == \"Monitor\"");
-            StringAssert.Contains(runnerSettingsSource, "return \"PowerDisplay\";");
-            StringAssert.Contains(runnerSettingsSource, "value == \"PowerDisplay\"");
+            Assert.IsFalse(runnerSettingsSource.Contains("PowerDisplay", StringComparison.Ordinal));
             StringAssert.Contains(shellXaml, "AwakeNavigationItem");
-            StringAssert.Contains(shellXaml, "PowerDisplayNavigationItem");
+            Assert.IsFalse(shellXaml.Contains("PowerDisplayNavigationItem", StringComparison.Ordinal));
             StringAssert.Contains(shellCode, "NavHelper.SetNavigateTo(AwakeNavigationItem, typeof(AwakePage));");
-            StringAssert.Contains(shellCode, "NavHelper.SetNavigateTo(PowerDisplayNavigationItem, typeof(PowerDisplayPage));");
+            Assert.IsFalse(shellCode.Contains("PowerDisplayPage", StringComparison.Ordinal));
             StringAssert.Contains(appCode, "\"Awake\" => typeof(AwakePage)");
-            StringAssert.Contains(appCode, "\"PowerDisplay\" => typeof(PowerDisplayPage)");
+            Assert.IsFalse(appCode.Contains("PowerDisplayPage", StringComparison.Ordinal));
             StringAssert.Contains(moduleGpoHelper, "ModuleType.Awake => typeof(AwakePage)");
-            StringAssert.Contains(moduleGpoHelper, "ModuleType.PowerDisplay => typeof(PowerDisplayPage)");
-            StringAssert.Contains(settingsProject, @"..\..\modules\powerdisplay\PowerDisplay.Models\PowerDisplay.Models.csproj");
+            Assert.IsFalse(moduleGpoHelper.Contains("PowerDisplayPage", StringComparison.Ordinal));
+            Assert.IsFalse(settingsProject.Contains(@"..\..\modules\powerdisplay", StringComparison.OrdinalIgnoreCase));
             Assert.IsFalse(settingsProject.Contains("Compile Remove=\"ViewModels\\Awake*.cs\"", StringComparison.Ordinal));
             Assert.IsFalse(settingsProject.Contains("Compile Remove=\"SettingsXAML\\Views\\Awake*.xaml.cs\"", StringComparison.Ordinal));
             Assert.IsFalse(settingsProject.Contains("Page Remove=\"SettingsXAML\\Views\\Awake*.xaml\"", StringComparison.Ordinal));
@@ -678,7 +668,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse201ReleaseMetadata()
+        public void KitAboutVersionShouldUse202ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -690,7 +680,7 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>2.0.1</Version>");
+            StringAssert.Contains(versionProps, "<Version>2.0.2</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -698,15 +688,19 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `2.0.1`.");
+            StringAssert.Contains(readme, "Current Kit version: `2.0.2`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.1`。");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.2`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
             StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
             StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
-            StringAssert.Contains(changelog, "### 2.0.1");
-            StringAssert.Contains(changelog, "Bumped Kit to `2.0.1`");
+            StringAssert.Contains(changelog, "### 2.0.2");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.2`");
+            StringAssert.Contains(changelog, "Removed PowerDisplay from the active plugin/module surface");
+            StringAssert.Contains(changelog, "The active module set is now `Awake`, `Light Switch`, and `Monitor`");
+            StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_2");
+            StringAssert.Contains(changelog, "三活动模块");
             StringAssert.Contains(changelog, "Trimmed GPOWrapper and Settings GPO helper policy surface");
             StringAssert.Contains(changelog, "Trimmed ADMX/ADML policy assets");
             StringAssert.Contains(changelog, "Removed the upstream BugReportTool source");
@@ -723,7 +717,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "`UITestAutomation`");
             StringAssert.Contains(changelog, "`ModuleHelper`");
             StringAssert.Contains(changelog, "historical module-key mappings");
-            StringAssert.Contains(changelog, "four active modules");
+            StringAssert.Contains(changelog, "three active modules");
             StringAssert.Contains(changelog, "XAML search index builder no longer carries inactive upstream module icon and panel fallbacks");
             StringAssert.Contains(changelog, "Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface");
             StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
@@ -788,10 +782,13 @@ namespace ViewModelTests
             StringAssert.Contains(readme, "orphaned CmdPal version props");
             StringAssert.Contains(readme, "resource strings, OOBE/model assets");
             StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
-            StringAssert.Contains(readme, "Shortcut Conflict hotkey lookup is explicit for Quick Access, LightSwitch, and PowerDisplay");
+            StringAssert.Contains(readme, "Shortcut Conflict hotkey lookup is explicit for Quick Access and LightSwitch");
             StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
-            StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access、LightSwitch 和 PowerDisplay");
+            StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
+            StringAssert.Contains(developmentLog, "## 2026-06-13 Version 2.0.2 PowerDisplay Removal And Upstream Module Sync");
+            StringAssert.Contains(developmentLog, "The active Kit module set is now `Awake`, `Light Switch`, and `Monitor`");
+            StringAssert.Contains(developmentLog, "PowerDisplay was removed from runner loading, solution entries, Settings navigation, Quick Access routing, GPO projection, Settings serialization, resources, assets, docs, and module source");
             StringAssert.Contains(developmentLog, "## 2026-05-28 Version 2.0.1 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
             StringAssert.Contains(developmentLog, "ADMX/ADML policy assets now match");
@@ -1238,7 +1235,20 @@ namespace ViewModelTests
             Assert.IsTrue(modules.Awake);
             Assert.IsTrue(modules.LightSwitch);
             Assert.IsFalse(modules.Monitor);
-            Assert.IsTrue(modules.PowerDisplay);
+        }
+
+        [TestMethod]
+        public void ActiveKitEnabledModulesShouldNotifyWhenToggled()
+        {
+            GeneralSettings settings = new GeneralSettings();
+            var changeCount = 0;
+            settings.AddEnabledModuleChangeNotification(() => changeCount++);
+
+            settings.Enabled.Awake = false;
+            settings.Enabled.LightSwitch = false;
+            settings.Enabled.Monitor = true;
+
+            Assert.AreEqual(3, changeCount);
         }
     }
 }

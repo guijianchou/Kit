@@ -14,7 +14,6 @@ namespace Microsoft.PowerToys.Settings.UI.SerializationContext;
 [JsonSerializable(typeof(AwakeSettings))]
 [JsonSerializable(typeof(LightSwitchSettings))]
 [JsonSerializable(typeof(MonitorSettings))]
-[JsonSerializable(typeof(PowerDisplaySettings))]
 [JsonSerializable(typeof(ShortcutConflictProperties))]
 [JsonSerializable(typeof(WINDOWPLACEMENT))]
 public sealed partial class SourceGenerationContextContext : JsonSerializerContext

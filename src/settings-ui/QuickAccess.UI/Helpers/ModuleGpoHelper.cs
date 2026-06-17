@@ -16,7 +16,6 @@ internal static class ModuleGpoHelper
         {
             ModuleType.Awake => GPOWrapper.GetConfiguredAwakeEnabledValue(),
             ModuleType.LightSwitch => GPOWrapper.GetConfiguredLightSwitchEnabledValue(),
-            ModuleType.PowerDisplay => GPOWrapper.GetConfiguredPowerDisplayEnabledValue(),
             _ => GpoRuleConfigured.Unavailable,
         };
     }

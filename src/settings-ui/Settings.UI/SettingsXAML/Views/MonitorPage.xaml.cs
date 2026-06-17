@@ -34,6 +34,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         private readonly DispatcherQueueTimer _manualScanProgressTimer;
         private readonly Func<string, int> _sendConfigMsg;
         private bool _suppressViewModelUpdates;
+        private string _manualScanId = string.Empty;
 
         private MonitorViewModel ViewModel { get; set; }
 
@@ -66,6 +67,24 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             _fileSystemWatcher.EnableRaisingEvents = true;
 
             InitializeComponent();
+
+            Unloaded += MonitorPage_Unloaded;
+        }
+
+        private void MonitorPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            // The page is recreated on each navigation (NavigationCacheMode is not set), so the
+            // watcher and timer must be released here or they leak and keep this instance alive.
+            Unloaded -= MonitorPage_Unloaded;
+
+            _manualScanProgressTimer.Stop();
+            _manualScanProgressTimer.Tick -= ManualScanProgressTimer_Tick;
+
+            _fileSystemWatcher.Changed -= Settings_Changed;
+            _fileSystemWatcher.EnableRaisingEvents = false;
+            _fileSystemWatcher.Dispose();
+
+            ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
 
         public void RefreshEnabledState()
@@ -76,28 +95,29 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         private void ScanNow_Click(object sender, RoutedEventArgs e)
         {
-            StartManualScanProgress();
-            _sendConfigMsg(Helper.GetSerializedCustomAction(MonitorSettings.ModuleName, "scanNow", string.Empty));
+            string manualScanId = StartManualScanProgress();
+            _sendConfigMsg(Helper.GetSerializedCustomAction(MonitorSettings.ModuleName, "scanNow", manualScanId));
         }
 
-        private void StartManualScanProgress()
+        private string StartManualScanProgress()
         {
             _manualScanProgressTimer.Stop();
+            _manualScanId = CreateManualScanId();
             using EventWaitHandle scanCompletedEvent = new(false, EventResetMode.AutoReset, MonitorScanCompletedEvent);
             scanCompletedEvent.Reset();
-            DeleteStaleManualScanProgress();
 
             ViewModel.ManualScanProgressValue = 1;
             ViewModel.IsManualScanProgressIndeterminate = true;
             ViewModel.ManualScanProgressDetail = "Starting scan";
             ViewModel.IsManualScanProgressVisible = true;
             _manualScanProgressTimer.Start();
+            return _manualScanId;
         }
 
         private void ManualScanProgressTimer_Tick(DispatcherQueueTimer sender, object args)
         {
             bool completionSignaled = IsScanCompletedSignaled();
-            WorkerProgressSnapshot progressSnapshot = ReadWorkerProgressSnapshot();
+            WorkerProgressSnapshot progressSnapshot = ReadWorkerProgressSnapshot(_manualScanId);
             if (progressSnapshot != null)
             {
                 ApplyWorkerProgressSnapshot(progressSnapshot);
@@ -108,7 +128,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 ViewModel.ManualScanProgressDetail = "Waiting for worker progress";
             }
 
-            if (completionSignaled || string.Equals(progressSnapshot?.Phase, "completed", StringComparison.OrdinalIgnoreCase))
+            bool manualScanCompleted = string.Equals(progressSnapshot?.Phase, "completed", StringComparison.OrdinalIgnoreCase);
+            if (manualScanCompleted || (completionSignaled && progressSnapshot != null && string.Equals(progressSnapshot.ScanId, _manualScanId, StringComparison.Ordinal)))
             {
                 ViewModel.IsManualScanProgressIndeterminate = false;
                 ViewModel.ManualScanProgressValue = 100;
@@ -211,7 +232,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
         }
 
-        private WorkerProgressSnapshot ReadWorkerProgressSnapshot()
+        private WorkerProgressSnapshot ReadWorkerProgressSnapshot(string manualScanId)
         {
             string progressPath = ResolveProgressPath();
 
@@ -222,7 +243,13 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
             try
             {
-                return JsonSerializer.Deserialize<WorkerProgressSnapshot>(File.ReadAllText(progressPath), WorkerProgressSnapshot.JsonOptions);
+                WorkerProgressSnapshot snapshot = JsonSerializer.Deserialize<WorkerProgressSnapshot>(File.ReadAllText(progressPath), WorkerProgressSnapshot.JsonOptions);
+                if (snapshot == null || !string.Equals(snapshot.ScanId, manualScanId, StringComparison.Ordinal))
+                {
+                    return null;
+                }
+
+                return snapshot;
             }
             catch (IOException)
             {
@@ -238,24 +265,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
         }
 
-        private static void DeleteStaleManualScanProgress()
-        {
-            string progressPath = ResolveProgressPath();
-            try
-            {
-                if (File.Exists(progressPath))
-                {
-                    File.Delete(progressPath);
-                }
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-        }
-
         private static string ResolveProgressPath()
         {
             return Path.Combine(
@@ -263,6 +272,11 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 "Kit",
                 MonitorSettings.ModuleName,
                 MonitorProgressFileName);
+        }
+
+        private static string CreateManualScanId()
+        {
+            return Guid.NewGuid().ToString("N");
         }
 
         private void ApplyWorkerProgressSnapshot(WorkerProgressSnapshot snapshot)
@@ -309,6 +323,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             {
                 PropertyNameCaseInsensitive = true,
             };
+
+            public string ScanId { get; set; } = string.Empty;
 
             public string Phase { get; set; }
 

@@ -16,10 +16,15 @@
 #include <NightLightRegistryObserver.h>
 #include <trace.h>
 
+namespace
+{
+    const wchar_t KIT_LIGHTSWITCH_MANUAL_OVERRIDE[] = L"Local\\KitLightSwitchManualOverrideEvent-55af6d42-c0e1-4f09-9a2c-b7cb8fdfb5a2";
+    const wchar_t KIT_LIGHTSWITCH_SERVICE_STOP[] = L"Local\\KitLightSwitchServiceStopEvent-09b983c3-01df-4490-9f84-9f6e5c52c7d5";
+}
+
 SERVICE_STATUS g_ServiceStatus = {};
 SERVICE_STATUS_HANDLE g_StatusHandle = nullptr;
 HANDLE g_ServiceStopEvent = nullptr;
-const wchar_t LIGHTSWITCH_SERVICE_STOP_EVENT[] = L"KIT_LIGHTSWITCH_SERVICE_STOP";
 static LightSwitchStateManager* g_stateManagerPtr = nullptr;
 
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
@@ -51,12 +56,13 @@ int _tmain(int argc, TCHAR* argv[])
         DWORD err = GetLastError();
         if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) // not launched by SCM
         {
-            g_ServiceStopEvent = CreateEventW(nullptr, TRUE, FALSE, LIGHTSWITCH_SERVICE_STOP_EVENT);
+            g_ServiceStopEvent = CreateEventW(nullptr, TRUE, FALSE, KIT_LIGHTSWITCH_SERVICE_STOP);
             if (!g_ServiceStopEvent)
             {
                 return static_cast<int>(GetLastError());
             }
 
+            ResetEvent(g_ServiceStopEvent);
             HANDLE hThread = CreateThread(
                 nullptr, 0, ServiceWorkerThread, reinterpret_cast<void*>(static_cast<ULONG_PTR>(parentPid)), 0, nullptr);
 
@@ -64,7 +70,6 @@ int _tmain(int argc, TCHAR* argv[])
             WaitForSingleObject(hThread, INFINITE);
             CloseHandle(hThread);
             CloseHandle(g_ServiceStopEvent);
-            g_ServiceStopEvent = nullptr;
             return 0;
         }
         return static_cast<int>(err);
@@ -85,7 +90,7 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR*)
     g_ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
 
-    g_ServiceStopEvent = CreateEventW(nullptr, TRUE, FALSE, LIGHTSWITCH_SERVICE_STOP_EVENT);
+    g_ServiceStopEvent = CreateEventW(nullptr, TRUE, FALSE, KIT_LIGHTSWITCH_SERVICE_STOP);
     if (!g_ServiceStopEvent)
     {
         g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
@@ -93,6 +98,8 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR*)
         SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
         return;
     }
+
+    ResetEvent(g_ServiceStopEvent);
 
     g_ServiceStatus.dwCurrentState = SERVICE_RUNNING;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
@@ -102,7 +109,6 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR*)
     CloseHandle(hThread);
 
     CloseHandle(g_ServiceStopEvent);
-    g_ServiceStopEvent = nullptr;
     g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
     g_ServiceStatus.dwWin32ExitCode = 0;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
@@ -218,7 +224,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
     LightSwitchSettings::instance().InitFileWatcher();
 
-    HANDLE hManualOverride = OpenEventW(SYNCHRONIZE | EVENT_MODIFY_STATE, FALSE, L"KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
+    HANDLE hManualOverride = CreateEventW(nullptr, TRUE, FALSE, KIT_LIGHTSWITCH_MANUAL_OVERRIDE);
     HANDLE hSettingsChanged = LightSwitchSettings::instance().GetSettingsChangedEvent();
 
     static std::unique_ptr<NightLightRegistryObserver> g_nightLightWatcher;
@@ -290,13 +296,13 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
         if (wait == WAIT_OBJECT_0)
         {
-            Logger::info(L"[LightSwitchService] Stop event triggered — exiting.");
+            Logger::info(L"[LightSwitchService] Stop event triggered - exiting.");
             break;
         }
 
         if (hParent && wait == WAIT_OBJECT_0 + 1)
         {
-            Logger::info(L"[LightSwitchService] Parent process exited — stopping service.");
+            Logger::info(L"[LightSwitchService] Parent process exited - stopping service.");
             break;
         }
 

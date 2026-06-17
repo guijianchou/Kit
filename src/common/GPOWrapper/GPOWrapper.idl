@@ -13,7 +13,6 @@ namespace PowerToys
         [default_interface] static runtimeclass GPOWrapper {
             static GpoRuleConfigured GetConfiguredAwakeEnabledValue();
             static GpoRuleConfigured GetConfiguredLightSwitchEnabledValue();
-            static GpoRuleConfigured GetConfiguredPowerDisplayEnabledValue();
             static GpoRuleConfigured GetDisableNewUpdateToastValue();
             static GpoRuleConfigured GetDisableAutomaticUpdateDownloadValue();
             static GpoRuleConfigured GetDisableShowWhatsNewAfterUpdatesValue();

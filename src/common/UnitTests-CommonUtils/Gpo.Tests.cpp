@@ -63,12 +63,6 @@ namespace UnitTestsCommonUtils
             Assert::IsTrue(IsValidGpoResult(result));
         }
 
-        TEST_METHOD(GetConfiguredPowerDisplayEnabledValue_ReturnsValidState)
-        {
-            auto result = getConfiguredPowerDisplayEnabledValue();
-            Assert::IsTrue(IsValidGpoResult(result));
-        }
-
         TEST_METHOD(GetConfiguredRunAtStartupValue_ReturnsValidState)
         {
             auto result = getConfiguredRunAtStartupValue();
@@ -100,7 +94,6 @@ namespace UnitTestsCommonUtils
             getAllowDataDiagnosticsValue();
             getConfiguredAwakeEnabledValue();
             getConfiguredLightSwitchEnabledValue();
-            getConfiguredPowerDisplayEnabledValue();
             getConfiguredRunAtStartupValue();
             getDisableAutomaticUpdateDownloadValue();
             getDisableNewUpdateToastValue();

@@ -163,6 +163,7 @@ namespace ViewModelTests
             var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml"));
             var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml.cs"));
             var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorViewModel.cs"));
+            var intervalOption = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorScanIntervalOption.cs"));
             var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
             var normalizedPageXaml = pageXaml.Replace("\r\n", "\n", StringComparison.Ordinal);
 
@@ -187,20 +188,37 @@ namespace ViewModelTests
             StringAssert.Contains(pageXaml, "Tag=\"SHA512\"");
             Assert.IsFalse(pageXaml.Contains("HashAlgorithmSha1_Monitor", StringComparison.Ordinal));
 
+            StringAssert.Contains(pageXaml, "ScanIntervalSeconds_Monitor");
+            StringAssert.Contains(pageXaml, "ItemsSource=\"{x:Bind ViewModel.ScanIntervalOptions, Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "SelectedValue=\"{x:Bind ViewModel.ScanIntervalSeconds, Mode=TwoWay}\"");
+            StringAssert.Contains(pageXaml, "SelectedValuePath=\"Seconds\"");
+            StringAssert.Contains(pageXaml, "DisplayMemberPath=\"Label\"");
+            Assert.IsFalse(pageXaml.Contains("AutomationProperties.AutomationId=\"ScanIntervalSeconds_Monitor\"\r\n                            LargeChange=\"600\"", StringComparison.Ordinal));
+
             StringAssert.Contains(pageCode, "ScanNow_Click");
             StringAssert.Contains(pageCode, "StartManualScanProgress");
             StringAssert.Contains(pageCode, "scan-progress.json");
             StringAssert.Contains(pageCode, "KitMonitorScanCompletedEvent");
-            StringAssert.Contains(pageCode, "DeleteStaleManualScanProgress");
-            StringAssert.Contains(pageCode, "File.Delete(progressPath)");
             StringAssert.Contains(pageCode, "ReadWorkerProgressSnapshot");
             StringAssert.Contains(pageCode, "\"scanNow\"");
+            StringAssert.Contains(pageCode, "_manualScanId");
+            StringAssert.Contains(pageCode, "CreateManualScanId");
+            StringAssert.Contains(pageCode, "snapshot.ScanId");
+            StringAssert.Contains(pageCode, "manualScanId");
             Assert.IsFalse(pageCode.Contains("ManualScanProgressValue + 1", StringComparison.Ordinal), "Monitor page should use worker progress instead of timer-only fake progress.");
             Assert.IsFalse(pageCode.Contains("\"organizeDownloads\"", StringComparison.Ordinal));
             StringAssert.Contains(pageCode, "BrowseDownloadsFolder_Click");
             StringAssert.Contains(pageCode, "ShellGetFolder.GetFolderDialog");
 
             StringAssert.Contains(viewModel, "DownloadsPathDisplay");
+            StringAssert.Contains(viewModel, "ScanIntervalOptions");
+            StringAssert.Contains(intervalOption, "record MonitorScanIntervalOption");
+            StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"1h\", 3600)");
+            StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"2h\", 7200)");
+            StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"6h\", 21600)");
+            StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"12h\", 43200)");
+            StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"24h\", 86400)");
+            StringAssert.Contains(viewModel, "new MonitorScanIntervalOption(\"1d\", 86400)");
             StringAssert.Contains(viewModel, "RunInBackground");
             StringAssert.Contains(viewModel, "IsManualScanProgressVisible");
             StringAssert.Contains(viewModel, "IsManualScanProgressIndeterminate");
@@ -215,17 +233,19 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void MonitorRunInBackgroundShouldBeImmediatelyAfterManualScan()
+        public void MonitorSettingsCardsShouldKeepBackgroundIntervalAndFolderOrder()
         {
             var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml"));
 
-            var scanNowIndex = pageXaml.IndexOf("x:Uid=\"Monitor_ScanNowSettingsCard\"", StringComparison.Ordinal);
-            var runInBackgroundIndex = pageXaml.IndexOf("x:Uid=\"Monitor_RunInBackgroundSettingsCard\"", StringComparison.Ordinal);
+            var cleanIndex = pageXaml.IndexOf("x:Uid=\"Monitor_CleanInstallersSettingsCard\"", StringComparison.Ordinal);
             var downloadsPathIndex = pageXaml.IndexOf("x:Uid=\"Monitor_DownloadsPathSettingsCard\"", StringComparison.Ordinal);
+            var runInBackgroundIndex = pageXaml.IndexOf("x:Uid=\"Monitor_RunInBackgroundSettingsCard\"", StringComparison.Ordinal);
+            var scanIntervalIndex = pageXaml.IndexOf("x:Uid=\"Monitor_ScanIntervalSeconds\"", StringComparison.Ordinal);
 
-            Assert.IsTrue(scanNowIndex >= 0, "Manual scan card should exist.");
-            Assert.IsTrue(runInBackgroundIndex > scanNowIndex, "Run in background should appear below Manual scan.");
-            Assert.IsTrue(downloadsPathIndex > runInBackgroundIndex, "Run in background should appear before folder/path settings.");
+            Assert.IsTrue(cleanIndex >= 0, "Clean installers card should exist.");
+            Assert.IsTrue(downloadsPathIndex > cleanIndex, "Downloads folder should appear below Clean.");
+            Assert.IsTrue(runInBackgroundIndex > downloadsPathIndex, "Run in background should appear below Downloads folder.");
+            Assert.IsTrue(scanIntervalIndex > runInBackgroundIndex, "Scan interval should appear below Run in background.");
         }
 
         [TestMethod]

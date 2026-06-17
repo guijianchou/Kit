@@ -9,7 +9,6 @@ enum class ESettingsWindowNames
     Awake,
     LightSwitch,
     Monitor,
-    PowerDisplay,
 };
 
 std::string ESettingsWindowNames_to_string(ESettingsWindowNames value);

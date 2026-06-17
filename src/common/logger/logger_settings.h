@@ -16,7 +16,6 @@ struct LogSettings
     inline const static std::string awakeLoggerName = "awake";
     inline const static std::wstring awakeLogPath = L"Logs\\awake-log.log";
     inline const static std::string lightSwitchLoggerName = "light-switch";
-    inline const static std::string powerDisplayLoggerName = "powerdisplay";
     inline const static int retention = 30;
     std::wstring logLevel;
     LogSettings();

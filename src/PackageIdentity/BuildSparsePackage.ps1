@@ -31,10 +31,10 @@ if ($CIBuild.IsPresent) {
 
 # Configuration constants - centralized management
 $script:Config = @{
-    IdentityName   = "Microsoft.PowerToys.SparseApp"
-    SparseMsixName = "PowerToysSparse.msix"
-    CertPrefix     = "PowerToysSparse"
-    CertSubject    = 'CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US'
+    IdentityName   = "Local.Kit.SparseApp"
+    SparseMsixName = "KitSparse.msix"
+    CertPrefix     = "KitSparse"
+    CertSubject    = 'CN=Kit Dev'
     CertValidMonths = 12
 }
 
@@ -195,8 +195,8 @@ if ($needNewCert) {
     $now = Get-Date
     $expiration = $now.AddMonths($script:Config.CertValidMonths)
     # Subject MUST match <Identity Publisher="..."> inside AppxManifest.xml
-    $friendlyName = "PowerToys Dev Sparse Cert Create=$now"
-    $keyFriendly = "PowerToys Dev Sparse Key Create=$now"
+    $friendlyName = "Kit Dev Sparse Cert Create=$now"
+    $keyFriendly = "Kit Dev Sparse Key Create=$now"
 
     $certStore = 'cert:\CurrentUser\My'
     $ekuOid = '2.5.29.37'
@@ -216,10 +216,10 @@ if ($needNewCert) {
     Export-Certificate -Cert $cert -FilePath $CertCerFile -Force | Out-Null
 }
 
-# Determine output directory - using PowerToys standard structure
-# Navigate to PowerToys root (two levels up from src/PackageIdentity)
-$PowerToysRoot = Split-Path (Split-Path $ProjectRoot -Parent) -Parent
-$outDir = Join-Path $PowerToysRoot "$Platform\$Configuration"
+# Determine output directory - using the Kit repo output structure.
+# Navigate to repo root (two levels up from src/PackageIdentity).
+$KitRoot = Split-Path (Split-Path $ProjectRoot -Parent) -Parent
+$outDir = Join-Path $KitRoot "$Platform\$Configuration"
 
 if (-not (Test-Path $outDir)) {
     Write-BuildLog "Creating output directory: $outDir" -Level Info
@@ -231,7 +231,7 @@ $sparseDir = $PSScriptRoot
 $manifestPath = Join-Path $sparseDir 'AppxManifest.xml'
 if (-not (Test-Path $manifestPath)) { throw "Missing AppxManifest.xml in PackageIdentity folder: $manifestPath" }
 
-$versionPropsPath = Join-Path $PowerToysRoot 'src\Version.props'
+$versionPropsPath = Join-Path $KitRoot 'src\Version.props'
 $targetManifestVersion = $null
 $versionCandidate = $null
 if (Test-Path $versionPropsPath) {

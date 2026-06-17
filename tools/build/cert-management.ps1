@@ -21,7 +21,7 @@ This is useful in build or signing pipelines to ensure a valid and trusted certi
 
 .PARAMETER certSubject
 The subject name of the certificate to search for or create. Default is:
-"CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US"
+"CN=Kit Dev"
 
 .PARAMETER cerPath
 (ImportAndVerifyCertificate only) The file path to a `.cer` certificate file to import.
@@ -46,7 +46,7 @@ Imports a certificate into the CurrentUser Root store and verifies its presence.
 #>
 
 param (
-    [string]$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US",
+    [string]$certSubject = "CN=Kit Dev",
     [switch]$RequireMachineRoot
 )
 
@@ -99,7 +99,7 @@ function ImportAndVerifyCertificate {
 
 function EnsureCertificate {
     param (
-        [string]$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US",
+        [string]$certSubject = "CN=Kit Dev",
         [switch]$RequireMachineRoot
     )
 
@@ -184,7 +184,7 @@ function Export-CertificateFiles {
 
 # Main execution when script is run directly
 if ($MyInvocation.InvocationName -ne '.') {
-    Write-Host "=== PowerToys Certificate Management ===" -ForegroundColor Green
+    Write-Host "=== Kit Certificate Management ===" -ForegroundColor Green
     Write-Host ""
     
     # Ensure certificate exists and is trusted
@@ -193,7 +193,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     
     if ($cert) {
         # Export the certificate to a .cer file
-        $exportPath = Join-Path (Get-Location) "PowerToys-CodeSigning.cer"
+        $exportPath = Join-Path (Get-Location) "Kit-CodeSigning.cer"
         Write-Host ""
         Write-Host "Exporting certificate..." -ForegroundColor Yellow
         Export-CertificateFiles -Certificate $cert -CerPath $exportPath

@@ -92,8 +92,9 @@ std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObjec
                 }
                 else if (action == L"restart_maintain_elevation")
                 {
-                    auto loaded = PTSettingsHelper::load_general_settings();
-
+                    // this was added to restart and maintain elevation, which is needed after settings are change from outside the normal process.
+                    // since a normal PostQuitMessage(0) would usually cause this process to save its in memory settings to disk, we need to
+                    // send a PostQuitMessage(1) and check for that on exit, and skip the settings-flush.
                     if (is_process_elevated())
                     {
                         schedule_restart_as_elevated(true);
@@ -762,8 +763,6 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
         return "LightSwitch";
     case ESettingsWindowNames::Monitor:
         return "Monitor";
-    case ESettingsWindowNames::PowerDisplay:
-        return "PowerDisplay";
     default:
     {
         Logger::error(L"Can't convert ESettingsWindowNames value={} to string", static_cast<int>(value));
@@ -794,10 +793,6 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     else if (value == "Monitor")
     {
         return ESettingsWindowNames::Monitor;
-    }
-    else if (value == "PowerDisplay")
-    {
-        return ESettingsWindowNames::PowerDisplay;
     }
     else
     {

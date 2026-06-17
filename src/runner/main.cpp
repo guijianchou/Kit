@@ -14,7 +14,6 @@
 
 #include <common/comUtils/comUtils.h>
 #include <common/display/dpi_aware.h>
-#include <common/Telemetry/EtwTrace/EtwTrace.h>
 #include <common/notifications/notifications.h>
 #include <common/notifications/dont_show_again.h>
 #include <common/utils/appMutex.h>
@@ -68,7 +67,6 @@ namespace
         L"PowerToys.AwakeModuleInterface.dll",
         L"PowerToys.LightSwitchModuleInterface.dll",
         L"PowerToys.MonitorModuleInterface.dll",
-        L"PowerToys.PowerDisplayModuleInterface.dll",
     };
 
     bool is_known_module_registered(std::wstring_view moduleName)
@@ -195,7 +193,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 #ifdef _DEBUG
                 // In debug mode, simply log the warning and continue execution.
                 // This contrasts with the past approach where developers had to build all modules
-                // without errors before debuggingâ€”slowing down quick clone-and-fix iterations.
+                // without errors before debugging—slowing down quick clone-and-fix iterations.
                 Logger::warn(L"Debug mode: {}", errorMessage);
 #else
                 // In release mode, show error dialog as before
@@ -310,9 +308,6 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
 
 int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR lpCmdLine, int /*nCmdShow*/)
 {
-    Shared::Trace::ETWTrace trace{};
-    trace.UpdateState(true);
-
     Gdiplus::GdiplusStartupInput gpStartupInput;
     ULONG_PTR gpToken;
     GdiplusStartup(&gpToken, &gpStartupInput, NULL);
@@ -443,9 +438,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         result = -1;
     }
 
-    trace.Flush();
-    trace.UpdateState(false);
-
     // We need to release the mutexes to be able to restart the application
     if (msi_mutex)
     {
@@ -465,5 +457,3 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
 
     return result;
 }
-
-

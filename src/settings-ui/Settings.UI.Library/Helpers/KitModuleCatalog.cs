@@ -17,7 +17,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
                 ModuleType.Awake,
                 ModuleType.LightSwitch,
                 ModuleType.Monitor,
-                ModuleType.PowerDisplay,
             };
 
         public static IReadOnlyList<ModuleType> DashboardModules => ActiveModules;
@@ -27,7 +26,24 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 ModuleType.LightSwitch,
                 ModuleType.Monitor,
-                ModuleType.PowerDisplay,
+            };
+
+        public static IReadOnlyList<string> ActiveSettingsModuleKeys { get; } =
+            new[]
+            {
+                nameof(GeneralSettings),
+                AwakeSettings.ModuleName,
+                LightSwitchSettings.ModuleName,
+                MonitorSettings.ModuleName,
+                "General",
+            };
+
+        public static IReadOnlyList<string> ActiveEnabledModuleKeys { get; } =
+            new[]
+            {
+                AwakeSettings.ModuleName,
+                LightSwitchSettings.ModuleName,
+                MonitorSettings.ModuleName,
             };
 
         public static bool IsActiveModule(ModuleType moduleType)

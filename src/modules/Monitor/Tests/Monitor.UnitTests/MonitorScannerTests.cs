@@ -40,6 +40,68 @@ public sealed class MonitorScannerTests
         Assert.AreEqual("cached-sha1", records[0].Sha1);
     }
 
+    [TestMethod]
+    public void ScanSkipsFilesDeletedAfterEnumerationBegins()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string notesPath = Path.Combine(tempDirectory.Path, "notes.txt");
+        File.WriteAllText(notesPath, "hello");
+
+        IReadOnlyList<MonitorFileRecord> records = MonitorScanner.Scan(
+            tempDirectory.Path,
+            MonitorSettings.CreateDefault(),
+            progressReporter: new DeletingProgressReporter(notesPath));
+
+        Assert.AreEqual(0, records.Count);
+    }
+
+    [TestMethod]
+    public void ScanRecalculatesHashWhenFileSizeChangedWithinSameTimestampSecond()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string notesPath = Path.Combine(tempDirectory.Path, "notes.txt");
+        File.WriteAllText(notesPath, "hello world");
+
+        DateTime timestamp = new(2026, 4, 25, 12, 0, 0, DateTimeKind.Local);
+        File.SetLastWriteTime(notesPath, timestamp);
+        string expectedTimestamp = MonitorScanner.FormatTimestamp(File.GetLastWriteTime(notesPath));
+        MonitorFileRecord previousRecord = new(
+            "~",
+            "~",
+            "notes.txt",
+            "notes.txt",
+            notesPath,
+            "cached-sha1",
+            expectedTimestamp,
+            5,
+            "Documents");
+
+        IReadOnlyList<MonitorFileRecord> records = MonitorScanner.Scan(tempDirectory.Path, MonitorSettings.CreateDefault(), new[] { previousRecord });
+
+        Assert.AreEqual(1, records.Count);
+        Assert.AreNotEqual("cached-sha1", records[0].Sha1);
+    }
+
+    private sealed class DeletingProgressReporter : IMonitorScanProgressReporter
+    {
+        private readonly string _filePath;
+        private bool _deleted;
+
+        public DeletingProgressReporter(string filePath)
+        {
+            _filePath = filePath;
+        }
+
+        public void Report(MonitorScanProgressSnapshot snapshot, bool force = false)
+        {
+            if (!_deleted)
+            {
+                File.Delete(_filePath);
+                _deleted = true;
+            }
+        }
+    }
+
     private sealed class TemporaryDirectory : IDisposable
     {
         public TemporaryDirectory()

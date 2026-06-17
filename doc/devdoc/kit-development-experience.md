@@ -2,6 +2,16 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-06-13 Version 2.0.2 PowerDisplay Removal And Upstream Module Sync
+
+This pass moved Kit to `2.0.2` after syncing the copied Awake and LightSwitch modules with the local PowerToys-main reference while preserving Kit's local-only runtime boundaries.
+
+- Version.props, README, README_zh, changelog, the sparse package manifest, GPO support markers, and version metadata tests now use Kit version `2.0.2`.
+- The active Kit module set is now `Awake`, `Light Switch`, and `Monitor`; PowerDisplay was removed from runner loading, solution entries, Settings navigation, Quick Access routing, GPO projection, Settings serialization, resources, assets, docs, and module source.
+- LightSwitch no longer keeps the deleted PowerDisplay profile bridge, Force Light/Force Dark custom-action plumbing, or PowerToys-named runtime events.
+- LightSwitch now uses Kit-named toggle, manual-override, and service-stop events, stops its scheduler service when the schedule changes to `Off`, and keeps toggle-hotkey handling independent of the scheduler process.
+- Awake and LightSwitch keep no-op trace compatibility hooks without active PowerToys telemetry providers, writes, telemetry include paths, or `EtwTrace` project references.
+
 ## 2026-05-28 Version 2.0.1 Stability Refactor
 
 This pass finalized Kit's docs, tests, and Settings code against the local PowerToys-main reference and moved Kit to `2.0.1`.

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 using Microsoft.PowerToys.Settings.UI.Library;
@@ -82,6 +83,15 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 }
             }
         }
+
+        public IReadOnlyList<MonitorScanIntervalOption> ScanIntervalOptions { get; } = new[]
+        {
+            new MonitorScanIntervalOption("1h", 3600),
+            new MonitorScanIntervalOption("2h", 7200),
+            new MonitorScanIntervalOption("6h", 21600),
+            new MonitorScanIntervalOption("12h", 43200),
+            new MonitorScanIntervalOption("24h", 86400),
+        };
 
         public int ScanIntervalSeconds
         {

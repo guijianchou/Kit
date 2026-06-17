@@ -31,7 +31,6 @@ namespace Microsoft.PowerToys.UITest
         Awake,
         LightSwitch,
         Monitor,
-        PowerDisplay,
     }
 
     /// <summary>
@@ -101,7 +100,6 @@ namespace Microsoft.PowerToys.UITest
                 [PowerToysModule.Awake] = new ModuleInfo("PowerToys.Awake.exe", "PowerToys Awake"),
                 [PowerToysModule.LightSwitch] = new ModuleInfo("PowerToys.LightSwitchService.exe", "PowerToys.LightSwitchService", "LightSwitchService"),
                 [PowerToysModule.Monitor] = new ModuleInfo("PowerToys.Monitor.exe", "Kit Monitor"),
-                [PowerToysModule.PowerDisplay] = new ModuleInfo("PowerToys.PowerDisplay.exe", "Power Display", "WinUI3Apps"),
             };
         }
 

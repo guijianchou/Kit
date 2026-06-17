@@ -118,31 +118,31 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="ERROR" xml:space="preserve">
-    <value>PowerToys Error</value>
+    <value>Kit Error</value>
   </data>
   <data name="COULDNOT_RESTART_NONELEVATED" xml:space="preserve">
-    <value>Could not start PowerToys as a user!</value>
+    <value>Could not start Kit as a user!</value>
   </data>
   <data name="COULDNOT_RESTART_ELEVATED" xml:space="preserve">
-    <value>Could not start PowerToys as an administrator!</value>
+    <value>Could not start Kit as an administrator!</value>
   </data>
   <data name="ANOTHER_INSTANCE_RUNNING" xml:space="preserve">
-    <value>PowerToys is already running.</value>
+    <value>Kit is already running.</value>
   </data>
   <data name="AUTOUPDATE_SUCCESS" xml:space="preserve">
-    <value>PowerToys was successfully updated!</value>
+    <value>Kit was successfully updated!</value>
   </data>
   <data name="MSI_VERSION_IS_ALREADY_RUNNING" xml:space="preserve">
-    <value>An older version of PowerToys is already running.</value>
+    <value>An older version of Kit is already running.</value>
   </data>
   <data name="DOWNLOAD_UPDATE_ERROR" xml:space="preserve">
-    <value>Couldn't download PowerToys update! Please report the issue on GitHub.</value>
+    <value>Couldn't download Kit update! Please report the issue on GitHub.</value>
   </data>
   <data name="OLDER_MSIX_UNINSTALLED" xml:space="preserve">
-    <value>An older MSIX version of PowerToys was uninstalled.</value>
+    <value>An older MSIX version of Kit was uninstalled.</value>
   </data>
   <data name="PT_UPDATE_MESSAGE_BOX_TEXT" xml:space="preserve">
-    <value>PowerToys was updated successfully!</value>
+    <value>Kit was updated successfully!</value>
   </data>
   <data name="STARTUP_DISABLED_BY_POLICY" xml:space="preserve">
     <value>This setting has been disabled by your administrator.</value>
@@ -151,19 +151,19 @@
     <value>This setting has been disabled manually via &lt;a href="https://ms_settings_startupapps" target="_blank"&gt;Startup Settings&lt;/a&gt;.</value>
   </data>
   <data name="GITHUB_NEW_VERSION_AVAILABLE" xml:space="preserve">
-    <value>An update to PowerToys is available.</value>
+    <value>An update to Kit is available.</value>
   </data>
   <data name="GITHUB_NEW_VERSION_UPDATE_NOW" xml:space="preserve">
     <value>Update now</value>
   </data>
   <data name="GITHUB_NEW_VERSION_AVAILABLE_OFFER_VISIT" xml:space="preserve">
-    <value>An update to PowerToys is available. Visit our GitHub page to update.</value>
+    <value>An update to Kit is available. Visit our GitHub page to update.</value>
   </data>
   <data name="GITHUB_NEW_VERSION_MORE_INFO" xml:space="preserve">
     <value>More info...</value>
   </data>
   <data name="TOAST_TITLE" xml:space="preserve">
-    <value>PowerToys Update</value>
+    <value>Kit Update</value>
   </data>
   <data name="QUICK_ACCESS_MENU_TEXT" xml:space="preserve">
     <value>Quick access\tLeft-click</value>
@@ -181,7 +181,7 @@
     <value>Documentation</value>
   </data>
   <data name="PT_VERSION_CHANGE_ASK_FOR_COMPUTER_RESTART" xml:space="preserve">
-    <value>A new PowerToys version has been installed. Please restart the computer, when possible, to fully reload File Explorer extensions.</value>
+    <value>A new Kit version has been installed. Please restart the computer, when possible, to fully reload File Explorer extensions.</value>
     <comment>File Explorer refers to the Windows File Explorer application.</comment>
   </data>
   <data name="TRAY_ICON_ADMIN_TOOLTIP" xml:space="preserve">

@@ -8,7 +8,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using PowerDisplay.Models;
 
 namespace Microsoft.PowerToys.Settings.UI.Library
 {
@@ -117,7 +116,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         /// <summary>
         /// Gets the display name - includes monitor number when multiple monitors exist.
-        /// Follows the same logic as PowerDisplay UI's MonitorViewModel.DisplayName.
+        /// Follows the same numbered monitor naming convention used by monitor settings UI.
         /// </summary>
         [JsonIgnore]
         public string DisplayName
@@ -514,7 +513,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         /// <summary>
         /// Compute available color presets from VcpCodesFormatted (VCP code 0x14).
-        /// Uses ColorTemperatureHelper from PowerDisplay.Lib for shared computation logic.
+        /// Computes color temperature display presets from VCP capability values.
         /// </summary>
         private ObservableCollection<ColorPresetItem> ComputeAvailableColorPresets()
         {
@@ -556,7 +555,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 })
                 .Where(x => x.VcpValue > 0);
 
-            // Compute presets inline (avoiding dependency on PowerDisplay.Lib's ColorTemperatureHelper)
+            // Compute presets inline so monitor settings do not depend on a module-specific display library.
             var presetList = colorTempValues
                 .Select(item => new ColorPresetItem(item.VcpValue, !string.IsNullOrEmpty(item.Name) ? item.Name : "Manufacturer Defined"))
                 .OrderBy(p => p.VcpValue);

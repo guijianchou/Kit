@@ -14,7 +14,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 ## 当前版本
 
-当前 Kit 版本：`2.0.1`。
+当前 Kit 版本：`2.0.2`。
 
 ## 更新日志
 
@@ -26,12 +26,12 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 当前稳定的交接点是：
 
-- 保持 `Awake`、`Light Switch`、`Monitor` 和 `PowerDisplay` 作为活动模块集。
+- 保持 `Awake`、`Light Switch` 和 `Monitor` 作为活动模块集。
 - 通过维护的列表和测试保持模块发现显式。暂时不要添加文件系统探测。
 - 保持通用和主页使用英语 Kit 措辞，删除自动更新和遥测界面。
 - 保持 Monitor 的工作器无头。用户操作和进度应通过设置/主页显示，而不是工作器窗口。
 - 保持设置扫描进度与工作器进度/完成状态绑定。避免独立于工作器推进的扫描完成 UI。
-- 保持 Kit UI 自动化指向 Kit 的运行器、设置窗口、安装根目录和四个活动模块可执行文件，避免意外附着到已安装的上游 PowerToys。
+- 保持 Kit UI 自动化指向 Kit 的运行器、设置窗口、安装根目录和三个活动模块可执行文件，避免意外附着到已安装的上游 PowerToys。
 - 保持 Settings 深度链接和模块设置链接只启动 `Kit.exe`。不要从 Kit UI 回退到已安装的上游 `PowerToys.exe`。
 - 在交接前清理构建工件，以便下一次 Visual Studio 构建从源状态开始。
 - 工作区可以在稳定交接后减少回源大小。本地 `Debug`、`Release`、`x64`、`bin`、`obj`、`TestResults`、`.vs` 和恢复的 `packages` 目录是可丢弃的构建状态。
@@ -39,7 +39,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 ## 架构
 
 - `src/runner` 启动 Kit，加载模块接口 DLL，拥有模块生命周期，并与设置应用协调设置 IPC。可执行文件已经足够分离，可以作为 `Kit.exe` 启动，而许多面向构建的项目名称仍然保留上游 PowerToys 名称。在运行时，运行器从 `Kit.exe` 旁边的 `WinUI3Apps` 打开设置和快速访问应用，因此运行器构建目标必须保持对两个 UI 可执行项目的显式依赖。
-- `src/modules` 包含活动实用工具。`Awake` 从上游 PowerToys 复制，包括 `Awake.ModuleServices`、`Awake` 和 `AwakeModuleInterface`；`LightSwitch` 是当前的 Kit 实用工具模块；`Monitor` 是从早期 Python 下载监视器创建的第一个 Kit 编写模块；`PowerDisplay` 从 PowerToys 风格模块形状导入，包括其设置页面、配置文件对话框、模型库、WinUI 应用和模块接口。
+- `src/modules` 包含活动实用工具。`Awake` 从上游 PowerToys 复制，包括 `Awake.ModuleServices`、`Awake` 和 `AwakeModuleInterface`；`LightSwitch` 是当前的 Kit 实用工具模块；`Monitor` 是从早期 Python 下载监视器创建的第一个 Kit 编写模块。
 - `src/settings-ui/Settings.UI` 包含 WinUI 设置应用，包括主页、通用、模块页面、导航和页面级视图模型。
 - `src/settings-ui/Settings.UI.Controls` 包含共享 UI 控件，如快速访问。
 - `src/settings-ui/Settings.UI.Library` 包含设置模型、设置序列化、模块设置存储库、备份和恢复助手、GPO 助手和共享设置基础设施。
@@ -54,7 +54,6 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 - `Awake`
 - `Light Switch`
 - `Monitor`
-- `PowerDisplay`
 
 Kit 不会自动公开源树中复制的每个上游 PowerToys 实用工具。模块仅在注册到运行器、设置导航、主页和测试的维护 Kit 列表后才启用。
 
@@ -65,7 +64,6 @@ Kit 遵循 PowerToys 模块加载模型，而不是发明新的插件协议。�
 - `PowerToys.AwakeModuleInterface.dll`
 - `PowerToys.LightSwitchModuleInterface.dll`
 - `PowerToys.MonitorModuleInterface.dll`
-- `PowerToys.PowerDisplayModuleInterface.dll`
 
 这个固定列表是有意的。它避免了不稳定的目录探测，并使每个导入的模块成为显式的兼容性决策。当另一个 PowerToys 模块被引入 Kit 时，它应该一起添加到运行器、解决方案、设置路由、主页仪表板元数据和测试中。
 
@@ -114,7 +112,7 @@ Kit 还没有活动的第三方插件主机。实际的第一步是 PowerToys �
 - 保持新模块拆分为可测试的核心库、工作器进程、本机模块接口、设置模型、设置页面、主页元数据和静态注册测试。
 - 当项目共享本机输出（如 `Version.pdb` 和 `PowerToys.Interop` 跟踪日志）时，按顺序或通过解决方案调度程序运行 C++ 模块接口验证。独立的并行 MSBuild 调用可能会竞争这些共享文件并报告错误的构建失败。
 - 保持本地构建脚本适合非 VS shell。MSBuild 参数应以数组转发，导入 Visual Studio 环境后缓存解析出的 MSBuild 路径，归一化 `VsDevCmd.bat` 带来的重复 `PATH`/`Path` 值，并在包源映射阻止 SDK restore 时默认跳过本地 CopyOnWrite/RunVSTest SDK resolver 导入。
-- 保持 PowerDisplay runner 激活走 runner 拥有的命名管道。runner 管理的启动会绕过独立 AppInstance 注册，因此切换操作不能使用无参数 `ShellExecuteExW` 激活。
+- 保持已删除模块的 runner、Settings、GPO、Quick Access 和解决方案表面真实删除，而不是隐藏在项目排除规则后面。
 - 保持开发签名范围明确。当前用户证书信任是默认本地路径；机器级根信任、递归包签名和非 sparse 包签名都应显式选择。
 - 在每次稳定化传递后保持文档接近实现。模块注册列表是有意手动的，因此陈旧的文档是真正的集成风险。
 
@@ -137,9 +135,9 @@ Monitor 是第一个直接针对 PowerToys 模块形状开发的 Kit 模块。�
 
 最新的主页工作保持 PowerToys 行为，但将其范围限定为 Kit 的活动模块：
 
-- `DashboardViewModel` 使用 `KitModuleCatalog.DashboardModules`，当前为 `Awake`、`LightSwitch`、`Monitor` 和 `PowerDisplay`，因此主页实用工具列表是固定和可预测的。
+- `DashboardViewModel` 使用 `KitModuleCatalog.DashboardModules`，当前为 `Awake`、`LightSwitch` 和 `Monitor`，因此主页实用工具列表是固定和可预测的。
 - `QuickAccessViewModel` 仍然支持可操作的快速访问项，但主页传递仪表板模块列表，以便启用的 Kit 模块一致显示。
-- 快速访问首先尝试正常启动器。如果模块没有直接快速操作，主页会回退到打开该模块的设置页面。这让 `Awake` 和 `Monitor` 在不创建虚假快捷方式操作的情况下有用地运行，而 `LightSwitch` 和 `PowerDisplay` 保持直接切换操作。
+- 快速访问首先尝试正常启动器。如果模块没有直接快速操作，主页会回退到打开该模块的设置页面。这让 `Awake` 和 `Monitor` 在不创建虚假快捷方式操作的情况下有用地运行，而 `LightSwitch` 保持直接切换操作。
 - `Awake` 贡献一个 `DashboardModuleActivationItem`，在主页快捷方式卡中显示当前 Awake 模式，使用现有的 PowerToys 仪表板项模板。
 - 快速访问空状态现在使用可见项的计数，而不是原始项集合计数，因此禁用或 GPO 隐藏的模块不会留下可见的空卡。
 
@@ -168,7 +166,7 @@ Monitor 是第一个直接针对 PowerToys 模块形状开发的 Kit 模块。�
 - 在本地迭代开发期间，如果磁盘空间允许，保留 `src\kit\packages`。它可以防止由于缺少包（如 WIL 和 C++/WinRT）而导致的冷构建失败和缓慢恢复。
 - 如果 `packages` 被删除，在判断缺少头文件或 WinMD 投影的编译错误之前，运行 Visual Studio `Restore NuGet Packages` 或执行完整解决方案构建。
 - 发布构建仅保留 `en-US` 卫星资源，从运行时输出中删除生成的调试符号和本机链接工件，清理非活动 Settings 模块资产、图标、资源字符串、OOBE/模型资产以及陈旧的非活动控件 XBF 输出，并且不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper。
-- Shortcut Conflict 热键查找显式限定为 Quick Access、LightSwitch 和 PowerDisplay，不再扫描 PowerToys 衍生库中的所有历史 `IHotkeyConfig` settings 模型。
+- Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch，不再扫描 PowerToys 衍生库中的所有历史 `IHotkeyConfig` settings 模型。
 - WindowsAppSDK 1.8 仍然通过 `Microsoft.WindowsAppSDK` 元包贡献其自己的 Windows AI/Onnx 运行时文件。删除这些将需要用细粒度的 WindowsAppSDK 包引用替换元包，因此推迟到可以更广泛地验证设置兼容性。
 
 在源大小清理后，`src\kit` 应该看起来接近仅源大小：源和文档保留，而 `x64`、`Release`、`.vs`、`packages` 和项目 `bin`/`obj` 目录应该不存在，直到下一次恢复/构建。
@@ -196,9 +194,8 @@ Git 工作树仅在需要隔离分支工作区时使用。在 2026-04-29，`git 
 - Monitor 的立即扫描操作发送 `scanNow` 自定义操作，工作器使用 `--use-configured-actions` 运行一次传递。这使手动扫描、类别文件夹创建、组织、安装程序清理和 CSV 写入保持在一个代码路径上，同时让 `OrganizeDownloads` 和 `CleanInstallers` 决定允许哪些副作用。
 - Monitor 的模块启用路径在启动工作器之前读取 `runInBackground`。模块可以保持启用以进行设置/主页/手动操作，而无需启动持久工作器。
 - Monitor 的设置页面现在将 `OrganizeDownloads`、`CleanInstallers` 和 `Run in background` 放置在手动扫描正下方，与设置的控制流匹配。
-- Light Switch 保持上游 `Apply monitor settings to` 形状，现在将 PowerDisplay 配置文件选择路由到导入的 PowerDisplay 设置页面。控件从 `GeneralSettings.Enabled.PowerDisplay` 启用，配置文件名称在该文件存在时从 `%LOCALAPPDATA%\Kit\PowerDisplay\profiles.json` 的 Kit 存储加载。加载器对缺失或格式错误的配置文件数据保持容忍。
-- PowerDisplay 的 runner 托管启动现在会在 AppInstance 注册前解析 runner PID 和命名管道，因此 IPC 启动会绕过独立窗口的单实例重定向，而普通用户启动仍会复用现有窗口。设置深链接现在启动 `Kit.exe`。
-- `Settings.UI.UnitTests` 现在具有 Monitor 设置顺序和 Light Switch 的 PowerDisplay 启用/配置文件加载路径的静态回归覆盖。
+- Light Switch 保留上游 schedule、Night Light 和 toggle hotkey 形状，但不再携带已删除的 PowerDisplay profile bridge。
+- `Settings.UI.UnitTests` 现在具有 Monitor 设置顺序和 Light Switch 无 PowerDisplay 边界的静态回归覆盖。
 
 ## 最近的发布构建回归
 

@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace Microsoft.PowerToys.Monitor;
@@ -9,7 +11,7 @@ namespace Microsoft.PowerToys.Monitor;
 /// <summary>
 /// Matches and removes installer files for software that is already installed.
 /// </summary>
-public static class MonitorInstallerCleaner
+public static partial class MonitorInstallerCleaner
 {
     private static readonly HashSet<string> InstallerExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -32,8 +34,9 @@ public static class MonitorInstallerCleaner
     /// </summary>
     /// <param name="programsPath">The Programs category folder to scan.</param>
     /// <param name="installedSoftwareNames">Installed software names.</param>
+    /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>Installer matches sorted by confidence descending.</returns>
-    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string programsPath, IEnumerable<string> installedSoftwareNames)
+    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string programsPath, IEnumerable<string> installedSoftwareNames, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(programsPath);
         ArgumentNullException.ThrowIfNull(installedSoftwareNames);
@@ -45,7 +48,7 @@ public static class MonitorInstallerCleaner
         }
 
         List<(FileInfo File, string CoreName)> installerTable = programsDirectory
-            .EnumerateFiles()
+            .SafeEnumerateFiles()
             .Where(file => InstallerExtensions.Contains(file.Extension))
             .Select(file => (file, ExtractCoreName(Path.GetFileNameWithoutExtension(file.Name))))
             .ToList();
@@ -55,6 +58,7 @@ public static class MonitorInstallerCleaner
 
         foreach (string softwareName in installedSoftwareNames)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string normalizedSoftwareName = NormalizeSoftwareName(softwareName);
             if (normalizedSoftwareName.Length < 3)
             {
@@ -64,6 +68,7 @@ public static class MonitorInstallerCleaner
             HashSet<string> keywords = ExtractKeywords(softwareName);
             foreach ((FileInfo File, string CoreName) installer in installerTable)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (matchedPaths.Contains(installer.File.FullName))
                 {
                     continue;
@@ -86,8 +91,9 @@ public static class MonitorInstallerCleaner
     /// </summary>
     /// <param name="programsPath">The Programs category folder to scan.</param>
     /// <param name="installedSoftwareIndex">Installed software metadata.</param>
+    /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>Installer matches sorted by confidence descending.</returns>
-    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string programsPath, MonitorInstalledSoftwareIndex installedSoftwareIndex)
+    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string programsPath, MonitorInstalledSoftwareIndex installedSoftwareIndex, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(programsPath);
         ArgumentNullException.ThrowIfNull(installedSoftwareIndex);
@@ -99,7 +105,7 @@ public static class MonitorInstallerCleaner
         }
 
         List<(FileInfo File, string CoreName, string? Version)> installerTable = programsDirectory
-            .EnumerateFiles()
+            .SafeEnumerateFiles()
             .Where(file => InstallerExtensions.Contains(file.Extension))
             .Select(file => (file, ExtractCoreName(Path.GetFileNameWithoutExtension(file.Name)), ExtractVersion(Path.GetFileNameWithoutExtension(file.Name))))
             .ToList();
@@ -109,6 +115,7 @@ public static class MonitorInstallerCleaner
 
         foreach (MonitorInstalledSoftwareEntry softwareEntry in installedSoftwareIndex.Entries)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string normalizedVersion = NormalizeVersion(softwareEntry.DisplayVersion);
             if (normalizedVersion.Length == 0)
             {
@@ -124,6 +131,7 @@ public static class MonitorInstallerCleaner
             HashSet<string> keywords = ExtractKeywords(softwareEntry.DisplayName);
             foreach ((FileInfo File, string CoreName, string? Version) installer in installerTable)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (matchedPaths.Contains(installer.File.FullName) || !string.Equals(NormalizeVersion(installer.Version), normalizedVersion, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -148,12 +156,16 @@ public static class MonitorInstallerCleaner
     /// <param name="matches">The installer matches to clean.</param>
     /// <param name="minConfidence">The minimum confidence required to delete.</param>
     /// <param name="dryRun">True to report without deleting.</param>
+    /// <param name="sendToRecycleBin">True to move deleted files to the Recycle Bin; false to delete permanently (used by tests).</param>
+    /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>A cleanup summary.</returns>
     public static MonitorInstallerCleanupResult Cleanup(
         string programsPath,
         IEnumerable<MonitorInstallerMatch> matches,
         double minConfidence,
-        bool dryRun)
+        bool dryRun,
+        bool sendToRecycleBin = true,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(programsPath);
         ArgumentNullException.ThrowIfNull(matches);
@@ -165,6 +177,7 @@ public static class MonitorInstallerCleaner
 
         foreach (MonitorInstallerMatch match in matches)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (match.Confidence < minConfidence || !MonitorFileOrganizer.IsPathInsideRoot(programsPath, match.FilePath) || !File.Exists(match.FilePath))
             {
                 skipped++;
@@ -176,7 +189,14 @@ public static class MonitorInstallerCleaner
                 long fileSize = new FileInfo(match.FilePath).Length;
                 if (!dryRun)
                 {
-                    File.Delete(match.FilePath);
+                    if (sendToRecycleBin)
+                    {
+                        RecycleFile(match.FilePath);
+                    }
+                    else
+                    {
+                        File.Delete(match.FilePath);
+                    }
                 }
 
                 deleted++;
@@ -193,6 +213,32 @@ public static class MonitorInstallerCleaner
         }
 
         return new MonitorInstallerCleanupResult(deleted, skipped, errors, freedBytes);
+    }
+
+    private static IEnumerable<FileInfo> SafeEnumerateFiles(this DirectoryInfo directory)
+    {
+        FileInfo[] files;
+        try
+        {
+            files = directory.EnumerateFiles().ToArray();
+        }
+        catch (DirectoryNotFoundException)
+        {
+            yield break;
+        }
+        catch (IOException)
+        {
+            yield break;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            yield break;
+        }
+
+        foreach (FileInfo file in files)
+        {
+            yield return file;
+        }
     }
 
     private static string ExtractCoreName(string fileName)
@@ -340,5 +386,60 @@ public static class MonitorInstallerCleaner
         }
 
         return maximumLength;
+    }
+
+    private const uint FileOperationDelete = 0x0003;
+    private const ushort FileOperationFlagSilent = 0x0004;
+    private const ushort FileOperationFlagNoConfirmation = 0x0010;
+    private const ushort FileOperationFlagAllowUndo = 0x0040;
+    private const ushort FileOperationFlagNoErrorUi = 0x0400;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ShFileOpStruct
+    {
+        public IntPtr Hwnd;
+        public uint Func;
+        public IntPtr From;
+        public IntPtr To;
+        public ushort Flags;
+        public int AnyOperationsAborted;
+        public IntPtr NameMappings;
+        public IntPtr ProgressTitle;
+    }
+
+    [LibraryImport("shell32.dll", EntryPoint = "SHFileOperationW")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial int SHFileOperation(ref ShFileOpStruct fileOp);
+
+    private static void RecycleFile(string filePath)
+    {
+        // SHFileOperation's pFrom must be double-null terminated. StringToHGlobalUni appends its own
+        // terminating null, and the extra "\0\0" guarantees the required double termination so the
+        // operation only ever targets this single path.
+        IntPtr from = Marshal.StringToHGlobalUni(filePath + "\0\0");
+        try
+        {
+            ShFileOpStruct fileOp = new()
+            {
+                Hwnd = IntPtr.Zero,
+                Func = FileOperationDelete,
+                From = from,
+                To = IntPtr.Zero,
+                Flags = unchecked((ushort)(FileOperationFlagAllowUndo | FileOperationFlagNoConfirmation | FileOperationFlagSilent | FileOperationFlagNoErrorUi)),
+                AnyOperationsAborted = 0,
+                NameMappings = IntPtr.Zero,
+                ProgressTitle = IntPtr.Zero,
+            };
+
+            int result = SHFileOperation(ref fileOp);
+            if (result != 0 || fileOp.AnyOperationsAborted != 0)
+            {
+                throw new IOException("Failed to move file to the Recycle Bin. SHFileOperation returned " + result.ToString(CultureInfo.InvariantCulture) + ".");
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(from);
+        }
     }
 }

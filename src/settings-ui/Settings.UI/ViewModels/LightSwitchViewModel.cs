@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -18,8 +17,6 @@ using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.Library.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 using Microsoft.PowerToys.Settings.UI.SerializationContext;
-using Newtonsoft.Json.Linq;
-using PowerDisplay.Models;
 using PowerToys.GPOWrapper;
 using Settings.UI.Library;
 using Settings.UI.Library.Helpers;
@@ -52,9 +49,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 "SunsetToSunrise",
                 "FollowNightLight",
             };
-
-            LoadPowerDisplayProfiles();
-            CheckPowerDisplayEnabled();
         }
 
         public override Dictionary<string, HotkeySettings[]> GetAllHotkeySettings()
@@ -80,16 +74,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             {
                 _isEnabled = GeneralSettingsConfig.Enabled.LightSwitch;
             }
-        }
-
-        private void SaveSettings()
-        {
-            SendConfigMSG(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    "{{ \"powertoys\": {{ \"{0}\": {1} }} }}",
-                    LightSwitchSettings.ModuleName,
-                    JsonSerializer.Serialize(_moduleSettings, SourceGenerationContextContext.Default.LightSwitchSettings)));
         }
 
         public LightSwitchSettings ModuleSettings
@@ -557,259 +541,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             OnPropertyChanged(propertyName);
         }
 
-        // PowerDisplay Integration Properties and Methods
-        public ObservableCollection<PowerDisplayProfile> AvailableProfiles
-        {
-            get => _availableProfiles;
-            set
-            {
-                if (_availableProfiles != value)
-                {
-                    _availableProfiles = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        public bool IsPowerDisplayEnabled
-        {
-            get => _isPowerDisplayEnabled;
-            set
-            {
-                if (_isPowerDisplayEnabled != value)
-                {
-                    _isPowerDisplayEnabled = value;
-                    NotifyPropertyChanged();
-                    NotifyPropertyChanged(nameof(ShowPowerDisplayDisabledWarning));
-                }
-            }
-        }
-
-        public bool ShowPowerDisplayDisabledWarning => !IsPowerDisplayEnabled;
-
-        public bool EnableDarkModeProfile
-        {
-            get => ModuleSettings.Properties.EnableDarkModeProfile.Value;
-            set
-            {
-                if (ModuleSettings.Properties.EnableDarkModeProfile.Value != value)
-                {
-                    ModuleSettings.Properties.EnableDarkModeProfile.Value = value;
-                    NotifyPropertyChanged();
-                    NotifyPropertyChanged(nameof(ShowPowerDisplayDisabledWarning));
-                    SaveSettings();
-                }
-            }
-        }
-
-        public bool EnableLightModeProfile
-        {
-            get => ModuleSettings.Properties.EnableLightModeProfile.Value;
-            set
-            {
-                if (ModuleSettings.Properties.EnableLightModeProfile.Value != value)
-                {
-                    ModuleSettings.Properties.EnableLightModeProfile.Value = value;
-                    NotifyPropertyChanged();
-                    NotifyPropertyChanged(nameof(ShowPowerDisplayDisabledWarning));
-                    SaveSettings();
-                }
-            }
-        }
-
-        public PowerDisplayProfile? SelectedDarkModeProfile
-        {
-            get => _selectedDarkModeProfile;
-            set
-            {
-                if (_selectedDarkModeProfile != value)
-                {
-                    _selectedDarkModeProfile = value;
-
-                    // Sync with the string property stored in settings
-                    var newProfileName = value?.Name ?? string.Empty;
-                    if (ModuleSettings.Properties.DarkModeProfile.Value != newProfileName)
-                    {
-                        ModuleSettings.Properties.DarkModeProfile.Value = newProfileName;
-                        SaveSettings();
-                    }
-
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        public PowerDisplayProfile? SelectedLightModeProfile
-        {
-            get => _selectedLightModeProfile;
-            set
-            {
-                if (_selectedLightModeProfile != value)
-                {
-                    _selectedLightModeProfile = value;
-
-                    // Sync with the string property stored in settings
-                    var newProfileName = value?.Name ?? string.Empty;
-                    if (ModuleSettings.Properties.LightModeProfile.Value != newProfileName)
-                    {
-                        ModuleSettings.Properties.LightModeProfile.Value = newProfileName;
-                        SaveSettings();
-                    }
-
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        // Legacy string properties for backwards compatibility with settings persistence
-        public string DarkModeProfile
-        {
-            get => ModuleSettings.Properties.DarkModeProfile.Value;
-            set
-            {
-                if (ModuleSettings.Properties.DarkModeProfile.Value != value)
-                {
-                    ModuleSettings.Properties.DarkModeProfile.Value = value;
-
-                    // Sync with the object property
-                    UpdateSelectedProfileFromName(value, isDarkMode: true);
-
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        public string LightModeProfile
-        {
-            get => ModuleSettings.Properties.LightModeProfile.Value;
-            set
-            {
-                if (ModuleSettings.Properties.LightModeProfile.Value != value)
-                {
-                    ModuleSettings.Properties.LightModeProfile.Value = value;
-
-                    // Sync with the object property
-                    UpdateSelectedProfileFromName(value, isDarkMode: false);
-
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        private void LoadPowerDisplayProfiles()
-        {
-            try
-            {
-                var profilesFilePath = SettingsUtils.Default.GetSettingsFilePath("PowerDisplay", "profiles.json");
-
-                AvailableProfiles.Clear();
-
-                if (File.Exists(profilesFilePath))
-                {
-                    using var document = JsonDocument.Parse(File.ReadAllText(profilesFilePath));
-
-                    if (document.RootElement.TryGetProperty("profiles", out var profiles) &&
-                        profiles.ValueKind == JsonValueKind.Array)
-                    {
-                        var seenProfileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                        foreach (var profile in profiles.EnumerateArray())
-                        {
-                            if (!profile.TryGetProperty("name", out var nameProperty))
-                            {
-                                continue;
-                            }
-
-                            var profileName = nameProperty.GetString();
-                            if (string.IsNullOrWhiteSpace(profileName) || !seenProfileNames.Add(profileName))
-                            {
-                                continue;
-                            }
-
-                            AvailableProfiles.Add(new PowerDisplayProfile { Name = profileName });
-                        }
-                    }
-                }
-
-                Logger.LogInfo($"Loaded {AvailableProfiles.Count} PowerDisplay profiles");
-
-                UpdateSelectedProfileFromName(ModuleSettings.Properties.DarkModeProfile.Value, isDarkMode: true);
-                UpdateSelectedProfileFromName(ModuleSettings.Properties.LightModeProfile.Value, isDarkMode: false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Failed to load PowerDisplay profiles: {ex.Message}");
-                AvailableProfiles.Clear();
-            }
-        }
-
-        private void UpdateSelectedProfileFromName(string profileName, bool isDarkMode)
-        {
-            PowerDisplayProfile? matchingProfile = null;
-
-            if (!string.IsNullOrEmpty(profileName))
-            {
-                matchingProfile = AvailableProfiles.FirstOrDefault(p =>
-                    p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
-
-                // If the configured profile no longer exists, clear it from settings
-                if (matchingProfile == null)
-                {
-                    Logger.LogWarning($"Configured {(isDarkMode ? "dark" : "light")} mode profile '{profileName}' no longer exists, clearing selection");
-
-                    if (isDarkMode)
-                    {
-                        ModuleSettings.Properties.DarkModeProfile.Value = string.Empty;
-                    }
-                    else
-                    {
-                        ModuleSettings.Properties.LightModeProfile.Value = string.Empty;
-                    }
-
-                    SaveSettings();
-                }
-            }
-
-            if (isDarkMode)
-            {
-                if (_selectedDarkModeProfile != matchingProfile)
-                {
-                    _selectedDarkModeProfile = matchingProfile;
-                    NotifyPropertyChanged(nameof(SelectedDarkModeProfile));
-                }
-            }
-            else
-            {
-                if (_selectedLightModeProfile != matchingProfile)
-                {
-                    _selectedLightModeProfile = matchingProfile;
-                    NotifyPropertyChanged(nameof(SelectedLightModeProfile));
-                }
-            }
-        }
-
-        private void CheckPowerDisplayEnabled()
-        {
-            try
-            {
-                var settingsUtils = SettingsUtils.Default;
-                var generalSettings = settingsUtils.GetSettingsOrDefault<GeneralSettings>(string.Empty);
-                IsPowerDisplayEnabled = generalSettings?.Enabled?.PowerDisplay ?? false;
-                Logger.LogInfo($"PowerDisplay enabled status: {IsPowerDisplayEnabled}");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Failed to check PowerDisplay enabled status: {ex.Message}");
-                IsPowerDisplayEnabled = false;
-            }
-        }
-
-        public void RefreshPowerDisplayStatus()
-        {
-            CheckPowerDisplayEnabled();
-            NotifyPropertyChanged(nameof(ShowPowerDisplayDisabledWarning));
-        }
-
         public void RefreshEnabledState()
         {
             OnPropertyChanged(nameof(IsEnabled));
@@ -826,10 +557,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             OnPropertyChanged(nameof(Latitude));
             OnPropertyChanged(nameof(Longitude));
             OnPropertyChanged(nameof(ScheduleMode));
-            OnPropertyChanged(nameof(EnableDarkModeProfile));
-            OnPropertyChanged(nameof(EnableLightModeProfile));
-            OnPropertyChanged(nameof(DarkModeProfile));
-            OnPropertyChanged(nameof(LightModeProfile));
         }
 
         private void UpdateSunTimes(double latitude, double longitude, string city = "n/a")
@@ -886,11 +613,5 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private bool _isEnabled;
         private TimeSpan? _sunriseTimeSpan;
         private TimeSpan? _sunsetTimeSpan;
-
-        // PowerDisplay integration
-        private ObservableCollection<PowerDisplayProfile> _availableProfiles = new ObservableCollection<PowerDisplayProfile>();
-        private bool _isPowerDisplayEnabled;
-        private PowerDisplayProfile? _selectedDarkModeProfile;
-        private PowerDisplayProfile? _selectedLightModeProfile;
     }
 }

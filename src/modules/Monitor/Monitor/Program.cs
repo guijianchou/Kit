@@ -41,7 +41,7 @@ public static class Program
             {
                 bool organize = commandLine.UseConfiguredActions ? settings.AutoOrganize : commandLine.Organize;
                 bool cleanInstallers = commandLine.UseConfiguredActions ? settings.AutoCleanInstallers : commandLine.CleanInstallers;
-                RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers);
+                RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, ResolveScanId(commandLine.ScanId), CancellationToken.None);
                 return 0;
             }
 
@@ -61,7 +61,31 @@ public static class Program
 
         while (true)
         {
-            RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers);
+            // Scope the lifetime watcher to the scan only. If it stayed alive during the idle wait
+            // below, two threads would wait on the same auto-reset exit event and the watcher could
+            // consume the shutdown signal, leaving the idle wait to spin until the interval elapsed.
+            // Disposing it (which joins the watcher thread) before the idle wait guarantees the exit
+            // event has a single waiter, and an exit consumed by the watcher is surfaced via
+            // ExitRequested read after the dispose/join.
+            LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(exitEvent, commandLine.ParentProcessId);
+            try
+            {
+                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), lifetimeCancellation.Token);
+            }
+            catch (OperationCanceledException) when (lifetimeCancellation.ExitRequested)
+            {
+                return 0;
+            }
+            finally
+            {
+                lifetimeCancellation.Dispose();
+            }
+
+            if (lifetimeCancellation.ExitRequested)
+            {
+                return 0;
+            }
+
             if (WaitForNextCycleOrExit(exitEvent, commandLine.ParentProcessId, interval))
             {
                 return 0;
@@ -69,10 +93,10 @@ public static class Program
         }
     }
 
-    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers)
+    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, CancellationToken cancellationToken)
     {
         MonitorScanProgressFileReporter progressReporter = new(ResolveProgressPath(), TimeSpan.FromMilliseconds(500));
-        MonitorWorkerResult result = MonitorWorker.RunOnce(downloadsPath, csvPath, settings, organize, cleanInstallers, progressReporter: progressReporter);
+        MonitorWorkerResult result = MonitorWorker.RunOnce(downloadsPath, csvPath, settings, organize, cleanInstallers, progressReporter: progressReporter, cancellationToken: cancellationToken, scanId: scanId);
 
         if (result.OrganizeResult is not null)
         {
@@ -116,9 +140,15 @@ public static class Program
             "  --downloads-path <path>     Override the Downloads folder.",
             "  --csv-path <path>           Override the CSV output path.",
             "  --settings-path <path>      Reserved for module settings integration.",
+            "  --scan-id <value>           Internal scan progress identifier.",
             "  --interval-seconds <value>  Reserved for continuous monitoring.",
             "  --pid <value>               Internal runner parent process ID.",
             "  --help                      Show help.");
+    }
+
+    private static LifetimeCancellation StartLifetimeCancellation(EventWaitHandle exitEvent, int? parentProcessId)
+    {
+        return new LifetimeCancellation(exitEvent, parentProcessId);
     }
 
     private static bool WaitForNextCycleOrExit(EventWaitHandle exitEvent, int? parentProcessId, TimeSpan interval)
@@ -169,6 +199,16 @@ public static class Program
         }
     }
 
+    private static string ResolveScanId(string? scanId)
+    {
+        return string.IsNullOrWhiteSpace(scanId) ? CreateScanId() : scanId;
+    }
+
+    private static string CreateScanId()
+    {
+        return Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);
+    }
+
     private static string ResolveDownloadsPath(string? downloadsPath)
     {
         if (!string.IsNullOrWhiteSpace(downloadsPath))
@@ -207,5 +247,54 @@ public static class Program
     {
         using EventWaitHandle scanCompletedEvent = new(false, EventResetMode.AutoReset, MonitorScanCompletedEvent);
         scanCompletedEvent.Set();
+    }
+
+    private sealed class LifetimeCancellation : IDisposable
+    {
+        private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+
+        private readonly EventWaitHandle _exitEvent;
+        private readonly int? _parentProcessId;
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private readonly Thread _watcherThread;
+        private volatile bool _disposed;
+        private volatile bool _exitRequested;
+
+        public LifetimeCancellation(EventWaitHandle exitEvent, int? parentProcessId)
+        {
+            _exitEvent = exitEvent;
+            _parentProcessId = parentProcessId;
+            _watcherThread = new Thread(WatchLifetime)
+            {
+                IsBackground = true,
+                Name = "Monitor lifetime cancellation watcher",
+            };
+            _watcherThread.Start();
+        }
+
+        public CancellationToken Token => _cancellationTokenSource.Token;
+
+        public bool ExitRequested => _exitRequested;
+
+        public void Dispose()
+        {
+            _disposed = true;
+            _watcherThread.Join(TimeSpan.FromSeconds(1));
+            _cancellationTokenSource.Dispose();
+        }
+
+        private void WatchLifetime()
+        {
+            while (!_disposed)
+            {
+                if (_exitEvent.WaitOne(PollInterval) ||
+                    (_parentProcessId.HasValue && !IsProcessRunning(_parentProcessId.Value)))
+                {
+                    _exitRequested = true;
+                    _cancellationTokenSource.Cancel();
+                    return;
+                }
+            }
+        }
     }
 }

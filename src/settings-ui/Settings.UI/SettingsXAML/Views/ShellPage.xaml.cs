@@ -113,7 +113,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             NavHelper.SetNavigateTo(AwakeNavigationItem, typeof(AwakePage));
             NavHelper.SetNavigateTo(LightSwitchNavigationItem, typeof(LightSwitchPage));
             NavHelper.SetNavigateTo(MonitorNavigationItem, typeof(MonitorPage));
-            NavHelper.SetNavigateTo(PowerDisplayNavigationItem, typeof(PowerDisplayPage));
             SetWindowTitle();
             var settingsUtils = SettingsUtils.Default;
             ViewModel = new ShellViewModel(SettingsRepository<GeneralSettings>.GetInstance(settingsUtils));

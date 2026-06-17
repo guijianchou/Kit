@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.0.1`.
+Current Kit version: `2.0.2`.
 
 ## Changelog
 
@@ -26,12 +26,12 @@ The first phase is now effectively a working Kit shell plus one newly-authored m
 
 The current stable handoff point is:
 
-- Keep `Awake`, `Light Switch`, `Monitor`, and `PowerDisplay` as the active module set.
+- Keep `Awake`, `Light Switch`, and `Monitor` as the active module set.
 - Keep module discovery explicit through maintained lists and tests. Do not add filesystem probing yet.
 - Keep General and Home in English Kit wording, with automatic update and telemetry surfaces removed.
 - Keep Monitor's worker headless. User actions and progress should be surfaced through Settings/Home, not worker windows.
 - Keep Settings scan progress tied to worker progress/completion state. Avoid scan-completion UI that advances independently from the worker.
-- Keep Kit UI automation pointed at Kit's runner, Settings window, install roots, and the four active module executables. It must not attach to an installed upstream PowerToys build by accident.
+- Keep Kit UI automation pointed at Kit's runner, Settings window, install roots, and the three active module executables. It must not attach to an installed upstream PowerToys build by accident.
 - Keep Settings deep links and module settings links launching `Kit.exe` only. Do not fall back to an installed upstream `PowerToys.exe` from Kit UI.
 - Clean build artifacts before handoff so the next Visual Studio build starts from source state.
 - The workspace can be reduced back to source size after a stable handoff. Local `Debug`, `Release`, `x64`, `bin`, `obj`, `TestResults`, `.vs`, and restored `packages` directories are disposable build state.
@@ -39,7 +39,7 @@ The current stable handoff point is:
 ## Architecture
 
 - `src/runner` starts Kit, loads module interface DLLs, owns module lifetime, and coordinates settings IPC with the Settings app. The executable is already separated enough to launch as `Kit.exe` while many build-facing project names still retain upstream PowerToys names. At runtime the runner opens the Settings and Quick Access apps from `WinUI3Apps` next to `Kit.exe`, so the runner build target must keep explicit dependencies on both UI executable projects.
-- `src/modules` contains the active utilities. `Awake` is copied from upstream PowerToys with `Awake.ModuleServices`, `Awake`, and `AwakeModuleInterface`; `LightSwitch` is the current Kit utility module; `Monitor` is the first Kit-authored module created from the earlier Python Downloads monitor; `PowerDisplay` is imported from the PowerToys-style module shape with its Settings page, profile dialogs, model library, WinUI app, and module interface.
+- `src/modules` contains the active utilities. `Awake` is copied from upstream PowerToys with `Awake.ModuleServices`, `Awake`, and `AwakeModuleInterface`; `LightSwitch` is the current Kit utility module; `Monitor` is the first Kit-authored module created from the earlier Python Downloads monitor.
 - `src/settings-ui/Settings.UI` contains the WinUI Settings app, including Home, General, module pages, navigation, and page-level view models.
 - `src/settings-ui/Settings.UI.Controls` contains shared UI controls such as Quick Access.
 - `src/settings-ui/Settings.UI.Library` contains settings models, settings serialization, module settings repositories, backup and restore helpers, GPO helpers, and shared settings infrastructure.
@@ -54,7 +54,6 @@ The active Kit module set is deliberately small:
 - `Awake`
 - `Light Switch`
 - `Monitor`
-- `PowerDisplay`
 
 Kit does not automatically expose every upstream PowerToys utility copied in the source tree. Modules are enabled only after they are registered in the maintained Kit lists for the runner, Settings navigation, Home, and tests.
 
@@ -65,7 +64,6 @@ Kit follows the PowerToys module-loading model instead of inventing a new plugin
 - `PowerToys.AwakeModuleInterface.dll`
 - `PowerToys.LightSwitchModuleInterface.dll`
 - `PowerToys.MonitorModuleInterface.dll`
-- `PowerToys.PowerDisplayModuleInterface.dll`
 
 This fixed list is intentional. It avoids unstable directory probing and makes each imported module an explicit compatibility decision. When another PowerToys module is brought into Kit, it should be added to the runner, solution, settings routing, Home dashboard metadata, and tests together.
 
@@ -114,7 +112,7 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 - Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
 - Run C++ module-interface verification sequentially, or through the solution scheduler, when projects share native outputs such as `Version.pdb` and `PowerToys.Interop` tracking logs. Independent parallel MSBuild invocations can race those shared files and report false build failures.
 - Keep local build scripts friendly to non-VS shells. Forward MSBuild arguments as arrays, cache the resolved MSBuild path after importing the Visual Studio environment, normalize duplicate `PATH`/`Path` values from `VsDevCmd.bat`, and skip local CopyOnWrite/RunVSTest SDK resolver imports by default when package source mapping blocks SDK restore.
-- Keep PowerDisplay runner activation on the runner-owned named pipe. Runner-managed launches bypass standalone AppInstance registration, so toggles must not use no-argument `ShellExecuteExW` activation.
+- Keep removed module surfaces deleted from runner, Settings, GPO, Quick Access, and solution files instead of hiding them behind project exclusions.
 - Keep development signing scoped and explicit. Current-user certificate trust is the default local path; machine-wide root trust, recursive package signing, and non-sparse package signing should be opt-in.
 - Keep documentation close to the implementation after each stabilization pass. The module-registration lists are intentionally manual, so stale docs are a real integration risk.
 
@@ -137,9 +135,9 @@ The current Settings surface includes a manual scan card, `OrganizeDownloads` an
 
 The latest Home work keeps PowerToys behavior but scopes it to Kit's active modules:
 
-- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake`, `LightSwitch`, `Monitor`, and `PowerDisplay`, so the Home utility list is fixed and predictable.
+- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake`, `LightSwitch`, and `Monitor`, so the Home utility list is fixed and predictable.
 - `QuickAccessViewModel` still supports actionable Quick Access items, but Home passes the dashboard module list so enabled Kit modules appear consistently.
-- Quick Access first tries the normal launcher. If a module has no direct quick action, Home falls back to opening that module's settings page. This lets `Awake` and `Monitor` behave usefully without creating fake shortcut actions while `LightSwitch` and `PowerDisplay` keep direct toggle actions.
+- Quick Access first tries the normal launcher. If a module has no direct quick action, Home falls back to opening that module's settings page. This lets `Awake` and `Monitor` behave usefully without creating fake shortcut actions while `LightSwitch` keeps its direct toggle action.
 - `Awake` contributes a `DashboardModuleActivationItem` that displays the current Awake mode in the Home shortcuts card, using the existing PowerToys dashboard item template.
 - The Quick Access empty state now uses the count of visible items, not the raw item collection count, so disabled or GPO-hidden modules do not leave an empty card visible.
 
@@ -168,7 +166,7 @@ Recommended cleanup policy:
 - During local iterative development, keep `src\kit\packages` if disk space allows. It prevents cold-build failures and slow restores caused by missing packages such as WIL and C++/WinRT.
 - If `packages` was removed, run Visual Studio `Restore NuGet Packages` or perform a full solution build before judging compile errors from missing headers or WinMD projections.
 - Release builds keep only `en-US` satellite resources, remove generated debug symbols and native link artifacts from runtime outputs, prune inactive Settings module assets, icons, resource strings, OOBE/model assets, stale inactive control XBF outputs, and no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers for the active Kit module set.
-- Shortcut Conflict hotkey lookup is explicit for Quick Access, LightSwitch, and PowerDisplay instead of scanning every historical `IHotkeyConfig` settings model from the PowerToys-derived library.
+- Shortcut Conflict hotkey lookup is explicit for Quick Access and LightSwitch instead of scanning every historical `IHotkeyConfig` settings model from the PowerToys-derived library.
 - WindowsAppSDK 1.8 still contributes its own Windows AI/Onnx runtime files through the `Microsoft.WindowsAppSDK` meta-package. Removing those would require replacing the meta-package with granular WindowsAppSDK package references, so it is deferred until Settings compatibility can be validated more broadly.
 
 After source-size cleanup, `src\kit` should look close to source-only size: source and docs remain, while `x64`, `Release`, `.vs`, `packages`, and project `bin`/`obj` directories should be absent until the next restore/build.
@@ -196,9 +194,8 @@ The latest settings pass keeps the active module behavior closer to upstream Pow
 - Monitor's Scan Now action sends the `scanNow` custom action and the worker runs one pass with `--use-configured-actions`. This keeps manual scan, category-folder creation, organization, installer cleanup, and CSV writing on one code path while letting `OrganizeDownloads` and `CleanInstallers` decide which side effects are allowed.
 - Monitor's module enable path reads `runInBackground` before launching the worker. The module can stay enabled for Settings/Home/manual actions without starting a persistent worker.
 - Monitor's Settings page now places `OrganizeDownloads`, `CleanInstallers`, and `Run in background` immediately below Manual scan, matching the setting's control flow.
-- Light Switch keeps the upstream `Apply monitor settings to` shape and now routes PowerDisplay profile selection to the imported PowerDisplay Settings page. The controls are enabled from `GeneralSettings.Enabled.PowerDisplay`, and profile names are loaded from Kit storage at `%LOCALAPPDATA%\Kit\PowerDisplay\profiles.json` when that file exists. The loader remains tolerant of missing or malformed profile data.
-- PowerDisplay runner-managed launches now parse the runner PID and named pipe before AppInstance registration, so IPC launches bypass standalone single-instance redirection while normal user launches still reuse the existing window. Settings deep links now launch `Kit.exe`.
-- `Settings.UI.UnitTests` now has static regression coverage for Monitor settings order and Light Switch's PowerDisplay enable/profile-loading path.
+- Light Switch keeps the upstream schedule, Night Light, and toggle-hotkey shape, but no longer carries the deleted PowerDisplay profile bridge.
+- `Settings.UI.UnitTests` now has static regression coverage for Monitor settings order and Light Switch's no-PowerDisplay boundary.
 
 ## Recent Release Build Regression
 

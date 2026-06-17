@@ -18,7 +18,6 @@ namespace Common.UI
             Awake,
             LightSwitch,
             Monitor,
-            PowerDisplay,
         }
 
         private static string SettingsWindowNameToString(SettingsWindow value)
@@ -35,8 +34,6 @@ namespace Common.UI
                     return "LightSwitch";
                 case SettingsWindow.Monitor:
                     return "Monitor";
-                case SettingsWindow.PowerDisplay:
-                    return "PowerDisplay";
                 default:
                     {
                         return string.Empty;

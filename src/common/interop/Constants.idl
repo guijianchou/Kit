@@ -8,14 +8,6 @@ namespace PowerToys
             static String LightSwitchToggleEvent();
             static String AwakeExitEvent();
             static String KitRunnerTerminateSettingsEvent();
-            static String TogglePowerDisplayEvent();
-            static String TerminatePowerDisplayEvent();
-            static String RefreshPowerDisplayMonitorsEvent();
-            static String SettingsUpdatedPowerDisplayEvent();
-            static String HotkeyUpdatedPowerDisplayEvent();
-            static String PowerDisplayToggleMessage();
-            static String PowerDisplayApplyProfileMessage();
-            static String PowerDisplayTerminateAppMessage();
         }
     }
 }

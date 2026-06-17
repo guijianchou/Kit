@@ -106,7 +106,7 @@ public sealed class MonitorInstallerCleanerTests
         MonitorInstallerMatch insideMatch = new(installerPath, "App", 0.95, 5);
         MonitorInstallerMatch outsideMatch = new(outsidePath, "Outside", 0.95, 7);
 
-        MonitorInstallerCleanupResult result = MonitorInstallerCleaner.Cleanup(programsDirectory.Path, new[] { insideMatch, outsideMatch }, minConfidence: 0.7, dryRun: false);
+        MonitorInstallerCleanupResult result = MonitorInstallerCleaner.Cleanup(programsDirectory.Path, new[] { insideMatch, outsideMatch }, minConfidence: 0.7, dryRun: false, sendToRecycleBin: false);
 
         Assert.AreEqual(1, result.Deleted);
         Assert.AreEqual(1, result.Skipped);

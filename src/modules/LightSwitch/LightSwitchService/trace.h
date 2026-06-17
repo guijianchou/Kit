@@ -8,9 +8,18 @@ public:
     class LightSwitch
     {
     public:
-        static void RegisterProvider();
-        static void UnregisterProvider();
-        static void ScheduleModeToggled(const std::wstring& newMode) noexcept;
-        static void ThemeTargetChanged(bool changeApps, bool changeSystem) noexcept;
+        static constexpr void RegisterProvider() noexcept {}
+        static constexpr void UnregisterProvider() noexcept {}
+
+        static constexpr void ScheduleModeToggled(const std::wstring& newMode) noexcept
+        {
+            (void)newMode;
+        }
+
+        static constexpr void ThemeTargetChanged(bool changeApps, bool changeSystem) noexcept
+        {
+            (void)changeApps;
+            (void)changeSystem;
+        }
     };
 };

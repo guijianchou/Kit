@@ -9,7 +9,6 @@ namespace winrt::PowerToys::GPOWrapper::implementation
         GPOWrapper() = default;
         static GpoRuleConfigured GetConfiguredAwakeEnabledValue();
         static GpoRuleConfigured GetConfiguredLightSwitchEnabledValue();
-        static GpoRuleConfigured GetConfiguredPowerDisplayEnabledValue();
         static GpoRuleConfigured GetDisableNewUpdateToastValue();
         static GpoRuleConfigured GetDisableAutomaticUpdateDownloadValue();
         static GpoRuleConfigured GetDisableShowWhatsNewAfterUpdatesValue();

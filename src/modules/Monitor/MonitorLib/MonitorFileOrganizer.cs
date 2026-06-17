@@ -17,8 +17,9 @@ public static class MonitorFileOrganizer
     /// <param name="downloadsPath">The Downloads root folder.</param>
     /// <param name="settings">The Monitor settings.</param>
     /// <param name="dryRun">True to report planned moves without changing files.</param>
+    /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>A summary of the organization run.</returns>
-    public static MonitorFileOrganizerResult Organize(string downloadsPath, MonitorSettings settings, bool dryRun)
+    public static MonitorFileOrganizerResult Organize(string downloadsPath, MonitorSettings settings, bool dryRun, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(downloadsPath);
         ArgumentNullException.ThrowIfNull(settings);
@@ -37,12 +38,13 @@ public static class MonitorFileOrganizer
 
         if (!dryRun)
         {
-            errors += EnsureCategoryFolders(rootDirectory, settings);
+            errors += EnsureCategoryFolders(rootDirectory, settings, cancellationToken);
         }
 
-        foreach (FileInfo sourceFile in rootDirectory.EnumerateFiles())
+        foreach (FileInfo sourceFile in SafeEnumerateFiles(rootDirectory))
         {
-            if (sourceFile.Attributes.HasFlag(FileAttributes.ReparsePoint) || excludedFiles.Contains(sourceFile.Name))
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsReparsePoint(sourceFile) || excludedFiles.Contains(sourceFile.Name))
             {
                 continue;
             }
@@ -99,8 +101,9 @@ public static class MonitorFileOrganizer
     /// </summary>
     /// <param name="downloadsPath">The Downloads root folder.</param>
     /// <param name="settings">The Monitor settings.</param>
+    /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>The number of folder creation errors.</returns>
-    public static int EnsureCategoryFolders(string downloadsPath, MonitorSettings settings)
+    public static int EnsureCategoryFolders(string downloadsPath, MonitorSettings settings, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(downloadsPath);
         ArgumentNullException.ThrowIfNull(settings);
@@ -111,15 +114,16 @@ public static class MonitorFileOrganizer
             return 1;
         }
 
-        return EnsureCategoryFolders(rootDirectory, settings);
+        return EnsureCategoryFolders(rootDirectory, settings, cancellationToken);
     }
 
-    private static int EnsureCategoryFolders(DirectoryInfo rootDirectory, MonitorSettings settings)
+    private static int EnsureCategoryFolders(DirectoryInfo rootDirectory, MonitorSettings settings, CancellationToken cancellationToken)
     {
         int errors = 0;
 
         foreach (string categoryName in settings.Categories.Keys)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string destinationFolder = Path.Combine(rootDirectory.FullName, categoryName);
             if (!IsPathInsideRoot(rootDirectory.FullName, destinationFolder))
             {
@@ -146,6 +150,52 @@ public static class MonitorFileOrganizer
         }
 
         return errors;
+    }
+
+    private static IEnumerable<FileInfo> SafeEnumerateFiles(DirectoryInfo directory)
+    {
+        FileInfo[] files;
+        try
+        {
+            files = directory.EnumerateFiles().ToArray();
+        }
+        catch (DirectoryNotFoundException)
+        {
+            yield break;
+        }
+        catch (IOException)
+        {
+            yield break;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            yield break;
+        }
+
+        foreach (FileInfo file in files)
+        {
+            yield return file;
+        }
+    }
+
+    private static bool IsReparsePoint(FileSystemInfo fileSystemInfo)
+    {
+        try
+        {
+            return fileSystemInfo.Attributes.HasFlag(FileAttributes.ReparsePoint);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return true;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
 
     /// <summary>

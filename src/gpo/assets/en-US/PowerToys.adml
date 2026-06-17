@@ -10,7 +10,7 @@
       <string id="InstallerUpdates">Installer and Updates</string>
       <string id="GeneralSettings">General settings</string>
 
-      <string id="SUPPORTED_KIT_2_0_1">Kit version 2.0.1 or later</string>
+      <string id="SUPPORTED_KIT_2_0_2">Kit version 2.0.2 or later</string>
 
       <string id="ConfigureEnabledUtilityDescription">This policy configures the enabled state for a Kit utility.
 
@@ -61,7 +61,6 @@ If you do not configure this setting, users can enable or disable run at startup
 
       <string id="ConfigureEnabledUtilityAwake">Awake: Configure enabled state</string>
       <string id="ConfigureEnabledUtilityLightSwitch">Light Switch: Configure enabled state</string>
-      <string id="ConfigureEnabledUtilityPowerDisplay">PowerDisplay: Configure enabled state</string>
       <string id="DisableAutomaticUpdateDownload">Disable automatic downloads</string>
       <string id="DisableNewUpdateToast">Disable Action Center notification for new updates</string>
       <string id="DoNotShowWhatsNewAfterUpdates">Do not show release notes after updates</string>

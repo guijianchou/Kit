@@ -4,7 +4,6 @@
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using PowerDisplay.Models;
 using SettingsUILibrary = Settings.UI.Library;
 using SettingsUILibraryHelpers = Settings.UI.Library.Helpers;
 
@@ -67,7 +66,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(NewPlusSettings))]
     [JsonSerializable(typeof(PeekSettings))]
     [JsonSerializable(typeof(PowerAccentSettings))]
-    [JsonSerializable(typeof(PowerDisplaySettings))]
     [JsonSerializable(typeof(PowerLauncherSettings))]
     [JsonSerializable(typeof(PowerOcrSettings))]
     [JsonSerializable(typeof(PowerPreviewSettings))]
@@ -106,7 +104,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(PeekProperties))]
     [JsonSerializable(typeof(SettingsUILibrary.PeekPreviewSettings))]
     [JsonSerializable(typeof(PowerAccentProperties))]
-    [JsonSerializable(typeof(PowerDisplayProperties))]
     [JsonSerializable(typeof(PowerLauncherProperties))]
     [JsonSerializable(typeof(PowerOcrProperties))]
     [JsonSerializable(typeof(PowerPreviewProperties))]
@@ -144,13 +141,12 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(ImageResizerCustomSizeProperty))]
     [JsonSerializable(typeof(KeyboardKeysProperty))]
     [JsonSerializable(typeof(MonitorInfo))]
-    [JsonSerializable(typeof(PowerDisplayActionMessage))]
-    [JsonSerializable(typeof(PowerDisplayActionMessage.ActionData))]
-    [JsonSerializable(typeof(PowerDisplayActionMessage.PowerDisplayAction))]
+    [JsonSerializable(typeof(ColorPresetItem))]
     [JsonSerializable(typeof(VcpCodeDisplayInfo))]
     [JsonSerializable(typeof(VcpValueInfo))]
     [JsonSerializable(typeof(List<string>))]
     [JsonSerializable(typeof(List<MonitorInfo>))]
+    [JsonSerializable(typeof(List<ColorPresetItem>))]
     [JsonSerializable(typeof(List<VcpCodeDisplayInfo>))]
     [JsonSerializable(typeof(List<VcpValueInfo>))]
     [JsonSerializable(typeof(SettingsUILibraryHelpers.SearchLocation))]

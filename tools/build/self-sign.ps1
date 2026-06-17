@@ -55,7 +55,7 @@ else {
 Write-Host "`nUsing SignTool: $signToolPath"
 
 # Set the certificate subject and the ECDSA curve
-$certSubject = "CN=PowerToys Dev, O=PowerToys, L=Redmond, S=Washington, C=US"
+$certSubject = "CN=Kit Dev"
 
 # Check if the certificate already exists in the current user's certificate store
 $existingCert = Get-ChildItem -Path Cert:\CurrentUser\My |
@@ -167,7 +167,7 @@ elseif ($AllPackages) {
     }
 }
 else {
-    $sparsePackagePath = Join-Path $directoryPath "PowerToysSparse.msix"
+    $sparsePackagePath = Join-Path $directoryPath "KitSparse.msix"
     if (-not (Test-Path $sparsePackagePath)) {
         Write-Error "Expected sparse package not found: $sparsePackagePath. Pass -TargetPaths for explicit files or -AllPackages to sign every package under the directory."
         exit 1

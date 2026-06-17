@@ -7,29 +7,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+using Microsoft.PowerToys.Settings.UI.Library.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 
 namespace Microsoft.PowerToys.Settings.UI.Library;
 
 public class CommandLineUtils
 {
-    private static readonly HashSet<string> ActiveSettingsModules = new(StringComparer.Ordinal)
-    {
-        nameof(GeneralSettings),
-        AwakeSettings.ModuleName,
-        LightSwitchSettings.ModuleName,
-        MonitorSettings.ModuleName,
-        PowerDisplaySettings.ModuleName,
-        "General",
-    };
+    private static readonly HashSet<string> ActiveSettingsModules = new(KitModuleCatalog.ActiveSettingsModuleKeys, StringComparer.Ordinal);
 
-    private static readonly HashSet<string> ActiveEnabledModules = new(StringComparer.Ordinal)
-    {
-        AwakeSettings.ModuleName,
-        LightSwitchSettings.ModuleName,
-        MonitorSettings.ModuleName,
-        PowerDisplaySettings.ModuleName,
-    };
+    private static readonly HashSet<string> ActiveEnabledModules = new(KitModuleCatalog.ActiveEnabledModuleKeys, StringComparer.Ordinal);
 
     public static bool IsGeneralSettingsModule(string moduleName)
         => moduleName == "General" || moduleName == nameof(GeneralSettings);

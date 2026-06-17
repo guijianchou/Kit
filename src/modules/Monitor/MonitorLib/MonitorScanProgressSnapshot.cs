@@ -14,6 +14,7 @@ public sealed class MonitorScanProgressSnapshot
     /// </summary>
     public MonitorScanProgressSnapshot()
     {
+        ScanId = string.Empty;
         Phase = string.Empty;
         CurrentDirectory = string.Empty;
     }
@@ -28,8 +29,10 @@ public sealed class MonitorScanProgressSnapshot
         string currentDirectory,
         DateTimeOffset startedAt,
         DateTimeOffset? completedAt,
-        int? recordCount)
+        int? recordCount,
+        string? scanId = null)
     {
+        ScanId = scanId ?? string.Empty;
         Phase = phase;
         FilesProcessed = filesProcessed;
         FilesTotal = filesTotal;
@@ -38,6 +41,11 @@ public sealed class MonitorScanProgressSnapshot
         CompletedAt = completedAt;
         RecordCount = recordCount;
     }
+
+    /// <summary>
+    /// Gets or sets the unique scan identifier used to separate background and manual progress.
+    /// </summary>
+    public string ScanId { get; set; }
 
     /// <summary>
     /// Gets or sets the current scan phase.

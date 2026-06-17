@@ -163,6 +163,4 @@ Per [Microsoft's documentation](https://learn.microsoft.com/en-us/windows/win32/
 
 ## Telemetry
 
-Kit's Awake module does not emit telemetry events. The managed telemetry package
-and module-local telemetry event sources have been removed; native trace hooks
-are retained only as no-op compatibility boundaries.
+Kit's Awake module does not emit telemetry events. The copied trace hooks stay as no-op compatibility methods.

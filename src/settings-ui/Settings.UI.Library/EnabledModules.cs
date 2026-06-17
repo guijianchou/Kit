@@ -169,6 +169,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 if (awake != value)
                 {
                     awake = value;
+                    NotifyChange();
                 }
             }
         }
@@ -522,22 +523,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 if (monitor != value)
                 {
                     monitor = value;
-                    NotifyChange();
-                }
-            }
-        }
-
-        private bool powerDisplay = true;
-
-        [JsonPropertyName("PowerDisplay")]
-        public bool PowerDisplay
-        {
-            get => powerDisplay;
-            set
-            {
-                if (powerDisplay != value)
-                {
-                    powerDisplay = value;
                     NotifyChange();
                 }
             }

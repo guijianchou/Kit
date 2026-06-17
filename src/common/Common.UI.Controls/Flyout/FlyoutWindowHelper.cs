@@ -13,7 +13,7 @@ namespace Microsoft.PowerToys.Common.UI.Controls.Flyout;
 
 /// <summary>
 /// Shared helper for positioning and sizing flyout-style WinUI 3 windows
-/// (e.g. Quick Access, PowerDisplay) that are pinned to a corner of the work area.
+/// (e.g. Quick Access) that are pinned to a corner of the work area.
 ///
 /// The public API takes sizes in device-independent pixels (DIP). The helper resolves the
 /// target monitor's effective DPI and converts to physical pixels. All window positioning
@@ -29,8 +29,12 @@ public static partial class FlyoutWindowHelper
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
     {
-        public int X;
-        public int Y;
+        private int _x;
+        private int _y;
+
+        public readonly int X => _x;
+
+        public readonly int Y => _y;
     }
 
     [LibraryImport("user32.dll")]

@@ -1,12 +1,15 @@
 #pragma once
 
-#include <windows.h>
-
 class Trace
 {
 public:
-    static void RegisterProvider();
-    static void UnregisterProvider();
-    static void Enable(bool enabled) noexcept;
-    static void ShortcutInvoked() noexcept;
+    static constexpr void RegisterProvider() noexcept {}
+    static constexpr void UnregisterProvider() noexcept {}
+
+    static constexpr void Enable(bool enabled) noexcept
+    {
+        (void)enabled;
+    }
+
+    static constexpr void ShortcutInvoked() noexcept {}
 };

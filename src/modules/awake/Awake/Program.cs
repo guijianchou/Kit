@@ -34,6 +34,7 @@ namespace Awake
         private static readonly string[] _aliasesParentPidOption = ["--use-parent-pid", "-u"];
 
         private static readonly JsonSerializerOptions _serializerOptions = new() { IncludeFields = true };
+
         private static FileSystemWatcher? _watcher;
         private static SettingsUtils? _settingsUtils;
         private static EventWaitHandle? _exitEventHandle;

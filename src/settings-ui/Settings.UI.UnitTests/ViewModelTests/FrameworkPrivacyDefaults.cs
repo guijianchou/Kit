@@ -88,6 +88,24 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitRunnerTraceShouldNotDependOnTelemetryInfrastructure()
+        {
+            var runnerTraceHeader = File.ReadAllText(FindSourceFile("src", "runner", "trace.h"));
+            var runnerTraceSource = File.ReadAllText(FindSourceFile("src", "runner", "trace.cpp"));
+            var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+
+            Assert.IsFalse(runnerTraceHeader.Contains("common/Telemetry", StringComparison.Ordinal), "Runner trace header should not include telemetry headers.");
+            Assert.IsFalse(runnerTraceHeader.Contains("TraceBase", StringComparison.Ordinal), "Runner trace should not inherit telemetry compatibility base classes.");
+            Assert.IsFalse(runnerTraceSource.Contains("TRACELOGGING_DEFINE_PROVIDER", StringComparison.Ordinal), "Runner trace should not define an ETW provider.");
+            Assert.IsFalse(runnerTraceSource.Contains("ProjectTelemetry", StringComparison.Ordinal), "Runner trace should not include PowerToys telemetry provider metadata.");
+            Assert.IsFalse(runnerMain.Contains("Shared::Trace::ETWTrace", StringComparison.Ordinal), "Runner startup should not create the inactive ETW trace object.");
+            Assert.IsFalse(runnerMain.Contains("trace.UpdateState", StringComparison.Ordinal), "Runner startup should not update inactive ETW trace state.");
+            Assert.IsFalse(runnerProject.Contains(@"common\Telemetry", StringComparison.Ordinal), "Runner project should not keep telemetry include paths.");
+            Assert.IsFalse(runnerProject.Contains("EtwTrace.vcxproj", StringComparison.Ordinal), "Runner project should not reference inactive ETW trace targets.");
+        }
+
+        [TestMethod]
         public void ManagedTelemetryCompatibilitySourceShouldBeDeleted()
         {
             var solutionPath = FindSourceFile("Kit.slnx");
@@ -148,7 +166,6 @@ namespace ViewModelTests
             string[][] activeManagedModuleRoots =
             {
                 new[] { "src", "modules", "awake", "Awake" },
-                new[] { "src", "modules", "powerdisplay", "PowerDisplay" },
             };
 
             foreach (var rootParts in activeManagedModuleRoots)
@@ -186,21 +203,13 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void PowerDisplayShouldNotKeepSettingsTelemetryIpc()
+        public void InteropShouldNotKeepPowerDisplaySettingsTelemetryIpc()
         {
-            var moduleInterface = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "dllmain.cpp"));
-            var app = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "PowerDisplayXAML", "App.xaml.cs"));
-            var viewModelSettings = File.ReadAllText(FindSourceFile("src", "modules", "powerdisplay", "PowerDisplay", "ViewModels", "MainViewModel.Settings.cs"));
             var sharedConstants = File.ReadAllText(FindSourceFile("src", "common", "interop", "shared_constants.h"));
             var interopConstantsCpp = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.cpp"));
             var interopConstantsHeader = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.h"));
             var interopConstantsIdl = File.ReadAllText(FindSourceFile("src", "common", "interop", "Constants.idl"));
 
-            Assert.IsFalse(moduleInterface.Contains("m_hSendSettingsTelemetryEvent", StringComparison.Ordinal), "PowerDisplay module interface should not create a settings telemetry event handle.");
-            Assert.IsFalse(moduleInterface.Contains("POWER_DISPLAY_SEND_SETTINGS_TELEMETRY_EVENT", StringComparison.Ordinal), "PowerDisplay module interface should not signal settings telemetry IPC.");
-            Assert.IsFalse(moduleInterface.Contains("send_settings_telemetry: Signaling", StringComparison.Ordinal), "PowerDisplay send_settings_telemetry should stay inert in Kit.");
-            Assert.IsFalse(app.Contains("PowerDisplaySendSettingsTelemetryEvent", StringComparison.Ordinal), "PowerDisplay app should not listen for settings telemetry IPC.");
-            Assert.IsFalse(viewModelSettings.Contains("SendSettingsTelemetry", StringComparison.Ordinal), "PowerDisplay view model should not keep settings telemetry collection.");
             Assert.IsFalse(sharedConstants.Contains("POWER_DISPLAY_SEND_SETTINGS_TELEMETRY_EVENT", StringComparison.Ordinal), "Interop constants should not expose PowerDisplay settings telemetry events.");
             Assert.IsFalse(interopConstantsCpp.Contains("PowerDisplaySendSettingsTelemetryEvent", StringComparison.Ordinal), "Interop C++ projection should not expose PowerDisplay settings telemetry events.");
             Assert.IsFalse(interopConstantsHeader.Contains("PowerDisplaySendSettingsTelemetryEvent", StringComparison.Ordinal), "Interop header should not expose PowerDisplay settings telemetry events.");
@@ -335,7 +344,6 @@ namespace ViewModelTests
             string[][] activeModuleTraceFiles =
             {
                 new[] { "src", "modules", "awake", "AwakeModuleInterface", "trace.cpp" },
-                new[] { "src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "Trace.cpp" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "trace.cpp" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchService", "trace.cpp" },
                 new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "trace.cpp" },
@@ -373,7 +381,6 @@ namespace ViewModelTests
             string[][] projectPaths =
             {
                 new[] { "src", "modules", "awake", "AwakeModuleInterface", "AwakeModuleInterface.vcxproj" },
-                new[] { "src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "PowerDisplayModuleInterface.vcxproj" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "LightSwitchModuleInterface.vcxproj" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchService", "LightSwitchService.vcxproj" },
                 new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "MonitorModuleInterface.vcxproj" },
@@ -395,7 +402,6 @@ namespace ViewModelTests
             string[][] headerPaths =
             {
                 new[] { "src", "modules", "awake", "AwakeModuleInterface", "trace.h" },
-                new[] { "src", "modules", "powerdisplay", "PowerDisplayModuleInterface", "Trace.h" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "trace.h" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchService", "trace.h" },
                 new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "trace.h" },

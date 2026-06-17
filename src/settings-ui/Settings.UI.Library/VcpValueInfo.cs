@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace Microsoft.PowerToys.Settings.UI.Library
 {
     /// <summary>
-    /// Individual VCP value information
+    /// Individual VCP value information.
     /// </summary>
     public class VcpValueInfo
     {

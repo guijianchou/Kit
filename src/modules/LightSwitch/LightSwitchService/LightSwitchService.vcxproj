@@ -62,7 +62,6 @@
         $(RepoRoot)src\common\utils;
         $(RepoRoot)src\common\SettingsAPI;
         $(RepoRoot)src\;
-        ..\..\..\..\deps\spdlog\include;
         ./;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>

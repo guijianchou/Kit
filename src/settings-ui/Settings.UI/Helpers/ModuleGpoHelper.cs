@@ -16,7 +16,6 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
             {
                 ModuleType.Awake => GPOWrapper.GetConfiguredAwakeEnabledValue(),
                 ModuleType.LightSwitch => GPOWrapper.GetConfiguredLightSwitchEnabledValue(),
-                ModuleType.PowerDisplay => GPOWrapper.GetConfiguredPowerDisplayEnabledValue(),
                 _ => GpoRuleConfigured.Unavailable,
             };
         }
@@ -28,7 +27,6 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
                 ModuleType.Awake => typeof(AwakePage),
                 ModuleType.LightSwitch => typeof(LightSwitchPage),
                 ModuleType.Monitor => typeof(MonitorPage),
-                ModuleType.PowerDisplay => typeof(PowerDisplayPage),
                 _ => typeof(GeneralPage),
             };
         }

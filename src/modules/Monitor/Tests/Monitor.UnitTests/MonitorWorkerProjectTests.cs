@@ -96,6 +96,12 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(commandLineText, "--use-configured-actions");
         StringAssert.Contains(programText, "commandLine.UseConfiguredActions ? settings.AutoOrganize : commandLine.Organize");
         StringAssert.Contains(programText, "commandLine.UseConfiguredActions ? settings.AutoCleanInstallers : commandLine.CleanInstallers");
+        StringAssert.Contains(monitorPageText, "CreateManualScanId");
+        StringAssert.Contains(monitorPageText, "GetSerializedCustomAction(MonitorSettings.ModuleName, \"scanNow\", manualScanId)");
+        StringAssert.Contains(moduleInterfaceText, "--scan-id");
+        StringAssert.Contains(commandLineText, "ScanId");
+        StringAssert.Contains(commandLineText, "--scan-id");
+        StringAssert.Contains(programText, "commandLine.ScanId");
     }
 
     [TestMethod]
@@ -115,6 +121,29 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(moduleInterfaceText, "if (m_run_in_background)");
         StringAssert.Contains(moduleInterfaceText, "get_bool_value(L\"runInBackground\")");
         Assert.IsFalse(programText.Contains("Use --scan-once for a one-shot scan.", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void WorkerSerializesScansAndSupportsCooperativeCancellation()
+    {
+        string kitRoot = FindKitRoot();
+        string workerPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorLib", "MonitorWorker.cs");
+        string programPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "Monitor", "Program.cs");
+        string hasherPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorLib", "MonitorHasher.cs");
+        string moduleInterfacePath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorModuleInterface", "dllmain.cpp");
+
+        string workerText = File.ReadAllText(workerPath);
+        string programText = File.ReadAllText(programPath);
+        string hasherText = File.ReadAllText(hasherPath);
+        string moduleInterfaceText = File.ReadAllText(moduleInterfacePath);
+
+        StringAssert.Contains(workerText, "MonitorScanLock.Acquire");
+        StringAssert.Contains(workerText, "CancellationToken");
+        StringAssert.Contains(programText, "StartLifetimeCancellation");
+        StringAssert.Contains(programText, "OperationCanceledException");
+        StringAssert.Contains(hasherText, "cancellationToken.ThrowIfCancellationRequested");
+        StringAssert.Contains(hasherText, "chunkSizeBytes");
+        StringAssert.Contains(moduleInterfaceText, "timeout_ms = 10000");
     }
 
     [TestMethod]

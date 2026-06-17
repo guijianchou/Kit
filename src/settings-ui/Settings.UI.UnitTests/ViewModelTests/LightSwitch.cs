@@ -43,17 +43,18 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract()
+        public void LightSwitchShouldNotKeepPowerDisplayProfileBridgeAfterModuleRemoval()
         {
             var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "LightSwitchViewModel.cs"));
+            var view = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml"));
+            var viewCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml.cs"));
+            var properties = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "LightSwitchProperties.cs"));
 
-            StringAssert.Contains(viewModel, "SettingsUtils.Default.GetSettingsFilePath(\"PowerDisplay\", \"profiles.json\")");
-            StringAssert.Contains(viewModel, "JsonDocument.Parse");
-            StringAssert.Contains(viewModel, "AvailableProfiles.Add(new PowerDisplayProfile");
-            StringAssert.Contains(viewModel, "SettingsUtils.Default");
-            StringAssert.Contains(viewModel, "GetSettingsOrDefault<GeneralSettings>(string.Empty)");
-            StringAssert.Contains(viewModel, "generalSettings?.Enabled?.PowerDisplay ?? false");
-            Assert.IsFalse(viewModel.Contains("private void CheckPowerDisplayEnabled()\r\n        {\r\n            IsPowerDisplayEnabled = false;\r\n        }", StringComparison.Ordinal));
+            Assert.IsFalse(viewModel.Contains("PowerDisplay", StringComparison.Ordinal), "LightSwitch view model should not read deleted PowerDisplay profiles or enabled state.");
+            Assert.IsFalse(view.Contains("PowerDisplay", StringComparison.Ordinal), "LightSwitch page should not expose deleted PowerDisplay profile controls.");
+            Assert.IsFalse(viewCodeBehind.Contains("PowerDisplay", StringComparison.Ordinal), "LightSwitch code-behind should not navigate to the deleted PowerDisplay settings page.");
+            Assert.IsFalse(properties.Contains("PowerDisplay", StringComparison.Ordinal), "LightSwitch settings schema should not expose deleted PowerDisplay profile settings.");
+            Assert.IsFalse(properties.Contains("ModeProfile", StringComparison.Ordinal), "LightSwitch settings schema should not keep monitor-profile fields after PowerDisplay removal.");
         }
     }
 }

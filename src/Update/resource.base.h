@@ -5,7 +5,6 @@
 //////////////////////////////
 // Non-localizable
 
-#define FILE_DESCRIPTION "PowerToys Update"
+#define FILE_DESCRIPTION "Kit Update"
 #define INTERNAL_NAME "PowerToys.Update"
 #define ORIGINAL_FILENAME "PowerToys.Update.exe"
-

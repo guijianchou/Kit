@@ -26,7 +26,6 @@ namespace Microsoft.PowerToys.Settings.UI.Services
             {
                 [GeneralSettingsModuleKey] = () => SettingsRepository<GeneralSettings>.GetInstance(_settingsUtils).SettingsConfig,
                 [LightSwitchSettings.ModuleName] = () => SettingsRepository<LightSwitchSettings>.GetInstance(_settingsUtils).SettingsConfig,
-                [PowerDisplaySettings.ModuleName] = () => SettingsRepository<PowerDisplaySettings>.GetInstance(_settingsUtils).SettingsConfig,
             };
         }
 

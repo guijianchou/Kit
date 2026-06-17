@@ -19,13 +19,17 @@ public static class MonitorScanner
     /// <param name="existingRecords">Optional previous records used for incremental SHA1 reuse.</param>
     /// <param name="progressReporter">Optional progress reporter.</param>
     /// <param name="startedAt">The scan start time.</param>
+    /// <param name="scanId">Unique scan identifier used for progress snapshots.</param>
+    /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>The records discovered in the scan.</returns>
     public static IReadOnlyList<MonitorFileRecord> Scan(
         string downloadsPath,
         MonitorSettings settings,
         IReadOnlyList<MonitorFileRecord>? existingRecords = null,
         IMonitorScanProgressReporter? progressReporter = null,
-        DateTimeOffset? startedAt = null)
+        DateTimeOffset? startedAt = null,
+        string? scanId = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(downloadsPath);
         ArgumentNullException.ThrowIfNull(settings);
@@ -40,36 +44,60 @@ public static class MonitorScanner
         HashSet<string> excludedFiles = new(settings.ExcludedFiles, StringComparer.OrdinalIgnoreCase);
         HashSet<string> categoryFolders = new(settings.Categories.Keys, StringComparer.OrdinalIgnoreCase);
         List<MonitorFileRecord> records = new();
-        List<FileInfo> files = EnumerateFiles(rootDirectory)
-            .Where(fileInfo => !excludedFiles.Contains(fileInfo.Name))
-            .Where(fileInfo => !fileInfo.Attributes.HasFlag(FileAttributes.ReparsePoint))
-            .ToList();
+        List<FileInfo> files = new();
+        foreach (FileInfo fileInfo in EnumerateFiles(rootDirectory))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!excludedFiles.Contains(fileInfo.Name) && !IsReparsePoint(fileInfo))
+            {
+                files.Add(fileInfo);
+            }
+        }
+
         DateTimeOffset scanStartedAt = startedAt ?? DateTimeOffset.UtcNow;
         int filesProcessed = 0;
 
-        progressReporter?.Report(new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, rootDirectory.FullName, scanStartedAt, null, null), force: true);
+        MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, rootDirectory.FullName, scanStartedAt, null, null, scanId), force: true);
 
         foreach (FileInfo fileInfo in files)
         {
-            string relativePath = NormalizeRelativePath(Path.GetRelativePath(rootDirectory.FullName, fileInfo.FullName));
-            string folderName = ResolveFolderName(relativePath, categoryFolders);
-            string timestamp = FormatTimestamp(fileInfo.LastWriteTime);
-            string? sha1 = ResolveSha1(fileInfo, relativePath, timestamp, settings, existingIndex);
-            string category = categoryFolders.Contains(folderName) ? folderName : MonitorCategoryResolver.ResolveCategory(fileInfo.Name, settings);
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                fileInfo.Refresh();
+                if (!fileInfo.Exists || IsReparsePoint(fileInfo))
+                {
+                    filesProcessed++;
+                    MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
+                    continue;
+                }
 
-            records.Add(new MonitorFileRecord(
-                "~",
-                folderName,
-                fileInfo.Name,
-                relativePath,
-                fileInfo.FullName,
-                sha1,
-                timestamp,
-                fileInfo.Length,
-                category));
+                string relativePath = NormalizeRelativePath(Path.GetRelativePath(rootDirectory.FullName, fileInfo.FullName));
+                string folderName = ResolveFolderName(relativePath, categoryFolders);
+                string timestamp = FormatTimestamp(fileInfo.LastWriteTime);
+                string? sha1 = ResolveSha1(fileInfo, relativePath, timestamp, settings, existingIndex, cancellationToken);
+                string category = categoryFolders.Contains(folderName) ? folderName : MonitorCategoryResolver.ResolveCategory(fileInfo.Name, settings);
+
+                records.Add(new MonitorFileRecord(
+                    "~",
+                    folderName,
+                    fileInfo.Name,
+                    relativePath,
+                    fileInfo.FullName,
+                    sha1,
+                    timestamp,
+                    fileInfo.Length,
+                    category));
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
 
             filesProcessed++;
-            progressReporter?.Report(new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null));
+            MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
         }
 
         return records;
@@ -212,7 +240,8 @@ public static class MonitorScanner
         string relativePath,
         string timestamp,
         MonitorSettings settings,
-        IReadOnlyDictionary<string, MonitorFileRecord> existingIndex)
+        IReadOnlyDictionary<string, MonitorFileRecord> existingIndex,
+        CancellationToken cancellationToken)
     {
         if (!settings.CalculateSha1)
         {
@@ -222,11 +251,12 @@ public static class MonitorScanner
         if (settings.IncrementalScan &&
             existingIndex.TryGetValue(relativePath, out MonitorFileRecord? existingRecord) &&
             string.Equals(existingRecord.Timestamp, timestamp, StringComparison.Ordinal) &&
+            existingRecord.FileSize == fileInfo.Length &&
             !string.IsNullOrEmpty(existingRecord.Sha1))
         {
             return existingRecord.Sha1;
         }
 
-        return MonitorHasher.CalculateHash(fileInfo.FullName, settings.HashAlgorithm, settings.ChunkSizeBytes, settings.MaxFileSizeForSha1Mb);
+        return MonitorHasher.CalculateHash(fileInfo.FullName, settings.HashAlgorithm, settings.ChunkSizeBytes, settings.MaxFileSizeForSha1Mb, cancellationToken);
     }
 }

@@ -251,7 +251,7 @@ private:
             Logger::info("Monitor background worker stopping.");
             signal_exit_event();
 
-            constexpr DWORD timeout_ms = 1500;
+            constexpr DWORD timeout_ms = 10000;
             DWORD wait_result = WaitForSingleObject(m_process, timeout_ms);
             if (wait_result == WAIT_TIMEOUT)
             {
@@ -341,7 +341,15 @@ public:
             auto action_object = PowerToysSettings::CustomActionObject::from_json_string(action);
             if (action_object.get_name() == L"scanNow")
             {
-                launch_process(L"--scan-once --use-configured-actions", false);
+                std::wstring args = L"--scan-once --use-configured-actions";
+                std::wstring scan_id = action_object.get_value();
+                if (!scan_id.empty())
+                {
+                    args += L" --scan-id ";
+                    args += quote_argument(scan_id);
+                }
+
+                launch_process(args, false);
             }
             else if (action_object.get_name() == L"organizeDownloads")
             {

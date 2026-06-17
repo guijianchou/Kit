@@ -6,6 +6,17 @@
 
 ## English
 
+### 2.0.2
+
+- Version: Bumped Kit to `2.0.2`.
+- Runtime: Removed PowerDisplay from the active plugin/module surface, including runner loading, solution entries, Settings navigation, Quick Access routing, GPO projection, Settings serialization, resources, assets, and module source.
+- Runtime: The active module set is now `Awake`, `Light Switch`, and `Monitor`.
+- Runtime: Synced Awake and LightSwitch with the local PowerToys-main module shape while preserving Kit-only storage, IPC names, telemetry-disabled trace hooks, and updater boundaries.
+- Runtime: LightSwitch now uses Kit-named toggle, manual-override, and service-stop events, stops the scheduler service when schedule mode switches to `Off`, and keeps the toggle hotkey from relaunching the scheduler process.
+- Slimming: Removed the LightSwitch-to-PowerDisplay profile bridge and disabled Force Light/Force Dark custom-action plumbing after removing PowerDisplay.
+- Policy: Updated Kit ADMX/ADML support markers to `SUPPORTED_KIT_2_0_2`.
+- Tests: Updated static registration and compatibility coverage for the three active modules and the removed PowerDisplay boundary.
+
 ### 2.0.1
 
 - Version: Bumped Kit to `2.0.1`.
@@ -186,6 +197,17 @@
 ## 中文
 
 ## 更新日志
+
+### 2.0.2
+
+- 版本：Kit 升级到 `2.0.2`。
+- 运行时：从活动插件/模块表面移除 PowerDisplay，包括 runner 加载、解决方案条目、Settings 导航、Quick Access 路由、GPO 投影、Settings 序列化、资源、资产和模块源码。
+- 运行时：当前活动模块集为 `Awake`、`Light Switch` 和 `Monitor`。
+- 运行时：同步本地 PowerToys-main 中的 Awake 和 LightSwitch 模块形状，同时保留 Kit 专用存储、IPC 名称、禁用遥测的 trace hook 和更新边界。
+- 运行时：LightSwitch 现在使用 Kit 命名的 toggle、manual-override 和 service-stop 事件；schedule mode 切换到 `Off` 时会停止 scheduler service，toggle hotkey 不再重新拉起 scheduler 进程。
+- 精简：移除 LightSwitch 到 PowerDisplay 的 profile bridge，以及删除 PowerDisplay 后无效的 Force Light/Force Dark custom-action 管线。
+- 策略：Kit ADMX/ADML support marker 更新为 `SUPPORTED_KIT_2_0_2`。
+- 测试：更新三活动模块和 PowerDisplay 删除边界的静态注册/兼容性覆盖。
 
 ### 2.0.1
 

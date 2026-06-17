@@ -94,10 +94,6 @@
                         <ToggleSwitch AutomationProperties.AutomationId="CleanInstallers_Monitor" IsOn="{x:Bind ViewModel.CleanInstallers, Mode=TwoWay}" />
                     </tkcontrols:SettingsCard>
 
-                    <tkcontrols:SettingsCard x:Uid="Monitor_RunInBackgroundSettingsCard" HeaderIcon="{ui:FontIcon Glyph=&#xE823;}">
-                        <ToggleSwitch AutomationProperties.AutomationId="RunInBackground_Monitor" IsOn="{x:Bind ViewModel.RunInBackground, Mode=TwoWay}" />
-                    </tkcontrols:SettingsCard>
-
                     <tkcontrols:SettingsCard x:Uid="Monitor_DownloadsPathSettingsCard" HeaderIcon="{ui:FontIcon Glyph=&#xE8B7;}">
                         <Grid MinWidth="{StaticResource SettingActionControlMinWidth}" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
@@ -117,22 +113,25 @@
                         </Grid>
                     </tkcontrols:SettingsCard>
 
+                    <tkcontrols:SettingsCard x:Uid="Monitor_RunInBackgroundSettingsCard" HeaderIcon="{ui:FontIcon Glyph=&#xE823;}">
+                        <ToggleSwitch AutomationProperties.AutomationId="RunInBackground_Monitor" IsOn="{x:Bind ViewModel.RunInBackground, Mode=TwoWay}" />
+                    </tkcontrols:SettingsCard>
+
+                    <tkcontrols:SettingsCard x:Uid="Monitor_ScanIntervalSeconds" HeaderIcon="{ui:FontIcon Glyph=&#xE823;}">
+                        <ComboBox
+                            MinWidth="{StaticResource SettingActionControlMinWidth}"
+                            AutomationProperties.AutomationId="ScanIntervalSeconds_Monitor"
+                            DisplayMemberPath="Label"
+                            ItemsSource="{x:Bind ViewModel.ScanIntervalOptions, Mode=OneWay}"
+                            SelectedValue="{x:Bind ViewModel.ScanIntervalSeconds, Mode=TwoWay}"
+                            SelectedValuePath="Seconds" />
+                    </tkcontrols:SettingsCard>
+
                     <tkcontrols:SettingsCard x:Uid="Monitor_CsvFileNameSettingsCard" HeaderIcon="{ui:FontIcon Glyph=&#xE8A5;}">
                         <TextBox
                             MinWidth="{StaticResource SettingActionControlMinWidth}"
                             AutomationProperties.AutomationId="CsvFileName_Monitor"
-                            Text="{x:Bind ViewModel.CsvFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </tkcontrols:SettingsCard>
-
-                    <tkcontrols:SettingsCard x:Uid="Monitor_ScanIntervalSeconds" HeaderIcon="{ui:FontIcon Glyph=&#xE823;}">
-                        <NumberBox
-                            MinWidth="{StaticResource SettingActionControlMinWidth}"
-                            AutomationProperties.AutomationId="ScanIntervalSeconds_Monitor"
-                            LargeChange="600"
-                            Minimum="60"
-                            SmallChange="60"
-                            SpinButtonPlacementMode="Compact"
-                            Value="{x:Bind ViewModel.ScanIntervalSeconds, Mode=TwoWay}" />
+                            Text="{x:Bind ViewModel.CsvFileName, Mode=TwoWay}" />
                     </tkcontrols:SettingsCard>
 
                     <tkcontrols:SettingsCard x:Uid="Monitor_MaxFileSizeMegabytes" HeaderIcon="{ui:FontIcon Glyph=&#xE8D4;}">

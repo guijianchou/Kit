@@ -13,8 +13,6 @@
       "src\\common\\logger\\logger.vcxproj",
       "src\\common\\version\\version.vcxproj",
       "src\\logging\\logging.vcxproj",
-      "src\\modules\\powerdisplay\\PowerDisplay.Lib\\PowerDisplay.Lib.csproj",
-      "src\\modules\\powerdisplay\\PowerDisplay.Models\\PowerDisplay.Models.csproj",
       "src\\settings-ui\\QuickAccess.UI\\PowerToys.QuickAccess.csproj",
       "src\\settings-ui\\Settings.UI.Controls\\Settings.UI.Controls.csproj",
       "src\\settings-ui\\Settings.UI.Library\\Settings.UI.Library.csproj",

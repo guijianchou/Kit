@@ -37,28 +37,39 @@ public static class MonitorHasher
     /// <param name="algorithm">The hash algorithm. Supported values are SHA1, MD5, SHA256, and SHA512.</param>
     /// <param name="chunkSizeBytes">The stream read chunk size.</param>
     /// <param name="maxFileSizeMb">The maximum file size to hash, in megabytes.</param>
+    /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>A lowercase hash value, <see cref="Sha1SkippedTooLarge"/>, or null when the file cannot be read.</returns>
-    public static string? CalculateHash(string filePath, string algorithm, int chunkSizeBytes, int? maxFileSizeMb)
+    public static string? CalculateHash(string filePath, string algorithm, int chunkSizeBytes, int? maxFileSizeMb, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(algorithm);
 
-        FileInfo fileInfo = new(filePath);
-        if (!fileInfo.Exists)
-        {
-            return null;
-        }
-
-        if (maxFileSizeMb.HasValue && fileInfo.Length > maxFileSizeMb.Value * 1024L * 1024L)
-        {
-            return Sha1SkippedTooLarge;
-        }
-
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            FileInfo fileInfo = new(filePath);
+            fileInfo.Refresh();
+            if (!fileInfo.Exists)
+            {
+                return null;
+            }
+
+            if (maxFileSizeMb.HasValue && fileInfo.Length > maxFileSizeMb.Value * 1024L * 1024L)
+            {
+                return Sha1SkippedTooLarge;
+            }
+
             using FileStream stream = File.OpenRead(filePath);
-            using HashAlgorithm hashAlgorithm = CreateHashAlgorithm(algorithm);
-            byte[] hash = hashAlgorithm.ComputeHash(stream);
+            using IncrementalHash hashAlgorithm = IncrementalHash.CreateHash(CreateHashAlgorithmName(algorithm));
+            byte[] buffer = new byte[Math.Max(1, chunkSizeBytes)];
+            int bytesRead;
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                hashAlgorithm.AppendData(buffer, 0, bytesRead);
+            }
+
+            byte[] hash = hashAlgorithm.GetHashAndReset();
             return ToLowerHex(hash);
         }
         catch (IOException)
@@ -71,22 +82,22 @@ public static class MonitorHasher
         }
     }
 
-    private static HashAlgorithm CreateHashAlgorithm(string algorithm)
+    private static HashAlgorithmName CreateHashAlgorithmName(string algorithm)
     {
         switch (algorithm.ToUpperInvariant())
         {
             case "SHA1":
 #pragma warning disable CA5350 // SHA1 remains the default for compatibility with the original Monitor CSV data.
-                return SHA1.Create();
+                return HashAlgorithmName.SHA1;
 #pragma warning restore CA5350
             case "MD5":
 #pragma warning disable CA5351 // MD5 is an explicit user-selectable inventory hash, not a security boundary.
-                return MD5.Create();
+                return HashAlgorithmName.MD5;
 #pragma warning restore CA5351
             case "SHA256":
-                return SHA256.Create();
+                return HashAlgorithmName.SHA256;
             case "SHA512":
-                return SHA512.Create();
+                return HashAlgorithmName.SHA512;
             default:
                 throw new ArgumentException("Unsupported hash algorithm: " + algorithm + ".", nameof(algorithm));
         }

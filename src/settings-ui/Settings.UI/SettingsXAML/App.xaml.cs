@@ -308,7 +308,6 @@ namespace Microsoft.PowerToys.Settings.UI
                 "Awake" => typeof(AwakePage),
                 "LightSwitch" => typeof(LightSwitchPage),
                 "Monitor" => typeof(MonitorPage),
-                "PowerDisplay" => typeof(PowerDisplayPage),
                 _ => typeof(GeneralPage),
             };
         }

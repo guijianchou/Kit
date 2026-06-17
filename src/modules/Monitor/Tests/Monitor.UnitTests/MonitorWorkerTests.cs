@@ -140,6 +140,64 @@ public sealed class MonitorWorkerTests
         Assert.IsNotNull(completed.CompletedAt);
     }
 
+    [TestMethod]
+    public void RunOnceCompletesWhenOptionalProgressReporterFails()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string sourcePath = Path.Combine(tempDirectory.Path, "notes.pdf");
+        string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
+        File.WriteAllText(sourcePath, "document");
+
+        MonitorWorkerResult result = MonitorWorker.RunOnce(
+            tempDirectory.Path,
+            csvPath,
+            MonitorSettings.CreateDefault(),
+            organize: false,
+            cleanInstallers: false,
+            progressReporter: new ThrowingProgressReporter());
+
+        Assert.AreEqual(1, result.RecordCount);
+        Assert.IsTrue(File.Exists(csvPath));
+    }
+
+    [TestMethod]
+    public async Task RunOnceSerializesConcurrentScans()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string firstFilePath = Path.Combine(tempDirectory.Path, "first.pdf");
+        string secondFilePath = Path.Combine(tempDirectory.Path, "second.pdf");
+        string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
+        File.WriteAllText(firstFilePath, "first");
+        File.WriteAllText(secondFilePath, "second");
+
+        using BlockingProgressReporter firstReporter = new();
+        Task firstScan = Task.Run(() => MonitorWorker.RunOnce(
+            tempDirectory.Path,
+            csvPath,
+            MonitorSettings.CreateDefault(),
+            organize: false,
+            cleanInstallers: false,
+            progressReporter: firstReporter));
+
+        Assert.IsTrue(firstReporter.WaitUntilHashingStarted(TimeSpan.FromSeconds(5)), "First scan should reach hashing.");
+
+        Task<MonitorWorkerResult> secondScan = Task.Run(() => MonitorWorker.RunOnce(
+            tempDirectory.Path,
+            csvPath,
+            MonitorSettings.CreateDefault(),
+            organize: false,
+            cleanInstallers: false));
+
+        Task completedBeforeRelease = await Task.WhenAny(secondScan, Task.Delay(200));
+        Assert.AreNotSame(secondScan, completedBeforeRelease, "Second scan should wait for the first scan to release the shared Monitor scan lock.");
+
+        firstReporter.Release();
+        await firstScan;
+        MonitorWorkerResult secondResult = await secondScan;
+
+        Assert.AreEqual(2, secondResult.RecordCount);
+    }
+
     private sealed class TemporaryDirectory : IDisposable
     {
         public TemporaryDirectory()
@@ -168,6 +226,47 @@ public sealed class MonitorWorkerTests
         public void Report(MonitorScanProgressSnapshot snapshot, bool force = false)
         {
             Snapshots.Add(snapshot);
+        }
+    }
+
+    private sealed class ThrowingProgressReporter : IMonitorScanProgressReporter
+    {
+        public void Report(MonitorScanProgressSnapshot snapshot, bool force = false)
+        {
+            throw new IOException("Progress output is unavailable.");
+        }
+    }
+
+    private sealed class BlockingProgressReporter : IMonitorScanProgressReporter, IDisposable
+    {
+        private readonly ManualResetEventSlim _hashingStarted = new(false);
+        private readonly ManualResetEventSlim _release = new(false);
+        private bool _blocked;
+
+        public void Report(MonitorScanProgressSnapshot snapshot, bool force = false)
+        {
+            if (!_blocked && string.Equals(snapshot.Phase, MonitorScanProgressPhase.Hashing, StringComparison.Ordinal))
+            {
+                _blocked = true;
+                _hashingStarted.Set();
+                Assert.IsTrue(_release.Wait(TimeSpan.FromSeconds(5)), "Test should release the first scan.");
+            }
+        }
+
+        public bool WaitUntilHashingStarted(TimeSpan timeout)
+        {
+            return _hashingStarted.Wait(timeout);
+        }
+
+        public void Release()
+        {
+            _release.Set();
+        }
+
+        public void Dispose()
+        {
+            _hashingStarted.Dispose();
+            _release.Dispose();
         }
     }
 }

@@ -412,10 +412,5 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 this.LocationWarningBar.Visibility = Visibility.Visible;
             }
         }
-
-        private void NavigatePowerDisplaySettings_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-        {
-            ShellPage.Navigate(typeof(PowerDisplayPage));
-        }
     }
 }

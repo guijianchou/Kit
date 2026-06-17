@@ -342,7 +342,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 ModuleType.Awake => GetModuleItemsAwake(),
                 ModuleType.LightSwitch => GetModuleItemsLightSwitch(),
                 ModuleType.Monitor => GetModuleItemsMonitor(),
-                ModuleType.PowerDisplay => GetModuleItemsPowerDisplay(),
                 _ => new ObservableCollection<DashboardModuleItem>(),
             };
         }
@@ -390,28 +389,23 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             {
                 new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Monitor_DownloadsPathSettingsCard/Header"), Activation = settings.Properties.DownloadsPath.Value },
                 new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Monitor_RunInBackgroundSettingsCard/Header"), Activation = settings.Properties.RunInBackground.Value ? resourceLoader.GetString("Monitor_RunInBackgroundOn") : resourceLoader.GetString("Monitor_RunInBackgroundOff") },
-                new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Monitor_ScanIntervalSeconds/Header"), Activation = $"{settings.Properties.ScanIntervalSeconds.Value}s" },
+                new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Monitor_ScanIntervalSeconds/Header"), Activation = FormatMonitorScanInterval(settings.Properties.ScanIntervalSeconds.Value) },
             };
 
             return new ObservableCollection<DashboardModuleItem>(list);
         }
 
-        private ObservableCollection<DashboardModuleItem> GetModuleItemsPowerDisplay()
+        private static string FormatMonitorScanInterval(int intervalSeconds)
         {
-            ISettingsRepository<PowerDisplaySettings> moduleSettingsRepository = SettingsRepository<PowerDisplaySettings>.GetInstance(SettingsUtils.Default);
-            var settings = moduleSettingsRepository.SettingsConfig;
-            var list = new List<DashboardModuleItem>
+            return intervalSeconds switch
             {
-                new DashboardModuleShortcutItem() { Label = resourceLoader.GetString("PowerDisplay_ToggleWindow"), Shortcut = settings.Properties.ActivationShortcut.GetKeysList() },
-                new DashboardModuleButtonItem() { ButtonTitle = resourceLoader.GetString("PowerDisplay_LaunchButtonControl/Header"), IsButtonDescriptionVisible = true, ButtonDescription = resourceLoader.GetString("PowerDisplay_LaunchButtonControl/Description"), ButtonGlyph = "ms-appx:///Assets/Settings/Icons/PowerDisplay.png", ButtonClickHandler = PowerDisplayLaunchClicked },
+                3600 => "1h",
+                7200 => "2h",
+                21600 => "6h",
+                43200 => "12h",
+                86400 => "24h",
+                _ => $"{intervalSeconds}s",
             };
-
-            return new ObservableCollection<DashboardModuleItem>(list);
-        }
-
-        private void PowerDisplayLaunchClicked(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-        {
-            SendConfigMSG("{\"action\":{\"PowerDisplay\":{\"action_name\":\"Launch\", \"value\":\"\"}}}");
         }
 
         internal void DashboardListItemClick(object sender)

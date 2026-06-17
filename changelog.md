@@ -6,6 +6,16 @@
 
 ## English
 
+### 2.0.3
+
+- Version: Bumped Kit to `2.0.3`.
+- Review: Rechecked Kit's runner, Settings, common build/package, sparse package identity, and policy surfaces against the local PowerToys-main framework baseline.
+- Runtime: Monitor manual scan progress now completes when the worker completion event is signaled even if the progress JSON cannot be read.
+- Runtime: Monitor background scans no longer signal the manual scan completion event, preventing Settings from treating background completion as a manual scan result.
+- Runtime: Monitor installer cleanup now keeps the highest-confidence installed-software match for each installer instead of reserving files by enumeration order.
+- UI: Monitor VCP capability cache comparison now includes value metadata so color preset changes refresh Settings correctly.
+- Docs: Updated README, README_zh, changelog, sparse package version, and GPO support marker `SUPPORTED_KIT_2_0_3`.
+
 ### 2.0.2
 
 - Version: Bumped Kit to `2.0.2`.
@@ -197,6 +207,16 @@
 ## 中文
 
 ## 更新日志
+
+### 2.0.3
+
+- 版本：Kit 升级到 `2.0.3`。
+- 审查：再次将 Kit 的 runner、Settings、common build/package、sparse package identity 和 policy surface 与本地 PowerToys-main 主框架基线对比。
+- 运行时：Monitor 手动扫描在 worker 完成事件发出后，即使无法读取 progress JSON，也会结束进度显示。
+- 运行时：Monitor 后台扫描不再触发手动扫描完成事件，避免 Settings 将后台完成误判为手动扫描结果。
+- 运行时：Monitor installer cleanup 现在为每个 installer 保留置信度最高的已安装软件匹配，不再被枚举顺序抢占。
+- UI：Monitor VCP capability 缓存比较现在包含 value metadata，色温预设变化会正确刷新 Settings。
+- 文档：同步 README、README_zh、changelog、sparse package version 和 GPO support marker `SUPPORTED_KIT_2_0_3`。
 
 ### 2.0.2
 

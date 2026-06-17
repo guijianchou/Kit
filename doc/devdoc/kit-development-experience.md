@@ -2,6 +2,17 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-06-16 Version 2.0.3 Monitor And Framework Review
+
+This pass moved Kit to `2.0.3` after rechecking the Kit runner, Settings, common build/package, sparse package identity, and policy surfaces against the local PowerToys-main framework baseline.
+
+- Version.props, README, README_zh, changelog, this development log, the sparse package manifest, GPO support markers, and version metadata tests now use Kit version `2.0.3`.
+- The PowerToys-main framework comparison did not require pulling back deleted inactive module surfaces; Kit's central package and build target differences remain intentional local-workspace boundaries.
+- Monitor manual scan progress now completes from the worker completion event even when the progress JSON cannot be read.
+- Monitor background scans no longer signal the manual scan completion event, so Settings cannot mistake background completion for the current manual scan.
+- Monitor installer cleanup now selects the highest-confidence installed-software match for each installer after gathering candidates.
+- Monitor VCP capability comparison now includes value metadata so color preset cache changes refresh Settings correctly.
+
 ## 2026-06-13 Version 2.0.2 PowerDisplay Removal And Upstream Module Sync
 
 This pass moved Kit to `2.0.2` after syncing the copied Awake and LightSwitch modules with the local PowerToys-main reference while preserving Kit's local-only runtime boundaries.

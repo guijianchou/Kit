@@ -13,4 +13,5 @@ public static class MonitorScanProgressPhase
     public const string Categorizing = "categorizing";
     public const string Writing = "writing";
     public const string Completed = "completed";
+    public const string Failed = "failed";
 }

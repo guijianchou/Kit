@@ -668,7 +668,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse202ReleaseMetadata()
+        public void KitAboutVersionShouldUse203ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -680,7 +680,7 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>2.0.2</Version>");
+            StringAssert.Contains(versionProps, "<Version>2.0.3</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -688,13 +688,21 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `2.0.2`.");
+            StringAssert.Contains(readme, "Current Kit version: `2.0.3`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.2`。");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.3`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
             StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
             StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
+            StringAssert.Contains(changelog, "### 2.0.3");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.3`");
+            StringAssert.Contains(changelog, "PowerToys-main framework baseline");
+            StringAssert.Contains(changelog, "Monitor manual scan progress now completes");
+            StringAssert.Contains(changelog, "Monitor background scans no longer signal the manual scan completion event");
+            StringAssert.Contains(changelog, "highest-confidence installed-software match");
+            StringAssert.Contains(changelog, "VCP capability cache comparison");
+            StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_3");
             StringAssert.Contains(changelog, "### 2.0.2");
             StringAssert.Contains(changelog, "Bumped Kit to `2.0.2`");
             StringAssert.Contains(changelog, "Removed PowerDisplay from the active plugin/module surface");
@@ -786,6 +794,12 @@ namespace ViewModelTests
             StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
             StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
+            StringAssert.Contains(developmentLog, "## 2026-06-16 Version 2.0.3 Monitor And Framework Review");
+            StringAssert.Contains(developmentLog, "PowerToys-main framework comparison");
+            StringAssert.Contains(developmentLog, "Monitor manual scan progress now completes");
+            StringAssert.Contains(developmentLog, "Monitor background scans no longer signal the manual scan completion event");
+            StringAssert.Contains(developmentLog, "highest-confidence installed-software match");
+            StringAssert.Contains(developmentLog, "VCP capability comparison");
             StringAssert.Contains(developmentLog, "## 2026-06-13 Version 2.0.2 PowerDisplay Removal And Upstream Module Sync");
             StringAssert.Contains(developmentLog, "The active Kit module set is now `Awake`, `Light Switch`, and `Monitor`");
             StringAssert.Contains(developmentLog, "PowerDisplay was removed from runner loading, solution entries, Settings navigation, Quick Access routing, GPO projection, Settings serialization, resources, assets, docs, and module source");

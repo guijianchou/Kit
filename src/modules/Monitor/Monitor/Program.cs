@@ -16,6 +16,7 @@ public static class Program
     private const string MonitorExitEvent = @"Local\KitMonitorExitEvent-0b94f553-2821-4690-a940-76d04c3ef7e8";
     private const string MonitorScanCompletedEvent = @"Local\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
     private const string MonitorProgressFileName = "scan-progress.json";
+    private static readonly TimeSpan OneShotScanTimeout = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Runs the Monitor worker.
@@ -41,8 +42,27 @@ public static class Program
             {
                 bool organize = commandLine.UseConfiguredActions ? settings.AutoOrganize : commandLine.Organize;
                 bool cleanInstallers = commandLine.UseConfiguredActions ? settings.AutoCleanInstallers : commandLine.CleanInstallers;
-                RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, ResolveScanId(commandLine.ScanId), signalScanCompleted: true, CancellationToken.None);
-                return 0;
+                string scanId = ResolveScanId(commandLine.ScanId);
+                using CancellationTokenSource oneShotCancellation = new(OneShotScanTimeout);
+                try
+                {
+                    RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, scanId, signalScanCompleted: true, oneShotCancellation.Token);
+                    return 0;
+                }
+                catch (OperationCanceledException)
+                {
+                    ReportOneShotScanFailed(scanId, "Scan timed out");
+                    SignalScanCompleted();
+                    Console.Error.WriteLine("Scan timed out.");
+                    return 1;
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    ReportOneShotScanFailed(scanId, "Scan failed");
+                    SignalScanCompleted();
+                    Console.Error.WriteLine(ex.Message);
+                    return 1;
+                }
             }
 
             return RunContinuous(commandLine, downloadsPath, csvPath, settings);
@@ -130,6 +150,33 @@ public static class Program
         }
 
         return result;
+    }
+
+    private static void ReportOneShotScanFailed(string scanId, string message)
+    {
+        DateTimeOffset failedAt = DateTimeOffset.UtcNow;
+        MonitorScanProgressFileReporter progressReporter = new(ResolveProgressPath(), TimeSpan.Zero);
+        try
+        {
+            progressReporter.Report(
+                new MonitorScanProgressSnapshot(
+                    MonitorScanProgressPhase.Failed,
+                    filesProcessed: 0,
+                    filesTotal: 0,
+                    currentDirectory: string.Empty,
+                    startedAt: failedAt,
+                    completedAt: failedAt,
+                    recordCount: null,
+                    scanId: scanId,
+                    message: message),
+                force: true);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private static string GetHelpText()

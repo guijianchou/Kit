@@ -1332,8 +1332,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
-            StringAssert.Contains(versionProps, "<Version>2.0.2</Version>");
-            StringAssert.Contains(manifest, "Version=\"2.0.2.0\"");
+            StringAssert.Contains(versionProps, "<Version>2.0.3</Version>");
+            StringAssert.Contains(manifest, "Version=\"2.0.3.0\"");
             StringAssert.Contains(readme, "Debug builds use `-NoSign`");
             StringAssert.Contains(manifest, "Local.Kit.SparseApp");
             StringAssert.Contains(manifest, "Kit.SparseApp");
@@ -1715,9 +1715,9 @@ namespace ViewModelTests
                 StringAssert.Contains(adml, activePolicy);
             }
 
-            StringAssert.Contains(admx, "SUPPORTED_KIT_2_0_2");
-            StringAssert.Contains(adml, "SUPPORTED_KIT_2_0_2");
-            foreach (var obsoleteSupportMarker in new[] { "SUPPORTED_KIT_1" + "_2_2", "SUPPORTED_KIT_3" + "_0_1" })
+            StringAssert.Contains(admx, "SUPPORTED_KIT_2_0_3");
+            StringAssert.Contains(adml, "SUPPORTED_KIT_2_0_3");
+            foreach (var obsoleteSupportMarker in new[] { "SUPPORTED_KIT_1" + "_2_2", "SUPPORTED_KIT_2" + "_0_2", "SUPPORTED_KIT_3" + "_0_1" })
             {
                 Assert.IsFalse(admx.Contains(obsoleteSupportMarker, StringComparison.Ordinal), $"GPO ADMX should not keep obsolete support marker after the version bump: {obsoleteSupportMarker}");
                 Assert.IsFalse(adml.Contains(obsoleteSupportMarker, StringComparison.Ordinal), $"GPO ADML should not keep obsolete support marker after the version bump: {obsoleteSupportMarker}");

@@ -37,9 +37,14 @@ namespace ViewModelTests
         public void LightSwitchCoordinateFallbackShouldUseReadableDegreeSymbols()
         {
             var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "LightSwitchViewModel.cs"));
+            var viewCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml.cs"));
 
-            StringAssert.Contains(viewModel, ": $\"{Latitude}°,{Longitude}°\";");
-            Assert.IsFalse(viewModel.Contains('Ã'));
+            StringAssert.Contains(viewModel, ": $\"{Latitude}\u00B0,{Longitude}\u00B0\";");
+            StringAssert.Contains(viewCodeBehind, "SyncButtonInformation = $\"{this.ViewModel.Latitude}\u00B0, {this.ViewModel.Longitude}\u00B0\";");
+            Assert.IsFalse(viewModel.Contains("\u00C2\u00B0", StringComparison.Ordinal));
+            Assert.IsFalse(viewCodeBehind.Contains("\u00C2\u00B0", StringComparison.Ordinal));
+            Assert.IsFalse(viewModel.Contains('\u00C3'));
+            Assert.IsFalse(viewCodeBehind.Contains('\u00C3'));
         }
 
         [TestMethod]

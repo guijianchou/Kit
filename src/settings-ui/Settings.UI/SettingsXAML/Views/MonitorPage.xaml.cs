@@ -23,6 +23,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
     {
         private const string MonitorScanCompletedEvent = @"Local\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
         private const string MonitorProgressFileName = "scan-progress.json";
+        private static readonly TimeSpan ManualScanUiTimeout = TimeSpan.FromMinutes(5);
 
         private readonly string _appName = MonitorSettings.ModuleName;
         private readonly SettingsUtils _settingsUtils;
@@ -35,6 +36,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         private readonly Func<string, int> _sendConfigMsg;
         private bool _suppressViewModelUpdates;
         private string _manualScanId = string.Empty;
+        private DateTimeOffset _manualScanStartedAt = DateTimeOffset.MinValue;
 
         private MonitorViewModel ViewModel { get; set; }
 
@@ -103,6 +105,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         {
             _manualScanProgressTimer.Stop();
             _manualScanId = CreateManualScanId();
+            _manualScanStartedAt = DateTimeOffset.UtcNow;
             using EventWaitHandle scanCompletedEvent = new(false, EventResetMode.AutoReset, MonitorScanCompletedEvent);
             scanCompletedEvent.Reset();
 
@@ -118,6 +121,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         {
             bool completionSignaled = IsScanCompletedSignaled();
             WorkerProgressSnapshot progressSnapshot = ReadWorkerProgressSnapshot(_manualScanId);
+            bool manualScanTimedOut = DateTimeOffset.UtcNow - _manualScanStartedAt >= ManualScanUiTimeout;
             if (progressSnapshot != null)
             {
                 ApplyWorkerProgressSnapshot(progressSnapshot);
@@ -129,8 +133,21 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
 
             bool manualScanCompleted = string.Equals(progressSnapshot?.Phase, "completed", StringComparison.OrdinalIgnoreCase);
+            bool manualScanFailed = string.Equals(progressSnapshot?.Phase, "failed", StringComparison.OrdinalIgnoreCase);
             bool completedWithoutProgressSnapshot = completionSignaled && progressSnapshot == null;
             bool completedWithMatchingProgressSnapshot = completionSignaled && progressSnapshot != null && string.Equals(progressSnapshot.ScanId, _manualScanId, StringComparison.Ordinal);
+            if (manualScanFailed)
+            {
+                FailManualScanProgress(sender, FormatProgressDetail(progressSnapshot));
+                return;
+            }
+
+            if (manualScanTimedOut && !manualScanCompleted)
+            {
+                FailManualScanProgress(sender, "Scan timed out");
+                return;
+            }
+
             if (manualScanCompleted || completedWithoutProgressSnapshot || completedWithMatchingProgressSnapshot)
             {
                 if (completedWithoutProgressSnapshot)
@@ -146,6 +163,14 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         {
             ViewModel.IsManualScanProgressIndeterminate = false;
             ViewModel.ManualScanProgressValue = 100;
+            sender.Stop();
+        }
+
+        private void FailManualScanProgress(DispatcherQueueTimer sender, string detail)
+        {
+            ViewModel.IsManualScanProgressIndeterminate = false;
+            ViewModel.ManualScanProgressValue = 100;
+            ViewModel.ManualScanProgressDetail = string.IsNullOrWhiteSpace(detail) ? "Scan failed" : detail;
             sender.Stop();
         }
 
@@ -294,13 +319,15 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         private void ApplyWorkerProgressSnapshot(WorkerProgressSnapshot snapshot)
         {
             bool hasTotal = snapshot.FilesTotal > 0;
-            ViewModel.IsManualScanProgressIndeterminate = !hasTotal && !string.Equals(snapshot.Phase, "completed", StringComparison.OrdinalIgnoreCase);
+            bool isCompleted = string.Equals(snapshot.Phase, "completed", StringComparison.OrdinalIgnoreCase);
+            bool isFailed = string.Equals(snapshot.Phase, "failed", StringComparison.OrdinalIgnoreCase);
+            ViewModel.IsManualScanProgressIndeterminate = !hasTotal && !isCompleted && !isFailed;
             if (hasTotal)
             {
                 ViewModel.ManualScanProgressValue = Math.Clamp((double)snapshot.FilesProcessed / snapshot.FilesTotal * 100, 1, 100);
             }
 
-            if (string.Equals(snapshot.Phase, "completed", StringComparison.OrdinalIgnoreCase))
+            if (isCompleted || isFailed)
             {
                 ViewModel.ManualScanProgressValue = 100;
             }
@@ -316,8 +343,14 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 "categorizing" => "Categorizing",
                 "writing" => "Writing",
                 "completed" => "Complete",
+                "failed" => "Scan failed",
                 _ => "Scanning",
             };
+
+            if (string.Equals(snapshot.Phase, "failed", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(snapshot.Message))
+            {
+                return snapshot.Message;
+            }
 
             if (string.Equals(snapshot.Phase, "completed", StringComparison.OrdinalIgnoreCase) && snapshot.RecordCount.HasValue)
             {
@@ -351,6 +384,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             public DateTimeOffset? CompletedAt { get; set; }
 
             public int? RecordCount { get; set; }
+
+            public string Message { get; set; }
         }
     }
 }

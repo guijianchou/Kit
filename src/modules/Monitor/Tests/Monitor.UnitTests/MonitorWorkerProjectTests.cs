@@ -105,6 +105,12 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(programText, "signalScanCompleted: true");
         StringAssert.Contains(programText, "signalScanCompleted: false");
         StringAssert.Contains(programText, "if (signalScanCompleted)");
+        StringAssert.Contains(programText, "OneShotScanTimeout");
+        StringAssert.Contains(programText, "CancellationTokenSource");
+        StringAssert.Contains(programText, "ReportOneShotScanFailed");
+        StringAssert.Contains(programText, "MonitorScanProgressPhase.Failed");
+        StringAssert.Contains(programText, "catch (OperationCanceledException");
+        Assert.IsFalse(programText.Contains("signalScanCompleted: true, CancellationToken.None", StringComparison.Ordinal), "Manual one-shot scans must use a finite cancellation token instead of waiting forever on the shared scan lock.");
     }
 
     [TestMethod]

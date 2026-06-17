@@ -30,7 +30,8 @@ public sealed class MonitorScanProgressSnapshot
         DateTimeOffset startedAt,
         DateTimeOffset? completedAt,
         int? recordCount,
-        string? scanId = null)
+        string? scanId = null,
+        string? message = null)
     {
         ScanId = scanId ?? string.Empty;
         Phase = phase;
@@ -40,6 +41,7 @@ public sealed class MonitorScanProgressSnapshot
         StartedAt = startedAt;
         CompletedAt = completedAt;
         RecordCount = recordCount;
+        Message = message;
     }
 
     /// <summary>
@@ -81,4 +83,9 @@ public sealed class MonitorScanProgressSnapshot
     /// Gets or sets the final record count, if finished.
     /// </summary>
     public int? RecordCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets a human-readable terminal failure message, if the scan failed.
+    /// </summary>
+    public string? Message { get; set; }
 }

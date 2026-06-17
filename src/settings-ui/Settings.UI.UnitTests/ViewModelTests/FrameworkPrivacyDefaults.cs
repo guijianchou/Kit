@@ -242,12 +242,20 @@ namespace ViewModelTests
             var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
             var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
+            var installerCpp = File.ReadAllText(FindSourceFile("src", "common", "updating", "installer.cpp"));
+            var installerHeader = File.ReadAllText(FindSourceFile("src", "common", "updating", "installer.h"));
 
             Assert.IsFalse(runnerProject.Contains(@"..\common\updating\updating.vcxproj", StringComparison.Ordinal), "Runner should not link the GitHub updater library.");
             StringAssert.Contains(runnerProject, "UpdateUtils.cpp", "Runner should compile Kit's check-only release notification worker.");
             Assert.IsFalse(runnerMain.Contains("uninstall_previous_msix_version_async", StringComparison.Ordinal), "Runner startup should not enter updater cleanup paths.");
             Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "UpdateUtils should not download installers.");
             Assert.IsFalse(updateUtils.Contains("PowerToys.Update.exe", StringComparison.Ordinal), "UpdateUtils should not launch the updater executable.");
+            Assert.IsFalse(installerCpp.Contains("Microsoft.PowerToys", StringComparison.Ordinal), "Kit should not keep PowerToys MSIX package cleanup targets.");
+            Assert.IsFalse(installerCpp.Contains("MSIX_PACKAGE_NAME", StringComparison.Ordinal), "Kit should not keep PowerToys MSIX package cleanup targets.");
+            Assert.IsFalse(installerCpp.Contains("MSIX_PACKAGE_PUBLISHER", StringComparison.Ordinal), "Kit should not keep PowerToys MSIX package cleanup targets.");
+            Assert.IsFalse(installerCpp.Contains("RemovePackageAsync", StringComparison.Ordinal), "Kit should not keep an unused package uninstall path.");
+            Assert.IsFalse(installerCpp.Contains("uninstall_previous_msix_version_async", StringComparison.Ordinal), "Kit should not keep the unused PowerToys MSIX cleanup implementation.");
+            Assert.IsFalse(installerHeader.Contains("uninstall_previous_msix_version_async", StringComparison.Ordinal), "Kit should not keep the unused PowerToys MSIX cleanup declaration.");
         }
 
         [TestMethod]

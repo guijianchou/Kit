@@ -207,6 +207,12 @@ namespace ViewModelTests
             StringAssert.Contains(pageCode, "manualScanId");
             StringAssert.Contains(pageCode, "CompleteManualScanProgress");
             StringAssert.Contains(pageCode, "completionSignaled && progressSnapshot == null");
+            StringAssert.Contains(pageCode, "ManualScanUiTimeout");
+            StringAssert.Contains(pageCode, "FailManualScanProgress");
+            StringAssert.Contains(pageCode, "manualScanTimedOut");
+            StringAssert.Contains(pageCode, "\"failed\"");
+            StringAssert.Contains(pageCode, "Scan timed out");
+            StringAssert.Contains(pageCode, "Scan failed");
             Assert.IsFalse(pageCode.Contains("ManualScanProgressValue + 1", StringComparison.Ordinal), "Monitor page should use worker progress instead of timer-only fake progress.");
             Assert.IsFalse(pageCode.Contains("manualScanCompleted || (completionSignaled && progressSnapshot != null", StringComparison.Ordinal), "Monitor page should complete when the worker event is signaled even if the progress file cannot be read.");
             Assert.IsFalse(pageCode.Contains("\"organizeDownloads\"", StringComparison.Ordinal));

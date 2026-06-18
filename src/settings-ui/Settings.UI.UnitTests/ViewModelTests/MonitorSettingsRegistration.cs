@@ -53,7 +53,7 @@ namespace ViewModelTests
             Assert.AreEqual(ModuleType.Monitor, settings.GetModuleType());
             Assert.AreEqual("%USERPROFILE%\\Downloads", settings.Properties.DownloadsPath.Value);
             Assert.AreEqual("results.csv", settings.Properties.CsvFileName.Value);
-            Assert.AreEqual(7200, settings.Properties.ScanIntervalSeconds.Value);
+            Assert.AreEqual(43200, settings.Properties.ScanIntervalSeconds.Value);
             Assert.AreEqual(500, settings.Properties.MaxFileSizeMegabytes.Value);
             Assert.AreEqual("SHA1", settings.Properties.HashAlgorithm.Value);
             Assert.IsTrue(settings.Properties.UseIncrementalHashing.Value);
@@ -84,7 +84,7 @@ namespace ViewModelTests
 
             var settingsJson = JsonSerializer.Serialize(new MonitorSettings(), SettingsSerializationContext.Default.MonitorSettings);
             StringAssert.Contains(settingsJson, "\"name\":\"Monitor\"");
-            StringAssert.Contains(settingsJson, "\"scanIntervalSeconds\":{\"value\":7200}");
+            StringAssert.Contains(settingsJson, "\"scanIntervalSeconds\":{\"value\":43200}");
 
             var ipcJson = new SndMonitorSettings(new MonitorSettings()).ToJsonString();
             StringAssert.Contains(ipcJson, "\"Monitor\"");

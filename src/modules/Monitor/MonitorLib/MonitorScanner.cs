@@ -127,21 +127,23 @@ public static class MonitorScanner
 
     private static IEnumerable<FileInfo> EnumerateFiles(DirectoryInfo rootDirectory)
     {
-        foreach (FileInfo file in SafeEnumerateFiles(rootDirectory))
-        {
-            yield return file;
-        }
+        Queue<DirectoryInfo> pendingDirectories = new();
+        pendingDirectories.Enqueue(rootDirectory);
 
-        foreach (DirectoryInfo childDirectory in SafeEnumerateDirectories(rootDirectory))
+        while (pendingDirectories.Count > 0)
         {
-            if (IsReparsePoint(childDirectory))
-            {
-                continue;
-            }
-
-            foreach (FileInfo file in SafeEnumerateFiles(childDirectory))
+            DirectoryInfo directory = pendingDirectories.Dequeue();
+            foreach (FileInfo file in SafeEnumerateFiles(directory))
             {
                 yield return file;
+            }
+
+            foreach (DirectoryInfo childDirectory in SafeEnumerateDirectories(directory))
+            {
+                if (!IsReparsePoint(childDirectory))
+                {
+                    pendingDirectories.Enqueue(childDirectory);
+                }
             }
         }
     }

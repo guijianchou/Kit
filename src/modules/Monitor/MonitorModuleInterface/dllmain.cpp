@@ -336,6 +336,12 @@ public:
 
     void call_custom_action(const wchar_t* action) override
     {
+        if (!m_enabled)
+        {
+            Logger::warn("Monitor custom action ignored because the module is disabled.");
+            return;
+        }
+
         try
         {
             auto action_object = PowerToysSettings::CustomActionObject::from_json_string(action);

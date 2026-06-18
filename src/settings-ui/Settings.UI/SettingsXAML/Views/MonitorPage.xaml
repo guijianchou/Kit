@@ -29,6 +29,154 @@
                     </tkcontrols:SettingsCard>
                 </controls:GPOInfoControl>
 
+                <controls:SettingsGroup x:Uid="Monitor_StatusSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
+                    <Border
+                        Padding="16"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4">
+                        <Grid MinWidth="{StaticResource SettingActionControlMinWidth}" RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock
+                                        AutomationProperties.AutomationId="MonitorStatusText"
+                                        FontSize="18"
+                                        FontWeight="SemiBold"
+                                        Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" />
+                                    <TextBlock
+                                        AutomationProperties.AutomationId="MonitorStatusDescription"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{x:Bind ViewModel.StatusDescription, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{x:Bind ViewModel.LastStatusMessage, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
+                                        Visibility="{x:Bind ViewModel.IsLastStatusMessageVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                </StackPanel>
+                                <StackPanel
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                                    <Button
+                                        x:Name="MonitorStatusAllButton"
+                                        x:Uid="Monitor_StatusAllButton"
+                                        MinWidth="48"
+                                        Click="StatusRangeAll_Click" />
+                                    <Button
+                                        x:Name="MonitorStatus30DaysButton"
+                                        x:Uid="Monitor_Status30DaysButton"
+                                        MinWidth="48"
+                                        Click="StatusRange30Days_Click" />
+                                    <Button
+                                        x:Name="MonitorStatus7DaysButton"
+                                        x:Uid="Monitor_Status7DaysButton"
+                                        MinWidth="48"
+                                        Click="StatusRange7Days_Click" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid
+                                Grid.Row="1"
+                                ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border
+                                    Padding="10,8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4">
+                                    <StackPanel>
+                                        <TextBlock
+                                            x:Uid="Monitor_StatusRunsLabel"
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock
+                                            FontSize="18"
+                                            FontWeight="SemiBold"
+                                            Text="{x:Bind ViewModel.RunCountText, Mode=OneWay}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border
+                                    Grid.Column="1"
+                                    Padding="10,8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4">
+                                    <StackPanel>
+                                        <TextBlock
+                                            x:Uid="Monitor_StatusSuccessLabel"
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock
+                                            FontSize="18"
+                                            FontWeight="SemiBold"
+                                            Text="{x:Bind ViewModel.SuccessRateText, Mode=OneWay}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border
+                                    Grid.Column="2"
+                                    Padding="10,8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4">
+                                    <StackPanel>
+                                        <TextBlock
+                                            x:Uid="Monitor_StatusIssuesLabel"
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock
+                                            FontSize="18"
+                                            FontWeight="SemiBold"
+                                            Text="{x:Bind ViewModel.IssueCountText, Mode=OneWay}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <ItemsControl
+                                Grid.Row="2"
+                                AutomationProperties.AutomationId="MonitorStatusActivity"
+                                ItemsSource="{x:Bind ViewModel.StatusDays, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <ItemsWrapGrid Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:MonitorStatusDayViewModel">
+                                        <Border
+                                            Width="12"
+                                            Height="12"
+                                            Margin="1"
+                                            Background="{Binding Brush}"
+                                            CornerRadius="2"
+                                            ToolTipService.ToolTip="{Binding ToolTip}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
+                </controls:SettingsGroup>
+
                 <controls:SettingsGroup x:Uid="Monitor_ScanSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
                     <tkcontrols:SettingsCard
                         x:Uid="Monitor_ScanNowSettingsCard"

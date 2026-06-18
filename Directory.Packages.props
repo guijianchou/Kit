@@ -28,6 +28,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.102" />
     <!-- Settings UI references Microsoft.Bcl.AsyncInterfaces directly; keep it pinned with the .NET 10 baseline. -->
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Windows.CppWinRT" Version="2.0.250303.1" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.8" />

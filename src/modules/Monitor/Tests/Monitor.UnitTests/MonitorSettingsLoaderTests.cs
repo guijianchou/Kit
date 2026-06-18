@@ -71,4 +71,12 @@ public sealed class MonitorSettingsLoaderTests
 
         Assert.IsFalse(settings.RunInBackground);
     }
+
+    [TestMethod]
+    public void DefaultSettingsUseTwelveHourScanInterval()
+    {
+        MonitorSettings settings = MonitorSettings.CreateDefault();
+
+        Assert.AreEqual(43200, settings.IntervalSeconds);
+    }
 }

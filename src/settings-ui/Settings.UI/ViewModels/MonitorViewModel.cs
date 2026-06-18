@@ -4,10 +4,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
+using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.Library.Helpers;
+using Microsoft.UI.Xaml.Media;
+
+using MonitorScanStatus = Microsoft.PowerToys.Monitor.MonitorScanStatus;
+using MonitorStatusDay = Microsoft.PowerToys.Monitor.MonitorStatusDay;
+using MonitorStatusRange = Microsoft.PowerToys.Monitor.MonitorStatusRange;
+using MonitorStatusSummary = Microsoft.PowerToys.Monitor.MonitorStatusSummary;
 
 namespace Microsoft.PowerToys.Settings.UI.ViewModels
 {
@@ -92,6 +101,110 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             new MonitorScanIntervalOption("12h", 43200),
             new MonitorScanIntervalOption("24h", 86400),
         };
+
+        public MonitorStatusRange SelectedStatusRange
+        {
+            get => _selectedStatusRange;
+            set
+            {
+                if (_selectedStatusRange != value)
+                {
+                    _selectedStatusRange = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string StatusText
+        {
+            get => _statusText;
+            private set
+            {
+                if (_statusText != value)
+                {
+                    _statusText = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string StatusDescription
+        {
+            get => _statusDescription;
+            private set
+            {
+                if (_statusDescription != value)
+                {
+                    _statusDescription = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string RunCountText
+        {
+            get => _runCountText;
+            private set
+            {
+                if (_runCountText != value)
+                {
+                    _runCountText = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string SuccessRateText
+        {
+            get => _successRateText;
+            private set
+            {
+                if (_successRateText != value)
+                {
+                    _successRateText = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string IssueCountText
+        {
+            get => _issueCountText;
+            private set
+            {
+                if (_issueCountText != value)
+                {
+                    _issueCountText = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string LastStatusMessage
+        {
+            get => _lastStatusMessage;
+            private set
+            {
+                if (_lastStatusMessage != value)
+                {
+                    _lastStatusMessage = value;
+                    NotifyPropertyChanged();
+                    OnPropertyChanged(nameof(IsLastStatusMessageVisible));
+                }
+            }
+        }
+
+        public bool IsLastStatusMessageVisible => !string.IsNullOrWhiteSpace(LastStatusMessage);
+
+        public IReadOnlyList<MonitorStatusDayViewModel> StatusDays
+        {
+            get => _statusDays;
+            private set
+            {
+                _statusDays = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         public int ScanIntervalSeconds
         {
@@ -242,6 +355,32 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
         }
 
+        public void ApplyStatusSummary(MonitorStatusSummary summary)
+        {
+            ArgumentNullException.ThrowIfNull(summary);
+
+            StatusText = FormatStatus(summary.OverallStatus);
+            StatusDescription = summary.TotalRuns == 0 ? GetResourceString("Monitor_StatusNoScans", "No scans yet") : FormatStatusDescription(summary);
+            RunCountText = summary.TotalRuns.ToString(CultureInfo.InvariantCulture);
+            SuccessRateText = summary.TotalRuns == 0
+                ? "--"
+                : Math.Round((double)summary.SuccessRuns / summary.TotalRuns * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
+            IssueCountText = (summary.WarningRuns + summary.FailedRuns).ToString(CultureInfo.InvariantCulture);
+            LastStatusMessage = summary.LastMessage ?? string.Empty;
+            StatusDays = summary.Days.Select(CreateDayViewModel).ToArray();
+        }
+
+        public void ApplyStatusUnavailable()
+        {
+            StatusText = GetResourceString("Monitor_StatusUnavailable", "Unavailable");
+            StatusDescription = GetResourceString("Monitor_StatusDatabaseUnavailable", "Status database could not be read");
+            RunCountText = "--";
+            SuccessRateText = "--";
+            IssueCountText = "--";
+            LastStatusMessage = string.Empty;
+            StatusDays = Array.Empty<MonitorStatusDayViewModel>();
+        }
+
         public void RefreshEnabledState()
         {
             OnPropertyChanged(nameof(IsEnabled));
@@ -272,6 +411,59 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             };
         }
 
+        private static MonitorStatusDayViewModel CreateDayViewModel(MonitorStatusDay day)
+        {
+            string status = FormatStatus(day.Status);
+            string toolTip = day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ": " + status;
+            if (day.TotalRuns > 0)
+            {
+                toolTip += " (" + day.TotalRuns.ToString(CultureInfo.InvariantCulture) + ")";
+            }
+
+            return new MonitorStatusDayViewModel(GetBrush(day.Status), toolTip);
+        }
+
+        private static Brush GetBrush(MonitorScanStatus? status)
+        {
+            return status switch
+            {
+                MonitorScanStatus.Success => MonitorStatusBrushes.Success,
+                MonitorScanStatus.Warning or MonitorScanStatus.Running => MonitorStatusBrushes.Warning,
+                MonitorScanStatus.Failed => MonitorStatusBrushes.Failed,
+                _ => MonitorStatusBrushes.Empty,
+            };
+        }
+
+        private static string FormatStatus(MonitorScanStatus? status)
+        {
+            return status switch
+            {
+                MonitorScanStatus.Success => GetResourceString("Monitor_StatusHealthy", "Healthy"),
+                MonitorScanStatus.Warning => GetResourceString("Monitor_StatusWarning", "Warning"),
+                MonitorScanStatus.Failed => GetResourceString("Monitor_StatusFailed", "Failed"),
+                MonitorScanStatus.Running => GetResourceString("Monitor_StatusRunning", "Running"),
+                _ => GetResourceString("Monitor_StatusNoData", "No data"),
+            };
+        }
+
+        private static string FormatStatusDescription(MonitorStatusSummary summary)
+        {
+            return summary.OverallStatus switch
+            {
+                MonitorScanStatus.Success => GetResourceString("Monitor_StatusLatestSuccess", "Latest scan completed successfully"),
+                MonitorScanStatus.Warning => GetResourceString("Monitor_StatusLatestWarning", "Latest scan completed with warnings"),
+                MonitorScanStatus.Failed => GetResourceString("Monitor_StatusLatestFailed", "Latest scan failed"),
+                MonitorScanStatus.Running => GetResourceString("Monitor_StatusLatestRunning", "Scan is running"),
+                _ => GetResourceString("Monitor_StatusNoScans", "No scans yet"),
+            };
+        }
+
+        private static string GetResourceString(string resourceKey, string fallback)
+        {
+            string value = ResourceLoaderInstance.ResourceLoader.GetString(resourceKey);
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
         private void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
         {
             OnPropertyChanged(propertyName);
@@ -279,6 +471,14 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private MonitorSettings _moduleSettings;
         private bool _isEnabled;
+        private MonitorStatusRange _selectedStatusRange = MonitorStatusRange.All;
+        private string _statusText = GetResourceString("Monitor_StatusNoData", "No data");
+        private string _statusDescription = GetResourceString("Monitor_StatusNoScans", "No scans yet");
+        private string _runCountText = "--";
+        private string _successRateText = "--";
+        private string _issueCountText = "--";
+        private string _lastStatusMessage = string.Empty;
+        private IReadOnlyList<MonitorStatusDayViewModel> _statusDays = Array.Empty<MonitorStatusDayViewModel>();
         private bool _isManualScanProgressVisible;
         private bool _isManualScanProgressIndeterminate;
         private double _manualScanProgressValue = 1;

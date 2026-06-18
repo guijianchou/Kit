@@ -82,6 +82,23 @@ public sealed class MonitorScannerTests
         Assert.AreNotEqual("cached-sha1", records[0].Sha1);
     }
 
+    [TestMethod]
+    public void ScanIncludesNestedDownloadsFiles()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string nestedDirectory = Path.Combine(tempDirectory.Path, "Archives", "2026");
+        string nestedPath = Path.Combine(nestedDirectory, "notes.pdf");
+        Directory.CreateDirectory(nestedDirectory);
+        File.WriteAllText(nestedPath, "document");
+
+        IReadOnlyList<MonitorFileRecord> records = MonitorScanner.Scan(tempDirectory.Path, MonitorSettings.CreateDefault());
+
+        Assert.AreEqual(1, records.Count);
+        Assert.AreEqual("Archives/2026/notes.pdf", records[0].RelativePath);
+        Assert.AreEqual("~", records[0].FolderName);
+        Assert.AreEqual("Documents", records[0].Category);
+    }
+
     private sealed class DeletingProgressReporter : IMonitorScanProgressReporter
     {
         private readonly string _filePath;

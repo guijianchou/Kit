@@ -10,7 +10,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     {
         public const string DefaultDownloadsPath = "%USERPROFILE%\\Downloads";
         public const string DefaultCsvFileName = "results.csv";
-        public const int DefaultScanIntervalSeconds = 7200;
+        public const int DefaultScanIntervalSeconds = 43200;
         public const int DefaultMaxFileSizeMegabytes = 500;
         public const string DefaultHashAlgorithm = "SHA1";
         public const bool DefaultUseIncrementalHashing = true;

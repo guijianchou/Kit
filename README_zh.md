@@ -14,7 +14,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 ## 当前版本
 
-当前 Kit 版本：`2.0.3`。
+当前 Kit 版本：`2.0.5`。
 
 ## 更新日志
 
@@ -127,9 +127,9 @@ Monitor 是第一个直接针对 PowerToys 模块形状开发的 Kit 模块。�
 - `src/settings-ui/Settings.UI` 拥有 `MonitorPage`、`MonitorViewModel`、Shell 导航、主页仪表板元数据、英语资源和设置路由。
 - `src/settings-ui/Settings.UI.Controls` 在 Kit 快速访问模块列表中包含 Monitor，以便主页在启用时可以一致地公开它。
 
-当前 Monitor 对等目标是 Python 实现的基线功能：扫描下载，维护 `results.csv`，对文件进行分类，保留重复行用于分析，按类别组织文件，并为安装程序清理提供试运行/删除原语。基于注册表的真实已安装软件发现和更丰富的 UI 操作是未来的改进。
+当前 Monitor 对等目标是 Python 实现的基线功能：递归扫描 Downloads 并跳过重解析点，维护 `results.csv`，对文件进行分类，保留重复行用于分析，在启用 `OrganizeDownloads` 时按类别组织文件，在启用 `CleanInstallers` 时从 Downloads 根目录和 `Programs` 分类目录清理匹配的安装程序，并为 Settings 持久化近期扫描状态。安装程序清理是显式开启路径，只会在 `CleanInstallers` 启用后读取当前进程可见的 uninstall 注册表项来匹配已安装软件名称和版本。更丰富的 Home 操作仍是后续改进。
 
-当前设置界面包括手动扫描卡、`OrganizeDownloads` 和 `CleanInstallers` 切换、`Run in background` 切换、默认下载文件夹选择器、哈希算法下拉菜单（默认为 SHA1），以及放置在手动扫描内容和扫描按钮之间的同行进度条/百分比。Monitor 模块切换控制模块和设置操作是否可用。`Run in background` 单独控制运行器是否在启用时启动持久工作器；当它关闭时，立即扫描仍然启动一次性扫描。一次性扫描始终刷新类别文件夹和 CSV 状态，然后应用当前操作切换：`OrganizeDownloads` 默认开启，`CleanInstallers` 默认关闭，`Run in background` 默认关闭。进度显示现在读取工作器进度快照和完成状态，而不是从仅 UI 的计时器推进。
+当前设置界面包括 Status 区域、手动扫描卡、`OrganizeDownloads` 和 `CleanInstallers` 切换、`Run in background` 切换、默认 Downloads 文件夹选择器、哈希算法下拉菜单（默认为 SHA1），以及放置在手动扫描内容和扫描按钮之间的同行进度条/百分比。Monitor 模块切换控制模块和 Settings 操作是否可用。`Run in background` 单独控制运行器是否在启用时启动持久工作器；当它关闭时，Scan Now 仍然启动一次性扫描。一次性扫描会应用当前操作切换：`OrganizeDownloads` 默认开启，并在移动 Downloads 根目录文件前创建类别文件夹；`CleanInstallers` 默认关闭，开启后可清理 Downloads 根目录和 `Programs` 中匹配的安装程序；`Run in background` 默认关闭。scan-only 传递不会创建类别文件夹或移动文件。进度显示读取工作器进度快照和完成状态，而不是从仅 UI 的计时器推进；Status 区域读取 `%LOCALAPPDATA%\Kit\Monitor\monitor-status.db` 显示 All/30d/7d 扫描健康状态。
 
 ## 最近的 Awake 和主页实现
 
@@ -191,9 +191,9 @@ Git 工作树仅在需要隔离分支工作区时使用。在 2026-04-29，`git 
 
 最新的设置传递使活动模块行为更接近上游 PowerToys，同时保留 Kit 的修剪模块表面：
 
-- Monitor 的立即扫描操作发送 `scanNow` 自定义操作，工作器使用 `--use-configured-actions` 运行一次传递。这使手动扫描、类别文件夹创建、组织、安装程序清理和 CSV 写入保持在一个代码路径上，同时让 `OrganizeDownloads` 和 `CleanInstallers` 决定允许哪些副作用。
+- Monitor 的立即扫描操作发送 `scanNow` 自定义操作，工作器使用 `--use-configured-actions` 运行一次传递。这使手动扫描、可选类别文件夹创建、组织、安装程序清理、CSV 写入和状态持久化保持在一个代码路径上，同时让 `OrganizeDownloads` 和 `CleanInstallers` 决定允许哪些副作用。
 - Monitor 的模块启用路径在启动工作器之前读取 `runInBackground`。模块可以保持启用以进行设置/主页/手动操作，而无需启动持久工作器。
-- Monitor 的设置页面现在将 `OrganizeDownloads`、`CleanInstallers` 和 `Run in background` 放置在手动扫描正下方，与设置的控制流匹配。
+- Monitor 的设置页面现在将 `OrganizeDownloads` 和 `CleanInstallers` 放置在手动扫描正下方，然后是 Downloads 文件夹和 `Run in background` 控件，与设置的控制流匹配。
 - Light Switch 保留上游 schedule、Night Light 和 toggle hotkey 形状，但不再携带已删除的 PowerDisplay profile bridge。
 - `Settings.UI.UnitTests` 现在具有 Monitor 设置顺序和 Light Switch 无 PowerDisplay 边界的静态回归覆盖。
 

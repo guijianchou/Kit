@@ -34,7 +34,7 @@ public sealed class MonitorWorkerTests
     }
 
     [TestMethod]
-    public void RunOnceCreatesCategoryFoldersBeforeScanningWithoutMovingFiles()
+    public void RunOnceDoesNotCreateCategoryFoldersWhenOrganizeIsFalse()
     {
         using TemporaryDirectory tempDirectory = new();
         MonitorSettings settings = MonitorSettings.CreateDefault();
@@ -53,13 +53,33 @@ public sealed class MonitorWorkerTests
         Assert.IsTrue(File.Exists(sourcePath));
         foreach (string categoryName in settings.Categories.Keys)
         {
-            Assert.IsTrue(Directory.Exists(Path.Combine(tempDirectory.Path, categoryName)), categoryName + " folder should be created before CSV write.");
+            Assert.IsFalse(Directory.Exists(Path.Combine(tempDirectory.Path, categoryName)), categoryName + " folder should not be created during a scan-only pass.");
         }
 
         IReadOnlyList<MonitorFileRecord> records = MonitorCsvStore.Load(csvPath, tempDirectory.Path, settings);
         Assert.AreEqual(1, records.Count);
         Assert.AreEqual("Documents", records[0].Category);
+        Assert.AreEqual("~", records[0].FolderName);
         Assert.AreEqual("notes.pdf", records[0].RelativePath);
+    }
+
+    [TestMethod]
+    public void RunOnceReportsMissingDownloadsFolderAsWarning()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string missingDownloadsPath = Path.Combine(tempDirectory.Path, "MissingDownloads");
+        string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
+
+        MonitorWorkerResult result = MonitorWorker.RunOnce(
+            missingDownloadsPath,
+            csvPath,
+            MonitorSettings.CreateDefault(),
+            organize: false,
+            cleanInstallers: false);
+
+        Assert.AreEqual(0, result.RecordCount);
+        Assert.AreEqual(1, result.WarningCount);
+        StringAssert.Contains(result.WarningMessage, "Downloads folder does not exist");
     }
 
     [TestMethod]
@@ -96,6 +116,26 @@ public sealed class MonitorWorkerTests
         string installerPath = Path.Combine(programsPath, "app-setup.exe");
         string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
         Directory.CreateDirectory(programsPath);
+        File.WriteAllText(installerPath, "installer");
+
+        MonitorWorkerResult result = MonitorWorker.RunOnce(
+            tempDirectory.Path,
+            csvPath,
+            MonitorSettings.CreateDefault(),
+            organize: false,
+            cleanInstallers: true,
+            installedSoftwareNames: AppSoftwareNames);
+
+        Assert.AreEqual(1, result.InstallerCleanupResult?.Deleted);
+        Assert.IsFalse(File.Exists(installerPath));
+    }
+
+    [TestMethod]
+    public void RunOnceCleansRootInstallersWhenOrganizeIsDisabled()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string installerPath = Path.Combine(tempDirectory.Path, "app-setup.exe");
+        string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
         File.WriteAllText(installerPath, "installer");
 
         MonitorWorkerResult result = MonitorWorker.RunOnce(

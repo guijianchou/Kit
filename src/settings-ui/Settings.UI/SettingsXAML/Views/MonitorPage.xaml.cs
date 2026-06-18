@@ -7,8 +7,10 @@ using System.IO;
 using System.IO.Abstractions;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 using ManagedCommon;
+using Microsoft.Data.Sqlite;
 using Microsoft.PowerToys.Settings.UI.Helpers;
 using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
@@ -17,12 +19,15 @@ using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 
+using MonitorCore = Microsoft.PowerToys.Monitor;
+
 namespace Microsoft.PowerToys.Settings.UI.Views
 {
     public sealed partial class MonitorPage : NavigablePage, IRefreshablePage
     {
         private const string MonitorScanCompletedEvent = @"Local\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
         private const string MonitorProgressFileName = "scan-progress.json";
+        private const string MonitorStatusDatabaseFileName = "monitor-status.db";
         private static readonly TimeSpan ManualScanUiTimeout = TimeSpan.FromMinutes(5);
 
         private readonly string _appName = MonitorSettings.ModuleName;
@@ -69,6 +74,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             _fileSystemWatcher.EnableRaisingEvents = true;
 
             InitializeComponent();
+            RefreshStatusSummary();
+            UpdateStatusRangeButtonStyles();
 
             Unloaded += MonitorPage_Unloaded;
         }
@@ -164,6 +171,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             ViewModel.IsManualScanProgressIndeterminate = false;
             ViewModel.ManualScanProgressValue = 100;
             sender.Stop();
+            RefreshStatusSummary();
         }
 
         private void FailManualScanProgress(DispatcherQueueTimer sender, string detail)
@@ -172,6 +180,68 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             ViewModel.ManualScanProgressValue = 100;
             ViewModel.ManualScanProgressDetail = string.IsNullOrWhiteSpace(detail) ? "Scan failed" : detail;
             sender.Stop();
+            RefreshStatusSummary();
+        }
+
+        private void StatusRangeAll_Click(object sender, RoutedEventArgs e)
+        {
+            SetStatusRange(MonitorCore.MonitorStatusRange.All);
+        }
+
+        private void StatusRange30Days_Click(object sender, RoutedEventArgs e)
+        {
+            SetStatusRange(MonitorCore.MonitorStatusRange.ThirtyDays);
+        }
+
+        private void StatusRange7Days_Click(object sender, RoutedEventArgs e)
+        {
+            SetStatusRange(MonitorCore.MonitorStatusRange.SevenDays);
+        }
+
+        private void SetStatusRange(MonitorCore.MonitorStatusRange range)
+        {
+            ViewModel.SelectedStatusRange = range;
+            RefreshStatusSummary();
+            UpdateStatusRangeButtonStyles();
+        }
+
+        private async void RefreshStatusSummary()
+        {
+            MonitorCore.MonitorStatusRange selectedRange = ViewModel.SelectedStatusRange;
+            try
+            {
+                MonitorCore.MonitorStatusSummary summary = await Task.Run(() =>
+                {
+                    string statusDatabasePath = ResolveStatusDatabasePath();
+                    DateTimeOffset now = DateTimeOffset.UtcNow;
+                    if (!MonitorCore.MonitorStatusStore.TryGetSummary(statusDatabasePath, selectedRange, now, out MonitorCore.MonitorStatusSummary summary))
+                    {
+                        return summary;
+                    }
+
+                    MonitorCore.MonitorStatusStore.RefreshStaleRunningScans(statusDatabasePath, now);
+                    return MonitorCore.MonitorStatusStore.GetSummary(statusDatabasePath, selectedRange, now);
+                });
+                if (ViewModel.SelectedStatusRange == selectedRange)
+                {
+                    ViewModel.ApplyStatusSummary(summary);
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
+            {
+                if (ViewModel.SelectedStatusRange == selectedRange)
+                {
+                    ViewModel.ApplyStatusUnavailable();
+                }
+            }
+        }
+
+        private void UpdateStatusRangeButtonStyles()
+        {
+            Style accentButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+            MonitorStatusAllButton.Style = ViewModel.SelectedStatusRange == MonitorCore.MonitorStatusRange.All ? accentButtonStyle : null;
+            MonitorStatus30DaysButton.Style = ViewModel.SelectedStatusRange == MonitorCore.MonitorStatusRange.ThirtyDays ? accentButtonStyle : null;
+            MonitorStatus7DaysButton.Style = ViewModel.SelectedStatusRange == MonitorCore.MonitorStatusRange.SevenDays ? accentButtonStyle : null;
         }
 
         private void BrowseDownloadsFolder_Click(object sender, RoutedEventArgs e)
@@ -244,11 +314,15 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
             {
                 _suppressViewModelUpdates = true;
-
-                _moduleSettingsRepository.ReloadSettings();
-                LoadSettings(_generalSettingsRepository, _moduleSettingsRepository);
-
-                _suppressViewModelUpdates = false;
+                try
+                {
+                    _moduleSettingsRepository.ReloadSettings();
+                    LoadSettings(_generalSettingsRepository, _moduleSettingsRepository);
+                }
+                finally
+                {
+                    _suppressViewModelUpdates = false;
+                }
             });
         }
 
@@ -309,6 +383,15 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 "Kit",
                 MonitorSettings.ModuleName,
                 MonitorProgressFileName);
+        }
+
+        private static string ResolveStatusDatabasePath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Kit",
+                MonitorSettings.ModuleName,
+                MonitorStatusDatabaseFileName);
         }
 
         private static string CreateManualScanId()

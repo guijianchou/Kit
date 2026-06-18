@@ -11,8 +11,12 @@ namespace Microsoft.PowerToys.Monitor;
 /// <param name="CsvPath">The CSV state path.</param>
 /// <param name="OrganizeResult">The optional organization summary.</param>
 /// <param name="InstallerCleanupResult">The optional installer cleanup summary.</param>
+/// <param name="WarningCount">The number of non-fatal worker warnings.</param>
+/// <param name="WarningMessage">The optional worker warning message.</param>
 public sealed record MonitorWorkerResult(
     int RecordCount,
     string CsvPath,
     MonitorFileOrganizerResult? OrganizeResult,
-    MonitorInstallerCleanupResult? InstallerCleanupResult);
+    MonitorInstallerCleanupResult? InstallerCleanupResult,
+    int WarningCount = 0,
+    string? WarningMessage = null);

@@ -114,6 +114,32 @@ public sealed class MonitorWorkerProjectTests
     }
 
     [TestMethod]
+    public void WorkerStatusWarningsIncludeWorkerResultWarnings()
+    {
+        string kitRoot = FindKitRoot();
+        string programPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "Monitor", "Program.cs");
+        string workerResultPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorLib", "MonitorWorkerResult.cs");
+
+        string programText = File.ReadAllText(programPath);
+        string workerResultText = File.ReadAllText(workerResultPath);
+
+        StringAssert.Contains(workerResultText, "WarningCount");
+        StringAssert.Contains(programText, "result.WarningCount");
+    }
+
+    [TestMethod]
+    public void ModuleInterfaceIgnoresCustomActionsWhenDisabled()
+    {
+        string kitRoot = FindKitRoot();
+        string moduleInterfacePath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorModuleInterface", "dllmain.cpp");
+
+        string moduleInterfaceText = File.ReadAllText(moduleInterfacePath);
+
+        StringAssert.Contains(moduleInterfaceText, "if (!m_enabled)");
+        StringAssert.Contains(moduleInterfaceText, "Monitor custom action ignored because the module is disabled.");
+    }
+
+    [TestMethod]
     public void WorkerRunsContinuousMonitoringUntilExitWhenStartedByRunner()
     {
         string kitRoot = FindKitRoot();
@@ -130,6 +156,32 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(moduleInterfaceText, "if (m_run_in_background)");
         StringAssert.Contains(moduleInterfaceText, "get_bool_value(L\"runInBackground\")");
         Assert.IsFalse(programText.Contains("Use --scan-once for a one-shot scan.", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void ContinuousWorkerContinuesAfterRecoverableScanFailure()
+    {
+        string kitRoot = FindKitRoot();
+        string programPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "Monitor", "Program.cs");
+
+        string programText = File.ReadAllText(programPath);
+
+        StringAssert.Contains(programText, "catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)");
+        StringAssert.Contains(programText, "Monitor background scan failed; waiting for next cycle.");
+        Assert.IsFalse(programText.Contains("catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)\r\n            {\r\n                return 1;", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void MonitorSettingsWatcherAlwaysRestoresViewModelUpdateSuppression()
+    {
+        string kitRoot = FindKitRoot();
+        string monitorPagePath = Path.Combine(kitRoot, "src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml.cs");
+
+        string monitorPageText = File.ReadAllText(monitorPagePath);
+
+        StringAssert.Contains(monitorPageText, "_suppressViewModelUpdates = true;");
+        StringAssert.Contains(monitorPageText, "finally");
+        StringAssert.Contains(monitorPageText, "_suppressViewModelUpdates = false;");
     }
 
     [TestMethod]

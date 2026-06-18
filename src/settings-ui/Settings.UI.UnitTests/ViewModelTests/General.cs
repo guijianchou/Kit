@@ -125,19 +125,41 @@ namespace ViewModelTests
             var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
 
             StringAssert.Contains(xaml, "x:Uid=\"General_VersionAndUpdate\"");
-            StringAssert.Contains(xaml, "x:Uid=\"Admin_Mode\"");
+            StringAssert.Contains(xaml, "x:Uid=\"StartupAndPermissions\"");
             StringAssert.Contains(xaml, "x:Uid=\"Appearance_Behavior\"");
             StringAssert.Contains(xaml, "x:Uid=\"General_SettingsBackupAndRestoreTitle\"");
             StringAssert.Contains(xaml, "x:Uid=\"General_Experimentation\"");
             StringAssert.Contains(xaml, "x:Uid=\"GeneralPage_EnableQuickAccess\"");
             StringAssert.Contains(xaml, "x:Uid=\"ShowSystemTrayIcon\"");
+            StringAssert.Contains(xaml, "x:Uid=\"GeneralPage_RunAtStartUp\"");
             StringAssert.Contains(xaml, "https://github.com/guijianchou/Kit/releases");
 
+            Assert.IsFalse(xaml.Contains("x:Uid=\"Admin_Mode\"", StringComparison.Ordinal));
             Assert.IsFalse(xaml.Contains("General_DiagnosticsAndFeedback", StringComparison.Ordinal));
             Assert.IsFalse(xaml.Contains("GeneralPage_AutoDownloadAndInstallUpdates", StringComparison.Ordinal));
             Assert.IsFalse(xaml.Contains("GeneralPage_ShowNewUpdatesToast", StringComparison.Ordinal));
             Assert.IsFalse(xaml.Contains("GeneralPage_ReportBugPackage", StringComparison.Ordinal));
             Assert.IsFalse(xaml.Contains("github.com/microsoft/PowerToys/releases", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
+        public void KitGeneralPageShouldUseStartupAndPermissionsLayout()
+        {
+            var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+
+            var startupAndPermissionsIndex = xaml.IndexOf("x:Uid=\"StartupAndPermissions\"", StringComparison.Ordinal);
+            var runAtStartupIndex = xaml.IndexOf("x:Uid=\"GeneralPage_RunAtStartUp\"", StringComparison.Ordinal);
+            var adminRunningAsIndex = xaml.IndexOf("x:Uid=\"Admin_Mode_Running_As\"", StringComparison.Ordinal);
+            var appearanceIndex = xaml.IndexOf("x:Uid=\"Appearance_Behavior\"", StringComparison.Ordinal);
+
+            Assert.IsTrue(startupAndPermissionsIndex >= 0, "General should use the PowerToys Startup & permissions group.");
+            Assert.IsTrue(runAtStartupIndex > startupAndPermissionsIndex, "Run at startup should be inside Startup & permissions.");
+            Assert.IsTrue(adminRunningAsIndex > runAtStartupIndex, "Running as administrator should follow Run at startup.");
+            Assert.IsTrue(appearanceIndex > adminRunningAsIndex, "Appearance & behavior should follow Startup & permissions.");
+
+            var startupAndPermissionsXaml = xaml.Substring(startupAndPermissionsIndex, appearanceIndex - startupAndPermissionsIndex);
+            StringAssert.Contains(startupAndPermissionsXaml, "HeaderIcon=\"{ui:FontIcon Glyph=&#xF71C;}\"");
+            Assert.IsFalse(startupAndPermissionsXaml.Contains("x:Uid=\"Appearance_Behavior\"", StringComparison.Ordinal));
         }
 
         [TestMethod]
@@ -169,6 +191,41 @@ namespace ViewModelTests
             Assert.IsFalse(versionXaml.Contains("GeneralPage_AutoDownloadAndInstallUpdates", StringComparison.Ordinal), "Kit should not expose auto-download settings.");
             Assert.IsFalse(versionXaml.Contains("General_DownloadAndInstall", StringComparison.Ordinal), "Kit should not expose installer download actions.");
             Assert.IsFalse(versionXaml.Contains("General_InstallNow", StringComparison.Ordinal), "Kit should not expose installer install actions.");
+        }
+
+        [TestMethod]
+        public void KitSettingsShouldUseDashboardAsDefaultSettingsHome()
+        {
+            var app = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
+            var shell = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+
+            StringAssert.Contains(app, "StartupPage { get; set; } = typeof(Views.DashboardPage)");
+            StringAssert.Contains(app, "\"Dashboard\" => typeof(DashboardPage)");
+            StringAssert.Contains(app, "\"Overview\" => typeof(GeneralPage)");
+            StringAssert.Contains(app, "_ => typeof(DashboardPage)");
+            StringAssert.Contains(shell, "shellFrame.Navigate(typeof(DashboardPage));");
+            StringAssert.Contains(shell, "NavigationService.EnsurePageIsSelected(typeof(DashboardPage));");
+            StringAssert.Contains(shell, "NavigationService.Navigate<DashboardPage>();");
+            Assert.IsFalse(shell.Contains("NavigationService.EnsurePageIsSelected(typeof(GeneralPage))", StringComparison.Ordinal), "Default page selection should not fall back to General.");
+            Assert.IsFalse(shell.Contains("NavigationService.Navigate<GeneralPage>();", StringComparison.Ordinal), "Empty search should return to Dashboard instead of General.");
+        }
+
+        [TestMethod]
+        public void KitSettingsResourcesShouldNotKeepDisabledUpdaterInstallActions()
+        {
+            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            foreach (var disabledUpdaterAction in new[]
+            {
+                "GeneralPage_AutoDownloadAndInstallUpdates.Header",
+                "GeneralPage_AutoDownloadAndInstallUpdates.Description",
+                "General_InstallNow.Content",
+                "General_TryAgainToDownloadAndInstall.Content",
+                "General_DownloadAndInstall.Content",
+            })
+            {
+                Assert.IsFalse(resources.Contains($"name=\"{disabledUpdaterAction}\"", StringComparison.Ordinal), $"Kit should not keep disabled updater install resource: {disabledUpdaterAction}");
+            }
         }
 
         [TestMethod]
@@ -648,7 +705,7 @@ namespace ViewModelTests
 
             var versionIndex = generalXaml.IndexOf("x:Uid=\"General_VersionAndUpdate\"", StringComparison.Ordinal);
             Assert.IsTrue(versionIndex >= 0, "General page should keep the PowerToys-style version and update group.");
-            var versionXaml = generalXaml.Substring(versionIndex, generalXaml.IndexOf("x:Uid=\"Admin_Mode\"", StringComparison.Ordinal) - versionIndex);
+            var versionXaml = generalXaml.Substring(versionIndex, generalXaml.IndexOf("x:Uid=\"StartupAndPermissions\"", StringComparison.Ordinal) - versionIndex);
             StringAssert.Contains(versionXaml, "Header=\"{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}\"");
             StringAssert.Contains(versionXaml, "https://github.com/guijianchou/Kit/releases/");
             StringAssert.Contains(versionXaml, "GeneralPage_CheckForUpdates");
@@ -668,7 +725,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse203ReleaseMetadata()
+        public void KitAboutVersionShouldUse205ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -680,7 +737,7 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>2.0.3</Version>");
+            StringAssert.Contains(versionProps, "<Version>2.0.5</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -688,13 +745,23 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `2.0.3`.");
+            StringAssert.Contains(readme, "Current Kit version: `2.0.5`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.3`。");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.5`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
             StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
             StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
+            StringAssert.Contains(changelog, "### 2.0.5");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.5`");
+            StringAssert.Contains(changelog, "Startup & permissions");
+            StringAssert.Contains(changelog, "system-tray expander icon");
+            StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_5");
+            StringAssert.Contains(changelog, "### 2.0.4");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.4`");
+            StringAssert.Contains(changelog, "Dashboard-first framework behavior");
+            StringAssert.Contains(changelog, "disabled updater install/download resource strings");
+            StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_4");
             StringAssert.Contains(changelog, "### 2.0.3");
             StringAssert.Contains(changelog, "Bumped Kit to `2.0.3`");
             StringAssert.Contains(changelog, "PowerToys-main framework baseline");
@@ -794,6 +861,12 @@ namespace ViewModelTests
             StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
             StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
+            StringAssert.Contains(developmentLog, "## 2026-06-17 Version 2.0.5 General Layout Sync");
+            StringAssert.Contains(developmentLog, "Startup & permissions");
+            StringAssert.Contains(developmentLog, "system tray expander now carries the upstream icon treatment");
+            StringAssert.Contains(developmentLog, "## 2026-06-17 Version 2.0.4 Dashboard And Updater Surface Cleanup");
+            StringAssert.Contains(developmentLog, "Dashboard-first Settings shell behavior");
+            StringAssert.Contains(developmentLog, "Disabled updater install/download resource strings");
             StringAssert.Contains(developmentLog, "## 2026-06-16 Version 2.0.3 Monitor And Framework Review");
             StringAssert.Contains(developmentLog, "PowerToys-main framework comparison");
             StringAssert.Contains(developmentLog, "Monitor manual scan progress now completes");

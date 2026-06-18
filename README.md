@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.0.3`.
+Current Kit version: `2.0.5`.
 
 ## Changelog
 
@@ -120,16 +120,16 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 
 Monitor is the first Kit module developed directly against the PowerToys module shape. It keeps the earlier Python monitor's core behavior while moving the implementation into buildable, testable Kit projects:
 
-- `src/modules/Monitor/MonitorLib` contains the managed core library for Downloads scanning, extension and smart-rule categorization, SHA1 hashing, Python-compatible CSV persistence, duplicate grouping, file organization, installer-cleanup primitives, and scan progress snapshots.
+- `src/modules/Monitor/MonitorLib` contains the managed core library for recursive Downloads scanning, extension and smart-rule categorization, SHA1 hashing, Python-compatible CSV persistence, duplicate grouping, file organization, installer-cleanup primitives, scan progress snapshots, and scan status persistence.
 - `src/modules/Monitor/Monitor` builds the Monitor worker as `PowerToys.Monitor.exe` when an apphost is present and as `PowerToys.Monitor.dll` in apphost-less Debug outputs. It supports `--scan-once` for one-shot scans, writes progress to `%LOCALAPPDATA%\Kit\Monitor\scan-progress.json`, signals a named scan-completed event, and supports `--pid` for runner-managed lifetime.
 - `src/modules/Monitor/MonitorModuleInterface` builds `PowerToys.MonitorModuleInterface.dll`. It follows the Awake/LightSwitch interface pattern: `powertoy_create`, key `Monitor`, explicit enable/disable, worker launch from the module output folder, `dotnet` fallback when the worker apphost is missing, exit-event signaling, basic custom actions for scan/organize/clean requests, and no filesystem module probing.
 - `src/settings-ui/Settings.UI.Library` owns `MonitorSettings`, `MonitorProperties`, serialization, enabled-state, and module-helper mappings.
 - `src/settings-ui/Settings.UI` owns `MonitorPage`, `MonitorViewModel`, Shell navigation, Home dashboard metadata, English resources, and settings routing.
 - `src/settings-ui/Settings.UI.Controls` includes Monitor in the Kit Quick Access module list so Home can expose it consistently when enabled.
 
-The current Monitor parity target is the Python implementation's baseline functionality: scan Downloads, maintain `results.csv`, categorize files, preserve duplicate rows for analytics, organize files by category, and provide dry-run/delete primitives for installer cleanup. Registry-backed real installed-software discovery and richer UI actions are future refinements.
+The current Monitor parity target is the Python implementation's baseline functionality: recursively scan Downloads while skipping reparse points, maintain `results.csv`, categorize files, preserve duplicate rows for analytics, organize files by category when `OrganizeDownloads` is enabled, clean matched installers from the Downloads root and `Programs` category folder when `CleanInstallers` is enabled, and persist recent scan status for Settings. Installer cleanup is opt-in and reads uninstall registry entries visible to the current process only after `CleanInstallers` is enabled. Richer Home actions remain future refinements.
 
-The current Settings surface includes a manual scan card, `OrganizeDownloads` and `CleanInstallers` toggles, a `Run in background` toggle, a default Downloads folder picker, a hash algorithm drop-down with SHA1 as the default, and a same-row progress bar/percentage placed between the Manual Scan content and the Scan button. The Monitor module toggle controls whether the module and Settings actions are available. `Run in background` separately controls whether the runner starts the persistent worker on enable; when it is off, Scan Now still launches a one-shot scan. The one-shot scan always refreshes the category folders and CSV state, then applies the current action toggles: `OrganizeDownloads` defaults to on, `CleanInstallers` defaults to off, and `Run in background` defaults to off. The progress display now reads worker progress snapshots and completion state instead of advancing from a UI-only timer.
+The current Settings surface includes a Status section, a manual scan card, `OrganizeDownloads` and `CleanInstallers` toggles, a `Run in background` toggle, a default Downloads folder picker, a hash algorithm drop-down with SHA1 as the default, and a same-row progress bar/percentage placed between the Manual Scan content and the Scan button. The Monitor module toggle controls whether the module and Settings actions are available. `Run in background` separately controls whether the runner starts the persistent worker on enable; when it is off, Scan Now still launches a one-shot scan. The one-shot scan applies the current action toggles: `OrganizeDownloads` defaults to on and creates category folders before moving root Downloads files, `CleanInstallers` defaults to off and can clean matching installers from the Downloads root and `Programs`, and `Run in background` defaults to off. Scan-only passes do not create category folders or move files. The progress display reads worker progress snapshots and completion state instead of advancing from a UI-only timer, and the Status section reads `%LOCALAPPDATA%\Kit\Monitor\monitor-status.db` for All/30d/7d scan health.
 
 ## Recent Awake and Home Implementation
 
@@ -191,9 +191,9 @@ The latest Monitor pass fixed the manual Scan Now path that could leave Settings
 
 The latest settings pass keeps the active module behavior closer to upstream PowerToys while preserving Kit's trimmed module surface:
 
-- Monitor's Scan Now action sends the `scanNow` custom action and the worker runs one pass with `--use-configured-actions`. This keeps manual scan, category-folder creation, organization, installer cleanup, and CSV writing on one code path while letting `OrganizeDownloads` and `CleanInstallers` decide which side effects are allowed.
+- Monitor's Scan Now action sends the `scanNow` custom action and the worker runs one pass with `--use-configured-actions`. This keeps manual scan, optional category-folder creation, organization, installer cleanup, CSV writing, and status persistence on one code path while letting `OrganizeDownloads` and `CleanInstallers` decide which side effects are allowed.
 - Monitor's module enable path reads `runInBackground` before launching the worker. The module can stay enabled for Settings/Home/manual actions without starting a persistent worker.
-- Monitor's Settings page now places `OrganizeDownloads`, `CleanInstallers`, and `Run in background` immediately below Manual scan, matching the setting's control flow.
+- Monitor's Settings page now places `OrganizeDownloads` and `CleanInstallers` immediately below Manual scan, then the Downloads folder and `Run in background` controls, matching the setting's control flow.
 - Light Switch keeps the upstream schedule, Night Light, and toggle-hotkey shape, but no longer carries the deleted PowerDisplay profile bridge.
 - `Settings.UI.UnitTests` now has static regression coverage for Monitor settings order and Light Switch's no-PowerDisplay boundary.
 

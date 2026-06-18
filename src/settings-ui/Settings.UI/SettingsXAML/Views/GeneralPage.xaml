@@ -74,9 +74,20 @@
                     </StackPanel>
                 </controls:SettingsGroup>
 
-                <controls:SettingsGroup x:Uid="Admin_Mode">
+                <controls:SettingsGroup x:Uid="StartupAndPermissions">
+                    <tkcontrols:SettingsCard
+                        x:Name="GeneralPageRunAtStartUp"
+                        x:Uid="GeneralPage_RunAtStartUp"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xF71C;}"
+                        IsEnabled="{x:Bind ViewModel.IsRunAtStartupGPOManaged, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                        <ToggleSwitch
+                            x:Uid="ToggleSwitch"
+                            AutomationProperties.Name="{Binding ElementName=GeneralPageRunAtStartUp, Path=Header}"
+                            IsOn="{x:Bind ViewModel.Startup, Mode=TwoWay}" />
+                    </tkcontrols:SettingsCard>
                     <tkcontrols:SettingsExpander
                         x:Name="AdminModeRunningAs"
+                        x:Uid="Admin_Mode_Running_As"
                         Header="{x:Bind ViewModel.RunningAsText, Mode=OneWay}"
                         HeaderIcon="{ui:FontIcon Glyph=&#xE7EF;}"
                         IsExpanded="True">
@@ -139,17 +150,11 @@
                         </ComboBox>
                     </tkcontrols:SettingsCard>
 
-                    <tkcontrols:SettingsCard
-                        x:Name="GeneralPageRunAtStartUp"
-                        x:Uid="GeneralPage_RunAtStartUp"
-                        IsEnabled="{x:Bind ViewModel.IsRunAtStartupGPOManaged, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
-                        <ToggleSwitch
-                            x:Uid="ToggleSwitch"
-                            AutomationProperties.Name="{Binding ElementName=GeneralPageRunAtStartUp, Path=Header}"
-                            IsOn="{x:Bind ViewModel.Startup, Mode=TwoWay}" />
-                    </tkcontrols:SettingsCard>
                     <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsRunAtStartupGPOManaged, Mode=OneWay}">
-                        <tkcontrols:SettingsExpander x:Name="ShowSystemTrayIconCard" x:Uid="ShowSystemTrayIcon">
+                        <tkcontrols:SettingsExpander
+                            x:Name="ShowSystemTrayIconCard"
+                            x:Uid="ShowSystemTrayIcon"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE75B;}">
                             <ToggleSwitch
                                 x:Uid="ToggleSwitch"
                                 AutomationProperties.Name="{Binding ElementName=ShowSystemTrayIconCard, Path=Header}"

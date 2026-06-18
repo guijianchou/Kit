@@ -72,7 +72,7 @@ public sealed class MonitorSettings
             .Where(fileName => !string.IsNullOrWhiteSpace(fileName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        IntervalSeconds = intervalSeconds.GetValueOrDefault(7200);
+        IntervalSeconds = intervalSeconds.GetValueOrDefault(43200);
         HashAlgorithm = NormalizeHashAlgorithm(hashAlgorithm);
         CalculateSha1 = !string.IsNullOrWhiteSpace(HashAlgorithm);
         IncrementalScan = incrementalScan.GetValueOrDefault(true);
@@ -95,7 +95,7 @@ public sealed class MonitorSettings
     /// <summary>
     /// Gets the scan interval in seconds.
     /// </summary>
-    public int IntervalSeconds { get; private init; } = 7200;
+    public int IntervalSeconds { get; private init; } = 43200;
 
     /// <summary>
     /// Gets a value indicating whether extension analytics are enabled.

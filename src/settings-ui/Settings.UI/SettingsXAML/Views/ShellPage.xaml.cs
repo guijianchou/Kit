@@ -120,8 +120,8 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             ShellHandler = this;
             ViewModel.Initialize(shellFrame, navigationView, KeyboardAccelerators);
 
-            // NL moved navigation to general page to the moment when the window is first activated (to not make flyout window disappear)
-            // shellFrame.Navigate(typeof(GeneralPage));
+            // NL moved navigation to Dashboard to the moment when the window is first activated (to not make flyout window disappear)
+            // shellFrame.Navigate(typeof(DashboardPage));
             IPCResponseHandleList.Add(ReceiveMessage);
             IPCResponseService.Instance.RegisterForIPC();
         }
@@ -206,7 +206,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         public void Refresh()
         {
-            shellFrame.Navigate(typeof(GeneralPage));
+            shellFrame.Navigate(typeof(DashboardPage));
         }
 
         // Tell the current page view model to update
@@ -288,7 +288,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         internal static void EnsurePageIsSelected()
         {
-            NavigationService.EnsurePageIsSelected(typeof(GeneralPage));
+            NavigationService.EnsurePageIsSelected(typeof(DashboardPage));
         }
 
         private void SetWindowTitle()
@@ -563,7 +563,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             var queryText = (args.QueryText ?? _lastQueryText)?.Trim();
             if (string.IsNullOrWhiteSpace(queryText))
             {
-                NavigationService.Navigate<GeneralPage>();
+                NavigationService.Navigate<DashboardPage>();
                 return;
             }
 

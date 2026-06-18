@@ -6,6 +6,23 @@
 
 ## English
 
+### 2.0.5
+
+- Version: Bumped Kit to `2.0.5`.
+- UI: Aligned General settings with the newer PowerToys-main layout by grouping Run at startup and administrator state under `Startup & permissions`.
+- UI: Kept Appearance & behavior focused on language, theme, system tray, and Quick Access settings, including the upstream system-tray expander icon.
+- Docs: Updated README, README_zh, changelog, development log, sparse package version, and GPO support marker `SUPPORTED_KIT_2_0_5`.
+- Tests: Updated static General page and version metadata coverage for the new layout and version.
+
+### 2.0.4
+
+- Version: Bumped Kit to `2.0.4`.
+- UI: Aligned Settings startup, refresh, empty-search fallback, and Dashboard deep-link routing with the PowerToys-main Dashboard-first framework behavior.
+- UI: Kept the `Overview` deep link mapped to General settings so existing Quick Access update routing continues to open the update section.
+- Slimming: Removed disabled updater install/download resource strings that no longer have visible Kit UI or active installer behavior.
+- Docs: Updated README, README_zh, changelog, development log, sparse package version, and GPO support marker `SUPPORTED_KIT_2_0_4`.
+- Tests: Added static regression coverage for Dashboard-as-default Settings home and disabled updater install/download resource cleanup.
+
 ### 2.0.3
 
 - Version: Bumped Kit to `2.0.3`.
@@ -207,6 +224,23 @@
 ## 中文
 
 ## 更新日志
+
+### 2.0.5
+
+- 版本：Kit 升级到 `2.0.5`。
+- UI：将 General settings 跟随新版 PowerToys-main 布局，把 Run at startup 和管理员状态归入 `Startup & permissions` 分组。
+- UI：保持 Appearance & behavior 专注于语言、主题、系统托盘和 Quick Access 设置，并同步上游系统托盘 expander 图标。
+- 文档：同步 README、README_zh、changelog、development log、sparse package version 和 GPO support marker `SUPPORTED_KIT_2_0_5`。
+- 测试：更新 General 页面静态布局和版本元数据覆盖。
+
+### 2.0.4
+
+- 版本：Kit 升级到 `2.0.4`。
+- UI：将 Settings 启动页、刷新、空搜索回退和 Dashboard 深链路由对齐到 PowerToys-main 的 Dashboard 优先主框架行为。
+- UI：保留 `Overview` 深链到 General settings，确保现有 Quick Access 更新入口仍然打开更新区域。
+- 精简：删除已禁用 updater install/download 功能残留的资源字符串，避免资源层继续暴露 Kit 没有启用的安装更新行为。
+- 文档：同步 README、README_zh、changelog、development log、sparse package version 和 GPO support marker `SUPPORTED_KIT_2_0_4`。
+- 测试：新增 Dashboard 作为 Settings 默认首页，以及禁用 updater install/download 资源清理的静态回归覆盖。
 
 ### 2.0.3
 

@@ -39,6 +39,30 @@ public sealed class MonitorCsvStoreTests
     }
 
     [TestMethod]
+    public void SavePreservesNestedRelativePathInLegacyPathColumn()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string fullPath = Path.Combine(tempDirectory.Path, "Archives", "2026", "notes.pdf");
+        MonitorFileRecord record = new(
+            "~",
+            "~",
+            "notes.pdf",
+            "Archives/2026/notes.pdf",
+            fullPath,
+            "abc123",
+            "2026-04-25T12:00:00",
+            42,
+            "Documents");
+
+        string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
+
+        MonitorCsvStore.Save(csvPath, new[] { record });
+
+        string csvText = File.ReadAllText(csvPath);
+        StringAssert.Contains(csvText, @"~\Archives\2026\notes.pdf");
+    }
+
+    [TestMethod]
     public void LoadReturnsEmptyWhenCsvIsMalformed()
     {
         using TemporaryDirectory tempDirectory = new();

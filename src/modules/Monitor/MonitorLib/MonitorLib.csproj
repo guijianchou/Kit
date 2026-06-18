@@ -10,4 +10,8 @@
     <AssemblyName>PowerToys.MonitorLib</AssemblyName>
     <RootNamespace>Microsoft.PowerToys.Monitor</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
 </Project>

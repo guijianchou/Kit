@@ -66,7 +66,7 @@ public static class MonitorCsvStore
 
         foreach (MonitorFileRecord record in records)
         {
-            string path = record.FolderName == "~" ? @"~\" + record.FileName : @"~\" + record.FolderName + @"\" + record.FileName;
+            string path = ResolveLegacyPath(record);
             string fileSize = record.FileSize?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
             string[] values =
             {
@@ -81,6 +81,15 @@ public static class MonitorCsvStore
 
             writer.WriteLine(string.Join(",", values.Select(EscapeCsvValue)));
         }
+    }
+
+    private static string ResolveLegacyPath(MonitorFileRecord record)
+    {
+        string relativePath = string.IsNullOrWhiteSpace(record.RelativePath)
+            ? (record.FolderName == "~" ? record.FileName : record.FolderName + "/" + record.FileName)
+            : record.RelativePath;
+
+        return @"~\" + relativePath.Replace('/', '\\').TrimStart('\\');
     }
 
     /// <summary>

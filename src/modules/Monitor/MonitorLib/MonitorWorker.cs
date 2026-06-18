@@ -43,7 +43,16 @@ public static class MonitorWorker
         cancellationToken.ThrowIfCancellationRequested();
 
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
-        _ = MonitorFileOrganizer.EnsureCategoryFolders(downloadsPath, settings, cancellationToken);
+        if (!Directory.Exists(downloadsPath))
+        {
+            string warningMessage = "Downloads folder does not exist: " + downloadsPath;
+            MonitorProgressReporter.TryReport(
+                progressReporter,
+                new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Completed, 0, 0, downloadsPath, startedAt, DateTimeOffset.UtcNow, 0, scanId, warningMessage),
+                force: true);
+
+            return new MonitorWorkerResult(0, csvPath, null, null, WarningCount: 1, WarningMessage: warningMessage);
+        }
 
         MonitorFileOrganizerResult? organizeResult = null;
         if (organize)
@@ -55,12 +64,8 @@ public static class MonitorWorker
         if (cleanInstallers)
         {
             string programsPath = Path.Combine(downloadsPath, "Programs");
-            IReadOnlyList<MonitorInstallerMatch> matches = installedSoftwareIndex is not null
-                ? MonitorInstallerCleaner.FindMatches(programsPath, installedSoftwareIndex, cancellationToken)
-                : installedSoftwareNames is not null
-                    ? MonitorInstallerCleaner.FindMatches(programsPath, installedSoftwareNames, cancellationToken)
-                    : MonitorInstallerCleaner.FindMatches(programsPath, MonitorInstalledSoftwareProvider.GetInstalledSoftwareIndex(), cancellationToken);
-            installerCleanupResult = MonitorInstallerCleaner.Cleanup(programsPath, matches, settings.InstallerMinConfidence, dryRun: false, cancellationToken: cancellationToken);
+            IReadOnlyList<MonitorInstallerMatch> matches = FindInstallerMatches(downloadsPath, programsPath, installedSoftwareNames, installedSoftwareIndex, cancellationToken);
+            installerCleanupResult = MonitorInstallerCleaner.Cleanup(downloadsPath, matches, settings.InstallerMinConfidence, dryRun: false, cancellationToken: cancellationToken);
         }
 
         IReadOnlyList<MonitorFileRecord> existingRecords = MonitorCsvStore.Load(csvPath, downloadsPath, settings);
@@ -71,5 +76,35 @@ public static class MonitorWorker
         MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Completed, records.Count, records.Count, downloadsPath, startedAt, DateTimeOffset.UtcNow, records.Count, scanId), force: true);
 
         return new MonitorWorkerResult(records.Count, csvPath, organizeResult, installerCleanupResult);
+    }
+
+    private static IReadOnlyList<MonitorInstallerMatch> FindInstallerMatches(
+        string downloadsPath,
+        string programsPath,
+        IEnumerable<string>? installedSoftwareNames,
+        MonitorInstalledSoftwareIndex? installedSoftwareIndex,
+        CancellationToken cancellationToken)
+    {
+        IEnumerable<string> scanRoots = new[] { downloadsPath, programsPath }.Distinct(StringComparer.OrdinalIgnoreCase);
+        List<MonitorInstallerMatch> matches = new();
+        MonitorInstalledSoftwareIndex? resolvedInstalledSoftwareIndex = installedSoftwareIndex;
+        if (installedSoftwareNames is null)
+        {
+            resolvedInstalledSoftwareIndex ??= MonitorInstalledSoftwareProvider.GetInstalledSoftwareIndex();
+        }
+
+        foreach (string scanRoot in scanRoots)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyList<MonitorInstallerMatch> rootMatches = resolvedInstalledSoftwareIndex is not null
+                ? MonitorInstallerCleaner.FindMatches(scanRoot, resolvedInstalledSoftwareIndex, cancellationToken)
+                : MonitorInstallerCleaner.FindMatches(scanRoot, installedSoftwareNames!, cancellationToken);
+            matches.AddRange(rootMatches);
+        }
+
+        return matches
+            .GroupBy(match => match.FilePath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderByDescending(match => match.Confidence).ThenBy(match => match.SoftwareName, StringComparer.OrdinalIgnoreCase).First())
+            .ToList();
     }
 }

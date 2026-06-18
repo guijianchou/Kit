@@ -217,6 +217,9 @@
   <data name="Appearance_Behavior.Header" xml:space="preserve">
     <value>Appearance &amp; behavior</value>
   </data>
+  <data name="StartupAndPermissions.Header" xml:space="preserve">
+    <value>Startup &amp; permissions</value>
+  </data>
   <data name="Admin_Mode.Header" xml:space="preserve">
     <value>Administrator mode</value>
   </data>
@@ -250,12 +253,6 @@
   </data>
   <data name="GeneralPage_ToggleSwitch_AlwaysRunElevated_Link.Content" xml:space="preserve">
     <value>Learn more about administrator mode</value>
-  </data>
-  <data name="GeneralPage_AutoDownloadAndInstallUpdates.Header" xml:space="preserve">
-    <value>Download and install updates automatically</value>
-  </data>
-  <data name="GeneralPage_AutoDownloadAndInstallUpdates.Description" xml:space="preserve">
-    <value>Except on metered connections</value>
   </data>
   <data name="GeneralSettings_AlwaysRunAsAdminText.Header" xml:space="preserve">
     <value>Always run as administrator</value>
@@ -604,17 +601,11 @@
   <data name="General_FailedToDownloadTheNewVersion.Title" xml:space="preserve">
     <value>An error occurred trying to install this update:</value>
   </data>
-  <data name="General_InstallNow.Content" xml:space="preserve">
-    <value>Install now</value>
-  </data>
   <data name="General_NewVersionAvailable.Title" xml:space="preserve">
     <value>An update is available:</value>
   </data>
   <data name="General_Downloading.Text" xml:space="preserve">
     <value>Downloading...</value>
-  </data>
-  <data name="General_TryAgainToDownloadAndInstall.Content" xml:space="preserve">
-    <value>Try again to download and install</value>
   </data>
   <data name="General_CheckingForUpdates.Text" xml:space="preserve">
     <value>Checking for updates...</value>
@@ -627,9 +618,6 @@
   </data>
   <data name="General_CantCheck.Title" xml:space="preserve">
     <value>Network error. Please try again later</value>
-  </data>
-  <data name="General_DownloadAndInstall.Content" xml:space="preserve">
-    <value>Download &amp; install</value>
   </data>
   <data name="No" xml:space="preserve">
     <value>No</value>
@@ -1770,6 +1758,63 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="Monitor_EnableSettingsCard.Description" xml:space="preserve">
     <value>Enable Monitor settings and actions</value>
+  </data>
+  <data name="Monitor_StatusSettingsGroup.Header" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Monitor_StatusAllButton.Content" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Monitor_Status30DaysButton.Content" xml:space="preserve">
+    <value>30d</value>
+  </data>
+  <data name="Monitor_Status7DaysButton.Content" xml:space="preserve">
+    <value>7d</value>
+  </data>
+  <data name="Monitor_StatusRunsLabel.Text" xml:space="preserve">
+    <value>Runs</value>
+  </data>
+  <data name="Monitor_StatusSuccessLabel.Text" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="Monitor_StatusIssuesLabel.Text" xml:space="preserve">
+    <value>Issues</value>
+  </data>
+  <data name="Monitor_StatusHealthy" xml:space="preserve">
+    <value>Healthy</value>
+  </data>
+  <data name="Monitor_StatusWarning" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="Monitor_StatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Monitor_StatusRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Monitor_StatusNoData" xml:space="preserve">
+    <value>No data</value>
+  </data>
+  <data name="Monitor_StatusNoScans" xml:space="preserve">
+    <value>No scans yet</value>
+  </data>
+  <data name="Monitor_StatusUnavailable" xml:space="preserve">
+    <value>Unavailable</value>
+  </data>
+  <data name="Monitor_StatusDatabaseUnavailable" xml:space="preserve">
+    <value>Status database could not be read</value>
+  </data>
+  <data name="Monitor_StatusLatestSuccess" xml:space="preserve">
+    <value>Latest scan completed successfully</value>
+  </data>
+  <data name="Monitor_StatusLatestWarning" xml:space="preserve">
+    <value>Latest scan completed with warnings</value>
+  </data>
+  <data name="Monitor_StatusLatestFailed" xml:space="preserve">
+    <value>Latest scan failed</value>
+  </data>
+  <data name="Monitor_StatusLatestRunning" xml:space="preserve">
+    <value>Scan is running</value>
   </data>
   <data name="Monitor_ScanSettingsGroup.Header" xml:space="preserve">
     <value>Scan</value>

@@ -53,7 +53,7 @@ namespace Microsoft.PowerToys.Settings.UI
 
         public static int PowerToysPID { get; set; }
 
-        public Type StartupPage { get; set; } = typeof(Views.GeneralPage);
+        public Type StartupPage { get; set; } = typeof(Views.DashboardPage);
 
         public static Action<string> IPCMessageReceivedCallback { get; set; }
 
@@ -305,10 +305,12 @@ namespace Microsoft.PowerToys.Settings.UI
         {
             return settingWindow switch
             {
+                "Dashboard" => typeof(DashboardPage),
+                "Overview" => typeof(GeneralPage),
                 "Awake" => typeof(AwakePage),
                 "LightSwitch" => typeof(LightSwitchPage),
                 "Monitor" => typeof(MonitorPage),
-                _ => typeof(GeneralPage),
+                _ => typeof(DashboardPage),
             };
         }
     }

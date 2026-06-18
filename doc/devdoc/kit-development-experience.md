@@ -2,6 +2,26 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-06-17 Version 2.0.5 General Layout Sync
+
+This pass moved Kit to `2.0.5` after syncing the General settings layout with the newer local PowerToys-main General page.
+
+- Version.props, README, README_zh, changelog, this development log, the sparse package manifest, GPO support markers, and version metadata tests now use Kit version `2.0.5`.
+- General settings now uses the `Startup & permissions` group for Run at startup and administrator state, matching the newer PowerToys-main first-screen organization.
+- Appearance & behavior now keeps Run at startup out of that section and retains language, theme, system tray, and Quick Access controls.
+- The system tray expander now carries the upstream icon treatment, and the old standalone `Admin_Mode` group is no longer present in the General XAML.
+- Settings UI tests now cover the `Startup & permissions` layout and the `2.0.5` version metadata.
+
+## 2026-06-17 Version 2.0.4 Dashboard And Updater Surface Cleanup
+
+This pass moved Kit to `2.0.4` after a final Kit framework comparison against the local PowerToys-main Dashboard-first Settings shell behavior.
+
+- Version.props, README, README_zh, changelog, this development log, the sparse package manifest, GPO support markers, and version metadata tests now use Kit version `2.0.4`.
+- Settings startup, refresh, empty-search fallback, and Dashboard deep-link routing now use `DashboardPage`, matching the PowerToys-main Dashboard-first shell behavior.
+- The `Overview` deep link remains mapped to `GeneralPage` so Quick Access update routing can still open General settings without becoming the default Settings home.
+- Disabled updater install/download resource strings were removed from the English resources because Kit exposes manual release checks and release links, not active installer download/install actions.
+- Settings UI tests now cover Dashboard-as-default Settings home and the disabled updater install/download resource cleanup.
+
 ## 2026-06-16 Version 2.0.3 Monitor And Framework Review
 
 This pass moved Kit to `2.0.3` after rechecking the Kit runner, Settings, common build/package, sparse package identity, and policy surfaces against the local PowerToys-main framework baseline.
@@ -156,7 +176,7 @@ Monitor is the reference shape for the next Kit-authored module:
 - `MonitorSettings`, `MonitorProperties`, and `SndMonitorSettings` keep the settings model aligned with the Settings app and serialization context.
 - `MonitorPage` exposes manual scan, `OrganizeDownloads`, `CleanInstallers`, the separate `Run in background` toggle, Downloads folder selection, hash algorithm selection, and worker-reported scan progress in the same PowerToys-style Settings surface.
 
-The Monitor module toggle and background worker toggle are deliberately separate. The module toggle controls whether Settings, Home, and custom actions are usable. `Run in background` controls whether the runner starts the persistent worker on enable. Manual Scan remains available when background mode is off and sends a one-shot `scanNow` action. That action now uses the same configured-action path as the worker: each run creates any missing category folders, applies `OrganizeDownloads` when enabled, applies `CleanInstallers` when enabled, scans the Downloads tree, and writes `results.csv`.
+The Monitor module toggle and background worker toggle are deliberately separate. The module toggle controls whether Settings, Home, and custom actions are usable. `Run in background` controls whether the runner starts the persistent worker on enable. Manual Scan remains available when background mode is off and sends a one-shot `scanNow` action. That action now uses the same configured-action path as the worker: each run applies `OrganizeDownloads` when enabled, applies `CleanInstallers` when enabled, recursively scans the Downloads tree while skipping reparse points, writes `results.csv`, and records scan status. Scan-only passes do not create category folders or move files.
 
 Scan progress is reported by the worker through `%LOCALAPPDATA%\Kit\Monitor\scan-progress.json` plus a named scan-completed event. Settings still owns the visual timer that polls this state, but it no longer invents completion by incrementing a UI-only counter.
 
@@ -167,7 +187,7 @@ This pass tightened two Settings behaviors without widening the active module se
 - Monitor's `Run in background` card was moved directly under Manual scan so the UI matches the control flow: manual one-shot work first, then optional persistent background mode, then scan configuration.
 - A static Settings UI regression test now verifies that `Monitor_RunInBackgroundSettingsCard` stays immediately below `Monitor_ScanNowSettingsCard` and before folder/path settings.
 - Monitor later added explicit `OrganizeDownloads` and `CleanInstallers` toggles above `Run in background`. Defaults are `OrganizeDownloads=true`, `CleanInstallers=false`, and `RunInBackground=false`, so a plain Scan Now organizes by default but does not delete installers unless the cleanup toggle is enabled.
-- The worker now keeps the Monitor pass order stable: ensure category folders, optionally organize root Downloads files, optionally clean matched installers, scan, then write CSV.
+- The worker now keeps the Monitor pass order stable: optionally organize root Downloads files and create category folders, optionally clean matched installers from the Downloads root and `Programs`, recursively scan, write CSV, then complete the scan status record.
 - Light Switch's `Apply monitor settings to` controls were traced against `PowerToys-main`. The upstream page gates those controls on `IsPowerDisplayEnabled`; Kit had drifted by hardcoding that value to `false`, which made the option impossible to enable.
 - Kit now restores the upstream enable check by reading `GeneralSettings.Enabled.PowerDisplay`, while keeping the implementation safe for a trimmed build where the full PowerDisplay module is not active.
 - PowerDisplay profile names are loaded from Kit storage at `%LOCALAPPDATA%\Kit\PowerDisplay\profiles.json` with a lightweight JSON parser. Missing, malformed, or incomplete profile data clears the list instead of breaking the Light Switch page.

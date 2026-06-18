@@ -6,6 +6,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 
+using Microsoft.Data.Sqlite;
+
 namespace Microsoft.PowerToys.Monitor;
 
 /// <summary>
@@ -16,6 +18,7 @@ public static class Program
     private const string MonitorExitEvent = @"Local\KitMonitorExitEvent-0b94f553-2821-4690-a940-76d04c3ef7e8";
     private const string MonitorScanCompletedEvent = @"Local\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
     private const string MonitorProgressFileName = "scan-progress.json";
+    private const string MonitorStatusDatabaseFileName = "monitor-status.db";
     private static readonly TimeSpan OneShotScanTimeout = TimeSpan.FromMinutes(5);
 
     /// <summary>
@@ -37,6 +40,8 @@ public static class Program
             MonitorSettings settings = MonitorSettingsLoader.LoadOrDefault(ResolveSettingsPath(commandLine.SettingsPath));
             string downloadsPath = ResolveDownloadsPath(commandLine.DownloadsPath ?? settings.DownloadsPath);
             string csvPath = ResolveCsvPath(downloadsPath, commandLine.CsvPath ?? settings.CsvPath);
+            string statusDatabasePath = ResolveStatusDatabasePath();
+            MarkStaleStatusRuns(statusDatabasePath);
 
             if (commandLine.ScanOnce)
             {
@@ -46,7 +51,7 @@ public static class Program
                 using CancellationTokenSource oneShotCancellation = new(OneShotScanTimeout);
                 try
                 {
-                    RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, scanId, signalScanCompleted: true, oneShotCancellation.Token);
+                    RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, scanId, MonitorScanTrigger.Manual, statusDatabasePath, MonitorScanStatus.Failed, signalScanCompleted: true, oneShotCancellation.Token);
                     return 0;
                 }
                 catch (OperationCanceledException)
@@ -65,7 +70,7 @@ public static class Program
                 }
             }
 
-            return RunContinuous(commandLine, downloadsPath, csvPath, settings);
+            return RunContinuous(commandLine, downloadsPath, csvPath, settings, statusDatabasePath);
         }
         catch (Exception ex) when (ex is ArgumentException || ex is IOException || ex is UnauthorizedAccessException)
         {
@@ -74,7 +79,7 @@ public static class Program
         }
     }
 
-    private static int RunContinuous(MonitorCommandLine commandLine, string downloadsPath, string csvPath, MonitorSettings settings)
+    private static int RunContinuous(MonitorCommandLine commandLine, string downloadsPath, string csvPath, MonitorSettings settings, string statusDatabasePath)
     {
         using EventWaitHandle exitEvent = new(false, EventResetMode.AutoReset, MonitorExitEvent);
         TimeSpan interval = TimeSpan.FromSeconds(Math.Max(60, commandLine.IntervalSeconds ?? settings.IntervalSeconds));
@@ -90,11 +95,16 @@ public static class Program
             LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(exitEvent, commandLine.ParentProcessId);
             try
             {
-                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), signalScanCompleted: false, lifetimeCancellation.Token);
+                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), MonitorScanTrigger.Background, statusDatabasePath, MonitorScanStatus.Warning, signalScanCompleted: false, lifetimeCancellation.Token);
             }
             catch (OperationCanceledException) when (lifetimeCancellation.ExitRequested)
             {
                 return 0;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
+            {
+                Console.Error.WriteLine("Monitor background scan failed; waiting for next cycle.");
+                Console.Error.WriteLine(ex.Message);
             }
             finally
             {
@@ -113,10 +123,26 @@ public static class Program
         }
     }
 
-    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, bool signalScanCompleted, CancellationToken cancellationToken)
+    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, MonitorScanTrigger trigger, string statusDatabasePath, MonitorScanStatus canceledStatus, bool signalScanCompleted, CancellationToken cancellationToken)
     {
+        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+        long? statusRunId = TryBeginStatusRun(statusDatabasePath, scanId, trigger, startedAt);
         MonitorScanProgressFileReporter progressReporter = new(ResolveProgressPath(), TimeSpan.FromMilliseconds(500));
-        MonitorWorkerResult result = MonitorWorker.RunOnce(downloadsPath, csvPath, settings, organize, cleanInstallers, progressReporter: progressReporter, cancellationToken: cancellationToken, scanId: scanId);
+        MonitorWorkerResult result;
+        try
+        {
+            result = MonitorWorker.RunOnce(downloadsPath, csvPath, settings, organize, cleanInstallers, progressReporter: progressReporter, cancellationToken: cancellationToken, scanId: scanId);
+        }
+        catch (OperationCanceledException)
+        {
+            TryCompleteStatusRun(statusDatabasePath, statusRunId, canceledStatus, DateTimeOffset.UtcNow, null, 0, canceledStatus == MonitorScanStatus.Failed ? "Scan timed out" : "Scan interrupted");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            TryCompleteStatusRun(statusDatabasePath, statusRunId, MonitorScanStatus.Failed, DateTimeOffset.UtcNow, null, 0, string.IsNullOrWhiteSpace(ex.Message) ? "Scan failed" : ex.Message);
+            throw;
+        }
 
         if (result.OrganizeResult is not null)
         {
@@ -144,12 +170,67 @@ public static class Program
 
         Console.WriteLine("Scan complete: " + result.RecordCount.ToString(CultureInfo.InvariantCulture) + " files.");
         Console.WriteLine("CSV: " + result.CsvPath);
+        int warningCount = CountWarnings(result);
+        TryCompleteStatusRun(
+            statusDatabasePath,
+            statusRunId,
+            warningCount > 0 ? MonitorScanStatus.Warning : MonitorScanStatus.Success,
+            DateTimeOffset.UtcNow,
+            result.RecordCount,
+            warningCount,
+            warningCount > 0 ? result.WarningMessage ?? "Completed with warnings" : null);
+
         if (signalScanCompleted)
         {
             SignalScanCompleted();
         }
 
         return result;
+    }
+
+    private static int CountWarnings(MonitorWorkerResult result)
+    {
+        return result.WarningCount + (result.OrganizeResult?.Errors ?? 0) + (result.InstallerCleanupResult?.Errors ?? 0);
+    }
+
+    private static void MarkStaleStatusRuns(string statusDatabasePath)
+    {
+        try
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            MonitorStatusStore.RefreshStaleRunningScans(statusDatabasePath, now);
+        }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
+        {
+        }
+    }
+
+    private static long? TryBeginStatusRun(string statusDatabasePath, string scanId, MonitorScanTrigger trigger, DateTimeOffset startedAt)
+    {
+        try
+        {
+            return MonitorStatusStore.BeginRun(statusDatabasePath, scanId, trigger, startedAt);
+        }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
+        {
+            return null;
+        }
+    }
+
+    private static void TryCompleteStatusRun(string statusDatabasePath, long? runId, MonitorScanStatus status, DateTimeOffset completedAt, int? recordCount, int warningCount, string? message)
+    {
+        if (!runId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            MonitorStatusStore.CompleteRun(statusDatabasePath, runId.Value, status, completedAt, recordCount, warningCount, message);
+        }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
+        {
+        }
     }
 
     private static void ReportOneShotScanFailed(string scanId, string message)
@@ -286,6 +367,12 @@ public static class Program
     {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(localAppData, "Kit", "Monitor", MonitorProgressFileName);
+    }
+
+    private static string ResolveStatusDatabasePath()
+    {
+        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "Kit", "Monitor", MonitorStatusDatabaseFileName);
     }
 
     private static string ResolveCsvPath(string downloadsPath, string csvPath)

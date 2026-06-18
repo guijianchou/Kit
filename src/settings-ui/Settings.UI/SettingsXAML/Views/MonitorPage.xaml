@@ -230,6 +230,7 @@
                                 VerticalAlignment="Center"
                                 AutomationProperties.AutomationId="ScanNow_Monitor"
                                 Click="ScanNow_Click"
+                                IsEnabled="{x:Bind ViewModel.CanStartManualScan, Mode=OneWay}"
                                 Style="{StaticResource AccentButtonStyle}" />
                         </Grid>
                     </tkcontrols:SettingsCard>

@@ -134,7 +134,7 @@ public sealed class MonitorInstallerCleanerTests
     }
 
     [TestMethod]
-    public void CleanupDeleteModeRemovesOnlyFilesUnderProgramsPath()
+    public void CleanupDeleteModeRemovesOnlyFilesUnderCleanupRootPath()
     {
         using TemporaryDirectory programsDirectory = new();
         using TemporaryDirectory outsideDirectory = new();

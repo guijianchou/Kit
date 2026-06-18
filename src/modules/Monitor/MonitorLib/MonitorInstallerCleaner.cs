@@ -32,22 +32,22 @@ public static partial class MonitorInstallerCleaner
     /// <summary>
     /// Finds installer files that match installed software names.
     /// </summary>
-    /// <param name="programsPath">The Programs category folder to scan.</param>
+    /// <param name="scanRootPath">The folder to scan for installer files.</param>
     /// <param name="installedSoftwareNames">Installed software names.</param>
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>Installer matches sorted by confidence descending.</returns>
-    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string programsPath, IEnumerable<string> installedSoftwareNames, CancellationToken cancellationToken = default)
+    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string scanRootPath, IEnumerable<string> installedSoftwareNames, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(programsPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(scanRootPath);
         ArgumentNullException.ThrowIfNull(installedSoftwareNames);
 
-        DirectoryInfo programsDirectory = new(programsPath);
-        if (!programsDirectory.Exists)
+        DirectoryInfo scanRootDirectory = new(scanRootPath);
+        if (!scanRootDirectory.Exists)
         {
             return Array.Empty<MonitorInstallerMatch>();
         }
 
-        List<(FileInfo File, string CoreName)> installerTable = programsDirectory
+        List<(FileInfo File, string CoreName)> installerTable = scanRootDirectory
             .SafeEnumerateFiles()
             .Where(file => InstallerExtensions.Contains(file.Extension))
             .Select(file => (file, ExtractCoreName(Path.GetFileNameWithoutExtension(file.Name))))
@@ -82,22 +82,22 @@ public static partial class MonitorInstallerCleaner
     /// <summary>
     /// Finds installer files that match installed software names and versions.
     /// </summary>
-    /// <param name="programsPath">The Programs category folder to scan.</param>
+    /// <param name="scanRootPath">The folder to scan for installer files.</param>
     /// <param name="installedSoftwareIndex">Installed software metadata.</param>
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>Installer matches sorted by confidence descending.</returns>
-    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string programsPath, MonitorInstalledSoftwareIndex installedSoftwareIndex, CancellationToken cancellationToken = default)
+    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string scanRootPath, MonitorInstalledSoftwareIndex installedSoftwareIndex, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(programsPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(scanRootPath);
         ArgumentNullException.ThrowIfNull(installedSoftwareIndex);
 
-        DirectoryInfo programsDirectory = new(programsPath);
-        if (!programsDirectory.Exists)
+        DirectoryInfo scanRootDirectory = new(scanRootPath);
+        if (!scanRootDirectory.Exists)
         {
             return Array.Empty<MonitorInstallerMatch>();
         }
 
-        List<(FileInfo File, string CoreName, string? Version)> installerTable = programsDirectory
+        List<(FileInfo File, string CoreName, string? Version)> installerTable = scanRootDirectory
             .SafeEnumerateFiles()
             .Where(file => InstallerExtensions.Contains(file.Extension))
             .Select(file => (file, ExtractCoreName(Path.GetFileNameWithoutExtension(file.Name)), ExtractVersion(Path.GetFileNameWithoutExtension(file.Name))))
@@ -143,7 +143,7 @@ public static partial class MonitorInstallerCleaner
     /// <summary>
     /// Deletes or previews deletion for matched installers.
     /// </summary>
-    /// <param name="programsPath">The Programs category folder that bounds deletions.</param>
+    /// <param name="cleanupRootPath">The folder that bounds installer cleanup.</param>
     /// <param name="matches">The installer matches to clean.</param>
     /// <param name="minConfidence">The minimum confidence required to delete.</param>
     /// <param name="dryRun">True to report without deleting.</param>
@@ -151,14 +151,14 @@ public static partial class MonitorInstallerCleaner
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>A cleanup summary.</returns>
     public static MonitorInstallerCleanupResult Cleanup(
-        string programsPath,
+        string cleanupRootPath,
         IEnumerable<MonitorInstallerMatch> matches,
         double minConfidence,
         bool dryRun,
         bool sendToRecycleBin = true,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(programsPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(cleanupRootPath);
         ArgumentNullException.ThrowIfNull(matches);
 
         int deleted = 0;
@@ -169,7 +169,7 @@ public static partial class MonitorInstallerCleaner
         foreach (MonitorInstallerMatch match in matches)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (match.Confidence < minConfidence || !MonitorFileOrganizer.IsPathInsideRoot(programsPath, match.FilePath) || !File.Exists(match.FilePath))
+            if (match.Confidence < minConfidence || !MonitorFileOrganizer.IsPathInsideRoot(cleanupRootPath, match.FilePath) || !File.Exists(match.FilePath))
             {
                 skipped++;
                 continue;

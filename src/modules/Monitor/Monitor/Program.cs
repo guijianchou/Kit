@@ -16,6 +16,7 @@ namespace Microsoft.PowerToys.Monitor;
 public static class Program
 {
     private const string MonitorExitEvent = @"Local\KitMonitorExitEvent-0b94f553-2821-4690-a940-76d04c3ef7e8";
+    private const string MonitorBackgroundExitEvent = @"Local\KitMonitorBackgroundExitEvent-1f418ca1-9e3f-48f4-a37e-e1b747aa41aa";
     private const string MonitorScanCompletedEvent = @"Local\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
     private const string MonitorProgressFileName = "scan-progress.json";
     private const string MonitorStatusDatabaseFileName = "monitor-status.db";
@@ -48,18 +49,34 @@ public static class Program
                 bool organize = commandLine.UseConfiguredActions ? settings.AutoOrganize : commandLine.Organize;
                 bool cleanInstallers = commandLine.UseConfiguredActions ? settings.AutoCleanInstallers : commandLine.CleanInstallers;
                 string scanId = ResolveScanId(commandLine.ScanId);
-                using CancellationTokenSource oneShotCancellation = new(OneShotScanTimeout);
+                using EventWaitHandle exitEvent = new(false, EventResetMode.ManualReset, MonitorExitEvent);
+                using LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(commandLine.ParentProcessId, exitEvent);
+                using CancellationTokenSource oneShotTimeoutCancellation = new(OneShotScanTimeout);
+                using CancellationTokenSource oneShotCancellation = CancellationTokenSource.CreateLinkedTokenSource(oneShotTimeoutCancellation.Token, lifetimeCancellation.Token);
                 try
                 {
-                    RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, scanId, MonitorScanTrigger.Manual, statusDatabasePath, MonitorScanStatus.Failed, signalScanCompleted: true, oneShotCancellation.Token);
+                    RunScanCycle(
+                        downloadsPath,
+                        csvPath,
+                        settings,
+                        organize,
+                        cleanInstallers,
+                        scanId,
+                        MonitorScanTrigger.Manual,
+                        statusDatabasePath,
+                        MonitorScanStatus.Failed,
+                        () => lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out",
+                        signalScanCompleted: true,
+                        oneShotCancellation.Token);
                     return 0;
                 }
                 catch (OperationCanceledException)
                 {
-                    ReportOneShotScanFailed(scanId, "Scan timed out");
+                    string message = lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out";
+                    ReportOneShotScanFailed(scanId, message);
                     SignalScanCompleted();
-                    Console.Error.WriteLine("Scan timed out.");
-                    return 1;
+                    Console.Error.WriteLine(message + ".");
+                    return lifetimeCancellation.ExitRequested ? 0 : 1;
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
@@ -81,21 +98,18 @@ public static class Program
 
     private static int RunContinuous(MonitorCommandLine commandLine, string downloadsPath, string csvPath, MonitorSettings settings, string statusDatabasePath)
     {
-        using EventWaitHandle exitEvent = new(false, EventResetMode.AutoReset, MonitorExitEvent);
+        using EventWaitHandle exitEvent = new(false, EventResetMode.ManualReset, MonitorExitEvent);
+        using EventWaitHandle backgroundExitEvent = new(false, EventResetMode.ManualReset, MonitorBackgroundExitEvent);
         TimeSpan interval = TimeSpan.FromSeconds(Math.Max(60, commandLine.IntervalSeconds ?? settings.IntervalSeconds));
 
         while (true)
         {
-            // Scope the lifetime watcher to the scan only. If it stayed alive during the idle wait
-            // below, two threads would wait on the same auto-reset exit event and the watcher could
-            // consume the shutdown signal, leaving the idle wait to spin until the interval elapsed.
-            // Disposing it (which joins the watcher thread) before the idle wait guarantees the exit
-            // event has a single waiter, and an exit consumed by the watcher is surfaced via
-            // ExitRequested read after the dispose/join.
-            LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(exitEvent, commandLine.ParentProcessId);
+            // Scope the watcher to the active scan, then let the idle wait own both exit events.
+            // This keeps background restarts responsive without sharing that signal with manual scans.
+            LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(commandLine.ParentProcessId, exitEvent, backgroundExitEvent);
             try
             {
-                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), MonitorScanTrigger.Background, statusDatabasePath, MonitorScanStatus.Warning, signalScanCompleted: false, lifetimeCancellation.Token);
+                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), MonitorScanTrigger.Background, statusDatabasePath, MonitorScanStatus.Warning, () => "Scan interrupted", signalScanCompleted: false, lifetimeCancellation.Token);
             }
             catch (OperationCanceledException) when (lifetimeCancellation.ExitRequested)
             {
@@ -116,14 +130,14 @@ public static class Program
                 return 0;
             }
 
-            if (WaitForNextCycleOrExit(exitEvent, commandLine.ParentProcessId, interval))
+            if (WaitForNextCycleOrExit(commandLine.ParentProcessId, interval, exitEvent, backgroundExitEvent))
             {
                 return 0;
             }
         }
     }
 
-    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, MonitorScanTrigger trigger, string statusDatabasePath, MonitorScanStatus canceledStatus, bool signalScanCompleted, CancellationToken cancellationToken)
+    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, MonitorScanTrigger trigger, string statusDatabasePath, MonitorScanStatus canceledStatus, Func<string> canceledMessageFactory, bool signalScanCompleted, CancellationToken cancellationToken)
     {
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
         long? statusRunId = TryBeginStatusRun(statusDatabasePath, scanId, trigger, startedAt);
@@ -135,7 +149,7 @@ public static class Program
         }
         catch (OperationCanceledException)
         {
-            TryCompleteStatusRun(statusDatabasePath, statusRunId, canceledStatus, DateTimeOffset.UtcNow, null, 0, canceledStatus == MonitorScanStatus.Failed ? "Scan timed out" : "Scan interrupted");
+            TryCompleteStatusRun(statusDatabasePath, statusRunId, canceledStatus, DateTimeOffset.UtcNow, null, 0, canceledMessageFactory());
             throw;
         }
         catch (Exception ex)
@@ -278,12 +292,12 @@ public static class Program
             "  --help                      Show help.");
     }
 
-    private static LifetimeCancellation StartLifetimeCancellation(EventWaitHandle exitEvent, int? parentProcessId)
+    private static LifetimeCancellation StartLifetimeCancellation(int? parentProcessId, params EventWaitHandle[] exitEvents)
     {
-        return new LifetimeCancellation(exitEvent, parentProcessId);
+        return new LifetimeCancellation(parentProcessId, exitEvents);
     }
 
-    private static bool WaitForNextCycleOrExit(EventWaitHandle exitEvent, int? parentProcessId, TimeSpan interval)
+    private static bool WaitForNextCycleOrExit(int? parentProcessId, TimeSpan interval, params EventWaitHandle[] exitEvents)
     {
         DateTimeOffset deadline = DateTimeOffset.UtcNow + interval;
 
@@ -296,7 +310,7 @@ public static class Program
                 break;
             }
 
-            if (exitEvent.WaitOne(wait))
+            if (WaitHandle.WaitAny(exitEvents, wait) != WaitHandle.WaitTimeout)
             {
                 return true;
             }
@@ -391,16 +405,21 @@ public static class Program
     {
         private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
 
-        private readonly EventWaitHandle _exitEvent;
+        private readonly WaitHandle[] _exitEvents;
         private readonly int? _parentProcessId;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly Thread _watcherThread;
         private volatile bool _disposed;
         private volatile bool _exitRequested;
 
-        public LifetimeCancellation(EventWaitHandle exitEvent, int? parentProcessId)
+        public LifetimeCancellation(int? parentProcessId, params EventWaitHandle[] exitEvents)
         {
-            _exitEvent = exitEvent;
+            if (exitEvents.Length == 0)
+            {
+                throw new ArgumentException("At least one exit event is required.", nameof(exitEvents));
+            }
+
+            _exitEvents = exitEvents;
             _parentProcessId = parentProcessId;
             _watcherThread = new Thread(WatchLifetime)
             {
@@ -425,7 +444,7 @@ public static class Program
         {
             while (!_disposed)
             {
-                if (_exitEvent.WaitOne(PollInterval) ||
+                if (WaitHandle.WaitAny(_exitEvents, PollInterval) != WaitHandle.WaitTimeout ||
                     (_parentProcessId.HasValue && !IsProcessRunning(_parentProcessId.Value)))
                 {
                     _exitRequested = true;

@@ -3,10 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Abstractions;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 
 using ManagedCommon;
@@ -25,7 +25,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 {
     public sealed partial class MonitorPage : NavigablePage, IRefreshablePage
     {
-        private const string MonitorScanCompletedEvent = @"Local\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
         private const string MonitorProgressFileName = "scan-progress.json";
         private const string MonitorStatusDatabaseFileName = "monitor-status.db";
         private static readonly TimeSpan ManualScanUiTimeout = TimeSpan.FromMinutes(5);
@@ -75,6 +74,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
             InitializeComponent();
             RefreshStatusSummary();
+            RestoreManualScanProgressIfRunning();
             UpdateStatusRangeButtonStyles();
 
             Unloaded += MonitorPage_Unloaded;
@@ -104,6 +104,11 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         private void ScanNow_Click(object sender, RoutedEventArgs e)
         {
+            if (!ViewModel.CanStartManualScan)
+            {
+                return;
+            }
+
             string manualScanId = StartManualScanProgress();
             _sendConfigMsg(Helper.GetSerializedCustomAction(MonitorSettings.ModuleName, "scanNow", manualScanId));
         }
@@ -113,20 +118,18 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             _manualScanProgressTimer.Stop();
             _manualScanId = CreateManualScanId();
             _manualScanStartedAt = DateTimeOffset.UtcNow;
-            using EventWaitHandle scanCompletedEvent = new(false, EventResetMode.AutoReset, MonitorScanCompletedEvent);
-            scanCompletedEvent.Reset();
 
             ViewModel.ManualScanProgressValue = 1;
             ViewModel.IsManualScanProgressIndeterminate = true;
-            ViewModel.ManualScanProgressDetail = "Starting scan";
+            ViewModel.ManualScanProgressDetail = GetResourceString("Monitor_ManualScanStarting", "Starting scan");
             ViewModel.IsManualScanProgressVisible = true;
+            ViewModel.IsManualScanRunning = true;
             _manualScanProgressTimer.Start();
             return _manualScanId;
         }
 
         private void ManualScanProgressTimer_Tick(DispatcherQueueTimer sender, object args)
         {
-            bool completionSignaled = IsScanCompletedSignaled();
             WorkerProgressSnapshot progressSnapshot = ReadWorkerProgressSnapshot(_manualScanId);
             bool manualScanTimedOut = DateTimeOffset.UtcNow - _manualScanStartedAt >= ManualScanUiTimeout;
             if (progressSnapshot != null)
@@ -136,13 +139,11 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             else
             {
                 ViewModel.IsManualScanProgressIndeterminate = true;
-                ViewModel.ManualScanProgressDetail = "Waiting for worker progress";
+                ViewModel.ManualScanProgressDetail = GetResourceString("Monitor_ManualScanWaitingForProgress", "Waiting for worker progress");
             }
 
             bool manualScanCompleted = string.Equals(progressSnapshot?.Phase, "completed", StringComparison.OrdinalIgnoreCase);
             bool manualScanFailed = string.Equals(progressSnapshot?.Phase, "failed", StringComparison.OrdinalIgnoreCase);
-            bool completedWithoutProgressSnapshot = completionSignaled && progressSnapshot == null;
-            bool completedWithMatchingProgressSnapshot = completionSignaled && progressSnapshot != null && string.Equals(progressSnapshot.ScanId, _manualScanId, StringComparison.Ordinal);
             if (manualScanFailed)
             {
                 FailManualScanProgress(sender, FormatProgressDetail(progressSnapshot));
@@ -151,17 +152,12 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
             if (manualScanTimedOut && !manualScanCompleted)
             {
-                FailManualScanProgress(sender, "Scan timed out");
+                FailManualScanProgress(sender, GetResourceString("Monitor_ManualScanTimedOut", "Scan timed out"));
                 return;
             }
 
-            if (manualScanCompleted || completedWithoutProgressSnapshot || completedWithMatchingProgressSnapshot)
+            if (manualScanCompleted)
             {
-                if (completedWithoutProgressSnapshot)
-                {
-                    ViewModel.ManualScanProgressDetail = "Complete";
-                }
-
                 CompleteManualScanProgress(sender);
             }
         }
@@ -170,15 +166,20 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         {
             ViewModel.IsManualScanProgressIndeterminate = false;
             ViewModel.ManualScanProgressValue = 100;
-            sender.Stop();
-            RefreshStatusSummary();
+            FinishManualScanProgress(sender);
         }
 
         private void FailManualScanProgress(DispatcherQueueTimer sender, string detail)
         {
             ViewModel.IsManualScanProgressIndeterminate = false;
             ViewModel.ManualScanProgressValue = 100;
-            ViewModel.ManualScanProgressDetail = string.IsNullOrWhiteSpace(detail) ? "Scan failed" : detail;
+            ViewModel.ManualScanProgressDetail = string.IsNullOrWhiteSpace(detail) ? GetResourceString("Monitor_ManualScanFailed", "Scan failed") : detail;
+            FinishManualScanProgress(sender);
+        }
+
+        private void FinishManualScanProgress(DispatcherQueueTimer sender)
+        {
+            ViewModel.IsManualScanRunning = false;
             sender.Stop();
             RefreshStatusSummary();
         }
@@ -326,24 +327,64 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             });
         }
 
-        private static bool IsScanCompletedSignaled()
+        private void RestoreManualScanProgressIfRunning()
         {
-            try
+            WorkerProgressSnapshot snapshot = ReadLatestWorkerProgressSnapshot();
+            if (snapshot == null || IsTerminalScanPhase(snapshot.Phase) || !IsLatestManualScanRunning(snapshot.ScanId))
             {
-                using EventWaitHandle scanCompletedEvent = EventWaitHandle.OpenExisting(MonitorScanCompletedEvent);
-                return scanCompletedEvent.WaitOne(0);
+                return;
             }
-            catch (WaitHandleCannotBeOpenedException)
+
+            _manualScanId = snapshot.ScanId;
+            _manualScanStartedAt = snapshot.StartedAt == default ? DateTimeOffset.UtcNow : snapshot.StartedAt;
+            ViewModel.IsManualScanProgressVisible = true;
+            ViewModel.IsManualScanRunning = true;
+            ApplyWorkerProgressSnapshot(snapshot);
+            _manualScanProgressTimer.Start();
+        }
+
+        private WorkerProgressSnapshot ReadWorkerProgressSnapshot(string manualScanId)
+        {
+            WorkerProgressSnapshot snapshot = ReadLatestWorkerProgressSnapshot();
+            if (snapshot == null || !string.Equals(snapshot.ScanId, manualScanId, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return snapshot;
+        }
+
+        private static bool IsLatestManualScanRunning(string scanId)
+        {
+            if (string.IsNullOrWhiteSpace(scanId))
             {
                 return false;
             }
-            catch (UnauthorizedAccessException)
+
+            try
+            {
+                if (!MonitorCore.MonitorStatusStore.TryGetLatestRun(ResolveStatusDatabasePath(), out MonitorCore.MonitorStatusRun latestRun) || latestRun == null)
+                {
+                    return false;
+                }
+
+                return latestRun.Trigger == MonitorCore.MonitorScanTrigger.Manual &&
+                       latestRun.Status == MonitorCore.MonitorScanStatus.Running &&
+                       string.Equals(latestRun.ScanId, scanId, StringComparison.Ordinal);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
             {
                 return false;
             }
         }
 
-        private WorkerProgressSnapshot ReadWorkerProgressSnapshot(string manualScanId)
+        private static bool IsTerminalScanPhase(string phase)
+        {
+            return string.Equals(phase, "completed", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(phase, "failed", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static WorkerProgressSnapshot ReadLatestWorkerProgressSnapshot()
         {
             string progressPath = ResolveProgressPath();
 
@@ -354,13 +395,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
             try
             {
-                WorkerProgressSnapshot snapshot = JsonSerializer.Deserialize<WorkerProgressSnapshot>(File.ReadAllText(progressPath), WorkerProgressSnapshot.JsonOptions);
-                if (snapshot == null || !string.Equals(snapshot.ScanId, manualScanId, StringComparison.Ordinal))
-                {
-                    return null;
-                }
-
-                return snapshot;
+                return JsonSerializer.Deserialize<WorkerProgressSnapshot>(File.ReadAllText(progressPath), WorkerProgressSnapshot.JsonOptions);
             }
             catch (IOException)
             {
@@ -422,12 +457,12 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         {
             string phase = snapshot.Phase switch
             {
-                "hashing" => "Hashing",
-                "categorizing" => "Categorizing",
-                "writing" => "Writing",
-                "completed" => "Complete",
-                "failed" => "Scan failed",
-                _ => "Scanning",
+                "hashing" => GetResourceString("Monitor_ManualScanPhaseHashing", "Hashing"),
+                "categorizing" => GetResourceString("Monitor_ManualScanPhaseCategorizing", "Categorizing"),
+                "writing" => GetResourceString("Monitor_ManualScanPhaseWriting", "Writing"),
+                "completed" => GetResourceString("Monitor_ManualScanPhaseComplete", "Complete"),
+                "failed" => GetResourceString("Monitor_ManualScanFailed", "Scan failed"),
+                _ => GetResourceString("Monitor_ManualScanPhaseScanning", "Scanning"),
             };
 
             if (string.Equals(snapshot.Phase, "failed", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(snapshot.Message))
@@ -435,14 +470,31 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 return snapshot.Message;
             }
 
+            if (string.Equals(snapshot.Phase, "completed", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(snapshot.Message))
+            {
+                return snapshot.Message;
+            }
+
             if (string.Equals(snapshot.Phase, "completed", StringComparison.OrdinalIgnoreCase) && snapshot.RecordCount.HasValue)
             {
-                return $"{phase}: {snapshot.RecordCount.Value} files";
+                return FormatResourceString("Monitor_ManualScanCompletedFiles", "{0}: {1} files", phase, snapshot.RecordCount.Value);
             }
 
             return snapshot.FilesTotal > 0
-                ? $"{phase}: {snapshot.FilesProcessed}/{snapshot.FilesTotal}"
+                ? FormatResourceString("Monitor_ManualScanProgressFiles", "{0}: {1}/{2}", phase, snapshot.FilesProcessed, snapshot.FilesTotal)
                 : phase;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1863:Cache a CompositeFormat for repeated use", Justification = "The format string is loaded from localizable resources.")]
+        private static string FormatResourceString(string resourceKey, string fallback, params object[] args)
+        {
+            return string.Format(CultureInfo.CurrentCulture, GetResourceString(resourceKey, fallback), args);
+        }
+
+        private static string GetResourceString(string resourceKey, string fallback)
+        {
+            string value = ResourceLoaderInstance.ResourceLoader.GetString(resourceKey);
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
         }
 
         private sealed class WorkerProgressSnapshot

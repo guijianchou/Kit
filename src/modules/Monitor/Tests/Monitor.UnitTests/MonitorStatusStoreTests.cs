@@ -93,6 +93,40 @@ public sealed class MonitorStatusStoreTests
         Assert.AreEqual(7, summary.Days.Count);
     }
 
+    [TestMethod]
+    public void TryGetLatestRunReturnsMostRecentRunIdentityTriggerAndStatus()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string databasePath = Path.Combine(tempDirectory.Path, "monitor-status.db");
+        DateTimeOffset now = new(2026, 6, 17, 12, 0, 0, TimeSpan.Zero);
+
+        long oldRun = MonitorStatusStore.BeginRun(databasePath, "old-background", MonitorScanTrigger.Background, now.AddMinutes(-10));
+        MonitorStatusStore.CompleteRun(databasePath, oldRun, MonitorScanStatus.Success, now.AddMinutes(-9), 10, 0, null);
+        _ = MonitorStatusStore.BeginRun(databasePath, "manual-running", MonitorScanTrigger.Manual, now);
+
+        bool exists = MonitorStatusStore.TryGetLatestRun(databasePath, out MonitorStatusRun? latestRun);
+
+        Assert.IsTrue(exists);
+        Assert.IsNotNull(latestRun);
+        Assert.AreEqual("manual-running", latestRun.ScanId);
+        Assert.AreEqual(MonitorScanTrigger.Manual, latestRun.Trigger);
+        Assert.AreEqual(MonitorScanStatus.Running, latestRun.Status);
+        Assert.AreEqual(now, latestRun.StartedAt);
+    }
+
+    [TestMethod]
+    public void TryGetLatestRunDoesNotCreateMissingDatabase()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string databasePath = Path.Combine(tempDirectory.Path, "monitor-status.db");
+
+        bool exists = MonitorStatusStore.TryGetLatestRun(databasePath, out MonitorStatusRun? latestRun);
+
+        Assert.IsFalse(exists);
+        Assert.IsNull(latestRun);
+        Assert.IsFalse(File.Exists(databasePath));
+    }
+
     private sealed class TemporaryDirectory : IDisposable
     {
         public TemporaryDirectory()

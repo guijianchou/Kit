@@ -116,6 +116,40 @@ public static class MonitorStatusStore
         return true;
     }
 
+    public static bool TryGetLatestRun(string databasePath, out MonitorStatusRun? latestRun)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+
+        if (!File.Exists(databasePath))
+        {
+            latestRun = null;
+            return false;
+        }
+
+        using SqliteConnection connection = OpenConnection(databasePath);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT scan_id, trigger, status, started_at
+            FROM scan_runs
+            ORDER BY started_at DESC, id DESC
+            LIMIT 1;
+            """;
+
+        using SqliteDataReader reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            latestRun = null;
+            return false;
+        }
+
+        latestRun = new MonitorStatusRun(
+            reader.GetString(0),
+            ParseTrigger(reader.GetString(1)),
+            ParseStatus(reader.GetString(2)),
+            DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal));
+        return true;
+    }
+
     private static MonitorStatusSummary GetSummary(SqliteConnection connection, MonitorStatusRange range, DateTimeOffset now)
     {
         IReadOnlyList<RunRow> rows = ReadRows(connection);
@@ -289,6 +323,16 @@ public static class MonitorStatusStore
             "warning" => MonitorScanStatus.Warning,
             "failed" => MonitorScanStatus.Failed,
             _ => MonitorScanStatus.Failed,
+        };
+    }
+
+    private static MonitorScanTrigger ParseTrigger(string value)
+    {
+        return value switch
+        {
+            "manual" => MonitorScanTrigger.Manual,
+            "background" => MonitorScanTrigger.Background,
+            _ => MonitorScanTrigger.Background,
         };
     }
 

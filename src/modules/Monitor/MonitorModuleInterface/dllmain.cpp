@@ -163,6 +163,11 @@ private:
             return false;
         }
 
+        if (track_process)
+        {
+            reset_background_exit_event();
+        }
+
         std::wstring args = L"--pid " + std::to_wstring(GetCurrentProcessId());
         if (!extra_args.empty())
         {
@@ -224,22 +229,75 @@ private:
 
     void signal_exit_event()
     {
-        HANDLE exit_event = CreateDefaultEvent(CommonSharedConstants::MONITOR_EXIT_EVENT);
+        signal_event(create_monitor_exit_event(), L"Monitor exit");
+    }
+
+    void signal_background_exit_event()
+    {
+        signal_event(create_monitor_background_exit_event(), L"Monitor background exit");
+    }
+
+    void signal_event(HANDLE exit_event, const wchar_t* event_description)
+    {
         if (exit_event == nullptr)
         {
-            Logger::warn(L"Failed to create Monitor exit event. {}", get_last_error_or_default(GetLastError()));
+            Logger::warn(L"Failed to create {} event. {}", event_description, get_last_error_or_default(GetLastError()));
             return;
         }
 
         if (!SetEvent(exit_event))
         {
-            Logger::warn(L"Failed to signal Monitor exit event. {}", get_last_error_or_default(GetLastError()));
+            Logger::warn(L"Failed to signal {} event. {}", event_description, get_last_error_or_default(GetLastError()));
         }
 
         CloseHandle(exit_event);
     }
 
-    void stop_background_worker()
+    HANDLE create_monitor_exit_event()
+    {
+        SECURITY_ATTRIBUTES sa;
+        sa.nLength = sizeof(sa);
+        sa.bInheritHandle = false;
+        sa.lpSecurityDescriptor = NULL;
+        return CreateEventW(&sa, TRUE, FALSE, CommonSharedConstants::MONITOR_EXIT_EVENT);
+    }
+
+    HANDLE create_monitor_background_exit_event()
+    {
+        SECURITY_ATTRIBUTES sa;
+        sa.nLength = sizeof(sa);
+        sa.bInheritHandle = false;
+        sa.lpSecurityDescriptor = NULL;
+        return CreateEventW(&sa, TRUE, FALSE, CommonSharedConstants::MONITOR_BACKGROUND_EXIT_EVENT);
+    }
+
+    void reset_exit_event()
+    {
+        reset_event(create_monitor_exit_event(), L"Monitor exit");
+    }
+
+    void reset_background_exit_event()
+    {
+        reset_event(create_monitor_background_exit_event(), L"Monitor background exit");
+    }
+
+    void reset_event(HANDLE exit_event, const wchar_t* event_description)
+    {
+        if (exit_event == nullptr)
+        {
+            Logger::warn(L"Failed to create {} event for reset. {}", event_description, get_last_error_or_default(GetLastError()));
+            return;
+        }
+
+        if (!ResetEvent(exit_event))
+        {
+            Logger::warn(L"Failed to reset {} event. {}", event_description, get_last_error_or_default(GetLastError()));
+        }
+
+        CloseHandle(exit_event);
+    }
+
+    void stop_background_worker(const bool request_exit)
     {
         if (m_process == nullptr)
         {
@@ -249,7 +307,10 @@ private:
         if (is_handle_running(m_process))
         {
             Logger::info("Monitor background worker stopping.");
-            signal_exit_event();
+            if (request_exit)
+            {
+                signal_background_exit_event();
+            }
 
             constexpr DWORD timeout_ms = 10000;
             DWORD wait_result = WaitForSingleObject(m_process, timeout_ms);
@@ -264,6 +325,12 @@ private:
         m_process = nullptr;
     }
 
+    void stop_monitor_workers()
+    {
+        signal_exit_event();
+        stop_background_worker(false);
+    }
+
     void sync_background_worker(const bool restart_running_worker)
     {
         if (!m_enabled)
@@ -275,7 +342,7 @@ private:
         {
             if (restart_running_worker)
             {
-                stop_background_worker();
+                stop_background_worker(true);
             }
 
             if (!launch_process(L"", true))
@@ -286,7 +353,7 @@ private:
             return;
         }
 
-        stop_background_worker();
+        stop_background_worker(true);
     }
 
 public:
@@ -375,6 +442,7 @@ public:
     void enable() override
     {
         Trace::EnableMonitor(true);
+        reset_exit_event();
         m_enabled = true;
         load_run_in_background_setting();
         sync_background_worker(false);
@@ -387,7 +455,7 @@ public:
             Logger::info("Monitor module disabling.");
         }
 
-        stop_background_worker();
+        stop_monitor_workers();
         Trace::EnableMonitor(false);
         m_enabled = false;
     }

@@ -51,6 +51,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     _isEnabled = value;
                     RefreshEnabledState();
                     NotifyPropertyChanged();
+                    OnPropertyChanged(nameof(CanStartManualScan));
                 }
             }
         }
@@ -303,6 +304,22 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
         }
 
+        public bool IsManualScanRunning
+        {
+            get => _isManualScanRunning;
+            set
+            {
+                if (_isManualScanRunning != value)
+                {
+                    _isManualScanRunning = value;
+                    NotifyPropertyChanged();
+                    OnPropertyChanged(nameof(CanStartManualScan));
+                }
+            }
+        }
+
+        public bool CanStartManualScan => IsEnabled && !IsManualScanRunning;
+
         public bool UseIncrementalHashing
         {
             get => ModuleSettings.Properties.UseIncrementalHashing.Value;
@@ -384,6 +401,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         public void RefreshEnabledState()
         {
             OnPropertyChanged(nameof(IsEnabled));
+            OnPropertyChanged(nameof(CanStartManualScan));
         }
 
         public void RefreshModuleSettings()
@@ -481,6 +499,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private IReadOnlyList<MonitorStatusDayViewModel> _statusDays = Array.Empty<MonitorStatusDayViewModel>();
         private bool _isManualScanProgressVisible;
         private bool _isManualScanProgressIndeterminate;
+        private bool _isManualScanRunning;
         private double _manualScanProgressValue = 1;
         private string _manualScanProgressDetail = string.Empty;
     }

@@ -198,23 +198,37 @@ namespace ViewModelTests
             StringAssert.Contains(pageCode, "ScanNow_Click");
             StringAssert.Contains(pageCode, "StartManualScanProgress");
             StringAssert.Contains(pageCode, "scan-progress.json");
-            StringAssert.Contains(pageCode, "KitMonitorScanCompletedEvent");
             StringAssert.Contains(pageCode, "ReadWorkerProgressSnapshot");
+            StringAssert.Contains(pageCode, "ReadLatestWorkerProgressSnapshot");
+            StringAssert.Contains(pageCode, "RestoreManualScanProgressIfRunning");
+            StringAssert.Contains(pageCode, "MonitorStatusStore.TryGetLatestRun");
+            StringAssert.Contains(pageCode, "MonitorScanTrigger.Manual");
+            StringAssert.Contains(pageCode, "MonitorScanStatus.Running");
             StringAssert.Contains(pageCode, "\"scanNow\"");
             StringAssert.Contains(pageCode, "_manualScanId");
             StringAssert.Contains(pageCode, "CreateManualScanId");
             StringAssert.Contains(pageCode, "snapshot.ScanId");
             StringAssert.Contains(pageCode, "manualScanId");
             StringAssert.Contains(pageCode, "CompleteManualScanProgress");
-            StringAssert.Contains(pageCode, "completionSignaled && progressSnapshot == null");
             StringAssert.Contains(pageCode, "ManualScanUiTimeout");
             StringAssert.Contains(pageCode, "FailManualScanProgress");
             StringAssert.Contains(pageCode, "manualScanTimedOut");
             StringAssert.Contains(pageCode, "\"failed\"");
-            StringAssert.Contains(pageCode, "Scan timed out");
-            StringAssert.Contains(pageCode, "Scan failed");
+            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanStarting\"");
+            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanWaitingForProgress\"");
+            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanTimedOut\"");
+            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanFailed\"");
+            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanPhaseHashing\"");
+            StringAssert.Contains(pageCode, "FinishManualScanProgress");
+            StringAssert.Contains(pageCode, "ViewModel.IsManualScanRunning = false;");
+            StringAssert.Contains(pageCode, "ViewModel.IsManualScanRunning = true;");
+            StringAssert.Contains(pageXaml, "IsEnabled=\"{x:Bind ViewModel.CanStartManualScan, Mode=OneWay}\"");
             Assert.IsFalse(pageCode.Contains("ManualScanProgressValue + 1", StringComparison.Ordinal), "Monitor page should use worker progress instead of timer-only fake progress.");
-            Assert.IsFalse(pageCode.Contains("manualScanCompleted || (completionSignaled && progressSnapshot != null", StringComparison.Ordinal), "Monitor page should complete when the worker event is signaled even if the progress file cannot be read.");
+            Assert.IsFalse(pageCode.Contains("MonitorScanCompletedEvent", StringComparison.Ordinal), "Monitor page should rely on scan-id progress and status, not the global completion event.");
+            Assert.IsFalse(pageCode.Contains("IsScanCompletedSignaled", StringComparison.Ordinal), "Monitor page should not consume the worker completion event.");
+            Assert.IsFalse(pageCode.Contains("completionSignaled", StringComparison.Ordinal), "Monitor page should not mix global completion events with per-scan progress.");
+            Assert.IsFalse(pageCode.Contains("completionSignaled && progressSnapshot == null", StringComparison.Ordinal), "Monitor page must not complete a scan from the global completion event without matching scan progress.");
+            Assert.IsFalse(pageCode.Contains("manualScanCompleted || completedWithoutProgressSnapshot", StringComparison.Ordinal), "Monitor page must only complete the current manual scan from its own scan id.");
             Assert.IsFalse(pageCode.Contains("\"organizeDownloads\"", StringComparison.Ordinal));
             StringAssert.Contains(pageCode, "BrowseDownloadsFolder_Click");
             StringAssert.Contains(pageCode, "ShellGetFolder.GetFolderDialog");
@@ -233,11 +247,33 @@ namespace ViewModelTests
             StringAssert.Contains(viewModel, "ManualScanProgressValue");
             StringAssert.Contains(viewModel, "ManualScanProgressText");
             StringAssert.Contains(viewModel, "ManualScanProgressDetail");
+            StringAssert.Contains(viewModel, "IsManualScanRunning");
+            StringAssert.Contains(viewModel, "CanStartManualScan");
 
             StringAssert.Contains(resources, "Monitor_ScanNowSettingsCard.Header");
             StringAssert.Contains(resources, "Monitor_RunInBackgroundSettingsCard.Header");
             StringAssert.Contains(resources, "Monitor_ScanNowButton.Content");
             StringAssert.Contains(resources, "Monitor_SelectDownloadsFolderButton.Content");
+            StringAssert.Contains(resources, "Monitor_ManualScanStarting");
+            StringAssert.Contains(resources, "Monitor_ManualScanWaitingForProgress");
+            StringAssert.Contains(resources, "Monitor_ManualScanTimedOut");
+            StringAssert.Contains(resources, "Monitor_ManualScanFailed");
+            StringAssert.Contains(resources, "Monitor_ManualScanPhaseHashing");
+            StringAssert.Contains(resources, "Monitor_ManualScanPhaseCategorizing");
+            StringAssert.Contains(resources, "Monitor_ManualScanPhaseWriting");
+            StringAssert.Contains(resources, "Monitor_ManualScanPhaseComplete");
+            StringAssert.Contains(resources, "Monitor_ManualScanPhaseScanning");
+            StringAssert.Contains(resources, "Monitor_ManualScanCompletedFiles");
+            StringAssert.Contains(resources, "Monitor_ManualScanProgressFiles");
+        }
+
+        [TestMethod]
+        public void MonitorManualScanProgressShouldSurfaceCompletedWarnings()
+        {
+            var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml.cs"));
+
+            StringAssert.Contains(pageCode, "string.Equals(snapshot.Phase, \"completed\", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(snapshot.Message)");
+            StringAssert.Contains(pageCode, "return snapshot.Message;");
         }
 
         [TestMethod]

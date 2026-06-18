@@ -32,17 +32,28 @@ public sealed class MonitorWorkerProjectTests
         string kitRoot = FindKitRoot();
         string programPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "Monitor", "Program.cs");
         string commandLinePath = Path.Combine(kitRoot, "src", "modules", "Monitor", "Monitor", "MonitorCommandLine.cs");
+        string moduleInterfacePath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorModuleInterface", "dllmain.cpp");
+        string sharedConstantsPath = Path.Combine(kitRoot, "src", "common", "interop", "shared_constants.h");
 
         string programText = File.ReadAllText(programPath);
         string commandLineText = File.ReadAllText(commandLinePath);
+        string moduleInterfaceText = File.ReadAllText(moduleInterfacePath);
+        string sharedConstantsText = File.ReadAllText(sharedConstantsPath);
 
         StringAssert.Contains(commandLineText, "--pid");
         StringAssert.Contains(commandLineText, "ParentProcessId");
         StringAssert.Contains(programText, "MonitorExitEvent");
         StringAssert.Contains(programText, "KitMonitorExitEvent");
+        StringAssert.Contains(programText, "MonitorBackgroundExitEvent");
+        StringAssert.Contains(sharedConstantsText, "MONITOR_BACKGROUND_EXIT_EVENT");
         Assert.IsFalse(programText.Contains("PowerToysMonitorExitEvent", StringComparison.Ordinal));
         StringAssert.Contains(programText, "EventWaitHandle");
-        StringAssert.Contains(programText, "WaitOne");
+        StringAssert.Contains(programText, "EventResetMode.ManualReset");
+        StringAssert.Contains(programText, "WaitHandle.WaitAny");
+        StringAssert.Contains(moduleInterfaceText, "create_monitor_exit_event");
+        StringAssert.Contains(moduleInterfaceText, "create_monitor_background_exit_event");
+        StringAssert.Contains(moduleInterfaceText, "CreateEventW(&sa, TRUE, FALSE, CommonSharedConstants::MONITOR_EXIT_EVENT)");
+        StringAssert.Contains(moduleInterfaceText, "CreateEventW(&sa, TRUE, FALSE, CommonSharedConstants::MONITOR_BACKGROUND_EXIT_EVENT)");
     }
 
     [TestMethod]
@@ -107,9 +118,15 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(programText, "if (signalScanCompleted)");
         StringAssert.Contains(programText, "OneShotScanTimeout");
         StringAssert.Contains(programText, "CancellationTokenSource");
+        StringAssert.Contains(programText, "StartLifetimeCancellation");
+        StringAssert.Contains(programText, "using EventWaitHandle exitEvent = new(false, EventResetMode.ManualReset, MonitorExitEvent);");
+        StringAssert.Contains(programText, "using LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(commandLine.ParentProcessId, exitEvent);");
+        StringAssert.Contains(programText, "CancellationTokenSource.CreateLinkedTokenSource");
         StringAssert.Contains(programText, "ReportOneShotScanFailed");
         StringAssert.Contains(programText, "MonitorScanProgressPhase.Failed");
         StringAssert.Contains(programText, "catch (OperationCanceledException");
+        Assert.IsFalse(programText.Contains("MonitorBackgroundExitEvent);\r\n                using LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(commandLine.ParentProcessId, exitEvent, backgroundExitEvent);", StringComparison.Ordinal), "Manual one-shot scans must not listen to background-only restart events.");
+        Assert.IsFalse(programText.Contains("RunScanCycle(downloadsPath, csvPath, settings, organize, cleanInstallers, scanId, MonitorScanTrigger.Manual, statusDatabasePath, MonitorScanStatus.Failed, signalScanCompleted: true, oneShotCancellation.Token)", StringComparison.Ordinal), "Manual one-shot scans must combine timeout and runner lifetime cancellation.");
         Assert.IsFalse(programText.Contains("signalScanCompleted: true, CancellationToken.None", StringComparison.Ordinal), "Manual one-shot scans must use a finite cancellation token instead of waiting forever on the shared scan lock.");
     }
 
@@ -137,6 +154,20 @@ public sealed class MonitorWorkerProjectTests
 
         StringAssert.Contains(moduleInterfaceText, "if (!m_enabled)");
         StringAssert.Contains(moduleInterfaceText, "Monitor custom action ignored because the module is disabled.");
+    }
+
+    [TestMethod]
+    public void ModuleDisableSignalsOneShotWorkersThroughSharedExitEvent()
+    {
+        string kitRoot = FindKitRoot();
+        string moduleInterfacePath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorModuleInterface", "dllmain.cpp");
+
+        string moduleInterfaceText = File.ReadAllText(moduleInterfacePath);
+
+        StringAssert.Contains(moduleInterfaceText, "signal_exit_event();");
+        StringAssert.Contains(moduleInterfaceText, "stop_monitor_workers");
+        StringAssert.Contains(moduleInterfaceText, "stop_monitor_workers();");
+        Assert.IsFalse(moduleInterfaceText.Contains("stop_background_worker();\r\n        Trace::EnableMonitor(false);", StringComparison.Ordinal), "Disable must signal one-shot workers as well as stop the tracked background worker.");
     }
 
     [TestMethod]
@@ -218,7 +249,23 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(moduleInterfaceText, "sync_background_worker(const bool restart_running_worker)");
         StringAssert.Contains(moduleInterfaceText, "sync_background_worker(true)");
         StringAssert.Contains(moduleInterfaceText, "if (restart_running_worker)");
-        StringAssert.Contains(moduleInterfaceText, "stop_background_worker();");
+        StringAssert.Contains(moduleInterfaceText, "stop_background_worker(true);");
+        StringAssert.Contains(moduleInterfaceText, "signal_background_exit_event();");
+        Assert.IsFalse(moduleInterfaceText.Contains("if (request_exit)\r\n            {\r\n                signal_exit_event();", StringComparison.Ordinal), "Background restarts must not signal the all-workers exit event used by manual scans.");
+    }
+
+    [TestMethod]
+    public void ContinuousWorkerListensForBackgroundRestartAndModuleDisableEvents()
+    {
+        string kitRoot = FindKitRoot();
+        string programPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "Monitor", "Program.cs");
+
+        string programText = File.ReadAllText(programPath);
+
+        StringAssert.Contains(programText, "using EventWaitHandle exitEvent = new(false, EventResetMode.ManualReset, MonitorExitEvent);");
+        StringAssert.Contains(programText, "using EventWaitHandle backgroundExitEvent = new(false, EventResetMode.ManualReset, MonitorBackgroundExitEvent);");
+        StringAssert.Contains(programText, "StartLifetimeCancellation(commandLine.ParentProcessId, exitEvent, backgroundExitEvent)");
+        StringAssert.Contains(programText, "WaitForNextCycleOrExit(commandLine.ParentProcessId, interval, exitEvent, backgroundExitEvent)");
     }
 
     [TestMethod]

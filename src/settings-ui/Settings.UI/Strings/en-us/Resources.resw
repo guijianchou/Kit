@@ -1828,6 +1828,41 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Monitor_ScanNowButton.Content" xml:space="preserve">
     <value>Scan</value>
   </data>
+  <data name="Monitor_ManualScanStarting" xml:space="preserve">
+    <value>Starting scan</value>
+  </data>
+  <data name="Monitor_ManualScanWaitingForProgress" xml:space="preserve">
+    <value>Waiting for worker progress</value>
+  </data>
+  <data name="Monitor_ManualScanTimedOut" xml:space="preserve">
+    <value>Scan timed out</value>
+  </data>
+  <data name="Monitor_ManualScanFailed" xml:space="preserve">
+    <value>Scan failed</value>
+  </data>
+  <data name="Monitor_ManualScanPhaseHashing" xml:space="preserve">
+    <value>Hashing</value>
+  </data>
+  <data name="Monitor_ManualScanPhaseCategorizing" xml:space="preserve">
+    <value>Categorizing</value>
+  </data>
+  <data name="Monitor_ManualScanPhaseWriting" xml:space="preserve">
+    <value>Writing</value>
+  </data>
+  <data name="Monitor_ManualScanPhaseComplete" xml:space="preserve">
+    <value>Complete</value>
+  </data>
+  <data name="Monitor_ManualScanPhaseScanning" xml:space="preserve">
+    <value>Scanning</value>
+  </data>
+  <data name="Monitor_ManualScanCompletedFiles" xml:space="preserve">
+    <value>{0}: {1} files</value>
+    <comment>{0} is the scan phase. {1} is the completed file count.</comment>
+  </data>
+  <data name="Monitor_ManualScanProgressFiles" xml:space="preserve">
+    <value>{0}: {1}/{2}</value>
+    <comment>{0} is the scan phase. {1} is files processed. {2} is total files.</comment>
+  </data>
   <data name="Monitor_DownloadsPathSettingsCard.Header" xml:space="preserve">
     <value>Downloads folder</value>
   </data>

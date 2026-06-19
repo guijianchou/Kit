@@ -6,19 +6,16 @@ using Microsoft.UI.Xaml.Media;
 
 namespace Microsoft.PowerToys.Settings.UI.ViewModels
 {
-    public sealed class MonitorStatusDayViewModel
+    public sealed class MonitorStatusLegendItemViewModel
     {
-        public MonitorStatusDayViewModel(Brush brush, string toolTip)
+        public MonitorStatusLegendItemViewModel(Brush brush, string label)
         {
             Brush = brush;
-            ToolTip = toolTip;
-            AccessibilityName = toolTip;
+            Label = label;
         }
 
         public Brush Brush { get; }
 
-        public string ToolTip { get; }
-
-        public string AccessibilityName { get; }
+        public string Label { get; }
     }
 }

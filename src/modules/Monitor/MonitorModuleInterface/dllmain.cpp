@@ -11,6 +11,8 @@
 #include "resource.h"
 #include "trace.h"
 
+#include <wil/resource.h>
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -149,22 +151,21 @@ class MonitorModuleInterface : public PowertoyModuleIface
 private:
     bool m_enabled = false;
     bool m_run_in_background = false;
-    HANDLE m_process = nullptr;
-    std::vector<HANDLE> m_one_shot_processes;
+    wil::unique_handle m_process;
+    std::vector<wil::unique_handle> m_one_shot_processes;
 
     bool launch_process(const std::wstring& extra_args, const MonitorProcessKind process_kind)
     {
         const bool track_background = process_kind == MonitorProcessKind::Background;
-        if (track_background && is_handle_running(m_process))
+        if (track_background && is_handle_running(m_process.get()))
         {
             Logger::debug(L"Monitor worker is already running.");
             return true;
         }
 
-        if (track_background && m_process != nullptr)
+        if (track_background && m_process.get() != nullptr)
         {
-            CloseHandle(m_process);
-            m_process = nullptr;
+            m_process.reset();
         }
         else if (process_kind == MonitorProcessKind::OneShot)
         {
@@ -211,17 +212,19 @@ private:
             return false;
         }
 
+        wil::unique_handle process_handle{ process_info.hProcess };
+        wil::unique_handle thread_handle{ process_info.hThread };
+
         Logger::info(L"Monitor process launched successfully (PID: {}).", process_info.dwProcessId);
         if (track_background)
         {
-            m_process = process_info.hProcess;
+            m_process = std::move(process_handle);
         }
         else
         {
-            m_one_shot_processes.push_back(process_info.hProcess);
+            m_one_shot_processes.push_back(std::move(process_handle));
         }
 
-        CloseHandle(process_info.hThread);
         return true;
     }
 
@@ -313,12 +316,12 @@ private:
 
     void stop_background_worker(const bool request_exit)
     {
-        if (m_process == nullptr)
+        if (m_process.get() == nullptr)
         {
             return;
         }
 
-        if (is_handle_running(m_process))
+        if (is_handle_running(m_process.get()))
         {
             Logger::info("Monitor background worker stopping.");
             if (request_exit)
@@ -326,31 +329,26 @@ private:
                 signal_background_exit_event();
             }
 
-            constexpr DWORD timeout_ms = 10000;
-            DWORD wait_result = WaitForSingleObject(m_process, timeout_ms);
+            constexpr DWORD background_stop_timeout_ms = 10000;
+            DWORD wait_result = WaitForSingleObject(m_process.get(), background_stop_timeout_ms);
             if (wait_result == WAIT_TIMEOUT)
             {
                 Logger::warn("Monitor worker did not exit in time. Forcing termination.");
-                TerminateProcess(m_process, 0);
+                TerminateProcess(m_process.get(), 0);
             }
         }
 
-        CloseHandle(m_process);
-        m_process = nullptr;
+        m_process.reset();
     }
 
     void prune_one_shot_processes()
     {
-        std::vector<HANDLE> running_processes;
-        for (HANDLE process : m_one_shot_processes)
+        std::vector<wil::unique_handle> running_processes;
+        for (wil::unique_handle& process : m_one_shot_processes)
         {
-            if (is_handle_running(process))
+            if (is_handle_running(process.get()))
             {
-                running_processes.push_back(process);
-            }
-            else if (process != nullptr)
-            {
-                CloseHandle(process);
+                running_processes.push_back(std::move(process));
             }
         }
 
@@ -366,25 +364,28 @@ private:
         }
 
         Logger::info("Monitor one-shot workers stopping.");
-        constexpr DWORD timeout_ms = 10000;
-        for (HANDLE process : m_one_shot_processes)
+        constexpr DWORD one_shot_stop_timeout_ms = 10000;
+        const ULONGLONG one_shot_stop_deadline = GetTickCount64() + one_shot_stop_timeout_ms;
+        for (wil::unique_handle& process : m_one_shot_processes)
         {
-            if (process == nullptr)
+            if (process.get() == nullptr)
             {
                 continue;
             }
 
-            if (is_handle_running(process))
+            if (is_handle_running(process.get()))
             {
-                DWORD wait_result = WaitForSingleObject(process, timeout_ms);
+                const ULONGLONG now = GetTickCount64();
+                const DWORD wait_timeout_ms = now >= one_shot_stop_deadline ? 0 : static_cast<DWORD>(one_shot_stop_deadline - now);
+                DWORD wait_result = WaitForSingleObject(process.get(), wait_timeout_ms);
                 if (wait_result == WAIT_TIMEOUT)
                 {
                     Logger::warn("Monitor one-shot worker did not exit in time. Forcing termination.");
-                    TerminateProcess(process, 0);
+                    TerminateProcess(process.get(), 0);
                 }
             }
 
-            CloseHandle(process);
+            process.reset();
         }
 
         m_one_shot_processes.clear();

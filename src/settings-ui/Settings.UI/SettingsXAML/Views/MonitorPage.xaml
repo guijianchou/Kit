@@ -41,6 +41,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <Grid ColumnSpacing="12">
@@ -89,72 +90,38 @@
                                 </StackPanel>
                             </Grid>
 
-                            <Grid
+                            <ItemsControl
                                 Grid.Row="1"
-                                ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Border
-                                    Padding="10,8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="4">
-                                    <StackPanel>
-                                        <TextBlock
-                                            x:Uid="Monitor_StatusRunsLabel"
-                                            FontSize="12"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock
-                                            FontSize="18"
-                                            FontWeight="SemiBold"
-                                            Text="{x:Bind ViewModel.RunCountText, Mode=OneWay}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border
-                                    Grid.Column="1"
-                                    Padding="10,8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="4">
-                                    <StackPanel>
-                                        <TextBlock
-                                            x:Uid="Monitor_StatusSuccessLabel"
-                                            FontSize="12"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock
-                                            FontSize="18"
-                                            FontWeight="SemiBold"
-                                            Text="{x:Bind ViewModel.SuccessRateText, Mode=OneWay}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border
-                                    Grid.Column="2"
-                                    Padding="10,8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="4">
-                                    <StackPanel>
-                                        <TextBlock
-                                            x:Uid="Monitor_StatusIssuesLabel"
-                                            FontSize="12"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock
-                                            FontSize="18"
-                                            FontWeight="SemiBold"
-                                            Text="{x:Bind ViewModel.IssueCountText, Mode=OneWay}" />
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
+                                ItemsSource="{x:Bind ViewModel.StatusMetrics, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <ItemsWrapGrid
+                                            ItemHeight="52"
+                                            ItemWidth="132"
+                                            Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:MonitorStatusMetricViewModel">
+                                        <StackPanel Margin="0,0,12,0">
+                                            <TextBlock
+                                                FontSize="12"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Text="{Binding Label}"
+                                                TextTrimming="CharacterEllipsis" />
+                                            <TextBlock
+                                                FontSize="18"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding Value}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
                             <ItemsControl
                                 Grid.Row="2"
                                 AutomationProperties.AutomationId="MonitorStatusActivity"
+                                AutomationProperties.Name="{x:Bind ViewModel.StatusChartAccessibilityName, Mode=OneWay}"
                                 ItemsSource="{x:Bind ViewModel.StatusDays, Mode=OneWay}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -167,9 +134,40 @@
                                             Width="12"
                                             Height="12"
                                             Margin="1"
+                                            AutomationProperties.Name="{Binding AccessibilityName}"
                                             Background="{Binding Brush}"
                                             CornerRadius="2"
                                             ToolTipService.ToolTip="{Binding ToolTip}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ItemsControl
+                                Grid.Row="3"
+                                AutomationProperties.AutomationId="MonitorStatusLegend"
+                                ItemsSource="{x:Bind ViewModel.StatusLegendItems, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VariableSizedWrapGrid Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:MonitorStatusLegendItemViewModel">
+                                        <StackPanel
+                                            Margin="0,0,16,0"
+                                            Orientation="Horizontal"
+                                            Spacing="6">
+                                            <Border
+                                                Width="10"
+                                                Height="10"
+                                                VerticalAlignment="Center"
+                                                Background="{Binding Brush}"
+                                                CornerRadius="2" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Text="{Binding Label}" />
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -317,7 +315,7 @@
         </controls:SettingsPageControl.ModuleContent>
 
         <controls:SettingsPageControl.PrimaryLinks>
-            <controls:PageLink x:Uid="LearnMore_Monitor" Link="https://github.com/microsoft/PowerToys" />
+            <controls:PageLink x:Uid="LearnMore_Monitor" Link="https://github.com/guijianchou/Kit/tree/main/src/modules/Monitor" />
         </controls:SettingsPageControl.PrimaryLinks>
     </controls:SettingsPageControl>
 </local:NavigablePage>

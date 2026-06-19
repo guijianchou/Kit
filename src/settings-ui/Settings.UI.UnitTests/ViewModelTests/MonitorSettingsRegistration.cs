@@ -166,18 +166,33 @@ namespace ViewModelTests
             var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml"));
             var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml.cs"));
             var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorViewModel.cs"));
+            var statusPresentationService = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "MonitorStatusPresentationService.cs"));
+            var statusMetricViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorStatusMetricViewModel.cs"));
+            var statusLegendItemViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorStatusLegendItemViewModel.cs"));
             var intervalOption = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorScanIntervalOption.cs"));
+            var manualScanCoordinator = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "MonitorManualScanCoordinator.cs"));
+            var statusQueryService = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "MonitorStatusQueryService.cs"));
+            var progressSnapshotReader = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "MonitorProgressSnapshotReader.cs"));
+            var storagePaths = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "MonitorSettingsStoragePaths.cs"));
             var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
             var normalizedPageXaml = pageXaml.Replace("\r\n", "\n", StringComparison.Ordinal);
 
             StringAssert.Contains(pageXaml, "Monitor_ScanNowSettingsCard");
             StringAssert.Contains(pageXaml, "ModuleImageSource=\"ms-appx:///Assets/Settings/Modules/Monitor.png\"");
             StringAssert.Contains(pageXaml, "HeaderIcon=\"{ui:BitmapIcon Source=/Assets/Settings/Icons/Monitor.png}\"");
+            StringAssert.Contains(pageXaml, "Link=\"https://github.com/guijianchou/Kit/tree/main/src/modules/Monitor\"");
+            Assert.IsFalse(pageXaml.Contains("Link=\"https://github.com/microsoft/PowerToys\"", StringComparison.Ordinal));
             StringAssert.Contains(pageXaml, "Monitor_RunInBackgroundSettingsCard");
             StringAssert.Contains(pageXaml, "Monitor_ScanNowButton");
             StringAssert.Contains(pageXaml, "Monitor_ManualScanProgressBar");
             StringAssert.Contains(pageXaml, "ManualScanProgressText_Monitor");
             StringAssert.Contains(pageXaml, "ManualScanProgressDetail_Monitor");
+            StringAssert.Contains(pageXaml, "ItemsSource=\"{x:Bind ViewModel.StatusMetrics, Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "ItemsSource=\"{x:Bind ViewModel.StatusLegendItems, Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "AutomationProperties.Name=\"{x:Bind ViewModel.StatusChartAccessibilityName, Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "AutomationProperties.AutomationId=\"MonitorStatusLegend\"");
+            StringAssert.Contains(pageXaml, "AutomationProperties.Name=\"{Binding AccessibilityName}\"");
+            Assert.IsFalse(pageXaml.Contains("Monitor_StatusRunsLabel", StringComparison.Ordinal), "Status metric labels should be supplied by the presentation service instead of page-local static cards.");
             StringAssert.Contains(normalizedPageXaml, "x:Uid=\"Monitor_ScanNowSettingsCard\"\n                        HeaderIcon=\"{ui:FontIcon Glyph=&#xE8B7;}\"\n                        HorizontalContentAlignment=\"Stretch\"");
             StringAssert.Contains(pageXaml, "<Grid MinWidth=\"{StaticResource SettingActionControlMinWidth}\" ColumnSpacing=\"12\">");
             StringAssert.Contains(normalizedPageXaml, "Grid.Column=\"1\"\n                                x:Uid=\"Monitor_ScanNowButton\"");
@@ -201,36 +216,37 @@ namespace ViewModelTests
             Assert.IsFalse(pageXaml.Contains("AutomationProperties.AutomationId=\"ScanIntervalSeconds_Monitor\"\r\n                            LargeChange=\"600\"", StringComparison.Ordinal));
 
             StringAssert.Contains(pageCode, "ScanNow_Click");
-            StringAssert.Contains(pageCode, "StartManualScanProgress");
-            StringAssert.Contains(pageCode, "scan-progress.json");
-            StringAssert.Contains(pageCode, "ReadWorkerProgressSnapshot");
-            StringAssert.Contains(pageCode, "ReadLatestWorkerProgressSnapshot");
+            StringAssert.Contains(pageCode, "_manualScanCoordinator");
+            StringAssert.Contains(pageCode, "_statusQueryService");
             StringAssert.Contains(pageCode, "RestoreManualScanProgressIfRunning");
-            StringAssert.Contains(pageCode, "MonitorStatusStore.TryGetLatestRun");
-            StringAssert.Contains(pageCode, "MonitorScanTrigger.Manual");
-            StringAssert.Contains(pageCode, "MonitorScanStatus.Running");
+            StringAssert.Contains(storagePaths, "scan-progress.json");
+            StringAssert.Contains(storagePaths, "monitor-status.db");
+            StringAssert.Contains(statusQueryService, "MonitorScanTrigger.Manual");
+            StringAssert.Contains(statusQueryService, "MonitorScanStatus.Running");
+            StringAssert.Contains(statusQueryService, "MonitorStatusStore.TryGetLatestRun");
+            StringAssert.Contains(progressSnapshotReader, "MonitorScanProgressFileReporter.Read");
             StringAssert.Contains(pageCode, "\"scanNow\"");
-            StringAssert.Contains(pageCode, "_manualScanId");
-            StringAssert.Contains(pageCode, "CreateManualScanId");
-            StringAssert.Contains(pageCode, "snapshot.ScanId");
             StringAssert.Contains(pageCode, "manualScanId");
-            StringAssert.Contains(pageCode, "CompleteManualScanProgress");
-            StringAssert.Contains(pageCode, "ManualScanUiTimeout");
-            StringAssert.Contains(pageCode, "RefreshStaleRunningScansForUi");
-            StringAssert.Contains(pageCode, "IsManualScanSnapshotExpired");
-            StringAssert.Contains(pageCode, "DateTimeOffset.UtcNow - snapshot.StartedAt >= ManualScanUiTimeout");
-            StringAssert.Contains(pageCode, "FailManualScanProgress");
-            StringAssert.Contains(pageCode, "manualScanTimedOut");
-            StringAssert.Contains(pageCode, "\"failed\"");
-            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanStarting\"");
-            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanWaitingForProgress\"");
-            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanTimedOut\"");
-            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanFailed\"");
-            StringAssert.Contains(pageCode, "GetResourceString(\"Monitor_ManualScanPhaseHashing\"");
-            StringAssert.Contains(pageCode, "FinishManualScanProgress");
+            StringAssert.Contains(manualScanCoordinator, "CreateManualScanId");
+            StringAssert.Contains(manualScanCoordinator, "CompleteManualScanProgress");
+            StringAssert.Contains(manualScanCoordinator, "ManualScanUiTimeout");
+            StringAssert.Contains(manualScanCoordinator, "IsManualScanSnapshotExpired");
+            StringAssert.Contains(manualScanCoordinator, "DateTimeOffset.UtcNow - snapshot.StartedAt >= ManualScanUiTimeout");
+            StringAssert.Contains(manualScanCoordinator, "FailManualScanProgress");
+            StringAssert.Contains(manualScanCoordinator, "manualScanTimedOut");
+            StringAssert.Contains(manualScanCoordinator, "\"failed\"");
+            StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanStarting\"");
+            StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanWaitingForProgress\"");
+            StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanTimedOut\"");
+            StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanFailed\"");
+            StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanPhaseHashing\"");
+            StringAssert.Contains(manualScanCoordinator, "FinishManualScanProgress");
             StringAssert.Contains(pageCode, "ViewModel.IsManualScanRunning = false;");
             StringAssert.Contains(pageCode, "ViewModel.IsManualScanRunning = true;");
             StringAssert.Contains(pageXaml, "IsEnabled=\"{x:Bind ViewModel.CanStartManualScan, Mode=OneWay}\"");
+            Assert.IsFalse(pageCode.Contains("MonitorStatusStore.", StringComparison.Ordinal), "Monitor page should use MonitorStatusQueryService instead of querying the status database directly.");
+            Assert.IsFalse(pageCode.Contains("JsonSerializer.Deserialize", StringComparison.Ordinal), "Monitor page should use MonitorProgressSnapshotReader instead of parsing progress JSON directly.");
+            Assert.IsFalse(pageCode.Contains("WorkerProgressSnapshot", StringComparison.Ordinal), "Monitor page should use MonitorLib progress snapshots through the coordinator.");
             Assert.IsFalse(pageCode.Contains("ManualScanProgressValue + 1", StringComparison.Ordinal), "Monitor page should use worker progress instead of timer-only fake progress.");
             Assert.IsFalse(pageCode.Contains("MonitorScanCompletedEvent", StringComparison.Ordinal), "Monitor page should rely on scan-id progress and status, not the global completion event.");
             Assert.IsFalse(pageCode.Contains("IsScanCompletedSignaled", StringComparison.Ordinal), "Monitor page should not consume the worker completion event.");
@@ -242,8 +258,8 @@ namespace ViewModelTests
             StringAssert.Contains(pageCode, "ShellGetFolder.GetFolderDialog");
 
             var restoreMethodIndex = pageCode.IndexOf("private void RestoreManualScanProgressIfRunning()", StringComparison.Ordinal);
-            var staleRefreshIndex = pageCode.IndexOf("RefreshStaleRunningScansForUi();", restoreMethodIndex, StringComparison.Ordinal);
-            var readProgressIndex = pageCode.IndexOf("WorkerProgressSnapshot snapshot = ReadLatestWorkerProgressSnapshot();", restoreMethodIndex, StringComparison.Ordinal);
+            var staleRefreshIndex = manualScanCoordinator.IndexOf("_statusQueryService.RefreshStaleRunningScans", StringComparison.Ordinal);
+            var readProgressIndex = manualScanCoordinator.IndexOf("_progressSnapshotReader.ReadLatest", StringComparison.Ordinal);
             Assert.IsTrue(staleRefreshIndex >= 0, "Restore should refresh stale running scans before trusting persisted status.");
             Assert.IsTrue(readProgressIndex > staleRefreshIndex, "Restore should refresh stale status before reading the latest progress snapshot.");
 
@@ -263,6 +279,26 @@ namespace ViewModelTests
             StringAssert.Contains(viewModel, "ManualScanProgressDetail");
             StringAssert.Contains(viewModel, "IsManualScanRunning");
             StringAssert.Contains(viewModel, "CanStartManualScan");
+            StringAssert.Contains(viewModel, "MonitorStatusPresentationService");
+            StringAssert.Contains(viewModel, "ApplyStatusPresentation");
+            StringAssert.Contains(viewModel, "StatusMetrics");
+            StringAssert.Contains(viewModel, "StatusLegendItems");
+            StringAssert.Contains(viewModel, "StatusChartAccessibilityName");
+            Assert.IsFalse(viewModel.Contains("RunCountText", StringComparison.Ordinal), "Status metric text should flow through StatusMetrics instead of duplicate bindable properties.");
+            Assert.IsFalse(viewModel.Contains("SuccessRateText", StringComparison.Ordinal), "Status metric text should flow through StatusMetrics instead of duplicate bindable properties.");
+            Assert.IsFalse(viewModel.Contains("IssueCountText", StringComparison.Ordinal), "Status metric text should flow through StatusMetrics instead of duplicate bindable properties.");
+            Assert.IsFalse(viewModel.Contains("private static string FormatStatus(", StringComparison.Ordinal), "Status text formatting should live in MonitorStatusPresentationService.");
+            Assert.IsFalse(viewModel.Contains("private static Brush GetBrush(", StringComparison.Ordinal), "Status color mapping should live in MonitorStatusPresentationService.");
+            StringAssert.Contains(statusPresentationService, "CreateSummaryPresentation");
+            StringAssert.Contains(statusPresentationService, "CreateUnavailablePresentation");
+            StringAssert.Contains(statusPresentationService, "CreateChartAccessibilityName");
+            StringAssert.Contains(statusPresentationService, "GetRunningRunCount");
+            StringAssert.Contains(statusPresentationService, "Monitor_StatusRunsMetric");
+            StringAssert.Contains(statusPresentationService, "Monitor_StatusLegendHealthy");
+            StringAssert.Contains(statusPresentationService, "Monitor_StatusLegendWarningRunning");
+            Assert.IsFalse(statusPresentationService.Contains("string RunCountText", StringComparison.Ordinal), "Presentation record should not duplicate metric values outside the metrics collection.");
+            StringAssert.Contains(statusMetricViewModel, "public sealed class MonitorStatusMetricViewModel");
+            StringAssert.Contains(statusLegendItemViewModel, "public sealed class MonitorStatusLegendItemViewModel");
 
             StringAssert.Contains(resources, "Monitor_ScanNowSettingsCard.Header");
             StringAssert.Contains(resources, "Monitor_RunInBackgroundSettingsCard.Header");
@@ -279,15 +315,21 @@ namespace ViewModelTests
             StringAssert.Contains(resources, "Monitor_ManualScanPhaseScanning");
             StringAssert.Contains(resources, "Monitor_ManualScanCompletedFiles");
             StringAssert.Contains(resources, "Monitor_ManualScanProgressFiles");
+            StringAssert.Contains(resources, "Monitor_StatusRunsMetric");
+            StringAssert.Contains(resources, "Monitor_StatusLegendHealthy");
+            StringAssert.Contains(resources, "Monitor_StatusLegendWarningRunning");
+            StringAssert.Contains(resources, "Monitor_StatusLegendNoData");
+            StringAssert.Contains(resources, "Monitor_StatusChartSummary");
+            StringAssert.Contains(resources, "Monitor_StatusChartUnavailable");
         }
 
         [TestMethod]
         public void MonitorManualScanProgressShouldSurfaceCompletedWarnings()
         {
-            var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml.cs"));
+            var manualScanCoordinator = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "MonitorManualScanCoordinator.cs"));
 
-            StringAssert.Contains(pageCode, "string.Equals(snapshot.Phase, \"completed\", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(snapshot.Message)");
-            StringAssert.Contains(pageCode, "return snapshot.Message;");
+            StringAssert.Contains(manualScanCoordinator, "string.Equals(snapshot.Phase, \"completed\", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(snapshot.Message)");
+            StringAssert.Contains(manualScanCoordinator, "return snapshot.Message;");
         }
 
         [TestMethod]

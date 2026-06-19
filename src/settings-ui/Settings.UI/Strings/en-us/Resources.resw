@@ -1780,6 +1780,36 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Monitor_StatusIssuesLabel.Text" xml:space="preserve">
     <value>Issues</value>
   </data>
+  <data name="Monitor_StatusRunsMetric" xml:space="preserve">
+    <value>Runs</value>
+  </data>
+  <data name="Monitor_StatusSuccessMetric" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="Monitor_StatusIssuesMetric" xml:space="preserve">
+    <value>Issues</value>
+  </data>
+  <data name="Monitor_StatusLegendHealthy" xml:space="preserve">
+    <value>Healthy</value>
+  </data>
+  <data name="Monitor_StatusLegendWarning" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="Monitor_StatusLegendWarningRunning" xml:space="preserve">
+    <value>Warning / running</value>
+  </data>
+  <data name="Monitor_StatusLegendFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Monitor_StatusLegendNoData" xml:space="preserve">
+    <value>No data</value>
+  </data>
+  <data name="Monitor_StatusChartSummary" xml:space="preserve">
+    <value>Activity chart: {0} runs, {1} success, {2} warnings, {3} failed, {4} running</value>
+  </data>
+  <data name="Monitor_StatusChartUnavailable" xml:space="preserve">
+    <value>Activity chart unavailable</value>
+  </data>
   <data name="Monitor_StatusHealthy" xml:space="preserve">
     <value>Healthy</value>
   </data>

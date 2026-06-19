@@ -1801,6 +1801,7 @@ namespace ViewModelTests
             {
                 "Awake.png",
                 "LightSwitch.png",
+                "Monitor.png",
                 "PT.png",
             };
 
@@ -1940,6 +1941,7 @@ namespace ViewModelTests
             {
                 "Awake.png",
                 "LightSwitch.png",
+                "Monitor.png",
                 "PowerToys.png",
             };
 
@@ -2777,6 +2779,8 @@ namespace ViewModelTests
             StringAssert.Contains(xamlIndexBuilderProgram, "\"ShortcutConflictWindow.xaml\"");
             Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"SearchResultsPage\"", StringComparison.Ordinal), "Generated search index should not include the search results page itself.");
             Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"ShortcutConflictWindow\"", StringComparison.Ordinal), "Generated search index should not include non-Views shortcut conflict window entries.");
+            StringAssert.Contains(searchIndex, "\"icon\": \"/Assets/Settings/Icons/Monitor.png\"");
+            Assert.IsFalse(searchIndex.Contains("\"elementUid\": \"Monitor_EnableSettingsCard\",\r\n    \"icon\": \"/Assets/Settings/Icons/PowerToys.png\"", StringComparison.Ordinal), "Monitor search entries should not keep the generic PowerToys icon.");
 
             string[] inactiveSearchIndexFallbacks =
             {
@@ -2895,7 +2899,6 @@ namespace ViewModelTests
             StringAssert.Contains(sharedConstants, "KitRunnerTerminateSettingsEvent");
             StringAssert.Contains(sharedConstants, "KitAwakeExitEvent");
             StringAssert.Contains(sharedConstants, "KitMonitorExitEvent");
-            StringAssert.Contains(sharedConstants, "KitMonitorScanCompletedEvent");
             StringAssert.Contains(sharedConstants, "Kit-LightSwitch-ToggleEvent");
             StringAssert.Contains(lightSwitchInterface, "CommonSharedConstants::LIGHTSWITCH_TOGGLE_EVENT");
             StringAssert.Contains(lightSwitchInterface, "KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
@@ -2913,6 +2916,8 @@ namespace ViewModelTests
             Assert.IsFalse(sharedConstants.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Kit Settings IPC must not share the PowerToys terminate event.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysAwakeExitEvent", StringComparison.Ordinal), "Kit Awake must not share the PowerToys exit event.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysMonitorExitEvent", StringComparison.Ordinal), "Kit Monitor must not share the PowerToys exit event.");
+            Assert.IsFalse(sharedConstants.Contains("MONITOR_SCAN_COMPLETED_EVENT", StringComparison.Ordinal), "Monitor should use scan-progress.json and the status DB instead of a legacy scan completion event constant.");
+            Assert.IsFalse(sharedConstants.Contains("KitMonitorScanCompletedEvent", StringComparison.Ordinal), "Monitor scan completion event should be removed when no Settings consumer remains.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysMonitorScanCompletedEvent", StringComparison.Ordinal), "Kit Monitor scan completion event must not share PowerToys names.");
             Assert.IsFalse(sharedConstants.Contains("PowerToys-LightSwitch-ToggleEvent", StringComparison.Ordinal), "Kit LightSwitch must not share the PowerToys toggle event.");
             Assert.IsFalse(sharedConstants.Contains("PowerDisplay", StringComparison.Ordinal), "Shared runtime events should not expose removed PowerDisplay.");

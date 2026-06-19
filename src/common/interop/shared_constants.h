@@ -21,9 +21,6 @@ namespace CommonSharedConstants
     // Path to the event used by Monitor to restart only the background worker
     const wchar_t MONITOR_BACKGROUND_EXIT_EVENT[] = L"Local\\KitMonitorBackgroundExitEvent-1f418ca1-9e3f-48f4-a37e-e1b747aa41aa";
 
-    // Path to the event used by Monitor to report one-shot scan completion
-    const wchar_t MONITOR_SCAN_COMPLETED_EVENT[] = L"Local\\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
-
     // Path to the event used by LightSwitch
     const wchar_t LIGHTSWITCH_TOGGLE_EVENT[] = L"Local\\Kit-LightSwitch-ToggleEvent-d8dc2f29-8c94-4ca1-8c5f-3e2b1e3c4f5a";
 

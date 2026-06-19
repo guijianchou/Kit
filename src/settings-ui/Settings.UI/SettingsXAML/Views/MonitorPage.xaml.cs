@@ -329,8 +329,9 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         private void RestoreManualScanProgressIfRunning()
         {
+            RefreshStaleRunningScansForUi();
             WorkerProgressSnapshot snapshot = ReadLatestWorkerProgressSnapshot();
-            if (snapshot == null || IsTerminalScanPhase(snapshot.Phase) || !IsLatestManualScanRunning(snapshot.ScanId))
+            if (snapshot == null || IsTerminalScanPhase(snapshot.Phase) || IsManualScanSnapshotExpired(snapshot) || !IsLatestManualScanRunning(snapshot.ScanId))
             {
                 return;
             }
@@ -341,6 +342,17 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             ViewModel.IsManualScanRunning = true;
             ApplyWorkerProgressSnapshot(snapshot);
             _manualScanProgressTimer.Start();
+        }
+
+        private static void RefreshStaleRunningScansForUi()
+        {
+            try
+            {
+                MonitorCore.MonitorStatusStore.RefreshStaleRunningScans(ResolveStatusDatabasePath(), DateTimeOffset.UtcNow);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
+            {
+            }
         }
 
         private WorkerProgressSnapshot ReadWorkerProgressSnapshot(string manualScanId)
@@ -376,6 +388,11 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             {
                 return false;
             }
+        }
+
+        private static bool IsManualScanSnapshotExpired(WorkerProgressSnapshot snapshot)
+        {
+            return snapshot.StartedAt != default && DateTimeOffset.UtcNow - snapshot.StartedAt >= ManualScanUiTimeout;
         }
 
         private static bool IsTerminalScanPhase(string phase)

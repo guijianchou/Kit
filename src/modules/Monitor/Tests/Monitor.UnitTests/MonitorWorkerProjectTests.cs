@@ -113,9 +113,9 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(commandLineText, "ScanId");
         StringAssert.Contains(commandLineText, "--scan-id");
         StringAssert.Contains(programText, "commandLine.ScanId");
-        StringAssert.Contains(programText, "signalScanCompleted: true");
-        StringAssert.Contains(programText, "signalScanCompleted: false");
-        StringAssert.Contains(programText, "if (signalScanCompleted)");
+        Assert.IsFalse(programText.Contains("signalScanCompleted", StringComparison.Ordinal), "Manual scan progress should be driven by scan-progress.json and status DB, not a global completion event flag.");
+        Assert.IsFalse(programText.Contains("SignalScanCompleted", StringComparison.Ordinal), "The worker should not signal the legacy global scan completion event.");
+        Assert.IsFalse(programText.Contains("MonitorScanCompletedEvent", StringComparison.Ordinal), "The legacy Monitor scan completion event should be removed from the worker.");
         StringAssert.Contains(programText, "OneShotScanTimeout");
         StringAssert.Contains(programText, "CancellationTokenSource");
         StringAssert.Contains(programText, "StartLifetimeCancellation");
@@ -167,6 +167,12 @@ public sealed class MonitorWorkerProjectTests
         StringAssert.Contains(moduleInterfaceText, "signal_exit_event();");
         StringAssert.Contains(moduleInterfaceText, "stop_monitor_workers");
         StringAssert.Contains(moduleInterfaceText, "stop_monitor_workers();");
+        StringAssert.Contains(moduleInterfaceText, "m_one_shot_processes");
+        StringAssert.Contains(moduleInterfaceText, "stop_one_shot_workers();");
+        StringAssert.Contains(moduleInterfaceText, "launch_process(args, MonitorProcessKind::OneShot)");
+        StringAssert.Contains(moduleInterfaceText, "launch_process(L\"--scan-once --organize\", MonitorProcessKind::OneShot)");
+        StringAssert.Contains(moduleInterfaceText, "launch_process(L\"--scan-once --clean-installers\", MonitorProcessKind::OneShot)");
+        StringAssert.Contains(moduleInterfaceText, "launch_process(L\"\", MonitorProcessKind::Background)");
         Assert.IsFalse(moduleInterfaceText.Contains("stop_background_worker();\r\n        Trace::EnableMonitor(false);", StringComparison.Ordinal), "Disable must signal one-shot workers as well as stop the tracked background worker.");
     }
 

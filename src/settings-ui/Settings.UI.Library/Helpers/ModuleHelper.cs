@@ -26,7 +26,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 ModuleType.Awake => "ms-appx:///Assets/Settings/Icons/Awake.png",
                 ModuleType.LightSwitch => "ms-appx:///Assets/Settings/Icons/LightSwitch.png",
-                ModuleType.Monitor => "ms-appx:///Assets/Settings/Icons/PowerToys.png",
+                ModuleType.Monitor => "ms-appx:///Assets/Settings/Icons/Monitor.png",
                 ModuleType.GeneralSettings => "ms-appx:///Assets/Settings/Icons/PowerToys.png",
                 _ => string.Empty,
             };

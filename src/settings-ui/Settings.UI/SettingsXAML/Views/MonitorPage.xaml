@@ -17,13 +17,13 @@
     <controls:SettingsPageControl
         x:Uid="Monitor"
         IsTabStop="False"
-        ModuleImageSource="ms-appx:///Assets/Settings/Modules/PT.png">
+        ModuleImageSource="ms-appx:///Assets/Settings/Modules/Monitor.png">
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
                 <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
                     <tkcontrols:SettingsCard
                         x:Uid="Monitor_EnableSettingsCard"
-                        HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/PowerToys.png}"
+                        HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Monitor.png}"
                         IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
                         <ToggleSwitch AutomationProperties.AutomationId="Toggle_Monitor" IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
                     </tkcontrols:SettingsCard>

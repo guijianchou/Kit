@@ -57,7 +57,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\Settings.UI\Assets\Settings\Icons\Awake.png;..\Settings.UI\Assets\Settings\Icons\LightSwitch.png;..\Settings.UI\Assets\Settings\Icons\PowerToys.png">
+    <Content Include="..\Settings.UI\Assets\Settings\Icons\Awake.png;..\Settings.UI\Assets\Settings\Icons\LightSwitch.png;..\Settings.UI\Assets\Settings\Icons\Monitor.png;..\Settings.UI\Assets\Settings\Icons\PowerToys.png">
       <Link>Assets\Settings\Icons\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -90,7 +90,7 @@
 
   <Target Name="KitRemoveInactiveQuickAccessIconAssetsFromOutput" AfterTargets="Build" Condition="'$(OutDir)' != ''">
     <ItemGroup>
-      <KitInactiveQuickAccessIconAssets Include="$(OutDir)Assets\Settings\Icons\*.png" Exclude="$(OutDir)Assets\Settings\Icons\Awake.png;$(OutDir)Assets\Settings\Icons\LightSwitch.png;$(OutDir)Assets\Settings\Icons\PowerToys.png" />
+      <KitInactiveQuickAccessIconAssets Include="$(OutDir)Assets\Settings\Icons\*.png" Exclude="$(OutDir)Assets\Settings\Icons\Awake.png;$(OutDir)Assets\Settings\Icons\LightSwitch.png;$(OutDir)Assets\Settings\Icons\Monitor.png;$(OutDir)Assets\Settings\Icons\PowerToys.png" />
     </ItemGroup>
 
     <Delete Files="@(KitInactiveQuickAccessIconAssets)" TreatErrorsAsWarnings="true" />

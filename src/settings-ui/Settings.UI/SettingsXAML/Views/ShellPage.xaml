@@ -182,7 +182,7 @@
                     x:Name="MonitorNavigationItem"
                     x:Uid="Shell_Monitor"
                     AutomationProperties.AutomationId="MonitorNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/PowerToys.png}" />
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Monitor.png}" />
             </NavigationView.MenuItems>
             <NavigationView.PaneFooter>
                 <StackPanel Orientation="Vertical">
@@ -211,4 +211,3 @@
             PrimaryButtonStyle="{StaticResource AccentButtonStyle}" />
     </Grid>
 </UserControl>
-

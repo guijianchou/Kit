@@ -97,6 +97,7 @@ namespace ViewModelTests
         {
             var shellXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml"));
             var shellCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+            var moduleHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Helpers", "ModuleHelper.cs"));
             var appCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
             var moduleGpoHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "ModuleGpoHelper.cs"));
             var dashboardViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.cs"));
@@ -108,6 +109,8 @@ namespace ViewModelTests
             _ = FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml.cs");
 
             StringAssert.Contains(shellXaml, "MonitorNavigationItem");
+            StringAssert.Contains(shellXaml, "/Assets/Settings/Icons/Monitor.png");
+            StringAssert.Contains(moduleHelper, "ModuleType.Monitor => \"ms-appx:///Assets/Settings/Icons/Monitor.png\"");
             StringAssert.Contains(shellCode, "NavHelper.SetNavigateTo(MonitorNavigationItem, typeof(MonitorPage));");
             StringAssert.Contains(appCode, "\"Monitor\" => typeof(MonitorPage)");
             StringAssert.Contains(moduleGpoHelper, "ModuleType.Monitor => typeof(MonitorPage)");
@@ -168,6 +171,8 @@ namespace ViewModelTests
             var normalizedPageXaml = pageXaml.Replace("\r\n", "\n", StringComparison.Ordinal);
 
             StringAssert.Contains(pageXaml, "Monitor_ScanNowSettingsCard");
+            StringAssert.Contains(pageXaml, "ModuleImageSource=\"ms-appx:///Assets/Settings/Modules/Monitor.png\"");
+            StringAssert.Contains(pageXaml, "HeaderIcon=\"{ui:BitmapIcon Source=/Assets/Settings/Icons/Monitor.png}\"");
             StringAssert.Contains(pageXaml, "Monitor_RunInBackgroundSettingsCard");
             StringAssert.Contains(pageXaml, "Monitor_ScanNowButton");
             StringAssert.Contains(pageXaml, "Monitor_ManualScanProgressBar");
@@ -211,6 +216,9 @@ namespace ViewModelTests
             StringAssert.Contains(pageCode, "manualScanId");
             StringAssert.Contains(pageCode, "CompleteManualScanProgress");
             StringAssert.Contains(pageCode, "ManualScanUiTimeout");
+            StringAssert.Contains(pageCode, "RefreshStaleRunningScansForUi");
+            StringAssert.Contains(pageCode, "IsManualScanSnapshotExpired");
+            StringAssert.Contains(pageCode, "DateTimeOffset.UtcNow - snapshot.StartedAt >= ManualScanUiTimeout");
             StringAssert.Contains(pageCode, "FailManualScanProgress");
             StringAssert.Contains(pageCode, "manualScanTimedOut");
             StringAssert.Contains(pageCode, "\"failed\"");
@@ -232,6 +240,12 @@ namespace ViewModelTests
             Assert.IsFalse(pageCode.Contains("\"organizeDownloads\"", StringComparison.Ordinal));
             StringAssert.Contains(pageCode, "BrowseDownloadsFolder_Click");
             StringAssert.Contains(pageCode, "ShellGetFolder.GetFolderDialog");
+
+            var restoreMethodIndex = pageCode.IndexOf("private void RestoreManualScanProgressIfRunning()", StringComparison.Ordinal);
+            var staleRefreshIndex = pageCode.IndexOf("RefreshStaleRunningScansForUi();", restoreMethodIndex, StringComparison.Ordinal);
+            var readProgressIndex = pageCode.IndexOf("WorkerProgressSnapshot snapshot = ReadLatestWorkerProgressSnapshot();", restoreMethodIndex, StringComparison.Ordinal);
+            Assert.IsTrue(staleRefreshIndex >= 0, "Restore should refresh stale running scans before trusting persisted status.");
+            Assert.IsTrue(readProgressIndex > staleRefreshIndex, "Restore should refresh stale status before reading the latest progress snapshot.");
 
             StringAssert.Contains(viewModel, "DownloadsPathDisplay");
             StringAssert.Contains(viewModel, "ScanIntervalOptions");

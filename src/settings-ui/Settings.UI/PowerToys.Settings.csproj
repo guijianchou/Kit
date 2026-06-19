@@ -154,8 +154,8 @@
 
 	<Target Name="KitRemoveInactiveSettingsAssetsFromOutput" AfterTargets="Build" Condition="'$(OutDir)' != ''">
 		<ItemGroup>
-			<KitInactiveSettingsModuleAssets Include="$(OutDir)Assets\Settings\Modules\*.png" Exclude="$(OutDir)Assets\Settings\Modules\Awake.png;$(OutDir)Assets\Settings\Modules\LightSwitch.png;$(OutDir)Assets\Settings\Modules\PT.png" />
-			<KitInactiveSettingsIconAssets Include="$(OutDir)Assets\Settings\Icons\*.png" Exclude="$(OutDir)Assets\Settings\Icons\Awake.png;$(OutDir)Assets\Settings\Icons\LightSwitch.png;$(OutDir)Assets\Settings\Icons\PowerToys.png" />
+			<KitInactiveSettingsModuleAssets Include="$(OutDir)Assets\Settings\Modules\*.png" Exclude="$(OutDir)Assets\Settings\Modules\Awake.png;$(OutDir)Assets\Settings\Modules\LightSwitch.png;$(OutDir)Assets\Settings\Modules\Monitor.png;$(OutDir)Assets\Settings\Modules\PT.png" />
+			<KitInactiveSettingsIconAssets Include="$(OutDir)Assets\Settings\Icons\*.png" Exclude="$(OutDir)Assets\Settings\Icons\Awake.png;$(OutDir)Assets\Settings\Icons\LightSwitch.png;$(OutDir)Assets\Settings\Icons\Monitor.png;$(OutDir)Assets\Settings\Icons\PowerToys.png" />
 			<KitInactiveSettingsXamlOutputs Include="$(OutDir)SettingsXAML\Controls\ColorFormatEditor.xbf;$(OutDir)SettingsXAML\Controls\ColorPickerButton.xbf;$(OutDir)SettingsXAML\Controls\FancyZonesPreviewControl.xbf;$(OutDir)SettingsXAML\Controls\OOBEPageControl.xbf;$(OutDir)SettingsXAML\Controls\PowerAccentShortcutControl.xbf" />
 			<KitInactiveSettingsAssets Include="$(OutDir)Assets\Settings\Modules\OOBE\**\*;$(OutDir)Assets\Settings\Icons\Models\*.svg;$(OutDir)Assets\Settings\CmdPal\**\*;$(OutDir)Assets\Settings\Scripts\*.ps1;$(OutDir)Images\MouseJump-Desktop.png" />
 			<KitInactiveSettingsAssetDirectories Include="$(OutDir)Assets\Settings\Modules\OOBE;$(OutDir)Assets\Settings\Icons\Models;$(OutDir)Assets\Settings\CmdPal;$(OutDir)Assets\Settings\Scripts" />

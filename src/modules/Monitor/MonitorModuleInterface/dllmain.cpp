@@ -12,6 +12,8 @@
 #include "trace.h"
 
 #include <string>
+#include <utility>
+#include <vector>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -28,6 +30,12 @@ namespace
         std::wstring application_path;
         std::wstring command_prefix;
         std::wstring working_directory;
+    };
+
+    enum class MonitorProcessKind
+    {
+        Background,
+        OneShot,
     };
 
     bool is_handle_running(HANDLE process)
@@ -142,19 +150,25 @@ private:
     bool m_enabled = false;
     bool m_run_in_background = false;
     HANDLE m_process = nullptr;
+    std::vector<HANDLE> m_one_shot_processes;
 
-    bool launch_process(const std::wstring& extra_args, const bool track_process)
+    bool launch_process(const std::wstring& extra_args, const MonitorProcessKind process_kind)
     {
-        if (track_process && is_handle_running(m_process))
+        const bool track_background = process_kind == MonitorProcessKind::Background;
+        if (track_background && is_handle_running(m_process))
         {
             Logger::debug(L"Monitor worker is already running.");
             return true;
         }
 
-        if (track_process && m_process != nullptr)
+        if (track_background && m_process != nullptr)
         {
             CloseHandle(m_process);
             m_process = nullptr;
+        }
+        else if (process_kind == MonitorProcessKind::OneShot)
+        {
+            prune_one_shot_processes();
         }
 
         MonitorLaunchTarget launch_target;
@@ -163,7 +177,7 @@ private:
             return false;
         }
 
-        if (track_process)
+        if (track_background)
         {
             reset_background_exit_event();
         }
@@ -198,13 +212,13 @@ private:
         }
 
         Logger::info(L"Monitor process launched successfully (PID: {}).", process_info.dwProcessId);
-        if (track_process)
+        if (track_background)
         {
             m_process = process_info.hProcess;
         }
         else
         {
-            CloseHandle(process_info.hProcess);
+            m_one_shot_processes.push_back(process_info.hProcess);
         }
 
         CloseHandle(process_info.hThread);
@@ -325,10 +339,62 @@ private:
         m_process = nullptr;
     }
 
+    void prune_one_shot_processes()
+    {
+        std::vector<HANDLE> running_processes;
+        for (HANDLE process : m_one_shot_processes)
+        {
+            if (is_handle_running(process))
+            {
+                running_processes.push_back(process);
+            }
+            else if (process != nullptr)
+            {
+                CloseHandle(process);
+            }
+        }
+
+        m_one_shot_processes = std::move(running_processes);
+    }
+
+    void stop_one_shot_workers()
+    {
+        prune_one_shot_processes();
+        if (m_one_shot_processes.empty())
+        {
+            return;
+        }
+
+        Logger::info("Monitor one-shot workers stopping.");
+        constexpr DWORD timeout_ms = 10000;
+        for (HANDLE process : m_one_shot_processes)
+        {
+            if (process == nullptr)
+            {
+                continue;
+            }
+
+            if (is_handle_running(process))
+            {
+                DWORD wait_result = WaitForSingleObject(process, timeout_ms);
+                if (wait_result == WAIT_TIMEOUT)
+                {
+                    Logger::warn("Monitor one-shot worker did not exit in time. Forcing termination.");
+                    TerminateProcess(process, 0);
+                }
+            }
+
+            CloseHandle(process);
+        }
+
+        m_one_shot_processes.clear();
+    }
+
     void stop_monitor_workers()
     {
         signal_exit_event();
         stop_background_worker(false);
+        stop_one_shot_workers();
     }
 
     void sync_background_worker(const bool restart_running_worker)
@@ -345,7 +411,7 @@ private:
                 stop_background_worker(true);
             }
 
-            if (!launch_process(L"", true))
+            if (!launch_process(L"", MonitorProcessKind::Background))
             {
                 Logger::warn("Monitor background worker failed to launch; keeping Monitor enabled so the user's setting is not reset.");
             }
@@ -422,15 +488,15 @@ public:
                     args += quote_argument(scan_id);
                 }
 
-                launch_process(args, false);
+                launch_process(args, MonitorProcessKind::OneShot);
             }
             else if (action_object.get_name() == L"organizeDownloads")
             {
-                launch_process(L"--scan-once --organize", false);
+                launch_process(L"--scan-once --organize", MonitorProcessKind::OneShot);
             }
             else if (action_object.get_name() == L"cleanInstallers")
             {
-                launch_process(L"--scan-once --clean-installers", false);
+                launch_process(L"--scan-once --clean-installers", MonitorProcessKind::OneShot);
             }
         }
         catch (const std::exception&)

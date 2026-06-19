@@ -17,7 +17,6 @@ public static class Program
 {
     private const string MonitorExitEvent = @"Local\KitMonitorExitEvent-0b94f553-2821-4690-a940-76d04c3ef7e8";
     private const string MonitorBackgroundExitEvent = @"Local\KitMonitorBackgroundExitEvent-1f418ca1-9e3f-48f4-a37e-e1b747aa41aa";
-    private const string MonitorScanCompletedEvent = @"Local\KitMonitorScanCompletedEvent-b7fb014b-c1fd-46c4-9d33-b517ef54824c";
     private const string MonitorProgressFileName = "scan-progress.json";
     private const string MonitorStatusDatabaseFileName = "monitor-status.db";
     private static readonly TimeSpan OneShotScanTimeout = TimeSpan.FromMinutes(5);
@@ -66,7 +65,6 @@ public static class Program
                         statusDatabasePath,
                         MonitorScanStatus.Failed,
                         () => lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out",
-                        signalScanCompleted: true,
                         oneShotCancellation.Token);
                     return 0;
                 }
@@ -74,14 +72,12 @@ public static class Program
                 {
                     string message = lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out";
                     ReportOneShotScanFailed(scanId, message);
-                    SignalScanCompleted();
                     Console.Error.WriteLine(message + ".");
                     return lifetimeCancellation.ExitRequested ? 0 : 1;
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
                     ReportOneShotScanFailed(scanId, "Scan failed");
-                    SignalScanCompleted();
                     Console.Error.WriteLine(ex.Message);
                     return 1;
                 }
@@ -109,7 +105,7 @@ public static class Program
             LifetimeCancellation lifetimeCancellation = StartLifetimeCancellation(commandLine.ParentProcessId, exitEvent, backgroundExitEvent);
             try
             {
-                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), MonitorScanTrigger.Background, statusDatabasePath, MonitorScanStatus.Warning, () => "Scan interrupted", signalScanCompleted: false, lifetimeCancellation.Token);
+                RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, CreateScanId(), MonitorScanTrigger.Background, statusDatabasePath, MonitorScanStatus.Warning, () => "Scan interrupted", lifetimeCancellation.Token);
             }
             catch (OperationCanceledException) when (lifetimeCancellation.ExitRequested)
             {
@@ -137,7 +133,7 @@ public static class Program
         }
     }
 
-    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, MonitorScanTrigger trigger, string statusDatabasePath, MonitorScanStatus canceledStatus, Func<string> canceledMessageFactory, bool signalScanCompleted, CancellationToken cancellationToken)
+    private static MonitorWorkerResult RunScanCycle(string downloadsPath, string csvPath, MonitorSettings settings, bool organize, bool cleanInstallers, string scanId, MonitorScanTrigger trigger, string statusDatabasePath, MonitorScanStatus canceledStatus, Func<string> canceledMessageFactory, CancellationToken cancellationToken)
     {
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
         long? statusRunId = TryBeginStatusRun(statusDatabasePath, scanId, trigger, startedAt);
@@ -193,11 +189,6 @@ public static class Program
             result.RecordCount,
             warningCount,
             warningCount > 0 ? result.WarningMessage ?? "Completed with warnings" : null);
-
-        if (signalScanCompleted)
-        {
-            SignalScanCompleted();
-        }
 
         return result;
     }
@@ -393,12 +384,6 @@ public static class Program
     {
         string expandedCsvPath = Environment.ExpandEnvironmentVariables(csvPath);
         return Path.IsPathRooted(expandedCsvPath) ? Path.GetFullPath(expandedCsvPath) : Path.Combine(downloadsPath, expandedCsvPath);
-    }
-
-    private static void SignalScanCompleted()
-    {
-        using EventWaitHandle scanCompletedEvent = new(false, EventResetMode.AutoReset, MonitorScanCompletedEvent);
-        scanCompletedEvent.Set();
     }
 
     private sealed class LifetimeCancellation : IDisposable

@@ -33,6 +33,155 @@
 const DWORD USERNAME_DOMAIN_LEN = DNLEN + UNLEN + 2; // Domain Name + '\' + User Name + '\0'
 const DWORD USERNAME_LEN = UNLEN + 1; // User Name + '\0'
 const wchar_t KIT_TASK_SCHEDULER_FOLDER[] = L"\\Kit";
+const wchar_t LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER[] = L"\\PowerToys";
+
+std::wstring get_auto_start_task_name_for_this_user()
+{
+    WCHAR username[USERNAME_LEN];
+    if (!GetEnvironmentVariable(L"USERNAME", username, USERNAME_LEN))
+    {
+        return {};
+    }
+
+    std::wstring task_name = L"Autorun for ";
+    task_name += username;
+    return task_name;
+}
+
+constexpr bool is_missing_task_scheduler_item(HRESULT hr)
+{
+    return hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) || hr == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND);
+}
+
+bool task_action_points_to_kit_executable(IRegisteredTask* task)
+{
+    if (!task)
+    {
+        return false;
+    }
+
+    bool matches = false;
+    ITaskDefinition* task_definition = NULL;
+    IActionCollection* action_collection = NULL;
+    IAction* action = NULL;
+    IExecAction* exec_action = NULL;
+    BSTR action_path = NULL;
+    std::wstring action_path_string;
+    std::wstring action_file_name;
+    size_t file_name_start = std::wstring::npos;
+
+    HRESULT hr = task->get_Definition(&task_definition);
+    if (FAILED(hr))
+    {
+        goto LExit;
+    }
+
+    hr = task_definition->get_Actions(&action_collection);
+    if (FAILED(hr))
+    {
+        goto LExit;
+    }
+
+    hr = action_collection->get_Item(1, &action);
+    if (FAILED(hr))
+    {
+        goto LExit;
+    }
+
+    hr = action->QueryInterface(IID_IExecAction, reinterpret_cast<void**>(&exec_action));
+    if (FAILED(hr))
+    {
+        goto LExit;
+    }
+
+    hr = exec_action->get_Path(&action_path);
+    if (FAILED(hr) || !action_path)
+    {
+        goto LExit;
+    }
+
+    action_path_string.assign(action_path, SysStringLen(action_path));
+    file_name_start = action_path_string.find_last_of(L"\\/");
+    action_file_name = file_name_start == std::wstring::npos ? action_path_string : action_path_string.substr(file_name_start + 1);
+    matches = action_file_name == L"Kit.exe" || _wcsicmp(action_file_name.c_str(), L"Kit.exe") == 0;
+
+LExit:
+    if (action_path)
+        SysFreeString(action_path);
+    if (exec_action)
+        exec_action->Release();
+    if (action)
+        action->Release();
+    if (action_collection)
+        action_collection->Release();
+    if (task_definition)
+        task_definition->Release();
+
+    return matches;
+}
+
+bool delete_auto_start_task_in_folder_for_this_user(const wchar_t* task_folder, bool require_kit_executable_action)
+{
+    HRESULT hr = S_OK;
+    std::wstring task_name = get_auto_start_task_name_for_this_user();
+
+    ITaskService* pService = NULL;
+    ITaskFolder* pTaskFolder = NULL;
+    IRegisteredTask* pExistingRegisteredTask = NULL;
+
+    if (task_name.empty())
+    {
+        ExitWithLastError(hr, "Getting username failed: {:x}", hr);
+    }
+
+    hr = CoCreateInstance(CLSID_TaskScheduler,
+                          NULL,
+                          CLSCTX_INPROC_SERVER,
+                          IID_ITaskService,
+                          reinterpret_cast<void**>(&pService));
+    ExitOnFailure(hr, "Failed to create an instance of ITaskService: {:x}", hr);
+
+    hr = pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t());
+    ExitOnFailure(hr, "ITaskService::Connect failed: {:x}", hr);
+
+    hr = pService->GetFolder(_bstr_t(task_folder), &pTaskFolder);
+    if (FAILED(hr))
+    {
+        if (is_missing_task_scheduler_item(hr))
+        {
+            hr = S_OK;
+        }
+        ExitFunction();
+    }
+
+    hr = pTaskFolder->GetTask(_bstr_t(task_name.c_str()), &pExistingRegisteredTask);
+    if (SUCCEEDED(hr))
+    {
+        const bool should_delete = !require_kit_executable_action || task_action_points_to_kit_executable(pExistingRegisteredTask);
+        if (should_delete)
+        {
+            hr = pTaskFolder->DeleteTask(_bstr_t(task_name.c_str()), 0);
+        }
+        else
+        {
+            hr = S_OK;
+        }
+    }
+    else if (is_missing_task_scheduler_item(hr))
+    {
+        hr = S_OK;
+    }
+
+LExit:
+    if (pExistingRegisteredTask)
+        pExistingRegisteredTask->Release();
+    if (pService)
+        pService->Release();
+    if (pTaskFolder)
+        pTaskFolder->Release();
+
+    return (SUCCEEDED(hr));
+}
 
 bool create_auto_start_task_for_this_user(bool runElevated)
 {
@@ -266,67 +415,14 @@ LExit:
 
 bool delete_auto_start_task_for_this_user()
 {
-    HRESULT hr = S_OK;
+    const bool deleted_kit_task = delete_auto_start_task_in_folder_for_this_user(KIT_TASK_SCHEDULER_FOLDER, false);
+    const bool deleted_legacy_task = delete_legacy_power_toys_auto_start_task_for_this_user();
+    return deleted_kit_task && deleted_legacy_task;
+}
 
-    WCHAR username[USERNAME_LEN];
-    std::wstring wstrTaskName;
-
-    ITaskService* pService = NULL;
-    ITaskFolder* pTaskFolder = NULL;
-
-    // ------------------------------------------------------
-    // Get the Username for the task.
-    if (!GetEnvironmentVariable(L"USERNAME", username, USERNAME_LEN))
-    {
-        ExitWithLastError(hr, "Getting username failed: {:x}", hr);
-    }
-
-    // Task Name.
-    wstrTaskName = L"Autorun for ";
-    wstrTaskName += username;
-
-    // ------------------------------------------------------
-    // Create an instance of the Task Service.
-    hr = CoCreateInstance(CLSID_TaskScheduler,
-                          NULL,
-                          CLSCTX_INPROC_SERVER,
-                          IID_ITaskService,
-                          reinterpret_cast<void**>(&pService));
-    ExitOnFailure(hr, "Failed to create an instance of ITaskService: {:x}", hr);
-
-    // Connect to the task service.
-    hr = pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t());
-    ExitOnFailure(hr, "ITaskService::Connect failed: {:x}", hr);
-
-    // ------------------------------------------------------
-    // Get the Kit task folder.
-    hr = pService->GetFolder(_bstr_t(KIT_TASK_SCHEDULER_FOLDER), &pTaskFolder);
-    if (FAILED(hr))
-    {
-        // Folder doesn't exist. No need to disable a non-existing task.
-        hr = S_OK;
-        ExitFunction();
-    }
-
-    // ------------------------------------------------------
-    // If the task exists, disable.
-    {
-        IRegisteredTask* pExistingRegisteredTask = NULL;
-        hr = pTaskFolder->GetTask(_bstr_t(wstrTaskName.c_str()), &pExistingRegisteredTask);
-        if (SUCCEEDED(hr))
-        {
-            // Task exists, try disabling it.
-            hr = pTaskFolder->DeleteTask(_bstr_t(wstrTaskName.c_str()), 0);
-        }
-    }
-
-LExit:
-    if (pService)
-        pService->Release();
-    if (pTaskFolder)
-        pTaskFolder->Release();
-
-    return (SUCCEEDED(hr));
+bool delete_legacy_power_toys_auto_start_task_for_this_user()
+{
+    return delete_auto_start_task_in_folder_for_this_user(LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER, true);
 }
 
 bool is_auto_start_task_active_for_this_user()

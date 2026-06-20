@@ -2866,9 +2866,17 @@ namespace ViewModelTests
         public void KitStartupTaskShouldUseKitSchedulerFolder()
         {
             var autoStartHelper = File.ReadAllText(FindSourceFile("src", "runner", "auto_start_helper.cpp"));
+            var generalSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
 
             StringAssert.Contains(autoStartHelper, "L\"\\\\Kit\"");
-            Assert.IsFalse(autoStartHelper.Contains("L\"\\\\PowerToys\"", StringComparison.Ordinal), "Kit startup tasks must not share the PowerToys Task Scheduler folder.");
+            StringAssert.Contains(autoStartHelper, "LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER");
+            StringAssert.Contains(autoStartHelper, "delete_legacy_power_toys_auto_start_task_for_this_user");
+            StringAssert.Contains(autoStartHelper, "task_action_points_to_kit_executable");
+            StringAssert.Contains(autoStartHelper, "action_file_name == L\"Kit.exe\"");
+            StringAssert.Contains(autoStartHelper, "HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)");
+            Assert.IsFalse(autoStartHelper.Contains("task_action_matches_current_executable", StringComparison.Ordinal), "Legacy cleanup must handle stale Kit.exe paths, not only the currently running executable path.");
+            Assert.IsFalse(autoStartHelper.Contains("CreateFolder(_bstr_t(LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER)", StringComparison.Ordinal), "Kit must not create new tasks in the legacy PowerToys Task Scheduler folder.");
+            Assert.IsFalse(generalSettings.Contains("gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_enabled || gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_not_configured", StringComparison.Ordinal), "Kit must not create a startup task by default when the startup field is absent and GPO is not configured.");
         }
 
         [TestMethod]

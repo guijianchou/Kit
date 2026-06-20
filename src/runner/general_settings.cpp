@@ -380,7 +380,7 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     else
     {
         delete_auto_start_task_for_this_user();
-        if (gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_enabled || gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_not_configured)
+        if (gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_enabled)
         {
             create_auto_start_task_for_this_user(run_as_elevated);
         }

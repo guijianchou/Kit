@@ -39,6 +39,8 @@ public sealed class MonitorScanProgressFileReporter : IMonitorScanProgressReport
             return;
         }
 
+        snapshot.UpdatedAt = now;
+
         string? directoryName = Path.GetDirectoryName(_progressPath);
         if (!string.IsNullOrEmpty(directoryName))
         {

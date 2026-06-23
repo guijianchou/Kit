@@ -21,11 +21,12 @@ internal static class MonitorScanRunCoordinator
         string statusDatabasePath,
         MonitorScanStatus canceledStatus,
         Func<string> canceledMessageFactory,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IMonitorScanProgressReporter? progressReporter = null)
     {
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
         long? statusRunId = TryBeginStatusRun(statusDatabasePath, scanId, trigger, startedAt);
-        MonitorScanProgressFileReporter progressReporter = new(MonitorRuntimePaths.ResolveProgressPath(), TimeSpan.FromMilliseconds(500));
+        progressReporter ??= new MonitorScanProgressFileReporter(MonitorRuntimePaths.ResolveProgressPath(), TimeSpan.FromMilliseconds(500));
         MonitorWorkerResult result;
         try
         {
@@ -61,7 +62,7 @@ internal static class MonitorScanRunCoordinator
         try
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            MonitorStatusStore.RefreshStaleRunningScans(statusDatabasePath, now);
+            MonitorStatusStore.RefreshStaleRunningScans(statusDatabasePath, now, MonitorScanProgressFreshness.GetFreshProgressScanId(MonitorRuntimePaths.ResolveProgressPath(), now));
         }
         catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is SqliteException)
         {

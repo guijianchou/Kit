@@ -65,7 +65,51 @@ public static class MonitorStatusStore
         command.ExecuteNonQuery();
     }
 
-    public static int MarkStaleRunningScansAsFailed(string databasePath, DateTimeOffset cutoff, DateTimeOffset now)
+    public static int CompleteLatestRunningRun(
+        string databasePath,
+        string scanId,
+        MonitorScanTrigger trigger,
+        MonitorScanStatus status,
+        DateTimeOffset completedAt,
+        int? recordCount,
+        int warningCount,
+        string? message)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(scanId);
+
+        using SqliteConnection connection = OpenConnection(databasePath);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE scan_runs
+            SET status = $status,
+                completed_at = $completedAt,
+                record_count = $recordCount,
+                warning_count = $warningCount,
+                message = $message
+            WHERE id = (
+                SELECT id
+                FROM scan_runs
+                WHERE scan_id = $scanId
+                  AND trigger = $trigger
+                  AND status = $runningStatus
+                ORDER BY started_at DESC, id DESC
+                LIMIT 1
+            );
+            """;
+        AddParameter(command, "$status", ToStorageValue(status));
+        AddParameter(command, "$completedAt", FormatTimestamp(completedAt));
+        AddParameter(command, "$recordCount", recordCount);
+        AddParameter(command, "$warningCount", Math.Max(0, warningCount));
+        AddParameter(command, "$message", string.IsNullOrWhiteSpace(message) ? null : message);
+        AddParameter(command, "$scanId", scanId);
+        AddParameter(command, "$trigger", ToStorageValue(trigger));
+        AddParameter(command, "$runningStatus", ToStorageValue(MonitorScanStatus.Running));
+
+        return command.ExecuteNonQuery();
+    }
+
+    public static int MarkStaleRunningScansAsFailed(string databasePath, DateTimeOffset cutoff, DateTimeOffset now, string? activeScanId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
 
@@ -77,20 +121,22 @@ public static class MonitorStatusStore
                 completed_at = $completedAt,
                 message = $message
             WHERE status = $runningStatus
-              AND started_at < $cutoff;
+              AND started_at < $cutoff
+              AND ($activeScanId IS NULL OR scan_id <> $activeScanId);
             """;
         AddParameter(command, "$failedStatus", ToStorageValue(MonitorScanStatus.Failed));
         AddParameter(command, "$completedAt", FormatTimestamp(now));
         AddParameter(command, "$message", UnexpectedExitMessage);
         AddParameter(command, "$runningStatus", ToStorageValue(MonitorScanStatus.Running));
         AddParameter(command, "$cutoff", FormatTimestamp(cutoff));
+        AddParameter(command, "$activeScanId", string.IsNullOrWhiteSpace(activeScanId) ? null : activeScanId);
 
         return command.ExecuteNonQuery();
     }
 
-    public static int RefreshStaleRunningScans(string databasePath, DateTimeOffset now)
+    public static int RefreshStaleRunningScans(string databasePath, DateTimeOffset now, string? activeScanId = null)
     {
-        return MarkStaleRunningScansAsFailed(databasePath, now - StaleRunningScanTimeout, now);
+        return MarkStaleRunningScansAsFailed(databasePath, now - StaleRunningScanTimeout, now, activeScanId);
     }
 
     public static MonitorStatusSummary GetSummary(string databasePath, MonitorStatusRange range, DateTimeOffset now)
@@ -152,15 +198,18 @@ public static class MonitorStatusStore
 
     private static MonitorStatusSummary GetSummary(SqliteConnection connection, MonitorStatusRange range, DateTimeOffset now)
     {
-        IReadOnlyList<RunRow> rows = ReadRows(connection);
+        IReadOnlyList<RunRow> rows = ReadRows(connection, range, now);
         return CreateSummary(rows, range, now);
     }
 
     private static MonitorStatusSummary CreateSummary(IReadOnlyList<RunRow> rows, MonitorStatusRange range, DateTimeOffset now)
     {
         DateTime today = now.UtcDateTime.Date;
-        DateTime startDate = GetStartDate(rows, range, today);
-        List<RunRow> rangedRows = rows
+        List<RunRow> countedRows = rows
+            .Where(row => row.Status != MonitorScanStatus.Canceled)
+            .ToList();
+        DateTime startDate = GetStartDate(countedRows, range, today);
+        List<RunRow> rangedRows = countedRows
             .Where(row => row.StartedAt.UtcDateTime.Date >= startDate && row.StartedAt.UtcDateTime.Date <= today)
             .ToList();
         Dictionary<DateTime, List<RunRow>> rowsByDay = rangedRows
@@ -234,14 +283,43 @@ public static class MonitorStatusStore
         command.ExecuteNonQuery();
     }
 
-    private static IReadOnlyList<RunRow> ReadRows(SqliteConnection connection)
+    private static IReadOnlyList<RunRow> ReadRows(SqliteConnection connection, MonitorStatusRange range, DateTimeOffset now)
     {
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT id, status, started_at, warning_count, message
-            FROM scan_runs
-            ORDER BY started_at ASC, id ASC;
-            """;
+        DateTime today = now.UtcDateTime.Date;
+        DateTimeOffset endDate = new(today.AddDays(1), TimeSpan.Zero);
+        DateTimeOffset? startDate = range switch
+        {
+            MonitorStatusRange.SevenDays => new DateTimeOffset(today.AddDays(-6), TimeSpan.Zero),
+            MonitorStatusRange.ThirtyDays => new DateTimeOffset(today.AddDays(-29), TimeSpan.Zero),
+            _ => null,
+        };
+
+        if (startDate.HasValue)
+        {
+            command.CommandText = """
+                SELECT id, status, started_at, warning_count, message
+                FROM scan_runs
+                WHERE status <> $canceledStatus
+                  AND started_at >= $startDate
+                  AND started_at < $endDate
+                ORDER BY started_at ASC, id ASC;
+                """;
+            AddParameter(command, "$startDate", FormatTimestamp(startDate.Value));
+        }
+        else
+        {
+            command.CommandText = """
+                SELECT id, status, started_at, warning_count, message
+                FROM scan_runs
+                WHERE status <> $canceledStatus
+                  AND started_at < $endDate
+                ORDER BY started_at ASC, id ASC;
+                """;
+        }
+
+        AddParameter(command, "$canceledStatus", ToStorageValue(MonitorScanStatus.Canceled));
+        AddParameter(command, "$endDate", FormatTimestamp(endDate));
 
         List<RunRow> rows = new();
         using SqliteDataReader reader = command.ExecuteReader();
@@ -322,6 +400,7 @@ public static class MonitorStatusStore
             "success" => MonitorScanStatus.Success,
             "warning" => MonitorScanStatus.Warning,
             "failed" => MonitorScanStatus.Failed,
+            "canceled" => MonitorScanStatus.Canceled,
             _ => MonitorScanStatus.Failed,
         };
     }

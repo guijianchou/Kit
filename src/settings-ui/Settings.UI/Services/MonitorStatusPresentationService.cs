@@ -158,13 +158,4 @@ namespace Microsoft.PowerToys.Settings.UI.Services
             return string.IsNullOrWhiteSpace(value) ? fallback : value;
         }
     }
-
-    public sealed record MonitorStatusPresentation(
-        string StatusText,
-        string StatusDescription,
-        string LastStatusMessage,
-        string ChartAccessibilityName,
-        IReadOnlyList<MonitorStatusMetricViewModel> Metrics,
-        IReadOnlyList<MonitorStatusDayViewModel> Days,
-        IReadOnlyList<MonitorStatusLegendItemViewModel> LegendItems);
 }

@@ -128,7 +128,12 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         public static int SendDefaultIPCMessage(string msg)
         {
-            DefaultSndMSGCallback?.Invoke(msg);
+            if (DefaultSndMSGCallback == null)
+            {
+                return 1;
+            }
+
+            DefaultSndMSGCallback.Invoke(msg);
             return 0;
         }
 

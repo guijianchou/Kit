@@ -77,7 +77,7 @@ public sealed class MonitorSettings
         CalculateSha1 = !string.IsNullOrWhiteSpace(HashAlgorithm);
         IncrementalScan = incrementalScan.GetValueOrDefault(true);
         RunInBackground = runInBackground.GetValueOrDefault(false);
-        AutoOrganize = autoOrganize.GetValueOrDefault(true);
+        AutoOrganize = autoOrganize.GetValueOrDefault(false);
         AutoCleanInstallers = autoCleanInstallers.GetValueOrDefault(false);
         MaxFileSizeForSha1Mb = Math.Max(1, maxFileSizeForHashMb.GetValueOrDefault(500));
     }
@@ -125,7 +125,7 @@ public sealed class MonitorSettings
     /// <summary>
     /// Gets a value indicating whether Monitor should organize files into category folders.
     /// </summary>
-    public bool AutoOrganize { get; private init; } = true;
+    public bool AutoOrganize { get; private init; }
 
     /// <summary>
     /// Gets a value indicating whether Monitor should remove matched installer files.

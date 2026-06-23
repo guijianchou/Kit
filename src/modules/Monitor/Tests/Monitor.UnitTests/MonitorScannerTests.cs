@@ -99,6 +99,59 @@ public sealed class MonitorScannerTests
         Assert.AreEqual("Documents", records[0].Category);
     }
 
+    [TestMethod]
+    public void ScanReportsProgressBeforeDirectoryEnumerationBegins()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string createdPath = Path.Combine(tempDirectory.Path, "created.txt");
+
+        IReadOnlyList<MonitorFileRecord> records = MonitorScanner.Scan(
+            tempDirectory.Path,
+            MonitorSettings.CreateDefault(),
+            progressReporter: new CreatingProgressReporter(createdPath));
+
+        Assert.AreEqual(1, records.Count);
+        Assert.AreEqual("created.txt", records[0].RelativePath);
+    }
+
+    [TestMethod]
+    public void ScanReportsProgressDuringDirectoryEnumeration()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        Directory.CreateDirectory(Path.Combine(tempDirectory.Path, "first", "second", "third"));
+        File.WriteAllText(Path.Combine(tempDirectory.Path, "first", "second", "third", "notes.txt"), "hello");
+        RecordingProgressReporter progressReporter = new();
+
+        _ = MonitorScanner.Scan(
+            tempDirectory.Path,
+            MonitorSettings.CreateDefault(),
+            progressReporter: progressReporter);
+
+        int preTotalHashingReports = progressReporter.Snapshots.Count(snapshot =>
+            string.Equals(snapshot.Phase, MonitorScanProgressPhase.Hashing, StringComparison.Ordinal) &&
+            snapshot.FilesTotal == 0);
+        Assert.IsTrue(preTotalHashingReports > 1, "Directory enumeration should keep emitting progress before the final file count is known.");
+    }
+
+    [TestMethod]
+    public void ScanReportsProgressWhileHashingLargeFile()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string largePath = Path.Combine(tempDirectory.Path, "large.bin");
+        File.WriteAllBytes(largePath, Enumerable.Repeat((byte)1, 100_000).ToArray());
+        RecordingProgressReporter progressReporter = new();
+
+        _ = MonitorScanner.Scan(
+            tempDirectory.Path,
+            MonitorSettings.CreateDefault(),
+            progressReporter: progressReporter);
+
+        int inFileHashingReports = progressReporter.Snapshots.Count(snapshot =>
+            string.Equals(snapshot.Phase, MonitorScanProgressPhase.Hashing, StringComparison.Ordinal) &&
+            snapshot.FilesProcessed == 0);
+        Assert.IsTrue(inFileHashingReports > 1, "Hashing one large file should keep emitting progress before the file is fully processed.");
+    }
+
     private sealed class DeletingProgressReporter : IMonitorScanProgressReporter
     {
         private readonly string _filePath;
@@ -116,6 +169,36 @@ public sealed class MonitorScannerTests
                 File.Delete(_filePath);
                 _deleted = true;
             }
+        }
+    }
+
+    private sealed class CreatingProgressReporter : IMonitorScanProgressReporter
+    {
+        private readonly string _filePath;
+        private bool _created;
+
+        public CreatingProgressReporter(string filePath)
+        {
+            _filePath = filePath;
+        }
+
+        public void Report(MonitorScanProgressSnapshot snapshot, bool force = false)
+        {
+            if (!_created)
+            {
+                File.WriteAllText(_filePath, "created after initial progress");
+                _created = true;
+            }
+        }
+    }
+
+    private sealed class RecordingProgressReporter : IMonitorScanProgressReporter
+    {
+        public List<MonitorScanProgressSnapshot> Snapshots { get; } = new();
+
+        public void Report(MonitorScanProgressSnapshot snapshot, bool force = false)
+        {
+            Snapshots.Add(snapshot);
         }
     }
 

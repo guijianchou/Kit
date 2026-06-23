@@ -1864,8 +1864,11 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Monitor_ManualScanWaitingForProgress" xml:space="preserve">
     <value>Waiting for worker progress</value>
   </data>
+  <data name="Monitor_ManualScanStartFailed" xml:space="preserve">
+    <value>Scan failed to start</value>
+  </data>
   <data name="Monitor_ManualScanTimedOut" xml:space="preserve">
-    <value>Scan timed out</value>
+    <value>Scan timed out due to no progress</value>
   </data>
   <data name="Monitor_ManualScanFailed" xml:space="preserve">
     <value>Scan failed</value>

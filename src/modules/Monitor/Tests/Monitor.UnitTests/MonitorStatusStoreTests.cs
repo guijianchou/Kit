@@ -115,6 +115,45 @@ public sealed class MonitorStatusStoreTests
     }
 
     [TestMethod]
+    public void GetSummaryIgnoresCanceledRunsSoExpectedBackgroundRestartsDoNotPolluteHealth()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string databasePath = Path.Combine(tempDirectory.Path, "monitor-status.db");
+        DateTimeOffset now = new(2026, 6, 17, 12, 0, 0, TimeSpan.Zero);
+
+        long successRun = MonitorStatusStore.BeginRun(databasePath, "success", MonitorScanTrigger.Background, now.AddMinutes(-10));
+        MonitorStatusStore.CompleteRun(databasePath, successRun, MonitorScanStatus.Success, now.AddMinutes(-9), 10, 0, null);
+
+        long canceledRun = MonitorStatusStore.BeginRun(databasePath, "restart", MonitorScanTrigger.Background, now);
+        MonitorStatusStore.CompleteRun(databasePath, canceledRun, MonitorScanStatus.Canceled, now.AddSeconds(1), null, 0, "Scan interrupted");
+
+        MonitorStatusSummary summary = MonitorStatusStore.GetSummary(databasePath, MonitorStatusRange.SevenDays, now);
+
+        Assert.AreEqual(MonitorScanStatus.Success, summary.OverallStatus);
+        Assert.AreEqual(1, summary.TotalRuns);
+        Assert.AreEqual(1, summary.SuccessRuns);
+        Assert.AreEqual(0, summary.WarningRuns);
+        Assert.AreEqual(0, summary.FailedRuns);
+    }
+
+    [TestMethod]
+    public void GetSummaryAllRangeIgnoresCanceledRunsWhenChoosingStartDate()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string databasePath = Path.Combine(tempDirectory.Path, "monitor-status.db");
+        DateTimeOffset now = new(2026, 6, 17, 12, 0, 0, TimeSpan.Zero);
+
+        long canceledRun = MonitorStatusStore.BeginRun(databasePath, "restart", MonitorScanTrigger.Background, now.AddDays(-3));
+        MonitorStatusStore.CompleteRun(databasePath, canceledRun, MonitorScanStatus.Canceled, now.AddDays(-3).AddSeconds(1), null, 0, "Scan interrupted");
+
+        MonitorStatusSummary summary = MonitorStatusStore.GetSummary(databasePath, MonitorStatusRange.All, now);
+
+        Assert.AreEqual(0, summary.TotalRuns);
+        Assert.AreEqual(7, summary.Days.Count);
+        Assert.AreEqual(now.UtcDateTime.Date.AddDays(-6), summary.Days[0].Date);
+    }
+
+    [TestMethod]
     public void TryGetLatestRunDoesNotCreateMissingDatabase()
     {
         using TemporaryDirectory tempDirectory = new();

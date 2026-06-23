@@ -28,7 +28,7 @@ The current parity target is the Python implementation baseline:
 - Preserve duplicate records for analytics.
 - Move files into category folders with conflict-safe names when `OrganizeDownloads` is enabled.
 - Provide installer cleanup primitives without touching real registry state in tests.
-- Let one-shot Scan Now apply the current action toggles through the same worker cycle: `OrganizeDownloads` is on by default, while `CleanInstallers` is off by default. When organization is disabled, scan-only passes do not create category folders or move files.
+- Let one-shot Scan Now apply the current action toggles through the same worker cycle: both `OrganizeDownloads` and `CleanInstallers` are off by default, so a fresh scan only indexes files. When organization is disabled, scan-only passes do not create category folders or move files.
 - Clean installers from the Downloads root and the `Programs` category folder when `CleanInstallers` is enabled; this opt-in path reads uninstall registry entries visible to the current process to match installed software names and versions.
 - Report scan progress phases and completion state to Settings through a JSON progress file and persisted scan status.
 - Persist recent manual and background scan status in SQLite for the Settings Status section.

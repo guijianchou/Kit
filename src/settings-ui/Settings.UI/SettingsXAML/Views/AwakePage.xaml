@@ -104,7 +104,7 @@
         </controls:SettingsPageControl.ModuleContent>
 
         <controls:SettingsPageControl.PrimaryLinks>
-            <controls:PageLink x:Uid="LearnMore_Awake" Link="https://aka.ms/PowerToysOverview_Awake" />
+            <controls:PageLink x:Uid="LearnMore_Awake" Link="https://github.com/guijianchou/Kit" />
         </controls:SettingsPageControl.PrimaryLinks>
         <controls:SettingsPageControl.SecondaryLinks>
             <controls:PageLink x:Uid="SecondaryLink_Awake" Link="https://awake.den.dev" />

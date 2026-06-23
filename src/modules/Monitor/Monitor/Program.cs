@@ -11,7 +11,7 @@ namespace Microsoft.PowerToys.Monitor;
 /// </summary>
 public static class Program
 {
-    private static readonly TimeSpan OneShotScanTimeout = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan OneShotNoProgressTimeout = TimeSpan.FromMinutes(30);
 
     /// <summary>
     /// Runs the Monitor worker.
@@ -42,8 +42,9 @@ public static class Program
                 string scanId = MonitorRuntimePaths.ResolveScanId(commandLine.ScanId);
                 using EventWaitHandle exitEvent = new(false, EventResetMode.ManualReset, MonitorWorkerEvents.MonitorExitEvent);
                 using MonitorLifetimeCancellation lifetimeCancellation = new(commandLine.ParentProcessId, exitEvent);
-                using CancellationTokenSource oneShotTimeoutCancellation = new(OneShotScanTimeout);
-                using CancellationTokenSource oneShotCancellation = CancellationTokenSource.CreateLinkedTokenSource(oneShotTimeoutCancellation.Token, lifetimeCancellation.Token);
+                using MonitorProgressTimeoutCancellation progressTimeoutCancellation = new(OneShotNoProgressTimeout);
+                using CancellationTokenSource oneShotCancellation = CancellationTokenSource.CreateLinkedTokenSource(progressTimeoutCancellation.Token, lifetimeCancellation.Token);
+                IMonitorScanProgressReporter progressReporter = progressTimeoutCancellation.CreateReporter(new MonitorScanProgressFileReporter(MonitorRuntimePaths.ResolveProgressPath(), TimeSpan.FromMilliseconds(500)));
                 try
                 {
                     MonitorScanRunCoordinator.RunScanCycle(
@@ -56,16 +57,17 @@ public static class Program
                         MonitorScanTrigger.Manual,
                         statusDatabasePath,
                         MonitorScanStatus.Failed,
-                        () => lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out",
-                        oneShotCancellation.Token);
+                        () => lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out due to no progress",
+                        oneShotCancellation.Token,
+                        progressReporter);
                     return 0;
                 }
                 catch (OperationCanceledException)
                 {
-                    string message = lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out";
+                    string message = lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out due to no progress";
                     MonitorScanRunCoordinator.ReportOneShotScanFailed(scanId, message);
                     Console.Error.WriteLine(message + ".");
-                    return lifetimeCancellation.ExitRequested ? 0 : 1;
+                    return lifetimeCancellation.ExitRequested && !progressTimeoutCancellation.TimedOut ? 0 : 1;
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
                 {
@@ -97,7 +99,7 @@ public static class Program
             MonitorLifetimeCancellation lifetimeCancellation = new(commandLine.ParentProcessId, exitEvent, backgroundExitEvent);
             try
             {
-                MonitorScanRunCoordinator.RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, MonitorRuntimePaths.CreateScanId(), MonitorScanTrigger.Background, statusDatabasePath, MonitorScanStatus.Warning, () => "Scan interrupted", lifetimeCancellation.Token);
+                MonitorScanRunCoordinator.RunScanCycle(downloadsPath, csvPath, settings, settings.AutoOrganize, settings.AutoCleanInstallers, MonitorRuntimePaths.CreateScanId(), MonitorScanTrigger.Background, statusDatabasePath, MonitorScanStatus.Canceled, () => "Scan interrupted", lifetimeCancellation.Token);
             }
             catch (OperationCanceledException) when (lifetimeCancellation.ExitRequested)
             {
@@ -142,5 +144,4 @@ public static class Program
             "  --pid <value>               Internal runner parent process ID.",
             "  --help                      Show help.");
     }
-
 }

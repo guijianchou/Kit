@@ -44,38 +44,39 @@ public static class MonitorScanner
         HashSet<string> excludedFiles = new(settings.ExcludedFiles, StringComparer.OrdinalIgnoreCase);
         HashSet<string> categoryFolders = new(settings.Categories.Keys, StringComparer.OrdinalIgnoreCase);
         List<MonitorFileRecord> records = new();
-        List<FileInfo> files = new();
-        foreach (FileInfo fileInfo in EnumerateFiles(rootDirectory))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!excludedFiles.Contains(fileInfo.Name) && !IsReparsePoint(fileInfo))
-            {
-                files.Add(fileInfo);
-            }
-        }
-
         DateTimeOffset scanStartedAt = startedAt ?? DateTimeOffset.UtcNow;
         int filesProcessed = 0;
 
-        MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, rootDirectory.FullName, scanStartedAt, null, null, scanId), force: true);
+        MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, 0, rootDirectory.FullName, scanStartedAt, null, null, scanId), force: true);
 
-        foreach (FileInfo fileInfo in files)
+        Action<DirectoryInfo> reportEnumerationProgress = directory => MonitorProgressReporter.TryReport(
+            progressReporter,
+            new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, 0, directory.FullName, scanStartedAt, null, null, scanId));
+        foreach (FileInfo fileInfo in EnumerateFiles(rootDirectory, reportEnumerationProgress, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (excludedFiles.Contains(fileInfo.Name) || IsReparsePoint(fileInfo))
+            {
+                continue;
+            }
+
             try
             {
                 fileInfo.Refresh();
                 if (!fileInfo.Exists || IsReparsePoint(fileInfo))
                 {
                     filesProcessed++;
-                    MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
+                    MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, 0, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
                     continue;
                 }
 
                 string relativePath = NormalizeRelativePath(Path.GetRelativePath(rootDirectory.FullName, fileInfo.FullName));
                 string folderName = ResolveFolderName(relativePath, categoryFolders);
                 string timestamp = FormatTimestamp(fileInfo.LastWriteTime);
-                string? sha1 = ResolveSha1(fileInfo, relativePath, timestamp, settings, existingIndex, cancellationToken);
+                Action hashProgressCallback = () => MonitorProgressReporter.TryReport(
+                    progressReporter,
+                    new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, 0, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
+                string? sha1 = ResolveSha1(fileInfo, relativePath, timestamp, settings, existingIndex, hashProgressCallback, cancellationToken);
                 string category = categoryFolders.Contains(folderName) ? folderName : MonitorCategoryResolver.ResolveCategory(fileInfo.Name, settings);
 
                 records.Add(new MonitorFileRecord(
@@ -97,7 +98,7 @@ public static class MonitorScanner
             }
 
             filesProcessed++;
-            MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, files.Count, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
+            MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, 0, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
         }
 
         return records;
@@ -125,14 +126,16 @@ public static class MonitorScanner
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
     }
 
-    private static IEnumerable<FileInfo> EnumerateFiles(DirectoryInfo rootDirectory)
+    private static IEnumerable<FileInfo> EnumerateFiles(DirectoryInfo rootDirectory, Action<DirectoryInfo>? progressCallback, CancellationToken cancellationToken)
     {
         Queue<DirectoryInfo> pendingDirectories = new();
         pendingDirectories.Enqueue(rootDirectory);
 
         while (pendingDirectories.Count > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             DirectoryInfo directory = pendingDirectories.Dequeue();
+            progressCallback?.Invoke(directory);
             foreach (FileInfo file in SafeEnumerateFiles(directory))
             {
                 yield return file;
@@ -150,10 +153,10 @@ public static class MonitorScanner
 
     private static IEnumerable<FileInfo> SafeEnumerateFiles(DirectoryInfo directory)
     {
-        FileInfo[] files;
+        IEnumerator<FileInfo> enumerator;
         try
         {
-            files = directory.EnumerateFiles().ToArray();
+            enumerator = directory.EnumerateFiles().GetEnumerator();
         }
         catch (DirectoryNotFoundException)
         {
@@ -168,18 +171,44 @@ public static class MonitorScanner
             yield break;
         }
 
-        foreach (FileInfo file in files)
+        using (enumerator)
         {
-            yield return file;
+            while (true)
+            {
+                FileInfo file;
+                try
+                {
+                    if (!enumerator.MoveNext())
+                    {
+                        yield break;
+                    }
+
+                    file = enumerator.Current;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    yield break;
+                }
+                catch (IOException)
+                {
+                    yield break;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    yield break;
+                }
+
+                yield return file;
+            }
         }
     }
 
     private static IEnumerable<DirectoryInfo> SafeEnumerateDirectories(DirectoryInfo directory)
     {
-        DirectoryInfo[] directories;
+        IEnumerator<DirectoryInfo> enumerator;
         try
         {
-            directories = directory.EnumerateDirectories().ToArray();
+            enumerator = directory.EnumerateDirectories().GetEnumerator();
         }
         catch (DirectoryNotFoundException)
         {
@@ -194,9 +223,35 @@ public static class MonitorScanner
             yield break;
         }
 
-        foreach (DirectoryInfo childDirectory in directories)
+        using (enumerator)
         {
-            yield return childDirectory;
+            while (true)
+            {
+                DirectoryInfo childDirectory;
+                try
+                {
+                    if (!enumerator.MoveNext())
+                    {
+                        yield break;
+                    }
+
+                    childDirectory = enumerator.Current;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    yield break;
+                }
+                catch (IOException)
+                {
+                    yield break;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    yield break;
+                }
+
+                yield return childDirectory;
+            }
         }
     }
 
@@ -243,6 +298,7 @@ public static class MonitorScanner
         string timestamp,
         MonitorSettings settings,
         IReadOnlyDictionary<string, MonitorFileRecord> existingIndex,
+        Action? progressCallback,
         CancellationToken cancellationToken)
     {
         if (!settings.CalculateSha1)
@@ -259,6 +315,6 @@ public static class MonitorScanner
             return existingRecord.Sha1;
         }
 
-        return MonitorHasher.CalculateHash(fileInfo.FullName, settings.HashAlgorithm, settings.ChunkSizeBytes, settings.MaxFileSizeForSha1Mb, cancellationToken);
+        return MonitorHasher.CalculateHash(fileInfo.FullName, settings.HashAlgorithm, settings.ChunkSizeBytes, settings.MaxFileSizeForSha1Mb, progressCallback, cancellationToken);
     }
 }

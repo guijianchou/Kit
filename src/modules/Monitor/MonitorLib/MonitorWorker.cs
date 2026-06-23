@@ -43,6 +43,8 @@ public static class MonitorWorker
         cancellationToken.ThrowIfCancellationRequested();
 
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+        Action reportCategorizingProgress = () => ReportProgress(progressReporter, MonitorScanProgressPhase.Categorizing, downloadsPath, startedAt, scanId);
+        reportCategorizingProgress();
         if (!Directory.Exists(downloadsPath))
         {
             string warningMessage = "Downloads folder does not exist: " + downloadsPath;
@@ -57,18 +59,21 @@ public static class MonitorWorker
         MonitorFileOrganizerResult? organizeResult = null;
         if (organize)
         {
-            organizeResult = MonitorFileOrganizer.Organize(downloadsPath, settings, dryRun: false, cancellationToken);
+            reportCategorizingProgress();
+            organizeResult = MonitorFileOrganizer.Organize(downloadsPath, settings, dryRun: false, progressCallback: reportCategorizingProgress, cancellationToken: cancellationToken);
         }
 
         MonitorInstallerCleanupResult? installerCleanupResult = null;
         if (cleanInstallers)
         {
+            reportCategorizingProgress();
             string programsPath = Path.Combine(downloadsPath, "Programs");
-            IReadOnlyList<MonitorInstallerMatch> matches = FindInstallerMatches(downloadsPath, programsPath, installedSoftwareNames, installedSoftwareIndex, cancellationToken);
-            installerCleanupResult = MonitorInstallerCleaner.Cleanup(downloadsPath, matches, settings.InstallerMinConfidence, dryRun: false, cancellationToken: cancellationToken);
+            IReadOnlyList<MonitorInstallerMatch> matches = FindInstallerMatches(downloadsPath, programsPath, installedSoftwareNames, installedSoftwareIndex, reportCategorizingProgress, cancellationToken);
+            installerCleanupResult = MonitorInstallerCleaner.Cleanup(downloadsPath, matches, settings.InstallerMinConfidence, dryRun: false, cancellationToken: cancellationToken, progressCallback: reportCategorizingProgress);
         }
 
-        IReadOnlyList<MonitorFileRecord> existingRecords = MonitorCsvStore.Load(csvPath, downloadsPath, settings);
+        reportCategorizingProgress();
+        IReadOnlyList<MonitorFileRecord> existingRecords = MonitorCsvStore.Load(csvPath, downloadsPath, settings, reportCategorizingProgress);
         IReadOnlyList<MonitorFileRecord> records = MonitorScanner.Scan(downloadsPath, settings, existingRecords, progressReporter, startedAt, scanId, cancellationToken);
         MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Writing, records.Count, records.Count, downloadsPath, startedAt, null, null, scanId), force: true);
         cancellationToken.ThrowIfCancellationRequested();
@@ -83,6 +88,7 @@ public static class MonitorWorker
         string programsPath,
         IEnumerable<string>? installedSoftwareNames,
         MonitorInstalledSoftwareIndex? installedSoftwareIndex,
+        Action? progressCallback,
         CancellationToken cancellationToken)
     {
         IEnumerable<string> scanRoots = new[] { downloadsPath, programsPath }.Distinct(StringComparer.OrdinalIgnoreCase);
@@ -96,9 +102,10 @@ public static class MonitorWorker
         foreach (string scanRoot in scanRoots)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            progressCallback?.Invoke();
             IReadOnlyList<MonitorInstallerMatch> rootMatches = resolvedInstalledSoftwareIndex is not null
-                ? MonitorInstallerCleaner.FindMatches(scanRoot, resolvedInstalledSoftwareIndex, cancellationToken)
-                : MonitorInstallerCleaner.FindMatches(scanRoot, installedSoftwareNames!, cancellationToken);
+                ? MonitorInstallerCleaner.FindMatches(scanRoot, resolvedInstalledSoftwareIndex, progressCallback, cancellationToken)
+                : MonitorInstallerCleaner.FindMatches(scanRoot, installedSoftwareNames!, progressCallback, cancellationToken);
             matches.AddRange(rootMatches);
         }
 
@@ -106,5 +113,13 @@ public static class MonitorWorker
             .GroupBy(match => match.FilePath, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(match => match.Confidence).ThenBy(match => match.SoftwareName, StringComparer.OrdinalIgnoreCase).First())
             .ToList();
+    }
+
+    private static void ReportProgress(IMonitorScanProgressReporter? progressReporter, string phase, string currentDirectory, DateTimeOffset startedAt, string? scanId)
+    {
+        MonitorProgressReporter.TryReport(
+            progressReporter,
+            new MonitorScanProgressSnapshot(phase, 0, 0, currentDirectory, startedAt, null, null, scanId),
+            force: true);
     }
 }

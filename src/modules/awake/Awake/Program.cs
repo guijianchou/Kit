@@ -193,7 +193,7 @@ namespace Awake
             {
                 if (result.Tokens.Count != 0 && !DateTimeOffset.TryParse(result.Tokens[0].Value, out _))
                 {
-                    string errorMessage = $"Date and time value in --expire-at could not be parsed correctly. Check that the value is valid date and time. Refer to https://aka.ms/powertoys/awake for format examples. Value used: {result.Tokens[0].Value}.";
+                    string errorMessage = $"Date and time value in --expire-at could not be parsed correctly. Check that the value is valid date and time. Refer to https://github.com/guijianchou/Kit for format examples. Value used: {result.Tokens[0].Value}.";
                     Logger.LogError(errorMessage);
                     result.ErrorMessage = errorMessage;
                 }

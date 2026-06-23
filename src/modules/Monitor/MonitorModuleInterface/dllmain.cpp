@@ -13,6 +13,8 @@
 
 #include <wil/resource.h>
 
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -64,7 +66,207 @@ namespace
 
     std::wstring quote_argument(const std::wstring& value)
     {
-        return L"\"" + value + L"\"";
+        std::wstring quoted;
+        quoted.reserve(value.size() + 2);
+        quoted.push_back(L'"');
+
+        size_t backslash_count = 0;
+        for (const wchar_t character : value)
+        {
+            if (character == L'\\')
+            {
+                ++backslash_count;
+                continue;
+            }
+
+            if (character == L'"')
+            {
+                quoted.append((backslash_count * 2) + 1, L'\\');
+                quoted.push_back(character);
+                backslash_count = 0;
+                continue;
+            }
+
+            quoted.append(backslash_count, L'\\');
+            backslash_count = 0;
+            quoted.push_back(character);
+        }
+
+        quoted.append(backslash_count * 2, L'\\');
+        quoted.push_back(L'"');
+        return quoted;
+    }
+
+    bool is_valid_scan_id(const std::wstring& scan_id)
+    {
+        if (scan_id.size() != 32)
+        {
+            return false;
+        }
+
+        for (const wchar_t character : scan_id)
+        {
+            const bool is_hex =
+                (character >= L'0' && character <= L'9') ||
+                (character >= L'a' && character <= L'f') ||
+                (character >= L'A' && character <= L'F');
+            if (!is_hex)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    std::string json_escape(const std::wstring& value)
+    {
+        std::ostringstream escaped;
+        for (const wchar_t character : value)
+        {
+            switch (character)
+            {
+            case L'\\':
+                escaped << "\\\\";
+                break;
+            case L'"':
+                escaped << "\\\"";
+                break;
+            case L'\b':
+                escaped << "\\b";
+                break;
+            case L'\f':
+                escaped << "\\f";
+                break;
+            case L'\n':
+                escaped << "\\n";
+                break;
+            case L'\r':
+                escaped << "\\r";
+                break;
+            case L'\t':
+                escaped << "\\t";
+                break;
+            default:
+                if (character >= 0x20 && character <= 0x7f)
+                {
+                    escaped << static_cast<char>(character);
+                }
+                else
+                {
+                    escaped << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(character);
+                }
+                break;
+            }
+        }
+
+        return escaped.str();
+    }
+
+    std::string utc_timestamp()
+    {
+        SYSTEMTIME system_time{};
+        GetSystemTime(&system_time);
+
+        std::ostringstream timestamp;
+        timestamp << std::setfill('0')
+                  << std::setw(4) << system_time.wYear << "-"
+                  << std::setw(2) << system_time.wMonth << "-"
+                  << std::setw(2) << system_time.wDay << "T"
+                  << std::setw(2) << system_time.wHour << ":"
+                  << std::setw(2) << system_time.wMinute << ":"
+                  << std::setw(2) << system_time.wSecond << "."
+                  << std::setw(3) << system_time.wMilliseconds << "Z";
+        return timestamp.str();
+    }
+
+    bool create_directory_if_missing(const std::wstring& path)
+    {
+        if (CreateDirectoryW(path.c_str(), nullptr) || GetLastError() == ERROR_ALREADY_EXISTS)
+        {
+            return true;
+        }
+
+        Logger::warn(L"Failed to create Monitor data directory '{}'. {}", path, get_last_error_or_default(GetLastError()));
+        return false;
+    }
+
+    bool resolve_monitor_data_folder(std::wstring& data_folder)
+    {
+        DWORD required_length = GetEnvironmentVariableW(L"LOCALAPPDATA", nullptr, 0);
+        if (required_length == 0)
+        {
+            Logger::warn(L"Failed to resolve LOCALAPPDATA for Monitor progress. {}", get_last_error_or_default(GetLastError()));
+            return false;
+        }
+
+        std::wstring local_app_data(required_length, L'\0');
+        DWORD actual_length = GetEnvironmentVariableW(L"LOCALAPPDATA", local_app_data.data(), required_length);
+        if (actual_length == 0 || actual_length >= required_length)
+        {
+            Logger::warn(L"Failed to read LOCALAPPDATA for Monitor progress. {}", get_last_error_or_default(GetLastError()));
+            return false;
+        }
+
+        local_app_data.resize(actual_length);
+        std::wstring kit_folder = combine_path(local_app_data, L"Kit");
+        data_folder = combine_path(kit_folder, L"Monitor");
+        return create_directory_if_missing(kit_folder) && create_directory_if_missing(data_folder);
+    }
+
+    void write_failed_scan_progress(const std::wstring& scan_id, const std::wstring& message)
+    {
+        if (scan_id.empty())
+        {
+            return;
+        }
+
+        std::wstring data_folder;
+        if (!resolve_monitor_data_folder(data_folder))
+        {
+            return;
+        }
+
+        std::wstring progress_path = combine_path(data_folder, L"scan-progress.json");
+        std::wstring temporary_path = progress_path + L"." + std::to_wstring(GetTickCount64()) + L".tmp";
+        std::string timestamp = utc_timestamp();
+        std::ostringstream json;
+        json << "{"
+             << "\"scanId\":\"" << json_escape(scan_id) << "\","
+             << "\"phase\":\"failed\","
+             << "\"filesProcessed\":0,"
+             << "\"filesTotal\":0,"
+             << "\"currentDirectory\":\"\","
+             << "\"startedAt\":\"" << timestamp << "\","
+             << "\"updatedAt\":\"" << timestamp << "\","
+             << "\"completedAt\":\"" << timestamp << "\","
+             << "\"recordCount\":null,"
+             << "\"message\":\"" << json_escape(message) << "\""
+             << "}";
+
+        HANDLE file_handle = CreateFileW(temporary_path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file_handle == INVALID_HANDLE_VALUE)
+        {
+            Logger::warn(L"Failed to write Monitor failed progress snapshot. {}", get_last_error_or_default(GetLastError()));
+            return;
+        }
+
+        wil::unique_handle temporary_file{ file_handle };
+        std::string payload = json.str();
+        DWORD bytes_written = 0;
+        if (!WriteFile(temporary_file.get(), payload.data(), static_cast<DWORD>(payload.size()), &bytes_written, nullptr) || bytes_written != static_cast<DWORD>(payload.size()))
+        {
+            Logger::warn(L"Failed to write Monitor failed progress snapshot. {}", get_last_error_or_default(GetLastError()));
+            DeleteFileW(temporary_path.c_str());
+            return;
+        }
+
+        temporary_file.reset();
+        if (!MoveFileExW(temporary_path.c_str(), progress_path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        {
+            Logger::warn(L"Failed to replace Monitor failed progress snapshot. {}", get_last_error_or_default(GetLastError()));
+            DeleteFileW(temporary_path.c_str());
+        }
     }
 
     bool search_process_path(const wchar_t* process_name, std::wstring& resolved_path)
@@ -151,6 +353,7 @@ class MonitorModuleInterface : public PowertoyModuleIface
 private:
     bool m_enabled = false;
     bool m_run_in_background = false;
+    std::wstring m_worker_settings_signature;
     wil::unique_handle m_process;
     std::vector<wil::unique_handle> m_one_shot_processes;
 
@@ -237,11 +440,49 @@ private:
             {
                 m_run_in_background = *value;
             }
+
+            // Capture the worker-relevant signature so a redundant set_config that pushes the
+            // same values right after enable() does not needlessly restart the worker.
+            m_worker_settings_signature = build_worker_settings_signature(values);
         }
         catch (const std::exception&)
         {
             Logger::warn("Monitor failed to load runInBackground setting; keeping the current value.");
         }
+    }
+
+    // Builds a stable string from the settings the worker actually consumes. Restarting the
+    // background worker is only necessary when one of these values changes; any other set_config
+    // call (for example a redundant re-save) should leave an in-progress scan untouched.
+    static std::wstring build_worker_settings_signature(const PowerToysSettings::PowerToyValues& values)
+    {
+        std::wstring signature;
+        const auto append_bool = [&signature](const std::optional<bool>& value) {
+            signature += value.has_value() ? (*value ? L"1" : L"0") : L"-";
+            signature += L'|';
+        };
+        const auto append_int = [&signature](const std::optional<int>& value) {
+            signature += value.has_value() ? std::to_wstring(*value) : L"-";
+            signature += L'|';
+        };
+        const auto append_string = [&signature](const std::optional<std::wstring>& value) {
+            const std::wstring resolved_value = value.value_or(L"-");
+            signature += std::to_wstring(resolved_value.size());
+            signature += L':';
+            signature += resolved_value;
+            signature += L'|';
+        };
+
+        append_string(values.get_string_value(L"downloadsPath"));
+        append_string(values.get_string_value(L"csvFileName"));
+        append_int(values.get_int_value(L"scanIntervalSeconds"));
+        append_int(values.get_int_value(L"maxFileSizeMegabytes"));
+        append_string(values.get_string_value(L"hashAlgorithm"));
+        append_bool(values.get_bool_value(L"useIncrementalHashing"));
+        append_bool(values.get_bool_value(L"runInBackground"));
+        append_bool(values.get_bool_value(L"organizeDownloads"));
+        append_bool(values.get_bool_value(L"cleanInstallers"));
+        return signature;
     }
 
     void signal_exit_event()
@@ -407,9 +648,19 @@ private:
 
         if (m_run_in_background)
         {
+            if (!restart_running_worker && is_handle_running(m_process.get()))
+            {
+                Logger::debug(L"Monitor background worker is already running; keeping it alive.");
+                return;
+            }
+
             if (restart_running_worker)
             {
                 stop_background_worker(true);
+            }
+            else if (m_process.get() != nullptr)
+            {
+                m_process.reset();
             }
 
             if (!launch_process(L"", MonitorProcessKind::Background))
@@ -460,7 +711,14 @@ public:
             }
 
             values.save_to_settings_file();
-            sync_background_worker(true);
+
+            // Only bounce the background worker when a value it actually reads changed. This keeps an
+            // in-progress background scan alive when unrelated or duplicate config updates arrive.
+            std::wstring new_signature = build_worker_settings_signature(values);
+            const bool worker_settings_changed = new_signature != m_worker_settings_signature;
+            m_worker_settings_signature = std::move(new_signature);
+
+            sync_background_worker(worker_settings_changed);
         }
         catch (const std::exception&)
         {
@@ -485,11 +743,23 @@ public:
                 std::wstring scan_id = action_object.get_value();
                 if (!scan_id.empty())
                 {
-                    args += L" --scan-id ";
-                    args += quote_argument(scan_id);
+                    if (is_valid_scan_id(scan_id))
+                    {
+                        args += L" --scan-id ";
+                        args += quote_argument(scan_id);
+                    }
+                    else
+                    {
+                        Logger::warn("Invalid Monitor scan id rejected.");
+                        write_failed_scan_progress(scan_id, L"Invalid scan id");
+                        return;
+                    }
                 }
 
-                launch_process(args, MonitorProcessKind::OneShot);
+                if (!launch_process(args, MonitorProcessKind::OneShot))
+                {
+                    write_failed_scan_progress(scan_id, L"Scan failed to start");
+                }
             }
             else if (action_object.get_name() == L"organizeDownloads")
             {

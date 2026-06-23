@@ -53,7 +53,7 @@ public sealed partial class LaunchPage : Page
     {
         if (_coordinator == null || !await _coordinator.ShowDocumentationAsync())
         {
-            await Launcher.LaunchUriAsync(new Uri("https://aka.ms/PowerToysOverview"));
+            await Launcher.LaunchUriAsync(new Uri("https://github.com/guijianchou/Kit"));
         }
     }
 

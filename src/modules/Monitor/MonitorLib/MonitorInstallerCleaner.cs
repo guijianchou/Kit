@@ -34,9 +34,10 @@ public static partial class MonitorInstallerCleaner
     /// </summary>
     /// <param name="scanRootPath">The folder to scan for installer files.</param>
     /// <param name="installedSoftwareNames">Installed software names.</param>
+    /// <param name="progressCallback">Optional heartbeat callback for long matching passes.</param>
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>Installer matches sorted by confidence descending.</returns>
-    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string scanRootPath, IEnumerable<string> installedSoftwareNames, CancellationToken cancellationToken = default)
+    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string scanRootPath, IEnumerable<string> installedSoftwareNames, Action? progressCallback = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(scanRootPath);
         ArgumentNullException.ThrowIfNull(installedSoftwareNames);
@@ -58,6 +59,7 @@ public static partial class MonitorInstallerCleaner
         foreach (string softwareName in installedSoftwareNames)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            progressCallback?.Invoke();
             string normalizedSoftwareName = NormalizeSoftwareName(softwareName);
             if (normalizedSoftwareName.Length < 3)
             {
@@ -68,6 +70,7 @@ public static partial class MonitorInstallerCleaner
             foreach ((FileInfo File, string CoreName) installer in installerTable)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                progressCallback?.Invoke();
                 double confidence = CalculateSimilarity(installer.CoreName, normalizedSoftwareName, keywords);
                 if (confidence >= 0.5)
                 {
@@ -84,9 +87,10 @@ public static partial class MonitorInstallerCleaner
     /// </summary>
     /// <param name="scanRootPath">The folder to scan for installer files.</param>
     /// <param name="installedSoftwareIndex">Installed software metadata.</param>
+    /// <param name="progressCallback">Optional heartbeat callback for long matching passes.</param>
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>Installer matches sorted by confidence descending.</returns>
-    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string scanRootPath, MonitorInstalledSoftwareIndex installedSoftwareIndex, CancellationToken cancellationToken = default)
+    public static IReadOnlyList<MonitorInstallerMatch> FindMatches(string scanRootPath, MonitorInstalledSoftwareIndex installedSoftwareIndex, Action? progressCallback = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(scanRootPath);
         ArgumentNullException.ThrowIfNull(installedSoftwareIndex);
@@ -108,6 +112,7 @@ public static partial class MonitorInstallerCleaner
         foreach (MonitorInstalledSoftwareEntry softwareEntry in installedSoftwareIndex.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            progressCallback?.Invoke();
             string normalizedVersion = NormalizeVersion(softwareEntry.DisplayVersion);
             if (normalizedVersion.Length == 0)
             {
@@ -124,6 +129,7 @@ public static partial class MonitorInstallerCleaner
             foreach ((FileInfo File, string CoreName, string? Version) installer in installerTable)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                progressCallback?.Invoke();
                 if (!string.Equals(NormalizeVersion(installer.Version), normalizedVersion, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -148,6 +154,7 @@ public static partial class MonitorInstallerCleaner
     /// <param name="minConfidence">The minimum confidence required to delete.</param>
     /// <param name="dryRun">True to report without deleting.</param>
     /// <param name="sendToRecycleBin">True to move deleted files to the Recycle Bin; false to delete permanently (used by tests).</param>
+    /// <param name="progressCallback">Optional heartbeat callback for long cleanup passes.</param>
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>A cleanup summary.</returns>
     public static MonitorInstallerCleanupResult Cleanup(
@@ -156,6 +163,7 @@ public static partial class MonitorInstallerCleaner
         double minConfidence,
         bool dryRun,
         bool sendToRecycleBin = true,
+        Action? progressCallback = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cleanupRootPath);
@@ -169,6 +177,7 @@ public static partial class MonitorInstallerCleaner
         foreach (MonitorInstallerMatch match in matches)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            progressCallback?.Invoke();
             if (match.Confidence < minConfidence || !MonitorFileOrganizer.IsPathInsideRoot(cleanupRootPath, match.FilePath) || !File.Exists(match.FilePath))
             {
                 skipped++;
@@ -208,10 +217,10 @@ public static partial class MonitorInstallerCleaner
 
     private static IEnumerable<FileInfo> SafeEnumerateFiles(this DirectoryInfo directory)
     {
-        FileInfo[] files;
+        IEnumerator<FileInfo> enumerator;
         try
         {
-            files = directory.EnumerateFiles().ToArray();
+            enumerator = directory.EnumerateFiles().GetEnumerator();
         }
         catch (DirectoryNotFoundException)
         {
@@ -226,9 +235,35 @@ public static partial class MonitorInstallerCleaner
             yield break;
         }
 
-        foreach (FileInfo file in files)
+        using (enumerator)
         {
-            yield return file;
+            while (true)
+            {
+                FileInfo file;
+                try
+                {
+                    if (!enumerator.MoveNext())
+                    {
+                        yield break;
+                    }
+
+                    file = enumerator.Current;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    yield break;
+                }
+                catch (IOException)
+                {
+                    yield break;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    yield break;
+                }
+
+                yield return file;
+            }
         }
     }
 

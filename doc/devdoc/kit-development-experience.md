@@ -2,6 +2,26 @@
 
 This note captures the first-phase lessons from turning the PowerToys-derived Kit shell into a stable local workspace and adding Monitor as the first Kit-authored module.
 
+## 2026-06-23 Version 2.0.7 Monitor Progress Hardening
+
+This pass moved Kit to `2.0.7` after another Monitor code and logic review focused on manual scan progress, timeout semantics, and launch argument hardening.
+
+- Version.props, README, README_zh, changelog, this development log, the sparse package manifest, GPO support markers, and version metadata tests now use Kit version `2.0.7`.
+- Monitor now emits hashing progress heartbeats while enumerating directories, so a large or slow Downloads tree does not look idle before the final file count is known.
+- The one-shot no-progress timeout now refreshes only after the wrapped progress reporter returns, keeping timeout state closer to observable progress output.
+- The native Monitor module validates Settings-provided manual scan ids before appending them to the worker command line, and command-line quoting now escapes quotes and trailing backslashes correctly.
+- Monitor unit tests cover the directory-enumeration heartbeat, timeout ordering, and manual scan id validation paths.
+
+## 2026-06-20 Version 2.0.6 Monitor Defaults And Branding Cleanup
+
+This pass moved Kit to `2.0.6` after a Monitor behavior review and a branding-link sweep.
+
+- Version.props, README, README_zh, changelog, this development log, the sparse package manifest, GPO support markers, and version metadata tests now use Kit version `2.0.6`.
+- Monitor `OrganizeDownloads` now defaults to off so background and one-shot scans only index until the user opts in; the explicit Organize action stays opt-in and unchanged.
+- The Monitor background worker now restarts only when a worker-relevant setting changes, so unrelated or duplicate config saves no longer interrupt an in-progress scan.
+- Hardened the Monitor worker lifetime watcher against a teardown race that could raise an unobserved `ObjectDisposedException`.
+- Replaced leftover `aka.ms/PowerToys*` links on Kit's own surfaces (tray documentation, Quick Access docs, General elevated-help, Awake learn-more and CLI help, Light Switch overview/learn-more, and elevated notification help) with the Kit project page.
+
 ## 2026-06-17 Version 2.0.5 General Layout Sync
 
 This pass moved Kit to `2.0.5` after syncing the General settings layout with the newer local PowerToys-main General page.
@@ -75,7 +95,7 @@ This pass finalized Kit's docs, tests, and Settings code against the local Power
 - The unused Command Palette toolkit and host central package pins were removed, along with the stale ToolGood.Words.Pinyin third-party notice section, after confirming no Kit project references `Shmuelie.WinRTServer` or `ToolGood.Words.Pinyin`; in the local PowerToys-main reference these packages feed the deleted CmdPal extension host/template and pinyin fuzzy matcher paths.
 - The deleted-module-only DSC, Workspaces/FancyZones, Peek, and PowerToys Run OneNote central package pins were removed after confirming no Kit project references `ModernWpfUI`, `NJsonSchema`, `ScipBe.Common.Office.OneNote`, or `SharpCompress`; in the local PowerToys-main reference these packages feed deleted DSC schema, Workspaces/FancyZones editor, Peek archive preview, and PowerToys Run OneNote paths.
 - The deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths were removed after confirming no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`; in the local PowerToys-main reference these packages feed deleted Hosts UI collections, Registry Preview grids, PowerToys Run notifications/OneNote caching, PowerAccent UI, and RTF conversion paths.
-- The deleted Launcher, AI, and CmdPal central package pins were removed, along with the stale CmdPal WyHash third-party notice section, after confirming no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`; the local PowerToys-main snapshot still keeps these as upstream central pins for deleted Launcher, AdvancedPaste/OpenAI, ImageResizer AI, and CmdPal paths.
+- The deleted Launcher, AI, and CmdPal central package pins were removed, along with the stale CmdPal WyHash third-party notice section, after confirming no Kit project references `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`; `Microsoft.Data.Sqlite` remains for Monitor scan status storage, and the local PowerToys-main snapshot still keeps these as upstream central pins for deleted Launcher, AdvancedPaste/OpenAI, ImageResizer AI, and CmdPal paths.
 - The inactive CmdPal Calculator and File Explorer/Peek shared assets were deleted after confirming `PowerToys-main` only uses `CalculatorEngineCommon`, `FilePreviewCommon`, Monaco assets, `modulesRegistry.h`, and shell-extension registration helpers from deleted CmdPal, PreviewPane, Peek, installer, or Registry Preview paths. This also removed the FilePreviewCommon-only `UTF.Unknown` package pin, stale Command Palette/File Explorer/Peek NOTICE sections, File Explorer add-in logger constants, the unused shell-extension registry generator, and Awake's stale launcher logger name.
 - Inactive Settings models, source files, unit tests, assets, icons, controls, converters, OOBE view models, and the legacy sibling Settings asset tree were deleted instead of being kept behind project exclusions.
 - GPOWrapper and module GPO helpers now expose only active modules that currently have policy rules plus the retained startup, update, and diagnostics rules; Monitor is active but intentionally remains policy-unavailable until a real Monitor policy is added. Inactive module and installer/update-toast policy readers were deleted from runtime and tests. ADMX/ADML policy assets now match the same Kit 2.0.1 policy surface.

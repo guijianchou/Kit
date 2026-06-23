@@ -363,7 +363,7 @@
                 </StackPanel>
             </controls:SettingsPageControl.ModuleContent>
             <controls:SettingsPageControl.PrimaryLinks>
-                <controls:PageLink x:Uid="LearnMore_LightSwitch" Link="https://aka.ms/PowerToysOverview_LightSwitch" />
+                <controls:PageLink x:Uid="LearnMore_LightSwitch" Link="https://github.com/guijianchou/Kit" />
             </controls:SettingsPageControl.PrimaryLinks>
         </controls:SettingsPageControl>
         <VisualStateManager.VisualStateGroups>

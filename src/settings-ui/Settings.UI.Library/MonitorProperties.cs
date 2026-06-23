@@ -15,7 +15,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         public const string DefaultHashAlgorithm = "SHA1";
         public const bool DefaultUseIncrementalHashing = true;
         public const bool DefaultRunInBackground = false;
-        public const bool DefaultOrganizeDownloads = true;
+        public const bool DefaultOrganizeDownloads = false;
         public const bool DefaultCleanInstallers = false;
 
         public MonitorProperties()

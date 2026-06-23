@@ -9,7 +9,7 @@
 // Non-Localizable strings
 namespace NonLocalizable
 {
-    const wchar_t RunAsAdminInfoPage[] = L"https://aka.ms/powertoysDetectedElevatedHelp";
+    const wchar_t RunAsAdminInfoPage[] = L"https://github.com/guijianchou/Kit";
     const wchar_t ToastNotificationButtonUrl[] = L"powertoys://cant_drag_elevated_disable/";
 }
 

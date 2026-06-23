@@ -14,7 +14,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 ## 当前版本
 
-当前 Kit 版本：`2.0.5`。
+当前 Kit 版本：`2.0.7`。
 
 ## 更新日志
 
@@ -128,6 +128,8 @@ Monitor 是第一个直接针对 PowerToys 模块形状开发的 Kit 模块。�
 - `src/settings-ui/Settings.UI.Controls` 在 Kit 快速访问模块列表中包含 Monitor，以便主页在启用时可以一致地公开它。
 
 当前 Monitor 对等目标是 Python 实现的基线功能：递归扫描 Downloads 并跳过重解析点，维护 `results.csv`，对文件进行分类，保留重复行用于分析，在启用 `OrganizeDownloads` 时按类别组织文件，在启用 `CleanInstallers` 时从 Downloads 根目录和 `Programs` 分类目录清理匹配的安装程序，并为 Settings 持久化近期扫描状态。安装程序清理是显式开启路径，只会在 `CleanInstallers` 启用后读取当前进程可见的 uninstall 注册表项来匹配已安装软件名称和版本。更丰富的 Home 操作仍是后续改进。
+
+最近的 Monitor 稳定化让扫描枚举保持流式处理，不再在 hashing 前物化整个目录或完整文件列表。Settings 状态摘要在 SQLite 查询层按时间范围过滤，stale-running 判断由 worker 和 Settings 共用同一个进度 freshness helper，非法手动 scan id 现在会写入对应扫描的失败状态，而不是启动一个无法追踪的 worker。
 
 当前设置界面包括 Status 区域、手动扫描卡、`OrganizeDownloads` 和 `CleanInstallers` 切换、`Run in background` 切换、默认 Downloads 文件夹选择器、哈希算法下拉菜单（默认为 SHA1），以及放置在手动扫描内容和扫描按钮之间的同行进度条/百分比。Monitor 模块切换控制模块和 Settings 操作是否可用。`Run in background` 单独控制运行器是否在启用时启动持久工作器；当它关闭时，Scan Now 仍然启动一次性扫描。一次性扫描会应用当前操作切换：`OrganizeDownloads` 默认开启，并在移动 Downloads 根目录文件前创建类别文件夹；`CleanInstallers` 默认关闭，开启后可清理 Downloads 根目录和 `Programs` 中匹配的安装程序；`Run in background` 默认关闭。scan-only 传递不会创建类别文件夹或移动文件。进度显示读取工作器进度快照和完成状态，而不是从仅 UI 的计时器推进；Status 区域读取 `%LOCALAPPDATA%\Kit\Monitor\monitor-status.db` 显示 All/30d/7d 扫描健康状态。
 

@@ -115,7 +115,18 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             ApplyManualScanProgressUpdate(progressUpdate);
             _manualScanProgressTimer.Start();
             string manualScanId = progressUpdate.ScanId;
-            _sendConfigMsg(Helper.GetSerializedCustomAction(MonitorSettings.ModuleName, "scanNow", manualScanId));
+            int sendResult = _sendConfigMsg(Helper.GetSerializedCustomAction(MonitorSettings.ModuleName, "scanNow", manualScanId));
+            if (sendResult != 0)
+            {
+                FailManualScanStart();
+            }
+        }
+
+        private void FailManualScanStart()
+        {
+            _manualScanProgressTimer.Stop();
+            ApplyManualScanProgressUpdate(_manualScanCoordinator.FailManualScanStart());
+            RefreshStatusSummary();
         }
 
         private void ManualScanProgressTimer_Tick(DispatcherQueueTimer sender, object args)
@@ -163,8 +174,9 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 MonitorCore.MonitorStatusSummary summary = await Task.Run(() =>
                 {
                     string statusDatabasePath = MonitorSettingsStoragePaths.ResolveStatusDatabasePath();
+                    string progressPath = MonitorSettingsStoragePaths.ResolveProgressPath();
                     DateTimeOffset now = DateTimeOffset.UtcNow;
-                    return _statusQueryService.GetSummaryWithStaleRefresh(statusDatabasePath, selectedRange, now);
+                    return _statusQueryService.GetSummaryWithStaleRefresh(statusDatabasePath, progressPath, selectedRange, now);
                 });
                 if (ViewModel.SelectedStatusRange == selectedRange)
                 {

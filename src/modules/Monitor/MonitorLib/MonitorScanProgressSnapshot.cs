@@ -39,6 +39,7 @@ public sealed class MonitorScanProgressSnapshot
         FilesTotal = filesTotal;
         CurrentDirectory = currentDirectory;
         StartedAt = startedAt;
+        UpdatedAt = DateTimeOffset.UtcNow;
         CompletedAt = completedAt;
         RecordCount = recordCount;
         Message = message;
@@ -73,6 +74,11 @@ public sealed class MonitorScanProgressSnapshot
     /// Gets or sets the scan start time.
     /// </summary>
     public DateTimeOffset StartedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last time this progress snapshot was written.
+    /// </summary>
+    public DateTimeOffset UpdatedAt { get; set; }
 
     /// <summary>
     /// Gets or sets the scan completion time, if finished.

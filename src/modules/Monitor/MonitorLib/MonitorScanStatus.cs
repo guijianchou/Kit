@@ -10,4 +10,5 @@ public enum MonitorScanStatus
     Success,
     Warning,
     Failed,
+    Canceled,
 }

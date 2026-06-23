@@ -17,9 +17,10 @@ public static class MonitorFileOrganizer
     /// <param name="downloadsPath">The Downloads root folder.</param>
     /// <param name="settings">The Monitor settings.</param>
     /// <param name="dryRun">True to report planned moves without changing files.</param>
+    /// <param name="progressCallback">Optional heartbeat callback for long organization passes.</param>
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>A summary of the organization run.</returns>
-    public static MonitorFileOrganizerResult Organize(string downloadsPath, MonitorSettings settings, bool dryRun, CancellationToken cancellationToken = default)
+    public static MonitorFileOrganizerResult Organize(string downloadsPath, MonitorSettings settings, bool dryRun, Action? progressCallback = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(downloadsPath);
         ArgumentNullException.ThrowIfNull(settings);
@@ -38,12 +39,14 @@ public static class MonitorFileOrganizer
 
         if (!dryRun)
         {
+            progressCallback?.Invoke();
             errors += EnsureCategoryFolders(rootDirectory, settings, cancellationToken);
         }
 
         foreach (FileInfo sourceFile in SafeEnumerateFiles(rootDirectory))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            progressCallback?.Invoke();
             if (IsReparsePoint(sourceFile) || excludedFiles.Contains(sourceFile.Name))
             {
                 continue;
@@ -154,10 +157,10 @@ public static class MonitorFileOrganizer
 
     private static IEnumerable<FileInfo> SafeEnumerateFiles(DirectoryInfo directory)
     {
-        FileInfo[] files;
+        IEnumerator<FileInfo> enumerator;
         try
         {
-            files = directory.EnumerateFiles().ToArray();
+            enumerator = directory.EnumerateFiles().GetEnumerator();
         }
         catch (DirectoryNotFoundException)
         {
@@ -172,9 +175,35 @@ public static class MonitorFileOrganizer
             yield break;
         }
 
-        foreach (FileInfo file in files)
+        using (enumerator)
         {
-            yield return file;
+            while (true)
+            {
+                FileInfo file;
+                try
+                {
+                    if (!enumerator.MoveNext())
+                    {
+                        yield break;
+                    }
+
+                    file = enumerator.Current;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    yield break;
+                }
+                catch (IOException)
+                {
+                    yield break;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    yield break;
+                }
+
+                yield return file;
+            }
         }
     }
 

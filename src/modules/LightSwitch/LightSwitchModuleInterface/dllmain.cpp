@@ -166,7 +166,7 @@ public:
         // Create a Settings object with your module name
         PowerToysSettings::Settings settings(hinstance, get_name());
         settings.set_description(MODULE_DESC);
-        settings.set_overview_link(L"https://aka.ms/powertoys");
+        settings.set_overview_link(L"https://github.com/guijianchou/Kit");
 
         // Boolean toggles
         settings.add_bool_toggle(

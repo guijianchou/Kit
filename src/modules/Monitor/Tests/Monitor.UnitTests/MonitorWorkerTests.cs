@@ -181,6 +181,29 @@ public sealed class MonitorWorkerTests
     }
 
     [TestMethod]
+    public void RunOnceReportsInitialProgressBeforeHashing()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string sourcePath = Path.Combine(tempDirectory.Path, "notes.pdf");
+        string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
+        File.WriteAllText(sourcePath, "document");
+        RecordingProgressReporter progressReporter = new();
+
+        _ = MonitorWorker.RunOnce(
+            tempDirectory.Path,
+            csvPath,
+            MonitorSettings.CreateDefault(),
+            organize: false,
+            cleanInstallers: false,
+            progressReporter: progressReporter);
+
+        Assert.IsTrue(progressReporter.Snapshots.Count > 0);
+        Assert.AreEqual(MonitorScanProgressPhase.Categorizing, progressReporter.Snapshots[0].Phase);
+        Assert.AreEqual(0, progressReporter.Snapshots[0].FilesProcessed);
+        Assert.AreEqual(0, progressReporter.Snapshots[0].FilesTotal);
+    }
+
+    [TestMethod]
     public void RunOnceCompletesWhenOptionalProgressReporterFails()
     {
         using TemporaryDirectory tempDirectory = new();

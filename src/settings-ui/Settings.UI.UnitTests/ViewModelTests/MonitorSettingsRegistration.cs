@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -58,7 +59,7 @@ namespace ViewModelTests
             Assert.AreEqual("SHA1", settings.Properties.HashAlgorithm.Value);
             Assert.IsTrue(settings.Properties.UseIncrementalHashing.Value);
             Assert.IsFalse(settings.Properties.RunInBackground.Value);
-            Assert.IsTrue(settings.Properties.OrganizeDownloads.Value);
+            Assert.IsFalse(settings.Properties.OrganizeDownloads.Value);
             Assert.IsFalse(settings.Properties.CleanInstallers.Value);
 
             var clone = (MonitorSettings)settings.Clone();
@@ -161,10 +162,12 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        [SuppressMessage("Performance", "CA2249:Use string.Contains instead of string.IndexOf", Justification = "This test compares source-order positions.")]
         public void MonitorSettingsUiShouldExposeManualScanFolderPickerHashDropdownAndScanProgress()
         {
             var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml"));
             var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml.cs"));
+            var shellCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
             var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorViewModel.cs"));
             var statusPresentationService = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "MonitorStatusPresentationService.cs"));
             var statusMetricViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "MonitorStatusMetricViewModel.cs"));
@@ -218,20 +221,30 @@ namespace ViewModelTests
             StringAssert.Contains(pageCode, "ScanNow_Click");
             StringAssert.Contains(pageCode, "_manualScanCoordinator");
             StringAssert.Contains(pageCode, "_statusQueryService");
+            StringAssert.Contains(pageCode, "FailManualScanStart");
+            StringAssert.Contains(pageCode, "sendResult != 0");
+            StringAssert.Contains(shellCode, "DefaultSndMSGCallback == null");
+            StringAssert.Contains(shellCode, "return 1;");
             StringAssert.Contains(pageCode, "RestoreManualScanProgressIfRunning");
             StringAssert.Contains(storagePaths, "scan-progress.json");
             StringAssert.Contains(storagePaths, "monitor-status.db");
             StringAssert.Contains(statusQueryService, "MonitorScanTrigger.Manual");
             StringAssert.Contains(statusQueryService, "MonitorScanStatus.Running");
             StringAssert.Contains(statusQueryService, "MonitorStatusStore.TryGetLatestRun");
+            StringAssert.Contains(statusQueryService, "GetFreshProgressScanId");
             StringAssert.Contains(progressSnapshotReader, "MonitorScanProgressFileReporter.Read");
             StringAssert.Contains(pageCode, "\"scanNow\"");
             StringAssert.Contains(pageCode, "manualScanId");
+            StringAssert.Contains(pageCode, "MonitorSettingsStoragePaths.ResolveProgressPath()");
+            StringAssert.Contains(pageCode, "GetSummaryWithStaleRefresh(statusDatabasePath, progressPath, selectedRange, now)");
             StringAssert.Contains(manualScanCoordinator, "CreateManualScanId");
             StringAssert.Contains(manualScanCoordinator, "CompleteManualScanProgress");
-            StringAssert.Contains(manualScanCoordinator, "ManualScanUiTimeout");
+            StringAssert.Contains(manualScanCoordinator, "RecordManualScanFailure");
+            StringAssert.Contains(manualScanCoordinator, "ManualScanNoProgressTimeout");
             StringAssert.Contains(manualScanCoordinator, "IsManualScanSnapshotExpired");
-            StringAssert.Contains(manualScanCoordinator, "DateTimeOffset.UtcNow - snapshot.StartedAt >= ManualScanUiTimeout");
+            StringAssert.Contains(manualScanCoordinator, "GetLastProgressAt(snapshot)");
+            Assert.IsFalse(manualScanCoordinator.Contains("DateTimeOffset.UtcNow - snapshot.StartedAt >= ManualScanUiTimeout", StringComparison.Ordinal), "Manual scan timeout should be based on missing progress, not total scan duration.");
+            Assert.IsFalse(manualScanCoordinator.Contains("ManualScanUiTimeout", StringComparison.Ordinal), "Manual scan UI should not keep a fixed total-duration timeout constant.");
             StringAssert.Contains(manualScanCoordinator, "FailManualScanProgress");
             StringAssert.Contains(manualScanCoordinator, "manualScanTimedOut");
             StringAssert.Contains(manualScanCoordinator, "\"failed\"");
@@ -240,7 +253,7 @@ namespace ViewModelTests
             StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanTimedOut\"");
             StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanFailed\"");
             StringAssert.Contains(manualScanCoordinator, "GetResourceString(\"Monitor_ManualScanPhaseHashing\"");
-            StringAssert.Contains(manualScanCoordinator, "FinishManualScanProgress");
+            Assert.IsFalse(manualScanCoordinator.Contains("FinishManualScanProgress", StringComparison.Ordinal));
             StringAssert.Contains(pageCode, "ViewModel.IsManualScanRunning = false;");
             StringAssert.Contains(pageCode, "ViewModel.IsManualScanRunning = true;");
             StringAssert.Contains(pageXaml, "IsEnabled=\"{x:Bind ViewModel.CanStartManualScan, Mode=OneWay}\"");
@@ -260,8 +273,9 @@ namespace ViewModelTests
             var restoreMethodIndex = pageCode.IndexOf("private void RestoreManualScanProgressIfRunning()", StringComparison.Ordinal);
             var staleRefreshIndex = manualScanCoordinator.IndexOf("_statusQueryService.RefreshStaleRunningScans", StringComparison.Ordinal);
             var readProgressIndex = manualScanCoordinator.IndexOf("_progressSnapshotReader.ReadLatest", StringComparison.Ordinal);
-            Assert.IsTrue(staleRefreshIndex >= 0, "Restore should refresh stale running scans before trusting persisted status.");
-            Assert.IsTrue(readProgressIndex > staleRefreshIndex, "Restore should refresh stale status before reading the latest progress snapshot.");
+            Assert.IsTrue(staleRefreshIndex >= 0, "Restore should still refresh stale running scans when there is no recoverable progress.");
+            Assert.IsTrue(readProgressIndex >= 0, "Restore should read the latest progress snapshot.");
+            Assert.IsTrue(readProgressIndex < staleRefreshIndex, "Restore should read progress before stale refresh so a fresh long-running scan is not marked failed.");
 
             StringAssert.Contains(viewModel, "DownloadsPathDisplay");
             StringAssert.Contains(viewModel, "ScanIntervalOptions");
@@ -306,6 +320,7 @@ namespace ViewModelTests
             StringAssert.Contains(resources, "Monitor_SelectDownloadsFolderButton.Content");
             StringAssert.Contains(resources, "Monitor_ManualScanStarting");
             StringAssert.Contains(resources, "Monitor_ManualScanWaitingForProgress");
+            StringAssert.Contains(resources, "Monitor_ManualScanStartFailed");
             StringAssert.Contains(resources, "Monitor_ManualScanTimedOut");
             StringAssert.Contains(resources, "Monitor_ManualScanFailed");
             StringAssert.Contains(resources, "Monitor_ManualScanPhaseHashing");

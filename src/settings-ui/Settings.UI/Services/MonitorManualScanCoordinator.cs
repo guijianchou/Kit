@@ -14,7 +14,7 @@ namespace Microsoft.PowerToys.Settings.UI.Services
 {
     public sealed class MonitorManualScanCoordinator
     {
-        private static readonly TimeSpan ManualScanUiTimeout = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan ManualScanNoProgressTimeout = TimeSpan.FromMinutes(30);
 
         private readonly MonitorProgressSnapshotReader _progressSnapshotReader;
         private readonly MonitorStatusQueryService _statusQueryService;
@@ -51,15 +51,22 @@ namespace Microsoft.PowerToys.Settings.UI.Services
                 ShouldRefreshStatus: false);
         }
 
+        public MonitorManualScanProgressUpdate FailManualScanStart()
+        {
+            return FailManualScanProgress(GetResourceString("Monitor_ManualScanStartFailed", "Scan failed to start"));
+        }
+
         public MonitorManualScanProgressUpdate UpdateManualScanProgress()
         {
             MonitorCore.MonitorScanProgressSnapshot snapshot = _progressSnapshotReader.ReadForScanId(_progressPath, _manualScanId);
-            bool manualScanTimedOut = DateTimeOffset.UtcNow - _manualScanStartedAt >= ManualScanUiTimeout;
+            bool manualScanTimedOut = snapshot == null
+                ? DateTimeOffset.UtcNow - _manualScanStartedAt >= ManualScanNoProgressTimeout
+                : IsManualScanSnapshotExpired(snapshot);
             if (snapshot == null)
             {
                 if (manualScanTimedOut)
                 {
-                    return FailManualScanProgress(GetResourceString("Monitor_ManualScanTimedOut", "Scan timed out"));
+                    return FailManualScanProgress(GetResourceString("Monitor_ManualScanTimedOut", "Scan timed out due to no progress"));
                 }
 
                 return new MonitorManualScanProgressUpdate(
@@ -82,7 +89,7 @@ namespace Microsoft.PowerToys.Settings.UI.Services
 
             if (manualScanTimedOut && !manualScanCompleted)
             {
-                return FailManualScanProgress(GetResourceString("Monitor_ManualScanTimedOut", "Scan timed out"));
+                return FailManualScanProgress(GetResourceString("Monitor_ManualScanTimedOut", "Scan timed out due to no progress"));
             }
 
             if (manualScanCompleted)
@@ -95,19 +102,19 @@ namespace Microsoft.PowerToys.Settings.UI.Services
 
         public MonitorManualScanProgressUpdate RestoreManualScanProgressIfRunning()
         {
-            _statusQueryService.RefreshStaleRunningScans(_statusDatabasePath, DateTimeOffset.UtcNow);
             MonitorCore.MonitorScanProgressSnapshot snapshot = _progressSnapshotReader.ReadLatest(_progressPath);
-            if (snapshot == null ||
-                IsTerminalScanPhase(snapshot.Phase) ||
-                IsManualScanSnapshotExpired(snapshot) ||
-                !_statusQueryService.IsLatestManualScanRunning(_statusDatabasePath, snapshot.ScanId))
+            if (snapshot != null &&
+                !IsTerminalScanPhase(snapshot.Phase) &&
+                !IsManualScanSnapshotExpired(snapshot) &&
+                _statusQueryService.IsLatestManualScanRunning(_statusDatabasePath, snapshot.ScanId))
             {
-                return null;
+                _manualScanId = snapshot.ScanId;
+                _manualScanStartedAt = snapshot.StartedAt == default ? DateTimeOffset.UtcNow : snapshot.StartedAt;
+                return ApplyWorkerProgressSnapshot(snapshot, isRunning: true, shouldStopTimer: false, shouldRefreshStatus: false);
             }
 
-            _manualScanId = snapshot.ScanId;
-            _manualScanStartedAt = snapshot.StartedAt == default ? DateTimeOffset.UtcNow : snapshot.StartedAt;
-            return ApplyWorkerProgressSnapshot(snapshot, isRunning: true, shouldStopTimer: false, shouldRefreshStatus: false);
+            _statusQueryService.RefreshStaleRunningScans(_statusDatabasePath, _progressPath, DateTimeOffset.UtcNow);
+            return null;
         }
 
         private MonitorManualScanProgressUpdate CompleteManualScanProgress(MonitorCore.MonitorScanProgressSnapshot snapshot)
@@ -117,13 +124,19 @@ namespace Microsoft.PowerToys.Settings.UI.Services
 
         private MonitorManualScanProgressUpdate FailManualScanProgress(string detail)
         {
+            string resolvedDetail = string.IsNullOrWhiteSpace(detail) ? GetResourceString("Monitor_ManualScanFailed", "Scan failed") : detail;
+            if (!string.IsNullOrWhiteSpace(_manualScanId))
+            {
+                _statusQueryService.RecordManualScanFailure(_statusDatabasePath, _manualScanId, _manualScanStartedAt, resolvedDetail);
+            }
+
             return new MonitorManualScanProgressUpdate(
                 _manualScanId,
                 IsVisible: true,
                 IsRunning: false,
                 IsIndeterminate: false,
                 ProgressValue: 100,
-                Detail: string.IsNullOrWhiteSpace(detail) ? GetResourceString("Monitor_ManualScanFailed", "Scan failed") : detail,
+                Detail: resolvedDetail,
                 ShouldStopTimer: true,
                 ShouldRefreshStatus: true);
         }
@@ -157,7 +170,22 @@ namespace Microsoft.PowerToys.Settings.UI.Services
 
         private static bool IsManualScanSnapshotExpired(MonitorCore.MonitorScanProgressSnapshot snapshot)
         {
-            return snapshot.StartedAt != default && DateTimeOffset.UtcNow - snapshot.StartedAt >= ManualScanUiTimeout;
+            return DateTimeOffset.UtcNow - GetLastProgressAt(snapshot) >= ManualScanNoProgressTimeout;
+        }
+
+        private static DateTimeOffset GetLastProgressAt(MonitorCore.MonitorScanProgressSnapshot snapshot)
+        {
+            if (snapshot.UpdatedAt != default)
+            {
+                return snapshot.UpdatedAt;
+            }
+
+            if (snapshot.CompletedAt.HasValue)
+            {
+                return snapshot.CompletedAt.Value;
+            }
+
+            return snapshot.StartedAt == default ? DateTimeOffset.UtcNow : snapshot.StartedAt;
         }
 
         private static bool IsTerminalScanPhase(string phase)

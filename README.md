@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.0.5`.
+Current Kit version: `2.0.7`.
 
 ## Changelog
 
@@ -128,6 +128,8 @@ Monitor is the first Kit module developed directly against the PowerToys module 
 - `src/settings-ui/Settings.UI.Controls` includes Monitor in the Kit Quick Access module list so Home can expose it consistently when enabled.
 
 The current Monitor parity target is the Python implementation's baseline functionality: recursively scan Downloads while skipping reparse points, maintain `results.csv`, categorize files, preserve duplicate rows for analytics, organize files by category when `OrganizeDownloads` is enabled, clean matched installers from the Downloads root and `Programs` category folder when `CleanInstallers` is enabled, and persist recent scan status for Settings. Installer cleanup is opt-in and reads uninstall registry entries visible to the current process only after `CleanInstallers` is enabled. Richer Home actions remain future refinements.
+
+Recent Monitor stabilization keeps scan enumeration streaming instead of materializing whole directories or the full file list before hashing. Settings status summaries are range-bound at the SQLite query layer, stale-running detection shares one progress freshness helper between the worker and Settings, and invalid manual scan ids now fail the requested scan instead of launching an untracked worker.
 
 The current Settings surface includes a Status section, a manual scan card, `OrganizeDownloads` and `CleanInstallers` toggles, a `Run in background` toggle, a default Downloads folder picker, a hash algorithm drop-down with SHA1 as the default, and a same-row progress bar/percentage placed between the Manual Scan content and the Scan button. The Monitor module toggle controls whether the module and Settings actions are available. `Run in background` separately controls whether the runner starts the persistent worker on enable; when it is off, Scan Now still launches a one-shot scan. The one-shot scan applies the current action toggles: `OrganizeDownloads` defaults to on and creates category folders before moving root Downloads files, `CleanInstallers` defaults to off and can clean matching installers from the Downloads root and `Programs`, and `Run in background` defaults to off. Scan-only passes do not create category folders or move files. The progress display reads worker progress snapshots by scan id instead of advancing from a UI-only timer or a global completion event, and the Status section reads `%LOCALAPPDATA%\Kit\Monitor\monitor-status.db` for All/30d/7d scan health.
 

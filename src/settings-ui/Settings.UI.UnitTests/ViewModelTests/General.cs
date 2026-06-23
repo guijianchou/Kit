@@ -725,7 +725,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse205ReleaseMetadata()
+        public void KitAboutVersionShouldUse207ReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -737,7 +737,7 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>2.0.5</Version>");
+            StringAssert.Contains(versionProps, "<Version>2.0.7</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -745,13 +745,21 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `2.0.5`.");
+            StringAssert.Contains(readme, "Current Kit version: `2.0.7`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.5`。");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.7`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
             StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
             StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
+            StringAssert.Contains(changelog, "### 2.0.7");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.7`");
+            StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_7");
+            StringAssert.Contains(changelog, "directory enumeration");
+            StringAssert.Contains(changelog, "progress-timeout ordering");
+            StringAssert.Contains(changelog, "### 2.0.6");
+            StringAssert.Contains(changelog, "Bumped Kit to `2.0.6`");
+            StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_6");
             StringAssert.Contains(changelog, "### 2.0.5");
             StringAssert.Contains(changelog, "Bumped Kit to `2.0.5`");
             StringAssert.Contains(changelog, "Startup & permissions");
@@ -851,7 +859,8 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
             StringAssert.Contains(changelog, "deleted-utility package pin removal");
             StringAssert.Contains(changelog, "Removed the deleted Launcher, AI, and CmdPal central package pins");
-            StringAssert.Contains(changelog, "no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(changelog, "no Kit project references `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(changelog, "`Microsoft.Data.Sqlite` remains for Monitor scan status storage");
             StringAssert.Contains(changelog, "stale CmdPal WyHash third-party notice section");
             StringAssert.Contains(changelog, "deleted Launcher/AI/CmdPal package pin removal");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
@@ -861,6 +870,8 @@ namespace ViewModelTests
             StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
             StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
+            StringAssert.Contains(developmentLog, "## 2026-06-23 Version 2.0.7 Monitor Progress Hardening");
+            StringAssert.Contains(developmentLog, "## 2026-06-20 Version 2.0.6 Monitor Defaults And Branding Cleanup");
             StringAssert.Contains(developmentLog, "## 2026-06-17 Version 2.0.5 General Layout Sync");
             StringAssert.Contains(developmentLog, "Startup & permissions");
             StringAssert.Contains(developmentLog, "system tray expander now carries the upstream icon treatment");
@@ -958,7 +969,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`");
             StringAssert.Contains(developmentLog, "deleted-utility package pin removal");
             StringAssert.Contains(developmentLog, "The deleted Launcher, AI, and CmdPal central package pins were removed");
-            StringAssert.Contains(developmentLog, "no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(developmentLog, "no Kit project references `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
+            StringAssert.Contains(developmentLog, "`Microsoft.Data.Sqlite` remains for Monitor scan status storage");
             StringAssert.Contains(developmentLog, "stale CmdPal WyHash third-party notice section");
             StringAssert.Contains(developmentLog, "deleted Launcher/AI/CmdPal package pin removal");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");

@@ -37,9 +37,10 @@ public static class MonitorHasher
     /// <param name="algorithm">The hash algorithm. Supported values are SHA1, MD5, SHA256, and SHA512.</param>
     /// <param name="chunkSizeBytes">The stream read chunk size.</param>
     /// <param name="maxFileSizeMb">The maximum file size to hash, in megabytes.</param>
+    /// <param name="progressCallback">Optional heartbeat callback after each read chunk.</param>
     /// <param name="cancellationToken">Cancellation token for cooperative shutdown.</param>
     /// <returns>A lowercase hash value, <see cref="Sha1SkippedTooLarge"/>, or null when the file cannot be read.</returns>
-    public static string? CalculateHash(string filePath, string algorithm, int chunkSizeBytes, int? maxFileSizeMb, CancellationToken cancellationToken = default)
+    public static string? CalculateHash(string filePath, string algorithm, int chunkSizeBytes, int? maxFileSizeMb, Action? progressCallback = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(algorithm);
@@ -67,6 +68,7 @@ public static class MonitorHasher
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 hashAlgorithm.AppendData(buffer, 0, bytesRead);
+                progressCallback?.Invoke();
             }
 
             byte[] hash = hashAlgorithm.GetHashAndReset();

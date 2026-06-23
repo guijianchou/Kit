@@ -102,7 +102,15 @@ internal sealed class MonitorLifetimeCancellation : IDisposable
                 (_parentProcessId.HasValue && !IsProcessRunning(_parentProcessId.Value)))
             {
                 _exitRequested = true;
-                _cancellationTokenSource.Cancel();
+                try
+                {
+                    _cancellationTokenSource.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Dispose won the race after Join timed out; the consumer is already tearing down.
+                }
+
                 return;
             }
         }

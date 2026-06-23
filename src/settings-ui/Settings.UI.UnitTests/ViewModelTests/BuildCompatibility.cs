@@ -1332,8 +1332,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
-            StringAssert.Contains(versionProps, "<Version>2.0.5</Version>");
-            StringAssert.Contains(manifest, "Version=\"2.0.5.0\"");
+            StringAssert.Contains(versionProps, "<Version>2.0.7</Version>");
+            StringAssert.Contains(manifest, "Version=\"2.0.7.0\"");
             StringAssert.Contains(readme, "Debug builds use `-NoSign`");
             StringAssert.Contains(manifest, "Local.Kit.SparseApp");
             StringAssert.Contains(manifest, "Kit.SparseApp");
@@ -1715,9 +1715,9 @@ namespace ViewModelTests
                 StringAssert.Contains(adml, activePolicy);
             }
 
-            StringAssert.Contains(admx, "SUPPORTED_KIT_2_0_5");
-            StringAssert.Contains(adml, "SUPPORTED_KIT_2_0_5");
-            foreach (var obsoleteSupportMarker in new[] { "SUPPORTED_KIT_1" + "_2_2", "SUPPORTED_KIT_2" + "_0_2", "SUPPORTED_KIT_2" + "_0_3", "SUPPORTED_KIT_2" + "_0_4", "SUPPORTED_KIT_3" + "_0_1" })
+            StringAssert.Contains(admx, "SUPPORTED_KIT_2_0_7");
+            StringAssert.Contains(adml, "SUPPORTED_KIT_2_0_7");
+            foreach (var obsoleteSupportMarker in new[] { "SUPPORTED_KIT_1" + "_2_2", "SUPPORTED_KIT_2" + "_0_2", "SUPPORTED_KIT_2" + "_0_3", "SUPPORTED_KIT_2" + "_0_4", "SUPPORTED_KIT_2" + "_0_5", "SUPPORTED_KIT_2" + "_0_6", "SUPPORTED_KIT_3" + "_0_1" })
             {
                 Assert.IsFalse(admx.Contains(obsoleteSupportMarker, StringComparison.Ordinal), $"GPO ADMX should not keep obsolete support marker after the version bump: {obsoleteSupportMarker}");
                 Assert.IsFalse(adml.Contains(obsoleteSupportMarker, StringComparison.Ordinal), $"GPO ADML should not keep obsolete support marker after the version bump: {obsoleteSupportMarker}");
@@ -2425,7 +2425,6 @@ namespace ViewModelTests
             var notice = File.ReadAllText(FindSourceFile("NOTICE.md"));
             string[] deletedLauncherAiAndCmdPalPackages =
             {
-                "Microsoft.Data.Sqlite",
                 "Microsoft.Graphics.Win2D",
                 "Microsoft.WindowsAppSDK.AI",
                 "NLog",
@@ -3117,6 +3116,25 @@ namespace ViewModelTests
             StringAssert.Contains(resources, "<value>Organize</value>");
             StringAssert.Contains(resources, "name=\"Monitor_CleanInstallersSettingsCard.Header\"");
             StringAssert.Contains(resources, "<value>Clean</value>");
+        }
+
+        [TestMethod]
+        public void KitOwnedDocumentationLinksShouldUseKitProjectPage()
+        {
+            var awakePage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AwakePage.xaml"));
+            var awakeProgram = File.ReadAllText(FindSourceFile("src", "modules", "awake", "Awake", "Program.cs"));
+            var generalPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+            var lightSwitchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml"));
+            var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
+            var notificationUtil = File.ReadAllText(FindSourceFile("src", "common", "notifications", "NotificationUtil.cpp"));
+            var runnerTrayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
+            var quickAccessLaunchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "QuickAccessXAML", "Flyout", "LaunchPage.xaml.cs"));
+
+            foreach (var kitOwnedSurface in new[] { awakePage, awakeProgram, generalPage, lightSwitchPage, lightSwitchInterface, notificationUtil, runnerTrayIcon, quickAccessLaunchPage })
+            {
+                StringAssert.Contains(kitOwnedSurface, "https://github.com/guijianchou/Kit");
+                Assert.IsFalse(kitOwnedSurface.Contains("aka.ms/powertoys", StringComparison.OrdinalIgnoreCase), "Kit-owned documentation links should not send users to upstream PowerToys docs.");
+            }
         }
 
         private static void AssertUsesXName(string xaml, string elementName)

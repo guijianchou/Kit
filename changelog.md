@@ -6,6 +6,30 @@
 
 ## English
 
+### 2.0.7
+
+- Version: Bumped Kit to `2.0.7`.
+- Monitor: Kept one-shot manual scans alive during long directory enumeration by emitting hashing progress heartbeats before the final file count is known.
+- Monitor: Streamed file and directory enumeration through the scanner, organizer, and installer cleaner so large Downloads folders no longer require full per-directory materialization before work continues.
+- Monitor: Range-bounded scan status summaries at the SQLite query layer and shared progress freshness detection between the worker and Settings.
+- Monitor: No-progress timeout tracking now resets only after the progress reporter returns, avoiding false worker heartbeats when progress output fails.
+- Monitor: Wakes the no-progress timeout watcher during disposal instead of waiting for the next polling sleep.
+- Monitor: Hardened manual scan launch arguments by validating Settings-provided scan ids and using Windows command-line quoting rules.
+- Monitor: Invalid manual scan ids now write a failed progress snapshot for the requested scan id and return without launching an untracked one-shot worker.
+- Docs: Updated README, README_zh, changelog, development log, sparse package version, and GPO support marker `SUPPORTED_KIT_2_0_7`.
+- Tests: Added regression coverage for Monitor directory-enumeration heartbeats, streaming enumeration, range-bounded status queries, shared progress freshness, progress-timeout ordering, scan-id validation, and version metadata for `2.0.7`.
+
+### 2.0.6
+
+- Version: Bumped Kit to `2.0.6`.
+- Monitor: `OrganizeDownloads` now defaults to off, so background and one-shot scans only index the Downloads folder until the user opts in; the explicit Organize action is unchanged.
+- Monitor: The background worker now restarts only when a setting it actually consumes changes, so unrelated or duplicate config saves no longer interrupt an in-progress background scan.
+- Monitor: Hardened the worker lifetime watcher so a teardown race can no longer raise an unobserved `ObjectDisposedException`.
+- Branding: Replaced leftover `aka.ms/PowerToys*` links on Kit's own surfaces (tray documentation menu, Quick Access docs, General elevated-help link, Awake learn-more and CLI help, Light Switch overview/learn-more, and elevated notification help) with the Kit project page.
+- Cleanup: Removed stale build output and a leftover native build scratch folder; no tracked files affected.
+- Docs: Updated README, README_zh, changelog, development log, sparse package version, and GPO support marker `SUPPORTED_KIT_2_0_6`.
+- Tests: Updated version metadata, Monitor default, and GPO support-marker coverage for `2.0.6`.
+
 ### 2.0.5
 
 - Version: Bumped Kit to `2.0.5`.
@@ -80,7 +104,7 @@
 - Slimming: Removed the unused Command Palette toolkit and host central package pins and stale ToolGood.Words.Pinyin third-party notice section after confirming no Kit project references `Shmuelie.WinRTServer` or `ToolGood.Words.Pinyin`.
 - Slimming: Removed the deleted-module-only central package pins for DSC, Workspaces/FancyZones, Peek, and PowerToys Run OneNote after confirming no Kit project references `ModernWpfUI`, `NJsonSchema`, `ScipBe.Common.Office.OneNote`, or `SharpCompress`.
 - Slimming: Removed the deleted-utility central package pins for Hosts, Registry Preview, PowerToys Run, PowerAccent, and RTF conversion paths after confirming no Kit project references `CommunityToolkit.WinUI.Collections`, `CommunityToolkit.WinUI.UI.Controls.DataGrid`, `ControlzEx`, `Interop.Microsoft.Office.Interop.OneNote`, `LazyCache`, `Microsoft.Toolkit.Uwp.Notifications`, `RtfPipe`, or `WPF-UI`.
-- Slimming: Removed the deleted Launcher, AI, and CmdPal central package pins after confirming no Kit project references `Microsoft.Data.Sqlite`, `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`, and removed the stale CmdPal WyHash third-party notice section.
+- Slimming: Removed the deleted Launcher, AI, and CmdPal central package pins after confirming no Kit project references `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`; `Microsoft.Data.Sqlite` remains for Monitor scan status storage, and the stale CmdPal WyHash third-party notice section was removed.
 - Slimming: Deleted inactive CmdPal Calculator and File Explorer/Peek shared assets after confirming `PowerToys-main` only uses `CalculatorEngineCommon`, `FilePreviewCommon`, Monaco assets, `modulesRegistry.h`, and shell-extension registration helpers from deleted CmdPal, PreviewPane, Peek, installer, or Registry Preview paths; the unused `UTF.Unknown` package pin, stale NOTICE sections, File Explorer logger constants, and stale Awake launcher logger name were removed with them.
 - Slimming: Deleted the legacy sibling Settings asset tree and inactive Settings models, source files, unit tests, assets, icons, controls, converters, and OOBE view models instead of hiding them behind project exclusions.
 - Policy: Trimmed GPOWrapper and Settings GPO helper policy surface to active modules plus retained startup, update, and diagnostics policy readers.
@@ -225,6 +249,30 @@
 
 ## 更新日志
 
+### 2.0.7
+
+- 版本：Kit 升级到 `2.0.7`。
+- Monitor：在长时间目录枚举期间持续写入 hashing 进度心跳，避免最终文件数尚未计算出来时被误判为手动扫描无进度。
+- Monitor：scanner、organizer 和 installer cleaner 改为流式文件/目录枚举，大型 Downloads 文件夹不再需要先完整物化单个目录才能继续处理。
+- Monitor：扫描状态摘要在 SQLite 查询层按范围过滤，worker 和 Settings 共用同一套进度 freshness 判断。
+- Monitor：无进度超时现在只在进度 reporter 返回后刷新，避免进度输出失败时仍被当作 worker 心跳。
+- Monitor：无进度超时 watcher 在 dispose 时会被唤醒，不再等待下一次轮询 sleep。
+- Monitor：手动扫描启动参数会校验 Settings 传入的 scan id，并使用 Windows 命令行引用规则。
+- Monitor：非法手动 scan id 会为请求的 scan id 写入失败进度快照并直接返回，不再启动无法追踪的一次性 worker。
+- 文档：同步 README、README_zh、changelog、development log、sparse package version 和 GPO support marker `SUPPORTED_KIT_2_0_7`。
+- 测试：新增 Monitor 目录枚举心跳、流式枚举、按范围查询状态摘要、共享进度 freshness、进度超时顺序、scan-id 校验和 `2.0.7` 版本元数据回归覆盖。
+
+### 2.0.6
+
+- 版本：Kit 升级到 `2.0.6`。
+- Monitor：`OrganizeDownloads` 默认改为关闭，后台与单次扫描默认只索引 Downloads 文件夹，需用户主动开启才整理；显式的"整理"操作行为不变。
+- Monitor：后台 worker 仅在其真正读取的设置发生变化时才重启，无关或重复的配置保存不再打断进行中的后台扫描。
+- Monitor：加固 worker 生命周期监视线程，消除拆卸竞态可能抛出的未观察 `ObjectDisposedException`。
+- 品牌：将 Kit 自有界面上残留的 `aka.ms/PowerToys*` 链接（托盘文档菜单、Quick Access 文档、General 提权帮助链接、Awake 了解更多与 CLI 帮助、Light Switch 概览与了解更多、提权通知帮助）替换为 Kit 项目页面。
+- 清理：删除陈旧的构建输出和一个残留的原生构建临时目录；不影响任何受版本控制的文件。
+- 文档：同步 README、README_zh、changelog、development log、sparse package version 和 GPO support marker `SUPPORTED_KIT_2_0_6`。
+- 测试：更新版本元数据、Monitor 默认值和 GPO support marker 的覆盖到 `2.0.6`。
+
 ### 2.0.5
 
 - 版本：Kit 升级到 `2.0.5`。
@@ -299,7 +347,7 @@
 - 瘦身：确认没有 Kit 项目引用 `Shmuelie.WinRTServer` 或 `ToolGood.Words.Pinyin` 后，移除未使用的 Command Palette toolkit/host central package pins 和陈旧 ToolGood.Words.Pinyin 第三方 notice 段。
 - 瘦身：确认没有 Kit 项目引用 `ModernWpfUI`、`NJsonSchema`、`ScipBe.Common.Office.OneNote` 或 `SharpCompress` 后，移除仅服务于已删除 DSC、Workspaces/FancyZones、Peek 和 PowerToys Run OneNote 路径的 central package pins。
 - 瘦身：确认没有 Kit 项目引用 `CommunityToolkit.WinUI.Collections`、`CommunityToolkit.WinUI.UI.Controls.DataGrid`、`ControlzEx`、`Interop.Microsoft.Office.Interop.OneNote`、`LazyCache`、`Microsoft.Toolkit.Uwp.Notifications`、`RtfPipe` 或 `WPF-UI` 后，移除仅服务于已删除 Hosts、Registry Preview、PowerToys Run、PowerAccent 和 RTF conversion 路径的 central package pins。
-- 瘦身：确认没有 Kit 项目引用 `Microsoft.Data.Sqlite`、`Microsoft.Graphics.Win2D`、`Microsoft.WindowsAppSDK.AI`、`NLog`、`NLog.Extensions.Logging`、`NLog.Schema`、`System.ClientModel`、`System.Numerics.Tensors` 或 `WyHash` 后，移除仅服务于已删除 Launcher、AI 和 CmdPal 路径的 central package pins，并删除陈旧 CmdPal WyHash 第三方 notice 段。
+- 瘦身：确认没有 Kit 项目引用 `Microsoft.Graphics.Win2D`、`Microsoft.WindowsAppSDK.AI`、`NLog`、`NLog.Extensions.Logging`、`NLog.Schema`、`System.ClientModel`、`System.Numerics.Tensors` 或 `WyHash` 后，移除仅服务于已删除 Launcher、AI 和 CmdPal 路径的 central package pins；`Microsoft.Data.Sqlite` 保留用于 Monitor scan status storage，并删除陈旧 CmdPal WyHash 第三方 notice 段。
 - 瘦身：确认 `PowerToys-main` 只在已删除 CmdPal、PreviewPane、Peek、installer 或 Registry Preview 路径中使用 `CalculatorEngineCommon`、`FilePreviewCommon`、Monaco 资产、`modulesRegistry.h` 和 shell-extension 注册 helper 后，删除这些 CmdPal Calculator 与 File Explorer/Peek 共享资产；同时移除未使用的 `UTF.Unknown` package pin、陈旧 NOTICE 段、File Explorer logger 常量，以及 Awake 中陈旧的 launcher logger 命名。
 - 瘦身：删除旧 sibling Settings 资产树以及非活动 Settings 模型、源码、单元测试、资产、图标、控件、转换器和 OOBE ViewModel，不再把它们隐藏在项目排除规则后面。
 - 策略：将 GPOWrapper 和 Settings GPO helper 策略表面裁剪到活动模块，以及仍保留的启动、更新和诊断策略读取器。

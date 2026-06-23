@@ -98,8 +98,9 @@ public static class MonitorCsvStore
     /// <param name="csvPath">The source CSV file path.</param>
     /// <param name="downloadsPath">The Downloads root used to reconstruct full paths.</param>
     /// <param name="settings">The Monitor settings used to resolve categories.</param>
+    /// <param name="progressCallback">Optional heartbeat callback for large CSV files.</param>
     /// <returns>The records read from the CSV file.</returns>
-    public static IReadOnlyList<MonitorFileRecord> Load(string csvPath, string downloadsPath, MonitorSettings settings)
+    public static IReadOnlyList<MonitorFileRecord> Load(string csvPath, string downloadsPath, MonitorSettings settings, Action? progressCallback = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(csvPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(downloadsPath);
@@ -128,6 +129,7 @@ public static class MonitorCsvStore
             Dictionary<string, int> columnIndex = BuildColumnIndex(headers);
             while (!parser.EndOfData)
             {
+                progressCallback?.Invoke();
                 string[]? fields = parser.ReadFields();
                 if (fields is null)
                 {

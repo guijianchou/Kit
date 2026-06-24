@@ -16,8 +16,15 @@
 - Monitor: Wakes the no-progress timeout watcher during disposal instead of waiting for the next polling sleep.
 - Monitor: Hardened manual scan launch arguments by validating Settings-provided scan ids and using Windows command-line quoting rules.
 - Monitor: Invalid manual scan ids now write a failed progress snapshot for the requested scan id and return without launching an untracked one-shot worker.
+- Monitor: Enabled SQLite WAL journaling with a busy timeout on the scan-status database so the background worker writer and the Settings reader no longer contend, removing the rare status-unavailable flicker during a background scan.
+- Monitor: Added a configurable installer-cleanup confidence threshold (50-95%, default 70) in Settings; the worker clamps it into a safe 0.5-0.95 range before matching installers.
+- Monitor: Added a non-destructive Preview cleanup action that reports how many installers would be removed and the space they would free without deleting anything, and real cleanup now reports a removed/freed summary.
+- Monitor: Extracted the shared file-enumeration helper used by the scanner, organizer, and installer cleaner and centralized the no-progress timeout, removing duplicated logic with no behavior change.
+- Monitor: Fixed the Settings status legend clipping the `Warning` and `No data` labels by laying the legend out with a horizontal stack panel so each item keeps its natural width instead of a uniform-cell grid sized to the first item.
+- Cleanup: Removed an orphaned PowerDisplay-era Monitor selection view model that no active Settings surface referenced.
 - Docs: Updated README, README_zh, changelog, development log, sparse package version, and GPO support marker `SUPPORTED_KIT_2_0_7`.
 - Tests: Added regression coverage for Monitor directory-enumeration heartbeats, streaming enumeration, range-bounded status queries, shared progress freshness, progress-timeout ordering, scan-id validation, and version metadata for `2.0.7`.
+- Tests: Added coverage for installer-cleanup confidence clamping, dry-run installer preview reporting, and the new Settings confidence/preview card registration.
 
 ### 2.0.6
 
@@ -259,8 +266,15 @@
 - Monitor：无进度超时 watcher 在 dispose 时会被唤醒，不再等待下一次轮询 sleep。
 - Monitor：手动扫描启动参数会校验 Settings 传入的 scan id，并使用 Windows 命令行引用规则。
 - Monitor：非法手动 scan id 会为请求的 scan id 写入失败进度快照并直接返回，不再启动无法追踪的一次性 worker。
+- Monitor：为扫描状态数据库开启 SQLite WAL 日志与忙等待超时，使后台 worker（写）与 Settings（读）不再相互争用，消除后台扫描期间偶发的"状态不可用"闪烁。
+- Monitor：在 Settings 中新增可配置的安装包清理置信阈值（50-95%，默认 70）；worker 在匹配安装包前会将其收敛到安全的 0.5-0.95 区间。
+- Monitor：新增非破坏性的"预览清理"操作，在不删除任何文件的前提下报告将会清理多少个安装包及可释放空间；真实清理现在也会报告已删除/已释放摘要。
+- Monitor：抽取 scanner、organizer 与 installer cleaner 共用的文件枚举 helper，并集中无进度超时常量，去除重复逻辑且行为不变。
+- Monitor：修复 Settings 状态图例把 `Warning` 和 `No data` 标签尾部截断的问题——改用水平 stack panel 布局，使每个图例项保持自身自然宽度，而不再按首项尺寸统一单元格。
+- 清理：移除一个无任何活动 Settings 界面引用、源自 PowerDisplay 时期的 Monitor 选择 view model。
 - 文档：同步 README、README_zh、changelog、development log、sparse package version 和 GPO support marker `SUPPORTED_KIT_2_0_7`。
 - 测试：新增 Monitor 目录枚举心跳、流式枚举、按范围查询状态摘要、共享进度 freshness、进度超时顺序、scan-id 校验和 `2.0.7` 版本元数据回归覆盖。
+- 测试：新增安装包清理置信阈值收敛、dry-run 安装包预览报告，以及新增 Settings 置信度/预览卡注册的覆盖。
 
 ### 2.0.6
 

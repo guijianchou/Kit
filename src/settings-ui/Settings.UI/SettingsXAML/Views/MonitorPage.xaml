@@ -148,7 +148,7 @@
                                 ItemsSource="{x:Bind ViewModel.StatusLegendItems, Mode=OneWay}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <VariableSizedWrapGrid Orientation="Horizontal" />
+                                        <StackPanel Orientation="Horizontal" />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>

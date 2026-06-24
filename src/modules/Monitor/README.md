@@ -15,7 +15,7 @@ Monitor settings live in `Settings.UI.Library` as `MonitorSettings`, `MonitorPro
 
 Manual registration points are covered by `Settings.UI.UnitTests/ViewModelTests/MonitorSettingsRegistration.cs` so future module imports do not silently miss runner, solution, Home, Quick Access, or Settings wiring.
 
-The current Settings page exposes manual scan, Monitor status, `OrganizeDownloads`, `CleanInstallers`, `Run in background`, Downloads folder selection, hash algorithm selection, and a same-row scan progress indicator. `Run in background` controls only the persistent worker launched by the runner. Manual Scan remains a one-shot action and does not require background mode. The progress indicator reads worker-written snapshots from `%LOCALAPPDATA%\Kit\Monitor\scan-progress.json`, and the Status section reads `%LOCALAPPDATA%\Kit\Monitor\monitor-status.db`, shows All/30d/7d history, and marks stale running scans as failed after the shared stale-run timeout.
+The current Settings page exposes manual scan, Monitor status, `OrganizeDownloads`, `CleanInstallers`, an installer-cleanup confidence threshold, a non-destructive Preview cleanup action, `Run in background`, Downloads folder selection, hash algorithm selection, and a same-row scan progress indicator. `Run in background` controls only the persistent worker launched by the runner. Manual Scan remains a one-shot action and does not require background mode. The progress indicator reads worker-written snapshots from `%LOCALAPPDATA%\Kit\Monitor\scan-progress.json`, and the Status section reads `%LOCALAPPDATA%\Kit\Monitor\monitor-status.db`, shows All/30d/7d history, and marks stale running scans as failed after the shared stale-run timeout. The status database uses SQLite WAL journaling with a busy timeout so the worker writer and the Settings reader can run concurrently without contention.
 
 ## Current Behavior
 
@@ -30,6 +30,7 @@ The current parity target is the Python implementation baseline:
 - Provide installer cleanup primitives without touching real registry state in tests.
 - Let one-shot Scan Now apply the current action toggles through the same worker cycle: both `OrganizeDownloads` and `CleanInstallers` are off by default, so a fresh scan only indexes files. When organization is disabled, scan-only passes do not create category folders or move files.
 - Clean installers from the Downloads root and the `Programs` category folder when `CleanInstallers` is enabled; this opt-in path reads uninstall registry entries visible to the current process to match installed software names and versions.
+- Gate installer cleanup behind a configurable confidence threshold (50-95% in Settings, clamped to 0.5-0.95 in the worker), and expose a non-destructive Preview action that reports how many installers would be removed and the space they would free without deleting anything.
 - Report scan progress phases and completion state to Settings through a JSON progress file and persisted scan status.
 - Persist recent manual and background scan status in SQLite for the Settings Status section.
 

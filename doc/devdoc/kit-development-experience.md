@@ -11,6 +11,11 @@ This pass moved Kit to `2.0.7` after another Monitor code and logic review focus
 - The one-shot no-progress timeout now refreshes only after the wrapped progress reporter returns, keeping timeout state closer to observable progress output.
 - The native Monitor module validates Settings-provided manual scan ids before appending them to the worker command line, and command-line quoting now escapes quotes and trailing backslashes correctly.
 - Monitor unit tests cover the directory-enumeration heartbeat, timeout ordering, and manual scan id validation paths.
+- A follow-up optimization pass in the same version hardened the Monitor scan-status SQLite database with WAL journaling, a busy timeout, and NORMAL synchronous mode so the background worker writer and the Settings reader no longer contend, removing the rare status-unavailable flicker during a background scan.
+- Installer cleanup now exposes a configurable confidence threshold in Settings (50-95%, default 70) that the worker clamps into a safe 0.5-0.95 range before matching, plus a non-destructive Preview cleanup action that reports what cleanup would remove without deleting files; an actual cleanup run now reports a removed/freed summary in the same completion line.
+- The scanner, organizer, and installer cleaner now share one fault-tolerant file-enumeration helper, and the no-progress timeout is centralized in a single MonitorLib constant, removing duplicated logic with no behavior change.
+- The Settings status legend now lays out with a horizontal stack panel so the `Warning` and `No data` labels are no longer clipped by the previous uniform-cell grid that sized every cell to the first item, and an orphaned PowerDisplay-era Monitor selection view model that no active surface referenced was removed.
+- Monitor unit tests now also cover installer-cleanup confidence clamping and dry-run preview reporting, and Settings UI tests cover the new confidence/preview card registration.
 
 ## 2026-06-20 Version 2.0.6 Monitor Defaults And Branding Cleanup
 

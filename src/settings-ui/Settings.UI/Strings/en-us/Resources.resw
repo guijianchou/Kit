@@ -1974,6 +1974,21 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Monitor_CleanInstallersSettingsCard.Description" xml:space="preserve">
     <value>Allow installer cleanup for files that match installed programs</value>
   </data>
+  <data name="Monitor_InstallerCleanupConfidenceSettingsCard.Header" xml:space="preserve">
+    <value>Cleanup confidence</value>
+  </data>
+  <data name="Monitor_InstallerCleanupConfidenceSettingsCard.Description" xml:space="preserve">
+    <value>Minimum match confidence (percent) required before an installer is removed</value>
+  </data>
+  <data name="Monitor_PreviewCleanupSettingsCard.Header" xml:space="preserve">
+    <value>Preview cleanup</value>
+  </data>
+  <data name="Monitor_PreviewCleanupSettingsCard.Description" xml:space="preserve">
+    <value>Show which installers would be removed, without deleting anything</value>
+  </data>
+  <data name="Monitor_PreviewCleanupButton.Content" xml:space="preserve">
+    <value>Preview</value>
+  </data>
   <data name="LearnMore_Monitor.Text" xml:space="preserve">
     <value>Learn more about Monitor</value>
   </data>

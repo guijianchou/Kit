@@ -40,7 +40,8 @@ public static class MonitorSettingsLoader
                 incrementalScan: ReadBool(properties, "useIncrementalHashing"),
                 runInBackground: ReadBool(properties, "runInBackground"),
                 autoOrganize: ReadBool(properties, "organizeDownloads"),
-                autoCleanInstallers: ReadBool(properties, "cleanInstallers"));
+                autoCleanInstallers: ReadBool(properties, "cleanInstallers"),
+                installerMinConfidence: ReadInstallerConfidence(properties));
         }
         catch (IOException)
         {
@@ -89,6 +90,12 @@ public static class MonitorSettingsLoader
             JsonValueKind.False => false,
             _ => null,
         };
+    }
+
+    private static double? ReadInstallerConfidence(JsonElement properties)
+    {
+        int? confidencePercent = ReadInt(properties, "installerCleanupConfidence");
+        return confidencePercent.HasValue ? confidencePercent.Value / 100.0 : null;
     }
 
     private static bool TryGetValue(JsonElement properties, string propertyName, out JsonElement value)

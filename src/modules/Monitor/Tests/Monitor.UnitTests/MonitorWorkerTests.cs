@@ -151,6 +151,32 @@ public sealed class MonitorWorkerTests
     }
 
     [TestMethod]
+    public void RunOnceDryRunPreviewDoesNotDeleteInstallersAndReportsSummary()
+    {
+        using TemporaryDirectory tempDirectory = new();
+        string installerPath = Path.Combine(tempDirectory.Path, "app-setup.exe");
+        string csvPath = Path.Combine(tempDirectory.Path, "results.csv");
+        File.WriteAllText(installerPath, "installer");
+        RecordingProgressReporter progressReporter = new();
+
+        MonitorWorkerResult result = MonitorWorker.RunOnce(
+            tempDirectory.Path,
+            csvPath,
+            MonitorSettings.CreateDefault(),
+            organize: false,
+            cleanInstallers: true,
+            dryRunInstallers: true,
+            installedSoftwareNames: AppSoftwareNames,
+            progressReporter: progressReporter);
+
+        Assert.AreEqual(1, result.InstallerCleanupResult?.Deleted);
+        Assert.IsTrue(File.Exists(installerPath), "Dry-run preview must not delete installers.");
+        MonitorScanProgressSnapshot completed = progressReporter.Snapshots.Last();
+        Assert.AreEqual(MonitorScanProgressPhase.Completed, completed.Phase);
+        StringAssert.Contains(completed.Message, "Preview");
+    }
+
+    [TestMethod]
     public void RunOnceReportsScanProgressThroughCsvWriteAndCompletion()
     {
         using TemporaryDirectory tempDirectory = new();

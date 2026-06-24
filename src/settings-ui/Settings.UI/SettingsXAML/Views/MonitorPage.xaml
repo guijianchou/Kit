@@ -241,6 +241,24 @@
                         <ToggleSwitch AutomationProperties.AutomationId="CleanInstallers_Monitor" IsOn="{x:Bind ViewModel.CleanInstallers, Mode=TwoWay}" />
                     </tkcontrols:SettingsCard>
 
+                    <tkcontrols:SettingsCard x:Uid="Monitor_InstallerCleanupConfidenceSettingsCard" HeaderIcon="{ui:FontIcon Glyph=&#xE713;}">
+                        <Slider
+                            MinWidth="{StaticResource SettingActionControlMinWidth}"
+                            AutomationProperties.AutomationId="InstallerCleanupConfidence_Monitor"
+                            Maximum="95"
+                            Minimum="50"
+                            StepFrequency="5"
+                            Value="{x:Bind ViewModel.InstallerCleanupConfidence, Mode=TwoWay}" />
+                    </tkcontrols:SettingsCard>
+
+                    <tkcontrols:SettingsCard x:Uid="Monitor_PreviewCleanupSettingsCard" HeaderIcon="{ui:FontIcon Glyph=&#xE7B3;}">
+                        <Button
+                            x:Uid="Monitor_PreviewCleanupButton"
+                            AutomationProperties.AutomationId="PreviewCleanup_Monitor"
+                            Click="PreviewCleanup_Click"
+                            IsEnabled="{x:Bind ViewModel.CanStartManualScan, Mode=OneWay}" />
+                    </tkcontrols:SettingsCard>
+
                     <tkcontrols:SettingsCard x:Uid="Monitor_DownloadsPathSettingsCard" HeaderIcon="{ui:FontIcon Glyph=&#xE8B7;}">
                         <Grid MinWidth="{StaticResource SettingActionControlMinWidth}" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>

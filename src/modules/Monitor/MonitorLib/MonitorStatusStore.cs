@@ -11,7 +11,7 @@ namespace Microsoft.PowerToys.Monitor;
 public static class MonitorStatusStore
 {
     private const string UnexpectedExitMessage = "Unexpected exit";
-    public static readonly TimeSpan StaleRunningScanTimeout = TimeSpan.FromMinutes(30);
+    public static readonly TimeSpan StaleRunningScanTimeout = MonitorScanTimeouts.NoProgress;
 
     public static long BeginRun(string databasePath, string scanId, MonitorScanTrigger trigger, DateTimeOffset startedAt)
     {
@@ -257,8 +257,24 @@ public static class MonitorStatusStore
 
         SqliteConnection connection = new(builder.ToString());
         connection.Open();
+        ApplyConnectionPragmas(connection);
         EnsureDatabase(connection);
         return connection;
+    }
+
+    private static void ApplyConnectionPragmas(SqliteConnection connection)
+    {
+        // The worker writes scan runs while the Settings UI reads summaries from a separate connection.
+        // WAL lets a reader and a writer proceed concurrently, and busy_timeout makes the rare lock contention
+        // wait briefly instead of throwing SQLITE_BUSY (which would flash the dashboard to "unavailable").
+        // WAL is a persistent database attribute; busy_timeout is per-connection, so both are set on every open.
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            PRAGMA busy_timeout = 5000;
+            PRAGMA journal_mode = WAL;
+            PRAGMA synchronous = NORMAL;
+            """;
+        command.ExecuteNonQuery();
     }
 
     private static void EnsureDatabase(SqliteConnection connection)

@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Globalization;
+
 namespace Microsoft.PowerToys.Monitor;
 
 /// <summary>
@@ -29,6 +31,7 @@ public static class MonitorWorker
         MonitorSettings settings,
         bool organize,
         bool cleanInstallers,
+        bool dryRunInstallers = false,
         IEnumerable<string>? installedSoftwareNames = null,
         MonitorInstalledSoftwareIndex? installedSoftwareIndex = null,
         IMonitorScanProgressReporter? progressReporter = null,
@@ -69,7 +72,7 @@ public static class MonitorWorker
             reportCategorizingProgress();
             string programsPath = Path.Combine(downloadsPath, "Programs");
             IReadOnlyList<MonitorInstallerMatch> matches = FindInstallerMatches(downloadsPath, programsPath, installedSoftwareNames, installedSoftwareIndex, reportCategorizingProgress, cancellationToken);
-            installerCleanupResult = MonitorInstallerCleaner.Cleanup(downloadsPath, matches, settings.InstallerMinConfidence, dryRun: false, cancellationToken: cancellationToken, progressCallback: reportCategorizingProgress);
+            installerCleanupResult = MonitorInstallerCleaner.Cleanup(downloadsPath, matches, settings.InstallerMinConfidence, dryRun: dryRunInstallers, cancellationToken: cancellationToken, progressCallback: reportCategorizingProgress);
         }
 
         reportCategorizingProgress();
@@ -78,7 +81,8 @@ public static class MonitorWorker
         MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Writing, records.Count, records.Count, downloadsPath, startedAt, null, null, scanId), force: true);
         cancellationToken.ThrowIfCancellationRequested();
         MonitorCsvStore.Save(csvPath, records);
-        MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Completed, records.Count, records.Count, downloadsPath, startedAt, DateTimeOffset.UtcNow, records.Count, scanId), force: true);
+        string? completionMessage = BuildInstallerCleanupMessage(installerCleanupResult, dryRunInstallers);
+        MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Completed, records.Count, records.Count, downloadsPath, startedAt, DateTimeOffset.UtcNow, records.Count, scanId, completionMessage), force: true);
 
         return new MonitorWorkerResult(records.Count, csvPath, organizeResult, installerCleanupResult);
     }
@@ -121,5 +125,33 @@ public static class MonitorWorker
             progressReporter,
             new MonitorScanProgressSnapshot(phase, 0, 0, currentDirectory, startedAt, null, null, scanId),
             force: true);
+    }
+
+    private static string? BuildInstallerCleanupMessage(MonitorInstallerCleanupResult? cleanupResult, bool dryRun)
+    {
+        if (cleanupResult is null || cleanupResult.Deleted == 0)
+        {
+            return null;
+        }
+
+        string count = cleanupResult.Deleted.ToString(CultureInfo.InvariantCulture);
+        string freed = FormatBytes(cleanupResult.FreedBytes);
+        return dryRun
+            ? "Preview: " + count + " installer(s) (" + freed + ") would be removed"
+            : "Removed " + count + " installer(s) (" + freed + ")";
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = { "B", "KB", "MB", "GB", "TB" };
+        double size = bytes < 0 ? 0 : bytes;
+        int unitIndex = 0;
+        while (size >= 1024 && unitIndex < units.Length - 1)
+        {
+            size /= 1024;
+            unitIndex++;
+        }
+
+        return size.ToString(unitIndex == 0 ? "0" : "0.0", CultureInfo.InvariantCulture) + " " + units[unitIndex];
     }
 }

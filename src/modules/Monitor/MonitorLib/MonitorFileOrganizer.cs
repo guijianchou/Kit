@@ -43,11 +43,11 @@ public static class MonitorFileOrganizer
             errors += EnsureCategoryFolders(rootDirectory, settings, cancellationToken);
         }
 
-        foreach (FileInfo sourceFile in SafeEnumerateFiles(rootDirectory))
+        foreach (FileInfo sourceFile in rootDirectory.SafeEnumerateFiles())
         {
             cancellationToken.ThrowIfCancellationRequested();
             progressCallback?.Invoke();
-            if (IsReparsePoint(sourceFile) || excludedFiles.Contains(sourceFile.Name))
+            if (sourceFile.IsReparsePoint() || excludedFiles.Contains(sourceFile.Name))
             {
                 continue;
             }
@@ -153,78 +153,6 @@ public static class MonitorFileOrganizer
         }
 
         return errors;
-    }
-
-    private static IEnumerable<FileInfo> SafeEnumerateFiles(DirectoryInfo directory)
-    {
-        IEnumerator<FileInfo> enumerator;
-        try
-        {
-            enumerator = directory.EnumerateFiles().GetEnumerator();
-        }
-        catch (DirectoryNotFoundException)
-        {
-            yield break;
-        }
-        catch (IOException)
-        {
-            yield break;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            yield break;
-        }
-
-        using (enumerator)
-        {
-            while (true)
-            {
-                FileInfo file;
-                try
-                {
-                    if (!enumerator.MoveNext())
-                    {
-                        yield break;
-                    }
-
-                    file = enumerator.Current;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    yield break;
-                }
-                catch (IOException)
-                {
-                    yield break;
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    yield break;
-                }
-
-                yield return file;
-            }
-        }
-    }
-
-    private static bool IsReparsePoint(FileSystemInfo fileSystemInfo)
-    {
-        try
-        {
-            return fileSystemInfo.Attributes.HasFlag(FileAttributes.ReparsePoint);
-        }
-        catch (DirectoryNotFoundException)
-        {
-            return true;
-        }
-        catch (IOException)
-        {
-            return true;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return true;
-        }
     }
 
     /// <summary>

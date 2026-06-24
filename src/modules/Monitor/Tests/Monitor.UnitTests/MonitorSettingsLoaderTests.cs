@@ -31,7 +31,8 @@ public sealed class MonitorSettingsLoaderTests
                     "useIncrementalHashing": { "value": false },
                     "runInBackground": { "value": true },
                     "organizeDownloads": { "value": false },
-                    "cleanInstallers": { "value": false }
+                    "cleanInstallers": { "value": false },
+                    "installerCleanupConfidence": { "value": 85 }
                   }
                 }
                 """;
@@ -48,6 +49,7 @@ public sealed class MonitorSettingsLoaderTests
             Assert.IsTrue(settings.RunInBackground);
             Assert.IsFalse(settings.AutoOrganize);
             Assert.IsFalse(settings.AutoCleanInstallers);
+            Assert.AreEqual(0.85, settings.InstallerMinConfidence, 0.0001);
             CollectionAssert.Contains(settings.ExcludedFiles.ToList(), "inventory.csv");
         }
         finally
@@ -78,5 +80,13 @@ public sealed class MonitorSettingsLoaderTests
         MonitorSettings settings = MonitorSettings.CreateDefault();
 
         Assert.AreEqual(43200, settings.IntervalSeconds);
+    }
+
+    [TestMethod]
+    public void InstallerCleanupConfidenceIsClampedToSafeRange()
+    {
+        Assert.AreEqual(0.7, MonitorSettings.CreateDefault().InstallerMinConfidence, 0.0001);
+        Assert.AreEqual(0.95, MonitorSettings.Create(installerMinConfidence: 1.5).InstallerMinConfidence, 0.0001);
+        Assert.AreEqual(0.5, MonitorSettings.Create(installerMinConfidence: 0.1).InstallerMinConfidence, 0.0001);
     }
 }

@@ -55,7 +55,7 @@ public static class MonitorScanner
         foreach (FileInfo fileInfo in EnumerateFiles(rootDirectory, reportEnumerationProgress, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (excludedFiles.Contains(fileInfo.Name) || IsReparsePoint(fileInfo))
+            if (excludedFiles.Contains(fileInfo.Name) || fileInfo.IsReparsePoint())
             {
                 continue;
             }
@@ -63,7 +63,7 @@ public static class MonitorScanner
             try
             {
                 fileInfo.Refresh();
-                if (!fileInfo.Exists || IsReparsePoint(fileInfo))
+                if (!fileInfo.Exists || fileInfo.IsReparsePoint())
                 {
                     filesProcessed++;
                     MonitorProgressReporter.TryReport(progressReporter, new MonitorScanProgressSnapshot(MonitorScanProgressPhase.Hashing, filesProcessed, 0, fileInfo.DirectoryName ?? rootDirectory.FullName, scanStartedAt, null, null, scanId));
@@ -136,142 +136,18 @@ public static class MonitorScanner
             cancellationToken.ThrowIfCancellationRequested();
             DirectoryInfo directory = pendingDirectories.Dequeue();
             progressCallback?.Invoke(directory);
-            foreach (FileInfo file in SafeEnumerateFiles(directory))
+            foreach (FileInfo file in directory.SafeEnumerateFiles())
             {
                 yield return file;
             }
 
-            foreach (DirectoryInfo childDirectory in SafeEnumerateDirectories(directory))
+            foreach (DirectoryInfo childDirectory in directory.SafeEnumerateDirectories())
             {
-                if (!IsReparsePoint(childDirectory))
+                if (!childDirectory.IsReparsePoint())
                 {
                     pendingDirectories.Enqueue(childDirectory);
                 }
             }
-        }
-    }
-
-    private static IEnumerable<FileInfo> SafeEnumerateFiles(DirectoryInfo directory)
-    {
-        IEnumerator<FileInfo> enumerator;
-        try
-        {
-            enumerator = directory.EnumerateFiles().GetEnumerator();
-        }
-        catch (DirectoryNotFoundException)
-        {
-            yield break;
-        }
-        catch (IOException)
-        {
-            yield break;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            yield break;
-        }
-
-        using (enumerator)
-        {
-            while (true)
-            {
-                FileInfo file;
-                try
-                {
-                    if (!enumerator.MoveNext())
-                    {
-                        yield break;
-                    }
-
-                    file = enumerator.Current;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    yield break;
-                }
-                catch (IOException)
-                {
-                    yield break;
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    yield break;
-                }
-
-                yield return file;
-            }
-        }
-    }
-
-    private static IEnumerable<DirectoryInfo> SafeEnumerateDirectories(DirectoryInfo directory)
-    {
-        IEnumerator<DirectoryInfo> enumerator;
-        try
-        {
-            enumerator = directory.EnumerateDirectories().GetEnumerator();
-        }
-        catch (DirectoryNotFoundException)
-        {
-            yield break;
-        }
-        catch (IOException)
-        {
-            yield break;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            yield break;
-        }
-
-        using (enumerator)
-        {
-            while (true)
-            {
-                DirectoryInfo childDirectory;
-                try
-                {
-                    if (!enumerator.MoveNext())
-                    {
-                        yield break;
-                    }
-
-                    childDirectory = enumerator.Current;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    yield break;
-                }
-                catch (IOException)
-                {
-                    yield break;
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    yield break;
-                }
-
-                yield return childDirectory;
-            }
-        }
-    }
-
-    private static bool IsReparsePoint(FileSystemInfo fileSystemInfo)
-    {
-        try
-        {
-            return fileSystemInfo.Attributes.HasFlag(FileAttributes.ReparsePoint);
-        }
-        catch (DirectoryNotFoundException)
-        {
-            return true;
-        }
-        catch (IOException)
-        {
-            return true;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return true;
         }
     }
 

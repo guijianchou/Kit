@@ -368,6 +368,19 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
         }
 
+        public int InstallerCleanupConfidence
+        {
+            get => ModuleSettings.Properties.InstallerCleanupConfidence.Value;
+            set
+            {
+                if (ModuleSettings.Properties.InstallerCleanupConfidence.Value != value)
+                {
+                    ModuleSettings.Properties.InstallerCleanupConfidence.Value = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         public void ApplyStatusSummary(MonitorStatusSummary summary)
         {
             ApplyStatusPresentation(_statusPresentationService.CreateSummaryPresentation(summary));
@@ -409,6 +422,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             OnPropertyChanged(nameof(RunInBackground));
             OnPropertyChanged(nameof(OrganizeDownloads));
             OnPropertyChanged(nameof(CleanInstallers));
+            OnPropertyChanged(nameof(InstallerCleanupConfidence));
         }
 
         private static string NormalizeHashAlgorithm(string value)

@@ -18,7 +18,7 @@ internal sealed class MonitorProgressTimeoutCancellation : IDisposable
 
     public MonitorProgressTimeoutCancellation(TimeSpan noProgressTimeout)
     {
-        _noProgressTimeout = noProgressTimeout <= TimeSpan.Zero ? TimeSpan.FromMinutes(30) : noProgressTimeout;
+        _noProgressTimeout = noProgressTimeout <= TimeSpan.Zero ? MonitorScanTimeouts.NoProgress : noProgressTimeout;
         Interlocked.Exchange(ref _lastProgressTicks, DateTimeOffset.UtcNow.UtcTicks);
         _watcherThread = new Thread(WatchProgress)
         {

@@ -14,7 +14,7 @@ namespace Microsoft.PowerToys.Settings.UI.Services
 {
     public sealed class MonitorManualScanCoordinator
     {
-        private static readonly TimeSpan ManualScanNoProgressTimeout = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan ManualScanNoProgressTimeout = MonitorCore.MonitorScanTimeouts.NoProgress;
 
         private readonly MonitorProgressSnapshotReader _progressSnapshotReader;
         private readonly MonitorStatusQueryService _statusQueryService;

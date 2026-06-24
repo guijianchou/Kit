@@ -44,6 +44,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                     RunInBackground = new BoolProperty(Properties.RunInBackground.Value),
                     OrganizeDownloads = new BoolProperty(Properties.OrganizeDownloads.Value),
                     CleanInstallers = new BoolProperty(Properties.CleanInstallers.Value),
+                    InstallerCleanupConfidence = new IntProperty(Properties.InstallerCleanupConfidence.Value),
                 },
             };
         }

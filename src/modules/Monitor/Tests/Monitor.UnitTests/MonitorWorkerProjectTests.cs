@@ -410,12 +410,16 @@ public sealed class MonitorWorkerProjectTests
     {
         string kitRoot = FindKitRoot();
         string scannerPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorLib", "MonitorScanner.cs");
+        string fileSystemPath = Path.Combine(kitRoot, "src", "modules", "Monitor", "MonitorLib", "MonitorFileSystem.cs");
 
         string scannerText = File.ReadAllText(scannerPath);
+        string fileSystemText = File.ReadAllText(fileSystemPath);
 
         StringAssert.Contains(scannerText, "SafeEnumerateFiles");
         StringAssert.Contains(scannerText, "UnauthorizedAccessException");
-        StringAssert.Contains(scannerText, "DirectoryNotFoundException");
+        StringAssert.Contains(fileSystemText, "SafeEnumerateFiles");
+        StringAssert.Contains(fileSystemText, "DirectoryNotFoundException");
+        StringAssert.Contains(fileSystemText, "UnauthorizedAccessException");
     }
 
     [TestMethod]

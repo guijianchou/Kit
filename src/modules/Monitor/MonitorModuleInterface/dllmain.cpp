@@ -482,6 +482,7 @@ private:
         append_bool(values.get_bool_value(L"runInBackground"));
         append_bool(values.get_bool_value(L"organizeDownloads"));
         append_bool(values.get_bool_value(L"cleanInstallers"));
+        append_int(values.get_int_value(L"installerCleanupConfidence"));
         return signature;
     }
 
@@ -759,6 +760,30 @@ public:
                 if (!launch_process(args, MonitorProcessKind::OneShot))
                 {
                     write_failed_scan_progress(scan_id, L"Scan failed to start");
+                }
+            }
+            else if (action_object.get_name() == L"previewInstallers")
+            {
+                std::wstring args = L"--scan-once --clean-installers --dry-run";
+                std::wstring scan_id = action_object.get_value();
+                if (!scan_id.empty())
+                {
+                    if (is_valid_scan_id(scan_id))
+                    {
+                        args += L" --scan-id ";
+                        args += quote_argument(scan_id);
+                    }
+                    else
+                    {
+                        Logger::warn("Invalid Monitor scan id rejected.");
+                        write_failed_scan_progress(scan_id, L"Invalid scan id");
+                        return;
+                    }
+                }
+
+                if (!launch_process(args, MonitorProcessKind::OneShot))
+                {
+                    write_failed_scan_progress(scan_id, L"Preview failed to start");
                 }
             }
             else if (action_object.get_name() == L"organizeDownloads")

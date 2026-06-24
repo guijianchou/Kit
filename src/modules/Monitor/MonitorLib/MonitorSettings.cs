@@ -42,7 +42,8 @@ public sealed class MonitorSettings
         bool? incrementalScan = null,
         bool? runInBackground = null,
         bool? autoOrganize = null,
-        bool? autoCleanInstallers = null)
+        bool? autoCleanInstallers = null,
+        double? installerMinConfidence = null)
     {
         Categories = new ReadOnlyDictionary<string, IReadOnlyList<string>>(
             new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
@@ -80,6 +81,7 @@ public sealed class MonitorSettings
         AutoOrganize = autoOrganize.GetValueOrDefault(false);
         AutoCleanInstallers = autoCleanInstallers.GetValueOrDefault(false);
         MaxFileSizeForSha1Mb = Math.Max(1, maxFileSizeForHashMb.GetValueOrDefault(500));
+        InstallerMinConfidence = Math.Clamp(installerMinConfidence.GetValueOrDefault(0.7), 0.5, 0.95);
     }
 
     /// <summary>
@@ -135,7 +137,7 @@ public sealed class MonitorSettings
     /// <summary>
     /// Gets the minimum installer match confidence required before cleanup.
     /// </summary>
-    public double InstallerMinConfidence { get; private init; } = 0.7;
+    public double InstallerMinConfidence { get; private init; }
 
     /// <summary>
     /// Gets category names and their file extensions.
@@ -193,7 +195,8 @@ public sealed class MonitorSettings
         bool? incrementalScan = null,
         bool? runInBackground = null,
         bool? autoOrganize = null,
-        bool? autoCleanInstallers = null)
+        bool? autoCleanInstallers = null,
+        double? installerMinConfidence = null)
     {
         return new MonitorSettings(
             downloadsPath,
@@ -204,7 +207,8 @@ public sealed class MonitorSettings
             incrementalScan,
             runInBackground,
             autoOrganize,
-            autoCleanInstallers);
+            autoCleanInstallers,
+            installerMinConfidence);
     }
 
     private static string NormalizeHashAlgorithm(string? algorithm)

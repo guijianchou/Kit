@@ -10,6 +10,7 @@ internal sealed record MonitorCommandLine(
     bool ScanOnce,
     bool Organize,
     bool CleanInstallers,
+    bool DryRun,
     bool UseConfiguredActions,
     bool ShowHelp,
     string? DownloadsPath,
@@ -24,6 +25,7 @@ internal sealed record MonitorCommandLine(
         bool scanOnce = false;
         bool organize = false;
         bool cleanInstallers = false;
+        bool dryRun = false;
         bool useConfiguredActions = false;
         bool showHelp = false;
         string? downloadsPath = null;
@@ -46,6 +48,9 @@ internal sealed record MonitorCommandLine(
                     break;
                 case "--clean-installers":
                     cleanInstallers = true;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
                     break;
                 case "--use-configured-actions":
                     useConfiguredActions = true;
@@ -75,7 +80,7 @@ internal sealed record MonitorCommandLine(
             }
         }
 
-        return new MonitorCommandLine(scanOnce, organize, cleanInstallers, useConfiguredActions, showHelp, downloadsPath, csvPath, settingsPath, scanId, intervalSeconds, parentProcessId);
+        return new MonitorCommandLine(scanOnce, organize, cleanInstallers, dryRun, useConfiguredActions, showHelp, downloadsPath, csvPath, settingsPath, scanId, intervalSeconds, parentProcessId);
     }
 
     private static string ReadValue(IReadOnlyList<string> args, ref int index, string argument)

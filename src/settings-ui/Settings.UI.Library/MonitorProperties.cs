@@ -17,6 +17,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         public const bool DefaultRunInBackground = false;
         public const bool DefaultOrganizeDownloads = false;
         public const bool DefaultCleanInstallers = false;
+        public const int DefaultInstallerCleanupConfidence = 70;
 
         public MonitorProperties()
         {
@@ -29,6 +30,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             RunInBackground = new BoolProperty(DefaultRunInBackground);
             OrganizeDownloads = new BoolProperty(DefaultOrganizeDownloads);
             CleanInstallers = new BoolProperty(DefaultCleanInstallers);
+            InstallerCleanupConfidence = new IntProperty(DefaultInstallerCleanupConfidence);
         }
 
         [JsonPropertyName("downloadsPath")]
@@ -57,5 +59,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         [JsonPropertyName("cleanInstallers")]
         public BoolProperty CleanInstallers { get; set; }
+
+        [JsonPropertyName("installerCleanupConfidence")]
+        public IntProperty InstallerCleanupConfidence { get; set; }
     }
 }

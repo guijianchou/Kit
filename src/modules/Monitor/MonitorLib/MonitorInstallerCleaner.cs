@@ -215,58 +215,6 @@ public static partial class MonitorInstallerCleaner
         return new MonitorInstallerCleanupResult(deleted, skipped, errors, freedBytes);
     }
 
-    private static IEnumerable<FileInfo> SafeEnumerateFiles(this DirectoryInfo directory)
-    {
-        IEnumerator<FileInfo> enumerator;
-        try
-        {
-            enumerator = directory.EnumerateFiles().GetEnumerator();
-        }
-        catch (DirectoryNotFoundException)
-        {
-            yield break;
-        }
-        catch (IOException)
-        {
-            yield break;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            yield break;
-        }
-
-        using (enumerator)
-        {
-            while (true)
-            {
-                FileInfo file;
-                try
-                {
-                    if (!enumerator.MoveNext())
-                    {
-                        yield break;
-                    }
-
-                    file = enumerator.Current;
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    yield break;
-                }
-                catch (IOException)
-                {
-                    yield break;
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    yield break;
-                }
-
-                yield return file;
-            }
-        }
-    }
-
     private static IReadOnlyList<MonitorInstallerMatch> SelectBestMatchPerInstaller(IEnumerable<MonitorInstallerMatch> candidates)
     {
         return candidates

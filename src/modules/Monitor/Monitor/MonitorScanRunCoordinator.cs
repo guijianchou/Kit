@@ -22,7 +22,8 @@ internal static class MonitorScanRunCoordinator
         MonitorScanStatus canceledStatus,
         Func<string> canceledMessageFactory,
         CancellationToken cancellationToken,
-        IMonitorScanProgressReporter? progressReporter = null)
+        IMonitorScanProgressReporter? progressReporter = null,
+        bool dryRunInstallers = false)
     {
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
         long? statusRunId = TryBeginStatusRun(statusDatabasePath, scanId, trigger, startedAt);
@@ -30,7 +31,7 @@ internal static class MonitorScanRunCoordinator
         MonitorWorkerResult result;
         try
         {
-            result = MonitorWorker.RunOnce(downloadsPath, csvPath, settings, organize, cleanInstallers, progressReporter: progressReporter, cancellationToken: cancellationToken, scanId: scanId);
+            result = MonitorWorker.RunOnce(downloadsPath, csvPath, settings, organize, cleanInstallers, dryRunInstallers: dryRunInstallers, progressReporter: progressReporter, cancellationToken: cancellationToken, scanId: scanId);
         }
         catch (OperationCanceledException)
         {

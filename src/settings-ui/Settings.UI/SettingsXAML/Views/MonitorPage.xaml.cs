@@ -122,6 +122,25 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
         }
 
+        private void PreviewCleanup_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ViewModel.CanStartManualScan)
+            {
+                return;
+            }
+
+            _manualScanProgressTimer.Stop();
+            MonitorManualScanProgressUpdate progressUpdate = _manualScanCoordinator.StartManualScanProgress();
+            ApplyManualScanProgressUpdate(progressUpdate);
+            _manualScanProgressTimer.Start();
+            string manualScanId = progressUpdate.ScanId;
+            int sendResult = _sendConfigMsg(Helper.GetSerializedCustomAction(MonitorSettings.ModuleName, "previewInstallers", manualScanId));
+            if (sendResult != 0)
+            {
+                FailManualScanStart();
+            }
+        }
+
         private void FailManualScanStart()
         {
             _manualScanProgressTimer.Stop();

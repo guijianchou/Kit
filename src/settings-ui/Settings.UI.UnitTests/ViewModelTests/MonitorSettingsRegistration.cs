@@ -61,6 +61,7 @@ namespace ViewModelTests
             Assert.IsFalse(settings.Properties.RunInBackground.Value);
             Assert.IsFalse(settings.Properties.OrganizeDownloads.Value);
             Assert.IsFalse(settings.Properties.CleanInstallers.Value);
+            Assert.AreEqual(70, settings.Properties.InstallerCleanupConfidence.Value);
 
             var clone = (MonitorSettings)settings.Clone();
 
@@ -187,6 +188,8 @@ namespace ViewModelTests
             Assert.IsFalse(pageXaml.Contains("Link=\"https://github.com/microsoft/PowerToys\"", StringComparison.Ordinal));
             StringAssert.Contains(pageXaml, "Monitor_RunInBackgroundSettingsCard");
             StringAssert.Contains(pageXaml, "Monitor_ScanNowButton");
+            StringAssert.Contains(pageXaml, "InstallerCleanupConfidence_Monitor");
+            StringAssert.Contains(pageXaml, "PreviewCleanup_Monitor");
             StringAssert.Contains(pageXaml, "Monitor_ManualScanProgressBar");
             StringAssert.Contains(pageXaml, "ManualScanProgressText_Monitor");
             StringAssert.Contains(pageXaml, "ManualScanProgressDetail_Monitor");
@@ -219,6 +222,8 @@ namespace ViewModelTests
             Assert.IsFalse(pageXaml.Contains("AutomationProperties.AutomationId=\"ScanIntervalSeconds_Monitor\"\r\n                            LargeChange=\"600\"", StringComparison.Ordinal));
 
             StringAssert.Contains(pageCode, "ScanNow_Click");
+            StringAssert.Contains(pageCode, "PreviewCleanup_Click");
+            StringAssert.Contains(pageCode, "previewInstallers");
             StringAssert.Contains(pageCode, "_manualScanCoordinator");
             StringAssert.Contains(pageCode, "_statusQueryService");
             StringAssert.Contains(pageCode, "FailManualScanStart");
@@ -316,6 +321,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(resources, "Monitor_ScanNowSettingsCard.Header");
             StringAssert.Contains(resources, "Monitor_RunInBackgroundSettingsCard.Header");
+            StringAssert.Contains(resources, "Monitor_InstallerCleanupConfidenceSettingsCard.Header");
+            StringAssert.Contains(resources, "Monitor_PreviewCleanupButton.Content");
             StringAssert.Contains(resources, "Monitor_ScanNowButton.Content");
             StringAssert.Contains(resources, "Monitor_SelectDownloadsFolderButton.Content");
             StringAssert.Contains(resources, "Monitor_ManualScanStarting");

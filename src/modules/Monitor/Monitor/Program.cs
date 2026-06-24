@@ -11,7 +11,7 @@ namespace Microsoft.PowerToys.Monitor;
 /// </summary>
 public static class Program
 {
-    private static readonly TimeSpan OneShotNoProgressTimeout = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan OneShotNoProgressTimeout = MonitorScanTimeouts.NoProgress;
 
     /// <summary>
     /// Runs the Monitor worker.
@@ -39,6 +39,7 @@ public static class Program
             {
                 bool organize = commandLine.UseConfiguredActions ? settings.AutoOrganize : commandLine.Organize;
                 bool cleanInstallers = commandLine.UseConfiguredActions ? settings.AutoCleanInstallers : commandLine.CleanInstallers;
+                bool dryRunInstallers = commandLine.DryRun;
                 string scanId = MonitorRuntimePaths.ResolveScanId(commandLine.ScanId);
                 using EventWaitHandle exitEvent = new(false, EventResetMode.ManualReset, MonitorWorkerEvents.MonitorExitEvent);
                 using MonitorLifetimeCancellation lifetimeCancellation = new(commandLine.ParentProcessId, exitEvent);
@@ -59,7 +60,8 @@ public static class Program
                         MonitorScanStatus.Failed,
                         () => lifetimeCancellation.ExitRequested ? "Scan interrupted" : "Scan timed out due to no progress",
                         oneShotCancellation.Token,
-                        progressReporter);
+                        progressReporter,
+                        dryRunInstallers: dryRunInstallers);
                     return 0;
                 }
                 catch (OperationCanceledException)
@@ -135,6 +137,7 @@ public static class Program
             "  --scan-once                 Scan once and write CSV state.",
             "  --organize                  Organize root files before scanning.",
             "  --clean-installers          Clean installers that match installed software.",
+            "  --dry-run                   Preview installer cleanup without deleting files.",
             "  --use-configured-actions    Apply organize and cleanup settings during a one-shot scan.",
             "  --downloads-path <path>     Override the Downloads folder.",
             "  --csv-path <path>           Override the CSV output path.",

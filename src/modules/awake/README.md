@@ -163,4 +163,6 @@ Per [Microsoft's documentation](https://learn.microsoft.com/en-us/windows/win32/
 
 ## Telemetry
 
-Kit's Awake module does not emit telemetry events. The copied trace hooks stay as no-op compatibility methods.
+The module emits telemetry events for:
+- Keep-awake mode changes (indefinite, timed, expirable, passive)
+- Privacy-compliant event tagging via `Microsoft.PowerToys.Telemetry`

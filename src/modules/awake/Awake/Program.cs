@@ -94,7 +94,6 @@ namespace Awake
             {
                 // Awake is already running - there is no need for us to process
                 // anything further
-                LogCLITelemetry(successful: false);
                 Exit(Core.Constants.AppName + " is already running! Exiting the application.", 1);
                 return 1;
             }
@@ -102,7 +101,6 @@ namespace Awake
             {
                 if (PowerToys.GPOWrapper.GPOWrapper.GetConfiguredAwakeEnabledValue() == PowerToys.GPOWrapper.GpoRuleConfigured.Disabled)
                 {
-                    LogCLITelemetry(successful: false);
                     Exit("PowerToys.Awake tried to start with a group policy setting that disables the tool. Please contact your system administrator.", 1);
                     return 1;
                 }
@@ -126,7 +124,6 @@ namespace Awake
                     Logger.LogInfo(JsonSerializer.Serialize(_powerCapabilities, _serializerOptions));
 
                     var result = await rootCommand.InvokeAsync(args);
-                    LogCLITelemetry(successful: result == 0);
                     return result;
                 }
             }
@@ -218,22 +215,6 @@ namespace Awake
             return rootCommand;
         }
 
-        private static void LogCLITelemetry(bool successful)
-        {
-            try
-            {
-                PowerToysTelemetry.Log.WriteEvent(new AwakeCLICommandEvent
-                {
-                    CommandName = "awake",
-                    Successful = successful,
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Failed to log CLI telemetry: {ex.Message}");
-            }
-        }
-
         private static void AwakeUnhandledExceptionCatcher(object sender, UnhandledExceptionEventArgs e)
         {
             if (e.ExceptionObject is Exception exception)
@@ -252,7 +233,6 @@ namespace Awake
 
         private static void Exit(string message, int exitCode)
         {
-            _etwTrace?.Dispose();
             DisposeFileSystemWatcher();
             _registeredWaitHandle?.Unregister(null);
             _exitEventHandle?.Dispose();

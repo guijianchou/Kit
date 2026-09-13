@@ -112,7 +112,7 @@
     <PlatformToolset Condition="'$(VisualStudioVersion)' == '18.0'">v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <DesktopCompatible>true</DesktopCompatible>
-    <SpectreMitigation>Spectre</SpectreMitigation>
+    <!-- SpectreMitigation disabled - requires additional VS components -->
   </PropertyGroup>
 
   <!-- Debug/Release props -->

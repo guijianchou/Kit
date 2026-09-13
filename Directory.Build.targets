@@ -155,4 +155,29 @@
     <Delete Files="@(_UnusedVCRuntimeDlls)" Condition="'@(_UnusedVCRuntimeDlls)' != ''" />
     <Message Importance="normal" Text="Cleaned up unused VC runtime DLLs: @(_UnusedVCRuntimeDlls)" Condition="'@(_UnusedVCRuntimeDlls)' != ''" />
   </Target>
+
+  <Target Name="EnsureLongPathsEnabled" BeforeTargets="Build">
+    <PropertyGroup>
+      <_LongPathsRegKey>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem</_LongPathsRegKey>
+      <_LongPathsRegValue>LongPathsEnabled</_LongPathsRegValue>
+    </PropertyGroup>
+    <Exec Command="reg query &quot;$(_LongPathsRegKey)&quot; /v &quot;$(_LongPathsRegValue)&quot; 2&gt;nul | findstr &quot;0x1&quot; &gt;nul"
+          IgnoreExitCode="true"
+          ConsoleToMSBuild="true">
+      <Output TaskParameter="ExitCode" PropertyName="_LongPathsEnabledExitCode" />
+    </Exec>
+    <Warning Condition="'$(_LongPathsEnabledExitCode)' != '0'"
+             Text="Long paths are not enabled on this system. Run: reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f (requires admin)" />
+  </Target>
+
+  <Target Name="RemoveUnusedWebView2WpfReference"
+          AfterTargets="ResolveAssemblyReferences"
+          Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <ItemGroup>
+      <_WebView2WpfReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+      <_WebView2CoreReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Microsoft.Web.WebView2.Core'" />
+      <_WinFormsReference Include="@(ReferencePath)" Condition="'%(ReferencePath.Filename)' == 'Microsoft.Web.WebView2.WinForms'" />
+      <ReferencePath Remove="@(_WebView2WpfReference)" Condition="'@(_WebView2CoreReference)' != '' and '@(_WinFormsReference)' == ''" />
+    </ItemGroup>
+  </Target>
 </Project>

@@ -16,6 +16,43 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 Current Kit version: `2.0.8`.
 
+## Build Output Structure
+
+Kit uses a version-based build output organization:
+
+```
+Kit/
+├── bin/
+│   ├── debug/
+│   │   ├── 2.0.8/              # Current version debug build
+│   │   │   ├── Kit.exe
+│   │   │   ├── *.dll           (runtime dependencies)
+│   │   │   └── Kit/            (application data subdirectory)
+│   │   └── 2.0.9/              # Future versions
+│   ├── release/
+│   │   ├── 2.0.8/              # Current version release build
+│   │   └── 2.0.9/              # Future versions
+│   └── publish/
+│       ├── 2.0.8.zip           # Packaged release distributions
+│       └── 2.0.9.zip
+```
+
+**Version Numbering:**
+- Version is extracted from `src/common/version/Generated Files/version_gen.h`
+- Current: 2.0.8 (VERSION_MAJOR=2, VERSION_MINOR=0, VERSION_REVISION=8)
+- After each build, outputs are organized into the corresponding version directory
+- Release distributions are packaged as `.zip` files in `bin/publish/`
+
+**Differences from PowerToys:**
+
+| Aspect | PowerToys | Kit |
+|--------|-----------|-----|
+| **Organization** | Configuration-first (x64/Debug/) | Version-first (bin/debug/2.0.8/) |
+| **Location** | Repository root | Centralized bin/ folder |
+| **Versioning** | Not reflected in paths | Explicit version subdirectories |
+| **Publishing** | Manual packaging | Dedicated bin/publish/ with .zip files |
+| **Cleanup** | Configuration directories persist | Scattered outputs removed, only bin/ kept |
+
 ## Changelog
 
 See [changelog.md](changelog.md) for the full version history.
@@ -129,6 +166,30 @@ The latest Home work keeps PowerToys behavior but scopes it to Kit's active modu
 General keeps the useful PowerToys settings structure but removes automatic update and telemetry controls. The About section shows the Kit version, GitHub repository, and a check-only release prompt. Home uses the PowerToys-style intro, module list, Quick Access, and shortcuts layout, but only for Kit modules.
 
 Visible UI should use English Kit text. Keep `PowerToys` only where it is still required for build-facing namespaces, assembly names, module interface names, upstream compatibility, or origin attribution.
+
+## Build Output Organization
+
+Kit uses a version-specific build output structure to keep compiled artifacts organized and separate from source code:
+
+```
+bin/
+├── debug/
+│   ├── 2.0.8/          # Debug build for version 2.0.8
+│   │   ├── Kit.exe
+│   │   ├── *.dll
+│   │   └── ...
+│   └── 2.0.9/          # Future version builds
+├── release/
+│   ├── 2.0.8/          # Release build for version 2.0.8
+│   └── 2.0.9/
+└── publish/
+    ├── 2.0.8.zip       # Packaged release for version 2.0.8
+    └── 2.0.9.zip
+```
+
+All build outputs are consolidated into the `bin/` directory at the repository root. Each configuration (debug/release) contains subdirectories named after the version (extracted from `src/common/version/Generated Files/version_gen.h`), and publish artifacts are packaged as version-named zip files.
+
+The scattered root-level build directories (`Debug/`, `Release/`, `x64/`, `AnyCPU/`) that MSBuild generates are removed after builds complete, keeping only the organized `bin/` structure.
 
 ## Artifact Cleanup
 

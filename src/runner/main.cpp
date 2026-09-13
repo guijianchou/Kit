@@ -3,6 +3,7 @@
 #include <lmcons.h>
 #include <filesystem>
 #include <sstream>
+#include <chrono>
 #include "tray_icon.h"
 #include "powertoy_module.h"
 #include "trace.h"
@@ -161,8 +162,17 @@ void open_menu_from_another_instance(std::optional<std::string> settings_window)
 
 int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, bool showRestartNotificationAfterUpdate, const json::JsonObject& startupGeneralSettings)
 {
+    auto start_time = std::chrono::high_resolution_clock::now();
     Logger::info("Runner is starting. Elevated={} showRestartNotificationAfterUpdate={}", isProcessElevated, showRestartNotificationAfterUpdate);
+
+    auto log_timing = [&start_time](const char* stage) {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
+        Logger::info("STARTUP_TIMING: {} at {}ms", stage, duration);
+    };
+
     DPIAware::EnableDPIAwarenessForThisProcess();
+    log_timing("DPI Awareness");
 
 #if _DEBUG && _WIN64
 //Global error handlers to diagnose errors.
@@ -170,17 +180,28 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 //init_global_error_handlers();
 #endif
     Trace::RegisterProvider();
+    log_timing("Trace Provider");
 
     auto const settings = get_general_settings();
+    log_timing("Load Settings");
+
     start_tray_icon(isProcessElevated, settings.showThemeAdaptiveTrayIcon);
+    log_timing("Tray Icon");
+
     PeriodicUpdateWorker();
+    log_timing("Update Worker");
 
     // OPTIMIZATION: Defer Quick Access launch until first use (Win+Space)
     // Saves 200-400ms on startup by avoiding WinUI3 process spawn
     // Quick Access will be lazily initialized on first hotkey press
     update_quick_access_hotkey(settings.enableQuickAccess, settings.quickAccessShortcut);
+    log_timing("Quick Access Hotkey");
+
     set_tray_icon_visible(settings.showSystemTrayIcon);
+    log_timing("Tray Icon Visible");
+
     CentralizedKeyboardHook::Start();
+    log_timing("Keyboard Hook");
 
     int result = -1;
     try
@@ -198,6 +219,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         }
 
         chdir_current_executable();
+        log_timing("Chdir");
 
         // We deprecated a utility called Video Conference Mute, which registered itself as a video input device.
         // When running elevated, we try to clean up the device registration from previous installations.
@@ -206,6 +228,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         if (isProcessElevated)
         {
             clean_video_conference_once();
+            log_timing("Video Conference Cleanup");
         }
 
         // Load Kit module DLLs
@@ -216,6 +239,9 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
             {
                 auto pt_module = load_powertoy(moduleSubdir);
                 modules().emplace(pt_module->get_key(), std::move(pt_module));
+                std::wstring module_msg = L"Module Loaded: ";
+                module_msg += moduleSubdir;
+                Logger::info(L"STARTUP_TIMING: {}", module_msg);
             }
             catch (...)
             {
@@ -238,8 +264,15 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         }
         // Start initial Kit modules
         start_enabled_powertoys(startupGeneralSettings);
+        log_timing("Modules Enabled");
+
         std::wstring product_version = get_product_version();
         Trace::EventLaunch(product_version, isProcessElevated);
+        log_timing("Event Launch");
+
+        Logger::info("STARTUP_TIMING: Total startup time: {}ms",
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now() - start_time).count());
 
         if (openSettings)
         {

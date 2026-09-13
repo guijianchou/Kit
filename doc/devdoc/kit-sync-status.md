@@ -1,12 +1,12 @@
-# fix.md — Kit 随上游同步进度与逻辑修正清单
+# Kit 随上游同步进度与逻辑修正清单
 
 > 生成日期：本次 review。基于上游 Source/PowerToys 与 Kit 源码的逐文件比对、构建产物与 git 历史（cea7b7a、cb2c1e5）核查。
-> 定位：next.md 是"要同步什么"的计划清单；fix.md 是"现状核对 + 哪里逻辑要修"的落地清单，两者配合使用。
+> 定位：[upstream-sync-checklist.md](upstream-sync-checklist.md) 是"要同步什么"的计划清单；本文档是"现状核对 + 哪里逻辑要修"的落地清单，两者配合使用。
 
 ## 0. 结论速览
 
-1. **构建 P0 已全部落地**（提交 cb2c1e5）：Directory.Build.targets 的 EnsureLongPathsEnabled 与 RemoveUnusedWebView2WpfReference、FuzzTest.props 已到 net10、Cpp.Build.props 已有 /utf-8 与协程弃用静默 → next.md §1/§3 对应条目应标记完成。
-2. **Monitor 模块已移除**（提交 cea7b7a，版本 2.0.8）：代码、runner、序列化、单元测试（BuildCompatibility 有 11 处负向断言）、devdoc 均已一致。**但 README.md 与 AGENTS.md 仍把 Monitor 当活动模块**，README 的 KitKnownModules 列表还列着已删除的 PowerToys.MonitorModuleInterface.dll —— 文档失实是当前最优先修正项。
+1. **构建 P0 已全部落地**（提交 cb2c1e5）：Directory.Build.targets 的 EnsureLongPathsEnabled 与 RemoveUnusedWebView2WpfReference、FuzzTest.props 已到 net10、Cpp.Build.props 已有 /utf-8 与协程弃用静默 → [upstream-sync-checklist.md](upstream-sync-checklist.md) §1/§3 对应条目应标记完成。
+2. **Monitor 模块已移除**（提交 cea7b7a，版本 2.0.8）：代码、runner、序列化、单元测试（BuildCompatibility 有 11 处负向断言）、devdoc 均已一致。**但 README.md 与 [AGENTS.md](AGENTS.md) 仍把 Monitor 当活动模块**，README 的 KitKnownModules 列表还列着已删除的 PowerToys.MonitorModuleInterface.dll —— 文档失实是当前最优先修正项。
 3. **版本号三处不一致**：src/Version.props = 2.0.8；changelog.md 最新条目仍是 2.0.7（缺 2.0.8 移除记录）；doc/devdoc/kit-development-experience.md 的移除记录写 2.1.0。
 4. **代码逻辑隐患 4 项（P1）**：runner 启动时执行 clean_video_conference 死代码（Kit 从未发布过 Video Conference Mute）；Directory.Build.props 无条件拼接版本号并保留微软品牌元数据；KitRemoveInactiveManagedTelemetryArtifactsFromOutput 会在引入 ManagedTelemetry 后误删运行库；version.h 硬编码第四段版本号。
 5. **随上游进度**：构建基础设施约 95%（剩版本方案、Common.Dotnet.props 抽取、构建脚本）；共享库约 80%（logger_settings、shared_constants、EtwTrace/TraceBase、version.h、TelemetryBase.cs / ManagedTelemetry 落后）；LightSwitch 落后 11 个文件；Awake 落后约 23 个文件（含遥测依赖阻塞）；Settings UI 的 LightSwitch 侧落后。

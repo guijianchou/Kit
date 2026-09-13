@@ -20,7 +20,7 @@ Both systems implement a plugin architecture with these core patterns:
 
 **Centralized Services**:
 - **Keyboard Hook**: Low-level `WH_KEYBOARD_LL` hook routing hotkeys to module callbacks
-- **Settings System**: JSON-based persistence with `general_settings.json` as single source of truth
+- **Settings System**: JSON-based persistence with per-module `settings.json` files under `%LOCALAPPDATA%/Microsoft/PowerToys/<module>/` plus a root `settings.json` for general settings (Settings v2)
 - **IPC Layer**: `TwoWayPipeMessageIPC` for communication between Runner and WinUI3 processes
 - **Hotkey Conflict Detection**: Centralized validation preventing duplicate hotkey assignments
 
@@ -31,12 +31,13 @@ Both systems implement a plugin architecture with these core patterns:
 - Multiple standalone processes (Settings UI, Quick Access, OOBE) coordinated via named pipes
 - Enterprise GPO integration for policy-driven module control
 - ETW telemetry infrastructure with `TraceLoggingProvider`
-- AI capability detection subsystem for ML-enabled features
+- AI capability detection subsystem (background `ImageResizer --detect-ai`, non-blocking)
+- Privileged pipe client authentication (`pipe_caller_auth`) for the Runner control channel (fail-closed)
 
 **Initialization Strategy**:
 - Sequential synchronous module loading during startup
 - Immediate `enable()` calls for all configured modules
-- Blocking AI detection subprocess for ImageResizer
+- Background AI detection subprocess for ImageResizer (non-blocking)
 - Centralized keyboard hook installed before module loading
 
 ### Kit-Specific Architecture
@@ -62,7 +63,7 @@ Both systems implement a plugin architecture with these core patterns:
 | **Loading Strategy** | Sequential synchronous | Sequential synchronous |
 | **Parallelization** | None | None |
 | **Hotkey Registration** | During module construction | During module construction |
-| **Settings Persistence** | JSON file (`general_settings.json`) | JSON file (`general_settings.json`) |
+| **Settings Persistence** | Per-module `settings.json` + root general `settings.json` | Same model under Kit paths (`%LOCALAPPDATA%/Kit/`) |
 | **Settings UI** | Separate WinUI3 process | Separate WinUI3 process |
 | **IPC Mechanism** | `TwoWayPipeMessageIPC` | `TwoWayPipeMessageIPC` |
 | **Tray Icon** | Created before module loading | Created before module loading |
@@ -92,7 +93,7 @@ WinMain Entry
 │  │  ├─ Register hotkeys
 │  │  └─ Store in modules() map
 │
-├─ AI Capability Detection (~200-500ms, blocking)
+├─ AI Capability Detection (background thread, non-blocking)
 ├─ start_enabled_powertoys() (~200-1000ms)
 │  └─ Call enable() on each active module
 │
@@ -292,3 +293,92 @@ Kit's startup is already faster than PowerToys (2 vs 33+ modules), but significa
 - **Long-term**: Monitor as module count grows
 
 Target: Sub-500ms warm startup (from ~900ms baseline)
+
+## 10. Build Output Structure Comparison
+
+### PowerToys Build Output Structure
+
+PowerToys uses configuration-level output directories at the repository root:
+
+```
+PowerToys/
+├── x64/
+│   ├── Debug/
+│   │   ├── PowerToys.exe
+│   │   ├── modules/
+│   │   │   ├── *.dll (33+ module DLLs)
+│   │   └── WinUI3Apps/
+│   │       ├── PowerToys.Settings.exe
+│   │       └── PowerToys.PowerLauncher.exe
+│   └── Release/
+│       ├── PowerToys.exe
+│       └── modules/
+└── ARM64/
+    ├── Debug/
+    └── Release/
+```
+
+**Characteristics**:
+- Flat configuration structure: `x64/Debug/`, `x64/Release/`
+- No version-based subdirectories
+- All build outputs for a configuration co-located
+- Module DLLs in `modules/` subdirectory
+- WinUI3 apps in `WinUI3Apps/` subdirectory
+
+### Kit Build Output Structure
+
+Kit uses a version-organized structure under `bin/`:
+
+```
+Kit/
+├── bin/
+│   ├── debug/
+│   │   ├── 2.0.8/              # Current version
+│   │   │   ├── Kit.exe
+│   │   │   ├── *.dll (runtime dependencies)
+│   │   │   └── Kit/ (subdirectory for app data)
+│   │   └── 2.0.9/              # Future versions
+│   ├── release/
+│   │   ├── 2.0.8/
+│   │   └── 2.0.9/
+│   └── publish/
+│       ├── 2.0.8.zip           # Packaged releases
+│       └── 2.0.9.zip
+└── src/
+    └── runner/x64/Debug/       # Original MSBuild output (removed after consolidation)
+```
+
+**Characteristics**:
+- Version-based organization: `bin/debug/2.0.8/`, `bin/release/2.0.8/`
+- Centralized `bin/` directory at repository root
+- Separate `publish/` folder for packaged distributions
+- Root-level scattered directories (`Debug/`, `Release/`, `x64/`, `AnyCPU/`) removed after builds
+- Version extracted from `src/common/version/Generated Files/version_gen.h`
+
+### Key Differences
+
+| Aspect | PowerToys | Kit |
+|--------|-----------|-----|
+| **Organization** | Configuration-first (x64/Debug/) | Version-first (bin/debug/2.0.8/) |
+| **Location** | Repository root | Centralized bin/ folder |
+| **Versioning** | Not reflected in paths | Explicit version subdirectories |
+| **Publishing** | Manual packaging | Dedicated bin/publish/ with .zip files |
+| **Module DLLs** | Separate modules/ subdirectory | Co-located with main executable |
+| **Cleanup** | Configuration directories persist | Scattered outputs removed, only bin/ kept |
+
+### Alignment Status
+
+**Aligned**:
+- ✅ Both use x64 platform builds
+- ✅ Both separate Debug and Release configurations
+- ✅ Both keep WinUI3 apps separate from main executable
+
+**Divergent** (by design):
+- ❌ Kit uses version-based subdirectories for historical tracking
+- ❌ Kit centralizes all outputs under `bin/` to avoid scattered files
+- ❌ Kit removes intermediate build directories to keep repository clean
+- ❌ Kit has explicit `publish/` folder for distribution artifacts
+
+**Not Yet Implemented**:
+- ⚠️ Kit does not yet have a `modules/` subdirectory structure (module DLLs are expected to be in the same directory as Kit.exe based on the `KitKnownModules` paths in `main.cpp`)
+- ⚠️ Kit's WinUI3 apps location needs verification after build consolidation

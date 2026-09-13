@@ -107,23 +107,6 @@
       <Deploy />
     </Project>
   </Folder>
-  <Folder Name="/modules/Monitor/">
-    <Project Path="src/modules/Monitor/MonitorLib/MonitorLib.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-    <Project Path="src/modules/Monitor/Monitor/PowerToys.Monitor.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-    <Project Path="src/modules/Monitor/MonitorModuleInterface/MonitorModuleInterface.vcxproj" Id="d1337e08-2d10-4e1d-8f1e-56952c662f47" />
-  </Folder>
-  <Folder Name="/modules/Monitor/Tests/">
-    <Project Path="src/modules/Monitor/Tests/Monitor.UnitTests/Monitor.UnitTests.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-    </Project>
-  </Folder>
   <Folder Name="/modules/awake/">
     <Project Path="src/modules/awake/Awake/Awake.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
@@ -181,8 +164,6 @@
     <BuildDependency Project="src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchModuleInterface/LightSwitchModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchService/LightSwitchService.vcxproj" />
-    <BuildDependency Project="src/modules/Monitor/Monitor/PowerToys.Monitor.csproj" />
-    <BuildDependency Project="src/modules/Monitor/MonitorModuleInterface/MonitorModuleInterface.vcxproj" />
     <BuildDependency Project="src/PackageIdentity/PackageIdentity.vcxproj" />
     <BuildDependency Project="src/settings-ui/QuickAccess.UI/PowerToys.QuickAccess.csproj" />
     <BuildDependency Project="src/settings-ui/Settings.UI/PowerToys.Settings.csproj" />

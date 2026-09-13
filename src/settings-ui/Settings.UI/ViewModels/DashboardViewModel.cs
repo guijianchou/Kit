@@ -317,7 +317,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private static List<DashboardModuleItem> GetShortcutItemsForDashboardModule(DashboardListItem module)
         {
             return module.DashboardModuleItems
-                .Where(m => m is DashboardModuleShortcutItem || (module.Tag != ModuleType.Monitor && m is DashboardModuleActivationItem))
+                .Where(m => m is DashboardModuleShortcutItem || m is DashboardModuleActivationItem)
                 .ToList();
         }
 
@@ -341,7 +341,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             {
                 ModuleType.Awake => GetModuleItemsAwake(),
                 ModuleType.LightSwitch => GetModuleItemsLightSwitch(),
-                ModuleType.Monitor => GetModuleItemsMonitor(),
                 _ => new ObservableCollection<DashboardModuleItem>(),
             };
         }
@@ -379,33 +378,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             };
 
             return new ObservableCollection<DashboardModuleItem>(list);
-        }
-
-        private ObservableCollection<DashboardModuleItem> GetModuleItemsMonitor()
-        {
-            ISettingsRepository<MonitorSettings> moduleSettingsRepository = SettingsRepository<MonitorSettings>.GetInstance(SettingsUtils.Default);
-            var settings = moduleSettingsRepository.SettingsConfig;
-            var list = new List<DashboardModuleItem>
-            {
-                new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Monitor_DownloadsPathSettingsCard/Header"), Activation = settings.Properties.DownloadsPath.Value },
-                new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Monitor_RunInBackgroundSettingsCard/Header"), Activation = settings.Properties.RunInBackground.Value ? resourceLoader.GetString("Monitor_RunInBackgroundOn") : resourceLoader.GetString("Monitor_RunInBackgroundOff") },
-                new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Monitor_ScanIntervalSeconds/Header"), Activation = FormatMonitorScanInterval(settings.Properties.ScanIntervalSeconds.Value) },
-            };
-
-            return new ObservableCollection<DashboardModuleItem>(list);
-        }
-
-        private static string FormatMonitorScanInterval(int intervalSeconds)
-        {
-            return intervalSeconds switch
-            {
-                3600 => "1h",
-                7200 => "2h",
-                21600 => "6h",
-                43200 => "12h",
-                86400 => "24h",
-                _ => $"{intervalSeconds}s",
-            };
         }
 
         internal void DashboardListItemClick(object sender)

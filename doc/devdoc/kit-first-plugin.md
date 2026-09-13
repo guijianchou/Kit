@@ -1,6 +1,6 @@
 # Kit First Plugin Development
 
-Kit currently follows the PowerToys module model. The three active modules are `Awake`, `LightSwitch`, and `Monitor`, and module exposure is controlled by maintained lists instead of filesystem probing.
+Kit currently follows the PowerToys module model. The two active modules are `Awake` and `LightSwitch`, and module exposure is controlled by maintained lists instead of filesystem probing.
 
 ## Recommended First Step
 
@@ -13,7 +13,7 @@ This keeps the work inside the already-tested runner, module interface, Settings
 Use this path for a first native or managed utility:
 
 1. Start from the closest upstream PowerToys module shape when one exists.
-2. Put reusable behavior in a testable library before wiring the runner. Monitor uses `MonitorLib` for scanning, hashing, CSV persistence, duplicate grouping, organization, and cleanup primitives.
+2. Put reusable behavior in a testable library before wiring the runner.
 3. Add the worker project. Keep command-line entry points explicit, for example `--scan-once` for one-shot operation and `--pid` plus a named exit event for runner-managed lifetime.
 4. Add the module interface project. Follow the Awake/LightSwitch pattern: `powertoy_create`, stable module key, `get_config`, `set_config`, `enable`, `disable`, worker launch, and clean shutdown signaling.
 5. Add the module projects to `Kit.slnx`.
@@ -24,22 +24,6 @@ Use this path for a first native or managed utility:
 10. Add a Quick Access action only when the module has a real action. Otherwise, let Home fall back to opening the module settings page.
 11. Add focused tests for runner registration, Settings routing, Home listing, Quick Access behavior, worker project shape, core library behavior, and any added WinMD/GPO dependency.
 12. Build the module interface and any service or worker project sequentially during local verification.
-
-## Monitor As The Reference Kit Module
-
-Monitor is the first Kit-authored module and should be used as the current reference for small module development:
-
-- Core library: `src/modules/Monitor/MonitorLib`
-- Worker: `src/modules/Monitor/Monitor`
-- Native module interface: `src/modules/Monitor/MonitorModuleInterface`
-- Settings model: `src/settings-ui/Settings.UI.Library/MonitorSettings.cs`
-- Settings page: `src/settings-ui/Settings.UI/SettingsXAML/Views/MonitorPage.xaml`
-- Home and Quick Access registration: `DashboardViewModel.cs` and `QuickAccessViewModel.cs`
-- Registration/static tests: `MonitorSettingsRegistration.cs` and `MonitorWorkerProjectTests.cs`
-
-The useful pattern is not the exact Monitor feature set, but the shape: isolate logic in a library, keep the worker simple, let the native interface own runner lifetime, and cover every manual registration point with tests.
-
-See `kit-development-experience.md` for the first-phase implementation notes and stability checklist that came out of Monitor.
 
 ## If The Feature Is A PowerToys Run Plugin
 
@@ -75,12 +59,8 @@ Run these commands from the `src/kit` project root.
 ```powershell
 & 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\Settings.UI\PowerToys.Settings.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
 & 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\QuickAccess.UI\PowerToys.QuickAccess.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
-& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\modules\Monitor\Tests\Monitor.UnitTests\Monitor.UnitTests.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /nologo
-& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\modules\Monitor\Monitor\PowerToys.Monitor.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /nologo
-& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\modules\Monitor\MonitorModuleInterface\MonitorModuleInterface.vcxproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /nologo
 & 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\runner\Kit.vcxproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
 & 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\Settings.UI.UnitTests\Settings.UI.UnitTests.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /nologo
-& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe' 'Debug\x64\tests\Monitor.UnitTests\net10.0-windows10.0.26100.0\Monitor.UnitTests.dll' /Platform:x64
 & 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe' 'Debug\x64\tests\SettingsTests\net10.0-windows10.0.26100.0\Settings.UI.UnitTests.dll' /Platform:x64
 ```
 
@@ -92,4 +72,4 @@ When starting from a source-size handoff, expect the first build to restore loca
 
 ## Current Test Boundary
 
-`Settings.UI.UnitTests` intentionally excludes ViewModel tests for PowerToys modules that Kit has removed from the active Settings UI. The remaining tests cover General, Kit branding and storage, Home module listing, Quick Access visibility, Monitor's scan UI shape, runner Awake/Monitor registration, settings serialization, and command-setting parsing. Monitor's own unit tests cover the core library, worker project shape, and runner-managed worker lifetime.
+`Settings.UI.UnitTests` intentionally excludes ViewModel tests for PowerToys modules that Kit has removed from the active Settings UI. The remaining tests cover General, Kit branding and storage, Home module listing, Quick Access visibility, runner Awake/LightSwitch registration, settings serialization, and command-setting parsing.

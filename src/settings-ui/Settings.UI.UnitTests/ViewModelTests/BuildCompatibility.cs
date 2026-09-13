@@ -653,11 +653,16 @@ namespace ViewModelTests
             StringAssert.Contains(launcherViewModel, "fallbackLauncher: OpenModuleSettings");
             StringAssert.Contains(launcherViewModel, "private bool OpenModuleSettings(ModuleType moduleType)");
             StringAssert.Contains(coordinatorInterface, "void OpenModuleSettings(ModuleType moduleType);");
-            StringAssert.Contains(coordinator, "ModuleType.Monitor => SettingsDeepLink.SettingsWindow.Monitor");
-            StringAssert.Contains(settingsDeepLink, "Monitor,");
-            StringAssert.Contains(settingsDeepLink, "return \"Monitor\";");
+            StringAssert.Contains(coordinator, "ModuleType.Awake => SettingsDeepLink.SettingsWindow.Awake");
+            StringAssert.Contains(coordinator, "ModuleType.LightSwitch => SettingsDeepLink.SettingsWindow.LightSwitch");
+            StringAssert.Contains(settingsDeepLink, "Awake,");
+            StringAssert.Contains(settingsDeepLink, "LightSwitch,");
+            StringAssert.Contains(settingsDeepLink, "return \"Awake\";");
+            StringAssert.Contains(settingsDeepLink, "return \"LightSwitch\";");
             Assert.IsFalse(coordinator.Contains("PowerDisplay", StringComparison.Ordinal), "Quick Access should not route to removed PowerDisplay settings.");
+            Assert.IsFalse(coordinator.Contains("Monitor", StringComparison.Ordinal), "Quick Access should not route to removed Monitor settings.");
             Assert.IsFalse(settingsDeepLink.Contains("PowerDisplay", StringComparison.Ordinal), "Settings deep links should not expose removed PowerDisplay windows.");
+            Assert.IsFalse(settingsDeepLink.Contains("Monitor", StringComparison.Ordinal), "Settings deep links should not expose removed Monitor windows.");
             StringAssert.Contains(allAppsViewModel, "if (!_coordinator.UpdateModuleEnabled(flyoutItem.Tag, flyoutItem.IsEnabled))");
             StringAssert.Contains(allAppsViewModel, "flyoutItem.UpdateStatus(!isEnabled)");
         }
@@ -673,7 +678,6 @@ namespace ViewModelTests
                 "Overview",
                 "Awake",
                 "LightSwitch",
-                "Monitor",
             };
 
             foreach (var activeWindow in activeWindows)
@@ -725,9 +729,8 @@ namespace ViewModelTests
             Assert.IsFalse(settingsLibraryProject.Contains(@"..\..\modules\powerdisplay", StringComparison.OrdinalIgnoreCase));
             Assert.IsFalse(settingsLibraryProject.Contains(@"<Compile Remove=""MonitorInfo.cs""", StringComparison.Ordinal));
 
-            StringAssert.Contains(serializationContext, "[JsonSerializable(typeof(MonitorInfo))]");
-            StringAssert.Contains(serializationContext, "[JsonSerializable(typeof(List<MonitorInfo>))]");
             Assert.IsFalse(serializationContext.Contains("PowerDisplay", StringComparison.Ordinal), "Settings serialization context should not register removed PowerDisplay models.");
+            Assert.IsFalse(serializationContext.Contains("MonitorInfo", StringComparison.Ordinal), "Settings serialization context should not register removed Monitor models.");
         }
 
         [TestMethod]
@@ -764,7 +767,6 @@ namespace ViewModelTests
             {
                 "SndAwakeSettings",
                 "SndLightSwitchSettings",
-                "SndMonitorSettings",
             };
 
             foreach (var activeIpcType in activeIpcTypes)
@@ -853,10 +855,11 @@ namespace ViewModelTests
 
             StringAssert.Contains(quickAccessViewModel, "ModuleType.Awake");
             StringAssert.Contains(quickAccessViewModel, "ModuleType.LightSwitch");
-            StringAssert.Contains(quickAccessViewModel, "ModuleType.Monitor");
             StringAssert.Contains(quickAccessLauncher, "ModuleType.LightSwitch");
             Assert.IsFalse(quickAccessViewModel.Contains("ModuleType.PowerDisplay", StringComparison.Ordinal), "Quick Access should not include removed PowerDisplay.");
+            Assert.IsFalse(quickAccessViewModel.Contains("ModuleType.Monitor", StringComparison.Ordinal), "Quick Access should not include removed Monitor.");
             Assert.IsFalse(quickAccessLauncher.Contains("ModuleType.PowerDisplay", StringComparison.Ordinal), "Quick Access launcher should not include removed PowerDisplay.");
+            Assert.IsFalse(quickAccessLauncher.Contains("ModuleType.Monitor", StringComparison.Ordinal), "Quick Access launcher should not include removed Monitor.");
         }
 
         [TestMethod]
@@ -1039,7 +1042,7 @@ namespace ViewModelTests
             AssertHasGpoBranch(gpoConfiguration, "Awake");
             AssertHasGpoBranch(gpoConfiguration, "LightSwitch");
             Assert.IsFalse(HasGpoBranch(gpoConfiguration, "PowerDisplay"), "Settings GPO helper should not expose removed PowerDisplay.");
-            Assert.IsFalse(HasGpoBranch(gpoConfiguration, "Monitor"), "Settings GPO helper should not expose a Monitor GPO branch until a Monitor GPO rule exists.");
+            Assert.IsFalse(HasGpoBranch(gpoConfiguration, "Monitor"), "Settings GPO helper should not expose removed Monitor.");
 
             string[] inactiveModules =
             {
@@ -1474,14 +1477,14 @@ namespace ViewModelTests
             StringAssert.Contains(moduleConfigData, "Runner");
             StringAssert.Contains(moduleConfigData, "Awake");
             StringAssert.Contains(moduleConfigData, "LightSwitch");
-            StringAssert.Contains(moduleConfigData, "Monitor");
             StringAssert.Contains(moduleConfigData, "Kit.exe");
             StringAssert.Contains(moduleConfigData, "PowerToys.Settings.exe");
             StringAssert.Contains(moduleConfigData, "PowerToys.Awake.exe");
             StringAssert.Contains(moduleConfigData, "PowerToys.LightSwitchService.exe");
-            StringAssert.Contains(moduleConfigData, "PowerToys.Monitor.exe");
             Assert.IsFalse(moduleConfigData.Contains("PowerDisplay", StringComparison.Ordinal), "UITestAutomation should not carry removed PowerDisplay launch targets.");
             Assert.IsFalse(moduleConfigData.Contains("PowerToys.PowerDisplay.exe", StringComparison.Ordinal), "UITestAutomation should not launch removed PowerDisplay.");
+            Assert.IsFalse(moduleConfigData.Contains("Monitor", StringComparison.Ordinal), "UITestAutomation should not carry removed Monitor launch targets.");
+            Assert.IsFalse(moduleConfigData.Contains("PowerToys.Monitor.exe", StringComparison.Ordinal), "UITestAutomation should not launch removed Monitor.");
             StringAssert.Contains(moduleConfigData, "C:\\Program Files\\Kit");
             StringAssert.Contains(moduleConfigData, "C:\\Program Files (x86)\\Kit");
             StringAssert.Contains(moduleConfigData, "%LocalAppData%\\Kit");
@@ -1571,7 +1574,7 @@ namespace ViewModelTests
             StringAssert.Contains(kitModuleCatalog, "ActiveEnabledModuleKeys");
             StringAssert.Contains(commandLineUtils, "KitModuleCatalog.ActiveSettingsModuleKeys");
             StringAssert.Contains(commandLineUtils, "KitModuleCatalog.ActiveEnabledModuleKeys");
-            foreach (var activeModule in new[] { "AwakeSettings.ModuleName", "LightSwitchSettings.ModuleName", "MonitorSettings.ModuleName" })
+            foreach (var activeModule in new[] { "AwakeSettings.ModuleName", "LightSwitchSettings.ModuleName" })
             {
                 StringAssert.Contains(kitModuleCatalog, activeModule);
                 Assert.IsFalse(commandLineUtils.Contains(activeModule, StringComparison.Ordinal), $"Settings command-line allowlist should read active module '{activeModule}' from KitModuleCatalog.");
@@ -1595,7 +1598,6 @@ namespace ViewModelTests
             {
                 "ModuleType.Awake",
                 "ModuleType.LightSwitch",
-                "ModuleType.Monitor",
                 "ModuleType.GeneralSettings",
             })
             {
@@ -1603,6 +1605,7 @@ namespace ViewModelTests
             }
 
             Assert.IsFalse(moduleHelper.Contains("ModuleType.PowerDisplay", StringComparison.Ordinal), "ModuleHelper should not expose removed PowerDisplay.");
+            Assert.IsFalse(moduleHelper.Contains("ModuleType.Monitor", StringComparison.Ordinal), "ModuleHelper should not expose removed Monitor.");
 
             foreach (var compatibilityModuleKey in new[]
             {
@@ -1684,13 +1687,14 @@ namespace ViewModelTests
         {
             var pluginDoc = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-first-plugin.md"));
 
-            foreach (var activeModule in new[] { "Awake", "LightSwitch", "Monitor" })
+            foreach (var activeModule in new[] { "Awake", "LightSwitch" })
             {
                 StringAssert.Contains(pluginDoc, activeModule);
             }
 
-            StringAssert.Contains(pluginDoc, "three active modules");
+            StringAssert.Contains(pluginDoc, "two active modules");
             Assert.IsFalse(pluginDoc.Contains("PowerDisplay", StringComparison.Ordinal), "First-plugin docs should not list removed PowerDisplay as active.");
+            Assert.IsFalse(pluginDoc.Contains("Monitor", StringComparison.Ordinal), "First-plugin docs should not list removed Monitor as active.");
         }
 
         [TestMethod]
@@ -1801,7 +1805,6 @@ namespace ViewModelTests
             {
                 "Awake.png",
                 "LightSwitch.png",
-                "Monitor.png",
                 "PT.png",
             };
 
@@ -1941,7 +1944,6 @@ namespace ViewModelTests
             {
                 "Awake.png",
                 "LightSwitch.png",
-                "Monitor.png",
                 "PowerToys.png",
             };
 
@@ -2594,8 +2596,8 @@ namespace ViewModelTests
             StringAssert.Contains(sharedConstants, "const wchar_t APPDATA_PATH[] = L\"Kit\"");
             StringAssert.Contains(runnerMain, "L\"PowerToys.AwakeModuleInterface.dll\"");
             StringAssert.Contains(runnerMain, "L\"PowerToys.LightSwitchModuleInterface.dll\"");
-            StringAssert.Contains(runnerMain, "L\"PowerToys.MonitorModuleInterface.dll\"");
             Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed PowerDisplay.");
+            Assert.IsFalse(runnerMain.Contains("PowerToys.MonitorModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed Monitor.");
         }
 
         [TestMethod]
@@ -2778,8 +2780,6 @@ namespace ViewModelTests
             StringAssert.Contains(xamlIndexBuilderProgram, "\"ShortcutConflictWindow.xaml\"");
             Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"SearchResultsPage\"", StringComparison.Ordinal), "Generated search index should not include the search results page itself.");
             Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"ShortcutConflictWindow\"", StringComparison.Ordinal), "Generated search index should not include non-Views shortcut conflict window entries.");
-            StringAssert.Contains(searchIndex, "\"icon\": \"/Assets/Settings/Icons/Monitor.png\"");
-            Assert.IsFalse(searchIndex.Contains("\"elementUid\": \"Monitor_EnableSettingsCard\",\r\n    \"icon\": \"/Assets/Settings/Icons/PowerToys.png\"", StringComparison.Ordinal), "Monitor search entries should not keep the generic PowerToys icon.");
 
             string[] inactiveSearchIndexFallbacks =
             {
@@ -2905,7 +2905,6 @@ namespace ViewModelTests
 
             StringAssert.Contains(sharedConstants, "KitRunnerTerminateSettingsEvent");
             StringAssert.Contains(sharedConstants, "KitAwakeExitEvent");
-            StringAssert.Contains(sharedConstants, "KitMonitorExitEvent");
             StringAssert.Contains(sharedConstants, "Kit-LightSwitch-ToggleEvent");
             StringAssert.Contains(lightSwitchInterface, "CommonSharedConstants::LIGHTSWITCH_TOGGLE_EVENT");
             StringAssert.Contains(lightSwitchInterface, "KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
@@ -2922,10 +2921,6 @@ namespace ViewModelTests
             Assert.IsFalse(lightSwitchInterface.Contains("CloseHandle(m_manual_override_event_handle);\n            m_manual_override_event_handle = nullptr;", StringComparison.Ordinal), "LightSwitch disable should not close one event handle conditionally while leaking the other module event handles.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Kit Settings IPC must not share the PowerToys terminate event.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysAwakeExitEvent", StringComparison.Ordinal), "Kit Awake must not share the PowerToys exit event.");
-            Assert.IsFalse(sharedConstants.Contains("PowerToysMonitorExitEvent", StringComparison.Ordinal), "Kit Monitor must not share the PowerToys exit event.");
-            Assert.IsFalse(sharedConstants.Contains("MONITOR_SCAN_COMPLETED_EVENT", StringComparison.Ordinal), "Monitor should use scan-progress.json and the status DB instead of a legacy scan completion event constant.");
-            Assert.IsFalse(sharedConstants.Contains("KitMonitorScanCompletedEvent", StringComparison.Ordinal), "Monitor scan completion event should be removed when no Settings consumer remains.");
-            Assert.IsFalse(sharedConstants.Contains("PowerToysMonitorScanCompletedEvent", StringComparison.Ordinal), "Kit Monitor scan completion event must not share PowerToys names.");
             Assert.IsFalse(sharedConstants.Contains("PowerToys-LightSwitch-ToggleEvent", StringComparison.Ordinal), "Kit LightSwitch must not share the PowerToys toggle event.");
             Assert.IsFalse(sharedConstants.Contains("PowerDisplay", StringComparison.Ordinal), "Shared runtime events should not expose removed PowerDisplay.");
             Assert.IsFalse(sharedConstants.Contains("LightThemeEvent", StringComparison.Ordinal), "LightSwitch-to-PowerDisplay light theme event should be removed with PowerDisplay.");
@@ -3087,35 +3082,6 @@ namespace ViewModelTests
             StringAssert.Contains(flyoutWindowHelper, "[StructLayout(LayoutKind.Sequential)]");
             Assert.IsFalse(flyoutWindowHelper.Contains("public int X;", StringComparison.Ordinal), "Interop structs should not expose public fields that trigger CA1051.");
             Assert.IsFalse(flyoutWindowHelper.Contains("public int Y;", StringComparison.Ordinal), "Interop structs should not expose public fields that trigger CA1051.");
-        }
-
-        [TestMethod]
-        public void MonitorActionSwitchesShouldAppearBeforeRunInBackground()
-        {
-            var monitorPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "MonitorPage.xaml"));
-
-            var organizeIndex = monitorPage.IndexOf("Monitor_OrganizeDownloadsSettingsCard", StringComparison.Ordinal);
-            var cleanIndex = monitorPage.IndexOf("Monitor_CleanInstallersSettingsCard", StringComparison.Ordinal);
-            var runInBackgroundIndex = monitorPage.IndexOf("Monitor_RunInBackgroundSettingsCard", StringComparison.Ordinal);
-
-            Assert.IsTrue(organizeIndex >= 0, "OrganizeDownloads switch should be present.");
-            Assert.IsTrue(cleanIndex >= 0, "CleanInstallers switch should be present.");
-            Assert.IsTrue(runInBackgroundIndex >= 0, "Run in background switch should be present.");
-            Assert.IsTrue(organizeIndex < runInBackgroundIndex, "OrganizeDownloads should appear above Run in background.");
-            Assert.IsTrue(cleanIndex < runInBackgroundIndex, "CleanInstallers should appear above Run in background.");
-            Assert.AreEqual(organizeIndex, monitorPage.LastIndexOf("Monitor_OrganizeDownloadsSettingsCard", StringComparison.Ordinal), "OrganizeDownloads switch should not be duplicated.");
-            Assert.AreEqual(cleanIndex, monitorPage.LastIndexOf("Monitor_CleanInstallersSettingsCard", StringComparison.Ordinal), "CleanInstallers switch should not be duplicated.");
-        }
-
-        [TestMethod]
-        public void MonitorActionSwitchesShouldUseShortLabels()
-        {
-            var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
-
-            StringAssert.Contains(resources, "name=\"Monitor_OrganizeDownloadsSettingsCard.Header\"");
-            StringAssert.Contains(resources, "<value>Organize</value>");
-            StringAssert.Contains(resources, "name=\"Monitor_CleanInstallersSettingsCard.Header\"");
-            StringAssert.Contains(resources, "<value>Clean</value>");
         }
 
         [TestMethod]

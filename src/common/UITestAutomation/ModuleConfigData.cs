@@ -30,7 +30,6 @@ namespace Microsoft.PowerToys.UITest
         Runner,
         Awake,
         LightSwitch,
-        Monitor,
     }
 
     /// <summary>
@@ -99,7 +98,6 @@ namespace Microsoft.PowerToys.UITest
                 [PowerToysModule.Runner] = new ModuleInfo("Kit.exe", "Kit"),
                 [PowerToysModule.Awake] = new ModuleInfo("PowerToys.Awake.exe", "PowerToys Awake"),
                 [PowerToysModule.LightSwitch] = new ModuleInfo("PowerToys.LightSwitchService.exe", "PowerToys.LightSwitchService", "LightSwitchService"),
-                [PowerToysModule.Monitor] = new ModuleInfo("PowerToys.Monitor.exe", "Kit Monitor"),
             };
         }
 

@@ -43,13 +43,12 @@ public class SetSettingCommandTests
     [DataRow(typeof(AwakeSettings), nameof(AwakeProperties.Mode), "EXPIRABLE")]
     [DataRow(typeof(AwakeSettings), nameof(AwakeProperties.ExpirationDateTime), "March 31, 2020 15:00 +00:00")]
     [DataRow(typeof(LightSwitchSettings), nameof(LightSwitchProperties.LightTime), "600")]
-    [DataRow(typeof(MonitorSettings), nameof(MonitorProperties.ScanIntervalSeconds), "3600")]
     public void SetModuleSetting(Type moduleSettingsType, string settingName, string newValueStr)
     {
         SetSetting(moduleSettingsType, settingName, newValueStr);
     }
 
-    [DataRow(typeof(GeneralSettings), "Enabled.Monitor", "true")]
+    [DataRow(typeof(GeneralSettings), "Enabled.Awake", "true")]
     [DataRow(typeof(GeneralSettings), nameof(GeneralSettings.AutoDownloadUpdates), "true")]
     [TestMethod]
     public void SetGeneralSetting(Type moduleSettingsType, string settingName, string newValueStr)
@@ -72,15 +71,15 @@ public class SetSettingCommandTests
         var requestedSettings = new Dictionary<string, List<string>>
         {
             ["General"] = [nameof(GeneralSettings.AutoDownloadUpdates)],
-            [MonitorSettings.ModuleName] = [nameof(MonitorProperties.ScanIntervalSeconds)],
+            [AwakeSettings.ModuleName] = [nameof(AwakeProperties.Mode)],
         };
 
         var result = GetSettingCommandLineCommand.Execute(requestedSettings);
 
         StringAssert.Contains(result, "\"General\"");
-        StringAssert.Contains(result, $"\"{MonitorSettings.ModuleName}\"");
+        StringAssert.Contains(result, $"\"{AwakeSettings.ModuleName}\"");
         StringAssert.Contains(result, nameof(GeneralSettings.AutoDownloadUpdates));
-        StringAssert.Contains(result, nameof(MonitorProperties.ScanIntervalSeconds));
+        StringAssert.Contains(result, nameof(AwakeProperties.Mode));
     }
 
     [TestMethod]

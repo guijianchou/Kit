@@ -229,3 +229,6 @@ src/common/Telemetry/*.etl
 .squad-workstream
 .github/agents/**squad**.md
 .github/workflows/**squad**.yml
+
+# Reference source checkout (PowerToys upstream) - local reference only, never committed
+/Source/

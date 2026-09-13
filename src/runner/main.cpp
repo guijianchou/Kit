@@ -66,7 +66,6 @@ namespace
     constexpr std::wstring_view KitKnownModules[] = {
         L"PowerToys.AwakeModuleInterface.dll",
         L"PowerToys.LightSwitchModuleInterface.dll",
-        L"PowerToys.MonitorModuleInterface.dll",
     };
 
     bool is_known_module_registered(std::wstring_view moduleName)

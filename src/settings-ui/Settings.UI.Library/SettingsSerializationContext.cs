@@ -58,7 +58,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(ImageResizerSettings))]
     [JsonSerializable(typeof(KeyboardManagerSettings))]
     [JsonSerializable(typeof(LightSwitchSettings))]
-    [JsonSerializable(typeof(MonitorSettings))]
     [JsonSerializable(typeof(MeasureToolSettings))]
     [JsonSerializable(typeof(MouseHighlighterSettings))]
     [JsonSerializable(typeof(MousePointerCrosshairsSettings))]
@@ -95,7 +94,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(KeyboardManagerProperties))]
     [JsonSerializable(typeof(KeyboardManagerProfile))]
     [JsonSerializable(typeof(LightSwitchProperties))]
-    [JsonSerializable(typeof(MonitorProperties))]
     [JsonSerializable(typeof(MeasureToolProperties))]
     [JsonSerializable(typeof(MouseHighlighterProperties))]
     [JsonSerializable(typeof(MousePointerCrosshairsProperties))]
@@ -140,12 +138,10 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(ImageResizerSizes))]
     [JsonSerializable(typeof(ImageResizerCustomSizeProperty))]
     [JsonSerializable(typeof(KeyboardKeysProperty))]
-    [JsonSerializable(typeof(MonitorInfo))]
     [JsonSerializable(typeof(ColorPresetItem))]
     [JsonSerializable(typeof(VcpCodeDisplayInfo))]
     [JsonSerializable(typeof(VcpValueInfo))]
     [JsonSerializable(typeof(List<string>))]
-    [JsonSerializable(typeof(List<MonitorInfo>))]
     [JsonSerializable(typeof(List<ColorPresetItem>))]
     [JsonSerializable(typeof(List<VcpCodeDisplayInfo>))]
     [JsonSerializable(typeof(List<VcpValueInfo>))]
@@ -159,12 +155,10 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     // IPC Send Message Wrapper Classes (Snd*)
     [JsonSerializable(typeof(SndAwakeSettings))]
     [JsonSerializable(typeof(SndLightSwitchSettings))]
-    [JsonSerializable(typeof(SndMonitorSettings))]
 
     // IPC Message Generic Wrapper Types (SndModuleSettings<T>)
     [JsonSerializable(typeof(SndModuleSettings<SndAwakeSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndLightSwitchSettings>))]
-    [JsonSerializable(typeof(SndModuleSettings<SndMonitorSettings>))]
 
     public partial class SettingsSerializationContext : JsonSerializerContext
     {

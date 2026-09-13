@@ -1,6 +1,6 @@
 # Kit Dev Docs
 
-Kit-specific developer notes. Kit's active module set is intentionally small: `Awake`, `Light Switch`, and `Monitor`.
+Kit-specific developer notes. Kit's active module set is intentionally small: `Awake` and `Light Switch`.
 
 ## Contents
 
@@ -9,7 +9,6 @@ Kit-specific developer notes. Kit's active module set is intentionally small: `A
 
 ## Kit Notes
 
-- The current active Kit modules are `Awake`, `Light Switch`, and `Monitor`.
+- The current active Kit modules are `Awake` and `Light Switch`.
 - PowerToys Run and Command Palette are not currently active Kit modules.
 - For new Kit features, prefer the existing PowerToys module contract unless a plugin host itself is the feature being imported.
-- Monitor is the current reference module for Kit-authored work: core library, worker process, native module interface, Settings model/page, Home metadata, Quick Access registration, and static registration tests.

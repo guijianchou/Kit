@@ -354,7 +354,6 @@ namespace ViewModelTests
                 new[] { "src", "modules", "awake", "AwakeModuleInterface", "trace.cpp" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "trace.cpp" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchService", "trace.cpp" },
-                new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "trace.cpp" },
             };
 
             foreach (var pathParts in activeModuleTraceFiles)
@@ -391,7 +390,6 @@ namespace ViewModelTests
                 new[] { "src", "modules", "awake", "AwakeModuleInterface", "AwakeModuleInterface.vcxproj" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "LightSwitchModuleInterface.vcxproj" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchService", "LightSwitchService.vcxproj" },
-                new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "MonitorModuleInterface.vcxproj" },
                 new[] { "tools", "project_template", "ModuleTemplate", "ModuleTemplate.vcxproj" },
                 new[] { "tools", "project_template", "ModuleTemplate", "ModuleTemplateCompileTest.vcxproj" },
             };
@@ -412,7 +410,6 @@ namespace ViewModelTests
                 new[] { "src", "modules", "awake", "AwakeModuleInterface", "trace.h" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchModuleInterface", "trace.h" },
                 new[] { "src", "modules", "lightswitch", "LightSwitchService", "trace.h" },
-                new[] { "src", "modules", "Monitor", "MonitorModuleInterface", "trace.h" },
                 new[] { "tools", "project_template", "ModuleTemplate", "trace.h" },
             };
 

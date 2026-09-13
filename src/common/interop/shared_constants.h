@@ -15,12 +15,6 @@ namespace CommonSharedConstants
     // Path to the event used by Awake
     const wchar_t AWAKE_EXIT_EVENT[] = L"Local\\KitAwakeExitEvent-c0d5e305-35fc-4fb5-83ec-f6070cfaf7fe";
 
-    // Path to the event used by Monitor
-    const wchar_t MONITOR_EXIT_EVENT[] = L"Local\\KitMonitorExitEvent-0b94f553-2821-4690-a940-76d04c3ef7e8";
-
-    // Path to the event used by Monitor to restart only the background worker
-    const wchar_t MONITOR_BACKGROUND_EXIT_EVENT[] = L"Local\\KitMonitorBackgroundExitEvent-1f418ca1-9e3f-48f4-a37e-e1b747aa41aa";
-
     // Path to the event used by LightSwitch
     const wchar_t LIGHTSWITCH_TOGGLE_EVENT[] = L"Local\\Kit-LightSwitch-ToggleEvent-d8dc2f29-8c94-4ca1-8c5f-3e2b1e3c4f5a";
 

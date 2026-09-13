@@ -21,7 +21,6 @@ namespace ManagedCommon
         ImageResizer,
         KeyboardManager,
         LightSwitch,
-        Monitor,
         MouseHighlighter,
         MouseJump,
         MousePointerCrosshairs,

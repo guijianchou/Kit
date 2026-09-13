@@ -177,12 +177,6 @@
                     x:Uid="Shell_LightSwitch"
                     AutomationProperties.AutomationId="LightSwitchNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/LightSwitch.png}" />
-
-                <NavigationViewItem
-                    x:Name="MonitorNavigationItem"
-                    x:Uid="Shell_Monitor"
-                    AutomationProperties.AutomationId="MonitorNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Monitor.png}" />
             </NavigationView.MenuItems>
             <NavigationView.PaneFooter>
                 <StackPanel Orientation="Vertical">

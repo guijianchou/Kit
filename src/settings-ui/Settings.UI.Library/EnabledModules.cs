@@ -512,22 +512,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             }
         }
 
-        private bool monitor;
-
-        [JsonPropertyName("Monitor")]
-        public bool Monitor
-        {
-            get => monitor;
-            set
-            {
-                if (monitor != value)
-                {
-                    monitor = value;
-                    NotifyChange();
-                }
-            }
-        }
-
         private bool grabAndMove;
 
         [JsonPropertyName("GrabAndMove")]

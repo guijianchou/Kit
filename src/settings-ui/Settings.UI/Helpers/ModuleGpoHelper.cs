@@ -26,7 +26,6 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
             {
                 ModuleType.Awake => typeof(AwakePage),
                 ModuleType.LightSwitch => typeof(LightSwitchPage),
-                ModuleType.Monitor => typeof(MonitorPage),
                 _ => typeof(GeneralPage),
             };
         }

@@ -26,7 +26,7 @@ namespace ViewModelTests
     public class General
     {
         public const string GeneralSettingsFileName = "Test\\GeneralSettings";
-        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Monitor" };
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch" };
 
         private Mock<SettingsUtils> mockGeneralSettingsUtils;
 
@@ -543,15 +543,14 @@ namespace ViewModelTests
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
 
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch },
                 KitModuleCatalog.ActiveModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Monitor },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch },
                 KitModuleCatalog.DashboardModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.LightSwitch, ModuleType.Monitor },
+                new[] { ModuleType.LightSwitch },
                 KitModuleCatalog.QuickAccessModules.ToArray());
-            Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.Monitor));
             Assert.IsFalse(Enum.GetNames<ModuleType>().Contains("PowerDisplay", StringComparer.Ordinal));
             Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.ImageResizer));
 
@@ -583,7 +582,6 @@ namespace ViewModelTests
             var settings = new GeneralSettings();
             settings.Enabled.Awake = false;
             settings.Enabled.LightSwitch = true;
-            settings.Enabled.Monitor = true;
 
             var outgoingJson = new OutGoingGeneralSettings(settings).ToString();
 
@@ -599,7 +597,6 @@ namespace ViewModelTests
             Assert.IsFalse(enabled.TryGetProperty("AlwaysOnTop", out _));
             Assert.AreEqual(false, enabled.GetProperty("Awake").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("LightSwitch").GetBoolean());
-            Assert.AreEqual(true, enabled.GetProperty("Monitor").GetBoolean());
             Assert.IsFalse(enabled.TryGetProperty("PowerDisplay", out _));
         }
 
@@ -631,13 +628,15 @@ namespace ViewModelTests
             Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal));
             Assert.IsFalse(runnerMain.Contains("directory_iterator", StringComparison.Ordinal));
             StringAssert.Contains(runnerSettingsHeader, "Awake,");
-            StringAssert.Contains(runnerSettingsHeader, "Monitor,");
+            StringAssert.Contains(runnerSettingsHeader, "LightSwitch,");
             Assert.IsFalse(runnerSettingsHeader.Contains("PowerDisplay", StringComparison.Ordinal));
+            Assert.IsFalse(runnerSettingsHeader.Contains("Monitor", StringComparison.Ordinal));
             StringAssert.Contains(runnerSettingsSource, "return \"Awake\";");
             StringAssert.Contains(runnerSettingsSource, "value == \"Awake\"");
-            StringAssert.Contains(runnerSettingsSource, "return \"Monitor\";");
-            StringAssert.Contains(runnerSettingsSource, "value == \"Monitor\"");
+            StringAssert.Contains(runnerSettingsSource, "return \"LightSwitch\";");
+            StringAssert.Contains(runnerSettingsSource, "value == \"LightSwitch\"");
             Assert.IsFalse(runnerSettingsSource.Contains("PowerDisplay", StringComparison.Ordinal));
+            Assert.IsFalse(runnerSettingsSource.Contains("Monitor", StringComparison.Ordinal));
             StringAssert.Contains(shellXaml, "AwakeNavigationItem");
             Assert.IsFalse(shellXaml.Contains("PowerDisplayNavigationItem", StringComparison.Ordinal));
             StringAssert.Contains(shellCode, "NavHelper.SetNavigateTo(AwakeNavigationItem, typeof(AwakePage));");
@@ -773,17 +772,15 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "### 2.0.3");
             StringAssert.Contains(changelog, "Bumped Kit to `2.0.3`");
             StringAssert.Contains(changelog, "PowerToys-main framework baseline");
-            StringAssert.Contains(changelog, "Monitor manual scan progress now completes");
-            StringAssert.Contains(changelog, "Monitor background scans no longer signal the manual scan completion event");
             StringAssert.Contains(changelog, "highest-confidence installed-software match");
             StringAssert.Contains(changelog, "VCP capability cache comparison");
             StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_3");
             StringAssert.Contains(changelog, "### 2.0.2");
             StringAssert.Contains(changelog, "Bumped Kit to `2.0.2`");
             StringAssert.Contains(changelog, "Removed PowerDisplay from the active plugin/module surface");
-            StringAssert.Contains(changelog, "The active module set is now `Awake`, `Light Switch`, and `Monitor`");
+            StringAssert.Contains(changelog, "The active module set is now `Awake` and `Light Switch`");
             StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_2");
-            StringAssert.Contains(changelog, "三活动模块");
+            StringAssert.Contains(changelog, "两活动模块");
             StringAssert.Contains(changelog, "Trimmed GPOWrapper and Settings GPO helper policy surface");
             StringAssert.Contains(changelog, "Trimmed ADMX/ADML policy assets");
             StringAssert.Contains(changelog, "Removed the upstream BugReportTool source");
@@ -800,7 +797,7 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "`UITestAutomation`");
             StringAssert.Contains(changelog, "`ModuleHelper`");
             StringAssert.Contains(changelog, "historical module-key mappings");
-            StringAssert.Contains(changelog, "three active modules");
+            StringAssert.Contains(changelog, "two active modules");
             StringAssert.Contains(changelog, "XAML search index builder no longer carries inactive upstream module icon and panel fallbacks");
             StringAssert.Contains(changelog, "Removed inactive Shortcut Guide Win-key tracking from the runner keyboard hook and module interface");
             StringAssert.Contains(changelog, "Removed the no-op keyboard hook window registration after deleting pressed-key timers");
@@ -860,7 +857,6 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "deleted-utility package pin removal");
             StringAssert.Contains(changelog, "Removed the deleted Launcher, AI, and CmdPal central package pins");
             StringAssert.Contains(changelog, "no Kit project references `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
-            StringAssert.Contains(changelog, "`Microsoft.Data.Sqlite` remains for Monitor scan status storage");
             StringAssert.Contains(changelog, "stale CmdPal WyHash third-party notice section");
             StringAssert.Contains(changelog, "deleted Launcher/AI/CmdPal package pin removal");
             StringAssert.Contains(readme, "orphaned CmdPal version props");
@@ -870,22 +866,17 @@ namespace ViewModelTests
             StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
             StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch");
             StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
-            StringAssert.Contains(developmentLog, "## 2026-06-23 Version 2.0.7 Monitor Progress Hardening");
-            StringAssert.Contains(developmentLog, "## 2026-06-20 Version 2.0.6 Monitor Defaults And Branding Cleanup");
             StringAssert.Contains(developmentLog, "## 2026-06-17 Version 2.0.5 General Layout Sync");
             StringAssert.Contains(developmentLog, "Startup & permissions");
             StringAssert.Contains(developmentLog, "system tray expander now carries the upstream icon treatment");
             StringAssert.Contains(developmentLog, "## 2026-06-17 Version 2.0.4 Dashboard And Updater Surface Cleanup");
             StringAssert.Contains(developmentLog, "Dashboard-first Settings shell behavior");
             StringAssert.Contains(developmentLog, "Disabled updater install/download resource strings");
-            StringAssert.Contains(developmentLog, "## 2026-06-16 Version 2.0.3 Monitor And Framework Review");
             StringAssert.Contains(developmentLog, "PowerToys-main framework comparison");
-            StringAssert.Contains(developmentLog, "Monitor manual scan progress now completes");
-            StringAssert.Contains(developmentLog, "Monitor background scans no longer signal the manual scan completion event");
             StringAssert.Contains(developmentLog, "highest-confidence installed-software match");
             StringAssert.Contains(developmentLog, "VCP capability comparison");
             StringAssert.Contains(developmentLog, "## 2026-06-13 Version 2.0.2 PowerDisplay Removal And Upstream Module Sync");
-            StringAssert.Contains(developmentLog, "The active Kit module set is now `Awake`, `Light Switch`, and `Monitor`");
+            StringAssert.Contains(developmentLog, "The active Kit module set is now `Awake` and `Light Switch`");
             StringAssert.Contains(developmentLog, "PowerDisplay was removed from runner loading, solution entries, Settings navigation, Quick Access routing, GPO projection, Settings serialization, resources, assets, docs, and module source");
             StringAssert.Contains(developmentLog, "## 2026-05-28 Version 2.0.1 Stability Refactor");
             StringAssert.Contains(developmentLog, "GPOWrapper and module GPO helpers now expose only");
@@ -918,7 +909,7 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "inactive `ManagedTelemetry` source tree and managed telemetry base file were deleted");
             StringAssert.Contains(developmentLog, "Awake and PowerDisplay no longer keep managed telemetry write calls");
             StringAssert.Contains(developmentLog, "stale `PowerToys.ManagedTelemetry` and TraceEvent support binaries");
-            StringAssert.Contains(developmentLog, "LightSwitchService, MonitorModuleInterface, and ModuleTemplate trace sources now keep no-op runtime hooks");
+            StringAssert.Contains(developmentLog, "LightSwitchService and ModuleTemplate trace sources now keep no-op runtime hooks");
             StringAssert.Contains(developmentLog, "All active native module-interface trace headers and projects no longer inherit `TraceBase`");
             StringAssert.Contains(developmentLog, "ModuleTemplate no-op trace defaults");
             StringAssert.Contains(developmentLog, "Awake README telemetry-free documentation");
@@ -970,7 +961,6 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "deleted-utility package pin removal");
             StringAssert.Contains(developmentLog, "The deleted Launcher, AI, and CmdPal central package pins were removed");
             StringAssert.Contains(developmentLog, "no Kit project references `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
-            StringAssert.Contains(developmentLog, "`Microsoft.Data.Sqlite` remains for Monitor scan status storage");
             StringAssert.Contains(developmentLog, "stale CmdPal WyHash third-party notice section");
             StringAssert.Contains(developmentLog, "deleted Launcher/AI/CmdPal package pin removal");
             StringAssert.Contains(developmentLog, "152/152 passing Settings UI tests");
@@ -1333,7 +1323,6 @@ namespace ViewModelTests
             // Assert
             Assert.IsTrue(modules.Awake);
             Assert.IsTrue(modules.LightSwitch);
-            Assert.IsFalse(modules.Monitor);
         }
 
         [TestMethod]
@@ -1345,9 +1334,8 @@ namespace ViewModelTests
 
             settings.Enabled.Awake = false;
             settings.Enabled.LightSwitch = false;
-            settings.Enabled.Monitor = true;
 
-            Assert.AreEqual(3, changeCount);
+            Assert.AreEqual(2, changeCount);
         }
     }
 }

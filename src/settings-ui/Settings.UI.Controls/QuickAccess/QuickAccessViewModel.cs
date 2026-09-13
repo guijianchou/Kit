@@ -155,7 +155,6 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             {
                 ModuleType.Awake => GetAwakeModeToolTip(),
                 ModuleType.LightSwitch => SettingsRepository<LightSwitchSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ToggleThemeHotkey.Value.ToString(),
-                ModuleType.Monitor => SettingsRepository<MonitorSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.DownloadsPath.Value,
                 _ => string.Empty,
             };
         }

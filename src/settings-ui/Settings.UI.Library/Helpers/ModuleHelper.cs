@@ -14,7 +14,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 ModuleType.Awake => $"{nameof(ModuleType.Awake)}/ModuleTitle",
                 ModuleType.LightSwitch => $"{nameof(ModuleType.LightSwitch)}/ModuleTitle",
-                ModuleType.Monitor => $"{nameof(ModuleType.Monitor)}/ModuleTitle",
                 ModuleType.GeneralSettings => "QuickAccessTitle/Title",
                 _ => string.Empty,
             };
@@ -26,7 +25,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 ModuleType.Awake => "ms-appx:///Assets/Settings/Icons/Awake.png",
                 ModuleType.LightSwitch => "ms-appx:///Assets/Settings/Icons/LightSwitch.png",
-                ModuleType.Monitor => "ms-appx:///Assets/Settings/Icons/Monitor.png",
                 ModuleType.GeneralSettings => "ms-appx:///Assets/Settings/Icons/PowerToys.png",
                 _ => string.Empty,
             };
@@ -38,7 +36,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 ModuleType.Awake => generalSettingsConfig.Enabled.Awake,
                 ModuleType.LightSwitch => generalSettingsConfig.Enabled.LightSwitch,
-                ModuleType.Monitor => generalSettingsConfig.Enabled.Monitor,
                 ModuleType.GeneralSettings => generalSettingsConfig.EnableQuickAccess,
                 _ => false,
             };
@@ -50,7 +47,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 case ModuleType.Awake: generalSettingsConfig.Enabled.Awake = isEnabled; break;
                 case ModuleType.LightSwitch: generalSettingsConfig.Enabled.LightSwitch = isEnabled; break;
-                case ModuleType.Monitor: generalSettingsConfig.Enabled.Monitor = isEnabled; break;
                 case ModuleType.GeneralSettings: generalSettingsConfig.EnableQuickAccess = isEnabled; break;
             }
         }
@@ -65,7 +61,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 ModuleType.Awake => AwakeSettings.ModuleName,
                 ModuleType.LightSwitch => LightSwitchSettings.ModuleName,
-                ModuleType.Monitor => MonitorSettings.ModuleName,
                 ModuleType.GeneralSettings => nameof(ModuleType.GeneralSettings),
                 _ => string.Empty,
             };

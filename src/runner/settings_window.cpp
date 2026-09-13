@@ -761,8 +761,6 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
         return "Awake";
     case ESettingsWindowNames::LightSwitch:
         return "LightSwitch";
-    case ESettingsWindowNames::Monitor:
-        return "Monitor";
     default:
     {
         Logger::error(L"Can't convert ESettingsWindowNames value={} to string", static_cast<int>(value));
@@ -789,10 +787,6 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     else if (value == "LightSwitch")
     {
         return ESettingsWindowNames::LightSwitch;
-    }
-    else if (value == "Monitor")
-    {
-        return ESettingsWindowNames::Monitor;
     }
     else
     {

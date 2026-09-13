@@ -1741,6 +1741,4 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Shell_Search_ShowAll.Text" xml:space="preserve">
     <value>Show all results</value>
   </data>
-    <value>Learn more about Monitor</value>
-  </data>
 </root>

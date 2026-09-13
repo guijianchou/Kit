@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <local:NavigablePage
     x:Class="Microsoft.PowerToys.Settings.UI.Views.LightSwitchPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -52,6 +52,7 @@
                             IsExpanded="True">
                             <ComboBox
                                 x:Name="ModeSelector"
+                                MinWidth="{StaticResource SettingActionControlMinWidth}"
                                 AutomationProperties.AutomationId="ModeSelection_LightSwitch"
                                 SelectedValue="{x:Bind ViewModel.ScheduleMode, Mode=TwoWay}"
                                 SelectedValuePath="Tag"
@@ -78,13 +79,13 @@
                                     x:Name="Fixed_TurnOnCard"
                                     x:Uid="LightSwitch_TurnOnDarkMode"
                                     Visibility="Collapsed">
-                                    <TimePicker AutomationProperties.AutomationId="DarkTimePicker" Time="{x:Bind ViewModel.DarkTimePickerValue, Mode=TwoWay}" />
+                                    <TimePicker AutomationProperties.AutomationId="DarkTimePicker" MinWidth="{StaticResource SettingActionControlMinWidth}" Time="{x:Bind ViewModel.DarkTimePickerValue, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard
                                     x:Name="Fixed_TurnOffCard"
                                     x:Uid="LightSwitch_TurnOffDarkMode"
                                     Visibility="Collapsed">
-                                    <TimePicker AutomationProperties.AutomationId="LightTimePicker" Time="{x:Bind ViewModel.LightTimePickerValue, Mode=TwoWay}" />
+                                    <TimePicker AutomationProperties.AutomationId="LightTimePicker" MinWidth="{StaticResource SettingActionControlMinWidth}" Time="{x:Bind ViewModel.LightTimePickerValue, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
 
                                 <tkcontrols:SettingsCard

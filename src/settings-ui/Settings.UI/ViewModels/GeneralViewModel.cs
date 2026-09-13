@@ -192,32 +192,12 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             InitializeLanguages();
         }
 
-        // Supported languages. Taken from Resources.wxs + default + en-US
+        // Supported languages: English (default) and Chinese (Simplified)
         private Dictionary<string, string> langTagsAndIds = new Dictionary<string, string>
         {
             { string.Empty, "Default_Language" },
-            { "ar-SA", "Arabic_Saudi_Arabia_Language" },
-            { "cs-CZ", "Czech_Language" },
-            { "de-DE", "German_Language" },
             { "en-US", "English_Language" },
-            { "es-ES", "Spanish_Language" },
-            { "fa-IR", "Persian_Farsi_Language" },
-            { "fr-FR", "French_Language" },
-            { "he-IL", "Hebrew_Israel_Language" },
-            { "hu-HU", "Hungarian_Language" },
-            { "it-IT", "Italian_Language" },
-            { "ja-JP", "Japanese_Language" },
-            { "ko-KR", "Korean_Language" },
-            { "nl-NL", "Dutch_Language" },
-            { "pl-PL", "Polish_Language" },
-            { "pt-BR", "Portuguese_Brazil_Language" },
-            { "pt-PT", "Portuguese_Portugal_Language" },
-            { "ru-RU", "Russian_Language" },
-            { "sv-SE", "Swedish_Language" },
-            { "tr-TR", "Turkish_Language" },
-            { "uk-UA", "Ukrainian_Language" },
             { "zh-CN", "Chinese_Simplified_Language" },
-            { "zh-TW", "Chinese_Traditional_Language" },
         };
 
         private static bool _isDevBuild;
@@ -1057,10 +1037,10 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 {
                     _languagesIndex = value;
                     OnPropertyChanged(nameof(LanguagesIndex));
-                    NotifyLanguageChanged();
-                    if (_initLanguagesIndex != value)
+                    if (value >= 0 && value < Languages.Count)
                     {
-                        LanguageChanged = true;
+                        NotifyLanguageChanged();
+                        LanguageChanged = _initLanguagesIndex != value;
                     }
                     else
                     {
@@ -1513,8 +1493,14 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 }
             }
 
+            if (selectedLanguageIndex < 0 || selectedLanguageIndex >= Languages.Count)
+            {
+                selectedLanguageIndex = 0;
+            }
+
             _initLanguagesIndex = selectedLanguageIndex;
-            LanguagesIndex = selectedLanguageIndex;
+            _languagesIndex = selectedLanguageIndex;
+            OnPropertyChanged(nameof(LanguagesIndex));
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1309:Use ordinal string comparison", Justification = "Building a user facing list")]
@@ -1538,9 +1524,25 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private void NotifyLanguageChanged()
         {
-            OutGoingLanguageSettings outsettings = new OutGoingLanguageSettings(Languages[_languagesIndex].Tag);
+            if (_languagesIndex >= 0 && _languagesIndex < Languages.Count)
+            {
+                OutGoingLanguageSettings outsettings = new OutGoingLanguageSettings(Languages[_languagesIndex].Tag);
 
-            SendConfigMSG(outsettings.ToString());
+                try
+                {
+                    var localAppDataDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    var dir = Path.Combine(localAppDataDir, "Kit");
+                    Directory.CreateDirectory(dir);
+                    var file = Path.Combine(dir, "language.json");
+                    File.WriteAllText(file, outsettings.ToString());
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Failed to save language.json directly", ex);
+                }
+
+                SendConfigMSG(outsettings.ToString());
+            }
         }
 
         internal void RefreshSettingsOnExternalChange()

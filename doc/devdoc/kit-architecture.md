@@ -1,523 +1,120 @@
-# Kit Architecture Reference
+# Kit 架构参考（轻量插件宿主方向）
 
-> 基于当前 Kit 项目的架构分析
+> 本文按当前 Kit 源码核对（src/runner/main.cpp、general_settings.cpp、settings_window.cpp、src/common/SettingsAPI、src/settings-ui），并按核心需求更新：
+> **主框架轻量、启动快、按插件开发逻辑兼容官方 PowerToys 插件与第三方自定插件。**
 
-## Overview
+## 1. 核心目标与设计原则
 
-Kit 是 PowerToys 的简化版本，保留核心架构模式但将模块数量从 35+ 减少到 2 个（Awake、LightSwitch）。移除了企业功能（GPO、遥测、OOBE），专注于个人使用场景。
+- 主框架最小化：runner + Settings UI + 公共库不内置任何模块业务逻辑，模块一律以插件承载；
+- 启动快：只加载已启用插件；Quick Access 延迟到首次使用；关键路径全程可计时（STARTUP_TIMING）；
+- 插件兼容：插件契约 = PowertoyModuleIface + powertoy_create()，与上游 PowerToys 完全一致，官方模块复制即用、第三方按契约开发；
+- 第一方/第三方分层：第一方模块走编译期清单（深度集成：Home、Quick Access、设置路由、测试），第三方插件走运行时清单（轻量接入：目录扫描 + manifest + 通用设置页）。
 
-## Core Components
+## 2. 进程模型
 
-### 1. Runner (Kit.exe)
+- Kit.exe（runner，src/runner）：托盘、插件加载与生命周期、全局热键、设置窗口协调、更新检查（check-only）；
+- Kit.Settings.exe（WinUI3，src/settings-ui/Settings.UI）：Settings v2，MVVM；
+- Kit.QuickAccess.exe（WinUI3，src/settings-ui/QuickAccess.UI）：快速访问，首次 Win+Space 才启动；
+- 插件接口 DLL（实现契约）与可选附属进程（如 Awake 的 PowerToys.Awake.exe）。
 
-**源文件**: `src/runner/main.cpp` (458 行)
+进程间通信沿用上游：TwoWayPipeMessageIPC 命名管道（powertoys_runner_<uuid> / powertoys_settings_<uuid>），消息为 JSON。
 
-**职责**:
-- 单实例强制（互斥量检查）
-- 模块生命周期管理
-- 托盘图标和菜单
-- Quick Access 主机
-- 设置管道通信
+## 3. 插件系统（本文核心）
 
-**关键差异与 PowerToys**:
-- 移除了 OOBE 窗口
-- 移除了 GPO 检查（代码保留但未使用）
-- 移除了 PeriodicUpdateWorker（更新检查禁用）
-- 移除了 AI 能力检测
+### 3.1 契约（与上游一致，不变）
 
-### 2. Module System
+- 接口头：src/modules/interface/powertoy_module_interface.h；
+- 工厂：extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()；
+- 必选：get_name / get_key / get_config / set_config / enable / disable / is_enabled / destroy；
+- 可选：call_custom_action、get_hotkeys/on_hotkey、GetHotkeyEx/OnHotkeyEx、gpo_policy_enabled_configuration 等；
+- 设置 UI 描述：get_config() 输出 PowerToysSettings::Settings 序列化 JSON（properties / links / custom_actions），见 powertoys-architecture.md §5.3。
 
-**当前模块** (2个):
+### 3.2 现状：第一方硬编码加载
 
-#### Awake
-- **路径**: `src/modules/awake/Awake/`
-- **功能**: 阻止系统休眠
-- **实现**: 生成独立的 `Kit.Awake.exe` 进程
-- **配置**: 
-  - `mode`: "keep_awake" / "timed" / "off"
-  - `keep_display_on`: bool
+- KitKnownModules（src/runner/main.cpp）：constexpr 数组，仅两项
+    L"PowerToys.AwakeModuleInterface.dll"
+    L"PowerToys.LightSwitchModuleInterface.dll"
+- is_known_module_registered()：白名单校验，非白名单模块在注册时被拒；
+- 加载循环：for 每个 known module → load_powertoy() → modules().emplace(get_key())；
+- 未启用模块也会被加载，启停由 start_enabled_powertoys() 在加载后过滤；
+- 缺点：新增插件必须改源码并重编译 runner；未启用插件仍付出加载开销。
 
-#### LightSwitch  
-- **路径**: `src/modules/lightswitch/LightSwitch/`
-- **功能**: 明暗主题快速切换 + 定时切换
-- **实现**: 
-  - 后台线程监控主题状态
-  - 定时器触发自动切换
-  - Win+Alt+T 热键手动切换
-- **配置**:
-  - `auto_switch_enabled`: bool
-  - `light_theme_start`: "HH:MM"
-  - `dark_theme_start`: "HH:MM"
+### 3.3 目标：插件宿主模型
 
-### 3. Module Registration
+- plugins/ 目录（与 runner 同级）承载第三方插件，每个插件一个子目录：接口 DLL + manifest.json；
+- manifest.json 字段：key、name、dll、version、author、enabledByDefault；
+- 加载规则：仅加载"已启用"的插件（enabled 集合来自 general settings + GPO 过滤）；第一方模块仍走编译期清单；
+- 校验：manifest 字段完整、key 不冲突、DLL 导出 powertoy_create；失败插件跳过并记录，不影响启动；
+- 枚举：Settings UI 经 IPC get_all_settings() 拿到 { general, powertoys: { key: json_config } }，第三方插件页面由通用 PluginSettingsPage 渲染（见 §6）；
+- 白名单语义扩展：is_known_module_registered() 变为"编译期清单 ∪ plugins/ 清单"。
 
-**静态数组** (`main.cpp:66-69`):
+## 4. Runner 启动流程（实测阶段与计时）
 
-```cpp
-constexpr std::array KitKnownModules{
-    L"modules\\Awake\\PowerToys.Awake.dll",
-    L"modules\\LightSwitch\\PowerToys.LightSwitch.dll",
-};
-```
+src/runner/main.cpp 全程 log_timing，阶段如下：
 
-**对比 PowerToys**:
-- PowerToys: `std::vector<std::wstring_view>` 33+ 项
-- Kit: `constexpr std::array` 2 项
-- 相同模式，不同规模
+1. DPI Awareness；
+2. Trace Provider 注册；
+3. Load Settings（读 general settings）；
+4. Tray Icon（托盘窗口创建）；
+5. Update Worker（PeriodicUpdateWorker，check-only 线程）；
+6. Quick Access Hotkey（仅注册 Win+Space 热键，进程延迟到首次使用）；
+7. Tray Icon Visible；
+8. Keyboard Hook（CentralizedKeyboardHook::Start）；
+9. Chdir（切到可执行目录）；
+10. Video Conference Cleanup（仅提权且首次，注册表标记一次性）；
+11. 模块加载（按 KitKnownModules，失败 Debug 日志 / Release 弹窗）；
+12. Modules Enabled（start_enabled_powertoys，GPO + 用户配置过滤）；
+13. Event Launch；
+14. 总时长日志。
 
-### 4. Settings UI
+已落地的启动优化：
 
-**架构**: 独立的 WinUI3 进程
+- Quick Access 延迟启动：首次 Win+Space 才拉起 WinUI3 进程，省 200-400ms（main.cpp 注释明确）；
+- clean_video_conference_once：注册表标记只清理一次，省 10-20ms 后续提权启动；
+- STARTUP_TIMING 全阶段计时日志，作为优化基线。
 
-**统计**:
-- 709 个文件
-- 主要技术栈：
-  - WinUI 3 (Windows App SDK 2.0)
-  - MVVM 模式
-  - C# .NET 10
+## 5. 设置与存储
 
-**关键文件**:
-- `src/settings-ui/Settings.UI/MainWindow.xaml.cs` - 主窗口
-- `src/settings-ui/Settings.UI/ViewModels/` - MVVM 视图模型
-- `src/settings-ui/Settings.UI/Views/` - XAML 页面
-  - `GeneralPage.xaml` - 通用设置
-  - `AwakePage.xaml` - Awake 配置
-  - `LightSwitchPage.xaml` - LightSwitch 配置
+- 根目录：%LOCALAPPDATA%/Kit/（CommonSharedConstants::APPDATA_PATH = L"Kit"，与官方 PowerToys 完全隔离）；
+- 全局：根下 settings.json；每模块：%LOCALAPPDATA%/Kit/<模块 key>/settings.json；
+- Settings v2：src/settings-ui/Settings.UI（页面/视图模型）+ Settings.UI.Library（SettingsRepository<T>、SettingsUtils、每模块模型）；
+- 配置流：Settings 改 → SettingsRepository 写盘 → IPC → runner dispatch_json_config_to_modules → 插件 set_config；
+- 反向：runner get_power_toys_settings() 收集各插件 json_config() → get_all_settings() 发给 Settings UI。
 
-**通信**: TwoWayPipeMessageIPC 与 Runner
+## 6. 设置 UI 结构（第三方插件接入点）
 
-### 5. Settings Persistence
+- 编译期页面：ShellPage、DashboardPage、GeneralPage、AwakePage、LightSwitchPage、SearchResultsPage；
+- 导航：NavigationService + ShellViewModel（模块 → 页面类型映射为编译期）；
+- 第三方插件接入：新增通用 PluginSettingsPage，运行时渲染 get_config JSON 描述的控件（bool_toggle / int_spinner / string / multiline_string / color_picker / hotkey / choice_group / dropdown / custom_action / header_szLarge）；
+- 路由：ShellViewModel 把 plugins/ 清单中的 key 映射到 PluginSettingsPage（参数为 key），避免为每个插件写 XAML；
+- 热键冲突检测沿用上游约定：插件 get_hotkeys() 顺序 = IHotkeyConfig.GetAllHotkeyAccessors() 顺序 = ViewModel.GetAllHotkeySettings() 顺序。
 
-**文件**: `%LocalAppData%\Microsoft\PowerToys\settings\general_settings.json`
+## 7. 启动瓶颈与优化路线
 
-**示例结构**:
-```json
-{
-  "startup": true,
-  "enabled": {
-    "Awake": true,
-    "LightSwitch": true
-  },
-  "Awake": {
-    "properties": {
-      "awake_mode": "keep_awake",
-      "keep_display_on": true
-    }
-  },
-  "LightSwitch": {
-    "properties": {
-      "auto_switch_enabled": true,
-      "light_theme_start": "07:00",
-      "dark_theme_start": "19:00"
-    }
-  }
-}
-```
+现状：第一方仅 2 个模块，启动已较快；目标是在插件数量增长时保持轻快。
 
-**管理器**: `src/runner/general_settings.cpp` (571 行)
+- 只加载已启用插件：未启用插件不再加载（当前实现会加载后过滤）；
+- 并行加载：插件多时 LoadLibrary 阶段并行（enable() 视模块情况异步化）；
+- 设置 UI 进程按需启动：Settings 窗口打开时才拉起（深链接除外）；
+- 清理：clean_video_conference_once 可在确认无历史 VCM 注册后彻底移除；
+- 度量：以 STARTUP_TIMING 总时长为基线，纳入 CI 冒烟。
 
-## Initialization Flow
+## 8. 官方插件兼容的前提（框架级缺口，P0）
 
-### 启动序列 (简化版)
+复制官方模块到 Kit 运行，除契约外还依赖以下框架件（当前 Kit 缺/漂移）：
 
-```
-1. WinMain Entry
-   └─ CreateMutexW("Local\\PowerToys_Runner_Instance")
-      └─ 如果已存在 → 退出（单实例）
+- ManagedTelemetry（Microsoft.PowerToys.Telemetry 程序集 + Directory.Build.targets 的 KitRemoveInactiveManagedTelemetryArtifactsFromOutput target）：Awake 等官方托管侧代码需要；
+- logger_settings.h：launcherLoggerName 等常量与上游最新版有漂移；
+- EtwTrace / TraceBase / TraceLoggingDefines：版本落后上游；
+- shared_constants.h：APPDATA_PATH 已改为 Kit（官方模块编译进来会自然继承，属优点）；但 UpdateUtils 等硬编码 PowerToys 路径/仓库的模块需兼容层或列入例外；
+- 依赖排除清单：AI 全家桶（OpenAI/SemanticKernel/LanguageModelProvider）、AdvancedPaste 等维持不引入（见 next.md §14 与 fix.md）。
 
-2. Load Settings
-   └─ load_general_settings()
-      └─ 读取 general_settings.json (~50-100ms)
+## 9. 与其它文档的关系
 
-3. Start Tray Icon
-   └─ tray_icon.init()
-      └─ 创建窗口 + 系统托盘注册 (~100-200ms)
-
-4. Start Quick Access (可选)
-   └─ if (settings["quick_access"]["enabled"])
-      └─ CreateProcessW for WinUI3 进程 (~200-400ms) ← 瓶颈
-
-5. Initialize Keyboard Hook
-   └─ CentralizedKeyboardHook::Start()
-      └─ SetWindowsHookEx(WH_KEYBOARD_LL)
-
-6. Change to Executable Directory
-   └─ SetCurrentDirectory(exe_directory)
-
-7. Load Modules (循环 2 次)
-   └─ for module_path in KitKnownModules:
-      ├─ LoadLibraryW(module_path) (~20-50ms/模块)
-      ├─ GetProcAddress("powertoy_create")
-      ├─ factory() → PowertoyModuleIface*
-      ├─ PowertoyModule wrapper
-      │  └─ 立即注册热键
-      └─ modules()[key] = module
-   
-   总计: ~40-100ms (仅 2 个模块)
-
-8. Enable Configured Modules
-   └─ start_enabled_powertoys(settings)
-      ├─ Awake: 生成 Kit.Awake.exe 进程
-      └─ LightSwitch: 启动调度器 + 切换线程
-   
-   总计: ~50-150ms
-
-9. Enter Message Loop
-   └─ run_message_loop()
-      └─ GetMessage/DispatchMessage
-
-总启动时间: ~500-1000ms
-```
-
-### 关键路径分析
-
-```
-Settings Load (50-100ms)
-  ↓
-Tray Icon (100-200ms)
-  ↓
-Quick Access Spawn (200-400ms) ← 最大瓶颈
-  ↓
-Module Loading (40-100ms)
-  ↓
-Module Enable (50-150ms)
-  ↓
-Ready
-```
-
-## Identified Bottlenecks
-
-### 1. Quick Access Process Spawn (HIGH)
-
-**影响**: 200-400ms
-
-**原因**: 
-- 阻塞式 `CreateProcessW` 等待 WinUI3 进程初始化
-- WinUI3 加载运行时 + XAML 解析 + 窗口创建
-
-**优化策略**:
-- 延迟启动直到首次 Win+Space 按下
-- 异步进程生成 + 后台初始化
-
-### 2. Tray Icon Creation (MEDIUM)
-
-**影响**: 100-200ms
-
-**原因**:
-- 窗口类注册
-- 系统托盘 API 调用
-- 发生在模块加载之前
-
-**优化策略**:
-- 后台线程创建
-- 与模块加载并行
-
-### 3. Settings JSON Parsing (MEDIUM)
-
-**影响**: 50-100ms
-
-**原因**:
-- 同步磁盘 I/O
-- JSON 反序列化
-
-**优化策略**:
-- 内存映射文件
-- 缓存解析的设置 + FileSystemWatcher
-
-### 4. Module Enable Calls (MEDIUM)
-
-**影响**: 50-150ms
-
-**原因**:
-- Awake 生成独立进程
-- LightSwitch 创建线程 + 启动定时器
-
-**优化策略**:
-- 延迟到消息循环后的空闲时间
-- 异步初始化
-
-### 5. Module DLL Loading (LOW)
-
-**影响**: 40-100ms (2 个模块)
-
-**原因**:
-- 顺序同步 LoadLibrary
-- Windows 加载器解析导入
-
-**优化策略**:
-- 并行加载（`std::async`）
-- 但收益有限（仅 2 个模块）
-
-## Module Details
-
-### Awake Module
-
-**接口实现**: `src/modules/awake/Awake/dllmain.cpp`
-
-**关键方法**:
-```cpp
-bool AwakeModule::enable() {
-    // 生成独立的 Kit.Awake.exe 进程
-    std::wstring command = get_awake_exe_path();
-    CreateProcessW(command, ...);
-    return true;
-}
-
-void AwakeModule::disable() {
-    // 终止 Awake 进程
-    terminate_awake_process();
-}
-
-void AwakeModule::set_config(const wchar_t* config) {
-    // 解析 JSON 配置
-    // 向 Awake 进程发送 IPC 消息
-    send_config_to_awake_process(config);
-}
-```
-
-**进程通信**:
-- 命名管道：`\\.\pipe\powertoys_awake_<pid>`
-- JSON 消息格式
-
-### LightSwitch Module
-
-**接口实现**: `src/modules/lightswitch/LightSwitch/dllmain.cpp`
-
-**关键方法**:
-```cpp
-bool LightSwitchModule::enable() {
-    // 启动后台线程监控主题
-    m_scheduler_thread = std::thread([this]() {
-        scheduler_loop();
-    });
-    
-    // 启动定时器线程
-    m_timer_thread = std::thread([this]() {
-        timer_loop();
-    });
-    
-    return true;
-}
-
-void LightSwitchModule::disable() {
-    // 停止线程
-    m_scheduler_running = false;
-    m_scheduler_thread.join();
-    m_timer_thread.join();
-}
-
-bool LightSwitchModule::on_hotkey(size_t hotkeyId) {
-    // Win+Alt+T 切换主题
-    toggle_theme();
-    return true;
-}
-```
-
-**主题切换实现**:
-```cpp
-void toggle_theme() {
-    // 读取当前主题
-    auto current = get_current_theme();
-    
-    // 切换到相反主题
-    auto target = (current == Theme::Light) ? Theme::Dark : Theme::Light;
-    
-    // 应用新主题
-    set_theme(target);
-}
-
-void set_theme(Theme theme) {
-    // 修改注册表
-    // HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
-    RegSetValueEx(
-        key,
-        L"AppsUseLightTheme",
-        0,
-        REG_DWORD,
-        (theme == Theme::Light) ? 1 : 0
-    );
-}
-```
-
-## Architecture Simplifications
-
-### 从 PowerToys 移除的功能
-
-| 功能 | PowerToys | Kit | 原因 |
-|------|-----------|-----|------|
-| **GPO 支持** | ✓ | ✗ (代码保留) | 个人使用，非企业 |
-| **ETW 遥测** | ✓ | ✗ | 隐私优先 |
-| **OOBE 窗口** | ✓ | ✗ | 简化首次运行 |
-| **更新检查** | ✓ | ✗ (禁用) | 手动更新 |
-| **AI 检测** | ✓ | N/A | 无 AI 模块 |
-| **33+ 模块** | ✓ | 仅 2 个 | 专注核心功能 |
-
-### 保留的核心系统
-
-| 系统 | 状态 | 备注 |
-|------|------|------|
-| **模块接口** | ✓ | 完全兼容 PowerToys |
-| **Settings UI** | ✓ | WinUI3 完整保留 |
-| **TwoWayPipeIPC** | ✓ | Runner ↔ Settings 通信 |
-| **CentralizedKeyboardHook** | ✓ | 热键系统 |
-| **JSON 设置** | ✓ | 持久化机制 |
-| **Quick Access** | ✓ | Win+Space 启动器 |
-
-## Code Organization
-
-### 目录结构
-
-```
-Kit/
-├── src/
-│   ├── runner/                      # Runner 可执行文件
-│   │   ├── main.cpp                 # 入口点 (458 行)
-│   │   ├── general_settings.cpp     # 设置管理 (571 行)
-│   │   ├── powertoy_module.cpp      # 模块包装器
-│   │   └── ...
-│   │
-│   ├── modules/                     # 模块 DLL
-│   │   ├── awake/                   # Awake 模块
-│   │   │   ├── Awake/               # DLL 实现
-│   │   │   └── AwakeApp/            # 独立进程
-│   │   │
-│   │   └── lightswitch/             # LightSwitch 模块
-│   │       └── LightSwitch/         # DLL 实现
-│   │
-│   ├── settings-ui/                 # Settings UI (WinUI3)
-│   │   ├── Settings.UI/             # 主项目 (709 文件)
-│   │   │   ├── Views/               # XAML 页面
-│   │   │   ├── ViewModels/          # MVVM 视图模型
-│   │   │   └── MainWindow.xaml.cs
-│   │   │
-│   │   └── Settings.UI.Library/     # 共享库
-│   │
-│   └── common/                      # 共享代码
-│       ├── interop/                 # C++ ↔ C# 互操作
-│       ├── logger/                  # 日志系统
-│       └── ...
-│
-├── doc/devdoc/                      # 架构文档
-│   ├── architecture-comparison.md   # 对比分析
-│   ├── powertoys-architecture.md    # PowerToys 参考
-│   └── kit-architecture.md          # 本文档
-│
-├── Cpp.Build.props                  # C++ 构建配置
-├── Directory.Build.targets          # MSBuild 目标
-└── Version.props                    # 版本号 (2.0.8)
-```
-
-## Optimization Roadmap
-
-### 快速优化（Phase 1）
-
-**目标**: 250-550ms 改进
-
-1. **延迟 Quick Access 启动**
-   - 当前: 启动时同步生成进程
-   - 优化: 首次 Win+Space 按下时启动
-   - 收益: 200-400ms
-
-2. **延迟模块 enable()**
-   - 当前: 启动时立即调用 enable()
-   - 优化: 消息循环后空闲时间调用
-   - 收益: 50-150ms
-
-### 中期优化（Phase 2）
-
-**目标**: 120-250ms 额外改进
-
-1. **异步托盘图标创建**
-   - 后台线程创建
-   - 与模块加载并行
-   - 收益: 100-200ms
-
-2. **并行模块加载**
-   - std::async 并发加载 2 个 DLL
-   - 收益: 20-50ms（有限）
-
-### 长期优化（Phase 3）
-
-**目标**: 20-50ms 额外改进
-
-1. **设置缓存**
-   - 内存映射文件或内存缓存
-   - FileSystemWatcher 监控更改
-   - 收益: 20-50ms
-
-## Performance Targets
-
-| 场景 | 当前 | 目标 | 方法 |
-|------|------|------|------|
-| **温启动** | 800-1000ms | <500ms | Phase 1+2 |
-| **冷启动** | 1000-1200ms | <800ms | Phase 1+2 |
-| **最小配置** | 600-800ms | <400ms | 所有模块禁用 |
-
-## Testing Strategy
-
-### 测量工具
-
-```cpp
-// 内联计时器
-class ScopedTimer {
-    LARGE_INTEGER start;
-public:
-    ScopedTimer(const char* name) : name(name) {
-        QueryPerformanceCounter(&start);
-    }
-    ~ScopedTimer() {
-        LARGE_INTEGER end, freq;
-        QueryPerformanceCounter(&end);
-        QueryPerformanceFrequency(&freq);
-        double ms = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
-        Logger::info("{}: {:.2f}ms", name, ms);
-    }
-};
-
-// 使用示例
-void WinMain() {
-    ScopedTimer timer("Startup");
-    
-    {
-        ScopedTimer t("Settings Load");
-        load_general_settings();
-    }
-    
-    {
-        ScopedTimer t("Module Loading");
-        load_powertoys();
-    }
-    
-    // ...
-}
-```
-
-### 测试场景
-
-1. **基线测量**: 当前启动时间分布
-2. **冷/温启动**: 重启后 vs 后续启动
-3. **Quick Access 禁用**: 跳过 WinUI3 进程
-4. **模块禁用**: 隔离 Runner 开销
-5. **压力测试**: 高 CPU/磁盘负载下启动
-
-## Future Considerations
-
-### 模块扩展
-
-如果添加更多模块（>5）：
-- 重新评估并行加载收益
-- 考虑模块加载优先级队列
-- 实现动态模块发现（扫描目录）
-
-### 性能监控
-
-- 添加 ETW 标记（可选）
-- 构建启动时间仪表板
-- 回归检测自动化
-
-## References
-
-- **PowerToys 架构**: `doc/devdoc/powertoys-architecture.md`
-- **对比分析**: `doc/devdoc/architecture-comparison.md`
-- **源码**: `src/runner/`, `src/modules/`
-- **设置 UI**: `src/settings-ui/Settings.UI/`
+- **主框架代码结构详解**：[kit-framework-structure.md](kit-framework-structure.md) — 源码层级、启动流程追踪、IPC 消息流、设置读写机制；
+- **插件契约与上游框架细节**：[powertoys-architecture.md](powertoys-architecture.md) — PowerToys 完整架构参考；
+- **架构对比分析**：[architecture-comparison.md](architecture-comparison.md) — Kit 与 PowerToys 的差异点；
+- **启动优化专项**：[startup-optimization-analysis.md](startup-optimization-analysis.md) — 性能分析与优化方案；
+- **同步状态与缺口**：[kit-sync-status.md](kit-sync-status.md) — 已同步/待同步模块清单；
+- **上游差异与修正清单**：fix.md（主目录）；
+- **行动方案**：fix.plan（主目录）— 分阶段任务、验收标准。

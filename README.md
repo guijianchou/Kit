@@ -14,7 +14,22 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.0.8`.
+Current Kit version: `2.0.10`.
+
+## Documentation
+
+- [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) — Authoritative guide for developing Kit plugins and modules (WinUI 3 + Mica Alt, PowertoyModuleIface C++ contract, Zero Telemetry, and process watchdog).
+- `doc/devdoc/kit-architecture.md` — Kit architecture reference (lightweight plugin-host direction).
+- `doc/devdoc/powertoys-architecture.md` — verified upstream PowerToys framework architecture reference (Chinese).
+- `doc/devdoc/architecture-comparison.md` — PowerToys vs Kit comparison and startup optimization analysis (Chinese).
+- `doc/devdoc/kit-first-plugin.md` — first-module checklist and validation baseline.
+- `doc/devdoc/kit-development-experience.md` — first-phase lessons learned and next stabilization checklist.
+- `doc/devdoc/startup-optimization-analysis.md` — startup optimization analysis (Chinese).
+- `fix.plan` — phased plugin-host plan (repo root).
+- `fix.md` — upstream delta and fix list (repo root).
+- `next.md` — sync progress and upstream-delta checklist (repo root).
+- [changelog.md](changelog.md) — version history.
+
 
 ## Build Output Structure
 
@@ -24,30 +39,30 @@ Kit uses a version-based build output organization:
 Kit/
 ├── bin/
 │   ├── debug/
-│   │   ├── 2.0.8/              # Current version debug build
+│   │   ├── 2.0.10/             # Current version debug build
 │   │   │   ├── Kit.exe
 │   │   │   ├── *.dll           (runtime dependencies)
 │   │   │   └── Kit/            (application data subdirectory)
-│   │   └── 2.0.9/              # Future versions
+│   │   └── 2.0.11/             # Future versions
 │   ├── release/
-│   │   ├── 2.0.8/              # Current version release build
-│   │   └── 2.0.9/              # Future versions
+│   │   ├── 2.0.10/             # Current version release build
+│   │   └── 2.0.11/             # Future versions
 │   └── publish/
-│       ├── 2.0.8.zip           # Packaged release distributions
-│       └── 2.0.9.zip
+│       ├── 2.0.10.zip          # Packaged release distributions
+│       └── 2.0.11.zip
 ```
 
 **Version Numbering:**
 - Version is extracted from `src/common/version/Generated Files/version_gen.h`
-- Current: 2.0.8 (VERSION_MAJOR=2, VERSION_MINOR=0, VERSION_REVISION=8)
+- Current: 2.0.10 (VERSION_MAJOR=2, VERSION_MINOR=0, VERSION_REVISION=10)
 - After each build, outputs are organized into the corresponding version directory
-- Release distributions are packaged as `.zip` files in `bin/publish/`
+- Release distributions are packaged as `.zip` files in `bin/publish/`. All build outputs are consolidated into the `bin/` directory at the repository root, and the scattered root-level build directories (`Debug/`, `Release/`, `x64/`, `AnyCPU/`) that MSBuild generates are removed after builds complete.
 
 **Differences from PowerToys:**
 
 | Aspect | PowerToys | Kit |
 |--------|-----------|-----|
-| **Organization** | Configuration-first (x64/Debug/) | Version-first (bin/debug/2.0.8/) |
+| **Organization** | Configuration-first (x64/Debug/) | Version-first (bin/debug/2.0.10/) |
 | **Location** | Repository root | Centralized bin/ folder |
 | **Versioning** | Not reflected in paths | Explicit version subdirectories |
 | **Publishing** | Manual packaging | Dedicated bin/publish/ with .zip files |
@@ -64,7 +79,7 @@ The first phase is now effectively a working Kit shell hosting the active PowerT
 The current stable handoff point is:
 
 - Keep `Awake` and `Light Switch` as the active module set.
-- Keep module discovery explicit through maintained lists and tests. Do not add filesystem probing yet.
+- Keep first-party module discovery explicit through maintained lists and tests. A third-party plugin host (`plugins/` + manifest) is planned per `fix.plan` but is not implemented yet.
 - Keep General and Home in English Kit wording, with automatic update and telemetry surfaces removed.
 - Keep Kit UI automation pointed at Kit's runner, Settings window, install roots, and the active module executables. It must not attach to an installed upstream PowerToys build by accident.
 - Keep Settings deep links and module settings links launching `Kit.exe` only. Do not fall back to an installed upstream `PowerToys.exe` from Kit UI.
@@ -100,7 +115,7 @@ Kit follows the PowerToys module-loading model instead of inventing a new plugin
 - `PowerToys.AwakeModuleInterface.dll`
 - `PowerToys.LightSwitchModuleInterface.dll`
 
-This fixed list is intentional. It avoids unstable directory probing and makes each imported module an explicit compatibility decision. When another PowerToys module is brought into Kit, it should be added to the runner, solution, settings routing, Home dashboard metadata, and tests together.
+This fixed list is intentional for first-party modules: it avoids unstable directory probing and makes each imported module an explicit compatibility decision. The planned third-party plugin host (`fix.plan` P1) adds a `plugins/` folder plus `manifest.json` for externally developed plugins while leaving this first-party list untouched. When another first-party PowerToys module is brought into Kit, it should be added to the runner, solution, settings routing, Home dashboard metadata, and tests together.
 
 ## Adding Another PowerToys Module
 
@@ -116,13 +131,15 @@ Use this checklist when importing another upstream module:
 8. Add focused static or unit coverage for the runner list, navigation route, dashboard list, Quick Access behavior, and any added WinMD/GPO dependency.
 9. Validate targeted builds before broader solution builds.
 
-## First Plugin Direction
+## Plugin Direction
 
-Kit does not yet have an active third-party plugin host. The practical first step is a PowerToys-style module import or a small Kit module that uses the existing runner/settings/module interface contract. `Light Switch` is the Kit-authored module following this route, and `Awake` is the upstream-copied baseline.
+Kit's core direction is a lightweight plugin host: keep the main framework (runner + Settings UI + common libraries) free of module business logic, start fast, and host both official PowerToys modules and third-party custom plugins through the same `PowertoyModuleIface` + `powertoy_create()` contract.
 
-Use the copied plugin docs under `doc/devdoc` as reference material, not as an active contract, until PowerToys Run or Command Palette is intentionally imported. If the first plugin must be a PowerToys Run plugin, import and stabilize the Run host first; otherwise, build the first feature as an explicit Kit module and wire it through the same maintained lists used by `Awake` and `LightSwitch`.
+- First-party modules (`Awake`, `Light Switch`) stay in the compiled `KitKnownModules` list for deep integration (Home, Quick Access, settings routes, tests).
+- Third-party plugins are planned to load from a `plugins/` folder (interface DLL + `manifest.json`), with only enabled plugins loaded and a generic settings page rendering each plugin's `get_config` JSON.
+- Official PowerToys module copies need framework prerequisites first (ManagedTelemetry, logger/settings/EtwTrace sync) — see `fix.plan` P0.
 
-See `doc/devdoc/kit-first-plugin.md` for the first-module checklist and validation baseline. See `doc/devdoc/kit-development-experience.md` for the first-phase lessons learned and next stabilization checklist.
+Until the plugin host lands, `Light Switch` remains the Kit-authored module following the existing contract route, and `Awake` is the upstream-copied baseline. For comprehensive development instructions, see [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md); use `doc/devdoc/kit-first-plugin.md` for the first-module checklist and `doc/devdoc/kit-development-experience.md` for lessons learned. The actionable phased plan is `fix.plan` (repo root); the target architecture is `doc/devdoc/kit-architecture.md`.
 
 ## Stability Direction
 
@@ -167,57 +184,32 @@ General keeps the useful PowerToys settings structure but removes automatic upda
 
 Visible UI should use English Kit text. Keep `PowerToys` only where it is still required for build-facing namespaces, assembly names, module interface names, upstream compatibility, or origin attribution.
 
-## Build Output Organization
-
-Kit uses a version-specific build output structure to keep compiled artifacts organized and separate from source code:
-
-```
-bin/
-├── debug/
-│   ├── 2.0.8/          # Debug build for version 2.0.8
-│   │   ├── Kit.exe
-│   │   ├── *.dll
-│   │   └── ...
-│   └── 2.0.9/          # Future version builds
-├── release/
-│   ├── 2.0.8/          # Release build for version 2.0.8
-│   └── 2.0.9/
-└── publish/
-    ├── 2.0.8.zip       # Packaged release for version 2.0.8
-    └── 2.0.9.zip
-```
-
-All build outputs are consolidated into the `bin/` directory at the repository root. Each configuration (debug/release) contains subdirectories named after the version (extracted from `src/common/version/Generated Files/version_gen.h`), and publish artifacts are packaged as version-named zip files.
-
-The scattered root-level build directories (`Debug/`, `Release/`, `x64/`, `AnyCPU/`) that MSBuild generates are removed after builds complete, keeping only the organized `bin/` structure.
 
 ## Artifact Cleanup
 
 After the framework reached a usable state, the local workspace was cleaned from build-output size back to source size. The large directories were generated artifacts, not required source:
 
-- `src\kit\x64`
-- `src\kit\Release`
-- `src\kit\.vs`
+- root `x64`, `Debug`, `Release`, `.vs`
 - root `TestResults`
-- project-local `bin`, `obj`, `x64`, `Debug`, `Release`, and `TestResults` directories under `src\kit\src` and `src\kit\tools`
-- `src\kit\packages`
+- project-local `bin`, `obj`, `x64`, `Debug`, `Release`, and `TestResults` directories under `src` and `tools`
+- root `packages`
 
-The first cleanup pass removed about 28.71 GB of compiler and test outputs. A later full cleanup removed about 39 GB of regenerated Debug/Release outputs. `src\kit\packages` is a NuGet restore cache, not source; it is already covered by `src\kit\.gitignore` through `**/[Pp]ackages/*`, so it should not be uploaded to GitHub. Removing `packages` is safe for source state, but the next Visual Studio or MSBuild compile must restore NuGet packages again and may take longer on the first run.
+The first cleanup pass removed about 28.71 GB of compiler and test outputs. A later full cleanup removed about 39 GB of regenerated Debug/Release outputs. `packages` is a NuGet restore cache, not source; it is already covered by `.gitignore` through `**/[Pp]ackages/*`, so it should not be uploaded to GitHub. Removing `packages` is safe for source state, but the next Visual Studio or MSBuild compile must restore NuGet packages again and may take longer on the first run.
 
 Recommended cleanup policy:
 
-- Before GitHub upload or archival, remove `src\kit\x64`, `src\kit\Debug`, `src\kit\Release`, `.vs`, `TestResults`, project `bin`/`obj` folders, and `src\kit\packages`.
-- During local iterative development, keep `src\kit\packages` if disk space allows. It prevents cold-build failures and slow restores caused by missing packages such as WIL and C++/WinRT.
+- Before GitHub upload or archival, remove root `x64`, `Debug`, `Release`, `.vs`, `TestResults`, project `bin`/`obj` folders, and root `packages`.
+- During local iterative development, keep `packages` if disk space allows. It prevents cold-build failures and slow restores caused by missing packages such as WIL and C++/WinRT.
 - If `packages` was removed, run Visual Studio `Restore NuGet Packages` or perform a full solution build before judging compile errors from missing headers or WinMD projections.
 - Release builds keep only `en-US` satellite resources, remove generated debug symbols and native link artifacts from runtime outputs, prune inactive Settings module assets, icons, resource strings, OOBE/model assets, stale inactive control XBF outputs, and no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers for the active Kit module set.
 - Shortcut Conflict hotkey lookup is explicit for Quick Access and LightSwitch instead of scanning every historical `IHotkeyConfig` settings model from the PowerToys-derived library.
 - WindowsAppSDK 1.8 still contributes its own Windows AI/Onnx runtime files through the `Microsoft.WindowsAppSDK` meta-package. Removing those would require replacing the meta-package with granular WindowsAppSDK package references, so it is deferred until Settings compatibility can be validated more broadly.
 
-After source-size cleanup, `src\kit` should look close to source-only size: source and docs remain, while `x64`, `Release`, `.vs`, `packages`, and project `bin`/`obj` directories should be absent until the next restore/build.
+After source-size cleanup, the repository should look close to source-only size: source and docs remain, while `x64`, `Release`, `.vs`, `packages`, and project `bin`/`obj` directories should be absent until the next restore/build.
 
 ## Git Worktree Cleanup
 
-Git worktrees are used only when an isolated branch workspace is needed. On 2026-04-29, `git worktree prune` removed the stale `C:\Users\Zen\Repo\Codings\Kit\.worktrees\kit-phase1-host` record. The current `git worktree list --porcelain` baseline should show only `C:\Users\Zen\Repo\Codes\Kit` unless a new isolated worktree has been created deliberately.
+Git worktrees are used only when an isolated branch workspace is needed. On 2026-04-29, `git worktree prune` removed a stale external worktree record. The current `git worktree list --porcelain` baseline should show only the active Kit worktree unless a new isolated worktree has been created deliberately.
 
 Use `git worktree prune` for stale records that Git already marks prunable. Do not delete a live worktree directory until its branch state and uncommitted files have been checked.
 
@@ -276,6 +268,6 @@ Local verification on 2026-04-29 covered the latest Light Switch Settings pass:
 - `Settings.UI.UnitTests.csproj` Debug x64 built with Visual Studio 18 MSBuild.
 - `vstest.console.exe` ran `Settings.UI.UnitTests.dll` with a filter for `LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract`; 77/77 tests passed.
 - `PowerToys.Settings.csproj` Release x64 built successfully and regenerated `x64\Release\WinUI3Apps\PowerToys.Settings.dll`.
-- `git worktree prune` removed the stale external worktree metadata, and `git worktree list --porcelain` now reports only the current `C:\Users\Zen\Repo\Codes\Kit` worktree.
+- `git worktree prune` removed the stale external worktree metadata, and `git worktree list --porcelain` now reports only the active Kit worktree.
 
 Before handing a clean tree to Visual Studio, local build outputs and restore caches can be removed. The next compile should recreate the runtime output directory, the `WinUI3Apps` children, shared WinMD files, CsWinRT projections, and package restore cache together.

@@ -133,6 +133,10 @@
     <value>General</value>
     <comment>Navigation view item name for General</comment>
   </data>
+  <data name="Shell_Settings.Content" xml:space="preserve">
+    <value>Settings</value>
+    <comment>Navigation view item name for Settings</comment>
+  </data>
   <data name="Shell_Awake.Content" xml:space="preserve">
     <value>Awake</value>
     <comment>{Locked}</comment>
@@ -1310,71 +1314,11 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Default_Language" xml:space="preserve">
     <value>Windows default</value>
   </data>
-  <data name="Arabic_Saudi_Arabia_Language" xml:space="preserve">
-    <value>Arabic (Saudi Arabia)</value>
-  </data>
-  <data name="Czech_Language" xml:space="preserve">
-    <value>Czech</value>
-  </data>
-  <data name="German_Language" xml:space="preserve">
-    <value>German</value>
-  </data>
   <data name="English_Language" xml:space="preserve">
     <value>English</value>
   </data>
-  <data name="Spanish_Language" xml:space="preserve">
-    <value>Spanish</value>
-  </data>
-  <data name="Persian_Farsi_Language" xml:space="preserve">
-    <value>Persian (Farsi)</value>
-  </data>
-  <data name="French_Language" xml:space="preserve">
-    <value>French</value>
-  </data>
-  <data name="Hebrew_Israel_Language" xml:space="preserve">
-    <value>Hebrew (Israel)</value>
-  </data>
-  <data name="Hungarian_Language" xml:space="preserve">
-    <value>Hungarian</value>
-  </data>
-  <data name="Italian_Language" xml:space="preserve">
-    <value>Italian</value>
-  </data>
-  <data name="Japanese_Language" xml:space="preserve">
-    <value>Japanese</value>
-  </data>
-  <data name="Korean_Language" xml:space="preserve">
-    <value>Korean</value>
-  </data>
-  <data name="Dutch_Language" xml:space="preserve">
-    <value>Dutch</value>
-  </data>
-  <data name="Polish_Language" xml:space="preserve">
-    <value>Polish</value>
-  </data>
-  <data name="Portuguese_Brazil_Language" xml:space="preserve">
-    <value>Portuguese (Brazil)</value>
-  </data>
-  <data name="Portuguese_Portugal_Language" xml:space="preserve">
-    <value>Portuguese (Portugal)</value>
-  </data>
-  <data name="Russian_Language" xml:space="preserve">
-    <value>Russian</value>
-  </data>
-  <data name="Swedish_Language" xml:space="preserve">
-    <value>Swedish</value>
-  </data>
-  <data name="Turkish_Language" xml:space="preserve">
-    <value>Turkish</value>
-  </data>
-  <data name="Ukrainian_Language" xml:space="preserve">
-    <value>Ukrainian</value>
-  </data>
   <data name="Chinese_Simplified_Language" xml:space="preserve">
     <value>Chinese (Simplified)</value>
-  </data>
-  <data name="Chinese_Traditional_Language" xml:space="preserve">
-    <value>Chinese (Traditional)</value>
   </data>
   <data name="GeneralPage_ViewDiagnosticDataViewerInfo.Title" xml:space="preserve">
     <value>Restart Kit for enable viewing change to take effect.</value>
@@ -1595,6 +1539,9 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="LightSwitch_LocationError_Unavailable" xml:space="preserve">
     <value>Location services unavailable. Please enter your coordinates manually.</value>
+  </data>
+  <data name="TogglePane_NavViewItem.Content" xml:space="preserve">
+    <value>Toggle sidebar</value>
   </data>
   <data name="Close_NavViewItem.Content" xml:space="preserve">
     <value>Close Kit</value>

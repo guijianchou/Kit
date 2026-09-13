@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include <WinSafer.h>
 #include <Sddl.h>
 #include <atomic>
@@ -655,6 +655,15 @@ LExit:
 
     g_isLaunchInProgress = false;
     g_settings_process_id = 0;
+
+    if (!is_restart_scheduled())
+    {
+        const auto pt_main_window = FindWindowW(pt_tray_icon_window_class, nullptr);
+        if (pt_main_window != nullptr)
+        {
+            PostMessageW(pt_main_window, WM_CLOSE, 0, 0);
+        }
+    }
 }
 
 #define MAX_TITLE_LENGTH 100

@@ -9,17 +9,16 @@
     Padding="8"
     HorizontalContentAlignment="Stretch"
     VerticalContentAlignment="Stretch"
-    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-    BorderThickness="1"
+    Background="Transparent"
+    BorderThickness="0"
     CornerRadius="{StaticResource OverlayCornerRadius}"
     mc:Ignorable="d">
     <Grid
         VerticalAlignment="{x:Bind VerticalContentAlignment, Mode=OneWay}"
-        Background="{x:Bind Background, Mode=OneWay}"
-        BorderBrush="{x:Bind BorderBrush, Mode=OneWay}"
-        BorderThickness="{x:Bind BorderThickness, Mode=OneWay}"
-        CornerRadius="{x:Bind CornerRadius, Mode=OneWay}">
+        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1"
+        CornerRadius="{StaticResource OverlayCornerRadius}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />

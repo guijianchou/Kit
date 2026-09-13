@@ -307,6 +307,8 @@ namespace Microsoft.PowerToys.Settings.UI
             {
                 "Dashboard" => typeof(DashboardPage),
                 "Overview" => typeof(GeneralPage),
+                "General" => typeof(GeneralPage),
+                "Settings" => typeof(GeneralPage),
                 "Awake" => typeof(AwakePage),
                 "LightSwitch" => typeof(LightSwitchPage),
                 _ => typeof(DashboardPage),

@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" msdata:Ordinal="0" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- 语言设置 -->
+  <data name="LanguageHeader.Header" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="LanguageHeader.Description" xml:space="preserve">
+    <value>Kit 默认匹配 Windows 系统语言</value>
+  </data>
+  <data name="LanguageRestartInfo.Title" xml:space="preserve">
+    <value>重启 Kit 以应用语言更改</value>
+  </data>
+  <data name="LanguageRestartInfoButton.Content" xml:space="preserve">
+    <value>重启</value>
+  </data>
+  <data name="Default_Language" xml:space="preserve">
+    <value>Windows 默认</value>
+  </data>
+  <data name="English_Language" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Chinese_Simplified_Language" xml:space="preserve">
+    <value>简体中文</value>
+  </data>
+
+  <!-- 导航与全局 Shell -->
+  <data name="SettingsWindow_Title" xml:space="preserve">
+    <value>Kit 设置</value>
+  </data>
+  <data name="SettingsWindow_AdminTitle" xml:space="preserve">
+    <value>管理员: Kit 设置</value>
+  </data>
+  <data name="Shell_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索设置</value>
+  </data>
+  <data name="Shell_Search_NoResults" xml:space="preserve">
+    <value>未找到结果：</value>
+  </data>
+  <data name="Shell_Search_ShowAll.Text" xml:space="preserve">
+    <value>显示所有结果</value>
+  </data>
+  <data name="Shell_Dashboard.Content" xml:space="preserve">
+    <value>主页</value>
+  </data>
+  <data name="Shell_Awake.Content" xml:space="preserve">
+    <value>Awake (保持唤醒)</value>
+  </data>
+  <data name="Shell_LightSwitch.Content" xml:space="preserve">
+    <value>Light Switch (深浅切换)</value>
+  </data>
+  <data name="Shell_Settings.Content" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Shell_General.Content" xml:space="preserve">
+    <value>常规</value>
+  </data>
+  <data name="Close_NavViewItem.Content" xml:space="preserve">
+    <value>退出 Kit</value>
+  </data>
+  <data name="CloseDialog.Title" xml:space="preserve">
+    <value>确定要退出 Kit 吗？</value>
+  </data>
+  <data name="CloseDialog.PrimaryButtonText" xml:space="preserve">
+    <value>退出</value>
+  </data>
+  <data name="CloseDialog.SecondaryButtonText" xml:space="preserve">
+    <value>取消</value>
+  </data>
+
+  <!-- 主页 (Dashboard) -->
+  <data name="DashboardTitle.Text" xml:space="preserve">
+    <value>主页</value>
+  </data>
+  <data name="DashboardIntro.Text" xml:space="preserve">
+    <value>Kit 是用于运行指定 Windows 实用工具的本地工作区，与上游 PowerToys 行为完全对齐，并在独立隔离且零遥测的环境下稳定运行。</value>
+  </data>
+  <data name="QuickAccessTitle.Title" xml:space="preserve">
+    <value>快捷访问</value>
+  </data>
+  <data name="ShortcutsOverview.Title" xml:space="preserve">
+    <value>快捷键概览</value>
+  </data>
+  <data name="UtilitiesHeader.Title" xml:space="preserve">
+    <value>实用工具</value>
+  </data>
+  <data name="NoActionsToShow.Text" xml:space="preserve">
+    <value>暂无可显示的快捷操作。</value>
+  </data>
+  <data name="NoShortcutsToShow.Text" xml:space="preserve">
+    <value>暂无可显示的快捷键。</value>
+  </data>
+  <data name="Dashboard_SortBy_ToolTip.Text" xml:space="preserve">
+    <value>工具排序</value>
+  </data>
+  <data name="Dashboard_SortAlphabetical.Text" xml:space="preserve">
+    <value>按字母顺序</value>
+  </data>
+  <data name="Dashboard_SortByStatus.Text" xml:space="preserve">
+    <value>按状态排序</value>
+  </data>
+
+  <!-- 常规设置 (General) -->
+  <data name="General_About.Header" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="General_VersionAndUpdate.Header" xml:space="preserve">
+    <value>版本与更新</value>
+  </data>
+  <data name="ShowSystemTrayIcon.Header" xml:space="preserve">
+    <value>显示系统托盘图标</value>
+  </data>
+  <data name="ShowSystemTrayIcon.Description" xml:space="preserve">
+    <value>若要访问设置，可随时再次运行 Kit 可执行程序</value>
+  </data>
+  <data name="Appearance_Behavior.Header" xml:space="preserve">
+    <value>外观与行为</value>
+  </data>
+  <data name="ColorModeHeader.Header" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="Radio_Theme_Dark.Content" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="Radio_Theme_Light.Content" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="Radio_Theme_Default.Content" xml:space="preserve">
+    <value>使用系统设置</value>
+  </data>
+  <data name="GeneralSettings_AlwaysRunAsAdminText.Header" xml:space="preserve">
+    <value>始终以管理员身份运行</value>
+  </data>
+
+  <!-- Awake 模块 -->
+  <data name="Awake.ModuleTitle" xml:space="preserve">
+    <value>Awake</value>
+  </data>
+  <data name="Awake.ModuleDescription" xml:space="preserve">
+    <value>一种无需管理其电源和睡眠设置即可按需保持计算机唤醒状态的工具。</value>
+  </data>
+  <data name="Awake_EnableSettingsCard.Header" xml:space="preserve">
+    <value>启用 Awake</value>
+  </data>
+  <data name="Awake_BehaviorSettingsGroup.Header" xml:space="preserve">
+    <value>行为</value>
+  </data>
+  <data name="Awake_ModeSettingsCard.Header" xml:space="preserve">
+    <value>模式</value>
+  </data>
+  <data name="Awake_ModeSettingsCard.Description" xml:space="preserve">
+    <value>管理 Awake 激活时设备的唤醒状态</value>
+  </data>
+  <data name="Awake_NoKeepAwakeSelector.Content" xml:space="preserve">
+    <value>关闭 (处于休眠状态)</value>
+  </data>
+  <data name="Awake_IndefiniteKeepAwakeSelector.Content" xml:space="preserve">
+    <value>无限期保持唤醒</value>
+  </data>
+  <data name="Awake_TemporaryKeepAwakeSelector.Content" xml:space="preserve">
+    <value>限时保持唤醒</value>
+  </data>
+  <data name="Awake_ExpirableKeepAwakeSelector.Content" xml:space="preserve">
+    <value>保持唤醒直至指定时间</value>
+  </data>
+  <data name="Awake_DisplaySettingsCard.Header" xml:space="preserve">
+    <value>保持屏幕开启</value>
+  </data>
+  <data name="Awake_DisplaySettingsCard.Description" xml:space="preserve">
+    <value>阻止显示器休眠</value>
+  </data>
+  <data name="Awake_IntervalSettingsCard.Header" xml:space="preserve">
+    <value>返回上一唤醒状态前的间隔时长</value>
+  </data>
+  <data name="Awake_IntervalHoursInput.Header" xml:space="preserve">
+    <value>小时</value>
+  </data>
+  <data name="Awake_IntervalMinutesInput.Header" xml:space="preserve">
+    <value>分钟</value>
+  </data>
+  <data name="Awake_ExpirationSettingsExpander.Header" xml:space="preserve">
+    <value>结束日期与时间</value>
+  </data>
+  <data name="Awake_ExpirationSettingsExpander_Date.Header" xml:space="preserve">
+    <value>结束日期</value>
+  </data>
+  <data name="Awake_ExpirationSettingsExpander_Time.Header" xml:space="preserve">
+    <value>结束时间</value>
+  </data>
+
+  <!-- Light Switch 模块 -->
+  <data name="LightSwitch.ModuleTitle" xml:space="preserve">
+    <value>Light Switch</value>
+  </data>
+  <data name="LightSwitch.ModuleDescription" xml:space="preserve">
+    <value>在深色与浅色模式之间平滑切换系统及应用程序外观风格的实用工具。</value>
+  </data>
+  <data name="LightSwitch_EnableSettingsCard.Header" xml:space="preserve">
+    <value>启用 Light Switch</value>
+  </data>
+  <data name="LightSwitch_ShortcutsSettingsGroup.Header" xml:space="preserve">
+    <value>快捷键</value>
+  </data>
+  <data name="LightSwitch_ThemeToggle_Shortcut.Header" xml:space="preserve">
+    <value>主题切换快捷键</value>
+  </data>
+  <data name="LightSwitch_ThemeToggle_Shortcut.Description" xml:space="preserve">
+    <value>在浅色和深色模式之间切换</value>
+  </data>
+  <data name="LightSwitch_ScheduleSettingsGroup.Header" xml:space="preserve">
+    <value>计划规则</value>
+  </data>
+  <data name="LightSwitch_ModeSettingsExpander.Header" xml:space="preserve">
+    <value>模式</value>
+  </data>
+  <data name="LightSwitch_ModeSettingsExpander.Description" xml:space="preserve">
+    <value>确定何时应开启深色模式</value>
+  </data>
+  <data name="LightSwitch_ModeOff.Content" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="LightSwitch_ModeManual.Content" xml:space="preserve">
+    <value>固定时间</value>
+  </data>
+  <data name="LightSwitch_ModeSunsetToSunrise.Content" xml:space="preserve">
+    <value>日落至日出</value>
+  </data>
+  <data name="LightSwitch_ModeFollowNightLight.Content" xml:space="preserve">
+    <value>跟随系统夜间模式</value>
+  </data>
+  <data name="LightSwitch_ScheduleOffMessage.Title" xml:space="preserve">
+    <value>定时计划已关闭。</value>
+  </data>
+  <data name="LightSwitch_TurnOnDarkMode.Header" xml:space="preserve">
+    <value>开启深色模式时间</value>
+  </data>
+  <data name="LightSwitch_TurnOffDarkMode.Header" xml:space="preserve">
+    <value>关闭深色模式时间</value>
+  </data>
+  <data name="LightSwitch_LocationSettingsCard.Header" xml:space="preserve">
+    <value>地理位置</value>
+  </data>
+  <data name="LightSwitch_SetLocationButton.Content" xml:space="preserve">
+    <value>更新位置</value>
+  </data>
+  <data name="LightSwitch_OffsetSettingsCard.Header" xml:space="preserve">
+    <value>偏移量</value>
+  </data>
+  <data name="LightSwitch_BehaviorSettingsGroup.Header" xml:space="preserve">
+    <value>应用范围</value>
+  </data>
+  <data name="LightSwitch_ApplyDarkModeExpander.Header" xml:space="preserve">
+    <value>将深色模式应用于</value>
+  </data>
+  <data name="LightSwitch_SystemCheckbox.Header" xml:space="preserve">
+    <value>系统 (任务栏、开始菜单等)</value>
+  </data>
+  <data name="LightSwitch_AppsCheckbox.Header" xml:space="preserve">
+    <value>应用程序</value>
+  </data>
+
+  <!-- 通用控件与操作 -->
+  <data name="ToggleSwitch.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="ToggleSwitch.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="Activation_Shortcut_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Activation_Shortcut_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Activation_Shortcut_Title" xml:space="preserve">
+    <value>激活快捷键</value>
+  </data>
+  <data name="Activation_Shortcut_Description" xml:space="preserve">
+    <value>按下组合键以更改此快捷键</value>
+  </data>
+  <data name="Activation_Shortcut_With_Disable_Description" xml:space="preserve">
+    <value>按下组合键以更改此快捷键。右键单击可清除组合键以停用此快捷键。</value>
+  </data>
+</root>

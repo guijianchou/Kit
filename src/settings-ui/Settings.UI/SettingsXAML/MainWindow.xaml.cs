@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -58,7 +58,24 @@ namespace Microsoft.PowerToys.Settings.UI
             // send IPC Message
             ShellPage.SetRestartAdminSndMessageCallback(msg =>
             {
-                App.GetTwoWayIPCManager()?.Send(msg);
+                var ipcManager = App.GetTwoWayIPCManager();
+                if (ipcManager != null)
+                {
+                    ipcManager.Send(msg);
+                }
+                else
+                {
+                    var processPath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(processPath))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = processPath,
+                            UseShellExecute = true,
+                        });
+                    }
+                }
+
                 Environment.Exit(0); // close application
             });
 
@@ -156,6 +173,25 @@ namespace Microsoft.PowerToys.Settings.UI
             if (!App.IsSecondaryWindowOpen())
             {
                 App.ClearSettingsWindow();
+
+                // Terminate runner so kit.runner does not remain in the background
+                try
+                {
+                    App.GetTwoWayIPCManager()?.Send("{\"killrunner\":{}}");
+                }
+                catch
+                {
+                }
+
+                const string kitTrayIconWindowClass = "KitTrayIconWindow";
+                const nuint ID_CLOSE_MENU_COMMAND = 40001;
+                IntPtr hWndTray = NativeMethods.FindWindow(kitTrayIconWindowClass, kitTrayIconWindowClass);
+                if (hWndTray != IntPtr.Zero)
+                {
+                    NativeMethods.SendMessage(hWndTray, (IntPtr)NativeMethods.WM_COMMAND, (UIntPtr)ID_CLOSE_MENU_COMMAND, UIntPtr.Zero);
+                }
+
+                Application.Current.Exit();
             }
             else
             {

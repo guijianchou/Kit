@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -88,7 +88,8 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             this.navigationView.BackRequested += OnBackRequested;
             var topLevelItems = navigationView.MenuItems.OfType<NavigationViewItem>();
             _moduleNavViewItems = topLevelItems.SelectMany(menuItem => menuItem.MenuItems.OfType<NavigationViewItem>()).ToArray();
-            _fullListOfNavViewItems = topLevelItems.Union(_moduleNavViewItems).ToArray();
+            var footerItems = navigationView.FooterMenuItems.OfType<NavigationViewItem>();
+            _fullListOfNavViewItems = topLevelItems.Union(_moduleNavViewItems).Union(footerItems).ToArray();
         }
 
         private static KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)
@@ -120,11 +121,13 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private void OnItemInvoked(NavigationViewItemInvokedEventArgs args)
         {
-            var pageType = args.InvokedItemContainer.GetValue(NavHelper.NavigateToProperty) as Type;
-
-            if (pageType != null)
+            if (args.InvokedItemContainer is NavigationViewItem item)
             {
-                NavigationService.Navigate(pageType);
+                var pageType = item.GetValue(NavHelper.NavigateToProperty) as Type;
+                if (pageType != null)
+                {
+                    NavigationService.Navigate(pageType);
+                }
             }
         }
 

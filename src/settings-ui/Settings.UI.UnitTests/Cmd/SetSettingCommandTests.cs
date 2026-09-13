@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -48,7 +48,7 @@ public class SetSettingCommandTests
         SetSetting(moduleSettingsType, settingName, newValueStr);
     }
 
-    [DataRow(typeof(GeneralSettings), "Enabled.Awake", "true")]
+    [DataRow(typeof(GeneralSettings), "Enabled.Awake", "false")]
     [DataRow(typeof(GeneralSettings), nameof(GeneralSettings.AutoDownloadUpdates), "true")]
     [TestMethod]
     public void SetGeneralSetting(Type moduleSettingsType, string settingName, string newValueStr)

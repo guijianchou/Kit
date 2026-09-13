@@ -1,12 +1,11 @@
 #pragma once
 
-#include <common/Telemetry/TraceBase.h>
 #include <string>
 
 class Trace
 {
 public:
-    class LightSwitch : public telemetry::TraceBase
+    class LightSwitch
     {
     public:
         static void RegisterProvider();

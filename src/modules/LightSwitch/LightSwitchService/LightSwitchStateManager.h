@@ -39,7 +39,7 @@ public:
     // Initial sync at startup to align internal state with system theme
     void SyncInitialThemeState();
 
-    // Accessor for current state (optional, for debugging or telemetry)
+    // Accessor for current state (optional, for diagnostics)
     const LightSwitchState& GetState() const { return _state; }
 
 private:
@@ -48,7 +48,4 @@ private:
 
     void EvaluateAndApplyIfNeeded();
     bool CoordinatesAreValid(const std::wstring& lat, const std::wstring& lon);
-
-    // Notify PowerDisplay that LightSwitch applied a new theme.
-    void NotifyPowerDisplayThemeChanged(bool isLight);
 };

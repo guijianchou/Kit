@@ -313,37 +313,12 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         private void NavigationView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
         {
-            if (args.DisplayMode == NavigationViewDisplayMode.Compact || args.DisplayMode == NavigationViewDisplayMode.Minimal)
-            {
-                AppTitleBar.IsPaneButtonVisible = true;
-            }
-            else
-            {
-                AppTitleBar.IsPaneButtonVisible = false;
-            }
+            AppTitleBar.IsPaneButtonVisible = true;
         }
 
         private void PaneToggleBtn_Click(object sender, RoutedEventArgs e)
         {
             navigationView.IsPaneOpen = !navigationView.IsPaneOpen;
-        }
-
-        private async void Close_Tapped(object sender, TappedRoutedEventArgs e)
-        {
-            await CloseDialog.ShowAsync();
-        }
-
-        private void CloseDialog_Click(ContentDialog sender, ContentDialogButtonClickEventArgs args)
-        {
-            const string kitTrayIconWindowClass = "KitTrayIconWindow"; // Defined in runner/tray_icon.h
-            const nuint ID_CLOSE_MENU_COMMAND = 40001;                  // Generated resource from runner/runner.base.rc
-
-            // Exit the XAML application
-            Application.Current.Exit();
-
-            // Invoke the exit command from the tray icon
-            IntPtr hWnd = NativeMethods.FindWindow(kitTrayIconWindowClass, kitTrayIconWindowClass);
-            NativeMethods.SendMessage(hWnd, NativeMethods.WM_COMMAND, ID_CLOSE_MENU_COMMAND, 0);
         }
 
         private List<SettingEntry> _lastSearchResults = new();

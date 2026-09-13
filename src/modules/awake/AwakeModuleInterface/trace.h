@@ -1,10 +1,13 @@
 #pragma once
 
-#include <common/Telemetry/TraceBase.h>
-
-class Trace : public telemetry::TraceBase
+class Trace
 {
 public:
-    // Log if the user has Awake enabled or disabled
-    static void EnableAwake(const bool enabled) noexcept;
+    static constexpr void RegisterProvider() noexcept {}
+    static constexpr void UnregisterProvider() noexcept {}
+
+    static constexpr void EnableAwake(const bool enabled) noexcept
+    {
+        (void)enabled;
+    }
 };

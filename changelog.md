@@ -6,6 +6,40 @@
 
 ## English
 
+### 2.0.10
+
+- Version: Bumped Kit to `2.0.10`.
+- UI/UX: Removed redundant "Close Kit" footer navigation item and dialog from the sidebar; closing is now handled cleanly and standardly via the top-right window close button ('X').
+- Runtime & Lifecycle: Fixed background `kit.runner` (`Kit.exe`) continuing to run after closing the main window. Closing the main window now coordinates a full, graceful termination of both the UI and background runner (via `killrunner` IPC, tray window message fallback, and runner process-watchdog auto-close).
+- UI/UX & Localization: Fixed application crash on language switch in Settings. Pruned language options to strictly supported locales (English default, Chinese Simplified). Added bounds checking, standalone `%LOCALAPPDATA%\Kit\language.json` persistence, and automatic application relaunch.
+- Localization: Added native WinUI 3 MRT Core Chinese Simplified resources (`Strings/zh-CN/Resources.resw`) aligned 1:1 with English keys, eliminating all PRI263 build warnings, and removed obsolete language strings.
+- UI/UX: Aligned selection controls and time pickers in LightSwitch and Settings to the standard upstream PowerToys width (`SettingActionControlMinWidth` = 240px) for consistent, balanced layouts.
+- UI/UX: Further refined card brush styling on Mica Alt backdrop inspired by `Locals` (`#80FFFFFF` 50% fill in Light mode, `#0AFFFFFF` in Dark mode with subtle borders), ensuring seamless, natural contrast.
+- Build & Tests: 100% test pass rate (186/186 in `Settings.UI.UnitTests`). Complete debug outputs staged in `bin/debug/2.0.10/`.
+
+### 2.0.9
+
+- Version: Bumped Kit to `2.0.9`.
+- UI/UX: Overhauled sidebar navigation with standard WinUI 3 `LeftCompact` mode; sidebar smoothly collapses to a 48px compact icon bar and expands on demand.
+- UI/UX: Restored default expanded sidebar state aligned with upstream PowerToys behavior, and removed the duplicate collapse icon from the footer.
+- UI/UX: Fixed the General Settings button in the footer menu by migrating `GeneralNavigationItem` to `<NavigationView.FooterMenuItems>` and wiring `ShellViewModel` item resolution.
+- UI/UX: Modernized visual styling with WinUI 3 + Mica Alt backdrop (referenced from `Locals` design system).
+- UI/UX: Refined card and surface brushes on Mica Alt to use soft translucent fills (`#90FFFFFF` in Light mode, `#0DFFFFFF` in Dark mode) and subtle borders (`#1F000000`), eliminating harsh, stark white cards.
+- UI/UX: Fixed double-rendering of background and border in `Card.xaml` primitive with `OverlayCornerRadius`.
+- Telemetry: Conducted full zero-telemetry audit across Awake and LightSwitch; replaced upstream ETW telemetry providers (`TraceLoggingWrite`) with no-op stubs (`trace.h/cpp`), ensuring zero background telemetry leaks.
+- Runtime: Restored worker graceful shutdown with named exit events and PID watchdog to prevent orphan background processes.
+- Runtime: Optimized LightSwitch scheduler to cleanly terminate service process when schedule mode is set to Off, and decoupled from upstream PowerDisplay.
+- Docs: Published comprehensive, production-grade `PLUGIN_DEVELOPMENT.md` guide at repository root referencing upstream PowerToys and Kit architectures.
+- Tests: Maintained 100% test pass rate (186/186 tests passing in `Settings.UI.UnitTests`).
+- Build: Staged complete verified debug outputs in `bin/debug/2.0.9/`.
+
+### 2.0.8
+
+- Version: Bumped Kit to `2.0.8`.
+- Slimming: Fully removed `Monitor` module from active modules, keeping `Awake` and `LightSwitch` as the focused active module set.
+- Runtime: Stabilized LightSwitch service and Awake module interfaces with Kit-isolated storage under `%LOCALAPPDATA%\Kit\`.
+- Build: Established version-based build output organization under `bin/debug/2.0.8/`.
+
 ### 2.0.7
 
 - Version: Bumped Kit to `2.0.7`.
@@ -256,7 +290,41 @@
 
 ## 更新日志
 
+### 2.0.10
+
+- 版本：Kit 升级到 `2.0.10`。
+- UI/UX 移除冗余退出按钮：彻底移除侧边栏底部的“退出 Kit”导航项与确认弹窗；完全统一采用窗口右上角标准关闭按钮（'X'）管理窗口与退出生命周期。
+- 进程生命周期与退出修复：彻底解决关闭主程序窗口后后台 `kit.runner` (`Kit.exe`) 依旧残留运行的 bug。主窗口关闭时协同联动退出 Settings 与后台 Runner（通过 IPC `killrunner` 指令、托盘窗口消息兜底以及 Runner 端的子进程退出看门狗自动联动），确保无后台孤儿进程。
+- 语言设置与崩溃修复：彻底修复切换语言时程序崩溃问题。将语言项精简收敛为仅支持中文（简体）与英语（默认），加入健全的越界防御、独立的 `%LOCALAPPDATA%\Kit\language.json` 本地持久化，并在独立模式下实现自动平滑自重启。
+- 本地化对齐：补全原生 WinUI 3 MRT Core 简体中文资源文件（`Strings/zh-CN/Resources.resw`），与英文键值 1:1 完整对齐，彻底消除 PRI263 构建告警，并彻底剔除多余的遗留语言字符串。
+- UI/UX 控件尺寸对齐：将 LightSwitch 等插件的模式下拉选择框与时间选择器左右宽度统一对齐为上游 PowerToys 标准宽度（`SettingActionControlMinWidth` = 240px），确保排版整齐规范。
+- UI/UX 卡片与 Mica 质感调优：参考 `Locals` 现代 WinUI 3 设计语言，进一步优化卡片半透明度（浅色 `#80FFFFFF` 50% 填充、深色 `#0AFFFFFF` 4% 填充及细致边缘描边），彻底消除小窗口和子项白斑突兀问题，使整体视觉和谐统一。
+- 质量与产物归档：全量单元测试（186/186）持续 100% 通过；全量产物完整归档至 `bin/debug/2.0.10/`。
+
+### 2.0.9
+
+- 版本：Kit 升级到 `2.0.9`。
+- UI/UX 侧栏导航重构：采用 WinUI 3 标准 `LeftCompact` 紧凑模式；点击折叠后平滑收缩为 48px 图标条，每个模块保持独立图标显示，点击顶部汉堡按钮平滑展开。
+- UI/UX 默认展开对齐：恢复侧边栏默认处于展开状态，沿用 PowerToys 原生展示风格；移除左下角与顶部重复的多余缩放图标，仅保留顶部控制按钮。
+- UI/UX 设置按钮交互修复：将左下角“通用设置”项迁移至标准的 `<NavigationView.FooterMenuItems>`，并在 `ShellViewModel` 路由中补充项解析，解决点击底部设置无反应的问题。
+- UI/UX Mica Alt 现代视觉质感：全面升级为 WinUI 3 + Mica Alt 材质背景（对齐 `Locals` 视觉规范），优化整体窗口层级与通透感。
+- UI/UX 卡片色彩与重影优化：深度定制 Mica Alt 下的卡片背景色，使用半透明柔和笔刷（浅色主题 `#90FFFFFF`、深色主题 `#0DFFFFFF`、描边 `#1F000000`），彻底消除小窗口与卡片过白刺眼的问题；修复 `Card.xaml` 原语中内外容器双层绘制边框与背景导致的边缘发白与重影。
+- 零遥测基线合规审计：全量审计 Awake 与 LightSwitch 模块；彻底清除意外引入的上游 ETW 遥测 Provider (`TraceLoggingWrite`)，恢复纯粹的内联 no-op 桩 (`trace.h/cpp`)，严格杜绝任何遥测事件泄漏。
+- 优雅生命周期与孤儿进程消除：恢复 Worker 进程的 PID 心跳看门狗与命名退出事件（Named Exit Event），Runner 退出或禁用时限时等待优雅退出，超时兜底终止，彻底避免后台僵尸服务残留。
+- 模块性能与解耦：LightSwitch 调度模式置为 Off 时彻底终止服务进程，快捷键切主题不误拉起调度服务，且彻底解耦上游 PowerDisplay。
+- 插件开发权威文档：在仓库根目录正式发布 `PLUGIN_DEVELOPMENT.md`，基于 upstream PowerToys 与 Kit 生产级源码详尽解析双层进程模型、C++ `PowertoyModuleIface` 契约、零遥测规范、进程看门狗、WinUI 3 卡片前端与 Runner 注册规范。
+- 质量与回归测试：全量单元测试 `Settings.UI.UnitTests` 保持 186/186（100%）全部通过。
+- 产物规范整理：构建并严格按规范同步全套产物至 `bin/debug/2.0.9/`。
+
+### 2.0.8
+
+- 版本：Kit 升级到 `2.0.8`。
+- 轻量瘦身：彻底移除 `Monitor` 模块，将活动模块收敛为专注高频实用的 `Awake` 与 `LightSwitch`。
+- 运行隔离：加固 LightSwitch 与 Awake 的 `%LOCALAPPDATA%\Kit\` 独立存储目录与 IPC 通道。
+- 产物规范：建立 `bin/debug/2.0.8/` 版本化构建输出目录体系。
+
 ### 2.0.7
+
 
 - 版本：Kit 升级到 `2.0.7`。
 - Monitor：在长时间目录枚举期间持续写入 hashing 进度心跳，避免最终文件数尚未计算出来时被误判为手动扫描无进度。

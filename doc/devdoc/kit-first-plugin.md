@@ -1,5 +1,7 @@
 # Kit First Plugin Development
 
+> **权威指南**: 完整权威的插件与模块开发指南请参阅仓库根目录的 [PLUGIN_DEVELOPMENT.md](../../PLUGIN_DEVELOPMENT.md)。
+
 Kit currently follows the PowerToys module model. The two active modules are `Awake` and `LightSwitch`, and module exposure is controlled by maintained lists instead of filesystem probing.
 
 ## Recommended First Step

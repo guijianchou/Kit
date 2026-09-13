@@ -333,17 +333,17 @@ Kit uses a version-organized structure under `bin/`:
 Kit/
 ├── bin/
 │   ├── debug/
-│   │   ├── 2.0.8/              # Current version
+│   │   ├── 2.0.10/             # Current version
 │   │   │   ├── Kit.exe
 │   │   │   ├── *.dll (runtime dependencies)
 │   │   │   └── Kit/ (subdirectory for app data)
-│   │   └── 2.0.9/              # Future versions
+│   │   └── 2.0.11/             # Future versions
 │   ├── release/
-│   │   ├── 2.0.8/
-│   │   └── 2.0.9/
+│   │   ├── 2.0.10/
+│   │   └── 2.0.11/
 │   └── publish/
-│       ├── 2.0.8.zip           # Packaged releases
-│       └── 2.0.9.zip
+│       ├── 2.0.10.zip          # Packaged releases
+│       └── 2.0.11.zip
 └── src/
     └── runner/x64/Debug/       # Original MSBuild output (removed after consolidation)
 ```

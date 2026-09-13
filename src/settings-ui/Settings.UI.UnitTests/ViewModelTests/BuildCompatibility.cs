@@ -1335,8 +1335,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
-            StringAssert.Contains(versionProps, "<Version>2.0.7</Version>");
-            StringAssert.Contains(manifest, "Version=\"2.0.7.0\"");
+            StringAssert.Contains(versionProps, "<Version>2.0.10</Version>");
+            StringAssert.Contains(manifest, "Version=\"2.0.10.0\"");
             StringAssert.Contains(readme, "Debug builds use `-NoSign`");
             StringAssert.Contains(manifest, "Local.Kit.SparseApp");
             StringAssert.Contains(manifest, "Kit.SparseApp");
@@ -2124,7 +2124,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2143,7 +2144,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2174,7 +2176,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2196,7 +2199,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2226,7 +2230,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2268,7 +2273,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2301,7 +2307,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2335,7 +2342,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2369,7 +2377,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2407,7 +2416,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2447,7 +2457,8 @@ namespace ViewModelTests
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
-                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (projectFile.Contains($"{Path.DirectorySeparatorChar}packages{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+                    projectFile.Contains($"{Path.DirectorySeparatorChar}source{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -2884,16 +2895,16 @@ namespace ViewModelTests
             var appMutex = File.ReadAllText(FindSourceFile("src", "common", "utils", "appMutex.h"));
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
             var trayIconHeader = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.h"));
-            var shellPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
+            var mainWindow = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "MainWindow.xaml.cs"));
 
             StringAssert.Contains(appMutex, "KIT_MSI_MUTEX_NAME");
             StringAssert.Contains(appMutex, "L\"Local\\\\Kit_Runner_MSI_InstanceMutex\"");
             StringAssert.Contains(runnerMain, "createAppMutex(KIT_MSI_MUTEX_NAME)");
             StringAssert.Contains(trayIconHeader, "L\"KitTrayIconWindow\"");
-            StringAssert.Contains(shellPage, "\"KitTrayIconWindow\"");
+            StringAssert.Contains(mainWindow, "\"KitTrayIconWindow\"");
             Assert.IsFalse(appMutex.Contains("PowerToys_Runner_MSI_InstanceMutex", StringComparison.Ordinal), "Kit runner must not share the PowerToys single-instance mutex.");
             Assert.IsFalse(runnerMain.Contains("L\"PToyTrayIconWindow\"", StringComparison.Ordinal), "Kit runner must not look up the PowerToys tray window class.");
-            Assert.IsFalse(shellPage.Contains("\"PToyTrayIconWindow\"", StringComparison.Ordinal), "Kit Settings must send close commands to the Kit tray window class.");
+            Assert.IsFalse(mainWindow.Contains("\"PToyTrayIconWindow\"", StringComparison.Ordinal), "Kit Settings must send close commands to the Kit tray window class.");
         }
 
         [TestMethod]

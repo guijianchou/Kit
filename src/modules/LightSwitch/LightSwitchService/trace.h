@@ -1,25 +1,17 @@
 #pragma once
 
+#include <common/Telemetry/TraceBase.h>
 #include <string>
 
 class Trace
 {
 public:
-    class LightSwitch
+    class LightSwitch : public telemetry::TraceBase
     {
     public:
-        static constexpr void RegisterProvider() noexcept {}
-        static constexpr void UnregisterProvider() noexcept {}
-
-        static constexpr void ScheduleModeToggled(const std::wstring& newMode) noexcept
-        {
-            (void)newMode;
-        }
-
-        static constexpr void ThemeTargetChanged(bool changeApps, bool changeSystem) noexcept
-        {
-            (void)changeApps;
-            (void)changeSystem;
-        }
+        static void RegisterProvider();
+        static void UnregisterProvider();
+        static void ScheduleModeToggled(const std::wstring& newMode) noexcept;
+        static void ThemeTargetChanged(bool changeApps, bool changeSystem) noexcept;
     };
 };

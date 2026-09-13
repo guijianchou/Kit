@@ -109,6 +109,39 @@ void chdir_current_executable()
     }
 }
 
+// Kit optimization: Only clean video conference driver once
+// Saves 10-20ms on subsequent elevated runs
+void clean_video_conference_once()
+{
+    const wchar_t* regKey = L"Software\\Microsoft\\PowerToys\\Kit";
+    const wchar_t* regValue = L"VideoConferenceCleanupDone";
+
+    DWORD cleanupDone = 0;
+    DWORD size = sizeof(cleanupDone);
+    HKEY hKey = nullptr;
+
+    // Try to read existing flag
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, regKey, 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+    {
+        RegQueryValueExW(hKey, regValue, nullptr, nullptr, reinterpret_cast<LPBYTE>(&cleanupDone), &size);
+        RegCloseKey(hKey);
+    }
+
+    if (cleanupDone == 0)
+    {
+        // First run or cleanup not done yet - perform cleanup
+        clean_video_conference();
+
+        // Mark as done
+        if (RegCreateKeyExW(HKEY_CURRENT_USER, regKey, 0, nullptr, 0, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
+        {
+            cleanupDone = 1;
+            RegSetValueExW(hKey, regValue, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&cleanupDone), sizeof(cleanupDone));
+            RegCloseKey(hKey);
+        }
+    }
+}
+
 inline wil::unique_mutex_nothrow create_msi_mutex()
 {
     return createAppMutex(KIT_MSI_MUTEX_NAME);
@@ -169,9 +202,10 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         // We deprecated a utility called Video Conference Mute, which registered itself as a video input device.
         // When running elevated, we try to clean up the device registration from previous installations.
         // This is done here too because a user-scope installer won't be able to remove the driver registration due to lack of permissions.
+        // Kit optimization: Only perform cleanup once per machine to save 10-20ms on subsequent runs
         if (isProcessElevated)
         {
-            clean_video_conference();
+            clean_video_conference_once();
         }
 
         // Load Kit module DLLs

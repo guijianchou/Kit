@@ -4,6 +4,7 @@
 #include <LightSwitchUtils.h>
 #include "ThemeScheduler.h"
 #include <ThemeHelper.h>
+#include <common/interop/shared_constants.h>
 
 void ApplyTheme(bool shouldBeLight);
 
@@ -45,14 +46,24 @@ void LightSwitchStateManager::OnManualOverride()
     _state.isManualOverride = !_state.isManualOverride;
 
     // ModuleInterface has already flipped the Windows theme before signaling this event,
-    // regardless of which direction isManualOverride just toggled. Sync cached state so
-    // scheduled evaluation sees the current theme.
+    // regardless of which direction isManualOverride just toggled. Sync cached state so the
+    // scheduler compares against the actual current theme on the next evaluation.
     _state.isSystemLightActive = GetCurrentSystemTheme();
     _state.isAppsLightActive = GetCurrentAppsTheme();
 
     Logger::debug(L"[LightSwitchStateManager] Synced internal theme state to current system theme ({}) and apps theme ({}).",
                   (_state.isSystemLightActive ? L"light" : L"dark"),
                   (_state.isAppsLightActive ? L"light" : L"dark"));
+
+    const auto& settings = LightSwitchSettings::settings();
+    if (settings.changeSystem)
+    {
+        NotifyPowerDisplayThemeChanged(_state.isSystemLightActive);
+    }
+    else if (settings.changeApps)
+    {
+        NotifyPowerDisplayThemeChanged(_state.isAppsLightActive);
+    }
 
     EvaluateAndApplyIfNeeded();
 }
@@ -267,7 +278,46 @@ void LightSwitchStateManager::EvaluateAndApplyIfNeeded()
         _state.isSystemLightActive = GetCurrentSystemTheme();
         _state.isAppsLightActive = GetCurrentAppsTheme();
 
+        // Notify PowerDisplay after the theme transition is complete.
+        NotifyPowerDisplayThemeChanged(shouldBeLight);
     }
 
     _state.lastTickMinutes = now;
+}
+
+// Notify PowerDisplay that LightSwitch applied a new theme.
+void LightSwitchStateManager::NotifyPowerDisplayThemeChanged(bool isLight)
+{
+    try
+    {
+        // The event carries only the resulting theme. PowerDisplay owns profile
+        // enablement, reference validation, and application.
+        const wchar_t* eventName = isLight
+            ? CommonSharedConstants::LIGHT_SWITCH_LIGHT_THEME_EVENT
+            : CommonSharedConstants::LIGHT_SWITCH_DARK_THEME_EVENT;
+
+        Logger::info(L"[LightSwitchStateManager] Notifying PowerDisplay about theme change (isLight: {})", isLight);
+
+        HANDLE hThemeEvent = CreateEventW(nullptr, FALSE, FALSE, eventName);
+        if (!hThemeEvent)
+        {
+            Logger::warn(L"[LightSwitchStateManager] Failed to create theme event (error: {})", GetLastError());
+            return;
+        }
+
+        if (!SetEvent(hThemeEvent))
+        {
+            Logger::warn(L"[LightSwitchStateManager] Failed to signal theme event '{}' (error: {})", eventName, GetLastError());
+        }
+        else
+        {
+            Logger::info(L"[LightSwitchStateManager] Theme event signaled to PowerDisplay: {}", eventName);
+        }
+
+        CloseHandle(hThemeEvent);
+    }
+    catch (...)
+    {
+        Logger::error(L"[LightSwitchStateManager] Failed to notify PowerDisplay");
+    }
 }

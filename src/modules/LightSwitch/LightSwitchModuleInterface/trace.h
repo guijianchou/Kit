@@ -1,15 +1,16 @@
 #pragma once
 
+#include <windows.h>
+#include <TraceLoggingActivity.h>
+#include <common/telemetry/ProjectTelemetry.h>
+
+TRACELOGGING_DECLARE_PROVIDER(g_hProvider);
+
 class Trace
 {
 public:
-    static constexpr void RegisterProvider() noexcept {}
-    static constexpr void UnregisterProvider() noexcept {}
-
-    static constexpr void Enable(bool enabled) noexcept
-    {
-        (void)enabled;
-    }
-
-    static constexpr void ShortcutInvoked() noexcept {}
+    static void RegisterProvider();
+    static void UnregisterProvider();
+    static void Enable(bool enabled) noexcept;
+    static void ShortcutInvoked() noexcept;
 };

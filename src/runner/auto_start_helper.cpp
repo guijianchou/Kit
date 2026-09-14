@@ -281,7 +281,7 @@ bool create_auto_start_task_for_this_user(bool runElevated)
             ExitOnFailure(hr, "Refusing to replace an unreadable or unrelated Kit startup task: {:x}", hr);
             const auto desired_run_level = runElevated ? TASK_RUNLEVEL_HIGHEST : TASK_RUNLEVEL_LUA;
             if (_wcsicmp(existing.executablePath.c_str(), wszExecutablePath) == 0 &&
-                existing.arguments.empty() && existing.runLevel == desired_run_level)
+                existing.arguments == L"--autorun" && existing.runLevel == desired_run_level)
             {
                 if (!existing.enabled)
                 {
@@ -378,8 +378,11 @@ bool create_auto_start_task_for_this_user(bool runElevated)
 
         // Set the path of the executable to Kit.
         hr = pExecAction->put_Path(_bstr_t(wszExecutablePath));
-        pExecAction->Release();
         ExitOnFailure(hr, "Cannot set path of executable: {:x}", hr);
+
+        hr = pExecAction->put_Arguments(_bstr_t(L"--autorun"));
+        pExecAction->Release();
+        ExitOnFailure(hr, "Cannot set arguments of executable: {:x}", hr);
     }
 
     // ------------------------------------------------------

@@ -14,7 +14,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 ## 当前版本
 
-当前 Kit 版本：`2.0.12`。
+当前 Kit 版本：`2.0.13`。
 
 ## 文档索引
 
@@ -38,7 +38,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 | --- | --- |
 | `x64/Debug/` | 主要 x64 Debug 运行目录，包含 `Kit.exe` 和 `WinUI3Apps/` |
 | `Debug/x64/`、项目 `bin/` 和 `obj/` | 其他工程输出与构建中间文件 |
-| `bin/debug/2.0.12/` | 人工整理的 Debug 测试交付目录，整理步骤独立于构建 |
+| `bin/debug/2.0.13/` | 人工整理的 Debug 测试交付目录，整理步骤独立于构建 |
 
 版本源是 `src/Version.props`，`src/common/version/Generated Files/version_gen.h` 由它生成。Release 构建与 ZIP 打包需要单独执行，上述目录约定不代表已经产出新的 Release 或压缩包。
 

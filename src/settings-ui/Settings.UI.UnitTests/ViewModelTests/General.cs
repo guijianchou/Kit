@@ -730,7 +730,7 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>2.0.12</Version>");
+            StringAssert.Contains(versionProps, "<Version>2.0.13</Version>");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -738,10 +738,10 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `2.0.12`.");
+            StringAssert.Contains(readme, "Current Kit version: `2.0.13`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.12`。");
+            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.13`。");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
             StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
             StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");

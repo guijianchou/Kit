@@ -616,6 +616,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
             }
         }
         settings_process_closed = false;
+        Logger::info(L"run_settings_window: Settings process created with PID={}", process_info.dwProcessId);
 
         if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
         {
@@ -636,6 +637,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
         // either a Settings exit or Runner shutdown, without polling.
         const HANDLE wait_handles[] = { process_info.hProcess, settings_shutdown_event.get() };
         const DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, INFINITE);
+        Logger::info("run_settings_window: WaitForMultipleObjects returned {}", wait_result);
         if (wait_result == WAIT_OBJECT_0)
         {
             settings_process_closed = true;
@@ -682,6 +684,7 @@ LExit:
         g_isLaunchInProgress = false;
         g_settings_process_closed = settings_process_closed;
     }
+    Logger::info("run_settings_window: lifecycle ended, settings_process_closed={}", settings_process_closed);
 
     if (process_info.hProcess)
     {
@@ -745,9 +748,11 @@ void bring_settings_to_front()
 
 void open_settings_window(std::optional<std::wstring> settings_window)
 {
+    Logger::info(L"open_settings_window: called with target={}", settings_window.value_or(L"<none>"));
     std::unique_lock launch_lock{ settings_launch_mutex };
     if (g_settings_shutdown_requested)
     {
+        Logger::warn("open_settings_window: g_settings_shutdown_requested is true, returning");
         return;
     }
 
@@ -755,6 +760,7 @@ void open_settings_window(std::optional<std::wstring> settings_window)
         std::unique_lock lock{ ipc_mutex };
         if (g_settings_process_id != 0)
         {
+            Logger::info("open_settings_window: Settings process already running with PID={}, sending ShowYourself", g_settings_process_id);
             if (current_settings_ipc)
             {
                 if (settings_window.has_value())
@@ -771,6 +777,7 @@ void open_settings_window(std::optional<std::wstring> settings_window)
         }
         if (g_isLaunchInProgress)
         {
+            Logger::info("open_settings_window: g_isLaunchInProgress is true, returning");
             return;
         }
     }
@@ -779,7 +786,9 @@ void open_settings_window(std::optional<std::wstring> settings_window)
     // no longer needs settings_launch_mutex; never hold ipc_mutex while joining.
     if (settings_thread.joinable())
     {
+        Logger::info("open_settings_window: joining previous settings_thread...");
         settings_thread.join();
+        Logger::info("open_settings_window: previous settings_thread joined.");
     }
 
     if (!settings_shutdown_event)
@@ -802,10 +811,12 @@ void open_settings_window(std::optional<std::wstring> settings_window)
         bool expected_isLaunchInProgress = false;
         if (!g_isLaunchInProgress.compare_exchange_strong(expected_isLaunchInProgress, true))
         {
+            Logger::warn("open_settings_window: compare_exchange on g_isLaunchInProgress failed, returning");
             return;
         }
     }
 
+    Logger::info("open_settings_window: launching run_settings_window thread...");
     try
     {
         settings_thread = std::thread([settings_window = std::move(settings_window)]() mutable {

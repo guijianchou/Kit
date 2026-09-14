@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.0.12`.
+Current Kit version: `2.0.13`.
 
 ## Documentation
 
@@ -39,7 +39,7 @@ Current Kit version: `2.0.12`.
 | --- | --- |
 | `x64/Debug/` | Main x64 Debug runtime output, including `Kit.exe` and `WinUI3Apps/` |
 | `Debug/x64/`, project `bin/` and `obj/` directories | Additional project outputs and intermediate build state |
-| `bin/debug/2.0.12/` | Manually prepared Debug test handoff directory; staging is separate from building |
+| `bin/debug/2.0.13/` | Manually prepared Debug test handoff directory; staging is separate from building |
 
 The version source is `src/Version.props`; `src/common/version/Generated Files/version_gen.h` is generated from it. Release builds and ZIP packaging are separate steps, and this layout does not indicate that a new Release build or archive has been produced.
 

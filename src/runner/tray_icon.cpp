@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Generated files/resource.h"
 #include "settings_window.h"
 #include "tray_icon.h"
@@ -84,11 +84,13 @@ void open_quick_access_flyout_window()
 
 void handle_tray_command(HWND window, const WPARAM command_id, LPARAM lparam)
 {
+    Logger::info("handle_tray_command: command_id={}", command_id);
     switch (command_id)
     {
     case ID_SETTINGS_MENU_COMMAND:
     {
         std::wstring settings_window{ winrt::to_hstring(ESettingsWindowNames_to_string(static_cast<ESettingsWindowNames>(lparam))) };
+        Logger::info(L"handle_tray_command: ID_SETTINGS_MENU_COMMAND target={}", settings_window);
         open_settings_window(settings_window);
     }
     break;
@@ -394,6 +396,7 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
                                   nullptr,
                                   wc.hInstance,
                                   nullptr);
+        Logger::info(L"start_tray_icon: CreateWindowW(class={}, name={}) returned hwnd={}", wc.lpszClassName, pt_tray_icon_window_class, (void*)hwnd);
         WINRT_VERIFY(hwnd);
         CentralizedHotkeys::RegisterWindow(hwnd);
         memset(&tray_icon_data, 0, sizeof(tray_icon_data));

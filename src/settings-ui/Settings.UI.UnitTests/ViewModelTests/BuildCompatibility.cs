@@ -1336,8 +1336,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
-            StringAssert.Contains(versionProps, "<Version>2.0.12</Version>");
-            StringAssert.Contains(manifest, "Version=\"2.0.12.0\"");
+            StringAssert.Contains(versionProps, "<Version>2.0.13</Version>");
+            StringAssert.Contains(manifest, "Version=\"2.0.13.0\"");
             StringAssert.Contains(readme, "Debug builds use `-NoSign`");
             StringAssert.Contains(manifest, "Local.Kit.SparseApp");
             StringAssert.Contains(manifest, "Kit.SparseApp");

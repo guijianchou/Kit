@@ -6,6 +6,13 @@
 
 ## English
 
+### 2.0.13
+
+- Version: Bumped Kit to `2.0.13`.
+- Lifecycle & PowerToys Parity: Restored PowerToys' native lifecycle model. Closing the main window (`Window_Closed`) now closes the Settings UI and leaves the runner in the system tray, allowing background modules (Awake, LightSwitch, and global hotkeys) to stay active without interruption. Complete exit is cleanly handled via the tray icon context menu.
+- Cold-Start Launch Fix: Fixed the issue where clicking `Kit.exe` on a cold start would only launch `kit.runner` in the background without opening the UI. Interactive execution of `Kit.exe` without `--autorun` now automatically opens the main Settings window on the very first click, whether the runner was already in the tray or started from scratch.
+- Auto-Start Parameterization: Updated Task Scheduler registration in `auto_start_helper.cpp` to pass `--autorun`, ensuring Windows login auto-start continues to boot silently to the system tray.
+
 ### 2.0.12
 
 - Version: Bumped Kit to `2.0.12`.
@@ -309,6 +316,13 @@
 ## 中文
 
 ## 更新日志
+
+### 2.0.13
+
+- 版本：Kit 升级到 `2.0.13`。
+- 生命周期与 PowerToys 规范对齐：严格沿用 PowerToys 原生进程模型。主窗口关闭（`Window_Closed`）仅关闭设置前端界面，Runner 保持在后台托盘常驻守护，确保 Awake（防息屏）、LightSwitch（快捷键监听）等后台服务持续有效；彻底退出完全交由系统托盘右键“退出”处理并干净退出。
+- 冷启动直接拉起修复：彻底修复了冷启动点击 `Kit.exe` 不弹出界面、只拉起 `kit.runner` 且需要点击第二次才启动的问题。交互式双击 `Kit.exe` 时默认启用开窗逻辑，无论此前后台是否有 Runner，均保证在第 1 次点击时立即拉起并展示主程序设置界面。
+- 开机自启参数化：在计划任务注册中添加 `--autorun` 参数，确保系统开机启动时保持静默常驻系统托盘，不弹窗打扰用户。
 
 ### 2.0.12
 

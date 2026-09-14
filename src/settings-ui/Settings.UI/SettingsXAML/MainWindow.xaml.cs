@@ -169,6 +169,8 @@ namespace Microsoft.PowerToys.Settings.UI
             }
         }
 
+        private const string KitTrayIconWindowClass = "KitTrayIconWindow";
+
         private void Window_Closed(object sender, WindowEventArgs args)
         {
             var hWnd = WindowNative.GetWindowHandle(this);
@@ -176,29 +178,8 @@ namespace Microsoft.PowerToys.Settings.UI
 
             if (!App.IsSecondaryWindowOpen())
             {
+                shellPage.Dispose();
                 App.ClearSettingsWindow();
-
-                // Request shutdown without waiting on the runner, which waits for Settings to exit.
-                try
-                {
-                    App.GetTwoWayIPCManager()?.Send("{\"killrunner\":{}}");
-                }
-                catch
-                {
-                }
-
-                const string kitTrayIconWindowClass = "KitTrayIconWindow";
-                const nuint ID_CLOSE_MENU_COMMAND = 40001;
-                IntPtr hWndTray = NativeMethods.FindWindow(kitTrayIconWindowClass, kitTrayIconWindowClass);
-                if (hWndTray != IntPtr.Zero)
-                {
-                    if (!NativeMethods.PostMessage(hWndTray, NativeMethods.WM_COMMAND, ID_CLOSE_MENU_COMMAND, IntPtr.Zero))
-                    {
-                        Logger.LogError("Failed to request Kit shutdown.");
-                    }
-                }
-
-                Application.Current.Exit();
             }
             else
             {

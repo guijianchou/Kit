@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include <ShellScalingApi.h>
 #include <lmcons.h>
 #include <filesystem>
@@ -115,13 +115,18 @@ inline wil::unique_mutex_nothrow create_msi_mutex()
 void open_menu_from_another_instance(std::optional<std::string> settings_window)
 {
     const HWND hwnd_main = FindWindowW(pt_tray_icon_window_class, nullptr);
+    Logger::info(L"open_menu_from_another_instance: FindWindowW({}) returned hwnd={}", pt_tray_icon_window_class, (void*)hwnd_main);
     LPARAM msg = static_cast<LPARAM>(ESettingsWindowNames::Dashboard);
     if (settings_window.has_value() && settings_window.value() != "")
     {
         msg = static_cast<LPARAM>(ESettingsWindowNames_from_string(settings_window.value()));
     }
-    PostMessageW(hwnd_main, WM_COMMAND, ID_SETTINGS_MENU_COMMAND, msg);
-    SetForegroundWindow(hwnd_main); // Bring the settings window to the front
+    BOOL posted = PostMessageW(hwnd_main, WM_COMMAND, ID_SETTINGS_MENU_COMMAND, msg);
+    Logger::info("open_menu_from_another_instance: PostMessageW result={}", posted);
+    if (hwnd_main)
+    {
+        SetForegroundWindow(hwnd_main); // Bring the settings window to the front
+    }
 }
 
 int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, const json::JsonObject& startupGeneralSettings, std::chrono::steady_clock::time_point start_time)
@@ -360,8 +365,12 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     const std::string cmdLine{ lpCmdLine };
     Logger::info("Running powertoys with cmd args: {}", cmdLine);
 
+    const bool is_autorun = (cmdLine.find("--autorun") != std::string::npos) ||
+                            (cmdLine.find("--silent") != std::string::npos) ||
+                            (cmdLine.find("--background") != std::string::npos);
+
     auto open_settings_it = cmdLine.find("--open-settings");
-    const bool open_settings = open_settings_it != std::string::npos;
+    const bool open_settings = (open_settings_it != std::string::npos) || (!is_autorun && cmdLine.find("--restartedElevated") == std::string::npos);
     // Check if opening specific settings window
     open_settings_it = cmdLine.find("--open-settings=");
     std::string settings_window;

@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
 using Common.UI;
@@ -30,7 +31,9 @@ public sealed class AwakeService : ModuleServiceBase, IAwakeService
 
     public AwakeState GetCurrentState()
     {
-        var isRunning = IsAwakeProcessRunning();
+        var installPath = PowerToysPathResolver.GetKitInstallPath();
+        var isRunning = !string.IsNullOrEmpty(installPath) &&
+            IsAwakeProcessRunning(Path.Combine(installPath, "PowerToys.Awake.exe"));
         var settings = ReadSettings();
 
         return CreateState(isRunning, settings);
@@ -129,11 +132,35 @@ public sealed class AwakeService : ModuleServiceBase, IAwakeService
         }
     }
 
-    private static bool IsAwakeProcessRunning()
+    internal static bool IsAwakeProcessRunning(string executablePath)
     {
         try
         {
-            return Process.GetProcessesByName("PowerToys.Awake").Length > 0;
+            var expectedPath = Path.GetFullPath(executablePath);
+            using var currentProcess = Process.GetCurrentProcess();
+            int sessionId = currentProcess.SessionId;
+            bool isRunning = false;
+
+            foreach (var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(expectedPath)))
+            {
+                using (process)
+                {
+                    try
+                    {
+                        if (process.SessionId == sessionId &&
+                            string.Equals(process.MainModule?.FileName, expectedPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isRunning = true;
+                        }
+                    }
+                    catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+                    {
+                        // An exited or inaccessible process cannot confirm that this Kit instance is running.
+                    }
+                }
+            }
+
+            return isRunning;
         }
         catch (Exception ex)
         {

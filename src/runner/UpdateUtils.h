@@ -2,7 +2,6 @@
 
 #include <Windows.h>
 
-void PeriodicUpdateWorker();
 void CheckForUpdatesCallback();
 
 namespace cmdArg

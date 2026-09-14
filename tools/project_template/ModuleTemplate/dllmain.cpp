@@ -24,6 +24,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
 // The PowerToy name that will be shown in the settings.
 const static wchar_t* MODULE_NAME = L"$projectname$";
+// Keep this nonlocalized key stable after the module has shipped.
+const static wchar_t* MODULE_KEY = L"$safeprojectname$";
 // Add a description that will we shown in the module settings page.
 const static wchar_t* MODULE_DESC = L"<no description>";
 
@@ -63,6 +65,7 @@ public:
     // Destroy the powertoy and free memory
     virtual void destroy() override
     {
+        disable();
         delete this;
     }
 
@@ -75,7 +78,7 @@ public:
     // Return the non localized key of the powertoy, this will be cached by the runner
     virtual const wchar_t* get_key() override
     {
-        return MODULE_NAME;
+        return MODULE_KEY;
     }
 
     // Return JSON with the configuration options.
@@ -257,7 +260,7 @@ void $safeprojectname$::init_settings()
 //void $projectname$::save_settings() {
 //  try {
 //    // Create a PowerToyValues object for this PowerToy
-//    PowerToysSettings::PowerToyValues values(get_name());
+//    PowerToysSettings::PowerToyValues values(get_name(), get_key());
 //
 //    // Save a bool property.
 //    //values.add_property(

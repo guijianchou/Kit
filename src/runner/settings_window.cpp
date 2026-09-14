@@ -5,6 +5,7 @@
 #include <exception>
 #include <sstream>
 #include <thread>
+#include <utility>
 #include <aclapi.h>
 
 #include "powertoy_module.h"
@@ -38,6 +39,12 @@ std::mutex ipc_mutex;
 std::atomic_bool g_isLaunchInProgress = false;
 std::atomic_bool isUpdateCheckThreadRunning = false;
 HANDLE g_terminateSettingsEvent = CreateEventW(nullptr, false, false, CommonSharedConstants::TERMINATE_SETTINGS_SHARED_EVENT);
+std::mutex settings_launch_mutex;
+bool g_settings_shutdown_requested = false;
+wil::unique_handle settings_shutdown_event;
+// The Runner UI thread owns open/close and reaps this lifecycle thread.
+// The worker takes settings_launch_mutex only until IPC and the PID are published.
+std::thread settings_thread;
 
 json::JsonObject get_power_toys_settings()
 {
@@ -252,7 +259,7 @@ void dispatch_received_json(const std::wstring& json_to_parse)
             const auto pt_main_window = FindWindowW(pt_tray_icon_window_class, nullptr);
             if (pt_main_window != nullptr)
             {
-                SendMessageW(pt_main_window, WM_CLOSE, 0, 0);
+                PostMessageW(pt_main_window, WM_CLOSE, 0, 0);
             }
         }
         else if (name == L"language")
@@ -406,236 +413,275 @@ BOOL run_settings_non_elevated(LPCWSTR executable_path, LPWSTR executable_args, 
                                           nullptr,
                                           &siex.StartupInfo,
                                           process_info);
-    g_isLaunchInProgress = false;
     return process_created;
 }
 
 DWORD g_settings_process_id = 0;
+bool g_settings_process_closed = true;
 
 void end_settings_ipc()
 {
-    std::unique_lock lock{ ipc_mutex };
-    if (current_settings_ipc)
+    std::unique_ptr<TwoWayPipeMessageIPC> settings_ipc;
     {
-        current_settings_ipc->end();
-        delete current_settings_ipc;
+        std::unique_lock lock{ ipc_mutex };
+        settings_ipc.reset(current_settings_ipc);
         current_settings_ipc = nullptr;
+    }
+    if (settings_ipc)
+    {
+        // Input callbacks only post to the main thread. Join on the Settings
+        // lifecycle thread, without holding the lock used by UI senders.
+        settings_ipc->end();
     }
 }
 
-void terminate_created_settings_process(PROCESS_INFORMATION& process_info)
+bool terminate_created_settings_process(PROCESS_INFORMATION& process_info)
 {
     if (!process_info.hProcess)
     {
-        return;
+        return true;
+    }
+
+    DWORD wait_result = WaitForSingleObject(process_info.hProcess, 0);
+    if (wait_result == WAIT_OBJECT_0)
+    {
+        return true;
+    }
+    if (wait_result == WAIT_FAILED)
+    {
+        Logger::warn(L"Cannot query Settings process state. {}", get_last_error_or_default(GetLastError()));
+        return false;
     }
 
     SetEvent(g_terminateSettingsEvent);
+    auto reset_exit_event = wil::scope_exit([] { ResetEvent(g_terminateSettingsEvent); });
 
     constexpr DWORD timeout_ms = 1500;
-    DWORD wait_result = WaitForSingleObject(process_info.hProcess, timeout_ms);
+    wait_result = WaitForSingleObject(process_info.hProcess, timeout_ms);
     if (wait_result == WAIT_TIMEOUT)
     {
-        Logger::warn(L"Settings launch setup failed after process creation. Terminating orphaned Settings process.");
-        if (TerminateProcess(process_info.hProcess, 0))
+        if (!TerminateProcess(process_info.hProcess, 0))
         {
-            wait_result = WaitForSingleObject(process_info.hProcess, timeout_ms);
-            if (wait_result == WAIT_TIMEOUT)
-            {
-                Logger::warn(L"Settings process did not exit after TerminateProcess fallback.");
-            }
-            else if (wait_result == WAIT_FAILED)
-            {
-                Logger::warn(L"Settings launch cleanup wait after TerminateProcess failed. {}", get_last_error_or_default(GetLastError()));
-            }
+            Logger::warn(L"Failed to terminate Settings. {}", get_last_error_or_default(GetLastError()));
+            return false;
         }
-        else
-        {
-            Logger::warn(L"Settings launch setup failed and terminating orphaned Settings process failed. {}", get_last_error_or_default(GetLastError()));
-        }
+        wait_result = WaitForSingleObject(process_info.hProcess, timeout_ms);
     }
-    else if (wait_result == WAIT_FAILED)
+    if (wait_result != WAIT_OBJECT_0)
     {
-        Logger::warn(L"Settings launch setup failed and waiting for Settings process failed. {}", get_last_error_or_default(GetLastError()));
+        Logger::warn(L"Settings did not finish shutting down; wait result={}", wait_result);
+        return false;
     }
-
-    ResetEvent(g_terminateSettingsEvent);
+    return true;
 }
 
 void run_settings_window(std::optional<std::wstring> settings_window)
 {
     PROCESS_INFORMATION process_info = { 0 };
     HANDLE hToken = nullptr;
-
-    // Arguments for calling the settings executable:
-    // "C:\kit_path\PowerToys.Settings.exe" kit_pipe settings_pipe kit_pid settings_theme
-    // kit_pipe: Kit pipe server.
-    // settings_pipe : Settings pipe server.
-    // kit_pid : Kit process pid.
-    // settings_theme: pass "dark" to start the settings window in dark mode
-
-    // Arg 1: executable path.
-    std::wstring executable_path = get_module_folderpath();
-
-    executable_path.append(L"\\WinUI3Apps\\PowerToys.Settings.exe");
-
-    // Args 2,3: pipe server. Generate unique names for the pipes, if getting a UUID is possible.
-    std::wstring powertoys_pipe_name(L"\\\\.\\pipe\\kit_runner_");
-    std::wstring settings_pipe_name(L"\\\\.\\pipe\\kit_settings_");
-    UUID temp_uuid;
     wchar_t* uuid_chars = nullptr;
-    if (UuidCreate(&temp_uuid) == RPC_S_UUID_NO_ADDRESS)
-    {
-        auto val = get_last_error_message(GetLastError());
-        Logger::warn(L"UuidCreate cannot create guid. {}", val.has_value() ? val.value() : L"");
-    }
-    else if (UuidToString(&temp_uuid, reinterpret_cast<RPC_WSTR*>(&uuid_chars)) != RPC_S_OK)
-    {
-        auto val = get_last_error_message(GetLastError());
-        Logger::warn(L"UuidToString cannot convert to string. {}", val.has_value() ? val.value() : L"");
-    }
-
-    if (uuid_chars != nullptr)
-    {
-        powertoys_pipe_name += std::wstring(uuid_chars);
-        settings_pipe_name += std::wstring(uuid_chars);
-        RpcStringFree(reinterpret_cast<RPC_WSTR*>(&uuid_chars));
-        uuid_chars = nullptr;
-    }
-
-    // Arg 4: process pid.
-    DWORD powertoys_pid = GetCurrentProcessId();
-
-    GeneralSettings save_settings = get_general_settings();
-
-    // Arg 5: settings theme.
-    const std::wstring settings_theme_setting{ save_settings.theme };
-    std::wstring settings_theme = L"system";
-    if (settings_theme_setting == L"dark" || (settings_theme_setting == L"system" && WindowsColors::is_dark_mode()))
-    {
-        settings_theme = L"dark";
-    }
-
-    // Arg 6: elevated status
-    bool isElevated{ save_settings.isElevated };
-    std::wstring settings_elevatedStatus = isElevated ? L"true" : L"false";
-
-    // Arg 7: is user an admin
-    bool isAdmin{ save_settings.isAdmin };
-    std::wstring settings_isUserAnAdmin = isAdmin ? L"true" : L"false";
-
-    // Arg 8: contains if there's a settings window argument. If true, will add one extra argument with the value to the call.
-    std::wstring settings_containsSettingsWindow = settings_window.has_value() ? L"true" : L"false";
-
-    // Args 9, .... : Optional arguments depending on the options presented before. All by the same value.
-
-    // create general settings file to initialize the settings file with installation configurations like :
-    // 1. Run on start up.
-    PTSettingsHelper::save_general_settings(save_settings.to_json());
-
-    std::wstring executable_args = fmt::format(L"\"{}\" {} {} {} {} {} {} {}",
-                                               executable_path,
-                                               powertoys_pipe_name,
-                                               settings_pipe_name,
-                                               std::to_wstring(powertoys_pid),
-                                               settings_theme,
-                                               settings_elevatedStatus,
-                                               settings_isUserAnAdmin,
-                                               settings_containsSettingsWindow);
-
-    if (settings_window.has_value())
-    {
-        executable_args.append(L" ");
-        executable_args.append(settings_window.value());
-    }
-
-    BOOL process_created = false;
-
-    // Commented out to fix #22659
-    // Running settings non-elevated and modules elevated when PowerToys is running elevated results
-    // in settings making changes in one file (non-elevated user dir) and modules are reading settings
-    // from different (elevated user) dir
-    //if (is_process_elevated())
-    //{
-
-    //    auto res = RunNonElevatedFailsafe(executable_path, executable_args, get_module_folderpath());
-    //    process_created = res.has_value();
-    //    if (process_created)
-    //    {
-    //        process_info.dwProcessId = res->processID;
-    //        process_info.hProcess = res->processHandle.release();
-    //        g_isLaunchInProgress = false;
-    //    }
-    //}
-
-    if (FALSE == process_created)
-    {
-        // The runner is not elevated or we failed to create the process using the
-        // attribute list from Windows Explorer (this happens when PowerToys is executed
-        // as Administrator from a non-Administrator user or an error occur trying).
-        // In the second case the Settings process will run elevated.
-        STARTUPINFO startup_info = { sizeof(startup_info) };
-        if (!CreateProcessW(executable_path.c_str(),
-                            executable_args.data(),
-                            nullptr,
-                            nullptr,
-                            FALSE,
-                            0,
-                            nullptr,
-                            nullptr,
-                            &startup_info,
-                            &process_info))
-        {
-            g_isLaunchInProgress = false;
-            goto LExit;
-        }
-    }
-
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
-    {
-        terminate_created_settings_process(process_info);
-        goto LExit;
-    }
+    bool settings_process_closed = true;
+    std::unique_lock launch_lock{ settings_launch_mutex, std::defer_lock };
 
     try
     {
-        std::unique_lock lock{ ipc_mutex };
-        current_settings_ipc = new TwoWayPipeMessageIPC(powertoys_pipe_name, settings_pipe_name, receive_json_send_to_main_thread);
-        current_settings_ipc->start(hToken);
+        // Keep shutdown and process creation ordered, including the interval
+        // before this worker first gets scheduled and before IPC publishes the PID.
+        launch_lock.lock();
+        if (g_settings_shutdown_requested)
+        {
+            goto LExit;
+        }
+
+        // Arguments for calling the settings executable:
+        // "C:\kit_path\PowerToys.Settings.exe" kit_pipe settings_pipe kit_pid settings_theme
+        // kit_pipe: Kit pipe server.
+        // settings_pipe : Settings pipe server.
+        // kit_pid : Kit process pid.
+        // settings_theme: pass "dark" to start the settings window in dark mode
+
+        // Arg 1: executable path.
+        std::wstring executable_path = get_module_folderpath();
+
+        executable_path.append(L"\\WinUI3Apps\\PowerToys.Settings.exe");
+
+        // Args 2,3: pipe server. Generate unique names for the pipes, if getting a UUID is possible.
+        std::wstring powertoys_pipe_name(L"\\\\.\\pipe\\kit_runner_");
+        std::wstring settings_pipe_name(L"\\\\.\\pipe\\kit_settings_");
+        UUID temp_uuid;
+        if (UuidCreate(&temp_uuid) == RPC_S_UUID_NO_ADDRESS)
+        {
+            auto val = get_last_error_message(GetLastError());
+            Logger::warn(L"UuidCreate cannot create guid. {}", val.has_value() ? val.value() : L"");
+        }
+        else if (UuidToString(&temp_uuid, reinterpret_cast<RPC_WSTR*>(&uuid_chars)) != RPC_S_OK)
+        {
+            auto val = get_last_error_message(GetLastError());
+            Logger::warn(L"UuidToString cannot convert to string. {}", val.has_value() ? val.value() : L"");
+        }
+
+        if (uuid_chars != nullptr)
+        {
+            powertoys_pipe_name += std::wstring(uuid_chars);
+            settings_pipe_name += std::wstring(uuid_chars);
+            RpcStringFree(reinterpret_cast<RPC_WSTR*>(&uuid_chars));
+            uuid_chars = nullptr;
+        }
+
+        // Arg 4: process pid.
+        DWORD powertoys_pid = GetCurrentProcessId();
+
+        GeneralSettings save_settings = get_general_settings();
+
+        // Arg 5: settings theme.
+        const std::wstring settings_theme_setting{ save_settings.theme };
+        std::wstring settings_theme = L"system";
+        if (settings_theme_setting == L"dark" || (settings_theme_setting == L"system" && WindowsColors::is_dark_mode()))
+        {
+            settings_theme = L"dark";
+        }
+
+        // Arg 6: elevated status
+        bool isElevated{ save_settings.isElevated };
+        std::wstring settings_elevatedStatus = isElevated ? L"true" : L"false";
+
+        // Arg 7: is user an admin
+        bool isAdmin{ save_settings.isAdmin };
+        std::wstring settings_isUserAnAdmin = isAdmin ? L"true" : L"false";
+
+        // Arg 8: contains if there's a settings window argument. If true, will add one extra argument with the value to the call.
+        std::wstring settings_containsSettingsWindow = settings_window.has_value() ? L"true" : L"false";
+
+        // Args 9, .... : Optional arguments depending on the options presented before. All by the same value.
+
+        // create general settings file to initialize the settings file with installation configurations like :
+        // 1. Run on start up.
+        PTSettingsHelper::save_general_settings(save_settings.to_json());
+
+        std::wstring executable_args = fmt::format(L"\"{}\" {} {} {} {} {} {} {}",
+                                                   executable_path,
+                                                   powertoys_pipe_name,
+                                                   settings_pipe_name,
+                                                   std::to_wstring(powertoys_pid),
+                                                   settings_theme,
+                                                   settings_elevatedStatus,
+                                                   settings_isUserAnAdmin,
+                                                   settings_containsSettingsWindow);
+
+        if (settings_window.has_value())
+        {
+            executable_args.append(L" ");
+            executable_args.append(settings_window.value());
+        }
+
+        BOOL process_created = false;
+
+        // Commented out to fix #22659
+        // Running settings non-elevated and modules elevated when PowerToys is running elevated results
+        // in settings making changes in one file (non-elevated user dir) and modules are reading settings
+        // from different (elevated user) dir
+        //if (is_process_elevated())
+        //{
+
+        //    auto res = RunNonElevatedFailsafe(executable_path, executable_args, get_module_folderpath());
+        //    process_created = res.has_value();
+        //    if (process_created)
+        //    {
+        //        process_info.dwProcessId = res->processID;
+        //        process_info.hProcess = res->processHandle.release();
+        //        g_isLaunchInProgress = false;
+        //    }
+        //}
+
+        if (FALSE == process_created)
+        {
+            // The runner is not elevated or we failed to create the process using the
+            // attribute list from Windows Explorer (this happens when PowerToys is executed
+            // as Administrator from a non-Administrator user or an error occur trying).
+            // In the second case the Settings process will run elevated.
+            STARTUPINFO startup_info = { sizeof(startup_info) };
+            if (!CreateProcessW(executable_path.c_str(),
+                                executable_args.data(),
+                                nullptr,
+                                nullptr,
+                                FALSE,
+                                0,
+                                nullptr,
+                                nullptr,
+                                &startup_info,
+                                &process_info))
+            {
+                Logger::error(L"Failed to start Settings. {}", get_last_error_or_default(GetLastError()));
+                goto LExit;
+            }
+        }
+        settings_process_closed = false;
+
+        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+        {
+            Logger::error(L"Failed to open the Settings IPC token. {}", get_last_error_or_default(GetLastError()));
+            goto LExit;
+        }
+
+        {
+            std::unique_lock lock{ ipc_mutex };
+            current_settings_ipc = new TwoWayPipeMessageIPC(powertoys_pipe_name, settings_pipe_name, receive_json_send_to_main_thread);
+            current_settings_ipc->start(hToken);
+            g_settings_process_id = process_info.dwProcessId;
+            g_isLaunchInProgress = false;
+        }
+        launch_lock.unlock();
+
+        // The lifecycle owner keeps the original process handle and wakes on
+        // either a Settings exit or Runner shutdown, without polling.
+        const HANDLE wait_handles[] = { process_info.hProcess, settings_shutdown_event.get() };
+        const DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, INFINITE);
+        if (wait_result == WAIT_OBJECT_0)
+        {
+            settings_process_closed = true;
+        }
+        else if (wait_result != WAIT_OBJECT_0 + 1)
+        {
+            Logger::warn(L"Cannot wait for the Settings lifecycle; wait result={}", wait_result);
+        }
     }
     catch (const std::exception& ex)
     {
-        Logger::error("Settings launch IPC setup failed. {}", ex.what());
-        end_settings_ipc();
-        terminate_created_settings_process(process_info);
-        goto LExit;
+        Logger::error("Settings launch setup failed. {}", ex.what());
     }
     catch (...)
     {
-        Logger::error(L"Settings launch IPC setup failed with unknown exception.");
-        end_settings_ipc();
-        terminate_created_settings_process(process_info);
-        goto LExit;
-    }
-
-    g_settings_process_id = process_info.dwProcessId;
-    g_isLaunchInProgress = false;
-
-    if (process_info.hProcess)
-    {
-        WaitForSingleObject(process_info.hProcess, INFINITE);
-        if (WaitForSingleObject(process_info.hProcess, INFINITE) != WAIT_OBJECT_0)
-        {
-            show_last_error_message(L"Couldn't wait on the Settings Window to close.", GetLastError(), L"Kit - runner");
-        }
-    }
-    else
-    {
-        auto val = get_last_error_message(GetLastError());
-        Logger::error(L"Process handle is empty. {}", val.has_value() ? val.value() : L"");
+        Logger::error(L"Settings launch setup failed with unknown exception.");
     }
 
 LExit:
+
+    // Never wait for Settings or join its IPC threads while holding either lock.
+    if (launch_lock.owns_lock())
+    {
+        launch_lock.unlock();
+    }
+    if (!settings_process_closed)
+    {
+        settings_process_closed = terminate_created_settings_process(process_info);
+    }
+    end_settings_ipc();
+
+    if (uuid_chars)
+    {
+        RpcStringFree(reinterpret_cast<RPC_WSTR*>(&uuid_chars));
+    }
+    if (hToken)
+    {
+        CloseHandle(hToken);
+    }
+
+    {
+        std::unique_lock lock{ ipc_mutex };
+        g_settings_process_id = 0;
+        g_isLaunchInProgress = false;
+        g_settings_process_closed = settings_process_closed;
+    }
 
     if (process_info.hProcess)
     {
@@ -646,32 +692,24 @@ LExit:
     {
         CloseHandle(process_info.hThread);
     }
-    end_settings_ipc();
-
-    if (hToken)
-    {
-        CloseHandle(hToken);
-    }
-
-    g_isLaunchInProgress = false;
-    g_settings_process_id = 0;
-
-    if (!is_restart_scheduled())
-    {
-        const auto pt_main_window = FindWindowW(pt_tray_icon_window_class, nullptr);
-        if (pt_main_window != nullptr)
-        {
-            PostMessageW(pt_main_window, WM_CLOSE, 0, 0);
-        }
-    }
 }
 
 #define MAX_TITLE_LENGTH 100
 void bring_settings_to_front()
 {
-    auto callback = [](HWND hwnd, LPARAM /*data*/) -> BOOL {
+    DWORD settings_process_id;
+    {
+        std::unique_lock lock{ ipc_mutex };
+        settings_process_id = g_settings_process_id;
+    }
+    if (settings_process_id == 0)
+    {
+        return;
+    }
+
+    auto callback = [](HWND hwnd, LPARAM data) -> BOOL {
         DWORD processId;
-        if (GetWindowThreadProcessId(hwnd, &processId) && processId == g_settings_process_id)
+        if (GetWindowThreadProcessId(hwnd, &processId) && processId == static_cast<DWORD>(data))
         {
             std::wstring windowTitle = L"Kit";
 
@@ -702,60 +740,112 @@ void bring_settings_to_front()
         return TRUE;
     };
 
-    EnumWindows(callback, 0);
+    EnumWindows(callback, static_cast<LPARAM>(settings_process_id));
 }
 
 void open_settings_window(std::optional<std::wstring> settings_window)
 {
-    if (g_settings_process_id != 0)
+    std::unique_lock launch_lock{ settings_launch_mutex };
+    if (g_settings_shutdown_requested)
     {
-        // nl instead of showing the window, send message to it (flyout might need to be hidden, main setting window activated)
-        // bring_settings_to_front();
-        if (current_settings_ipc)
+        return;
+    }
+
+    {
+        std::unique_lock lock{ ipc_mutex };
+        if (g_settings_process_id != 0)
         {
-            if (settings_window.has_value())
+            if (current_settings_ipc)
             {
-                std::wstring msg = L"{\"ShowYourself\":\"" + settings_window.value() + L"\"}";
-                current_settings_ipc->send(msg);
+                if (settings_window.has_value())
+                {
+                    std::wstring msg = L"{\"ShowYourself\":\"" + settings_window.value() + L"\"}";
+                    current_settings_ipc->send(msg);
+                }
+                else
+                {
+                    current_settings_ipc->send(L"{\"ShowYourself\":\"Dashboard\"}");
+                }
             }
-            else
-            {
-                current_settings_ipc->send(L"{\"ShowYourself\":\"Dashboard\"}");
-            }
+            return;
+        }
+        if (g_isLaunchInProgress)
+        {
+            return;
         }
     }
-    else
+
+    // A previous Settings crash or setup failure has finished cleanup. Its worker
+    // no longer needs settings_launch_mutex; never hold ipc_mutex while joining.
+    if (settings_thread.joinable())
     {
-        bool expected_isLaunchInProgress = false;
-        if (g_isLaunchInProgress.compare_exchange_strong(expected_isLaunchInProgress, true))
+        settings_thread.join();
+    }
+
+    if (!settings_shutdown_event)
+    {
+        settings_shutdown_event.reset(CreateEventW(nullptr, TRUE, FALSE, nullptr));
+        if (!settings_shutdown_event)
         {
-            try
-            {
-                std::thread([settings_window]() {
-                    run_settings_window(settings_window);
-                }).detach();
-            }
-            catch (...)
-            {
-                g_isLaunchInProgress = false;
-                throw;
-            }
+            Logger::error(L"Failed to create the Settings shutdown event. {}", get_last_error_or_default(GetLastError()));
+            return;
         }
+    }
+
+    {
+        std::unique_lock lock{ ipc_mutex };
+        if (!g_settings_process_closed)
+        {
+            Logger::warn(L"Cannot reopen Settings because the previous process exit was not confirmed.");
+            return;
+        }
+        bool expected_isLaunchInProgress = false;
+        if (!g_isLaunchInProgress.compare_exchange_strong(expected_isLaunchInProgress, true))
+        {
+            return;
+        }
+    }
+
+    try
+    {
+        settings_thread = std::thread([settings_window = std::move(settings_window)]() mutable {
+            run_settings_window(std::move(settings_window));
+        });
+    }
+    catch (const std::exception& ex)
+    {
+        std::unique_lock lock{ ipc_mutex };
+        g_isLaunchInProgress = false;
+        Logger::error("Failed to create the Settings lifecycle thread. {}", ex.what());
+    }
+    catch (...)
+    {
+        std::unique_lock lock{ ipc_mutex };
+        g_isLaunchInProgress = false;
+        Logger::error(L"Failed to create the Settings lifecycle thread.");
     }
 }
 
-void close_settings_window()
+bool close_settings_window()
 {
-    if (g_settings_process_id != 0)
     {
-        SetEvent(g_terminateSettingsEvent);
-        wil::unique_handle proc{ OpenProcess(PROCESS_ALL_ACCESS, false, g_settings_process_id) };
-        if (proc)
+        std::unique_lock launch_lock{ settings_launch_mutex };
+        g_settings_shutdown_requested = true;
+        if (settings_shutdown_event)
         {
-            WaitForSingleObject(proc.get(), 1500);
-            TerminateProcess(proc.get(), 0);
+            SetEvent(settings_shutdown_event.get());
         }
     }
+
+    // Release the launch lock so an unscheduled worker can observe cancellation.
+    // Joining also waits for child-process cleanup and all Settings IPC threads.
+    if (settings_thread.joinable())
+    {
+        settings_thread.join();
+    }
+
+    std::unique_lock lock{ ipc_mutex };
+    return g_settings_process_closed && g_settings_process_id == 0 && !g_isLaunchInProgress && current_settings_ipc == nullptr;
 }
 
 std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)

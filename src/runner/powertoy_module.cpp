@@ -47,12 +47,6 @@ PowertoyModule::PowertoyModule(PowertoyModuleIface* pt_module, HMODULE handle) :
         throw std::runtime_error("Module not initialized");
     }
 
-    // Kit optimization: Cache immutable metadata at construction
-    // Saves 2-5ms by reducing virtual function call overhead during startup
-    cached_name = pt_module->get_name();
-    cached_key = pt_module->get_key();
-    cached_default_enabled = pt_module->is_enabled_by_default();
-
     remove_hotkey_records();
     update_hotkeys();
     UpdateHotkeyEx();

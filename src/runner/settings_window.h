@@ -14,4 +14,4 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value);
 ESettingsWindowNames ESettingsWindowNames_from_string(std::string value);
 
 void open_settings_window(std::optional<std::wstring> settings_window);
-void close_settings_window();
+bool close_settings_window();

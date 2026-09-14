@@ -4,6 +4,7 @@
 #include "SettingsObserver.h"
 #include <filesystem>
 #include <fstream>
+#include <condition_variable>
 #include <logger.h>
 #include <LightSwitchService/trace.h>
 
@@ -49,18 +50,22 @@ void LightSwitchSettings::InitFileWatcher()
 
                 m_debounceThread = std::jthread([this](std::stop_token stop) {
                     using namespace std::chrono;
+                    std::condition_variable_any delay;
+                    std::unique_lock lock(m_debounceMutex);
                     while (!stop.stop_requested())
                     {
-                        std::this_thread::sleep_for(seconds(3));
+                        delay.wait_for(lock, stop, seconds(3), [] { return false; });
 
                         auto elapsed = steady_clock::now() - m_lastChangeTime;
                         if (elapsed >= seconds(1))
                             break;
                     }
 
+                    m_debouncePending = false;
+                    lock.unlock();
+                    if (stop.stop_requested())
                     {
-                        std::lock_guard<std::mutex> lock(m_debounceMutex);
-                        m_debouncePending = false;
+                        return;
                     }
 
                     Logger::info(L"[LightSwitchSettings] Settings file stabilized, reloading.");
@@ -85,17 +90,17 @@ LightSwitchSettings::~LightSwitchSettings()
 {
     Logger::info(L"[LightSwitchSettings] Cleaning up settings resources...");
 
-    // Stop and join the debounce thread (std::jthread auto-joins, but we can signal stop too)
-    if (m_debounceThread.joinable())
-    {
-        m_debounceThread.request_stop();
-    }
-
-    // Release the file watcher so it closes file handles and background threads
+    // Stop new callbacks before stopping the thread they can create.
     if (m_settingsFileWatcher)
     {
         m_settingsFileWatcher.reset();
         Logger::info(L"[LightSwitchSettings] File watcher stopped.");
+    }
+
+    if (m_debounceThread.joinable())
+    {
+        m_debounceThread.request_stop();
+        m_debounceThread.join();
     }
 
     // Close the Windows event handle

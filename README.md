@@ -14,11 +14,11 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.0.10`.
+Current Kit version: `2.0.12`.
 
 ## Documentation
 
-- [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) — Authoritative guide for developing Kit plugins and modules (WinUI 3 + Mica Alt, PowertoyModuleIface C++ contract, Zero Telemetry, and process watchdog).
+- [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) — Kit plugin and module requirements: the PowerToys C++ contract, registration, WinUI 3 + Mica Alt, logo specifications, isolated data paths, lifecycle, and templates.
 - `doc/devdoc/kit-architecture.md` — Kit architecture reference (lightweight plugin-host direction).
 - `doc/devdoc/powertoys-architecture.md` — verified upstream PowerToys framework architecture reference (Chinese).
 - `doc/devdoc/architecture-comparison.md` — PowerToys vs Kit comparison and startup optimization analysis (Chinese).
@@ -33,40 +33,17 @@ Current Kit version: `2.0.10`.
 
 ## Build Output Structure
 
-Kit uses a version-based build output organization:
+`tools/build/build.ps1` invokes MSBuild with the project-defined output paths. An x64 Debug build uses `x64/Debug/`, `Debug/x64/`, and project-local output directories; the script does not automatically move these outputs into `bin/` or delete them.
 
-```
-Kit/
-├── bin/
-│   ├── debug/
-│   │   ├── 2.0.10/             # Current version debug build
-│   │   │   ├── Kit.exe
-│   │   │   ├── *.dll           (runtime dependencies)
-│   │   │   └── Kit/            (application data subdirectory)
-│   │   └── 2.0.11/             # Future versions
-│   ├── release/
-│   │   ├── 2.0.10/             # Current version release build
-│   │   └── 2.0.11/             # Future versions
-│   └── publish/
-│       ├── 2.0.10.zip          # Packaged release distributions
-│       └── 2.0.11.zip
-```
+| Path | Purpose |
+| --- | --- |
+| `x64/Debug/` | Main x64 Debug runtime output, including `Kit.exe` and `WinUI3Apps/` |
+| `Debug/x64/`, project `bin/` and `obj/` directories | Additional project outputs and intermediate build state |
+| `bin/debug/2.0.12/` | Manually prepared Debug test handoff directory; staging is separate from building |
 
-**Version Numbering:**
-- Version is extracted from `src/common/version/Generated Files/version_gen.h`
-- Current: 2.0.10 (VERSION_MAJOR=2, VERSION_MINOR=0, VERSION_REVISION=10)
-- After each build, outputs are organized into the corresponding version directory
-- Release distributions are packaged as `.zip` files in `bin/publish/`. All build outputs are consolidated into the `bin/` directory at the repository root, and the scattered root-level build directories (`Debug/`, `Release/`, `x64/`, `AnyCPU/`) that MSBuild generates are removed after builds complete.
+The version source is `src/Version.props`; `src/common/version/Generated Files/version_gen.h` is generated from it. Release builds and ZIP packaging are separate steps, and this layout does not indicate that a new Release build or archive has been produced.
 
-**Differences from PowerToys:**
-
-| Aspect | PowerToys | Kit |
-|--------|-----------|-----|
-| **Organization** | Configuration-first (x64/Debug/) | Version-first (bin/debug/2.0.10/) |
-| **Location** | Repository root | Centralized bin/ folder |
-| **Versioning** | Not reflected in paths | Explicit version subdirectories |
-| **Publishing** | Manual packaging | Dedicated bin/publish/ with .zip files |
-| **Cleanup** | Configuration directories persist | Scattered outputs removed, only bin/ kept |
+Runtime settings and logs use `%LOCALAPPDATA%\Kit`, with module data in `%LOCALAPPDATA%\Kit\<ModuleKey>`. Application data is not stored in a `Kit/` subdirectory beside `Kit.exe`; see [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) for the directory and isolation rules.
 
 ## Changelog
 
@@ -137,9 +114,9 @@ Kit's core direction is a lightweight plugin host: keep the main framework (runn
 
 - First-party modules (`Awake`, `Light Switch`) stay in the compiled `KitKnownModules` list for deep integration (Home, Quick Access, settings routes, tests).
 - Third-party plugins are planned to load from a `plugins/` folder (interface DLL + `manifest.json`), with only enabled plugins loaded and a generic settings page rendering each plugin's `get_config` JSON.
-- Official PowerToys module copies need framework prerequisites first (ManagedTelemetry, logger/settings/EtwTrace sync) — see `fix.plan` P0.
+- Official PowerToys module imports require a source-level compatibility review and Kit-specific settings, IPC, and lifecycle integration. Telemetry stays disabled; follow [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md).
 
-Until the plugin host lands, `Light Switch` remains the Kit-authored module following the existing contract route, and `Awake` is the upstream-copied baseline. For comprehensive development instructions, see [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md); use `doc/devdoc/kit-first-plugin.md` for the first-module checklist and `doc/devdoc/kit-development-experience.md` for lessons learned. The actionable phased plan is `fix.plan` (repo root); the target architecture is `doc/devdoc/kit-architecture.md`.
+`Awake` and `Light Switch` are PowerToys-derived modules adapted to Kit's existing contract. For comprehensive development instructions, see [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md); use `doc/devdoc/kit-first-plugin.md` for the first-module checklist and `doc/devdoc/kit-development-experience.md` for lessons learned. The phased plan is `fix.plan` (repo root); the target architecture is `doc/devdoc/kit-architecture.md`.
 
 ## Stability Direction
 
@@ -155,8 +132,8 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 - Keep UI state derived from real settings and module state. Home should show enabled modules consistently, and each Quick Access command should either perform a real action or navigate to the module settings page.
 - Keep Kit storage, backup, window title, and visible text separate from the installed official PowerToys app. Backup defaults should stay generic to Kit's active module settings and not carry inactive PowerToys module-specific files or restore fix-ups.
 - Do not re-enable automatic download/install or telemetry behavior in Kit.
-- Keep installer/updater entry points and settings telemetry inert. The runner may check GitHub releases and write `UpdateState.json`, but `update_now`, installer staging, updater executable launch paths, and the old settings telemetry source must remain inactive unless a future change deliberately replaces them with local-only behavior.
-- Keep GPO policy wrappers and ADMX/ADML policy assets scoped to active modules that currently have policy rules, plus retained product-wide startup/update/diagnostics rules. Do not carry inactive PowerToys module policies, installer-only policy readers, or stale update-toast readers in Kit.
+- Keep release checks explicit and manual. Background checks, retry threads, update toasts, automatic download/install, and settings telemetry are removed or inactive.
+- Keep GPO compatibility entry points at `not_configured` consistently across the runner, Settings, and workers. Importing a module must not re-enable official PowerToys policy reads.
 - Keep DSC-only Settings command-line entry points out of Kit. The retained Settings command-line surface is only the active `set`/`get` compatibility paths; do not restore `setAdditional` unless DSC generation returns as an active feature.
 - Keep OOBE/SCOOBE launch and state paths out of Kit while those windows are not shipped. Do not restore their SettingsAPI helpers, backup rules, resources, or styles unless the full onboarding surface returns as an active feature.
 - Keep the upstream BugReportTool out of the active Kit runtime. Its collection model is broad PowerToys diagnostic state, including inactive modules that Kit does not ship.
@@ -180,7 +157,7 @@ The latest Home work keeps PowerToys behavior but scopes it to Kit's active modu
 
 ## General and Home UI Scope
 
-General keeps the useful PowerToys settings structure but removes automatic update and telemetry controls. The About section shows the Kit version, GitHub repository, and a check-only release prompt. Home uses the PowerToys-style intro, module list, Quick Access, and shortcuts layout, but only for Kit modules.
+General keeps the useful PowerToys settings structure but removes automatic update and telemetry controls. The About section shows the Kit version, GitHub repository, and a manual release check. Home uses the PowerToys-style intro, module list, Quick Access, and shortcuts layout, but only for Kit modules.
 
 Visible UI should use English Kit text. Keep `PowerToys` only where it is still required for build-facing namespaces, assembly names, module interface names, upstream compatibility, or origin attribution.
 

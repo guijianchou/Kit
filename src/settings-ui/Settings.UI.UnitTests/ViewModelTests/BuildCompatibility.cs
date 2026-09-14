@@ -493,10 +493,7 @@ namespace ViewModelTests
                 "src/common/CalculatorEngineCommon/CalculatorEngineCommon.vcxproj",
                 "src/common/FilePreviewCommon/FilePreviewCommon.csproj",
                 "src/common/GPOWrapperProjection/GPOWrapperProjection.csproj",
-                "src/common/PowerToys.ModuleContracts/PowerToys.ModuleContracts.csproj",
-                "src/common/UITestAutomation/UITestAutomation.csproj",
                 "src/dsc/",
-                "src/modules/awake/Awake.ModuleServices/Awake.ModuleServices.csproj",
             };
 
             foreach (var project in inactiveProjects)
@@ -962,18 +959,16 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitRunnerShouldHonorQuickAccessSettingAndUpdateToastBoundary()
+        public void KitRunnerShouldHonorQuickAccessSettingWithoutLaunchingIt()
         {
             var generalSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
-            var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
             var normalizedGeneralSettings = NormalizeLineEndings(generalSettings);
 
             StringAssert.Contains(generalSettings, "enable_quick_access = loaded.GetNamedBoolean(L\"enable_quick_access\", false);");
             StringAssert.Contains(generalSettings, "general_configs.GetNamedBoolean(L\"enable_quick_access\", enable_quick_access)");
             Assert.IsFalse(normalizedGeneralSettings.Contains("\n    enable_quick_access = false;\n", StringComparison.Ordinal), "Runner should not force Quick Access off while Settings exposes the toggle.");
             Assert.IsFalse(generalSettings.Contains("bool new_enable_quick_access = false;", StringComparison.Ordinal), "Runner should apply the Settings-provided Quick Access value.");
-            StringAssert.Contains(updateUtils, "get_general_settings().showNewUpdatesToastNotification");
-            StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic && !alreadyNotified && get_general_settings().showNewUpdatesToastNotification");
+            Assert.IsFalse(generalSettings.Contains("QuickAccessHost::start();", StringComparison.Ordinal), "Enabling Quick Access or changing its hotkey should not start the UI before it is requested.");
         }
 
         [TestMethod]
@@ -1217,7 +1212,10 @@ namespace ViewModelTests
 
             StringAssert.Contains(settingsWindow, "g_isLaunchInProgress.compare_exchange_strong");
             StringAssert.Contains(settingsWindow, "if (!CreateProcessW(executable_path.c_str(),");
-            StringAssert.Contains(settingsWindow, "g_isLaunchInProgress = false;\n            goto LExit;");
+            var cleanup = settingsWindow[settingsWindow.IndexOf("\nLExit:\n", StringComparison.Ordinal)..settingsWindow.IndexOf("#define MAX_TITLE_LENGTH", StringComparison.Ordinal)];
+            StringAssert.Contains(cleanup, "g_settings_process_id = 0;");
+            StringAssert.Contains(cleanup, "g_isLaunchInProgress = false;");
+            Assert.IsFalse(cleanup.Contains("WM_CLOSE", StringComparison.Ordinal), "Settings failure cleanup must not request Runner shutdown.");
         }
 
         [TestMethod]
@@ -1227,7 +1225,7 @@ namespace ViewModelTests
 
             var createProcessSuccess = settingsWindow.IndexOf("if (!CreateProcessW(executable_path.c_str(),", StringComparison.Ordinal);
             var openSettingsWindow = settingsWindow.IndexOf("void open_settings_window(std::optional<std::wstring> settings_window)", StringComparison.Ordinal);
-            var closeSettingsWindow = settingsWindow.IndexOf("void close_settings_window()", openSettingsWindow, StringComparison.Ordinal);
+            var closeSettingsWindow = settingsWindow.IndexOf("bool close_settings_window()", openSettingsWindow, StringComparison.Ordinal);
             var runSettingsWindow = settingsWindow.IndexOf("void run_settings_window(std::optional<std::wstring> settings_window)", StringComparison.Ordinal);
             var openToken = settingsWindow.IndexOf("if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))", StringComparison.Ordinal);
             var ipcStart = settingsWindow.IndexOf("current_settings_ipc->start(hToken);", StringComparison.Ordinal);
@@ -1261,7 +1259,7 @@ namespace ViewModelTests
         {
             var settingsWindow = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp")));
 
-            StringAssert.Contains(settingsWindow, "void terminate_created_settings_process(PROCESS_INFORMATION& process_info)");
+            StringAssert.Contains(settingsWindow, "bool terminate_created_settings_process(PROCESS_INFORMATION& process_info)");
             StringAssert.Contains(settingsWindow, "SetEvent(g_terminateSettingsEvent);");
             StringAssert.Contains(settingsWindow, "constexpr DWORD timeout_ms = 1500;");
             StringAssert.Contains(settingsWindow, "WaitForSingleObject(process_info.hProcess, timeout_ms)");
@@ -1269,13 +1267,14 @@ namespace ViewModelTests
             StringAssert.Contains(settingsWindow, "ResetEvent(g_terminateSettingsEvent)");
 
             var openTokenFailure = settingsWindow.IndexOf("if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))", StringComparison.Ordinal);
-            var cleanupCall = settingsWindow.IndexOf("terminate_created_settings_process(process_info);", openTokenFailure, StringComparison.Ordinal);
+            var cleanupLabel = settingsWindow.IndexOf("\nLExit:\n", openTokenFailure, StringComparison.Ordinal);
+            var cleanupCall = settingsWindow.IndexOf("terminate_created_settings_process(process_info);", cleanupLabel, StringComparison.Ordinal);
             var exitJump = settingsWindow.IndexOf("goto LExit;", openTokenFailure, StringComparison.Ordinal);
 
             Assert.AreNotEqual(-1, openTokenFailure, "Settings launch should keep an OpenProcessToken failure branch.");
             Assert.AreNotEqual(-1, cleanupCall, "Settings launch should terminate a created Settings child if runner IPC setup cannot continue.");
             Assert.AreNotEqual(-1, exitJump, "Settings launch should still exit after IPC setup failure.");
-            Assert.IsTrue(cleanupCall < exitJump, "Settings launch should terminate the created Settings process before leaving the failure path.");
+            Assert.IsTrue(exitJump < cleanupLabel && cleanupLabel < cleanupCall, "Settings launch failures must reach the common child-process cleanup path.");
         }
 
         [TestMethod]
@@ -1288,12 +1287,14 @@ namespace ViewModelTests
             Assert.AreNotEqual(-1, ipcStart, "Settings launch should still start runner/settings IPC.");
             Assert.AreNotEqual(-1, processIdAssignment, "Settings launch should register the Settings process id after IPC setup.");
 
-            var ipcSetupWindow = settingsWindow.Substring(ipcStart, processIdAssignment - ipcStart);
+            var processWait = settingsWindow.IndexOf("if (process_info.hProcess)", processIdAssignment, StringComparison.Ordinal);
+            Assert.AreNotEqual(-1, processWait, "Settings launch should wait for the child after IPC setup.");
+            var ipcSetupWindow = settingsWindow.Substring(ipcStart, processWait - ipcStart);
             StringAssert.Contains(ipcSetupWindow, "catch (const std::exception& ex)");
             StringAssert.Contains(ipcSetupWindow, "catch (...)");
             StringAssert.Contains(ipcSetupWindow, "end_settings_ipc();");
             StringAssert.Contains(ipcSetupWindow, "terminate_created_settings_process(process_info);");
-            StringAssert.Contains(ipcSetupWindow, "goto LExit;");
+            StringAssert.Contains(ipcSetupWindow, "\nLExit:\n");
         }
 
         [TestMethod]
@@ -1335,8 +1336,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
-            StringAssert.Contains(versionProps, "<Version>2.0.10</Version>");
-            StringAssert.Contains(manifest, "Version=\"2.0.10.0\"");
+            StringAssert.Contains(versionProps, "<Version>2.0.12</Version>");
+            StringAssert.Contains(manifest, "Version=\"2.0.12.0\"");
             StringAssert.Contains(readme, "Debug builds use `-NoSign`");
             StringAssert.Contains(manifest, "Local.Kit.SparseApp");
             StringAssert.Contains(manifest, "Kit.SparseApp");
@@ -2879,13 +2880,11 @@ namespace ViewModelTests
             var generalSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
 
             StringAssert.Contains(autoStartHelper, "L\"\\\\Kit\"");
-            StringAssert.Contains(autoStartHelper, "LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER");
-            StringAssert.Contains(autoStartHelper, "delete_legacy_power_toys_auto_start_task_for_this_user");
-            StringAssert.Contains(autoStartHelper, "task_action_points_to_kit_executable");
-            StringAssert.Contains(autoStartHelper, "action_file_name == L\"Kit.exe\"");
+            StringAssert.Contains(autoStartHelper, "read_kit_auto_start_task");
+            StringAssert.Contains(autoStartHelper, "PathFindFileNameW(action_path.get()), L\"Kit.exe\"");
             StringAssert.Contains(autoStartHelper, "HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)");
-            Assert.IsFalse(autoStartHelper.Contains("task_action_matches_current_executable", StringComparison.Ordinal), "Legacy cleanup must handle stale Kit.exe paths, not only the currently running executable path.");
-            Assert.IsFalse(autoStartHelper.Contains("CreateFolder(_bstr_t(LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER)", StringComparison.Ordinal), "Kit must not create new tasks in the legacy PowerToys Task Scheduler folder.");
+            Assert.IsFalse(autoStartHelper.Contains("LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER", StringComparison.Ordinal), "Kit must not inspect or modify the official PowerToys scheduler folder.");
+            Assert.IsFalse(autoStartHelper.Contains("delete_legacy_power_toys_auto_start_task_for_this_user", StringComparison.Ordinal), "Kit startup must not run legacy PowerToys task cleanup.");
             Assert.IsFalse(generalSettings.Contains("gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_enabled || gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_not_configured", StringComparison.Ordinal), "Kit must not create a startup task by default when the startup field is absent and GPO is not configured.");
         }
 
@@ -2922,7 +2921,6 @@ namespace ViewModelTests
             StringAssert.Contains(lightSwitchInterface, "KIT_LIGHTSWITCH_SERVICE_STOP");
             StringAssert.Contains(lightSwitchInterface, "SetEvent(m_service_stop_event_handle)");
             StringAssert.Contains(lightSwitchInterface, "ResetEvent(m_service_stop_event_handle)");
-            StringAssert.Contains(lightSwitchInterface, "if (m_process && WaitForSingleObject(m_process, 0) != WAIT_TIMEOUT)");
             StringAssert.Contains(lightSwitchInterface, "CloseEventHandles();");
             StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_manual_override_event_handle);");
             StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_service_stop_event_handle);");
@@ -2971,21 +2969,20 @@ namespace ViewModelTests
         {
             var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
 
-            StringAssert.Contains(lightSwitchInterface, "void stop_worker_only()");
             StringAssert.Contains(lightSwitchInterface, "void stop_service_if_running()");
-            StringAssert.Contains(lightSwitchInterface, "if (newMode == ScheduleMode::Off)");
+            StringAssert.Contains(lightSwitchInterface, "if (g_settings.m_scheduleMode == ScheduleMode::Off)");
             StringAssert.Contains(lightSwitchInterface, "stop_service_if_running();");
             StringAssert.Contains(lightSwitchInterface, "start_service_if_needed();");
+            var startService = lightSwitchInterface[lightSwitchInterface.IndexOf("void start_service_if_needed()", StringComparison.Ordinal)..lightSwitchInterface.IndexOf("void stop_service_if_running()", StringComparison.Ordinal)];
+            StringAssert.Contains(startService, "g_settings.m_scheduleMode == ScheduleMode::Off");
             Assert.IsTrue(
-                lightSwitchInterface.IndexOf("if (newMode == ScheduleMode::Off)", StringComparison.Ordinal) <
-                lightSwitchInterface.IndexOf("start_service_if_needed();", StringComparison.Ordinal),
-                "LightSwitch schedule changes should branch on Off before starting the service.");
-            Assert.IsFalse(lightSwitchInterface.Contains("/*virtual void stop_worker_only()", StringComparison.Ordinal), "LightSwitch should not keep disabled stop-worker lifecycle code in comments.");
-            Assert.IsFalse(lightSwitchInterface.Contains("/*virtual void stop_service_if_running()", StringComparison.Ordinal), "LightSwitch should not keep disabled stop-service lifecycle code in comments.");
+                startService.IndexOf("g_settings.m_scheduleMode == ScheduleMode::Off", StringComparison.Ordinal) <
+                startService.IndexOf("CreateProcessW", StringComparison.Ordinal),
+                "Every worker start must return early when the schedule is Off.");
         }
 
         [TestMethod]
-        public void KitLightSwitchEnableShouldReportEnabledOnlyAfterServiceLaunchSucceeds()
+        public void KitLightSwitchEnableShouldStartItsListenerWithoutLaunchingWorkerInline()
         {
             var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
 
@@ -2993,35 +2990,34 @@ namespace ViewModelTests
             Assert.AreNotEqual(-1, enableStart, "LightSwitch module interface should expose enable().");
             var enableBody = lightSwitchInterface[enableStart..lightSwitchInterface.IndexOf("// Disable the powertoy", enableStart, StringComparison.Ordinal)];
 
-            StringAssert.Contains(enableBody, "CreateProcessW");
+            StringAssert.Contains(enableBody, "if (m_enabled)");
+            StringAssert.Contains(enableBody, "if (!EnsureEventHandles())");
+            StringAssert.Contains(enableBody, "if (!StartToggleListener())");
             StringAssert.Contains(enableBody, "m_enabled = true;");
+            StringAssert.Contains(enableBody, "m_enabled = false;");
             StringAssert.Contains(enableBody, "Trace::Enable(true);");
+            Assert.IsFalse(enableBody.Contains("CreateProcessW", StringComparison.Ordinal), "Enabling LightSwitch should keep process creation on its listener, including when the schedule is Off.");
             Assert.IsTrue(
-                enableBody.IndexOf("CreateProcessW", StringComparison.Ordinal) <
-                enableBody.IndexOf("m_enabled = true;", StringComparison.Ordinal),
-                "LightSwitch should mark the module enabled only after the service process is created.");
-            Assert.IsTrue(
-                enableBody.IndexOf("m_enabled = true;", StringComparison.Ordinal) <
+                enableBody.IndexOf("if (!StartToggleListener())", StringComparison.Ordinal) <
                 enableBody.IndexOf("Trace::Enable(true);", StringComparison.Ordinal),
-                "LightSwitch enable tracing should reflect a successfully launched service.");
-            Assert.IsFalse(enableBody.TrimStart().StartsWith("virtual void enable()\r\n    {\r\n        m_enabled = true;", StringComparison.Ordinal), "LightSwitch should not set m_enabled before any launch failure path.");
-            Assert.IsFalse(enableBody.Contains("Logger::error(L\"Failed to launch Light Switch process.", StringComparison.Ordinal) && enableBody.Contains("m_enabled = true;\r\n        Logger::info(L\"Enabling Light Switch module...\"", StringComparison.Ordinal), "LightSwitch create-process failure path should not leave m_enabled true.");
+                "LightSwitch should finish starting its manual-toggle listener before reporting successful enablement.");
         }
 
         [TestMethod]
-        public void KitLightSwitchToggleHotkeyShouldToggleThemeWithoutRestartingService()
+        public void KitLightSwitchToggleHotkeyShouldOnlySignalItsListener()
         {
             var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
 
             var hotkeyStart = lightSwitchInterface.IndexOf("virtual bool on_hotkey(size_t hotkeyId) override", StringComparison.Ordinal);
             Assert.AreNotEqual(-1, hotkeyStart, "LightSwitch module interface should expose on_hotkey().");
-            var classEnd = lightSwitchInterface.IndexOf("void LightSwitchInterface::EnsureEventHandles()", hotkeyStart, StringComparison.Ordinal);
+            var classEnd = lightSwitchInterface.IndexOf("bool LightSwitchInterface::EnsureEventHandles()", hotkeyStart, StringComparison.Ordinal);
             Assert.AreNotEqual(-1, classEnd, "LightSwitch module interface class should close before its out-of-line member definitions.");
             var hotkeyAndTail = lightSwitchInterface[hotkeyStart..classEnd];
 
-            StringAssert.Contains(hotkeyAndTail, "ToggleTheme();");
-            Assert.IsFalse(hotkeyAndTail.Contains("enable();", StringComparison.Ordinal), "The toggle-theme hotkey should toggle the theme directly, not relaunch the scheduler service when the schedule is Off and the worker has been stopped.");
-            Assert.IsFalse(hotkeyAndTail.Contains("is_process_running", StringComparison.Ordinal), "The toggle-theme hotkey should not gate the theme toggle on a running scheduler service, and the now-unused is_process_running helper should be removed.");
+            StringAssert.Contains(hotkeyAndTail, "SetEvent(m_toggle_event_handle)");
+            Assert.IsFalse(hotkeyAndTail.Contains("ToggleTheme();", StringComparison.Ordinal), "The low-level keyboard hook must not broadcast theme changes synchronously.");
+            Assert.IsFalse(hotkeyAndTail.Contains("enable();", StringComparison.Ordinal), "The low-level keyboard hook must not enable the module synchronously.");
+            Assert.IsFalse(hotkeyAndTail.Contains("CreateProcessW", StringComparison.Ordinal), "Worker recovery must run on the listener, outside the low-level keyboard hook.");
         }
 
         [TestMethod]

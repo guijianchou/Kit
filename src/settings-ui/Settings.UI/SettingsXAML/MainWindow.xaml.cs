@@ -62,6 +62,10 @@ namespace Microsoft.PowerToys.Settings.UI
                 if (ipcManager != null)
                 {
                     ipcManager.Send(msg);
+
+                    // Send queues asynchronously. Keep the IPC process alive until
+                    // the runner accepts the request and closes the old Settings instance.
+                    return;
                 }
                 else
                 {
@@ -76,7 +80,7 @@ namespace Microsoft.PowerToys.Settings.UI
                     }
                 }
 
-                Environment.Exit(0); // close application
+                Environment.Exit(0); // Standalone mode has no runner to own shutdown.
             });
 
             // send IPC Message
@@ -174,7 +178,7 @@ namespace Microsoft.PowerToys.Settings.UI
             {
                 App.ClearSettingsWindow();
 
-                // Terminate runner so kit.runner does not remain in the background
+                // Request shutdown without waiting on the runner, which waits for Settings to exit.
                 try
                 {
                     App.GetTwoWayIPCManager()?.Send("{\"killrunner\":{}}");
@@ -188,7 +192,10 @@ namespace Microsoft.PowerToys.Settings.UI
                 IntPtr hWndTray = NativeMethods.FindWindow(kitTrayIconWindowClass, kitTrayIconWindowClass);
                 if (hWndTray != IntPtr.Zero)
                 {
-                    NativeMethods.SendMessage(hWndTray, (IntPtr)NativeMethods.WM_COMMAND, (UIntPtr)ID_CLOSE_MENU_COMMAND, UIntPtr.Zero);
+                    if (!NativeMethods.PostMessage(hWndTray, NativeMethods.WM_COMMAND, ID_CLOSE_MENU_COMMAND, IntPtr.Zero))
+                    {
+                        Logger.LogError("Failed to request Kit shutdown.");
+                    }
                 }
 
                 Application.Current.Exit();

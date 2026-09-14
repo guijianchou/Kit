@@ -71,7 +71,7 @@ namespace Awake
 
             _settingsUtils = SettingsUtils.Default;
 
-            LockMutex = new Mutex(true, Core.Constants.AppName, out bool instantiated);
+            LockMutex = new Mutex(true, Core.Constants.SingleInstanceMutexName, out bool instantiated);
 
             try
             {

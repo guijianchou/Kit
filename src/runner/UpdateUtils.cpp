@@ -1,11 +1,9 @@
 #include "pch.h"
 
 #include "UpdateUtils.h"
-#include "general_settings.h"
 #include "tray_icon.h"
 
 #include <common/logger/logger.h>
-#include <common/notifications/notifications.h>
 #include <common/updating/updateState.h>
 #include <common/utils/json.h>
 #include <common/utils/timeutil.h>
@@ -15,7 +13,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <thread>
 
 #include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.Web.Http.h>
@@ -28,20 +25,9 @@ namespace
     constexpr wchar_t KitReleasesPage[] = L"https://github.com/guijianchou/Kit/releases";
     constexpr wchar_t GitHubHtmlUrlField[] = L"html_url";
     constexpr wchar_t KitReleaseCheckUserAgent[] = L"Kit release checker";
-    constexpr std::wstring_view KitUpdateToastTag = L"KitUpdateAvailable";
-    constexpr auto periodicCheckInterval = std::chrono::hours(24);
-    constexpr auto failedRetryInterval = std::chrono::hours(2);
-
-    enum class UpdateCheckMode
-    {
-        Periodic,
-        Manual,
-    };
-
     struct LatestReleaseInfo
     {
         VersionHelper version;
-        std::wstring versionTag;
         std::wstring releasePage;
     };
 
@@ -72,29 +58,6 @@ namespace
 
         const auto savedVersion = version_from_release_page(state.releasePageUrl);
         return savedVersion.has_value() && *savedVersion > current_version();
-    }
-
-    bool is_same_saved_update(const UpdateState& state, const VersionHelper& version)
-    {
-        if (state.state != UpdateState::readyToDownload && state.state != UpdateState::readyToInstall)
-        {
-            return false;
-        }
-
-        const auto savedVersion = version_from_release_page(state.releasePageUrl);
-        return savedVersion.has_value() && *savedVersion == version;
-    }
-
-    bool should_check_now(const UpdateState& state)
-    {
-        if (!state.githubUpdateLastCheckedDate.has_value())
-        {
-            return true;
-        }
-
-        const auto lastCheckedTime = std::chrono::system_clock::from_time_t(*state.githubUpdateLastCheckedDate);
-        const auto elapsed = std::chrono::system_clock::now() - lastCheckedTime;
-        return elapsed < std::chrono::system_clock::duration::zero() || elapsed >= periodicCheckInterval;
     }
 
     void set_update_badge(bool available)
@@ -162,7 +125,7 @@ namespace
             releasePage = std::wstring{ KitReleasesPage } + L"/tag/" + tag;
         }
 
-        return LatestReleaseInfo{ *version, tag, releasePage };
+        return LatestReleaseInfo{ *version, releasePage };
     }
 
     void save_update_available(const LatestReleaseInfo& release)
@@ -185,52 +148,28 @@ namespace
         });
     }
 
-    void save_check_failure(UpdateCheckMode mode)
+    void save_check_failure()
     {
-        UpdateState::store([&](UpdateState& state) {
-            if (mode == UpdateCheckMode::Manual)
-            {
-                state.state = UpdateState::networkError;
-                state.releasePageUrl = {};
-                state.downloadedInstallerFilename = {};
-                state.githubUpdateLastCheckedDate.emplace(timeutil::now());
-            }
+        UpdateState::store([](UpdateState& state) {
+            state.state = UpdateState::networkError;
+            state.releasePageUrl = {};
+            state.downloadedInstallerFilename = {};
+            state.githubUpdateLastCheckedDate.emplace(timeutil::now());
         });
     }
 
-    void show_update_available_toast(const LatestReleaseInfo& release)
-    {
-        std::wstring message = L"Kit ";
-        message += release.versionTag;
-        message += L" is available on GitHub.";
-
-        notifications::show_toast_with_activations(
-            message,
-            L"Kit update available",
-            {},
-            { notifications::link_button{ L"Open releases", release.releasePage } },
-            notifications::toast_params{ .tag = KitUpdateToastTag },
-            release.releasePage);
-    }
-
-    bool check_for_updates(UpdateCheckMode mode)
+    bool check_for_updates()
     {
         std::scoped_lock lock{ updateCheckMutex };
 
         const auto previousState = UpdateState::read();
-        if (mode == UpdateCheckMode::Periodic && !should_check_now(previousState))
-        {
-            set_update_badge(is_update_available(previousState));
-            return true;
-        }
-
         try
         {
             const auto latestRelease = fetch_latest_release();
             if (!latestRelease.has_value())
             {
                 Logger::warn(L"Kit update check did not return a parseable release.");
-                save_check_failure(mode);
+                save_check_failure();
                 set_update_badge(is_update_available(previousState));
                 return false;
             }
@@ -243,65 +182,27 @@ namespace
                 return true;
             }
 
-            const bool alreadyNotified = is_same_saved_update(previousState, latestRelease->version);
             Logger::info(L"Kit update available: current={} latest={}", current_version().toWstring(), latestRelease->version.toWstring());
             save_update_available(*latestRelease);
             set_update_badge(true);
-
-            if (mode == UpdateCheckMode::Periodic && !alreadyNotified && get_general_settings().showNewUpdatesToastNotification)
-            {
-                show_update_available_toast(*latestRelease);
-            }
 
             return true;
         }
         catch (...)
         {
             Logger::warn(L"Kit update check failed.");
-            save_check_failure(mode);
+            save_check_failure();
             set_update_badge(is_update_available(previousState));
             return false;
         }
     }
 }
 
-void PeriodicUpdateWorker()
-{
-    std::thread([] {
-        winrt::init_apartment(winrt::apartment_type::multi_threaded);
-
-        set_update_badge(is_update_available(UpdateState::read()));
-
-        bool retryAfterFailure = false;
-        while (true)
-        {
-            if (retryAfterFailure)
-            {
-                std::this_thread::sleep_for(failedRetryInterval);
-            }
-            else
-            {
-                const auto state = UpdateState::read();
-                if (state.githubUpdateLastCheckedDate.has_value())
-                {
-                    const auto lastCheckedTime = std::chrono::system_clock::from_time_t(*state.githubUpdateLastCheckedDate);
-                    const auto elapsed = std::chrono::system_clock::now() - lastCheckedTime;
-                    if (elapsed > std::chrono::system_clock::duration::zero() && elapsed < periodicCheckInterval)
-                    {
-                        std::this_thread::sleep_for(periodicCheckInterval - elapsed);
-                    }
-                }
-            }
-
-            retryAfterFailure = !check_for_updates(UpdateCheckMode::Periodic);
-        }
-    }).detach();
-}
-
 void CheckForUpdatesCallback()
 {
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
-    check_for_updates(UpdateCheckMode::Manual);
+    auto uninitialize = wil::scope_exit([] { winrt::uninit_apartment(); });
+    check_for_updates();
 }
 
 SHELLEXECUTEINFOW LaunchPowerToysUpdate(const wchar_t*)

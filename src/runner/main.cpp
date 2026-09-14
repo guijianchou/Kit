@@ -10,7 +10,6 @@
 #include "general_settings.h"
 #include "restart_elevated.h"
 #include "RestartManagement.h"
-#include "UpdateUtils.h"
 #include "Generated files/resource.h"
 
 #include <common/comUtils/comUtils.h>
@@ -22,7 +21,6 @@
 #include <common/utils/os-detect.h>
 #include <common/utils/processApi.h>
 #include <common/utils/resources.h>
-#include <common/utils/clean_video_conference.h>
 
 #include "ActionRunnerUtils.h"
 
@@ -46,7 +44,6 @@
 #include <common/utils/window.h>
 #include <common/version/version.h>
 #include <common/utils/string_utils.h>
-#include <common/utils/gpo.h>
 
 // disabling warning 4458 - declaration of 'identifier' hides class member
 // to avoid warnings from GDI files - can't add winRT directory to external code
@@ -110,39 +107,6 @@ void chdir_current_executable()
     }
 }
 
-// Kit optimization: Only clean video conference driver once
-// Saves 10-20ms on subsequent elevated runs
-void clean_video_conference_once()
-{
-    const wchar_t* regKey = L"Software\\Microsoft\\PowerToys\\Kit";
-    const wchar_t* regValue = L"VideoConferenceCleanupDone";
-
-    DWORD cleanupDone = 0;
-    DWORD size = sizeof(cleanupDone);
-    HKEY hKey = nullptr;
-
-    // Try to read existing flag
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, regKey, 0, KEY_READ, &hKey) == ERROR_SUCCESS)
-    {
-        RegQueryValueExW(hKey, regValue, nullptr, nullptr, reinterpret_cast<LPBYTE>(&cleanupDone), &size);
-        RegCloseKey(hKey);
-    }
-
-    if (cleanupDone == 0)
-    {
-        // First run or cleanup not done yet - perform cleanup
-        clean_video_conference();
-
-        // Mark as done
-        if (RegCreateKeyExW(HKEY_CURRENT_USER, regKey, 0, nullptr, 0, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS)
-        {
-            cleanupDone = 1;
-            RegSetValueExW(hKey, regValue, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&cleanupDone), sizeof(cleanupDone));
-            RegCloseKey(hKey);
-        }
-    }
-}
-
 inline wil::unique_mutex_nothrow create_msi_mutex()
 {
     return createAppMutex(KIT_MSI_MUTEX_NAME);
@@ -160,13 +124,12 @@ void open_menu_from_another_instance(std::optional<std::string> settings_window)
     SetForegroundWindow(hwnd_main); // Bring the settings window to the front
 }
 
-int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, bool showRestartNotificationAfterUpdate, const json::JsonObject& startupGeneralSettings)
+int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow, const json::JsonObject& startupGeneralSettings, std::chrono::steady_clock::time_point start_time)
 {
-    auto start_time = std::chrono::high_resolution_clock::now();
-    Logger::info("Runner is starting. Elevated={} showRestartNotificationAfterUpdate={}", isProcessElevated, showRestartNotificationAfterUpdate);
+    Logger::info("Runner is starting. Elevated={}", isProcessElevated);
 
     auto log_timing = [&start_time](const char* stage) {
-        auto now = std::chrono::high_resolution_clock::now();
+        auto now = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
         Logger::info("STARTUP_TIMING: {} at {}ms", stage, duration);
     };
@@ -188,12 +151,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
     start_tray_icon(isProcessElevated, settings.showThemeAdaptiveTrayIcon);
     log_timing("Tray Icon");
 
-    PeriodicUpdateWorker();
-    log_timing("Update Worker");
-
-    // OPTIMIZATION: Defer Quick Access launch until first use (Win+Space)
-    // Saves 200-400ms on startup by avoiding WinUI3 process spawn
-    // Quick Access will be lazily initialized on first hotkey press
+    // Register the shortcut without launching Quick Access until it is requested.
     update_quick_access_hotkey(settings.enableQuickAccess, settings.quickAccessShortcut);
     log_timing("Quick Access Hotkey");
 
@@ -206,30 +164,8 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
     int result = -1;
     try
     {
-        if (showRestartNotificationAfterUpdate)
-        {
-            std::thread{
-                [] {
-                    // Wait a bit, because Windows has a delay until it picks up toast notification registration in the registry
-                    Sleep(10000);
-                    Logger::info("Showing toast notification asking to restart PC");
-                    notifications::show_toast(GET_RESOURCE_STRING(IDS_PT_VERSION_CHANGE_ASK_FOR_COMPUTER_RESTART).c_str(), KIT_DISPLAY_NAME);
-                }
-            }.detach();
-        }
-
         chdir_current_executable();
         log_timing("Chdir");
-
-        // We deprecated a utility called Video Conference Mute, which registered itself as a video input device.
-        // When running elevated, we try to clean up the device registration from previous installations.
-        // This is done here too because a user-scope installer won't be able to remove the driver registration due to lack of permissions.
-        // Kit optimization: Only perform cleanup once per machine to save 10-20ms on subsequent runs
-        if (isProcessElevated)
-        {
-            clean_video_conference_once();
-            log_timing("Video Conference Cleanup");
-        }
 
         // Load Kit module DLLs
 
@@ -270,9 +206,10 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         Trace::EventLaunch(product_version, isProcessElevated);
         log_timing("Event Launch");
 
-        Logger::info("STARTUP_TIMING: Total startup time: {}ms",
+        // This measures Runner initialization, not Settings or Worker readiness.
+        Logger::info("STARTUP_TIMING: Runner initialization since WinMain: {}ms",
             std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::high_resolution_clock::now() - start_time).count());
+                std::chrono::steady_clock::now() - start_time).count());
 
         if (openSettings)
         {
@@ -373,6 +310,7 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
 
 int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR lpCmdLine, int /*nCmdShow*/)
 {
+    const auto startupStartTime = std::chrono::steady_clock::now();
     Gdiplus::GdiplusStartupInput gpStartupInput;
     ULONG_PTR gpToken;
     GdiplusStartup(&gpToken, &gpStartupInput, NULL);
@@ -442,8 +380,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         return 0;
     }
 
-    const bool showRestartNotificationAfterUpdate = false;
-
     int result = 0;
     try
     {
@@ -460,13 +396,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         const bool run_elevated_setting = general_settings.GetNamedBoolean(L"run_elevated", false);
         const bool with_restartedElevated_arg = cmdLine.find("--restartedElevated") != std::string::npos;
 
-        bool dataDiagnosticsDisabledByGpo = powertoys_gpo::getAllowDataDiagnosticsValue() == powertoys_gpo::gpo_rule_configured_disabled;
-        if (dataDiagnosticsDisabledByGpo)
-        {
-            Logger::info(L"Data diagnostics: Data diagnostics is disabled by GPO.");
-            PTSettingsHelper::save_data_diagnostics(false);
-        }
-
         if (elevated && with_dont_elevate_arg && !run_elevated_setting)
         {
             Logger::info("Scheduling restart as non elevated");
@@ -481,7 +410,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
                 Logger::info("Restart as elevated failed. Running non-elevated.");
             }
 
-            result = runner(elevated, open_settings, settings_window, showRestartNotificationAfterUpdate, general_settings);
+            result = runner(elevated, open_settings, settings_window, general_settings, startupStartTime);
 
             if (result == 0)
             {
@@ -503,6 +432,11 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         result = -1;
     }
 
+    // Finish the old UI before a restarted runner can create a new one using
+    // the same Settings exit event. This also covers a failed tray-icon setup.
+    stop_tray_icon();
+    const bool settings_closed = close_settings_window();
+
     // We need to release the mutexes to be able to restart the application
     if (msi_mutex)
     {
@@ -512,13 +446,16 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     if (is_restart_scheduled())
     {
         modules().clear();
-        if (!restart_if_scheduled())
+        if (!settings_closed)
+        {
+            Logger::error("Scheduled restart cancelled because the old Settings process did not exit.");
+            result = -1;
+        }
+        else if (!restart_if_scheduled())
         {
             // If it's not possible to restart non-elevated due to some condition in the user's configuration, user should start PowerToys manually.
             Logger::warn("Scheduled restart failed. Couldn't restart non-elevated. PowerToys exits here because retrying it would just mean failing in a loop.");
         }
     }
-    stop_tray_icon();
-
     return result;
 }

@@ -7,6 +7,7 @@
 #include <rpc.h>
 #include <new>
 #include <memory>
+#include <atomic>
 
 #include <common/logger/logger.h>
 #include <common/utils/process_path.h>
@@ -27,6 +28,9 @@ namespace
     std::wstring app_pipe_name;
     std::unique_ptr<TwoWayPipeMessageIPC> quick_access_ipc;
     std::mutex quick_access_mutex;
+    std::mutex show_request_mutex;
+    std::atomic_bool show_pending = false;
+    wil::unique_threadpool_work show_work;
 
     bool is_process_active_locked()
     {
@@ -247,20 +251,55 @@ namespace QuickAccessHost
 
     void show()
     {
-        start();
-        std::scoped_lock lock(quick_access_mutex);
-
-        if (show_event)
+        std::unique_lock lock(show_request_mutex, std::try_to_lock);
+        if (!lock.owns_lock())
         {
-            if (!SetEvent(show_event.get()))
+            // A hotkey arriving during shutdown must not wait for process cleanup.
+            return;
+        }
+        if (!show_work)
+        {
+            show_work.reset(CreateThreadpoolWork(
+                [](PTP_CALLBACK_INSTANCE, PVOID, PTP_WORK) noexcept {
+                    try
+                    {
+                        winrt::init_apartment(winrt::apartment_type::multi_threaded);
+                        auto uninitialize = wil::scope_exit([] { winrt::uninit_apartment(); });
+                        start();
+                        std::scoped_lock process_lock(quick_access_mutex);
+                        if (show_event && !SetEvent(show_event.get()))
+                        {
+                            Logger::warn(L"QuickAccessHost: failed to signal show event. error={}.", GetLastError());
+                        }
+                    }
+                    catch (...)
+                    {
+                        Logger::error(L"QuickAccessHost: failed to show Quick Access.");
+                    }
+                    show_pending = false;
+                },
+                nullptr,
+                nullptr));
+            if (!show_work)
             {
-                Logger::warn(L"QuickAccessHost: failed to signal show event. error={}.", GetLastError());
+                Logger::error(L"QuickAccessHost: failed to create launch work. error={}.", GetLastError());
+                return;
             }
+        }
+
+        // Coalesce repeated hotkeys while a cold launch is already in progress.
+        if (!show_pending.exchange(true))
+        {
+            SubmitThreadpoolWork(show_work.get());
         }
     }
 
     void stop()
     {
+        std::scoped_lock request_lock(show_request_mutex);
+        // WIL cancels queued callbacks and waits for an active callback before closing the work.
+        show_work.reset();
+        show_pending = false;
         Logger::info(L"QuickAccessHost::stop() called");
         std::unique_lock lock(quick_access_mutex);
         if (exit_event)

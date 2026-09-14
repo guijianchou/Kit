@@ -309,7 +309,7 @@ try {
         if ($filePattern.EndsWith('\*')) {
             # Copy directory contents
             $sourceDir = $sourcePath.TrimEnd('\*')
-            $targetDir = Join-Path $stagingDir (Split-Path $relativePath.TrimEnd('\*') -Parent)
+            $targetDir = Join-Path $stagingDir (Split-Path $relativePath -Parent)
             if (Test-Path $sourceDir) {
                 Copy-Item -Path "$sourceDir\*" -Destination $targetDir -Force -ErrorAction SilentlyContinue
             }

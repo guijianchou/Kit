@@ -56,6 +56,7 @@
     <!-- Match projects starting with UnitTests- or UITest- prefix -->
     <_IsSkippedTestProject Condition="$(_ProjectName.StartsWith('UnitTests-'))">true</_IsSkippedTestProject>
     <_IsSkippedTestProject Condition="$(_ProjectName.StartsWith('UITest-'))">true</_IsSkippedTestProject>
+    <_IsSkippedTestProject Condition="'$(_ProjectName)' == 'UITestAutomation'">true</_IsSkippedTestProject>
     <!-- Match projects in a Tests folder -->
     <_IsSkippedTestProject Condition="$(MSBuildProjectDirectory.Contains('\Tests\'))">true</_IsSkippedTestProject>
   </PropertyGroup>

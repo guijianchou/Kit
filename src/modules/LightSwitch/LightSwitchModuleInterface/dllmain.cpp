@@ -8,9 +8,12 @@
 #include <locale>
 #include <codecvt>
 #include <common/utils/logger_helper.h>
+#include <common/utils/process_path.h>
 #include "ThemeHelper.h"
 #include <thread>
 #include <atomic>
+#include <mutex>
+#include <filesystem>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -89,9 +92,9 @@ inline ScheduleMode FromString(const std::wstring& str)
 // These are the properties shown in the Settings page.
 struct ModuleSettings
 {
-    bool m_changeSystem = true;
-    bool m_changeApps = true;
-    ScheduleMode m_scheduleMode = ScheduleMode::Off;
+    std::atomic<bool> m_changeSystem{ true };
+    std::atomic<bool> m_changeApps{ true };
+    std::atomic<ScheduleMode> m_scheduleMode{ ScheduleMode::Off };
     int m_lightTime = 480;
     int m_darkTime = 1200;
     int m_sunrise_offset = 0;
@@ -103,23 +106,26 @@ struct ModuleSettings
 class LightSwitchInterface : public PowertoyModuleIface
 {
 private:
-    bool m_enabled = false;
+    std::atomic<bool> m_enabled{ false };
 
+    // Only the listener accesses the worker while enabled; disable joins it before cleanup.
     HANDLE m_process{ nullptr };
     HANDLE m_manual_override_event_handle{ nullptr };
     HANDLE m_service_stop_event_handle{ nullptr };
     HANDLE m_toggle_event_handle{ nullptr };
+    HANDLE m_control_event_handle{ nullptr };
     std::thread m_toggle_thread;
-    std::atomic<bool> m_toggle_thread_running{ false };
+    std::mutex m_lifecycle_mutex;
+    std::mutex m_event_mutex;
 
     Hotkey m_toggle_theme_hotkey = { .win = true, .ctrl = true, .shift = true, .alt = false, .key = 'D' };
 
     void init_settings();
-    void EnsureEventHandles();
+    bool EnsureEventHandles();
     void CloseHandleIfSet(HANDLE& handle);
     void CloseEventHandles();
     void ToggleTheme();
-    void StartToggleListener();
+    bool StartToggleListener();
     void StopToggleListener();
     void close_process_handle();
 
@@ -127,8 +133,6 @@ public:
     LightSwitchInterface()
     {
         LoggerHelpers::init_logger(L"LightSwitch", L"ModuleInterface", LogSettings::lightSwitchLoggerName);
-
-        EnsureEventHandles();
 
         init_settings();
     };
@@ -143,6 +147,7 @@ public:
     {
         // Ensure worker threads/process handles are cleaned up before destruction
         disable();
+        close_process_handle();
         delete this;
     }
 
@@ -263,6 +268,7 @@ public:
         try
         {
             auto values = PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+            auto newMode = g_settings.m_scheduleMode.load();
 
             parse_hotkey(values);
 
@@ -278,23 +284,7 @@ public:
 
             if (auto v = values.get_string_value(L"scheduleMode"))
             {
-                auto newMode = FromString(*v);
-                if (newMode != g_settings.m_scheduleMode)
-                {
-                    Logger::info(L"[LightSwitchInterface] Schedule mode changed from {} to {}",
-                                 ToString(g_settings.m_scheduleMode),
-                                 ToString(newMode));
-                    g_settings.m_scheduleMode = newMode;
-
-                    if (newMode == ScheduleMode::Off)
-                    {
-                        stop_service_if_running();
-                    }
-                    else
-                    {
-                        start_service_if_needed();
-                    }
-                }
+                newMode = FromString(*v);
             }
 
             if (auto v = values.get_int_value(L"lightTime"))
@@ -327,15 +317,28 @@ public:
             }
 
             values.save_to_settings_file();
+
+            // The worker must see the persisted mode before it is started or resumed.
+            g_settings.m_scheduleMode = newMode;
+            std::lock_guard lock(m_event_mutex);
+            if (m_enabled && m_control_event_handle)
+            {
+                SetEvent(m_control_event_handle);
+            }
         }
-        catch (const std::exception&)
+        catch (...)
         {
             Logger::error("[Light Switch] set_config: Failed to parse or apply config.");
         }
     }
 
-    virtual void start_service_if_needed()
+    void start_service_if_needed()
     {
+        if (!m_enabled || g_settings.m_scheduleMode == ScheduleMode::Off)
+        {
+            return;
+        }
+
         if (m_process && WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT)
         {
             Logger::debug(L"[LightSwitchInterface] Service already running, skipping start.");
@@ -344,110 +347,30 @@ public:
 
         close_process_handle();
 
-        if (g_settings.m_scheduleMode != ScheduleMode::Off)
-        {
-            Logger::info(L"[LightSwitchInterface] Starting LightSwitchService due to active schedule mode.");
-            enable();
-        }
-    }
-
-    void stop_worker_only()
-    {
-        if (m_process)
-        {
-            Logger::info(L"[LightSwitchInterface] Stopping LightSwitchService (worker only).");
-            EnsureEventHandles();
-
-            if (m_service_stop_event_handle)
-            {
-                SetEvent(m_service_stop_event_handle);
-            }
-
-            DWORD result = WaitForSingleObject(m_process, LIGHTSWITCH_SHUTDOWN_WAIT_MS);
-
-            if (result == WAIT_TIMEOUT)
-            {
-                Logger::warn("Light Switch: Process didn't exit in time. Forcing termination.");
-                TerminateProcess(m_process, 0);
-                WaitForSingleObject(m_process, LIGHTSWITCH_SHUTDOWN_WAIT_MS);
-            }
-            else if (result == WAIT_FAILED)
-            {
-                Logger::warn(L"Light Switch: Failed to wait for worker shutdown. {}", get_last_error_or_default(GetLastError()));
-                TerminateProcess(m_process, 0);
-                WaitForSingleObject(m_process, LIGHTSWITCH_SHUTDOWN_WAIT_MS);
-            }
-
-            if (m_service_stop_event_handle)
-            {
-                ResetEvent(m_service_stop_event_handle);
-            }
-
-            close_process_handle();
-        }
-    }
-
-    void stop_service_if_running()
-    {
-        if (m_process && WaitForSingleObject(m_process, 0) != WAIT_TIMEOUT)
-        {
-            close_process_handle();
-            return;
-        }
-
-        if (m_process)
-        {
-            Logger::info(L"[LightSwitchInterface] Stopping LightSwitchService due to schedule OFF.");
-            stop_worker_only();
-        }
-    }
-
-    virtual void enable()
-    {
-        Logger::info(L"Enabling Light Switch module...");
-
         unsigned long powertoys_pid = GetCurrentProcessId();
         std::wstring args = L"--pid " + std::to_wstring(powertoys_pid);
-        std::wstring exe_name = L"LightSwitchService\\PowerToys.LightSwitchService.exe";
-
-        std::wstring resolved_path(MAX_PATH, L'\0');
-        DWORD result = SearchPathW(
-            nullptr,
-            exe_name.c_str(),
-            nullptr,
-            static_cast<DWORD>(resolved_path.size()),
-            resolved_path.data(),
-            nullptr);
-
-        if (result == 0 || result >= resolved_path.size())
+        const auto module_path = get_module_filename(reinterpret_cast<HMODULE>(&__ImageBase));
+        if (module_path.empty())
         {
-            Logger::error(
-                L"Failed to locate Light Switch executable named '{}' at location '{}'",
-                exe_name,
-                resolved_path.c_str());
+            Logger::error(L"Failed to resolve the Light Switch module path. {}", get_last_error_or_default(GetLastError()));
             return;
         }
 
-        EnsureEventHandles();
-        if (m_service_stop_event_handle)
-        {
-            ResetEvent(m_service_stop_event_handle);
-        }
-
-        resolved_path.resize(result);
-        Logger::debug(L"Resolved executable path: {}", resolved_path);
+        const auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"LightSwitchService" / L"PowerToys.LightSwitchService.exe").wstring();
+        ResetEvent(m_service_stop_event_handle);
+        ResetEvent(m_manual_override_event_handle);
 
         std::wstring command_line = L"\"" + resolved_path + L"\" " + args;
 
         STARTUPINFO si = { sizeof(si) };
-        PROCESS_INFORMATION pi;
+        PROCESS_INFORMATION pi{};
 
         if (!CreateProcessW(
                 resolved_path.c_str(),
                 command_line.data(),
                 nullptr,
                 nullptr,
-                TRUE,
+                FALSE,
                 0,
                 nullptr,
                 nullptr,
@@ -459,25 +382,92 @@ public:
         }
 
         Logger::info(L"Light Switch process launched successfully (PID: {}).", pi.dwProcessId);
-        close_process_handle();
         m_process = pi.hProcess;
         CloseHandle(pi.hThread);
+    }
 
-        StartToggleListener();
-        m_enabled = true;
+    void stop_service_if_running()
+    {
+        if (!m_process)
+        {
+            return;
+        }
+
+        DWORD result = WaitForSingleObject(m_process, 0);
+        if (result == WAIT_TIMEOUT)
+        {
+            Logger::info(L"[LightSwitchInterface] Stopping LightSwitchService.");
+            SetEvent(m_service_stop_event_handle);
+            result = WaitForSingleObject(m_process, LIGHTSWITCH_SHUTDOWN_WAIT_MS);
+        }
+
+        if (result == WAIT_TIMEOUT || result == WAIT_FAILED)
+        {
+            Logger::warn(L"Light Switch worker did not exit after the stop signal; terminating it.");
+            if (!TerminateProcess(m_process, 0))
+            {
+                Logger::warn(L"Failed to terminate Light Switch worker. {}", get_last_error_or_default(GetLastError()));
+            }
+            result = WaitForSingleObject(m_process, LIGHTSWITCH_SHUTDOWN_WAIT_MS);
+        }
+
+        if (result != WAIT_OBJECT_0)
+        {
+            Logger::error(L"Light Switch worker shutdown could not be confirmed.");
+            return;
+        }
+
+        close_process_handle();
+        ResetEvent(m_service_stop_event_handle);
+        ResetEvent(m_manual_override_event_handle);
+    }
+
+    virtual void enable()
+    {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
+        if (m_enabled)
+        {
+            std::lock_guard eventLock(m_event_mutex);
+            SetEvent(m_control_event_handle);
+            return;
+        }
+
+        StopToggleListener();
+        {
+            std::lock_guard eventLock(m_event_mutex);
+            if (!EnsureEventHandles())
+            {
+                Logger::error(L"Failed to create Light Switch events. {}", get_last_error_or_default(GetLastError()));
+                CloseEventHandles();
+                return;
+            }
+
+            ResetEvent(m_toggle_event_handle);
+            ResetEvent(m_control_event_handle);
+            m_enabled = true;
+        }
+
+        if (!StartToggleListener())
+        {
+            std::lock_guard eventLock(m_event_mutex);
+            m_enabled = false;
+            CloseEventHandles();
+            return;
+        }
+
         Trace::Enable(true);
     }
 
     // Disable the powertoy
     virtual void disable()
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         Logger::info("Light Switch disabling");
 
         Trace::Enable(false);
         StopToggleListener();
-        stop_service_if_running();
+        std::lock_guard eventLock(m_event_mutex);
         CloseEventHandles();
-        m_enabled = false;
     }
 
     // Returns if the powertoys is enabled
@@ -530,35 +520,52 @@ public:
 
     virtual bool on_hotkey(size_t hotkeyId) override
     {
-        if (m_enabled && hotkeyId == 0)
+        std::lock_guard lock(m_event_mutex);
+        if (m_enabled && hotkeyId == 0 && m_toggle_event_handle)
         {
-            Logger::trace(L"Light Switch hotkey pressed");
-            Trace::ShortcutInvoked();
-            Logger::info(L"[Light Switch] Hotkey triggered: Toggle Theme");
-            ToggleTheme();
-            return true;
+            // Keep the low-level keyboard hook free of process startup and theme broadcasts.
+            return SetEvent(m_toggle_event_handle) != FALSE;
         }
 
         return false;
     }
 };
 
-void LightSwitchInterface::EnsureEventHandles()
+bool LightSwitchInterface::EnsureEventHandles()
 {
     if (!m_manual_override_event_handle)
     {
         m_manual_override_event_handle = CreateEventW(nullptr, TRUE, FALSE, KIT_LIGHTSWITCH_MANUAL_OVERRIDE);
+        if (!m_manual_override_event_handle)
+        {
+            return false;
+        }
     }
 
     if (!m_service_stop_event_handle)
     {
         m_service_stop_event_handle = CreateEventW(nullptr, TRUE, FALSE, KIT_LIGHTSWITCH_SERVICE_STOP);
+        if (!m_service_stop_event_handle)
+        {
+            return false;
+        }
     }
 
     if (!m_toggle_event_handle)
     {
         m_toggle_event_handle = CreateDefaultEvent(CommonSharedConstants::LIGHTSWITCH_TOGGLE_EVENT);
+        if (!m_toggle_event_handle)
+        {
+            return false;
+        }
     }
+
+    if (!m_control_event_handle)
+    {
+        m_control_event_handle = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    }
+
+    return m_control_event_handle != nullptr;
 }
 
 void LightSwitchInterface::CloseHandleIfSet(HANDLE& handle)
@@ -575,6 +582,7 @@ void LightSwitchInterface::CloseEventHandles()
     CloseHandleIfSet(m_manual_override_event_handle);
     CloseHandleIfSet(m_service_stop_event_handle);
     CloseHandleIfSet(m_toggle_event_handle);
+    CloseHandleIfSet(m_control_event_handle);
 }
 
 void LightSwitchInterface::close_process_handle()
@@ -593,57 +601,103 @@ void LightSwitchInterface::ToggleTheme()
         SetAppsTheme(!GetCurrentAppsTheme());
     }
 
-    EnsureEventHandles();
-
-    if (m_manual_override_event_handle)
+    if (m_process && g_settings.m_scheduleMode != ScheduleMode::Off)
     {
         SetEvent(m_manual_override_event_handle);
         Logger::debug(L"[Light Switch] Manual override event set");
     }
 }
 
-void LightSwitchInterface::StartToggleListener()
+bool LightSwitchInterface::StartToggleListener()
 {
-    if (m_toggle_thread_running || !m_toggle_event_handle)
+    try
     {
-        return;
+        m_toggle_thread = std::thread([this]() {
+            try
+            {
+                start_service_if_needed();
+                while (m_enabled)
+                {
+                    HANDLE events[] = { m_control_event_handle, m_toggle_event_handle, m_process };
+                    const DWORD count = m_process ? 3 : 2;
+                    const DWORD waitResult = WaitForMultipleObjects(count, events, FALSE, INFINITE);
+                    if (!m_enabled)
+                    {
+                        break;
+                    }
+
+                    if (waitResult == WAIT_OBJECT_0)
+                    {
+                        if (g_settings.m_scheduleMode == ScheduleMode::Off)
+                        {
+                            stop_service_if_running();
+                        }
+                        else
+                        {
+                            start_service_if_needed();
+                        }
+                    }
+                    else if (waitResult == WAIT_OBJECT_0 + 1)
+                    {
+                        Trace::ShortcutInvoked();
+                        if (g_settings.m_scheduleMode != ScheduleMode::Off &&
+                            (!m_process || WaitForSingleObject(m_process, 0) != WAIT_TIMEOUT))
+                        {
+                            // Match upstream: the first action after a worker exit restores the schedule.
+                            start_service_if_needed();
+                        }
+                        else
+                        {
+                            ToggleTheme();
+                        }
+                    }
+                    else if (waitResult == WAIT_OBJECT_0 + 2 && m_process)
+                    {
+                        Logger::warn(L"Light Switch worker exited; the next action or settings change can restart it.");
+                        close_process_handle();
+                    }
+                    else
+                    {
+                        Logger::error(L"Light Switch listener wait failed. {}", get_last_error_or_default(GetLastError()));
+                        break;
+                    }
+                }
+            }
+            catch (...)
+            {
+                Logger::error(L"Light Switch listener failed.");
+            }
+
+            m_enabled = false;
+            stop_service_if_running();
+        });
+        return true;
     }
-
-    m_toggle_thread_running = true;
-    m_toggle_thread = std::thread([this]() {
-        while (m_toggle_thread_running)
-        {
-            const DWORD wait_result = WaitForSingleObject(m_toggle_event_handle, 500);
-            if (!m_toggle_thread_running)
-            {
-                break;
-            }
-
-            if (wait_result == WAIT_OBJECT_0)
-            {
-                ToggleTheme();
-                ResetEvent(m_toggle_event_handle);
-            }
-        }
-    });
+    catch (const std::exception&)
+    {
+        Logger::error(L"Failed to start Light Switch listener.");
+        return false;
+    }
 }
 
 void LightSwitchInterface::StopToggleListener()
 {
-    if (!m_toggle_thread_running)
     {
-        return;
+        std::lock_guard lock(m_event_mutex);
+        m_enabled = false;
+        if (m_control_event_handle)
+        {
+            SetEvent(m_control_event_handle);
+        }
     }
 
-    m_toggle_thread_running = false;
-    if (m_toggle_event_handle)
-    {
-        SetEvent(m_toggle_event_handle);
-    }
     if (m_toggle_thread.joinable())
     {
         m_toggle_thread.join();
     }
+
+    // A failed stop keeps the handle owned until a subsequent cleanup attempt.
+    stop_service_if_running();
 }
 
 std::wstring utf8_to_wstring(const std::string& str)

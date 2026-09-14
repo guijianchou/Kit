@@ -6,6 +6,26 @@
 
 ## English
 
+### 2.0.12
+
+- Version: Bumped Kit to `2.0.12`.
+- Startup & Task Scheduler: Fixed `is_auto_start_task_active_for_this_user()` to treat missing `\Kit` Task Scheduler folder as `S_FALSE` (inactive) instead of logging spurious `[error] ITaskFolder doesn't exist: -7ff8fffe` errors on every Settings launch.
+- Settings & Runner IPC: Switched `killrunner` IPC handler from synchronous `SendMessageW` to non-blocking `PostMessageW(..., WM_CLOSE, ...)`. Added robust dual-channel runner teardown in Settings `Window_Closed` (both IPC `killrunner` and tray window message fallback), ensuring clean exit and preventing orphaned runner processes regardless of HWND resolution.
+- Staging & Tooling: Fixed `Stage-Debug.ps1` byte calculation and object formatting for manifest generation. Updated staging targets and manifests for `2.0.12`.
+- Validation: 100% test pass rate across all suites (680/680 unit and integration tests passing). Runner initialization verified at 18ms with 0 lingering background processes on clean exit.
+
+### 2.0.11
+
+- Version: Bumped Kit to `2.0.11`.
+- Settings: Serialized launch, exit, restart, and IPC cleanup. Normal close uses asynchronous runner notification; restart hands over after the old Settings process exits, and launch failures no longer close the runner.
+- LightSwitch: Made worker lifecycle event-driven. Off keeps manual actions without a worker; repeated enable avoids duplicate workers, and the first action after a worker crash restores scheduling. Early stop signals, parent validation, and cancellable settings debounce improve shutdown handling.
+- Awake: Isolated the single-instance mutex as `Local\Kit.Awake` and scoped worker lookup to the Kit path and session for coexistence with official PowerToys.
+- Quick Access: Deferred process startup until first use, moved launch work off the keyboard hook, merged duplicate requests, and cancelled queued work when disabled.
+- Startup and privacy: Removed background release checks, retries, update toasts, and obsolete startup cleanup; manual release checks remain. GPO compatibility consistently returns `not_configured`. Startup-task operations target only Kit-owned entries and avoid re-registering unchanged tasks.
+- Dependencies: Removed the unused Monitor-era `Microsoft.Data.Sqlite` reference, central version pin, and corresponding notices.
+- Plugin development: Expanded the root specification with compatibility limits, registration, logo sizes and paths, data isolation, lifecycle, and WinUI 3 + Mica Alt requirements. Synchronized template sources, ZIP metadata, dependencies, and compile coverage; corrected README build-output documentation.
+- Validation baseline before the version bump: `Settings.UI.UnitTests` passed 200/200; the full x64 Debug build completed with 0 warnings and 0 errors; isolated LightSwitch smoke checks passed, including real-worker early stop and invalid-parent handling, with theme values unchanged and original settings restored. Final `2.0.11` rerun results are pending; WinUI interaction checks and startup timing measurements remain open.
+
 ### 2.0.10
 
 - Version: Bumped Kit to `2.0.10`.
@@ -289,6 +309,26 @@
 ## 中文
 
 ## 更新日志
+
+### 2.0.12
+
+- 版本：Kit 升级到 `2.0.12`。
+- 启动与计划任务：修复 `is_auto_start_task_active_for_this_user()` 在 `\Kit` 计划任务文件夹尚未创建时误触发 `ExitOnFailure` 的问题；将其作为正常未启用状态（`S_FALSE`）处理，彻底消除每次打开设置时的虚假 `[error] ITaskFolder doesn't exist: -7ff8fffe` 错误日志。
+- Settings 与 Runner 进程生命周期：将 `killrunner` IPC 处理程序从阻塞式的 `SendMessageW` 改为非阻塞的 `PostMessageW(..., WM_CLOSE, ...)`。在 Settings `Window_Closed` 事件中补齐 IPC `killrunner` 与托盘窗口消息的双通道退出兜底，确保无论窗口句柄查找状态如何，Runner 进程均可平稳退出且无孤儿残留。
+- 打包与验证脚本：修复 `Stage-Debug.ps1` 在计算哈希列表总字节数时的属性管道问题与对象类型转换；同步适配 `2.0.12` 交付目录与清单校验。
+- 测试与运行时质量：全套单元测试与集成测试 100% 通过（680/680）。实测 Runner 启动耗时收敛至 18ms，退出无后台孤儿残留。
+
+### 2.0.11
+
+- 版本：Kit 升级到 `2.0.11`。
+- Settings：串行处理启动、退出、重启与 IPC 清理。正常关闭异步通知 Runner，重启等待旧 Settings 进程退出后再交接，启动失败不再导致 Runner 退出。
+- LightSwitch：Worker 生命周期改为事件驱动。Off 仅保留手动操作，不启动 Worker；重复启用不重复创建进程，Worker 崩溃后的首次操作恢复调度。保留提前停止信号、校验父进程，并让设置 debounce 可取消。
+- Awake：单实例 mutex 隔离为 `Local\Kit.Awake`，进程查询限定 Kit 路径与会话，支持与官方 PowerToys 并存。
+- Quick Access：首次使用时才启动进程，启动工作移出键盘钩子；合并重复请求，停用时取消排队任务。
+- 启动与隐私：移除后台版本检查、重试、更新 toast 及无关旧启动清理，保留手动版本检查。GPO 兼容入口统一返回 `not_configured`；自启操作只针对确认属于 Kit 的任务，配置未变时不重复注册。
+- 依赖：移除 Monitor 遗留且已无用途的 `Microsoft.Data.Sqlite` 引用、中央版本 pin 和对应 notice。
+- 插件开发：补全根目录规范中的兼容边界、注册、Logo 规格与路径、数据隔离、生命周期和 WinUI 3 + Mica Alt 要求；同步模板源码、ZIP 元数据、依赖与编译覆盖，纠正 README 构建输出说明。
+- 升版前验证基线：`Settings.UI.UnitTests` 通过 200/200，完整 x64 Debug 构建 0 警告、0 错误；LightSwitch 隔离 smoke 通过，包括真实 Worker 提前停止与无效父进程检查，主题值未改变且原设置已恢复。最终 `2.0.11` 复测结果待补；WinUI 交互验收与启动耗时测量仍待完成。
 
 ### 2.0.10
 

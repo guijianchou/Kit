@@ -14,11 +14,11 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 ## 当前版本
 
-当前 Kit 版本：`2.0.10`。
+当前 Kit 版本：`2.0.12`。
 
 ## 文档索引
 
-- [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) — Kit 插件与模块开发权威指南（WinUI 3 + Mica Alt 界面、PowertoyModuleIface C++ 契约、零遥测标准与 Worker 看门狗）。
+- [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) — Kit 插件与模块开发规范：PowerToys C++ 契约、注册、WinUI 3 + Mica Alt、Logo 规格、数据目录隔离、生命周期与模板。
 - `doc/devdoc/kit-architecture.md` — Kit 架构参考（轻量插件宿主方向）。
 - `doc/devdoc/powertoys-architecture.md` — PowerToys 主框架架构参考（按上游源码核对）。
 - `doc/devdoc/architecture-comparison.md` — PowerToys 与 Kit 架构对比与启动优化分析。
@@ -30,13 +30,27 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 - `next.md` — 随上游更新的进度与同步清单（仓库根目录）。
 
 
+## 构建输出
+
+`tools/build/build.ps1` 调用 MSBuild，沿用各工程的输出路径。x64 Debug 构建会生成 `x64/Debug/`、`Debug/x64/` 及项目自身的输出目录；脚本不会自动把产物搬入 `bin/`，也不会自动删除这些目录。
+
+| 路径 | 用途 |
+| --- | --- |
+| `x64/Debug/` | 主要 x64 Debug 运行目录，包含 `Kit.exe` 和 `WinUI3Apps/` |
+| `Debug/x64/`、项目 `bin/` 和 `obj/` | 其他工程输出与构建中间文件 |
+| `bin/debug/2.0.12/` | 人工整理的 Debug 测试交付目录，整理步骤独立于构建 |
+
+版本源是 `src/Version.props`，`src/common/version/Generated Files/version_gen.h` 由它生成。Release 构建与 ZIP 打包需要单独执行，上述目录约定不代表已经产出新的 Release 或压缩包。
+
+运行时设置与日志位于 `%LOCALAPPDATA%\Kit`，插件数据按 `%LOCALAPPDATA%\Kit\<ModuleKey>` 隔离，不写入 `Kit.exe` 旁的 `Kit/` 子目录；完整目录规范见 [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)。
+
 ## 更新日志
 
 请查看 [changelog.md](changelog.md) 获取完整的版本历史。
 
 ## 第一阶段收尾
 
-第一阶段现在实际上是一个工作的 Kit 外壳，承载活动的 PowerToys 风格模块。该框架可以加载显式的 PowerToys 风格模块，在设置和主页中显示它们，保持 Kit 品牌存储与官方 PowerToys 分离，并通过现有的运行器/模块接口/设置路径运行 Monitor 的下载工作流程。
+第一阶段现在实际上是一个工作的 Kit 外壳，承载活动的 PowerToys 风格模块。该框架可以加载显式的 PowerToys 风格模块，在设置和主页中显示它们，保持 Kit 品牌存储与官方 PowerToys 分离，并通过现有的运行器/模块接口/设置路径运行各活动模块。
 
 当前稳定的交接点是：
 
@@ -102,9 +116,9 @@ Kit 的核心方向是轻量插件宿主：主框架（runner + Settings UI + �
 
 - 第一方模块（`Awake`、`Light Switch`）保持在编译期 `KitKnownModules` 清单内，深度集成（Home、Quick Access、设置路由、测试）。
 - 第三方插件计划从 `plugins/` 目录加载（接口 DLL + `manifest.json`），只加载已启用插件，并由通用设置页渲染各插件的 `get_config` JSON。
-- 官方 PowerToys 模块复制需要先补齐框架前提（ManagedTelemetry、logger/settings/EtwTrace 同步）——见 `fix.plan` P0。
+- 导入官方 PowerToys 模块需要先核对源码兼容性，再接入 Kit 的设置、IPC 与生命周期；保持遥测禁用，按 [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) 执行。
 
-在插件宿主落地前，`Light Switch` 仍是走现有契约路线的 Kit 自研模块，`Awake` 是上游复制基线；首个模块检查清单见 `doc/devdoc/kit-first-plugin.md`，经验教训见 `doc/devdoc/kit-development-experience.md`。行动方案见 `fix.plan`（仓库根目录），目标架构见 `doc/devdoc/kit-architecture.md`。
+`Awake` 与 `Light Switch` 都源自 PowerToys，并已按 Kit 的现有契约适配。完整开发规范见 [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)，首个模块检查清单见 `doc/devdoc/kit-first-plugin.md`，经验教训见 `doc/devdoc/kit-development-experience.md`。分阶段方案见 `fix.plan`（仓库根目录），目标架构见 `doc/devdoc/kit-architecture.md`。
 
 ## 稳定性方向
 
@@ -120,8 +134,8 @@ Kit 的核心方向是轻量插件宿主：主框架（runner + Settings UI + �
 - 保持 UI 状态从真实设置和模块状态派生。主页应一致显示启用的模块，每个快速访问命令应执行真实操作或导航到模块设置页面。
 - 保持 Kit 存储、备份、窗口标题和可见文本与已安装的官方 PowerToys 应用分离。备份默认值应保持为 Kit 活动模块设置的通用规则，不要携带非活动 PowerToys 模块专用文件或恢复修正。
 - 不要在 Kit 中重新启用自动下载/安装或遥测行为。
-- 保持安装器/更新程序入口点和设置遥测惰性。runner 可以检查 GitHub releases 并写入 `UpdateState.json`，但 `update_now`、安装器暂存、更新程序可执行文件启动路径和旧的设置遥测源必须保持不活动，除非未来的更改明确用仅本地行为替换它们。
-- 将 GPO 策略包装器和 ADMX/ADML 策略资产限制在当前已有策略规则的活动模块，以及仍保留的产品级启动/更新/诊断规则内。不要在 Kit 中携带非活动 PowerToys 模块策略、仅安装器策略读取器或陈旧的更新 toast 读取器。
+- 版本检查只保留明确的手动入口。后台检查、重试线程、更新 toast、自动下载安装与设置遥测均已移除或保持禁用。
+- Runner、Settings 与 Worker 的 GPO 兼容入口统一返回 `not_configured`；导入模块时不得重新启用官方 PowerToys 策略读取。
 - 不要在 Kit 中保留只供 DSC 使用的 Settings 命令行入口。当前保留的 Settings 命令行表面只有活动的 `set`/`get` 兼容路径；除非 DSC 生成重新成为活动功能，否则不要恢复 `setAdditional`。
 - 在 OOBE/SCOOBE 窗口未交付时，不要在 Kit 中保留其启动和状态路径。除非完整的引导界面重新成为活动功能，否则不要恢复它们的 SettingsAPI helper、备份规则、资源或样式。
 - 保持上游 BugReportTool 不进入活动 Kit 运行时。它的收集模型是广泛的 PowerToys 诊断状态，包括 Kit 不交付的非活动模块。
@@ -145,7 +159,7 @@ Kit 的核心方向是轻量插件宿主：主框架（runner + Settings UI + �
 
 ## 通用和主页 UI 范围
 
-通用保持有用的 PowerToys 设置结构，但删除自动更新和遥测控件。About 部分显示 Kit 版本、GitHub 仓库和仅检查的 release 提示。主页使用 PowerToys 风格的介绍、模块列表、快速访问和快捷方式布局，但仅用于 Kit 模块。
+通用保持有用的 PowerToys 设置结构，但删除自动更新和遥测控件。About 部分显示 Kit 版本、GitHub 仓库和手动版本检查入口。主页使用 PowerToys 风格的介绍、模块列表、快速访问和快捷方式布局，但仅用于 Kit 模块。
 
 可见 UI 应使用英语 Kit 文本。仅在构建面向命名空间、程序集名称、模块接口名称、上游兼容性或来源归属仍然需要时保留 `PowerToys`。
 

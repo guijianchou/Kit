@@ -33,7 +33,6 @@
 const DWORD USERNAME_DOMAIN_LEN = DNLEN + UNLEN + 2; // Domain Name + '\' + User Name + '\0'
 const DWORD USERNAME_LEN = UNLEN + 1; // User Name + '\0'
 const wchar_t KIT_TASK_SCHEDULER_FOLDER[] = L"\\Kit";
-const wchar_t LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER[] = L"\\PowerToys";
 
 std::wstring get_auto_start_task_name_for_this_user()
 {
@@ -53,74 +52,92 @@ constexpr bool is_missing_task_scheduler_item(HRESULT hr)
     return hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) || hr == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND);
 }
 
-bool task_action_points_to_kit_executable(IRegisteredTask* task)
+struct AutoStartTaskSettings
 {
-    if (!task)
-    {
-        return false;
-    }
+    std::wstring executablePath;
+    std::wstring arguments;
+    TASK_RUNLEVEL_TYPE runLevel = TASK_RUNLEVEL_LUA;
+    bool enabled = false;
+};
 
-    bool matches = false;
-    ITaskDefinition* task_definition = NULL;
-    IActionCollection* action_collection = NULL;
-    IAction* action = NULL;
-    IExecAction* exec_action = NULL;
-    BSTR action_path = NULL;
-    std::wstring action_path_string;
-    std::wstring action_file_name;
-    size_t file_name_start = std::wstring::npos;
+static HRESULT read_kit_auto_start_task(IRegisteredTask* task, AutoStartTaskSettings& settings)
+{
+    winrt::com_ptr<ITaskDefinition> task_definition;
+    winrt::com_ptr<IActionCollection> action_collection;
+    winrt::com_ptr<IAction> action;
+    winrt::com_ptr<IExecAction> exec_action;
+    winrt::com_ptr<IPrincipal> principal;
+    wil::unique_bstr action_path;
+    wil::unique_bstr arguments;
+    LONG action_count = 0;
+    VARIANT_BOOL enabled = VARIANT_FALSE;
 
-    HRESULT hr = task->get_Definition(&task_definition);
+    HRESULT hr = task->get_Definition(task_definition.put());
     if (FAILED(hr))
     {
-        goto LExit;
+        return hr;
     }
-
-    hr = task_definition->get_Actions(&action_collection);
+    hr = task_definition->get_Actions(action_collection.put());
     if (FAILED(hr))
     {
-        goto LExit;
+        return hr;
     }
-
-    hr = action_collection->get_Item(1, &action);
+    hr = action_collection->get_Count(&action_count);
     if (FAILED(hr))
     {
-        goto LExit;
+        return hr;
     }
-
-    hr = action->QueryInterface(IID_IExecAction, reinterpret_cast<void**>(&exec_action));
+    if (action_count != 1)
+    {
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+    hr = action_collection->get_Item(1, action.put());
     if (FAILED(hr))
     {
-        goto LExit;
+        return hr;
     }
-
-    hr = exec_action->get_Path(&action_path);
-    if (FAILED(hr) || !action_path)
+    hr = action->QueryInterface(IID_PPV_ARGS(exec_action.put()));
+    if (FAILED(hr))
     {
-        goto LExit;
+        return hr;
     }
-
-    action_path_string.assign(action_path, SysStringLen(action_path));
-    file_name_start = action_path_string.find_last_of(L"\\/");
-    action_file_name = file_name_start == std::wstring::npos ? action_path_string : action_path_string.substr(file_name_start + 1);
-    matches = action_file_name == L"Kit.exe" || _wcsicmp(action_file_name.c_str(), L"Kit.exe") == 0;
-
-LExit:
-    if (action_path)
-        SysFreeString(action_path);
-    if (exec_action)
-        exec_action->Release();
-    if (action)
-        action->Release();
-    if (action_collection)
-        action_collection->Release();
-    if (task_definition)
-        task_definition->Release();
-
-    return matches;
+    hr = exec_action->get_Path(action_path.put());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    if (!action_path || _wcsicmp(PathFindFileNameW(action_path.get()), L"Kit.exe") != 0)
+    {
+        // A name collision must not make Kit replace or delete another program's task.
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+    hr = exec_action->get_Arguments(arguments.put());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = task_definition->get_Principal(principal.put());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = principal->get_RunLevel(&settings.runLevel);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = task->get_Enabled(&enabled);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    settings.executablePath = action_path.get();
+    settings.arguments = arguments ? arguments.get() : L"";
+    settings.enabled = enabled == VARIANT_TRUE;
+    return S_OK;
 }
 
-bool delete_auto_start_task_in_folder_for_this_user(const wchar_t* task_folder, bool require_kit_executable_action)
+bool delete_auto_start_task_for_this_user()
 {
     HRESULT hr = S_OK;
     std::wstring task_name = get_auto_start_task_name_for_this_user();
@@ -144,7 +161,7 @@ bool delete_auto_start_task_in_folder_for_this_user(const wchar_t* task_folder, 
     hr = pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t());
     ExitOnFailure(hr, "ITaskService::Connect failed: {:x}", hr);
 
-    hr = pService->GetFolder(_bstr_t(task_folder), &pTaskFolder);
+    hr = pService->GetFolder(_bstr_t(KIT_TASK_SCHEDULER_FOLDER), &pTaskFolder);
     if (FAILED(hr))
     {
         if (is_missing_task_scheduler_item(hr))
@@ -157,15 +174,10 @@ bool delete_auto_start_task_in_folder_for_this_user(const wchar_t* task_folder, 
     hr = pTaskFolder->GetTask(_bstr_t(task_name.c_str()), &pExistingRegisteredTask);
     if (SUCCEEDED(hr))
     {
-        const bool should_delete = !require_kit_executable_action || task_action_points_to_kit_executable(pExistingRegisteredTask);
-        if (should_delete)
-        {
-            hr = pTaskFolder->DeleteTask(_bstr_t(task_name.c_str()), 0);
-        }
-        else
-        {
-            hr = S_OK;
-        }
+        AutoStartTaskSettings existing;
+        hr = read_kit_auto_start_task(pExistingRegisteredTask, existing);
+        ExitOnFailure(hr, "Refusing to delete an unreadable or unrelated Kit startup task: {:x}", hr);
+        hr = pTaskFolder->DeleteTask(_bstr_t(task_name.c_str()), 0);
     }
     else if (is_missing_task_scheduler_item(hr))
     {
@@ -219,7 +231,13 @@ bool create_auto_start_task_for_this_user(bool runElevated)
 
     // Get the executable path passed to the custom action.
     WCHAR wszExecutablePath[MAX_PATH];
-    GetModuleFileName(NULL, wszExecutablePath, MAX_PATH);
+    {
+        const DWORD path_length = GetModuleFileNameW(nullptr, wszExecutablePath, MAX_PATH);
+        if (path_length == 0 || path_length >= MAX_PATH)
+        {
+            ExitWithLastError(hr, "Cannot obtain the Kit startup executable path: {:x}", hr);
+        }
+    }
 
     // ------------------------------------------------------
     // Create an instance of the Task Service.
@@ -239,32 +257,43 @@ bool create_auto_start_task_for_this_user(bool runElevated)
     hr = pService->GetFolder(_bstr_t(KIT_TASK_SCHEDULER_FOLDER), &pTaskFolder);
     if (FAILED(hr))
     {
+        if (!is_missing_task_scheduler_item(hr))
+        {
+            ExitOnFailure(hr, "Cannot access Kit task folder: {:x}", hr);
+        }
         // Folder doesn't exist. Get the Root folder and create the Kit subfolder.
         ITaskFolder* pRootFolder = NULL;
         hr = pService->GetFolder(_bstr_t(L"\\"), &pRootFolder);
         ExitOnFailure(hr, "Cannot get Root Folder pointer: {:x}", hr);
         hr = pRootFolder->CreateFolder(_bstr_t(KIT_TASK_SCHEDULER_FOLDER), _variant_t(L""), &pTaskFolder);
-        if (FAILED(hr))
-        {
-            pRootFolder->Release();
-            ExitOnFailure(hr, "Cannot create Kit task folder: {:x}", hr);
-        }
+        pRootFolder->Release();
+        ExitOnFailure(hr, "Cannot create Kit task folder: {:x}", hr);
     }
 
-    // If the task exists, just enable it.
+    // Read before writing. An unchanged task must not be re-registered at every launch.
     {
-        IRegisteredTask* pExistingRegisteredTask = NULL;
-        hr = pTaskFolder->GetTask(_bstr_t(wstrTaskName.c_str()), &pExistingRegisteredTask);
+        winrt::com_ptr<IRegisteredTask> existing_task;
+        hr = pTaskFolder->GetTask(_bstr_t(wstrTaskName.c_str()), existing_task.put());
         if (SUCCEEDED(hr))
         {
-            // Task exists, try enabling it.
-            hr = pExistingRegisteredTask->put_Enabled(VARIANT_TRUE);
-            pExistingRegisteredTask->Release();
-            if (SUCCEEDED(hr))
+            AutoStartTaskSettings existing;
+            hr = read_kit_auto_start_task(existing_task.get(), existing);
+            ExitOnFailure(hr, "Refusing to replace an unreadable or unrelated Kit startup task: {:x}", hr);
+            const auto desired_run_level = runElevated ? TASK_RUNLEVEL_HIGHEST : TASK_RUNLEVEL_LUA;
+            if (_wcsicmp(existing.executablePath.c_str(), wszExecutablePath) == 0 &&
+                existing.arguments.empty() && existing.runLevel == desired_run_level)
             {
-                // Function enable. Sounds like a success.
+                if (!existing.enabled)
+                {
+                    hr = existing_task->put_Enabled(VARIANT_TRUE);
+                    ExitOnFailure(hr, "Cannot enable Kit startup task: {:x}", hr);
+                }
                 ExitFunction();
             }
+        }
+        else if (!is_missing_task_scheduler_item(hr))
+        {
+            ExitOnFailure(hr, "Cannot read Kit startup task: {:x}", hr);
         }
     }
 
@@ -413,18 +442,6 @@ LExit:
     return (SUCCEEDED(hr));
 }
 
-bool delete_auto_start_task_for_this_user()
-{
-    const bool deleted_kit_task = delete_auto_start_task_in_folder_for_this_user(KIT_TASK_SCHEDULER_FOLDER, false);
-    const bool deleted_legacy_task = delete_legacy_power_toys_auto_start_task_for_this_user();
-    return deleted_kit_task && deleted_legacy_task;
-}
-
-bool delete_legacy_power_toys_auto_start_task_for_this_user()
-{
-    return delete_auto_start_task_in_folder_for_this_user(LEGACY_POWERTOYS_TASK_SCHEDULER_FOLDER, true);
-}
-
 bool is_auto_start_task_active_for_this_user()
 {
     HRESULT hr = S_OK;
@@ -462,25 +479,35 @@ bool is_auto_start_task_active_for_this_user()
     // ------------------------------------------------------
     // Get the Kit task folder.
     hr = pService->GetFolder(_bstr_t(KIT_TASK_SCHEDULER_FOLDER), &pTaskFolder);
-    ExitOnFailure(hr, "ITaskFolder doesn't exist: {:x}", hr);
+    if (FAILED(hr))
+    {
+        if (is_missing_task_scheduler_item(hr))
+        {
+            hr = S_FALSE;
+            ExitFunction();
+        }
+        ExitOnFailure(hr, "ITaskFolder doesn't exist: {:x}", hr);
+    }
 
     // ------------------------------------------------------
-    // If the task exists, disable.
+    // Only report a task belonging to Kit as an active startup entry.
     {
-        IRegisteredTask* pExistingRegisteredTask = NULL;
-        hr = pTaskFolder->GetTask(_bstr_t(wstrTaskName.c_str()), &pExistingRegisteredTask);
+        winrt::com_ptr<IRegisteredTask> existing_task;
+        hr = pTaskFolder->GetTask(_bstr_t(wstrTaskName.c_str()), existing_task.put());
         if (SUCCEEDED(hr))
         {
-            // Task exists, get its value.
-            VARIANT_BOOL is_enabled;
-            hr = pExistingRegisteredTask->get_Enabled(&is_enabled);
-            pExistingRegisteredTask->Release();
+            AutoStartTaskSettings existing;
+            hr = read_kit_auto_start_task(existing_task.get(), existing);
             if (SUCCEEDED(hr))
             {
-                // Got the value. Return it.
-                hr = (is_enabled == VARIANT_TRUE) ? S_OK : E_FAIL; // Fake success or fail to return the value.
+                hr = existing.enabled ? S_OK : S_FALSE;
                 ExitFunction();
             }
+        }
+        else if (is_missing_task_scheduler_item(hr))
+        {
+            hr = S_FALSE;
+            ExitFunction();
         }
     }
 
@@ -490,5 +517,5 @@ LExit:
     if (pTaskFolder)
         pTaskFolder->Release();
 
-    return (SUCCEEDED(hr));
+    return hr == S_OK;
 }

@@ -162,7 +162,6 @@ SOFTWARE.
 - CommunityToolkit.WinUI.Extensions
 - Markdig.Signed
 - MessagePack
-- Microsoft.Data.Sqlite
 - Moq
 - MSTest
 - MSTest.TestFramework

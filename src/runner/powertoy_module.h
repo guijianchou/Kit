@@ -39,11 +39,6 @@ public:
         return pt_module.get();
     }
 
-    // Kit optimization: Cache frequently accessed metadata to reduce virtual call overhead
-    inline const wchar_t* get_name() const { return cached_name.c_str(); }
-    inline const wchar_t* get_key() const { return cached_key.c_str(); }
-    inline bool is_enabled_by_default() const { return cached_default_enabled; }
-
     json::JsonObject json_config() const;
 
     void update_hotkeys();
@@ -60,10 +55,6 @@ private:
     std::unique_ptr<HMODULE, PowertoyModuleDLLDeleter> handle;
     std::unique_ptr<PowertoyModuleIface, PowertoyModuleDeleter> pt_module;
 
-    // Cached metadata
-    std::wstring cached_name;
-    std::wstring cached_key;
-    bool cached_default_enabled;
 };
 
 PowertoyModule load_powertoy(const std::wstring_view filename);

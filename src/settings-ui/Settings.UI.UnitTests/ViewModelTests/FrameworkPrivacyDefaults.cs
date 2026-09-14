@@ -270,7 +270,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void RunnerShouldCheckKitReleasesOncePerDayWithoutAutoUpdating()
+        public void RunnerShouldCheckKitReleasesOnlyOnExplicitRequest()
         {
             var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
@@ -278,24 +278,20 @@ namespace ViewModelTests
             var updateUtils = File.ReadAllText(FindSourceFile("src", "runner", "UpdateUtils.cpp"));
 
             StringAssert.Contains(runnerProject, "UpdateUtils.cpp");
-            StringAssert.Contains(runnerMain, "PeriodicUpdateWorker();");
+            Assert.IsFalse(runnerMain.Contains("PeriodicUpdateWorker", StringComparison.Ordinal), "Kit startup must not schedule release checks.");
+            Assert.IsFalse(updateUtils.Contains("PeriodicUpdateWorker", StringComparison.Ordinal), "Kit should not retain a periodic release-check worker.");
             StringAssert.Contains(updateUtils, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
             StringAssert.Contains(updateUtils, "html_url");
             StringAssert.Contains(updateUtils, "githubUpdateLastCheckedDate");
-            StringAssert.Contains(updateUtils, "std::chrono::hours(24)");
-            StringAssert.Contains(updateUtils, "std::chrono::hours(2)");
             StringAssert.Contains(updateUtils, "set_update_badge(true)");
-            StringAssert.Contains(updateUtils, "notifications::show_toast_with_activations");
             StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
-            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Periodic)");
-            StringAssert.Contains(updateUtils, "check_for_updates(UpdateCheckMode::Manual)");
-            StringAssert.Contains(updateUtils, "elapsed < std::chrono::system_clock::duration::zero()");
-            StringAssert.Contains(updateUtils, "retryAfterFailure = !check_for_updates(UpdateCheckMode::Periodic)");
-            StringAssert.Contains(updateUtils, "std::this_thread::sleep_for(failedRetryInterval)");
+            StringAssert.Contains(updateUtils, "void CheckForUpdatesCallback()");
+            StringAssert.Contains(updateUtils, "check_for_updates();");
             StringAssert.Contains(updateUtils, "UpdateState::store");
-            StringAssert.Contains(updateUtils, "mode == UpdateCheckMode::Periodic");
+            StringAssert.Contains(settingsWindow, "CheckForUpdatesCallback();");
             StringAssert.Contains(settingsWindow, "isUpdateCheckThreadRunning.compare_exchange_strong");
-            Assert.IsFalse(updateUtils.Contains("idlePollInterval", StringComparison.Ordinal), "Runner should not wake every hour when the next update check time is known.");
+            Assert.IsFalse(updateUtils.Contains("std::this_thread::sleep_for", StringComparison.Ordinal), "Manual release checking must not schedule periodic retries.");
+            Assert.IsFalse(updateUtils.Contains("notifications::show_toast_with_activations", StringComparison.Ordinal), "Manual checks should report results through Settings and the tray badge.");
             Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "Kit release check must not download installers.");
             Assert.IsFalse(updateUtils.Contains("LaunchPowerToysUpdate", StringComparison.Ordinal) && updateUtils.Contains("ShellExecuteEx", StringComparison.Ordinal), "Kit release check must not launch an updater.");
         }

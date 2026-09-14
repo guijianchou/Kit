@@ -528,13 +528,6 @@ void update_quick_access_hotkey(bool enabled, PowerToysSettings::HotkeyObject ho
 
         hkmng.AddHotkey(hk, L"GeneralSettings", 0, true);
         CentralizedKeyboardHook::SetHotkeyAction(L"QuickAccess", hk, []() {
-            // OPTIMIZATION: Lazy initialization - start Quick Access on first hotkey press
-            // Saves 200-400ms on startup by deferring WinUI3 process spawn
-            if (!QuickAccessHost::is_running())
-            {
-                Logger::info(L"Quick Access: Lazy initialization on first hotkey press");
-                QuickAccessHost::start();
-            }
             open_quick_access_flyout_window();
             return true;
         });
@@ -543,5 +536,4 @@ void update_quick_access_hotkey(bool enabled, PowerToysSettings::HotkeyObject ho
         is_registered = true;
     }
 }
-
 

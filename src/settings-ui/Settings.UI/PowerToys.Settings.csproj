@@ -74,7 +74,6 @@
 		<PackageReference Include="CommunityToolkit.Common" />
 		<!-- Keep Microsoft.Bcl.AsyncInterfaces aligned with the .NET 10 package baseline used by the Settings runtime closure. -->
 		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
-		<PackageReference Include="Microsoft.Data.Sqlite" />
 		<Manifest Include="$(ApplicationManifest)" />
 	</ItemGroup>
 	<!-- Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging

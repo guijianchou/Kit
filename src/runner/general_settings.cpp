@@ -14,11 +14,6 @@
 #include <common/utils/elevation.h>
 #include <common/version/version.h>
 
-// Kit optimization: Skip GPO checks - Kit doesn't use Group Policy
-// Saves 10-20ms on startup by avoiding registry reads
-#ifndef KIT_ENABLE_GPO_SUPPORT
-#define KIT_SKIP_GPO_CHECKS 1
-#endif
 #include <common/utils/resources.h>
 
 namespace
@@ -229,13 +224,6 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
     const bool module_inst_enabled = powertoy->is_enabled();
     bool target_enabled = value.GetBoolean();
 
-    auto gpo_rule = powertoy->gpo_policy_enabled_configuration();
-    if (gpo_rule == powertoys_gpo::gpo_rule_configured_enabled || gpo_rule == powertoys_gpo::gpo_rule_configured_disabled)
-    {
-        // Apply the GPO Rule.
-        target_enabled = gpo_rule == powertoys_gpo::gpo_rule_configured_enabled;
-    }
-
     if (module_inst_enabled == target_enabled)
     {
         Logger::info(L"apply_module_status_update: Module {} already in target state {}", name, target_enabled);
@@ -320,15 +308,11 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
         enable_quick_access = new_enable_quick_access;
         quick_access_shortcut = new_quick_access_shortcut;
 
-        if (enable_quick_access)
-        {
-            QuickAccessHost::start();
-        }
-        else
+        update_quick_access_hotkey(enable_quick_access, quick_access_shortcut);
+        if (!enable_quick_access)
         {
             QuickAccessHost::stop();
         }
-        update_quick_access_hotkey(enable_quick_access, quick_access_shortcut);
     }
 
     show_new_updates_toast_notification = general_configs.GetNamedBoolean(L"show_new_updates_toast_notification", false);
@@ -339,57 +323,15 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     enable_experimentation = general_configs.GetNamedBoolean(L"enable_experimentation", false);
     dashboard_sort_order = parse_dashboard_sort_order(general_configs, dashboard_sort_order);
 
-    // apply_general_settings is called by the runner's WinMain, so we can just force the run at startup gpo rule here.
-    auto gpo_run_as_startup = powertoys_gpo::getConfiguredRunAtStartupValue();
-
-    if (json::has(general_configs, L"startup", json::JsonValueType::Boolean))
+    if (json::has(general_configs, L"startup", json::JsonValueType::Boolean) &&
+        general_configs.GetNamedBoolean(L"startup"))
     {
-        bool startup = general_configs.GetNamedBoolean(L"startup");
-
-        if (gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_enabled)
-        {
-            startup = true;
-        }
-        else if (gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_disabled)
-        {
-            startup = false;
-        }
-
-        if (startup)
-        {
-            if (is_process_elevated())
-            {
-                delete_auto_start_task_for_this_user();
-                create_auto_start_task_for_this_user(run_as_elevated);
-            }
-            else
-            {
-                if (!is_auto_start_task_active_for_this_user())
-                {
-                    delete_auto_start_task_for_this_user();
-                    create_auto_start_task_for_this_user(false);
-
-                    run_as_elevated = false;
-                }
-                else if (!general_configs.GetNamedBoolean(L"run_elevated", false))
-                {
-                    delete_auto_start_task_for_this_user();
-                    create_auto_start_task_for_this_user(false);
-                }
-            }
-        }
-        else
-        {
-            delete_auto_start_task_for_this_user();
-        }
+        // Reconcile only Kit's task; unchanged actions and run levels need no write.
+        create_auto_start_task_for_this_user(run_as_elevated);
     }
     else
     {
         delete_auto_start_task_for_this_user();
-        if (gpo_run_as_startup == powertoys_gpo::gpo_rule_configured_enabled)
-        {
-            create_auto_start_task_for_this_user(run_as_elevated);
-        }
     }
 
     if (json::has(general_configs, L"enabled"))
@@ -410,13 +352,6 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
             PowertoyModule& powertoy = modules().at(name);
             const bool module_inst_enabled = powertoy->is_enabled();
             bool target_enabled = value.GetBoolean();
-
-            auto gpo_rule = powertoy->gpo_policy_enabled_configuration();
-            if (gpo_rule == powertoys_gpo::gpo_rule_configured_enabled || gpo_rule == powertoys_gpo::gpo_rule_configured_disabled)
-            {
-                // Apply the GPO Rule.
-                target_enabled = gpo_rule == powertoys_gpo::gpo_rule_configured_enabled;
-            }
 
             if (module_inst_enabled == target_enabled)
             {
@@ -495,35 +430,11 @@ void start_enabled_powertoys(const json::JsonObject& general_settings)
 {
     std::unordered_set<std::wstring> powertoys_to_disable;
 
-#if !KIT_SKIP_GPO_CHECKS
-    // Original GPO configuration path (preserved for compatibility)
-    std::unordered_map<std::wstring, powertoys_gpo::gpo_rule_configured_t> powertoys_gpo_configuration;
-    // Take into account default values supplied by modules themselves and gpo configurations
-    for (auto& [name, powertoy] : modules())
-    {
-        auto gpo_rule = powertoy->gpo_policy_enabled_configuration();
-        powertoys_gpo_configuration[name] = gpo_rule;
-        if (gpo_rule == powertoys_gpo::gpo_rule_configured_unavailable)
-        {
-            Logger::warn(L"start_enabled_powertoys: couldn't read the gpo rule for Powertoy {}", name);
-        }
-        if (gpo_rule == powertoys_gpo::gpo_rule_configured_wrong_value)
-        {
-            Logger::warn(L"start_enabled_powertoys: gpo rule for Powertoy {} is set to an unknown value", name);
-        }
-
-        if (!powertoy->is_enabled_by_default())
-            powertoys_to_disable.emplace(name);
-    }
-#else
-    // Kit optimization: Skip GPO checks entirely - only check module defaults
-    // Saves 10-20ms by avoiding registry reads on startup
     for (auto& [name, powertoy] : modules())
     {
         if (!powertoy->is_enabled_by_default())
             powertoys_to_disable.emplace(name);
     }
-#endif
 
     try
     {
@@ -533,14 +444,6 @@ void start_enabled_powertoys(const json::JsonObject& general_settings)
             for (const auto& disabled_element : enabled)
             {
                 std::wstring disable_module_name{ static_cast<std::wstring_view>(disabled_element.Key()) };
-
-#if !KIT_SKIP_GPO_CHECKS
-                if (powertoys_gpo_configuration.find(disable_module_name) != powertoys_gpo_configuration.end() && (powertoys_gpo_configuration[disable_module_name] == powertoys_gpo::gpo_rule_configured_enabled || powertoys_gpo_configuration[disable_module_name] == powertoys_gpo::gpo_rule_configured_disabled))
-                {
-                    // If gpo forces the enabled setting, no need to check the setting for this PowerToy. It will be applied later on this function.
-                    continue;
-                }
-#endif
 
                 // Disable explicitly disabled modules
                 if (!disabled_element.Value().GetBoolean())
@@ -565,27 +468,10 @@ void start_enabled_powertoys(const json::JsonObject& general_settings)
     {
         bool should_powertoy_be_enabled = true;
 
-#if !KIT_SKIP_GPO_CHECKS
-        auto gpo_rule = powertoys_gpo_configuration.find(name) != powertoys_gpo_configuration.end() ? powertoys_gpo_configuration[name] : powertoys_gpo::gpo_rule_configured_not_configured;
-
-        if (gpo_rule == powertoys_gpo::gpo_rule_configured_enabled || gpo_rule == powertoys_gpo::gpo_rule_configured_disabled)
-        {
-            // Apply the GPO Rule.
-            should_powertoy_be_enabled = gpo_rule == powertoys_gpo::gpo_rule_configured_enabled;
-            Logger::info(L"start_enabled_powertoys: GPO sets the enabled state for {} powertoy as {}", name, should_powertoy_be_enabled);
-        }
-        else if (powertoys_to_disable.contains(name))
-        {
-            // Apply the settings or default information provided by the PowerToy on first run.
-            should_powertoy_be_enabled = false;
-        }
-#else
-        // Kit optimization: No GPO, only check settings
         if (powertoys_to_disable.contains(name))
         {
             should_powertoy_be_enabled = false;
         }
-#endif
 
         if (should_powertoy_be_enabled)
         {

@@ -62,15 +62,29 @@ int _tmain(int argc, TCHAR* argv[])
                 return static_cast<int>(GetLastError());
             }
 
-            ResetEvent(g_ServiceStopEvent);
+            // The launcher resets this event before CreateProcess. Do not erase a stop
+            // request that arrived while the child was still starting.
             HANDLE hThread = CreateThread(
                 nullptr, 0, ServiceWorkerThread, reinterpret_cast<void*>(static_cast<ULONG_PTR>(parentPid)), 0, nullptr);
+            if (!hThread)
+            {
+                const DWORD error = GetLastError();
+                CloseHandle(g_ServiceStopEvent);
+                g_ServiceStopEvent = nullptr;
+                return static_cast<int>(error);
+            }
 
             // Wait so the process stays alive
             WaitForSingleObject(hThread, INFINITE);
+            DWORD exitCode = 0;
+            if (!GetExitCodeThread(hThread, &exitCode))
+            {
+                exitCode = GetLastError();
+            }
             CloseHandle(hThread);
             CloseHandle(g_ServiceStopEvent);
-            return 0;
+            g_ServiceStopEvent = nullptr;
+            return static_cast<int>(exitCode);
         }
         return static_cast<int>(err);
     }
@@ -211,7 +225,23 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     DWORD parentPid = static_cast<DWORD>(reinterpret_cast<ULONG_PTR>(lpParam));
     HANDLE hParent = nullptr;
     if (parentPid)
+    {
         hParent = OpenProcess(SYNCHRONIZE, FALSE, parentPid);
+        if (!hParent)
+        {
+            const DWORD error = GetLastError();
+            Logger::warn(L"[LightSwitchService] Could not bind to the parent process; exiting (error {}).", error);
+            return error;
+        }
+    }
+
+    if (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_TIMEOUT ||
+        (hParent && WaitForSingleObject(hParent, 0) != WAIT_TIMEOUT))
+    {
+        if (hParent)
+            CloseHandle(hParent);
+        return 0;
+    }
 
     Logger::info(L"[LightSwitchService] Worker thread starting...");
     Logger::info(L"[LightSwitchService] Parent PID: {}", parentPid);
@@ -226,6 +256,15 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
     HANDLE hManualOverride = CreateEventW(nullptr, TRUE, FALSE, KIT_LIGHTSWITCH_MANUAL_OVERRIDE);
     HANDLE hSettingsChanged = LightSwitchSettings::instance().GetSettingsChangedEvent();
+    if (!hManualOverride || !hSettingsChanged)
+    {
+        Logger::error(L"[LightSwitchService] Required worker events are unavailable; exiting.");
+        if (hManualOverride)
+            CloseHandle(hManualOverride);
+        if (hParent)
+            CloseHandle(hParent);
+        return ERROR_INVALID_HANDLE;
+    }
 
     static std::unique_ptr<NightLightRegistryObserver> g_nightLightWatcher;
 
@@ -259,12 +298,17 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     int nowMinutes = st.wHour * 60 + st.wMinute;
 
     Logger::info(L"[LightSwitchService] Initialized at {:02d}:{:02d}.", st.wHour, st.wMinute);
-    stateManager.SyncInitialThemeState();
+    const bool stopping = WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_TIMEOUT ||
+                          (hParent && WaitForSingleObject(hParent, 0) != WAIT_TIMEOUT);
+    if (!stopping)
+    {
+        stateManager.SyncInitialThemeState();
+    }
 
     // ────────────────────────────────────────────────────────────────
     // Worker Loop
     // ────────────────────────────────────────────────────────────────
-    for (;;)
+    while (!stopping)
     {
         HANDLE waits[4];
         DWORD count = 0;

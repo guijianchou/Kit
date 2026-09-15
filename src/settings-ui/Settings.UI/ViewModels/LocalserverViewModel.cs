@@ -308,8 +308,8 @@ namespace Kit.Settings.UI.ViewModels
         public bool IsRunning => State.IsActive();
         public bool IsEditable => !_parent.IsCatalogBusy && State.AllowsEditing();
         public Visibility LockVisibility => IsRunning ? Visibility.Visible : Visibility.Collapsed;
-        public bool CanToggle => !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStop() || (_parent.IsEnabled && State.CanStart()));
-        public bool CanRestart => _parent.IsEnabled && !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStart() || State.CanStop());
+        public bool CanToggle => !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStop() || State.CanStart());
+        public bool CanRestart => !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStart() || State.CanStop());
         public bool CanForceKill => !_parent.IsCatalogBusy && State.IsActive();
 
         public bool IsOn
@@ -1388,9 +1388,14 @@ namespace Kit.Settings.UI.ViewModels
 
         public async Task StartLineAsync(LineRowViewModel row)
         {
-            if (_disposed || IsCatalogBusy || !IsEnabled || !row.State.CanStart())
+            if (_disposed || IsCatalogBusy || !row.State.CanStart())
             {
                 return;
+            }
+
+            if (!IsEnabled)
+            {
+                IsEnabled = true;
             }
 
             try

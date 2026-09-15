@@ -579,17 +579,17 @@
                                                 <TextBox Grid.Row="5" Grid.Column="1" Text="{x:Bind ResolvedCommandText, Mode=OneWay}" FontFamily="Consolas, Segoe UI Mono" IsReadOnly="True" TextWrapping="Wrap" />
                                             </Grid>
 
-                                            <!-- Bottom of Expanded Panel: Delete Line Button with Confirmation Flyout -->
+                                            <!-- Bottom of Expanded Panel: Action buttons (Delete on left, Save on right) -->
                                             <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4" />
 
-                                            <tkcontrols:SettingsCard
-                                                x:Uid="Localserver_DeleteLineCard"
-                                                IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                            <Grid Margin="0,4,0,0">
                                                 <Button
-                                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                                                    HorizontalAlignment="Left"
+                                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                    IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE74D;" FontSize="13" />
-                                                        <TextBlock x:Uid="Localserver_DeleteLineText" />
+                                                        <TextBlock x:Uid="Localserver_DeleteLineButtonText" />
                                                     </StackPanel>
                                                     <Button.Flyout>
                                                         <Flyout>
@@ -601,7 +601,18 @@
                                                         </Flyout>
                                                     </Button.Flyout>
                                                 </Button>
-                                            </tkcontrols:SettingsCard>
+
+                                                <Button
+                                                    HorizontalAlignment="Right"
+                                                    Style="{ThemeResource AccentButtonStyle}"
+                                                    Click="SaveCatalog_Click"
+                                                    IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <FontIcon Glyph="&#xE74E;" FontSize="13" />
+                                                        <TextBlock x:Uid="Localserver_SaveLineButtonText" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

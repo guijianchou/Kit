@@ -409,6 +409,15 @@
   <data name="Localserver_DeleteLineText.Text" xml:space="preserve">
     <value>删除链路</value>
   </data>
+  <data name="Localserver_DeleteLineButtonText.Text" xml:space="preserve">
+    <value>删除链路</value>
+  </data>
+  <data name="Localserver_SaveLineButtonText.Text" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Localserver_SaveCatalogSuccess" xml:space="preserve">
+    <value>服务配置已成功保存。</value>
+  </data>
   <data name="Localserver_ConfirmDeleteTitle.Text" xml:space="preserve">
     <value>确定删除此服务链路吗？</value>
   </data>

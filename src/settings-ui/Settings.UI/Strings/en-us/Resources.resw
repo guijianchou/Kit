@@ -1725,6 +1725,15 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Localserver_DeleteLineText.Text" xml:space="preserve">
     <value>Delete Line</value>
   </data>
+  <data name="Localserver_DeleteLineButtonText.Text" xml:space="preserve">
+    <value>Delete Line</value>
+  </data>
+  <data name="Localserver_SaveLineButtonText.Text" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Localserver_SaveCatalogSuccess" xml:space="preserve">
+    <value>Service configuration saved successfully.</value>
+  </data>
   <data name="Localserver_ConfirmDeleteTitle.Text" xml:space="preserve">
     <value>Delete this service line?</value>
   </data>

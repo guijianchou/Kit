@@ -241,7 +241,7 @@ namespace Kit.Settings.UI.Views
 
         private void SaveCatalog_Click(object sender, RoutedEventArgs e)
         {
-            _ = ViewModel.SaveLinesAsync();
+            _ = ViewModel.SaveLinesAsync(markDirty: false, showSuccess: true);
         }
 
         private void RestartLine_Click(object sender, RoutedEventArgs e)

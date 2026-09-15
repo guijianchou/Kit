@@ -89,9 +89,10 @@ namespace ViewModelTests
             Assert.IsFalse(viewModel.Contains("ShowOnMainWindow", StringComparison.OrdinalIgnoreCase), "Localserver ViewModel should not have ShowOnMainWindow property.");
             Assert.IsFalse(viewModel.Contains("AutoStartOnBoot", StringComparison.OrdinalIgnoreCase), "Localserver ViewModel should not have AutoStartOnBoot property.");
 
-            // 2. Verify Zone 3 runtime freezing & delete line placement
+            // 2. Verify Zone 3 runtime freezing & action buttons placement
             StringAssert.Contains(pageXaml, "IsEnabled=\"{x:Bind IsEditable, Mode=OneWay}\"");
-            StringAssert.Contains(pageXaml, "x:Uid=\"Localserver_DeleteLineCard\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"Localserver_DeleteLineButtonText\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"Localserver_SaveLineButtonText\"");
 
             // 3. Verify data isolation paths
             StringAssert.Contains(libPathHelper, "Kit");

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -700,6 +700,20 @@ namespace Kit.Settings.UI.ViewModels
             IsErrorOpen = true;
         }
 
+        private void ShowSuccess(string resourceKey, params object?[] args)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            ErrorMessage = FormatMessage(resourceKey, "Service configuration saved successfully.", args);
+            MessageSeverity = InfoBarSeverity.Success;
+            OnPropertyChanged(nameof(ErrorMessage));
+            OnPropertyChanged(nameof(MessageSeverity));
+            IsErrorOpen = true;
+        }
+
         public void ReportError(string resourceKey) => ShowError(resourceKey);
 
         public bool IsCatalogBusy
@@ -1311,7 +1325,7 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public async Task SaveLinesAsync(bool markDirty = true)
+        public async Task SaveLinesAsync(bool markDirty = true, bool showSuccess = false)
         {
             if (_disposed)
             {
@@ -1341,7 +1355,14 @@ namespace Kit.Settings.UI.ViewModels
                 Logger.LogInfo("[LocalserverViewModel] Saved lines catalog successfully.");
                 _lastSaveSucceeded = true;
                 _hasUnsavedChanges = false;
-                IsErrorOpen = false;
+                if (showSuccess)
+                {
+                    ShowSuccess("Localserver_SaveCatalogSuccess");
+                }
+                else
+                {
+                    IsErrorOpen = false;
+                }
             }
             catch (InvalidOperationException)
             {

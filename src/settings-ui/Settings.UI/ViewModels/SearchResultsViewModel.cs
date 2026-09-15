@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -7,10 +7,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Microsoft.PowerToys.Settings.UI.Services;
-using Settings.UI.Library;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
     public class SearchResultsViewModel : INotifyPropertyChanged
     {

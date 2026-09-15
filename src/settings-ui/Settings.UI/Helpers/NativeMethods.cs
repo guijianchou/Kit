@@ -6,7 +6,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public static class NativeMethods
     {

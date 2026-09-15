@@ -3,7 +3,7 @@
 #include <Windows.h>
 #include <string>
 
-namespace powertoys_gpo
+namespace kit_gpo
 {
     enum gpo_rule_configured_t
     {
@@ -76,3 +76,5 @@ namespace powertoys_gpo
         return getConfiguredValue(POLICY_CONFIGURE_RUN_AT_STARTUP);
     }
 }
+
+namespace powertoys_gpo = kit_gpo;

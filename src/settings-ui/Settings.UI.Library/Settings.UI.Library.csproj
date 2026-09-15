@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <!-- Look at Directory.Build.props in root for common stuff as well -->
   <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
   <Import Project="$(RepoRoot)src\Common.SelfContained.props" />
     <PropertyGroup>
-        <Description>PowerToys Settings UI Library</Description>
-        <AssemblyName>PowerToys.Settings.UI.Lib</AssemblyName>
+        <Description>Kit Settings UI Library</Description>
+        <AssemblyName>Kit.Settings.UI.Lib</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,8 +18,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\common\interop\PowerToys.Interop.vcxproj" />
+        <ProjectReference Include="..\..\common\interop\Kit.Interop.vcxproj" />
         <ProjectReference Include="..\..\common\ManagedCommon\ManagedCommon.csproj" />
+        <ProjectReference Include="..\..\common\AiHub\Kit.AiHub.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -6,7 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public partial class TimelineAutomationPeer : FrameworkElementAutomationPeer
     {

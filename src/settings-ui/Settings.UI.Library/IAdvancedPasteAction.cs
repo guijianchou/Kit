@@ -5,7 +5,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace Microsoft.PowerToys.Settings.UI.Library;
+namespace Kit.Settings.UI.Library;
 
 public interface IAdvancedPasteAction : INotifyPropertyChanged
 {

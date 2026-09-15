@@ -5,9 +5,9 @@
 using System;
 using System.Reflection;
 
-using Settings.UI.Library.Attributes;
+using Kit.Settings.UI.Library.Attributes;
 
-namespace Microsoft.PowerToys.Settings.UI.Library;
+namespace Kit.Settings.UI.Library;
 
 /// <summary>
 /// This user flow allows DSC resources to use PowerToys.Settings executable to set settings values by suppling them from command line using the following syntax:

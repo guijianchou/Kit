@@ -6,7 +6,7 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     [JsonConverter(typeof(EnabledModulesJsonConverter))]
     public class EnabledModules
@@ -523,6 +523,38 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                 if (grabAndMove != value)
                 {
                     grabAndMove = value;
+                    NotifyChange();
+                }
+            }
+        }
+
+        private bool localserver;
+
+        [JsonPropertyName("Localserver")]
+        public bool Localserver
+        {
+            get => localserver;
+            set
+            {
+                if (localserver != value)
+                {
+                    localserver = value;
+                    NotifyChange();
+                }
+            }
+        }
+
+        private bool aiHub;
+
+        [JsonPropertyName("AiHub")]
+        public bool AiHub
+        {
+            get => aiHub;
+            set
+            {
+                if (aiHub != value)
+                {
+                    aiHub = value;
                     NotifyChange();
                 }
             }

@@ -1,19 +1,19 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
 using CommunityToolkit.WinUI.Controls;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Services;
-using Microsoft.PowerToys.Settings.UI.ViewModels;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
+using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using Settings.UI.Library;
 
-namespace Microsoft.PowerToys.Settings.UI.Views
+namespace Kit.Settings.UI.Views
 {
     public partial class SearchResultsPage : Page
     {
@@ -88,7 +88,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
 
             var assembly = typeof(GeneralPage).Assembly;
-            return assembly.GetType($"Microsoft.PowerToys.Settings.UI.Views.{pageTypeName}");
+            return assembly.GetType($"Kit.Settings.UI.Views.{pageTypeName}");
         }
     }
 

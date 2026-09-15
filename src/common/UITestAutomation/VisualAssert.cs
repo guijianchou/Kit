@@ -12,7 +12,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     public static class VisualAssert
     {

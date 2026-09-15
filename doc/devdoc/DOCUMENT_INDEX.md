@@ -49,29 +49,11 @@
 | 文档 | 用途 | 页数 | 最后更新 |
 |------|------|------|----------|
 | **[startup-optimization-analysis.md](startup-optimization-analysis.md)** | **启动性能分析与优化** | 16.6KB | 2026-09-13 |
-| [STARTUP_DEBUG_GUIDE.md](STARTUP_DEBUG_GUIDE.md) | 启动调试指南 | 2.7KB | 2026-09-13 |
 
 **重点**：
 - 启动时间目标 <300ms
 - 瓶颈分析（模块加载、Settings UI、Quick Access）
 - 已实施优化（缓存元数据、延迟启动、一次性清理）
-- 调试工具和日志分析方法
-
-### 🔄 上游同步层
-| 文档 | 用途 | 页数 | 最后更新 |
-|------|------|------|----------|
-| [kit-sync-status.md](kit-sync-status.md) | 上游同步状态追踪 | 10.1KB | 2026-09-13 |
-| [upstream-sync-checklist.md](upstream-sync-checklist.md) | 同步检查清单 | 41.8KB | 2026-09-12 |
-
-**重点**：
-- 已同步模块：Awake、LightSwitch
-- 待同步优化：Settings 性能、共享库更新
-- 排除清单：不需要的模块和功能
-
-### 🔬 专项分析
-| 文档 | 用途 | 页数 | 最后更新 |
-|------|------|------|----------|
-| [monitor-removal-plan.md](monitor-removal-plan.md) | Monitor 移除方案 | 21.4KB | 2026-09-12 |
 
 ---
 
@@ -92,10 +74,9 @@
 2. **[kit-framework-structure.md](kit-framework-structure.md)** 第5章 (20分钟) — 模块系统
 3. **[kit-development-experience.md](kit-development-experience.md)** (20分钟) — 踩坑经验
 
-### 上游同步（1.5小时）
-1. **[kit-sync-status.md](kit-sync-status.md)** (20分钟) — 当前状态
-2. **[upstream-sync-checklist.md](upstream-sync-checklist.md)** (40分钟) — 检查清单
-3. **[powertoys-architecture.md](powertoys-architecture.md)** (30分钟) — 上游参考
+### 模块与上游参考（1小时）
+1. **[powertoys-architecture.md](powertoys-architecture.md)** (30分钟) — 上游参考
+2. **[architecture-comparison.md](architecture-comparison.md)** (30分钟) — 架构对比与取舍
 
 ---
 
@@ -124,10 +105,6 @@
 - [startup-optimization-analysis.md](startup-optimization-analysis.md)
 - [architecture-comparison.md](architecture-comparison.md) 第 3 章
 
-### 上游同步
-- [kit-sync-status.md](kit-sync-status.md)
-- [upstream-sync-checklist.md](upstream-sync-checklist.md)
-
 ---
 
 ## 📊 文档统计
@@ -138,10 +115,9 @@
 | 架构设计层 | 3 | ~47KB |
 | 实现层 | 1 | ~35KB |
 | 开发层 | 2 | ~20KB |
-| 性能优化层 | 2 | ~19KB |
-| 上游同步层 | 2 | ~52KB |
-| 专项分析 | 1 | ~21KB |
-| **总计** | **13** | **~202KB** |
+| 性能优化层 | 1 | ~16.6KB |
+| 扩展指南与经验 | 2 | ~34KB |
+| **总计** | **11** | **~160KB** |
 
 ---
 
@@ -170,12 +146,8 @@ ARCHITECTURE_OVERVIEW.md (导航中心)
     │       └─ references → kit-first-plugin.md
     │
     └─ 运维层
-        ├─ startup-optimization-analysis.md
-        │   └─ references → kit-framework-structure.md (第 6 章)
-        ├─ kit-sync-status.md
-        ├─ upstream-sync-checklist.md
-        │   └─ references → powertoys-architecture.md
-        └─ STARTUP_DEBUG_GUIDE.md
+        └─ startup-optimization-analysis.md
+            └─ references → kit-framework-structure.md (第 6 章)
 ```
 
 ---
@@ -186,13 +158,12 @@ ARCHITECTURE_OVERVIEW.md (导航中心)
 - [x] 源码实现文档完整（kit-framework-structure.md）
 - [x] 开发指南文档完整（kit-first-plugin.md）
 - [x] 性能优化文档完整（startup-optimization-analysis.md）
-- [x] 上游同步文档完整（kit-sync-status.md、upstream-sync-checklist.md）
 - [x] 导航文档完整（ARCHITECTURE_OVERVIEW.md、README.md）
 - [x] 所有文档有交叉引用
 - [x] 所有文档有版本和更新日期
 
 ---
 
-**最后更新**: 2026-09-13  
-**文档总数**: 13  
-**总字数**: 约 20 万字
+**最后更新**: 2026-09-14  
+**文档总数**: 11  
+

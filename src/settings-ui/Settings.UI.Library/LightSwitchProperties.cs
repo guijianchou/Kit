@@ -4,7 +4,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class LightSwitchProperties
     {
@@ -17,7 +17,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         public const string DefaultLatitude = "0.0";
         public const string DefaultLongitude = "0.0";
         public const string DefaultScheduleMode = "Off";
-        public static readonly HotkeySettings DefaultToggleThemeHotkey = new HotkeySettings(true, true, false, true, 0x44); // Ctrl+Win+Shift+D
 
         public LightSwitchProperties()
         {
@@ -30,7 +29,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             SunriseOffset = new IntProperty(DefaultSunriseOffset);
             SunsetOffset = new IntProperty(DefaultSunsetOffset);
             ScheduleMode = new StringProperty(DefaultScheduleMode);
-            ToggleThemeHotkey = new KeyboardKeysProperty(DefaultToggleThemeHotkey);
         }
 
         [JsonPropertyName("changeSystem")]
@@ -59,8 +57,5 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         [JsonPropertyName("scheduleMode")]
         public StringProperty ScheduleMode { get; set; }
-
-        [JsonPropertyName("toggle-theme-hotkey")]
-        public KeyboardKeysProperty ToggleThemeHotkey { get; set; }
     }
 }

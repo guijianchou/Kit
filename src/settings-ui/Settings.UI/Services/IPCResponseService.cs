@@ -5,12 +5,12 @@
 using System;
 using System.Collections.Generic;
 
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts;
-using Microsoft.PowerToys.Settings.UI.Views;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library.HotkeyConflicts;
+using Kit.Settings.UI.Views;
 using Windows.Data.Json;
 
-namespace Microsoft.PowerToys.Settings.UI.Services
+namespace Kit.Settings.UI.Services
 {
     public class IPCResponseService
     {

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -10,7 +10,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using PowerToys.Interop;
+using Kit.Interop;
 
 namespace ManagedCommon
 {
@@ -25,6 +25,116 @@ namespace ManagedCommon
         private static readonly string TraceFlag = "Trace";
 
         private static readonly string Version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
+
+        private static int _activeLogLevel; // 0: Trace, 1: Debug, 2: Info, 3: Warning, 4: Error, 5: Off
+        private static bool _isLoggingEnabled = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether logging is currently active.
+        /// </summary>
+        public static bool IsLoggingEnabled
+        {
+            get => _isLoggingEnabled;
+            set => _isLoggingEnabled = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the active log level name (e.g. "trace", "debug", "info", "warn", "err", "off").
+        /// </summary>
+        public static string LogLevelName { get; private set; } = "trace";
+
+        /// <summary>
+        /// Sets the logging state and verbosity level.
+        /// </summary>
+        public static void SetLogging(bool enabled, string logLevel = "trace")
+        {
+            _isLoggingEnabled = enabled;
+            LogLevelName = string.IsNullOrWhiteSpace(logLevel) ? "trace" : logLevel.ToLowerInvariant();
+            if (!enabled || LogLevelName == "off")
+            {
+                _isLoggingEnabled = false;
+                _activeLogLevel = 5;
+                return;
+            }
+
+            _activeLogLevel = LogLevelName switch
+            {
+                "trace" => 0,
+                "debug" => 1,
+                "info" => 2,
+                "warn" or "warning" => 3,
+                "err" or "error" or "critical" => 4,
+                _ => 0,
+            };
+        }
+
+        private static bool ShouldLog(string type)
+        {
+            int level = type switch
+            {
+                "Trace" => 0,
+                "Debug" => 1,
+                "Info" => 2,
+                "Warning" => 3,
+                "Error" => 4,
+                _ => 2,
+            };
+
+            return level >= _activeLogLevel;
+        }
+
+        /// <summary>
+        /// Loads log settings from %LOCALAPPDATA%\Kit\log_settings.json if present.
+        /// </summary>
+        public static void LoadLogSettings()
+        {
+            try
+            {
+                string settingsPath = Path.Combine(Constants.AppDataPath(), "log_settings.json");
+                if (File.Exists(settingsPath))
+                {
+                    string json = File.ReadAllText(settingsPath);
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("logLevel", out var elem))
+                    {
+                        string level = elem.GetString() ?? "trace";
+                        if (string.Equals(level, "off", StringComparison.OrdinalIgnoreCase))
+                        {
+                            SetLogging(false, "off");
+                        }
+                        else
+                        {
+                            SetLogging(true, level);
+                        }
+
+                        return;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            SetLogging(true, "trace");
+        }
+
+        /// <summary>
+        /// Opens the logs directory in Windows Explorer.
+        /// </summary>
+        public static void OpenLogFolder()
+        {
+            try
+            {
+                string targetPath = !string.IsNullOrEmpty(AppLogDirectoryPath) && Directory.Exists(AppLogDirectoryPath)
+                    ? AppLogDirectoryPath
+                    : Constants.AppDataPath();
+
+                Process.Start(new ProcessStartInfo("explorer.exe", targetPath) { UseShellExecute = true });
+            }
+            catch
+            {
+            }
+        }
 
         /// <summary>
         /// Gets the path to the log directory for the current version of the app.
@@ -49,6 +159,7 @@ namespace ManagedCommon
         /// <param name="isLocalLow">If the process using Logger is a low-privilege process.</param>
         public static void InitializeLogger(string applicationLogPath, bool isLocalLow = false)
         {
+            LoadLogSettings();
             string versionedPath = LogDirectoryPath(applicationLogPath, isLocalLow);
             string basePath = Path.GetDirectoryName(versionedPath);
 
@@ -185,6 +296,11 @@ namespace ManagedCommon
 
         private static void Log(string message, string type, string memberName, string sourceFilePath, int sourceLineNumber)
         {
+            if (!_isLoggingEnabled || !ShouldLog(type))
+            {
+                return;
+            }
+
             Trace.WriteLine("[" + DateTime.Now.TimeOfDay + "] [" + type + "] " + GetCallerInfo(memberName, sourceFilePath, sourceLineNumber));
             Trace.Indent();
             if (message != string.Empty)

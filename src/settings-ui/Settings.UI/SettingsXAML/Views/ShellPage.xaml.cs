@@ -10,23 +10,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common.Search;
 using Common.Search.FuzzSearch;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Services;
+using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Controls;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.Services;
-using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Settings.UI.Library;
 using Windows.Data.Json;
 using WinRT.Interop;
 
-namespace Microsoft.PowerToys.Settings.UI.Views
+namespace Kit.Settings.UI.Views
 {
     /// <summary>
     /// Root page.
@@ -112,6 +111,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             NavHelper.SetNavigateTo(GeneralNavigationItem, typeof(GeneralPage));
             NavHelper.SetNavigateTo(AwakeNavigationItem, typeof(AwakePage));
             NavHelper.SetNavigateTo(LightSwitchNavigationItem, typeof(LightSwitchPage));
+            NavHelper.SetNavigateTo(LocalserverNavigationItem, typeof(LocalserverPage));
             SetWindowTitle();
             var settingsUtils = SettingsUtils.Default;
             ViewModel = new ShellViewModel(SettingsRepository<GeneralSettings>.GetInstance(settingsUtils));
@@ -301,16 +301,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             AppTitleBar.Title = App.IsElevated ? loader.GetString("SettingsWindow_AdminTitle") : loader.GetString("SettingsWindow_Title");
         }
 
-        private void ShellPage_Loaded(object sender, RoutedEventArgs e)
-        {
-            Task.Run(async () =>
-            {
-                await Task.Delay(1000);
-                SearchIndexService.BuildIndex();
-            })
-            .ContinueWith(_ => { });
-        }
-
         private void NavigationView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
         {
             AppTitleBar.IsPaneButtonVisible = true;
@@ -437,7 +427,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             }
 
             var assembly = typeof(GeneralPage).Assembly;
-            return assembly.GetType($"Microsoft.PowerToys.Settings.UI.Views.{pageTypeName}");
+            return assembly.GetType($"Kit.Settings.UI.Views.{pageTypeName}");
         }
 
         private void CtrlF_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)

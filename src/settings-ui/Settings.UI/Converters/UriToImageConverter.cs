@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media.Imaging;
 
-namespace Microsoft.PowerToys.Settings.UI.Converters
+namespace Kit.Settings.UI.Converters
 {
     public sealed partial class UriToImageSourceConverter : IValueConverter
     {

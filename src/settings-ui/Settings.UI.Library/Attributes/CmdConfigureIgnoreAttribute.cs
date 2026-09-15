@@ -4,7 +4,7 @@
 
 using System;
 
-namespace Settings.UI.Library.Attributes;
+namespace Kit.Settings.UI.Library.Attributes;
 
 /// <summary>
 /// Adding this attribute to a property makes it not configurable from the command line.

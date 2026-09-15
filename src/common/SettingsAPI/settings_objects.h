@@ -4,7 +4,7 @@
 
 #include <cwctype>
 
-namespace PowerToysSettings
+namespace KitSettings
 {
     class HotkeyObject;
 
@@ -263,3 +263,6 @@ namespace PowerToysSettings
     };
 
 }
+
+// Imported module sources may still use the upstream namespace.
+namespace PowerToysSettings = KitSettings;

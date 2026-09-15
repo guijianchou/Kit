@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Base class that should be inherited by all Test Classes.

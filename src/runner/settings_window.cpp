@@ -31,6 +31,7 @@
 #include <common/utils/winapi_error.h>
 #include <common/themes/windows_colors.h>
 #include "settings_window.h"
+#include "ai_hub_ipc.h"
 
 #define BUFSIZE 1024
 
@@ -68,7 +69,9 @@ json::JsonObject get_all_settings()
     json::JsonObject result;
 
     result.SetNamedValue(L"general", get_general_settings().to_json());
-    result.SetNamedValue(L"powertoys", get_power_toys_settings());
+    const auto moduleSettings = get_power_toys_settings();
+    result.SetNamedValue(L"kit", moduleSettings);
+    result.SetNamedValue(L"powertoys", moduleSettings);
     return result;
 }
 
@@ -223,7 +226,7 @@ void dispatch_received_json(const std::wstring& json_to_parse)
             // Expected format: {"module_status": {"ModuleName": true/false}}
             apply_module_status_update(value.GetObjectW());
         }
-        else if (name == L"powertoys")
+        else if (name == L"powertoys" || name == L"kit")
         {
             dispatch_json_config_to_modules(value.GetObjectW());
             const std::wstring settings_string{ get_all_settings().Stringify().c_str() };
@@ -352,6 +355,11 @@ void dispatch_received_json_callback(PVOID data)
 
 void receive_json_send_to_main_thread(const std::wstring& msg)
 {
+    if (try_complete_ai_hub_response(msg))
+    {
+        return;
+    }
+
     std::wstring* copy = new std::wstring(msg);
     dispatch_run_on_main_ui_thread(dispatch_received_json_callback, copy);
 }
@@ -427,6 +435,7 @@ void end_settings_ipc()
         settings_ipc.reset(current_settings_ipc);
         current_settings_ipc = nullptr;
     }
+    cancel_ai_hub_requests();
     if (settings_ipc)
     {
         // Input callbacks only post to the main thread. Join on the Settings
@@ -494,16 +503,14 @@ void run_settings_window(std::optional<std::wstring> settings_window)
         }
 
         // Arguments for calling the settings executable:
-        // "C:\kit_path\PowerToys.Settings.exe" kit_pipe settings_pipe kit_pid settings_theme
+        // "C:\kit_path\Kit.Settings.exe" kit_pipe settings_pipe kit_pid settings_theme
         // kit_pipe: Kit pipe server.
         // settings_pipe : Settings pipe server.
         // kit_pid : Kit process pid.
         // settings_theme: pass "dark" to start the settings window in dark mode
 
         // Arg 1: executable path.
-        std::wstring executable_path = get_module_folderpath();
-
-        executable_path.append(L"\\WinUI3Apps\\PowerToys.Settings.exe");
+        std::wstring executable_path = get_module_folderpath() + L"\\WinUI3Apps\\Kit.Settings.exe";
 
         // Args 2,3: pipe server. Generate unique names for the pipes, if getting a UUID is possible.
         std::wstring powertoys_pipe_name(L"\\\\.\\pipe\\kit_runner_");
@@ -871,6 +878,10 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
         return "Awake";
     case ESettingsWindowNames::LightSwitch:
         return "LightSwitch";
+    case ESettingsWindowNames::Localserver:
+        return "Localserver";
+    case ESettingsWindowNames::AiHub:
+        return "AiHub";
     default:
     {
         Logger::error(L"Can't convert ESettingsWindowNames value={} to string", static_cast<int>(value));
@@ -897,6 +908,14 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     else if (value == "LightSwitch")
     {
         return ESettingsWindowNames::LightSwitch;
+    }
+    else if (value == "Localserver")
+    {
+        return ESettingsWindowNames::Localserver;
+    }
+    else if (value == "AiHub")
+    {
+        return ESettingsWindowNames::AiHub;
     }
     else
     {

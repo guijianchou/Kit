@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Provides methods for capturing the screen with the mouse cursor.

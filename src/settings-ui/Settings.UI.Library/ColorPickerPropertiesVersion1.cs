@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Microsoft.PowerToys.Settings.UI.Library.Enumerations;
+using Kit.Settings.UI.Library.Enumerations;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class ColorPickerPropertiesVersion1
     {

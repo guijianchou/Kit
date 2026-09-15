@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -7,7 +7,7 @@ using System.Linq;
 
 using ManagedCommon;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
+namespace Kit.Settings.UI.Library.Helpers
 {
     public static class KitModuleCatalog
     {
@@ -16,6 +16,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 ModuleType.Awake,
                 ModuleType.LightSwitch,
+                ModuleType.Localserver,
             };
 
         public static IReadOnlyList<ModuleType> DashboardModules => ActiveModules;
@@ -32,6 +33,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
                 nameof(GeneralSettings),
                 AwakeSettings.ModuleName,
                 LightSwitchSettings.ModuleName,
+                LocalserverSettings.ModuleName,
                 "General",
             };
 
@@ -40,6 +42,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
             {
                 AwakeSettings.ModuleName,
                 LightSwitchSettings.ModuleName,
+                LocalserverSettings.ModuleName,
             };
 
         public static bool IsActiveModule(ModuleType moduleType)

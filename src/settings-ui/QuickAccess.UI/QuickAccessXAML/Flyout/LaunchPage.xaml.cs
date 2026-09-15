@@ -1,23 +1,23 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
 using System.Threading;
 using ManagedCommon;
-using Microsoft.PowerToys.QuickAccess.Services;
-using Microsoft.PowerToys.QuickAccess.ViewModels;
-using Microsoft.PowerToys.Settings.UI.Controls;
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.QuickAccess.Services;
+using Kit.QuickAccess.ViewModels;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Library;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
-using PowerToys.Interop;
+using Kit.Interop;
 using Windows.System;
 
-namespace Microsoft.PowerToys.QuickAccess.Flyout;
+namespace Kit.QuickAccess.Flyout;
 
 public sealed partial class LaunchPage : Page
 {

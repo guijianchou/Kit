@@ -4,7 +4,7 @@
 
 using System.Threading.Tasks;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Represents a TextBox in the UI test environment.

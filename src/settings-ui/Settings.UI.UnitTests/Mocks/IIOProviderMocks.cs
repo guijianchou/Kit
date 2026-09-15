@@ -6,10 +6,10 @@ using System;
 using System.IO.Abstractions;
 using System.Linq.Expressions;
 
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Library.Utilities;
 using Moq;
 
-namespace Microsoft.PowerToys.Settings.UI.UnitTests.Mocks
+namespace Kit.Settings.UI.UnitTests.Mocks
 {
     internal static class IIOProviderMocks
     {

@@ -8,7 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     /// <summary>
     /// Represents a control that can contain multiple settings (or other) controls

@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Windows;
-using static Microsoft.PowerToys.UITest.WindowHelper;
+using static Kit.UITest.WindowHelper;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Nested class for test initialization.

@@ -3,12 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.ViewModels;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.PowerToys.Settings.UI.Converters;
+namespace Kit.Settings.UI.Converters;
 
 public sealed partial class SearchSuggestionTemplateSelector : DataTemplateSelector
 {

@@ -1,23 +1,23 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using global::PowerToys.GPOWrapper;
+using global::Kit.GPOWrapper;
 using ManagedCommon;
-using Microsoft.PowerToys.QuickAccess.Helpers;
-using Microsoft.PowerToys.QuickAccess.Services;
-using Microsoft.PowerToys.Settings.UI.Controls;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels.Commands;
+using Kit.QuickAccess.Helpers;
+using Kit.QuickAccess.Services;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.ViewModels.Commands;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.ApplicationModel.Resources;
 
-namespace Microsoft.PowerToys.QuickAccess.ViewModels;
+namespace Kit.QuickAccess.ViewModels;
 
 public sealed class AllAppsViewModel : Observable
 {
@@ -104,11 +104,11 @@ public sealed class AllAppsViewModel : Observable
             var moduleType = item.Tag;
             var gpo = Helpers.ModuleGpoHelper.GetModuleGpoConfiguration(moduleType);
             var isLocked = gpo is GpoRuleConfigured.Enabled or GpoRuleConfigured.Disabled;
-            var isEnabled = gpo == GpoRuleConfigured.Enabled || (!isLocked && Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType));
+            var isEnabled = gpo == GpoRuleConfigured.Enabled || (!isLocked && Kit.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType));
 
-            item.Label = _resourceLoader.GetString(Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetModuleLabelResourceName(moduleType));
+            item.Label = _resourceLoader.GetString(Kit.Settings.UI.Library.Helpers.ModuleHelper.GetModuleLabelResourceName(moduleType));
             item.IsLocked = isLocked;
-            item.Icon = Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetModuleTypeFluentIconName(moduleType);
+            item.Icon = Kit.Settings.UI.Library.Helpers.ModuleHelper.GetModuleTypeFluentIconName(moduleType);
 
             if (item.IsEnabled != isEnabled)
             {

@@ -1,20 +1,22 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
 using System.IO.Abstractions;
+using Kit.GPOWrapper;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Dispatching;
-using PowerToys.GPOWrapper;
 
-namespace Microsoft.PowerToys.Settings.UI.Views
+namespace Kit.Settings.UI.Views
 {
+    using GPOWrapper = global::Kit.GPOWrapper.GPOWrapper;
+
     public sealed partial class AwakePage : NavigablePage, IRefreshablePage
     {
         private readonly string _appName = "Awake";

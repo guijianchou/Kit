@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Settings.UI.Library.Helpers
+namespace Kit.Settings.UI.Library.Helpers
 {
     public class SearchLocation
     {

@@ -4,9 +4,9 @@
 
 using System.Text.Json;
 
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class PowerRenameLocalProperties : ISettingsConfig
     {

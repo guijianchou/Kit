@@ -3,20 +3,20 @@
 #include <mutex>
 #include <unordered_set>
 
-namespace winrt::PowerToys::Interop::implementation
+namespace winrt::Kit::Interop::implementation
 {
     struct KeyboardHook : KeyboardHookT<KeyboardHook>
     {
         // KeyboardHook() = default;
 
-        KeyboardHook(winrt::PowerToys::Interop::KeyboardEventCallback const& keyboardEventCallback, winrt::PowerToys::Interop::IsActiveCallback const& isActiveCallback, winrt::PowerToys::Interop::FilterKeyboardEvent const& filterKeyboardEvent);
+        KeyboardHook(winrt::Kit::Interop::KeyboardEventCallback const& keyboardEventCallback, winrt::Kit::Interop::IsActiveCallback const& isActiveCallback, winrt::Kit::Interop::FilterKeyboardEvent const& filterKeyboardEvent);
         void Start();
         void Close();
 
     private:
-        winrt::PowerToys::Interop::KeyboardEventCallback keyboardEventCallback;
-        winrt::PowerToys::Interop::IsActiveCallback isActiveCallback;
-        winrt::PowerToys::Interop::FilterKeyboardEvent filterKeyboardEvent;
+        winrt::Kit::Interop::KeyboardEventCallback keyboardEventCallback;
+        winrt::Kit::Interop::IsActiveCallback isActiveCallback;
+        winrt::Kit::Interop::FilterKeyboardEvent filterKeyboardEvent;
 
         // This class used to be C++/CX, which meant it ran on .NET runtime and was able to send function pointer for delegates as hook procedures for SetWindowsHookEx which kept an object reference.
         // There doesn't seem to be a way to do this outside of the .NET runtime that allows us to get a proper C-style function.
@@ -27,7 +27,7 @@ namespace winrt::PowerToys::Interop::implementation
         static LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam);
     };
 }
-namespace winrt::PowerToys::Interop::factory_implementation
+namespace winrt::Kit::Interop::factory_implementation
 {
     struct KeyboardHook : KeyboardHookT<KeyboardHook, implementation::KeyboardHook>
     {

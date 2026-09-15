@@ -16,8 +16,8 @@ using Awake.Core.Models;
 using Awake.Core.Native;
 using Awake.Core.Threading;
 using Awake.Properties;
+using Kit.Settings.UI.Library;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
 
 namespace Awake.Core
 {
@@ -424,19 +424,19 @@ namespace Awake.Core
                 null);
         }
 
-        internal static void SetTray(AwakeSettings settings, bool startedFromPowerToys)
+        internal static void SetTray(AwakeSettings settings, bool startedFromKit)
         {
             SetTray(
                 settings.Properties.KeepDisplayOn,
                 settings.Properties.Mode,
                 settings.Properties.CustomTrayTimes,
-                startedFromPowerToys);
+                startedFromKit);
         }
 
-        public static void SetTray(bool keepDisplayOn, AwakeMode mode, Dictionary<string, uint> trayTimeShortcuts, bool startedFromPowerToys)
+        public static void SetTray(bool keepDisplayOn, AwakeMode mode, Dictionary<string, uint> trayTimeShortcuts, bool startedFromKit)
         {
             ClearExistingTrayMenu();
-            CreateNewTrayMenu(startedFromPowerToys, keepDisplayOn, mode);
+            CreateNewTrayMenu(startedFromKit, keepDisplayOn, mode);
 
             InsertAwakeModeMenuItems(mode);
 
@@ -453,7 +453,7 @@ namespace Awake.Core
             }
         }
 
-        private static void CreateNewTrayMenu(bool startedFromPowerToys, bool keepDisplayOn, AwakeMode mode)
+        private static void CreateNewTrayMenu(bool startedFromKit, bool keepDisplayOn, AwakeMode mode)
         {
             TrayMenu = Bridge.CreatePopupMenu();
 
@@ -462,14 +462,14 @@ namespace Awake.Core
                 return;
             }
 
-            if (!startedFromPowerToys)
+            if (!startedFromKit)
             {
                 InsertMenuItem(0, TrayCommands.TC_EXIT, Resources.AWAKE_EXIT);
             }
 
             InsertMenuItem(0, TrayCommands.TC_DISPLAY_SETTING, Resources.AWAKE_KEEP_SCREEN_ON, keepDisplayOn, mode == AwakeMode.PASSIVE);
 
-            if (!startedFromPowerToys)
+            if (!startedFromKit)
             {
                 InsertSeparator(1);
             }

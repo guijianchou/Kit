@@ -4,7 +4,7 @@
 
 using System;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.Interfaces
+namespace Kit.Settings.UI.Library.Interfaces
 {
     public interface ISettingsRepository<T>
     {

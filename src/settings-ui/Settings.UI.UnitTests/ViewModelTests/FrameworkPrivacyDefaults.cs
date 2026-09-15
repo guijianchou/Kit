@@ -129,9 +129,9 @@ namespace ViewModelTests
                 new[] { "Kit.slnx" },
                 new[] { "src", "common", "ManagedCommon", "ManagedCommon.csproj" },
                 new[] { "src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj" },
-                new[] { "src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj" },
-                new[] { "src", "settings-ui", "QuickAccess.UI", "PowerToys.QuickAccess.csproj" },
-                new[] { "src", "settings-ui", "PowerToys.Settings.slnf" },
+                new[] { "src", "settings-ui", "Settings.UI", "Kit.Settings.csproj" },
+                new[] { "src", "settings-ui", "QuickAccess.UI", "Kit.QuickAccess.csproj" },
+                new[] { "src", "settings-ui", "Kit.Settings.slnf" },
             };
 
             foreach (var pathParts in projectPaths)
@@ -221,7 +221,7 @@ namespace ViewModelTests
         {
             var runnerHelper = File.ReadAllText(FindSourceFile("src", "common", "ManagedCommon", "RunnerHelper.cs"));
 
-            StringAssert.Contains(runnerHelper, "NativeMethods.CloseHandle(powerToysProcHandle)");
+            StringAssert.Contains(runnerHelper, "NativeMethods.CloseHandle(kitProcHandle)");
             StringAssert.Contains(runnerHelper, "NativeMethods.CloseHandle(hProcess)");
             StringAssert.Contains(runnerHelper, "hProcess = IntPtr.Zero;");
             StringAssert.Contains(runnerHelper, "NativeMethods.CloseHandle(runnerHandle)");

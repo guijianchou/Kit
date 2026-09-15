@@ -8,9 +8,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Helpers;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public static class SearchLocationLoader
     {

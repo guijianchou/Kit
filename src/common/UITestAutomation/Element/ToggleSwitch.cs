@@ -4,7 +4,7 @@
 
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Represents a ToggleSwitch in the UI test environment.

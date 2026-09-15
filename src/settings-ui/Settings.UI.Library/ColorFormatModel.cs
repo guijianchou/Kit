@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 using ManagedCommon;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class ColorFormatModel : INotifyPropertyChanged
     {

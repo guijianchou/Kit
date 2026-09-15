@@ -5,12 +5,12 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
-    <RootNamespace>Microsoft.PowerToys.Settings.UI.Controls</RootNamespace>
-    <AssemblyName>PowerToys.Settings.UI.Controls</AssemblyName>
+    <RootNamespace>Kit.Settings.UI.Controls</RootNamespace>
+    <AssemblyName>Kit.Settings.UI.Controls</AssemblyName>
     <UseWinUI>true</UseWinUI>
     <EnablePreviewMsixTooling>true</EnablePreviewMsixTooling>
     <GenerateLibraryLayout>true</GenerateLibraryLayout>
-    <ProjectPriFileName>PowerToys.Settings.UI.Controls.pri</ProjectPriFileName>
+    <ProjectPriFileName>Kit.Settings.UI.Controls.pri</ProjectPriFileName>
     <Nullable>enable</Nullable>
     <Platforms>x64;ARM64</Platforms>
   </PropertyGroup>

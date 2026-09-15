@@ -14,12 +14,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Windows.Input;
-
+using Kit.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Library.ViewModels.Commands;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels.Commands;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class KeysDataModel : INotifyPropertyChanged
     {

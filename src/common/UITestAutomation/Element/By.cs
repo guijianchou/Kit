@@ -4,7 +4,7 @@
 
 using static OpenQA.Selenium.By;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// This class represents a By selector.

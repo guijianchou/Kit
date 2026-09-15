@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers;
+namespace Kit.Settings.UI.Helpers;
 
 public static class TimeSpanHelper
 {

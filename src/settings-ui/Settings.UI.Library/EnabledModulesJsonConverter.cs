@@ -6,12 +6,14 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public sealed class EnabledModulesJsonConverter : JsonConverter<EnabledModules>
     {
         private const string AwakeKey = "Awake";
         private const string LightSwitchKey = "LightSwitch";
+        private const string LocalserverKey = "Localserver";
+        private const string AiHubKey = "AiHub";
 
         public override EnabledModules Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -54,6 +56,12 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                     case LightSwitchKey:
                         modules.LightSwitch = isEnabled;
                         break;
+                    case LocalserverKey:
+                        modules.Localserver = isEnabled;
+                        break;
+                    case AiHubKey:
+                        modules.AiHub = isEnabled;
+                        break;
                 }
             }
 
@@ -68,6 +76,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             writer.WriteStartObject();
             writer.WriteBoolean(AwakeKey, value.Awake);
             writer.WriteBoolean(LightSwitchKey, value.LightSwitch);
+            writer.WriteBoolean(LocalserverKey, value.Localserver);
+            writer.WriteBoolean(AiHubKey, value.AiHub);
             writer.WriteEndObject();
         }
     }

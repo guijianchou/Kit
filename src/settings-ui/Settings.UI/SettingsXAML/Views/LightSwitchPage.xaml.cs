@@ -10,19 +10,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.UI;
+using Kit.GPOWrapper;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using PowerToys.GPOWrapper;
-using Settings.UI.Library;
 using Windows.Devices.Geolocation;
 
-namespace Microsoft.PowerToys.Settings.UI.Views
+namespace Kit.Settings.UI.Views
 {
     public sealed partial class LightSwitchPage : NavigablePage, IRefreshablePage
     {

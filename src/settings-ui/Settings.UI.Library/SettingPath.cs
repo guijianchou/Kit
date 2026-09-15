@@ -5,9 +5,9 @@
 using System;
 using System.IO.Abstractions;
 
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Library.Utilities;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class SettingPath
     {

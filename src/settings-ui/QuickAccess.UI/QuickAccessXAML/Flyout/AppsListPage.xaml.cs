@@ -1,16 +1,16 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.PowerToys.QuickAccess.ViewModels;
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.QuickAccess.ViewModels;
+using Kit.Settings.UI.Library;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 
-namespace Microsoft.PowerToys.QuickAccess.Flyout;
+namespace Kit.QuickAccess.Flyout;
 
 public sealed partial class AppsListPage : Page
 {

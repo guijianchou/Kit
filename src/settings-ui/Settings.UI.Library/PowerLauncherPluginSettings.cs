@@ -4,7 +4,7 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class PowerLauncherPluginSettings
     {

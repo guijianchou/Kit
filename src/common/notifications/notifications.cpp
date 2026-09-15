@@ -46,12 +46,12 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace // Strings in this namespace should not be localized
 {
-    constexpr std::wstring_view TASK_NAME = L"PowerToysBackgroundNotificationsHandler";
+    constexpr std::wstring_view TASK_NAME = L"KitBackgroundNotificationsHandler";
     constexpr std::wstring_view TASK_ENTRYPOINT = L"BackgroundActivator.BackgroundHandler";
-    constexpr std::wstring_view PACKAGED_APPLICATION_ID = L"PowerToys";
+    constexpr std::wstring_view PACKAGED_APPLICATION_ID = L"Kit";
 
-    std::wstring APPLICATION_ID = L"Microsoft.PowerToysWin32";
-    constexpr std::wstring_view DEFAULT_TOAST_GROUP = L"PowerToysToastTag";
+    std::wstring APPLICATION_ID = L"Microsoft.KitWin32";
+    constexpr std::wstring_view DEFAULT_TOAST_GROUP = L"KitToastTag";
 }
 
 static DWORD loop_thread_id()
@@ -94,7 +94,11 @@ public:
         const NOTIFICATION_USER_INPUT_DATA*,
         ULONG) override
     {
-        auto lib = LoadLibraryW(L"PowerToys.BackgroundActivatorDLL.dll");
+        auto lib = LoadLibraryW(L"Kit.BackgroundActivatorDLL.dll");
+        if (!lib)
+        {
+            lib = LoadLibraryW(L"PowerToys.BackgroundActivatorDLL.dll");
+        }
         if (!lib)
         {
             return 1;

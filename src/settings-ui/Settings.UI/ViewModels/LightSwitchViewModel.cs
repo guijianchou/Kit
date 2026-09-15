@@ -11,18 +11,18 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Kit.GPOWrapper;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.SerializationContext;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.SerializationContext;
-using PowerToys.GPOWrapper;
-using Settings.UI.Library;
-using Settings.UI.Library.Helpers;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
+    using GPOWrapper = global::Kit.GPOWrapper.GPOWrapper;
+
     public partial class LightSwitchViewModel : PageViewModelBase
     {
         protected override string ModuleName => LightSwitchSettings.ModuleName;
@@ -53,12 +53,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         public override Dictionary<string, HotkeySettings[]> GetAllHotkeySettings()
         {
-            var hotkeysDict = new Dictionary<string, HotkeySettings[]>
-            {
-                [ModuleName] = [ToggleThemeActivationShortcut],
-            };
-
-            return hotkeysDict;
+            return new Dictionary<string, HotkeySettings[]>();
         }
 
         private void InitializeEnabledValue()
@@ -505,35 +500,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         public TimeSpan LocationPanelLightTime => TimeSpan.FromMinutes(_locationPanelLightTime);
 
         public TimeSpan LocationPanelDarkTime => TimeSpan.FromMinutes(_locationPanelDarkTime);
-
-        public HotkeySettings ToggleThemeActivationShortcut
-        {
-            get => ModuleSettings.Properties.ToggleThemeHotkey.Value;
-
-            set
-            {
-                if (value != ModuleSettings.Properties.ToggleThemeHotkey.Value)
-                {
-                    if (value == null)
-                    {
-                        ModuleSettings.Properties.ToggleThemeHotkey.Value = LightSwitchProperties.DefaultToggleThemeHotkey;
-                    }
-                    else
-                    {
-                        ModuleSettings.Properties.ToggleThemeHotkey.Value = value;
-                    }
-
-                    NotifyPropertyChanged();
-
-                    SendConfigMSG(
-                        string.Format(
-                            CultureInfo.InvariantCulture,
-                            "{{ \"powertoys\": {{ \"{0}\": {1} }} }}",
-                            LightSwitchSettings.ModuleName,
-                            JsonSerializer.Serialize(_moduleSettings, SourceGenerationContextContext.Default.LightSwitchSettings)));
-                }
-            }
-        }
 
         public void NotifyPropertyChanged([CallerMemberName] string? propertyName = null)
         {

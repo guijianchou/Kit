@@ -1,14 +1,14 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Controls;
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Library;
 
-namespace Microsoft.PowerToys.QuickAccess.Services
+namespace Kit.QuickAccess.Services
 {
-    public class QuickAccessLauncher : Microsoft.PowerToys.Settings.UI.Controls.QuickAccessLauncher
+    public class QuickAccessLauncher : Kit.Settings.UI.Controls.QuickAccessLauncher
     {
         private readonly IQuickAccessCoordinator? _coordinator;
 

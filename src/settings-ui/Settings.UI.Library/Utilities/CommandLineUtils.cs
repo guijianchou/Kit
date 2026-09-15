@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -7,10 +7,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library;
+namespace Kit.Settings.UI.Library;
 
 public class CommandLineUtils
 {
@@ -66,7 +66,7 @@ public class CommandLineUtils
     public static Assembly GetSettingsAssembly()
     {
         return AppDomain.CurrentDomain.GetAssemblies()
-                        .FirstOrDefault(a => a.GetName().Name == "PowerToys.Settings.UI.Lib");
+                        .FirstOrDefault(a => a.GetName().Name is "Kit.Settings.UI.Lib" or "PowerToys.Settings.UI.Lib") ?? typeof(CommandLineUtils).Assembly;
     }
 
     public static object GetPropertyValue(string propertyName, ISettingsConfig settingsConfig)

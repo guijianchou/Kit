@@ -4,10 +4,10 @@
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
 
-namespace Microsoft.PowerToys.Settings.UI.SerializationContext;
+namespace Kit.Settings.UI.SerializationContext;
 
 [JsonSerializable(typeof(ActionMessage))]
 [JsonSerializable(typeof(Dictionary<string, List<string>>))]

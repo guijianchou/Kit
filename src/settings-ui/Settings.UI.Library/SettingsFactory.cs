@@ -4,10 +4,10 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Services
+namespace Kit.Settings.UI.Services
 {
     /// <summary>
     /// Factory service for getting Kit hotkey settings used by the shortcut conflict window.

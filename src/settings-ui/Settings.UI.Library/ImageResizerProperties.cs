@@ -7,9 +7,9 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Settings.UI.Library.Attributes;
+using Kit.Settings.UI.Library.Attributes;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class ImageResizerProperties
     {

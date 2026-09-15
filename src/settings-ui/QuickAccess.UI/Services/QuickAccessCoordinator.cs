@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -6,12 +6,12 @@ using System;
 using System.Threading.Tasks;
 using Common.UI;
 using ManagedCommon;
-using Microsoft.PowerToys.QuickAccess.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using PowerToys.Interop;
+using Kit.QuickAccess.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Interop;
 
-namespace Microsoft.PowerToys.QuickAccess.Services;
+namespace Kit.QuickAccess.Services;
 
 internal sealed class QuickAccessCoordinator : IQuickAccessCoordinator, IDisposable
 {

@@ -7,9 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Library.Utilities;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts
+namespace Kit.Settings.UI.Library.HotkeyConflicts
 {
     public class HotkeyData
     {

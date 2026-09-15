@@ -4,10 +4,10 @@
 
 using System.Text.Json;
 
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
 
-namespace Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class PeekPreviewSettings : ISettingsConfig
     {
@@ -34,7 +34,7 @@ namespace Settings.UI.Library
 
         public string ToJsonString()
         {
-            return JsonSerializer.Serialize(this, Microsoft.PowerToys.Settings.UI.Library.SettingsSerializationContext.Default.PeekPreviewSettings);
+            return JsonSerializer.Serialize(this, Kit.Settings.UI.Library.SettingsSerializationContext.Default.PeekPreviewSettings);
         }
 
         public string GetModuleName()

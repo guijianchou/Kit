@@ -7,11 +7,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class MouseWithoutBordersSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
     {

@@ -1,4 +1,4 @@
-﻿#include <windows.h>
+#include <windows.h>
 #include <tchar.h>
 #include "ThemeScheduler.h"
 #include "ThemeHelper.h"
@@ -180,21 +180,40 @@ static void DetectAndHandleExternalThemeChange(LightSwitchStateManager& stateMan
     if (s.scheduleMode == ScheduleMode::Off)
         return;
 
+    const auto& state = stateManager.GetState();
+    if (state.isManualOverride)
+        return;
+
+    // Compare current system/apps theme against our internal tracked state.
+    // If the system theme is still what LightSwitch expects, no external change happened!
+    bool currentSystemLight = GetCurrentSystemTheme();
+    bool currentAppsLight = GetCurrentAppsTheme();
+
+    bool systemChanged = s.changeSystem && (currentSystemLight != state.isSystemLightActive);
+    bool appsChanged = s.changeApps && (currentAppsLight != state.isAppsLightActive);
+
+    if (!systemChanged && !appsChanged)
+    {
+        return;
+    }
+
     SYSTEMTIME st;
     GetLocalTime(&st);
     int nowMinutes = st.wHour * 60 + st.wMinute;
 
-    // Compute effective boundaries (with offsets if needed)
-    int effectiveLight = s.lightTime;
-    int effectiveDark = s.darkTime;
-
-    if (s.scheduleMode == ScheduleMode::SunsetToSunrise)
+    int effectiveLight = state.effectiveLightMinutes;
+    int effectiveDark = state.effectiveDarkMinutes;
+    if (effectiveLight == 0 && effectiveDark == 0)
     {
-        effectiveLight = (s.lightTime + s.sunrise_offset) % 1440;
-        effectiveDark = (s.darkTime + s.sunset_offset) % 1440;
+        effectiveLight = s.lightTime;
+        effectiveDark = s.darkTime;
+        if (s.scheduleMode == ScheduleMode::SunsetToSunrise)
+        {
+            effectiveLight = (s.lightTime + s.sunrise_offset % 1440 + 1440) % 1440;
+            effectiveDark = (s.darkTime + s.sunset_offset % 1440 + 1440) % 1440;
+        }
     }
 
-    // Use shared helper (handles wraparound logic)
     bool shouldBeLight = false;
     if (s.scheduleMode == ScheduleMode::FollowNightLight)
     {
@@ -205,18 +224,18 @@ static void DetectAndHandleExternalThemeChange(LightSwitchStateManager& stateMan
         shouldBeLight = ShouldBeLight(nowMinutes, effectiveLight, effectiveDark);
     }
 
-    // Compare current system/apps theme
-    bool currentSystemLight = GetCurrentSystemTheme();
-    bool currentAppsLight = GetCurrentAppsTheme();
-
     bool systemMismatch = s.changeSystem && (currentSystemLight != shouldBeLight);
     bool appsMismatch = s.changeApps && (currentAppsLight != shouldBeLight);
 
-    // Trigger manual override only if mismatch and not already active
-    if ((systemMismatch || appsMismatch) && !stateManager.GetState().isManualOverride)
+    if (systemMismatch || appsMismatch)
     {
         Logger::info(L"[LightSwitchService] External theme change detected (Windows Settings). Entering manual override mode.");
         stateManager.OnManualOverride();
+    }
+    else
+    {
+        Logger::info(L"[LightSwitchService] External theme change aligned with schedule. Syncing state.");
+        stateManager.SyncCurrentThemeState();
     }
 }
 
@@ -413,7 +432,7 @@ int APIENTRY wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
     Trace::LightSwitch::RegisterProvider();
 
-    if (powertoys_gpo::getConfiguredLightSwitchEnabledValue() == powertoys_gpo::gpo_rule_configured_disabled)
+    if (kit_gpo::getConfiguredLightSwitchEnabledValue() == kit_gpo::gpo_rule_configured_disabled)
     {
         wchar_t msg[160];
         swprintf_s(

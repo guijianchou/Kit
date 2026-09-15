@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -14,7 +14,7 @@ using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 using Windows.Graphics;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls;
+namespace Kit.Settings.UI.Controls;
 
 [TemplatePart(Name = nameof(PART_FooterPresenter), Type = typeof(ContentPresenter))]
 [TemplatePart(Name = nameof(PART_ContentPresenter), Type = typeof(ContentPresenter))]
@@ -27,7 +27,7 @@ public partial class TitleBar : Control
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
     ContentPresenter? PART_ContentPresenter;
     ContentPresenter? PART_FooterPresenter;
-    #pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 #pragma warning restore SA1400 // Access modifier should be declared
 #pragma warning restore SA1306 // Field names should begin with lower-case letter
 #pragma warning restore SA1310 // Field names should not contain underscore

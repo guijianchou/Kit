@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library;
+namespace Kit.Settings.UI.Library;
 
 public sealed class AdvancedPasteCustomActions
 {

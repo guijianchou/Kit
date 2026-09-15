@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public sealed class ActionMessage
     {
@@ -41,7 +41,7 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
 
     [SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:File may only contain a single type", Justification = "Those are just a define for one simple struct")]
     public sealed class SettingsGeneral
-        {
+    {
         [JsonPropertyName("action_name")]
         public string ActionName { get; set; }
     }

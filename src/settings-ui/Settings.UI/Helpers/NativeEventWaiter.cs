@@ -7,7 +7,7 @@ using System.Threading;
 
 using Microsoft.UI.Dispatching;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public static class NativeEventWaiter
     {

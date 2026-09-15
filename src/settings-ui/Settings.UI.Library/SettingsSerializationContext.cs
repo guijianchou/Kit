@@ -1,13 +1,12 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using SettingsUILibrary = Settings.UI.Library;
-using SettingsUILibraryHelpers = Settings.UI.Library.Helpers;
+using SettingsUILibraryHelpers = Kit.Settings.UI.Library.Helpers;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     /// <summary>
     /// JSON serialization context for Native AOT compatibility.
@@ -74,6 +73,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(WorkspacesSettings))]
     [JsonSerializable(typeof(GrabAndMoveSettings))]
     [JsonSerializable(typeof(ZoomItSettings))]
+    [JsonSerializable(typeof(LocalserverSettings))]
 
     // Properties Classes
     [JsonSerializable(typeof(AdvancedPasteProperties))]
@@ -100,7 +100,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(MouseWithoutBordersProperties))]
     [JsonSerializable(typeof(NewPlusProperties))]
     [JsonSerializable(typeof(PeekProperties))]
-    [JsonSerializable(typeof(SettingsUILibrary.PeekPreviewSettings))]
+    [JsonSerializable(typeof(PeekPreviewSettings))]
     [JsonSerializable(typeof(PowerAccentProperties))]
     [JsonSerializable(typeof(PowerLauncherProperties))]
     [JsonSerializable(typeof(PowerOcrProperties))]
@@ -113,6 +113,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     [JsonSerializable(typeof(WorkspacesProperties))]
     [JsonSerializable(typeof(GrabAndMoveProperties))]
     [JsonSerializable(typeof(ZoomItProperties))]
+    [JsonSerializable(typeof(LocalserverProperties))]
 
     // Base Property Types (used throughout settings)
     [JsonSerializable(typeof(BoolProperty))]
@@ -155,10 +156,12 @@ namespace Microsoft.PowerToys.Settings.UI.Library
     // IPC Send Message Wrapper Classes (Snd*)
     [JsonSerializable(typeof(SndAwakeSettings))]
     [JsonSerializable(typeof(SndLightSwitchSettings))]
+    [JsonSerializable(typeof(SndLocalserverSettings))]
 
     // IPC Message Generic Wrapper Types (SndModuleSettings<T>)
     [JsonSerializable(typeof(SndModuleSettings<SndAwakeSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndLightSwitchSettings>))]
+    [JsonSerializable(typeof(SndModuleSettings<SndLocalserverSettings>))]
 
     public partial class SettingsSerializationContext : JsonSerializerContext
     {

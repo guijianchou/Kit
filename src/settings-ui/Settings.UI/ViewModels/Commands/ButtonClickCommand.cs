@@ -5,7 +5,7 @@
 using System;
 using System.Windows.Input;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels.Commands
+namespace Kit.Settings.UI.ViewModels.Commands
 {
     public partial class ButtonClickCommand : ICommand
     {

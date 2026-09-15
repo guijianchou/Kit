@@ -7,7 +7,7 @@ using System.IO;
 using System.IO.Abstractions;
 using System.Text.Json;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class LanguageModel
     {

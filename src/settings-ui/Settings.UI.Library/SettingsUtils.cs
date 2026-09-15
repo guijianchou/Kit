@@ -9,11 +9,10 @@ using System.IO;
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-
+using Kit.Settings.UI.Library.Interfaces;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     // Some functions are marked as virtual to allow mocking in unit tests.
     public class SettingsUtils

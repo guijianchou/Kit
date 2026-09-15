@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium.Appium.Windows;
 using OpenQA.Selenium.Interactions;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     public class Tab : Element
     {

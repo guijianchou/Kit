@@ -9,7 +9,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 
-namespace Microsoft.PowerToys.Settings.UI.Services
+namespace Kit.Settings.UI.Services
 {
     public static class NavigationService
     {

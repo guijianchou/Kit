@@ -8,20 +8,19 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 
-using global::PowerToys.GPOWrapper;
+using Kit.GPOWrapper;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Services;
+using Kit.Settings.UI.Views;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Controls;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.Services;
-using Microsoft.PowerToys.Settings.UI.Views;
 using Microsoft.UI.Dispatching;
-using Settings.UI.Library;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
     public partial class DashboardViewModel : PageViewModelBase
     {
@@ -33,7 +32,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private readonly ISettingsRepository<GeneralSettings> settingsRepository;
         private readonly QuickAccessViewModel quickAccessViewModel;
         private readonly List<DashboardListItem> moduleItems = new List<DashboardListItem>();
-        private readonly Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = ResourceLoaderInstance.ResourceLoader;
+        private readonly Microsoft.Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = ResourceLoaderInstance.ResourceLoader;
 
         private GeneralSettings generalSettingsConfig;
         private DashboardSortOrder dashboardSortOrder;
@@ -44,10 +43,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         public Func<string, int> SendConfigMSG { get; }
 
         public ObservableCollection<DashboardListItem> AllModules { get; } = new ObservableCollection<DashboardListItem>();
-
-        public ObservableCollection<DashboardListItem> ShortcutModules { get; } = new ObservableCollection<DashboardListItem>();
-
-        public ObservableCollection<DashboardListItem> ActionModules { get; } = new ObservableCollection<DashboardListItem>();
 
         public ObservableCollection<QuickAccessItem> QuickAccessItems => quickAccessViewModel.Items;
 
@@ -93,7 +88,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
             BuildModuleList();
             SortModuleList();
-            RefreshShortcutModules();
         }
 
         private void OnQuickAccessPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -151,7 +145,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                     IsLocked = gpo == GpoRuleConfigured.Enabled || gpo == GpoRuleConfigured.Disabled,
                     Icon = ModuleHelper.GetModuleTypeFluentIconName(moduleType),
                     IsNew = false,
-                    DashboardModuleItems = GetModuleItems(moduleType),
+                    DashboardModuleItems = new ObservableCollection<DashboardModuleItem>(),
                     ClickCommand = new RelayCommand<object>(DashboardListItemClick),
                 };
                 newItem.EnabledChangedCallback = EnabledChangedOnUI;
@@ -251,8 +245,6 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
                 {
                     SortModuleList();
                 }
-
-                RefreshShortcutModules();
             }
             finally
             {
@@ -270,114 +262,11 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             try
             {
                 RefreshModuleList();
-                RefreshShortcutModules();
             }
             catch (Exception ex)
             {
                 Logger.LogError($"Updating active/disabled modules list failed: {ex.Message}");
             }
-        }
-
-        private void RefreshShortcutModules()
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            if (dispatcher != null && !dispatcher.HasThreadAccess)
-            {
-                _ = dispatcher.TryEnqueue(DispatcherQueuePriority.Normal, RefreshShortcutModules);
-                return;
-            }
-
-            ShortcutModules.Clear();
-            ActionModules.Clear();
-
-            foreach (var module in AllModules.Where(x => x.IsEnabled))
-            {
-                var shortcutItems = GetShortcutItemsForDashboardModule(module);
-
-                if (shortcutItems.Count != 0)
-                {
-                    ShortcutModules.Add(CreateModuleProjection(module, shortcutItems));
-                }
-
-                var actionItems = module.DashboardModuleItems
-                    .Where(m => m is DashboardModuleButtonItem)
-                    .ToList();
-
-                if (actionItems.Count != 0)
-                {
-                    ActionModules.Add(CreateModuleProjection(module, actionItems));
-                }
-            }
-        }
-
-        private static List<DashboardModuleItem> GetShortcutItemsForDashboardModule(DashboardListItem module)
-        {
-            return module.DashboardModuleItems
-                .Where(m => m is DashboardModuleShortcutItem || m is DashboardModuleActivationItem)
-                .ToList();
-        }
-
-        private static DashboardListItem CreateModuleProjection(DashboardListItem source, List<DashboardModuleItem> items)
-        {
-            return new DashboardListItem
-            {
-                Icon = source.Icon,
-                IsLocked = source.IsLocked,
-                Label = source.Label,
-                Tag = source.Tag,
-                IsEnabled = source.IsEnabled,
-                EnabledChangedCallback = source.EnabledChangedCallback,
-                DashboardModuleItems = new ObservableCollection<DashboardModuleItem>(items),
-            };
-        }
-
-        private ObservableCollection<DashboardModuleItem> GetModuleItems(ModuleType moduleType)
-        {
-            return moduleType switch
-            {
-                ModuleType.Awake => GetModuleItemsAwake(),
-                ModuleType.LightSwitch => GetModuleItemsLightSwitch(),
-                _ => new ObservableCollection<DashboardModuleItem>(),
-            };
-        }
-
-        private ObservableCollection<DashboardModuleItem> GetModuleItemsAwake()
-        {
-            ISettingsRepository<AwakeSettings> moduleSettingsRepository = SettingsRepository<AwakeSettings>.GetInstance(SettingsUtils.Default);
-            var settings = moduleSettingsRepository.SettingsConfig;
-            var list = new List<DashboardModuleItem>
-            {
-                new DashboardModuleActivationItem() { Label = resourceLoader.GetString("Awake_ModeSettingsCard/Header"), Activation = GetAwakeModeDisplayText(settings.Properties.Mode) },
-            };
-
-            return new ObservableCollection<DashboardModuleItem>(list);
-        }
-
-        private string GetAwakeModeDisplayText(AwakeMode mode)
-        {
-            return mode switch
-            {
-                AwakeMode.INDEFINITE => resourceLoader.GetString("Awake_IndefiniteKeepAwakeSelector/Content"),
-                AwakeMode.TIMED => resourceLoader.GetString("Awake_TemporaryKeepAwakeSelector/Content"),
-                AwakeMode.EXPIRABLE => resourceLoader.GetString("Awake_ExpirableKeepAwakeSelector/Content"),
-                _ => resourceLoader.GetString("Awake_NoKeepAwakeSelector/Content"),
-            };
-        }
-
-        private ObservableCollection<DashboardModuleItem> GetModuleItemsLightSwitch()
-        {
-            ISettingsRepository<LightSwitchSettings> moduleSettingsRepository = SettingsRepository<LightSwitchSettings>.GetInstance(SettingsUtils.Default);
-            var settings = moduleSettingsRepository.SettingsConfig;
-            var list = new List<DashboardModuleItem>
-            {
-                new DashboardModuleShortcutItem() { Label = resourceLoader.GetString("LightSwitch_ForceDarkMode"), Shortcut = settings.Properties.ToggleThemeHotkey.Value.GetKeysList() },
-            };
-
-            return new ObservableCollection<DashboardModuleItem>(list);
         }
 
         internal void DashboardListItemClick(object sender)

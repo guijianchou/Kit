@@ -5,7 +5,7 @@
 using System;
 using Microsoft.UI.Xaml.Data;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls.Converters
+namespace Kit.Settings.UI.Controls.Converters
 {
     public partial class EnumToBooleanConverter : IValueConverter
     {

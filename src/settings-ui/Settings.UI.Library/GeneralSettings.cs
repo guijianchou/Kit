@@ -1,18 +1,17 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
+using Kit.Settings.UI.Library.Attributes;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Utilities;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Settings.UI.Library.Attributes;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public enum DashboardSortOrder
     {
@@ -75,6 +74,20 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         [CmdConfigureIgnore]
         public string PowertoysVersion { get; set; }
 
+        [JsonPropertyName("kit_version")]
+        [CmdConfigureIgnore]
+        public string KitVersion
+        {
+            get => PowertoysVersion;
+            set
+            {
+                if (!string.IsNullOrEmpty(value))
+                {
+                    PowertoysVersion = value;
+                }
+            }
+        }
+
         [JsonPropertyName("action_name")]
         [CmdConfigureIgnore]
         public string CustomActionName { get; set; }
@@ -95,6 +108,12 @@ namespace Microsoft.PowerToys.Settings.UI.Library
         [JsonPropertyName("enable_experimentation")]
         public bool EnableExperimentation { get; set; }
 
+        [JsonPropertyName("enable_logging")]
+        public bool EnableLogging { get; set; } = true;
+
+        [JsonPropertyName("log_level")]
+        public string LogLevel { get; set; } = "trace";
+
         [JsonPropertyName("dashboard_sort_order")]
         public DashboardSortOrder DashboardSortOrder { get; set; }
 
@@ -114,6 +133,8 @@ namespace Microsoft.PowerToys.Settings.UI.Library
             AutoDownloadUpdates = false;
             ShowWhatsNewAfterUpdates = false;
             EnableExperimentation = false;
+            EnableLogging = true;
+            LogLevel = "trace";
             DashboardSortOrder = DashboardSortOrder.Alphabetical;
             Theme = "system";
             SystemTheme = "light";
@@ -156,7 +177,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         private static string DefaultPowertoysVersion()
         {
-            return global::PowerToys.Interop.CommonManaged.GetProductVersion();
+            return global::Kit.Interop.CommonManaged.GetProductVersion();
         }
 
         // This function is to implement the ISettingsConfig interface.

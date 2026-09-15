@@ -7,7 +7,7 @@
 #include "hotkey_conflict_detector.h"
 
 #include <common/SettingsAPI/settings_helpers.h>
-#include "powertoy_module.h"
+#include "kit_module.h"
 #include <common/themes/windows_colors.h>
 
 #include "trace.h"
@@ -114,6 +114,7 @@ json::JsonObject GeneralSettings::to_json()
     result.SetNamedValue(L"quick_access_shortcut", quickAccessShortcut.get_json());
     result.SetNamedValue(L"theme", json::value(theme));
     result.SetNamedValue(L"system_theme", json::value(systemTheme));
+    result.SetNamedValue(L"kit_version", json::value(powerToysVersion));
     result.SetNamedValue(L"powertoys_version", json::value(powerToysVersion));
     result.SetNamedValue(L"ignored_conflict_properties", json::value(ignoredProps));
 
@@ -426,14 +427,14 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     }
 }
 
-void start_enabled_powertoys(const json::JsonObject& general_settings)
+void start_enabled_kit_modules(const json::JsonObject& general_settings)
 {
-    std::unordered_set<std::wstring> powertoys_to_disable;
+    std::unordered_set<std::wstring> modules_to_disable;
 
-    for (auto& [name, powertoy] : modules())
+    for (auto& [name, kit_module] : modules())
     {
-        if (!powertoy->is_enabled_by_default())
-            powertoys_to_disable.emplace(name);
+        if (!kit_module->is_enabled_by_default())
+            modules_to_disable.emplace(name);
     }
 
     try
@@ -448,14 +449,14 @@ void start_enabled_powertoys(const json::JsonObject& general_settings)
                 // Disable explicitly disabled modules
                 if (!disabled_element.Value().GetBoolean())
                 {
-                    Logger::info(L"start_enabled_powertoys: Powertoy {} explicitly disabled", disable_module_name);
-                    powertoys_to_disable.emplace(std::move(disable_module_name));
+                    Logger::info(L"start_enabled_kit_modules: Module {} explicitly disabled", disable_module_name);
+                    modules_to_disable.emplace(std::move(disable_module_name));
                 }
                 // If module was scheduled for disable, but it's enabled in the settings - override default value
-                else if (auto it = powertoys_to_disable.find(disable_module_name); it != end(powertoys_to_disable))
+                else if (auto it = modules_to_disable.find(disable_module_name); it != end(modules_to_disable))
                 {
-                    Logger::info(L"start_enabled_powertoys: Overriding default enabled value for {} powertoy", disable_module_name);
-                    powertoys_to_disable.erase(it);
+                    Logger::info(L"start_enabled_kit_modules: Overriding default enabled value for {} module", disable_module_name);
+                    modules_to_disable.erase(it);
                 }
             }
         }
@@ -464,22 +465,22 @@ void start_enabled_powertoys(const json::JsonObject& general_settings)
     {
     }
 
-    for (auto& [name, powertoy] : modules())
+    for (auto& [name, kit_module] : modules())
     {
-        bool should_powertoy_be_enabled = true;
+        bool should_module_be_enabled = true;
 
-        if (powertoys_to_disable.contains(name))
+        if (modules_to_disable.contains(name))
         {
-            should_powertoy_be_enabled = false;
+            should_module_be_enabled = false;
         }
 
-        if (should_powertoy_be_enabled)
+        if (should_module_be_enabled)
         {
-            Logger::info(L"start_enabled_powertoys: Enabling powertoy {}", name);
-            powertoy->enable();
+            Logger::info(L"start_enabled_kit_modules: Enabling module {}", name);
+            kit_module->enable();
             auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
             hkmng.EnableHotkeyByModule(name);
-            powertoy.UpdateHotkeyEx();
+            kit_module.UpdateHotkeyEx();
         }
     }
 }

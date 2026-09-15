@@ -5,7 +5,7 @@
 #include <sstream>
 #include <chrono>
 #include "tray_icon.h"
-#include "powertoy_module.h"
+#include "kit_module.h"
 #include "trace.h"
 #include "general_settings.h"
 #include "restart_elevated.h"
@@ -62,8 +62,9 @@ namespace
     const wchar_t KIT_MODULE_LOAD_FAIL[] = L"Failed to load "; // Module name will be appended on this message and it is not localized.
 
     constexpr std::wstring_view KitKnownModules[] = {
-        L"PowerToys.AwakeModuleInterface.dll",
-        L"PowerToys.LightSwitchModuleInterface.dll",
+        L"Kit.AwakeModuleInterface.dll",
+        L"Kit.LightSwitchModuleInterface.dll",
+        L"Kit.LocalserverModuleInterface.dll",
     };
 
     bool is_known_module_registered(std::wstring_view moduleName)
@@ -178,7 +179,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         {
             try
             {
-                auto pt_module = load_powertoy(moduleSubdir);
+                auto pt_module = load_kit_module(moduleSubdir);
                 modules().emplace(pt_module->get_key(), std::move(pt_module));
                 std::wstring module_msg = L"Module Loaded: ";
                 module_msg += moduleSubdir;
@@ -204,7 +205,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
             }
         }
         // Start initial Kit modules
-        start_enabled_powertoys(startupGeneralSettings);
+        start_enabled_kit_modules(startupGeneralSettings);
         log_timing("Modules Enabled");
 
         std::wstring product_version = get_product_version();
@@ -363,7 +364,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     Logger::init(LogSettings::runnerLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
 
     const std::string cmdLine{ lpCmdLine };
-    Logger::info("Running powertoys with cmd args: {}", cmdLine);
+    Logger::info("Running Kit with cmd args: {}", cmdLine);
 
     const bool is_autorun = (cmdLine.find("--autorun") != std::string::npos) ||
                             (cmdLine.find("--silent") != std::string::npos) ||
@@ -462,8 +463,8 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         }
         else if (!restart_if_scheduled())
         {
-            // If it's not possible to restart non-elevated due to some condition in the user's configuration, user should start PowerToys manually.
-            Logger::warn("Scheduled restart failed. Couldn't restart non-elevated. PowerToys exits here because retrying it would just mean failing in a loop.");
+            // If it's not possible to restart non-elevated due to some condition in the user's configuration, user should start Kit manually.
+            Logger::warn("Scheduled restart failed. Couldn't restart non-elevated. Kit exits here because retrying it would just mean failing in a loop.");
         }
     }
     return result;

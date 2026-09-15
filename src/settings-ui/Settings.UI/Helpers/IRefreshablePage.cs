@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 // An interface so that pages can define refresh method to refresh their view models.
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public interface IRefreshablePage
     {

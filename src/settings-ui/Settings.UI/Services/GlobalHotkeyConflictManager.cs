@@ -6,10 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.HotkeyConflicts;
 
-namespace Microsoft.PowerToys.Settings.UI.Services
+namespace Kit.Settings.UI.Services
 {
     public class GlobalHotkeyConflictManager
     {

@@ -7,9 +7,9 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Library;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
     public partial class PluginAdditionalOptionViewModel : INotifyPropertyChanged
     {

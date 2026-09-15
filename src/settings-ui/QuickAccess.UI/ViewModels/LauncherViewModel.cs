@@ -1,19 +1,19 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.ObjectModel;
-using global::PowerToys.GPOWrapper;
+using global::Kit.GPOWrapper;
 using ManagedCommon;
-using Microsoft.PowerToys.QuickAccess.Services;
-using Microsoft.PowerToys.Settings.UI.Controls;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.QuickAccess.Services;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.ApplicationModel.Resources;
 
-namespace Microsoft.PowerToys.QuickAccess.ViewModels;
+namespace Kit.QuickAccess.ViewModels;
 
 public sealed class LauncherViewModel : Observable
 {
@@ -38,7 +38,7 @@ public sealed class LauncherViewModel : Observable
 
         _quickAccessViewModel = new QuickAccessViewModel(
             _settingsRepository,
-            new Microsoft.PowerToys.QuickAccess.Services.QuickAccessLauncher(_coordinator),
+            new Kit.QuickAccess.Services.QuickAccessLauncher(_coordinator),
             moduleType => Helpers.ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Disabled,
             moduleType => Helpers.ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Enabled,
             _resourceLoader,

@@ -5,9 +5,9 @@
 //////////////////////////////
 // Non-localizable
 
-#define FILE_DESCRIPTION "Light Switch Module"
-#define INTERNAL_NAME "Light Switch"
-#define ORIGINAL_FILENAME "PowerToys.LightSwitchModuleInterface.dll"
+#define FILE_DESCRIPTION "Kit LightSwitch Module"
+#define INTERNAL_NAME "Kit.LightSwitchModuleInterface"
+#define ORIGINAL_FILENAME "Kit.LightSwitchModuleInterface.dll"
 
 // Non-localizable
 //////////////////////////////

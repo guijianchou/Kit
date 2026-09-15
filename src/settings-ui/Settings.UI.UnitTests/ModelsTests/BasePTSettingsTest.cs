@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Text.Json;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.UnitTests;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.UnitTests;
 
-namespace Microsoft.PowerToys.Settings.UnitTest
+namespace Kit.Settings.UnitTest
 {
     public class BasePTSettingsTest : BasePTModuleSettings, ISettingsConfig
     {

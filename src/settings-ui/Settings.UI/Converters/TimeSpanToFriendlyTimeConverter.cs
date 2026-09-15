@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
 using Microsoft.UI.Xaml.Data;
 
-namespace Microsoft.PowerToys.Settings.UI.Converters;
+namespace Kit.Settings.UI.Converters;
 
 public sealed partial class TimeSpanToFriendlyTimeConverter : IValueConverter
 {

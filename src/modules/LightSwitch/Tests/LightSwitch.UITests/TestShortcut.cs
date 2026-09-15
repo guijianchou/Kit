@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.PowerToys.UITest;
+using Kit.UITest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace LightSwitch.UITests

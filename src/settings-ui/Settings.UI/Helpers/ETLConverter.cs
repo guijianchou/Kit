@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ManagedCommon;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public class ETLConverter
     {

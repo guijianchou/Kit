@@ -5,9 +5,9 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Helpers;
 
-namespace Microsoft.PowerToys.Settings.UI.Library;
+namespace Kit.Settings.UI.Library;
 
 public sealed class AdvancedPasteTranscodeAction : Observable, IAdvancedPasteAction
 {

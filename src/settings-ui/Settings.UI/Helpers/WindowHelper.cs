@@ -6,10 +6,10 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using Microsoft.PowerToys.Settings.UI.SerializationContext;
+using Kit.Settings.UI.SerializationContext;
 using Microsoft.UI.Xaml;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     internal sealed class WindowHelper
     {

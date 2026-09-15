@@ -445,12 +445,12 @@ if ($hasModuleServices) {
 
 # Summary
 $OutputDir = Join-Path $RepoRoot "$Platform\$Configuration"
-$AwakeDll = Join-Path $OutputDir "PowerToys.Awake.dll"
+$AwakeDll = Join-Path $OutputDir "Kit.Awake.dll"
 $elapsed = Get-ElapsedTime
 
 if (Test-Path $AwakeDll) {
     $size = "$([math]::Round((Get-Item $AwakeDll).Length / 1KB, 1)) KB"
-    Write-SuccessBox -Time $elapsed -Output "PowerToys.Awake.dll" -Size $size
+    Write-SuccessBox -Time $elapsed -Output "Kit.Awake.dll" -Size $size
 } else {
     Write-SuccessBox -Time $elapsed -Output $OutputDir -Size "N/A"
 }

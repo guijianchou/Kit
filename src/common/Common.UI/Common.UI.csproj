@@ -6,7 +6,8 @@
   <PropertyGroup>
     <UseWPF>false</UseWPF>
     <UseWindowsForms>false</UseWindowsForms>
-    <AssemblyName>PowerToys.Common.UI</AssemblyName>
+    <RootNamespace>Kit.Common.UI</RootNamespace>
+    <AssemblyName>Kit.Common.UI</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

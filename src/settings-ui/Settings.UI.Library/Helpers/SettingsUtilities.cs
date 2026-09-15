@@ -5,7 +5,7 @@
 using System.Drawing;
 using System.Globalization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.Helpers
+namespace Kit.Settings.UI.Library.Helpers
 {
     public static class SettingsUtilities
     {

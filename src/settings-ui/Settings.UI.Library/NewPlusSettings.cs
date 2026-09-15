@@ -8,10 +8,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Settings.UI.Library.Resources;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Resources;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class NewPlusSettings : BasePTModuleSettings, ISettingsConfig
     {

@@ -5,9 +5,9 @@
 using System;
 using System.Text.Json.Serialization;
 
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class PowerRenameSettings : BasePTModuleSettings, ISettingsConfig
     {

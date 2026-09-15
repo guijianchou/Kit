@@ -1,13 +1,13 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Kit.Settings.UI.Library.Interfaces;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class GrabAndMoveSettings : BasePTModuleSettings, ISettingsConfig
     {

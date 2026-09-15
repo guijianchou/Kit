@@ -73,8 +73,8 @@ RestoreThenBuild -Solution 'Kit.slnx' -ExtraArgs $DefaultExtraArgs -Platform $Pl
 # Build the runner, settings, and Quick Access surfaces that the runner expects at runtime.
 $ProjectsToBuild = @(
     ".\src\runner\Kit.vcxproj",
-    ".\src\settings-ui\Settings.UI\PowerToys.Settings.csproj",
-    ".\src\settings-ui\QuickAccess.UI\PowerToys.QuickAccess.csproj"
+    ".\src\settings-ui\Settings.UI\Kit.Settings.csproj",
+    ".\src\settings-ui\QuickAccess.UI\Kit.QuickAccess.csproj"
 )
 $ExtraArgs = @("/p:SolutionDir=$repoRoot\") + $DefaultExtraArgs
 foreach ($proj in $ProjectsToBuild) {

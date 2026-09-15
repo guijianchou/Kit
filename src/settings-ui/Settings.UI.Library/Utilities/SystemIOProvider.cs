@@ -5,7 +5,7 @@
 using System;
 using System.IO.Abstractions;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.Utilities
+namespace Kit.Settings.UI.Library.Utilities
 {
     public class SystemIOProvider : IIOProvider
     {

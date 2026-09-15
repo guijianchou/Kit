@@ -1,13 +1,13 @@
 #pragma once
 #include "HotkeyManager.g.h"
 
-namespace winrt::PowerToys::Interop::implementation
+namespace winrt::Kit::Interop::implementation
 {
     struct HotkeyManager : HotkeyManagerT<HotkeyManager>
     {
         HotkeyManager();
 
-        uint16_t RegisterHotkey(winrt::PowerToys::Interop::Hotkey const& _hotkey, winrt::PowerToys::Interop::HotkeyCallback const& _callback);
+        uint16_t RegisterHotkey(winrt::Kit::Interop::Hotkey const& _hotkey, winrt::Kit::Interop::HotkeyCallback const& _callback);
         void UnregisterHotkey(uint16_t _handle);
         void Close();
 
@@ -25,7 +25,7 @@ namespace winrt::PowerToys::Interop::implementation
         uint16_t GetHotkeyHandle(Hotkey hotkey);
     };
 }
-namespace winrt::PowerToys::Interop::factory_implementation
+namespace winrt::Kit::Interop::factory_implementation
 {
     struct HotkeyManager : HotkeyManagerT<HotkeyManager, implementation::HotkeyManager>
     {

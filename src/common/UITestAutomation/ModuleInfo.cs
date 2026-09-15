@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     internal class ModuleInfo
     {

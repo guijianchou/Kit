@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts
+namespace Kit.Settings.UI.Library.HotkeyConflicts
 {
     public class AllHotkeyConflictsData
     {

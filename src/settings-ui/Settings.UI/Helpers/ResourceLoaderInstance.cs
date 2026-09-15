@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 using Microsoft.Windows.ApplicationModel.Resources;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     internal static class ResourceLoaderInstance
     {
@@ -11,7 +11,7 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
 
         static ResourceLoaderInstance()
         {
-            ResourceLoader = new Microsoft.Windows.ApplicationModel.Resources.ResourceLoader("PowerToys.Settings.pri");
+            ResourceLoader = new Microsoft.Windows.ApplicationModel.Resources.ResourceLoader("Kit.Settings.pri");
         }
     }
 }

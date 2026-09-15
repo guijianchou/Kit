@@ -6,15 +6,15 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.ViewModels.Commands;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels.Commands;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.ApplicationModel.Resources;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public partial class QuickAccessViewModel : Observable
     {
@@ -95,11 +95,11 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
 
             Items.Add(new QuickAccessItem
             {
-                Title = _resourceLoader.GetString(Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetModuleLabelResourceName(moduleType)),
+                Title = _resourceLoader.GetString(Kit.Settings.UI.Library.Helpers.ModuleHelper.GetModuleLabelResourceName(moduleType)),
                 Tag = moduleType,
                 Visible = GetItemVisibility(moduleType),
                 Description = GetModuleToolTip(moduleType),
-                Icon = Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetModuleTypeFluentIconName(moduleType),
+                Icon = Kit.Settings.UI.Library.Helpers.ModuleHelper.GetModuleTypeFluentIconName(moduleType),
                 Command = new RelayCommand(() =>
                 {
                     if (!_launcher.Launch(moduleType))
@@ -146,7 +146,7 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
         private bool GetItemVisibility(ModuleType moduleType)
         {
             // Generally, if gpo is enabled or if module enabled, then quick access item is visible.
-            return _isModuleGpoEnabled(moduleType) || Microsoft.PowerToys.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType);
+            return _isModuleGpoEnabled(moduleType) || Kit.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType);
         }
 
         private string GetModuleToolTip(ModuleType moduleType)
@@ -154,7 +154,7 @@ namespace Microsoft.PowerToys.Settings.UI.Controls
             return moduleType switch
             {
                 ModuleType.Awake => GetAwakeModeToolTip(),
-                ModuleType.LightSwitch => SettingsRepository<LightSwitchSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ToggleThemeHotkey.Value.ToString(),
+                ModuleType.LightSwitch => _resourceLoader.GetString("LightSwitch/ModuleTitle"),
                 _ => string.Empty,
             };
         }

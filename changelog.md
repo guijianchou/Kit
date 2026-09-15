@@ -6,6 +6,96 @@
 
 ## English
 
+### 2.0.23
+
+- Redesigned Settings AI Service UI/UX using standard PowerToys SettingsExpander and SettingsCard controls, aligning hierarchy and layout with native settings.
+- Streamlined endpoint headers to display only `Model · Effort` (e.g. `gpt-5.6-luna · medium`), removing unnecessary subtitle badges and verbose notes.
+- Decoupled Localserver module from AI Hub: completely removed AI analysis card, prompt chains, service dependencies, and view models.
+- Added centralized Diagnostics & Logging management to Kit General Settings: master logging toggle, log level selector (trace, debug, info, warn, error, critical, off), and one-click log folder explorer, synchronized with ManagedCommon.Logger and `%LOCALAPPDATA%\Kit\log_settings.json`.
+- Updated test suites and verified zero-defect execution.
+
+### 2.0.22
+
+- Refactored AI Hub into an in-place compact layout directly within General Settings, eliminating nested subpage navigation and breadcrumb buttons.
+- Added master toggle collapse/expand behavior: configuration is hidden when AI Hub is disabled and revealed in-place when enabled.
+- Added explicit [Apply] confirmation button for switching AI kernels (Codex CLI / Pi CLI).
+- Replicated Locals compact endpoints and security policy (security.md) expander panels with full bilingual localization (en-US / zh-CN).
+
+### 2.0.21
+
+- Moved AI Hub under Settings, removed its standalone sidebar entry and Home module card, and kept the global enable switch inside AI Hub settings.
+- Added a localized Settings entry and return link. AI Hub keeps Settings selected in the sidebar when opened directly or from Localserver.
+
+### 2.0.20
+
+- Fixed incomplete Kit namespace migration in SettingsAPI, Awake WinRT projection, Settings/Quick Access executable paths, and PRI resource loading.
+- Restored the upstream native interface slot order, retained the legacy factory fallback, and hardened DLL loading and configuration buffer handling.
+- Deferred the search index until the first query, skipped empty keyboard hooks, and serialized module settings once for both IPC compatibility keys.
+- Fixed Localserver graceful stop deadlines and cancellation cleanup during readiness. Pending edits are flushed before closing; active services keep their Settings host and output pipes alive while the window is hidden.
+- Routed Localserver log previews through bounded periodic refresh, corrected the Kit log directory action, refreshed shared enable state, and localized hardware status labels.
+- Made LightSwitch configuration and runtime state reads return locked snapshots. Updated the native module template, plugin guide, and reproducible Debug staging checks.
+- Validation: managed/native regression tests and AI Hub Native AOT smoke. Full WinUI visual interaction remains pending because Windows automation cannot bind the Kit window.
+
+### 2.0.19
+
+- Version: Bumped Kit to `2.0.19`.
+- Localserver Card Typography & UX Optimization:
+  - Fixed HOST label line wrapping into "HOS\nT" by switching to `Auto,*` column sizing and stacking `SystemEditionText` and `SystemBuildText`.
+  - Upgraded hardware info display to match original `LocalServerHub` standards: refined CPU from raw identifier to friendly name (`Ryzen 5 5600H · 12 logical cores`), GPU to compact name (`RTX 3050 Ti`), and OS edition/build (`Windows 11 LTSC`, `Build 26100.9168`).
+  - Improved environment verdict contrast: `EnvSummaryText` now renders in crisp theme-aware `SystemFillColorSuccessBrush` (green) with semi-bold typography.
+  - De-cluttered Health Ring: centered clean health state text without crowded icons and static labels.
+  - Added `NoWrap` single-line truncation with tooltips to command and working directory fields.
+  - Standardized metrics typography: introduced `MetricPrimaryStyle` and `MetricCompactStyle` for headline values (PORT, PID, REGISTERED, RUNNING, FAULTED).
+- LightSwitch Theme Switching & Night Auto-Switch Fixes:
+  - Fixed bug in `DetectAndHandleExternalThemeChange` where scheduled night transition was falsely diagnosed as external Windows change, locking the service into manual override and preventing dark mode from applying.
+  - Fixed manual override toggle logic to properly respect user intent without premature schedule snapback.
+  - Fixed `SunsetToSunrise` schedule evaluation when coordinates are unset/invalid to reliably fall back to scheduled times, eliminating the 0,0 boundary degradation.
+  - Synchronized target theme in `LightSwitchInterface::ToggleTheme()` to ensure system and app themes toggle synchronously.
+
+### 2.0.18
+
+- Version: Bumped Kit to `2.0.18`.
+- Shortcuts Feature Removal: Completely removed the Shortcuts card and hotkey system from Dashboard (`DashboardPage.xaml`, `DashboardViewModel.cs`), resolving the flickering icon issue caused by continuous item template recreation.
+- Module Hotkey Cleanup: Removed hotkey configuration cards and controls from `LightSwitchPage.xaml` and `LightSwitchViewModel.cs`. Removed `ToggleThemeHotkey` from `LightSwitchProperties.cs` and `LightSwitchSettings.cs`.
+- Native C++ Interface: Removed hotkey definitions, settings deserialization, registration (`get_hotkeys`), and handling (`on_hotkey`) from `LightSwitchModuleInterface/dllmain.cpp`, releasing global keyboard hook registrations.
+- Quick Access Tooltip: Cleaned up tooltip lookup in `QuickAccessViewModel.cs` to eliminate removed hotkey dependencies.
+
+### 2.0.17
+
+- Version: Bumped Kit to `2.0.17`.
+- Toolbar Cleanup & Auto-Save: Removed redundant `Save` and `Reload` buttons from the Services toolbar. Line configuration now automatically persists to `services.json` upon collapsing/folding the drawer, auto-saves with debouncing during parameter edits, and saves when navigating away from the page.
+- Add Line Experience: Clicking `Add Line` now automatically unfolds the configuration drawer so parameters can be edited immediately.
+- Table Column Layout & Alignment: Restructured the service table to share a unified 8-column proportional grid (`NAME` 1.8*, `PORT` 0.7*, `STATE` 1.1*, `UPTIME` 0.9*, `CPU` 0.6*, `MEM` 0.8*, `PID` 0.7*, Actions 110px). Eliminated the excessive empty space between `NAME` and `PORT`.
+- Status Bar Pixel-Alignment: Status text (`Status: ● [State]`) is positioned in Column 0 under `NAME`, while the real-time recent status bars (`RecentBars`) start directly under Column 1 (`PORT`) left-aligned and span across to `PID`, perfectly matching the original reference design.
+- Stop Responsiveness: Fixed `LineRowViewModel.IsOn` to evaluate to `false` during `Stopping` so the toggle switch turns off immediately without fighting the user. Fast-pathed process termination in `ServiceRunner.StopCoreAsync()` when no GUI window exists, reducing shutdown latency from 5-10 seconds down to < 1 second.
+
+### 2.0.16
+
+- Version: Bumped Kit to `2.0.16`.
+- Shell UI: Adjusted unhidden navigation pane width (`OpenPaneLength="176"`, widened by 1/3 from 132) to prevent text clipping while maintaining a compact layout.
+- Language Unification: Strict localization isolation between English (`en-us`) and Simplified Chinese (`zh-CN`). Eliminated all mixed-language bilingual slashes, ensuring 100% key parity and native phrasing.
+- Service Line UI/UX Overhaul: Aligned service line rows strictly with high-density design, featuring real-time recent status bars (`RecentBars`), running lock indicator (`🔒`) with configuration freeze (`IsEnabled="{x:Bind IsEditable}"`), and Targets-style expandable configuration drawer.
+- Configuration Management: Relocated `Delete Line` button to the bottom of the expanded configuration drawer with safety confirmation flyout; eliminated service line reordering and auto-start on boot toggles.
+- Diagnostics & Output: Retained top overview cards (Environment with Health Ring & CPU trend canvas, System hardware metrics, and Session counters) alongside a collapsible bottom console output drawer with live tail follow, log folder shortcut, and buffer clear.
+- Stability: Fixed `XamlParseException` on navigating to Localserver caused by `.Content` Uid resolution on `TextBlock` elements.
+
+### 2.0.15
+
+- Localserver UI: Restored Health and System as persistent cards above the service list. They share a row when the content area is at least 720 DIP wide and stack on narrower windows. Removed the introductory image to reduce unused space.
+- Logging: Removed the Localserver log panel and its UI refresh loop. Already-redacted service output now flows through a bounded background queue into Kit's existing Settings logger, preserving service IDs, streams, timestamps, and sequence numbers. Overload and write failures are counted; disposal does not block the UI, and process-exit draining is bounded.
+- Language: Connected page labels, service states, environment checks, and operation feedback to Kit's existing English and Chinese resources. Runtime state and action availability no longer depend on translated text.
+- Reliability: Preserved configuration origins and concurrent-save checks, fixed consecutive saves after cross-file reordering, reused encrypted secret migration, and kept intentionally empty service catalogs empty. Added confirmation and process-identity checks for destructive service actions; service URLs use the live port and existing variable expansion.
+- Lifecycle and documentation: Paused hardware sampling while the page is inactive, prevented overlapping refreshes, and retained cached management state until Settings actually closes. Updated the plugin guide and both READMEs with the three active modules, logging path, layout rules, and the current Settings-hosted management boundary.
+
+### 2.0.14
+
+- Version: Bumped Kit to `2.0.14`.
+- Plugin Integration: Fully integrated `Localserver` as a first-party native built-in plugin into Kit per the plugin development specification (`PLUGIN_DEVELOPMENT.md`).
+- WinUI 3 + Mica Architecture: Embedded natively in Kit's main window (`LocalserverPage.xaml`), adopting Mica Alt backdrop tokens and complete UI/UX modernization without standalone application overhead.
+- Diagnostics & Telemetry: Added Zone 1 dual-panel diagnostics featuring Environment dependency checks (with interactive command copying and port releasing flyouts) and System hardware monitoring (GPU core/memory/temperature metrics, host CPU/RAM gauges, and 60-second historical CPU curve canvas).
+- Service Line Operations: Modernized target service lines into `Line` with unified header controls (status indicator, runtime duration, resource consumption, PID, quick browser launch, and toggle switch). Implemented strict runtime configuration freezing (`IsEnabled="{x:Bind IsEditable}"`) when running to prevent runtime mutation. Relocated `Delete Line` with safety confirmation flyout to the bottom of the expanded details panel.
+- Strict Cleanup: Enforced removal of legacy "Last Error" labels, "链路隐藏 (Show on main window)" toggle, and per-line auto-start on boot. User data strictly isolated under `%LOCALAPPDATA%\Kit\Localserver\`.
+
 ### 2.0.13
 
 - Version: Bumped Kit to `2.0.13`.
@@ -154,7 +244,7 @@
 - Privacy: Removed the remaining no-op managed telemetry calls and event source classes from Awake and PowerDisplay.
 - Privacy: Removed PowerDisplay's settings telemetry IPC event and module-interface signaling path after deleting the runner settings telemetry worker.
 - Build: Active outputs now remove stale `PowerToys.ManagedTelemetry` and TraceEvent support binaries left by old build graphs.
-- Slimming: Pruned `PowerToys.Interop` WinRT and shared IPC constants to Kit's active runtime surface, removing inactive PowerToys Run, FancyZones, Advanced Paste, CmdPal, Keyboard Manager, Mouse utilities, preview, Hosts, Workspaces, and telemetry event names.
+- Slimming: Pruned `Kit.Interop` WinRT and shared IPC constants to Kit's active runtime surface, removing inactive PowerToys Run, FancyZones, Advanced Paste, CmdPal, Keyboard Manager, Mouse utilities, preview, Hosts, Workspaces, and telemetry event names.
 - Runtime: Renamed the active Settings termination WinRT projection from `PowerToysRunnerTerminateSettingsEvent` to `KitRunnerTerminateSettingsEvent` while keeping the underlying Kit named event unchanged.
 - Slimming: Deleted the inactive AdvancedPaste-only `LanguageModelProvider` source tree and removed its AI provider package pins, provider UI metadata/helpers, non-serialized AI enum helpers, stale Foundry Local UI string, and stale `OpenAI` third-party notice entry while preserving historical settings serialization models.
 - UI: Removed Shortcut Conflict window special cases for inactive AdvancedPaste, Mouse Without Borders, Peek, and PowerToys Run settings while keeping the generic active-module conflict workflow.
@@ -228,7 +318,7 @@
 - Slimming: Pruned backup/restore defaults to the active Kit settings surface by deleting inactive Keyboard Manager, FancyZones, Workspaces, PowerToys Run restore rules, and the PowerToys Run plugin fix-up code path.
 - Build: Settings and Quick Access now remove stale inactive Settings assets from the shared WinUI output, and Quick Access copies only active Settings icons.
 - Tests: Added regression coverage for the deleted legacy Settings asset copy and ADMX/ADML policy assets.
-- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `PowerToys.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, Registry Preview-only SkiaSharp package pin removal, Command Palette extension package pin removal, Command Palette Adaptive Cards package pin removal, Command Palette WinGet interop package pin removal, AdvancedPaste Markdown conversion package pin removal, PowerToys Run package pin removal, deleted PowerToys Run and Registry Preview utility notice sections, PreviewPane STL and PowerAccent package pin removal, Command Palette toolkit and host package pin removal, deleted-module package pin removal, deleted-utility package pin removal, deleted Launcher/AI/CmdPal package pin removal, deleted Preview/Peek/CmdPal shared assets, deleted utility NOTICE sections, current Kit runtime wording, and the sparse package active app identity boundary.
+- Tests: Added regression coverage for active-module Quick Access boundaries, deleted inactive settings surfaces, GPO policy trimming, BugReportTool removal, stale output cleanup, telemetry-free managed app projects, active managed modules without telemetry sends, deleted managed telemetry source, active native module no-op trace providers, telemetry-free build targets and headers, ModuleTemplate no-op trace defaults, Awake README telemetry-free documentation, PowerDisplay's removed settings telemetry IPC, the trimmed `Kit.Interop` IPC constant surface, the Kit-named Settings termination projection, deleted AdvancedPaste AI provider source/package/UI/enum helper remnants, removed Shortcut Conflict inactive-module special cases, the explicit SettingsFactory hotkey boundary, the removed inactive MouseUtils page conflict branch, Settings package-reference comment cleanup, Registry Preview-only SkiaSharp package pin removal, Command Palette extension package pin removal, Command Palette Adaptive Cards package pin removal, Command Palette WinGet interop package pin removal, AdvancedPaste Markdown conversion package pin removal, PowerToys Run package pin removal, deleted PowerToys Run and Registry Preview utility notice sections, PreviewPane STL and PowerAccent package pin removal, Command Palette toolkit and host package pin removal, deleted-module package pin removal, deleted-utility package pin removal, deleted Launcher/AI/CmdPal package pin removal, deleted Preview/Peek/CmdPal shared assets, deleted utility NOTICE sections, current Kit runtime wording, and the sparse package active app identity boundary.
 - Tests: Added regression coverage for Kit UI-test launch targets, path-scoped cleanup, active-module module keys, common and PowerDisplay `Kit.exe` settings links, PowerDisplay runner IPC single-instancing, early pipe-message buffering, pipe-write retry, and build/signing helper stability defaults.
 
 ### 1.2.0
@@ -316,6 +406,96 @@
 ## 中文
 
 ## 更新日志
+
+### 2.0.23
+
+- 重新设计常规设置中“AI 服务”的 UI/UX：统一采用原生 PowerToys SettingsExpander 与 SettingsCard 排版，使内核与端点子选项层级与原生设置规范一致。
+- 精简主/备用端点摘要显示，仅保留模型名称与思考强度（Model · Effort，如 gpt-5.6-luna · medium），去除冗余的小字备注与标签。
+- 彻底移除 Localserver 插件中的 AI 分析卡片、ViewModel、服务类与 Prompt 链路依赖，保持 Localserver 纯净。
+- 参考 PowerToys 日志系统在 Kit 常规设置中增加集中式“诊断与日志”管理：提供主日志开关、日志级别选择（trace/debug/info/warn/error/critical/off）及一键打开日志文件夹按钮，并同步联动 ManagedCommon.Logger 与 %LOCALAPPDATA%\Kit\log_settings.json。
+- 完善单元测试覆盖并校验通过。
+
+### 2.0.22
+
+- 重构 AI Hub 设置为常规设置中的就地紧凑布局，彻底移除多余的子页面跳转与返回面包屑按钮。
+- 增加总开关折叠/展开联动：AI Hub 未启用时隐藏全部详细配置，开启时就地展开。
+- 增加 AI 执行内核（Codex CLI / Pi CLI）切换确认按钮 [应用]，避免误触。
+- 对齐原项目紧凑接口端点（主/备用）与全局安全策略（security.md）配置面板，提供完整中英双语支持。
+
+### 2.0.21
+
+- 将 AI Hub 收入 Kit 设置，移除独立侧栏入口和首页插件卡片，全局启用开关只保留在 AI Hub 设置页。
+- 增加双语设置入口和返回链接；直接打开或从 Localserver 跳转 AI Hub 时，侧栏保持“设置”选中。
+
+### 2.0.20
+
+- 修复 Kit 更名后遗漏的 SettingsAPI 命名空间、Awake WinRT 投影、Settings/Quick Access 启动路径和 PRI 资源加载。
+- 恢复与本地上游一致的原生接口虚表槽位，保留旧工厂入口回退，加固 DLL 加载和配置缓冲区读取。
+- 搜索索引改为首次查询时加载；没有快捷键时跳过键盘钩子；两种兼容 IPC 字段共用一次模块配置序列化。
+- 修复 Localserver 优雅停止超时和健康检查期间取消的进程回收；关闭前异步保存待提交配置，有活跃服务时隐藏设置窗口并保留宿主和输出管道。
+- 日志预览改为有界定时刷新，修正 Kit 日志目录入口、共享开关刷新及硬件状态双语资源。
+- LightSwitch 配置与运行状态改为加锁快照；同步原生模块模板、插件开发指南和可复现的 Debug 交付校验脚本。
+- 验证覆盖托管/原生回归和 AI Hub Native AOT 冒烟；Windows 自动化无法绑定 Kit 窗口，完整 WinUI 视觉交互仍待实际反馈。
+
+### 2.0.19
+
+- 版本：Kit 升级到 `2.0.19`。
+- Localserver 状态卡片排版与视觉体验优化：
+  - 修复 HOST 标签因列宽过小折行变为“HOS\nT”的排版缺陷，调整列宽为 `Auto,*` 并将操作系统版号与 Build 编号纵向优雅堆叠。
+  - 硬件信息展示对齐原版 `LocalServerHub`：CPU 从原始环境变量识别符精简为友好型号（如 `Ryzen 5 5600H · 12 logical cores`），GPU 显示精简型号（如 `RTX 3050 Ti`）与规范驱动/设备信息，系统版号精简为 `Windows 11 LTSC` 与 `Build 26100.9168`。
+  - 环境自检文本对比度与渲染优化：`All environment checks passed` 绑定独立 `EnvSummaryBrush`，通过时呈现高对比度绿色（`SystemFillColorSuccessBrush`）粗体，彻底杜绝浅灰不可见问题。
+  - 健康环呼吸感提升：健康环中心居中展示清晰的健康状态文本（如 `IDLE` / `STOPPED`），移除拥挤的重叠图标与静态“HEALTH”标签。
+  - 路径单行显示：为命令行与工作目录添加 `NoWrap` 与单行文本省略，附带鼠标浮动提示。
+  - 关键指标层级强化：引入 `MetricPrimaryStyle` 与 `MetricCompactStyle` 等宽粗体字形，大幅突出 PORT、PID、REGISTERED、RUNNING、FAULTED 数值。
+- LightSwitch 主题手动与夜间自动切换缺陷修复：
+  - 修复 `DetectAndHandleExternalThemeChange` 中的重大缺陷：外部变更检测由比对当前系统与认知状态改为直接比对 `shouldBeLight`，导致夜间到达时误判为外部变更而死锁在 manual override，彻底修复夜间无法自动切换到深色主题的问题。
+  - 修复手动切换状态机逻辑：手动切换智能判定是否脱离或回归计划，杜绝状态拉扯与立即自动复原。
+  - 修复日落日出模式下未配置有效经纬度时边界退化为 `0,0` 导致全天恒为浅色（Light）的缺陷，无缝回退至默认配置时间。
+  - 统一 `ToggleTheme` 目标主题，确保系统主题与应用主题同步切换。
+
+### 2.0.18
+
+- 版本：Kit 升级到 `2.0.18`。
+- 彻底移除快捷键功能：从主页 Dashboard（`DashboardPage.xaml`、`DashboardViewModel.cs`）中彻底移除 Shortcuts（快捷键）卡片及刷新逻辑，从根源上解决因集合刷新重绘导致的主页图标持续闪烁问题。
+- 设置界面与模块清理：移除 `LightSwitchPage.xaml` 与 `LightSwitchViewModel.cs` 中的快捷键设置分组、卡片与绑定；从 `LightSwitchProperties.cs` 与 `LightSwitchSettings.cs` 中清理 `ToggleThemeHotkey` 属性。
+- 底层 C++ 接口精简：从 `LightSwitchModuleInterface/dllmain.cpp` 中完全移除热键配置读取、注册接口（`get_hotkeys`）与消息响应接口（`on_hotkey`），不再向系统注册全局底层键盘钩子。
+- 快捷入口清理：优化 `QuickAccessViewModel.cs` 提示文本逻辑，移除已废弃的热键属性读取。
+
+### 2.0.17
+
+- 版本：Kit 升级到 `2.0.17`。
+- 工具栏精简与自动保存：移除服务工具栏中冗余的“Save”与“Reload”按钮；新增配置自动保存逻辑：点击展开抽屉配置完毕折叠收起时自动持久化到 `services.json`，修改参数时防抖自动保存，离开页面时自动保存。
+- 添加链路体验优化：点击“Add Line”后自动展开该链路的配置抽屉，方便用户直接录入或调整参数。
+- 表格列比例与对齐统一：重构服务表格为统一的 8 列比例网格（`NAME` 1.8*、`PORT` 0.7*、`STATE` 1.1*、`UPTIME` 0.9*、`CPU` 0.6*、`MEM` 0.8*、`PID` 0.7*、操作栏 110px），彻底消除 `NAME` 栏过宽导致的空白断层。
+- 状态栏竖条对齐原项目：Row 1 中 `Status: ● [State]` 固定在 Col 0（`NAME` 正下方），竖条状态栏（`RecentBars`）起始位置精确对齐 Col 1（`PORT` 端口正下方）并向右延伸至 `PID`，与原项目设计保持完全一致。
+- 停止链路响应优化：修复 `IsOn` 属性在 `Stopping` 状态下仍为 `true` 导致开关反弹的问题，开关点击后立即显示关闭并防重入；优化 `ServiceRunner.StopCoreAsync()` 终止逻辑，无 GUI 窗口时快速升级进程销毁，将停止延迟从 5-10 秒降低至 1 秒以内。
+
+### 2.0.16
+
+- 版本：Kit 升级到 `2.0.16`。
+- 主导航栏紧凑化：主程序侧边栏未隐藏时宽度优化为 `OpenPaneLength="176"`（比 132 拓宽三分之一），既保证主界面空间充裕，又彻底避免图标文字被遮挡。
+- 语言统一规范：严格遵循 Kit 原生仅支持中英双语规范，彻底清除所有双语混合斜杠（中/En），实现 `en-us` 与 `zh-CN` 资源字典 100% 键值对齐与地道表述。
+- 服务链路 UI/UX 全面重构：严格重构服务列表为高密度表格样式，集成最近状态色块条（`RecentBars`）、运行中锁定标志（`🔒`，停止后方可修改参数）以及 Targets 风格的展开配置抽屉。
+- 链路配置精简与下沉：移除链路手动上下排序按钮与“开机自启”开关；将“删除链路”入口下沉至当前链路展开抽屉底部并配备防误触二次确认。
+- 诊断看板与日志抽屉：顶部看板融合健康圆环（HealthRing）、60 秒 CPU 趋势图、系统硬件与会话统计；底部常驻可折叠输出日志抽屉（支持跟随滚动、日志目录直达与清空）。
+- 稳定性修复：修复 Localserver 页面中由于部分 `TextBlock` 绑定了包含 `.Content` 的 `x:Uid` 导致的 `XamlParseException` 崩溃问题。
+
+### 2.0.15
+
+- Localserver 界面：Health（健康状态）与 System（系统资源）恢复到服务清单上方常驻；内容区达到 720 DIP 时并列，较窄时纵向排列。移除顶部介绍图，减少留白。
+- 日志：删除 Localserver 日志面板及 UI 刷新循环。已脱敏的服务输出经有界后台队列批量接入 Kit 现有 Settings Logger，保留服务 Id、流类型、时间与序号；过载和写入失败均计数，释放不阻塞 UI，进程退出等待有明确上限。
+- 语言：页面文案、服务状态、环境检查与操作反馈复用 Kit 中英文资源；运行状态与可用操作不再依赖翻译后的文本判断。
+- 稳定性：保存保留配置来源与并发校验，修复跨文件重排后连续保存的误冲突；复用秘密值加密迁移，显式空服务目录保持为空。强制终止和释放端口增加确认与进程身份核验；服务链接复用变量展开与实际端口。
+- 生命周期与规范：离页暂停硬件采样，刷新防重入，缓存管理状态在 Settings 真正关闭时释放。开发规范与中英文 README 补齐三个活动模块、日志目录、布局要求，以及当前由 Settings 承载管理的生命周期边界。
+
+### 2.0.14
+
+- 版本：Kit 升级到 `2.0.14`。
+- 原生插件化迁移：将原本地服务链路管理器完整迁移并重构为 Kit 原生内置插件 `Localserver`，严格遵循插件开发规范（`PLUGIN_DEVELOPMENT.md`），源码归置于 `src/modules/Localserver/`。
+- WinUI 3 + Mica 统一架构：彻底放弃独立应用窗口模式，以单页形式原生嵌入 Kit 主设置界面（`LocalserverPage.xaml`），完美复用 WinUI 3 + Mica Alt 设计语言。
+- 诊断与硬件监控看板：打造区域 1 双卡片诊断区，包含 Environment 环境依赖项检测（支持交互式芯片命令复制与一键释放被占端口）与 System 硬件监控（GPU 核心利用率 / 显存占用 / 核心温度指标、宿主 CPU & 内存占用仪表盘及 60 秒历史 CPU 曲线 Canvas）。
+- 服务链路管理 (Target -> Line)：将目标服务链路统一命名为 `Line`。主标题行融合状态指示点、运行时长、端口、PID、资源占用率、快捷打开链接与单链路启用开关；实现严格的运行期配置只读锁定（`IsEnabled="{x:Bind IsEditable}"`）；将删除链路入口下沉至“展开详细配置”底部并加入二次确认浮窗。
+- 历史冗余精简：彻底移除“Last Error”文本标签、彻底移除“链路隐藏（主界面显示）”开关、彻底移除单链路“开机/启动自启”开关。运行时数据严格隔离于 `%LOCALAPPDATA%\Kit\Localserver\`。
 
 ### 2.0.13
 

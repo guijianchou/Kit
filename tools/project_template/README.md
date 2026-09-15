@@ -1,11 +1,11 @@
 # Kit 原生模块模板
 
-该模板用于在 Kit 仓库内创建实现 `PowertoyModuleIface` 的 C++ DLL。模块的完整接入要求、数据隔离、图标和 WinUI 3 页面规范见根目录 [PLUGIN_DEVELOPMENT.md](../../PLUGIN_DEVELOPMENT.md)。
+该模板用于在 Kit 仓库内创建实现 `KitModuleIface` 的 C++ DLL。模块的完整接入要求、数据隔离、图标和 WinUI 3 页面规范见根目录 [PLUGIN_DEVELOPMENT.md](../../PLUGIN_DEVELOPMENT.md)。
 
 ## 安装与创建项目
 
 1. 把本目录的 `ModuleTemplate.zip` 复制到 Visual Studio 的 **User project templates location**。实际位置以 `Tools > Options > Projects and Solutions` 中的设置为准；默认位置通常是 `%USERPROFILE%\Documents\Visual Studio 18\Templates\ProjectTemplates\`（VS 2026）或对应 VS 2022 目录。
-2. 在 Visual Studio 的 C++ 项目模板中选择 **PowerToy Module Template**。这是保留的模板显示名称；生成的工程使用 Kit 仓库的接口和构建配置。
+2. 在 Visual Studio 的 C++ 项目模板中选择 **Kit Module Template**。生成的工程使用 Kit 仓库的接口和构建配置。
 3. 在 Kit 的 `src\modules\` 下创建项目，例如项目名 `Sample`、位置 `src\modules\sample\`，得到 `src\modules\sample\Sample\Sample.vcxproj`。使用以字母开头的 ASCII 字母/数字名称，并确认模块 Key 不与现有模块或保留目录重名。
 4. 将生成的工程加入 `Kit.slnx`，按根规范完成 Runner、设置模型、导航、语言资源及资产接入。
 

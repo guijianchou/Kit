@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "LightSwitchStateManager.h"
 #include <logger.h>
 #include <LightSwitchUtils.h>
@@ -37,24 +37,69 @@ void LightSwitchStateManager::OnTick()
     }
 }
 
-// Called when manual override is triggered (via hotkey)
+// Called when manual override is triggered (via hotkey or toggle)
 void LightSwitchStateManager::OnManualOverride()
 {
     std::lock_guard<std::mutex> lock(_stateMutex);
     Logger::info(L"[LightSwitchStateManager] Manual override triggered");
-    _state.isManualOverride = !_state.isManualOverride;
 
-    // ModuleInterface has already flipped the Windows theme before signaling this event,
-    // regardless of which direction isManualOverride just toggled. Sync cached state so
-    // scheduled evaluation sees the current theme.
     _state.isSystemLightActive = GetCurrentSystemTheme();
     _state.isAppsLightActive = GetCurrentAppsTheme();
 
-    Logger::debug(L"[LightSwitchStateManager] Synced internal theme state to current system theme ({}) and apps theme ({}).",
-                  (_state.isSystemLightActive ? L"light" : L"dark"),
-                  (_state.isAppsLightActive ? L"light" : L"dark"));
+    const auto& currentSettings = LightSwitchSettings::settings();
+    auto now = GetNowMinutes();
 
-    EvaluateAndApplyIfNeeded();
+    bool shouldBeLight = false;
+    if (currentSettings.scheduleMode == ScheduleMode::FollowNightLight)
+    {
+        shouldBeLight = !_state.isNightLightActive;
+    }
+    else
+    {
+        int effectiveLight = _state.effectiveLightMinutes;
+        int effectiveDark = _state.effectiveDarkMinutes;
+        if (effectiveLight == 0 && effectiveDark == 0)
+        {
+            effectiveLight = currentSettings.lightTime;
+            effectiveDark = currentSettings.darkTime;
+            if (currentSettings.scheduleMode == ScheduleMode::SunsetToSunrise)
+            {
+                effectiveLight = (currentSettings.lightTime + currentSettings.sunrise_offset % 1440 + 1440) % 1440;
+                effectiveDark = (currentSettings.darkTime + currentSettings.sunset_offset % 1440 + 1440) % 1440;
+            }
+        }
+        shouldBeLight = ShouldBeLight(now, effectiveLight, effectiveDark);
+    }
+
+    bool matchesSchedule = true;
+    if (currentSettings.changeSystem && _state.isSystemLightActive != shouldBeLight)
+    {
+        matchesSchedule = false;
+    }
+    if (currentSettings.changeApps && _state.isAppsLightActive != shouldBeLight)
+    {
+        matchesSchedule = false;
+    }
+
+    if (matchesSchedule)
+    {
+        Logger::info(L"[LightSwitchStateManager] Theme now matches schedule; clearing manual override.");
+        _state.isManualOverride = false;
+    }
+    else
+    {
+        Logger::info(L"[LightSwitchStateManager] Theme differs from schedule; activating manual override.");
+        _state.isManualOverride = true;
+    }
+
+    _state.lastTickMinutes = now;
+}
+
+void LightSwitchStateManager::SyncCurrentThemeState()
+{
+    std::lock_guard<std::mutex> lock(_stateMutex);
+    _state.isSystemLightActive = GetCurrentSystemTheme();
+    _state.isAppsLightActive = GetCurrentAppsTheme();
 }
 
 // Runs with the registry observer detects a change in Night Light settings.
@@ -132,7 +177,7 @@ static std::pair<int, int> update_sun_times(auto& settings)
 
     try
     {
-        auto values = PowerToysSettings::PowerToyValues::load_from_settings_file(L"LightSwitch");
+        auto values = KitSettings::PowerToyValues::load_from_settings_file(L"LightSwitch");
         values.add_property(L"lightTime", newLightTime);
         values.add_property(L"darkTime", newDarkTime);
         values.save_to_settings_file();
@@ -166,31 +211,46 @@ void LightSwitchStateManager::EvaluateAndApplyIfNeeded()
     bool coordsValid = CoordinatesAreValid(_currentSettings.latitude, _currentSettings.longitude);
 
     // Handle Sun Mode recalculation
-    if (_currentSettings.scheduleMode == ScheduleMode::SunsetToSunrise && coordsValid)
+    if (_currentSettings.scheduleMode == ScheduleMode::SunsetToSunrise)
     {
-        SYSTEMTIME st;
-        GetLocalTime(&st);
-        bool newDay = (_state.lastEvaluatedDay != st.wDay);
-        bool modeChangedToSun = (_state.lastAppliedMode != ScheduleMode::SunsetToSunrise &&
-                                 _currentSettings.scheduleMode == ScheduleMode::SunsetToSunrise);
-
-        if (newDay || modeChangedToSun)
+        if (coordsValid)
         {
-            auto [newLightTime, newDarkTime] = update_sun_times(_currentSettings);
-            _state.lastEvaluatedDay = st.wDay;
-            _state.effectiveLightMinutes = newLightTime + _currentSettings.sunrise_offset;
-            _state.effectiveDarkMinutes = newDarkTime + _currentSettings.sunset_offset;
+            SYSTEMTIME st;
+            GetLocalTime(&st);
+            bool newDay = (_state.lastEvaluatedDay != st.wDay);
+            bool modeChangedToSun = (_state.lastAppliedMode != ScheduleMode::SunsetToSunrise &&
+                                     _currentSettings.scheduleMode == ScheduleMode::SunsetToSunrise);
+
+            if (newDay || modeChangedToSun)
+            {
+                auto [newLightTime, newDarkTime] = update_sun_times(_currentSettings);
+                _state.lastEvaluatedDay = st.wDay;
+                _state.effectiveLightMinutes = (newLightTime + _currentSettings.sunrise_offset % 1440 + 1440) % 1440;
+                _state.effectiveDarkMinutes = (newDarkTime + _currentSettings.sunset_offset % 1440 + 1440) % 1440;
+            }
+            else
+            {
+                _state.effectiveLightMinutes = (_currentSettings.lightTime + _currentSettings.sunrise_offset % 1440 + 1440) % 1440;
+                _state.effectiveDarkMinutes = (_currentSettings.darkTime + _currentSettings.sunset_offset % 1440 + 1440) % 1440;
+            }
         }
         else
         {
-            _state.effectiveLightMinutes = _currentSettings.lightTime + _currentSettings.sunrise_offset;
-            _state.effectiveDarkMinutes = _currentSettings.darkTime + _currentSettings.sunset_offset;
+            // Fallback when coords are invalid or unset
+            _state.effectiveLightMinutes = (_currentSettings.lightTime + _currentSettings.sunrise_offset % 1440 + 1440) % 1440;
+            _state.effectiveDarkMinutes = (_currentSettings.darkTime + _currentSettings.sunset_offset % 1440 + 1440) % 1440;
         }
     }
     else if (_currentSettings.scheduleMode == ScheduleMode::FixedHours)
     {
-        _state.effectiveLightMinutes = _currentSettings.lightTime;
-        _state.effectiveDarkMinutes = _currentSettings.darkTime;
+        _state.effectiveLightMinutes = (_currentSettings.lightTime % 1440 + 1440) % 1440;
+        _state.effectiveDarkMinutes = (_currentSettings.darkTime % 1440 + 1440) % 1440;
+    }
+
+    if (_state.effectiveLightMinutes == 0 && _state.effectiveDarkMinutes == 0 && _currentSettings.scheduleMode != ScheduleMode::FollowNightLight)
+    {
+        _state.effectiveLightMinutes = 420;
+        _state.effectiveDarkMinutes = 1140;
     }
 
     // Handle manual override logic

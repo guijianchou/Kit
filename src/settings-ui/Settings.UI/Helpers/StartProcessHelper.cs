@@ -5,7 +5,7 @@
 using System.Diagnostics;
 using ManagedCommon;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public static class StartProcessHelper
     {

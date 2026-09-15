@@ -12,19 +12,20 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-
-using global::PowerToys.GPOWrapper;
+using global::Kit.GPOWrapper;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Library.ViewModels.Commands;
+using Kit.Settings.UI.SerializationContext;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.Library.ViewModels.Commands;
-using Microsoft.PowerToys.Settings.UI.SerializationContext;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
+    using GPOWrapper = global::Kit.GPOWrapper.GPOWrapper;
+
     public partial class GeneralViewModel : PageViewModelBase
     {
         private const bool IsDataDiagnosticsEnabledInKit = false;
@@ -44,9 +45,11 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private UpdatingSettings UpdatingSettingsConfig { get; set; }
 
+        public AiHubViewModel AiHub { get; }
+
         public ButtonClickCommand CheckForUpdatesEventHandler { get; set; }
 
-        public Windows.ApplicationModel.Resources.ResourceLoader ResourceLoader { get; set; }
+        public Microsoft.Windows.ApplicationModel.Resources.ResourceLoader ResourceLoader { get; set; }
 
         private Action HideBackupAndRestoreMessageAreaAction { get; set; }
 
@@ -85,7 +88,7 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
 
         private SettingsBackupAndRestoreUtils settingsBackupAndRestoreUtils = SettingsBackupAndRestoreUtils.Instance;
 
-        public GeneralViewModel(ISettingsRepository<GeneralSettings> settingsRepository, string runAsAdminText, string runAsUserText, bool isElevated, bool isAdmin, Func<string, int> ipcMSGCallBackFunc, Func<string, int> ipcMSGRestartAsAdminMSGCallBackFunc, Func<string, int> ipcMSGCheckForUpdatesCallBackFunc, string configFileSubfolder = "", Action dispatcherAction = null, Action hideBackupAndRestoreMessageAreaAction = null, Action<int> doBackupAndRestoreDryRun = null, Func<Task<string>> pickSingleFolderDialog = null, Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = null)
+        public GeneralViewModel(ISettingsRepository<GeneralSettings> settingsRepository, string runAsAdminText, string runAsUserText, bool isElevated, bool isAdmin, Func<string, int> ipcMSGCallBackFunc, Func<string, int> ipcMSGRestartAsAdminMSGCallBackFunc, Func<string, int> ipcMSGCheckForUpdatesCallBackFunc, string configFileSubfolder = "", Action dispatcherAction = null, Action hideBackupAndRestoreMessageAreaAction = null, Action<int> doBackupAndRestoreDryRun = null, Func<Task<string>> pickSingleFolderDialog = null, Microsoft.Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = null)
         {
             CheckForUpdatesEventHandler = new ButtonClickCommand(CheckForUpdatesClick);
             RestartElevatedButtonEventHandler = new ButtonClickCommand(RestartElevated);
@@ -157,6 +160,9 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             GeneralSettingsConfig.AutoDownloadUpdates = false;
             GeneralSettingsConfig.ShowWhatsNewAfterUpdates = false;
             _enableExperimentation = GeneralSettingsConfig.EnableExperimentation;
+            _enableLogging = GeneralSettingsConfig.EnableLogging;
+            _logLevelIndex = LogLevelToIndex(GeneralSettingsConfig.LogLevel);
+            SyncLogSettingsFile();
 
             _isElevated = isElevated;
             _runElevated = GeneralSettingsConfig.RunElevated;
@@ -190,6 +196,20 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             }
 
             InitializeLanguages();
+
+            AiHub = new AiHubViewModel(_dispatcherQueue);
+            AiHub.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(AiHub.IsEnabled) && GeneralSettingsConfig?.Enabled != null)
+                {
+                    if (GeneralSettingsConfig.Enabled.AiHub != AiHub.IsEnabled)
+                    {
+                        GeneralSettingsConfig.Enabled.AiHub = AiHub.IsEnabled;
+                        var outgoing = new OutGoingGeneralSettings(GeneralSettingsConfig);
+                        SendConfigMSG(outgoing.ToString());
+                    }
+                }
+            };
         }
 
         // Supported languages: English (default) and Chinese (Simplified)
@@ -240,6 +260,8 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private int _languagesIndex;
         private int _initLanguagesIndex;
         private bool _languageChanged;
+        private bool _enableLogging;
+        private int _logLevelIndex;
 
         // Gets or sets a value indicating whether run powertoys on start-up.
         public bool Startup
@@ -578,6 +600,100 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         public bool IsRunAtStartupGPOManaged
         {
             get => _runAtStartupIsGPOConfigured;
+        }
+
+        public bool EnableLogging
+        {
+            get => _enableLogging;
+            set
+            {
+                if (_enableLogging != value)
+                {
+                    _enableLogging = value;
+                    GeneralSettingsConfig.EnableLogging = value;
+                    SyncLogSettingsFile();
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public int LogLevelIndex
+        {
+            get => _logLevelIndex;
+            set
+            {
+                if (_logLevelIndex != value && value >= 0 && value < 5)
+                {
+                    _logLevelIndex = value;
+                    GeneralSettingsConfig.LogLevel = IndexToLogLevel(value);
+                    SyncLogSettingsFile();
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string LogsFolderPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit");
+
+        public System.Windows.Input.ICommand OpenLogsFolderCommand => new Kit.Settings.UI.Helpers.RelayCommand(() =>
+        {
+            try
+            {
+                string path = LogsFolderPath;
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
+            }
+            catch (Exception e)
+            {
+                Logger.LogError("Failed to open logs folder", e);
+            }
+        });
+
+        private static int LogLevelToIndex(string level) => level?.ToLowerInvariant() switch
+        {
+            "trace" => 0,
+            "debug" => 1,
+            "info" => 2,
+            "warn" or "warning" => 3,
+            "err" or "error" => 4,
+            _ => 0,
+        };
+
+        private static string IndexToLogLevel(int index) => index switch
+        {
+            0 => "trace",
+            1 => "debug",
+            2 => "info",
+            3 => "warn",
+            4 => "err",
+            _ => "trace",
+        };
+
+        private void SyncLogSettingsFile()
+        {
+            try
+            {
+                string targetLevel = _enableLogging ? IndexToLogLevel(_logLevelIndex) : "off";
+                ManagedCommon.Logger.SetLogging(_enableLogging, targetLevel);
+
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string dir = Path.Combine(appData, "Kit");
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                string filePath = Path.Combine(dir, "log_settings.json");
+                string content = $"{{\"logLevel\":\"{targetLevel}\"}}";
+                File.WriteAllText(filePath, content);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to synchronize log_settings.json", ex);
+            }
         }
 
         public string SettingsBackupAndRestoreDir
@@ -1602,6 +1718,8 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
             {
                 _settingsRepository.SettingsChanged -= OnSettingsChanged;
             }
+
+            AiHub?.Dispose();
 
             GC.SuppressFinalize(this);
         }

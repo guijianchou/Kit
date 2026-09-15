@@ -24,7 +24,7 @@
 src/
 ├── runner/                         # Kit.exe 主进程
 │   ├── main.cpp                    # 入口点，启动流程编排
-│   ├── powertoy_module.cpp/h       # 模块加载与生命周期管理
+│   ├── kit_module.cpp/h            # 模块加载与生命周期管理
 │   ├── general_settings.cpp/h      # 全局设置读写与缓存
 │   ├── tray_icon.cpp/h             # 系统托盘图标与菜单
 │   ├── settings_window.cpp/h       # Settings 窗口启动与 IPC
@@ -41,15 +41,19 @@ src/
 │
 ├── modules/
 │   ├── interface/
-│   │   └── powertoy_module_interface.h  # 模块契约定义
+│   │   └── kit_module_interface.h  # 模块契约定义 (KitModuleIface)
 │   ├── awake/                      # Awake 模块
 │   │   ├── AwakeModuleInterface/   # DLL 接口层
-│   │   └── PowerToys.Awake/        # C# 后台服务进程
-│   └── LightSwitch/                # LightSwitch 模块
-│       └── LightSwitchModuleInterface/  # DLL 接口层
+│   │   └── PowerToys.Awake/        # C# 独立进程
+│   ├── LightSwitch/                # LightSwitch 模块
+│   │   ├── LightSwitchModuleInterface/  # DLL 接口层
+│   │   └── LightSwitchService/     # C++ 后台守护服务
+│   └── Localserver/                # Localserver 模块
+│       ├── LocalserverModuleInterface/  # DLL 接口层
+│       └── LocalserverLib/         # 核心托管业务类库
 │
 ├── settings-ui/
-│   ├── Settings.UI/                # PowerToys.Settings.exe (WinUI3)
+│   ├── Settings.UI/                # Kit.Settings.dll (WinUI3)
 │   │   ├── App.xaml.cs             # WinUI3 应用入口
 │   │   ├── MainWindow.xaml.cs      # 主窗口，IPC 初始化
 │   │   ├── Views/                  # XAML 页面
@@ -58,12 +62,14 @@ src/
 │   │   │   ├── GeneralPage.xaml    # 通用设置
 │   │   │   ├── AwakePage.xaml      # Awake 设置页
 │   │   │   ├── LightSwitchPage.xaml # LightSwitch 设置页
+│   │   │   ├── LocalserverPage.xaml # Localserver 设置页
 │   │   │   └── SearchResultsPage.xaml # 搜索结果
 │   │   ├── ViewModels/             # MVVM 视图模型
 │   │   │   ├── ShellViewModel.cs   # 导航逻辑
 │   │   │   ├── GeneralViewModel.cs # 通用设置 VM
 │   │   │   ├── AwakeViewModel.cs   # Awake VM
-│   │   │   └── LightSwitchViewModel.cs
+│   │   │   ├── LightSwitchViewModel.cs
+│   │   │   └── LocalserverViewModel.cs
 │   │   ├── Controls/               # 自定义控件
 │   │   │   ├── ShortcutControl.xaml # 热键输入
 │   │   │   ├── SettingsGroup.xaml  # 设置分组
@@ -76,9 +82,10 @@ src/
 │   │   ├── ViewModels/             # 每模块设置模型
 │   │   │   ├── GeneralSettings.cs  # 全局设置
 │   │   │   ├── AwakeSettings.cs
-│   │   │   └── LightSwitchSettings.cs
+│   │   │   ├── LightSwitchSettings.cs
+│   │   │   └── LocalserverSettings.cs
 │   │   └── Helpers/                # IPC、热键、GPO 帮助
-│   ├── QuickAccess.UI/             # PowerToys.QuickAccess.exe (WinUI3)
+│   ├── QuickAccess.UI/             # Kit.QuickAccess.exe (WinUI3)
 │   └── Settings.UI.Controls/       # 共享控件库
 │
 ├── common/                         # 公共基础库

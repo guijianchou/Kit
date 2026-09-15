@@ -2,7 +2,7 @@
 #include "HotkeyManager.h"
 #include "HotkeyManager.g.cpp"
 
-namespace winrt::PowerToys::Interop::implementation
+namespace winrt::Kit::Interop::implementation
 {
     HotkeyManager::HotkeyManager()
     {
@@ -58,7 +58,7 @@ namespace winrt::PowerToys::Interop::implementation
         return false;
     }
 
-    uint16_t HotkeyManager::RegisterHotkey(winrt::PowerToys::Interop::Hotkey const& _hotkey, winrt::PowerToys::Interop::HotkeyCallback const& _callback)
+    uint16_t HotkeyManager::RegisterHotkey(winrt::Kit::Interop::Hotkey const& _hotkey, winrt::Kit::Interop::HotkeyCallback const& _callback)
     {
         auto handle = GetHotkeyHandle(_hotkey);
         hotkeys[handle] = _callback;

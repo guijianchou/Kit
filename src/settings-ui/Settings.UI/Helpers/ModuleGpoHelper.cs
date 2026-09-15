@@ -2,12 +2,14 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using global::PowerToys.GPOWrapper;
+using global::Kit.GPOWrapper;
+using Kit.Settings.UI.Views;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Views;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
+    using GPOWrapper = global::Kit.GPOWrapper.GPOWrapper;
+
     internal sealed class ModuleGpoHelper
     {
         public static GpoRuleConfigured GetModuleGpoConfiguration(ModuleType moduleType)
@@ -26,6 +28,8 @@ namespace Microsoft.PowerToys.Settings.UI.Helpers
             {
                 ModuleType.Awake => typeof(AwakePage),
                 ModuleType.LightSwitch => typeof(LightSwitchPage),
+                ModuleType.Localserver => typeof(LocalserverPage),
+                ModuleType.AiHub => typeof(GeneralPage),
                 _ => typeof(GeneralPage),
             };
         }

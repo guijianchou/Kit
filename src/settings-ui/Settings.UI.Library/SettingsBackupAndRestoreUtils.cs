@@ -15,11 +15,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
-
+using Kit.Settings.UI.Library.Utilities;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class SettingsBackupAndRestoreUtils
     {

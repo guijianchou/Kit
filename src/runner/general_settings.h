@@ -39,4 +39,8 @@ json::JsonObject load_general_settings();
 GeneralSettings get_general_settings();
 void apply_general_settings(const json::JsonObject& general_configs, bool save = true);
 void apply_module_status_update(const json::JsonObject& module_config, bool save = true);
-void start_enabled_powertoys(const json::JsonObject& general_settings);
+void start_enabled_kit_modules(const json::JsonObject& general_settings);
+inline void start_enabled_powertoys(const json::JsonObject& general_settings)
+{
+    start_enabled_kit_modules(general_settings);
+}

@@ -9,7 +9,7 @@ This is the top-level guidance for AI contributions to Kit. Keep changes atomic,
 
 ## Overview
 
-Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. The active module set is intentionally small: `Awake`, `Light Switch`, and `Monitor`.
+Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. The active module set is: `Awake`, `LightSwitch`, and `Localserver`.
 
 | Area | Location | Description |
 |------|----------|-------------|
@@ -24,11 +24,11 @@ For architecture details, module set, and stability direction, see the [project 
 
 ## Conventions
 
-- Prefer upstream PowerToys patterns and small deltas over new local abstractions.
+- Follow Kit's `KitModuleIface` and `kit_create()` plugin contract.
 - Keep module registration explicit through maintained Kit lists (`KitKnownModules` in `src/runner/main.cpp`, `KitModuleCatalog`, navigation routes).
-- Keep Kit storage, backup, window title, and visible text separate from the installed official PowerToys app (`%LOCALAPPDATA%\Kit\`, `Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`).
+- Keep Kit storage, backup, window title, and visible text separate from official PowerToys (`%LOCALAPPDATA%\Kit\`, `Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`).
 - Do not re-enable automatic download/install or telemetry behavior.
-- Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests. `Monitor` is the reference shape.
+- Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
 
 ## Build
 
@@ -71,7 +71,7 @@ For complete details, see [Build Guidelines](tools/build/BUILD-GUIDELINES.md).
 ### Test discovery
 
 - Find test projects under `src/**/UnitTests` and `src/**/UITests`.
-- Key Kit test surfaces: `Settings.UI.UnitTests` (BuildCompatibility, navigation, view-model regressions), `Monitor.UnitTests` (worker/runner registration, progress reporting).
+- Key Kit test surfaces: `Settings.UI.UnitTests` (BuildCompatibility, navigation, view-model regressions), `Kit.AiHub.UnitTests`, `Awake.ModuleServices.UnitTests`.
 
 ### Running tests
 

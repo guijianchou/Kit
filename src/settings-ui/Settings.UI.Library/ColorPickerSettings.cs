@@ -7,12 +7,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Kit.Settings.UI.Library.Enumerations;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Enumerations;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class ColorPickerSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
     {

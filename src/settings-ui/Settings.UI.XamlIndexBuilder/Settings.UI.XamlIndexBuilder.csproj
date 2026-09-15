@@ -5,7 +5,7 @@
 	<PropertyGroup>
 		<TargetFramework>$(CoreTargetFramework)</TargetFramework>
 		<OutputType>Exe</OutputType>
-	<RootNamespace>Microsoft.PowerToys.Tools.XamlIndexBuilder</RootNamespace>
+	<RootNamespace>Kit.Settings.UI.XamlIndexBuilder</RootNamespace>
 		<AssemblyName>XamlIndexBuilder</AssemblyName>
 		<!-- Platform-agnostic: framework-dependent DLL executed via dotnet -->
 		<SelfContained>false</SelfContained>

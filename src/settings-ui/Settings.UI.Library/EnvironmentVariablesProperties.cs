@@ -4,9 +4,9 @@
 
 using System.Text.Json.Serialization;
 
-using Settings.UI.Library.Enumerations;
+using Kit.Settings.UI.Library.Enumerations;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class EnvironmentVariablesProperties
     {

@@ -5,7 +5,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.Utilities
+namespace Kit.Settings.UI.Library.Utilities
 {
     internal static class NativeMethods
     {

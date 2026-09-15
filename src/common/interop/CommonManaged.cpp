@@ -3,7 +3,7 @@
 #include "CommonManaged.g.cpp"
 #include <common/version/version.h>
 
-namespace winrt::PowerToys::Interop::implementation
+namespace winrt::Kit::Interop::implementation
 {
     hstring CommonManaged::GetProductVersion()
     {

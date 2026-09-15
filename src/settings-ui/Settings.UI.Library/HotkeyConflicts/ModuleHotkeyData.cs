@@ -4,11 +4,11 @@
 
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Kit.Settings.UI.Library.Helpers;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
 using Windows.Web.AtomPub;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts
+namespace Kit.Settings.UI.Library.HotkeyConflicts
 {
     public class ModuleHotkeyData : INotifyPropertyChanged
     {

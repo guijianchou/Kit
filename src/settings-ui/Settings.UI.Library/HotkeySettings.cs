@@ -9,10 +9,10 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
+using Kit.Settings.UI.Library.Utilities;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public record HotkeySettings : ICmdLineRepresentable, INotifyPropertyChanged
     {

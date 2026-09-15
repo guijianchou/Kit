@@ -5,9 +5,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Library;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     public class HotkeyConflictHelper
     {

@@ -6,7 +6,7 @@ using System;
 using System.Globalization;
 using System.Reflection;
 
-namespace Microsoft.PowerToys.Settings.UI.Library;
+namespace Kit.Settings.UI.Library;
 
 /// <summary>
 /// A helper interface to allow parsing property values from their command line representation.

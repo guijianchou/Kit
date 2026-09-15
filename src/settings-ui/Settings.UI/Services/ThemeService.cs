@@ -4,11 +4,11 @@
 
 using System;
 
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
 using Microsoft.UI.Xaml;
 
-namespace Microsoft.PowerToys.Settings.UI.Services
+namespace Kit.Settings.UI.Services
 {
     public class ThemeService
     {

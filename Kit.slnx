@@ -4,6 +4,14 @@
     <Platform Name="x64" />
   </Configurations>
   <Folder Name="/common/">
+    <Project Path="src/common/AiHub/Kit.AiHub.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/common/AiHub.UnitTests/Kit.AiHub.UnitTests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/common/Common.Search/Common.Search.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
@@ -27,7 +35,7 @@
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="src/common/PowerToys.ModuleContracts/PowerToys.ModuleContracts.csproj">
+    <Project Path="src/common/Kit.ModuleContracts/Kit.ModuleContracts.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
@@ -46,7 +54,7 @@
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="src/common/interop/PowerToys.Interop.vcxproj" Id="f055103b-f80b-4d0c-bf48-057c55620033" />
+    <Project Path="src/common/interop/Kit.Interop.vcxproj" Id="f055103b-f80b-4d0c-bf48-057c55620033" />
   </Folder>
   <Folder Name="/common/log/">
     <Project Path="src/common/logger/logger.vcxproj" Id="d9b8fc84-322a-4f9f-bbb9-20915c47ddfd">
@@ -101,7 +109,19 @@
   </Folder>
   <Folder Name="/modules/" />
   <Folder Name="/modules/interface/">
+    <File Path="src/modules/interface/kit_module_interface.h" />
     <File Path="src/modules/interface/powertoy_module_interface.h" />
+  </Folder>
+  <Folder Name="/modules/Localserver/">
+    <Project Path="src/modules/Localserver/Localserver.UnitTests/Localserver.UnitTests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/Localserver/LocalserverLib/LocalserverLib.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/Localserver/LocalserverModuleInterface/LocalserverModuleInterface.vcxproj" Id="b749d21c-4b53-4318-9719-f5383a15dc01" />
   </Folder>
   <Folder Name="/modules/LightSwitch/">
     <Project Path="src/modules/LightSwitch/LightSwitchLib/LightSwitchLib.vcxproj" Id="79267138-2895-4346-9021-21408d65379f" />
@@ -137,7 +157,7 @@
     </Project>
   </Folder>
   <Folder Name="/settings-ui/">
-    <Project Path="src/settings-ui/QuickAccess.UI/PowerToys.QuickAccess.csproj">
+    <Project Path="src/settings-ui/QuickAccess.UI/Kit.QuickAccess.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
@@ -153,7 +173,7 @@
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
-    <Project Path="src/settings-ui/Settings.UI/PowerToys.Settings.csproj">
+    <Project Path="src/settings-ui/Settings.UI/Kit.Settings.csproj">
       <Platform Solution="*|ARM64" Project="ARM64" />
       <Platform Solution="*|x64" Project="x64" />
     </Project>
@@ -187,8 +207,8 @@
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchModuleInterface/LightSwitchModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchService/LightSwitchService.vcxproj" />
     <BuildDependency Project="src/PackageIdentity/PackageIdentity.vcxproj" />
-    <BuildDependency Project="src/settings-ui/QuickAccess.UI/PowerToys.QuickAccess.csproj" />
-    <BuildDependency Project="src/settings-ui/Settings.UI/PowerToys.Settings.csproj" />
+    <BuildDependency Project="src/settings-ui/QuickAccess.UI/Kit.QuickAccess.csproj" />
+    <BuildDependency Project="src/settings-ui/Settings.UI/Kit.Settings.csproj" />
   </Project>
   <Project Path="src/ActionRunner/ActionRunner.vcxproj" Id="d29ddd63-e2cf-4657-9fd5-2aede4257e5d" />
   <Project Path="tools/project_template/ModuleTemplate/ModuleTemplateCompileTest.vcxproj" Id="64a80062-4d8b-4229-8a38-dfa1d7497749" />

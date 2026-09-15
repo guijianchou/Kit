@@ -5,7 +5,7 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public record KeyboardKeysProperty : ICmdLineRepresentable
     {

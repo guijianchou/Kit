@@ -18,8 +18,8 @@ using System.Threading;
 using Awake.Core.Models;
 using Awake.Core.Native;
 using Awake.Properties;
+using Kit.Settings.UI.Library;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
 using Microsoft.Win32;
 
 namespace Awake.Core
@@ -34,7 +34,9 @@ namespace Awake.Core
     {
         private bool _disposed;
 
-        internal static bool IsUsingPowerToysConfig { get; set; }
+        internal static bool IsUsingKitConfig { get; set; }
+
+        internal static bool IsUsingPowerToysConfig { get => IsUsingKitConfig; set => IsUsingKitConfig = value; }
 
         internal static SettingsUtils? ModuleSettings { get; set; }
 
@@ -240,7 +242,7 @@ namespace Awake.Core
         {
             CancelExistingThread();
 
-            if (IsUsingPowerToysConfig)
+            if (IsUsingKitConfig)
             {
                 try
                 {
@@ -286,7 +288,7 @@ namespace Awake.Core
 
             CancelExistingThread();
 
-            if (IsUsingPowerToysConfig)
+            if (IsUsingKitConfig)
             {
                 try
                 {
@@ -347,7 +349,7 @@ namespace Awake.Core
 
             CancelExistingThread();
 
-            if (IsUsingPowerToysConfig)
+            if (IsUsingKitConfig)
             {
                 try
                 {
@@ -422,7 +424,7 @@ namespace Awake.Core
             Logger.LogInfo($"Completed {timerType} keep-awake.");
             CancelExistingThread();
 
-            if (IsUsingPowerToysConfig)
+            if (IsUsingKitConfig)
             {
                 // If running under PowerToys settings, just revert to the default Passive state.
                 SetPassiveKeepAwake();
@@ -521,7 +523,7 @@ namespace Awake.Core
 
             CancelExistingThread();
 
-            if (IsUsingPowerToysConfig && updateSettings)
+            if (IsUsingKitConfig && updateSettings)
             {
                 try
                 {
@@ -561,7 +563,7 @@ namespace Awake.Core
         internal static void SetDisplay([CallerMemberName] string callerName = "")
         {
             Logger.LogInfo($"Setting display configuration from settings. Invoked by {callerName}.");
-            if (IsUsingPowerToysConfig)
+            if (IsUsingKitConfig)
             {
                 try
                 {

@@ -7,9 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 
-using Settings.UI.Library.Attributes;
+using Kit.Settings.UI.Library.Attributes;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
 #pragma warning disable SA1649 // File name should match first type name
     public struct ConnectionRequest

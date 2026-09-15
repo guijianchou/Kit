@@ -5,14 +5,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.PowerToys.Settings.UI.Views
+namespace Kit.Settings.UI.Views
 {
     /// <summary>
     /// General Settings Page.

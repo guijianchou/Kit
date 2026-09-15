@@ -4,12 +4,12 @@
 #include <common/debug_control.h>
 #include <common/utils/winapi_error.h>
 
-namespace winrt::PowerToys::Interop::implementation
+namespace winrt::Kit::Interop::implementation
 {
     std::mutex KeyboardHook::instancesMutex;
     std::unordered_set<KeyboardHook*> KeyboardHook::instances;
 
-    KeyboardHook::KeyboardHook(winrt::PowerToys::Interop::KeyboardEventCallback const& keyboardEventCallback, winrt::PowerToys::Interop::IsActiveCallback const& isActiveCallback, winrt::PowerToys::Interop::FilterKeyboardEvent const& filterKeyboardEvent)
+    KeyboardHook::KeyboardHook(winrt::Kit::Interop::KeyboardEventCallback const& keyboardEventCallback, winrt::Kit::Interop::IsActiveCallback const& isActiveCallback, winrt::Kit::Interop::FilterKeyboardEvent const& filterKeyboardEvent)
     {
         this->keyboardEventCallback = keyboardEventCallback;
         this->isActiveCallback = isActiveCallback;

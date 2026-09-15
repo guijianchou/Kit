@@ -7,14 +7,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.UnitTests.BackwardsCompatibility;
+using Kit.Settings.UI.UnitTests.Mocks;
+using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
-using Microsoft.PowerToys.Settings.UI.UnitTests.BackwardsCompatibility;
-using Microsoft.PowerToys.Settings.UI.UnitTests.Mocks;
-using Microsoft.PowerToys.Settings.UI.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -26,7 +26,7 @@ namespace ViewModelTests
     public class General
     {
         public const string GeneralSettingsFileName = "Test\\GeneralSettings";
-        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch" };
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AiHub" };
 
         private Mock<SettingsUtils> mockGeneralSettingsUtils;
 
@@ -39,7 +39,7 @@ namespace ViewModelTests
         private sealed class TestGeneralViewModel : GeneralViewModel
         {
             public TestGeneralViewModel(
-                Microsoft.PowerToys.Settings.UI.Library.Interfaces.ISettingsRepository<GeneralSettings> settingsRepository,
+                Kit.Settings.UI.Library.Interfaces.ISettingsRepository<GeneralSettings> settingsRepository,
                 string runAsAdminText,
                 string runAsUserText,
                 bool isElevated,
@@ -488,8 +488,8 @@ namespace ViewModelTests
             StringAssert.Contains(dashboard, "QuickAccessList");
             StringAssert.Contains(dashboard, "ModuleList");
             StringAssert.Contains(dashboard, "x:Uid=\"QuickAccessTitle\"");
-            StringAssert.Contains(dashboard, "x:Uid=\"ShortcutsOverview\"");
             StringAssert.Contains(dashboard, "x:Uid=\"UtilitiesHeader\"");
+            Assert.IsFalse(dashboard.Contains("ShortcutsOverview", StringComparison.Ordinal), "Dashboard should not keep removed ShortcutsOverview card.");
 
             Assert.IsFalse(dashboard.Contains("应用源于", StringComparison.Ordinal));
             Assert.IsFalse(dashboard.Contains("修改自用", StringComparison.Ordinal));
@@ -537,27 +537,27 @@ namespace ViewModelTests
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
 
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver },
                 KitModuleCatalog.ActiveModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver },
                 KitModuleCatalog.DashboardModules.ToArray());
             CollectionAssert.AreEqual(
                 new[] { ModuleType.LightSwitch },
                 KitModuleCatalog.QuickAccessModules.ToArray());
             Assert.IsFalse(Enum.GetNames<ModuleType>().Contains("PowerDisplay", StringComparer.Ordinal));
             Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.ImageResizer));
+            Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.AiHub));
 
             StringAssert.Contains(dashboardViewModel, "KitModuleCatalog.DashboardModules");
-            StringAssert.Contains(dashboardViewModel, "ModuleType.LightSwitch");
-            StringAssert.Contains(dashboardViewModel, "ModuleType.Awake");
             Assert.IsFalse(dashboardViewModel.Contains("foreach (ModuleType moduleType in Enum.GetValues<ModuleType>())", StringComparison.Ordinal));
             StringAssert.Contains(dashboardViewModel, "moduleTypes: KitModuleCatalog.DashboardModules");
             StringAssert.Contains(dashboardViewModel, "fallbackLauncher: OpenModuleSettingsFromQuickAccess");
-            StringAssert.Contains(dashboardViewModel, "ModuleType.Awake => GetModuleItemsAwake()");
+            Assert.IsFalse(dashboardViewModel.Contains("ShortcutModules", StringComparison.Ordinal), "Dashboard should not keep ShortcutModules collection.");
+            Assert.IsFalse(dashboardViewModel.Contains("GetModuleItemsAwake", StringComparison.Ordinal), "Dashboard should not keep Awake shortcut module items.");
+            Assert.IsFalse(dashboardViewModel.Contains("new DashboardModuleActivationItem()", StringComparison.Ordinal), "Dashboard should not instantiate activation items.");
             Assert.IsFalse(dashboardViewModel.Contains("ModuleType.PowerDisplay => GetModuleItemsPowerDisplay()", StringComparison.Ordinal));
             Assert.IsFalse(dashboardViewModel.Contains("PowerDisplayLaunchClicked", StringComparison.Ordinal));
-            StringAssert.Contains(dashboardViewModel, "new DashboardModuleActivationItem()");
 
             StringAssert.Contains(quickAccessViewModel, "KitModuleCatalog.QuickAccessModules");
             StringAssert.Contains(quickAccessViewModel, "ModuleType.LightSwitch");
@@ -576,6 +576,8 @@ namespace ViewModelTests
             var settings = new GeneralSettings();
             settings.Enabled.Awake = false;
             settings.Enabled.LightSwitch = true;
+            settings.Enabled.Localserver = false;
+            settings.Enabled.AiHub = true;
 
             var outgoingJson = new OutGoingGeneralSettings(settings).ToString();
 
@@ -591,6 +593,8 @@ namespace ViewModelTests
             Assert.IsFalse(enabled.TryGetProperty("AlwaysOnTop", out _));
             Assert.AreEqual(false, enabled.GetProperty("Awake").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("LightSwitch").GetBoolean());
+            Assert.AreEqual(false, enabled.GetProperty("Localserver").GetBoolean());
+            Assert.AreEqual(true, enabled.GetProperty("AiHub").GetBoolean());
             Assert.IsFalse(enabled.TryGetProperty("PowerDisplay", out _));
         }
 
@@ -605,7 +609,7 @@ namespace ViewModelTests
             var shellCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
             var appCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
             var moduleGpoHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "ModuleGpoHelper.cs"));
-            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
 
             _ = FindSourceFile("src", "modules", "awake", "AwakeModuleInterface", "AwakeModuleInterface.vcxproj");
             _ = FindSourceFile("src", "modules", "awake", "Awake", "Awake.csproj");
@@ -617,8 +621,8 @@ namespace ViewModelTests
             StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj\"");
             Assert.IsFalse(solution.Contains("src/modules/powerdisplay", StringComparison.OrdinalIgnoreCase));
             StringAssert.Contains(runnerMain, "KitKnownModules");
-            StringAssert.Contains(runnerMain, "PowerToys.AwakeModuleInterface.dll");
-            StringAssert.Contains(runnerMain, "PowerToys.LightSwitchModuleInterface.dll");
+            StringAssert.Contains(runnerMain, "Kit.AwakeModuleInterface.dll");
+            StringAssert.Contains(runnerMain, "Kit.LightSwitchModuleInterface.dll");
             Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal));
             Assert.IsFalse(runnerMain.Contains("directory_iterator", StringComparison.Ordinal));
             StringAssert.Contains(runnerSettingsHeader, "Awake,");
@@ -718,7 +722,7 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitAboutVersionShouldUse207ReleaseMetadata()
+        public void KitAboutVersionShouldMatchReleaseMetadata()
         {
             var versionProps = File.ReadAllText(FindSourceFile("src", "Version.props"));
             var versionProject = File.ReadAllText(FindSourceFile("src", "common", "version", "version.vcxproj"));
@@ -730,7 +734,8 @@ namespace ViewModelTests
             var changelog = File.ReadAllText(FindSourceFile("changelog.md"));
             var developmentLog = File.ReadAllText(FindSourceFile("doc", "devdoc", "kit-development-experience.md"));
 
-            StringAssert.Contains(versionProps, "<Version>2.0.13</Version>");
+            var releaseVersion = System.Xml.Linq.XDocument.Parse(versionProps).Descendants().Single(element => element.Name.LocalName == "Version").Value;
+            Assert.AreEqual($"{releaseVersion}.0", System.Diagnostics.FileVersionInfo.GetVersionInfo(typeof(GeneralSettings).Assembly.Location).FileVersion, "Built Settings metadata must match the source version.");
             Assert.IsFalse(versionProps.Contains("<DevEnvironment>beta1</DevEnvironment>", StringComparison.Ordinal));
             StringAssert.Contains(directoryBuildProps, "<_Parameter1>DevEnvironment</_Parameter1>");
             StringAssert.Contains(helper, "GetProductDisplayVersion");
@@ -738,10 +743,11 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, "Current Kit version: `2.0.13`.");
+            StringAssert.Contains(readme, $"Current Kit version: `{releaseVersion}`.");
             StringAssert.Contains(readme, "## Changelog");
             StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, "当前 Kit 版本：`2.0.13`。");
+            StringAssert.Contains(readmeZh, $"当前 Kit 版本：`{releaseVersion}`。");
+            StringAssert.Contains(changelog, $"### {releaseVersion}");
             StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
             StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
             StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
@@ -805,8 +811,8 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "Pruned backup/restore defaults to the active Kit settings surface");
             StringAssert.Contains(changelog, "Removed the remaining no-op managed telemetry calls and event source classes from Awake and PowerDisplay");
             StringAssert.Contains(changelog, "Removed PowerDisplay's settings telemetry IPC event and module-interface signaling path");
-            StringAssert.Contains(changelog, "Pruned `PowerToys.Interop` WinRT and shared IPC constants to Kit's active runtime surface");
-            StringAssert.Contains(changelog, "trimmed `PowerToys.Interop` IPC constant surface");
+            StringAssert.Contains(changelog, "Pruned `Kit.Interop` WinRT and shared IPC constants to Kit's active runtime surface");
+            StringAssert.Contains(changelog, "trimmed `Kit.Interop` IPC constant surface");
             StringAssert.Contains(changelog, "Renamed the active Settings termination WinRT projection from `PowerToysRunnerTerminateSettingsEvent` to `KitRunnerTerminateSettingsEvent`");
             StringAssert.Contains(changelog, "Kit-named Settings termination projection");
             StringAssert.Contains(changelog, "Deleted the inactive AdvancedPaste-only `LanguageModelProvider` source tree");
@@ -906,8 +912,8 @@ namespace ViewModelTests
             StringAssert.Contains(developmentLog, "ModuleTemplate no-op trace defaults");
             StringAssert.Contains(developmentLog, "Awake README telemetry-free documentation");
             StringAssert.Contains(developmentLog, "PowerDisplay no longer exposes or listens to a settings telemetry IPC event");
-            StringAssert.Contains(developmentLog, "`PowerToys.Interop` now exposes only Kit's active runtime constants");
-            StringAssert.Contains(developmentLog, "trimmed `PowerToys.Interop` IPC constant surface");
+            StringAssert.Contains(developmentLog, "`Kit.Interop` now exposes only Kit's active runtime constants");
+            StringAssert.Contains(developmentLog, "trimmed `Kit.Interop` IPC constant surface");
             StringAssert.Contains(developmentLog, "active Settings termination WinRT projection is now `KitRunnerTerminateSettingsEvent`");
             StringAssert.Contains(developmentLog, "Kit-named Settings termination projection");
             StringAssert.Contains(developmentLog, "inactive AdvancedPaste-only `LanguageModelProvider` source tree was deleted");
@@ -1328,6 +1334,40 @@ namespace ViewModelTests
             settings.Enabled.LightSwitch = false;
 
             Assert.AreEqual(2, changeCount);
+        }
+
+        [TestMethod]
+        public void LoggingSettingsDefaultsAndToggleWorkCorrectly()
+        {
+            GeneralSettings settings = new GeneralSettings();
+            Assert.IsTrue(settings.EnableLogging);
+            Assert.AreEqual("trace", settings.LogLevel);
+
+            var sawExpectedIpcPayload = false;
+            Func<string, int> sendMockIPCConfigMSG = msg =>
+            {
+                OutGoingGeneralSettings snd = JsonSerializer.Deserialize<OutGoingGeneralSettings>(msg);
+                Assert.IsFalse(snd.GeneralSettings.EnableLogging);
+                sawExpectedIpcPayload = true;
+                return 0;
+            };
+
+            GeneralViewModel viewModel = new TestGeneralViewModel(
+                settingsRepository: SettingsRepository<GeneralSettings>.GetInstance(mockGeneralSettingsUtils.Object),
+                "GeneralSettings_RunningAsAdminText",
+                "GeneralSettings_RunningAsUserText",
+                false,
+                false,
+                sendMockIPCConfigMSG,
+                _ => 0,
+                _ => 0,
+                GeneralSettingsFileName);
+
+            Assert.IsTrue(viewModel.EnableLogging);
+            Assert.AreEqual(0, viewModel.LogLevelIndex);
+
+            viewModel.EnableLogging = false;
+            Assert.IsTrue(sawExpectedIpcPayload);
         }
     }
 }

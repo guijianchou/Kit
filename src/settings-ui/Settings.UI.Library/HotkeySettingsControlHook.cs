@@ -4,9 +4,9 @@
 
 using System;
 
-using PowerToys.Interop;
+using Kit.Interop;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public delegate void KeyEvent(int key);
 

@@ -10,9 +10,9 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Principal;
 
-using Microsoft.PowerToys.Settings.UI.Library.CustomAction;
+using Kit.Settings.UI.Library.CustomAction;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.Utilities
+namespace Kit.Settings.UI.Library.Utilities
 {
     public static class Helper
     {
@@ -129,7 +129,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Utilities
             return Path.Combine(GetPowerToysInstallationFolder(), "WinUI3Apps", "Assets");
         }
 
-        private static readonly global::PowerToys.Interop.LayoutMapManaged LayoutMap = new global::PowerToys.Interop.LayoutMapManaged();
+        private static readonly global::Kit.Interop.LayoutMapManaged LayoutMap = new global::Kit.Interop.LayoutMapManaged();
 
         public static string GetKeyName(uint key)
         {
@@ -143,7 +143,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Utilities
 
         public static string GetProductVersion()
         {
-            return global::PowerToys.Interop.CommonManaged.GetProductVersion();
+            return global::Kit.Interop.CommonManaged.GetProductVersion();
         }
 
         public static string GetProductDisplayVersion(string productVersion = null, string devEnvironment = null)
@@ -224,6 +224,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library.Utilities
             }
         }
 
-        public static readonly uint VirtualKeyWindows = global::PowerToys.Interop.Constants.VK_WIN_BOTH;
+        public static readonly uint VirtualKeyWindows = global::Kit.Interop.Constants.VK_WIN_BOTH;
     }
 }

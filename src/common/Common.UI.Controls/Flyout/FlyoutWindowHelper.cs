@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -9,7 +9,7 @@ using Microsoft.UI.Windowing;
 using Windows.Graphics;
 using WinUIEx;
 
-namespace Microsoft.PowerToys.Common.UI.Controls.Flyout;
+namespace Kit.Common.UI.Controls.Flyout;
 
 /// <summary>
 /// Shared helper for positioning and sizing flyout-style WinUI 3 windows

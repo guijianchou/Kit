@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "../modules/interface/powertoy_module_interface.h"
+#include "../modules/interface/kit_module_interface.h"
 
 namespace CentralizedKeyboardHook
 {
-    using Hotkey = PowertoyModuleIface::Hotkey;
+    using Hotkey = KitModuleIface::Hotkey;
 
     void Start() noexcept;
     void Stop() noexcept;

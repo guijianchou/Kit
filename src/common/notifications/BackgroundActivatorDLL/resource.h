@@ -5,9 +5,9 @@
 //////////////////////////////
 // Non-localizable
 
-#define FILE_DESCRIPTION "PowerToys Notifications"
+#define FILE_DESCRIPTION "Kit Notifications"
 #define INTERNAL_NAME "Notifications"
-#define ORIGINAL_FILENAME "PowerToys.BackgroundActivatorDLL.dll"
+#define ORIGINAL_FILENAME "Kit.BackgroundActivatorDLL.dll"
 
 // Non-localizable
 //////////////////////////////

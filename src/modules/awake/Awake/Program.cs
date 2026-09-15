@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -19,14 +19,14 @@ using Awake.Core;
 using Awake.Core.Models;
 using Awake.Core.Native;
 using Awake.Properties;
+using Kit.Settings.UI.Library;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
 
 namespace Awake
 {
     internal sealed class Program
     {
-        private static readonly string[] _aliasesConfigOption = ["--use-pt-config", "-c"];
+        private static readonly string[] _aliasesConfigOption = ["--use-kit-config", "--use-pt-config", "-c"];
         private static readonly string[] _aliasesDisplayOption = ["--display-on", "-d"];
         private static readonly string[] _aliasesTimeOption = ["--time-limit", "-t"];
         private static readonly string[] _aliasesPidOption = ["--pid", "-p"];
@@ -40,7 +40,7 @@ namespace Awake
         private static EventWaitHandle? _exitEventHandle;
         private static RegisteredWaitHandle? _registeredWaitHandle;
 
-        private static bool _startedFromPowerToys;
+        private static bool _startedFromKit;
 
         public static Mutex? LockMutex { get; set; }
 
@@ -99,9 +99,9 @@ namespace Awake
             }
             else
             {
-                if (PowerToys.GPOWrapper.GPOWrapper.GetConfiguredAwakeEnabledValue() == PowerToys.GPOWrapper.GpoRuleConfigured.Disabled)
+                if (Kit.GPOWrapper.GPOWrapper.GetConfiguredAwakeEnabledValue() == Kit.GPOWrapper.GpoRuleConfigured.Disabled)
                 {
-                    Exit("PowerToys.Awake tried to start with a group policy setting that disables the tool. Please contact your system administrator.", 1);
+                    Exit("Kit.Awake tried to start with a group policy setting that disables the tool. Please contact your system administrator.", 1);
                     return 1;
                 }
                 else
@@ -287,10 +287,10 @@ namespace Awake
             else
             {
                 Logger.LogInfo("Starting with PID binding.");
-                _startedFromPowerToys = true;
+                _startedFromKit = true;
             }
 
-            Logger.LogInfo($"The value for --use-pt-config is: {usePtConfig}");
+            Logger.LogInfo($"The value for config option is: {usePtConfig}");
             Logger.LogInfo($"The value for --display-on is: {displayOn}");
             Logger.LogInfo($"The value for --time-limit is: {timeLimit}");
             Logger.LogInfo($"The value for --pid is: {pid}");
@@ -300,7 +300,7 @@ namespace Awake
             // Start the monitor thread that will be used to track the current state.
             Manager.StartMonitor();
 
-            _exitEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset, PowerToys.Interop.Constants.AwakeExitEvent());
+            _exitEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset, Kit.Interop.Constants.AwakeExitEvent());
             _registeredWaitHandle = ThreadPool.RegisterWaitForSingleObject(
                 _exitEventHandle,
                 (state, timedOut) => Exit(Resources.AWAKE_EXIT_SIGNAL_MESSAGE, 0),
@@ -312,8 +312,8 @@ namespace Awake
             {
                 // Configuration file is used, therefore we disregard any other command-line parameter
                 // and instead watch for changes in the file. This is used as a priority against all other arguments,
-                // so if --use-pt-config is applied the rest of the arguments are irrelevant.
-                Manager.IsUsingPowerToysConfig = true;
+                // so if --use-kit-config or --use-pt-config is applied the rest of the arguments are irrelevant.
+                Manager.IsUsingKitConfig = true;
 
                 try
                 {
@@ -339,9 +339,9 @@ namespace Awake
                             Exit(Resources.AWAKE_EXIT_PROCESS_BINDING_FAILURE_MESSAGE, 1);
                         }
 
-                        Logger.LogInfo($"Bound to target process while also using PowerToys settings: {pid}");
+                        Logger.LogInfo($"Bound to target process while also using Kit settings: {pid}");
 
-                        RunnerHelper.WaitForPowerToysRunner(pid, () =>
+                        RunnerHelper.WaitForKitRunner(pid, () =>
                         {
                             Logger.LogInfo($"Triggered PID-based exit handler for PID {pid}.");
                             Exit(Resources.AWAKE_EXIT_BINDING_HOOK_MESSAGE, 0);
@@ -440,7 +440,7 @@ namespace Awake
             Manager.SetIndefiniteKeepAwake(displayOn, targetPid);
 
             // Synchronize with the target process, and trigger Exit() when it finishes.
-            RunnerHelper.WaitForPowerToysRunner(targetPid, () =>
+            RunnerHelper.WaitForKitRunner(targetPid, () =>
             {
                 Logger.LogInfo($"Triggered PID-based exit handler for PID {targetPid}.");
                 Exit(Resources.AWAKE_EXIT_BINDING_HOOK_MESSAGE, 0);
@@ -500,7 +500,7 @@ namespace Awake
         private static void InitializeSettings()
         {
             AwakeSettings settings = Manager.ModuleSettings?.GetSettings<AwakeSettings>(Core.Constants.AppName) ?? new AwakeSettings();
-            TrayHelper.SetTray(settings, _startedFromPowerToys);
+            TrayHelper.SetTray(settings, _startedFromKit);
         }
 
         private static void HandleAwakeConfigChange(FileSystemEventArgs fileEvent)
@@ -562,7 +562,7 @@ namespace Awake
                         break;
                 }
 
-                TrayHelper.SetTray(settings, _startedFromPowerToys);
+                TrayHelper.SetTray(settings, _startedFromKit);
             }
             catch (Exception ex)
             {

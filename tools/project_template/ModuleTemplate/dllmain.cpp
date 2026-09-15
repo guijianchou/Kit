@@ -1,5 +1,5 @@
 #include "pch.h"
-#include <interface/powertoy_module_interface.h>
+#include <interface/kit_module_interface.h>
 #include <common/SettingsAPI/settings_objects.h>
 #include "trace.h"
 
@@ -46,7 +46,7 @@ struct ModuleSettings
 } g_settings;
 
 // Implement the PowerToy Module Interface and all the required methods.
-class $safeprojectname$ : public PowertoyModuleIface
+class $safeprojectname$ : public KitModuleIface
 {
 private:
     // The PowerToy state.
@@ -87,7 +87,7 @@ public:
         HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
 
         // Create a Settings object.
-        PowerToysSettings::Settings settings(hinstance, get_name());
+        KitSettings::Settings settings(hinstance, get_name());
         settings.set_description(MODULE_DESC);
 
         // Show an overview link in the Settings page
@@ -127,7 +127,7 @@ public:
         //  g_settings.color_prop // property value.
         //);
 
-        // A custom action property. When using this settings type, the "PowertoyModuleIface::call_custom_action()"
+        // A custom action property. When using this settings type, the "KitModuleIface::call_custom_action()"
         // method should be overridden as well.
         //settings.add_custom_action(
         //  L"custom_action_id", // action name.
@@ -147,8 +147,8 @@ public:
         try
         {
             // Parse the action values, including name.
-            PowerToysSettings::CustomActionObject action_object =
-                PowerToysSettings::CustomActionObject::from_json_string(action);
+            KitSettings::CustomActionObject action_object =
+                KitSettings::CustomActionObject::from_json_string(action);
 
             //if (action_object.get_name() == L"custom_action_id") {
             //  // Execute your custom action
@@ -166,8 +166,8 @@ public:
         try
         {
             // Parse the input JSON string.
-            PowerToysSettings::PowerToyValues values =
-                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+            KitSettings::PowerToyValues values =
+                KitSettings::PowerToyValues::from_json_string(config, get_key());
 
             // Update a bool property.
             //if (auto v = values.get_bool_value(L"bool_toggle_1")) {
@@ -226,8 +226,8 @@ void $safeprojectname$::init_settings()
     try
     {
         // Load and parse the settings file for this PowerToy.
-        PowerToysSettings::PowerToyValues settings =
-            PowerToysSettings::PowerToyValues::load_from_settings_file($safeprojectname$::get_key());
+        KitSettings::PowerToyValues settings =
+            KitSettings::PowerToyValues::load_from_settings_file($safeprojectname$::get_key());
 
         // Load a bool property.
         //if (auto v = settings.get_bool_value(L"bool_toggle_1")) {
@@ -260,7 +260,7 @@ void $safeprojectname$::init_settings()
 //void $projectname$::save_settings() {
 //  try {
 //    // Create a PowerToyValues object for this PowerToy
-//    PowerToysSettings::PowerToyValues values(get_name(), get_key());
+//    KitSettings::PowerToyValues values(get_name(), get_key());
 //
 //    // Save a bool property.
 //    //values.add_property(
@@ -294,7 +294,7 @@ void $safeprojectname$::init_settings()
 //  }
 //}
 
-extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()
+extern "C" __declspec(dllexport) KitModuleIface* __cdecl kit_create()
 {
     return new $safeprojectname$();
 }

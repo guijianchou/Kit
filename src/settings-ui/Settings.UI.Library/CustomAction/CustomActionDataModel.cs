@@ -4,7 +4,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.CustomAction
+namespace Kit.Settings.UI.Library.CustomAction
 {
     public class CustomActionDataModel
     {

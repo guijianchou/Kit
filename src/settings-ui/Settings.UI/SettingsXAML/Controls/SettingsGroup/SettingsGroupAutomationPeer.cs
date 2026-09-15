@@ -4,7 +4,7 @@
 
 using Microsoft.UI.Xaml.Automation.Peers;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public partial class SettingsGroupAutomationPeer : FrameworkElementAutomationPeer
     {

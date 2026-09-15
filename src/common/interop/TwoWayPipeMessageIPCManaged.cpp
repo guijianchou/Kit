@@ -4,9 +4,9 @@
 #include "two_way_pipe_message_ipc_impl.h"
 #include <functional>
 
-namespace winrt::PowerToys::Interop::implementation
+namespace winrt::Kit::Interop::implementation
 {
-    TwoWayPipeMessageIPCManaged::TwoWayPipeMessageIPCManaged(hstring const& inputPipeName, hstring const& outputPipeName, winrt::PowerToys::Interop::TwoWayPipeIPCReadCallback const& _callback)
+    TwoWayPipeMessageIPCManaged::TwoWayPipeMessageIPCManaged(hstring const& inputPipeName, hstring const& outputPipeName, winrt::Kit::Interop::TwoWayPipeIPCReadCallback const& _callback)
     {
         this->_callback = _callback;
         if (_callback != nullptr)

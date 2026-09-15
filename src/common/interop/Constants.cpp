@@ -4,7 +4,7 @@
 #include "shared_constants.h"
 #include <ShlObj.h>
 
-namespace winrt::PowerToys::Interop::implementation
+namespace winrt::Kit::Interop::implementation
 {
     uint32_t Constants::VK_WIN_BOTH()
     {

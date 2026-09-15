@@ -5,24 +5,25 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Kit.Interop;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.SerializationContext;
+using Kit.Settings.UI.Services;
+using Kit.Settings.UI.SettingsXAML.Controls.Dashboard;
+using Kit.Settings.UI.Views;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.SerializationContext;
-using Microsoft.PowerToys.Settings.UI.Services;
-using Microsoft.PowerToys.Settings.UI.SettingsXAML.Controls.Dashboard;
-using Microsoft.PowerToys.Settings.UI.Views;
 using Microsoft.UI.Xaml;
-using PowerToys.Interop;
 using Windows.UI.Popups;
 using WinRT.Interop;
 using WinUIEx;
 
-namespace Microsoft.PowerToys.Settings.UI
+namespace Kit.Settings.UI
 {
     public partial class App : Application
     {
@@ -72,13 +73,21 @@ namespace Microsoft.PowerToys.Settings.UI
                 Microsoft.Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = appLanguage;
             }
 
+            string cultureName = string.IsNullOrEmpty(appLanguage) ? CultureInfo.CurrentUICulture.Name : appLanguage;
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo(
+                cultureName.StartsWith("zh-CN", StringComparison.OrdinalIgnoreCase)
+                || cultureName.StartsWith("zh-Hans", StringComparison.OrdinalIgnoreCase)
+                || cultureName.Equals("zh-SG", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en-US");
+
             InitializeComponent();
 
             UnhandledException += App_UnhandledException;
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => AiHubIpcBridge.Shutdown();
 
             NativeEventWaiter.WaitForEventLoop(
                 Constants.KitRunnerTerminateSettingsEvent(), () =>
             {
+                AiHubIpcBridge.Shutdown();
                 Environment.Exit(0);
             });
         }
@@ -171,11 +180,17 @@ namespace Microsoft.PowerToys.Settings.UI
 
             RunnerHelper.WaitForPowerToysRunner(PowerToysPID, () =>
             {
+                AiHubIpcBridge.Shutdown();
                 Environment.Exit(0);
             });
 
             ipcmanager = new TwoWayPipeMessageIPCManaged(cmdArgs[(int)Arguments.SettingsPipeName], cmdArgs[(int)Arguments.PTPipeName], (string message) =>
             {
+                if (AiHubIpcBridge.TryDispatchMessage(message, response => ipcmanager.Send(response)))
+                {
+                    return;
+                }
+
                 if (IPCMessageReceivedCallback != null && message.Length > 0)
                 {
                     IPCMessageReceivedCallback(message);
@@ -311,6 +326,8 @@ namespace Microsoft.PowerToys.Settings.UI
                 "Settings" => typeof(GeneralPage),
                 "Awake" => typeof(AwakePage),
                 "LightSwitch" => typeof(LightSwitchPage),
+                "Localserver" => typeof(LocalserverPage),
+                "AiHub" => typeof(GeneralPage),
                 _ => typeof(DashboardPage),
             };
         }

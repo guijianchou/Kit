@@ -5,7 +5,7 @@
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class GenericProperty<T> : ICmdLineRepresentable
     {

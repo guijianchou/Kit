@@ -87,7 +87,7 @@ namespace ViewModelTests
         [TestMethod]
         public void NativeWinMDProjectsShouldPublishToRepoOutput()
         {
-            var interopProject = File.ReadAllText(FindSourceFile("src", "common", "interop", "PowerToys.Interop.vcxproj"));
+            var interopProject = File.ReadAllText(FindSourceFile("src", "common", "interop", "Kit.Interop.vcxproj"));
             var gpoWrapperProject = File.ReadAllText(FindSourceFile("src", "common", "GPOWrapper", "GPOWrapper.vcxproj"));
 
             StringAssert.Contains(interopProject, "CopyInteropWinMDToRepoOutput");
@@ -204,8 +204,8 @@ namespace ViewModelTests
             StringAssert.Contains(verifyRuntimeArtifactsScript, "exit 1");
 
             StringAssert.Contains(buildEssentialsScript, @".\src\runner\Kit.vcxproj");
-            StringAssert.Contains(buildEssentialsScript, @".\src\settings-ui\Settings.UI\PowerToys.Settings.csproj");
-            StringAssert.Contains(buildEssentialsScript, @".\src\settings-ui\QuickAccess.UI\PowerToys.QuickAccess.csproj");
+            StringAssert.Contains(buildEssentialsScript, @".\src\settings-ui\Settings.UI\Kit.Settings.csproj");
+            StringAssert.Contains(buildEssentialsScript, @".\src\settings-ui\QuickAccess.UI\Kit.QuickAccess.csproj");
         }
 
         [TestMethod]
@@ -234,8 +234,8 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsShouldDeleteInactiveModuleSourceFilesInsteadOfExcludingThem()
         {
-            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
-            var settingsUiRoot = Path.GetDirectoryName(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
+            var settingsUiRoot = Path.GetDirectoryName(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
 
             Assert.IsFalse(settingsProject.Contains(@"<Compile Remove=""", StringComparison.Ordinal), "Inactive Settings sources should be deleted rather than hidden behind Compile Remove rules.");
             Assert.IsFalse(settingsProject.Contains(@"<Page Remove=""SettingsXAML\Views\", StringComparison.Ordinal), "Inactive Settings XAML pages should be deleted rather than hidden behind Page Remove rules.");
@@ -307,7 +307,7 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsShouldDeleteInactiveControlsConvertersAndOobeViewModels()
         {
-            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj");
             var settingsProject = File.ReadAllText(settingsProjectPath);
             var settingsUiRoot = Path.GetDirectoryName(settingsProjectPath);
 
@@ -718,7 +718,7 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsShouldNotRegisterRemovedPowerDisplaySerializationAndModels()
         {
-            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
             var settingsLibraryProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj"));
             var serializationContext = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "SettingsSerializationContext.cs"));
 
@@ -1336,15 +1336,17 @@ namespace ViewModelTests
 
             StringAssert.Contains(solution, "src/PackageIdentity/PackageIdentity.vcxproj");
             StringAssert.Contains(solution, "<BuildDependency Project=\"src/PackageIdentity/PackageIdentity.vcxproj\" />");
-            StringAssert.Contains(versionProps, "<Version>2.0.13</Version>");
-            StringAssert.Contains(manifest, "Version=\"2.0.13.0\"");
+            var releaseVersion = System.Xml.Linq.XDocument.Parse(versionProps).Descendants().Single(element => element.Name.LocalName == "Version").Value;
+            var packageVersion = System.Xml.Linq.XDocument.Parse(manifest).Descendants().Single(element => element.Name.LocalName == "Identity").Attribute("Version")?.Value;
+            Assert.IsTrue(Version.TryParse(releaseVersion, out var parsedVersion) && parsedVersion.Build >= 0 && parsedVersion.Revision == -1);
+            Assert.AreEqual($"{releaseVersion}.0", packageVersion, "The sparse package version must match the product version.");
             StringAssert.Contains(readme, "Debug builds use `-NoSign`");
             StringAssert.Contains(manifest, "Local.Kit.SparseApp");
             StringAssert.Contains(manifest, "Kit.SparseApp");
             StringAssert.Contains(manifest, "Kit.SettingsUI");
             Assert.IsFalse(manifest.Contains("Microsoft.PowerToys.SparseApp", StringComparison.Ordinal), "Kit sparse package identity should not collide with official PowerToys sparse registration.");
             Assert.IsFalse(manifest.Contains("PowerToys.SparseApp", StringComparison.Ordinal), "Kit sparse package display name should not use the upstream sparse package name.");
-            StringAssert.Contains(manifest, @"WinUI3Apps\PowerToys.Settings.exe");
+            StringAssert.Contains(manifest, @"WinUI3Apps\Kit.Settings.exe");
             StringAssert.Contains(certSignPackageScript, "exit 1");
             StringAssert.Contains(certSignPackageScript, "$signedCount++");
             StringAssert.Contains(certSignPackageScript, "$LASTEXITCODE");
@@ -1479,9 +1481,9 @@ namespace ViewModelTests
             StringAssert.Contains(moduleConfigData, "Awake");
             StringAssert.Contains(moduleConfigData, "LightSwitch");
             StringAssert.Contains(moduleConfigData, "Kit.exe");
-            StringAssert.Contains(moduleConfigData, "PowerToys.Settings.exe");
-            StringAssert.Contains(moduleConfigData, "PowerToys.Awake.exe");
-            StringAssert.Contains(moduleConfigData, "PowerToys.LightSwitchService.exe");
+            StringAssert.Contains(moduleConfigData, "Kit.Settings.exe");
+            StringAssert.Contains(moduleConfigData, "Kit.Awake.exe");
+            StringAssert.Contains(moduleConfigData, "Kit.LightSwitchService.exe");
             Assert.IsFalse(moduleConfigData.Contains("PowerDisplay", StringComparison.Ordinal), "UITestAutomation should not carry removed PowerDisplay launch targets.");
             Assert.IsFalse(moduleConfigData.Contains("PowerToys.PowerDisplay.exe", StringComparison.Ordinal), "UITestAutomation should not launch removed PowerDisplay.");
             Assert.IsFalse(moduleConfigData.Contains("Monitor", StringComparison.Ordinal), "UITestAutomation should not carry removed Monitor launch targets.");
@@ -1701,8 +1703,8 @@ namespace ViewModelTests
         [TestMethod]
         public void KitGpoPolicyAssetsShouldStayInActiveModuleSurface()
         {
-            var admx = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "PowerToys.admx"));
-            var adml = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "en-US", "PowerToys.adml"));
+            var admx = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "Kit.admx"));
+            var adml = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "en-US", "Kit.adml"));
 
             foreach (var activePolicy in new[]
             {
@@ -1795,7 +1797,7 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsShouldDeleteInactiveModuleAssetsInsteadOfProjectExcludingThem()
         {
-            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj");
             var settingsProject = File.ReadAllText(settingsProjectPath);
             var settingsRoot = Path.GetDirectoryName(settingsProjectPath);
             var moduleAssetsRoot = Path.Combine(settingsRoot!, "Assets", "Settings", "Modules");
@@ -1894,8 +1896,8 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsShouldDeleteLegacySiblingAssetTree()
         {
-            var settingsUiRoot = Path.GetDirectoryName(FindSourceFile("src", "settings-ui", "PowerToys.Settings.slnf"));
-            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+            var settingsUiRoot = Path.GetDirectoryName(FindSourceFile("src", "settings-ui", "Kit.Settings.slnf"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
 
             Assert.IsFalse(Directory.Exists(Path.Combine(settingsUiRoot!, "Assets")), "Kit should delete the legacy sibling Settings asset tree instead of keeping an unused full upstream copy beside Settings.UI.");
             Assert.IsFalse(settingsProject.Contains(@"..\Assets\", StringComparison.Ordinal), "Settings.UI should not depend on the deleted sibling asset tree.");
@@ -1904,7 +1906,7 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsShouldDeleteInactiveAuxiliaryPayloadsInsteadOfShippingThem()
         {
-            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj");
             var settingsProject = File.ReadAllText(settingsProjectPath);
             var settingsRoot = Path.GetDirectoryName(settingsProjectPath);
 
@@ -1935,9 +1937,9 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsShouldDeleteInactiveIconAssetsInsteadOfShippingThem()
         {
-            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj");
             var settingsProject = File.ReadAllText(settingsProjectPath);
-            var quickAccessProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "PowerToys.QuickAccess.csproj"));
+            var quickAccessProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "QuickAccess.UI", "Kit.QuickAccess.csproj"));
             var settingsRoot = Path.GetDirectoryName(settingsProjectPath);
             var iconAssetsRoot = Path.Combine(settingsRoot!, "Assets", "Settings", "Icons");
 
@@ -2013,8 +2015,8 @@ namespace ViewModelTests
             var solutionPath = FindSourceFile("Kit.slnx");
             var repoRoot = Path.GetDirectoryName(solutionPath)!;
             var solution = File.ReadAllText(solutionPath);
-            var settingsFilter = File.ReadAllText(FindSourceFile("src", "settings-ui", "PowerToys.Settings.slnf"));
-            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj");
+            var settingsFilter = File.ReadAllText(FindSourceFile("src", "settings-ui", "Kit.Settings.slnf"));
+            var settingsProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj");
             var settingsProject = File.ReadAllText(settingsProjectPath);
             var settingsUiRoot = Path.GetDirectoryName(settingsProjectPath);
             var settingsLibraryProjectPath = FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Settings.UI.Library.csproj");
@@ -2085,7 +2087,7 @@ namespace ViewModelTests
         [TestMethod]
         public void KitSettingsPackageReferencesShouldNotDocumentInactiveModuleHacks()
         {
-            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
 
             var packageReferenceBlockStart = settingsProject.IndexOf("<ItemGroup>", StringComparison.Ordinal);
             var packageReferenceBlockEnd = settingsProject.IndexOf("<Manifest Include=\"$(ApplicationManifest)\" />", StringComparison.Ordinal);
@@ -2486,7 +2488,7 @@ namespace ViewModelTests
             {
                 Path.Combine("src", "common", "Common.UI.Controls", "Common.UI.Controls.csproj"),
                 Path.Combine("src", "common", "UITestAutomation", "UITestAutomation.csproj"),
-                Path.Combine("src", "settings-ui", "QuickAccess.UI", "PowerToys.QuickAccess.csproj"),
+                Path.Combine("src", "settings-ui", "QuickAccess.UI", "Kit.QuickAccess.csproj"),
                 Path.Combine("src", "settings-ui", "Settings.UI.Controls", "Settings.UI.Controls.csproj"),
             };
 
@@ -2540,7 +2542,7 @@ namespace ViewModelTests
 
             Assert.IsFalse(packages.Contains(@"<PackageVersion Include=""System.Collections.Immutable""", StringComparison.Ordinal), "PowerToys-main no longer pins System.Collections.Immutable centrally.");
 
-            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "PowerToys.Settings.csproj"));
+            var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
             var settingsUnitTestsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.UnitTests", "Settings.UI.UnitTests.csproj"));
             var xamlIndexBuilderProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.XamlIndexBuilder", "Settings.UI.XamlIndexBuilder.csproj"));
             var uiTestAutomationProject = File.ReadAllText(FindSourceFile("src", "common", "UITestAutomation", "UITestAutomation.csproj"));
@@ -2606,8 +2608,9 @@ namespace ViewModelTests
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
 
             StringAssert.Contains(sharedConstants, "const wchar_t APPDATA_PATH[] = L\"Kit\"");
-            StringAssert.Contains(runnerMain, "L\"PowerToys.AwakeModuleInterface.dll\"");
-            StringAssert.Contains(runnerMain, "L\"PowerToys.LightSwitchModuleInterface.dll\"");
+            StringAssert.Contains(runnerMain, "L\"Kit.AwakeModuleInterface.dll\"");
+            StringAssert.Contains(runnerMain, "L\"Kit.LightSwitchModuleInterface.dll\"");
+            StringAssert.Contains(runnerMain, "L\"Kit.LocalserverModuleInterface.dll\"");
             Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed PowerDisplay.");
             Assert.IsFalse(runnerMain.Contains("PowerToys.MonitorModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed Monitor.");
         }
@@ -2774,8 +2777,7 @@ namespace ViewModelTests
             Assert.IsFalse(generalPage.Contains("doRefreshBackupRestoreStatus(100);", StringComparison.Ordinal), "Backup dry-run should not be scheduled from the GeneralPage constructor before the first frame.");
             StringAssert.Contains(generalViewModel, "RunDeferredStartupMaintenance");
             StringAssert.Contains(generalViewModel, "Task.Run(DeleteOldDiagnosticData)");
-            StringAssert.Contains(shellPage, "await Task.Delay(1000)");
-            StringAssert.Contains(shellPage, "SearchIndexService.BuildIndex()");
+            Assert.IsFalse(shellPage.Contains("SearchIndexService.BuildIndex()", StringComparison.Ordinal), "Search indexing should be requested by a search, not by loading the shell.");
         }
 
         [TestMethod]
@@ -2818,9 +2820,9 @@ namespace ViewModelTests
             var generalSettingsHeader = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.h"));
 
             StringAssert.Contains(runnerMain, "const json::JsonObject& startupGeneralSettings");
-            StringAssert.Contains(runnerMain, "start_enabled_powertoys(startupGeneralSettings)");
-            StringAssert.Contains(generalSettingsHeader, "void start_enabled_powertoys(const json::JsonObject& general_settings);");
-            StringAssert.Contains(generalSettings, "void start_enabled_powertoys(const json::JsonObject& general_settings)");
+            StringAssert.Contains(runnerMain, "start_enabled_kit_modules(startupGeneralSettings)");
+            StringAssert.Contains(generalSettingsHeader, "void start_enabled_kit_modules(const json::JsonObject& general_settings);");
+            StringAssert.Contains(generalSettings, "void start_enabled_kit_modules(const json::JsonObject& general_settings)");
             Assert.IsFalse(generalSettings.Contains("general_settings = load_general_settings();", StringComparison.Ordinal), "Initial module enablement should reuse the already-loaded settings object instead of re-reading settings.json.");
         }
 
@@ -3004,20 +3006,19 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitLightSwitchToggleHotkeyShouldOnlySignalItsListener()
+        public void KitLightSwitchShouldNotRegisterOrHandleHotkeys()
         {
             var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
+            var lightSwitchProperties = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "LightSwitchProperties.cs"));
+            var lightSwitchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml"));
+            var lightSwitchViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "LightSwitchViewModel.cs"));
 
-            var hotkeyStart = lightSwitchInterface.IndexOf("virtual bool on_hotkey(size_t hotkeyId) override", StringComparison.Ordinal);
-            Assert.AreNotEqual(-1, hotkeyStart, "LightSwitch module interface should expose on_hotkey().");
-            var classEnd = lightSwitchInterface.IndexOf("bool LightSwitchInterface::EnsureEventHandles()", hotkeyStart, StringComparison.Ordinal);
-            Assert.AreNotEqual(-1, classEnd, "LightSwitch module interface class should close before its out-of-line member definitions.");
-            var hotkeyAndTail = lightSwitchInterface[hotkeyStart..classEnd];
-
-            StringAssert.Contains(hotkeyAndTail, "SetEvent(m_toggle_event_handle)");
-            Assert.IsFalse(hotkeyAndTail.Contains("ToggleTheme();", StringComparison.Ordinal), "The low-level keyboard hook must not broadcast theme changes synchronously.");
-            Assert.IsFalse(hotkeyAndTail.Contains("enable();", StringComparison.Ordinal), "The low-level keyboard hook must not enable the module synchronously.");
-            Assert.IsFalse(hotkeyAndTail.Contains("CreateProcessW", StringComparison.Ordinal), "Worker recovery must run on the listener, outside the low-level keyboard hook.");
+            Assert.IsFalse(lightSwitchInterface.Contains("on_hotkey", StringComparison.Ordinal), "LightSwitch interface should not implement on_hotkey.");
+            Assert.IsFalse(lightSwitchInterface.Contains("get_hotkeys", StringComparison.Ordinal), "LightSwitch interface should not implement get_hotkeys.");
+            Assert.IsFalse(lightSwitchInterface.Contains("add_hotkey", StringComparison.Ordinal), "LightSwitch interface should not add hotkey configuration.");
+            Assert.IsFalse(lightSwitchProperties.Contains("ToggleThemeHotkey", StringComparison.Ordinal), "LightSwitch properties should not expose ToggleThemeHotkey.");
+            Assert.IsFalse(lightSwitchPage.Contains("ShortcutControl", StringComparison.Ordinal), "LightSwitch page should not contain ShortcutControl.");
+            Assert.IsFalse(lightSwitchViewModel.Contains("ToggleThemeActivationShortcut", StringComparison.Ordinal), "LightSwitch ViewModel should not expose ToggleThemeActivationShortcut.");
         }
 
         [TestMethod]

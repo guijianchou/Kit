@@ -5,9 +5,9 @@
 //////////////////////////////
 // Non-localizable
 
-#define FILE_DESCRIPTION "PowerToys Interop"
-#define INTERNAL_NAME "PowerToys.Interop"
-#define ORIGINAL_FILENAME "PowerToys.Interop.dll"
+#define FILE_DESCRIPTION "Kit Interop"
+#define INTERNAL_NAME "Kit.Interop"
+#define ORIGINAL_FILENAME "Kit.Interop.dll"
 
 // Non-localizable
 //////////////////////////////

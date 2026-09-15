@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.0.13`.
+Current Kit version: `2.0.23`.
 
 ## Documentation
 
@@ -28,7 +28,8 @@ Current Kit version: `2.0.13`.
 - `fix.plan` — phased plugin-host plan (repo root).
 - `fix.md` — upstream delta and fix list (repo root).
 - `next.md` — sync progress and upstream-delta checklist (repo root).
-- [changelog.md](changelog.md) — version history.
+- `fixed.md` — completed fix inventory (repo root).
+- `changelog.md` — changelog (repo root).
 
 
 ## Build Output Structure
@@ -39,7 +40,7 @@ Current Kit version: `2.0.13`.
 | --- | --- |
 | `x64/Debug/` | Main x64 Debug runtime output, including `Kit.exe` and `WinUI3Apps/` |
 | `Debug/x64/`, project `bin/` and `obj/` directories | Additional project outputs and intermediate build state |
-| `bin/debug/2.0.13/` | Manually prepared Debug test handoff directory; staging is separate from building |
+| `bin/debug/2.0.23/` | Debug test handoff directory; produced separately with `tools/build/Stage-Debug.ps1` |
 
 The version source is `src/Version.props`; `src/common/version/Generated Files/version_gen.h` is generated from it. Release builds and ZIP packaging are separate steps, and this layout does not indicate that a new Release build or archive has been produced.
 
@@ -55,7 +56,7 @@ The first phase is now effectively a working Kit shell hosting the active PowerT
 
 The current stable handoff point is:
 
-- Keep `Awake` and `Light Switch` as the active module set.
+- Keep `Awake`, `Light Switch`, and `Localserver` as the active module set.
 - Keep first-party module discovery explicit through maintained lists and tests. A third-party plugin host (`plugins/` + manifest) is planned per `fix.plan` but is not implemented yet.
 - Keep General and Home in English Kit wording, with automatic update and telemetry surfaces removed.
 - Keep Kit UI automation pointed at Kit's runner, Settings window, install roots, and the active module executables. It must not attach to an installed upstream PowerToys build by accident.
@@ -66,11 +67,13 @@ The current stable handoff point is:
 ## Architecture
 
 - `src/runner` starts Kit, loads module interface DLLs, owns module lifetime, and coordinates settings IPC with the Settings app. The executable is already separated enough to launch as `Kit.exe` while many build-facing project names still retain upstream PowerToys names. At runtime the runner opens the Settings and Quick Access apps from `WinUI3Apps` next to `Kit.exe`, so the runner build target must keep explicit dependencies on both UI executable projects.
-- `src/modules` contains the active utilities. `Awake` is copied from upstream PowerToys with `Awake.ModuleServices`, `Awake`, and `AwakeModuleInterface`; `LightSwitch` is the current Kit utility module
+- `src/modules` contains the active utilities. `Awake` is copied from upstream PowerToys with `Awake.ModuleServices`, `Awake`, and `AwakeModuleInterface`; `LightSwitch` is also adapted from upstream PowerToys; `Localserver` contains the local service management core and its native module interface.
 - `src/settings-ui/Settings.UI` contains the WinUI Settings app, including Home, General, module pages, navigation, and page-level view models.
 - `src/settings-ui/Settings.UI.Controls` contains shared UI controls such as Quick Access.
 - `src/settings-ui/Settings.UI.Library` contains settings models, settings serialization, module settings repositories, backup and restore helpers, GPO helpers, and shared settings infrastructure.
 - `src/common` retains shared native and managed PowerToys infrastructure used by the runner, modules, and Settings.
+
+Localserver's management logic currently runs in the Settings page's ViewModel, without a separate background worker. After Settings fully closes, continued log collection, health checks, and automatic restarts are not guaranteed. See [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) for its lifecycle boundary.
 
 Runtime settings are stored under Kit-specific application data, such as `%LOCALAPPDATA%\Kit\settings.json`, rather than the official PowerToys settings directory. Backup and restore defaults also use Kit branding, including `Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`, and `Kit_settings_*` temporary backup folders.
 
@@ -80,6 +83,7 @@ The active Kit module set is deliberately small:
 
 - `Awake`
 - `Light Switch`
+- `Localserver`
 
 `Monitor` was removed in `2.0.8`; see the removal record in `doc/devdoc/kit-development-experience.md` and the version history in [changelog.md](changelog.md).
 
@@ -89,8 +93,9 @@ Kit does not automatically expose every upstream PowerToys utility copied in the
 
 Kit follows the PowerToys module-loading model instead of inventing a new plugin protocol. The runner loads known module interface DLLs through the maintained `KitKnownModules` list in `src/runner/main.cpp`, currently:
 
-- `PowerToys.AwakeModuleInterface.dll`
-- `PowerToys.LightSwitchModuleInterface.dll`
+- `Kit.AwakeModuleInterface.dll`
+- `Kit.LightSwitchModuleInterface.dll`
+- `Kit.LocalserverModuleInterface.dll`
 
 This fixed list is intentional for first-party modules: it avoids unstable directory probing and makes each imported module an explicit compatibility decision. The planned third-party plugin host (`fix.plan` P1) adds a `plugins/` folder plus `manifest.json` for externally developed plugins while leaving this first-party list untouched. When another first-party PowerToys module is brought into Kit, it should be added to the runner, solution, settings routing, Home dashboard metadata, and tests together.
 
@@ -110,9 +115,9 @@ Use this checklist when importing another upstream module:
 
 ## Plugin Direction
 
-Kit's core direction is a lightweight plugin host: keep the main framework (runner + Settings UI + common libraries) free of module business logic, start fast, and host both official PowerToys modules and third-party custom plugins through the same `PowertoyModuleIface` + `powertoy_create()` contract.
+Kit's core direction is a lightweight plugin host: keep the main framework (runner + Settings UI + common libraries) free of module business logic, start fast, and host both official PowerToys modules and third-party custom plugins through the same `KitModuleIface` + `kit_create()` contract (with backward-compatible `PowertoyModuleIface` / `powertoy_create` aliases).
 
-- First-party modules (`Awake`, `Light Switch`) stay in the compiled `KitKnownModules` list for deep integration (Home, Quick Access, settings routes, tests).
+- First-party modules (`Awake`, `Light Switch`, `Localserver`) stay in the compiled `KitKnownModules` list for deep integration (Home, settings routes, tests, and Quick Access where supported).
 - Third-party plugins are planned to load from a `plugins/` folder (interface DLL + `manifest.json`), with only enabled plugins loaded and a generic settings page rendering each plugin's `get_config` JSON.
 - Official PowerToys module imports require a source-level compatibility review and Kit-specific settings, IPC, and lifecycle integration. Telemetry stays disabled; follow [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md).
 
@@ -126,8 +131,8 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 - Keep module registration explicit until the current runner/settings/module compatibility is boringly stable.
 - Reduce places that need manual module-list updates only after the existing lists are covered by tests.
 - Keep Settings, runner, module interface projects, Quick Access, and copied module projects buildable independently before widening to whole-solution builds.
-- Keep runner build dependencies aligned with runtime-launched UI apps. `Kit.exe` can start and show a tray icon even when `WinUI3Apps\PowerToys.Settings.exe` is missing; Debug outputs can hide that problem with stale files, so clean Release validation must confirm both Settings and Quick Access executables are regenerated.
-- Keep PowerToys CsWinRT metadata stable for copied modules. `PowerToys.Interop.winmd` and `PowerToys.GPOWrapper.winmd` are published into `$(RepoRoot)$(Platform)\$(Configuration)` by the native projects, and `Common.Dotnet.CsWinRT.props` invalidates stale `cswinrt.rsp` files when a previous failed or cleaned build left no generated projection sources. This prevents imported modules such as `Awake` and Quick Access from compiling before their `PowerToys.*` projections are regenerated.
+- Keep runner build dependencies aligned with runtime-launched UI apps. `Kit.exe` can start and show a tray icon even when `WinUI3Apps\Kit.Settings.exe` is missing; Debug outputs can hide that problem with stale files, so clean Release validation must confirm both Settings and Quick Access executables are regenerated.
+- Keep PowerToys/Kit CsWinRT metadata stable for copied modules. `Kit.Interop.winmd` and `Kit.GPOWrapper.winmd` are published into `$(RepoRoot)$(Platform)\$(Configuration)` by the native projects, and `Common.Dotnet.CsWinRT.props` invalidates stale `cswinrt.rsp` files when a previous failed or cleaned build left no generated projection sources. This prevents imported modules such as `Awake` and Quick Access from compiling before their `Kit.*` projections are regenerated.
 - Delete intentionally removed upstream tests and sources rather than hiding them behind project exclusions. `Settings.UI.UnitTests` now has `BuildCompatibility` coverage for inactive Settings sources, unit tests, assets, icons, controls, converters, the legacy sibling Settings asset tree, and stale WinUI output cleanup.
 - Keep UI state derived from real settings and module state. Home should show enabled modules consistently, and each Quick Access command should either perform a real action or navigate to the module settings page.
 - Keep Kit storage, backup, window title, and visible text separate from the installed official PowerToys app. Backup defaults should stay generic to Kit's active module settings and not carry inactive PowerToys module-specific files or restore fix-ups.
@@ -149,9 +154,9 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 
 The latest Home work keeps PowerToys behavior but scopes it to Kit's active modules:
 
-- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake` and `LightSwitch`, so the Home utility list is fixed and predictable.
+- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake`, `LightSwitch`, and `Localserver`, so the Home utility list is fixed and predictable.
 - `QuickAccessViewModel` still supports actionable Quick Access items, but Home passes the dashboard module list so enabled Kit modules appear consistently.
-- Quick Access first tries the normal launcher. If a module has no direct quick action, Home falls back to opening that module's settings page. This lets `Awake` behave usefully without creating a fake shortcut action while `LightSwitch` keeps its direct toggle action.
+- Quick Access first tries the normal launcher. If a module has no direct quick action, Home falls back to opening that module's settings page. `Awake` and `Localserver` use this settings page fallback; `LightSwitch` keeps its direct toggle action.
 - `Awake` contributes a `DashboardModuleActivationItem` that displays the current Awake mode in the Home shortcuts card, using the existing PowerToys dashboard item template.
 - The Quick Access empty state now uses the count of visible items, not the raw item collection count, so disabled or GPO-hidden modules do not leave an empty card visible.
 
@@ -218,8 +223,8 @@ Two additional full-solution Release cleanup items were handled during the same 
 
 Local verification on 2026-04-25 used Visual Studio 18 MSBuild and VSTest. The following targeted Debug x64 builds passed with 0 warnings and 0 errors:
 
-- `PowerToys.Settings.csproj` Debug x64
-- `PowerToys.QuickAccess.csproj` Debug x64
+- `Kit.Settings.csproj` Debug x64
+- `Kit.QuickAccess.csproj` Debug x64
 - `Kit.vcxproj` Debug x64
 - `Awake.csproj` Debug x64
 - `AwakeModuleInterface.vcxproj` Debug x64
@@ -231,20 +236,20 @@ Local verification on 2026-04-25 used Visual Studio 18 MSBuild and VSTest. The f
 After the Release runner build-dependency fix, the targeted `Kit.slnx /t:Kit` Release x64 build passed and produced the runtime trio expected from a clean tree:
 
 - `x64\Release\Kit.exe`
-- `x64\Release\WinUI3Apps\PowerToys.Settings.exe`
-- `x64\Release\WinUI3Apps\PowerToys.QuickAccess.exe`
+- `x64\Release\WinUI3Apps\Kit.Settings.exe`
+- `x64\Release\WinUI3Apps\Kit.QuickAccess.exe`
 
 After the PowerToys CsWinRT/WinMD compatibility fix, a full `Kit.slnx` Release x64 build also passed locally and produced the copied-module metadata expected by Awake, Quick Access, Settings, DSC, and other PowerToys-derived surfaces:
 
-- `x64\Release\PowerToys.Interop.winmd`
-- `x64\Release\PowerToys.GPOWrapper.winmd`
-- regenerated CsWinRT projections such as `PowerToys.GPOWrapper.cs` in consuming project `obj` directories
+- `x64\Release\Kit.Interop.winmd`
+- `x64\Release\Kit.GPOWrapper.winmd`
+- regenerated CsWinRT projections such as `Kit.GPOWrapper.cs` in consuming project `obj` directories
 
 Local verification on 2026-04-29 covered the latest Light Switch Settings pass:
 
 - `Settings.UI.UnitTests.csproj` Debug x64 built with Visual Studio 18 MSBuild.
 - `vstest.console.exe` ran `Settings.UI.UnitTests.dll` with a filter for `LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract`; 77/77 tests passed.
-- `PowerToys.Settings.csproj` Release x64 built successfully and regenerated `x64\Release\WinUI3Apps\PowerToys.Settings.dll`.
+- `Kit.Settings.csproj` Release x64 built successfully and regenerated `x64\Release\WinUI3Apps\Kit.Settings.dll`.
 - `git worktree prune` removed the stale external worktree metadata, and `git worktree list --porcelain` now reports only the active Kit worktree.
 
 Before handing a clean tree to Visual Studio, local build outputs and restore caches can be removed. The next compile should recreate the runtime output directory, the `WinUI3Apps` children, shared WinMD files, CsWinRT projections, and package restore cache together.

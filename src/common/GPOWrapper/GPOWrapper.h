@@ -2,7 +2,7 @@
 #include "GPOWrapper.g.h"
 #include <common/utils/gpo.h>
 
-namespace winrt::PowerToys::GPOWrapper::implementation
+namespace winrt::Kit::GPOWrapper::implementation
 {
     struct GPOWrapper : GPOWrapperT<GPOWrapper>
     {
@@ -18,7 +18,7 @@ namespace winrt::PowerToys::GPOWrapper::implementation
     };
 }
 
-namespace winrt::PowerToys::GPOWrapper::factory_implementation
+namespace winrt::Kit::GPOWrapper::factory_implementation
 {
     struct GPOWrapper : GPOWrapperT<GPOWrapper, implementation::GPOWrapper>
     {

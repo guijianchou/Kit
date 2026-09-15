@@ -6,9 +6,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
 using Common.UI;
+using Kit.ModuleContracts;
+using Kit.Settings.UI.Library;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
-using PowerToys.ModuleContracts;
 
 namespace Awake.ModuleServices;
 
@@ -31,9 +31,9 @@ public sealed class AwakeService : ModuleServiceBase, IAwakeService
 
     public AwakeState GetCurrentState()
     {
-        var installPath = PowerToysPathResolver.GetKitInstallPath();
+        var installPath = KitPathResolver.GetKitInstallPath();
         var isRunning = !string.IsNullOrEmpty(installPath) &&
-            IsAwakeProcessRunning(Path.Combine(installPath, "PowerToys.Awake.exe"));
+            IsAwakeProcessRunning(Path.Combine(installPath, "Kit.Awake.exe"));
         var settings = ReadSettings();
 
         return CreateState(isRunning, settings);

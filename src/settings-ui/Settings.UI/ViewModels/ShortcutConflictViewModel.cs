@@ -13,17 +13,17 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Windows.Threading;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.HotkeyConflicts;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.SerializationContext;
+using Kit.Settings.UI.Services;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.SerializationContext;
-using Microsoft.PowerToys.Settings.UI.Services;
 using Microsoft.Windows.ApplicationModel.Resources;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
     public class ShortcutConflictViewModel : PageViewModelBase
     {

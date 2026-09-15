@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
   <PropertyGroup>
-    <RootNamespace>PowerToys.LightSwitch.UITests</RootNamespace>
+    <RootNamespace>Kit.LightSwitch.UITests</RootNamespace>
     <AssemblyName>LightSwitch.UITests</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <Target Name="CopyNativeDll" AfterTargets="Build">
-    <Copy SourceFiles="$(SolutionDir)$(Platform)\$(Configuration)\PowerToys.LightSwitchModuleInterface.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(SolutionDir)$(Platform)\$(Configuration)\PowerToys.LightSwitchModuleInterface.dll')" />
+    <Copy SourceFiles="$(SolutionDir)$(Platform)\$(Configuration)\Kit.LightSwitchModuleInterface.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(SolutionDir)$(Platform)\$(Configuration)\Kit.LightSwitchModuleInterface.dll')" />
     <Copy SourceFiles="$(SolutionDir)$(Platform)\$(Configuration)\LightSwitchLib\LightSwitchLib.lib" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(SolutionDir)$(Platform)\$(Configuration)\LightSwitchLib\LightSwitchLib.lib')" ContinueOnError="true" />
   </Target>
 </Project>

@@ -1,5 +1,5 @@
 #include "pch.h"
-#include <interface/powertoy_module_interface.h>
+#include <interface/kit_module_interface.h>
 #include "trace.h"
 #include <common/logger/logger.h>
 #include <common/SettingsAPI/settings_objects.h>
@@ -19,14 +19,6 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 namespace
 {
-    const wchar_t JSON_KEY_PROPERTIES[] = L"properties";
-    const wchar_t JSON_KEY_WIN[] = L"win";
-    const wchar_t JSON_KEY_ALT[] = L"alt";
-    const wchar_t JSON_KEY_CTRL[] = L"ctrl";
-    const wchar_t JSON_KEY_SHIFT[] = L"shift";
-    const wchar_t JSON_KEY_CODE[] = L"code";
-    const wchar_t JSON_KEY_TOGGLE_THEME_HOTKEY[] = L"toggle-theme-hotkey";
-    const wchar_t JSON_KEY_VALUE[] = L"value";
     const wchar_t KIT_LIGHTSWITCH_MANUAL_OVERRIDE[] = L"Local\\KitLightSwitchManualOverrideEvent-55af6d42-c0e1-4f09-9a2c-b7cb8fdfb5a2";
     const wchar_t KIT_LIGHTSWITCH_SERVICE_STOP[] = L"Local\\KitLightSwitchServiceStopEvent-09b983c3-01df-4490-9f84-9f6e5c52c7d5";
     constexpr DWORD LIGHTSWITCH_SHUTDOWN_WAIT_MS = 1500;
@@ -103,7 +95,7 @@ struct ModuleSettings
     std::wstring m_longitude = L"0.0";
 } g_settings;
 
-class LightSwitchInterface : public PowertoyModuleIface
+class LightSwitchInterface : public KitModuleIface
 {
 private:
     std::atomic<bool> m_enabled{ false };
@@ -117,8 +109,6 @@ private:
     std::thread m_toggle_thread;
     std::mutex m_lifecycle_mutex;
     std::mutex m_event_mutex;
-
-    Hotkey m_toggle_theme_hotkey = { .win = true, .ctrl = true, .shift = true, .alt = false, .key = 'D' };
 
     void init_settings();
     bool EnsureEventHandles();
@@ -158,9 +148,9 @@ public:
     }
 
     // Return the configured status for the gpo policy for the module
-    virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+    virtual kit_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
     {
-        return powertoys_gpo::getConfiguredLightSwitchEnabledValue();
+        return kit_gpo::getConfiguredLightSwitchEnabledValue();
     }
 
     // Return JSON with the configuration options.
@@ -169,7 +159,7 @@ public:
         HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
 
         // Create a Settings object with your module name
-        PowerToysSettings::Settings settings(hinstance, get_name());
+        KitSettings::Settings settings(hinstance, get_name());
         settings.set_description(MODULE_DESC);
         settings.set_overview_link(L"https://github.com/guijianchou/Kit");
 
@@ -238,19 +228,6 @@ public:
             L"Your longitude in decimal degrees (e.g. -75.16).",
             g_settings.m_longitude);
 
-        // Hotkeys
-        PowerToysSettings::HotkeyObject dm_hk = PowerToysSettings::HotkeyObject::from_settings(
-            m_toggle_theme_hotkey.win,
-            m_toggle_theme_hotkey.ctrl,
-            m_toggle_theme_hotkey.alt,
-            m_toggle_theme_hotkey.shift,
-            m_toggle_theme_hotkey.key);
-
-        settings.add_hotkey(
-            L"toggle-theme-hotkey",
-            L"Shortcut to toggle theme immediately",
-            dm_hk);
-
         // Serialize to buffer for the PowerToys runner
         return settings.serialize_to_buffer(buffer, buffer_size);
     }
@@ -267,10 +244,8 @@ public:
     {
         try
         {
-            auto values = PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+            auto values = KitSettings::PowerToyValues::from_json_string(config, get_key());
             auto newMode = g_settings.m_scheduleMode.load();
-
-            parse_hotkey(values);
 
             if (auto v = values.get_bool_value(L"changeSystem"))
             {
@@ -347,8 +322,8 @@ public:
 
         close_process_handle();
 
-        unsigned long powertoys_pid = GetCurrentProcessId();
-        std::wstring args = L"--pid " + std::to_wstring(powertoys_pid);
+        unsigned long kit_pid = GetCurrentProcessId();
+        std::wstring args = L"--pid " + std::to_wstring(kit_pid);
         const auto module_path = get_module_filename(reinterpret_cast<HMODULE>(&__ImageBase));
         if (module_path.empty())
         {
@@ -356,7 +331,7 @@ public:
             return;
         }
 
-        const auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"LightSwitchService" / L"PowerToys.LightSwitchService.exe").wstring();
+        const auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"LightSwitchService" / L"Kit.LightSwitchService.exe").wstring();
         ResetEvent(m_service_stop_event_handle);
         ResetEvent(m_manual_override_event_handle);
 
@@ -481,54 +456,6 @@ public:
     {
         return false;
     }
-
-    void parse_hotkey(PowerToysSettings::PowerToyValues& settings)
-    {
-        auto settingsObject = settings.get_raw_json();
-        if (settingsObject.GetView().Size())
-        {
-            try
-            {
-                Hotkey _temp_toggle_theme;
-                auto jsonHotkeyObject = settingsObject.GetNamedObject(JSON_KEY_PROPERTIES).GetNamedObject(JSON_KEY_TOGGLE_THEME_HOTKEY).GetNamedObject(JSON_KEY_VALUE);
-                _temp_toggle_theme.win = jsonHotkeyObject.GetNamedBoolean(JSON_KEY_WIN);
-                _temp_toggle_theme.alt = jsonHotkeyObject.GetNamedBoolean(JSON_KEY_ALT);
-                _temp_toggle_theme.shift = jsonHotkeyObject.GetNamedBoolean(JSON_KEY_SHIFT);
-                _temp_toggle_theme.ctrl = jsonHotkeyObject.GetNamedBoolean(JSON_KEY_CTRL);
-                _temp_toggle_theme.key = static_cast<unsigned char>(jsonHotkeyObject.GetNamedNumber(JSON_KEY_CODE));
-                m_toggle_theme_hotkey = _temp_toggle_theme;
-            }
-            catch (...)
-            {
-                Logger::error("Failed to initialize Light Switch toggle-theme shortcut from settings. Value will keep unchanged.");
-            }
-        }
-        else
-        {
-            Logger::info("Light Switch settings are empty");
-        }
-    }
-
-    virtual size_t get_hotkeys(Hotkey* hotkeys, size_t buffer_size) override
-    {
-        if (hotkeys && buffer_size >= 1)
-        {
-            hotkeys[0] = m_toggle_theme_hotkey;
-        }
-        return 1;
-    }
-
-    virtual bool on_hotkey(size_t hotkeyId) override
-    {
-        std::lock_guard lock(m_event_mutex);
-        if (m_enabled && hotkeyId == 0 && m_toggle_event_handle)
-        {
-            // Keep the low-level keyboard hook free of process startup and theme broadcasts.
-            return SetEvent(m_toggle_event_handle) != FALSE;
-        }
-
-        return false;
-    }
 };
 
 bool LightSwitchInterface::EnsureEventHandles()
@@ -592,13 +519,16 @@ void LightSwitchInterface::close_process_handle()
 
 void LightSwitchInterface::ToggleTheme()
 {
+    bool currentSystem = GetCurrentSystemTheme();
+    bool targetTheme = !currentSystem;
+
     if (g_settings.m_changeSystem)
     {
-        SetSystemTheme(!GetCurrentSystemTheme());
+        SetSystemTheme(targetTheme);
     }
     if (g_settings.m_changeApps)
     {
-        SetAppsTheme(!GetCurrentAppsTheme());
+        SetAppsTheme(targetTheme);
     }
 
     if (m_process && g_settings.m_scheduleMode != ScheduleMode::Off)
@@ -733,10 +663,8 @@ void LightSwitchInterface::init_settings()
 
     try
     {
-        PowerToysSettings::PowerToyValues settings =
-            PowerToysSettings::PowerToyValues::load_from_settings_file(get_name());
-
-        parse_hotkey(settings);
+        KitSettings::PowerToyValues settings =
+            KitSettings::PowerToyValues::load_from_settings_file(get_name());
 
         if (auto v = settings.get_bool_value(L"changeSystem"))
             g_settings.m_changeSystem = *v;
@@ -775,7 +703,12 @@ void LightSwitchInterface::init_settings()
     }
 }
 
-extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()
+extern "C" __declspec(dllexport) KitModuleIface* __cdecl kit_create()
 {
     return new LightSwitchInterface();
+}
+
+extern "C" __declspec(dllexport) KitModuleIface* __cdecl powertoy_create()
+{
+    return kit_create();
 }

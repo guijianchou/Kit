@@ -8,7 +8,7 @@ namespace Awake.Core
     {
         internal const string AppName = "Awake";
         internal const string SingleInstanceMutexName = @"Local\Kit.Awake";
-        internal const string FullAppName = "PowerToys " + AppName;
+        internal const string FullAppName = "Kit " + AppName;
         internal const string TrayWindowId = "Awake.MessageWindow";
         internal const string BuildRegistryLocation = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
 

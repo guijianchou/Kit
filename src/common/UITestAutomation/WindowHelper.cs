@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     public static class WindowHelper
     {

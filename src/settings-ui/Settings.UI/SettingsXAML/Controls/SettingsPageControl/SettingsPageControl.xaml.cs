@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public sealed partial class SettingsPageControl : UserControl
     {

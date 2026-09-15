@@ -1,12 +1,12 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System.Windows.Input;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Helpers;
 using Microsoft.UI.Xaml;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public sealed class QuickAccessItem : Observable
     {

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -7,16 +7,16 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCommon;
-using Microsoft.PowerToys.Common.UI.Controls.Flyout;
-using Microsoft.PowerToys.QuickAccess.Services;
-using Microsoft.PowerToys.QuickAccess.ViewModels;
+using Kit.Common.UI.Controls.Flyout;
+using Kit.QuickAccess.Services;
+using Kit.QuickAccess.ViewModels;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using WinRT.Interop;
 using WinUIEx;
 
-namespace Microsoft.PowerToys.QuickAccess;
+namespace Kit.QuickAccess;
 
 public sealed partial class MainWindow : WindowEx, IDisposable
 {

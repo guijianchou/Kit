@@ -1,17 +1,17 @@
-﻿#pragma once
+#pragma once
 #include "pch.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
 
-#include "../modules/interface/powertoy_module_interface.h"
+#include "../modules/interface/kit_module_interface.h"
 #include "centralized_hotkeys.h"
 #include "common/utils/json.h"
 
 namespace HotkeyConflictDetector
 {
-    using Hotkey = PowertoyModuleIface::Hotkey;
-    using HotkeyEx = PowertoyModuleIface::HotkeyEx;
+    using Hotkey = KitModuleIface::Hotkey;
+    using HotkeyEx = KitModuleIface::HotkeyEx;
     using Shortcut = CentralizedHotkeys::Shortcut;
 
     struct HotkeyConflictInfo

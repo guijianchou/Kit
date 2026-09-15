@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System.IO.Abstractions;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
 using Moq;
 
-namespace Microsoft.PowerToys.Settings.UI.UnitTests.Mocks
+namespace Kit.Settings.UI.UnitTests.Mocks
 {
     internal static class ISettingsUtilsMocks
     {

@@ -5,7 +5,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     // Needs to be kept in sync with src\modules\alwaysontop\AlwaysOnTop\Settings.h
     public class AlwaysOnTopProperties

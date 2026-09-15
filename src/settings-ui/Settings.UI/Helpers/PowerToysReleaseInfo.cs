@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     // Contains information for a release. Used to deserialize release JSON info from GitHub.
     public sealed class PowerToysReleaseInfo

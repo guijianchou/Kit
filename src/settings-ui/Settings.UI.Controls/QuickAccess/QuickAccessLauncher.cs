@@ -3,10 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Threading;
+using Kit.Interop;
 using ManagedCommon;
-using PowerToys.Interop;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public class QuickAccessLauncher : IQuickAccessLauncher
     {

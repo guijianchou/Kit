@@ -1,110 +1,51 @@
-<?xml version="1.0" encoding="utf-8"?>
-<root>
-  <!--
-    Microsoft ResX Schema
-
-    Version 2.0
-
-    The primary goals of this format is to allow a simple XML format
-    that is mostly human readable. The generation and parsing of the
-    various data types are done through the TypeConverter classes
-    associated with the data types.
-
-    Example:
-
-    ... ado.net/XML headers & schema ...
-    <resheader name="resmimetype">text/microsoft-resx</resheader>
-    <resheader name="version">2.0</resheader>
-    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
-    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
-    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
-    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
-    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
-        <value>[base64 mime encoded serialized .NET Framework object]</value>
-    </data>
-    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
-        <comment>This is a comment</comment>
-    </data>
-
-    There are any number of "resheader" rows that contain simple
-    name/value pairs.
-
-    Each data row contains a name, and value. The row also contains a
-    type or mimetype. Type corresponds to a .NET class that support
-    text/value conversion through the TypeConverter architecture.
-    Classes that don't support this are serialized and stored with the
-    mimetype set.
-
-    The mimetype is used for serialized objects, and tells the
-    ResXResourceReader how to depersist the object. This is currently not
-    extensible. For a given mimetype the value must be set accordingly:
-
-    Note - application/x-microsoft.net.object.binary.base64 is the format
-    that the ResXResourceWriter will generate, however the reader can
-    read any of the formats listed below.
-
-    mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with
-            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
-            : and then encoded with base64 encoding.
-
-    mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with
-            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
-            : and then encoded with base64 encoding.
-
-    mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array
-            : using a System.ComponentModel.TypeConverter
-            : and then encoded with base64 encoding.
-    -->
-  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
-    <xsd:element name="root" msdata:IsDataSet="true">
-      <xsd:complexType>
-        <xsd:choice maxOccurs="unbounded">
-          <xsd:element name="metadata">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" />
-              </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" />
-              <xsd:attribute name="type" type="xsd:string" />
-              <xsd:attribute name="mimetype" type="xsd:string" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="assembly">
-            <xsd:complexType>
-              <xsd:attribute name="alias" type="xsd:string" />
-              <xsd:attribute name="name" type="xsd:string" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="data">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="resheader">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" />
-            </xsd:complexType>
-          </xsd:element>
-        </xsd:choice>
-      </xsd:complexType>
-    </xsd:element>
-  </xsd:schema>
+<?xml version='1.0' encoding='utf-8'?>
+<root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:schema id="root">
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xs:element name="root" ns1:IsDataSet="true">
+      <xs:complexType>
+        <xs:choice maxOccurs="unbounded">
+          <xs:element name="metadata">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" />
+              <xs:attribute name="type" type="xsd:string" />
+              <xs:attribute name="mimetype" type="xsd:string" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="assembly">
+            <xs:complexType>
+              <xs:attribute name="alias" type="xsd:string" />
+              <xs:attribute name="name" type="xsd:string" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="data">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+                <xs:element name="comment" type="xsd:string" minOccurs="0" ns1:Ordinal="2" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" ns1:Ordinal="1" />
+              <xs:attribute name="type" type="xsd:string" ns1:Ordinal="3" />
+              <xs:attribute name="mimetype" type="xsd:string" ns1:Ordinal="4" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="resheader">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" />
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
   </resheader>
@@ -1687,5 +1628,1227 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="Shell_Search_ShowAll.Text" xml:space="preserve">
     <value>Show all results</value>
+  </data>
+  <data name="Shell_Localserver.Content" xml:space="preserve">
+    <value>Localserver</value>
+  </data>
+  <data name="Localserver.ModuleTitle" xml:space="preserve">
+    <value>Localserver</value>
+  </data>
+  <data name="Localserver.ModuleDescription" xml:space="preserve">
+    <value>Manage local services, resource usage, and environment diagnostics.</value>
+  </data>
+  <data name="Localserver_EnableSettingsCard.Header" xml:space="preserve">
+    <value>Enable Localserver</value>
+  </data>
+  <data name="Localserver_EnableSettingsCard.Description" xml:space="preserve">
+    <value>Allow services to start and restart. Turning this off leaves running services active.</value>
+  </data>
+  <data name="Localserver_LineSettingsGroup.Header" xml:space="preserve">
+    <value>Services</value>
+  </data>
+  <data name="Localserver_StartAllButton.Content" xml:space="preserve">
+    <value>Start all</value>
+  </data>
+  <data name="Localserver_StopAllButton.Content" xml:space="preserve">
+    <value>Stop all</value>
+  </data>
+  <data name="Localserver_RefreshButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Refresh status and resource usage</value>
+  </data>
+  <data name="Localserver_RefreshButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh status and resource usage</value>
+  </data>
+  <data name="Localserver_AddLineButton.Content" xml:space="preserve">
+    <value>Add Line</value>
+  </data>
+  <data name="Localserver_ReloadCatalogButton.Content" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="Localserver_SaveCatalogButton.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Localserver_LinesHeader.Text" xml:space="preserve">
+    <value>Services</value>
+  </data>
+  <data name="Localserver_OpenUrlText.Text" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Localserver_RestartLineMenu.Text" xml:space="preserve">
+    <value>Restart</value>
+  </data>
+  <data name="Localserver_ForceKillLineMenu.Text" xml:space="preserve">
+    <value>Force kill</value>
+  </data>
+  <data name="Localserver_MoveUpLineMenu.Text" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="Localserver_MoveDownLineMenu.Text" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="Localserver_LineNameCard.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Localserver_LineExecutableCard.Header" xml:space="preserve">
+    <value>Executable</value>
+  </data>
+  <data name="Localserver_LineExecutableCard.Description" xml:space="preserve">
+    <value>Absolute executable path or command</value>
+  </data>
+  <data name="Localserver_LineCwdCard.Header" xml:space="preserve">
+    <value>Working directory</value>
+  </data>
+  <data name="Localserver_LineCwdCard.Description" xml:space="preserve">
+    <value>Working directory for process startup</value>
+  </data>
+  <data name="Localserver_LineArgsCard.Header" xml:space="preserve">
+    <value>Arguments</value>
+  </data>
+  <data name="Localserver_LineArgsCard.Description" xml:space="preserve">
+    <value>Command-line arguments passed to executable</value>
+  </data>
+  <data name="Localserver_LinePortCard.Header" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Localserver_LinePortCard.Description" xml:space="preserve">
+    <value>TCP network port listened by the service</value>
+  </data>
+  <data name="Localserver_LineResolvedCommandCard.Header" xml:space="preserve">
+    <value>Resolved command</value>
+  </data>
+  <data name="Localserver_DeleteLineCard.Header" xml:space="preserve">
+    <value>Delete Line</value>
+  </data>
+  <data name="Localserver_DeleteLineCard.Description" xml:space="preserve">
+    <value>Remove this service from configuration</value>
+  </data>
+  <data name="Localserver_DeleteLineText.Text" xml:space="preserve">
+    <value>Delete Line</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteTitle.Text" xml:space="preserve">
+    <value>Delete this service line?</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteDescription.Text" xml:space="preserve">
+    <value>Permanently remove this line and its configuration (cannot be undone).</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteConfirmButton.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Localserver_BrowseFileButton.Content" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="Localserver_BrowseFolderButton.Content" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="Localserver_LockedTooltip" xml:space="preserve">
+    <value>Service running, configuration locked</value>
+  </data>
+  <data name="Localserver_EnvironmentCardTitle.Text" xml:space="preserve">
+    <value>ENVIRONMENT</value>
+  </data>
+  <data name="Localserver_ChecksLabel.Text" xml:space="preserve">
+    <value>CHECKS</value>
+  </data>
+  <data name="Localserver_CpuTrendLabel.Text" xml:space="preserve">
+    <value>CPU TREND</value>
+  </data>
+  <data name="Localserver_SystemCardTitle.Text" xml:space="preserve">
+    <value>SYSTEM</value>
+  </data>
+  <data name="Localserver_GpuLoadLabel.Text" xml:space="preserve">
+    <value>GPU UTIL</value>
+  </data>
+  <data name="Localserver_GpuVramLabel.Text" xml:space="preserve">
+    <value>VRAM</value>
+  </data>
+  <data name="Localserver_GpuTempLabel.Text" xml:space="preserve">
+    <value>TEMP</value>
+  </data>
+  <data name="Localserver_HostCpuLabel.Text" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Localserver_HostRamLabel.Text" xml:space="preserve">
+    <value>RAM</value>
+  </data>
+  <data name="Localserver_CopyFixCommandMenu.Text" xml:space="preserve">
+    <value>Copy fix command</value>
+  </data>
+  <data name="Localserver_ReleasePortMenu.Text" xml:space="preserve">
+    <value>Release port...</value>
+  </data>
+  <data name="Localserver_NoActivityText.Text" xml:space="preserve">
+    <value>No samples yet — start the service to collect a trend</value>
+  </data>
+  <data name="Localserver_StateRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Localserver_StateStopped" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="Localserver_StateStarting" xml:space="preserve">
+    <value>Starting</value>
+  </data>
+  <data name="Localserver_StateStopping" xml:space="preserve">
+    <value>Stopping</value>
+  </data>
+  <data name="Localserver_StateFaulted" xml:space="preserve">
+    <value>Faulted</value>
+  </data>
+  <data name="Localserver_NoPortConfigured" xml:space="preserve">
+    <value>No port configured</value>
+  </data>
+  <data name="Localserver_UptimeLabel.Text" xml:space="preserve">
+    <value>UPTIME</value>
+  </data>
+  <data name="Localserver_PortLabel.Text" xml:space="preserve">
+    <value>PORT</value>
+  </data>
+  <data name="Localserver_PidLabel.Text" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="Localserver_StateLabel.Text" xml:space="preserve">
+    <value>STATE</value>
+  </data>
+  <data name="Localserver_RuntimesLabel.Text" xml:space="preserve">
+    <value>RUNTIMES</value>
+  </data>
+  <data name="Localserver_MemoryLabel.Text" xml:space="preserve">
+    <value>MEM</value>
+  </data>
+  <data name="Localserver_LineStatusCard.Header" xml:space="preserve">
+    <value>Runtime status</value>
+  </data>
+  <data name="Localserver_SelectedLineComboBox.PlaceholderText" xml:space="preserve">
+    <value>Select a service</value>
+  </data>
+  <data name="Localserver_SelectedLineComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Selected service</value>
+  </data>
+  <data name="Localserver_LineToggleSwitch.OnContent" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Localserver_LineToggleSwitch.OffContent" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Localserver_LineActionsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Service actions</value>
+  </data>
+  <data name="Localserver_LockedIcon.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Stop the service before editing its configuration.</value>
+  </data>
+  <data name="Localserver_EmptyLinesTitle.Text" xml:space="preserve">
+    <value>No targets configured</value>
+  </data>
+  <data name="Localserver_EmptyLinesDescription.Text" xml:space="preserve">
+    <value>Add a target above to manage it here.</value>
+  </data>
+  <data name="Localserver_PortNumberBox.Description" xml:space="preserve">
+    <value>0 leaves the port unspecified.</value>
+  </data>
+  <data name="Localserver_ReleasePortTitle" xml:space="preserve">
+    <value>Release port</value>
+  </data>
+  <data name="Localserver_ReleasePortConfirmMessage" xml:space="preserve">
+    <value>Release port {0} by terminating {1} (PID {2})? Unsaved data may be lost.</value>
+  </data>
+  <data name="Localserver_ForceKillTitle" xml:space="preserve">
+    <value>Force stop</value>
+  </data>
+  <data name="Localserver_ForceKillConfirmMessage" xml:space="preserve">
+    <value>Force stop “{0}”? Unsaved data may be lost.</value>
+  </data>
+  <data name="Localserver_TerminateProcessButton" xml:space="preserve">
+    <value>End process</value>
+  </data>
+  <data name="Localserver_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Localserver_ReleasePortFailed" xml:space="preserve">
+    <value>Could not release port. Verify permissions and try again.</value>
+  </data>
+  <data name="Localserver_FilePickerFailed" xml:space="preserve">
+    <value>Could not open file or folder picker.</value>
+  </data>
+  <data name="Localserver_CheckWorkingDirectory" xml:space="preserve">
+    <value>Working dir</value>
+  </data>
+  <data name="Localserver_CheckExecutable" xml:space="preserve">
+    <value>Executable</value>
+  </data>
+  <data name="Localserver_CheckServiceHealth" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="Localserver_CheckHealthProbe" xml:space="preserve">
+    <value>Health</value>
+  </data>
+  <data name="Localserver_CheckPort" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Localserver_CheckRuntimeTitle" xml:space="preserve">
+    <value>Runtime: {0}</value>
+  </data>
+  <data name="Localserver_StatePreflight" xml:space="preserve">
+    <value>Checking dependencies</value>
+  </data>
+  <data name="Localserver_StateCrashed" xml:space="preserve">
+    <value>Crashed</value>
+  </data>
+  <data name="Localserver_StateBackoff" xml:space="preserve">
+    <value>Waiting to restart</value>
+  </data>
+  <data name="Localserver_StateFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Localserver_StateStopFailed" xml:space="preserve">
+    <value>Stop failed</value>
+  </data>
+  <data name="Localserver_StateUnhealthy" xml:space="preserve">
+    <value>Unhealthy</value>
+  </data>
+  <data name="Localserver_StateUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Localserver_NoLineSelected" xml:space="preserve">
+    <value>Select a service to view its diagnostics.</value>
+  </data>
+  <data name="Localserver_HealthIdle" xml:space="preserve">
+    <value>IDLE</value>
+  </data>
+  <data name="Localserver_HealthHealthy" xml:space="preserve">
+    <value>READY</value>
+  </data>
+  <data name="Localserver_HealthChecking" xml:space="preserve">
+    <value>CHECKING</value>
+  </data>
+  <data name="Localserver_HealthFaulted" xml:space="preserve">
+    <value>ISSUE</value>
+  </data>
+  <data name="Localserver_HealthIssue" xml:space="preserve">
+    <value>ISSUE</value>
+  </data>
+  <data name="Localserver_HealthStopped" xml:space="preserve">
+    <value>STOPPED</value>
+  </data>
+  <data name="Localserver_NoRuntimes" xml:space="preserve">
+    <value>None required</value>
+  </data>
+  <data name="Localserver_EnvironmentChecking" xml:space="preserve">
+    <value>Checking environment...</value>
+  </data>
+  <data name="Localserver_EnvironmentCheckFailed" xml:space="preserve">
+    <value>Environment check failed. Refresh to retry.</value>
+  </data>
+  <data name="Localserver_DetectingGpu" xml:space="preserve">
+    <value>Detecting GPU...</value>
+  </data>
+  <data name="Localserver_GpuActive" xml:space="preserve">
+    <value>ACTIVE</value>
+  </data>
+  <data name="Localserver_GpuUnavailable" xml:space="preserve">
+    <value>UNAVAILABLE</value>
+  </data>
+  <data name="Localserver_GpuNotDetected" xml:space="preserve">
+    <value>No GPU detected</value>
+  </data>
+  <data name="Localserver_DriverFormat" xml:space="preserve">
+    <value>Driver {0}</value>
+  </data>
+  <data name="Localserver_DriverUnavailable" xml:space="preserve">
+    <value>Driver unavailable</value>
+  </data>
+  <data name="Localserver_DetectingProcessor" xml:space="preserve">
+    <value>Detecting processor...</value>
+  </data>
+  <data name="Localserver_DetectingWindows" xml:space="preserve">
+    <value>Detecting Windows...</value>
+  </data>
+  <data name="Localserver_ProcessorFormat" xml:space="preserve">
+    <value>{0} · {1} logical cores</value>
+  </data>
+  <data name="Localserver_ResourceCheckFailed" xml:space="preserve">
+    <value>Resource check failed.</value>
+  </data>
+  <data name="Localserver_ChartRange" xml:space="preserve">
+    <value>LAST 60S</value>
+  </data>
+  <data name="Localserver_ChartRangePeak" xml:space="preserve">
+    <value>LAST 60S · PEAK {0:F0}%</value>
+  </data>
+  <data name="Localserver_NewLine" xml:space="preserve">
+    <value>New Line</value>
+  </data>
+  <data name="Localserver_InitializationFailed" xml:space="preserve">
+    <value>Localserver initialization failed.</value>
+  </data>
+  <data name="Localserver_LoadCatalogFailed" xml:space="preserve">
+    <value>Failed to load service catalog.</value>
+  </data>
+  <data name="Localserver_SaveCatalogFailed" xml:space="preserve">
+    <value>Failed to save service catalog.</value>
+  </data>
+  <data name="Localserver_RecoveryFailed" xml:space="preserve">
+    <value>Process recovery failed for “{0}”.</value>
+  </data>
+  <data name="Localserver_StartLineFailed" xml:space="preserve">
+    <value>Failed to start “{0}”.</value>
+  </data>
+  <data name="Localserver_StopLineFailed" xml:space="preserve">
+    <value>Failed to stop “{0}”.</value>
+  </data>
+  <data name="Localserver_RestartLineFailed" xml:space="preserve">
+    <value>Failed to restart “{0}”.</value>
+  </data>
+  <data name="Localserver_ForceKillFailed" xml:space="preserve">
+    <value>Failed to force kill “{0}”.</value>
+  </data>
+  <data name="Localserver_SectionEnvironment.Text" xml:space="preserve">
+    <value>ENVIRONMENT</value>
+  </data>
+  <data name="Localserver_SectionSystem.Text" xml:space="preserve">
+    <value>SYSTEM</value>
+  </data>
+  <data name="Localserver_SectionSession.Text" xml:space="preserve">
+    <value>SESSION</value>
+  </data>
+  <data name="Localserver_SessionUptimeTooltip" xml:space="preserve">
+    <value>Time since the first service was started in this session</value>
+  </data>
+  <data name="Localserver_RegisteredLabel.Text" xml:space="preserve">
+    <value>REGISTERED</value>
+  </data>
+  <data name="Localserver_RunningLabel.Text" xml:space="preserve">
+    <value>RUNNING</value>
+  </data>
+  <data name="Localserver_FaultedLabel.Text" xml:space="preserve">
+    <value>FAULTED</value>
+  </data>
+  <data name="Localserver_HealthLabel.Text" xml:space="preserve">
+    <value>HEALTH</value>
+  </data>
+  <data name="Localserver_HostLabel.Text" xml:space="preserve">
+    <value>HOST</value>
+  </data>
+  <data name="Localserver_CommandAndArgsLabel.Text" xml:space="preserve">
+    <value>COMMAND &amp; ARGS</value>
+  </data>
+  <data name="Localserver_WorkingDirLabel.Text" xml:space="preserve">
+    <value>WORKING DIR</value>
+  </data>
+  <data name="Localserver_ColName.Text" xml:space="preserve">
+    <value>NAME</value>
+  </data>
+  <data name="Localserver_ColPort.Text" xml:space="preserve">
+    <value>PORT</value>
+  </data>
+  <data name="Localserver_ColState.Text" xml:space="preserve">
+    <value>STATE</value>
+  </data>
+  <data name="Localserver_ColUptime.Text" xml:space="preserve">
+    <value>UPTIME</value>
+  </data>
+  <data name="Localserver_ColCpu.Text" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Localserver_ColMem.Text" xml:space="preserve">
+    <value>MEM</value>
+  </data>
+  <data name="Localserver_ColPid.Text" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="Localserver_StatusLabel.Text" xml:space="preserve">
+    <value>Status:</value>
+  </data>
+  <data name="Localserver_ConfigName.Text" xml:space="preserve">
+    <value>NAME</value>
+  </data>
+  <data name="Localserver_ConfigCommand.Text" xml:space="preserve">
+    <value>COMMAND</value>
+  </data>
+  <data name="Localserver_ConfigArguments.Text" xml:space="preserve">
+    <value>ARGUMENTS</value>
+  </data>
+  <data name="Localserver_ConfigWorkingDir.Text" xml:space="preserve">
+    <value>WORKING DIR</value>
+  </data>
+  <data name="Localserver_ConfigPort.Text" xml:space="preserve">
+    <value>PORT</value>
+  </data>
+  <data name="Localserver_ConfigResolvedCommand.Text" xml:space="preserve">
+    <value>RESOLVED COMMAND</value>
+  </data>
+  <data name="Localserver_ExpandConfigTooltip" xml:space="preserve">
+    <value>Configure service parameters</value>
+  </data>
+  <data name="Localserver_StopToEditTooltip" xml:space="preserve">
+    <value>Stop the service before editing configuration.</value>
+  </data>
+  <data name="Localserver_OutputHeader.Text" xml:space="preserve">
+    <value>OUTPUT</value>
+  </data>
+  <data name="Localserver_LogFollowToggle.Content" xml:space="preserve">
+    <value>Follow</value>
+  </data>
+  <data name="Localserver_LogFollowTooltip" xml:space="preserve">
+    <value>Keep scrolling to the newest line</value>
+  </data>
+  <data name="Localserver_LogOpenFolderTooltip" xml:space="preserve">
+    <value>Open this service's log folder</value>
+  </data>
+  <data name="Localserver_LogClearTooltip" xml:space="preserve">
+    <value>Clear the on-screen buffer</value>
+  </data>
+  <data name="Localserver_LogEmptyText.Text" xml:space="preserve">
+    <value>No output captured yet.</value>
+  </data>
+  <data name="Localserver_ToggleOutputTooltip" xml:space="preserve">
+    <value>Show/hide output drawer</value>
+  </data>
+  <data name="Localserver_LogResumeMismatch" xml:space="preserve">
+    <value>the ownership record no longer matches this target's command, working directory or owner tag.</value>
+  </data>
+  <data name="Localserver_LogResumeExited" xml:space="preserve">
+    <value>PID {0} exited while it was being adopted.</value>
+  </data>
+  <data name="Localserver_LogResumeNote" xml:space="preserve">
+    <value>Resume note: {0}</value>
+  </data>
+  <data name="Localserver_LogResumeFailed" xml:space="preserve">
+    <value>adopting the recorded process tree failed: {0}</value>
+  </data>
+  <data name="Localserver_LogResumeSkipped" xml:space="preserve">
+    <value>Resume skipped: {0}</value>
+  </data>
+  <data name="Localserver_LogResumeNoProcesses" xml:space="preserve">
+    <value>no process from the recorded tree is still alive.</value>
+  </data>
+  <data name="Localserver_LogResumeInvalidPid" xml:space="preserve">
+    <value>The ownership record contains a duplicate or invalid PID.</value>
+  </data>
+  <data name="Localserver_LogResumeConsoleOnly" xml:space="preserve">
+    <value>Only the console host survived; the service process is gone.</value>
+  </data>
+  <data name="Localserver_LogResumeOutsideJob" xml:space="preserve">
+    <value>PID {0} could not be reassigned to this service's job object; stopping will fall back to killing its process tree.</value>
+  </data>
+  <data name="Localserver_LogResumeWithoutOwnerTag" xml:space="preserve">
+    <value>PID {0} is in this service's job object but no longer reports the owner tag; it is kept for stop and force-kill only.</value>
+  </data>
+  <data name="Localserver_LogOwnershipRebuildFailed" xml:space="preserve">
+    <value>Rebuilding ownership failed: {0}</value>
+  </data>
+  <data name="Localserver_LogProcessAdopted" xml:space="preserve">
+    <value>Adopted PID {0} from the previous Hub instance ({1} process(es) in the tree). Output from before this session was not captured.</value>
+  </data>
+  <data name="Localserver_LogPreviousProcessReleased" xml:space="preserve">
+    <value>Released the previous LocalServerHub-owned process for '{0}'.</value>
+  </data>
+  <data name="Localserver_RuntimePreflightFailed" xml:space="preserve">
+    <value>Runtime preflight failed: {0}</value>
+  </data>
+  <data name="Localserver_RuntimeWarning" xml:space="preserve">
+    <value>Runtime warning: {0}</value>
+  </data>
+  <data name="Localserver_LogStopQueryFailed" xml:space="preserve">
+    <value>Process tree query failed; exit must be verified before releasing ownership.</value>
+  </data>
+  <data name="Localserver_LogForceKilling" xml:space="preserve">
+    <value>Force killing the process tree...</value>
+  </data>
+  <data name="Localserver_LogStopping" xml:space="preserve">
+    <value>Stopping (timeout {0}s)...</value>
+  </data>
+  <data name="Localserver_LogGracefulStopSent" xml:space="preserve">
+    <value>Sent window close / stdin EOF; waiting for exit.</value>
+  </data>
+  <data name="Localserver_LogGracefulStopUnavailable" xml:space="preserve">
+    <value>No graceful channel is available; waiting before escalation.</value>
+  </data>
+  <data name="Localserver_LogGracefulStopEscalating" xml:space="preserve">
+    <value>Graceful stop could not complete ({0}); escalating.</value>
+  </data>
+  <data name="Localserver_StopFailedDetail" xml:space="preserve">
+    <value>Stop failed: the process tree is still alive or its exit could not be verified. Retry force kill.</value>
+  </data>
+  <data name="Localserver_LogStopped" xml:space="preserve">
+    <value>Stopped.</value>
+  </data>
+  <data name="Localserver_CommandNotConfigured" xml:space="preserve">
+    <value>No command is configured for this service. Set one in the service settings.</value>
+  </data>
+  <data name="Localserver_WorkingDirectoryNotFound" xml:space="preserve">
+    <value>Working directory does not exist: {0}</value>
+  </data>
+  <data name="Localserver_ExecutableNotFound" xml:space="preserve">
+    <value>Executable not found: {0}</value>
+  </data>
+  <data name="Localserver_ConPtyUnavailable" xml:space="preserve">
+    <value>ConPTY mode is not available in this build. Use io=pipe until interactive terminal support is enabled.</value>
+  </data>
+  <data name="Localserver_PortOutOfRange" xml:space="preserve">
+    <value>Port must be between 1 and 65535.</value>
+  </data>
+  <data name="Localserver_TcpHealthPortRequired" xml:space="preserve">
+    <value>TCP health checks require a port.</value>
+  </data>
+  <data name="Localserver_LogHealthPatternRequired" xml:space="preserve">
+    <value>LogPattern health checks require a non-empty regular expression.</value>
+  </data>
+  <data name="Localserver_LogHealthPatternInvalid" xml:space="preserve">
+    <value>LogPattern health check contains an invalid regular expression.</value>
+  </data>
+  <data name="Localserver_ConfigurationVariableInvalid" xml:space="preserve">
+    <value>A configuration variable is missing, cyclic, or malformed. Check service, env and secret references.</value>
+  </data>
+  <data name="Localserver_HttpHealthUrlRequired" xml:space="preserve">
+    <value>HTTP health checks require an absolute http(s) URL.</value>
+  </data>
+  <data name="Localserver_OwnedPortUnavailable" xml:space="preserve">
+    <value>Port {0} is still held by PID {1} ({2}), which this Hub started for this target earlier but can no longer adopt (its ownership record is missing, or the command or working directory changed since). End it with: taskkill /PID {1} /T /F</value>
+  </data>
+  <data name="Localserver_PortInUse" xml:space="preserve">
+    <value>Port {0} is already in use by PID {1} ({2}). Free that port or choose another one.</value>
+  </data>
+  <data name="Localserver_LogPreviousTreeStillRunning" xml:space="preserve">
+    <value>The previously owned process tree did not fully exit; the port preflight below will report what is still holding it.</value>
+  </data>
+  <data name="Localserver_ProcessStartFailed" xml:space="preserve">
+    <value>The process failed to start.</value>
+  </data>
+  <data name="Localserver_LogProcessStarted" xml:space="preserve">
+    <value>Started PID {0}: {1}</value>
+  </data>
+  <data name="Localserver_LogOutputCaptureEnded" xml:space="preserve">
+    <value>Output capture ended ({0}).</value>
+  </data>
+  <data name="Localserver_LogAdoptedHealthUnverified" xml:space="preserve">
+    <value>Health is reported as unverified: a log-pattern probe cannot be re-evaluated against a process this Hub adopted.</value>
+  </data>
+  <data name="Localserver_LogAdoptedPortMismatch" xml:space="preserve">
+    <value>Warning: port {0} is held by PID {1} ({2}), which is not part of the adopted tree. Health results may describe another process.</value>
+  </data>
+  <data name="Localserver_HealthStartupTimedOut" xml:space="preserve">
+    <value>Did not become healthy within {0}s.</value>
+  </data>
+  <data name="Localserver_AdoptedHealthTimedOut" xml:space="preserve">
+    <value>Adopted process did not answer its health probe within {0}s.</value>
+  </data>
+  <data name="Localserver_LogAdoptedHealthFailed" xml:space="preserve">
+    <value>{0} The process tree is still running and was left alone.</value>
+  </data>
+  <data name="Localserver_LogHealthRecovered" xml:space="preserve">
+    <value>Health probe recovered.</value>
+  </data>
+  <data name="Localserver_LogHealthFailed" xml:space="preserve">
+    <value>Health probe failed; process is still running.</value>
+  </data>
+  <data name="Localserver_LogHealthMonitoringStopped" xml:space="preserve">
+    <value>Health monitoring stopped ({0}).</value>
+  </data>
+  <data name="Localserver_LogExitHandlingFailed" xml:space="preserve">
+    <value>Exit handling failed ({0}).</value>
+  </data>
+  <data name="Localserver_LogProcessExited" xml:space="preserve">
+    <value>Process exited with code {0}.</value>
+  </data>
+  <data name="Localserver_ProcessExitedDetail" xml:space="preserve">
+    <value>Exited with code {0}</value>
+  </data>
+  <data name="Localserver_LogAdoptedRestartPolicy" xml:space="preserve">
+    <value>The exited process was adopted from a previous session; the '{0}' restart policy applies to it as well.</value>
+  </data>
+  <data name="Localserver_LogRestarting" xml:space="preserve">
+    <value>Restarting in {0}s (attempt {1}/{2}).</value>
+  </data>
+  <data name="Localserver_AutomaticRestartFailed" xml:space="preserve">
+    <value>Automatic restart failed: {0}</value>
+  </data>
+  <data name="Localserver_OperationFailed" xml:space="preserve">
+    <value>The operation failed.</value>
+  </data>
+  <data name="Localserver_LogFailed" xml:space="preserve">
+    <value>Failed: {0}</value>
+  </data>
+  <data name="Localserver_LogHealthPatternTimedOut" xml:space="preserve">
+    <value>Log health pattern exceeded its time limit and was disabled for this run.</value>
+  </data>
+  <data name="Localserver_CatalogRecovered" xml:space="preserve">
+    <value>Loaded backup {0} because the service configuration was invalid. Review the services before saving.</value>
+  </data>
+  <data name="Localserver_EnvironmentChecksPassed" xml:space="preserve">
+    <value>All environment checks passed.</value>
+  </data>
+  <data name="Localserver_EnvironmentIssueSingular" xml:space="preserve">
+    <value>{0} environment issue</value>
+  </data>
+  <data name="Localserver_EnvironmentIssuePlural" xml:space="preserve">
+    <value>{0} environment issues</value>
+  </data>
+  <data name="Localserver_EnvironmentDirectoryNotFound" xml:space="preserve">
+    <value>Directory not found: {0}</value>
+  </data>
+  <data name="Localserver_RuntimeProbeUnavailable" xml:space="preserve">
+    <value>No probe available for this runtime kind.</value>
+  </data>
+  <data name="Localserver_RuntimeNotFound" xml:space="preserve">
+    <value>Runtime not found: {0}</value>
+  </data>
+  <data name="Localserver_RuntimeStartFailed" xml:space="preserve">
+    <value>Runtime process failed to start.</value>
+  </data>
+  <data name="Localserver_RuntimeVersionFailed" xml:space="preserve">
+    <value>Runtime version check failed.</value>
+  </data>
+  <data name="Localserver_RuntimeVersionUnknown" xml:space="preserve">
+    <value>Found runtime, but its version could not be parsed.</value>
+  </data>
+  <data name="Localserver_RuntimeMinimumInvalid" xml:space="preserve">
+    <value>Invalid minimum version requirement: {0}</value>
+  </data>
+  <data name="Localserver_RuntimeVersionTooOld" xml:space="preserve">
+    <value>Found version {0}; requires {1} or newer.</value>
+  </data>
+  <data name="Localserver_RuntimeProbeTimedOut" xml:space="preserve">
+    <value>Runtime version check timed out.</value>
+  </data>
+  <data name="Localserver_RuntimeProbeFailed" xml:space="preserve">
+    <value>Runtime check failed: {0}</value>
+  </data>
+  <data name="Localserver_HealthProbeUnverified" xml:space="preserve">
+    <value>Adopted process cannot replay log patterns; health is unverified, not failed.</value>
+  </data>
+  <data name="Localserver_HealthProbePassed" xml:space="preserve">
+    <value>Passed configured health check.</value>
+  </data>
+  <data name="Localserver_HealthProbeDidNotPass" xml:space="preserve">
+    <value>Did not pass configured health check.</value>
+  </data>
+  <data name="Localserver_HealthProbeTimedOut" xml:space="preserve">
+    <value>Configured health check timed out.</value>
+  </data>
+  <data name="Localserver_HealthProbeFailed" xml:space="preserve">
+    <value>Health check failed ({0}).</value>
+  </data>
+  <data name="Localserver_PortNotListening" xml:space="preserve">
+    <value>Port {0} is not listening.</value>
+  </data>
+  <data name="Localserver_PortAvailable" xml:space="preserve">
+    <value>Port {0} is available.</value>
+  </data>
+  <data name="Localserver_PortListening" xml:space="preserve">
+    <value>Port {0} is listening (PID {1}).</value>
+  </data>
+  <data name="Localserver_ReleasePortSuggestion" xml:space="preserve">
+    <value>Terminate PID {0}, or switch this service to port {1}.</value>
+  </data>
+  <data name="Localserver_ReleasePortManual" xml:space="preserve">
+    <value>Terminate PID {0}, or choose another port manually; no ports near {1} are free.</value>
+  </data>
+  <data name="Localserver_PortOccupied" xml:space="preserve">
+    <value>Port {0} is occupied by PID {1} ({2}).</value>
+  </data>
+  <data name="Localserver_ServiceReportedRunning" xml:space="preserve">
+    <value>Service manager reports service is running.</value>
+  </data>
+  <data name="Localserver_ServiceStopped" xml:space="preserve">
+    <value>Service is stopped.</value>
+  </data>
+  <data name="Localserver_InstallNode" xml:space="preserve">
+    <value>Install the Node.js LTS runtime.</value>
+  </data>
+  <data name="Localserver_InstallPython" xml:space="preserve">
+    <value>Install Python 3.12.</value>
+  </data>
+  <data name="Localserver_CreateVirtualEnvironment" xml:space="preserve">
+    <value>Create a virtual environment in this service's working directory.</value>
+  </data>
+  <data name="Localserver_InstallMiniconda" xml:space="preserve">
+    <value>Install Miniconda.</value>
+  </data>
+  <data name="Localserver_RepairGpuDriver" xml:space="preserve">
+    <value>nvidia-smi is provided by the NVIDIA graphics driver. Install or repair the driver, or remove the runtime requirement if this service does not use the GPU.</value>
+  </data>
+  <data name="Localserver_CatalogNotLoaded" xml:space="preserve">
+    <value>Load the service configuration before saving changes.</value>
+  </data>
+  <data name="Localserver_CatalogSaveConflict" xml:space="preserve">
+    <value>Service configuration changed on disk; edits were not written. Review your changes before reloading.</value>
+  </data>
+  <data name="Localserver_LineLockedRunning" xml:space="preserve">
+    <value>Running: configuration locked. Stop the service to edit parameters.</value>
+  </data>
+  <data name="Localserver_PortNoneHint" xml:space="preserve">
+    <value>Leave empty or 0 if service has no port.</value>
+  </data>
+  <data name="Localserver_NoChecksRunYet" xml:space="preserve">
+    <value>No checks have run yet</value>
+  </data>
+  <data name="Localserver_SelectServiceHint" xml:space="preserve">
+    <value>Choose the service shown in Environment</value>
+  </data>
+  <data name="Localserver_SessionCardTitle.Text" xml:space="preserve">
+    <value>SESSION</value>
+  </data>
+  <data name="Localserver_LogSubtitleFormat" xml:space="preserve">
+    <value>{0} · {1} lines shown</value>
+  </data>
+  <!-- AI Hub -->
+  <data name="General_AiServices.Header" xml:space="preserve">
+    <value>AI services</value>
+  </data>
+  <data name="General_AiHubSettings.Header" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="General_AiHubSettings.Description" xml:space="preserve">
+    <value>Manage shared AI services, kernels, and connections for Kit and its plugins.</value>
+  </data>
+  <data name="AiHub_BackToSettings.Content" xml:space="preserve">
+    <value>Back to settings</value>
+  </data>
+  <data name="AiHub.ModuleTitle" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="AiHub.ModuleDescription" xml:space="preserve">
+    <value>Shared AI tasks for Kit plugins, with local kernels and validated advisory results.</value>
+  </data>
+  <data name="AiHub_EnableSettingsCard.Header" xml:space="preserve">
+    <value>Enable AI Hub</value>
+  </data>
+  <data name="AiHub_EnableSettingsCard.Description" xml:space="preserve">
+    <value>Allow plugins to submit AI tasks using the endpoints configured below.</value>
+  </data>
+  <data name="AiHub_KernelSettingsGroup.Header" xml:space="preserve">
+    <value>AI Kernel &amp; Runtime</value>
+  </data>
+  <data name="AiHub_KernelCard.Header" xml:space="preserve">
+    <value>AI Execution Kernel</value>
+  </data>
+  <data name="AiHub_KernelCard.Description" xml:space="preserve">
+    <value>Choose a kernel, install it if needed, then apply the switch. Running tasks keep their current kernel.</value>
+  </data>
+  <data name="AiHub_ApplyKernelButton.Content" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="AiHub_CheckUpdatesButton.Content" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="AiHub_DownloadKernelButton.Content" xml:space="preserve">
+    <value>Download / Update</value>
+  </data>
+  <data name="AiHub_EndpointsSettingsGroup.Header" xml:space="preserve">
+    <value>AI Endpoints</value>
+  </data>
+  <data name="AiHub_EndpointsDescription.Text" xml:space="preserve">
+    <value>Configure Main and optional Fallback endpoints. Fallback is automatically invoked if Main fails.</value>
+  </data>
+  <data name="AiHub_SecurityPolicyGroup.Header" xml:space="preserve">
+    <value>Security Policy</value>
+  </data>
+  <data name="AiHub_SecurityPolicyCard.Header" xml:space="preserve">
+    <value>Global security policy</value>
+  </data>
+  <data name="AiHub_SecurityPolicyCard.Description" xml:space="preserve">
+    <value>security.md adds constraints to every task. Built-in validation remains enforced.</value>
+  </data>
+  <data name="AiHub_SavePolicyButton.Content" xml:space="preserve">
+    <value>Save Policy</value>
+  </data>
+  <data name="AiHub_ResetPolicyButton.Content" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
+  <data name="AiHub_PipelineCard.Header" xml:space="preserve">
+    <value>Task pipeline</value>
+  </data>
+  <data name="AiHub_PipelineCard.Description" xml:space="preserve">
+    <value>Plugin policy → input sanitization → Main / Fallback → output validation</value>
+  </data>
+  <data name="AiHub_KernelRuntime.Header" xml:space="preserve">
+    <value>Selected kernel installation</value>
+  </data>
+  <data name="AiHub_KernelPathCard.Header" xml:space="preserve">
+    <value>Kernel location</value>
+  </data>
+  <data name="AiHub_ConcurrencyCard.Header" xml:space="preserve">
+    <value>Concurrent batches</value>
+  </data>
+  <data name="AiHub_ConcurrencyCard.Description" xml:space="preserve">
+    <value>Maximum simultaneous analysis batches per worker (1–4).</value>
+  </data>
+  <data name="AiHub_FallbackEnabledCard.Header" xml:space="preserve">
+    <value>Enable fallback</value>
+  </data>
+  <data name="AiHub_FallbackEnabledCard.Description" xml:space="preserve">
+    <value>Retry eligible endpoint failures using this route.</value>
+  </data>
+  <data name="AiHub_EndpointUrlCard.Header" xml:space="preserve">
+    <value>Endpoint URL</value>
+  </data>
+  <data name="AiHub_EndpointUrlCard.Description" xml:space="preserve">
+    <value>HTTP(S) base URL without credentials, query strings, or fragments.</value>
+  </data>
+  <data name="AiHub_EndpointUrlInput.PlaceholderText" xml:space="preserve">
+    <value>https://api.example.com/v1</value>
+  </data>
+  <data name="AiHub_ApiKeyCard.Header" xml:space="preserve">
+    <value>API key</value>
+  </data>
+  <data name="AiHub_ApiKeyCard.Description" xml:space="preserve">
+    <value>Encrypted for your Windows account; stored separately from settings.</value>
+  </data>
+  <data name="AiHub_ApiKeyInput.PlaceholderText" xml:space="preserve">
+    <value>Enter an API key if required</value>
+  </data>
+  <data name="AiHub_ModeCard.Header" xml:space="preserve">
+    <value>API protocol</value>
+  </data>
+  <data name="AiHub_ModeCard.Description" xml:space="preserve">
+    <value>Codex requires Responses. Pi supports both protocols.</value>
+  </data>
+  <data name="AiHub_ModelCard.Header" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="AiHub_ModelInput.PlaceholderText" xml:space="preserve">
+    <value>Model identifier accepted by your endpoint</value>
+  </data>
+  <data name="AiHub_EffortCard.Header" xml:space="preserve">
+    <value>Reasoning effort</value>
+  </data>
+  <data name="AiHub_EffortLow.Content" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="AiHub_EffortMedium.Content" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="AiHub_EffortHigh.Content" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="AiHub_EffortExtraHigh.Content" xml:space="preserve">
+    <value>Extra high</value>
+  </data>
+  <data name="AiHub_EffortMaximum.Content" xml:space="preserve">
+    <value>Maximum</value>
+  </data>
+  <data name="AiHub_ProbeCard.Header" xml:space="preserve">
+    <value>Test this draft</value>
+  </data>
+  <data name="AiHub_ProbeCard.Description" xml:space="preserve">
+    <value>Sends a small validation request. The draft is not saved by testing.</value>
+  </data>
+  <data name="AiHub_TestConnectionButton.Content" xml:space="preserve">
+    <value>Test connection</value>
+  </data>
+  <data name="AiHub_SaveEndpointsCard.Header" xml:space="preserve">
+    <value>Save endpoint changes</value>
+  </data>
+  <data name="AiHub_SaveEndpointsCard.Description" xml:space="preserve">
+    <value>Apply both routes and their encrypted credentials together.</value>
+  </data>
+  <data name="AiHub_SaveEndpointsButton.Content" xml:space="preserve">
+    <value>Save endpoints</value>
+  </data>
+  <data name="AiHub_SaveButton.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="AiHub_MainEndpointExpander.Header" xml:space="preserve">
+    <value>Main endpoint</value>
+  </data>
+  <data name="AiHub_FallbackEndpointExpander.Header" xml:space="preserve">
+    <value>Fallback endpoint</value>
+  </data>
+  <data name="AiHub_ClearFallbackButton.Content" xml:space="preserve">
+    <value>Clear fallback</value>
+  </data>
+  <data name="AiHub_CancelButton.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AiHub_PolicyPathCard.Header" xml:space="preserve">
+    <value>security.md location</value>
+  </data>
+  <data name="AiHub_PolicyActionsCard.Header" xml:space="preserve">
+    <value>Save or restore the policy</value>
+  </data>
+  <data name="AiHub_PolicyActionsCard.Description" xml:space="preserve">
+    <value>Reset replaces the saved policy and the current editor with the default text.</value>
+  </data>
+  <data name="AiHub_MainRoute" xml:space="preserve">
+    <value>Main</value>
+  </data>
+  <data name="AiHub_FallbackRoute" xml:space="preserve">
+    <value>Fallback</value>
+  </data>
+  <data name="AiHub_MainDescription" xml:space="preserve">
+    <value>Primary endpoint for new AI tasks.</value>
+  </data>
+  <data name="AiHub_FallbackDescription" xml:space="preserve">
+    <value>Optional backup for eligible network and endpoint failures.</value>
+  </data>
+  <data name="AiHub_SaveFailed" xml:space="preserve">
+    <value>Could not save the change. Check access to the AI Hub data directory.</value>
+  </data>
+  <data name="AiHub_LoadFailed" xml:space="preserve">
+    <value>AI Hub settings could not be read. Existing files have been preserved.</value>
+  </data>
+  <data name="AiHub_OperationFailed" xml:space="preserve">
+    <value>The operation could not finish. Check the selected kernel, endpoint configuration, and directory access.</value>
+  </data>
+  <data name="AiHub_EndpointInvalid" xml:space="preserve">
+    <value>Check the URL, model, API protocol, and reasoning effort. Codex requires Responses.</value>
+  </data>
+  <data name="AiHub_Testing" xml:space="preserve">
+    <value>Testing the endpoint and validating its response…</value>
+  </data>
+  <data name="AiHub_TestSucceeded" xml:space="preserve">
+    <value>Connection test passed.</value>
+  </data>
+  <data name="AiHub_TestFailed" xml:space="preserve">
+    <value>Connection test failed. Check the installed kernel, protocol, model, and credentials.</value>
+  </data>
+  <data name="AiHub_InstallBeforeSwitch" xml:space="preserve">
+    <value>Install and verify the selected kernel before applying the switch.</value>
+  </data>
+  <data name="AiHub_SwitchIncompatible" xml:space="preserve">
+    <value>A saved endpoint is incompatible with this kernel. Adjust and save its API protocol first.</value>
+  </data>
+  <data name="AiHub_SwitchApplied" xml:space="preserve">
+    <value>The selected kernel is now active.</value>
+  </data>
+  <data name="AiHub_Checking" xml:space="preserve">
+    <value>Checking the latest release…</value>
+  </data>
+  <data name="AiHub_LatestAvailable" xml:space="preserve">
+    <value>Latest release: {0}</value>
+  </data>
+  <data name="AiHub_UpdateAvailable" xml:space="preserve">
+    <value>Update available: {0}</value>
+  </data>
+  <data name="AiHub_UpToDate" xml:space="preserve">
+    <value>Up to date: {0}</value>
+  </data>
+  <data name="AiHub_Downloading" xml:space="preserve">
+    <value>Downloading and verifying the selected kernel…</value>
+  </data>
+  <data name="AiHub_Installed" xml:space="preserve">
+    <value>Kernel installed and verified. Apply the switch if this is a new selection.</value>
+  </data>
+  <data name="AiHub_AlreadyInstalled" xml:space="preserve">
+    <value>The selected kernel is already current.</value>
+  </data>
+  <data name="AiHub_EndpointsSaved" xml:space="preserve">
+    <value>Endpoints and encrypted credentials saved.</value>
+  </data>
+  <data name="AiHub_FallbackDraftCleared" xml:space="preserve">
+    <value>Fallback cleared in the editor. Save endpoints to apply this change.</value>
+  </data>
+  <data name="AiHub_PolicyDraft" xml:space="preserve">
+    <value>Unsaved changes</value>
+  </data>
+  <data name="AiHub_PolicyActive" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="AiHub_PolicyDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="AiHub_PolicySaved" xml:space="preserve">
+    <value>Global security policy saved.</value>
+  </data>
+  <data name="AiHub_PolicyReset" xml:space="preserve">
+    <value>Global security policy restored to its default.</value>
+  </data>
+  <data name="AiHub_KernelInstalled" xml:space="preserve">
+    <value>{0} · Installed · {1}</value>
+  </data>
+  <data name="AiHub_KernelMissing" xml:space="preserve">
+    <value>{0} · Not installed</value>
+  </data>
+  <data name="AiHub_VersionUnknown" xml:space="preserve">
+    <value>Check to read version</value>
+  </data>
+  <data name="AiHub_Cancelled" xml:space="preserve">
+    <value>Operation cancelled.</value>
+  </data>
+  <data name="AiHub_EnableToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable AI Hub</value>
+  </data>
+  <data name="AiHub_KernelSelector.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Select AI kernel</value>
+  </data>
+  <data name="AiHub_ConcurrencyInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Concurrent analysis batches</value>
+  </data>
+  <data name="AiHub_DownloadProgress.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Kernel download progress</value>
+  </data>
+  <data name="AiHub_FallbackToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable fallback endpoint</value>
+  </data>
+  <data name="AiHub_EndpointUrlInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Endpoint URL</value>
+  </data>
+  <data name="AiHub_ApiKeyInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Endpoint API key</value>
+  </data>
+  <data name="AiHub_ModeInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>API protocol</value>
+  </data>
+  <data name="AiHub_ModelInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Model identifier</value>
+  </data>
+  <data name="AiHub_EffortInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Reasoning effort</value>
+  </data>
+  <data name="AiHub_PolicyEditor.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Global security policy editor</value>
+  </data>
+  <data name="AiHub_EnableToggle.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="AiHub_EnableToggle.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="AiHub_FallbackToggle.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="AiHub_FallbackToggle.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Localserver_AiCard.Header" xml:space="preserve">
+    <value>AI analysis</value>
+  </data>
+  <data name="Localserver_AiCard.Description" xml:space="preserve">
+    <value>Analyze service health or review configuration with AI Hub.</value>
+  </data>
+  <data name="Localserver_AiDisabledCard.Header" xml:space="preserve">
+    <value>AI Hub is disabled</value>
+  </data>
+  <data name="Localserver_AiDisabledCard.Description" xml:space="preserve">
+    <value>Enable AI Hub and configure an endpoint to run analysis.</value>
+  </data>
+  <data name="Localserver_OpenAiHubButton.Content" xml:space="preserve">
+    <value>Open AI Hub</value>
+  </data>
+  <data name="Localserver_AiAnalyzeCard.Header" xml:space="preserve">
+    <value>Analyze a current snapshot</value>
+  </data>
+  <data name="Localserver_AiAnalyzeCard.Description" xml:space="preserve">
+    <value>Sends service states and configuration facts for advisory recommendations.</value>
+  </data>
+  <data name="Localserver_AiDiagnoseButton.Content" xml:space="preserve">
+    <value>Diagnose health</value>
+  </data>
+  <data name="Localserver_AiReviewButton.Content" xml:space="preserve">
+    <value>Review configuration</value>
+  </data>
+  <data name="Localserver_AiNoServices" xml:space="preserve">
+    <value>Add a service before running AI analysis.</value>
+  </data>
+  <data name="Localserver_AiRunning" xml:space="preserve">
+    <value>Analyzing the service snapshot…</value>
+  </data>
+  <data name="Localserver_AiNoFindings" xml:space="preserve">
+    <value>No issues were found in the supplied snapshot.</value>
+  </data>
+  <data name="Localserver_AiCompleted" xml:space="preserve">
+    <value>{0} findings · {1}</value>
+  </data>
+  <data name="Localserver_AiSeveritylow" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="Localserver_AiSeveritymedium" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="Localserver_AiSeverityhigh" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="AiHub_ErrorHubDisabled" xml:space="preserve">
+    <value>Enable AI Hub in Kit Settings before running this task.</value>
+  </data>
+  <data name="AiHub_ErrorKernelNotInstalled" xml:space="preserve">
+    <value>Install the selected kernel in AI Hub settings.</value>
+  </data>
+  <data name="AiHub_ErrorEndpointFailed" xml:space="preserve">
+    <value>The configured endpoints could not complete the request.</value>
+  </data>
+  <data name="AiHub_ErrorInvalidPayload" xml:space="preserve">
+    <value>The task input or output contract is invalid or too large.</value>
+  </data>
+  <data name="AiHub_ErrorPolicyViolation" xml:space="preserve">
+    <value>The policy or model output did not pass validation.</value>
+  </data>
+  <data name="AiHub_ErrorTimeout" xml:space="preserve">
+    <value>AI analysis timed out.</value>
+  </data>
+  <data name="AiHub_ErrorCancelled" xml:space="preserve">
+    <value>AI analysis cancelled.</value>
+  </data>
+  <data name="AiHub_ErrorExecutionFailed" xml:space="preserve">
+    <value>AI analysis could not be completed.</value>
+  </data>
+  <data name="AiHub_ErrorInvalidConfiguration" xml:space="preserve">
+    <value>Check the saved kernel and endpoint configuration.</value>
+  </data>
+  <data name="AiHub_ErrorHostUnavailable" xml:space="preserve">
+    <value>The AI Hub host is unavailable. Open Kit Settings and try again.</value>
+  </data>
+  <data name="AiHub_KernelExecutionTitle.Text" xml:space="preserve">
+    <value>AI execution kernel</value>
+  </data>
+  <data name="AiHub_KernelExecutionSubtitle.Text" xml:space="preserve">
+    <value>Select local Codex CLI or Pi CLI runner (installed outside Kit application directory)</value>
+  </data>
+  <data name="AiHub_EndpointsTitle.Text" xml:space="preserve">
+    <value>Endpoints (Main &amp; Fallback)</value>
+  </data>
+  <data name="AiHub_EndpointUrlLabel.Text" xml:space="preserve">
+    <value>Endpoint URL</value>
+  </data>
+  <data name="AiHub_ApiKeyLabel.Text" xml:space="preserve">
+    <value>API key</value>
+  </data>
+  <data name="AiHub_ApiModeLabel.Text" xml:space="preserve">
+    <value>API mode</value>
+  </data>
+  <data name="AiHub_ModelLabel.Text" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="AiHub_ReasoningEffortLabel.Text" xml:space="preserve">
+    <value>Reasoning effort</value>
+  </data>
+  <data name="AiHub_SecurityPolicyTitle.Text" xml:space="preserve">
+    <value>Global Security Policy (security.md)</value>
+  </data>
+  <data name="AiHub_SecurityPolicySubtitle.Text" xml:space="preserve">
+    <value>Advisory-only principle, mandatory data desensitization, and sandboxed isolation</value>
+  </data>
+  <data name="AiHub_CheckUpdatesText.Text" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="AiHub_DownloadKernelText.Text" xml:space="preserve">
+    <value>Download or update</value>
+  </data>
+  <data name="AiHub_KernelUpdatesCard.Header" xml:space="preserve">
+    <value>Kernel updates</value>
+  </data>
+  <data name="AiHub_KernelLocationCard.Header" xml:space="preserve">
+    <value>Installation path</value>
+  </data>
+  <data name="General_DiagnosticsGroup.Header" xml:space="preserve">
+    <value>Diagnostics &amp; logs</value>
+  </data>
+  <data name="General_DiagnosticsExpander.Header" xml:space="preserve">
+    <value>Logging</value>
+  </data>
+  <data name="General_DiagnosticsExpander.Description" xml:space="preserve">
+    <value>Collect and manage application and plugin logs for troubleshooting.</value>
+  </data>
+  <data name="General_LogLevelCard.Header" xml:space="preserve">
+    <value>Log level</value>
+  </data>
+  <data name="General_LogLevelCard.Description" xml:space="preserve">
+    <value>Set the verbosity of collected logs.</value>
+  </data>
+  <data name="General_OpenLogsFolderCard.Header" xml:space="preserve">
+    <value>Logs folder</value>
+  </data>
+  <data name="General_OpenLogsFolderText.Text" xml:space="preserve">
+    <value>Open folder</value>
   </data>
 </root>

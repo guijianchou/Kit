@@ -1,14 +1,15 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Views;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Views;
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
@@ -17,10 +18,17 @@ using Windows.Data.Json;
 using WinRT.Interop;
 using WinUIEx;
 
-namespace Microsoft.PowerToys.Settings.UI
+namespace Kit.Settings.UI
 {
     public sealed partial class MainWindow : WindowEx
     {
+        private bool _closePending;
+        private bool _closeApproved;
+
+        internal Func<Task<bool>> FlushPendingSettingsAsync { get; set; }
+
+        internal Func<bool> KeepAliveForBackgroundWork { get; set; }
+
         public MainWindow(bool createHidden = false)
         {
             this.Activated += Window_Activated_SetIcon;
@@ -129,12 +137,17 @@ namespace Microsoft.PowerToys.Settings.UI
             // receive IPC Message
             App.IPCMessageReceivedCallback = (string msg) =>
             {
-                if (ShellPage.ShellHandler.IPCResponseHandleList != null)
+                DispatcherQueue.TryEnqueue(() =>
                 {
+                    if (App.GetSettingsWindow() != this || ShellPage.ShellHandler?.IPCResponseHandleList == null)
+                    {
+                        return;
+                    }
+
                     var success = JsonObject.TryParse(msg, out JsonObject json);
                     if (success)
                     {
-                        foreach (Action<JsonObject> handle in ShellPage.ShellHandler.IPCResponseHandleList)
+                        foreach (Action<JsonObject> handle in ShellPage.ShellHandler.IPCResponseHandleList.ToArray())
                         {
                             handle(json);
                         }
@@ -143,7 +156,7 @@ namespace Microsoft.PowerToys.Settings.UI
                     {
                         Logger.LogError("Failed to parse JSON from IPC message.");
                     }
-                }
+                });
             };
         }
 
@@ -173,11 +186,24 @@ namespace Microsoft.PowerToys.Settings.UI
 
         private void Window_Closed(object sender, WindowEventArgs args)
         {
+            if (!_closeApproved && FlushPendingSettingsAsync is { } flush)
+            {
+                args.Handled = true;
+                if (!_closePending)
+                {
+                    _ = FlushSettingsAndCloseAsync(flush);
+                }
+
+                return;
+            }
+
             var hWnd = WindowNative.GetWindowHandle(this);
             WindowHelper.SerializePlacement(hWnd);
 
-            if (!App.IsSecondaryWindowOpen())
+            if (!App.IsSecondaryWindowOpen() && KeepAliveForBackgroundWork?.Invoke() != true)
             {
+                App.ThemeService.ThemeChanged -= OnThemeChanged;
+                App.IPCMessageReceivedCallback = null;
                 shellPage.Dispose();
                 App.ClearSettingsWindow();
             }
@@ -186,8 +212,36 @@ namespace Microsoft.PowerToys.Settings.UI
                 args.Handled = true;
                 NativeMethods.ShowWindow(hWnd, NativeMethods.SW_HIDE);
             }
+        }
 
-            App.ThemeService.ThemeChanged -= OnThemeChanged;
+        private async Task FlushSettingsAndCloseAsync(Func<Task<bool>> flush)
+        {
+            _closePending = true;
+            try
+            {
+                if (await flush() && DispatcherQueue.TryEnqueue(() =>
+                {
+                    _closeApproved = true;
+                    try
+                    {
+                        Close();
+                    }
+                    finally
+                    {
+                        _closeApproved = false;
+                        _closePending = false;
+                    }
+                }))
+                {
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to save settings before closing: {ex.GetType().Name}");
+            }
+
+            _closePending = false;
         }
 
         private void Window_Activated_SetIcon(object sender, WindowActivatedEventArgs args)

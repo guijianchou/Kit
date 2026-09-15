@@ -9,7 +9,7 @@
     <MinimalCoreWin>true</MinimalCoreWin>
     <ProjectGuid>{e599c30b-9dc8-4e5a-bf27-93d4ccede788}</ProjectGuid>
     <ProjectName>GPOWrapper</ProjectName>
-    <RootNamespace>PowerToys.GPOWrapper</RootNamespace>
+    <RootNamespace>Kit.GPOWrapper</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>false</AppContainerApplication>
@@ -46,7 +46,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <TargetName>PowerToys.GPOWrapper</TargetName>
+    <TargetName>Kit.GPOWrapper</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

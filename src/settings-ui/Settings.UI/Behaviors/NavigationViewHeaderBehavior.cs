@@ -2,7 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.PowerToys.Settings.UI.Services;
+using Kit.Settings.UI.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -10,7 +10,7 @@ using Microsoft.Xaml.Interactivity;
 
 using WinUI = Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.PowerToys.Settings.UI.Behaviors
+namespace Kit.Settings.UI.Behaviors
 {
     public class NavigationViewHeaderBehavior : Behavior<WinUI.NavigationView>
     {

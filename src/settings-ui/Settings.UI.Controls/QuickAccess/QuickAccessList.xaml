@@ -1,8 +1,8 @@
-<UserControl
-    x:Class="Microsoft.PowerToys.Settings.UI.Controls.QuickAccessList"
+﻿<UserControl
+    x:Class="Kit.Settings.UI.Controls.QuickAccessList"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:Microsoft.PowerToys.Settings.UI.Controls"
+    xmlns:local="using:Kit.Settings.UI.Controls"
     xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
     xmlns:tkconverters="using:CommunityToolkit.WinUI.Converters">
 

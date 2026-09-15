@@ -4,7 +4,7 @@
 
 using System;
 
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Library.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CommonLibTest

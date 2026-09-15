@@ -7,7 +7,7 @@ using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Xml.Linq;
 using ABI.Windows.Foundation;
-using Microsoft.PowerToys.UITest;
+using Kit.UITest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Appium;
@@ -16,7 +16,7 @@ using OpenQA.Selenium.Interactions;
 
 [assembly: InternalsVisibleTo("Session")]
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Represents a basic UI element in the application.

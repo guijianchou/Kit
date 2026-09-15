@@ -4,7 +4,7 @@
 
 using System;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public class PageLink
     {

@@ -146,8 +146,8 @@ void LightSwitchSettings::LoadSettings()
     std::lock_guard<std::mutex> guard(m_settingsMutex);
     try
     {
-        PowerToysSettings::PowerToyValues values =
-            PowerToysSettings::PowerToyValues::load_from_settings_file(L"LightSwitch");
+        KitSettings::PowerToyValues values =
+            KitSettings::PowerToyValues::load_from_settings_file(L"LightSwitch");
 
 
         if (const auto jsonVal = values.get_string_value(L"scheduleMode"))

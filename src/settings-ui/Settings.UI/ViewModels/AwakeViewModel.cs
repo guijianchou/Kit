@@ -4,12 +4,11 @@
 
 using System;
 using System.Runtime.CompilerServices;
-
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
     public partial class AwakeViewModel : Observable
     {

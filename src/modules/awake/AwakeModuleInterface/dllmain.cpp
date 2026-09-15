@@ -1,5 +1,5 @@
 #include "pch.h"
-#include <interface/powertoy_module_interface.h>
+#include <interface/kit_module_interface.h>
 #include <common/SettingsAPI/settings_objects.h>
 #include <common/interop/shared_constants.h>
 #include "trace.h"
@@ -38,7 +38,7 @@ const static wchar_t* MODULE_NAME = L"Awake";
 const static wchar_t* MODULE_DESC = L"A module that keeps your computer awake on-demand.";
 constexpr DWORD AWAKE_SHUTDOWN_WAIT_MS = 1500;
 
-class Awake : public PowertoyModuleIface
+class Awake : public KitModuleIface
 {
     std::wstring app_name;
     std::wstring app_key;
@@ -77,10 +77,10 @@ private:
             return;
         }
 
-        Logger::warn(L"PowerToys Awake did not exit after shutdown signal; terminating process.");
+        Logger::warn(L"Kit Awake did not exit after shutdown signal; terminating process.");
         if (!TerminateProcess(p_info.hProcess, 1))
         {
-            Logger::warn(L"Failed to terminate PowerToys Awake. {}", get_last_error_or_default(GetLastError()));
+            Logger::warn(L"Failed to terminate Kit Awake. {}", get_last_error_or_default(GetLastError()));
             return;
         }
 
@@ -95,35 +95,35 @@ private:
         }
 
         DWORD waitResult = WaitForSingleObject(p_info.hProcess, AWAKE_SHUTDOWN_WAIT_MS);
-        if (waitResult == WAIT_TIMEOUT)
+        if (waitResult == WAIT_TIMEOUT || waitResult == WAIT_FAILED)
         {
-            terminate_process_if_running();
-        }
-        else if (waitResult == WAIT_FAILED)
-        {
-            Logger::warn(L"Failed to wait for PowerToys Awake shutdown. {}", get_last_error_or_default(GetLastError()));
             terminate_process_if_running();
         }
     }
 
     bool launch_process()
     {
-        Logger::trace(L"Launching PowerToys Awake process");
-        unsigned long powertoys_pid = GetCurrentProcessId();
+        Logger::trace(L"Launching Kit Awake process");
+        unsigned long kit_pid = GetCurrentProcessId();
 
-        std::wstring executable_args = L"--use-pt-config --pid " + std::to_wstring(powertoys_pid);
-        std::wstring application_path = L"PowerToys.Awake.exe";
-        std::wstring full_command_path = application_path + L" " + executable_args.data();
-        Logger::trace(L"PowerToys Awake launching with parameters: " + executable_args);
+        const auto module_path = get_module_filename(reinterpret_cast<HMODULE>(&__ImageBase));
+        if (module_path.empty())
+        {
+            Logger::error(L"Failed to resolve the Awake module path.");
+            return false;
+        }
+
+        const auto application_directory = std::filesystem::path(module_path).parent_path().wstring();
+        const auto application_path = (std::filesystem::path(application_directory) / L"Kit.Awake.exe").wstring();
+        const std::wstring executable_args = L"--use-kit-config --pid " + std::to_wstring(kit_pid);
+        std::wstring full_command_path = L"\"" + application_path + L"\" " + executable_args;
+        Logger::trace(L"Kit Awake launching with parameters: " + executable_args);
 
         STARTUPINFO info = { sizeof(info) };
 
-        if (!CreateProcess(application_path.c_str(), full_command_path.data(), NULL, NULL, true, NULL, NULL, NULL, &info, &p_info))
+        if (!CreateProcessW(application_path.c_str(), full_command_path.data(), nullptr, nullptr, FALSE, 0, nullptr, application_directory.c_str(), &info, &p_info))
         {
-            DWORD error = GetLastError();
-            std::wstring message = L"PowerToys Awake failed to start with error: ";
-            message += std::to_wstring(error);
-            Logger::error(message);
+            Logger::error(L"Kit Awake failed to start. {}", get_last_error_or_default(GetLastError()));
             close_process_handles();
             return false;
         }
@@ -142,10 +142,9 @@ public:
         Logger::info("Awake module is constructing");
     };
 
-    // Return the configured status for the gpo policy for the module
-    virtual powertoys_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
+    virtual kit_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() override
     {
-        return powertoys_gpo::getConfiguredAwakeEnabledValue();
+        return kit_gpo::getConfiguredAwakeEnabledValue();
     }
 
     virtual void destroy() override
@@ -178,21 +177,16 @@ public:
     {
         try
         {
-            // Parse the input JSON string.
             PowerToysSettings::PowerToyValues values =
                 PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
-
-            // If you don't need to do any custom processing of the settings, proceed
-            // to persists the values.
             values.save_to_settings_file();
         }
         catch (std::exception&)
         {
-            // Improper JSON.
         }
     }
 
-    virtual void enable()
+    virtual void enable() override
     {
         if (m_enabled && is_process_running())
         {
@@ -200,14 +194,14 @@ public:
         }
 
         close_process_handles();
-        if (launch_process())
+        m_enabled = launch_process();
+        if (m_enabled)
         {
-            m_enabled = true;
             Trace::EnableAwake(true);
         }
-    };
+    }
 
-    virtual void disable()
+    virtual void disable() override
     {
         if (m_enabled || p_info.hProcess)
         {
@@ -217,15 +211,15 @@ public:
             auto exitEvent = CreateEvent(nullptr, false, false, CommonSharedConstants::AWAKE_EXIT_EVENT);
             if (!exitEvent)
             {
-                Logger::warn(L"Failed to create exit event for PowerToys Awake. {}", get_last_error_or_default(GetLastError()));
+                Logger::warn(L"Failed to create exit event for Kit Awake. {}", get_last_error_or_default(GetLastError()));
                 terminate_process_if_running();
             }
             else
             {
-                Logger::trace(L"Signaled exit event for PowerToys Awake.");
+                Logger::trace(L"Signaled exit event for Kit Awake.");
                 if (!SetEvent(exitEvent))
                 {
-                    Logger::warn(L"Failed to signal exit event for PowerToys Awake. {}", get_last_error_or_default(GetLastError()));
+                    Logger::warn(L"Failed to signal exit event for Kit Awake. {}", get_last_error_or_default(GetLastError()));
                     terminate_process_if_running();
                 }
                 CloseHandle(exitEvent);
@@ -243,7 +237,12 @@ public:
     }
 };
 
-extern "C" __declspec(dllexport) PowertoyModuleIface* __cdecl powertoy_create()
+extern "C" __declspec(dllexport) KitModuleIface* __cdecl kit_create()
 {
     return new Awake();
+}
+
+extern "C" __declspec(dllexport) KitModuleIface* __cdecl powertoy_create()
+{
+    return kit_create();
 }

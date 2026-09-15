@@ -39,12 +39,19 @@ public:
     // Initial sync at startup to align internal state with system theme
     void SyncInitialThemeState();
 
+    // Sync current theme state when external theme changes
+    void SyncCurrentThemeState();
+
     // Accessor for current state (optional, for diagnostics)
-    const LightSwitchState& GetState() const { return _state; }
+    LightSwitchState GetState() const
+    {
+        std::lock_guard<std::mutex> lock(_stateMutex);
+        return _state;
+    }
 
 private:
     LightSwitchState _state;
-    std::mutex _stateMutex;
+    mutable std::mutex _stateMutex;
 
     void EvaluateAndApplyIfNeeded();
     bool CoordinatesAreValid(const std::wstring& lat, const std::wstring& lon);

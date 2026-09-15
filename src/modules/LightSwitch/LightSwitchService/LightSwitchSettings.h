@@ -74,9 +74,11 @@ class LightSwitchSettings
 public:
     static LightSwitchSettings& instance();
 
-    static inline const LightSwitchConfig& settings()
+    static inline LightSwitchConfig settings()
     {
-        return instance().m_settings;
+        auto& owner = instance();
+        std::lock_guard<std::mutex> lock(owner.m_settingsMutex);
+        return owner.m_settings;
     }
 
     void InitFileWatcher();

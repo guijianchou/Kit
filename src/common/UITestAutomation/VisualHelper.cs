@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     internal static class VisualHelper
     {

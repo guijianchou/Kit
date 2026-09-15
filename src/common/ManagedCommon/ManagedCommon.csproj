@@ -4,13 +4,13 @@
   <Import Project="$(RepoRoot)src\Common.Dotnet.AotCompatibility.props" />
 
   <PropertyGroup>
-    <Description>PowerToys ManagedCommon</Description>
-    <AssemblyName>PowerToys.ManagedCommon</AssemblyName>
+    <Description>Kit ManagedCommon</Description>
+    <AssemblyName>Kit.ManagedCommon</AssemblyName>
   </PropertyGroup>
 
   <!-- See https://learn.microsoft.com/windows/apps/develop/platform/csharp-winrt/net-projection-from-cppwinrt-component for more info -->
   <PropertyGroup>
-    <CsWinRTIncludes>PowerToys.Interop</CsWinRTIncludes>
+    <CsWinRTIncludes>Kit.Interop</CsWinRTIncludes>
     <CsWinRTGeneratedFilesDir>$(OutDir)</CsWinRTGeneratedFilesDir>
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\interop\PowerToys.Interop.vcxproj" />
+    <ProjectReference Include="..\interop\Kit.Interop.vcxproj" />
   </ItemGroup>
 
   <ItemGroup>

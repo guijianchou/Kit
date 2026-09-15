@@ -10,7 +10,7 @@ using OpenQA.Selenium.Appium.Windows;
 [assembly: InternalsVisibleTo("Element")]
 [assembly: InternalsVisibleTo("Session")]
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Helper class for finding elements.

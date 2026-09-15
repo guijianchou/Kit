@@ -1,13 +1,13 @@
 ﻿<Page
-    x:Class="Microsoft.PowerToys.QuickAccess.Flyout.AppsListPage"
+    x:Class="Kit.QuickAccess.Flyout.AppsListPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:Microsoft.PowerToys.Settings.UI.Controls"
-    xmlns:converters="using:Microsoft.PowerToys.Settings.UI.Controls.Converters"
+    xmlns:controls="using:Kit.Settings.UI.Controls"
+    xmlns:converters="using:Kit.Settings.UI.Controls.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:Microsoft.PowerToys.QuickAccess.Flyout"
+    xmlns:local="using:Kit.QuickAccess.Flyout"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="using:Microsoft.PowerToys.QuickAccess.ViewModels"
+    xmlns:viewModels="using:Kit.QuickAccess.ViewModels"
     mc:Ignorable="d">
     <Page.Resources>
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />

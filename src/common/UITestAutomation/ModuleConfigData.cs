@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("UITestBase")]
 [assembly: InternalsVisibleTo("Session")]
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// This file manages the configuration of Kit modules for UI tests.
@@ -94,10 +94,10 @@ namespace Microsoft.PowerToys.UITest
             // Module information including executable name, window name, and optional subdirectory
             ModuleInfo = new Dictionary<PowerToysModule, ModuleInfo>
             {
-                [PowerToysModule.PowerToysSettings] = new ModuleInfo("PowerToys.Settings.exe", "Kit", "WinUI3Apps"),
+                [PowerToysModule.PowerToysSettings] = new ModuleInfo("Kit.Settings.exe", "Kit", "WinUI3Apps"),
                 [PowerToysModule.Runner] = new ModuleInfo("Kit.exe", "Kit"),
-                [PowerToysModule.Awake] = new ModuleInfo("PowerToys.Awake.exe", "PowerToys Awake"),
-                [PowerToysModule.LightSwitch] = new ModuleInfo("PowerToys.LightSwitchService.exe", "PowerToys.LightSwitchService", "LightSwitchService"),
+                [PowerToysModule.Awake] = new ModuleInfo("Kit.Awake.exe", "Kit Awake"),
+                [PowerToysModule.LightSwitch] = new ModuleInfo("Kit.LightSwitchService.exe", "Kit.LightSwitchService", "LightSwitchService"),
             };
         }
 

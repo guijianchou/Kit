@@ -17,10 +17,10 @@ Use this path for a first native or managed utility:
 1. Start from the closest upstream PowerToys module shape when one exists.
 2. Put reusable behavior in a testable library before wiring the runner.
 3. Add the worker project. Keep command-line entry points explicit, for example `--scan-once` for one-shot operation and `--pid` plus a named exit event for runner-managed lifetime.
-4. Add the module interface project. Follow the Awake/LightSwitch pattern: `powertoy_create`, stable module key, `get_config`, `set_config`, `enable`, `disable`, worker launch, and clean shutdown signaling.
+4. Add the module interface project. Follow the Awake/LightSwitch pattern: `kit_create` (or `KitModuleIface`), stable module key, `get_config`, `set_config`, `enable`, `disable`, worker launch, and clean shutdown signaling.
 5. Add the module projects to `Kit.slnx`.
-6. Add the module interface DLL to `src/runner/main.cpp` in the `knownModules` list.
-7. Preserve upstream `PowerToys.Interop` and `PowerToys.GPOWrapper` project references when the module uses them. Those WinMDs are part of Kit's PowerToys compatibility surface and should regenerate from a clean Release tree.
+6. Add the module interface DLL to `src/runner/main.cpp` in the `KitKnownModules` list.
+7. Use `Kit.Interop` and `Kit.GPOWrapper` project references when the module uses them.
 8. Add Settings route/navigation only for the new module.
 9. Add Home dashboard metadata only if the module should be visible on Home.
 10. Add a Quick Access action only when the module has a real action. Otherwise, let Home fall back to opening the module settings page.
@@ -56,14 +56,14 @@ Use these upstream references:
 
 Before starting the first module/plugin branch, keep this baseline green:
 
-Run these commands from the `src/kit` project root.
+Run these commands from the repo root.
 
 ```powershell
-& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\Settings.UI\PowerToys.Settings.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
-& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\QuickAccess.UI\PowerToys.QuickAccess.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
+& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\Settings.UI\Kit.Settings.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
+& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\QuickAccess.UI\Kit.QuickAccess.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
 & 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\runner\Kit.vcxproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m /nr:false /nologo
 & 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe' 'src\settings-ui\Settings.UI.UnitTests\Settings.UI.UnitTests.csproj' /t:Restore,Build /p:Configuration=Debug /p:Platform=x64 /m:1 /nr:false /nologo
-& 'C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe' 'Debug\x64\tests\SettingsTests\net10.0-windows10.0.26100.0\Settings.UI.UnitTests.dll' /Platform:x64
+dotnet test src\settings-ui\Settings.UI.UnitTests\Settings.UI.UnitTests.csproj --no-build -c Debug /p:Platform=x64
 ```
 
 Run module interface projects with `/m:1` when building them independently. Some upstream native projects share generated outputs and tracking logs, so independent parallel MSBuild commands can fail even when the projects are valid.

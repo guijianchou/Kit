@@ -9,11 +9,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Library.Utilities;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Utilities;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     /// <summary>
     /// Helper class for configuring PowerToys settings for UI tests.

@@ -2,24 +2,24 @@
 
 本规范面向 Kit 主框架和新增模块开发。优先顺序是安全、正确性、最小改动与轻量化；界面复用现有 WinUI 3 + Mica Alt 设置框架。
 
-**核查基线：2026-09-13，Kit `3524ba3` / `2.0.10` 及本轮工作区修复；本地 `source/PowerToys` 为 `f47af41de2837a9d588f84270ad521c26264ab40`，release train `0.101`。** 这里的“上游”指这个本地快照，不代表已核对 GitHub 后续提交。第 12 节记录代码 review、修复与验证，其余章节规定新增模块的接入方式和验收要求。
+**更新日期：2026-09-14。** 初次 PowerToys review 基线为 Kit `3524ba3` / `2.0.10`；本轮在 Gemini 的 `2.0.19` 工作区继续复核框架、三个模块和 `fixed.md`，验收记录见第 12.6 节。本地 `source/PowerToys` 为 `f47af41de2837a9d588f84270ad521c26264ab40`，release train `0.101`；这里的“上游”指这个本地快照，不代表已核对 GitHub 后续提交。Localserver 另对照相邻的 `../Localserver` 原项目。第 12 节区分历史 review 与本次验证，其余章节规定当前模块接入方式和验收要求。
 
 ## 1. 支持范围与上游兼容边界
 
-Kit 当前活动模块只有 **Awake、LightSwitch**。本文中的“插件”默认指由 Runner 加载的原生模块接口 DLL，以及它管理的业务进程。
+Kit 当前活动模块为 **Awake、LightSwitch、Localserver**。本文中的“插件”默认指由 Runner 加载的原生模块接口 DLL，以及对应业务实现。Awake、LightSwitch 使用独立业务进程；Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中，尚无独立后台 Worker。
 
 | 接入方式 | 当前支持程度 |
 | --- | --- |
-| PowerToys 原生模块源码 | 保留 `PowertoyModuleIface`、`powertoy_create`、配置 IPC、热键、设置页和 Worker 模型；移植时使用 Kit 的头文件与依赖重新编译，并完成显式注册 |
-| 官方现成 ModuleInterface DLL | **不承诺二进制兼容，也不支持拖入目录自动安装**；Kit 接口比本地上游少了两个虚函数，虚表布局不同 |
+| PowerToys / Kit 原生模块源码 | 支持 `KitModuleIface`、`kit_create`（兼容 `PowertoyModuleIface`、`powertoy_create` 别名）、配置 IPC、热键、设置页和 Worker 模型；移植时使用 Kit 的头文件与依赖重新编译，并完成显式注册 |
+| 官方现成 ModuleInterface DLL | **不承诺所有官方二进制可直接运行，也不支持拖入目录自动安装**；当前虚表槽位已对齐本地上游，仍须验证依赖、架构、配置、事件名和宿主能力 |
 | C# / C++ Worker | 支持，由原生 ModuleInterface 启动；Worker 自身不是 Runner 可直接加载的 DLL |
 | PowerToys Run 的 `IPlugin` / `plugin.json` | 当前没有 Run / Launcher 宿主，不能直接运行 |
 | Command Palette 扩展 | 当前没有 CmdPal 宿主，不能直接运行 |
-| `Awake.ModuleServices` / `PowerToys.ModuleContracts` | 保留适配源码并由 Awake 测试引用；`IModuleService` 面向 CmdPal，当前没有对应运行宿主，不是 Kit 的托管插件发现接口 |
+| `Awake.ModuleServices` / `Kit.ModuleContracts` | 保留适配源码并由 Awake 测试引用；`IModuleService` 面向 CmdPal，当前没有对应运行宿主，不是 Kit 的托管插件发现接口 |
 
-[Kit 接口头](src/modules/interface/powertoy_module_interface.h) 相比[上游接口头](source/PowerToys/src/modules/interface/powertoy_module_interface.h) 删除了 `keep_track_of_pressed_win_key()` 和 `milliseconds_win_key_must_be_pressed()`。导出函数同名不代表 ABI 相同；所有进程内模块必须与当前 Kit 接口、目标架构和工具链一起验证。
+[Kit 接口头](src/modules/interface/kit_module_interface.h)（保留旧 [powertoy_module_interface.h](src/modules/interface/powertoy_module_interface.h) 重定向头供平滑过渡）已按[上游接口头](source/PowerToys/src/modules/interface/powertoy_module_interface.h) 恢复 `keep_track_of_pressed_win_key()` 和 `milliseconds_win_key_must_be_pressed()` 的原始位置，但不恢复 Win 键长按轮询。`tools/tests/NativeModules/ModuleAbiSmoke.cpp` 分别使用上游头编译 DLL、Kit 头编译宿主，验证全部虚函数槽位、热键结构体及销毁调用。该测试只证明这一契约在当前 x64 工具链下对齐，不代表上游所有插件的运行依赖都已提供。
 
-[Runner](src/runner/main.cpp) 的 `KitKnownModules` 与 [KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 是活动模块入口。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表，Kit 的精简是把列表及相关界面缩到两个模块。
+[Runner](src/runner/main.cpp) 的 `KitKnownModules` 与 [KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 是活动模块入口。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表；Kit 仅注册当前三个模块，Localserver 没有 Quick Access 快捷动作。
 
 原生 DLL 与 Runner 共享进程和权限。Worker 隔离能限制业务进程崩溃的影响，**不构成不可信插件沙箱**；DLL 初始化、回调和销毁仍能影响主程序。
 
@@ -50,7 +50,7 @@ src/settings-ui/Settings.UI/
 - `get_key()`、`SampleSettings.ModuleName`、JSON 模块键、数据目录、路由映射必须一致，且不随语言变化。
 - 新模块 Key 使用固定的 ASCII 字母/数字名称，例如 `Sample`；禁止路径分隔符、`..`、绝对路径及保留目录名 `Settings`、`RunnerLogs` 等。现有路径 helper 不负责替调用者验证任意模块名。
 - 展示名称来自资源文件，可以本地化；不要用展示名称拼接持久化路径。
-- 新 Kit 自有模块可命名为 `Kit.SampleModuleInterface.dll`、`Kit.Sample.exe`；复制的官方模块继续保留既有 `PowerToys.*` 程序集和命名空间，避免无关重命名。加载清单必须填写真实产物名。
+- Kit 模块产物统一命名为 `Kit.<Module>ModuleInterface.dll`、`Kit.<Module>.exe`（如 `Kit.AwakeModuleInterface.dll`、`Kit.Awake.exe`、`Kit.Settings.exe` 等）；加载清单必须填写真实产物名。
 - 不要求每个插件新增库、数据库、独立 UI、注册表、GPO 或服务接口。只引入当前功能需要的项目和依赖；通常复用现有设置进程即可。
 
 ### 模板使用边界
@@ -63,14 +63,16 @@ src/settings-ui/Settings.UI/
 
 ## 3. 原生接口、热键与生命周期
 
-以 [powertoy_module_interface.h](src/modules/interface/powertoy_module_interface.h) 为契约源，不在新项目内复制、删改一份接口声明。必要导出形式为：
+以 [kit_module_interface.h](src/modules/interface/kit_module_interface.h) 为契约源（保留旧 [powertoy_module_interface.h](src/modules/interface/powertoy_module_interface.h) 转发头），不在新项目内复制、删改一份接口声明。标准导出形式为：
 
 ```cpp
-#include <interface/powertoy_module_interface.h>
+#include <interface/kit_module_interface.h>
 
 extern "C" __declspec(dllexport)
-PowertoyModuleIface* __cdecl powertoy_create();
+KitModuleIface* __cdecl kit_create();
 ```
+
+头文件保留 `using PowertoyModuleIface = KitModuleIface;` 和旧工厂指针类型别名。Runner 优先查找 `kit_create`，再查找 `powertoy_create`；C++ 类型别名不会自动生成第二个导出函数。新模块实现 `kit_create()`，确需双导出时显式定义转发函数。
 
 | 接口 | 新模块要求 |
 | --- | --- |
@@ -84,7 +86,7 @@ PowertoyModuleIface* __cdecl powertoy_create();
 | `is_enabled_by_default()` | 与 Settings 全局开关默认值一致；新模块优先默认关闭，避免安装后产生未请求的业务动作 |
 | `call_custom_action()` | 仅处理已定义动作，校验输入；不把任意字符串当作命令执行 |
 
-[加载器](src/runner/powertoy_module.cpp) 实际执行 `LoadLibraryW → GetProcAddress("powertoy_create") → create()`，退出时通过 [PowertoyModuleDeleter](src/runner/powertoy_module.h) 销毁对象，再卸载 DLL。工厂返回初始禁用对象；初始化失败可返回 `nullptr`。即使模块配置为禁用，DLL 仍会加载，因此构造函数也必须保持轻量。
+[加载器](src/runner/kit_module.cpp) 实际执行 `LoadLibraryExW → GetProcAddress("kit_create")（若未找到则回退至 "powertoy_create"）→ create()`，退出时通过 [KitModuleDeleter](src/runner/kit_module.h) 销毁对象，再卸载 DLL。工厂返回初始禁用对象；初始化失败可返回 `nullptr`。即使模块配置为禁用，DLL 仍会加载，因此构造函数也必须保持轻量。
 
 ### 热键
 
@@ -104,13 +106,15 @@ PowertoyModuleIface* __cdecl powertoy_create();
 6. Off / 按需模式在“首次启动、重启、重新启用、运行中切换”四种入口保持一致，不能只在 `set_config` 时停止 Worker。
 7. 有持续调度职责的模块明确异常退出后的恢复入口和退避策略；无任务时不要为了“健康检查”新增高频轮询。
 
-当前 Kit 在未打开辅助窗口时，关闭主 Settings 窗口会异步请求 Runner 退出，继而结束插件；存在辅助窗口时则隐藏主窗口，见 [MainWindow.xaml.cs](src/settings-ui/Settings.UI/SettingsXAML/MainWindow.xaml.cs)。Settings 创建失败或崩溃不等同用户退出，不再联动结束宿主。正常关闭、语言/权限重启和故障清理必须分别处理；新增模块不能假定用户关闭设置后仍继续常驻。
+Kit 自 2.0.13 起恢复托盘宿主行为：关闭主 Settings 窗口后，Runner 与其独立 Worker 继续运行；存在辅助窗口时，主窗口取消关闭并隐藏，见 [MainWindow.xaml.cs](src/settings-ui/Settings.UI/SettingsXAML/MainWindow.xaml.cs)。Settings 创建失败或崩溃也不联动结束宿主。页面监听 `Window.Closed` 时必须先检查 `args.Handled`，不能在取消关闭后释放缓存页。Localserver 有活跃服务时，正常关闭 Settings 会隐藏窗口并保留管理宿主及输出管道，隐藏页面暂停资源采样；重新打开恢复采样。没有活跃服务时，先异步完成待保存配置，再释放页面。完整退出 Kit、语言/权限重启和宿主崩溃不等同于关闭窗口；Localserver 尚无独立 Worker，不能保证依赖输出管道的进程在这些情况下继续工作。
+
+Localserver 当前是例外：真正关闭 Settings 会释放页面持有的管理资源；`ServiceRunner.Dispose()` 沿用原项目的保留服务进程语义，下次进入页面再根据 Kit 的 ownership 记录恢复管理。这不等于后台管理仍在运行，Settings 退出期间不能承诺继续采集日志、健康检查或自动重启。需要持续管理职责的后续变更，应先明确进程所有权和退出语义。
 
 ## 4. 配置、日志与数据隔离
 
 ### 4.1 当前路径与新增目录约定
 
-**产品根目录为 `%LOCALAPPDATA%\Kit`；插件按固定 ModuleKey 分目录。** 沿用现有平铺布局，不另加 `Plugins` 层，也不迁移现有两个模块的数据。
+**产品根目录为 `%LOCALAPPDATA%\Kit`；插件按固定 ModuleKey 分目录。** 沿用现有平铺布局，不另加 `Plugins` 层，也不迁移现有模块的数据。
 
 ```text
 %LOCALAPPDATA%\Kit\
@@ -119,7 +123,7 @@ PowertoyModuleIface* __cdecl powertoy_create();
 ├── settings-placement.json             # 设置窗口位置
 ├── RunnerLogs\
 │   └── runner-log.log                  # Runner 原生日志
-├── Settings\Logs\<assembly-version>\    # Settings 托管日志
+├── Settings\Logs\<assembly-version>\    # Settings 托管日志，含 Localserver 服务日志
 ├── Awake\
 │   ├── settings.json
 │   └── Logs\                           # 原生接口日志和托管版本日志
@@ -127,6 +131,14 @@ PowertoyModuleIface* __cdecl powertoy_create();
 │   ├── settings.json
 │   ├── ModuleInterface\Logs\<version>\
 │   └── Service\Logs\<version>\
+├── Localserver\
+│   ├── settings.json                   # Kit 模块设置
+│   ├── services.json                  # 当前实际读取的服务目录
+│   ├── services.d\                    # 可选：按服务拆分的配置
+│   ├── hub.settings.json              # 移植保留的管理器参数
+│   ├── secrets.dat                    # 当前用户 DPAPI 加密的秘密值
+│   ├── backups\                       # 服务配置备份
+│   └── State\service-<hash>.json       # 服务进程身份与恢复记录
 └── Sample\                             # 新模块目录约定，按需创建
     ├── settings.json                   # 用户配置
     ├── State\                          # 可选：运行状态，不混入配置
@@ -136,9 +148,14 @@ PowertoyModuleIface* __cdecl powertoy_create();
 
 上图未列出所有框架辅助文件。`Sample\State`、`Cache` 是新增数据有需要时才采用的约定，不代表框架已经实现通用存储服务。
 
+Localserver 的实际读写入口是 `ServiceCatalogStore`，文件名仍为 `services.json`；路径 helper 中的 `LinesFilePath` 和 `OwnershipFilePath` 不代表已启用 `lines.json` 或统一 `ownership.json`。文档应跟随调用链，不能仅按常量推断数据格式。
+
+Localserver 的服务日志复用 Settings 已初始化的 `ManagedCommon.Logger`，实际文件为 `%LOCALAPPDATA%\Kit\Settings\Logs\<assembly-version>\Log_yyyy-MM-dd.log`，用 `[Localserver]` 和服务 Id 区分来源。模块不重新初始化全局 Logger，不创建自己的日志文件或查看面板；旧 `Localserver\Logs` 目录不主动清理。
+
 | 数据或资源 | 位置与边界 |
 | --- | --- |
 | 模块用户配置、业务内部状态、缓存、日志 | `%LOCALAPPDATA%\Kit\<ModuleKey>\...`；模块不得清理相邻模块或整个 Kit 根目录 |
+| Settings 内运行的模块日志 | 复用 `%LOCALAPPDATA%\Kit\Settings\Logs\<assembly-version>\`，按模块和服务标识区分；不重设进程级 Logger 路径 |
 | 默认设置备份 | 当前是 `%USERPROFILE%\Documents\Kit\Backup`，由宿主统一管理，用户可调整；这是产品内部数据默认根目录之外的既有例外 |
 | 低完整性进程数据 | helper 保留 `%USERPROFILE%\AppData\LocalLow\Kit` 支持，仅实际需要低完整性进程时使用，不另造一套常规配置 |
 | 安装资产、图标、DLL、静态资源 | 随程序部署；不在安装目录写入运行状态，不把只读资产复制成用户配置 |
@@ -163,7 +180,7 @@ const auto settingsFile =
 C#：
 
 ```csharp
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Library;
 
 string settingsFile =
     SettingsUtils.Default.GetSettingsFilePath(SampleSettings.ModuleName);
@@ -189,6 +206,63 @@ string settingsFile =
 - Runner ↔ Settings 继续复用已有 TwoWayPipeMessageIPC。跨 C++/C# 新增常量时才同步 [shared_constants.h](src/common/interop/shared_constants.h) 与 `src/common/interop/Constants.idl/.h/.cpp`；没有跨语言需求不新建 WinMD 层。
 - 当前 Awake 单实例 Mutex 为 `Local\Kit.Awake`，显示名称仍为 `Awake`；进程状态判定同时检查 Kit 安装目录中的完整路径和会话，不接受任意同名官方进程。
 
+### 4.5 日志接口使用规范
+
+Kit 提供了统一的集中式日志基础设施，覆盖 C++ 原生模块接口、C++ 独立服务/Worker、C# 独立进程 Worker 以及在 Settings 宿主内运行的模块界面。所有日志输出统一受 `%LOCALAPPDATA%\Kit\log_settings.json`（由常规设置中的“日志”开关和日志级别控制）的运行时动态过滤。
+
+#### 1. C++ 原生接口与 C++ Worker
+
+* **头文件引用**：
+  ```cpp
+  #include <common/utils/logger_helper.h>
+  #include <common/logger/logger.h>
+  ```
+* **初始化**（在 DLL `kit_create()` 或服务进程启动入口调用）：
+  ```cpp
+  // 参数：模块名、内部组件子路径、logger 唯一标识名
+  LoggerHelpers::init_logger(L"Sample", L"ModuleInterface", "sample-module");
+  ```
+  * 自动绑定全局配置：根据 `%LOCALAPPDATA%\Kit\log_settings.json` 自动设置 `spdlog` 日志级别（`trace`/`debug`/`info`/`warn`/`err`/`critical`/`off`）。
+  * 自动生成存储路径：`%LOCALAPPDATA%\Kit\<ModuleName>\<InternalPath>\Logs\<Version>\log.log`。
+  * 自动轮转管理：保留当前版本的日志，清理陈旧版本的日志文件夹。
+* **日志写入宏**：
+  ```cpp
+  Logger::trace("Detailed step-by-step trace: {}", value);
+  Logger::info("Sample worker started successfully on pid {}", GetCurrentProcessId());
+  Logger::warn("Recoverable network timeout, retrying...");
+  Logger::error("Failed to parse configuration: {}", ex.what());
+  ```
+
+#### 2. C# 独立 Worker / 进程
+
+* **命名空间引用**：
+  ```csharp
+  using ManagedCommon;
+  ```
+* **初始化**（在进程入口 `Program.cs` 调用）：
+  ```csharp
+  // 参数：相对路径，例如 @"\Sample\Logs"
+  Logger.InitializeLogger(@"\Sample\Logs");
+  ```
+  * 自动从 `%LOCALAPPDATA%\Kit\log_settings.json` 读取全局日志开关与过滤级别，动态启用/禁用日志写入及级别过滤。
+  * 自动生成存储路径：`%LOCALAPPDATA%\Kit\Sample\Logs\<Version>\Log_yyyy-MM-dd.log`。
+* **日志写入方法**：
+  ```csharp
+  Logger.LogTrace("Detailed trace info");
+  Logger.LogDebug("Debug parameters state");
+  Logger.LogInfo("Service listening on port 8080");
+  Logger.LogWarning("Fallback route activated");
+  Logger.LogError("Exception caught during execution", exception);
+  Logger.LogCritical("Unrecoverable error occurred", exception);
+  ```
+
+#### 3. Settings 宿主内运行的模块（如 ViewModel / Page）
+
+* **复用宿主 Logger**：Settings 进程（`Kit.Settings.exe`）启动时已全局初始化了 `ManagedCommon.Logger`，写入目标为 `%LOCALAPPDATA%\Kit\Settings\Logs\<assembly-version>\Log_yyyy-MM-dd.log`。
+* **开发规范**：
+  * **禁止重新调用 `Logger.InitializeLogger`**，避免篡改整个设置宿主的日志路径与 TraceListener。
+  * **建议使用模块标签前缀**：直接调用 `Logger.LogInfo("[Sample] Target connection established.")` 或 `Logger.LogError("[Sample] Save failed", ex)`，以便在统一日志中按模块筛选定位问题。
+
 ## 5. 设置模型、序列化与 IPC
 
 ### 5.1 最小有效模型
@@ -197,9 +271,9 @@ string settingsFile =
 
 ```csharp
 using System.Text.Json.Serialization;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library;
+namespace Kit.Settings.UI.Library;
 
 public sealed class SampleSettings : BasePTModuleSettings, ISettingsConfig
 {
@@ -255,7 +329,7 @@ Page / ViewModel
   → 保存当前模块配置，并更新 Worker / 热键状态
 ```
 
-外层协议仍使用上游字段名，不能因为品牌为 Kit 就单方面重命名 `powertoys`：
+Runner 同时接受 `kit` 和旧 `powertoys` 外层字段，并在完整设置响应中提供两者。当前 `SndModuleSettings<T>` 仍发送 `powertoys`，以下示例与这个序列化模型一致；新增调用应复用该模型，不能只改发送端字段：
 
 ```json
 {
@@ -304,7 +378,7 @@ SettingsUtils.Default.SaveSettings(
 | 接入面 | 必须检查的文件与动作 |
 | --- | --- |
 | 工程与构建依赖 | [Kit.slnx](Kit.slnx)：添加实际需要的项目和 Runner 的 BuildDependency；独立构建项目与解决方案构建的依赖行为不同 |
-| 原生加载 | [main.cpp](src/runner/main.cpp)：`KitKnownModules` 添加真实 DLL 文件名；当前两个官方接口 DLL 均部署在 Runner 旁 |
+| 原生加载 | [main.cpp](src/runner/main.cpp)：`KitKnownModules` 添加真实 DLL 文件名；当前三个活动接口 DLL 均部署在 Runner 旁 |
 | 模块身份 | [ModuleType.cs](src/common/ManagedCommon/ModuleType.cs)、C++ Key、Settings.ModuleName、JSON key 保持一致 |
 | 全局开关 | [EnabledModules.cs](src/settings-ui/Settings.UI.Library/EnabledModules.cs) 添加属性/default/通知；[EnabledModulesJsonConverter.cs](src/settings-ui/Settings.UI.Library/EnabledModulesJsonConverter.cs) **同时增加 Read 和 Write** |
 | 活动列表与 CLI | [KitModuleCatalog.cs](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs)：ActiveModules、ActiveSettingsModuleKeys、ActiveEnabledModuleKeys；DashboardModules 当前复用 ActiveModules |
@@ -314,7 +388,7 @@ SettingsUtils.Default.SaveSettings(
 | 字符串路由与页面映射 | [App.xaml.cs](src/settings-ui/Settings.UI/SettingsXAML/App.xaml.cs) 的 `GetPage(string)`；[ModuleGpoHelper.cs](src/settings-ui/Settings.UI/Helpers/ModuleGpoHelper.cs) 的页面类型映射 |
 | 类型化深链 | [settings_window.h](src/runner/settings_window.h) 枚举、[settings_window.cpp](src/runner/settings_window.cpp) 字符串双向映射、[SettingsDeepLink.cs](src/common/Common.UI/SettingsDeepLink.cs) |
 | Dashboard 内容 | [DashboardViewModel.cs](src/settings-ui/Settings.UI/ViewModels/DashboardViewModel.cs) 的模块内容分派；展示真实状态，有动作才展示动作，无动作打开设置页 |
-| 图标部署 | [PowerToys.Settings.csproj](src/settings-ui/Settings.UI/PowerToys.Settings.csproj) 的大小图 **Exclude 保留清单**，以及 [Quick Access 工程](src/settings-ui/QuickAccess.UI/PowerToys.QuickAccess.csproj) 的小图标 Content 与 Exclude；两个工程共享 `WinUI3Apps` 输出，即使新模块没有快捷动作也必须同步，否则后续构建会删除新图标 |
+| 图标部署 | [Kit.Settings.csproj](src/settings-ui/Settings.UI/Kit.Settings.csproj) 的大小图 **Exclude 保留清单**，以及 [Quick Access 工程](src/settings-ui/QuickAccess.UI/Kit.QuickAccess.csproj) 的小图标 Content 与 Exclude；两个工程共享 `WinUI3Apps` 输出，即使新模块没有快捷动作也必须同步，否则后续构建会删除新图标 |
 
 按需入口：
 
@@ -370,6 +444,7 @@ NavHelper.SetNavigateTo(SampleNavigationItem, typeof(SamplePage));
 当前主窗口 [MainWindow.xaml](src/settings-ui/Settings.UI/SettingsXAML/MainWindow.xaml) 已采用 `<MicaBackdrop Kind="BaseAlt" />`。新模块设置页复用这个窗口，不为每个页面单独创建背景控制器或隐藏预热窗口。
 
 - 页面继承 [NavigablePage](src/settings-ui/Settings.UI/Helpers/NavigablePage.cs)，容器保持透明；使用 [SettingsPageControl](src/settings-ui/Settings.UI/SettingsXAML/Controls/SettingsPageControl/SettingsPageControl.xaml) 与现有 SettingsCard / SettingsExpander / SettingsGroup。
+- `SettingsExpander.Items` 的默认样式目标是 `SettingsCard`。日志、图表等自定义布局必须放在 `SettingsCard` 内，再按需设置 `HorizontalContentAlignment="Stretch"` / `ContentAlignment="Vertical"`；直接把 `Border` 或 `Grid` 放进 Items 会在展开时应用不兼容样式并导致 WinUI 异常。编译成功不能替代实际展开验证。
 - 卡片颜色通过 [Colors.xaml](src/settings-ui/Settings.UI/SettingsXAML/Themes/Colors.xaml) 的 ThemeResource 获取。当前 `CardBackgroundFillColorDefaultBrush` 为浅色 `#80FFFFFF`、深色 `#0AFFFFFF`；描边分别为 `#18000000`、`#1AFFFFFF`。这些是基线值，不应复制成每页硬编码。
 - [Card.xaml](src/settings-ui/Settings.UI.Controls/Primitives/Card.xaml) 已将外层背景设为透明，由内层 Grid 绘制一次背景和边框。不要再叠一层不透明白底或重复描边。
 - 高对比度、关闭透明效果、窗口失焦时使用系统支持的回退，保证文字可读；不把截图中的 Mica 颜色当成固定颜色值。
@@ -389,7 +464,7 @@ NavHelper.SetNavigateTo(SampleNavigationItem, typeof(SamplePage));
 - 新代码不注册行为遥测 Provider、不发送事件、不增加 ManagedTelemetry / EtwTrace 依赖。移植代码确需保留 Trace 调用形状时，用小范围 no-op 维持源码兼容，不要求每个全新插件都创建无用的 `trace.h/.cpp`。
 - 共享库、包与版本优先复用当前工程；新增依赖必须说明当前用途。移除依赖前检查实际引用和产物，不能把源目录还在等同于库参与启动。
 
-当前活动 Runner、Awake、LightSwitch 的 trace 入口已为空实现或删除，旧 `common/Telemetry` 源目录仍存在。本轮移除周期版本检查及重试线程，仅保留用户在 Settings 主动触发的版本查询、结果状态和发布页入口，不下载或安装更新。
+当前活动 Runner、Awake、LightSwitch、Localserver 的 trace 入口已为空实现或删除，旧 `common/Telemetry` 源目录仍存在。周期版本检查及重试线程已移除，仅保留用户在 Settings 主动触发的版本查询、结果状态和发布页入口，不下载或安装更新。Localserver 的硬件采样方法沿用 `Telemetry` 命名，但只读取本机状态，没有行为遥测上报。
 
 ### 9.2 性能记录与优化顺序
 
@@ -442,7 +517,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Awake tests failed' }
 - 独立验证某项目可给 `build.ps1 -Path` 传该项目目录。不要启动多个独立 MSBuild 同时写共享 WinMD、PDB 和 tracking 文件；使用顺序构建或同一解决方案调度。
 - `build-essentials.ps1` 当前 restore 解决方案后主要构建 Runner、Settings 和 Quick Access；它不是所有新插件 Worker 已生成的证明。
 - 直接构建 `Kit.vcxproj` 不会执行 `Kit.slnx` 中的全部模块 BuildDependency。新增模块必须验证 Worker、接口 DLL 和 UI 都来自本次构建。
-- 使用 `PowerToys.Interop` / `PowerToys.GPOWrapper` 时保留必要项目引用，验证隔离的干净 Release 输出能重建 WinMD 和 CsWinRT 投影，不能靠旧产物或手工复制 DLL 通过。
+- 使用 `Kit.Interop` / `Kit.GPOWrapper` 时保留必要项目引用，验证隔离的干净 Release 输出能重建 WinMD 和 CsWinRT 投影，不能靠旧产物或手工复制 DLL 通过。
 - 测试以本次实际构建的结果为准，记录数量和失败原因；历史 `186/186` 等数字不是永久验收门槛。
 
 ### 10.2 当前实际输出
@@ -452,20 +527,23 @@ if ($LASTEXITCODE -ne 0) { throw 'Awake tests failed' }
 ```text
 x64/Debug/
 ├── Kit.exe
-├── PowerToys.AwakeModuleInterface.dll
-├── PowerToys.LightSwitchModuleInterface.dll
-├── PowerToys.Awake.exe
+├── Kit.AwakeModuleInterface.dll
+├── Kit.LightSwitchModuleInterface.dll
+├── Kit.LocalserverModuleInterface.dll
+├── Kit.Awake.exe
 ├── LightSwitchService/
-│   └── PowerToys.LightSwitchService.exe
+│   └── Kit.LightSwitchService.exe
 ├── WinUI3Apps/
-│   ├── PowerToys.Settings.exe
-│   ├── PowerToys.QuickAccess.exe
+│   ├── Kit.Settings.exe
+│   ├── Kit.QuickAccess.exe
+│   ├── LocalserverLib.dll
 │   └── Assets/Settings/...
 └── tests/
     ├── Awake.UnitTests/Awake.UnitTests.dll
     ├── Awake.ModuleServices.UnitTests/Awake.ModuleServices.UnitTests.dll
     ├── UnitTestsCommonUtils/Common.Utils.UnitTests.dll
-    └── ModuleTemplate/ModuleTemplateCompileTest.dll
+    ├── ModuleTemplate/ModuleTemplateCompileTest.dll
+    └── AiHub/Kit.AiHub.UnitTests.exe
 
 Debug/x64/tests/SettingsTests/net10.0-windows10.0.26100.0/
 └── Settings.UI.UnitTests.dll
@@ -496,9 +574,9 @@ Debug/x64/tests/SettingsTests/net10.0-windows10.0.26100.0/
 
 Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运行、长任务可取消并反馈进度、配置与运行状态分离、注册点同步、WinMD 干净重建、退出资源回收。不要从旧材料恢复 Monitor 本身、数据库依赖或已经删除的模块列表。
 
-## 12. 本次 review、修复与验证
+## 12. Review、修复与验证记录
 
-先核对本地上游、代码和资源，再按宿主稳定性、插件隔离与恢复、启动轻量化、开发模板的顺序修复。以下记录本轮工作区行为；实际构建与测试结果单独列出，不把源码推演当作运行期证明。
+先核对本地上游、代码和资源，再按宿主稳定性、插件隔离与恢复、启动轻量化、开发模板的顺序修复。12.1 记录初次 PowerToys review，12.2–12.3 按当前代码更新，实际构建与测试结果单独列出，不把源码推演当作运行期证明。
 
 ### 12.1 与本地上游的同步进度
 
@@ -509,7 +587,7 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 | LightSwitch 业务核心 | LightSwitchLib、ThemeScheduler、Night Light observer 与本地快照对齐；保留固定时段、日落日出及偏移、跟随夜间模式、系统/应用主题与快捷键 |
 | LightSwitch 有意裁剪 | PowerDisplay 配置和事件桥接移除；forceLight/forceDark 自定义动作移除，上游对应 UI 已注释，不把它误报为可见按钮缺失 |
 | 测试同步 | 已引入 Awake 两个测试项目及三个原样上游测试源文件，并补充 Mutex 并存和完整进程路径验证；LightSwitch UI 测试源码仍在，源码存在不代表已运行通过 |
-| 提交覆盖 | `37bff1d` 实际只修改 README 与 Awake 共 11 个文件，没有 LightSwitch 变更；`3524ba3` 才包含两个模块生命周期及 LightSwitch 依赖调整；本轮修复尚在工作区 |
+| 提交覆盖 | 初次 review 中，`37bff1d` 只修改 README 与 Awake 共 11 个文件，没有 LightSwitch 变更；`3524ba3` 包含两个模块生命周期及 LightSwitch 依赖调整。后续已经推进至 `1ebfa49` / 2.0.13，不能把初次 review 的“未提交”状态当作当前状态 |
 | WinUI 3 + Mica | BaseAlt 主背景、透明页面、卡片背景/边框单层绘制和主题资源调整已落地；运行期视觉与无障碍验收仍需执行 |
 
 不沿用旧 `kit-sync-status.md` 的“Awake 落后 23 文件”“95% 同步”等历史估算；不把删除遥测/PowerDisplay 的文件差异算作必须补回的缺失。后续同步应记录上游 commit、保留功能、Kit 有意差异、未合入行为和验证结果。
@@ -518,7 +596,7 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 
 | 优先级 | 修复与当前行为 |
 | --- | --- |
-| P2 | **Settings 故障隔离和退出。** [settings_window.cpp](src/runner/settings_window.cpp) 的通用失败清理不再发 Runner 退出消息；正常关闭改用异步 `PostMessage`，避免 Settings 同步等 Runner、Runner 又等待 Settings 的退出环 |
+| P2 | **Settings 故障隔离和退出。** [settings_window.cpp](src/runner/settings_window.cpp) 的通用失败清理不再发 Runner 退出消息；2.0.13 已恢复关闭 Settings 后 Runner 继续托盘运行，正常退出与设置重启分别处理 |
 | P2 | **Settings 重开与重启交接。** IPC 指针与 PID 用同一互斥量保护；单个可 join 的生命周期线程持有子进程句柄，并等待退出或关闭事件。关闭标记与创建过程串行化，Runner 在锁外等待线程完成清理，避免退出后又创建窗口；IPC 重启请求发送后由 Runner 关闭旧 UI，再交接新实例，避免异步请求丢失和共享退出事件残留 |
 | P2 | **Awake 与官方并存。** [Constants.cs](src/modules/awake/Awake/Core/Constants.cs) 使用 `Local\Kit.Awake`；[AwakeService](src/modules/awake/Awake.ModuleServices/AwakeService.cs) 按 Kit 安装路径和会话确认进程，释放所有候选 `Process` 对象 |
 | P2 | **LightSwitch Off 与重复启用。** [dllmain.cpp](src/modules/LightSwitch/LightSwitchModuleInterface/dllmain.cpp) 在 Off 下只保留手动切换监听；Worker 启停统一由该监听线程处理，重复 enable 不重复创建；设置先持久化，再通知监听线程 |
@@ -530,7 +608,7 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 
 | 项目 | 当前行为与边界 |
 | --- | --- |
-| 活动模块列表 | 已缩为 Awake/LightSwitch；保留对这两个 DLL 的正常加载和配置处理 |
+| 活动模块列表 | 显式注册 Awake/LightSwitch/Localserver 三个接口 DLL；Localserver 的页面、采样与管理对象按导航需要创建，未新增目录发现扫描 |
 | Quick Access 延迟 | 开启或修改热键均不提前启动；首次展示通过受管理的线程池任务创建进程，重复请求合并，停用会取消排队工作并等待活动回调收尾，低级键盘钩子不执行进程冷启动 |
 | 自动更新检查 | 移除启动调用、周期线程、失败重试和更新 toast；只保留明确的手动检查及发布页入口 |
 | 无关旧清理 | 移除旧摄像头注册清理函数、调用及无人引用的头文件，同时删除无效更新后通知等待线程 |
@@ -541,9 +619,49 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 
 ### 12.4 验证结果与剩余边界
 
-构建及测试验证进行中，完成后在本节记录实际结果。
+2026-09-14 完成 `2.0.15` x64 Debug 构建与交付。日志接入和布局修改在升版前通过 Settings 190 项、业务契约 24 项、日志接入 10 项检查；以下为升版后的最终产物验证：
+
+| 验证范围 | 实际结果 |
+| --- | --- |
+| 完整 `Kit.slnx` x64 Debug 构建 | 成功，0 错误；保留 55 条 `LocalserverLib.csproj` 既有警告，包含 AOT/裁剪、取消令牌和静态分析警告。此结果不代表 NativeAOT 发布验证通过 |
+| Settings 与 Awake 测试 | 201/201 通过，其中 Settings 190 项、Awake 两个测试工程合计 11 项 |
+| 原生 GPO 兼容测试 | 3/3 通过；仅运行 `GpoTests`，不把其他原生测试计为已验证 |
+| Localserver 业务契约 | 24/24 通过，引用本次 `LocalserverLib.dll`，覆盖配置来源、并发保存、跨来源重排、秘密迁移、备份恢复、环形缓冲和实际端口变量；只操作测试临时目录 |
+| Kit 日志接入 | 10/10 通过，使用真实 ManagedCommon Logger 与隔离 Trace listener，覆盖多服务、脱敏事件、截断、过载、写入异常、共享缩进恢复、非阻塞释放和退出等待；未启动真实服务或读取用户日志 |
+| 语言与 XAML 资源 | 源码中英文各 212 个 Localserver 资源键、52 个 XAML Uid、137 个源码 literal 键通过匹配校验；最终 PRI 的 212 项均包含两种语言，旧日志/诊断折叠栏资源已删除 |
+| Debug 交付 | `bin/debug/2.0.15`，1330 个文件、24 个 PDB；12 个产品二进制及 Sparse 包版本一致，运行依赖缺失为 0，复制前后 SHA-256 全部一致。保留已有旧版本交付目录 |
+| 运行与界面 | 已确认 Runner 与 Settings 均从 `bin/debug/2.0.15` 启动。Windows 自动化仍出现同一窗口归属错误，未将卡片布局、缩放和完整交互计为通过；需用户实际反馈 |
+
+构建、TRX、两组隔离回归、PRI dump 和文件哈希记录位于 `TestResults/LocalserverReview`。这些结果验证当前 Kit 产物，不用原项目测试数量代替本轮结果。
 
 剩余边界：上游官方 DLL 的 ABI、Run/CmdPal 宿主没有新增兼容承诺；LightSwitch 既有同步主题广播可能延长禁用时的线程等待；WinUI/Mica 多主题、缩放、无障碍和完整语言/权限重启仍需运行期验收。没有为了这些后续事项新增插件发现框架、后台健康轮询或跨平台层。
+
+### 12.5 Localserver 移植要求与当前边界
+
+- **语言与状态分离。** XAML 文案使用 `x:Uid`，动态文案使用现有 `GetLocalized()`；分别在 `Strings/en-us/Resources.resw` 和 `Strings/zh-CN/Resources.resw` 配齐键及格式化参数。服务状态、颜色、可执行动作由枚举控制，不根据翻译后的文本判断。用户服务名、真实命令和标准输出/错误流保持原文。
+- **生命周期。** 页面使用导航缓存；离页停止硬件采样，返回后恢复。服务日志转发覆盖所有已加载服务，不依赖当前页面或所选服务。缓存页只在 Settings 真正关闭时释放，取消关闭/隐藏不触发 Dispose；异步采样和环境检查防重入，并在返回 UI 前复核页面和选中服务。模块总开关约束启动与重启；停止已运行服务仍可用，关闭总开关不会自动终止它们。
+- **日志。** 当前页面保留有界日志预览，复用 2 秒采样节拍增量刷新，最多保留 2000 行；持久化统一走 Kit 日志链路。只订阅 `ServiceRunner.LogAppended` 已脱敏的 `LogLine`，经过有界后台队列批量转发至 Kit 的 `ManagedCommon.Logger`；保留时间、流类型、服务 Id 和序号。当前队列上限 512 条，正文/服务 Id 分别限 8192/256 字符并标记截断；活跃输出按 100 ms 合批，每批最多 128 条、65536 字符，空闲时不轮询。不能在 stdout/stderr 读取线程逐条同步刷盘，也不新增每行 Task 或 UI Dispatcher 操作。队列过载汇总丢弃数量；写入失败只记录计数并恢复 Trace 缩进，不泄露异常正文或中断服务输出捕获。保留核心 `LogRingBuffer` 和健康匹配流程，落盘队列不参与健康判断。重载、删除、最终释放均解绑事件；Dispose 非阻塞结束队列，进程退出最多等待 500 ms，异常退出不保证最后的排队记录落盘。
+- **配置持久化。** 复用 `LoadAndMigrateSecretsAsync` 处理秘密值，保存使用 `UpdateAsync(expectedCatalog)` 保留 `services.d` 来源及并发校验。配置恢复、保存冲突和操作失败显示本地化提示；显式保存的空目录应保持为空，不反复生成示例。
+- **服务链接。** 复用 `VariableExpander` 根据实际端口和配置展开模板，只有有效的 HTTP/HTTPS URI 才显示打开入口。
+- **终止进程。** 强制终止和释放端口先显示明确目标及取消按钮。端口释放复用 `PortInspector.ReleaseAsync`，同时核验 PID、创建时间和当前监听端口；不能仅凭过期 PID 调用 Kill。
+- **界面。** Health（健康状态）与 System（系统资源）在启用开关下方常驻，位于服务清单之前，不放进折叠栏。服务选择器属于 Health 卡；两卡内容区宽度达到 720 DIP 时并列，较窄时纵向排列，自动高度避免裁切。移除本页顶部介绍图以减少留白；服务清单与启停操作放在状态卡之后，工具栏可换行。复用宿主 Mica、主题色和字体；编辑区在服务运行时锁定，命令支持选择复制，空服务清单有明确提示。
+- **并存。** 数据与恢复记录只使用 Kit 模块目录。移植保留的 `Local\LocalServerHub.Service.<hash>` Job 名包含服务 Id 与每次启动新建的随机 owner tag，正常独立启动不会仅因前缀相同复用原项目的 Job；仍拒绝已存在的命名 Job。新模块继续遵守第 4.4 节的 Kit 命名约定。
+
+当前没有恢复原项目的独立主窗口、托盘或文件日志宿主，也未新增通用插件发现、后台服务或健康巡检框架。原项目测试只有在引用当前 Kit 产物、限制在测试目录并排除真实服务操作后，才能作为这次移植的验证证据。
+
+### 12.6 Gemini 工作区复核与 2.0.20 Debug
+
+本轮从 `2.0.19` 的实际源码继续复核，首次完整构建出现 544 个错误、3 个警告，不能沿用旧签署中的“全绿”结论。已修复 SettingsAPI 命名空间、Awake 重复 Interop 投影、EXE/PRI 名称、原生接口虚表槽位、加载器缓冲区、Settings IPC 线程与退出清理、Localserver 停止和取消流程，并将搜索索引改为首次查询时建立。
+
+- 模板现在使用 `KitModuleIface` / `kit_create` / `KitSettings`，VS 显示名为 **Kit Module Template**；ZIP 的 11 个条目与源码校验一致。
+- Localserver 日志预览在后续版本已恢复。本轮限制为每 2 秒增量刷新、最多 2000 行；真实日志继续走 Kit 有界日志队列。文件夹入口指向 `ManagedCommon.Logger.CurrentVersionLogDirectoryPath`，不创建另一套独立服务日志存储。
+- Localserver 正常关闭窗口前会异步保存待提交编辑；有运行、启动、停止或重试中的服务时隐藏 Settings 并保留宿主与输出管道。它尚无独立后台 Worker，完整退出/重启/崩溃后的管道服务连续运行不在保证范围。
+- LightSwitch 的配置和运行状态改为锁内快照。原生生命周期回归覆盖反复启停、崩溃后恢复、快速模式切换和销毁；真实 Worker 的预先停止和父进程绑定错误也已验证。
+- 最终七套测试合计 319 项通过、1 项因测试环境无法创建目录符号链接而跳过：Settings 190、Localserver 生命周期 7、Awake 核心 8、ModuleServices 3、GPO 3、Interop 1、AI Hub 107。独立 Native AOT 冒烟通过；完整 Debug 构建为 0 errors / 50 warnings。独立 `bin/debug/2.0.20` 的依赖与资源校验、Runner 三次启动和 Settings 进程启动检查通过。完整证据、告警和交付清单见 [fixed.md 第 11 节](fixed.md#11-本轮源码复核与验证记录2026-09-14)。
+- LocalserverLib 仍有反射 JSON 及 WinRT/裁剪分析告警。AI Hub 的 AOT 结果不能用于宣称整个 WinUI 应用或 LocalserverLib 已完成 AOT 验收，也不能通过新增全局 NoWarn 隐藏差距。
+- Windows 自动化不能正确绑定当前 Kit 窗口，实际布局、展开收起、关闭保存和隐藏后恢复仍需桌面反馈。本轮未改动参考源码或开展新插件功能。
+
+原生回归工具位于 `tools/tests/NativeModules/`。`Measure-RunnerStartup.ps1` 只测 Runner 后台初始化，并用本轮创建的精确进程句柄测试父进程退出联动；该耗时不代表 WinUI 首屏时间。交付由 `tools/build/Stage-Debug.ps1` 从当前版本产物生成，保留旧 Debug 目录，校验产物版本、依赖、资源和 SHA-256。
 
 ## 13. 上游文档与 Monitor 经验的使用方式
 
@@ -557,7 +675,181 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 | [模块通信](source/PowerToys/doc/devdocs/core/settings/communication-with-modules.md)与[Runner IPC](source/PowerToys/doc/devdocs/core/settings/runner-ipc.md) | JSON 消息与配置分派 | 保留协议字段，按 Kit 当前命名事件与进程生命周期验证 |
 | [Run 插件清单](source/PowerToys/doc/devdocs/modules/launcher/new-plugin-checklist.md) | Run 宿主的插件开发方式 | 当前不可直接用于 Kit 原生模块，必须先有对应宿主 |
 | [Kit first-plugin](doc/devdoc/kit-first-plugin.md) | 原生模块优先、注册及构建经验 | 文中的 `knownModules` / `src/kit` 是旧写法，当前为 `KitKnownModules` / 仓库根 |
-| [Kit 开发经验](doc/devdoc/kit-development-experience.md)与[Monitor 移除记录](doc/devdoc/monitor-removal-plan.md) | 生命周期、状态/配置分离、WinMD、注册一致性 | Monitor、PowerDisplay、旧版本号和测试数量属于历史，不能当作当前活动结构 |
-| [历史 devdoc 指南](doc/devdoc/AGENTS.md) | 上游小差异、显式列表、构建纪律 | 仍列 Monitor 为活动模块，本规范明确当前只保留 Awake/LightSwitch |
+| [Kit 开发经验](doc/devdoc/kit-development-experience.md) | 生命周期、状态/配置分离、WinMD、注册一致性 | Monitor、PowerDisplay、旧版本号和测试数量属于历史，不能当作当前活动结构 |
+| [历史 devdoc 指南](doc/devdoc/AGENTS.md) | 上游小差异、显式列表、构建纪律 | 当前活动模块以本规范和源码为准：Awake/LightSwitch/Localserver |
+| [原 Localserver 项目](../Localserver) | 配置来源回写、进程所有权、日志批处理与环境检查 | 复用现有逻辑并接入 Kit 语言和目录；不恢复独立窗口、托盘或另一套主框架 |
 
 同步上游时，在插件变更说明中记录对应 commit、功能变化、Kit 必须保留的路径/事件/遥测裁剪、相关测试及未验证场景。同步目标是所需功能和契约正确，不是把已剔除的框架职责重新搬回 Kit。
+
+## 14. AI Hub：共享任务接口与移植约束
+
+AI Hub 是托管共享基础库，不是新的 `KitModuleIface` DLL。入口位于 Kit 的“设置 → AI Hub”，没有独立一级导航、Dashboard 插件卡片或首页启用开关；打开 AI Hub 后侧栏保持“设置”选中，页面提供返回设置入口。全局启用开关只放在 AI Hub 设置页，通过 `AiHubSettingsStore` 管理 `%LOCALAPPDATA%\Kit\AiHub\settings.json` 中的 `isEnabled`。第 5 节的原生模块 `GeneralSettings.Enabled` 规则不用于 AI Hub，不能另建 `AiHubSettings.Properties` 或通过通用模块设置命令覆盖这份文件。
+
+实现入口为 [Kit.AiHub.csproj](src/common/AiHub/Kit.AiHub.csproj)、[IAiTaskEngine](src/common/AiHub/Models/AiTaskContracts.cs)、[TaskAiEngine](src/common/AiHub/Engine/TaskAiEngine.cs)。项目跟随 Kit 的 `net10.0-windows10.0.26100.0` 和集中包版本管理；JSON 必须使用 source-generated metadata。不能用屏蔽 `IL2026` / `IL3050` 证明支持 AOT。共享库的 Native AOT smoke 与整个 WinUI Settings 应用的发布方式需要分开验证，不宣称未测量的启动或内存改善比例。
+
+### 14.1 三种获取方式
+
+| 插件形态 | 获取方式 | 生命周期与前提 |
+| --- | --- | --- |
+| Settings 内的托管页面 | `AiHubEngine.Current`，或由构造函数注入 `IAiTaskEngine` | 共享实例由宿主关闭时释放；插件只解绑自己的 `StateChanged`，不能 Dispose 单例 |
+| 独立托管 Worker | `using IAiTaskEngine engine = AiHubEngine.Create();` | 同一 Windows 用户自动共享配置、DPAPI 凭据及内核；Worker 释放自己的实例，不需要 Settings 窗口常驻 |
+| Runner 内原生 C++ DLL | [ai_hub_client.h](src/common/interop/ai_hub_client.h) 的 `kit::ai::request` | 在插件 Worker 线程调用；需要 Kit Settings 作为托管宿主运行；使用既有 Runner／Settings 双向命名管道 |
+
+`AiHubEngine.Create(customDataDirectory, pluginPackagesDirectory)` 可用于测试或明确指定的独立数据根。配置、凭据、安全策略与请求临时目录属于前者；插件策略只从后者按 ModuleKey 查找。测试必须传入独立目录，不能读取真实用户的端点或密钥。
+
+所有调用在关闭状态返回 `AiErrorCode.HubDisabled`，不探测或启动 CLI。配置更改会通过文件通知刷新 Worker 的 `StateChanged`；执行前再次读最新配置和凭据，关闭开关会取消进行中的任务。事件可能来自后台线程，UI 更新必须转发到自己的 `DispatcherQueue`。每个引擎按 `maxConcurrentAnalysis` 限制同时运行的批次，范围 1–4；它不是多个 Worker 合计的全局配额。
+
+### 14.2 插件策略目录与部署
+
+```text
+src/modules/Sample/SampleLib/
+  Chains/
+    diagnostic/
+      AGENTS.md
+      security.md
+    config-review/
+      AGENTS.md
+      security.md
+
+<Kit install directory>/
+  modules/Sample/Chains/diagnostic/AGENTS.md
+  modules/Sample/Chains/diagnostic/security.md
+```
+
+`pluginId`、`taskId` 必须是受限的 ASCII 单段标识，不接受绝对路径、斜杠、`..` 或重解析点。不同插件的同名任务互相隔离。AI Hub 不再查找共享的 `AiHub/chains/<taskId>` 或顶层 `chains`，也不把 `AGENTS.md` 暴露为 Settings 编辑项。缺少任务策略即拒绝执行，不隐式选择另一个任务。
+
+在插件库中将资源部署到统一位置，不能依赖开发机的源码绝对路径：
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="$(RepoRoot)src\common\AiHub\Kit.AiHub.csproj" />
+  <Content Include="Chains\**\*.md">
+    <TargetPath>modules\Sample\Chains\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+  </Content>
+</ItemGroup>
+```
+
+最终 Debug／发布目录必须实际包含这些文件；只在源码目录中存在不算完成部署。原生插件如需相同策略，也部署到这一路径，不复制解析器。
+
+### 14.3 强类型调用与 AOT
+
+泛型类型不能由共享库预先猜测。调用方必须传 `AiTaskSchema<TInput,TOutput>`，其中包含插件自己的 `JsonTypeInfo<TInput>`、`JsonTypeInfo<TOutput>` 与必需的 `ValidateOutput`。超过一批的数据还必须提供 `MergeBatches`。禁止调用无 metadata 的 `JsonSerializer.Serialize<T>` / `Deserialize<T>` 作为兜底。
+
+常规诊断可直接复用 [AiTaskReport](src/common/AiHub/Models/AiTaskReport.cs) 的双语 finding 和只读建议契约：
+
+```csharp
+using System.Text.Json.Serialization;
+using Kit.AiHub.Contract;
+using Kit.AiHub.Engine;
+
+public sealed record ServiceInput(string State, bool? Healthy);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(ServiceInput))]
+internal sealed partial class PluginJsonContext : JsonSerializerContext
+{
+}
+
+public static class Diagnostics
+{
+    public static Task<AiTaskResult<AiTaskReport>> RunAsync(
+        IAiTaskEngine engine,
+        IReadOnlyList<ServiceInput> snapshot,
+        CancellationToken cancellationToken)
+    {
+        // Select the private task chain and provide compile-time JSON metadata.
+        return engine.ExecuteTaskAsync(
+            pluginId: "Sample",
+            taskId: "diagnostic",
+            items: snapshot,
+            schema: AiTaskReport.CreateSchema(PluginJsonContext.Default.ServiceInput),
+            options: new AiTaskOptions { Language = "en-US", TimeoutSeconds = 120 },
+            cancellationToken: cancellationToken);
+    }
+}
+
+// In-process use: the host owns this singleton.
+IAiTaskEngine shared = AiHubEngine.Current;
+
+// Independent worker use: this worker owns the returned instance.
+using IAiTaskEngine worker = AiHubEngine.Create();
+```
+
+示例最后两种获取方式放在调用方的方法体中。`Language` 应传 Kit 当前 UI 语言，只有 `en-US` / `zh-CN`；状态逻辑和错误处理使用 `AiErrorCode`，不能解析英文 `ErrorMessage`。
+
+引擎将输入包装为 `{ "itemId": "item-000001", "data": ... }`；编号在一次调用内按输入顺序固定，跨批次不重排。插件保留本地快照，用编号映射回自己的服务名或对象，避免将名称、绝对路径或业务 ID 当成模型引用。结果只能引用当前批次的编号。输入先逐字段、逐字符串脱敏，再序列化发送，不能对已转义的整个 JSON 做正则替换。
+
+自定义输出类型应使用 `JsonUnmappedMemberHandling.Disallow` 和必要的 required 属性。插件的 validator 必须检查必填内容、双语字段、重复引用和业务约束；合并函数返回后还会再校验。`AllowedActions` 默认仅 `skip`；需要 move/delete/restart 建议的插件必须明确声明并验证目标路径，随后在自己的执行入口重新核实当前对象和用户确认。模型返回的 `isConfirmedByUser`、命令、脚本或越界路径不能成为执行授权。
+
+### 14.4 原生 IPC 契约
+
+原生入口通过 `GetProcAddress` 查找 Runner 的可选 `KitAiHubRequest` 导出，不修改 `KitModuleIface` 的 vtable，也不要求现有 Awake／LightSwitch 增加虚方法。
+
+```cpp
+#include <common/interop/ai_hub_client.h>
+#include <common/utils/json.h>
+
+// Run on a plugin worker thread, never on the Runner UI or hotkey thread.
+json::JsonObject request;
+request.SetNamedValue(L"target", json::JsonValue::CreateStringValue(L"AiHub"));
+request.SetNamedValue(L"action", json::JsonValue::CreateStringValue(L"ai_task_request"));
+request.SetNamedValue(L"pluginId", json::JsonValue::CreateStringValue(L"Sample"));
+request.SetNamedValue(L"taskId", json::JsonValue::CreateStringValue(L"diagnostic"));
+request.SetNamedValue(L"language", json::JsonValue::CreateStringValue(L"en-US"));
+request.SetNamedValue(L"timeoutSeconds", json::JsonValue::CreateNumberValue(120));
+
+json::JsonArray items;
+json::JsonObject item;
+item.SetNamedValue(L"state", json::JsonValue::CreateStringValue(L"running"));
+items.Append(item);
+request.SetNamedValue(L"items", items);
+
+std::wstring response;
+HRESULT transport = kit::ai::request(request.Stringify().c_str(), response, 130000, cancellationEvent);
+// S_OK means a response arrived; inspect isSuccess/errorCode before using payload.
+```
+
+Runner 自动写入协议 `version: 1` 和唯一 `requestId`；Settings 的 [AiHubIpcBridge](src/settings-ui/Settings.UI/Helpers/AiHubIpcBridge.cs) 已接入 App 收包入口，交给同一个 `IAiTaskEngine` 执行。响应为 `target: AiHub`、`action: ai_task_response`，保留 requestId，并提供 `isSuccess`、字符串 `errorCode`、`payload`、`usedModel`、`usedRoute`、`elapsedMilliseconds`。原生任务输出采用共享 `AiTaskReport` 契约；`get_status` 可以只查询启用状态和内核，不提交任务。
+
+每个 Runner 最多 16 个待处理请求，发送消息上限 524,288 个 UTF-16 字符，响应上限 1,048,576 个字符。超时或调用方的取消事件会发出关联的 `ai_task_cancel`；宿主退出会唤醒等待线程，不依赖其完整任务超时。Settings 未运行返回 `ERROR_NOT_READY`，缺少入口的宿主返回 `ERROR_NOT_SUPPORTED`；插件应显示可操作的状态，不自行写凭据或启动另一套 AI 配置。此接口供 Kit 进程内可信插件使用，不是对外开放的服务端点。
+
+### 14.5 数据、内核与错误边界
+
+```text
+%LOCALAPPDATA%\Kit\AiHub\
+  settings.json               # Non-secret configuration
+  secrets.dat                 # DPAPI CurrentUser encrypted credentials
+  .settings-transaction.dat   # Encrypted recovery journal, only during a transaction
+  security.md                 # User-editable global task policy
+  kernels\                   # Verified Codex / Pi installations and update staging
+  requests\                  # Unique ephemeral CLI homes and task working directories
+```
+
+配置和密钥使用同一把按数据目录区分的跨进程 mutex，并以加密恢复记录协调提交。`Update(Action<AiHubConfig>)` 在锁内读取最新快照、只更改目标字段并提交：开关不保存端点草稿，切换内核不覆盖其他 Worker 的配置。失败会报错并保留或恢复旧文件，不吞掉 DPAPI 写入失败；损坏文件不会被当成空配置覆盖。跨会话共用目录需要 `Global\Kit.AiHub.<directory-hash>` 存储锁，这是文件一致性用途，不改变插件常规命名事件的会话范围。
+
+内核版本检查和安装只由用户操作触发，不加入 Kit 启动阶段的网络检查。选择下拉项只更改 pending 值；所选内核安装并验证、已保存端点兼容后，点击 Apply 才提交。Main／Fallback 的启用状态单独保存，Codex 只接受 Responses，Pi 支持 Responses／Chat；Codex 的 `max` 映射到其支持的 `xhigh`，Pi 保留 `max`。模型标识允许手动输入，不能把预设列表当成端点支持的完整模型集合。
+
+只对明确可重试的网络错误、HTTP 408/429/5xx 使用已启用的备用端点。缺少内核、协议不兼容、认证、权限、输出审计失败、用户取消或本地 deadline 不触发备用请求。CLI stdout/stderr 同时有界读取，取消和超时需要回收进程树；探针只有收到严格的 `{ "issues": [] }` 才成功，exit code 0 本身不算连接成功。
+
+`security.md` 编辑器允许保存和恢复默认值；宿主内置的脱敏、引用检查、命令禁用和路径约束不随文本删除而关闭。每份策略最多 64 KiB UTF-8 且全局策略不可为空；输入最多 2,000 项，每项编码后最多 64,000 字节，总量最多 8,000,000 字节。分批同时受条目数和 96,000 字节的数据预算限制；超限拒绝执行，不静默截断业务输入。
+
+### 14.6 Localserver 示例与验证入口
+
+[LocalserverAiService](src/modules/Localserver/LocalserverLib/Ai/LocalserverAiService.cs) 已按按钮选择 `diagnostic` / `config-review` 两个私有任务链。只发送服务状态、健康结果、配置是否存在、检查间隔、超时和重试策略；服务名称留在本地映射，不发送命令、环境变量、凭据、原始日志或路径。结果卡片使用双语字段跟随 Kit 语言，分析流程只提供建议。后续插件可参考这个完整消费链，不需要复制 AI Hub 实现。
+
+参考项目为 `C:\Users\Zen\Repos\Codings\Locals`。重点对照其 `KernelManagerService`、`AiAnalysisService`、`TaskAiClient` 的版本检查、CLI 协议、探针和引用／动作审计。原 Locals 的普通设置文件仍会序列化 API key；Kit 使用独立 DPAPI 存储，不照搬该行为。原项目源码保持只读。
+
+图标沿用第 7 节的 36×36 与 400×266 RGBA PNG，实际位于 `Assets/Settings/Icons/AiHub.png` 和 `Assets/Settings/Modules/AiHub.png`，并加入产物裁剪保留清单。所有新增代码及示例注释使用英文，UI 文案放在 en-us／zh-CN 资源文件。
+
+维护回归在 [AiHub.UnitTests](src/common/AiHub.UnitTests/Kit.AiHub.UnitTests.csproj)。使用独立临时目录、合成 CLI 和内存 HTTP handler 覆盖凭据事务、策略边界、脱敏、协议、分批、容灾、取消及 IPC；不得用用户真实端点替代 fixture。Native AOT smoke 位于 [AiHub.AotSmoke](tools/tests/AiHub.AotSmoke/AiHub.AotSmoke.csproj)：
+
+```powershell
+.\tools\build\build.ps1 -Platform x64 -Configuration Debug -Path src\common\AiHub.UnitTests
+& .\x64\Debug\tests\AiHub\Kit.AiHub.UnitTests.exe --report-trx
+dotnet publish .\tools\tests\AiHub.AotSmoke\AiHub.AotSmoke.csproj -c Release -r win-x64 -p:Platform=x64 -p:PowerToysSkipCopyOnWriteSdk=true -p:PowerToysSkipRunVSTestSdk=true -o .\TestResults\AiHubAotSmoke
+& .\TestResults\AiHubAotSmoke\AiHub.AotSmoke.exe
+```
+
+最终交付还要构建 Settings 和 Runner，检查两套资源的 PRI、插件 Chains 和图标是否进入交付目录。模拟内核验证不能替代用户端点的真实兼容性反馈；不以正常 Debug build 代替 AOT publish，也不以单元测试代替 WinUI 视觉验收。

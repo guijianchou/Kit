@@ -5,10 +5,10 @@
 using System;
 using System.IO;
 using System.Threading;
+using Kit.Settings.UI.Library.Interfaces;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     // This Singleton class is a wrapper around the settings configurations that are accessed by viewmodels.
     // This class can have only one instance and therefore the settings configurations are common to all.

@@ -4,7 +4,7 @@
 
 using Microsoft.Windows.ApplicationModel.Resources;
 
-namespace Microsoft.PowerToys.Settings.UI.Helpers
+namespace Kit.Settings.UI.Helpers
 {
     internal static class ResourceExtensions
     {

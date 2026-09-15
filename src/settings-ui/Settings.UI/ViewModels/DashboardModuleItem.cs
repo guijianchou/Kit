@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Library;
 using Microsoft.UI.Xaml;
 using Windows.UI;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
 #pragma warning disable SA1402 // File may only contain a single type
 #pragma warning disable SA1649 // File name should match first type name

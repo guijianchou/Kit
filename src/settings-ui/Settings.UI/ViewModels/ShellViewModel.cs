@@ -9,17 +9,18 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-using Microsoft.PowerToys.Settings.UI.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.Services;
+using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Services;
+using Kit.Settings.UI.Views;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.System;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
     public partial class ShellViewModel : Observable
     {
@@ -144,7 +145,8 @@ namespace Microsoft.PowerToys.Settings.UI.ViewModels
         private void Frame_Navigated(object sender, NavigationEventArgs e)
         {
             IsBackEnabled = NavigationService.CanGoBack;
-            Selected = _fullListOfNavViewItems.FirstOrDefault(menuItem => IsMenuItemForPageType(menuItem, e.SourcePageType));
+            var selectedPageType = e.SourcePageType;
+            Selected = _fullListOfNavViewItems.FirstOrDefault(menuItem => IsMenuItemForPageType(menuItem, selectedPageType));
         }
 
         private static bool IsMenuItemForPageType(NavigationViewItem menuItem, Type sourcePageType)

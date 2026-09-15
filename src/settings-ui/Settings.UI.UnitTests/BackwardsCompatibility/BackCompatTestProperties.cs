@@ -8,12 +8,12 @@ using System.IO.Abstractions;
 using System.Linq.Expressions;
 using System.Text;
 
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
-using Microsoft.PowerToys.Settings.UI.UnitTests.Mocks;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.UnitTests.Mocks;
 using Moq;
 
-namespace Microsoft.PowerToys.Settings.UI.UnitTests.BackwardsCompatibility
+namespace Kit.Settings.UI.UnitTests.BackwardsCompatibility
 {
     public static class BackCompatTestProperties
     {

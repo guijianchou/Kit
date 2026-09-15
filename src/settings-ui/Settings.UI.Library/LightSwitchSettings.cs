@@ -6,12 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Library;
-using Microsoft.PowerToys.Settings.UI.Library.Helpers;
-using Microsoft.PowerToys.Settings.UI.Library.Interfaces;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class LightSwitchSettings : BasePTModuleSettings, ISettingsConfig, ICloneable, IHotkeyConfig
     {
@@ -29,15 +29,7 @@ namespace Microsoft.PowerToys.Settings.UI.Library
 
         public HotkeyAccessor[] GetAllHotkeyAccessors()
         {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ToggleThemeHotkey.Value,
-                    value => Properties.ToggleThemeHotkey.Value = value ?? LightSwitchProperties.DefaultToggleThemeHotkey,
-                    "LightSwitch_ThemeToggle_Shortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
+            return Array.Empty<HotkeyAccessor>();
         }
 
         public ModuleType GetModuleType() => ModuleType.LightSwitch;
@@ -59,7 +51,6 @@ namespace Microsoft.PowerToys.Settings.UI.Library
                     SunsetOffset = new IntProperty((int)Properties.SunsetOffset.Value),
                     Latitude = new StringProperty(Properties.Latitude.Value),
                     Longitude = new StringProperty(Properties.Longitude.Value),
-                    ToggleThemeHotkey = new KeyboardKeysProperty(Properties.ToggleThemeHotkey.Value),
                 },
             };
         }

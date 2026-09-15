@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -7,7 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 
-namespace Microsoft.PowerToys.UITest
+namespace Kit.UITest
 {
     internal static class KitProcessCleanup
     {

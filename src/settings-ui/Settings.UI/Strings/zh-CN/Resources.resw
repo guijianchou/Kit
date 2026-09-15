@@ -1,45 +1,45 @@
-<?xml version="1.0" encoding="utf-8"?>
-<root>
-  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
-    <xsd:element name="root" msdata:IsDataSet="true">
-      <xsd:complexType>
-        <xsd:choice maxOccurs="unbounded">
-          <xsd:element name="metadata">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" />
-              </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" />
-              <xsd:attribute name="type" type="xsd:string" />
-              <xsd:attribute name="mimetype" type="xsd:string" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="data">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
-              </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" msdata:Ordinal="0" />
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="resheader">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-              </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" msdata:Ordinal="0" />
-            </xsd:complexType>
-          </xsd:element>
-        </xsd:choice>
-      </xsd:complexType>
-    </xsd:element>
-  </xsd:schema>
+<?xml version='1.0' encoding='utf-8'?>
+<root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:schema id="root">
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xs:element name="root" ns1:IsDataSet="true">
+      <xs:complexType>
+        <xs:choice maxOccurs="unbounded">
+          <xs:element name="metadata">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" />
+              <xs:attribute name="type" type="xsd:string" />
+              <xs:attribute name="mimetype" type="xsd:string" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="data">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+                <xs:element name="comment" type="xsd:string" minOccurs="0" ns1:Ordinal="2" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" ns1:Ordinal="0" />
+              <xs:attribute name="type" type="xsd:string" ns1:Ordinal="3" />
+              <xs:attribute name="mimetype" type="xsd:string" ns1:Ordinal="4" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="resheader">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" ns1:Ordinal="0" />
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
   </resheader>
@@ -52,8 +52,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-
-  <!-- 语言设置 -->
   <data name="LanguageHeader.Header" xml:space="preserve">
     <value>语言</value>
   </data>
@@ -75,8 +73,6 @@
   <data name="Chinese_Simplified_Language" xml:space="preserve">
     <value>简体中文</value>
   </data>
-
-  <!-- 导航与全局 Shell -->
   <data name="SettingsWindow_Title" xml:space="preserve">
     <value>Kit 设置</value>
   </data>
@@ -101,6 +97,9 @@
   <data name="Shell_LightSwitch.Content" xml:space="preserve">
     <value>Light Switch (深浅切换)</value>
   </data>
+  <data name="Shell_Localserver.Content" xml:space="preserve">
+    <value>Localserver (本地服务)</value>
+  </data>
   <data name="Shell_Settings.Content" xml:space="preserve">
     <value>设置</value>
   </data>
@@ -119,8 +118,6 @@
   <data name="CloseDialog.SecondaryButtonText" xml:space="preserve">
     <value>取消</value>
   </data>
-
-  <!-- 主页 (Dashboard) -->
   <data name="DashboardTitle.Text" xml:space="preserve">
     <value>主页</value>
   </data>
@@ -151,8 +148,6 @@
   <data name="Dashboard_SortByStatus.Text" xml:space="preserve">
     <value>按状态排序</value>
   </data>
-
-  <!-- 常规设置 (General) -->
   <data name="General_About.Header" xml:space="preserve">
     <value>关于</value>
   </data>
@@ -183,8 +178,6 @@
   <data name="GeneralSettings_AlwaysRunAsAdminText.Header" xml:space="preserve">
     <value>始终以管理员身份运行</value>
   </data>
-
-  <!-- Awake 模块 -->
   <data name="Awake.ModuleTitle" xml:space="preserve">
     <value>Awake</value>
   </data>
@@ -239,8 +232,6 @@
   <data name="Awake_ExpirationSettingsExpander_Time.Header" xml:space="preserve">
     <value>结束时间</value>
   </data>
-
-  <!-- Light Switch 模块 -->
   <data name="LightSwitch.ModuleTitle" xml:space="preserve">
     <value>Light Switch</value>
   </data>
@@ -310,8 +301,6 @@
   <data name="LightSwitch_AppsCheckbox.Header" xml:space="preserve">
     <value>应用程序</value>
   </data>
-
-  <!-- 通用控件与操作 -->
   <data name="ToggleSwitch.OffContent" xml:space="preserve">
     <value>关</value>
   </data>
@@ -330,7 +319,1223 @@
   <data name="Activation_Shortcut_Description" xml:space="preserve">
     <value>按下组合键以更改此快捷键</value>
   </data>
-  <data name="Activation_Shortcut_With_Disable_Description" xml:space="preserve">
-    <value>按下组合键以更改此快捷键。右键单击可清除组合键以停用此快捷键。</value>
+  <data name="Localserver.ModuleTitle" xml:space="preserve">
+    <value>Localserver (本地服务)</value>
+  </data>
+  <data name="Localserver.ModuleDescription" xml:space="preserve">
+    <value>管理本地运行的服务进程、资源占用监控与环境依赖诊断。</value>
+  </data>
+  <data name="Localserver_EnableSettingsCard.Header" xml:space="preserve">
+    <value>启用 Localserver</value>
+  </data>
+  <data name="Localserver_EnableSettingsCard.Description" xml:space="preserve">
+    <value>允许本地服务启动与自动重启。关闭此项不会停止当前运行中的服务。</value>
+  </data>
+  <data name="Localserver_LineSettingsGroup.Header" xml:space="preserve">
+    <value>链路列表</value>
+  </data>
+  <data name="Localserver_StartAllButton.Content" xml:space="preserve">
+    <value>全部启动</value>
+  </data>
+  <data name="Localserver_StopAllButton.Content" xml:space="preserve">
+    <value>全部停止</value>
+  </data>
+  <data name="Localserver_RefreshButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>刷新状态与资源占用</value>
+  </data>
+  <data name="Localserver_AddLineButton.Content" xml:space="preserve">
+    <value>添加链路</value>
+  </data>
+  <data name="Localserver_ReloadCatalogButton.Content" xml:space="preserve">
+    <value>重载配置</value>
+  </data>
+  <data name="Localserver_SaveCatalogButton.Content" xml:space="preserve">
+    <value>保存配置</value>
+  </data>
+  <data name="Localserver_LinesHeader.Text" xml:space="preserve">
+    <value>链路列表</value>
+  </data>
+  <data name="Localserver_OpenUrlText.Text" xml:space="preserve">
+    <value>打开</value>
+  </data>
+  <data name="Localserver_RestartLineMenu.Text" xml:space="preserve">
+    <value>重启</value>
+  </data>
+  <data name="Localserver_ForceKillLineMenu.Text" xml:space="preserve">
+    <value>强制结束</value>
+  </data>
+  <data name="Localserver_MoveUpLineMenu.Text" xml:space="preserve">
+    <value>上移</value>
+  </data>
+  <data name="Localserver_MoveDownLineMenu.Text" xml:space="preserve">
+    <value>下移</value>
+  </data>
+  <data name="Localserver_LineNameCard.Header" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Localserver_LineExecutableCard.Header" xml:space="preserve">
+    <value>执行文件</value>
+  </data>
+  <data name="Localserver_LineExecutableCard.Description" xml:space="preserve">
+    <value>可执行文件绝对路径或命令</value>
+  </data>
+  <data name="Localserver_LineCwdCard.Header" xml:space="preserve">
+    <value>工作目录</value>
+  </data>
+  <data name="Localserver_LineCwdCard.Description" xml:space="preserve">
+    <value>进程启动所在的工作目录</value>
+  </data>
+  <data name="Localserver_LineArgsCard.Header" xml:space="preserve">
+    <value>启动参数</value>
+  </data>
+  <data name="Localserver_LineArgsCard.Description" xml:space="preserve">
+    <value>传递给执行文件的命令行参数</value>
+  </data>
+  <data name="Localserver_LinePortCard.Header" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="Localserver_LinePortCard.Description" xml:space="preserve">
+    <value>服务监听的 TCP 网络端口</value>
+  </data>
+  <data name="Localserver_LineResolvedCommandCard.Header" xml:space="preserve">
+    <value>解析后的完整命令</value>
+  </data>
+  <data name="Localserver_DeleteLineCard.Header" xml:space="preserve">
+    <value>删除链路</value>
+  </data>
+  <data name="Localserver_DeleteLineCard.Description" xml:space="preserve">
+    <value>从配置文件中移除此服务链路</value>
+  </data>
+  <data name="Localserver_DeleteLineText.Text" xml:space="preserve">
+    <value>删除链路</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteTitle.Text" xml:space="preserve">
+    <value>确定删除此服务链路吗？</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteDescription.Text" xml:space="preserve">
+    <value>永久移除此链路及其运行配置（不可恢复）。</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteConfirmButton.Content" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Localserver_BrowseFileButton.Content" xml:space="preserve">
+    <value>浏览文件...</value>
+  </data>
+  <data name="Localserver_BrowseFolderButton.Content" xml:space="preserve">
+    <value>浏览文件夹...</value>
+  </data>
+  <data name="Localserver_LockedTooltip" xml:space="preserve">
+    <value>链路运行中，已锁定配置修改</value>
+  </data>
+  <data name="Localserver_EnvironmentCardTitle.Text" xml:space="preserve">
+    <value>ENVIRONMENT</value>
+  </data>
+  <data name="Localserver_ChecksLabel.Text" xml:space="preserve">
+    <value>CHECKS</value>
+  </data>
+  <data name="Localserver_CpuTrendLabel.Text" xml:space="preserve">
+    <value>CPU TREND</value>
+  </data>
+  <data name="Localserver_SystemCardTitle.Text" xml:space="preserve">
+    <value>SYSTEM</value>
+  </data>
+  <data name="Localserver_GpuLoadLabel.Text" xml:space="preserve">
+    <value>GPU UTIL</value>
+  </data>
+  <data name="Localserver_GpuVramLabel.Text" xml:space="preserve">
+    <value>VRAM</value>
+  </data>
+  <data name="Localserver_GpuTempLabel.Text" xml:space="preserve">
+    <value>TEMP</value>
+  </data>
+  <data name="Localserver_HostCpuLabel.Text" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Localserver_HostRamLabel.Text" xml:space="preserve">
+    <value>RAM</value>
+  </data>
+  <data name="Localserver_CopyFixCommandMenu.Text" xml:space="preserve">
+    <value>复制修复命令</value>
+  </data>
+  <data name="Localserver_ReleasePortMenu.Text" xml:space="preserve">
+    <value>释放端口...</value>
+  </data>
+  <data name="Localserver_NoActivityText.Text" xml:space="preserve">
+    <value>暂无数据 — 启动服务后即可收集趋势</value>
+  </data>
+  <data name="Localserver_StateRunning" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="Localserver_StateStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="Localserver_StateStarting" xml:space="preserve">
+    <value>正在启动</value>
+  </data>
+  <data name="Localserver_StateStopping" xml:space="preserve">
+    <value>正在停止</value>
+  </data>
+  <data name="Localserver_StateFaulted" xml:space="preserve">
+    <value>异常</value>
+  </data>
+  <data name="Localserver_NoPortConfigured" xml:space="preserve">
+    <value>未配置端口</value>
+  </data>
+  <data name="Localserver_UptimeLabel.Text" xml:space="preserve">
+    <value>UPTIME</value>
+  </data>
+  <data name="Localserver_PortLabel.Text" xml:space="preserve">
+    <value>PORT</value>
+  </data>
+  <data name="Localserver_PidLabel.Text" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="Localserver_StateLabel.Text" xml:space="preserve">
+    <value>STATE</value>
+  </data>
+  <data name="Localserver_RuntimesLabel.Text" xml:space="preserve">
+    <value>RUNTIMES</value>
+  </data>
+  <data name="Localserver_MemoryLabel.Text" xml:space="preserve">
+    <value>MEM</value>
+  </data>
+  <data name="Localserver_LineStatusCard.Header" xml:space="preserve">
+    <value>运行状态</value>
+  </data>
+  <data name="Localserver_SelectedLineComboBox.PlaceholderText" xml:space="preserve">
+    <value>选择链路</value>
+  </data>
+  <data name="Localserver_SelectedLineComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>当前选中的服务链路</value>
+  </data>
+  <data name="Localserver_LineToggleSwitch.OnContent" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Localserver_LineToggleSwitch.OffContent" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Localserver_LineActionsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>链路操作</value>
+  </data>
+  <data name="Localserver_RefreshButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>刷新状态与资源占用</value>
+  </data>
+  <data name="Localserver_LockedIcon.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>停止链路后方可修改参数。</value>
+  </data>
+  <data name="Localserver_EmptyLinesTitle.Text" xml:space="preserve">
+    <value>未配置任何链路</value>
+  </data>
+  <data name="Localserver_EmptyLinesDescription.Text" xml:space="preserve">
+    <value>点击上方添加链路即可在此管理。</value>
+  </data>
+  <data name="Localserver_PortNumberBox.Description" xml:space="preserve">
+    <value>0 表示不指定固定端口。</value>
+  </data>
+  <data name="Localserver_ReleasePortTitle" xml:space="preserve">
+    <value>释放端口</value>
+  </data>
+  <data name="Localserver_ReleasePortConfirmMessage" xml:space="preserve">
+    <value>是否结束进程 {1}（PID {2}）以释放端口 {0}？未保存的数据可能会丢失。</value>
+  </data>
+  <data name="Localserver_ForceKillTitle" xml:space="preserve">
+    <value>强制结束</value>
+  </data>
+  <data name="Localserver_ForceKillConfirmMessage" xml:space="preserve">
+    <value>是否强制结束链路“{0}”？未保存的数据可能会丢失。</value>
+  </data>
+  <data name="Localserver_TerminateProcessButton" xml:space="preserve">
+    <value>结束进程</value>
+  </data>
+  <data name="Localserver_CancelButton" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Localserver_ReleasePortFailed" xml:space="preserve">
+    <value>未能释放端口。请检查权限后重试。</value>
+  </data>
+  <data name="Localserver_FilePickerFailed" xml:space="preserve">
+    <value>无法打开文件或文件夹选择窗口。</value>
+  </data>
+  <data name="Localserver_CheckWorkingDirectory" xml:space="preserve">
+    <value>工作目录</value>
+  </data>
+  <data name="Localserver_CheckExecutable" xml:space="preserve">
+    <value>可执行文件</value>
+  </data>
+  <data name="Localserver_CheckServiceHealth" xml:space="preserve">
+    <value>服务状态</value>
+  </data>
+  <data name="Localserver_CheckHealthProbe" xml:space="preserve">
+    <value>健康探测</value>
+  </data>
+  <data name="Localserver_CheckPort" xml:space="preserve">
+    <value>端口占用</value>
+  </data>
+  <data name="Localserver_CheckRuntimeTitle" xml:space="preserve">
+    <value>运行时：{0}</value>
+  </data>
+  <data name="Localserver_StatePreflight" xml:space="preserve">
+    <value>正在检查依赖</value>
+  </data>
+  <data name="Localserver_StateCrashed" xml:space="preserve">
+    <value>崩溃退出</value>
+  </data>
+  <data name="Localserver_StateBackoff" xml:space="preserve">
+    <value>等待重启</value>
+  </data>
+  <data name="Localserver_StateFailed" xml:space="preserve">
+    <value>启动失败</value>
+  </data>
+  <data name="Localserver_StateStopFailed" xml:space="preserve">
+    <value>停止失败</value>
+  </data>
+  <data name="Localserver_StateUnhealthy" xml:space="preserve">
+    <value>探针未就绪</value>
+  </data>
+  <data name="Localserver_StateUnknown" xml:space="preserve">
+    <value>未知状态</value>
+  </data>
+  <data name="Localserver_NoLineSelected" xml:space="preserve">
+    <value>请选择一条链路以查看其环境诊断。</value>
+  </data>
+  <data name="Localserver_HealthIdle" xml:space="preserve">
+    <value>就绪</value>
+  </data>
+  <data name="Localserver_HealthHealthy" xml:space="preserve">
+    <value>健康</value>
+  </data>
+  <data name="Localserver_HealthChecking" xml:space="preserve">
+    <value>检查中</value>
+  </data>
+  <data name="Localserver_HealthFaulted" xml:space="preserve">
+    <value>异常</value>
+  </data>
+  <data name="Localserver_HealthIssue" xml:space="preserve">
+    <value>有警告</value>
+  </data>
+  <data name="Localserver_HealthStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="Localserver_NoRuntimes" xml:space="preserve">
+    <value>无特定运行时依赖</value>
+  </data>
+  <data name="Localserver_EnvironmentChecking" xml:space="preserve">
+    <value>正在检查环境...</value>
+  </data>
+  <data name="Localserver_EnvironmentCheckFailed" xml:space="preserve">
+    <value>环境检查失败，请刷新重试。</value>
+  </data>
+  <data name="Localserver_DetectingGpu" xml:space="preserve">
+    <value>正在检测 GPU...</value>
+  </data>
+  <data name="Localserver_GpuActive" xml:space="preserve">
+    <value>正常</value>
+  </data>
+  <data name="Localserver_GpuUnavailable" xml:space="preserve">
+    <value>不可用</value>
+  </data>
+  <data name="Localserver_GpuNotDetected" xml:space="preserve">
+    <value>未检测到独显</value>
+  </data>
+  <data name="Localserver_DriverFormat" xml:space="preserve">
+    <value>驱动版本 {0}</value>
+  </data>
+  <data name="Localserver_DriverUnavailable" xml:space="preserve">
+    <value>驱动信息不可用</value>
+  </data>
+  <data name="Localserver_DetectingProcessor" xml:space="preserve">
+    <value>正在检测处理器...</value>
+  </data>
+  <data name="Localserver_DetectingWindows" xml:space="preserve">
+    <value>正在检测系统版本...</value>
+  </data>
+  <data name="Localserver_ProcessorFormat" xml:space="preserve">
+    <value>{0} · {1} 个逻辑核心</value>
+  </data>
+  <data name="Localserver_ResourceCheckFailed" xml:space="preserve">
+    <value>资源占用检测失败。</value>
+  </data>
+  <data name="Localserver_ChartRange" xml:space="preserve">
+    <value>最近 60 秒</value>
+  </data>
+  <data name="Localserver_ChartRangePeak" xml:space="preserve">
+    <value>最近 60 秒 · 峰值 {0:F0}%</value>
+  </data>
+  <data name="Localserver_NewLine" xml:space="preserve">
+    <value>新建链路</value>
+  </data>
+  <data name="Localserver_InitializationFailed" xml:space="preserve">
+    <value>Localserver 初始化失败。</value>
+  </data>
+  <data name="Localserver_LoadCatalogFailed" xml:space="preserve">
+    <value>加载服务列表失败。</value>
+  </data>
+  <data name="Localserver_SaveCatalogFailed" xml:space="preserve">
+    <value>保存服务列表失败。</value>
+  </data>
+  <data name="Localserver_RecoveryFailed" xml:space="preserve">
+    <value>接管“{0}”现有进程失败。</value>
+  </data>
+  <data name="Localserver_StartLineFailed" xml:space="preserve">
+    <value>启动“{0}”失败。</value>
+  </data>
+  <data name="Localserver_StopLineFailed" xml:space="preserve">
+    <value>停止“{0}”失败。</value>
+  </data>
+  <data name="Localserver_RestartLineFailed" xml:space="preserve">
+    <value>重启“{0}”失败。</value>
+  </data>
+  <data name="Localserver_ForceKillFailed" xml:space="preserve">
+    <value>强制结束“{0}”失败。</value>
+  </data>
+  <data name="Localserver_EnvironmentChecksPassed" xml:space="preserve">
+    <value>所有环境检查均已通过</value>
+  </data>
+  <data name="Localserver_EnvironmentIssueSingular" xml:space="preserve">
+    <value>{0} 个环境问题</value>
+  </data>
+  <data name="Localserver_EnvironmentIssuePlural" xml:space="preserve">
+    <value>{0} 个环境问题</value>
+  </data>
+  <data name="Localserver_EnvironmentDirectoryNotFound" xml:space="preserve">
+    <value>找不到目录：{0}</value>
+  </data>
+  <data name="Localserver_ExecutableNotFound" xml:space="preserve">
+    <value>找不到可执行程序：{0}</value>
+  </data>
+  <data name="Localserver_RuntimeProbeUnavailable" xml:space="preserve">
+    <value>此运行时类型没有可用的检查程序。</value>
+  </data>
+  <data name="Localserver_RuntimeNotFound" xml:space="preserve">
+    <value>找不到运行时：{0}</value>
+  </data>
+  <data name="Localserver_RuntimeStartFailed" xml:space="preserve">
+    <value>运行时进程未能启动。</value>
+  </data>
+  <data name="Localserver_RuntimeVersionFailed" xml:space="preserve">
+    <value>运行时版本检查失败。</value>
+  </data>
+  <data name="Localserver_RuntimeVersionUnknown" xml:space="preserve">
+    <value>已找到运行时，但无法识别其版本。</value>
+  </data>
+  <data name="Localserver_RuntimeMinimumInvalid" xml:space="preserve">
+    <value>最低版本要求无效：{0}</value>
+  </data>
+  <data name="Localserver_RuntimeVersionTooOld" xml:space="preserve">
+    <value>已找到版本 {0}，需要 {1} 或更高版本。</value>
+  </data>
+  <data name="Localserver_RuntimeProbeTimedOut" xml:space="preserve">
+    <value>运行时版本检查超时。</value>
+  </data>
+  <data name="Localserver_RuntimeProbeFailed" xml:space="preserve">
+    <value>运行时检查失败：{0}</value>
+  </data>
+  <data name="Localserver_HealthProbeUnverified" xml:space="preserve">
+    <value>接管的进程无法执行日志模式检查；健康状态尚未验证，并非检查失败。</value>
+  </data>
+  <data name="Localserver_HealthProbePassed" xml:space="preserve">
+    <value>已通过配置的健康检查。</value>
+  </data>
+  <data name="Localserver_HealthProbeDidNotPass" xml:space="preserve">
+    <value>未通过配置的健康检查。</value>
+  </data>
+  <data name="Localserver_HealthProbeTimedOut" xml:space="preserve">
+    <value>配置的健康检查超时。</value>
+  </data>
+  <data name="Localserver_HealthProbeFailed" xml:space="preserve">
+    <value>健康检查失败（{0}）。</value>
+  </data>
+  <data name="Localserver_PortNotListening" xml:space="preserve">
+    <value>端口 {0} 尚未监听。</value>
+  </data>
+  <data name="Localserver_PortAvailable" xml:space="preserve">
+    <value>端口 {0} 可用。</value>
+  </data>
+  <data name="Localserver_PortListening" xml:space="preserve">
+    <value>端口 {0} 正在监听（PID {1}）。</value>
+  </data>
+  <data name="Localserver_ReleasePortSuggestion" xml:space="preserve">
+    <value>结束 PID {0} 的进程，或将此服务改用端口 {1}。</value>
+  </data>
+  <data name="Localserver_ReleasePortManual" xml:space="preserve">
+    <value>结束 PID {0} 的进程，或手动选择其他端口；{1} 附近没有可用端口。</value>
+  </data>
+  <data name="Localserver_PortOccupied" xml:space="preserve">
+    <value>端口 {0} 已被 PID {1}（{2}）占用。</value>
+  </data>
+  <data name="Localserver_ServiceReportedRunning" xml:space="preserve">
+    <value>服务管理器报告服务正在运行。</value>
+  </data>
+  <data name="Localserver_ServiceStopped" xml:space="preserve">
+    <value>服务已停止。</value>
+  </data>
+  <data name="Localserver_InstallNode" xml:space="preserve">
+    <value>安装 Node.js LTS 运行时。</value>
+  </data>
+  <data name="Localserver_InstallPython" xml:space="preserve">
+    <value>安装 Python 3.12。</value>
+  </data>
+  <data name="Localserver_CreateVirtualEnvironment" xml:space="preserve">
+    <value>在此服务的工作目录中创建虚拟环境。</value>
+  </data>
+  <data name="Localserver_InstallMiniconda" xml:space="preserve">
+    <value>安装 Miniconda。</value>
+  </data>
+  <data name="Localserver_RepairGpuDriver" xml:space="preserve">
+    <value>nvidia-smi 随 NVIDIA 显卡驱动提供。请安装或修复驱动；若此服务不需要 GPU，可移除此运行时要求。</value>
+  </data>
+  <data name="Localserver_LogResumeMismatch" xml:space="preserve">
+    <value>进程归属记录与此服务的命令、工作目录或归属标记不再匹配。</value>
+  </data>
+  <data name="Localserver_LogResumeExited" xml:space="preserve">
+    <value>PID {0} 的进程在接管过程中退出。</value>
+  </data>
+  <data name="Localserver_LogResumeNote" xml:space="preserve">
+    <value>恢复提示：{0}</value>
+  </data>
+  <data name="Localserver_LogResumeFailed" xml:space="preserve">
+    <value>接管记录中的进程树失败：{0}</value>
+  </data>
+  <data name="Localserver_LogResumeSkipped" xml:space="preserve">
+    <value>已跳过恢复：{0}</value>
+  </data>
+  <data name="Localserver_LogResumeNoProcesses" xml:space="preserve">
+    <value>记录中的进程树已无存活进程。</value>
+  </data>
+  <data name="Localserver_LogResumeInvalidPid" xml:space="preserve">
+    <value>进程归属记录包含重复或无效的 PID。</value>
+  </data>
+  <data name="Localserver_LogResumeConsoleOnly" xml:space="preserve">
+    <value>仅控制台宿主仍在运行，服务进程已经退出。</value>
+  </data>
+  <data name="Localserver_LogResumeOutsideJob" xml:space="preserve">
+    <value>无法将 PID {0} 重新分配给此服务的作业对象；停止时将改为终止其进程树。</value>
+  </data>
+  <data name="Localserver_LogResumeWithoutOwnerTag" xml:space="preserve">
+    <value>PID {0} 位于此服务的作业对象中，但已无法读取归属标记；仅保留停止和强制终止操作。</value>
+  </data>
+  <data name="Localserver_LogOwnershipRebuildFailed" xml:space="preserve">
+    <value>重建进程归属关系失败：{0}</value>
+  </data>
+  <data name="Localserver_LogProcessAdopted" xml:space="preserve">
+    <value>已从上一次运行中接管 PID {0}（进程树中共 {1} 个进程）。本次会话之前的输出未被捕获。</value>
+  </data>
+  <data name="Localserver_LogPreviousProcessReleased" xml:space="preserve">
+    <value>已释放“{0}”此前由 LocalServerHub 管理的进程。</value>
+  </data>
+  <data name="Localserver_RuntimePreflightFailed" xml:space="preserve">
+    <value>运行时预检失败：{0}</value>
+  </data>
+  <data name="Localserver_RuntimeWarning" xml:space="preserve">
+    <value>运行时警告：{0}</value>
+  </data>
+  <data name="Localserver_LogStopQueryFailed" xml:space="preserve">
+    <value>进程树查询失败；必须确认进程已退出，才能释放归属关系。</value>
+  </data>
+  <data name="Localserver_LogForceKilling" xml:space="preserve">
+    <value>正在强制终止进程树…</value>
+  </data>
+  <data name="Localserver_LogStopping" xml:space="preserve">
+    <value>正在停止（超时 {0} 秒）…</value>
+  </data>
+  <data name="Localserver_LogGracefulStopSent" xml:space="preserve">
+    <value>已发送关闭窗口或标准输入结束信号，正在等待退出。</value>
+  </data>
+  <data name="Localserver_LogGracefulStopUnavailable" xml:space="preserve">
+    <value>没有可用的正常退出通道，正在等待后续终止操作。</value>
+  </data>
+  <data name="Localserver_LogGracefulStopEscalating" xml:space="preserve">
+    <value>正常停止未能完成（{0}），将改为强制终止。</value>
+  </data>
+  <data name="Localserver_StopFailedDetail" xml:space="preserve">
+    <value>停止失败：进程树仍在运行，或无法确认其已退出。请重试强制终止。</value>
+  </data>
+  <data name="Localserver_LogStopped" xml:space="preserve">
+    <value>已停止。</value>
+  </data>
+  <data name="Localserver_CommandNotConfigured" xml:space="preserve">
+    <value>此服务尚未配置命令。请在服务设置中填写。</value>
+  </data>
+  <data name="Localserver_WorkingDirectoryNotFound" xml:space="preserve">
+    <value>工作目录不存在：{0}</value>
+  </data>
+  <data name="Localserver_ConPtyUnavailable" xml:space="preserve">
+    <value>此版本不支持 ConPTY 模式。在支持交互式终端之前，请使用 io=pipe。</value>
+  </data>
+  <data name="Localserver_PortOutOfRange" xml:space="preserve">
+    <value>端口必须介于 1 和 65535 之间。</value>
+  </data>
+  <data name="Localserver_TcpHealthPortRequired" xml:space="preserve">
+    <value>TCP 健康检查需要指定端口。</value>
+  </data>
+  <data name="Localserver_LogHealthPatternRequired" xml:space="preserve">
+    <value>LogPattern 健康检查需要非空的正则表达式。</value>
+  </data>
+  <data name="Localserver_LogHealthPatternInvalid" xml:space="preserve">
+    <value>LogPattern 健康检查包含无效的正则表达式。</value>
+  </data>
+  <data name="Localserver_ConfigurationVariableInvalid" xml:space="preserve">
+    <value>配置变量缺失、存在循环引用或格式错误。请检查 service、env 和 secret 引用。</value>
+  </data>
+  <data name="Localserver_HttpHealthUrlRequired" xml:space="preserve">
+    <value>HTTP 健康检查需要完整的 http(s) URL。</value>
+  </data>
+  <data name="Localserver_OwnedPortUnavailable" xml:space="preserve">
+    <value>端口 {0} 仍被 PID {1}（{2}）占用。该进程此前由本模块为此服务启动，但现在无法接管（归属记录缺失，或命令、工作目录已更改）。可执行以下命令结束进程：taskkill /PID {1} /T /F</value>
+  </data>
+  <data name="Localserver_PortInUse" xml:space="preserve">
+    <value>端口 {0} 已被 PID {1}（{2}）占用。请释放该端口或选择其他端口。</value>
+  </data>
+  <data name="Localserver_LogPreviousTreeStillRunning" xml:space="preserve">
+    <value>此前管理的进程树尚未完全退出；接下来的端口预检将报告仍占用端口的进程。</value>
+  </data>
+  <data name="Localserver_ProcessStartFailed" xml:space="preserve">
+    <value>进程启动失败。</value>
+  </data>
+  <data name="Localserver_LogProcessStarted" xml:space="preserve">
+    <value>已启动 PID {0}：{1}</value>
+  </data>
+  <data name="Localserver_LogOutputCaptureEnded" xml:space="preserve">
+    <value>输出捕获已结束（{0}）。</value>
+  </data>
+  <data name="Localserver_LogAdoptedHealthUnverified" xml:space="preserve">
+    <value>健康状态尚未验证：无法对接管的进程重新执行日志模式检查。</value>
+  </data>
+  <data name="Localserver_LogAdoptedPortMismatch" xml:space="preserve">
+    <value>警告：端口 {0} 被 PID {1}（{2}）占用，该进程不属于接管的进程树。健康检查结果可能来自其他进程。</value>
+  </data>
+  <data name="Localserver_HealthStartupTimedOut" xml:space="preserve">
+    <value>未能在 {0} 秒内通过健康检查。</value>
+  </data>
+  <data name="Localserver_AdoptedHealthTimedOut" xml:space="preserve">
+    <value>接管的进程未能在 {0} 秒内响应健康检查。</value>
+  </data>
+  <data name="Localserver_LogAdoptedHealthFailed" xml:space="preserve">
+    <value>{0} 进程树仍在运行，未执行终止操作。</value>
+  </data>
+  <data name="Localserver_LogHealthRecovered" xml:space="preserve">
+    <value>健康检查已恢复正常。</value>
+  </data>
+  <data name="Localserver_LogHealthFailed" xml:space="preserve">
+    <value>健康检查失败，进程仍在运行。</value>
+  </data>
+  <data name="Localserver_LogHealthMonitoringStopped" xml:space="preserve">
+    <value>健康监控已停止（{0}）。</value>
+  </data>
+  <data name="Localserver_LogExitHandlingFailed" xml:space="preserve">
+    <value>进程退出处理失败（{0}）。</value>
+  </data>
+  <data name="Localserver_LogProcessExited" xml:space="preserve">
+    <value>进程已退出，退出代码为 {0}。</value>
+  </data>
+  <data name="Localserver_ProcessExitedDetail" xml:space="preserve">
+    <value>已退出，退出代码为 {0}</value>
+  </data>
+  <data name="Localserver_LogAdoptedRestartPolicy" xml:space="preserve">
+    <value>退出的进程接管自上一次会话，同样适用“{0}”重启策略。</value>
+  </data>
+  <data name="Localserver_LogRestarting" xml:space="preserve">
+    <value>将在 {0} 秒后重启（第 {1}/{2} 次尝试）。</value>
+  </data>
+  <data name="Localserver_AutomaticRestartFailed" xml:space="preserve">
+    <value>自动重启失败：{0}</value>
+  </data>
+  <data name="Localserver_OperationFailed" xml:space="preserve">
+    <value>操作失败。</value>
+  </data>
+  <data name="Localserver_LogFailed" xml:space="preserve">
+    <value>失败：{0}</value>
+  </data>
+  <data name="Localserver_LogHealthPatternTimedOut" xml:space="preserve">
+    <value>日志健康检查正则匹配超时，已在本次运行中停用。</value>
+  </data>
+  <data name="Localserver_CatalogRecovered" xml:space="preserve">
+    <value>原服务配置无效，已加载备份 {0}。请检查服务配置后再保存。</value>
+  </data>
+  <data name="Localserver_CatalogNotLoaded" xml:space="preserve">
+    <value>请先加载服务配置，再保存更改。</value>
+  </data>
+  <data name="Localserver_CatalogSaveConflict" xml:space="preserve">
+    <value>磁盘上的服务配置已更改，本次编辑尚未写入。请先保留需要的更改，再重载配置。</value>
+  </data>
+  <data name="Localserver_SectionEnvironment.Text" xml:space="preserve">
+    <value>ENVIRONMENT</value>
+  </data>
+  <data name="Localserver_SectionSystem.Text" xml:space="preserve">
+    <value>SYSTEM</value>
+  </data>
+  <data name="Localserver_SectionSession.Text" xml:space="preserve">
+    <value>SESSION</value>
+  </data>
+  <data name="Localserver_SessionUptimeTooltip" xml:space="preserve">
+    <value>本次会话自首个服务启动以来的时长</value>
+  </data>
+  <data name="Localserver_RegisteredLabel.Text" xml:space="preserve">
+    <value>REGISTERED</value>
+  </data>
+  <data name="Localserver_RunningLabel.Text" xml:space="preserve">
+    <value>RUNNING</value>
+  </data>
+  <data name="Localserver_FaultedLabel.Text" xml:space="preserve">
+    <value>FAULTED</value>
+  </data>
+  <data name="Localserver_HealthLabel.Text" xml:space="preserve">
+    <value>HEALTH</value>
+  </data>
+  <data name="Localserver_HostLabel.Text" xml:space="preserve">
+    <value>HOST</value>
+  </data>
+  <data name="Localserver_CommandAndArgsLabel.Text" xml:space="preserve">
+    <value>COMMAND &amp; ARGS</value>
+  </data>
+  <data name="Localserver_WorkingDirLabel.Text" xml:space="preserve">
+    <value>WORKING DIR</value>
+  </data>
+  <data name="Localserver_ColName.Text" xml:space="preserve">
+    <value>NAME</value>
+  </data>
+  <data name="Localserver_ColPort.Text" xml:space="preserve">
+    <value>PORT</value>
+  </data>
+  <data name="Localserver_ColState.Text" xml:space="preserve">
+    <value>STATE</value>
+  </data>
+  <data name="Localserver_ColUptime.Text" xml:space="preserve">
+    <value>UPTIME</value>
+  </data>
+  <data name="Localserver_ColCpu.Text" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Localserver_ColMem.Text" xml:space="preserve">
+    <value>MEM</value>
+  </data>
+  <data name="Localserver_ColPid.Text" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="Localserver_StatusLabel.Text" xml:space="preserve">
+    <value>Status:</value>
+  </data>
+  <data name="Localserver_ConfigName.Text" xml:space="preserve">
+    <value>NAME</value>
+  </data>
+  <data name="Localserver_ConfigCommand.Text" xml:space="preserve">
+    <value>COMMAND</value>
+  </data>
+  <data name="Localserver_ConfigArguments.Text" xml:space="preserve">
+    <value>ARGUMENTS</value>
+  </data>
+  <data name="Localserver_ConfigWorkingDir.Text" xml:space="preserve">
+    <value>WORKING DIR</value>
+  </data>
+  <data name="Localserver_ConfigPort.Text" xml:space="preserve">
+    <value>PORT</value>
+  </data>
+  <data name="Localserver_ConfigResolvedCommand.Text" xml:space="preserve">
+    <value>RESOLVED COMMAND</value>
+  </data>
+  <data name="Localserver_ExpandConfigTooltip" xml:space="preserve">
+    <value>展开配置详情</value>
+  </data>
+  <data name="Localserver_StopToEditTooltip" xml:space="preserve">
+    <value>停止链路后方可修改参数</value>
+  </data>
+  <data name="Localserver_OutputHeader.Text" xml:space="preserve">
+    <value>OUTPUT</value>
+  </data>
+  <data name="Localserver_LogFollowToggle.Content" xml:space="preserve">
+    <value>Follow</value>
+  </data>
+  <data name="Localserver_LogFollowTooltip" xml:space="preserve">
+    <value>保持滚动到最新行</value>
+  </data>
+  <data name="Localserver_LogOpenFolderTooltip" xml:space="preserve">
+    <value>打开此服务的日志文件夹</value>
+  </data>
+  <data name="Localserver_LogClearTooltip" xml:space="preserve">
+    <value>清空屏幕缓冲区</value>
+  </data>
+  <data name="Localserver_LogEmptyText.Text" xml:space="preserve">
+    <value>暂无捕获的输出。</value>
+  </data>
+  <data name="Localserver_ToggleOutputTooltip" xml:space="preserve">
+    <value>展开/折叠输出抽屉</value>
+  </data>
+  <data name="Localserver_LineLockedRunning" xml:space="preserve">
+    <value>运行中：配置已锁定。停止链路后方可修改参数。</value>
+  </data>
+  <data name="Localserver_PortNoneHint" xml:space="preserve">
+    <value>若无端口要求可留空或设为 0。</value>
+  </data>
+  <data name="Localserver_NoChecksRunYet" xml:space="preserve">
+    <value>尚未运行任何检查</value>
+  </data>
+  <data name="Localserver_SelectServiceHint" xml:space="preserve">
+    <value>选择在环境面板中展示的链路</value>
+  </data>
+  <data name="Localserver_SessionCardTitle.Text" xml:space="preserve">
+    <value>SESSION</value>
+  </data>
+  <data name="Localserver_LogSubtitleFormat" xml:space="preserve">
+    <value>{0} · 已显示 {1} 行</value>
+  </data>
+  <!-- AI Hub -->
+  <data name="General_AiServices.Header" xml:space="preserve">
+    <value>AI 服务</value>
+  </data>
+  <data name="General_AiHubSettings.Header" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="General_AiHubSettings.Description" xml:space="preserve">
+    <value>管理 Kit 与插件共用的 AI 服务、内核和连接。</value>
+  </data>
+  <data name="AiHub_BackToSettings.Content" xml:space="preserve">
+    <value>返回设置</value>
+  </data>
+  <data name="AiHub.ModuleTitle" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="AiHub.ModuleDescription" xml:space="preserve">
+    <value>为 Kit 插件提供共享 AI 任务、独立内核与经过校验的分析建议。</value>
+  </data>
+  <data name="AiHub_EnableSettingsCard.Header" xml:space="preserve">
+    <value>启用 AI Hub</value>
+  </data>
+  <data name="AiHub_EnableSettingsCard.Description" xml:space="preserve">
+    <value>允许插件通过下方配置的端点提交 AI 任务。</value>
+  </data>
+  <data name="AiHub_KernelSettingsGroup.Header" xml:space="preserve">
+    <value>AI 内核与运行时</value>
+  </data>
+  <data name="AiHub_KernelCard.Header" xml:space="preserve">
+    <value>AI 执行内核</value>
+  </data>
+  <data name="AiHub_KernelCard.Description" xml:space="preserve">
+    <value>选择内核，按需安装后确认切换。已开始的任务继续使用原内核。</value>
+  </data>
+  <data name="AiHub_ApplyKernelButton.Content" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="AiHub_CheckUpdatesButton.Content" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="AiHub_DownloadKernelButton.Content" xml:space="preserve">
+    <value>下载 / 更新</value>
+  </data>
+  <data name="AiHub_EndpointsSettingsGroup.Header" xml:space="preserve">
+    <value>AI 接口端点</value>
+  </data>
+  <data name="AiHub_EndpointsDescription.Text" xml:space="preserve">
+    <value>配置主接口和可选的备用接口。当主接口调用失败时将自动故障转移至备用接口。</value>
+  </data>
+  <data name="AiHub_SecurityPolicyGroup.Header" xml:space="preserve">
+    <value>安全策略</value>
+  </data>
+  <data name="AiHub_SecurityPolicyCard.Header" xml:space="preserve">
+    <value>全局安全策略</value>
+  </data>
+  <data name="AiHub_SecurityPolicyCard.Description" xml:space="preserve">
+    <value>security.md 为所有任务追加约束；内置的输入与输出检查始终生效。</value>
+  </data>
+  <data name="AiHub_SavePolicyButton.Content" xml:space="preserve">
+    <value>保存策略</value>
+  </data>
+  <data name="AiHub_ResetPolicyButton.Content" xml:space="preserve">
+    <value>重置为默认</value>
+  </data>
+  <data name="AiHub_PipelineCard.Header" xml:space="preserve">
+    <value>任务管线</value>
+  </data>
+  <data name="AiHub_PipelineCard.Description" xml:space="preserve">
+    <value>插件策略 → 输入脱敏 → 主／备用端点 → 输出校验</value>
+  </data>
+  <data name="AiHub_KernelRuntime.Header" xml:space="preserve">
+    <value>所选内核的安装状态</value>
+  </data>
+  <data name="AiHub_KernelPathCard.Header" xml:space="preserve">
+    <value>内核位置</value>
+  </data>
+  <data name="AiHub_ConcurrencyCard.Header" xml:space="preserve">
+    <value>并发批次数</value>
+  </data>
+  <data name="AiHub_ConcurrencyCard.Description" xml:space="preserve">
+    <value>每个 Worker 同时运行的分析批次上限（1–4）。</value>
+  </data>
+  <data name="AiHub_FallbackEnabledCard.Header" xml:space="preserve">
+    <value>启用备用端点</value>
+  </data>
+  <data name="AiHub_FallbackEnabledCard.Description" xml:space="preserve">
+    <value>主端点遇到可重试的连接或服务故障时，使用此端点。</value>
+  </data>
+  <data name="AiHub_EndpointUrlCard.Header" xml:space="preserve">
+    <value>端点地址</value>
+  </data>
+  <data name="AiHub_EndpointUrlCard.Description" xml:space="preserve">
+    <value>填写 HTTP(S) 基础地址，不包含凭据、查询参数或片段。</value>
+  </data>
+  <data name="AiHub_EndpointUrlInput.PlaceholderText" xml:space="preserve">
+    <value>https://api.example.com/v1</value>
+  </data>
+  <data name="AiHub_ApiKeyCard.Header" xml:space="preserve">
+    <value>API 密钥</value>
+  </data>
+  <data name="AiHub_ApiKeyCard.Description" xml:space="preserve">
+    <value>使用当前 Windows 账户加密，并与普通设置分开保存。</value>
+  </data>
+  <data name="AiHub_ApiKeyInput.PlaceholderText" xml:space="preserve">
+    <value>按端点要求填写 API 密钥</value>
+  </data>
+  <data name="AiHub_ModeCard.Header" xml:space="preserve">
+    <value>API 协议</value>
+  </data>
+  <data name="AiHub_ModeCard.Description" xml:space="preserve">
+    <value>Codex 需要 Responses；Pi 支持两种协议。</value>
+  </data>
+  <data name="AiHub_ModelCard.Header" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="AiHub_ModelInput.PlaceholderText" xml:space="preserve">
+    <value>填写端点支持的模型标识</value>
+  </data>
+  <data name="AiHub_EffortCard.Header" xml:space="preserve">
+    <value>推理强度</value>
+  </data>
+  <data name="AiHub_EffortLow.Content" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="AiHub_EffortMedium.Content" xml:space="preserve">
+    <value>中</value>
+  </data>
+  <data name="AiHub_EffortHigh.Content" xml:space="preserve">
+    <value>高</value>
+  </data>
+  <data name="AiHub_EffortExtraHigh.Content" xml:space="preserve">
+    <value>更高</value>
+  </data>
+  <data name="AiHub_EffortMaximum.Content" xml:space="preserve">
+    <value>最高</value>
+  </data>
+  <data name="AiHub_ProbeCard.Header" xml:space="preserve">
+    <value>测试当前配置</value>
+  </data>
+  <data name="AiHub_ProbeCard.Description" xml:space="preserve">
+    <value>发送少量测试内容并校验响应。测试不会保存当前草稿。</value>
+  </data>
+  <data name="AiHub_TestConnectionButton.Content" xml:space="preserve">
+    <value>测试连接</value>
+  </data>
+  <data name="AiHub_SaveEndpointsCard.Header" xml:space="preserve">
+    <value>保存端点更改</value>
+  </data>
+  <data name="AiHub_SaveEndpointsCard.Description" xml:space="preserve">
+    <value>一并保存主／备用端点及加密凭据。</value>
+  </data>
+  <data name="AiHub_SaveEndpointsButton.Content" xml:space="preserve">
+    <value>保存端点</value>
+  </data>
+  <data name="AiHub_SaveButton.Content" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="AiHub_MainEndpointExpander.Header" xml:space="preserve">
+    <value>主端点</value>
+  </data>
+  <data name="AiHub_FallbackEndpointExpander.Header" xml:space="preserve">
+    <value>备用端点</value>
+  </data>
+  <data name="AiHub_ClearFallbackButton.Content" xml:space="preserve">
+    <value>清空备用端点</value>
+  </data>
+  <data name="AiHub_CancelButton.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AiHub_PolicyPathCard.Header" xml:space="preserve">
+    <value>security.md 位置</value>
+  </data>
+  <data name="AiHub_PolicyActionsCard.Header" xml:space="preserve">
+    <value>保存或恢复策略</value>
+  </data>
+  <data name="AiHub_PolicyActionsCard.Description" xml:space="preserve">
+    <value>重置会将已保存的策略和当前编辑内容替换为默认文本。</value>
+  </data>
+  <data name="AiHub_MainRoute" xml:space="preserve">
+    <value>主端点</value>
+  </data>
+  <data name="AiHub_FallbackRoute" xml:space="preserve">
+    <value>备用端点</value>
+  </data>
+  <data name="AiHub_MainDescription" xml:space="preserve">
+    <value>新 AI 任务优先使用此端点。</value>
+  </data>
+  <data name="AiHub_FallbackDescription" xml:space="preserve">
+    <value>可选备用端点，用于可重试的网络与服务故障。</value>
+  </data>
+  <data name="AiHub_SaveFailed" xml:space="preserve">
+    <value>无法保存更改，请检查 AI Hub 数据目录的访问权限。</value>
+  </data>
+  <data name="AiHub_LoadFailed" xml:space="preserve">
+    <value>无法读取 AI Hub 设置，现有文件已保留。</value>
+  </data>
+  <data name="AiHub_OperationFailed" xml:space="preserve">
+    <value>操作未完成，请检查所选内核、端点配置与目录访问权限。</value>
+  </data>
+  <data name="AiHub_EndpointInvalid" xml:space="preserve">
+    <value>请检查地址、模型、API 协议与推理强度；Codex 需要 Responses 协议。</value>
+  </data>
+  <data name="AiHub_Testing" xml:space="preserve">
+    <value>正在测试端点并校验响应…</value>
+  </data>
+  <data name="AiHub_TestSucceeded" xml:space="preserve">
+    <value>连接测试通过。</value>
+  </data>
+  <data name="AiHub_TestFailed" xml:space="preserve">
+    <value>连接测试失败，请检查已安装的内核、协议、模型和凭据。</value>
+  </data>
+  <data name="AiHub_InstallBeforeSwitch" xml:space="preserve">
+    <value>请先安装并验证所选内核，再确认切换。</value>
+  </data>
+  <data name="AiHub_SwitchIncompatible" xml:space="preserve">
+    <value>已保存的端点与此内核不兼容，请先调整并保存 API 协议。</value>
+  </data>
+  <data name="AiHub_SwitchApplied" xml:space="preserve">
+    <value>所选内核已生效。</value>
+  </data>
+  <data name="AiHub_Checking" xml:space="preserve">
+    <value>正在检查最新版本…</value>
+  </data>
+  <data name="AiHub_LatestAvailable" xml:space="preserve">
+    <value>最新版本：{0}</value>
+  </data>
+  <data name="AiHub_UpdateAvailable" xml:space="preserve">
+    <value>可更新至：{0}</value>
+  </data>
+  <data name="AiHub_UpToDate" xml:space="preserve">
+    <value>已是最新版本：{0}</value>
+  </data>
+  <data name="AiHub_Downloading" xml:space="preserve">
+    <value>正在下载并校验所选内核…</value>
+  </data>
+  <data name="AiHub_Installed" xml:space="preserve">
+    <value>内核已安装并通过校验；如更换了选择，请确认切换。</value>
+  </data>
+  <data name="AiHub_AlreadyInstalled" xml:space="preserve">
+    <value>所选内核已是最新版本。</value>
+  </data>
+  <data name="AiHub_EndpointsSaved" xml:space="preserve">
+    <value>端点与加密凭据已保存。</value>
+  </data>
+  <data name="AiHub_FallbackDraftCleared" xml:space="preserve">
+    <value>已清空备用端点草稿，保存端点后生效。</value>
+  </data>
+  <data name="AiHub_PolicyDraft" xml:space="preserve">
+    <value>有未保存更改</value>
+  </data>
+  <data name="AiHub_PolicyActive" xml:space="preserve">
+    <value>已保存</value>
+  </data>
+  <data name="AiHub_PolicyDefault" xml:space="preserve">
+    <value>默认</value>
+  </data>
+  <data name="AiHub_PolicySaved" xml:space="preserve">
+    <value>全局安全策略已保存。</value>
+  </data>
+  <data name="AiHub_PolicyReset" xml:space="preserve">
+    <value>全局安全策略已恢复默认。</value>
+  </data>
+  <data name="AiHub_KernelInstalled" xml:space="preserve">
+    <value>{0} · 已安装 · {1}</value>
+  </data>
+  <data name="AiHub_KernelMissing" xml:space="preserve">
+    <value>{0} · 未安装</value>
+  </data>
+  <data name="AiHub_VersionUnknown" xml:space="preserve">
+    <value>检查后显示版本</value>
+  </data>
+  <data name="AiHub_Cancelled" xml:space="preserve">
+    <value>操作已取消。</value>
+  </data>
+  <data name="AiHub_EnableToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>启用 AI Hub</value>
+  </data>
+  <data name="AiHub_KernelSelector.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>选择 AI 内核</value>
+  </data>
+  <data name="AiHub_ConcurrencyInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>并发分析批次数</value>
+  </data>
+  <data name="AiHub_DownloadProgress.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>内核下载进度</value>
+  </data>
+  <data name="AiHub_FallbackToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>启用备用端点</value>
+  </data>
+  <data name="AiHub_EndpointUrlInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>端点地址</value>
+  </data>
+  <data name="AiHub_ApiKeyInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>端点 API 密钥</value>
+  </data>
+  <data name="AiHub_ModeInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>API 协议</value>
+  </data>
+  <data name="AiHub_ModelInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>模型标识</value>
+  </data>
+  <data name="AiHub_EffortInput.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>推理强度</value>
+  </data>
+  <data name="AiHub_PolicyEditor.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>全局安全策略编辑器</value>
+  </data>
+  <data name="AiHub_EnableToggle.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="AiHub_EnableToggle.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="AiHub_FallbackToggle.OnContent" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="AiHub_FallbackToggle.OffContent" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="Localserver_AiCard.Header" xml:space="preserve">
+    <value>AI 分析</value>
+  </data>
+  <data name="Localserver_AiCard.Description" xml:space="preserve">
+    <value>通过 AI Hub 分析服务健康状态或审查配置。</value>
+  </data>
+  <data name="Localserver_AiDisabledCard.Header" xml:space="preserve">
+    <value>AI Hub 未启用</value>
+  </data>
+  <data name="Localserver_AiDisabledCard.Description" xml:space="preserve">
+    <value>先启用 AI Hub 并配置端点，再运行分析。</value>
+  </data>
+  <data name="Localserver_OpenAiHubButton.Content" xml:space="preserve">
+    <value>打开 AI Hub</value>
+  </data>
+  <data name="Localserver_AiAnalyzeCard.Header" xml:space="preserve">
+    <value>分析当前快照</value>
+  </data>
+  <data name="Localserver_AiAnalyzeCard.Description" xml:space="preserve">
+    <value>发送服务状态与配置摘要，获取分析建议。</value>
+  </data>
+  <data name="Localserver_AiDiagnoseButton.Content" xml:space="preserve">
+    <value>诊断健康状态</value>
+  </data>
+  <data name="Localserver_AiReviewButton.Content" xml:space="preserve">
+    <value>审查配置</value>
+  </data>
+  <data name="Localserver_AiNoServices" xml:space="preserve">
+    <value>添加服务后即可运行 AI 分析。</value>
+  </data>
+  <data name="Localserver_AiRunning" xml:space="preserve">
+    <value>正在分析服务快照…</value>
+  </data>
+  <data name="Localserver_AiNoFindings" xml:space="preserve">
+    <value>在当前快照中未发现问题。</value>
+  </data>
+  <data name="Localserver_AiCompleted" xml:space="preserve">
+    <value>{0} 条分析结果 · {1}</value>
+  </data>
+  <data name="Localserver_AiSeveritylow" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="Localserver_AiSeveritymedium" xml:space="preserve">
+    <value>中</value>
+  </data>
+  <data name="Localserver_AiSeverityhigh" xml:space="preserve">
+    <value>高</value>
+  </data>
+  <data name="AiHub_ErrorHubDisabled" xml:space="preserve">
+    <value>请先在 Kit 设置中启用 AI Hub。</value>
+  </data>
+  <data name="AiHub_ErrorKernelNotInstalled" xml:space="preserve">
+    <value>请在 AI Hub 设置中安装所选内核。</value>
+  </data>
+  <data name="AiHub_ErrorEndpointFailed" xml:space="preserve">
+    <value>已配置的端点未能完成请求。</value>
+  </data>
+  <data name="AiHub_ErrorInvalidPayload" xml:space="preserve">
+    <value>任务输入或输出契约无效，或超过大小限制。</value>
+  </data>
+  <data name="AiHub_ErrorPolicyViolation" xml:space="preserve">
+    <value>策略或模型输出未通过校验。</value>
+  </data>
+  <data name="AiHub_ErrorTimeout" xml:space="preserve">
+    <value>AI 分析已超时。</value>
+  </data>
+  <data name="AiHub_ErrorCancelled" xml:space="preserve">
+    <value>AI 分析已取消。</value>
+  </data>
+  <data name="AiHub_ErrorExecutionFailed" xml:space="preserve">
+    <value>无法完成 AI 分析。</value>
+  </data>
+  <data name="AiHub_ErrorInvalidConfiguration" xml:space="preserve">
+    <value>请检查已保存的内核与端点配置。</value>
+  </data>
+  <data name="AiHub_ErrorHostUnavailable" xml:space="preserve">
+    <value>AI Hub 宿主不可用，请打开 Kit 设置后重试。</value>
+  </data>
+  <data name="AiHub_KernelExecutionTitle.Text" xml:space="preserve">
+    <value>AI 执行内核</value>
+  </data>
+  <data name="AiHub_KernelExecutionSubtitle.Text" xml:space="preserve">
+    <value>选择本地 Codex CLI 或 Pi CLI 运行器（安装在 Kit 程序目录之外）</value>
+  </data>
+  <data name="AiHub_EndpointsTitle.Text" xml:space="preserve">
+    <value>接口端点（主接口与备用接口）</value>
+  </data>
+  <data name="AiHub_EndpointUrlLabel.Text" xml:space="preserve">
+    <value>端点地址</value>
+  </data>
+  <data name="AiHub_ApiKeyLabel.Text" xml:space="preserve">
+    <value>API 密钥</value>
+  </data>
+  <data name="AiHub_ApiModeLabel.Text" xml:space="preserve">
+    <value>API 协议</value>
+  </data>
+  <data name="AiHub_ModelLabel.Text" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="AiHub_ReasoningEffortLabel.Text" xml:space="preserve">
+    <value>推理强度</value>
+  </data>
+  <data name="AiHub_SecurityPolicyTitle.Text" xml:space="preserve">
+    <value>全局安全策略 (security.md)</value>
+  </data>
+  <data name="AiHub_SecurityPolicySubtitle.Text" xml:space="preserve">
+    <value>仅提供咨询建议原则、强制数据脱敏与沙箱隔离</value>
+  </data>
+  <data name="AiHub_CheckUpdatesText.Text" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="AiHub_DownloadKernelText.Text" xml:space="preserve">
+    <value>下载或更新</value>
+  </data>
+  <data name="AiHub_KernelUpdatesCard.Header" xml:space="preserve">
+    <value>内核更新</value>
+  </data>
+  <data name="AiHub_KernelLocationCard.Header" xml:space="preserve">
+    <value>安装路径</value>
+  </data>
+  <data name="General_DiagnosticsGroup.Header" xml:space="preserve">
+    <value>诊断与日志</value>
+  </data>
+  <data name="General_DiagnosticsExpander.Header" xml:space="preserve">
+    <value>运行日志</value>
+  </data>
+  <data name="General_DiagnosticsExpander.Description" xml:space="preserve">
+    <value>收集并管理主程序与插件的运行日志，用于调试和排错。</value>
+  </data>
+  <data name="General_LogLevelCard.Header" xml:space="preserve">
+    <value>日志级别</value>
+  </data>
+  <data name="General_LogLevelCard.Description" xml:space="preserve">
+    <value>设置日志收集的详细程度（Trace 最详尽）。</value>
+  </data>
+  <data name="General_OpenLogsFolderCard.Header" xml:space="preserve">
+    <value>日志文件夹</value>
+  </data>
+  <data name="General_OpenLogsFolderText.Text" xml:space="preserve">
+    <value>打开文件夹</value>
   </data>
 </root>

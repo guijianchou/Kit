@@ -8,7 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.PowerToys.UITest;
+using Kit.UITest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Win32;
 
@@ -18,17 +18,17 @@ namespace LightSwitch.UITests
     {
         private static readonly string[] ShortcutSeparators = { " + ", "+", " " };
 
-        [DllImport("PowerToys.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
         private static extern void LightSwitch_SetSystemTheme(bool isLight);
 
-        [DllImport("PowerToys.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
         private static extern void LightSwitch_SetAppsTheme(bool isLight);
 
-        [DllImport("PowerToys.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool LightSwitch_GetCurrentSystemTheme();
 
-        [DllImport("PowerToys.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool LightSwitch_GetCurrentAppsTheme();
 
@@ -176,7 +176,7 @@ namespace LightSwitch.UITests
         {
             try
             {
-                var processes = System.Diagnostics.Process.GetProcessesByName("PowerToys.LightSwitchService");
+                var processes = System.Diagnostics.Process.GetProcessesByName("Kit.LightSwitchService");
                 foreach (var process in processes)
                 {
                     try

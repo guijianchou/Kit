@@ -45,7 +45,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\$(MSBuildProjectName)\</OutDir>
-    <TargetName>PowerToys.LightSwitchService</TargetName>
+    <TargetName>Kit.LightSwitchService</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

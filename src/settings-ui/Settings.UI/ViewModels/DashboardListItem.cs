@@ -6,13 +6,12 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-
+using Kit.Settings.UI.Controls;
 using ManagedCommon;
-using Microsoft.PowerToys.Settings.UI.Controls;
 using Microsoft.UI;
 using Windows.UI;
 
-namespace Microsoft.PowerToys.Settings.UI.ViewModels
+namespace Kit.Settings.UI.ViewModels
 {
     public partial class DashboardListItem : ModuleListItem
     {

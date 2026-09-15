@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -10,42 +10,45 @@ namespace ManagedCommon
 {
     public static class RunnerHelper
     {
-        public static void WaitForPowerToysRunner(int powerToysPID, Action act, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+        public static void WaitForKitRunner(int kitPID, Action act, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
             var assembly = Assembly.GetCallingAssembly().GetName();
-            Logger.LogDebug($"[{assembly}][{memberName}]WaitForPowerToysRunner waiting for Event powerToysPID={powerToysPID}");
+            Logger.LogDebug($"[{assembly}][{memberName}]WaitForKitRunner waiting for Event kitPID={kitPID}");
             Task.Run(() =>
             {
                 const uint INFINITE = 0xFFFFFFFF;
                 const uint WAIT_OBJECT_0 = 0x00000000;
                 const uint SYNCHRONIZE = 0x00100000;
 
-                IntPtr powerToysProcHandle = NativeMethods.OpenProcess(SYNCHRONIZE, false, powerToysPID);
-                if (powerToysProcHandle == IntPtr.Zero)
+                IntPtr kitProcHandle = NativeMethods.OpenProcess(SYNCHRONIZE, false, kitPID);
+                if (kitProcHandle == IntPtr.Zero)
                 {
-                    Logger.LogWarning($"[{assembly}][{memberName}]WaitForPowerToysRunner could not open runner process powerToysPID={powerToysPID}");
+                    Logger.LogWarning($"[{assembly}][{memberName}]WaitForKitRunner could not open runner process kitPID={kitPID}");
                     return;
                 }
 
                 try
                 {
-                    if (NativeMethods.WaitForSingleObject(powerToysProcHandle, INFINITE) == WAIT_OBJECT_0)
+                    if (NativeMethods.WaitForSingleObject(kitProcHandle, INFINITE) == WAIT_OBJECT_0)
                     {
-                        Logger.LogDebug($"[{assembly}][{memberName}]WaitForPowerToysRunner Event Notified powerToysPID={powerToysPID}");
+                        Logger.LogDebug($"[{assembly}][{memberName}]WaitForKitRunner Event Notified kitPID={kitPID}");
                         act.Invoke();
                     }
                 }
                 finally
                 {
-                    NativeMethods.CloseHandle(powerToysProcHandle);
+                    NativeMethods.CloseHandle(kitProcHandle);
                 }
             });
         }
 
+        public static void WaitForPowerToysRunner(int powerToysPID, Action act, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+            => WaitForKitRunner(powerToysPID, act, memberName);
+
         private static readonly string[] RunnerProcessNames = new[] { "Kit.exe", "PowerToys.exe" };
 
         // In case we don't have a permission to open user's processes with a SYNCHRONIZE access right, e.g. LocalSystem processes, we could use GetExitCodeProcess to check the process' exit code periodically.
-        public static void WaitForPowerToysRunnerExitFallback(Action act)
+        public static void WaitForKitRunnerExitFallback(Action act)
         {
             int[] processIds = new int[1024];
             uint bytesCopied;
@@ -116,5 +119,8 @@ namespace ManagedCommon
                 act.Invoke();
             });
         }
+
+        public static void WaitForPowerToysRunnerExitFallback(Action act)
+            => WaitForKitRunnerExitFallback(act);
     }
 }

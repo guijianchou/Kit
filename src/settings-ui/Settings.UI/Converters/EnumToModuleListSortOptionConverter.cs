@@ -1,13 +1,13 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.PowerToys.Settings.UI.Controls;
-using Microsoft.PowerToys.Settings.UI.Library;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Library;
 using Microsoft.UI.Xaml.Data;
 
-namespace Microsoft.PowerToys.Settings.UI.Converters
+namespace Kit.Settings.UI.Converters
 {
     public partial class EnumToModuleListSortOptionConverter : IValueConverter
     {

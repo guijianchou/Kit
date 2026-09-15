@@ -4,9 +4,9 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Settings.UI.Library;
+using Kit.Settings.UI.Library;
 
-namespace Microsoft.PowerToys.Settings.UI.Library
+namespace Kit.Settings.UI.Library
 {
     public class SndLightSwitchSettings
     {

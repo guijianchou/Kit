@@ -5,7 +5,7 @@
 using System;
 using Microsoft.UI.Xaml.Data;
 
-namespace Microsoft.PowerToys.Settings.UI.Converters
+namespace Kit.Settings.UI.Converters
 {
     public partial class BoolToConflictTypeConverter : IValueConverter
     {

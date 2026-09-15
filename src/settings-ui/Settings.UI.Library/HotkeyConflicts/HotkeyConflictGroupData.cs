@@ -4,7 +4,7 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.PowerToys.Settings.UI.Library.HotkeyConflicts
+namespace Kit.Settings.UI.Library.HotkeyConflicts
 {
     public class HotkeyConflictGroupData
     {

@@ -22,7 +22,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <TargetName>PowerToys.BackgroundActivatorDLL</TargetName>
+    <TargetName>Kit.BackgroundActivatorDLL</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>

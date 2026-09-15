@@ -5,11 +5,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
-using Microsoft.PowerToys.Settings.UI.Views;
+using Kit.Settings.UI.Views;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.PowerToys.Settings.UI.Controls
+namespace Kit.Settings.UI.Controls
 {
     public sealed partial class ShortcutDialogContentControl : UserControl
     {

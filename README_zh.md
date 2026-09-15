@@ -221,34 +221,30 @@ Git 工作树仅在需要隔离分支工作区时使用。在 2026-04-29，`git 
 
 ## 验证快照
 
-2026-04-25 的本地验证使用 Visual Studio 18 MSBuild 和 VSTest。以下目标调试 x64 构建通过，0 个警告和 0 个错误：
+2026-09-15 针对版本 `2.0.23` 的本地验证使用 Visual Studio 18 MSBuild、VSTest 和 .NET 测试运行器：
 
-- `Kit.Settings.csproj` Debug x64
-- `Kit.QuickAccess.csproj` Debug x64
-- `Kit.vcxproj` Debug x64
-- `Awake.csproj` Debug x64
-- `AwakeModuleInterface.vcxproj` Debug x64
-- `LightSwitchModuleInterface.vcxproj` Debug x64
-- `LightSwitchService.vcxproj` Debug x64
+- **Release 与 Debug x64 完整构建**：
+  - 完整 `Kit.slnx` 在 Debug x64 与 Release x64 配置下均以 0 错误通过编译。
+  - 在 `x64\Release\` 下生成了完整的运行时产物：
+    - `x64\Release\Kit.exe` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\Kit.Settings.exe` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\Kit.QuickAccess.exe` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\Kit.AiHub.dll` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\LocalserverLib.dll` (`2.0.23.0`)
+    - `x64\Release\Kit.Interop.winmd` 与 `Kit.GPOWrapper.winmd`
+    - 模块接口及服务：`Kit.AwakeModuleInterface.dll`、`Kit.LightSwitchModuleInterface.dll`、`Kit.LocalserverModuleInterface.dll`、`Kit.Awake.exe` 及 `Kit.LightSwitchService.exe`
+    - 已签名的稀疏身份包：`x64\Release\KitSparse.msix` (`2.0.23.0`)
 
-`Settings.UI.UnitTests.csproj` 现在在将测试项目与 Kit 的修剪模块集和 Kit 设置路径对齐后干净构建。`vstest.console.exe` 通过 `Settings.UI.UnitTests.dll`，59/59 测试通过。
-在发布运行器构建依赖项修复后，目标 `Kit.slnx /t:Kit` 发布 x64 构建通过并从干净树生成了预期的运行时三元组：
+- **自动化测试套件验证**：
+  - `Settings.UI.UnitTests`（通用视图模型与版本元数据）：通过 `vstest.console.exe` 执行，44/44 测试通过（包括 `KitAboutVersionShouldMatchReleaseMetadata` 与 `LoggingSettingsDefaultsAndToggleWorkCorrectly`）。
+  - `Kit.AiHub.UnitTests`：107 通过，0 失败，1 跳过。
+  - `Localserver.UnitTests`：7/7 全部通过。
 
-- `x64\Release\Kit.exe`
-- `x64\Release\WinUI3Apps\Kit.Settings.exe`
-- `x64\Release\WinUI3Apps\Kit.QuickAccess.exe`
-
-在 PowerToys CsWinRT/WinMD 兼容性修复后，完整的 `Kit.slnx` 发布 x64 构建也在本地通过，并生成了 Awake、快速访问、设置、DSC 和其他 PowerToys 派生表面期望的复制模块元数据：
-
-- `x64\Release\Kit.Interop.winmd`
-- `x64\Release\Kit.GPOWrapper.winmd`
-- 重新生成的 CsWinRT 投影，如消费项目 `obj` 目录中的 `Kit.GPOWrapper.cs`
-
-2026-04-29 的本地验证涵盖了最新的 Light Switch 设置传递：
-
-- `Settings.UI.UnitTests.csproj` Debug x64 使用 Visual Studio 18 MSBuild 构建。
-- `vstest.console.exe` 使用 `LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract` 过滤器运行 `Settings.UI.UnitTests.dll`，77/77 测试通过。
-- `Kit.Settings.csproj` Release x64 成功构建并重新生成 `x64\Release\WinUI3Apps\Kit.Settings.dll`。
-- `git worktree prune` 删除了陈旧的外部工作树元数据，`git worktree list --porcelain` 现在仅报告活动的 Kit 工作树。
+- **核心功能与架构验证**：
+  - **AI 服务设置 UI/UX 重构**：对齐原生 PowerToys `SettingsExpander`/`SettingsCard` 风格，解耦 Execution Kernel（Codex / Pi CLI）与 Endpoints，Main/Fallback 单行紧凑排版（展示 `Model · Effort` 与 `Test connection`），全局安全策略下方统一 `Save` 保存按钮。
+  - **Localserver AI 彻底解耦**：完全移除 AI 分析服务、诊断链及界面卡片。
+  - **诊断与集中日志系统**：集成 C++ `spdlog` 与 C# `ManagedCommon.Logger`，通过 `%LOCALAPPDATA%\Kit\log_settings.json` 双向同步；设置界面启用开关与日志级别选择器验证完毕。
+  - **Debug 交付包**：通过 `bin/debug/2.0.23/` 交付验证（1,352 文件，0 缺失依赖）。
 
 在将干净树交给 Visual Studio 之前，可以删除本地构建输出和恢复缓存。下一次编译应该一起重新创建运行时输出目录、`WinUI3Apps` 子项、共享 WinMD 文件、CsWinRT 投影和包恢复缓存。
+

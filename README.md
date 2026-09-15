@@ -221,35 +221,30 @@ Two additional full-solution Release cleanup items were handled during the same 
 
 ## Verification Snapshot
 
-Local verification on 2026-04-25 used Visual Studio 18 MSBuild and VSTest. The following targeted Debug x64 builds passed with 0 warnings and 0 errors:
+Local verification on 2026-09-15 for version `2.0.23` used Visual Studio 18 MSBuild, VSTest, and .NET test runners:
 
-- `Kit.Settings.csproj` Debug x64
-- `Kit.QuickAccess.csproj` Debug x64
-- `Kit.vcxproj` Debug x64
-- `Awake.csproj` Debug x64
-- `AwakeModuleInterface.vcxproj` Debug x64
-- `LightSwitchModuleInterface.vcxproj` Debug x64
-- `LightSwitchService.vcxproj` Debug x64
+- **Release and Debug x64 Solution Builds**:
+  - Full `Kit.slnx` built with 0 errors for both Debug x64 and Release x64.
+  - Produced complete runtime binaries under `x64\Release\`:
+    - `x64\Release\Kit.exe` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\Kit.Settings.exe` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\Kit.QuickAccess.exe` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\Kit.AiHub.dll` (`2.0.23.0`)
+    - `x64\Release\WinUI3Apps\LocalserverLib.dll` (`2.0.23.0`)
+    - `x64\Release\Kit.Interop.winmd` and `Kit.GPOWrapper.winmd`
+    - Module interfaces and services: `Kit.AwakeModuleInterface.dll`, `Kit.LightSwitchModuleInterface.dll`, `Kit.LocalserverModuleInterface.dll`, `Kit.Awake.exe`, and `Kit.LightSwitchService.exe`
+    - Signed sparse package identity: `x64\Release\KitSparse.msix` (`2.0.23.0`)
 
-`Settings.UI.UnitTests.csproj` now builds cleanly after aligning the test project with Kit's trimmed module set and Kit settings path. `vstest.console.exe` passed `Settings.UI.UnitTests.dll` with 59/59 tests passing, including static coverage for runner/solution registration and the removed Monitor surface.
+- **Automated Test Validation**:
+  - `Settings.UI.UnitTests` (General ViewModel & Version Metadata): 44/44 passed via `vstest.console.exe` (including `KitAboutVersionShouldMatchReleaseMetadata` and `LoggingSettingsDefaultsAndToggleWorkCorrectly`).
+  - `Kit.AiHub.UnitTests`: 107 passed, 0 failed, 1 skipped.
+  - `Localserver.UnitTests`: 7/7 passed.
 
-After the Release runner build-dependency fix, the targeted `Kit.slnx /t:Kit` Release x64 build passed and produced the runtime trio expected from a clean tree:
-
-- `x64\Release\Kit.exe`
-- `x64\Release\WinUI3Apps\Kit.Settings.exe`
-- `x64\Release\WinUI3Apps\Kit.QuickAccess.exe`
-
-After the PowerToys CsWinRT/WinMD compatibility fix, a full `Kit.slnx` Release x64 build also passed locally and produced the copied-module metadata expected by Awake, Quick Access, Settings, DSC, and other PowerToys-derived surfaces:
-
-- `x64\Release\Kit.Interop.winmd`
-- `x64\Release\Kit.GPOWrapper.winmd`
-- regenerated CsWinRT projections such as `Kit.GPOWrapper.cs` in consuming project `obj` directories
-
-Local verification on 2026-04-29 covered the latest Light Switch Settings pass:
-
-- `Settings.UI.UnitTests.csproj` Debug x64 built with Visual Studio 18 MSBuild.
-- `vstest.console.exe` ran `Settings.UI.UnitTests.dll` with a filter for `LightSwitchPowerDisplayIntegrationShouldFollowOriginalModuleContract`; 77/77 tests passed.
-- `Kit.Settings.csproj` Release x64 built successfully and regenerated `x64\Release\WinUI3Apps\Kit.Settings.dll`.
-- `git worktree prune` removed the stale external worktree metadata, and `git worktree list --porcelain` now reports only the active Kit worktree.
+- **Key Feature & Architecture Verification**:
+  - **AI Service UI/UX Redesign**: Native PowerToys `SettingsExpander`/`SettingsCard` layout, separated Execution Kernel (Codex / Pi CLI) and Endpoints, single-row flat layout for Main/Fallback (`Model · Effort` with `Test connection`), and unified `Save` button beneath Global Security Policy.
+  - **Localserver AI Decoupling**: AI analysis services, diagnostic chains, and UI cards completely removed.
+  - **Centralized Diagnostics & Logging**: C++ `spdlog` and C# `ManagedCommon.Logger` integration synchronized via `%LOCALAPPDATA%\Kit\log_settings.json`; Settings UI toggle and log level selector verified.
+  - **Debug Staging**: Verified staged test handoff under `bin/debug/2.0.23/` (1,352 files, 0 missing dependencies).
 
 Before handing a clean tree to Visual Studio, local build outputs and restore caches can be removed. The next compile should recreate the runtime output directory, the `WinUI3Apps` children, shared WinMD files, CsWinRT projections, and package restore cache together.
+

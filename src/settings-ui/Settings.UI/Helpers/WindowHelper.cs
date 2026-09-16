@@ -25,7 +25,11 @@ namespace Kit.Settings.UI.Helpers
                 placement.Length = Marshal.SizeOf<WINDOWPLACEMENT>();
                 placement.Flags = 0;
                 placement.ShowCmd = (placement.ShowCmd == NativeMethods.SW_SHOWMAXIMIZED) ? NativeMethods.SW_SHOWMAXIMIZED : NativeMethods.SW_SHOWNORMAL;
-                return placement;
+                var normal = placement.NormalPosition;
+                if (normal.Right - normal.Left >= 480 && normal.Bottom - normal.Top >= 480)
+                {
+                    return placement;
+                }
             }
             catch (Exception)
             {
@@ -33,8 +37,8 @@ namespace Kit.Settings.UI.Helpers
 
             _ = NativeMethods.GetWindowPlacement(handle, out var defaultPlacement);
             defaultPlacement.Length = Marshal.SizeOf<WINDOWPLACEMENT>();
-            var normal = defaultPlacement.NormalPosition;
-            if (normal.Right - normal.Left < 480 || normal.Bottom - normal.Top < 480)
+            var defNormal = defaultPlacement.NormalPosition;
+            if (defNormal.Right - defNormal.Left < 480 || defNormal.Bottom - defNormal.Top < 480)
             {
                 defaultPlacement.NormalPosition = new RECT(100, 100, 1200, 850);
             }
@@ -45,9 +49,32 @@ namespace Kit.Settings.UI.Helpers
 
         public static void SerializePlacement(IntPtr handle)
         {
-            _ = NativeMethods.GetWindowPlacement(handle, out var placement);
+            var placement = default(WINDOWPLACEMENT);
+            placement.Length = Marshal.SizeOf<WINDOWPLACEMENT>();
+            if (!NativeMethods.GetWindowPlacement(handle, out placement))
+            {
+                return;
+            }
+
+            if (placement.ShowCmd != NativeMethods.SW_SHOWMAXIMIZED)
+            {
+                placement.ShowCmd = NativeMethods.SW_SHOWNORMAL;
+            }
+
+            var normal = placement.NormalPosition;
+            if (normal.Right - normal.Left < 480 || normal.Bottom - normal.Top < 480)
+            {
+                return;
+            }
+
             try
             {
+                var dir = Path.GetDirectoryName(_placementPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
                 var json = JsonSerializer.Serialize(placement, SourceGenerationContextContext.Default.WINDOWPLACEMENT);
                 File.WriteAllText(_placementPath, json);
             }

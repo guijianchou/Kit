@@ -115,9 +115,9 @@ namespace Kit.Settings.UI
             if (type != null)
             {
                 settingsWindow.NavigateToSection(type);
-
-                WindowHelpers.BringToForeground(settingsWindow.GetWindowHandle());
             }
+
+            WindowHelpers.BringToForeground(settingsWindow.GetWindowHandle());
 
             if (ensurePageIsSelected)
             {

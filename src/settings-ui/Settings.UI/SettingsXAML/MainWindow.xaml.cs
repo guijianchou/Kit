@@ -24,6 +24,7 @@ namespace Kit.Settings.UI
     {
         private bool _closePending;
         private bool _closeApproved;
+        private DispatcherTimer _placementDebounceTimer;
 
         internal Func<Task<bool>> FlushPendingSettingsAsync { get; set; }
 
@@ -51,6 +52,7 @@ namespace Kit.Settings.UI
             // Restore the last known placement on the first activation
             this.Activated += Window_Activated;
             NativeMethods.SetWindowPlacement(hWnd, ref placement);
+            this.AppWindow.Changed += OnAppWindowChanged;
 
             var loader = ResourceLoaderInstance.ResourceLoader;
             Title = App.IsElevated ? loader.GetString("SettingsWindow_AdminTitle") : loader.GetString("SettingsWindow_Title");
@@ -196,6 +198,15 @@ namespace Kit.Settings.UI
                 return;
             }
 
+            _placementDebounceTimer?.Stop();
+            try
+            {
+                this.AppWindow.Changed -= OnAppWindowChanged;
+            }
+            catch (Exception)
+            {
+            }
+
             var hWnd = WindowNative.GetWindowHandle(this);
             WindowHelper.SerializePlacement(hWnd);
 
@@ -268,6 +279,35 @@ namespace Kit.Settings.UI
         internal void EnsurePageIsSelected()
         {
             ShellPage.EnsurePageIsSelected();
+        }
+
+        private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
+        {
+            if (args.DidPositionChange || args.DidSizeChange)
+            {
+                var hWnd = WindowNative.GetWindowHandle(this);
+                if (NativeMethods.IsIconic(hWnd))
+                {
+                    return;
+                }
+
+                if (_placementDebounceTimer == null)
+                {
+                    _placementDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                    _placementDebounceTimer.Tick += (s, e) =>
+                    {
+                        _placementDebounceTimer.Stop();
+                        var currentHWnd = WindowNative.GetWindowHandle(this);
+                        if (!NativeMethods.IsIconic(currentHWnd))
+                        {
+                            WindowHelper.SerializePlacement(currentHWnd);
+                        }
+                    };
+                }
+
+                _placementDebounceTimer.Stop();
+                _placementDebounceTimer.Start();
+            }
         }
     }
 }

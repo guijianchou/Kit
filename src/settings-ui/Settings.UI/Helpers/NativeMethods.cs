@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -16,8 +16,12 @@ namespace Kit.Settings.UI.Helpers
         internal const int SPI_GETDESKWALLPAPER = 0x0073;
         internal const int SW_SHOWNORMAL = 1;
         internal const int SW_SHOWMAXIMIZED = 3;
+        internal const int SW_RESTORE = 9;
         internal const int SW_HIDE = 0;
         internal const int WM_COMMAND = 0x0111; // https://learn.microsoft.com/en-us/windows/win32/menurc/wm-command
+
+        [DllImport("user32.dll")]
+        internal static extern bool IsIconic(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         internal static extern IntPtr GetActiveWindow();

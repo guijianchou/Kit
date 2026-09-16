@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -32,6 +32,14 @@ namespace Kit.Settings.UI.Helpers
             }
 
             _ = NativeMethods.GetWindowPlacement(handle, out var defaultPlacement);
+            defaultPlacement.Length = Marshal.SizeOf<WINDOWPLACEMENT>();
+            var normal = defaultPlacement.NormalPosition;
+            if (normal.Right - normal.Left < 480 || normal.Bottom - normal.Top < 480)
+            {
+                defaultPlacement.NormalPosition = new RECT(100, 100, 1200, 850);
+            }
+
+            defaultPlacement.ShowCmd = NativeMethods.SW_SHOWNORMAL;
             return defaultPlacement;
         }
 

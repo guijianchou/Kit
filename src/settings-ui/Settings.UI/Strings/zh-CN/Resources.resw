@@ -808,6 +808,9 @@
   <data name="Localserver_LogResumeSkipped" xml:space="preserve">
     <value>已跳过恢复：{0}</value>
   </data>
+  <data name="Localserver_AdoptedTooltip" xml:space="preserve">
+    <value>从先前的会话接管。运行时间继承自原始启动，但无法获取本次会话之前的日志输出。</value>
+  </data>
   <data name="Localserver_LogResumeNoProcesses" xml:space="preserve">
     <value>记录中的进程树已无存活进程。</value>
   </data>

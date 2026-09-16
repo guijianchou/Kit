@@ -104,6 +104,12 @@ namespace Kit.Settings.UI
                 settingsWindow = new MainWindow();
             }
 
+            var hWnd = settingsWindow.GetWindowHandle();
+            if (NativeMethods.IsIconic(hWnd))
+            {
+                NativeMethods.ShowWindow(hWnd, NativeMethods.SW_RESTORE);
+            }
+
             settingsWindow.Activate();
 
             if (type != null)

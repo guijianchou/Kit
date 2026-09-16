@@ -174,9 +174,16 @@ namespace Kit.Settings.UI.Views
                     if (file != null && row.IsEditable)
                     {
                         row.Executable = file.Path;
-                        if (string.IsNullOrWhiteSpace(row.Cwd))
+                        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                        if (string.IsNullOrWhiteSpace(row.Cwd) || row.Cwd == "." || string.Equals(row.Cwd, userProfile, StringComparison.OrdinalIgnoreCase))
                         {
                             row.Cwd = Path.GetDirectoryName(file.Path) ?? string.Empty;
+                        }
+
+                        if (string.Equals(row.BaseArgsText, "/c echo Running", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(row.BaseArgsText, "echo Running", StringComparison.OrdinalIgnoreCase))
+                        {
+                            row.BaseArgsText = string.Empty;
                         }
                     }
                 }

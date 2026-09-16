@@ -264,6 +264,10 @@ namespace Kit.Settings.UI.ViewModels
         public string TagLabel => Definition.Tags.Count > 0 ? Definition.Tags[0].ToUpperInvariant() : string.Empty;
         public Visibility TagVisibility => Definition.Tags.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        public bool IsAdopted => _runner.IsRecovered && State.IsActive();
+        public Visibility AdoptedVisibility => IsAdopted ? Visibility.Visible : Visibility.Collapsed;
+        public string AdoptedTooltip => "Localserver_AdoptedTooltip".GetLocalized();
+
         public Brush TagBrush => (Brush)Application.Current.Resources[Definition.Tags.Count > 0
             ? Definition.Tags[0].ToLowerInvariant() switch
             {
@@ -519,8 +523,10 @@ namespace Kit.Settings.UI.ViewModels
             OnPropertyChanged(nameof(StatusVisibility));
             OnPropertyChanged(nameof(PortHintText));
             OnPropertyChanged(nameof(LockTooltip));
+            OnPropertyChanged(nameof(IsAdopted));
+            OnPropertyChanged(nameof(AdoptedVisibility));
 
-            if (State != ServiceState.Stopped)
+            if (State.IsActive())
             {
                 RecentBars.Add(new RecentBarViewModel(State, _runner.HealthProbePassed));
                 while (RecentBars.Count > _recentBarCapacity)
@@ -528,7 +534,7 @@ namespace Kit.Settings.UI.ViewModels
                     RecentBars.RemoveAt(0);
                 }
             }
-            else
+            else if (State == ServiceState.Stopped)
             {
                 if (RecentBars.Count > 0)
                 {
@@ -1495,9 +1501,9 @@ namespace Kit.Settings.UI.ViewModels
             {
                 Id = id,
                 Name = "Localserver_NewLine".GetLocalized(),
-                Cwd = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                Executable = "cmd.exe",
-                BaseArgs = ["/c", "echo", "Running"],
+                Cwd = ".",
+                Executable = string.Empty,
+                BaseArgs = [],
                 Tags = ["custom"],
                 DefaultPort = 8000,
                 StopTimeoutSec = 5,

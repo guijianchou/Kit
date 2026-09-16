@@ -419,6 +419,9 @@
                                             <Border Padding="4,1" CornerRadius="3" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind TagVisibility, Mode=OneWay}" VerticalAlignment="Center">
                                                 <TextBlock Text="{x:Bind TagLabel, Mode=OneWay}" FontSize="10" FontWeight="SemiBold" Foreground="{x:Bind TagBrush, Mode=OneWay}" />
                                             </Border>
+                                            <Border Padding="4,1" CornerRadius="3" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind AdoptedVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind AdoptedTooltip, Mode=OneWay}" VerticalAlignment="Center">
+                                                <TextBlock Text="ADOPTED" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                            </Border>
                                             <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind LockVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LockTooltip, Mode=OneWay}" VerticalAlignment="Center" />
                                         </StackPanel>
 

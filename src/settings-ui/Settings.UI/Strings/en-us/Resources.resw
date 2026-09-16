@@ -2127,6 +2127,9 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Localserver_LogResumeSkipped" xml:space="preserve">
     <value>Resume skipped: {0}</value>
   </data>
+  <data name="Localserver_AdoptedTooltip" xml:space="preserve">
+    <value>Adopted from a previous session. Uptime is carried over from the original start; output produced before this session was not captured.</value>
+  </data>
   <data name="Localserver_LogResumeNoProcesses" xml:space="preserve">
     <value>no process from the recorded tree is still alive.</value>
   </data>

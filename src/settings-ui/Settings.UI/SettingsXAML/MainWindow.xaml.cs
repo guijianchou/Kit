@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -46,11 +46,10 @@ namespace Kit.Settings.UI
             if (createHidden)
             {
                 placement.ShowCmd = NativeMethods.SW_HIDE;
-
-                // Restore the last known placement on the first activation
-                this.Activated += Window_Activated;
             }
 
+            // Restore the last known placement on the first activation
+            this.Activated += Window_Activated;
             NativeMethods.SetWindowPlacement(hWnd, ref placement);
 
             var loader = ResourceLoaderInstance.ResourceLoader;

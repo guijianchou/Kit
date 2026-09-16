@@ -1409,54 +1409,6 @@
   <data name="AiHub_FallbackToggle.OffContent" xml:space="preserve">
     <value>关</value>
   </data>
-  <data name="Localserver_AiCard.Header" xml:space="preserve">
-    <value>AI 分析</value>
-  </data>
-  <data name="Localserver_AiCard.Description" xml:space="preserve">
-    <value>通过 AI Hub 分析服务健康状态或审查配置。</value>
-  </data>
-  <data name="Localserver_AiDisabledCard.Header" xml:space="preserve">
-    <value>AI Hub 未启用</value>
-  </data>
-  <data name="Localserver_AiDisabledCard.Description" xml:space="preserve">
-    <value>先启用 AI Hub 并配置端点，再运行分析。</value>
-  </data>
-  <data name="Localserver_OpenAiHubButton.Content" xml:space="preserve">
-    <value>打开 AI Hub</value>
-  </data>
-  <data name="Localserver_AiAnalyzeCard.Header" xml:space="preserve">
-    <value>分析当前快照</value>
-  </data>
-  <data name="Localserver_AiAnalyzeCard.Description" xml:space="preserve">
-    <value>发送服务状态与配置摘要，获取分析建议。</value>
-  </data>
-  <data name="Localserver_AiDiagnoseButton.Content" xml:space="preserve">
-    <value>诊断健康状态</value>
-  </data>
-  <data name="Localserver_AiReviewButton.Content" xml:space="preserve">
-    <value>审查配置</value>
-  </data>
-  <data name="Localserver_AiNoServices" xml:space="preserve">
-    <value>添加服务后即可运行 AI 分析。</value>
-  </data>
-  <data name="Localserver_AiRunning" xml:space="preserve">
-    <value>正在分析服务快照…</value>
-  </data>
-  <data name="Localserver_AiNoFindings" xml:space="preserve">
-    <value>在当前快照中未发现问题。</value>
-  </data>
-  <data name="Localserver_AiCompleted" xml:space="preserve">
-    <value>{0} 条分析结果 · {1}</value>
-  </data>
-  <data name="Localserver_AiSeveritylow" xml:space="preserve">
-    <value>低</value>
-  </data>
-  <data name="Localserver_AiSeveritymedium" xml:space="preserve">
-    <value>中</value>
-  </data>
-  <data name="Localserver_AiSeverityhigh" xml:space="preserve">
-    <value>高</value>
-  </data>
   <data name="AiHub_ErrorHubDisabled" xml:space="preserve">
     <value>请先在 Kit 设置中启用 AI Hub。</value>
   </data>

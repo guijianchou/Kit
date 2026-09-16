@@ -233,8 +233,15 @@
                                         </Grid>
                                         <Border Grid.Row="1" Height="50" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" SizeChanged="OnStatusChartSizeChanged">
                                             <Grid>
-                                                <Path Data="{x:Bind ViewModel.StatusCurveFillGeometry, Mode=OneWay}" Fill="{ThemeResource AccentFillColorTertiaryBrush}" />
-                                                <Path Data="{x:Bind ViewModel.StatusCurveGeometry, Mode=OneWay}" Stroke="{ThemeResource AccentFillColorDefaultBrush}" StrokeThickness="1.5" />
+                                                <Path Data="{x:Bind ViewModel.StatusCurveFillGeometry, Mode=OneWay}"
+                                                      Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                                      Opacity="0.14" />
+                                                <Path Data="{x:Bind ViewModel.StatusCurveGeometry, Mode=OneWay}"
+                                                      Stroke="{ThemeResource AccentFillColorDefaultBrush}"
+                                                      StrokeThickness="1.75"
+                                                      StrokeLineJoin="Round"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round" />
                                                 <TextBlock x:Uid="Localserver_NoActivityText" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Visibility="{x:Bind ViewModel.StatusChartEmptyVisibility, Mode=OneWay}" />
                                             </Grid>
                                         </Border>

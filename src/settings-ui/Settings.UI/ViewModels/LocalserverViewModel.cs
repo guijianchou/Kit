@@ -1844,11 +1844,19 @@ namespace Kit.Settings.UI.ViewModels
 
             width = _chartWidth;
             height = _chartHeight;
+            if (width <= 0 || height <= 0)
+            {
+                return;
+            }
+
+            double plotBottom = Math.Max(4, height - 4);
+            double plotTop = 4;
+
             if (SelectedLine == null || SelectedLine.CpuHistory.Count == 0)
             {
-                StatusCurveGeometry = null;
+                StatusCurveGeometry = CreateStatusBaseline(width, plotBottom);
                 StatusCurveFillGeometry = null;
-                StatusChartRangeText = "Localserver_ChartRange".GetLocalized();
+                StatusChartRangeText = "LAST 60S";
                 OnPropertyChanged(nameof(StatusCurveGeometry));
                 OnPropertyChanged(nameof(StatusCurveFillGeometry));
                 OnPropertyChanged(nameof(StatusChartRangeText));
@@ -1857,49 +1865,127 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             var samples = SelectedLine.CpuHistory;
-            double peak = samples.Max();
-            double scaleMaximum = Math.Max(1d, peak);
-            double plotBottom = Math.Max(4, height - 4);
-            double plotTop = 4;
+            double peak = Math.Max(1d, samples.Max());
+            double scaleMaximum = peak;
 
             List<Point> points = new(samples.Count);
             for (int i = 0; i < samples.Count; i++)
             {
-                double x = samples.Count == 1 ? width / 2d : (double)i / (samples.Count - 1) * width;
+                double x = samples.Count == 1
+                    ? Math.Max(0, width - 2) / 2d
+                    : (double)i / (samples.Count - 1) * Math.Max(0, width - 2);
                 double norm = Math.Clamp(samples[i] / scaleMaximum, 0d, 1d);
                 double y = plotBottom - norm * (plotBottom - plotTop);
                 points.Add(new Point(x, y));
             }
 
-            StatusChartRangeText = FormatMessage("Localserver_ChartRangePeak", "Peak {0:F0}%", peak);
+            StatusChartRangeText = $"LAST 60S · PEAK {peak:F0}%";
 
-            // Build smooth curve
-            PathGeometry curveGeom = new();
-            PathFigure curveFig = new() { StartPoint = points[0], IsClosed = false, IsFilled = false };
-            for (int i = 1; i < points.Count; i++)
-            {
-                curveFig.Segments.Add(new LineSegment { Point = points[i] });
-            }
-            curveGeom.Figures.Add(curveFig);
-            StatusCurveGeometry = curveGeom;
-
-            // Build fill
-            PathGeometry fillGeom = new();
-            PathFigure fillFig = new() { StartPoint = new Point(0, plotBottom), IsClosed = true, IsFilled = true };
-            fillFig.Segments.Add(new LineSegment { Point = points[0] });
-            for (int i = 1; i < points.Count; i++)
-            {
-                fillFig.Segments.Add(new LineSegment { Point = points[i] });
-            }
-            fillFig.Segments.Add(new LineSegment { Point = new Point(points[^1].X, plotBottom) });
-            fillGeom.Figures.Add(fillFig);
-            StatusCurveFillGeometry = fillGeom;
+            StatusCurveGeometry = CreateSmoothHealthPath(points);
+            StatusCurveFillGeometry = CreateHealthFillPath(points, plotBottom);
 
             OnPropertyChanged(nameof(StatusCurveGeometry));
             OnPropertyChanged(nameof(StatusCurveFillGeometry));
             OnPropertyChanged(nameof(StatusChartRangeText));
             OnPropertyChanged(nameof(StatusChartEmptyVisibility));
             ChartRedrawRequested?.Invoke();
+        }
+
+        private static PathGeometry CreateStatusBaseline(double width, double y)
+        {
+            PathGeometry geometry = new();
+            PathFigure figure = new()
+            {
+                StartPoint = new Point(0, y),
+                IsClosed = false,
+                IsFilled = false,
+            };
+            figure.Segments.Add(new LineSegment
+            {
+                Point = new Point(Math.Max(0, width), y),
+            });
+            geometry.Figures.Add(figure);
+            return geometry;
+        }
+
+        private static PathGeometry CreateSmoothHealthPath(IReadOnlyList<Point> points)
+        {
+            PathGeometry geometry = new();
+            if (points.Count == 0)
+            {
+                return geometry;
+            }
+
+            PathFigure figure = new()
+            {
+                StartPoint = points[0],
+                IsClosed = false,
+                IsFilled = false,
+            };
+
+            AddSmoothHealthSegments(figure, points);
+            geometry.Figures.Add(figure);
+            return geometry;
+        }
+
+        private static PathGeometry CreateHealthFillPath(IReadOnlyList<Point> points, double plotBottom)
+        {
+            PathGeometry geometry = new();
+            if (points.Count == 0)
+            {
+                return geometry;
+            }
+
+            PathFigure figure = new()
+            {
+                StartPoint = points[0],
+                IsClosed = true,
+                IsFilled = true,
+            };
+            AddSmoothHealthSegments(figure, points);
+            figure.Segments.Add(new LineSegment
+            {
+                Point = new Point(points[^1].X, plotBottom),
+            });
+            figure.Segments.Add(new LineSegment
+            {
+                Point = new Point(points[0].X, plotBottom),
+            });
+            geometry.Figures.Add(figure);
+            return geometry;
+        }
+
+        private static void AddSmoothHealthSegments(PathFigure figure, IReadOnlyList<Point> points)
+        {
+            if (points.Count == 1)
+            {
+                figure.Segments.Add(new LineSegment { Point = new Point(points[0].X + 1, points[0].Y) });
+            }
+            else if (points.Count == 2)
+            {
+                figure.Segments.Add(new LineSegment { Point = points[1] });
+            }
+            else
+            {
+                for (int index = 1; index < points.Count - 1; index++)
+                {
+                    Point midpoint = new(
+                        (points[index].X + points[index + 1].X) / 2d,
+                        (points[index].Y + points[index + 1].Y) / 2d);
+                    figure.Segments.Add(new QuadraticBezierSegment
+                    {
+                        Point1 = points[index],
+                        Point2 = midpoint,
+                    });
+                }
+
+                Point last = points[^1];
+                figure.Segments.Add(new QuadraticBezierSegment
+                {
+                    Point1 = last,
+                    Point2 = last,
+                });
+            }
         }
 
         private void OnRunnerLogAppended(object? sender, LogLine line)

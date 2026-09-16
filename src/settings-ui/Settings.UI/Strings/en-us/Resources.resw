@@ -2722,54 +2722,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AiHub_FallbackToggle.OffContent" xml:space="preserve">
     <value>Off</value>
   </data>
-  <data name="Localserver_AiCard.Header" xml:space="preserve">
-    <value>AI analysis</value>
-  </data>
-  <data name="Localserver_AiCard.Description" xml:space="preserve">
-    <value>Analyze service health or review configuration with AI Hub.</value>
-  </data>
-  <data name="Localserver_AiDisabledCard.Header" xml:space="preserve">
-    <value>AI Hub is disabled</value>
-  </data>
-  <data name="Localserver_AiDisabledCard.Description" xml:space="preserve">
-    <value>Enable AI Hub and configure an endpoint to run analysis.</value>
-  </data>
-  <data name="Localserver_OpenAiHubButton.Content" xml:space="preserve">
-    <value>Open AI Hub</value>
-  </data>
-  <data name="Localserver_AiAnalyzeCard.Header" xml:space="preserve">
-    <value>Analyze a current snapshot</value>
-  </data>
-  <data name="Localserver_AiAnalyzeCard.Description" xml:space="preserve">
-    <value>Sends service states and configuration facts for advisory recommendations.</value>
-  </data>
-  <data name="Localserver_AiDiagnoseButton.Content" xml:space="preserve">
-    <value>Diagnose health</value>
-  </data>
-  <data name="Localserver_AiReviewButton.Content" xml:space="preserve">
-    <value>Review configuration</value>
-  </data>
-  <data name="Localserver_AiNoServices" xml:space="preserve">
-    <value>Add a service before running AI analysis.</value>
-  </data>
-  <data name="Localserver_AiRunning" xml:space="preserve">
-    <value>Analyzing the service snapshot…</value>
-  </data>
-  <data name="Localserver_AiNoFindings" xml:space="preserve">
-    <value>No issues were found in the supplied snapshot.</value>
-  </data>
-  <data name="Localserver_AiCompleted" xml:space="preserve">
-    <value>{0} findings · {1}</value>
-  </data>
-  <data name="Localserver_AiSeveritylow" xml:space="preserve">
-    <value>Low</value>
-  </data>
-  <data name="Localserver_AiSeveritymedium" xml:space="preserve">
-    <value>Medium</value>
-  </data>
-  <data name="Localserver_AiSeverityhigh" xml:space="preserve">
-    <value>High</value>
-  </data>
   <data name="AiHub_ErrorHubDisabled" xml:space="preserve">
     <value>Enable AI Hub in Kit Settings before running this task.</value>
   </data>

@@ -16,7 +16,7 @@ namespace Kit.Settings.UI.Controls
                 nameof(BarWidth),
                 typeof(double),
                 typeof(StatusBarsPanel),
-                new PropertyMetadata(3.0, OnLayoutPropertyChanged));
+                new PropertyMetadata(5.0, OnLayoutPropertyChanged));
 
         public static readonly DependencyProperty SpacingProperty =
             DependencyProperty.Register(
@@ -30,7 +30,7 @@ namespace Kit.Settings.UI.Controls
                 nameof(MaxSlots),
                 typeof(int),
                 typeof(StatusBarsPanel),
-                new PropertyMetadata(60, OnLayoutPropertyChanged));
+                new PropertyMetadata(0, OnLayoutPropertyChanged));
 
         public double BarWidth
         {
@@ -68,7 +68,7 @@ namespace Kit.Settings.UI.Controls
             }
 
             double width = double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width;
-            double barWidth = BarWidth;
+            double barWidth = BarWidth > 0 ? BarWidth : 5.0;
             double maxHeight = 0;
 
             foreach (UIElement child in Children)
@@ -83,19 +83,40 @@ namespace Kit.Settings.UI.Controls
         protected override Size ArrangeOverride(Size finalSize)
         {
             int count = Children.Count;
-            if (count == 0)
+            if (count == 0 || finalSize.Width <= 0 || finalSize.Height <= 0)
             {
                 return finalSize;
             }
 
-            int slots = Math.Max(MaxSlots > 1 ? MaxSlots : 1, count);
-            double barWidth = BarWidth;
-            double step = slots > 1 ? Math.Max(0, (finalSize.Width - barWidth) / (slots - 1)) : 0;
+            double barWidth = BarWidth > 0 ? BarWidth : 5.0;
+            double targetSpacing = Spacing > 0 ? Spacing : 2.0;
+            double pitch = barWidth + targetSpacing;
+
+            // Compute how many slots fit across the available width with ~targetSpacing
+            int slots = Math.Max(1, (int)Math.Round((finalSize.Width + targetSpacing) / pitch));
+            if (MaxSlots > 0 && slots > MaxSlots)
+            {
+                slots = MaxSlots;
+            }
+
+            // Step to ensure slot 0 is at x = 0 and slot (slots - 1) ends exactly at finalSize.Width - barWidth
+            double step = slots > 1 ? (finalSize.Width - barWidth) / (slots - 1) : 0;
+
+            // If we have more children than available slots, only show the most recent 'slots' items
+            int startIndex = Math.Max(0, count - slots);
 
             for (int i = 0; i < count; i++)
             {
-                double x = i * step;
-                Children[i].Arrange(new Rect(x, 0, barWidth, finalSize.Height));
+                if (i < startIndex)
+                {
+                    Children[i].Arrange(new Rect(0, 0, 0, 0));
+                }
+                else
+                {
+                    int slotIndex = i - startIndex;
+                    double x = slotIndex * step;
+                    Children[i].Arrange(new Rect(x, 0, barWidth, finalSize.Height));
+                }
             }
 
             return finalSize;

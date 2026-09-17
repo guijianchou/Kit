@@ -103,9 +103,9 @@ namespace Kit.Settings.UI.ViewModels
             }];
             BarHeight = severity switch
             {
-                ServiceSeverity.Success => 18d,
-                ServiceSeverity.Caution => 12d,
-                ServiceSeverity.Critical => 9d,
+                ServiceSeverity.Success => 16d,
+                ServiceSeverity.Caution => 16d,
+                ServiceSeverity.Critical => 8d,
                 _ => 6d,
             };
             Description = LocalserverViewModel.GetStateLabel(state, healthProbePassed);
@@ -120,7 +120,7 @@ namespace Kit.Settings.UI.ViewModels
         private string? _selectedPresetName;
         private bool _isExpanded;
         private bool _isConfigExpanded;
-        private int _recentBarCapacity = 60;
+        private int _recentBarCapacity = 240;
         private ProcessResourceSample? _lastResourceSample;
         private DateTimeOffset? _lastResourceSampleAtUtc;
         private long _lastResourceGeneration;
@@ -536,10 +536,22 @@ namespace Kit.Settings.UI.ViewModels
 
             if (State.IsActive())
             {
-                RecentBars.Add(new RecentBarViewModel(State, _runner.HealthProbePassed));
-                while (RecentBars.Count > _recentBarCapacity)
+                if (RecentBars.Count == 0 && _runner.StartedAtUtc is DateTimeOffset startTime)
                 {
-                    RecentBars.RemoveAt(0);
+                    var uptimeSeconds = Math.Max(1, (int)(DateTimeOffset.UtcNow - startTime).TotalSeconds);
+                    int initialCount = Math.Min(uptimeSeconds, _recentBarCapacity);
+                    for (int k = 0; k < initialCount; k++)
+                    {
+                        RecentBars.Add(new RecentBarViewModel(State, _runner.HealthProbePassed));
+                    }
+                }
+                else
+                {
+                    RecentBars.Add(new RecentBarViewModel(State, _runner.HealthProbePassed));
+                    while (RecentBars.Count > _recentBarCapacity)
+                    {
+                        RecentBars.RemoveAt(0);
+                    }
                 }
             }
             else if (State == ServiceState.Stopped)

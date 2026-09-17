@@ -23,18 +23,18 @@ namespace Kit.Settings.UI.ViewModels
                 if (isWarning || durationMilliseconds > 250)
                 {
                     Brush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
-                    BarHeight = 12.0;
+                    BarHeight = 11.0;
                 }
                 else
                 {
                     Brush = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
-                    BarHeight = 18.0;
+                    BarHeight = 16.0;
                 }
             }
             else
             {
                 Brush = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
-                BarHeight = 9.0;
+                BarHeight = 6.0;
             }
             Description = description;
         }

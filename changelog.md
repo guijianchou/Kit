@@ -4,6 +4,14 @@
 
 ## English
 
+### 2.1.1
+
+- Refined status bar sparkline dimensions and density in Localserver and UDPtest plugins to match original projects:
+  - Adjusted vertical bar width from 3px to 5px and corner radius to 2px, eliminating overly thin and needle-like dense bars.
+  - Set comfortable 2px inter-bar spacing with 7px pitch, achieving a solid, high-legibility pill-shaped telemetry strip.
+  - Adjusted tick heights to 16px (16px/11px/6px in UDPtest), fully matching `LocalServerHub.App` and `NetworkMonitor.App`.
+  - Expanded historical sample buffer capacity to 240 items and automatically pre-fill telemetry on loading active services.
+
 ### 2.1.0
 
 - Added new UDPtest native plugin module and UI page:
@@ -418,6 +426,14 @@
 ## 中文
 
 ## 更新日志
+
+### 2.1.1
+
+- 深度对齐 Localserver 与 UDPtest 状态遥测条 UI/UX，完美还原原项目质感：
+  - 调整状态微条宽度为 5px、圆角为 2px，彻底解决 3px 竖条过于细长针状与过密视觉问题。
+  - 保持 2px 间距与 7px 节拍，呈现饱满、清晰、比例协调的药丸形竖柱时序条。
+  - 对齐柱高层级（16px 全高，UDPtest 告警 11px、失败 6px），高度与原项目（`LocalServerHub.App`、`NetworkMonitor.App`）完全一致。
+  - 扩充历史样本缓冲区至 240 条，检测到运行中服务时自动预填已有时序点，首尾边界精准对齐且满格无缝。
 
 ### 2.1.0
 

@@ -101,12 +101,12 @@
                         Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <controls:StatusBarsPanel BarWidth="3" MaxSlots="60" />
+                                <controls:StatusBarsPanel BarWidth="5" Spacing="2" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="viewModels:RecentProbeBarViewModel">
-                                <Border Height="{x:Bind BarHeight}" Width="3" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="1.5" ToolTipService.ToolTip="{x:Bind Description}" />
+                                <Border Height="{x:Bind BarHeight}" Width="5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="2" ToolTipService.ToolTip="{x:Bind Description}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -171,12 +171,12 @@
                         Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <controls:StatusBarsPanel BarWidth="3" MaxSlots="60" />
+                                <controls:StatusBarsPanel BarWidth="5" Spacing="2" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="viewModels:RecentProbeBarViewModel">
-                                <Border Height="{x:Bind BarHeight}" Width="3" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="1.5" ToolTipService.ToolTip="{x:Bind Description}" />
+                                <Border Height="{x:Bind BarHeight}" Width="5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="2" ToolTipService.ToolTip="{x:Bind Description}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

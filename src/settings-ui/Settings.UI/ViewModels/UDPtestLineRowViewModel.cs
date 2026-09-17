@@ -17,7 +17,7 @@ namespace Kit.Settings.UI.ViewModels
 {
     public sealed class UDPtestLineRowViewModel : INotifyPropertyChanged
     {
-        private const int MaxRecentBars = 60;
+        private int _recentBarCapacity = 240;
 
         private ProbeLineDefinition _definition;
         private bool _isEnabled;
@@ -494,7 +494,21 @@ namespace Kit.Settings.UI.ViewModels
                 : $"Failed: {error ?? "timeout"}";
 
             RecentBars.Add(new RecentProbeBarViewModel(success, durationMilliseconds, description));
-            while (RecentBars.Count > MaxRecentBars)
+            while (RecentBars.Count > _recentBarCapacity)
+            {
+                RecentBars.RemoveAt(0);
+            }
+        }
+
+        public void SetRecentBarCapacity(int capacity)
+        {
+            if (capacity < 1)
+            {
+                return;
+            }
+
+            _recentBarCapacity = capacity;
+            while (RecentBars.Count > _recentBarCapacity)
             {
                 RecentBars.RemoveAt(0);
             }

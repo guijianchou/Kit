@@ -1912,7 +1912,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Runtime: {0}</value>
   </data>
   <data name="Localserver_StatePreflight" xml:space="preserve">
-    <value>Checking dependencies</value>
+    <value>Checking</value>
   </data>
   <data name="Localserver_StateCrashed" xml:space="preserve">
     <value>Crashed</value>
@@ -2347,13 +2347,13 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Runtime check failed: {0}</value>
   </data>
   <data name="Localserver_HealthProbeUnverified" xml:space="preserve">
-    <value>Adopted process cannot replay log patterns; health is unverified, not failed.</value>
+    <value>Health unverified for adopted process.</value>
   </data>
   <data name="Localserver_HealthProbePassed" xml:space="preserve">
-    <value>Passed configured health check.</value>
+    <value>Health check passed.</value>
   </data>
   <data name="Localserver_HealthProbeDidNotPass" xml:space="preserve">
-    <value>Did not pass configured health check.</value>
+    <value>Health check failed.</value>
   </data>
   <data name="Localserver_HealthProbeTimedOut" xml:space="preserve">
     <value>Configured health check timed out.</value>
@@ -2380,7 +2380,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Port {0} is occupied by PID {1} ({2}).</value>
   </data>
   <data name="Localserver_ServiceReportedRunning" xml:space="preserve">
-    <value>Service manager reports service is running.</value>
+    <value>Service is running.</value>
   </data>
   <data name="Localserver_ServiceStopped" xml:space="preserve">
     <value>Service is stopped.</value>

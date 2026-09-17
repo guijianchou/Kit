@@ -88,18 +88,26 @@ namespace Kit.Settings.UI.ViewModels
     public sealed class RecentBarViewModel
     {
         public Brush Brush { get; }
-        public double BarHeight => 20d;
+        public double BarHeight { get; }
         public string Description { get; }
 
         public RecentBarViewModel(ServiceState state, bool? healthProbePassed = null)
         {
-            Brush = (Brush)Application.Current.Resources[state.ToSeverity(healthProbePassed) switch
+            var severity = state.ToSeverity(healthProbePassed);
+            Brush = (Brush)Application.Current.Resources[severity switch
             {
                 ServiceSeverity.Success => "SystemFillColorSuccessBrush",
                 ServiceSeverity.Caution => "SystemFillColorCautionBrush",
                 ServiceSeverity.Critical => "SystemFillColorCriticalBrush",
                 _ => "ControlStrongStrokeColorDefaultBrush",
             }];
+            BarHeight = severity switch
+            {
+                ServiceSeverity.Success => 18d,
+                ServiceSeverity.Caution => 12d,
+                ServiceSeverity.Critical => 9d,
+                _ => 6d,
+            };
             Description = LocalserverViewModel.GetStateLabel(state, healthProbePassed);
         }
     }

@@ -599,7 +599,7 @@
     <value>运行时：{0}</value>
   </data>
   <data name="Localserver_StatePreflight" xml:space="preserve">
-    <value>正在检查依赖</value>
+    <value>检查中</value>
   </data>
   <data name="Localserver_StateCrashed" xml:space="preserve">
     <value>崩溃退出</value>
@@ -761,13 +761,13 @@
     <value>运行时检查失败：{0}</value>
   </data>
   <data name="Localserver_HealthProbeUnverified" xml:space="preserve">
-    <value>接管的进程无法执行日志模式检查；健康状态尚未验证，并非检查失败。</value>
+    <value>接管进程未验证健康状态。</value>
   </data>
   <data name="Localserver_HealthProbePassed" xml:space="preserve">
-    <value>已通过配置的健康检查。</value>
+    <value>健康检查正常。</value>
   </data>
   <data name="Localserver_HealthProbeDidNotPass" xml:space="preserve">
-    <value>未通过配置的健康检查。</value>
+    <value>健康检查异常。</value>
   </data>
   <data name="Localserver_HealthProbeTimedOut" xml:space="preserve">
     <value>配置的健康检查超时。</value>
@@ -794,7 +794,7 @@
     <value>端口 {0} 已被 PID {1}（{2}）占用。</value>
   </data>
   <data name="Localserver_ServiceReportedRunning" xml:space="preserve">
-    <value>服务管理器报告服务正在运行。</value>
+    <value>服务运行正常。</value>
   </data>
   <data name="Localserver_ServiceStopped" xml:space="preserve">
     <value>服务已停止。</value>

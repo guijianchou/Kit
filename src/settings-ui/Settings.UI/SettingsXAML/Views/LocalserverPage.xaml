@@ -383,16 +383,16 @@
                     </Border>
 
                     <!-- Table Header -->
-                    <Grid Padding="17,8,17,8" Margin="0,4,0,0" ColumnSpacing="8">
+                    <Grid Padding="17,8,17,8" Margin="0,4,0,0" ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1.8*" MinWidth="140" />
-                            <ColumnDefinition Width="0.7*" MinWidth="56" />
-                            <ColumnDefinition Width="1.1*" MinWidth="90" />
-                            <ColumnDefinition Width="0.9*" MinWidth="75" />
-                            <ColumnDefinition Width="0.6*" MinWidth="50" />
-                            <ColumnDefinition Width="0.8*" MinWidth="65" />
-                            <ColumnDefinition Width="0.7*" MinWidth="55" />
-                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="1.1*" MinWidth="96" />
+                            <ColumnDefinition Width="0.5*" MinWidth="48" />
+                            <ColumnDefinition Width="0.8*" MinWidth="85" />
+                            <ColumnDefinition Width="0.7*" MinWidth="72" />
+                            <ColumnDefinition Width="0.5*" MinWidth="48" />
+                            <ColumnDefinition Width="0.6*" MinWidth="60" />
+                            <ColumnDefinition Width="45" />
+                            <ColumnDefinition Width="108" />
                         </Grid.ColumnDefinitions>
                         <TextBlock x:Uid="Localserver_ColName" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock Grid.Column="1" x:Uid="Localserver_ColPort" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -414,16 +414,16 @@
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
                                     CornerRadius="{StaticResource OverlayCornerRadius}">
-                                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8">
+                                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="1.8*" MinWidth="140" />
-                                            <ColumnDefinition Width="0.7*" MinWidth="56" />
-                                            <ColumnDefinition Width="1.1*" MinWidth="90" />
-                                            <ColumnDefinition Width="0.9*" MinWidth="75" />
-                                            <ColumnDefinition Width="0.6*" MinWidth="50" />
-                                            <ColumnDefinition Width="0.8*" MinWidth="65" />
-                                            <ColumnDefinition Width="0.7*" MinWidth="55" />
-                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="1.1*" MinWidth="96" />
+                                            <ColumnDefinition Width="0.5*" MinWidth="48" />
+                                            <ColumnDefinition Width="0.8*" MinWidth="85" />
+                                            <ColumnDefinition Width="0.7*" MinWidth="72" />
+                                            <ColumnDefinition Width="0.5*" MinWidth="48" />
+                                            <ColumnDefinition Width="0.6*" MinWidth="60" />
+                                            <ColumnDefinition Width="45" />
+                                            <ColumnDefinition Width="108" />
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Row 0: NAME + Tag + Lock -->
@@ -504,7 +504,7 @@
                                             </Button>
                                         </StackPanel>
 
-                                        <!-- Row 1: Status Sub-Row (Status in Col 0 under NAME, RecentBars in Col 1..6 starting under PORT, Open in Col 7) -->
+                                        <!-- Row 1: Status Sub-Row (Status in Col 0 under NAME, RecentBars in Col 1..6 starting under PORT and spanning across to PID, Open in Col 7) -->
                                         <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
                                             <TextBlock x:Uid="Localserver_StatusLabel" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                             <Ellipse Width="6" Height="6" Fill="{x:Bind StateBrush, Mode=OneWay}" VerticalAlignment="Center" />
@@ -512,32 +512,27 @@
                                         </StackPanel>
 
                                         <!-- RecentBars status bar (starts directly under PORT, spans across to PID) -->
-                                        <ScrollViewer
+                                        <ItemsControl
                                             Grid.Row="1"
                                             Grid.Column="1"
                                             Grid.ColumnSpan="6"
-                                            Margin="0,8,0,0"
-                                            Height="24"
-                                            HorizontalAlignment="Left"
+                                            Margin="0,8,23,0"
+                                            Height="20"
+                                            HorizontalAlignment="Stretch"
                                             VerticalAlignment="Center"
-                                            HorizontalScrollMode="Disabled"
-                                            HorizontalScrollBarVisibility="Hidden"
-                                            VerticalScrollMode="Disabled"
-                                            VerticalScrollBarVisibility="Hidden"
+                                            ItemsSource="{x:Bind RecentBars, Mode=OneWay}"
                                             Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
-                                            <ItemsControl ItemsSource="{x:Bind RecentBars, Mode=OneWay}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal" Spacing="2" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="viewModels:RecentBarViewModel">
-                                                        <Border Width="5" Height="{x:Bind BarHeight}" Background="{x:Bind Brush}" CornerRadius="2" ToolTipService.ToolTip="{x:Bind Description}" />
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </ScrollViewer>
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <controls:StatusBarsPanel BarWidth="3" MaxSlots="60" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="viewModels:RecentBarViewModel">
+                                                    <Border Height="{x:Bind BarHeight}" Width="3" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="1.5" ToolTipService.ToolTip="{x:Bind Description}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
 
                                         <!-- Open hyperlink button directly under Actions -->
                                         <HyperlinkButton

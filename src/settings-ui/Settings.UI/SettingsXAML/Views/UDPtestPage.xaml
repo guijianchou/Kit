@@ -55,16 +55,16 @@
         <DataTemplate x:Key="TcpLineTemplate" x:DataType="viewModels:UDPtestLineRowViewModel">
             <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                     BorderThickness="0,1,0,0">
-                <Grid Padding="16,0" RowDefinitions="52,Auto">
+                <Grid Padding="16,0" RowDefinitions="52,Auto" ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1*" MinWidth="88" />
+                        <ColumnDefinition Width="1.1*" MinWidth="88" />
                         <ColumnDefinition Width="0.5*" MinWidth="50" />
                         <ColumnDefinition Width="0.75*" MinWidth="68" />
                         <ColumnDefinition Width="0.7*" MinWidth="64" />
                         <ColumnDefinition Width="0.65*" MinWidth="60" />
                         <ColumnDefinition Width="1.05*" MinWidth="100" />
                         <ColumnDefinition Width="1.15*" MinWidth="104" />
-                        <ColumnDefinition Width="1.35*" MinWidth="120" />
+                        <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="60" />
                     </Grid.ColumnDefinitions>
 
@@ -79,33 +79,37 @@
                     <TextBlock Grid.Row="0" Grid.Column="4" VerticalAlignment="Center" Text="{x:Bind Quality, Mode=OneWay}" />
                     <TextBlock Grid.Row="0" Grid.Column="5" VerticalAlignment="Center" Text="{x:Bind Counts, Mode=OneWay}" />
                     <TextBlock Grid.Row="0" Grid.Column="6" VerticalAlignment="Center" Text="{x:Bind IpAddress, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind IpAddressDescription, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Row="0" Grid.Column="7" Width="84" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind LastErrorDisplay, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LastError, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Row="0" Grid.Column="7" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind LastErrorDisplay, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LastError, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
                     <ToggleSwitch Grid.Row="0" Grid.Column="8" MinWidth="0" Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind ToggleLabel, Mode=OneWay}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" IsEnabled="{x:Bind IsToggleEnabled, Mode=OneWay}" OnContent="" OffContent="" ToolTipService.ToolTip="{x:Bind ToggleLabel, Mode=OneWay}" />
 
-                    <!-- Status History Micro-ticks Sub-Row -->
-                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="9" Margin="0,0,0,8" ColumnDefinitions="64,112,*" Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Status:" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <Ellipse Width="7" Height="7" Fill="{x:Bind StatusBrush, Mode=OneWay}" />
-                            <TextBlock Text="{x:Bind Status, Mode=OneWay}" />
-                        </StackPanel>
-                        <ScrollViewer Grid.Column="2" Margin="12,0,0,0" Height="24" HorizontalAlignment="Left" VerticalAlignment="Center" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Hidden">
-                            <ItemsControl Height="20" HorizontalAlignment="Left" ItemsSource="{x:Bind RecentBars, Mode=OneWay}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="2" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:RecentProbeBarViewModel">
-                                        <Grid Width="5" Height="20" ToolTipService.ToolTip="{x:Bind Description}">
-                                            <Border Width="5" Height="{x:Bind BarHeight}" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="1" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
+                    <!-- Status History Micro-ticks Sub-Row (Status in Col 0 under TARGET, RecentBars in Col 1..7 starting under PORT and spanning across to LAST ERROR) -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,8,0,8" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
+                        <TextBlock VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Status:" />
+                        <Ellipse Width="6" Height="6" Fill="{x:Bind StatusBrush, Mode=OneWay}" VerticalAlignment="Center" />
+                        <TextBlock Text="{x:Bind Status, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <ItemsControl
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        Grid.ColumnSpan="7"
+                        Margin="0,8,10,8"
+                        Height="20"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        ItemsSource="{x:Bind RecentBars, Mode=OneWay}"
+                        Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <controls:StatusBarsPanel BarWidth="3" MaxSlots="60" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:RecentProbeBarViewModel">
+                                <Border Height="{x:Bind BarHeight}" Width="3" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="1.5" ToolTipService.ToolTip="{x:Bind Description}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -114,17 +118,17 @@
         <DataTemplate x:Key="UdpLineTemplate" x:DataType="viewModels:UDPtestLineRowViewModel">
             <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                     BorderThickness="0,1,0,0">
-                <Grid Padding="16,0" RowDefinitions="52,Auto,Auto">
+                <Grid Padding="16,0" RowDefinitions="52,Auto,Auto" ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1*" MinWidth="88" />
+                        <ColumnDefinition Width="1.1*" MinWidth="88" />
                         <ColumnDefinition Width="0.5*" MinWidth="50" />
                         <ColumnDefinition Width="0.75*" MinWidth="68" />
                         <ColumnDefinition Width="0.7*" MinWidth="64" />
                         <ColumnDefinition Width="0.65*" MinWidth="60" />
                         <ColumnDefinition Width="1.05*" MinWidth="100" />
                         <ColumnDefinition Width="1.15*" MinWidth="104" />
-                        <ColumnDefinition Width="1.35*" MinWidth="120" />
-                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="80" />
                     </Grid.ColumnDefinitions>
 
                     <Grid Grid.Row="0" Grid.Column="0" Margin="0,0,12,0" ColumnDefinitions="*,Auto" ColumnSpacing="6" VerticalAlignment="Center">
@@ -138,7 +142,7 @@
                     <TextBlock Grid.Row="0" Grid.Column="4" VerticalAlignment="Center" Text="{x:Bind Quality, Mode=OneWay}" />
                     <TextBlock Grid.Row="0" Grid.Column="5" VerticalAlignment="Center" Text="{x:Bind Counts, Mode=OneWay}" />
                     <TextBlock Grid.Row="0" Grid.Column="6" VerticalAlignment="Center" Text="{x:Bind IpAddress, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind IpAddressDescription, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Row="0" Grid.Column="7" Width="84" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind LastErrorDisplay, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LastError, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Row="0" Grid.Column="7" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind LastErrorDisplay, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LastError, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
 
                     <!-- Actions Column: ToggleSwitch + Chevron Folded Button -->
                     <StackPanel Grid.Row="0" Grid.Column="8" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -148,30 +152,34 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- Status History Micro-ticks Sub-Row -->
-                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="9" Margin="0,0,0,8" ColumnDefinitions="64,112,*" Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Status:" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <Ellipse Width="7" Height="7" Fill="{x:Bind StatusBrush, Mode=OneWay}" />
-                            <TextBlock Text="{x:Bind Status, Mode=OneWay}" />
-                        </StackPanel>
-                        <ScrollViewer Grid.Column="2" Margin="12,0,0,0" Height="24" HorizontalAlignment="Left" VerticalAlignment="Center" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Hidden">
-                            <ItemsControl Height="20" HorizontalAlignment="Left" ItemsSource="{x:Bind RecentBars, Mode=OneWay}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="2" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="viewModels:RecentProbeBarViewModel">
-                                        <Grid Width="5" Height="20" ToolTipService.ToolTip="{x:Bind Description}">
-                                            <Border Width="5" Height="{x:Bind BarHeight}" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="1" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
+                    <!-- Status History Micro-ticks Sub-Row (Status in Col 0 under TARGET, RecentBars in Col 1..7 starting under PORT and spanning across to LAST ERROR) -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,8,0,8" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
+                        <TextBlock VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Status:" />
+                        <Ellipse Width="6" Height="6" Fill="{x:Bind StatusBrush, Mode=OneWay}" VerticalAlignment="Center" />
+                        <TextBlock Text="{x:Bind Status, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <ItemsControl
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        Grid.ColumnSpan="7"
+                        Margin="0,8,10,8"
+                        Height="20"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        ItemsSource="{x:Bind RecentBars, Mode=OneWay}"
+                        Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <controls:StatusBarsPanel BarWidth="3" MaxSlots="60" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:RecentProbeBarViewModel">
+                                <Border Height="{x:Bind BarHeight}" Width="3" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="1.5" ToolTipService.ToolTip="{x:Bind Description}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
                     <!-- Expanded Configuration Panel (Localserver Style) -->
                     <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="9" Margin="0,8,0,16" Spacing="12" Visibility="{x:Bind ConfigVisibility, Mode=OneWay}">
@@ -495,16 +503,16 @@
                                 <TextBlock Grid.Column="1" FontSize="15" FontWeight="SemiBold" CharacterSpacing="40" VerticalAlignment="Center" Text="TCP" />
                                 <TextBlock Grid.Column="3" Style="{StaticResource MicroLabelStyle}" VerticalAlignment="Center" Text="{x:Bind ViewModel.TcpLines.Count, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0} LINKS'}" />
                             </Grid>
-                            <Grid Padding="16,0,16,7">
+                            <Grid Padding="16,0,16,7" ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1*" MinWidth="88" />
+                                    <ColumnDefinition Width="1.1*" MinWidth="88" />
                                     <ColumnDefinition Width="0.5*" MinWidth="50" />
                                     <ColumnDefinition Width="0.75*" MinWidth="68" />
                                     <ColumnDefinition Width="0.7*" MinWidth="64" />
                                     <ColumnDefinition Width="0.65*" MinWidth="60" />
                                     <ColumnDefinition Width="1.05*" MinWidth="100" />
                                     <ColumnDefinition Width="1.15*" MinWidth="104" />
-                                    <ColumnDefinition Width="1.35*" MinWidth="120" />
+                                    <ColumnDefinition Width="80" />
                                     <ColumnDefinition Width="60" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Style="{StaticResource ColumnHeaderStyle}" Text="TARGET" />
@@ -532,18 +540,18 @@
                                 <TextBlock Grid.Column="1" FontSize="15" FontWeight="SemiBold" CharacterSpacing="40" VerticalAlignment="Center" Text="UDP" />
                                 <TextBlock Grid.Column="3" Style="{StaticResource MicroLabelStyle}" VerticalAlignment="Center" Text="{x:Bind ViewModel.UdpLines.Count, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0} LINKS'}" />
                             </Grid>
-                            <Grid Padding="16,0,16,7">
+                            <Grid Padding="16,0,16,7" ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1*" MinWidth="88" />
+                                    <ColumnDefinition Width="1.1*" MinWidth="88" />
                                     <ColumnDefinition Width="0.5*" MinWidth="50" />
                                     <ColumnDefinition Width="0.75*" MinWidth="68" />
                                     <ColumnDefinition Width="0.7*" MinWidth="64" />
                                     <ColumnDefinition Width="0.65*" MinWidth="60" />
                                     <ColumnDefinition Width="1.05*" MinWidth="100" />
                                     <ColumnDefinition Width="1.15*" MinWidth="104" />
-                                    <ColumnDefinition Width="1.35*" MinWidth="120" />
-                                    <ColumnDefinition Width="90" />
-                                </Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80" />
+                                    <ColumnDefinition Width="80" />
+                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Style="{StaticResource ColumnHeaderStyle}" Text="TARGET" />
                                 <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderStyle}" Text="PORT" />
                                 <TextBlock Grid.Column="2" Style="{StaticResource ColumnHeaderStyle}" Text="AVG RTT" />

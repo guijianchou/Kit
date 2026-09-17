@@ -2,9 +2,21 @@
 
 **Language / 语言:** English | [中文](#更新日志)
 
----
-
 ## English
+
+### 2.1.0
+
+- Added new UDPtest native plugin module and UI page:
+  - High-performance probe engine supporting TCP HTTPS latency, UDP echo, STUN binding, and NAT type discovery.
+  - Interactive status dashboard, node verification, and historical probe strip with doubled 60-bar capacity.
+- Unified plugin master switch lifecycle across modules with official Awake/LightSwitch standards:
+  - Fixed GPO configuration check to prevent false "managed by your organization" warning lock.
+  - Synchronized cascade stop: toggling off the master switch immediately terminates all child services and probe workers (Localserver `StopAllLinesAsync()`, UDPtest `StopAsync()`) and pauses background identity polling.
+  - Applied WinUI 3 standard 0.38 disabled opacity and control gray-out, and neutralized indicator lights to inactive gray.
+- Status bar display optimizations:
+  - Localserver: aligned telemetry tick cadence to 1s/sample and increased vertical bar height by 20% (to 20px).
+  - UDPtest: doubled recent probe bar capacity to 60 items and increased bar height to 20px.
+- Updated `PLUGIN_DEVELOPMENT.md` with master switch cascade stopping and status bar guidelines.
 
 ### 2.0.23
 
@@ -406,6 +418,20 @@
 ## 中文
 
 ## 更新日志
+
+### 2.1.0
+
+- 新增 UDPtest 模块及设置页：
+  - 高性能网络探测引擎，支持 TCP HTTPS 延迟探测、UDP Echo 回显、STUN 绑定检测及 NAT 类型发现。
+  - 交互式健康状态看板、节点验证（Node Verified）与历史探针条（容量倍增至 60 条）。
+- 全面对齐插件主开关生命周期与原生（Awake / LightSwitch）规范：
+  - 修复 GPO 规则判定，杜绝未配置策略模块出现 “This setting is managed by your organization” 的误报与锁死。
+  - 主开关关闭时级联停用所有子链路与服务：Localserver 同步调用 `StopAllLinesAsync()` 停止全部子服务；UDPtest 同步调用 `StopAsync()` 停止所有探针 Worker 并挂起后台网络身份探测。
+  - 主开关关闭时全局应用 WinUI 3 标准 `0.38` 暗化与置灰，状态指示灯与健康环切为中性禁用灰态（零亮绿灯、零后台活动）。
+- 状态进度条与节拍优化：
+  - Localserver：遥测节拍严格对齐为 1s/次，状态竖条高度增加 1/5 至 20px（容器增至 24px）。
+  - UDPtest：状态条历史容量翻倍扩充至 60 条，竖条高度增至 20px（失败为 8px）。
+- 同步更新主目录 `PLUGIN_DEVELOPMENT.md` 规范文档。
 
 ### 2.0.23
 

@@ -378,7 +378,7 @@ public static partial class EnvironmentInspector
                     "Health probe",
                     EnvironmentCheckStatus.Warning,
                     FormatMessage(formatMessage, "Localserver_HealthProbeUnverified",
-                        "Log-pattern probe cannot be evaluated for a process this Hub adopted; health is unverified rather than failing."));
+                        "Health unverified for adopted process."));
             }
 
             bool healthy = definition.Health.Kind switch
@@ -392,13 +392,13 @@ public static partial class EnvironmentInspector
             if (healthy)
             {
                 return new EnvironmentCheckItem("Health probe", EnvironmentCheckStatus.Success,
-                    FormatMessage(formatMessage, "Localserver_HealthProbePassed", "Configured health probe passed."));
+                    FormatMessage(formatMessage, "Localserver_HealthProbePassed", "Health check passed."));
             }
 
             return new EnvironmentCheckItem(
                 "Health probe",
                 state == ServiceState.Running ? EnvironmentCheckStatus.Error : EnvironmentCheckStatus.Warning,
-                FormatMessage(formatMessage, "Localserver_HealthProbeDidNotPass", "Configured health probe did not pass."));
+                FormatMessage(formatMessage, "Localserver_HealthProbeDidNotPass", "Health check failed."));
         }
         catch (OperationCanceledException)
         {
@@ -477,7 +477,7 @@ public static partial class EnvironmentInspector
         Func<string, string, object?[], string>? formatMessage) => state switch
     {
         ServiceState.Running => new("Service health", EnvironmentCheckStatus.Success,
-            FormatMessage(formatMessage, "Localserver_ServiceReportedRunning", "Runner reports Running.")),
+            FormatMessage(formatMessage, "Localserver_ServiceReportedRunning", "Service is running.")),
         ServiceState.Stopped => new("Service health", EnvironmentCheckStatus.Neutral,
             FormatMessage(formatMessage, "Localserver_ServiceStopped", "Service is stopped.")),
         ServiceState.Crashed or ServiceState.Failed or ServiceState.StopFailed =>

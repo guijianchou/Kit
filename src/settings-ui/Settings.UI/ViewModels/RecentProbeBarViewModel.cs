@@ -16,12 +16,26 @@ namespace Kit.Settings.UI.ViewModels
         public double BarHeight { get; }
         public string Description { get; }
 
-        public RecentProbeBarViewModel(bool isSuccess, double durationMilliseconds, string description)
+        public RecentProbeBarViewModel(bool isSuccess, double durationMilliseconds, string description, bool isWarning = false)
         {
-            Brush = isSuccess
-                ? (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"]
-                : (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
-            BarHeight = isSuccess ? 20.0 : 8.0;
+            if (isSuccess)
+            {
+                if (isWarning || durationMilliseconds > 250)
+                {
+                    Brush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                    BarHeight = 12.0;
+                }
+                else
+                {
+                    Brush = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
+                    BarHeight = 18.0;
+                }
+            }
+            else
+            {
+                Brush = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
+                BarHeight = 9.0;
+            }
             Description = description;
         }
     }

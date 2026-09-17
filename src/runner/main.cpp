@@ -65,6 +65,7 @@ namespace
         L"Kit.AwakeModuleInterface.dll",
         L"Kit.LightSwitchModuleInterface.dll",
         L"Kit.LocalserverModuleInterface.dll",
+        L"Kit.UDPtestModuleInterface.dll",
     };
 
     bool is_known_module_registered(std::wstring_view moduleName)

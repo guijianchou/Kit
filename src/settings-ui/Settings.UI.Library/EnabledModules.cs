@@ -544,6 +544,22 @@ namespace Kit.Settings.UI.Library
             }
         }
 
+        private bool udpTest;
+
+        [JsonPropertyName("UDPtest")]
+        public bool UDPtest
+        {
+            get => udpTest;
+            set
+            {
+                if (udpTest != value)
+                {
+                    udpTest = value;
+                    NotifyChange();
+                }
+            }
+        }
+
         private bool aiHub;
 
         [JsonPropertyName("AiHub")]

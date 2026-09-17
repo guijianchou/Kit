@@ -112,6 +112,7 @@ namespace Kit.Settings.UI.Views
             NavHelper.SetNavigateTo(AwakeNavigationItem, typeof(AwakePage));
             NavHelper.SetNavigateTo(LightSwitchNavigationItem, typeof(LightSwitchPage));
             NavHelper.SetNavigateTo(LocalserverNavigationItem, typeof(LocalserverPage));
+            NavHelper.SetNavigateTo(UDPtestNavigationItem, typeof(UDPtestPage));
             SetWindowTitle();
             var settingsUtils = SettingsUtils.Default;
             ViewModel = new ShellViewModel(SettingsRepository<GeneralSettings>.GetInstance(settingsUtils));

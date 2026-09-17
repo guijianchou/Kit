@@ -15,6 +15,7 @@
       "src\\common\\version\\version.vcxproj",
       "src\\logging\\logging.vcxproj",
       "src\\modules\\Localserver\\LocalserverLib\\LocalserverLib.csproj",
+      "src\\modules\\UDPtest\\UDPtestLib\\UDPtestLib.csproj",
       "src\\settings-ui\\QuickAccess.UI\\Kit.QuickAccess.csproj",
       "src\\settings-ui\\Settings.UI.Controls\\Settings.UI.Controls.csproj",
       "src\\settings-ui\\Settings.UI.Library\\Settings.UI.Library.csproj",

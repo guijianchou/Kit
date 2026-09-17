@@ -13,6 +13,7 @@ namespace Kit.Settings.UI.Library
         private const string AwakeKey = "Awake";
         private const string LightSwitchKey = "LightSwitch";
         private const string LocalserverKey = "Localserver";
+        private const string UDPtestKey = "UDPtest";
         private const string AiHubKey = "AiHub";
 
         public override EnabledModules Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -59,6 +60,9 @@ namespace Kit.Settings.UI.Library
                     case LocalserverKey:
                         modules.Localserver = isEnabled;
                         break;
+                    case UDPtestKey:
+                        modules.UDPtest = isEnabled;
+                        break;
                     case AiHubKey:
                         modules.AiHub = isEnabled;
                         break;
@@ -77,6 +81,7 @@ namespace Kit.Settings.UI.Library
             writer.WriteBoolean(AwakeKey, value.Awake);
             writer.WriteBoolean(LightSwitchKey, value.LightSwitch);
             writer.WriteBoolean(LocalserverKey, value.Localserver);
+            writer.WriteBoolean(UDPtestKey, value.UDPtest);
             writer.WriteBoolean(AiHubKey, value.AiHub);
             writer.WriteEndObject();
         }

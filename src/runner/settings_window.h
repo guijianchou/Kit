@@ -9,6 +9,7 @@ enum class ESettingsWindowNames
     Awake,
     LightSwitch,
     Localserver,
+    UDPtest,
     AiHub,
 };
 

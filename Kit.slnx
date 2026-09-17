@@ -123,6 +123,17 @@
     </Project>
     <Project Path="src/modules/Localserver/LocalserverModuleInterface/LocalserverModuleInterface.vcxproj" Id="b749d21c-4b53-4318-9719-f5383a15dc01" />
   </Folder>
+  <Folder Name="/modules/UDPtest/">
+    <Project Path="src/modules/UDPtest/UDPtest.UnitTests/UDPtest.UnitTests.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/UDPtest/UDPtestLib/UDPtestLib.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/UDPtest/UDPtestModuleInterface/UDPtestModuleInterface.vcxproj" Id="d36a8e32-1549-417b-8914-7e8e569528be" />
+  </Folder>
   <Folder Name="/modules/LightSwitch/">
     <Project Path="src/modules/LightSwitch/LightSwitchLib/LightSwitchLib.vcxproj" Id="79267138-2895-4346-9021-21408d65379f" />
     <Project Path="src/modules/LightSwitch/LightSwitchModuleInterface/LightSwitchModuleInterface.vcxproj" Id="38177d56-6ad1-4adf-88c9-2843a7932166" />
@@ -206,6 +217,8 @@
     <BuildDependency Project="src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchModuleInterface/LightSwitchModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchService/LightSwitchService.vcxproj" />
+    <BuildDependency Project="src/modules/Localserver/LocalserverModuleInterface/LocalserverModuleInterface.vcxproj" />
+    <BuildDependency Project="src/modules/UDPtest/UDPtestModuleInterface/UDPtestModuleInterface.vcxproj" />
     <BuildDependency Project="src/PackageIdentity/PackageIdentity.vcxproj" />
     <BuildDependency Project="src/settings-ui/QuickAccess.UI/Kit.QuickAccess.csproj" />
     <BuildDependency Project="src/settings-ui/Settings.UI/Kit.Settings.csproj" />

@@ -453,6 +453,51 @@ NavHelper.SetNavigateTo(SampleNavigationItem, typeof(SamplePage));
 - 为交互控件提供可访问名称、键盘焦点和合理 Tab 顺序；标题使用现有 HeadingLevel。装饰图片保持 AccessibilityView.Raw。
 - 至少检查浅色/深色/高对比度、100%/150%/200% 缩放、中英文、480 DIP 最小窗口及宽窗口、键盘操作与 Narrator。本次仅核对 XAML，未完成这些运行期视觉验收。
 
+### 8.1 模块主启用开关（Master Toggle）与选项联动禁用规范
+
+本规范统一对齐 PowerToys / Kit 官方模块（如 Awake、LightSwitch）的标准交互与状态生命周期：
+
+#### 1. 开关数据源与 GPO 策略判定标准
+- **单一真理来源**：模块主启用状态必须持久化在 `GeneralSettings.Enabled.<ModuleName>` 中（对应 `%LOCALAPPDATA%\Kit\settings.json`），禁止在模块内部私有属性中另起独立的“启用/禁用”属性造成状态竞争。
+- **严谨的 GPO 判定逻辑**：
+  ```csharp
+  // 必须只在明确配置为 Enabled 或 Disabled 时才判定为受组织策略接管
+  public bool IsEnabledGpoConfigured => _gpoConfiguration is GpoRuleConfigured.Enabled or GpoRuleConfigured.Disabled;
+  ```
+  **严禁**使用 `_gpoConfiguration != GpoRuleConfigured.NotConfigured`。对于未在系统组策略模板中注册专有策略的新模块，框架 `ModuleGpoHelper` 会返回 `GpoRuleConfigured.Unavailable (-2)`。若用不等于 `NotConfigured` 判断，会导致其被误判为“已受策略管理”，触发黄色警告提示 *“This setting is managed by your organization”* 并错误锁死用户开关。
+
+##### 2. 开关关闭时的界面选项整体联动禁用与暗化置灰（Full Grayed Out & Dimmed）
+- **核心交互原则**：**当模块主开关关闭时，页面下方所有相关设置、操作按钮、卡片、列表及图表必须全部自动置灰与钝化暗化**，达到与官方 Awake、LightSwitch 原生视觉体验完全一致。
+- **WinUI 3 容器暗化与置灰机制**：
+  在 WinUI 3 中，纯容器与非输入控件（如 `<Border>`, `<TextBlock>`, `<ProgressBar>`, 自定义 `<Ellipse>` 状态灯、Path 曲线）即使父容器设置了 `IsEnabled="False"`，也不会自动去色或改变透明度，导致界面依然呈现亮色/高对比度的未置灰状态。
+  **标准解决规范**：在设置页 XAML 中，将顶部主开关卡片及全局 `InfoBar` 下方的所有区域使用容器包裹，并**同时绑定 `IsEnabled` 与 `Opacity`**：
+  ```xml
+  <!-- 主开关联动禁用容器：关闭时整页内容全部自动置灰并按 WinUI 3 标准 disabled 深度（0.38）全局暗化 -->
+  <ContentControl IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                  Opacity="{x:Bind ViewModel.IsEnabled, Mode=OneWay, Converter={StaticResource BoolToDisabledOpacityConverter}}"
+                  IsTabStop="False"
+                  HorizontalContentAlignment="Stretch">
+      <StackPanel Spacing="16">
+          <!-- 模块下的所有卡片、仪表盘、操作按钮、数据表格与展开抽屉 -->
+      </StackPanel>
+  </ContentControl>
+  ```
+- **状态指示器去激活化（Neutral Disabled Indicators）**：
+  - 模块关闭时，**严禁保留常亮的绿色状态灯或活跃标签**（如 "● ACTIVE"、"健康" 等）。
+  - ViewModel 在 `IsEnabled == false` 时必须主动将状态灯和描述文本切至中性禁用态：
+    - 状态文本置为 "DISABLED" / "已禁用"（如 `Localserver_HealthDisabled`）。
+    - 状态圆点/画刷切为 `ControlStrongStrokeColorDefaultBrush`（中性灰），禁止使用 `SystemFillColorSuccessBrush`（绿）。
+    - 状态数值与进度条置零或重置为占位符 `"—"`。
+
+#### 3. 业务停用与彻底静止后台生命周期（Zero Background Activity）
+- 当 `ViewModel.IsEnabled` 被用户置为 `false` 时：
+  1. **立即停止所有后台采样与轮询定时器**（如 Localserver 的 `_telemetryTimer` 必须调用 `.Stop()`，停止 CPU、RAM、GPU 硬件高频采样；UDP Test 必须停止测试会话与后台网络探针）。
+  2. **在所有后台入口与异步刷新处加入防护**：在 `OnTelemetryTimerTick`、`RefreshTelemetryAsync`、`RefreshEnvironmentAsync`、`StartAsync` 等入口顶部加入 `if (!_isEnabled) return;`，杜绝任何残余任务或导航残留使后台活动复活。
+  3. **页面激活生命周期守卫**：在 `SetPageActive(bool active)` 中，仅当 `active && _isInitialized && _isEnabled` 三者同时满足时才允许启动后台轮询，关闭状态下进入页面严禁触发活动。
+  4. **立即持久化与下发 IPC**：更新 `GeneralSettings.Enabled.<ModuleName> = value` 并保存设置，触发向 Runner 的配置同步 IPC消息（`ShellPage.SendDefaultIPCMessage(outgoing.ToString())`），通知原生 ModuleInterface 执行 `disable()`。
+  5. **操作与行级防护**：将工具栏按钮（如 Add Line, Start all, Stop all）及子行各项操作的 `Can*` 属性绑定联动 `_parent.IsEnabled`，保证子项逻辑层面同样完全锁定。
+  6. **同步级联停用所有子链路与服务（Cascade Stop on Switch Off）**：当模块主开关关闭时，必须同步（或在后台无等待立即触发）向所有正在运行的子链路/服务发出停止指令（如 Localserver 触发 `_ = StopAllLinesAsync()` 终止所有子服务；UDP Test 触发 `_ = StopAsync()` 停止所有探针 Worker 并挂起后台网络身份探测）。不得出现总开关关闭后底层服务依然在后台静默运行的情况。
+
 ## 9. 轻量启动、隐私与依赖边界
 
 ### 9.1 新模块不得增加的默认启动职责
@@ -639,8 +684,8 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 ### 12.5 Localserver 移植要求与当前边界
 
 - **语言与状态分离。** XAML 文案使用 `x:Uid`，动态文案使用现有 `GetLocalized()`；分别在 `Strings/en-us/Resources.resw` 和 `Strings/zh-CN/Resources.resw` 配齐键及格式化参数。服务状态、颜色、可执行动作由枚举控制，不根据翻译后的文本判断。用户服务名、真实命令和标准输出/错误流保持原文。
-- **生命周期。** 页面使用导航缓存；离页停止硬件采样，返回后恢复。服务日志转发覆盖所有已加载服务，不依赖当前页面或所选服务。缓存页只在 Settings 真正关闭时释放，取消关闭/隐藏不触发 Dispose；异步采样和环境检查防重入，并在返回 UI 前复核页面和选中服务。模块总开关约束启动与重启；停止已运行服务仍可用，关闭总开关不会自动终止它们。
-- **日志。** 当前页面保留有界日志预览，复用 2 秒采样节拍增量刷新，最多保留 2000 行；持久化统一走 Kit 日志链路。只订阅 `ServiceRunner.LogAppended` 已脱敏的 `LogLine`，经过有界后台队列批量转发至 Kit 的 `ManagedCommon.Logger`；保留时间、流类型、服务 Id 和序号。当前队列上限 512 条，正文/服务 Id 分别限 8192/256 字符并标记截断；活跃输出按 100 ms 合批，每批最多 128 条、65536 字符，空闲时不轮询。不能在 stdout/stderr 读取线程逐条同步刷盘，也不新增每行 Task 或 UI Dispatcher 操作。队列过载汇总丢弃数量；写入失败只记录计数并恢复 Trace 缩进，不泄露异常正文或中断服务输出捕获。保留核心 `LogRingBuffer` 和健康匹配流程，落盘队列不参与健康判断。重载、删除、最终释放均解绑事件；Dispose 非阻塞结束队列，进程退出最多等待 500 ms，异常退出不保证最后的排队记录落盘。
+- **生命周期。** 页面使用导航缓存；离页停止硬件采样，返回后恢复。服务日志转发覆盖所有已加载服务，不依赖当前页面或所选服务。缓存页只在 Settings 真正关闭时释放，取消关闭/隐藏不触发 Dispose；异步采样和环境检查防重入，并在返回 UI 前复核页面和选中服务。模块总开关约束启动与重启；**当关闭总开关时，不仅页面整体暗化置灰，还会同步触发 `StopAllLinesAsync()` 停止所有正在运行的服务与后台采样，并将状态重置为中性禁用态。RecentBars 状态进度条采样对齐为每秒 1 次（1s 节拍），条高为 20px（+20%）。**
+- **日志。** 当前页面保留有界日志预览，复用采样节拍增量刷新，最多保留 2000 行；持久化统一走 Kit 日志链路。只订阅 `ServiceRunner.LogAppended` 已脱敏的 `LogLine`，经过有界后台队列批量转发至 Kit 的 `ManagedCommon.Logger`；保留时间、流类型、服务 Id 和序号。当前队列上限 512 条，正文/服务 Id 分别限 8192/256 字符并标记截断；活跃输出按 100 ms 合批，每批最多 128 条、65536 字符，空闲时不轮询。不能在 stdout/stderr 读取线程逐条同步刷盘，也不新增每行 Task 或 UI Dispatcher 操作。队列过载汇总丢弃数量；写入失败只记录计数并恢复 Trace 缩进，不泄露异常正文或中断服务输出捕获。保留核心 `LogRingBuffer` 和健康匹配流程，落盘队列不参与健康判断。重载、删除、最终释放均解绑事件；Dispose 非阻塞结束队列，进程退出最多等待 500 ms，异常退出不保证最后的排队记录落盘。
 - **配置持久化。** 复用 `LoadAndMigrateSecretsAsync` 处理秘密值，保存使用 `UpdateAsync(expectedCatalog)` 保留 `services.d` 来源及并发校验。配置恢复、保存冲突和操作失败显示本地化提示；显式保存的空目录应保持为空，不反复生成示例。
 - **服务链接。** 复用 `VariableExpander` 根据实际端口和配置展开模板，只有有效的 HTTP/HTTPS URI 才显示打开入口。
 - **终止进程。** 强制终止和释放端口先显示明确目标及取消按钮。端口释放复用 `PortInspector.ReleaseAsync`，同时核验 PID、创建时间和当前监听端口；不能仅凭过期 PID 调用 Kill。
@@ -662,6 +707,12 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 - Windows 自动化不能正确绑定当前 Kit 窗口，实际布局、展开收起、关闭保存和隐藏后恢复仍需桌面反馈。本轮未改动参考源码或开展新插件功能。
 
 原生回归工具位于 `tools/tests/NativeModules/`。`Measure-RunnerStartup.ps1` 只测 Runner 后台初始化，并用本轮创建的精确进程句柄测试父进程退出联动；该耗时不代表 WinUI 首屏时间。交付由 `tools/build/Stage-Debug.ps1` 从当前版本产物生成，保留旧 Debug 目录，校验产物版本、依赖、资源和 SHA-256。
+
+### 12.7 UDP Test 模块设计与生命周期规范
+
+- **状态条容量与尺寸。** 探针行右侧 RecentBars 容量由 30 扩充为 60 条（倍增历史样本宽度），成功探针高度对齐为 20px（失败为 8px）。
+- **开关同步停止。** 顶部主开关关闭时，`IsEnabled` setter 同步触发 `_ = StopAsync()` 停止所有后台探针 Worker，同时 `PollNetworkIdentityAsync` 挂起外网身份追踪，会话计时器立即停止。
+- **选项锁定与灰化。** 开关关闭时，整页内容容器绑定 `Opacity=0.38`，`CanStart`、`CanStop`、`CanClear` 全部锁死为 `false`，状态灯与卡片重置为中性禁用态。
 
 ## 13. 上游文档与 Monitor 经验的使用方式
 

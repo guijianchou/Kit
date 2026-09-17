@@ -173,6 +173,12 @@
                     AutomationProperties.AutomationId="LocalserverNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Localserver.png}" />
 
+                <NavigationViewItem
+                    x:Name="UDPtestNavigationItem"
+                    x:Uid="Shell_UDPtest"
+                    AutomationProperties.AutomationId="UDPtestNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/UDPtest.png}" />
+
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem

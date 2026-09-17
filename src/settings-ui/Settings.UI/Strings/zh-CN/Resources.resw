@@ -100,6 +100,9 @@
   <data name="Shell_Localserver.Content" xml:space="preserve">
     <value>Localserver (本地服务)</value>
   </data>
+  <data name="Shell_UDPtest.Content" xml:space="preserve">
+    <value>UDP Test (网络探测)</value>
+  </data>
   <data name="Shell_Settings.Content" xml:space="preserve">
     <value>设置</value>
   </data>
@@ -329,7 +332,19 @@
     <value>启用 Localserver</value>
   </data>
   <data name="Localserver_EnableSettingsCard.Description" xml:space="preserve">
-    <value>允许本地服务启动与自动重启。关闭此项不会停止当前运行中的服务。</value>
+    <value>允许本地服务启动与自动重启。关闭此项将停止所有运行中的服务。</value>
+  </data>
+  <data name="UDPtest.ModuleTitle" xml:space="preserve">
+    <value>UDP Test (网络探测)</value>
+  </data>
+  <data name="UDPtest.ModuleDescription" xml:space="preserve">
+    <value>UDP 与 TCP 链路多路径持续探测及 NAT 网络诊断。</value>
+  </data>
+  <data name="UDPtest_EnableSettingsCard.Header" xml:space="preserve">
+    <value>启用 UDP Test</value>
+  </data>
+  <data name="UDPtest_EnableSettingsCard.Description" xml:space="preserve">
+    <value>持续探测 UDP 连通性、TCP 基线延迟以及诊断 NAT 类型。</value>
   </data>
   <data name="Localserver_LineSettingsGroup.Header" xml:space="preserve">
     <value>链路列表</value>
@@ -624,6 +639,12 @@
   </data>
   <data name="Localserver_HealthStopped" xml:space="preserve">
     <value>已停止</value>
+  </data>
+  <data name="Localserver_HealthDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="Localserver_ServiceDisabled" xml:space="preserve">
+    <value>Localserver 处于已关闭状态。</value>
   </data>
   <data name="Localserver_NoRuntimes" xml:space="preserve">
     <value>无特定运行时依赖</value>

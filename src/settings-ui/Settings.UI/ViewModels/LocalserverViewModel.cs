@@ -88,7 +88,7 @@ namespace Kit.Settings.UI.ViewModels
     public sealed class RecentBarViewModel
     {
         public Brush Brush { get; }
-        public double BarHeight => 16d;
+        public double BarHeight => 20d;
         public string Description { get; }
 
         public RecentBarViewModel(ServiceState state, bool? healthProbePassed = null)
@@ -310,11 +310,11 @@ namespace Kit.Settings.UI.ViewModels
         public string PidText => _runner.ProcessId?.ToString(CultureInfo.InvariantCulture) ?? "—";
 
         public bool IsRunning => State.IsActive();
-        public bool IsEditable => !_parent.IsCatalogBusy && State.AllowsEditing();
+        public bool IsEditable => _parent.IsEnabled && !_parent.IsCatalogBusy && State.AllowsEditing();
         public Visibility LockVisibility => IsRunning ? Visibility.Visible : Visibility.Collapsed;
-        public bool CanToggle => !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStop() || State.CanStart());
-        public bool CanRestart => !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStart() || State.CanStop());
-        public bool CanForceKill => !_parent.IsCatalogBusy && State.IsActive();
+        public bool CanToggle => _parent.IsEnabled && !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStop() || State.CanStart());
+        public bool CanRestart => _parent.IsEnabled && !_parent.IsCatalogBusy && !State.IsTransitional() && (State.CanStart() || State.CanStop());
+        public bool CanForceKill => _parent.IsEnabled && !_parent.IsCatalogBusy && State.IsActive();
 
         public bool IsOn
         {
@@ -754,11 +754,20 @@ namespace Kit.Settings.UI.ViewModels
         public bool HasActiveServices => Lines.Any(row => row.Runner.ProcessId.HasValue || row.State.IsActive() || row.State.IsTransitional());
         public Visibility EmptyLinesVisibility => Lines.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        public bool CanAddLine => IsEnabled && !IsCatalogBusy;
+        public bool CanStartAll => IsEnabled && !IsCatalogBusy && Lines.Any(l => l.State.CanStart());
+        public bool CanStopAll => IsEnabled && !IsCatalogBusy && Lines.Any(l => l.State.CanStop());
+        public bool CanRefreshTelemetry => IsEnabled && !IsCatalogBusy;
+
         internal void NotifyCatalogState()
         {
             OnPropertyChanged(nameof(IsCatalogBusy));
             OnPropertyChanged(nameof(CanReloadCatalog));
             OnPropertyChanged(nameof(EmptyLinesVisibility));
+            OnPropertyChanged(nameof(CanAddLine));
+            OnPropertyChanged(nameof(CanStartAll));
+            OnPropertyChanged(nameof(CanStopAll));
+            OnPropertyChanged(nameof(CanRefreshTelemetry));
             UpdateSessionMetrics();
         }
 
@@ -773,10 +782,78 @@ namespace Kit.Settings.UI.ViewModels
         {
             _generalSettingsConfig = _generalSettingsRepository.SettingsConfig;
             InitializeEnabledValue();
+            ApplyEnabledLifecycle();
             OnPropertyChanged(nameof(IsEnabled));
+            OnPropertyChanged(nameof(CanAddLine));
+            OnPropertyChanged(nameof(CanStartAll));
+            OnPropertyChanged(nameof(CanStopAll));
+            OnPropertyChanged(nameof(CanRefreshTelemetry));
             foreach (var row in Lines)
             {
                 row.RaiseAll();
+            }
+        }
+
+        private void ApplyEnabledLifecycle()
+        {
+            if (!_isEnabled)
+            {
+                _telemetryTimer.Stop();
+
+                _ = StopAllLinesAsync();
+
+                GpuStatusText = "Localserver_HealthDisabled".GetLocalized();
+                GpuStatusDotBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
+                GpuUtilizationValue = 0;
+                GpuUtilizationText = "—";
+                GpuMemoryValue = 0;
+                GpuMemoryText = "—";
+                GpuTemperatureValue = 0;
+                GpuTemperatureText = "—";
+
+                SystemCpuValue = 0;
+                SystemCpuText = "—";
+                SystemRamValue = 0;
+                SystemRamText = "—";
+
+                EnvHealthText = "Localserver_HealthDisabled".GetLocalized();
+                EnvHealthBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
+                EnvSummaryText = "Localserver_ServiceDisabled".GetLocalized();
+                EnvSummaryBrush = (Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
+                EnvironmentCheckChips.Clear();
+
+                OnPropertyChanged(nameof(GpuStatusText));
+                OnPropertyChanged(nameof(GpuStatusDotBrush));
+                OnPropertyChanged(nameof(GpuUtilizationValue));
+                OnPropertyChanged(nameof(GpuUtilizationText));
+                OnPropertyChanged(nameof(GpuMemoryValue));
+                OnPropertyChanged(nameof(GpuMemoryText));
+                OnPropertyChanged(nameof(GpuTemperatureValue));
+                OnPropertyChanged(nameof(GpuTemperatureText));
+                OnPropertyChanged(nameof(SystemCpuValue));
+                OnPropertyChanged(nameof(SystemCpuText));
+                OnPropertyChanged(nameof(SystemRamValue));
+                OnPropertyChanged(nameof(SystemRamText));
+
+                OnPropertyChanged(nameof(EnvHealthText));
+                OnPropertyChanged(nameof(EnvHealthBrush));
+                OnPropertyChanged(nameof(EnvSummaryText));
+                OnPropertyChanged(nameof(EnvSummaryBrush));
+                OnPropertyChanged(nameof(HealthRingBrush));
+                OnPropertyChanged(nameof(HealthStateText));
+                OnPropertyChanged(nameof(HealthStatusIconVisibility));
+                OnPropertyChanged(nameof(SessionRunningBrush));
+                OnPropertyChanged(nameof(SessionFaultedBrush));
+            }
+            else
+            {
+                if (_isPageActive && _isInitialized)
+                {
+                    _telemetryTimer.Start();
+                    _ = RefreshTelemetryAsync();
+                    RefreshEnvironmentCard();
+                    UpdateSessionMetrics();
+                }
             }
         }
 
@@ -797,6 +874,13 @@ namespace Kit.Settings.UI.ViewModels
                     OutGoingGeneralSettings snd = new OutGoingGeneralSettings(_generalSettingsConfig);
                     _sendConfigMsg(snd.ToString());
                     OnPropertyChanged(nameof(IsEnabled));
+                    OnPropertyChanged(nameof(CanAddLine));
+                    OnPropertyChanged(nameof(CanStartAll));
+                    OnPropertyChanged(nameof(CanStopAll));
+                    OnPropertyChanged(nameof(CanRefreshTelemetry));
+
+                    ApplyEnabledLifecycle();
+
                     foreach (var row in Lines)
                     {
                         row.RaiseAll();
@@ -1049,17 +1133,17 @@ namespace Kit.Settings.UI.ViewModels
         public string SessionUptimeText { get; private set; } = "—";
         public string SessionRegisteredText => Lines.Count.ToString(CultureInfo.InvariantCulture);
         public string SessionRunningText => Lines.Count(l => l.State.IsActive()).ToString(CultureInfo.InvariantCulture);
-        public Brush SessionRunningBrush => (Brush)Application.Current.Resources[Lines.Any(l => l.State.IsActive())
+        public Brush SessionRunningBrush => (Brush)Application.Current.Resources[(_isEnabled && Lines.Any(l => l.State.IsActive()))
             ? "SystemFillColorSuccessBrush"
             : "TextFillColorPrimaryBrush"];
         public string SessionFaultedText => Lines.Count(l => l.State.IsFaulted()).ToString(CultureInfo.InvariantCulture);
-        public Brush SessionFaultedBrush => (Brush)Application.Current.Resources[Lines.Any(l => l.State.IsFaulted())
+        public Brush SessionFaultedBrush => (Brush)Application.Current.Resources[(_isEnabled && Lines.Any(l => l.State.IsFaulted()))
             ? "SystemFillColorCriticalBrush"
             : "TextFillColorPrimaryBrush"];
 
         public Brush HealthRingBrush => EnvHealthBrush;
         public string HealthStateText => EnvHealthText;
-        public Visibility HealthStatusIconVisibility => (SelectedLine?.State == ServiceState.Running && SelectedLine?.Runner.HealthProbePassed == true)
+        public Visibility HealthStatusIconVisibility => (_isEnabled && SelectedLine?.State == ServiceState.Running && SelectedLine?.Runner.HealthProbePassed == true)
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -1158,7 +1242,7 @@ namespace Kit.Settings.UI.ViewModels
             _secretStore = new SecretStore(dataDir);
             _logSink = new LocalserverLogSink();
 
-            _telemetryTimer.Interval = TimeSpan.FromSeconds(2);
+            _telemetryTimer.Interval = TimeSpan.FromSeconds(1);
             _telemetryTimer.Tick += OnTelemetryTimerTick;
             Lines.CollectionChanged += (_, _) => NotifyCatalogState();
 
@@ -1173,7 +1257,7 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             _isPageActive = active;
-            if (active && _isInitialized)
+            if (active && _isInitialized && _isEnabled)
             {
                 _telemetryTimer.Start();
                 _ = RefreshTelemetryAsync();
@@ -1572,6 +1656,12 @@ namespace Kit.Settings.UI.ViewModels
 
         private async void OnTelemetryTimerTick(object? sender, object e)
         {
+            if (!_isEnabled || !_isPageActive || _disposed)
+            {
+                _telemetryTimer.Stop();
+                return;
+            }
+
             UpdateSessionMetrics();
             RefreshLogPanel();
             await RefreshTelemetryAsync();
@@ -1579,7 +1669,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public async Task RefreshTelemetryAsync()
         {
-            if (_disposed || !_isPageActive || IsCatalogBusy || Interlocked.CompareExchange(ref _telemetryRefreshInFlight, 1, 0) != 0)
+            if (_disposed || !_isPageActive || !_isEnabled || IsCatalogBusy || Interlocked.CompareExchange(ref _telemetryRefreshInFlight, 1, 0) != 0)
             {
                 return;
             }
@@ -1716,6 +1806,30 @@ namespace Kit.Settings.UI.ViewModels
                 return;
             }
 
+            if (!_isEnabled)
+            {
+                EnvHealthText = "Localserver_HealthDisabled".GetLocalized();
+                EnvHealthBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
+                EnvRuntimesText = "—";
+                EnvSummaryText = "Localserver_ServiceDisabled".GetLocalized();
+                EnvSummaryBrush = (Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
+                EnvironmentCheckChips.Clear();
+
+                OnPropertyChanged(nameof(EnvHealthText));
+                OnPropertyChanged(nameof(EnvHealthBrush));
+                OnPropertyChanged(nameof(EnvPortText));
+                OnPropertyChanged(nameof(EnvPidText));
+                OnPropertyChanged(nameof(EnvStateText));
+                OnPropertyChanged(nameof(EnvStateBrush));
+                OnPropertyChanged(nameof(EnvRuntimesText));
+                OnPropertyChanged(nameof(EnvSummaryText));
+                OnPropertyChanged(nameof(EnvSummaryBrush));
+                OnPropertyChanged(nameof(EnvCommandText));
+                OnPropertyChanged(nameof(EnvCwdText));
+                UpdateChartGeometry();
+                return;
+            }
+
             var line = SelectedLine;
             if (line == null)
             {
@@ -1765,6 +1879,10 @@ namespace Kit.Settings.UI.ViewModels
 
         private async Task RefreshEnvironmentAsync(LineRowViewModel line)
         {
+            if (_disposed || !_isPageActive || !_isEnabled)
+            {
+                return;
+            }
             try
             {
                 var snapshot = await Task.Run(() => EnvironmentInspector.CheckAsync(

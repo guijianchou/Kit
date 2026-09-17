@@ -1642,7 +1642,22 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Enable Localserver</value>
   </data>
   <data name="Localserver_EnableSettingsCard.Description" xml:space="preserve">
-    <value>Allow services to start and restart. Turning this off leaves running services active.</value>
+    <value>Allow services to start and restart. Turning this off stops all running services.</value>
+  </data>
+  <data name="Shell_UDPtest.Content" xml:space="preserve">
+    <value>UDP Test</value>
+  </data>
+  <data name="UDPtest.ModuleTitle" xml:space="preserve">
+    <value>UDP Test</value>
+  </data>
+  <data name="UDPtest.ModuleDescription" xml:space="preserve">
+    <value>Continuous multi-path probe &amp; NAT diagnostics for UDP and TCP.</value>
+  </data>
+  <data name="UDPtest_EnableSettingsCard.Header" xml:space="preserve">
+    <value>Enable UDP Test</value>
+  </data>
+  <data name="UDPtest_EnableSettingsCard.Description" xml:space="preserve">
+    <value>Continuously monitor UDP connectivity, baseline TCP latency, and diagnose NAT type.</value>
   </data>
   <data name="Localserver_LineSettingsGroup.Header" xml:space="preserve">
     <value>Services</value>
@@ -1937,6 +1952,12 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="Localserver_HealthStopped" xml:space="preserve">
     <value>STOPPED</value>
+  </data>
+  <data name="Localserver_HealthDisabled" xml:space="preserve">
+    <value>DISABLED</value>
+  </data>
+  <data name="Localserver_ServiceDisabled" xml:space="preserve">
+    <value>Localserver is turned off.</value>
   </data>
   <data name="Localserver_NoRuntimes" xml:space="preserve">
     <value>None required</value>

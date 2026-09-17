@@ -48,7 +48,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\common\inc;..\common\os-detection;..;..\modules;$(PkgMicrosoft_Windows_ImplementationLibrary)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\common\inc;..\common\os-detection;..;..\modules;$(PkgMicrosoft_Windows_ImplementationLibrary)\include;$(UserProfile)\.nuget\packages\microsoft.windows.implementationlibrary\1.0.250325.1\include;$(RepoRoot)packages\Microsoft.Windows.ImplementationLibrary.1.0.260126.7\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <UACExecutionLevel>AsInvoker</UACExecutionLevel>

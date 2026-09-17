@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -17,6 +17,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.Awake,
                 ModuleType.LightSwitch,
                 ModuleType.Localserver,
+                ModuleType.UDPtest,
             };
 
         public static IReadOnlyList<ModuleType> DashboardModules => ActiveModules;
@@ -34,6 +35,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 AwakeSettings.ModuleName,
                 LightSwitchSettings.ModuleName,
                 LocalserverSettings.ModuleName,
+                UDPtestSettings.ModuleName,
                 "General",
             };
 
@@ -43,6 +45,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 AwakeSettings.ModuleName,
                 LightSwitchSettings.ModuleName,
                 LocalserverSettings.ModuleName,
+                UDPtestSettings.ModuleName,
             };
 
         public static bool IsActiveModule(ModuleType moduleType)

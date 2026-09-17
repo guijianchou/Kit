@@ -93,8 +93,14 @@
                         Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                         Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}" />
 
-                    <!-- Top Overview Cards Grid -->
-                    <Grid x:Name="StatusCardsGrid" ColumnSpacing="12" RowSpacing="12">
+                    <!-- All module settings disabled when master switch is OFF -->
+                    <ContentControl IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
+                                    Opacity="{x:Bind ViewModel.IsEnabled, Mode=OneWay, Converter={StaticResource BoolToDisabledOpacityConverter}}"
+                                    IsTabStop="False"
+                                    HorizontalContentAlignment="Stretch">
+                        <StackPanel Spacing="16">
+                            <!-- Top Overview Cards Grid -->
+                        <Grid x:Name="StatusCardsGrid" ColumnSpacing="12" RowSpacing="12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1.3*" />
                             <ColumnDefinition Width="1*" />
@@ -353,10 +359,10 @@
                     <StackPanel Margin="0,8,0,0" Spacing="12">
                         <TextBlock x:Uid="Localserver_LinesHeader" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource SubtitleTextBlockStyle}" />
                         <tkcontrols:WrapPanel HorizontalSpacing="8" Orientation="Horizontal" VerticalSpacing="8">
-                            <Button x:Uid="Localserver_AddLineButton" Click="AddLine_Click" IsEnabled="{x:Bind ViewModel.IsCatalogBusy, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}" Style="{ThemeResource AccentButtonStyle}" />
-                            <Button x:Uid="Localserver_StartAllButton" Click="StartAll_Click" IsEnabled="{x:Bind ViewModel.IsCatalogBusy, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}" />
-                            <Button x:Uid="Localserver_StopAllButton" Click="StopAll_Click" />
-                            <Button x:Uid="Localserver_RefreshButton" Click="RefreshTelemetry_Click">
+                            <Button x:Uid="Localserver_AddLineButton" Click="AddLine_Click" IsEnabled="{x:Bind ViewModel.CanAddLine, Mode=OneWay}" Style="{ThemeResource AccentButtonStyle}" />
+                            <Button x:Uid="Localserver_StartAllButton" Click="StartAll_Click" IsEnabled="{x:Bind ViewModel.CanStartAll, Mode=OneWay}" />
+                            <Button x:Uid="Localserver_StopAllButton" Click="StopAll_Click" IsEnabled="{x:Bind ViewModel.CanStopAll, Mode=OneWay}" />
+                            <Button x:Uid="Localserver_RefreshButton" Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}">
                                 <FontIcon FontSize="16" Glyph="&#xE72C;" />
                             </Button>
                         </tkcontrols:WrapPanel>
@@ -511,7 +517,7 @@
                                             Grid.Column="1"
                                             Grid.ColumnSpan="6"
                                             Margin="0,8,0,0"
-                                            Height="20"
+                                            Height="24"
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Center"
                                             HorizontalScrollMode="Disabled"
@@ -712,6 +718,8 @@
                             </Border>
                         </Grid>
                     </Border>
+                    </StackPanel>
+                    </ContentControl>
 
                 </StackPanel>
             </controls:SettingsPageControl.ModuleContent>

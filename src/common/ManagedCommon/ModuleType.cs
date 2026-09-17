@@ -38,6 +38,7 @@ namespace ManagedCommon
         GrabAndMove,
         ZoomIt,
         Localserver,
+        UDPtest,
         AiHub,
         GeneralSettings,
     }

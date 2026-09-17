@@ -880,6 +880,8 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
         return "LightSwitch";
     case ESettingsWindowNames::Localserver:
         return "Localserver";
+    case ESettingsWindowNames::UDPtest:
+        return "UDPtest";
     case ESettingsWindowNames::AiHub:
         return "AiHub";
     default:
@@ -912,6 +914,10 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     else if (value == "Localserver")
     {
         return ESettingsWindowNames::Localserver;
+    }
+    else if (value == "UDPtest")
+    {
+        return ESettingsWindowNames::UDPtest;
     }
     else if (value == "AiHub")
     {

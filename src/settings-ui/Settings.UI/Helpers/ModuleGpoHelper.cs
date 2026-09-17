@@ -29,6 +29,7 @@ namespace Kit.Settings.UI.Helpers
                 ModuleType.Awake => typeof(AwakePage),
                 ModuleType.LightSwitch => typeof(LightSwitchPage),
                 ModuleType.Localserver => typeof(LocalserverPage),
+                ModuleType.UDPtest => typeof(UDPtestPage),
                 ModuleType.AiHub => typeof(GeneralPage),
                 _ => typeof(GeneralPage),
             };

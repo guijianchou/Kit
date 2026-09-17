@@ -74,6 +74,7 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(GrabAndMoveSettings))]
     [JsonSerializable(typeof(ZoomItSettings))]
     [JsonSerializable(typeof(LocalserverSettings))]
+    [JsonSerializable(typeof(UDPtestSettings))]
 
     // Properties Classes
     [JsonSerializable(typeof(AdvancedPasteProperties))]
@@ -114,6 +115,7 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(GrabAndMoveProperties))]
     [JsonSerializable(typeof(ZoomItProperties))]
     [JsonSerializable(typeof(LocalserverProperties))]
+    [JsonSerializable(typeof(UDPtestProperties))]
 
     // Base Property Types (used throughout settings)
     [JsonSerializable(typeof(BoolProperty))]
@@ -157,11 +159,13 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(SndAwakeSettings))]
     [JsonSerializable(typeof(SndLightSwitchSettings))]
     [JsonSerializable(typeof(SndLocalserverSettings))]
+    [JsonSerializable(typeof(SndUDPtestSettings))]
 
     // IPC Message Generic Wrapper Types (SndModuleSettings<T>)
     [JsonSerializable(typeof(SndModuleSettings<SndAwakeSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndLightSwitchSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndLocalserverSettings>))]
+    [JsonSerializable(typeof(SndModuleSettings<SndUDPtestSettings>))]
 
     public partial class SettingsSerializationContext : JsonSerializerContext
     {

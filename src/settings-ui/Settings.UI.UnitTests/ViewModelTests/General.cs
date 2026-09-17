@@ -26,7 +26,7 @@ namespace ViewModelTests
     public class General
     {
         public const string GeneralSettingsFileName = "Test\\GeneralSettings";
-        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AiHub" };
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AiHub", "UDPtest" };
 
         private Mock<SettingsUtils> mockGeneralSettingsUtils;
 
@@ -537,10 +537,10 @@ namespace ViewModelTests
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
 
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest },
                 KitModuleCatalog.ActiveModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest },
                 KitModuleCatalog.DashboardModules.ToArray());
             CollectionAssert.AreEqual(
                 new[] { ModuleType.LightSwitch },
@@ -578,6 +578,7 @@ namespace ViewModelTests
             settings.Enabled.LightSwitch = true;
             settings.Enabled.Localserver = false;
             settings.Enabled.AiHub = true;
+            settings.Enabled.UDPtest = true;
 
             var outgoingJson = new OutGoingGeneralSettings(settings).ToString();
 
@@ -595,6 +596,7 @@ namespace ViewModelTests
             Assert.AreEqual(true, enabled.GetProperty("LightSwitch").GetBoolean());
             Assert.AreEqual(false, enabled.GetProperty("Localserver").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("AiHub").GetBoolean());
+            Assert.AreEqual(true, enabled.GetProperty("UDPtest").GetBoolean());
             Assert.IsFalse(enabled.TryGetProperty("PowerDisplay", out _));
         }
 

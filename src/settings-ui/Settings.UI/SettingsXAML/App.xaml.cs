@@ -333,6 +333,7 @@ namespace Kit.Settings.UI
                 "Awake" => typeof(AwakePage),
                 "LightSwitch" => typeof(LightSwitchPage),
                 "Localserver" => typeof(LocalserverPage),
+                "UDPtest" => typeof(UDPtestPage),
                 "AiHub" => typeof(GeneralPage),
                 _ => typeof(DashboardPage),
             };

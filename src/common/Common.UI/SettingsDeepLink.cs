@@ -17,6 +17,8 @@ namespace Common.UI
             Overview,
             Awake,
             LightSwitch,
+            Localserver,
+            UDPtest,
         }
 
         private static string SettingsWindowNameToString(SettingsWindow value)
@@ -31,6 +33,10 @@ namespace Common.UI
                     return "Awake";
                 case SettingsWindow.LightSwitch:
                     return "LightSwitch";
+                case SettingsWindow.Localserver:
+                    return "Localserver";
+                case SettingsWindow.UDPtest:
+                    return "UDPtest";
                 default:
                     {
                         return string.Empty;

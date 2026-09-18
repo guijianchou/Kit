@@ -14,7 +14,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 ### 当前版本
 
-当前 Kit 版本：`2.1.1`。
+当前 Kit 版本：`2.2.1`。
 
 ## 文档索引
 
@@ -54,7 +54,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 当前稳定的交接点是：
 
-- 保持 `Awake`、`Light Switch` 和 `Localserver` 作为活动模块集（`Monitor` 已在 2.0.8 移除）。
+- 保持 `Awake`、`Light Switch`、`Localserver`、`UDPtest` 和 `AI Hub` 作为活动模块集（`Monitor` 已在 2.0.8 移除）。
 - 第一方模块通过维护的列表和测试保持显式发现；第三方插件宿主（`plugins/` + manifest）按 `fix.plan` 规划，尚未实现。
 - 保持通用和主页使用英语 Kit 措辞，删除自动更新和遥测界面。
 - 保持 Kit UI 自动化指向 Kit 的运行器、设置窗口、安装根目录和活动模块可执行文件，避免意外附着到已安装的上游 PowerToys。
@@ -65,11 +65,11 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 ## 架构
 
 - `src/runner` 启动 Kit，加载模块接口 DLL，拥有模块生命周期，并与设置应用协调设置 IPC。可执行文件已经足够分离，可以作为 `Kit.exe` 启动，而许多面向构建的项目名称仍然保留上游 PowerToys 名称。在运行时，运行器从 `Kit.exe` 旁边的 `WinUI3Apps` 打开设置和快速访问应用，因此运行器构建目标必须保持对两个 UI 可执行项目的显式依赖。
-- `src/modules` 包含活动实用工具。`Awake` 从上游 PowerToys 复制，包括 `Awake.ModuleServices`、`Awake` 和 `AwakeModuleInterface`；`LightSwitch` 也由上游 PowerToys 适配；`Localserver` 包含本地服务管理核心库及原生模块接口（Monitor 已在 2.0.8 移除）。
+- `src/modules` 包含活动实用工具：`Awake`、`LightSwitch`、`Localserver`、`UDPtest` 与 `AIHub` 原生模块接口及服务后端。
 - `src/settings-ui/Settings.UI` 包含 WinUI 设置应用，包括主页、通用、模块页面、导航和页面级视图模型。
 - `src/settings-ui/Settings.UI.Controls` 包含共享 UI 控件，如快速访问。
 - `src/settings-ui/Settings.UI.Library` 包含设置模型、设置序列化、模块设置存储库、备份和恢复助手、GPO 助手和共享设置基础设施。
-- `src/common` 保留运行器、模块和设置使用的共享本机和托管 PowerToys 基础设施。
+- `src/common` 保留运行器、模块和设置使用的共享本机和托管 PowerToys 基础设施，包含统一的 `Kit.AiHub` 任务引擎。
 
 Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中，尚无独立后台 Worker。完整关闭 Settings 后，不承诺日志采集、健康检查或自动重启继续运行。生命周期边界详见 [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)。
 
@@ -77,11 +77,13 @@ Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中，�
 
 ## 当前模块集
 
-活动 Kit 模块集故意很小：
+活动 Kit 模块集包含五个聚焦的实用工具：
 
-- `Awake`
-- `Light Switch`
-- `Localserver`
+- `Awake` —— 系统保持唤醒工具，管理屏幕与电源休眠状态。
+- `Light Switch` —— 定时与自动化系统/应用深浅色主题切换。
+- `Localserver` —— 本地开发者服务生命周期与进程编排管理。
+- `UDPtest` —— 高性能网络探测引擎（TCP HTTPS 延迟、UDP 回显、STUN 绑定及 NAT 类型发现）。
+- `AI Hub` —— 统一 AI 服务集成、安全策略管控与安全审计中心（支持任务策略管线编排）。
 
 `Monitor` 已在 `2.0.8` 移除；移除记录见 `doc/devdoc/kit-development-experience.md` 与 [changelog.md](changelog.md)。
 
@@ -94,6 +96,8 @@ Kit 遵循 PowerToys 模块加载模型，而不是发明新的插件协议。�
 - `Kit.AwakeModuleInterface.dll`
 - `Kit.LightSwitchModuleInterface.dll`
 - `Kit.LocalserverModuleInterface.dll`
+- `Kit.UDPtestModuleInterface.dll`
+- `Kit.AIHubModuleInterface.dll`
 
 这个固定列表对第一方模块是有意的：它避免了不稳定的目录探测，并使每个导入的模块成为显式的兼容性决策。计划的第三方插件宿主（`fix.plan` P1）会通过 `plugins/` 目录 + `manifest.json` 承载外部插件，同时保持此第一方列表不变。当另一个第一方 PowerToys 模块被引入 Kit 时，它应该一起添加到运行器、解决方案、设置路由、主页仪表板元数据和测试中。
 
@@ -118,7 +122,7 @@ Kit 遵循 PowerToys 模块加载模型，而不是发明新的插件协议。�
 
 Kit 的核心方向是轻量插件宿主：主框架（runner + Settings UI + 公共库）不内置模块业务逻辑，启动快，并通过同一个 `KitModuleIface` + `kit_create()` 契约（同时提供 `PowertoyModuleIface` / `powertoy_create` 兼容别名）同时承载官方 PowerToys 模块与第三方自定插件。
 
-- 第一方模块（`Awake`、`Light Switch`、`Localserver`）保持在编译期 `KitKnownModules` 清单内，深度集成（Home、设置路由、测试，以及模块支持的 Quick Access 动作）。
+- 第一方模块（`Awake`、`Light Switch`、`Localserver`、`UDPtest`、`AI Hub`）保持在编译期 `KitKnownModules` 清单内，深度集成（Home、设置路由、测试，以及模块支持的 Quick Access 动作）。
 - 第三方插件计划从 `plugins/` 目录加载（接口 DLL + `manifest.json`），只加载已启用插件，并由通用设置页渲染各插件的 `get_config` JSON。
 - 导入官方 PowerToys 模块需要先核对源码兼容性，再接入 Kit 的设置、IPC 与生命周期；保持遥测禁用，按 [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) 执行。
 
@@ -155,7 +159,7 @@ Kit 的核心方向是轻量插件宿主：主框架（runner + Settings UI + �
 
 最新的主页工作保持 PowerToys 行为，但将其范围限定为 Kit 的活动模块：
 
-- `DashboardViewModel` 使用 `KitModuleCatalog.DashboardModules`，当前为 `Awake`、`LightSwitch` 和 `Localserver`，因此主页实用工具列表是固定和可预测的。
+- `DashboardViewModel` 使用 `KitModuleCatalog.DashboardModules`，当前为 `Awake`、`LightSwitch`、`Localserver` 和 `UDPtest`，因此主页实用工具列表是固定和可预测的。
 - `QuickAccessViewModel` 仍然支持可操作的快速访问项，但主页传递仪表板模块列表，以便启用的 Kit 模块一致显示。
 - 快速访问首先尝试正常启动器。如果模块没有直接快速操作，主页会回退到打开该模块的设置页面。`Awake` 和 `Localserver` 使用这一设置页回退路径；`LightSwitch` 保持直接切换操作。
 - `Awake` 贡献一个 `DashboardModuleActivationItem`，在主页快捷方式卡中显示当前 Awake 模式，使用现有的 PowerToys 仪表板项模板。
@@ -219,32 +223,61 @@ Git 工作树仅在需要隔离分支工作区时使用。在 2026-04-29，`git 
 
 在同一传递期间处理了两个额外的完整解决方案发布清理项：DSC 模块列表不再宣传已删除的 `MouseJump` 设置表面，`UnitTests-CommonUtils` 现在使用 `/utf-8` 构建，以便一致接受上游 `spdlog/fmt` Unicode 支持。
 
+## 最近版本记录
+
+### 2.2.1 WinUI 3 页面崩溃修复与导航弹性加固
+
+`2.2.1` 版本彻底解决了常规设置（General）、UDP 探测（UDPtest）以及 AI 智能中心（AI Hub）三处设置页面的 WinUI 3 XAML 崩溃问题，对页面生命周期与主题资源访问进行了全方位防崩溃加固：
+
+- **常规设置页**：修复 `Resources.resw` 中 `AiHub_MainEndpoint_ApiKeyCard.PlaceholderText` 误加至父级 `SettingsCard` 引发的 `XamlParseException` / `0xC000027B` 致命崩溃，精确绑定至子级 `PasswordBox`（`x:Uid="AiHub_MainEndpoint_ApiKeyBox"`），并将 ViewModel 提前至 `InitializeComponent()` 前初始化。
+- **UDP 探测测试页**：修复按钮 ToolTip 资源未按附加属性语法声明引发的 XAML 解析异常，在页面资源显式派生 `AccentHealthButtonStyle` 消除 `COMException: Element not found`，并引入 `ThemeBrushHelper` 安全画刷助手提供安全的资源索引与 Fluent 回退笔刷。
+- **AI 智能中心页**：修复编译型绑定中 `SolidColorBrush` 无法转换为 `Windows.UI.Color` 的 `InvalidCastException` 崩溃，直接将转换器绑定至 `Ellipse.Fill`，并规范 ViewModel 初始化顺序。
+- **崩溃日志基础设施**：在 `App.xaml.cs` 中增加同步 First-Chance 和 Unhandled Exception 异常捕获机制，自动输出完整调用堆栈与时间戳至 `%LOCALAPPDATA%\Kit\crash.log`。
+
+### 2.2.0 AI Hub 与 UDPtest 原生集成与双语纯化
+
+`2.2.0` 版本正式完成了 `AI Hub` 与 `UDPtest` 的深度原生集成，并实现 100% 纯正中英双语体验：
+
+- **AI Hub 与安全审计中心**：
+  - 完整原生模块接口（`Kit.AIHubModuleInterface.dll`）与专属设置页面（`AIHubPage.xaml`）。
+  - 分层安全策略执行管线：全局安全策略（`%LOCALAPPDATA%\Kit\AiHub\security.md`）与基础任务约束策略（`chains/{task}/AGENTS.md`），执行流程直观呈现为 `Codex / Pi → 安全策略 + AGENTS.md → 审计摘要 → 建议动作`。
+  - 深度还原原项目质感的安全审计界面：健康状况概览环、健康评级徽章（A-F）、问题风险等级分布条、审计活动指标、首要建议操作横幅，以及动态本地化详情弹窗 `FindingDetailsDialog.xaml`。
+  - 审计结果动态多语种格式化：检测事实、根因分析和处置建议（`PriorityActionText`）随当前系统语言（`zh-CN` 或 `en-US`）动态呈现对应语言。
+  - 恢复浅色紫色图标（`#A756FF`），统一侧边栏导航与模块资产视觉规范。
+- **UDPtest 高性能网络探测引擎**：
+  - 高性能探测引擎，支持 TCP HTTPS 延迟、UDP Echo 回显、STUN 绑定检测及 NAT 类型发现。
+  - 实时时序状态条：5px 药丸形竖条、2px 间距，支持 60 条近期探测容量（至多 240 条历史样本），支持总开关级联退出停用。
+- **100% 纯正双语对齐与去除混杂标注**：
+  - 彻底清理主界面与插件中的中英混杂小括号与斜杠（如 `(保持唤醒)` -> `保持唤醒`、`启用 Awake` -> `启用保持唤醒`、`启用 UDP Test` -> `启用网络探测`、`启用 AI Hub` -> `启用 AI 智能中心`、`Essential Policy (全局任务策略)` -> `基础任务策略`）。
+  - Localserver 指标标签纯中文呈现、UDPtest 表头及元数据条纯中文、快捷键冲突与分配弹窗全面纯中文。
+
 ## 验证快照
 
-2026-09-15 针对版本 `2.0.23` 的本地验证使用 Visual Studio 18 MSBuild、VSTest 和 .NET 测试运行器：
+2026-09-17 针对版本 `2.2.1` 的本地验证使用 Visual Studio 18 MSBuild、VSTest 和 .NET 测试运行器：
 
 - **Release 与 Debug x64 完整构建**：
-  - 完整 `Kit.slnx` 在 Debug x64 与 Release x64 配置下均以 0 错误通过编译。
-  - 在 `x64\Release\` 下生成了完整的运行时产物：
-    - `x64\Release\Kit.exe` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\Kit.Settings.exe` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\Kit.QuickAccess.exe` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\Kit.AiHub.dll` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\LocalserverLib.dll` (`2.0.23.0`)
-    - `x64\Release\Kit.Interop.winmd` 与 `Kit.GPOWrapper.winmd`
-    - 模块接口及服务：`Kit.AwakeModuleInterface.dll`、`Kit.LightSwitchModuleInterface.dll`、`Kit.LocalserverModuleInterface.dll`、`Kit.Awake.exe` 及 `Kit.LightSwitchService.exe`
-    - 已签名的稀疏身份包：`x64\Release\KitSparse.msix` (`2.0.23.0`)
+  - 完整 `Kit.slnx` 在 Debug x64 与 Release x64 配置下均以 0 错误、0 警告通过编译。
+  - 在 `x64\Debug\` 与 `x64\Release\` 下生成了完整的运行时产物：
+    - `Kit.exe` (`2.2.1.0`)
+    - `WinUI3Apps\Kit.Settings.exe` (`2.2.1.0`)
+    - `WinUI3Apps\Kit.QuickAccess.exe` (`2.2.1.0`)
+    - `WinUI3Apps\Kit.AiHub.dll` (`2.2.1.0`)
+    - `WinUI3Apps\LocalserverLib.dll` (`2.2.1.0`)
+    - `Kit.Interop.winmd` 与 `Kit.GPOWrapper.winmd`
+    - 模块接口及服务：`Kit.AwakeModuleInterface.dll`、`Kit.LightSwitchModuleInterface.dll`、`Kit.LocalserverModuleInterface.dll`、`Kit.UDPtestModuleInterface.dll`、`Kit.AIHubModuleInterface.dll`
+    - 已签名的稀疏身份包：`KitSparse.msix` (`2.2.1.0`)
 
 - **自动化测试套件验证**：
-  - `Settings.UI.UnitTests`（通用视图模型与版本元数据）：通过 `vstest.console.exe` 执行，44/44 测试通过（包括 `KitAboutVersionShouldMatchReleaseMetadata` 与 `LoggingSettingsDefaultsAndToggleWorkCorrectly`）。
-  - `Kit.AiHub.UnitTests`：107 通过，0 失败，1 跳过。
+  - `Settings.UI.UnitTests`：通过 `vstest.console.exe` 执行，196/196 测试全部通过（覆盖通用设置、版本元数据、构建兼容性与多语种资源校验）。
+  - `Kit.AiHub.UnitTests`：108 通过，0 失败，1 跳过。
   - `Localserver.UnitTests`：7/7 全部通过。
 
 - **核心功能与架构验证**：
-  - **AI 服务设置 UI/UX 重构**：对齐原生 PowerToys `SettingsExpander`/`SettingsCard` 风格，解耦 Execution Kernel（Codex / Pi CLI）与 Endpoints，Main/Fallback 单行紧凑排版（展示 `Model · Effort` 与 `Test connection`），全局安全策略下方统一 `Save` 保存按钮。
-  - **Localserver AI 彻底解耦**：完全移除 AI 分析服务、诊断链及界面卡片。
-  - **诊断与集中日志系统**：集成 C++ `spdlog` 与 C# `ManagedCommon.Logger`，通过 `%LOCALAPPDATA%\Kit\log_settings.json` 双向同步；设置界面启用开关与日志级别选择器验证完毕。
-  - **Debug 交付包**：通过 `bin/debug/2.0.23/` 交付验证（1,352 文件，0 缺失依赖）。
+  - **页面导航与防崩溃**：直接唤起 `General`、`UDPtest`、`AIHub` 页面均以退出码 0 成功启动并运行，`%LOCALAPPDATA%\Kit\crash.log` 保持 0 错误记录。
+  - **AI Hub 安全审计**：严重级别颜色转换器类型安全性验证通过，审计详情弹窗完整本地化，动态语言格式化生效。
+  - **安全策略体系**：自动为缺失的 `security.md` 与 `chains/{task}/AGENTS.md` 生成缺省脚手架，防范 I/O 崩溃。
+  - **双语纯净度**：`zh-CN/Resources.resw` 与 `en-us/Resources.resw` 实现纯净中文与英文对齐，零括号中英混杂。
 
 在将干净树交给 Visual Studio 之前，可以删除本地构建输出和恢复缓存。下一次编译应该一起重新创建运行时输出目录、`WinUI3Apps` 子项、共享 WinMD 文件、CsWinRT 投影和包恢复缓存。
+
 

@@ -135,7 +135,34 @@ internal sealed class KernelFixture : IDisposable
                 }
             }
 
-            Directory.Delete(root, recursive: true);
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    if (!Directory.Exists(root))
+                    {
+                        break;
+                    }
+
+                    foreach (var file in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            File.SetAttributes(file, FileAttributes.Normal);
+                        }
+                        catch
+                        {
+                        }
+                    }
+
+                    Directory.Delete(root, recursive: true);
+                    break;
+                }
+                catch (Exception) when (attempt < 4)
+                {
+                    Thread.Sleep(150 * (attempt + 1));
+                }
+            }
         }
     }
 

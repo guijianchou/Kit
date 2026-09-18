@@ -5,6 +5,7 @@
 #nullable enable
 
 using System;
+using Kit.Settings.UI.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 
@@ -22,18 +23,18 @@ namespace Kit.Settings.UI.ViewModels
             {
                 if (isWarning || durationMilliseconds > 250)
                 {
-                    Brush = (Brush)Application.Current.Resources["SystemFillColorCautionBrush"];
+                    Brush = ThemeBrushHelper.CautionBrush;
                     BarHeight = 11.0;
                 }
                 else
                 {
-                    Brush = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
+                    Brush = ThemeBrushHelper.SuccessBrush;
                     BarHeight = 16.0;
                 }
             }
             else
             {
-                Brush = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
+                Brush = ThemeBrushHelper.CriticalBrush;
                 BarHeight = 6.0;
             }
             Description = description;

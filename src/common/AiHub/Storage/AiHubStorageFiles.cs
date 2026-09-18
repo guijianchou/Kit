@@ -156,16 +156,29 @@ internal sealed class AiHubStorageFiles
         }
     }
 
-    internal void WriteAtomic(string fileName, byte[] content, int maximumBytes = MaxDataFileBytes)
+    internal void WriteAtomic(string relativePath, byte[] content, int maximumBytes = MaxDataFileBytes)
     {
-        if (content.Length > maximumBytes || Path.GetFileName(fileName) != fileName)
+        if (content.Length > maximumBytes || string.IsNullOrWhiteSpace(relativePath))
         {
             throw new InvalidDataException("The AI Hub data file is invalid.");
         }
 
-        string destination = GetPath(fileName);
-        EnsureNoReparsePoints(destination);
-        string temporaryPath = GetPath($".{fileName}.{Guid.NewGuid():N}.tmp");
+        string destination = Path.GetFullPath(GetPath(relativePath));
+        string rootPrefix = Path.EndsInDirectorySeparator(DataDirectory) ? DataDirectory : DataDirectory + Path.DirectorySeparatorChar;
+        if (!destination.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("The AI Hub data file path is invalid.");
+        }
+
+        string? parent = Path.GetDirectoryName(destination);
+        if (parent is not null)
+        {
+            EnsureNoReparsePoints(parent);
+            Directory.CreateDirectory(parent);
+            EnsureNoReparsePoints(parent);
+        }
+
+        string temporaryPath = Path.Combine(parent ?? DataDirectory, $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
         bool temporaryCreated = false;
         try
         {

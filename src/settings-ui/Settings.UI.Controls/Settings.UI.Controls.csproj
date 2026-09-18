@@ -12,7 +12,7 @@
     <GenerateLibraryLayout>true</GenerateLibraryLayout>
     <ProjectPriFileName>Kit.Settings.UI.Controls.pri</ProjectPriFileName>
     <Nullable>enable</Nullable>
-    <Platforms>x64;ARM64</Platforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

@@ -58,8 +58,10 @@ namespace Kit.Settings.UI.ViewModels
         private bool _isEnabled;
         private long _sessionStartedTimestamp;
 
+        private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+
         private MonitorRunState _state = MonitorRunState.Stopped;
-        private string _runStateText = "Stopped";
+        private string _runStateText = IsChinese ? "已停止" : "Stopped";
         private Brush _runStateBrush;
         private string _sessionDurationText = "00:00:00";
         private bool _canStart = true;
@@ -70,20 +72,20 @@ namespace Kit.Settings.UI.ViewModels
         private UDPtestLineRowViewModel? _selectedLine;
         private string _healthStateText = "IDLE";
         private Brush _healthRingBrush;
-        private string _healthConditionText = "Idle";
+        private string _healthConditionText = IsChinese ? "空闲" : "Idle";
         private string _qualityText = "--";
         private string _avgRttText = "--";
         private string _peakRttText = "--";
         private string _periodAvgText = "--";
-        private string _healthDetailText = "Select a line";
+        private string _healthDetailText = IsChinese ? "请选择线路" : "Select a line";
         private int _selectedPeriodSeconds = 60;
 
-        private string _udpAssessmentText = "Not started";
-        private string _udpDetailText = "4/4 enabled";
-        private string _tcpAssessmentText = "Not started";
-        private string _tcpDetailText = "2/2 enabled";
-        private string _pathSummaryText = "Not started";
-        private string _nodeVerificationText = "Node Unverified";
+        private string _udpAssessmentText = IsChinese ? "未启动" : "Not started";
+        private string _udpDetailText = IsChinese ? "4/4 已启用" : "4/4 enabled";
+        private string _tcpAssessmentText = IsChinese ? "未启动" : "Not started";
+        private string _tcpDetailText = IsChinese ? "2/2 已启用" : "2/2 enabled";
+        private string _pathSummaryText = IsChinese ? "未启动" : "Not started";
+        private string _nodeVerificationText = IsChinese ? "节点未验证" : "Node Unverified";
         private string _nodeVerificationIcon = "\uE946";
         private Brush _nodeVerificationBrush;
 
@@ -107,9 +109,9 @@ namespace Kit.Settings.UI.ViewModels
             _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.UDPtest);
             _isEnabled = _settingsUtils.GetSettingsOrDefault<GeneralSettings>().Enabled.UDPtest;
 
-            _runStateBrush = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
-            _healthRingBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-            _nodeVerificationBrush = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+            _runStateBrush = ThemeBrushHelper.SecondaryTextBrush;
+            _healthRingBrush = ThemeBrushHelper.StrokeDefaultBrush;
+            _nodeVerificationBrush = ThemeBrushHelper.SecondaryTextBrush;
 
             _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _sessionTimer.Tick += OnSessionTimerTick;
@@ -168,8 +170,8 @@ namespace Kit.Settings.UI.ViewModels
                         CanStart = false;
                         CanStop = false;
                         CanClear = false;
-                        RunStateText = "Stopped";
-                        RunStateBrush = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+                        RunStateText = IsChinese ? "已停止" : "Stopped";
+                        RunStateBrush = ThemeBrushHelper.SecondaryTextBrush;
                     }
                     else
                     {
@@ -189,6 +191,20 @@ namespace Kit.Settings.UI.ViewModels
         public ObservableCollection<UDPtestLineRowViewModel> Lines { get; } = [];
         public ObservableCollection<UDPtestLineRowViewModel> TcpLines { get; } = [];
         public ObservableCollection<UDPtestLineRowViewModel> UdpLines { get; } = [];
+
+        private string _tcpLinksSummaryText = string.Empty;
+        public string TcpLinksSummaryText
+        {
+            get => _tcpLinksSummaryText;
+            private set => Set(ref _tcpLinksSummaryText, value);
+        }
+
+        private string _udpLinksSummaryText = string.Empty;
+        public string UdpLinksSummaryText
+        {
+            get => _udpLinksSummaryText;
+            private set => Set(ref _udpLinksSummaryText, value);
+        }
 
         public string RunStateText
         {
@@ -583,6 +599,7 @@ namespace Kit.Settings.UI.ViewModels
                 udpIndex++;
             }
 
+            UpdateLineCounts();
             UpdateAssessmentPresentation();
         }
 
@@ -667,8 +684,10 @@ namespace Kit.Settings.UI.ViewModels
         {
             int tcpEnabled = TcpLines.Count(l => l.IsEnabled);
             int udpEnabled = UdpLines.Count(l => l.IsEnabled);
-            TcpDetailText = $"{tcpEnabled}/{TcpLines.Count} enabled";
-            UdpDetailText = $"{udpEnabled}/{UdpLines.Count} enabled";
+            TcpDetailText = IsChinese ? $"{tcpEnabled}/{TcpLines.Count} 已启用" : $"{tcpEnabled}/{TcpLines.Count} enabled";
+            UdpDetailText = IsChinese ? $"{udpEnabled}/{UdpLines.Count} 已启用" : $"{udpEnabled}/{UdpLines.Count} enabled";
+            TcpLinksSummaryText = IsChinese ? $"{TcpLines.Count} 条链路" : $"{TcpLines.Count} LINKS";
+            UdpLinksSummaryText = IsChinese ? $"{UdpLines.Count} 条链路" : $"{UdpLines.Count} LINKS";
         }
 
         private void OnSessionTimerTick(object? sender, object e)
@@ -685,17 +704,17 @@ namespace Kit.Settings.UI.ViewModels
                 _state = state;
                 RunStateText = state switch
                 {
-                    MonitorRunState.Running => "Running",
-                    MonitorRunState.Starting => "Starting",
-                    MonitorRunState.Stopping => "Stopping",
-                    _ => "Stopped",
+                    MonitorRunState.Running => IsChinese ? "运行中" : "Running",
+                    MonitorRunState.Starting => IsChinese ? "正在启动" : "Starting",
+                    MonitorRunState.Stopping => IsChinese ? "正在停止" : "Stopping",
+                    _ => IsChinese ? "已停止" : "Stopped",
                 };
 
                 RunStateBrush = state switch
                 {
-                    MonitorRunState.Running => (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"],
-                    MonitorRunState.Starting or MonitorRunState.Stopping => (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
-                    _ => (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                    MonitorRunState.Running => ThemeBrushHelper.SuccessBrush,
+                    MonitorRunState.Starting or MonitorRunState.Stopping => ThemeBrushHelper.CautionBrush,
+                    _ => ThemeBrushHelper.SecondaryTextBrush,
                 };
 
                 CanStart = IsEnabled && state == MonitorRunState.Stopped;
@@ -747,8 +766,25 @@ namespace Kit.Settings.UI.ViewModels
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                UdpAssessmentText = assessment.State;
-                UdpDetailText = assessment.Detail;
+                if (IsChinese)
+                {
+                    UdpAssessmentText = assessment.State switch
+                    {
+                        "Supported / Stable" => "支持且稳定",
+                        "Supported / Unstable" => "支持但偶发丢包",
+                        "Supported / Degraded" => "支持但严重劣化",
+                        "Unsupported" => "不支持 UDP 出站",
+                        "Assessing" => "评估中",
+                        _ => assessment.State,
+                    };
+                    UdpDetailText = assessment.Detail;
+                }
+                else
+                {
+                    UdpAssessmentText = assessment.State;
+                    UdpDetailText = assessment.Detail;
+                }
+
                 UpdateAssessmentPresentation();
             });
         }
@@ -757,7 +793,16 @@ namespace Kit.Settings.UI.ViewModels
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                NatTypeText = assessment.Type;
+                NatTypeText = IsChinese ? assessment.Type switch
+                {
+                    "Endpoint-Independent Mapping" => "完全圆锥型 (EIM)",
+                    "Address-Dependent Mapping" => "受限圆锥型 (ADM)",
+                    "Address and Port-Dependent Mapping" => "端口受限圆锥型 (APDM)",
+                    "Symmetric" => "对称型 NAT",
+                    "Open Internet" => "公网开放",
+                    "Blocked" => "受阻断",
+                    _ => assessment.Type,
+                } : assessment.Type;
             });
         }
 
@@ -781,19 +826,21 @@ namespace Kit.Settings.UI.ViewModels
         {
             if (SelectedLine is null)
             {
-                HealthStateText = "IDLE";
+                HealthStateText = IsChinese ? "空闲" : "IDLE";
                 HealthStateFontSize = 15;
-                HealthRingBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-                HealthConditionText = "Idle";
+                HealthRingBrush = ThemeBrushHelper.StrokeDefaultBrush;
+                HealthConditionText = IsChinese ? "空闲" : "Idle";
                 QualityText = "--";
                 AvgRttText = "--";
                 PeakRttText = "--";
                 PeriodAvgText = "--";
-                HealthDetailText = "Select a line";
+                HealthDetailText = IsChinese ? "请选择线路" : "Select a line";
                 return;
             }
 
-            HealthDetailText = $"{SelectedLine.Name} | {SelectedLine.Target}:{SelectedLine.Port} | {SelectedLine.Counts} probes";
+            HealthDetailText = IsChinese
+                ? $"{SelectedLine.Name} | {SelectedLine.Target}:{SelectedLine.Port} | {SelectedLine.Counts} 次探测"
+                : $"{SelectedLine.Name} | {SelectedLine.Target}:{SelectedLine.Port} | {SelectedLine.Counts} probes";
             QualityText = SelectedLine.Quality;
             AvgRttText = SelectedLine.AverageRtt;
 
@@ -822,19 +869,25 @@ namespace Kit.Settings.UI.ViewModels
 
             string displayState = SelectedLine.Status switch
             {
-                "Stopped" or "Disabled" => "IDLE",
-                "Warming" => "WARMING",
-                "Internal Error" => "ERROR",
+                "Stopped" or "Disabled" => IsChinese ? "已停止" : "IDLE",
+                "Warming" => IsChinese ? "预热中" : "WARMING",
+                "Internal Error" => IsChinese ? "异常" : "ERROR",
+                "OK" => IsChinese ? "正常" : "OK",
+                "Degraded" => IsChinese ? "劣化" : "DEGRADED",
+                "Offline" => IsChinese ? "离线" : "OFFLINE",
                 _ => SelectedLine.Status,
             };
             HealthStateText = displayState;
             HealthStateFontSize = GetHealthStateFontSize(displayState);
             HealthRingBrush = SelectedLine.StatusBrush;
-            HealthConditionText = displayState switch
+            HealthConditionText = SelectedLine.Status switch
             {
-                "IDLE" => "Idle",
-                "WARMING" => "Warming",
-                "ERROR" => "Error",
+                "Stopped" or "Disabled" => IsChinese ? "空闲" : "Idle",
+                "Warming" => IsChinese ? "预热中" : "Warming",
+                "Internal Error" => IsChinese ? "异常" : "Error",
+                "OK" => IsChinese ? "正常" : "Normal",
+                "Degraded" => IsChinese ? "劣化" : "Degraded",
+                "Offline" => IsChinese ? "离线" : "Offline",
                 _ => displayState,
             };
         }
@@ -842,17 +895,17 @@ namespace Kit.Settings.UI.ViewModels
         private void UpdateAssessmentPresentation()
         {
             var enabledTcp = TcpLines.Where(l => l.IsEnabled).ToList();
-            TcpDetailText = $"{enabledTcp.Count}/{TcpLines.Count} enabled";
+            TcpDetailText = IsChinese ? $"{enabledTcp.Count}/{TcpLines.Count} 已启用" : $"{enabledTcp.Count}/{TcpLines.Count} enabled";
 
             var enabledUdp = UdpLines.Where(l => l.IsEnabled).ToList();
-            UdpDetailText = $"{enabledUdp.Count}/{UdpLines.Count} enabled";
+            UdpDetailText = IsChinese ? $"{enabledUdp.Count}/{UdpLines.Count} 已启用" : $"{enabledUdp.Count}/{UdpLines.Count} enabled";
 
             if (_coordinator.State != MonitorRunState.Running)
             {
-                if (UdpAssessmentText == "Not started")
+                if (UdpAssessmentText is "Not started" or "未启动")
                 {
-                    TcpAssessmentText = "Not started";
-                    PathSummaryText = "Not started";
+                    TcpAssessmentText = IsChinese ? "未启动" : "Not started";
+                    PathSummaryText = IsChinese ? "未启动" : "Not started";
                 }
 
                 return;
@@ -861,46 +914,46 @@ namespace Kit.Settings.UI.ViewModels
             string tcpAssessment;
             if (enabledTcp.Count == 0)
             {
-                tcpAssessment = "Not Monitored";
+                tcpAssessment = IsChinese ? "未监控" : "Not Monitored";
             }
             else if (enabledTcp.All(l => l.Status == "OK"))
             {
                 tcpAssessment = enabledTcp.Count > 1
-                    ? "Available / Stable"
-                    : "Available / Single-Target Stable";
+                    ? (IsChinese ? "可用且稳定" : "Available / Stable")
+                    : (IsChinese ? "单目标稳定" : "Available / Single-Target Stable");
             }
             else if (enabledTcp.Any(l => l.Status is "OK" or "DEGRADED"))
             {
-                tcpAssessment = "Available / Partial or Unstable";
+                tcpAssessment = IsChinese ? "部分不稳定" : "Available / Partial or Unstable";
             }
             else if (enabledTcp.All(l => l.Status == "DOWN"))
             {
-                tcpAssessment = "Unavailable";
+                tcpAssessment = IsChinese ? "不可用" : "Unavailable";
             }
             else if (enabledTcp.Any(l => l.Status == "Internal Error"))
             {
-                tcpAssessment = "Unknown / Internal Error";
+                tcpAssessment = IsChinese ? "内部错误" : "Unknown / Internal Error";
             }
             else
             {
-                tcpAssessment = "Warming";
+                tcpAssessment = IsChinese ? "预热中" : "Warming";
             }
 
             TcpAssessmentText = tcpAssessment;
-            bool tcpAvailable = tcpAssessment.StartsWith("Available", StringComparison.Ordinal);
+            bool tcpAvailable = tcpAssessment.StartsWith("Available", StringComparison.Ordinal) || tcpAssessment.Contains("可用") || tcpAssessment.Contains("稳定");
             string udpAssessment = UdpAssessmentText;
-            bool udpAvailable = udpAssessment.StartsWith("Supported", StringComparison.Ordinal);
+            bool udpAvailable = udpAssessment.StartsWith("Supported", StringComparison.Ordinal) || udpAssessment.Contains("支持") || udpAssessment.Contains("稳定");
             PathSummaryText = (tcpAvailable, udpAvailable) switch
             {
-                (true, true) when tcpAssessment == "Available / Stable"
-                    && udpAssessment == "Supported / Stable" => "TCP + UDP Stable",
-                (true, true) => "TCP + UDP Available",
-                (true, false) when udpAssessment == "Unsupported" => "TCP Available / UDP Unsupported",
-                (true, false) => "TCP Available / UDP Assessing",
-                (false, true) when tcpAssessment == "Unavailable" => "UDP Available / TCP Unavailable",
-                _ when tcpAssessment.StartsWith("Unknown", StringComparison.Ordinal)
-                    || udpAssessment.StartsWith("Unknown", StringComparison.Ordinal) => "Path Unknown",
-                _ => "Assessing",
+                (true, true) when (tcpAssessment == "Available / Stable" || tcpAssessment == "可用且稳定")
+                    && (udpAssessment == "Supported / Stable" || udpAssessment == "支持且稳定") => IsChinese ? "TCP 与 UDP 稳定" : "TCP + UDP Stable",
+                (true, true) => IsChinese ? "TCP 与 UDP 可用" : "TCP + UDP Available",
+                (true, false) when udpAssessment.Contains("Unsupported") || udpAssessment.Contains("不支持") => IsChinese ? "TCP 可用，UDP 不受支持" : "TCP Available / UDP Unsupported",
+                (true, false) => IsChinese ? "TCP 可用，UDP 评估中" : "TCP Available / UDP Assessing",
+                (false, true) when tcpAssessment.Contains("Unavailable") || tcpAssessment.Contains("不可用") => IsChinese ? "UDP 可用，TCP 不可用" : "UDP Available / TCP Unavailable",
+                _ when tcpAssessment.Contains("Unknown") || tcpAssessment.Contains("内部错误")
+                    || udpAssessment.Contains("Unknown") => IsChinese ? "链路未知" : "Path Unknown",
+                _ => IsChinese ? "评估中" : "Assessing",
             };
         }
 
@@ -914,11 +967,13 @@ namespace Kit.Settings.UI.ViewModels
                         .Where(l => l.Definition.Kind == ProbeKind.StunBinding)
                         .Select(l => new StunEgressEvidence(l.IsEnabled, l.IpAddress)));
 
-            NodeVerificationText = verified ? "Node Verified" : "Node Unverified";
+            NodeVerificationText = verified
+                ? (IsChinese ? "节点已验证" : "Node Verified")
+                : (IsChinese ? "节点未验证" : "Node Unverified");
             NodeVerificationIcon = verified ? "\uE73E" : "\uE946";
             NodeVerificationBrush = verified
-                ? (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"]
-                : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+                ? ThemeBrushHelper.SuccessBrush
+                : ThemeBrushHelper.SecondaryTextBrush;
         }
 
         private async Task PollNetworkIdentityAsync(CancellationToken cancellationToken)

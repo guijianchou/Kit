@@ -18,6 +18,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.LightSwitch,
                 ModuleType.Localserver,
                 ModuleType.UDPtest,
+                ModuleType.AIHub,
             };
 
         public static IReadOnlyList<ModuleType> DashboardModules => ActiveModules;
@@ -36,6 +37,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 LightSwitchSettings.ModuleName,
                 LocalserverSettings.ModuleName,
                 UDPtestSettings.ModuleName,
+                AIHubSettings.ModuleName,
                 "General",
             };
 
@@ -46,6 +48,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 LightSwitchSettings.ModuleName,
                 LocalserverSettings.ModuleName,
                 UDPtestSettings.ModuleName,
+                AIHubSettings.ModuleName,
             };
 
         public static bool IsActiveModule(ModuleType moduleType)

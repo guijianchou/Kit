@@ -22,9 +22,9 @@ namespace Kit.Settings.UI.Views
 
         public UDPtestPage()
         {
-            InitializeComponent();
             ViewModel = new UDPtestViewModel();
             DataContext = ViewModel;
+            InitializeComponent();
 
             ViewModel.HealthChartNeedsRedraw += OnHealthChartNeedsRedraw;
             UpdateHealthPeriodButtons();
@@ -95,10 +95,15 @@ namespace Kit.Settings.UI.Views
             int selectedSeconds = ViewModel.SelectedPeriodSeconds;
             foreach (Button button in buttons)
             {
+                if (button == null)
+                {
+                    continue;
+                }
+
                 bool selected = int.TryParse(button.Tag?.ToString(), out int seconds)
                     && seconds == selectedSeconds;
                 button.Style = selected
-                    ? Application.Current.Resources["AccentButtonStyle"] as Style
+                    ? (Resources.TryGetValue("AccentHealthButtonStyle", out object s) ? s as Style : null)
                     : null;
             }
         }

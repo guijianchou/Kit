@@ -1659,6 +1659,36 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="UDPtest_EnableSettingsCard.Description" xml:space="preserve">
     <value>Continuously monitor UDP connectivity, baseline TCP latency, and diagnose NAT type.</value>
   </data>
+  <data name="Shell_AIHub.Content" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="AIHub.ModuleTitle" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="AIHub.ModuleDescription" xml:space="preserve">
+    <value>Analyze system security events and optimize disk hygiene with policy constraints.</value>
+  </data>
+  <data name="AIHub_EnableSettingsCard.Header" xml:space="preserve">
+    <value>Enable AI Hub</value>
+  </data>
+  <data name="AIHub_EnableSettingsCard.Description" xml:space="preserve">
+    <value>Analyze Windows event logs for security health and optimize disk hygiene with strict safety policies.</value>
+  </data>
+  <data name="AiHub_EssentialPolicyCard.Header" xml:space="preserve">
+    <value>Essential Policy</value>
+  </data>
+  <data name="AiHub_EssentialPolicyCard.Description" xml:space="preserve">
+    <value>Task policies and global security boundaries for AI execution</value>
+  </data>
+  <data name="AiHub_ResetAuditPolicyButton.Content" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
+  <data name="AiHub_ResetOptimizationPolicyButton.Content" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
+  <data name="AiHub_ResetPolicyButton.Content" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
   <data name="Localserver_LineSettingsGroup.Header" xml:space="preserve">
     <value>Services</value>
   </data>
@@ -2424,7 +2454,7 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Localserver_LogSubtitleFormat" xml:space="preserve">
     <value>{0} · {1} lines shown</value>
   </data>
-  <!-- AI Hub -->
+  
   <data name="General_AiServices.Header" xml:space="preserve">
     <value>AI services</value>
   </data>
@@ -2437,23 +2467,12 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AiHub_BackToSettings.Content" xml:space="preserve">
     <value>Back to settings</value>
   </data>
-  <data name="AiHub.ModuleTitle" xml:space="preserve">
-    <value>AI Hub</value>
-  </data>
-  <data name="AiHub.ModuleDescription" xml:space="preserve">
-    <value>Shared AI tasks for Kit plugins, with local kernels and validated advisory results.</value>
-  </data>
-  <data name="AiHub_EnableSettingsCard.Header" xml:space="preserve">
-    <value>Enable AI Hub</value>
-  </data>
-  <data name="AiHub_EnableSettingsCard.Description" xml:space="preserve">
-    <value>Allow plugins to submit AI tasks using the endpoints configured below.</value>
-  </data>
+
   <data name="AiHub_KernelSettingsGroup.Header" xml:space="preserve">
     <value>AI Kernel &amp; Runtime</value>
   </data>
   <data name="AiHub_KernelCard.Header" xml:space="preserve">
-    <value>AI Execution Kernel</value>
+    <value>AI execution kernel</value>
   </data>
   <data name="AiHub_KernelCard.Description" xml:space="preserve">
     <value>Choose a kernel, install it if needed, then apply the switch. Running tasks keep their current kernel.</value>
@@ -2483,16 +2502,13 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>security.md adds constraints to every task. Built-in validation remains enforced.</value>
   </data>
   <data name="AiHub_SavePolicyButton.Content" xml:space="preserve">
-    <value>Save Policy</value>
-  </data>
-  <data name="AiHub_ResetPolicyButton.Content" xml:space="preserve">
-    <value>Reset to Default</value>
+    <value>Save</value>
   </data>
   <data name="AiHub_PipelineCard.Header" xml:space="preserve">
-    <value>Task pipeline</value>
+    <value>AI Hub Pipeline</value>
   </data>
   <data name="AiHub_PipelineCard.Description" xml:space="preserve">
-    <value>Plugin policy → input sanitization → Main / Fallback → output validation</value>
+    <value>Codex / Pi → Security policy + AGENTS.md → Analysis summary → Suggested action</value>
   </data>
   <data name="AiHub_KernelRuntime.Header" xml:space="preserve">
     <value>Selected kernel installation</value>
@@ -2588,7 +2604,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Fallback endpoint</value>
   </data>
   <data name="AiHub_ClearFallbackButton.Content" xml:space="preserve">
-    <value>Clear fallback</value>
+    <value>Clear</value>
   </data>
   <data name="AiHub_CancelButton.Content" xml:space="preserve">
     <value>Cancel</value>
@@ -2835,5 +2851,45 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="General_OpenLogsFolderText.Text" xml:space="preserve">
     <value>Open folder</value>
+  </data>
+<data name="AiHub_MainEndpoint_UrlCard.Header" xml:space="preserve"><value>Endpoint URL</value></data><data name="AiHub_MainEndpoint_ApiKeyCard.Header" xml:space="preserve"><value>API key</value></data><data name="AiHub_MainEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve"><value>Enter API key</value></data><data name="AiHub_MainEndpoint_ApiModeCard.Header" xml:space="preserve"><value>API mode</value></data><data name="AiHub_MainEndpoint_ModelCard.Header" xml:space="preserve"><value>Model</value></data><data name="AiHub_MainEndpoint_ReasoningCard.Header" xml:space="preserve"><value>Reasoning effort</value></data><data name="AiHub_ClearFallbackCard.Header" xml:space="preserve"><value>Clear fallback endpoint</value></data><data name="AiHub_Pipeline_Step1.Text" xml:space="preserve"><value>Codex / Pi</value></data><data name="AiHub_Pipeline_Step2.Text" xml:space="preserve"><value>Security policy + agents.md</value></data><data name="AiHub_Pipeline_Step3.Text" xml:space="preserve"><value>Analysis summary</value></data><data name="AiHub_Pipeline_Step4.Text" xml:space="preserve"><value>Suggested action</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Header" xml:space="preserve"><value>Global Security Policy</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Description" xml:space="preserve"><value>Global security policy (security.md) and task boundaries for AI execution</value></data><data name="AiHub_GlobalSecurityBoundaryCard.Header" xml:space="preserve"><value>Global Security Boundary (security.md)</value></data><data name="AiHub_PolicyFilePathCard.Header" xml:space="preserve"><value>Policy file path</value></data><data name="AiHub_EssentialPolicyExpander.Header" xml:space="preserve"><value>Essential Policy</value></data><data name="AiHub_EssentialPolicyExpander.Description" xml:space="preserve"><value>Task policies (AGENTS.md) for Security Audit and Optimization</value></data><data name="AiHub_SecurityAuditCard.Header" xml:space="preserve"><value>Security Audit</value></data><data name="AiHub_OptimizationCard.Header" xml:space="preserve"><value>Optimization</value></data><data name="Localserver_AdoptedBadge.Text" xml:space="preserve"><value>ADOPTED</value></data><data name="General_LogLevelTrace.Content" xml:space="preserve"><value>Trace (Verbose)</value></data><data name="General_LogLevelDebug.Content" xml:space="preserve"><value>Debug</value></data><data name="General_LogLevelInfo.Content" xml:space="preserve"><value>Info</value></data><data name="General_LogLevelWarning.Content" xml:space="preserve"><value>Warning</value></data><data name="General_LogLevelError.Content" xml:space="preserve"><value>Error</value></data><data name="UDPtest_StatusLabel.Text" xml:space="preserve"><value>Status:</value></data><data name="UDPtest_ConfigNameLabel.Text" xml:space="preserve"><value>Target Name</value></data><data name="UDPtest_ConfigNameInput.PlaceholderText" xml:space="preserve"><value>e.g. Cloudflare, Singapore</value></data><data name="UDPtest_ConfigKindLabel.Text" xml:space="preserve"><value>Protocol Kind</value></data><data name="UDPtest_ConfigKindStun.Content" xml:space="preserve"><value>STUN (Binding Probe)</value></data><data name="UDPtest_ConfigKindEcho.Content" xml:space="preserve"><value>ECHO (UDP Reflection)</value></data><data name="UDPtest_ConfigEndpointLabel.Text" xml:space="preserve"><value>Endpoint</value></data><data name="UDPtest_ConfigPortLabel.Text" xml:space="preserve"><value>Parsed Port</value></data><data name="UDPtest_DeleteButtonText.Text" xml:space="preserve"><value>Delete</value></data><data name="UDPtest_DeleteDialogTitle.Text" xml:space="preserve"><value>Delete this UDP line?</value></data><data name="UDPtest_DeleteDialogMessage.Text" xml:space="preserve"><value>This link will be permanently removed from your target list.</value></data><data name="UDPtest_DeleteDialogConfirm.Content" xml:space="preserve"><value>Confirm Delete</value></data><data name="UDPtest_SaveButtonText.Text" xml:space="preserve"><value>Save</value></data><data name="UDPtest_StartButtonText.Text" xml:space="preserve"><value>Start</value></data><data name="UDPtest_StopButtonText.Text" xml:space="preserve"><value>Stop</value></data><data name="UDPtest_SamplingInterval.Text" xml:space="preserve"><value>Sampling Interval</value></data><data name="UDPtest_AddLinkButtonText.Text" xml:space="preserve"><value>Add UDP Link</value></data><data name="UDPtest_HealthLabel.Text" xml:space="preserve"><value>HEALTH</value></data><data name="UDPtest_ConditionLabel.Text" xml:space="preserve"><value>CONDITION</value></data><data name="UDPtest_RealtimeLabel.Text" xml:space="preserve"><value>REALTIME</value></data><data name="UDPtest_QualityLabel.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_AvgRttLabel.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_PeakRttLabel.Text" xml:space="preserve"><value>PEAK RTT</value></data><data name="UDPtest_PeriodAvgLabel.Text" xml:space="preserve"><value>PERIOD AVG</value></data><data name="UDPtest_RttTrendLabel.Text" xml:space="preserve"><value>RTT TREND</value></data><data name="UDPtest_NoSamplesLabel.Text" xml:space="preserve"><value>No samples in this period</value></data><data name="UDPtest_UdpAssessmentLabel.Text" xml:space="preserve"><value>UDP ASSESSMENT</value></data><data name="UDPtest_TcpBaselineLabel.Text" xml:space="preserve"><value>TCP BASELINE</value></data><data name="UDPtest_CurrentPathLabel.Text" xml:space="preserve"><value>CURRENT PATH</value></data><data name="UDPtest_PublicIpLabel.Text" xml:space="preserve"><value>PUBLIC IP</value></data><data name="UDPtest_LocationLabel.Text" xml:space="preserve"><value>LOCATION</value></data><data name="UDPtest_NatTypeLabel.Text" xml:space="preserve"><value>NAT TYPE</value></data><data name="UDPtest_LocalRouteLabel.Text" xml:space="preserve"><value>LOCAL ROUTE</value></data><data name="UDPtest_ColTarget.Text" xml:space="preserve"><value>TARGET</value></data><data name="UDPtest_ColPort.Text" xml:space="preserve"><value>PORT</value></data><data name="UDPtest_ColAvgRtt.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_ColJitter.Text" xml:space="preserve"><value>JITTER</value></data><data name="UDPtest_ColQuality.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_ColOkFail.Text" xml:space="preserve"><value>OK / FAIL</value></data><data name="UDPtest_ColHttpIp.Text" xml:space="preserve"><value>HTTP IP</value></data><data name="UDPtest_ColUdpIp.Text" xml:space="preserve"><value>UDP IP</value></data><data name="UDPtest_ColLastError.Text" xml:space="preserve"><value>LAST ERROR</value></data><data name="UDPtest_ColOn.Text" xml:space="preserve"><value>ON</value></data><data name="UDPtest_ColActions.Text" xml:space="preserve"><value>ACTIONS</value></data><data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Clear RTT sample history for the selected line</value></data><data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Configure line settings</value></data><data name="GPOWarning.Text" xml:space="preserve"><value>This setting is managed by your organization.</value></data><data name="General_OpenLogsFolderButton.Content" xml:space="preserve"><value>Open logs folder</value></data><data name="NewInfoBadge.Text" xml:space="preserve"><value>NEW</value></data>
+  <data name="AiHub_SecurityAuditTabItem.Content" xml:space="preserve">
+    <value>Security Audit</value>
+  </data>
+  <data name="AiHub_OptimizationTabItem.Content" xml:space="preserve">
+    <value>Optimization</value>
+  </data>
+  <data name="AiHub_SaveAuditPolicyButton.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="AiHub_AuditAgentsExpander.Header" xml:space="preserve">
+    <value>AGENTS.md</value>
+  </data>
+  <data name="AiHub_SaveOptimizationPolicyButton.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="AiHub_PolicyRulesExpander.Header" xml:space="preserve">
+    <value>Policy Rules</value>
+  </data>
+  <data name="AiHub_PolicyRulesExpander.Description" xml:space="preserve">
+    <value>Global security policy and task instructions (security.md and AGENTS.md)</value>
+  </data>
+  <data name="AiHub_PolicyRulesHeader.Text" xml:space="preserve">
+    <value>Policy Rules</value>
+  </data>
+  <data name="AiHub_PolicyRulesDescription.Text" xml:space="preserve">
+    <value>Global security policy and task instructions (security.md and AGENTS.md)</value>
+  </data>
+  <data name="AiHub_GlobalSecurityPolicyCard.Header" xml:space="preserve">
+    <value>Global security policy</value>
+  </data>
+  <data name="AiHub_Segment_GlobalPolicy.Content" xml:space="preserve">
+    <value>Global security policy</value>
+  </data>
+  <data name="AiHub_Segment_SecurityAudit.Content" xml:space="preserve">
+    <value>Security audit</value>
+  </data>
+  <data name="AiHub_Segment_Optimization.Content" xml:space="preserve">
+    <value>Optimization</value>
   </data>
 </root>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
+  <Import Project="$(RepoRoot)src\Common.Dotnet.AotCompatibility.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <RootNamespace>Kit.AIHubLib</RootNamespace>
+    <AssemblyName>Kit.AIHubLib</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1510</WarningsNotAsErrors>
+    <NoWarn>$(NoWarn);NU1510;SA0001;SA1000;SA1001;SA1003;SA1005;SA1008;SA1009;SA1028;SA1101;SA1106;SA1116;SA1117;SA1118;SA1127;SA1128;SA1200;SA1201;SA1202;SA1204;SA1300;SA1306;SA1307;SA1309;SA1310;SA1401;SA1402;SA1407;SA1413;SA1500;SA1501;SA1502;SA1503;SA1505;SA1507;SA1508;SA1512;SA1513;SA1514;SA1515;SA1516;SA1600;SA1633;SA1649</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.EventLog" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(RepoRoot)src\common\ManagedCommon\ManagedCommon.csproj" />
+    <ProjectReference Include="$(RepoRoot)src\common\AiHub\Kit.AiHub.csproj" />
+  </ItemGroup>
+</Project>

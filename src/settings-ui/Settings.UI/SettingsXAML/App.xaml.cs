@@ -82,6 +82,21 @@ namespace Kit.Settings.UI
             InitializeComponent();
 
             UnhandledException += App_UnhandledException;
+            AppDomain.CurrentDomain.FirstChanceException += (_, args) =>
+            {
+                var ex = args.Exception;
+                if (ex != null && !(ex is System.IO.FileNotFoundException fnf && fnf.FileName != null && fnf.FileName.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase)))
+                {
+                    try
+                    {
+                        string crashFile = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "Kit", "crash.log");
+                        System.IO.File.AppendAllText(crashFile, $"[FirstChance {System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {ex.GetType().FullName}: {ex.Message}\n{ex.StackTrace}\n\n");
+                    }
+                    catch
+                    {
+                    }
+                }
+            };
             AppDomain.CurrentDomain.ProcessExit += (_, _) => AiHubIpcBridge.Shutdown();
 
             NativeEventWaiter.WaitForEventLoop(
@@ -94,7 +109,16 @@ namespace Kit.Settings.UI
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
+            try
+            {
+                string crashFile = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "Kit", "crash.log");
+                System.IO.File.AppendAllText(crashFile, $"[Unhandled {System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {e.Exception?.GetType().FullName}: {e.Exception?.Message}\n{e.Exception?.StackTrace}\n\n");
+            }
+            catch
+            {
+            }
             Logger.LogError("Unhandled exception", e.Exception);
+            System.Diagnostics.Trace.Flush();
         }
 
         public static void OpenSettingsWindow(Type type = null, bool ensurePageIsSelected = false)
@@ -334,7 +358,8 @@ namespace Kit.Settings.UI
                 "LightSwitch" => typeof(LightSwitchPage),
                 "Localserver" => typeof(LocalserverPage),
                 "UDPtest" => typeof(UDPtestPage),
-                "AiHub" => typeof(GeneralPage),
+                "AIHub" => typeof(AIHubPage),
+                "AiHub" => typeof(AIHubPage),
                 _ => typeof(DashboardPage),
             };
         }

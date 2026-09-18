@@ -919,7 +919,7 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     {
         return ESettingsWindowNames::UDPtest;
     }
-    else if (value == "AiHub")
+    else if (value == "AiHub" || value == "AIHub")
     {
         return ESettingsWindowNames::AiHub;
     }

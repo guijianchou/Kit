@@ -113,6 +113,7 @@ namespace Kit.Settings.UI.Views
             NavHelper.SetNavigateTo(LightSwitchNavigationItem, typeof(LightSwitchPage));
             NavHelper.SetNavigateTo(LocalserverNavigationItem, typeof(LocalserverPage));
             NavHelper.SetNavigateTo(UDPtestNavigationItem, typeof(UDPtestPage));
+            NavHelper.SetNavigateTo(AIHubNavigationItem, typeof(AIHubPage));
             SetWindowTitle();
             var settingsUtils = SettingsUtils.Default;
             ViewModel = new ShellViewModel(SettingsRepository<GeneralSettings>.GetInstance(settingsUtils));

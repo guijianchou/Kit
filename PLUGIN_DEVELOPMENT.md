@@ -6,7 +6,7 @@
 
 ## 1. 支持范围与上游兼容边界
 
-Kit 当前活动模块为 **Awake、LightSwitch、Localserver**。本文中的“插件”默认指由 Runner 加载的原生模块接口 DLL，以及对应业务实现。Awake、LightSwitch 使用独立业务进程；Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中，尚无独立后台 Worker。
+Kit 当前活动模块为 **Awake、LightSwitch、Localserver、UDPtest、AIHub**。本文中的“插件”默认指由 Runner 加载的原生模块接口 DLL，以及对应业务实现。Awake、LightSwitch 使用独立业务进程；Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中；UDPtest 采用内置高并发探测 Worker；AI Hub 则包含原生模块接口、专属独立设置界面及底层共享 `Kit.AiHub` 任务引擎。
 
 | 接入方式 | 当前支持程度 |
 | --- | --- |
@@ -19,7 +19,7 @@ Kit 当前活动模块为 **Awake、LightSwitch、Localserver**。本文中的�
 
 [Kit 接口头](src/modules/interface/kit_module_interface.h)（保留旧 [powertoy_module_interface.h](src/modules/interface/powertoy_module_interface.h) 重定向头供平滑过渡）已按[上游接口头](source/PowerToys/src/modules/interface/powertoy_module_interface.h) 恢复 `keep_track_of_pressed_win_key()` 和 `milliseconds_win_key_must_be_pressed()` 的原始位置，但不恢复 Win 键长按轮询。`tools/tests/NativeModules/ModuleAbiSmoke.cpp` 分别使用上游头编译 DLL、Kit 头编译宿主，验证全部虚函数槽位、热键结构体及销毁调用。该测试只证明这一契约在当前 x64 工具链下对齐，不代表上游所有插件的运行依赖都已提供。
 
-[Runner](src/runner/main.cpp) 的 `KitKnownModules` 与 [KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 是活动模块入口。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表；Kit 仅注册当前三个模块，Localserver 没有 Quick Access 快捷动作。
+[Runner](src/runner/main.cpp) 的 `KitKnownModules` 与 [KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 是活动模块入口。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表；Kit 维护 5 个活动模块，未实现快捷动作的模块自动回退至设置页。
 
 原生 DLL 与 Runner 共享进程和权限。Worker 隔离能限制业务进程崩溃的影响，**不构成不可信插件沙箱**；DLL 初始化、回调和销毁仍能影响主程序。
 
@@ -139,6 +139,16 @@ Localserver 当前是例外：真正关闭 Settings 会释放页面持有的管�
 │   ├── secrets.dat                    # 当前用户 DPAPI 加密的秘密值
 │   ├── backups\                       # 服务配置备份
 │   └── State\service-<hash>.json       # 服务进程身份与恢复记录
+├── UDPtest\
+│   ├── settings.json                   # UDPtest 模块设置
+│   └── Logs\
+├── AiHub\
+│   ├── settings.json                   # AI Hub 基础配置与端点
+│   ├── secrets.dat                     # DPAPI 加密的 API Key 凭据
+│   ├── security.md                     # 用户全局安全策略
+│   ├── chains\                         # 基础任务策略目录 (AGENTS.md)
+│   ├── kernels\                        # 下载验证的 Codex / Pi CLI 执行内核
+│   └── requests\                       # 任务执行临时隔离工作区
 └── Sample\                             # 新模块目录约定，按需创建
     ├── settings.json                   # 用户配置
     ├── State\                          # 可选：运行状态，不混入配置
@@ -498,6 +508,104 @@ NavHelper.SetNavigateTo(SampleNavigationItem, typeof(SamplePage));
   5. **操作与行级防护**：将工具栏按钮（如 Add Line, Start all, Stop all）及子行各项操作的 `Can*` 属性绑定联动 `_parent.IsEnabled`，保证子项逻辑层面同样完全锁定。
   6. **同步级联停用所有子链路与服务（Cascade Stop on Switch Off）**：当模块主开关关闭时，必须同步（或在后台无等待立即触发）向所有正在运行的子链路/服务发出停止指令（如 Localserver 触发 `_ = StopAllLinesAsync()` 终止所有子服务；UDP Test 触发 `_ = StopAsync()` 停止所有探针 Worker 并挂起后台网络身份探测）。不得出现总开关关闭后底层服务依然在后台静默运行的情况。
 
+### 8.2 WinUI 3 ContentDialog 与 ValueConverter 规范
+
+#### 1. XAML 绑定与 ValueConverter 类型严格匹配
+- **底层原理与常见崩溃**：WinUI 3 (Windows App SDK) 的 XAML 绑定引擎对属性类型实行严格校验。若 XAML 绑定的目标属性类型为 `Microsoft.UI.Xaml.Media.Brush`（例如 `Border.BorderBrush`、`Shape.Fill`、`Control.Foreground` 等），`IValueConverter.Convert` 返回的对象**必须严格为 `Brush` 或 `SolidColorBrush`，绝对不能返回 `Windows.UI.Color`**。
+- **崩溃特征**：在 WPF 或旧 UWP 中部分类型可隐式包装，但在 WinUI 3 中返回 `Color` 会直接在底层的 COM/WinRT 接口强制转换（QueryInterface）时抛出 `0x80004002 (E_NOINTERFACE)`，导致进程在弹窗或列表渲染瞬间未处理异常闪退。
+- **标准实现规范**：
+  ```csharp
+  // 必须返回 SolidColorBrush 或在应用层资源查找对应的 ThemeResource Brush
+  public object Convert(object value, Type targetType, object parameter, string language)
+  {
+      if (value is FindingSeverity severity)
+      {
+          return severity switch
+          {
+              FindingSeverity.Critical => new SolidColorBrush(ColorHelper.FromArgb(255, 239, 68, 68)),
+              FindingSeverity.High => new SolidColorBrush(ColorHelper.FromArgb(255, 249, 115, 22)),
+              FindingSeverity.Medium => new SolidColorBrush(ColorHelper.FromArgb(255, 234, 179, 8)),
+              FindingSeverity.Low => new SolidColorBrush(ColorHelper.FromArgb(255, 59, 130, 246)),
+              _ => new SolidColorBrush(ColorHelper.FromArgb(255, 107, 114, 128)),
+          };
+      }
+      return DependencyProperty.UnsetValue;
+  }
+  ```
+
+#### 2. ContentDialog 现代宿主与安全呈现范式
+- **必须绑定活动宿主 XamlRoot 与主题**：在 WinAppSDK / WinUI 3 中，弹出 `ContentDialog` 必须明确设置其 `XamlRoot` 为调用源控件的 `XamlRoot`，且必须同步其 `RequestedTheme` 与宿主 `ActualTheme`，防止在深浅色切换时弹窗主题与主界面割裂：
+  ```csharp
+  var dialog = new FindingDetailsDialog(finding)
+  {
+      XamlRoot = this.XamlRoot,
+      RequestedTheme = this.ActualTheme,
+  };
+  await dialog.ShowAsync();
+  ```
+- **并发弹窗保护**：同一个 `XamlRoot` 同时只能显示一个 `ContentDialog`，若在上一个弹窗尚未关闭时尝试显示第二个弹窗，WinUI 3 会直接抛出 `InvalidOperationException`。编写异步弹窗逻辑时必须采用原子标志（如 `Interlocked.CompareExchange`）或信号量保护，杜绝重复弹窗引发异常。
+
+### 8.3 纯正中英双语规范与无混杂标注规范 (Strict Bilingual Parity Standards)
+
+Kit 作为同时面向双语用户的本地工具平台，必须维持严格、地道的中英双语质量标准：
+
+#### 1. 杜绝中英混杂标注与斜杠排版
+- **严禁小括号中英混注**：中文界面中**严禁**保留英文名称后加括号中文的混杂写法（例如禁止 `Awake (保持唤醒)`、`启用 Awake`、`启用 UDP Test`、`启用 AI Hub`、`Essential Policy (全局任务策略)`）。
+- **纯化规范**：
+  - 中文环境（`zh-CN`）：必须使用地道全中文术语，如 `保持唤醒`、`启用保持唤醒`、`启用网络探测`、`启用 AI 智能中心`、`基础任务策略`。
+  - 英文环境（`en-US`）：必须使用纯正英文，如 `Awake`、`Enable Awake`、`Enable UDP Test`、`Enable AI Hub`、`Essential Policy`。
+- **严禁双语斜杠并列**：禁止在界面标签、表头或按钮文案中采用 `操作建议 / Action`、`端口 / Port` 这类占位偷懒的双语混排写法，两种语言必须在各自的 `.resw` 资源中完全独立。
+
+#### 2. UWP / WinAppSDK 资源定义规范与 x:Uid 强类型匹配
+- **x:Uid 属性点号命名**：在 `Strings/zh-CN/Resources.resw` 与 `Strings/en-us/Resources.resw` 中，配合 XAML `x:Uid="MyControl"` 使用时必须遵循点号属性命名（例如 `MyControl.Text`、`MyControl.Header`、`MyControl.PlaceholderText`）。
+- **属性强类型反射与防崩溃铁律（Fatal XamlParseException）**：
+  - WinUI 3 XAML 引擎在 `InitializeComponent()` 期间，会通过反射将 `[Uid].[PropertyName]` 的值直接赋给对应的 XAML 控件。
+  - **如果目标控件本身没有该属性**（例如对 `SettingsCard` 设置 `PlaceholderText`，或对 `Button` 设置 `Text`），WinUI 3 会抛出致命的 `XamlParseException: Unable to resolve property '...' while processing properties for Uid '...'`，并触发不可捕获的 `0xC000027B` fail-fast 崩溃闪退！
+  - **规则**：`x:Uid` 必须精确标记在拥有该属性的具体子控件上（例如为嵌套在 `SettingsCard` 内的 `PasswordBox` 赋予独立的 `x:Uid="My_ApiKeyBox"`，而卡片标题只使用 `My_ApiKeyCard.Header`）。
+  - **附加属性语法**：若需通过资源文件设置工具提示等附加属性，必须使用标准完整的命名空间语法：`MyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip`，绝对不能写成 `MyButton.Text` 或未限定作用域的属性名。
+- **严禁在 Key 中随意使用斜杠 `/`**：WinAppSDK 的 `ResourceLoader.GetString()` 会将 `/` 解析为资源子树路径（如 `SubTree/Key`）。若平级资源键名误用斜杠，会导致根据键名查不到资源并回退为空字符串或抛出资源缺失异常。
+
+#### 3. ViewModel 动态文本的多语种动态格式化
+- **动态文案必须跟随当前运行时语言**：ViewModel 中动态拼装的诊断日志、时间戳、检测事实、根因分析和建议操作（如 `PriorityActionText`），不能在代码中硬编码单语种。
+- 必须通过 `CultureInfo.CurrentUICulture.Name` 判定当前语言（如 `isZh = culture.StartsWith("zh", StringComparison.OrdinalIgnoreCase)`），或者统一从 `ResourceLoader` 中检索对应词条，确保界面语言切换时，所有动态文本无需重启即可呈现正确语言。
+
+### 8.4 WinUI 3 页面构造生命周期与 DataContext 绑定顺序
+
+在 WinUI 3 XAML Page 的代码隐藏（Code-Behind）构造函数中，必须严格遵循初始化顺序：
+
+```csharp
+public UDPtestPage()
+{
+    // 1. 优先创建 ViewModel 实例并绑定 DataContext
+    ViewModel = App.GetService<UDPtestViewModel>();
+    DataContext = ViewModel;
+
+    // 2. 然后再执行 InitializeComponent()
+    InitializeComponent();
+}
+```
+
+- **核心原因**：在调用 `InitializeComponent()` 时，XAML 解析器会立即创建 UI 元素树并对页面内的所有 `x:Bind` 和 `{Binding}` 执行首次求值（Initial Pass）。若 `DataContext` 或 `ViewModel` 在 `InitializeComponent()` 之后才赋值，初始求值时上下文为 `null`，不仅会导致闪烁，对于依赖非空上下文的转换器、事件处理或复杂属性路径，极易触发 NullReferenceException 或无效的初始状态。
+
+### 8.5 系统主题资源安全查找与 ThemeBrushHelper 规范
+
+在 WinUI 3 应用中，直接通过 `Application.Current.Resources[...]` 索引获取系统资源存在严重的安全隐患：
+
+1. **系统样式与系统主题画刷不常驻在 Application 字典**：
+   - `Application.Current.Resources` 仅包含应用在 `App.xaml` 中显式合并的资源字典，**不包含** WinUI 3 内部控件模板或动态系统样式（如 `AccentButtonStyle`）。
+   - 在代码中直接执行 `Application.Current.Resources["AccentButtonStyle"]` 会抛出 `System.Runtime.InteropServices.COMException (0x80004005): Element not found`。
+2. **样式派生标准**：
+   - 若需在 XAML 中引用或重写内置系统样式，应在 `Page.Resources` 中使用 `BasedOn` 派生，例如：
+     ```xml
+     <Page.Resources>
+         <Style x:Key="AccentHealthButtonStyle" BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button" />
+     </Page.Resources>
+     ```
+   - 在代码中若需动态替换样式，使用 `Resources.TryGetValue("AccentHealthButtonStyle", out var style)` 并进行空安全判定。
+3. **安全主题画刷助手（ThemeBrushHelper）**：
+   - 杜绝在 ViewModel 或代码中直接执行 `(Brush)Application.Current.Resources["CardBackgroundFillColorDefault"]`。
+   - 统一使用 `ThemeBrushHelper`，通过 `TryGetValue` 安全尝试检索；若资源未就绪或未找到，自动回退到预置的 Fluent 语义画刷（如 `SuccessBrush`、`CautionBrush`、`CriticalBrush`、`AttentionBrush`、`SecondaryTextBrush` 等），确保在深色、浅色及高对比度主题切换下永不崩溃。
+
 ## 9. 轻量启动、隐私与依赖边界
 
 ### 9.1 新模块不得增加的默认启动职责
@@ -732,11 +840,11 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 
 同步上游时，在插件变更说明中记录对应 commit、功能变化、Kit 必须保留的路径/事件/遥测裁剪、相关测试及未验证场景。同步目标是所需功能和契约正确，不是把已剔除的框架职责重新搬回 Kit。
 
-## 14. AI Hub：共享任务接口与移植约束
+## 14. AI Hub：原生模块、任务策略编排管线与移植约束
 
-AI Hub 是托管共享基础库，不是新的 `KitModuleIface` DLL。入口位于 Kit 的“设置 → AI Hub”，没有独立一级导航、Dashboard 插件卡片或首页启用开关；打开 AI Hub 后侧栏保持“设置”选中，页面提供返回设置入口。全局启用开关只放在 AI Hub 设置页，通过 `AiHubSettingsStore` 管理 `%LOCALAPPDATA%\Kit\AiHub\settings.json` 中的 `isEnabled`。第 5 节的原生模块 `GeneralSettings.Enabled` 规则不用于 AI Hub，不能另建 `AiHubSettings.Properties` 或通过通用模块设置命令覆盖这份文件。
+AI Hub 在 `2.2.0` 版本中已演进为完整的原生第一方模块：拥有原生模块接口 DLL（`Kit.AIHubModuleInterface.dll`，在 Runner `KitKnownModules` 中注册）、独立二级设置主页（`AIHubPage.xaml`，包含“安全审计”与“服务设置”两大功能标签页），并由底层共享库 [Kit.AiHub.csproj](src/common/AiHub/Kit.AiHub.csproj)、[IAiTaskEngine](src/common/AiHub/Models/AiTaskContracts.cs)、[TaskAiEngine](src/common/AiHub/Engine/TaskAiEngine.cs) 提供统一的高性能任务执行引擎。
 
-实现入口为 [Kit.AiHub.csproj](src/common/AiHub/Kit.AiHub.csproj)、[IAiTaskEngine](src/common/AiHub/Models/AiTaskContracts.cs)、[TaskAiEngine](src/common/AiHub/Engine/TaskAiEngine.cs)。项目跟随 Kit 的 `net10.0-windows10.0.26100.0` 和集中包版本管理；JSON 必须使用 source-generated metadata。不能用屏蔽 `IL2026` / `IL3050` 证明支持 AOT。共享库的 Native AOT smoke 与整个 WinUI Settings 应用的发布方式需要分开验证，不宣称未测量的启动或内存改善比例。
+全局启用状态通过 `GeneralSettings.Enabled.AIHub` 与 `%LOCALAPPDATA%\Kit\AiHub\settings.json` 同步联动。底层项目跟随 Kit 的 `net10.0-windows10.0.26100.0` 和集中包版本管理；JSON 序列化必须使用 source-generated metadata（禁止反射）。共享库的 Native AOT smoke 与整个 WinUI Settings 应用的发布方式独立验证，不宣称未测量的性能数据。
 
 ### 14.1 三种获取方式
 
@@ -750,8 +858,22 @@ AI Hub 是托管共享基础库，不是新的 `KitModuleIface` DLL。入口位�
 
 所有调用在关闭状态返回 `AiErrorCode.HubDisabled`，不探测或启动 CLI。配置更改会通过文件通知刷新 Worker 的 `StateChanged`；执行前再次读最新配置和凭据，关闭开关会取消进行中的任务。事件可能来自后台线程，UI 更新必须转发到自己的 `DispatcherQueue`。每个引擎按 `maxConcurrentAnalysis` 限制同时运行的批次，范围 1–4；它不是多个 Worker 合计的全局配额。
 
-### 14.2 插件策略目录与部署
+### 14.2 任务策略编排管线架构 (Task Policy Pipeline Pattern)
 
+AI Hub 规定了统一、严格的 AI 任务执行管线：
+```text
+┌─────────────────┐     ┌──────────────────────────────────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Execution Kernel│ ──> │ Security Policy (全局) + AGENTS.md (任务约束) │ ──> │ Analysis Summary │ ──> │ Suggested Action │
+│ (Codex / Pi CLI)│     │ (%LOCALAPPDATA%\Kit\AiHub\security.md 等)   │     │ (风险/根因多语种) │     │ (PriorityAction) │
+└─────────────────┘     └──────────────────────────────────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+#### 1. 分层策略体系与隔离边界
+- **全局安全策略 (`security.md`)**：位于 `%LOCALAPPDATA%\Kit\AiHub\security.md`，面向用户定义整个 Kit 平台内所有 AI 任务必须遵守的全局安全红线（如禁止明文凭据外发、禁止直接生成无确认的破坏性 shell 指令、输入条目限制）。常规设置页中提供专属卡片供用户查看、编辑和一键恢复默认。
+- **特定任务约束策略 (`chains/{task}/AGENTS.md`)**：位于插件或模块的 `Chains/<taskId>/AGENTS.md`（如 `diagnostic`、`security-audit` 等），用于细化特定业务场景的模型行为模式、输出 JSON 模式约束、重点审查领域及风险判定规则。
+- **自动脚手架保障（Zero-Crash Scaffolding）**：由 `SecurityPolicyService.cs` 与 `TaskPolicyDefaults.cs` 统一管理。若目标策略文件在用户数据目录或部署目录中尚未创建，服务层会自动根据内置安全模板创建安全基线脚手架，防范由于文件缺失引发的 I/O 异常与启动崩溃。
+
+#### 2. 插件策略目录与部署
 ```text
 src/modules/Sample/SampleLib/
   Chains/
@@ -767,8 +889,7 @@ src/modules/Sample/SampleLib/
   modules/Sample/Chains/diagnostic/security.md
 ```
 
-`pluginId`、`taskId` 必须是受限的 ASCII 单段标识，不接受绝对路径、斜杠、`..` 或重解析点。不同插件的同名任务互相隔离。AI Hub 不再查找共享的 `AiHub/chains/<taskId>` 或顶层 `chains`，也不把 `AGENTS.md` 暴露为 Settings 编辑项。缺少任务策略即拒绝执行，不隐式选择另一个任务。
-
+`pluginId`、`taskId` 必须是受限的 ASCII 单段标识，不接受绝对路径、斜杠、`..` 或重解析点。不同插件的同名任务互相隔离。缺少任务策略即拒绝执行，不隐式选择另一个任务。
 在插件库中将资源部署到统一位置，不能依赖开发机的源码绝对路径：
 
 ```xml
@@ -783,6 +904,10 @@ src/modules/Sample/SampleLib/
 ```
 
 最终 Debug／发布目录必须实际包含这些文件；只在源码目录中存在不算完成部署。原生插件如需相同策略，也部署到这一路径，不复制解析器。
+
+#### 3. 审计发现与动态多语种建议契约 (Dynamic Localization Contract)
+- 结构化审计结果（`Finding`）必须提供标准化指标：`EventId`、`Scope`、`Severity`、`DetectionFacts`（检测事实）、`RootCause`（根因分析）以及 `PriorityActionText`（首要处置建议）。
+- **动态语言跟随**：ViewModel 与审计弹窗展示时，必须动态适配当前系统的 UI 语言（`CultureInfo.CurrentUICulture.Name`），确保检测事实与操作建议随系统语言自适应呈现，严禁写死单语言字符串。
 
 ### 14.3 强类型调用与 AOT
 
@@ -892,7 +1017,7 @@ Runner 自动写入协议 `version: 1` 和唯一 `requestId`；Settings 的 [AiH
 
 参考项目为 `C:\Users\Zen\Repos\Codings\Locals`。重点对照其 `KernelManagerService`、`AiAnalysisService`、`TaskAiClient` 的版本检查、CLI 协议、探针和引用／动作审计。原 Locals 的普通设置文件仍会序列化 API key；Kit 使用独立 DPAPI 存储，不照搬该行为。原项目源码保持只读。
 
-图标沿用第 7 节的 36×36 与 400×266 RGBA PNG，实际位于 `Assets/Settings/Icons/AiHub.png` 和 `Assets/Settings/Modules/AiHub.png`，并加入产物裁剪保留清单。所有新增代码及示例注释使用英文，UI 文案放在 en-us／zh-CN 资源文件。
+图标沿用第 7 节的 36×36 与 400×266 RGBA PNG，已切换为原项目标志性紫色浅色 Logo（`#A756FF`），实际位于 `Assets/Settings/Icons/AiHub.png` 和 `Assets/Settings/Modules/AiHub.png`，并加入产物裁剪保留清单。所有新增代码及示例注释使用英文，UI 文案放在 en-us／zh-CN 资源文件。
 
 维护回归在 [AiHub.UnitTests](src/common/AiHub.UnitTests/Kit.AiHub.UnitTests.csproj)。使用独立临时目录、合成 CLI 和内存 HTTP handler 覆盖凭据事务、策略边界、脱敏、协议、分批、容灾、取消及 IPC；不得用用户真实端点替代 fixture。Native AOT smoke 位于 [AiHub.AotSmoke](tools/tests/AiHub.AotSmoke/AiHub.AotSmoke.csproj)：
 

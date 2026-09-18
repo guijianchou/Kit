@@ -34,8 +34,6 @@ namespace Kit.Settings.UI.Views
         /// </summary>
         public GeneralPage()
         {
-            InitializeComponent();
-
             // Load string resources
             var loader = Helpers.ResourceLoaderInstance.ResourceLoader;
             var settingsUtils = SettingsUtils.Default;
@@ -84,6 +82,7 @@ namespace Kit.Settings.UI.Views
                 loader);
 
             DataContext = ViewModel;
+            InitializeComponent();
 
             this.Loaded += (s, e) =>
             {
@@ -93,7 +92,33 @@ namespace Kit.Settings.UI.Views
                     _backupStatusRefreshQueued = true;
                     doRefreshBackupRestoreStatus(500);
                 }
+
+                if (ViewModel?.AiHub?.MainEndpoint is { } main)
+                {
+                    AiMainApiKeyBox.Password = main.ApiKey ?? string.Empty;
+                }
+
+                if (ViewModel?.AiHub?.FallbackEndpoint is { } fallback)
+                {
+                    AiFallbackApiKeyBox.Password = fallback.ApiKey ?? string.Empty;
+                }
             };
+        }
+
+        private void AiMainApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is PasswordBox box && ViewModel?.AiHub?.MainEndpoint is { } endpoint)
+            {
+                endpoint.ApiKey = box.Password;
+            }
+        }
+
+        private void AiFallbackApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is PasswordBox box && ViewModel?.AiHub?.FallbackEndpoint is { } endpoint)
+            {
+                endpoint.ApiKey = box.Password;
+            }
         }
 
         private void OpenColorsSettings_Click(object sender, RoutedEventArgs e)
@@ -162,5 +187,9 @@ namespace Kit.Settings.UI.Views
                 }
             }
         }
+
+        public Visibility IsSecurityAuditPolicyTab(int tabIndex) => tabIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        public Visibility IsOptimizationPolicyTab(int tabIndex) => tabIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
     }
 }

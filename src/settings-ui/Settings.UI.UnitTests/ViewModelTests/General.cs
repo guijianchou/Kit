@@ -537,17 +537,17 @@ namespace ViewModelTests
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
 
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.AIHub },
                 KitModuleCatalog.ActiveModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.AIHub },
                 KitModuleCatalog.DashboardModules.ToArray());
             CollectionAssert.AreEqual(
                 new[] { ModuleType.LightSwitch },
                 KitModuleCatalog.QuickAccessModules.ToArray());
             Assert.IsFalse(Enum.GetNames<ModuleType>().Contains("PowerDisplay", StringComparer.Ordinal));
             Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.ImageResizer));
-            Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.AiHub));
+            Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.AIHub));
 
             StringAssert.Contains(dashboardViewModel, "KitModuleCatalog.DashboardModules");
             Assert.IsFalse(dashboardViewModel.Contains("foreach (ModuleType moduleType in Enum.GetValues<ModuleType>())", StringComparison.Ordinal));

@@ -515,6 +515,22 @@ public sealed class StorageAndPolicyTests
         Assert.AreEqual("Outside policy", File.ReadAllText(Path.Combine(target, "Chains", "task", "security.md")));
     }
 
+    [TestMethod]
+    public async Task SaveTaskPolicyAsyncCanCreateAndPersistUserChains()
+    {
+        using var fixture = new FixtureDirectory();
+        var service = new SecurityPolicyService(fixture.PathFor("data"), fixture.PathFor("modules"));
+
+        await service.SaveTaskPolicyAsync("security-audit", "Custom security audit policy content");
+        await service.SaveTaskPolicyAsync("system-optimization", "Custom system optimization policy content");
+
+        string auditPolicy = await service.LoadTaskAgentsPolicyAsync("aihub", "security-audit");
+        string optPolicy = await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization");
+
+        Assert.AreEqual("Custom security audit policy content", auditPolicy);
+        Assert.AreEqual("Custom system optimization policy content", optPolicy);
+    }
+
     private static void WritePolicy(string path, string content)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

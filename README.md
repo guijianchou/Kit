@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.1.1`.
+Current Kit version: `2.2.1`.
 
 ## Documentation
 
@@ -55,47 +55,51 @@ See [changelog.md](changelog.md) for the full version history.
 The first phase is now effectively a working Kit shell hosting the active PowerToys-style modules. The framework can load explicit PowerToys-style modules, show them in Settings and Home, keep Kit-branded storage separate from official PowerToys, and run each module through the existing runner/module-interface/settings path.
 
 The current stable handoff point is:
-
-- Keep `Awake`, `Light Switch`, and `Localserver` as the active module set.
+ 
+- Keep `Awake`, `Light Switch`, `Localserver`, `UDPtest`, and `AI Hub` as the active module set.
 - Keep first-party module discovery explicit through maintained lists and tests. A third-party plugin host (`plugins/` + manifest) is planned per `fix.plan` but is not implemented yet.
 - Keep General and Home in English Kit wording, with automatic update and telemetry surfaces removed.
 - Keep Kit UI automation pointed at Kit's runner, Settings window, install roots, and the active module executables. It must not attach to an installed upstream PowerToys build by accident.
 - Keep Settings deep links and module settings links launching `Kit.exe` only. Do not fall back to an installed upstream `PowerToys.exe` from Kit UI.
 - Clean build artifacts before handoff so the next Visual Studio build starts from source state.
 - The workspace can be reduced back to source size after a stable handoff. Local `Debug`, `Release`, `x64`, `bin`, `obj`, `TestResults`, `.vs`, and restored `packages` directories are disposable build state.
-
-## Architecture
-
+ 
+ ## Architecture
+ 
 - `src/runner` starts Kit, loads module interface DLLs, owns module lifetime, and coordinates settings IPC with the Settings app. The executable is already separated enough to launch as `Kit.exe` while many build-facing project names still retain upstream PowerToys names. At runtime the runner opens the Settings and Quick Access apps from `WinUI3Apps` next to `Kit.exe`, so the runner build target must keep explicit dependencies on both UI executable projects.
-- `src/modules` contains the active utilities. `Awake` is copied from upstream PowerToys with `Awake.ModuleServices`, `Awake`, and `AwakeModuleInterface`; `LightSwitch` is also adapted from upstream PowerToys; `Localserver` contains the local service management core and its native module interface.
+- `src/modules` contains the active utilities: `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, and `AIHub` native module interfaces and service backends.
 - `src/settings-ui/Settings.UI` contains the WinUI Settings app, including Home, General, module pages, navigation, and page-level view models.
 - `src/settings-ui/Settings.UI.Controls` contains shared UI controls such as Quick Access.
 - `src/settings-ui/Settings.UI.Library` contains settings models, settings serialization, module settings repositories, backup and restore helpers, GPO helpers, and shared settings infrastructure.
-- `src/common` retains shared native and managed PowerToys infrastructure used by the runner, modules, and Settings.
-
-Localserver's management logic currently runs in the Settings page's ViewModel, without a separate background worker. After Settings fully closes, continued log collection, health checks, and automatic restarts are not guaranteed. See [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) for its lifecycle boundary.
-
-Runtime settings are stored under Kit-specific application data, such as `%LOCALAPPDATA%\Kit\settings.json`, rather than the official PowerToys settings directory. Backup and restore defaults also use Kit branding, including `Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`, and `Kit_settings_*` temporary backup folders.
-
-## Current Module Set
-
-The active Kit module set is deliberately small:
-
-- `Awake`
-- `Light Switch`
-- `Localserver`
-
-`Monitor` was removed in `2.0.8`; see the removal record in `doc/devdoc/kit-development-experience.md` and the version history in [changelog.md](changelog.md).
-
-Kit does not automatically expose every upstream PowerToys utility copied in the source tree. Modules are enabled only after they are registered in the maintained Kit lists for the runner, Settings navigation, Home, and tests.
-
-## PowerToys Compatibility Model
-
-Kit follows the PowerToys module-loading model instead of inventing a new plugin protocol. The runner loads known module interface DLLs through the maintained `KitKnownModules` list in `src/runner/main.cpp`, currently:
-
-- `Kit.AwakeModuleInterface.dll`
-- `Kit.LightSwitchModuleInterface.dll`
-- `Kit.LocalserverModuleInterface.dll`
+- `src/common` retains shared native and managed PowerToys infrastructure used by the runner, modules, and Settings, including the unified `Kit.AiHub` task engine.
+ 
+ Localserver's management logic currently runs in the Settings page's ViewModel, without a separate background worker. After Settings fully closes, continued log collection, health checks, and automatic restarts are not guaranteed. See [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) for its lifecycle boundary.
+ 
+ Runtime settings are stored under Kit-specific application data, such as `%LOCALAPPDATA%\Kit\settings.json`, rather than the official PowerToys settings directory. Backup and restore defaults also use Kit branding, including `Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`, and `Kit_settings_*` temporary backup folders.
+ 
+ ## Current Module Set
+ 
+ The active Kit module set consists of five focused utilities:
+ 
+ - `Awake` — System keep-awake utility for screen and power state management.
+ - `Light Switch` — Scheduled and automated system/app theme switching.
+ - `Localserver` — Local developer service lifecycle and process orchestration.
+ - `UDPtest` — High-performance network probe engine (TCP HTTPS latency, UDP echo, STUN binding, NAT type discovery).
+ - `AI Hub` — Unified AI service integration, security policy management, and Security Audit center with task policy orchestration.
+ 
+ `Monitor` was removed in `2.0.8`; see the removal record in `doc/devdoc/kit-development-experience.md` and the version history in [changelog.md](changelog.md).
+ 
+ Kit does not automatically expose every upstream PowerToys utility copied in the source tree. Modules are enabled only after they are registered in the maintained Kit lists for the runner, Settings navigation, Home, and tests.
+ 
+ ## PowerToys Compatibility Model
+ 
+ Kit follows the PowerToys module-loading model instead of inventing a new plugin protocol. The runner loads known module interface DLLs through the maintained `KitKnownModules` list in `src/runner/main.cpp`, currently:
+ 
+ - `Kit.AwakeModuleInterface.dll`
+ - `Kit.LightSwitchModuleInterface.dll`
+ - `Kit.LocalserverModuleInterface.dll`
+ - `Kit.UDPtestModuleInterface.dll`
+ - `Kit.AIHubModuleInterface.dll`
 
 This fixed list is intentional for first-party modules: it avoids unstable directory probing and makes each imported module an explicit compatibility decision. The planned third-party plugin host (`fix.plan` P1) adds a `plugins/` folder plus `manifest.json` for externally developed plugins while leaving this first-party list untouched. When another first-party PowerToys module is brought into Kit, it should be added to the runner, solution, settings routing, Home dashboard metadata, and tests together.
 
@@ -117,7 +121,7 @@ Use this checklist when importing another upstream module:
 
 Kit's core direction is a lightweight plugin host: keep the main framework (runner + Settings UI + common libraries) free of module business logic, start fast, and host both official PowerToys modules and third-party custom plugins through the same `KitModuleIface` + `kit_create()` contract (with backward-compatible `PowertoyModuleIface` / `powertoy_create` aliases).
 
-- First-party modules (`Awake`, `Light Switch`, `Localserver`) stay in the compiled `KitKnownModules` list for deep integration (Home, settings routes, tests, and Quick Access where supported).
+- First-party modules (`Awake`, `Light Switch`, `Localserver`, `UDPtest`, `AI Hub`) stay in the compiled `KitKnownModules` list for deep integration (Home, settings routes, tests, and Quick Access where supported).
 - Third-party plugins are planned to load from a `plugins/` folder (interface DLL + `manifest.json`), with only enabled plugins loaded and a generic settings page rendering each plugin's `get_config` JSON.
 - Official PowerToys module imports require a source-level compatibility review and Kit-specific settings, IPC, and lifecycle integration. Telemetry stays disabled; follow [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md).
 
@@ -154,7 +158,7 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 
 The latest Home work keeps PowerToys behavior but scopes it to Kit's active modules:
 
-- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake`, `LightSwitch`, and `Localserver`, so the Home utility list is fixed and predictable.
+- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake`, `LightSwitch`, `Localserver`, and `UDPtest`, so the Home utility list is fixed and predictable.
 - `QuickAccessViewModel` still supports actionable Quick Access items, but Home passes the dashboard module list so enabled Kit modules appear consistently.
 - Quick Access first tries the normal launcher. If a module has no direct quick action, Home falls back to opening that module's settings page. `Awake` and `Localserver` use this settings page fallback; `LightSwitch` keeps its direct toggle action.
 - `Awake` contributes a `DashboardModuleActivationItem` that displays the current Awake mode in the Home shortcuts card, using the existing PowerToys dashboard item template.
@@ -219,32 +223,61 @@ The compatibility fix keeps the upstream PowerToys dependency shape intact:
 
 Two additional full-solution Release cleanup items were handled during the same pass: the DSC module list no longer advertises the removed `MouseJump` settings surface, and `UnitTests-CommonUtils` now builds with `/utf-8` so upstream `spdlog/fmt` Unicode support is accepted consistently.
 
+## Recent Releases
+
+### 2.2.1 WinUI 3 Navigation Resilience & Crash Fixes
+
+The `2.2.1` release resolves critical WinUI 3 XAML crashes across Settings (General), UDP test, and AI Hub pages, hardening UI lifecycle and resource lookup:
+
+- **General Settings**: Eliminated `XamlParseException` / `0xC000027B` fail-fast crash by targeting `AiHub_MainEndpoint_ApiKeyBox` directly to the `PasswordBox` instead of its parent `SettingsCard`, and instantiating ViewModel before `InitializeComponent()`.
+- **UDP Test**: Fixed button tooltip attached property localization syntax (`[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip`), eliminated `COMException: Element not found` by deriving `AccentHealthButtonStyle`, and integrated `ThemeBrushHelper` for safe brush lookups with Fluent fallback brushes.
+- **AI Hub**: Fixed `SolidColorBrush` to `Windows.UI.Color` cast failure on `Ellipse.Fill` binding, and ensured ViewModel initialization precedes `InitializeComponent()`.
+- **Diagnostics Infrastructure**: Added synchronous first-chance and unhandled exception logging to `%LOCALAPPDATA%\Kit\crash.log` in `App.xaml.cs`.
+
+### 2.2.0 AI Hub and UDPtest Integration
+
+The `2.2.0` release introduces full native integration for `AI Hub` and `UDPtest`, alongside complete bilingual localization:
+
+- **AI Hub & Security Audit Center**:
+  - Full native module interface (`Kit.AIHubModuleInterface.dll`) and dedicated settings surface (`AIHubPage.xaml`).
+  - Restructured tiered security policy pipeline: global policy (`%LOCALAPPDATA%\Kit\AiHub\security.md`) and task-specific essential policy (`chains/{task}/AGENTS.md`), visualized as `Codex / Pi → Security policy + AGENTS.md → Summary → Action`.
+  - Comprehensive Security Audit UI aligned with original reference design: Health overview donut ring, health grade badges (A-F), finding severity distribution bar, audit activity metrics, priority action banners, and dynamic culture-aware `FindingDetailsDialog.xaml`.
+  - Dynamic bilingual translation for detection facts, root cause, and recommendations (`PriorityActionText`) based on system culture (`zh-CN` vs `en-US`).
+  - Restored light theme purple icon (`#A756FF`) across navigation and module assets.
+- **UDPtest High-Performance Probe Engine**:
+  - High-performance network probe engine supporting TCP HTTPS latency, UDP echo, STUN binding, and NAT type discovery.
+  - Live sparkline telemetry strip with 5px pill-shaped vertical bars, 2px spacing, 60-bar recent probe capacity (up to 240 historical samples), and cascade lifecycle shutdown.
+- **100% Pure Bilingual Localization**:
+  - Removed all mixed-language parenthetical annotations and slashes across the shell and plugins (e.g. `(保持唤醒)` -> `保持唤醒`, `启用 Awake` -> `启用保持唤醒`, `启用 UDP Test` -> `启用网络探测`, `启用 AI Hub` -> `启用 AI 智能中心`, `Essential Policy (全局任务策略)` -> `基础任务策略`).
+  - Pure Chinese localization across Localserver metrics, UDPtest tables/metadata, Quick Access flyouts, and shortcut dialogs.
+
 ## Verification Snapshot
 
-Local verification on 2026-09-15 for version `2.0.23` used Visual Studio 18 MSBuild, VSTest, and .NET test runners:
+Local verification on 2026-09-17 for version `2.2.1` used Visual Studio 18 MSBuild, VSTest, and .NET test runners:
 
 - **Release and Debug x64 Solution Builds**:
-  - Full `Kit.slnx` built with 0 errors for both Debug x64 and Release x64.
-  - Produced complete runtime binaries under `x64\Release\`:
-    - `x64\Release\Kit.exe` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\Kit.Settings.exe` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\Kit.QuickAccess.exe` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\Kit.AiHub.dll` (`2.0.23.0`)
-    - `x64\Release\WinUI3Apps\LocalserverLib.dll` (`2.0.23.0`)
-    - `x64\Release\Kit.Interop.winmd` and `Kit.GPOWrapper.winmd`
-    - Module interfaces and services: `Kit.AwakeModuleInterface.dll`, `Kit.LightSwitchModuleInterface.dll`, `Kit.LocalserverModuleInterface.dll`, `Kit.Awake.exe`, and `Kit.LightSwitchService.exe`
-    - Signed sparse package identity: `x64\Release\KitSparse.msix` (`2.0.23.0`)
+  - `Kit.slnx` built with 0 errors and 0 warnings for both Debug x64 and Release x64.
+  - Complete runtime outputs under `x64\Debug\` and `x64\Release\`:
+    - `Kit.exe` (`2.2.1.0`)
+    - `WinUI3Apps\Kit.Settings.exe` (`2.2.1.0`)
+    - `WinUI3Apps\Kit.QuickAccess.exe` (`2.2.1.0`)
+    - `WinUI3Apps\Kit.AiHub.dll` (`2.2.1.0`)
+    - `WinUI3Apps\LocalserverLib.dll` (`2.2.1.0`)
+    - `Kit.Interop.winmd` and `Kit.GPOWrapper.winmd`
+    - Module interfaces: `Kit.AwakeModuleInterface.dll`, `Kit.LightSwitchModuleInterface.dll`, `Kit.LocalserverModuleInterface.dll`, `Kit.UDPtestModuleInterface.dll`, and `Kit.AIHubModuleInterface.dll`
+    - Signed sparse package identity: `KitSparse.msix` (`2.2.1.0`)
 
 - **Automated Test Validation**:
-  - `Settings.UI.UnitTests` (General ViewModel & Version Metadata): 44/44 passed via `vstest.console.exe` (including `KitAboutVersionShouldMatchReleaseMetadata` and `LoggingSettingsDefaultsAndToggleWorkCorrectly`).
-  - `Kit.AiHub.UnitTests`: 107 passed, 0 failed, 1 skipped.
-  - `Localserver.UnitTests`: 7/7 passed.
+  - `Settings.UI.UnitTests`: 196 passed, 0 failed via `vstest.console.exe` (including version metadata, build compatibility, and localization checks).
+  - `Kit.AiHub.UnitTests`: 108 passed, 0 failed, 1 skipped.
+  - `Localserver.UnitTests`: 7 passed, 0 failed.
 
 - **Key Feature & Architecture Verification**:
-  - **AI Service UI/UX Redesign**: Native PowerToys `SettingsExpander`/`SettingsCard` layout, separated Execution Kernel (Codex / Pi CLI) and Endpoints, single-row flat layout for Main/Fallback (`Model · Effort` with `Test connection`), and unified `Save` button beneath Global Security Policy.
-  - **Localserver AI Decoupling**: AI analysis services, diagnostic chains, and UI cards completely removed.
-  - **Centralized Diagnostics & Logging**: C++ `spdlog` and C# `ManagedCommon.Logger` integration synchronized via `%LOCALAPPDATA%\Kit\log_settings.json`; Settings UI toggle and log level selector verified.
-  - **Debug Staging**: Verified staged test handoff under `bin/debug/2.0.23/` (1,352 files, 0 missing dependencies).
+  - **Navigation & Page Stability**: Direct page launches for `General`, `UDPtest`, and `AIHub` succeed with exit code 0 and zero crash logs in `%LOCALAPPDATA%\Kit\crash.log`.
+  - **AI Hub Security Audit**: Severity brush converter type safety verified, finding detail dialog fully localized, dynamic culture formatting verified.
+  - **Security Policy Hierarchy**: Scaffolding for `security.md` and `chains/{task}/AGENTS.md` safely auto-created without I/O exceptions.
+  - **Bilingual Coverage**: 100% pure Chinese strings in `zh-CN/Resources.resw` and English strings in `en-us/Resources.resw` without mixed language annotations.
 
 Before handing a clean tree to Visual Studio, local build outputs and restore caches can be removed. The next compile should recreate the runtime output directory, the `WinUI3Apps` children, shared WinMD files, CsWinRT projections, and package restore cache together.
+
 

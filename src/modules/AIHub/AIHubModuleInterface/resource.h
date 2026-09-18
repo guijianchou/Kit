@@ -1,0 +1,1 @@
+#define IDS_AIHUB_NAME 101

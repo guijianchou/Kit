@@ -39,7 +39,7 @@ namespace ManagedCommon
         ZoomIt,
         Localserver,
         UDPtest,
-        AiHub,
+        AIHub,
         GeneralSettings,
     }
 }

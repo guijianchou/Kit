@@ -64,6 +64,7 @@ namespace Kit.Settings.UI.Library
                         modules.UDPtest = isEnabled;
                         break;
                     case AiHubKey:
+                    case "AIHub":
                         modules.AiHub = isEnabled;
                         break;
                 }

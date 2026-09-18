@@ -4,6 +4,40 @@
 
 ## English
 
+### 2.2.1
+
+- **WinUI 3 Page Crash Fixes & Navigation Stability**:
+  - **General Settings Page (`GeneralPage.xaml`)**: Fixed fatal `XamlParseException` / `0xC000027B` crash on page load caused by `AiHub_MainEndpoint_ApiKeyCard.PlaceholderText` in `Resources.resw` targeting the parent `SettingsCard` rather than the child `PasswordBox`. Assigned `x:Uid="AiHub_MainEndpoint_ApiKeyBox"` to the `PasswordBox` and relocated ViewModel initialization before `InitializeComponent()`.
+  - **UDP Test Page (`UDPtestPage.xaml` & `UDPtestPage.xaml.cs`)**:
+    - Fixed crash from `UDPtest_ClearHistoryButton.Text` in resource files attempting to set a non-existent property on `Button`. Replaced with tooltip attached property syntax `[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip`.
+    - Fixed runtime crash caused by `Application.Current.Resources["AccentButtonStyle"]` throwing `COMException: Element not found` (WinUI 3 system theme styles are not stored in `Application.Current.Resources`). Added explicit `AccentHealthButtonStyle` based on `AccentButtonStyle` in page resources and guarded runtime lookups.
+    - Introduced `ThemeBrushHelper` with safe `TryGetValue` fallback brushes (`SuccessBrush`, `CautionBrush`, `CriticalBrush`, `AttentionBrush`, `SecondaryTextBrush`, `StrokeDefaultBrush`) across `UDPtestViewModel.cs`, `UDPtestLineRowViewModel.cs`, and `RecentProbeBarViewModel.cs` to eliminate brush indexing exceptions.
+  - **AI Hub Page (`AIHubPage.xaml` & `AIHubPage.xaml.cs`)**:
+    - Fixed `InvalidCastException` (`SolidColorBrush` to `Windows.UI.Color`) in XAML compiled bindings (`AIHubPage_obj1_Bindings.Update_ViewModel_HealthScoreGrade`) by binding the `SeverityToBrushConverter` directly to `Ellipse.Fill` rather than `<SolidColorBrush Color="..." />`.
+    - Moved ViewModel instantiation prior to `InitializeComponent()` to guarantee bindings attach to a valid ViewModel instance during the initial XAML layout pass.
+- **Diagnostic Logging Infrastructure**:
+  - Added synchronous first-chance and unhandled exception logging in `App.xaml.cs` writing to `%LOCALAPPDATA%\Kit\crash.log` with full stack traces, timestamps, and thread IDs for immediate post-mortem analysis.
+- **Documentation & Plugin Guidelines**:
+  - Updated `PLUGIN_DEVELOPMENT.md` with best practices for WinUI 3 page lifecycle, strict `x:Uid` target property rules, attached property localization syntax, and safe theme resource lookups using `ThemeBrushHelper`.
+
+### 2.2.0
+
+- **AI Hub Security Audit UI & Architecture Overhaul**:
+  - Restructured tiered security policy pipeline: global policy (`%LOCALAPPDATA%\Kit\AiHub\security.md`) and task-specific essential policy (`chains/{task}/AGENTS.md`), complete with default scaffolding in `SecurityPolicyService.cs` and dedicated Settings expander panels.
+  - Formally integrated execution pipeline visualization: `Codex / Pi → Security policy + AGENTS.md → Summary → Action`.
+  - Beautified and pixel-aligned the Security Audit tab in `AIHubPage.xaml` strictly matching the reference project: Health overview donut ring, health grade badges (A-F), finding severity distribution bar, audit activity metrics, and priority action banners.
+  - Fixed WinUI 3 XAML binding crash when viewing security finding details by enforcing strict `SolidColorBrush` return type in `SeverityToBrushConverter.cs`.
+  - Added dynamic bilingual culture formatting: detection facts, root cause analysis, and actionable recommendations (`PriorityActionText`) dynamically follow the active system language (`zh-CN` vs `en-US`).
+  - Restored light theme purple icon (`#A756FF`) for AI Hub across Settings sidebar navigation and module assets.
+- **100% Pure Bilingual Localization Across Kit & Plugins**:
+  - Removed all mixed-language parenthetical annotations and bilingual slashes across the main shell and plugins (e.g. `(保持唤醒)` -> `保持唤醒`, `启用 Awake` -> `启用保持唤醒`, `启用 UDP Test` -> `启用网络探测`, `启用 AI Hub` -> `启用 AI 智能中心`, `Essential Policy (全局任务策略)` -> `基础任务策略`).
+  - Localized Localserver interface (40+ all-caps metric labels replaced with pure Chinese), UDPtest table headers & metadata strip, Shell navigation, Dashboard, Shortcut conflict & assignment dialogs, and Quick Access flyout.
+  - Fully localized `FindingDetailsDialog.xaml.cs` (event ID, affected scope, severity, timestamps, formatted report output).
+- **Test Suite Verification & Quality Assurance**:
+  - `Kit.Settings.csproj`: 0 Warnings, 0 Errors.
+  - `Kit.AiHub.UnitTests.csproj`: 108 Passed, 0 Failed, 1 Skipped.
+  - `Settings.UI.UnitTests.dll`: 196 Passed, 0 Failed.
+
 ### 2.1.1
 
 - Refined status bar sparkline dimensions and density in Localserver and UDPtest plugins to match original projects:
@@ -426,6 +460,40 @@
 ## 中文
 
 ## 更新日志
+
+### 2.2.1
+
+- **WinUI 3 页面崩溃修复与导航稳定性提升**：
+  - **常规设置页（`GeneralPage.xaml`）**：修复页面加载时 `Resources.resw` 中的 `AiHub_MainEndpoint_ApiKeyCard.PlaceholderText` 误将属性应用在父级 `SettingsCard`（控件无此属性）上引发的致命 `XamlParseException` / `0xC000027B` 崩溃。为子级 `PasswordBox` 赋予专用 `x:Uid="AiHub_MainEndpoint_ApiKeyBox"` 并将 ViewModel 初始化提升至 `InitializeComponent()` 之前。
+  - **UDP 探测测试页（`UDPtestPage.xaml` & `UDPtestPage.xaml.cs`）**：
+    - 修复因 `Resources.resw` 中 `UDPtest_ClearHistoryButton.Text` 尝试向 `Button` 反射设置不存在的 `Text` 属性导致的崩溃，纠正为 WinUI 附加属性语法 `[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip`。
+    - 修复直接索引 `Application.Current.Resources["AccentButtonStyle"]` 抛出 `COMException: Element not found` 崩溃问题（WinUI 3 内置系统样式不在 `Application.Current.Resources` 根字典中），通过在页面局部资源显式派生 `AccentHealthButtonStyle` 并通过 `TryGetValue` 强化空安全防御。
+    - 引入 `ThemeBrushHelper` 安全笔刷助手，在 `UDPtestViewModel.cs`、`UDPtestLineRowViewModel.cs` 与 `RecentProbeBarViewModel.cs` 中提供安全的 `TryGetValue` 与 Fluent 回退笔刷，彻底消除深浅主题切换与初始化时的笔刷索引崩溃。
+  - **AI 智能中心页（`AIHubPage.xaml` & `AIHubPage.xaml.cs`）**：
+    - 修复编译型绑定 `AIHubPage_obj1_Bindings.Update_ViewModel_HealthScoreGrade` 中 `SolidColorBrush` 无法转换为 `Windows.UI.Color` 的 `InvalidCastException` 崩溃，将 `SeverityToBrushConverter` 直接绑定至 `Ellipse.Fill` 笔刷属性。
+    - 将 ViewModel 初始化提升至 `InitializeComponent()` 之前，确保在首次 XAML 布局遍历与绑定求值时已存在有效实例。
+- **故障诊断与崩溃日志基础设施**：
+  - 在 `App.xaml.cs` 中集成同步 First-Chance 与 Unhandled Exception 异常捕获机制，自动输出完整堆栈、时间戳和线程 ID 至 `%LOCALAPPDATA%\Kit\crash.log`，实现事后秒级精准定界。
+- **开发文档与插件规范优化**：
+  - 在 `PLUGIN_DEVELOPMENT.md` 中补充 WinUI 3 页面生命周期规范、`x:Uid` 本地化强类型属性对齐规则、附加属性声明语法以及利用 `ThemeBrushHelper` 安全获取主题笔刷的最佳实践。
+
+### 2.2.0
+
+- **AI Hub 安全审计界面重构与策略管线架构升级**：
+  - 重构分层安全策略体系：全局安全策略（`%LOCALAPPDATA%\Kit\AiHub\security.md`）与特定任务约束策略（`chains/{task}/AGENTS.md`），在 `SecurityPolicyService.cs` 中增加自动缺省模板脚手架，防范 I/O 崩溃并在常规设置中提供专属 Expander 配置卡片。
+  - 正式形成任务策略执行管线规范：`Codex / Pi → 安全策略 + AGENTS.md → 审计摘要 → 建议动作`。
+  - 深度还原并美化 `AIHubPage.xaml` 安全审计界面：健康状况概览环、A-F 级健康评级徽章、风险严重等级分布条、审计活动指标、首要建议操作横幅，以及详情弹窗 `FindingDetailsDialog.xaml`。
+  - 修复点击审计详情弹窗时的 WinUI 3 崩溃：在 `SeverityToBrushConverter.cs` 中修正类型映射，强制返回 `SolidColorBrush` 笔刷，杜绝底层 XAML 绑定抛出 `E_NOINTERFACE`。
+  - 审计结果动态多语种格式化：检测事实、根因分析和处置建议（`PriorityActionText`）根据运行时系统语言（`zh-CN` 与 `en-US`）动态呈现对应语言。
+  - 恢复 AI Hub 原项目浅色紫色图标（`#A756FF`），统一侧边栏导航与模块资产视觉质感。
+- **Kit 主框架与插件 100% 纯正中英双语对齐**：
+  - 全面清除主界面与插件中的中英混杂小括号与斜杠（如 `(保持唤醒)` -> `保持唤醒`、`启用 Awake` -> `启用保持唤醒`、`启用 UDP Test` -> `启用网络探测`、`启用 AI Hub` -> `启用 AI 智能中心`、`Essential Policy (全局任务策略)` -> `基础任务策略`）。
+  - 全面汉化 Localserver 监控卡片（40 余处全大写英文字段标签均替换为纯中文）、UDPtest 表头及元数据条纯中文、侧边栏导航、仪表盘、快捷键冲突与分配弹窗、托盘快速访问浮窗。
+  - 完整汉化 `FindingDetailsDialog.xaml.cs` 内部拼接文案（事件 ID、影响范围、严重级别、时间戳及格式化报告输出）。
+- **自动化测试套件与质量验证**：
+  - `Kit.Settings.csproj`：0 警告、0 错误。
+  - `Kit.AiHub.UnitTests.csproj`：108 通过，0 失败，1 跳过。
+  - `Settings.UI.UnitTests.dll`：196 通过，0 失败。
 
 ### 2.1.1
 

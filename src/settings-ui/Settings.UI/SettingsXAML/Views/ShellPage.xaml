@@ -179,6 +179,12 @@
                     AutomationProperties.AutomationId="UDPtestNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/UDPtest.png}" />
 
+                <NavigationViewItem
+                    x:Name="AIHubNavigationItem"
+                    x:Uid="Shell_AIHub"
+                    AutomationProperties.AutomationId="AIHubNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/AiHub.png}" />
+
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem

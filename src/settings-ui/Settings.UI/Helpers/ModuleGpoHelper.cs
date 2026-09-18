@@ -30,7 +30,7 @@ namespace Kit.Settings.UI.Helpers
                 ModuleType.LightSwitch => typeof(LightSwitchPage),
                 ModuleType.Localserver => typeof(LocalserverPage),
                 ModuleType.UDPtest => typeof(UDPtestPage),
-                ModuleType.AiHub => typeof(GeneralPage),
+                ModuleType.AIHub => typeof(AIHubPage),
                 _ => typeof(GeneralPage),
             };
         }

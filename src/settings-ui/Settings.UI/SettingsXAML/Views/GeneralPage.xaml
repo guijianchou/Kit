@@ -283,22 +283,22 @@
                                 <Button x:Uid="AiHub_TestConnectionButton" Content="Test connection" Command="{x:Bind ViewModel.AiHub.MainEndpoint.TestCommand}" />
                             </StackPanel>
                             <tkcontrols:SettingsExpander.Items>
-                                <tkcontrols:SettingsCard Header="Endpoint URL">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
                                     <TextBox Width="320" Text="{x:Bind ViewModel.AiHub.MainEndpoint.BaseUrl, Mode=TwoWay}" PlaceholderText="https://api.example.com" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="API key">
-                                    <PasswordBox Width="320" Password="{x:Bind ViewModel.AiHub.MainEndpoint.ApiKey, Mode=TwoWay}" PlaceholderText="Enter API key" />
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiKeyCard" Header="API key">
+                                    <PasswordBox x:Name="AiMainApiKeyBox" x:Uid="AiHub_MainEndpoint_ApiKeyBox" Width="320" Password="{x:Bind ViewModel.AiHub.MainEndpoint.ApiKey, Mode=OneWay}" PasswordChanged="AiMainApiKeyBox_PasswordChanged" PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="API mode">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode">
                                     <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiHub.MainEndpoint.Mode, Mode=TwoWay}" SelectedValuePath="Tag">
                                         <ComboBoxItem Content="responses (/v1/responses)" Tag="responses" />
                                         <ComboBoxItem Content="chat (/v1/chat/completions)" Tag="chat" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="Model">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox Width="200" Text="{x:Bind ViewModel.AiHub.MainEndpoint.Model, Mode=TwoWay}" PlaceholderText="gpt-5.6-luna" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="Reasoning effort">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
                                     <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiHub.MainEndpoint.Effort, Mode=TwoWay}" SelectedValuePath="Tag">
                                         <ComboBoxItem Content="low" Tag="low" />
                                         <ComboBoxItem Content="medium" Tag="medium" />
@@ -324,22 +324,22 @@
                                 <Button x:Uid="AiHub_TestConnectionButton" Content="Test connection" Command="{x:Bind ViewModel.AiHub.FallbackEndpoint.TestCommand}" />
                             </StackPanel>
                             <tkcontrols:SettingsExpander.Items>
-                                <tkcontrols:SettingsCard Header="Endpoint URL">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
                                     <TextBox Width="320" Text="{x:Bind ViewModel.AiHub.FallbackEndpoint.BaseUrl, Mode=TwoWay}" PlaceholderText="https://api.example.com" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="API key">
-                                    <PasswordBox Width="320" Password="{x:Bind ViewModel.AiHub.FallbackEndpoint.ApiKey, Mode=TwoWay}" PlaceholderText="Enter API key" />
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiKeyCard" Header="API key">
+                                    <PasswordBox x:Name="AiFallbackApiKeyBox" Width="320" Password="{x:Bind ViewModel.AiHub.FallbackEndpoint.ApiKey, Mode=OneWay}" PasswordChanged="AiFallbackApiKeyBox_PasswordChanged" PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="API mode">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode">
                                     <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiHub.FallbackEndpoint.Mode, Mode=TwoWay}" SelectedValuePath="Tag">
                                         <ComboBoxItem Content="responses (/v1/responses)" Tag="responses" />
                                         <ComboBoxItem Content="chat (/v1/chat/completions)" Tag="chat" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="Model">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox Width="200" Text="{x:Bind ViewModel.AiHub.FallbackEndpoint.Model, Mode=TwoWay}" PlaceholderText="gpt-5.6-luna" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="Reasoning effort">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
                                     <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiHub.FallbackEndpoint.Effort, Mode=TwoWay}" SelectedValuePath="Tag">
                                         <ComboBoxItem Content="low" Tag="low" />
                                         <ComboBoxItem Content="medium" Tag="medium" />
@@ -348,41 +348,79 @@
                                         <ComboBoxItem Content="max" Tag="max" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard Header="Clear fallback endpoint">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_ClearFallbackCard" Header="Clear fallback endpoint">
                                     <Button x:Uid="AiHub_ClearFallbackButton" Content="Clear" Command="{x:Bind ViewModel.AiHub.ClearFallbackCommand}" />
                                 </tkcontrols:SettingsCard>
                             </tkcontrols:SettingsExpander.Items>
                         </tkcontrols:SettingsExpander>
 
-                        <!-- 3. Global Security Policy (SettingsExpander) -->
+                        <!-- 4. Policy rules (SettingsExpander) -->
                         <tkcontrols:SettingsExpander
-                            x:Name="AiSecurityPolicyExpander"
-                            x:Uid="AiHub_SecurityPolicyCard"
-                            Description="{x:Bind ViewModel.AiHub.SecurityPolicyStatusText, Mode=OneWay}"
-                            HeaderIcon="{ui:FontIcon Glyph=&#xE72E;}"
+                            x:Name="AiPolicyRulesExpander"
+                            x:Uid="AiHub_PolicyRulesExpander"
+                            Header="Policy rules"
+                            Description="Global security policy and task instructions (security.md and AGENTS.md)"
+                            HeaderIcon="{ui:FontIcon Glyph=&#xE946;}"
                             IsExpanded="False">
-                            <Button x:Uid="AiHub_ResetPolicyButton" Content="Reset to Default" Command="{x:Bind ViewModel.AiHub.ResetPolicyCommand}" />
                             <tkcontrols:SettingsExpander.Items>
-                                <tkcontrols:SettingsCard Header="Policy file path">
-                                    <TextBlock Text="{x:Bind ViewModel.AiHub.SecurityPolicyPath, Mode=OneWay}"
-                                               Style="{StaticResource CaptionTextBlockStyle}"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               IsTextSelectionEnabled="True" />
-                                </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard ContentAlignment="Vertical" HorizontalContentAlignment="Stretch">
-                                    <TextBox Text="{x:Bind ViewModel.AiHub.SecurityPolicyContent, Mode=TwoWay}"
-                                             AcceptsReturn="True" TextWrapping="Wrap"
-                                             MinHeight="180" MaxHeight="320" MaxLength="64000"
-                                             FontFamily="Consolas, Cascadia Code" FontSize="12"
-                                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                    <StackPanel Spacing="12" Margin="0,4,0,4">
+                                        <!-- Segmented Control for 3 policies -->
+                                        <tkcontrols:Segmented
+                                            x:Name="AiPolicySegmented"
+                                            SelectedIndex="{x:Bind ViewModel.AiHub.ActivePolicyIndex, Mode=TwoWay}"
+                                            HorizontalAlignment="Left">
+                                            <tkcontrols:SegmentedItem x:Uid="AiHub_Segment_GlobalPolicy" Content="Global security policy" Icon="{ui:FontIcon Glyph=&#xE946;}" />
+                                            <tkcontrols:SegmentedItem x:Uid="AiHub_Segment_SecurityAudit" Content="Security audit" Icon="{ui:FontIcon Glyph=&#xE72E;}" />
+                                            <tkcontrols:SegmentedItem x:Uid="AiHub_Segment_Optimization" Content="Optimization" Icon="{ui:FontIcon Glyph=&#xE771;}" />
+                                        </tkcontrols:Segmented>
+
+                                        <!-- Code/Policy Content Editor -->
+                                        <TextBox
+                                            x:Name="AiPolicyContentBox"
+                                            Text="{x:Bind ViewModel.AiHub.CurrentPolicyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            AcceptsReturn="True"
+                                            TextWrapping="Wrap"
+                                            MinHeight="160"
+                                            MaxHeight="320"
+                                            MaxLength="64000"
+                                            FontFamily="Consolas, Cascadia Code"
+                                            FontSize="12"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto" />
+
+                                        <!-- Bottom action row with target file path indicator & buttons -->
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Text="{x:Bind ViewModel.AiHub.CurrentPolicyFilePath, Mode=OneWay}"
+                                                Style="{StaticResource CaptionTextBlockStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                VerticalAlignment="Center"
+                                                TextTrimming="CharacterEllipsis" />
+
+                                            <Button
+                                                Grid.Column="1"
+                                                x:Uid="AiHub_ResetPolicyButton"
+                                                Content="Reset to default"
+                                                Command="{x:Bind ViewModel.AiHub.ResetActivePolicyCommand}" />
+
+                                            <Button
+                                                Grid.Column="2"
+                                                x:Uid="AiHub_SavePolicyButton"
+                                                Content="Save"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Command="{x:Bind ViewModel.AiHub.SaveActivePolicyCommand}" />
+                                        </Grid>
+                                    </StackPanel>
                                 </tkcontrols:SettingsCard>
                             </tkcontrols:SettingsExpander.Items>
                         </tkcontrols:SettingsExpander>
-
-                        <!-- 4. Save settings card -->
-                        <tkcontrols:SettingsCard>
-                            <Button x:Uid="AiHub_SaveButton" Content="Save" Command="{x:Bind ViewModel.AiHub.SaveCommand}" Style="{StaticResource AccentButtonStyle}" />
-                        </tkcontrols:SettingsCard>
                     </StackPanel>
                 </controls:SettingsGroup>
 
@@ -404,11 +442,11 @@
                                 <ComboBox
                                     MinWidth="{StaticResource SettingActionControlMinWidth}"
                                     SelectedIndex="{x:Bind ViewModel.LogLevelIndex, Mode=TwoWay}">
-                                    <ComboBoxItem Content="Trace (Verbose)" Tag="trace" />
-                                    <ComboBoxItem Content="Debug" Tag="debug" />
-                                    <ComboBoxItem Content="Info" Tag="info" />
-                                    <ComboBoxItem Content="Warning" Tag="warn" />
-                                    <ComboBoxItem Content="Error" Tag="err" />
+                                    <ComboBoxItem x:Uid="General_LogLevelTrace" Content="Trace (Verbose)" Tag="trace" />
+                                    <ComboBoxItem x:Uid="General_LogLevelDebug" Content="Debug" Tag="debug" />
+                                    <ComboBoxItem x:Uid="General_LogLevelInfo" Content="Info" Tag="info" />
+                                    <ComboBoxItem x:Uid="General_LogLevelWarning" Content="Warning" Tag="warn" />
+                                    <ComboBoxItem x:Uid="General_LogLevelError" Content="Error" Tag="err" />
                                 </ComboBox>
                             </tkcontrols:SettingsCard>
                             <tkcontrols:SettingsCard

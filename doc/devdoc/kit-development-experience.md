@@ -2,6 +2,54 @@
 
 This note captures the lessons from turning the PowerToys-derived Kit shell into a stable local workspace.
 
+## 2026-09-17 Version 2.2.1 WinUI 3 Page Crash Fixes & Navigation Resilience
+
+This pass moves Kit to `2.2.1` following root cause debugging and permanent remediation of fail-fast crashes (`0xC000027B` / stowed exceptions) across Settings (General), UDP test, and AI Hub pages:
+
+- **Version & Manifest Updates**:
+  - `Version.props`, `AppxManifest.xml`, `README.md`, `README_zh.md`, `changelog.md`, and this development log updated to `2.2.1` (or `2.2.1.0` in package identity).
+- **Diagnostics Infrastructure**:
+  - Added synchronous first-chance and unhandled exception logging via `System.IO.File.AppendAllText` into `%LOCALAPPDATA%\Kit\crash.log` in `App.xaml.cs`.
+  - Stack traces, error codes, and thread information are captured immediately before any fail-fast termination, dramatically speeding up bug resolution.
+- **Root Cause Analysis & Fixes**:
+  - **GeneralPage (`GeneralPage.xaml`)**:
+    - *Root Cause*: `Resources.resw` mapped `AiHub_MainEndpoint_ApiKeyCard.PlaceholderText` to `SettingsCard`, but `SettingsCard` does not possess a `PlaceholderText` property. WinUI 3 XAML reflectively attempts to set this property during `InitializeComponent()`, throwing a fatal `XamlParseException`.
+    - *Resolution*: Directed the localization UID to the child `PasswordBox` (`x:Uid="AiHub_MainEndpoint_ApiKeyBox"`) and synchronized `en-us` and `zh-CN` resource keys. Moved ViewModel instantiation before `InitializeComponent()`.
+  - **UDPtestPage (`UDPtestPage.xaml` & `UDPtestPage.xaml.cs`)**:
+    - *Root Cause 1*: `UDPtest_ClearHistoryButton.Text` in `.resw` attempted to set `Text` on a `Button` (which only supports content/icons), throwing `XamlParseException`.
+    - *Root Cause 2*: Tooltip resource keys targeted properties improperly. Corrected to attached property syntax `[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip`.
+    - *Root Cause 3*: Calling `Application.Current.Resources["AccentButtonStyle"]` threw `COMException: Element not found` because WinUI 3 framework system styles are not stored in `Application.Current.Resources`.
+    - *Root Cause 4*: Unsafe direct indexing of theme brushes (`(Brush)Application.Current.Resources[...]`) threw exceptions when theme dictionaries were unmerged.
+    - *Resolution*: Created `ThemeBrushHelper.cs` with safe `TryGetValue` lookup and fluent fallback brushes (`SuccessBrush`, `CautionBrush`, `CriticalBrush`, `AttentionBrush`, `SecondaryTextBrush`, `StrokeDefaultBrush`). Declared explicit `AccentHealthButtonStyle` in page resources and moved ViewModel instantiation prior to `InitializeComponent()`.
+  - **AIHubPage (`AIHubPage.xaml` & `AIHubPage.xaml.cs`)**:
+    - *Root Cause*: `AIHubPage_obj1_Bindings.Update_ViewModel_HealthScoreGrade` threw `InvalidCastException` because `SeverityToBrushConverter` returns a `SolidColorBrush`, but XAML wrapped it in `<SolidColorBrush Color="{...}" />` which expects a `Windows.UI.Color`.
+    - *Resolution*: Bound `SeverityToBrushConverter` directly to `<Ellipse Fill="{...}" />`. Moved ViewModel creation before `InitializeComponent()`.
+- **Validation**:
+  - Verified with direct page launch commands (`General`, `UDPtest`, `AIHub`) with exit code 0 and 0 crashes in `%LOCALAPPDATA%\Kit\crash.log`.
+  - Unit test suites passing cleanly.
+
+## 2026-09-17 Version 2.2.0 AI Hub & UDPtest Integration and Bilingual Localization
+
+This pass moves Kit to `2.2.0` with full integration of AI Hub (native module interface, security policy hierarchy, and security audit dashboard), UDPtest (network probe engine and high-density sparkline), and 100% pure bilingual localization.
+
+- Version.props, README, README_zh, changelog, this development log, the sparse package manifest, and version metadata tests now use Kit version `2.2.0`.
+- The active Kit module set is now `Awake`, `Light Switch`, `Localserver`, `UDPtest`, and `AI Hub`.
+- AI Hub Security Audit:
+  - Reconstructed tiered security policy pipeline: global policy (`%LOCALAPPDATA%\Kit\AiHub\security.md`) and essential task policies (`chains/{task}/AGENTS.md`), with execution workflow `Codex / Pi → Security policy + AGENTS.md → Analysis summary → Suggested action`.
+  - Added auto-scaffolding in `SecurityPolicyService.cs` for default policies, preventing file I/O exceptions on clean setups.
+  - Aligned Security Audit tab in `AIHubPage.xaml` strictly with original reference design: Health overview ring, grade badges (A-F), finding severity distribution bar, audit activity metrics, priority action banners, and `FindingDetailsDialog.xaml`.
+  - Fixed WinUI 3 XAML binding crash in `SeverityToBrushConverter.cs` by ensuring returned object is strictly `SolidColorBrush`.
+  - Dynamically format finding facts, root cause, and recommendations (`PriorityActionText`) based on current runtime UI culture (`zh-CN` vs `en-US`).
+  - Restored light theme purple icon (`#A756FF`) for AI Hub.
+- 100% Pure Bilingual Localization:
+  - Removed all mixed parenthetical English annotations (e.g. `(保持唤醒)` -> `保持唤醒`, `启用 Awake` -> `启用保持唤醒`, `启用 UDP Test` -> `启用网络探测`, `启用 AI Hub` -> `启用 AI 智能中心`, `Essential Policy (全局任务策略)` -> `基础任务策略`).
+  - Completely localized Localserver hardware/process metrics to pure Chinese, UDPtest table headers & metadata, Shell navigation, and Quick Access flyouts.
+  - Fully localized `FindingDetailsDialog.xaml.cs`.
+- Automated Test Validation:
+  - `Kit.Settings.csproj`: 0 Warnings, 0 Errors.
+  - `Kit.AiHub.UnitTests.csproj`: 108 Passed, 0 Failed, 1 Skipped.
+  - `Settings.UI.UnitTests.dll`: 196 Passed, 0 Failed.
+
 ## 2026-09-12 Version 2.1.0 Monitor Module Removal
 
 This pass moves Kit to `2.1.0` after removing the Monitor module to focus on the two core utilities (Awake and LightSwitch).

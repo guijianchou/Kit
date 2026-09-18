@@ -92,16 +92,19 @@
     <value>主页</value>
   </data>
   <data name="Shell_Awake.Content" xml:space="preserve">
-    <value>Awake (保持唤醒)</value>
+    <value>保持唤醒</value>
   </data>
   <data name="Shell_LightSwitch.Content" xml:space="preserve">
-    <value>Light Switch (深浅切换)</value>
+    <value>深浅切换</value>
   </data>
   <data name="Shell_Localserver.Content" xml:space="preserve">
-    <value>Localserver (本地服务)</value>
+    <value>本地服务</value>
   </data>
   <data name="Shell_UDPtest.Content" xml:space="preserve">
-    <value>UDP Test (网络探测)</value>
+    <value>网络探测</value>
+  </data>
+  <data name="Shell_AIHub.Content" xml:space="preserve">
+    <value>AI 智能中心</value>
   </data>
   <data name="Shell_Settings.Content" xml:space="preserve">
     <value>设置</value>
@@ -182,13 +185,13 @@
     <value>始终以管理员身份运行</value>
   </data>
   <data name="Awake.ModuleTitle" xml:space="preserve">
-    <value>Awake</value>
+    <value>保持唤醒</value>
   </data>
   <data name="Awake.ModuleDescription" xml:space="preserve">
     <value>一种无需管理其电源和睡眠设置即可按需保持计算机唤醒状态的工具。</value>
   </data>
   <data name="Awake_EnableSettingsCard.Header" xml:space="preserve">
-    <value>启用 Awake</value>
+    <value>启用保持唤醒</value>
   </data>
   <data name="Awake_BehaviorSettingsGroup.Header" xml:space="preserve">
     <value>行为</value>
@@ -236,13 +239,13 @@
     <value>结束时间</value>
   </data>
   <data name="LightSwitch.ModuleTitle" xml:space="preserve">
-    <value>Light Switch</value>
+    <value>深浅切换</value>
   </data>
   <data name="LightSwitch.ModuleDescription" xml:space="preserve">
     <value>在深色与浅色模式之间平滑切换系统及应用程序外观风格的实用工具。</value>
   </data>
   <data name="LightSwitch_EnableSettingsCard.Header" xml:space="preserve">
-    <value>启用 Light Switch</value>
+    <value>启用深浅切换</value>
   </data>
   <data name="LightSwitch_ShortcutsSettingsGroup.Header" xml:space="preserve">
     <value>快捷键</value>
@@ -323,25 +326,25 @@
     <value>按下组合键以更改此快捷键</value>
   </data>
   <data name="Localserver.ModuleTitle" xml:space="preserve">
-    <value>Localserver (本地服务)</value>
+    <value>本地服务</value>
   </data>
   <data name="Localserver.ModuleDescription" xml:space="preserve">
     <value>管理本地运行的服务进程、资源占用监控与环境依赖诊断。</value>
   </data>
   <data name="Localserver_EnableSettingsCard.Header" xml:space="preserve">
-    <value>启用 Localserver</value>
+    <value>启用本地服务</value>
   </data>
   <data name="Localserver_EnableSettingsCard.Description" xml:space="preserve">
     <value>允许本地服务启动与自动重启。关闭此项将停止所有运行中的服务。</value>
   </data>
   <data name="UDPtest.ModuleTitle" xml:space="preserve">
-    <value>UDP Test (网络探测)</value>
+    <value>网络探测</value>
   </data>
   <data name="UDPtest.ModuleDescription" xml:space="preserve">
     <value>UDP 与 TCP 链路多路径持续探测及 NAT 网络诊断。</value>
   </data>
   <data name="UDPtest_EnableSettingsCard.Header" xml:space="preserve">
-    <value>启用 UDP Test</value>
+    <value>启用网络探测</value>
   </data>
   <data name="UDPtest_EnableSettingsCard.Description" xml:space="preserve">
     <value>持续探测 UDP 连通性、TCP 基线延迟以及诊断 NAT 类型。</value>
@@ -452,31 +455,31 @@
     <value>链路运行中，已锁定配置修改</value>
   </data>
   <data name="Localserver_EnvironmentCardTitle.Text" xml:space="preserve">
-    <value>ENVIRONMENT</value>
+    <value>环境</value>
   </data>
   <data name="Localserver_ChecksLabel.Text" xml:space="preserve">
-    <value>CHECKS</value>
+    <value>环境检查</value>
   </data>
   <data name="Localserver_CpuTrendLabel.Text" xml:space="preserve">
-    <value>CPU TREND</value>
+    <value>CPU 趋势</value>
   </data>
   <data name="Localserver_SystemCardTitle.Text" xml:space="preserve">
-    <value>SYSTEM</value>
+    <value>系统</value>
   </data>
   <data name="Localserver_GpuLoadLabel.Text" xml:space="preserve">
-    <value>GPU UTIL</value>
+    <value>GPU 负载</value>
   </data>
   <data name="Localserver_GpuVramLabel.Text" xml:space="preserve">
-    <value>VRAM</value>
+    <value>显存</value>
   </data>
   <data name="Localserver_GpuTempLabel.Text" xml:space="preserve">
-    <value>TEMP</value>
+    <value>温度</value>
   </data>
   <data name="Localserver_HostCpuLabel.Text" xml:space="preserve">
     <value>CPU</value>
   </data>
   <data name="Localserver_HostRamLabel.Text" xml:space="preserve">
-    <value>RAM</value>
+    <value>内存</value>
   </data>
   <data name="Localserver_CopyFixCommandMenu.Text" xml:space="preserve">
     <value>复制修复命令</value>
@@ -506,22 +509,22 @@
     <value>未配置端口</value>
   </data>
   <data name="Localserver_UptimeLabel.Text" xml:space="preserve">
-    <value>UPTIME</value>
+    <value>运行时间</value>
   </data>
   <data name="Localserver_PortLabel.Text" xml:space="preserve">
-    <value>PORT</value>
+    <value>端口</value>
   </data>
   <data name="Localserver_PidLabel.Text" xml:space="preserve">
-    <value>PID</value>
+    <value>进程 ID</value>
   </data>
   <data name="Localserver_StateLabel.Text" xml:space="preserve">
-    <value>STATE</value>
+    <value>状态</value>
   </data>
   <data name="Localserver_RuntimesLabel.Text" xml:space="preserve">
-    <value>RUNTIMES</value>
+    <value>运行时</value>
   </data>
   <data name="Localserver_MemoryLabel.Text" xml:space="preserve">
-    <value>MEM</value>
+    <value>内存</value>
   </data>
   <data name="Localserver_LineStatusCard.Header" xml:space="preserve">
     <value>运行状态</value>
@@ -992,79 +995,79 @@
     <value>磁盘上的服务配置已更改，本次编辑尚未写入。请先保留需要的更改，再重载配置。</value>
   </data>
   <data name="Localserver_SectionEnvironment.Text" xml:space="preserve">
-    <value>ENVIRONMENT</value>
+    <value>环境</value>
   </data>
   <data name="Localserver_SectionSystem.Text" xml:space="preserve">
-    <value>SYSTEM</value>
+    <value>系统</value>
   </data>
   <data name="Localserver_SectionSession.Text" xml:space="preserve">
-    <value>SESSION</value>
+    <value>会话</value>
   </data>
   <data name="Localserver_SessionUptimeTooltip" xml:space="preserve">
     <value>本次会话自首个服务启动以来的时长</value>
   </data>
   <data name="Localserver_RegisteredLabel.Text" xml:space="preserve">
-    <value>REGISTERED</value>
+    <value>已注册</value>
   </data>
   <data name="Localserver_RunningLabel.Text" xml:space="preserve">
-    <value>RUNNING</value>
+    <value>运行中</value>
   </data>
   <data name="Localserver_FaultedLabel.Text" xml:space="preserve">
-    <value>FAULTED</value>
+    <value>异常</value>
   </data>
   <data name="Localserver_HealthLabel.Text" xml:space="preserve">
-    <value>HEALTH</value>
+    <value>健康度</value>
   </data>
   <data name="Localserver_HostLabel.Text" xml:space="preserve">
-    <value>HOST</value>
+    <value>主机</value>
   </data>
   <data name="Localserver_CommandAndArgsLabel.Text" xml:space="preserve">
-    <value>COMMAND &amp; ARGS</value>
+    <value>命令与参数</value>
   </data>
   <data name="Localserver_WorkingDirLabel.Text" xml:space="preserve">
-    <value>WORKING DIR</value>
+    <value>工作目录</value>
   </data>
   <data name="Localserver_ColName.Text" xml:space="preserve">
-    <value>NAME</value>
+    <value>服务名称</value>
   </data>
   <data name="Localserver_ColPort.Text" xml:space="preserve">
-    <value>PORT</value>
+    <value>端口</value>
   </data>
   <data name="Localserver_ColState.Text" xml:space="preserve">
-    <value>STATE</value>
+    <value>状态</value>
   </data>
   <data name="Localserver_ColUptime.Text" xml:space="preserve">
-    <value>UPTIME</value>
+    <value>运行时间</value>
   </data>
   <data name="Localserver_ColCpu.Text" xml:space="preserve">
     <value>CPU</value>
   </data>
   <data name="Localserver_ColMem.Text" xml:space="preserve">
-    <value>MEM</value>
+    <value>内存</value>
   </data>
   <data name="Localserver_ColPid.Text" xml:space="preserve">
-    <value>PID</value>
+    <value>进程 ID</value>
   </data>
   <data name="Localserver_StatusLabel.Text" xml:space="preserve">
-    <value>Status:</value>
+    <value>状态:</value>
   </data>
   <data name="Localserver_ConfigName.Text" xml:space="preserve">
-    <value>NAME</value>
+    <value>服务名称</value>
   </data>
   <data name="Localserver_ConfigCommand.Text" xml:space="preserve">
-    <value>COMMAND</value>
+    <value>启动命令</value>
   </data>
   <data name="Localserver_ConfigArguments.Text" xml:space="preserve">
-    <value>ARGUMENTS</value>
+    <value>参数</value>
   </data>
   <data name="Localserver_ConfigWorkingDir.Text" xml:space="preserve">
-    <value>WORKING DIR</value>
+    <value>工作目录</value>
   </data>
   <data name="Localserver_ConfigPort.Text" xml:space="preserve">
-    <value>PORT</value>
+    <value>端口</value>
   </data>
   <data name="Localserver_ConfigResolvedCommand.Text" xml:space="preserve">
-    <value>RESOLVED COMMAND</value>
+    <value>解析后命令</value>
   </data>
   <data name="Localserver_ExpandConfigTooltip" xml:space="preserve">
     <value>展开配置详情</value>
@@ -1073,10 +1076,10 @@
     <value>停止链路后方可修改参数</value>
   </data>
   <data name="Localserver_OutputHeader.Text" xml:space="preserve">
-    <value>OUTPUT</value>
+    <value>运行日志</value>
   </data>
   <data name="Localserver_LogFollowToggle.Content" xml:space="preserve">
-    <value>Follow</value>
+    <value>跟踪滚动</value>
   </data>
   <data name="Localserver_LogFollowTooltip" xml:space="preserve">
     <value>保持滚动到最新行</value>
@@ -1106,12 +1109,12 @@
     <value>选择在环境面板中展示的链路</value>
   </data>
   <data name="Localserver_SessionCardTitle.Text" xml:space="preserve">
-    <value>SESSION</value>
+    <value>会话</value>
   </data>
   <data name="Localserver_LogSubtitleFormat" xml:space="preserve">
     <value>{0} · 已显示 {1} 行</value>
   </data>
-  <!-- AI Hub -->
+  
   <data name="General_AiServices.Header" xml:space="preserve">
     <value>AI 服务</value>
   </data>
@@ -1124,18 +1127,7 @@
   <data name="AiHub_BackToSettings.Content" xml:space="preserve">
     <value>返回设置</value>
   </data>
-  <data name="AiHub.ModuleTitle" xml:space="preserve">
-    <value>AI Hub</value>
-  </data>
-  <data name="AiHub.ModuleDescription" xml:space="preserve">
-    <value>为 Kit 插件提供共享 AI 任务、独立内核与经过校验的分析建议。</value>
-  </data>
-  <data name="AiHub_EnableSettingsCard.Header" xml:space="preserve">
-    <value>启用 AI Hub</value>
-  </data>
-  <data name="AiHub_EnableSettingsCard.Description" xml:space="preserve">
-    <value>允许插件通过下方配置的端点提交 AI 任务。</value>
-  </data>
+
   <data name="AiHub_KernelSettingsGroup.Header" xml:space="preserve">
     <value>AI 内核与运行时</value>
   </data>
@@ -1173,13 +1165,37 @@
     <value>保存策略</value>
   </data>
   <data name="AiHub_ResetPolicyButton.Content" xml:space="preserve">
-    <value>重置为默认</value>
+    <value>恢复默认值</value>
+  </data>
+  <data name="AIHub.ModuleTitle" xml:space="preserve">
+    <value>AI 智能中心</value>
+  </data>
+  <data name="AIHub.ModuleDescription" xml:space="preserve">
+    <value>分析系统安全事件与执行安全受控的系统优化。</value>
+  </data>
+  <data name="AIHub_EnableSettingsCard.Header" xml:space="preserve">
+    <value>启用 AI 智能中心</value>
+  </data>
+  <data name="AIHub_EnableSettingsCard.Description" xml:space="preserve">
+    <value>分析 Windows 事件日志评估安全运行健康，并在严格安全策略边界下执行系统优化清理。</value>
+  </data>
+  <data name="AiHub_EssentialPolicyCard.Header" xml:space="preserve">
+    <value>基础任务策略</value>
+  </data>
+  <data name="AiHub_EssentialPolicyCard.Description" xml:space="preserve">
+    <value>配置安全审计与系统优化的核心任务策略及全局安全边界</value>
+  </data>
+  <data name="AiHub_ResetAuditPolicyButton.Content" xml:space="preserve">
+    <value>恢复默认值</value>
+  </data>
+  <data name="AiHub_ResetOptimizationPolicyButton.Content" xml:space="preserve">
+    <value>恢复默认值</value>
   </data>
   <data name="AiHub_PipelineCard.Header" xml:space="preserve">
-    <value>任务管线</value>
+    <value>AI Hub 执行链路</value>
   </data>
   <data name="AiHub_PipelineCard.Description" xml:space="preserve">
-    <value>插件策略 → 输入脱敏 → 主／备用端点 → 输出校验</value>
+    <value>Codex / Pi → 安全策略 + 专有 agents.md → 分析摘要 → 建议操作</value>
   </data>
   <data name="AiHub_KernelRuntime.Header" xml:space="preserve">
     <value>所选内核的安装状态</value>
@@ -1275,7 +1291,7 @@
     <value>备用端点</value>
   </data>
   <data name="AiHub_ClearFallbackButton.Content" xml:space="preserve">
-    <value>清空备用端点</value>
+    <value>清除</value>
   </data>
   <data name="AiHub_CancelButton.Content" xml:space="preserve">
     <value>取消</value>
@@ -1522,5 +1538,46 @@
   </data>
   <data name="General_OpenLogsFolderText.Text" xml:space="preserve">
     <value>打开文件夹</value>
+  </data>
+<data name="General.ModuleTitle" xml:space="preserve"><value>常规</value></data><data name="Awake.SecondaryLinksHeader" xml:space="preserve"><value>鸣谢</value></data><data name="Awake_ExpirationSettingsExpander.Description" xml:space="preserve"><value>保持自定义唤醒状态直到特定日期和时间</value></data><data name="Dashboard_SortBy.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>对实用工具排序</value></data><data name="General.ModuleDescription" xml:space="preserve"><value>Kit 是一个用于对比行为、测试针对性改进以及与官方 PowerToys 并行运行选定实用工具的工作区。</value></data><data name="General.SecondaryLinksHeader" xml:space="preserve"><value>相关信息</value></data><data name="GeneralPage_CheckForUpdates.Content" xml:space="preserve"><value>检查更新</value></data><data name="GeneralPage_EnableExperimentation.Description" xml:space="preserve"><value>仅限 Windows 预览体验成员版本可选择实验功能</value></data><data name="GeneralPage_EnableExperimentation.Header" xml:space="preserve"><value>允许尝试新功能</value></data><data name="GeneralPage_EnableQuickAccess.Header" xml:space="preserve"><value>快速访问浮出控件</value></data><data name="GeneralPage_EnableQuickAccess.Description" xml:space="preserve"><value>快速使用快捷操作和模块开关</value></data><data name="GeneralPage_QuickAccessShortcut.Header" xml:space="preserve"><value>激活快捷键</value></data><data name="GeneralPage_RestartAsAdmin_Button.Content" xml:space="preserve"><value>以管理员身份重启 Kit</value></data><data name="GeneralPage_RunAtStartUp.Header" xml:space="preserve"><value>开机自启动</value></data><data name="GeneralPage_RunAtStartUp.Description" xml:space="preserve"><value>Kit 将在系统启动时自动运行</value></data><data name="GeneralPage_ToggleSwitch_AlwaysRunElevated_Link.Content" xml:space="preserve"><value>了解有关管理员模式的详细信息</value></data><data name="GeneralPage_ViewRelease.Content" xml:space="preserve"><value>查看版本</value></data><data name="GeneralPage_WarningsElevatedApps.Content" xml:space="preserve"><value>与提升权限的应用程序并存时显示功能问题警告</value></data><data name="GeneralSettings_AlwaysRunAsAdminText.Description" xml:space="preserve"><value>仅在以管理员身份运行时可更改此设置</value></data><data name="General_CheckingForUpdates.Text" xml:space="preserve"><value>正在检查更新...</value></data><data name="General_Experimentation.Header" xml:space="preserve"><value>实验性功能</value></data><data name="General_SettingsBackupAndRestore.Header" xml:space="preserve"><value>备份和还原设置</value></data><data name="General_SettingsBackupAndRestore.Description" xml:space="preserve"><value>如果需要，Kit 将自动重启</value></data><data name="General_SettingsBackupAndRestoreLocationText.Header" xml:space="preserve"><value>位置</value></data><data name="General_SettingsBackupAndRestoreStatusInfo.Header" xml:space="preserve"><value>备份信息</value></data><data name="General_SettingsBackupAndRestoreTitle.Header" xml:space="preserve"><value>备份与还原</value></data><data name="General_SettingsBackupAndRestore_ButtonBackup.Content" xml:space="preserve"><value>备份</value></data><data name="General_SettingsBackupAndRestore_ButtonRestore.Content" xml:space="preserve"><value>还原</value></data><data name="General_SettingsBackupAndRestore_ButtonSelectFolder.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>选择文件夹</value></data><data name="General_SettingsBackupAndRestore_ButtonSelectLocation.Text" xml:space="preserve"><value>选择文件夹</value></data><data name="General_SettingsBackupAndRestore_LinkRefresh.Text" xml:space="preserve"><value>刷新</value></data><data name="General_SettingsBackupInfo_DateHeader.Text" xml:space="preserve"><value>创建时间:</value></data><data name="General_SettingsBackupInfo_FileNameHeader.Text" xml:space="preserve"><value>文件名:</value></data><data name="General_SettingsBackupInfo_SourceHeader.Text" xml:space="preserve"><value>来源计算机:</value></data><data name="General_SettingsBackupInfo_StatusHeader.Text" xml:space="preserve"><value>状态:</value></data><data name="General_VersionAndUpdate.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>版本与更新</value></data><data name="General_VersionLastChecked.Text" xml:space="preserve"><value>上次检查时间: </value></data><data name="LearnMore_Awake.Text" xml:space="preserve"><value>了解有关保持唤醒的详细信息</value></data><data name="LearnMore_LightSwitch.Text" xml:space="preserve"><value>了解有关深浅切换的详细信息</value></data><data name="LightSwitch_ApplyDarkModeExpander.Description" xml:space="preserve"><value>选择计算机的哪些部分遵循深浅切换</value></data><data name="LightSwitch_AppsCheckbox.Description" xml:space="preserve"><value>受支持的应用程序</value></data><data name="LightSwitch_FindLocation.Text" xml:space="preserve"><value>检测位置</value></data><data name="LightSwitch_FindLocationAutomation.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>检测位置</value></data><data name="LightSwitch_FollowNightLightCardMessage.Text" xml:space="preserve"><value>遵循夜间模式设置。</value></data><data name="LightSwitch_LatitudeBox.Header" xml:space="preserve"><value>纬度</value></data><data name="LightSwitch_LocationDialog.Title" xml:space="preserve"><value>选择位置</value></data><data name="LightSwitch_LocationDialog.PrimaryButtonText" xml:space="preserve"><value>保存</value></data><data name="LightSwitch_LocationDialog.SecondaryButtonText" xml:space="preserve"><value>取消</value></data><data name="LightSwitch_LocationDialog_Description.Text" xml:space="preserve"><value>自动检测您的位置或手动输入，以计算日出和日落时间。</value></data><data name="LightSwitch_LocationSettingsCard.Description" xml:space="preserve"><value>用于自动计算准确的日出和日落时间</value></data><data name="LightSwitch_LocationWarningBar.Title" xml:space="preserve"><value>需要位置信息</value></data><data name="LightSwitch_LocationWarningBar.Message" xml:space="preserve"><value>同步您的位置，以便深浅切换计算准确的日出与日落时间</value></data><data name="LightSwitch_LongitudeBox.Header" xml:space="preserve"><value>经度</value></data><data name="LightSwitch_NightLightSettingsButton.Content" xml:space="preserve"><value>个性化您的夜间模式设置。</value></data><data name="LightSwitch_OffsetSettingsCard.Description" xml:space="preserve"><value>通过提前或推迟开始时间调整触发时间</value></data><data name="LightSwitch_SunriseText.Text" xml:space="preserve"><value>日出</value></data><data name="LightSwitch_SunriseTooltip.Text" xml:space="preserve"><value>日出</value></data><data name="LightSwitch_SunsetText.Text" xml:space="preserve"><value>日落</value></data><data name="LightSwitch_SunsetTooltip.Text" xml:space="preserve"><value>日落</value></data><data name="LightSwitch_SystemCheckbox.Description" xml:space="preserve"><value>任务栏、开始菜单及其他系统界面</value></data><data name="ReleaseNotes.Content" xml:space="preserve"><value>发行说明</value></data><data name="SearchResults_ModulesTitle.Header" xml:space="preserve"><value>模块</value></data><data name="SearchResults_NoResultsDescription.Text" xml:space="preserve"><value>请尝试不同的搜索词</value></data><data name="SearchResults_NoResultsHeader.Text" xml:space="preserve"><value>无搜索结果</value></data><data name="SearchResults_Title.ModuleTitle" xml:space="preserve"><value>搜索结果</value></data><data name="SecondaryLink_Awake.Text" xml:space="preserve"><value>Den Delimarsky 创建 Awake 的成果</value></data><data name="ShowThemeAdaptiveTrayIcon.Content" xml:space="preserve"><value>显示与 Windows 主题匹配的单色托盘图标</value></data><data name="StartupAndPermissions.Header" xml:space="preserve"><value>启动与权限</value></data><data name="Windows_Color_Settings.Content" xml:space="preserve"><value>Windows 颜色设置</value></data><data name="AiHub_MainEndpoint_UrlCard.Header" xml:space="preserve"><value>端点 URL</value></data><data name="AiHub_MainEndpoint_ApiKeyCard.Header" xml:space="preserve"><value>API 密钥</value></data><data name="AiHub_MainEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve"><value>请输入 API 密钥</value></data><data name="AiHub_MainEndpoint_ApiModeCard.Header" xml:space="preserve"><value>API 模式</value></data><data name="AiHub_MainEndpoint_ModelCard.Header" xml:space="preserve"><value>模型</value></data><data name="AiHub_MainEndpoint_ReasoningCard.Header" xml:space="preserve"><value>思考强度</value></data><data name="AiHub_ClearFallbackCard.Header" xml:space="preserve"><value>清除备用端点</value></data><data name="AiHub_Pipeline_Step1.Text" xml:space="preserve"><value>Codex / Pi</value></data><data name="AiHub_Pipeline_Step2.Text" xml:space="preserve"><value>安全策略 + agents.md</value></data><data name="AiHub_Pipeline_Step3.Text" xml:space="preserve"><value>分析摘要</value></data><data name="AiHub_Pipeline_Step4.Text" xml:space="preserve"><value>建议操作</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Header" xml:space="preserve"><value>全局安全策略</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Description" xml:space="preserve"><value>全局安全策略 (security.md) 及 AI 执行边界</value></data><data name="AiHub_GlobalSecurityBoundaryCard.Header" xml:space="preserve"><value>全局安全基线 (security.md)</value></data><data name="AiHub_PolicyFilePathCard.Header" xml:space="preserve"><value>策略文件路径</value></data><data name="AiHub_EssentialPolicyExpander.Header" xml:space="preserve"><value>基础任务策略</value></data><data name="AiHub_EssentialPolicyExpander.Description" xml:space="preserve"><value>安全审计与系统优化的专有任务策略 (AGENTS.md)</value></data><data name="AiHub_SecurityAuditCard.Header" xml:space="preserve"><value>安全审计</value></data><data name="AiHub_OptimizationCard.Header" xml:space="preserve"><value>系统优化</value></data><data name="Localserver_AdoptedBadge.Text" xml:space="preserve"><value>接管</value></data><data name="General_LogLevelTrace.Content" xml:space="preserve"><value>跟踪 (详细)</value></data><data name="General_LogLevelDebug.Content" xml:space="preserve"><value>调试</value></data><data name="General_LogLevelInfo.Content" xml:space="preserve"><value>信息</value></data><data name="General_LogLevelWarning.Content" xml:space="preserve"><value>警告</value></data><data name="General_LogLevelError.Content" xml:space="preserve"><value>错误</value></data><data name="UDPtest_StatusLabel.Text" xml:space="preserve"><value>状态:</value></data><data name="UDPtest_ConfigNameLabel.Text" xml:space="preserve"><value>目标名称</value></data><data name="UDPtest_ConfigNameInput.PlaceholderText" xml:space="preserve"><value>例如 Cloudflare，新加坡</value></data><data name="UDPtest_ConfigKindLabel.Text" xml:space="preserve"><value>协议类型</value></data><data name="UDPtest_ConfigKindStun.Content" xml:space="preserve"><value>STUN (绑定探测)</value></data><data name="UDPtest_ConfigKindEcho.Content" xml:space="preserve"><value>ECHO (UDP 反射)</value></data><data name="UDPtest_ConfigEndpointLabel.Text" xml:space="preserve"><value>端点地址</value></data><data name="UDPtest_ConfigPortLabel.Text" xml:space="preserve"><value>解析端口</value></data><data name="UDPtest_DeleteButtonText.Text" xml:space="preserve"><value>删除</value></data><data name="UDPtest_DeleteDialogTitle.Text" xml:space="preserve"><value>删除此 UDP 线路？</value></data><data name="UDPtest_DeleteDialogMessage.Text" xml:space="preserve"><value>该目标将从您的监控列表中永久移除。</value></data><data name="UDPtest_DeleteDialogConfirm.Content" xml:space="preserve"><value>确认删除</value></data><data name="UDPtest_SaveButtonText.Text" xml:space="preserve"><value>保存</value></data><data name="UDPtest_StartButtonText.Text" xml:space="preserve"><value>启动</value></data><data name="UDPtest_StopButtonText.Text" xml:space="preserve"><value>停止</value></data><data name="UDPtest_SamplingInterval.Text" xml:space="preserve"><value>采样间隔</value></data><data name="UDPtest_AddLinkButtonText.Text" xml:space="preserve"><value>添加 UDP 线路</value></data><data name="UDPtest_HealthLabel.Text" xml:space="preserve"><value>健康度</value></data><data name="UDPtest_ConditionLabel.Text" xml:space="preserve"><value>状态评估</value></data><data name="UDPtest_RealtimeLabel.Text" xml:space="preserve"><value>实时指标</value></data><data name="UDPtest_QualityLabel.Text" xml:space="preserve"><value>网络质量</value></data><data name="UDPtest_AvgRttLabel.Text" xml:space="preserve"><value>平均时延</value></data><data name="UDPtest_PeakRttLabel.Text" xml:space="preserve"><value>峰值时延</value></data><data name="UDPtest_PeriodAvgLabel.Text" xml:space="preserve"><value>周期均值</value></data><data name="UDPtest_RttTrendLabel.Text" xml:space="preserve"><value>时延趋势</value></data><data name="UDPtest_NoSamplesLabel.Text" xml:space="preserve"><value>此时间段内暂无采样</value></data><data name="UDPtest_UdpAssessmentLabel.Text" xml:space="preserve"><value>UDP 评估</value></data><data name="UDPtest_TcpBaselineLabel.Text" xml:space="preserve"><value>TCP 基准</value></data><data name="UDPtest_CurrentPathLabel.Text" xml:space="preserve"><value>当前链路</value></data><data name="UDPtest_PublicIpLabel.Text" xml:space="preserve"><value>公网 IP</value></data><data name="UDPtest_LocationLabel.Text" xml:space="preserve"><value>地理位置</value></data><data name="UDPtest_NatTypeLabel.Text" xml:space="preserve"><value>NAT 类型</value></data><data name="UDPtest_LocalRouteLabel.Text" xml:space="preserve"><value>本地路由</value></data><data name="UDPtest_ColTarget.Text" xml:space="preserve"><value>目标</value></data><data name="UDPtest_ColPort.Text" xml:space="preserve"><value>端口</value></data><data name="UDPtest_ColAvgRtt.Text" xml:space="preserve"><value>平均时延</value></data><data name="UDPtest_ColJitter.Text" xml:space="preserve"><value>抖动</value></data><data name="UDPtest_ColQuality.Text" xml:space="preserve"><value>质量</value></data><data name="UDPtest_ColOkFail.Text" xml:space="preserve"><value>成功 / 失败</value></data><data name="UDPtest_ColHttpIp.Text" xml:space="preserve"><value>HTTP IP</value></data><data name="UDPtest_ColUdpIp.Text" xml:space="preserve"><value>UDP IP</value></data><data name="UDPtest_ColLastError.Text" xml:space="preserve"><value>最近错误</value></data><data name="UDPtest_ColOn.Text" xml:space="preserve"><value>启用</value></data><data name="UDPtest_ColActions.Text" xml:space="preserve"><value>操作</value></data><data name="AllAppsTxt.Text" xml:space="preserve"><value>所有应用</value></data><data name="BackBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>返回</value></data><data name="BackLabel.Text" xml:space="preserve"><value>返回</value></data><data name="ConfigureShortcutText.Text" xml:space="preserve"><value>分配快捷键</value></data><data name="ConfigureShortcut" xml:space="preserve"><value>配置快捷键</value></data><data name="DocsBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>文档</value></data><data name="DocsTooltip.Text" xml:space="preserve"><value>文档</value></data><data name="GPOWarning.Text" xml:space="preserve"><value>此设置由组织策略管理</value></data><data name="GPO_SettingIsManaged.Title" xml:space="preserve"><value>此设置由组织策略管理。</value></data><data name="GeneralVersion.Text" xml:space="preserve"><value>版本</value></data><data name="General_OpenLogsFolderButton.Content" xml:space="preserve"><value>打开日志文件夹</value></data><data name="InvalidShortcut.Message" xml:space="preserve"><value>无效快捷键</value></data><data name="InvalidShortcutWarningLabel.Text" xml:space="preserve"><value>快捷键应以 Windows 徽标键、Ctrl、Alt 或 Shift 开头。</value></data><data name="MoreBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>更多</value></data><data name="MoreLabel.Text" xml:space="preserve"><value>更多</value></data><data name="NewInfoBadge.Text" xml:space="preserve"><value>新增</value></data><data name="QuickAccessTxt.Text" xml:space="preserve"><value>快速访问</value></data><data name="SettingsBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>设置</value></data><data name="SettingsPage_NewInfoBadge.Text" xml:space="preserve"><value>新增</value></data><data name="SettingsTooltip.Text" xml:space="preserve"><value>设置</value></data><data name="ShortcutConflictControl_Automation.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>快捷键冲突</value></data><data name="ShortcutConflictControl_Title.Text" xml:space="preserve"><value>快捷键冲突</value></data><data name="ShortcutConflictWindow_Description.Text" xml:space="preserve"><value>如果检测到快捷键冲突，将在此显示。冲突可能发生在 Kit 实用工具之间或与 Windows 系统快捷键之间。如果一切按预期运行，您可以忽略该冲突。</value></data><data name="ShortcutConflictWindow_IgnoreShortcut.Content" xml:space="preserve"><value>忽略冲突</value></data><data name="ShortcutConflictWindow_ModulesUsingShortcut.Text" xml:space="preserve"><value>冲突</value></data><data name="ShortcutConflictWindow_NoConflictsDescription.Text" xml:space="preserve"><value>所有快捷键均正常工作</value></data><data name="ShortcutConflictWindow_NoConflictsTitle.Text" xml:space="preserve"><value>未检测到冲突</value></data><data name="ShortcutConflictWindow_SystemCard.Header" xml:space="preserve"><value>系统快捷键</value></data><data name="ShortcutConflictWindow_SystemCard.Description" xml:space="preserve"><value>此快捷键已被 Windows 保留，无法重新分配。</value></data><data name="ShortcutConflictWindow_SystemShortcutLink.Content" xml:space="preserve"><value>查看所有 Windows 快捷键</value></data><data name="ShortcutConflictWindow_TitleTxt.Title" xml:space="preserve"><value>Kit 快捷键冲突</value></data><data name="ShortcutConflictWindow_Title" xml:space="preserve"><value>Kit 快捷键冲突</value></data><data name="Shortcut_Clear.Text" xml:space="preserve"><value>清除</value></data><data name="Shortcut_ClearBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>清除快捷键</value></data><data name="Shortcut_ClearToolTip.Text" xml:space="preserve"><value>清除并取消分配此快捷键</value></data><data name="Shortcut_Conflict_LearnMore.Content" xml:space="preserve"><value>了解详细信息</value></data><data name="Shortcut_Reset.Text" xml:space="preserve"><value>重置</value></data><data name="Shortcut_ResetBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>重置快捷键</value></data><data name="Shortcut_ResetToolTip.Text" xml:space="preserve"><value>重置为默认快捷键</value></data><data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>清除当前选定线路的时延采样历史</value></data><data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>编辑线路配置</value></data><data name="UpdateAvailableInfoBar.Title" xml:space="preserve"><value>有可用更新</value></data><data name="UpdateAvailableTextBlock.Text" xml:space="preserve"><value>有可用更新</value></data><data name="WarningPotentialShortcutConflict.Message" xml:space="preserve"><value>此快捷键存在潜在冲突，但警告已被忽略。</value></data><data name="WarningShortcutAltGr.Message" xml:space="preserve"><value>可能与 Alt Gr 产生快捷键干扰</value></data><data name="WarningShortcutAltGr.ToolTipService.ToolTip" xml:space="preserve"><value>包含 Ctrl 和 Alt 的快捷键可能会在某些国际键盘布局上造成功能冲突。</value></data><data name="YoureUpToDate.Text" xml:space="preserve"><value>已是最新版本</value></data><data name="GeneralSettings_RunningAsAdminText" xml:space="preserve"><value>以管理员身份运行</value></data><data name="GeneralSettings_RunningAsUserText" xml:space="preserve"><value>以普通用户身份运行</value></data><data name="General_LastCheckedDate_TodayAt" xml:space="preserve"><value>今天 {0}</value></data><data name="General_LastCheckedDate_YesterdayAt" xml:space="preserve"><value>昨天 {0}</value></data><data name="Activation_Shortcut_With_Disable_Description" xml:space="preserve"><value>按一组组合键更改此快捷键。
+右键单击可移除按键组合，从而停用该快捷键。</value></data><data name="InAppHotkeyConflictTooltipText" xml:space="preserve"><value>此快捷键已被另一个实用工具占用。</value></data><data name="SysHotkeyConflictTooltipText" xml:space="preserve"><value>此快捷键已被默认系统快捷键占用。</value></data><data name="LightSwitch_LocationError_Timeout" xml:space="preserve"><value>无法连接到定位服务。请重试或手动输入坐标。</value></data><data name="LightSwitch_LocationError_Unavailable" xml:space="preserve"><value>定位服务不可用。请手动输入坐标。</value></data><data name="Search_ResultsFor" xml:space="preserve"><value>搜索结果：</value></data><data name="Shell_NavigationMenu_Announce_Collapse" xml:space="preserve"><value>导航栏已折叠</value></data><data name="Shell_NavigationMenu_Announce_Open" xml:space="preserve"><value>导航栏已展开</value></data><data name="ShortcutConflictControl_MultipleConflictsFound" xml:space="preserve"><value>发现 {0} 个冲突</value></data><data name="ShortcutConflictControl_NoConflictsFound" xml:space="preserve"><value>未发现冲突</value></data><data name="ShortcutConflictControl_SingleConflictFound" xml:space="preserve"><value>发现 1 个冲突</value></data>
+  <data name="AiHub_SecurityAuditTabItem.Content" xml:space="preserve">
+    <value>安全审计</value>
+  </data>
+  <data name="AiHub_OptimizationTabItem.Content" xml:space="preserve">
+    <value>系统优化</value>
+  </data>
+  <data name="AiHub_SaveAuditPolicyButton.Content" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="AiHub_AuditAgentsExpander.Header" xml:space="preserve">
+    <value>AGENTS.md 详情</value>
+  </data>
+  <data name="AiHub_SaveOptimizationPolicyButton.Content" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="AiHub_PolicyRulesExpander.Header" xml:space="preserve">
+    <value>策略规则</value>
+  </data>
+  <data name="AiHub_PolicyRulesExpander.Description" xml:space="preserve">
+    <value>全局安全策略与专有任务指令 (security.md 与 AGENTS.md)</value>
+  </data>
+  <data name="AiHub_PolicyRulesHeader.Text" xml:space="preserve">
+    <value>策略规则</value>
+  </data>
+  <data name="AiHub_PolicyRulesDescription.Text" xml:space="preserve">
+    <value>全局安全策略与专有任务指令 (security.md 与 AGENTS.md)</value>
+  </data>
+  <data name="AiHub_GlobalSecurityPolicyCard.Header" xml:space="preserve">
+    <value>全局安全策略</value>
+  </data>
+  <data name="AiHub_Segment_GlobalPolicy.Content" xml:space="preserve">
+    <value>全局安全策略</value>
+  </data>
+  <data name="AiHub_Segment_SecurityAudit.Content" xml:space="preserve">
+    <value>安全审计</value>
+  </data>
+  <data name="AiHub_Segment_Optimization.Content" xml:space="preserve">
+    <value>系统优化</value>
   </data>
 </root>

@@ -1,0 +1,7 @@
+#include <windows.h>
+#include "resource.h"
+
+STRINGTABLE
+BEGIN
+    IDS_AIHUB_NAME "AI Hub"
+END

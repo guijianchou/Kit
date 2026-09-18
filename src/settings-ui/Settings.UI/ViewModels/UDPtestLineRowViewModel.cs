@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Kit.Settings.UI.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using UDPtestLib.Core;
@@ -17,6 +18,8 @@ namespace Kit.Settings.UI.ViewModels
 {
     public sealed class UDPtestLineRowViewModel : INotifyPropertyChanged
     {
+        private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+
         private int _recentBarCapacity = 240;
 
         private ProbeLineDefinition _definition;
@@ -29,7 +32,7 @@ namespace Kit.Settings.UI.ViewModels
         private string _ipAddress = "--";
         private string _ipAddressDescription = string.Empty;
         private string _lastError = "--";
-        private string _lastErrorDisplay = "Last error: --";
+        private string _lastErrorDisplay = IsChinese ? "最近错误: --" : "Last error: --";
         private string _status = "Idle";
         private Brush _statusBrush;
         private Visibility _statusVisibility = Visibility.Collapsed;
@@ -53,7 +56,7 @@ namespace Kit.Settings.UI.ViewModels
         {
             _definition = definition;
             _isEnabled = definition.IsEnabled;
-            _statusBrush = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+            _statusBrush = ThemeBrushHelper.SecondaryTextBrush;
 
             ResetEditFields();
         }
@@ -126,7 +129,7 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public string ToggleLabel => $"Toggle {Name}";
+        public string ToggleLabel => IsChinese ? $"切换 {Name}" : $"Toggle {Name}";
 
         public string AverageRtt
         {
@@ -215,8 +218,21 @@ namespace Kit.Settings.UI.ViewModels
             {
                 _status = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(DisplayStatus));
             }
         }
+
+        public string DisplayStatus => IsChinese ? _status switch
+        {
+            "OK" => "正常",
+            "DEGRADED" => "劣化",
+            "DOWN" => "离线",
+            "Warming" => "预热中",
+            "Idle" => "空闲",
+            "Stopped" => "已停止",
+            "Internal Error" => "内部错误",
+            _ => _status,
+        } : _status;
 
         public Brush StatusBrush
         {
@@ -380,9 +396,18 @@ namespace Kit.Settings.UI.ViewModels
 
         private void UpdateEditCapability()
         {
-            EditCapabilityText = _editKindIndex == 1
-                ? "Outbound echo reflection"
-                : "NAT evaluation + Public IP detection";
+            if (IsChinese)
+            {
+                EditCapabilityText = _editKindIndex == 1
+                    ? "出站回显反射"
+                    : "NAT 评估与公网 IP 检测";
+            }
+            else
+            {
+                EditCapabilityText = _editKindIndex == 1
+                    ? "Outbound echo reflection"
+                    : "NAT evaluation + Public IP detection";
+            }
         }
 
         private void ValidateEdit()
@@ -390,7 +415,7 @@ namespace Kit.Settings.UI.ViewModels
             ProbeKind kind = _editKindIndex == 1 ? ProbeKind.UdpEcho : ProbeKind.StunBinding;
             if (string.IsNullOrWhiteSpace(_editName))
             {
-                ValidationErrorMessage = "Target name cannot be empty.";
+                ValidationErrorMessage = IsChinese ? "目标名称不能为空。" : "Target name cannot be empty.";
                 CanSave = false;
                 EditPortText = "--";
                 return;
@@ -400,7 +425,7 @@ namespace Kit.Settings.UI.ViewModels
             {
                 ValidationErrorMessage = error;
                 CanSave = false;
-                EditPortText = "Invalid port";
+                EditPortText = IsChinese ? "端口无效" : "Invalid port";
                 return;
             }
 
@@ -463,21 +488,25 @@ namespace Kit.Settings.UI.ViewModels
 
             string? ip = snapshot.RemoteIpv4;
             IpAddress = !string.IsNullOrEmpty(ip) ? ip : "--";
-            IpAddressDescription = !string.IsNullOrEmpty(ip) ? $"Remote endpoint: {ip}" : "Not resolved";
+            IpAddressDescription = !string.IsNullOrEmpty(ip)
+                ? (IsChinese ? $"远端节点: {ip}" : $"Remote endpoint: {ip}")
+                : (IsChinese ? "未解析" : "Not resolved");
 
             string? error = snapshot.LastError;
             LastError = !string.IsNullOrEmpty(error) ? error : "--";
-            LastErrorDisplay = string.IsNullOrEmpty(error) || error == "--" ? "Last error: --" : $"Last error: {FormatErrorDisplay(error)}";
+            LastErrorDisplay = string.IsNullOrEmpty(error) || error == "--"
+                ? (IsChinese ? "最近错误: --" : "Last error: --")
+                : (IsChinese ? $"最近错误: {FormatErrorDisplay(error)}" : $"Last error: {FormatErrorDisplay(error)}");
 
             Status = snapshot.State;
 
             StatusBrush = snapshot.State switch
             {
-                "OK" => (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"],
-                "DEGRADED" => (Brush)Application.Current.Resources["SystemFillColorCautionBrush"],
-                "DOWN" => (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
-                "Warming" => (Brush)Application.Current.Resources["SystemFillColorAttentionBrush"],
-                _ => (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                "OK" => ThemeBrushHelper.SuccessBrush,
+                "DEGRADED" => ThemeBrushHelper.CautionBrush,
+                "DOWN" => ThemeBrushHelper.CriticalBrush,
+                "Warming" => ThemeBrushHelper.AttentionBrush,
+                _ => ThemeBrushHelper.SecondaryTextBrush,
             };
         }
 
@@ -525,7 +554,7 @@ namespace Kit.Settings.UI.ViewModels
             LastError = "--";
             LastErrorDisplay = "Last error: --";
             Status = "Idle";
-            StatusBrush = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+            StatusBrush = ThemeBrushHelper.SecondaryTextBrush;
             RecentBars.Clear();
         }
 

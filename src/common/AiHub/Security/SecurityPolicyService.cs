@@ -60,7 +60,36 @@ public sealed class SecurityPolicyService
         {
             _files.WriteAtomic("security.md", EncodePolicy(GetDefaultPolicyContent()), MaximumPolicyBytes);
         }
+
+        EnsureTaskDefaultPolicy("security-audit", TaskPolicyDefaults.DefaultSecurityAuditInstructions);
+        EnsureTaskDefaultPolicy("system-optimization", TaskPolicyDefaults.DefaultSystemOptimizationInstructions);
     });
+
+    private void EnsureTaskDefaultPolicy(string taskId, string defaultContent)
+    {
+        string path = GetTaskPolicyPath(taskId);
+        bool shouldUpdate = !File.Exists(path);
+        if (!shouldUpdate && taskId.Equals("security-audit", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Length < 2500)
+                {
+                    shouldUpdate = true;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        if (shouldUpdate)
+        {
+            string relativePath = Path.Combine("chains", taskId, "AGENTS.md");
+            _files.WriteAtomic(relativePath, EncodePolicy(defaultContent), MaximumPolicyBytes);
+        }
+    }
 
     public Task<string> LoadGlobalPolicyAsync(CancellationToken cancellationToken = default) =>
         Task.Run(() => _files.Run(LoadGlobalPolicyUnlocked, cancellationToken), cancellationToken);
@@ -79,11 +108,40 @@ public sealed class SecurityPolicyService
     public void ResetGlobalPolicy() =>
         _files.Run(() => _files.WriteAtomic("security.md", EncodePolicy(GetDefaultPolicyContent()), MaximumPolicyBytes));
 
+    public string GetTaskPolicyPath(string taskId) =>
+        _files.GetPath(Path.Combine("chains", taskId, "AGENTS.md"));
+
     public Task<string> LoadTaskSecurityPolicyAsync(string pluginId, string taskId, CancellationToken cancellationToken = default) =>
         LoadTaskPolicyAsync(pluginId, taskId, "security.md", cancellationToken);
 
     public Task<string> LoadTaskAgentsPolicyAsync(string pluginId, string taskId, CancellationToken cancellationToken = default) =>
         LoadTaskPolicyAsync(pluginId, taskId, "AGENTS.md", cancellationToken);
+
+    public Task SaveTaskPolicyAsync(string taskId, string content, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ValidateId(taskId, nameof(taskId));
+        string relativePath = Path.Combine("chains", taskId, "AGENTS.md");
+        return Task.Run(() => _files.Run(
+            () => _files.WriteAtomic(relativePath, EncodePolicy(content), MaximumPolicyBytes),
+            cancellationToken), cancellationToken);
+    }
+
+    public void ResetTaskPolicy(string taskId)
+    {
+        ValidateId(taskId, nameof(taskId));
+        string defaultContent = taskId.Equals("security-audit", StringComparison.OrdinalIgnoreCase)
+            ? TaskPolicyDefaults.DefaultSecurityAuditInstructions
+            : taskId.Equals("system-optimization", StringComparison.OrdinalIgnoreCase)
+                ? TaskPolicyDefaults.DefaultSystemOptimizationInstructions
+                : string.Empty;
+
+        if (!string.IsNullOrEmpty(defaultContent))
+        {
+            string relativePath = Path.Combine("chains", taskId, "AGENTS.md");
+            _files.Run(() => _files.WriteAtomic(relativePath, EncodePolicy(defaultContent), MaximumPolicyBytes));
+        }
+    }
 
     private Task<string> LoadTaskPolicyAsync(string pluginId, string taskId, string fileName, CancellationToken cancellationToken)
     {
@@ -100,8 +158,44 @@ public sealed class SecurityPolicyService
                 throw new InvalidDataException("The AI Hub task policy path is invalid.");
             }
 
+            // Only built-in AI Hub plugin checks user-customized policy in the data directory
+            if (pluginId.Equals("aihub", StringComparison.OrdinalIgnoreCase) || pluginId.Equals("kit", StringComparison.OrdinalIgnoreCase))
+            {
+                string userPath = _files.GetPath(Path.Combine("chains", taskId, fileName));
+                if (File.Exists(userPath))
+                {
+                    byte[]? userBytes = AiHubStorageFiles.ReadOptionalFile(userPath, MaximumPolicyBytes);
+                    if (userBytes is not null)
+                    {
+                        return DecodePolicy(userBytes);
+                    }
+                }
+            }
+
             byte[]? bytes = AiHubStorageFiles.ReadOptionalFile(candidate, MaximumPolicyBytes);
-            return bytes is null ? string.Empty : DecodePolicy(bytes);
+            if (bytes is not null)
+            {
+                return DecodePolicy(bytes);
+            }
+
+            // Fallback to built-in default instructions for AI Hub built-in tasks
+            if (pluginId.Equals("aihub", StringComparison.OrdinalIgnoreCase) || pluginId.Equals("kit", StringComparison.OrdinalIgnoreCase))
+            {
+                if (fileName.Equals("AGENTS.md", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (taskId.Equals("security-audit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return TaskPolicyDefaults.DefaultSecurityAuditInstructions;
+                    }
+
+                    if (taskId.Equals("system-optimization", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return TaskPolicyDefaults.DefaultSystemOptimizationInstructions;
+                    }
+                }
+            }
+
+            return string.Empty;
         }, cancellationToken), cancellationToken);
     }
 

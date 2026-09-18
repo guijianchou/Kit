@@ -19,6 +19,7 @@ namespace Common.UI
             LightSwitch,
             Localserver,
             UDPtest,
+            AIHub,
         }
 
         private static string SettingsWindowNameToString(SettingsWindow value)
@@ -37,6 +38,8 @@ namespace Common.UI
                     return "Localserver";
                 case SettingsWindow.UDPtest:
                     return "UDPtest";
+                case SettingsWindow.AIHub:
+                    return "AIHub";
                 default:
                     {
                         return string.Empty;

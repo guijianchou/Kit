@@ -249,24 +249,26 @@ public sealed class RouteDispatcher
                 try
                 {
                     string relative = Path.GetRelativePath(_requestRoot, requestDirectory);
-                    if (relative.Length != 40 || !relative.StartsWith("request-", StringComparison.Ordinal) ||
-                        Path.GetFileName(relative) != relative || !Guid.TryParseExact(relative.AsSpan(8), "N", out _))
+                    if (relative.Length == 40 && relative.StartsWith("request-", StringComparison.Ordinal) &&
+                        Path.GetFileName(relative) == relative && Guid.TryParseExact(relative.AsSpan(8), "N", out _))
                     {
-                        result = Failure(AiErrorCode.ExecutionFailed);
+                        DeleteDirectorySafe(requestDirectory);
                     }
                     else
                     {
-                        AiHubStorageFiles.EnsureNoReparsePoints(requestDirectory);
-                        Directory.Delete(requestDirectory, recursive: true);
+                        result = Failure(AiErrorCode.ExecutionFailed);
                     }
                 }
                 catch (DirectoryNotFoundException)
                 {
                     // Nothing remains to clean up.
                 }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                catch (Exception)
                 {
-                    result = Failure(AiErrorCode.ExecutionFailed);
+                    if (!result.IsSuccess)
+                    {
+                        result = Failure(AiErrorCode.ExecutionFailed);
+                    }
                 }
             }
 
@@ -275,6 +277,29 @@ public sealed class RouteDispatcher
 
         return cancellationToken.IsCancellationRequested ? Failure(AiErrorCode.Cancelled)
             : deadline.IsCancellationRequested ? Failure(AiErrorCode.Timeout) : result;
+    }
+
+    private static void DeleteDirectorySafe(string path)
+    {
+        AiHubStorageFiles.EnsureNoReparsePoints(path);
+        try
+        {
+            foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
+                catch
+                {
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        Directory.Delete(path, recursive: true);
     }
 
     private static async Task ConfigureProcessAsync(

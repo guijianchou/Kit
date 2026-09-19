@@ -4,6 +4,13 @@
 > **当前 Kit 版本**：2.2.1；活动模块：Awake、LightSwitch、Localserver、UDPtest、AIHub（前两者为官方插件，本清单不展开）。
 > **原版对照**：AIHub ← `../Locals`（LocalSecurityAudit）、Localserver ← `../Localserver`（LocalServerHub）、UDPtest ← `../Network`（NetworkMonitor）。
 > **可信度说明**：所有论断均经源码验证，证据带文件/行号；历轮 9 处更正已在正文按"更正后"表述呈现，更正留痕汇总于 §7。
+>
+> **执行进度（fix 分支）**：
+> - ✅ **P0-1 AI 深度分析接线**（commit cd13179）——新增 `AiHubAuditAnalysisService`（事件→security-audit 策略链→校验回的 issues）+ 页面"AI 深度分析"按钮与 AI 报告面板；引擎侧契约 `EventAnalysisInput`/`AuditIssueContainer` 本已存在。
+> - ✅ **P0-3 Security/Firewall 通道**（commit 727e288）——`EventLogService.AuditMode`（Extended/Full）+ Security/Firewall 通道（显式 ID 白名单、16-ID XPath 分块）+ `CanReadSecurityLog` 探针 + 设置项与提权感知 UI。
+> - ✅ 顺带完成 §2.1 扫描范围硬编码本地化、§2.2 `SelectedScopeIndex` 死代码删除、§6 文档失实修正（Monitor/3 模块/不存在文件）。
+> - ⏳ 待办：P0-2 Worker 化、P1 面板迁移与数据真实性、P2/P3。
+> - 验证：`Kit.Settings` 编译 0 错误；`Kit.AiHub.UnitTests` 112 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
 
 ## 目录
 - §0 总体评估

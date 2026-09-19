@@ -97,7 +97,8 @@
 
 ### 2.3 活动统计/审计时间造假（P1）
 - `ActivityScansText` 写死 `"1"`（:892）；审计时间写"今天"（:896）——UI 显示的不是真实历史。
-- 修复：活动统计改用 AuditHistoryStorage 的真实历史（含审计时间标签）。
+- ✅ **已修复**（commit a428e4e）：活动统计改用 `AuditHistoryStorage` 的真实历史（新增 `AuditHistoryStatistics`：审计次数/活跃天数/均分/发现数）。
+- **新发现（评分权重的实际语义）**：低危单条实际扣 **2 分**（`Math.Ceiling(1.5*1)=2`），非 README 所述 1 分；中危 6 分、高危 15 分，封顶分别 25/60/15——已在 `HealthScoreCalculatorTests` 固化。
 
 ### 2.4 巨型 VM + 规则引擎下沉（P2）
 - AIHubPageViewModel 1852 行、GeneralViewModel 59KB、UDPtestViewModel 42KB、LocalserverViewModel 92KB——规则/数据/命令全在一个类。
@@ -105,6 +106,7 @@
 
 ### 2.5 审计与对话框细节（P1）
 - 11 个 catch 中仅 3 处空（:258/:296/:1478），其余有 UI 反馈（更正：非"大量空 catch"）；fire-and-forget 1 处（:902 `_ = SaveHistoryAsync(...)`）。
+- ✅ **已修复**（commit a428e4e）：剩余空 catch（AI Hub 启用状态与页签持久化）已改为记录日志的失败分支。
 - FindingDetailsDialog 无 AI 报告区（并入 1.2 修复）。
 
 ### 2.6 优化执行（P1）

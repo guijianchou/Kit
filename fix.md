@@ -18,7 +18,8 @@
 > - ✅ **P1 补测试**：新增 HealthScoreCalculator(7)、DownloadOrganizerService(4)、AuditHistoryStatistics(4)、AuditHistoryStorage(6)、EventLogService(4)、AuditSchedule(10)、OptimizationOutcome(8)——AIHub 套件 108 → 151 项。
 > - ⏳ 待办：**P0-2 Worker 化**（结构性：需新建 worker 项目 + 原生 enable() 拉起 + IPC + 解决方案/测试注册）、P1 AI 面板迁移（受 AiHubSettingsTests:84-104 断言约束）、P2 本地化 x:Uid 全量替换。
 > - 验证：`Kit.Settings` 编译 0 错误；`Kit.vcxproj` 编译并链接 Kit.exe 成功；`Kit.AiHub.UnitTests` 151 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
-> - 构建注记（本机沙箱）：需 `/p:TrackFileAccess=false`；原生项目用 `Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）。
+> - 构建注记（本机沙箱）：需 `/p:TrackFileAccess=false`；原生项目用 `Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）；`dotnet test` 因命名管道受限改用测试 exe 直接运行。
+> - 环境限制（非回归）：`Localserver.UnitTests` 的 7 项中有 6 项失败——这些用例通过 `Process.Start` 启动**真实子进程**验证服务生命周期（进程树回收/优雅停机/关闭后恢复/就绪取消），而本机沙箱限制子进程创建（`ServiceLifecycleTests.cs:173/:272`）。已确认 `git diff main..fix` 中**不含任何 Localserver 文件**，故与本次改动无关；需在无沙箱环境复跑确认。
 
 ## 目录
 - §0 总体评估

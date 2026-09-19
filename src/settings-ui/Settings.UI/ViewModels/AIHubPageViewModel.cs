@@ -292,8 +292,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     new AiHubSettingsStore().Update(c => c.IsEnabled = value);
                     AiHubEngine.RaiseStateChanged();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.LogError("Failed to persist the AI Hub enabled state", ex);
                 }
 
                 OnPropertyChanged();
@@ -330,8 +331,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     var snd = new SndAIHubSettings(_moduleSettingsRepository.SettingsConfig);
                     _ipcSendMethod(snd.ToJsonString());
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.LogError("Failed to persist the AI Hub tab selection", ex);
                 }
             }
         }
@@ -976,6 +978,33 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public System.Collections.ObjectModel.ObservableCollection<AiReportFinding> AiReportFindings => _aiReportFindings;
 
     /// <summary>
+    /// Persists an audit result and refreshes the dashboard activity counters from the
+    /// stored history (never from hardcoded values).
+    /// </summary>
+    private async Task SaveHistoryAndRefreshStatisticsAsync(AuditResult result)
+    {
+        try
+        {
+            int retentionDays = _moduleSettingsRepository.SettingsConfig.Properties.RetentionDays.Value;
+            await _auditHistoryStorage.SaveHistoryAsync(result, retentionDays).ConfigureAwait(false);
+            AuditHistoryStatistics statistics = await _auditHistoryStorage.GetStatisticsAsync().ConfigureAwait(false);
+            EnqueueOnUI(() => ApplyStatistics(statistics));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Failed to persist AI Hub audit history", ex);
+        }
+    }
+
+    /// <summary>Projects stored history statistics onto the activity counters.</summary>
+    private void ApplyStatistics(AuditHistoryStatistics statistics)
+    {
+        ActivityScansText = statistics.AuditCountText;
+        ActiveDaysText = statistics.ActiveDayCountText;
+        HealthAverageText = statistics.AverageHealthScoreText;
+    }
+
+    /// <summary>
     /// Sends the audited events to the sandboxed "security-audit" AI chain and
     /// surfaces the advisory issues in the Security Audit tab.
     /// </summary>
@@ -1133,17 +1162,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         _ => IsChinese ? "最近 1 天" : "Past 1 day",
                     };
                     EventCountText = IsChinese ? $"{events.Count} 事件" : $"{events.Count} events";
-                    ActivityScansText = "1";
                     ActivityFindingsText = issues.Count.ToString(CultureInfo.InvariantCulture);
-                    ActiveDaysText = "1";
-                    HealthAverageText = score.ToString(CultureInfo.InvariantCulture);
                     SelectedAuditLabel = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                     SelectedAuditDate = DateTimeOffset.Now;
 
                     RebuildSections();
 
-                    // Save history
-                    _ = _auditHistoryStorage.SaveHistoryAsync(new AuditResult
+                    // Save history, then derive the activity counters from what is stored
+                    // so scan/active-day/average figures reflect the real history.
+                    _ = SaveHistoryAndRefreshStatisticsAsync(new AuditResult
                     {
                         Timestamp = DateTime.UtcNow,
                         HealthScore = score,
@@ -1684,6 +1711,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             try
             {
+                AuditHistoryStatistics statistics = await _auditHistoryStorage.GetStatisticsAsync().ConfigureAwait(false);
+                EnqueueOnUI(() => ApplyStatistics(statistics));
+
                 var history = await _auditHistoryStorage.LoadLatestHistoryAsync();
                 if (history != null && history.Findings.Count > 0)
                 {
@@ -1713,10 +1743,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         FinishedText = history.Timestamp.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture);
                         WindowText = IsChinese ? "全时段" : "All times";
                         EventCountText = IsChinese ? $"{history.Findings.Count} 发现项" : $"{history.Findings.Count} findings";
-                        ActivityScansText = "1";
                         ActivityFindingsText = history.Findings.Count.ToString(CultureInfo.InvariantCulture);
-                        ActiveDaysText = "1";
-                        HealthAverageText = HealthScore.ToString(CultureInfo.InvariantCulture);
                         SelectedAuditLabel = history.Timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                         SelectedAuditDate = history.Timestamp.ToLocalTime();
 
@@ -1724,8 +1751,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.LogError("Failed to load the most recent AI Hub audit snapshot", ex);
             }
         });
     }

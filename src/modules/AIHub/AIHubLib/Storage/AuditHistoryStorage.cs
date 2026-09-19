@@ -62,6 +62,18 @@ public sealed class AuditHistoryStorage
         }
     }
 
+    /// <summary>
+    /// Aggregated statistics over the retained history. The dashboard consumes these
+    /// instead of hardcoded placeholders, so every counter reflects stored audits.
+    /// </summary>
+    public AuditHistoryStatistics GetStatistics()
+    {
+        var history = LoadHistory();
+        return AuditHistoryStatistics.From(history);
+    }
+
+    public Task<AuditHistoryStatistics> GetStatisticsAsync() => Task.Run(GetStatistics);
+
     public Task<AuditResult?> LoadLatestHistoryAsync()
     {
         return Task.Run(() =>

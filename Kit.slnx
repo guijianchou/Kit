@@ -126,6 +126,9 @@
     <Project Path="src/modules/AIHub/AIHubLib/Kit.AIHubLib.csproj">
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/modules/AIHub/AIHubWorker/AIHubWorker.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/modules/AIHub/AIHubModuleInterface/AIHubModuleInterface.vcxproj" Id="e47b9f55-263a-4c8d-9015-8f9e67a639cf" />
   </Folder>
   <Folder Name="/modules/LightSwitch/">

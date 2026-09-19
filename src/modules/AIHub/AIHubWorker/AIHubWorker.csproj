@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless audit host for AI Hub. It runs the scheduled rule-based audit
+       without a Settings window, so the cadence survives the UI closing. -->
+  <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
+  <Import Project="$(RepoRoot)src\Common.Dotnet.AotCompatibility.props" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <AssemblyName>Kit.AIHubWorker</AssemblyName>
+    <RootNamespace>Kit.AIHubWorker</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <UseWinUI>false</UseWinUI>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\AIHubWorker\</OutDir>
+    <NoWarn>$(NoWarn);SA0001;SA1200;SA1201;SA1202;SA1309;SA1402;SA1516;SA1600;SA1633;SA1649;CA1861;CA1305;CA1303</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\common\ManagedCommon\ManagedCommon.csproj" />
+    <ProjectReference Include="..\..\..\common\AiHub\Kit.AiHub.csproj" />
+    <ProjectReference Include="..\AIHubLib\Kit.AIHubLib.csproj" />
+  </ItemGroup>
+</Project>

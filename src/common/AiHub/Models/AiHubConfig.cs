@@ -12,6 +12,9 @@ public sealed partial class AiHubConfig : ObservableObject
     private bool _isEnabled;
     private string _selectedKernel = AiKernelCatalog.Codex;
     private int _maxConcurrentAnalysis = 2;
+    private int _scanIntervalHours;
+    private int _auditModeIndex;
+    private int _retentionDays = 30;
     private ObservableCollection<AiTargetSettings> _targets = new();
 
     public bool IsEnabled
@@ -30,6 +33,33 @@ public sealed partial class AiHubConfig : ObservableObject
     {
         get => _maxConcurrentAnalysis;
         set => SetProperty(ref _maxConcurrentAnalysis, value);
+    }
+
+    /// <summary>
+    /// Scheduled audit cadence in hours; 0 disables scheduling.
+    /// </summary>
+    /// <remarks>
+    /// Lives here rather than only in the Settings model so a headless host can read the
+    /// cadence without loading the UI settings assembly.
+    /// </remarks>
+    public int ScanIntervalHours
+    {
+        get => _scanIntervalHours;
+        set => SetProperty(ref _scanIntervalHours, value);
+    }
+
+    /// <summary>Audit mode: 0 = extended (standard privileges), 1 = full (elevated).</summary>
+    public int AuditModeIndex
+    {
+        get => _auditModeIndex;
+        set => SetProperty(ref _auditModeIndex, value);
+    }
+
+    /// <summary>Audit history retention in days.</summary>
+    public int RetentionDays
+    {
+        get => _retentionDays;
+        set => SetProperty(ref _retentionDays, value);
     }
 
     public ObservableCollection<AiTargetSettings> Targets
@@ -53,7 +83,10 @@ public sealed partial class AiHubConfig : ObservableObject
         {
             IsEnabled = false,
             SelectedKernel = AiKernelCatalog.Codex,
-            MaxConcurrentAnalysis = 2
+            MaxConcurrentAnalysis = 2,
+            ScanIntervalHours = 0,
+            AuditModeIndex = 0,
+            RetentionDays = 30,
         };
 
         config.Targets.Add(new AiTargetSettings

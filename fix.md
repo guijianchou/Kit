@@ -24,7 +24,9 @@
 > - ✅ **P2 面板本地化补齐**（commit 12efc13）——AI 面板中缺失 `x:Uid` 的可见文案（内核徽标、Codex/Pi 选项）补齐 resw 键与中文翻译；审计确认 **AIHubPage 31/31 个 x:Uid 均有资源覆盖**（协议标识类枚举值保持字面量）。
 > - ✅ **P2/P0-2 无头审计链路**（commit 9febf37）——新增 `AuditPipeline`（采集→分类→评分→持久化，含窗口/模式/上限/retention/不落盘选项）与 `AuditScheduler`（由 `AuditSchedule` 驱动的节奏循环、增量窗口、运行时间隔调整、启停与释放）；**审计路径已完全脱离页面**，就绪于无头宿主。
 >   - **提取过程发现并修复真实竞态**：`AuditScheduler.Start()` 在循环字段赋值前检查 `IsRunning`，两次快速调用会启动两个循环；改为锁内守卫（`Start`/`StopAsync` 同锁），修复后 11 项测试连续 3 轮全绿。
-> - ⏳ 待办：AIHub 调度宿主接入（`AuditScheduler` 已就绪，剩原生 `enable()` 拉起 + 设置读取）；UDPtest 经核实**不需要 Worker**（见 §8.3 说明）。
+> - ✅ **P0-2 AIHub Worker**（commit 74f292f）——新增 `Kit.AIHubWorker`（`--pid`/`--data-dir` 契约、父进程存活监视、**每 tick 重读设置并 fail-closed**，关闭开关即停调度无需重启）+ `AIHubConfig` 扩展 `ScanIntervalHours`/`AuditModeIndex`/`RetentionDays`（使无头宿主无需加载 UI 程序集即可读取节奏）+ 原生 `enable()` 拉起 / `disable()` 停止；注册进 `Kit.slnx`，部署至 `x64/Debug/AIHubWorker`。
+>   - **P0-2 结论：两个真正需要的插件均已完成**——Localserver（常驻服务监督）+ AIHub（定时审计）；UDPtest 经核实为显式 Start/Stop 模型，无守护缺口，**不适用**（见 §8.3）。
+> - ⏳ 待办：P2 本地化 x:Uid 的**可行部分**（静态标签）——需先区分静态文案与运行时插值字符串（后者无法用 x:Uid 表达，属技术不可行而非未做）。
 > - **P0-2 适用性结论**：UDPtest 的探测按用户显式 Start/Stop 运行，页面无导航钩子（`UDPtestPage.xaml.cs` 无 `OnNavigatedFrom`），停止探测是原版"显式 Start/Stop"设计的延续，**不构成需要常驻监督的缺口**；Localserver（已做）与 AIHub 定时审计才是真正的"服务存活但失去守护"场景。
 > - 验证：`Kit.Settings` 编译 0 错误；`Kit.vcxproj` 编译并链接 Kit.exe 成功；`Kit.AiHub.UnitTests` 151 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
 > - 构建注记（本机沙箱）：需 `/p:TrackFileAccess=false`；原生项目用 `Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）；`dotnet test` 因命名管道受限改用测试 exe 直接运行。

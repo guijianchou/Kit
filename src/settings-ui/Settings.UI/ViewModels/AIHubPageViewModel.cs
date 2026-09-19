@@ -157,6 +157,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly SecurityPolicyService _securityService = new();
     private readonly ObservableCollection<AiReportFinding> _aiReportFindings = new();
     private readonly List<SecurityEvent> _lastAuditEvents = new();
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _scheduleTimer;
+    private DateTime? _lastCompletedAuditUtc;
 
     private CancellationTokenSource _currentCts;
     private bool _disposed;
@@ -251,6 +253,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         SelectAllCandidatesCommand = new RelayCommand(SelectAllCandidates, () => HasCandidates && !_isOptimizing);
         DeselectAllCandidatesCommand = new RelayCommand(DeselectAllCandidates, () => HasCandidates && !_isOptimizing);
         ExecuteOptimizationCommand = new RelayCommand(RunExecuteOptimization, () => CanExecuteOptimization);
+
+        // Scheduled audits: check every few minutes whether the configured cadence is due.
+        _scheduleTimer = _dispatcherQueue.CreateTimer();
+        _scheduleTimer.Interval = TimeSpan.FromMinutes(5);
+        _scheduleTimer.Tick += (_, _) => RunScheduledAuditIfDue();
 
         // Load cached audit history
         LoadRecentAudit();
@@ -978,6 +985,102 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public System.Collections.ObjectModel.ObservableCollection<AiReportFinding> AiReportFindings => _aiReportFindings;
 
     /// <summary>
+    /// Scheduled audit interval in hours. 0 disables scheduling.
+    /// </summary>
+    public int ScanIntervalHours
+    {
+        get => _moduleSettingsRepository.SettingsConfig.Properties.ScanIntervalHours.Value;
+        set
+        {
+            int normalized = AuditSchedule.NormalizeIntervalHours(value);
+            if (_moduleSettingsRepository.SettingsConfig.Properties.ScanIntervalHours.Value == normalized)
+            {
+                return;
+            }
+
+            _moduleSettingsRepository.SettingsConfig.Properties.ScanIntervalHours.Value = normalized;
+            OnPropertyChanged(nameof(ScanIntervalHours));
+            OnPropertyChanged(nameof(IsSchedulingEnabled));
+            OnPropertyChanged(nameof(ScheduleSummaryText));
+
+            try
+            {
+                var snd = new SndAIHubSettings(_moduleSettingsRepository.SettingsConfig);
+                _ipcSendMethod(snd.ToJsonString());
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to persist the AI Hub scan interval", ex);
+            }
+
+            UpdateScheduleTimerState();
+        }
+    }
+
+    public bool IsSchedulingEnabled => AuditSchedule.IsSchedulingEnabled(ScanIntervalHours);
+
+    /// <summary>Explains the current schedule state for the settings UI.</summary>
+    public string ScheduleSummaryText
+    {
+        get
+        {
+            if (!IsSchedulingEnabled)
+            {
+                return IsChinese ? "已关闭：仅在手动触发时审计" : "Off: audits run only when triggered manually";
+            }
+
+            DateTime now = DateTime.UtcNow;
+            DateTime? next = AuditSchedule.NextRunUtc(_lastCompletedAuditUtc, now, ScanIntervalHours);
+            string cadence = IsChinese ? $"每 {ScanIntervalHours} 小时" : $"Every {ScanIntervalHours} h";
+
+            return next is null
+                ? cadence
+                : (IsChinese
+                    ? $"{cadence} · 下次约 {next.Value.ToLocalTime():MM-dd HH:mm}"
+                    : $"{cadence} · next around {next.Value.ToLocalTime():MM-dd HH:mm}");
+        }
+    }
+
+    /// <summary>Starts or stops the scheduler timer to match the configured cadence.</summary>
+    private void UpdateScheduleTimerState()
+    {
+        EnqueueOnUI(() =>
+        {
+            if (IsEnabled && IsSchedulingEnabled)
+            {
+                _scheduleTimer.Start();
+            }
+            else
+            {
+                _scheduleTimer.Stop();
+            }
+
+            OnPropertyChanged(nameof(ScheduleSummaryText));
+        });
+    }
+
+    /// <summary>
+    /// Runs an audit when the configured cadence is due. Skips when a scan is already
+    /// running, when the module is disabled, or when AI Hub scheduling is off.
+    /// </summary>
+    private void RunScheduledAuditIfDue()
+    {
+        if (!IsEnabled || !IsSchedulingEnabled || IsAuditing || _disposed)
+        {
+            return;
+        }
+
+        if (!AuditSchedule.IsDue(_lastCompletedAuditUtc, DateTime.UtcNow, ScanIntervalHours))
+        {
+            OnPropertyChanged(nameof(ScheduleSummaryText));
+            return;
+        }
+
+        Logger.LogInfo("AI Hub scheduled audit is due; starting an incremental run.");
+        RunAudit(fast: false);
+    }
+
+    /// <summary>
     /// Persists an audit result and refreshes the dashboard activity counters from the
     /// stored history (never from hardcoded values).
     /// </summary>
@@ -1112,7 +1215,16 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 int maxEvents = fast ? 250 : 2000;
                 var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
-                var events = await _eventLogService.CollectEventsAsync(DateTime.UtcNow - scope, DateTime.UtcNow, auditMode, maxEvents, token);
+
+                // Continue from the previous scan when it falls inside the selected range,
+                // so repeated runs re-read only the new tail instead of the whole period.
+                DateTime nowUtc = DateTime.UtcNow;
+                (DateTime windowFrom, DateTime windowTo) = fast
+                    ? (nowUtc - scope, nowUtc)
+                    : AuditSchedule.ComputeWindow(_lastCompletedAuditUtc, nowUtc, scope);
+                bool incremental = !fast && AuditSchedule.IsIncremental(_lastCompletedAuditUtc, nowUtc, scope);
+
+                var events = await _eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, token);
 
                 // Retain the raw events so AI deep analysis can send the same evidence.
                 lock (_lastAuditEvents)
@@ -1151,9 +1263,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     // Update Verdict & Health Summary
                     UpdateHealthSummary(score, HighCount, MediumCount, LowCount);
+                    OnPropertyChanged(nameof(ScheduleSummaryText));
 
                     // Update Scan Details & Activity
-                    ScanTypeText = fast ? (IsChinese ? "快速扫描" : "Fast scan") : (IsChinese ? "全量审计" : "Full scan");
+                    _lastCompletedAuditUtc = DateTime.UtcNow;
+                    ScanTypeText = fast
+                        ? (IsChinese ? "快速扫描" : "Fast scan")
+                        : incremental
+                            ? (IsChinese ? "增量审计" : "Incremental audit")
+                            : (IsChinese ? "全量审计" : "Full scan");
                     FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
                     WindowText = fast ? (IsChinese ? "最近 1 小时" : "Past 1 hour") : _selectedScopeIndex switch
                     {
@@ -2122,6 +2240,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         if (!_disposed)
         {
             _disposed = true;
+            _scheduleTimer.Stop();
             _currentCts?.Cancel();
             _currentCts?.Dispose();
         }

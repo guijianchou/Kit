@@ -13,6 +13,7 @@ namespace Kit.Settings.UI.Library
             RetentionDays = new IntProperty(30);
             ActiveTabIndex = new IntProperty(0);
             AuditMode = new IntProperty(0);
+            ScanIntervalHours = new IntProperty(0);
         }
 
         [JsonPropertyName("retentionDays")]
@@ -27,5 +28,12 @@ namespace Kit.Settings.UI.Library
         /// </summary>
         [JsonPropertyName("auditMode")]
         public IntProperty AuditMode { get; set; }
+
+        /// <summary>
+        /// Scheduled audit interval in hours. 0 disables scheduling; otherwise the audit
+        /// re-runs on this cadence using an incremental window.
+        /// </summary>
+        [JsonPropertyName("scanIntervalHours")]
+        public IntProperty ScanIntervalHours { get; set; }
     }
 }

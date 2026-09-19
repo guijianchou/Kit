@@ -34,6 +34,7 @@ namespace Kit.Settings.UI.Library
                     RetentionDays = new IntProperty(Properties.RetentionDays.Value),
                     ActiveTabIndex = new IntProperty(Properties.ActiveTabIndex.Value),
                     AuditMode = new IntProperty(Properties.AuditMode.Value),
+                    ScanIntervalHours = new IntProperty(Properties.ScanIntervalHours.Value),
                 },
             };
         }

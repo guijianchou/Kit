@@ -9,8 +9,16 @@
 > - ✅ **P0-1 AI 深度分析接线**（commit cd13179）——新增 `AiHubAuditAnalysisService`（事件→security-audit 策略链→校验回的 issues）+ 页面"AI 深度分析"按钮与 AI 报告面板；引擎侧契约 `EventAnalysisInput`/`AuditIssueContainer` 本已存在。
 > - ✅ **P0-3 Security/Firewall 通道**（commit 727e288）——`EventLogService.AuditMode`（Extended/Full）+ Security/Firewall 通道（显式 ID 白名单、16-ID XPath 分块）+ `CanReadSecurityLog` 探针 + 设置项与提权感知 UI。
 > - ✅ 顺带完成 §2.1 扫描范围硬编码本地化、§2.2 `SelectedScopeIndex` 死代码删除、§6 文档失实修正（Monitor/3 模块/不存在文件）。
-> - ⏳ 待办：P0-2 Worker 化、P1 面板迁移与数据真实性、P2/P3。
-> - 验证：`Kit.Settings` 编译 0 错误；`Kit.AiHub.UnitTests` 112 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
+> - ✅ **P1 数据真实性**（commit a428e4e）——新增 `AuditHistoryStatistics`（审计次数/活跃天数/均分/发现数），替换页面上写死的 "1"/"1"；清除剩余 2 处空 catch（启用状态与页签持久化改为记录日志）。
+> - ✅ **P1 优化执行可观测性**（commit da87835）——新增 `OptimizationOutcome`：保留失败原因（此前回收站 helper 的错误被丢弃、异常被吞成计数），批量执行显示 (n/N) 进度，失败时列出文件名与原因并降级为 Warning。
+> - ✅ **P1 定时/增量审计**（commit 4257aaf）——新增 `AuditSchedule`（间隔校验/到期判定/下次运行/扫描窗口），设置项 `scanIntervalHours`（0=关闭），页面用 DispatcherQueueTimer 到期触发、增量窗口续扫（含重叠与范围钳制），标注"增量审计"。
+> - ✅ **P2 存储**（commit 8514b4f）——审计历史上限 200 条（原仅按天数，无上限）；`AuditHistoryStorage` 从反射 JSON 改为源生成上下文（移除该文件唯一 IL3050 AOT 警告）。
+> - ✅ **P2/P3 文档与残留**（commit e0976ae）：补写缺失的 `src/modules/UDPtest/README.md`（含与原版 Network 的 SQLite 差距表）；修复 `.claude/CLAUDE.md` 指向不存在的 `.github/`；补齐悬空 resw 键 `Admin_Mode_Running_As`。
+> - ✅ **P3 残留**（commit 13220a6）：`settings_window.cpp` 的 `powertoys_pipe_name` 变量重命名为 `runner_pipe_name`（值为 kit_runner_，行为不变）。
+> - ✅ **P1 补测试**：新增 HealthScoreCalculator(7)、DownloadOrganizerService(4)、AuditHistoryStatistics(4)、AuditHistoryStorage(6)、EventLogService(4)、AuditSchedule(10)、OptimizationOutcome(8)——AIHub 套件 108 → 151 项。
+> - ⏳ 待办：**P0-2 Worker 化**（结构性：需新建 worker 项目 + 原生 enable() 拉起 + IPC + 解决方案/测试注册）、P1 AI 面板迁移（受 AiHubSettingsTests:84-104 断言约束）、P2 本地化 x:Uid 全量替换。
+> - 验证：`Kit.Settings` 编译 0 错误；`Kit.vcxproj` 编译并链接 Kit.exe 成功；`Kit.AiHub.UnitTests` 151 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
+> - 构建注记（本机沙箱）：需 `/p:TrackFileAccess=false`；原生项目用 `Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）。
 
 ## 目录
 - §0 总体评估

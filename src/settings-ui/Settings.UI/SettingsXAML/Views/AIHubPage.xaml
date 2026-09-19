@@ -196,11 +196,20 @@
                                         </Button>
                                         <ComboBox Width="76" Height="32" SelectedIndex="{x:Bind ViewModel.FullScanRangeIndex, Mode=TwoWay}"
                                                   ToolTipService.ToolTip="{x:Bind ViewModel.FullScanRangeHint, Mode=OneWay}">
-                                            <ComboBoxItem Content="1d" />
-                                            <ComboBoxItem Content="2d" />
-                                            <ComboBoxItem Content="1w" />
+                                            <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1DayLabel, Mode=OneWay}" />
+                                            <ComboBoxItem Content="{x:Bind ViewModel.RangeOption2DaysLabel, Mode=OneWay}" />
+                                            <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1WeekLabel, Mode=OneWay}" />
                                         </ComboBox>
-                                        <Button Height="32" Padding="8,0" ToolTipService.ToolTip="Scan options">
+                                        <Button Height="32" Padding="12,0" Command="{x:Bind ViewModel.DeepAnalyzeCommand}"
+                                                AutomationProperties.AutomationId="AIHub_DeepAnalyzeButton"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint, Mode=OneWay}">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                                <ProgressRing IsActive="{x:Bind ViewModel.IsAiAnalyzing, Mode=OneWay}" Width="14" Height="14" />
+                                                <FontIcon Glyph="&#xE9D9;" FontSize="12" />
+                                                <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel, Mode=OneWay}" FontSize="13" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Height="32" Padding="8,0" ToolTipService.ToolTip="{x:Bind ViewModel.ScanOptionsLabel, Mode=OneWay}">
                                             <FontIcon Glyph="&#xE712;" FontSize="14" />
                                             <Button.Flyout>
                                                 <MenuFlyout>
@@ -460,6 +469,42 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+
+
+                                <!-- AI deep-analysis report (produced by the configured Codex/Pi kernel) -->
+                                <Border Margin="0,4,0,0" Padding="14,12" CornerRadius="6"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                        Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <StackPanel Spacing="10">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <FontIcon Glyph="&#xE9D9;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiReportSummaryText, Mode=OneWay}"
+                                                       Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.AiReportMetaText, Mode=OneWay}"
+                                                       Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.AiReportFindings, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="viewModels:AiReportFinding">
+                                                    <Border Margin="0,0,0,8" Padding="10,8" CornerRadius="4"
+                                                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock Text="{x:Bind Title}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                                            <TextBlock Text="{x:Bind SeverityLabel}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                                            <TextBlock Text="{x:Bind Recommendation}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
 
                             <!-- ============================================================== -->
                             <!-- TAB 2: OPTIMIZATION (1:1 MATCHING SCREENSHOT)                  -->

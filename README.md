@@ -25,10 +25,7 @@ Current Kit version: `2.2.1`.
 - `doc/devdoc/kit-first-plugin.md` — first-module checklist and validation baseline.
 - `doc/devdoc/kit-development-experience.md` — first-phase lessons learned and next stabilization checklist.
 - `doc/devdoc/startup-optimization-analysis.md` — startup optimization analysis (Chinese).
-- `fix.plan` — phased plugin-host plan (repo root).
 - `fix.md` — upstream delta and fix list (repo root).
-- `next.md` — sync progress and upstream-delta checklist (repo root).
-- `fixed.md` — completed fix inventory (repo root).
 - `changelog.md` — changelog (repo root).
 
 
@@ -158,7 +155,7 @@ Near-term work should optimize for predictable builds and low-risk PowerToys com
 
 The latest Home work keeps PowerToys behavior but scopes it to Kit's active modules:
 
-- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake`, `LightSwitch`, `Localserver`, and `UDPtest`, so the Home utility list is fixed and predictable.
+- `DashboardViewModel` uses `KitModuleCatalog.DashboardModules`, currently `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, and `AI Hub`, so the Home utility list is fixed and predictable.
 - `QuickAccessViewModel` still supports actionable Quick Access items, but Home passes the dashboard module list so enabled Kit modules appear consistently.
 - Quick Access first tries the normal launcher. If a module has no direct quick action, Home falls back to opening that module's settings page. `Awake` and `Localserver` use this settings page fallback; `LightSwitch` keeps its direct toggle action.
 - `Awake` contributes a `DashboardModuleActivationItem` that displays the current Awake mode in the Home shortcuts card, using the existing PowerToys dashboard item template.

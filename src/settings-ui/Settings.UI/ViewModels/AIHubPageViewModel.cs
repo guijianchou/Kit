@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
 using Kit.AiHub.Models;
 using Kit.AiHub.Security;
@@ -111,6 +112,34 @@ public sealed class FindingSection : Observable
     }
 }
 
+/// <summary>
+/// One AI-produced advisory finding shown in the Security Audit AI report panel.
+/// The AI engine only ever returns advisory text; no action is executed.
+/// </summary>
+public sealed class AiReportFinding
+{
+    public AiReportFinding(string title, string severityLabel, string description, string recommendation, string eventId)
+    {
+        Title = title;
+        Severity = severityLabel;
+        Description = description;
+        Recommendation = recommendation;
+        EventId = eventId;
+    }
+
+    public string Title { get; }
+
+    public string Severity { get; }
+
+    public string Description { get; }
+
+    public string Recommendation { get; }
+
+    public string EventId { get; }
+
+    public string SeverityLabel => Severity;
+}
+
 public sealed class AIHubPageViewModel : Observable, IDisposable
 {
     private static readonly char[] LineSeparators = ['\r', '\n'];
@@ -126,6 +155,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly RecycleBinHelper _recycleBinHelper = new();
     private readonly AuditHistoryStorage _auditHistoryStorage = new();
     private readonly SecurityPolicyService _securityService = new();
+    private readonly ObservableCollection<AiReportFinding> _aiReportFindings = new();
+    private readonly List<SecurityEvent> _lastAuditEvents = new();
 
     private CancellationTokenSource _currentCts;
     private bool _disposed;
@@ -146,6 +177,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private string _findingSearchText = string.Empty;
     private bool _isAuditing;
     private string _auditStatusText = IsChinese ? "就绪" : "Ready";
+    private bool _isAiAnalyzing;
+    private string _aiStatusText = string.Empty;
+    private bool _hasAiReport;
+    private string _aiReportSummaryText = string.Empty;
+    private string _aiReportMetaText = string.Empty;
 
     private string _healthVerdict = IsChinese ? "系统状态良好 · 多数指标稳定" : "System state healthy · Majority of indicators stable";
     private string _healthSummaryText = IsChinese ? "尚未进行全面事件扫描，点击上方扫描按钮以开始。" : "Comprehensive event scan has not been performed yet. Click scan above to begin.";
@@ -207,6 +243,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         FullScanCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing);
         SelectLatestCommand = new RelayCommand(LoadRecentAudit, () => IsEnabled && !_isAuditing);
         ReanalyzeRangeCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing);
+        DeepAnalyzeCommand = new RelayCommand(RunDeepAnalysis, () => CanRunDeepAnalysis);
 
         ScanAllCommand = new RelayCommand(RunScanAll, () => IsEnabled && !_isOptimizing);
         ScanDownloadsCommand = new RelayCommand(RunScanDownloads, () => IsEnabled && !_isOptimizing);
@@ -367,18 +404,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         private set => Set(ref _auditTimestampText, value);
     }
 
-    public int SelectedScopeIndex
-    {
-        get => _selectedScopeIndex;
-        set
-        {
-            if (Set(ref _selectedScopeIndex, value))
-            {
-                RunAudit(fast: false);
-            }
-        }
-    }
-
+    /// <summary>
+    /// Selected full-scan range: 0 = 1 day, 1 = 2 days, 2 = 1 week.
+    /// </summary>
     public int FullScanRangeIndex
     {
         get => _selectedScopeIndex;
@@ -392,6 +420,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     public string FullScanRangeHint => IsChinese ? "选择全量扫描时间跨度" : "Select full scan time range";
+
+    public string RangeOption1DayLabel => IsChinese ? "1 天" : "1d";
+
+    public string RangeOption2DaysLabel => IsChinese ? "2 天" : "2d";
+
+    public string RangeOption1WeekLabel => IsChinese ? "1 周" : "1w";
+
+    public string ScanOptionsLabel => IsChinese ? "扫描选项" : "Scan options";
 
     public string ReanalyzeRangeHint => IsChinese ? "重新分析选定时段内的日志" : "Reanalyze events in selected range";
 
@@ -453,6 +489,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string FastScanLabel => IsChinese ? "快速扫描" : "Fast scan";
     public string FullScanLabel => IsChinese ? "全量审计" : "Full scan";
     public string ReanalyzeLabel => IsChinese ? "重新分析选定时段" : "Reanalyze selected range";
+
+    /// <summary>Label for the AI deep-analysis action (runs the configured kernel).</summary>
+    public string DeepAnalyzeLabel => IsChinese ? "AI 深度分析" : "AI deep analysis";
+
+    /// <summary>Explains what the deep-analysis action does and when it is unavailable.</summary>
+    public string DeepAnalyzeHint => IsChinese
+        ? "将当前发现（高危优先，最多 12 项）提交给已配置的 AI 内核，按 security-audit 策略生成补充诊断与建议。不会自动执行任何操作。"
+        : "Sends the current findings (highest severity first, up to 12) to the configured AI kernel for supplementary diagnostics under the security-audit policy. No action is executed automatically.";
 
     // Overview Card
     public string HealthOverviewLabel => IsChinese ? "健康总览" : "Health overview";
@@ -655,6 +699,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public ICommand ReanalyzeRangeCommand { get; }
 
+    /// <summary>Runs the configured AI kernel over the highest-severity findings.</summary>
+    public ICommand DeepAnalyzeCommand { get; }
+
     // Optimization Properties (1:1 with Screenshot)
     public bool IsOptimizing
     {
@@ -820,6 +867,137 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
     }
 
+    public bool IsAiAnalyzing
+    {
+        get => _isAiAnalyzing;
+        private set
+        {
+            if (Set(ref _isAiAnalyzing, value))
+            {
+                OnPropertyChanged(nameof(CanRunDeepAnalysis));
+            }
+        }
+    }
+
+    /// <summary>Enables the deep-analysis action only when AI Hub is on and audited events exist.</summary>
+    public bool CanRunDeepAnalysis
+    {
+        get
+        {
+            lock (_lastAuditEvents)
+            {
+                return IsEnabled && !_isAuditing && !_isAiAnalyzing && _lastAuditEvents.Count > 0 && AiHubAuditAnalysisService.IsAvailable;
+            }
+        }
+    }
+
+    public string AiStatusText
+    {
+        get => _aiStatusText;
+        private set => Set(ref _aiStatusText, value);
+    }
+
+    public bool HasAiReport
+    {
+        get => _hasAiReport;
+        private set => Set(ref _hasAiReport, value);
+    }
+
+    public string AiReportSummaryText
+    {
+        get => _aiReportSummaryText;
+        private set => Set(ref _aiReportSummaryText, value);
+    }
+
+    public string AiReportMetaText
+    {
+        get => _aiReportMetaText;
+        private set => Set(ref _aiReportMetaText, value);
+    }
+
+    public System.Collections.ObjectModel.ObservableCollection<AiReportFinding> AiReportFindings => _aiReportFindings;
+
+    /// <summary>
+    /// Sends the audited events to the sandboxed "security-audit" AI chain and
+    /// surfaces the advisory issues in the Security Audit tab.
+    /// </summary>
+    private void RunDeepAnalysis()
+    {
+        if (!CanRunDeepAnalysis)
+        {
+            return;
+        }
+
+        List<SecurityEvent> events;
+        lock (_lastAuditEvents)
+        {
+            events = _lastAuditEvents.ToList();
+        }
+        _aiReportFindings.Clear();
+        HasAiReport = false;
+        IsAiAnalyzing = true;
+        AiStatusText = IsChinese ? "正在请求 AI 深度分析..." : "Requesting AI deep analysis...";
+
+        var progress = new Progress<string>(message => EnqueueOnUI(() => AiStatusText = message));
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                IReadOnlyList<AuditIssue> issues = await AiHubAuditAnalysisService
+                    .AnalyzeEventsAsync(events, progress, CancellationToken.None)
+                    .ConfigureAwait(false);
+
+                EnqueueOnUI(() =>
+                {
+                    if (issues is null)
+                    {
+                        AiStatusText = IsChinese
+                            ? "AI 分析不可用或未返回有效结果。请在“常规 → AI 服务”中确认已启用 AI Hub 并选择内核。"
+                            : "AI analysis unavailable or returned nothing valid. Enable AI Hub and select a kernel under General > AI Services.";
+                        return;
+                    }
+
+                    foreach (AuditIssue issue in issues.OrderByDescending(item => item.Severity == "High").ThenByDescending(item => item.Occurrences))
+                    {
+                        _aiReportFindings.Add(new AiReportFinding(
+                            IsChinese && !string.IsNullOrWhiteSpace(issue.TitleZh) ? issue.TitleZh : issue.Title,
+                            IsChinese && !string.IsNullOrWhiteSpace(issue.RootCauseZh) ? issue.RootCauseZh : issue.RootCause,
+                            IsChinese && !string.IsNullOrWhiteSpace(issue.DescriptionZh) ? issue.DescriptionZh : issue.Description,
+                            IsChinese && !string.IsNullOrWhiteSpace(issue.RecommendationZh) ? issue.RecommendationZh : issue.Recommendation,
+                            $"{issue.Severity} · Event {issue.EventId} · {issue.Occurrences}x"));
+                    }
+
+                    AiReportSummaryText = IsChinese
+                        ? $"AI 深度分析完成：{issues.Count} 项增强发现。"
+                        : $"AI deep analysis completed: {issues.Count} enhanced finding(s).";
+                    AiReportMetaText = IsChinese
+                        ? $"内核 {AiHubEngine.Current.ActiveKernel} · {DateTime.Now:HH:mm:ss}"
+                        : $"Kernel {AiHubEngine.Current.ActiveKernel} · {DateTime.Now:HH:mm:ss}";
+                    HasAiReport = true;
+                    AiStatusText = IsChinese ? "AI 深度分析完成" : "AI deep analysis completed";
+
+                    OnPropertyChanged(nameof(CanRunDeepAnalysis));
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                EnqueueOnUI(() => AiStatusText = IsChinese ? "AI 分析已取消" : "AI analysis cancelled");
+            }
+            catch (Exception ex)
+            {
+                EnqueueOnUI(() =>
+                {
+                    AiStatusText = IsChinese ? $"AI 分析失败：{ex.Message}" : $"AI analysis failed: {ex.Message}";
+                });
+            }
+            finally
+            {
+                EnqueueOnUI(() => IsAiAnalyzing = false);
+            }
+        });
+    }
+
     private void RunAudit(bool fast)
     {
         if (!IsEnabled || IsAuditing)
@@ -847,6 +1025,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 int maxEvents = fast ? 250 : 2000;
                 var events = await _eventLogService.CollectEventsAsync(DateTime.UtcNow - scope, DateTime.UtcNow, maxEvents, token);
+
+                // Retain the raw events so AI deep analysis can send the same evidence.
+                lock (_lastAuditEvents)
+                {
+                    _lastAuditEvents.Clear();
+                    _lastAuditEvents.AddRange(events);
+                }
 
                 // Run audit analysis (rule-based detection with rich bilingual solutions)
                 var issues = RunRuleBasedAuditAnalysis(events);
@@ -927,7 +1112,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             }
             finally
             {
-                EnqueueOnUI(() => IsAuditing = false);
+                EnqueueOnUI(() =>
+                {
+                    IsAuditing = false;
+                    OnPropertyChanged(nameof(CanRunDeepAnalysis));
+                });
             }
         }, token);
     }
@@ -1406,6 +1595,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
 
         // Notify properties
+        OnPropertyChanged(nameof(CanRunDeepAnalysis));
         OnPropertyChanged(nameof(TotalFindings));
         OnPropertyChanged(nameof(FindingsSummaryText));
         OnPropertyChanged(nameof(AllFindingsLabel));

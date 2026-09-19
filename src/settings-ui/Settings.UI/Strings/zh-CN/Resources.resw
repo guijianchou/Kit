@@ -1580,4 +1580,10 @@
   <data name="AiHub_Segment_Optimization.Content" xml:space="preserve">
     <value>系统优化</value>
   </data>
+  <data name="Admin_Mode_Running_As.Description" xml:space="preserve">
+    <value>Kit 以当前用户身份运行；仅在需要时请求提权。</value>
+  </data>
+  <data name="Admin_Mode_Running_As.Header" xml:space="preserve">
+    <value>运行身份</value>
+  </data>
 </root>

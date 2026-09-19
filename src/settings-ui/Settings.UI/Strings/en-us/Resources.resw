@@ -2892,4 +2892,10 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AiHub_Segment_Optimization.Content" xml:space="preserve">
     <value>Optimization</value>
   </data>
+  <data name="Admin_Mode_Running_As.Description" xml:space="preserve">
+    <value>Kit runs tasks as the current user. Elevation is only requested for actions that need it.</value>
+  </data>
+  <data name="Admin_Mode_Running_As.Header" xml:space="preserve">
+    <value>Running as</value>
+  </data>
 </root>

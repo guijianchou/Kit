@@ -1,1 +1,1 @@
-../.github/copilot-instructions.md
+../doc/devdoc/AGENTS.md

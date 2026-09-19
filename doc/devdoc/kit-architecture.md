@@ -84,7 +84,7 @@ src/runner/main.cpp 全程 log_timing，阶段如下：
 
 ## 6. 设置 UI 结构（第三方插件接入点）
 
-- 编译期页面：ShellPage、DashboardPage、GeneralPage、AwakePage、LightSwitchPage、SearchResultsPage；
+- 编译期页面：ShellPage、DashboardPage、GeneralPage、AwakePage、LightSwitchPage、LocalserverPage、UDPtestPage、AIHubPage、SearchResultsPage；
 - 导航：NavigationService + ShellViewModel（模块 → 页面类型映射为编译期）；
 - 第三方插件接入：新增通用 PluginSettingsPage，运行时渲染 get_config JSON 描述的控件（bool_toggle / int_spinner / string / multiline_string / color_picker / hotkey / choice_group / dropdown / custom_action / header_szLarge）；
 - 路由：ShellViewModel 把 plugins/ 清单中的 key 映射到 PluginSettingsPage（参数为 key），避免为每个插件写 XAML；

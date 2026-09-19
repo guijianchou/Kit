@@ -18,9 +18,7 @@
 │   └── kit-development-experience.md - 模块集成经验与教训
 └── 运维层 - 性能优化与同步
     ├── startup-optimization-analysis.md - 启动性能分析
-    ├── kit-sync-status.md - 上游同步状态
-    ├── upstream-sync-checklist.md - 同步检查清单
-    └── STARTUP_DEBUG_GUIDE.md - 启动调试指南
+    └── kit-framework-structure.md - 主框架源码结构详解
 ```
 
 ---
@@ -60,7 +58,7 @@
 - 待优化方向（预编译设置、进程池、异步加载）
 
 #### 🔄 **与 PowerToys 上游同步**
-→ 阅读 [kit-sync-status.md](kit-sync-status.md)
+→ 阅读 [changelog.md](../../changelog.md)
 - 已同步模块清单（Awake、LightSwitch）
 - 待同步优化（Settings 性能、共享库更新）
 - 排除清单（不需要的模块和功能）
@@ -87,7 +85,7 @@
 1. **先读**：[kit-architecture.md](kit-architecture.md) - 了解 Kit 是什么
 2. **再读**：[kit-framework-structure.md](kit-framework-structure.md) - 掌握代码结构
 3. **然后**：[kit-first-plugin.md](kit-first-plugin.md) - 如果要开发插件
-4. **参考**：[STARTUP_DEBUG_GUIDE.md](STARTUP_DEBUG_GUIDE.md) - 遇到问题时
+4. **参考**：[startup-optimization-analysis.md](startup-optimization-analysis.md) - 遇到问题时
 
 ### 插件开发者
 1. **必读**：[kit-first-plugin.md](kit-first-plugin.md) - 开发规范
@@ -99,11 +97,11 @@
 1. **必读**：[startup-optimization-analysis.md](startup-optimization-analysis.md) - 当前瓶颈分析
 2. **必读**：[kit-framework-structure.md](kit-framework-structure.md) 第 6 章 - 启动流程源码追踪
 3. **参考**：[architecture-comparison.md](architecture-comparison.md) - Kit 已做的优化
-4. **工具**：[STARTUP_DEBUG_GUIDE.md](STARTUP_DEBUG_GUIDE.md) - 性能测量方法
+4. **工具**：[startup-optimization-analysis.md](startup-optimization-analysis.md) - 性能测量方法
 
 ### 上游同步维护者
-1. **必读**：[kit-sync-status.md](kit-sync-status.md) - 当前同步状态
-2. **必读**：[upstream-sync-checklist.md](upstream-sync-checklist.md) - 同步检查清单
+1. **必读**：[changelog.md](../../changelog.md) - 当前版本与变更记录
+2. **必读**：[kit-framework-structure.md](kit-framework-structure.md) - 主框架源码结构
 3. **参考**：[powertoys-architecture.md](powertoys-architecture.md) - 上游架构参考
 4. **参考**：[architecture-comparison.md](architecture-comparison.md) - 差异点对照
 
@@ -128,9 +126,9 @@
 | `kit-first-plugin.md` | 插件契约变更、开发流程优化 |
 | `kit-development-experience.md` | 新的集成经验教训 |
 | `startup-optimization-analysis.md` | 性能优化实施后、新瓶颈发现 |
-| `kit-sync-status.md` | 上游同步完成、模块状态变更 |
-| `upstream-sync-checklist.md` | 同步流程改进 |
-| `STARTUP_DEBUG_GUIDE.md` | 新增调试工具、常见问题 |
+| `changelog.md` | 版本变更与修复记录 |
+| `kit-framework-structure.md` | 主框架结构调整 |
+| `startup-optimization-analysis.md` | 启动优化与性能分析方法 |
 
 ### 文档一致性检查清单
 
@@ -142,7 +140,7 @@
 - [ ] 修改 IPC 消息格式 → 更新 `kit-framework-structure.md` 第 8 章
 - [ ] 修改设置存储结构 → 更新 `kit-framework-structure.md` 第 9 章
 - [ ] 实施性能优化 → 更新 `startup-optimization-analysis.md`
-- [ ] 同步上游变更 → 更新 `kit-sync-status.md`
+- [ ] 同步上游变更 → 更新 `changelog.md` 与 `doc/devdoc/`
 - [ ] 修改模块契约 → 更新 `kit-first-plugin.md` + `powertoys-architecture.md`
 
 ---

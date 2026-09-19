@@ -30,6 +30,17 @@ public sealed class AuditTrendDay
     /// <summary>Compact label for the heatmap, e.g. "01-15".</summary>
     public string Label => Date.ToString("MM-dd", CultureInfo.InvariantCulture);
 
+    /// <summary>Human readable summary used as the cell tooltip.</summary>
+    public string TooltipText => HasData
+        ? string.Format(
+            CultureInfo.InvariantCulture,
+            "{0}: {1} audit(s), {2} finding(s), health {3}",
+            Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            AuditCount,
+            Total,
+            HealthScore?.ToString("0.#", CultureInfo.InvariantCulture) ?? "-")
+        : string.Format(CultureInfo.InvariantCulture, "{0}: no audit", Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
     /// <summary>Darker buckets mean more findings; 0 means no activity.</summary>
     public int IntensityLevel => Total switch
     {
@@ -47,6 +58,8 @@ public sealed class AuditCategoryTotal
     public required string Name { get; init; }
 
     public required int Count { get; init; }
+
+    public string CountText => Count.ToString(CultureInfo.InvariantCulture);
 }
 
 /// <summary>

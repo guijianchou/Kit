@@ -36,6 +36,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility IsOptTab(int index) => index == 1 ? Visibility.Visible : Visibility.Collapsed;
 
+    public Visibility IsTrendsTab(int index) => index == 2 ? Visibility.Visible : Visibility.Collapsed;
+
     public void RefreshEnabledState()
     {
         ViewModel.RefreshEnabledState();
@@ -110,6 +112,16 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         if (args.NewDate.HasValue)
         {
             ViewModel.SelectedAuditDate = args.NewDate.Value;
+        }
+    }
+
+    /// <summary>Switches the trends window (1, 7 or 30 days).</summary>
+    private void OnTrendWindowClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string tag }
+            && int.TryParse(tag, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int days))
+        {
+            ViewModel.TrendWindowDays = days;
         }
     }
 

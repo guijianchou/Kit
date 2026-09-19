@@ -20,6 +20,7 @@
 
     <local:NavigablePage.Resources>
         <converters:SeverityToBrushConverter x:Key="SeverityToBrushConverter" />
+        <converters:TrendIntensityBrushConverter x:Key="TrendIntensityBrushConverter" />
         <FontFamily x:Key="MonoFontFamily">Consolas, Segoe UI Mono, Cascadia Mono</FontFamily>
 
         <SolidColorBrush x:Key="SeverityHighFillBrush" Color="#DC2626" />
@@ -167,6 +168,7 @@
                                 SelectedIndex="{x:Bind ViewModel.ActiveTabIndex, Mode=TwoWay}">
                                 <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.SecurityAuditTabLabel, Mode=OneWay}" Icon="{ui:FontIcon Glyph=&#xE72E;}" />
                                 <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.OptimizationTabLabel, Mode=OneWay}" Icon="{ui:FontIcon Glyph=&#xE771;}" />
+                                <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.TrendsTabLabel, Mode=OneWay}" Icon="{ui:FontIcon Glyph=&#xE9D2;}" />
                             </tkcontrols:Segmented>
 
                             <!-- ============================================================== -->
@@ -784,6 +786,68 @@
                                         </StackPanel>
                                     </Border>
                                 </Grid>
+                            </StackPanel>
+
+                            <!-- ============================================================== -->
+                            <!-- TAB 3: TRENDS                                                  -->
+                            <!-- ============================================================== -->
+                            <StackPanel Spacing="16" Visibility="{x:Bind IsTrendsTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
+                                <tkcontrols:SettingsCard Header="{x:Bind ViewModel.TrendsTabLabel, Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <ToggleButton Tag="1" Content="1d"
+                                                      IsChecked="{x:Bind ViewModel.IsTrendWindow1Day, Mode=OneWay}"
+                                                      Click="OnTrendWindowClick" />
+                                        <ToggleButton Tag="7" Content="7d"
+                                                      IsChecked="{x:Bind ViewModel.IsTrendWindow7Days, Mode=OneWay}"
+                                                      Click="OnTrendWindowClick" />
+                                        <ToggleButton Tag="30" Content="30d"
+                                                      IsChecked="{x:Bind ViewModel.IsTrendWindow30Days, Mode=OneWay}"
+                                                      Click="OnTrendWindowClick" />
+                                    </StackPanel>
+                                </tkcontrols:SettingsCard>
+
+                                <Border CornerRadius="8" Padding="14,12"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="{x:Bind ViewModel.TrendSummaryText, Mode=OneWay}"
+                                                   Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+
+                                        <!-- Daily activity: one column per day, darker means more findings. -->
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.TrendDays, Mode=OneWay}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="3" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:AuditTrendDay">
+                                                    <StackPanel Spacing="3" ToolTipService.ToolTip="{x:Bind TooltipText}">
+                                                        <Border Width="16" Height="28" CornerRadius="3"
+                                                                Background="{x:Bind IntensityLevel, Converter={StaticResource TrendIntensityBrushConverter}}" />
+                                                        <TextBlock Text="{x:Bind Label}" FontSize="9" HorizontalAlignment="Center"
+                                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Category totals across the window -->
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.TrendCategories, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:AuditCategoryTotal">
+                                                    <Grid ColumnDefinitions="*,Auto" Padding="0,2">
+                                                        <TextBlock Text="{x:Bind Name}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind CountText}"
+                                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
 
                         </StackPanel>

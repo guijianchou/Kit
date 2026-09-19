@@ -10,7 +10,6 @@ namespace Kit.AIHubLib.Storage;
 
 public sealed class AuditHistoryStorage
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string _storagePath;
     private readonly object _lock = new();
 
@@ -38,7 +37,7 @@ public sealed class AuditHistoryStorage
             try
             {
                 string json = File.ReadAllText(_storagePath);
-                return JsonSerializer.Deserialize<List<AuditResult>>(json) ?? new List<AuditResult>();
+                return JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.ListAuditResult) ?? new List<AuditResult>();
             }
             catch
             {
@@ -46,6 +45,13 @@ public sealed class AuditHistoryStorage
             }
         }
     }
+
+    /// <summary>
+    /// Upper bound on retained snapshots. The age-based retention alone is unbounded
+    /// when audits run frequently, and every save rewrites the whole file, so the
+    /// count is capped as well to keep both the file and the rewrite bounded.
+    /// </summary>
+    public const int MaxRetainedAudits = 200;
 
     public void SaveResult(AuditResult result, int retentionDays = 30)
     {
@@ -55,7 +61,12 @@ public sealed class AuditHistoryStorage
             history.RemoveAll(r => r.Timestamp < DateTime.UtcNow.AddDays(-retentionDays));
             history.Insert(0, result);
 
-            string json = JsonSerializer.Serialize(history, JsonOptions);
+            if (history.Count > MaxRetainedAudits)
+            {
+                history.RemoveRange(MaxRetainedAudits, history.Count - MaxRetainedAudits);
+            }
+
+            string json = JsonSerializer.Serialize(history, AIHubLibJsonContext.Default.ListAuditResult);
             string tempPath = _storagePath + ".tmp";
             File.WriteAllText(tempPath, json);
             File.Move(tempPath, _storagePath, overwrite: true);

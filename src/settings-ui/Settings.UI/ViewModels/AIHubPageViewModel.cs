@@ -419,6 +419,63 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Audit scan mode: 0 = extended (standard privileges), 1 = full (elevated; also
+    /// reads the Security and Windows Firewall channels).
+    /// </summary>
+    public int AuditModeIndex
+    {
+        get => _moduleSettingsRepository.SettingsConfig.Properties.AuditMode.Value;
+        set
+        {
+            if (_moduleSettingsRepository.SettingsConfig.Properties.AuditMode.Value != value)
+            {
+                _moduleSettingsRepository.SettingsConfig.Properties.AuditMode.Value = value;
+                OnPropertyChanged(nameof(AuditModeIndex));
+                OnPropertyChanged(nameof(IsFullAuditMode));
+                OnPropertyChanged(nameof(ScopeHint));
+                OnPropertyChanged(nameof(AuditModeHint));
+
+                try
+                {
+                    var snd = new SndAIHubSettings(_moduleSettingsRepository.SettingsConfig);
+                    _ipcSendMethod(snd.ToJsonString());
+                }
+                catch
+                {
+                    // Persisting the mode is best-effort; the scan below still runs.
+                }
+
+                RunAudit(fast: false);
+            }
+        }
+    }
+
+    public bool IsFullAuditMode => AuditModeIndex == 1;
+
+    /// <summary>
+    /// Full mode is only useful when elevated; without elevation the Security channel
+    /// cannot be read, so the toggle stays disabled rather than silently degrading.
+    /// </summary>
+    public bool CanUseFullAuditMode => App.IsElevated;
+
+    public string AuditModeLabel => IsChinese ? "审计模式" : "Audit mode";
+
+    public string AuditModeHint
+    {
+        get
+        {
+            if (!IsFullAuditMode)
+            {
+                return IsChinese ? "拓展模式：标准权限，读取 System/Application/Setup/ForwardedEvents" : "Extended: standard privileges, reads System/Application/Setup/ForwardedEvents";
+            }
+
+            return App.IsElevated
+                ? (IsChinese ? "完整模式：额外读取 Security 与防火墙通道" : "Full: additionally reads the Security and Firewall channels")
+                : (IsChinese ? "完整模式需要管理员权限；当前未提权，Security 通道将不可读" : "Full mode needs elevation; the Security channel is unreadable without it");
+        }
+    }
+
     public string FullScanRangeHint => IsChinese ? "选择全量扫描时间跨度" : "Select full scan time range";
 
     public string RangeOption1DayLabel => IsChinese ? "1 天" : "1d";
@@ -431,9 +488,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public string ReanalyzeRangeHint => IsChinese ? "重新分析选定时段内的日志" : "Reanalyze events in selected range";
 
-    public string ScopeHint => IsChinese
-        ? "拓展模式 · 无需提权 · 跳过 Security · 使用配置的 AI Hub 分析"
-        : "Extended mode · No elevation · Skip Security · Analyzed using configured AI Hub";
+    /// <summary>Summarizes the active scan mode; reflects the real setting, not a fixed claim.</summary>
+    public string ScopeHint => IsFullAuditMode
+        ? (IsChinese ? "完整模式 · 需提权 · 含 Security 与防火墙" : "Full mode · Elevation required · Includes Security and Firewall")
+        : (IsChinese ? "拓展模式 · 无需提权 · 跳过 Security" : "Extended mode · No elevation · Skips Security");
 
     public string FindingsHeading => IsChinese ? "发现列表" : "Findings";
 
@@ -1024,7 +1082,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 };
 
                 int maxEvents = fast ? 250 : 2000;
-                var events = await _eventLogService.CollectEventsAsync(DateTime.UtcNow - scope, DateTime.UtcNow, maxEvents, token);
+                var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
+                var events = await _eventLogService.CollectEventsAsync(DateTime.UtcNow - scope, DateTime.UtcNow, auditMode, maxEvents, token);
 
                 // Retain the raw events so AI deep analysis can send the same evidence.
                 lock (_lastAuditEvents)

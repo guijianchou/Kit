@@ -218,6 +218,13 @@
                                                             <FontIcon Glyph="&#xE72C;" />
                                                         </MenuFlyoutItem.Icon>
                                                     </MenuFlyoutItem>
+                                                    <MenuFlyoutSeparator />
+                                                    <ToggleMenuFlyoutItem Text="{x:Bind ViewModel.AuditModeLabel, Mode=OneWay}"
+                                                                          IsChecked="{x:Bind ViewModel.IsFullAuditMode, Mode=OneWay}"
+                                                                          IsEnabled="{x:Bind ViewModel.CanUseFullAuditMode, Mode=OneWay}"
+                                                                          ToolTipService.ToolTip="{x:Bind ViewModel.AuditModeHint, Mode=OneWay}"
+                                                                          Click="OnFullAuditModeToggleClick"
+                                                                          AutomationProperties.AutomationId="AIHub_FullAuditModeToggle" />
                                                 </MenuFlyout>
                                             </Button.Flyout>
                                         </Button>

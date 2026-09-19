@@ -112,4 +112,16 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             ViewModel.SelectedAuditDate = args.NewDate.Value;
         }
     }
+
+    /// <summary>
+    /// Persists the audit mode selection. Full mode additionally reads the Security and
+    /// Firewall channels and requires elevation, so it is rejected when not elevated.
+    /// </summary>
+    private void OnFullAuditModeToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleMenuFlyoutItem item)
+        {
+            ViewModel.AuditModeIndex = item.IsChecked ? 1 : 0;
+        }
+    }
 }

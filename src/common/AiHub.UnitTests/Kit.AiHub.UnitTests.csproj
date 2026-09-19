@@ -15,6 +15,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MSTest" />
+    <PackageReference Include="System.Diagnostics.EventLog" />
     <ProjectReference Include="..\AiHub\Kit.AiHub.csproj" />
+    <ProjectReference Include="..\..\modules\AIHub\AIHubLib\Kit.AIHubLib.csproj" />
   </ItemGroup>
 </Project>

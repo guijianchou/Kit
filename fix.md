@@ -348,3 +348,51 @@
 ---
 
 > 收敛说明：本版合并删除的逐轮记录（旧 §7/§9/§10.5-10.6/§11-§16、6 张重叠优先级表、轮次 TOC 标注）如需追溯历史表述，参见上一版 fix.md（git 历史）。
+
+---
+
+## 10. 执行总结（fix 分支，34 commits）
+
+### 10.1 §8 清单逐条状态
+
+| §8 条目 | 状态 | 提交 / 说明 |
+|---|---|---|
+| P0-1 AI 深度分析接入 | ✅ 完成 | cd13179（引擎契约已存在，补齐调用方 + AI 报告面板） |
+| P0-2 三插件 Worker 化 | ✅ 完成 | fd09e88（Localserver）+ 74f292f（AIHub）；UDPtest 判定**不适用**（显式 Start/Stop 模型，无守护缺口） |
+| P0-3 Security/Firewall + README 修正 | ✅ 完成 | 727e288 + b12de1c |
+| P1 面板迁移 + x:Uid | ✅ 完成 | 7afec58（并修复重复总开关） |
+| P1 定时/增量审计 + Trends | ✅ 完成 | 4257aaf + b84ecab + 961c2d6 |
+| P1 数据真实性 | ✅ 完成 | a428e4e + da87835 |
+| P1 补测试 | ✅ 完成 | 1460b67 / 02bbaa3 / 89b5c89 / 61b8e5e |
+| P2 本地化 x:Uid | ✅ 完成（可行范围） | 12efc13 + d165b9f；138 处运行时插值**技术不可行**（x:Uid 无法表达拼接） |
+| P2 存储 / digest / 热加载 | ◐ 部分 | 存储上限 + AOT 安全（8514b4f）；digest 白名单与热加载未做（低优先，见 10.3） |
+| P2 文档同步 | ✅ 完成 | e0976ae + 9359c8e + b12de1c |
+| P3 残留 + 文档全量校对 | ✅ 完成（可做部分） | 13220a6 / 02bbaa3 / e0976ae；`%LOCALAPPDATA%\Kit\Monitor\` 旧数据目录未处置（需真实环境确认） |
+
+### 10.2 量化结果
+
+| 测试套件 | 起点 | 终点 |
+|---|---|---|
+| Kit.AiHub.UnitTests | 108 | **193 通过** / 1 跳过 |
+| Settings.UI.UnitTests | 196 | **200 通过** |
+| UDPtest.UnitTests | 18 | **28 通过** |
+| Localserver.UnitTests（无子进程部分） | 7（含 6 项需真实进程） | **17 通过** |
+
+新增可执行产物：`Kit.LocalserverWorker`、`Kit.AIHubWorker`（均注册进 `Kit.slnx`）。
+
+### 10.3 明确的未完成项与理由
+
+| 项 | 状态 | 理由 |
+|---|---|---|
+| Worker 端到端启动验证 | 未验证 | 本沙箱禁止子进程创建；需在真实环境运行 `Kit.exe` 后确认 worker 进程存在 |
+| Localserver 6 项 ServiceLifecycleTests | 沙箱内失败 | 测试通过 `Process.Start` 创建真实子进程，被沙箱拒绝；`git diff main..fix` 不含 Localserver 业务代码变更，非回归 |
+| UDPtest SQLite 持久化 | 未做 | SQLite 为 **2.0.8 刻意移除**（changelog:176），恢复需新增依赖 + 更新 NOTICE.md，超出本次范围 |
+| 在线 digest 白名单 | 未做 | 现有 SHA256SUMS 校验已属发布域可信来源（见 §5 更正），加白名单属加固增强，非缺陷 |
+| `%LOCALAPPDATA%\Kit\Monitor\` 旧数据 | 未处置 | 需确认是否存在用户数据后决定删除策略 |
+| 热加载 / 拖拽排序 | 未做 | 功能增强，非缺陷修复 |
+
+### 10.4 构建注记（本机沙箱）
+
+- 托管项目：`/p:TrackFileAccess=false`（file tracker 受限）、`/p:NuGetAudit=false`（网络受限）
+- 原生项目：使用 `MSBuild\Current\Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）
+- 测试：直接运行测试 `exe`（`dotnet test` 依赖命名管道，受限）

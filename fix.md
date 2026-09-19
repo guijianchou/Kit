@@ -20,7 +20,10 @@
 >   - **关键发现**：`ServiceRunner` **完全无 UI 线程依赖**（无 DispatcherQueue/WinUI），且**已自带健康探测与重启退避**（:2124 `MonitorHealthAsync`、:2271 重启策略）——VM 只是持有者。因此 worker 只需提供长生命周期宿主，改动面远小于预期；监督缺口 = 页面释放时 `line.Dispose()`（LocalserverViewModel:2383）连带释放 runner。
 > - ✅ **P1 趋势视图**（commits b84ecab/961c2d6）——`AuditTrends`（1/7/30 天窗口、稠密日序列、强度分桶、分类汇总）+ AIHubPage 第四个页签（窗口切换、日热力图、分类统计）+ UI 层 `TrendIntensityBrushConverter`（聚合模型保持无 UI 依赖）；8 项测试。
 > - ✅ **P1 AI 面板迁移**（commit 7afec58）——内核/端点/策略面板从 GeneralPage 迁至 AIHubPage 第四页签；`AiHubViewModel` 改由 AIHubPageViewModel 托管；**并修复了 §2.1 记录的"重复总开关"问题**（General 侧副本移除，全仓库仅剩一个 `Toggle_AiHub`）。迁移前已核实 AIHubPage 的 `IsEnabled` 本就发送相同的 general-settings IPC，故无持久化损失；测试同步改写为"面板位于 AIHubPage"+"General 不再承载"双向守护。
-> - ⏳ 待办：P0-2 扩展到 UDPtest/AIHub（同模式）；P2 本地化 x:Uid 全量替换（AIHubPageViewModel 内 145 处 `IsChinese ?`）。
+> - ✅ **P2 规则引擎下沉**（commit c684f5b）——345 行纯逻辑 `RunRuleBasedAuditAnalysis` 从页面 VM 提取为 `AIHubLib.Services.AuditRuleEngine`（**零 UI 依赖**，仅用 SecurityEvent/AuditIssueEnhanced/CultureInfo）；VM 侧改为一行委托，**减少约 360 行**；9 项新测试。这同时是 AIHub Worker 化的前置条件（worker 需在无页面环境下执行审计）。
+> - ✅ **P2 面板本地化补齐**（commit 12efc13）——AI 面板中缺失 `x:Uid` 的可见文案（内核徽标、Codex/Pi 选项）补齐 resw 键与中文翻译；审计确认 **AIHubPage 31/31 个 x:Uid 均有资源覆盖**（协议标识类枚举值保持字面量）。
+> - ⏳ 待办：P0-2 扩展到 AIHub（规则引擎已就绪，剩调度宿主）；UDPtest 经核实**不需要 Worker**（见 §8.3 说明）。
+> - **P0-2 适用性结论**：UDPtest 的探测按用户显式 Start/Stop 运行，页面无导航钩子（`UDPtestPage.xaml.cs` 无 `OnNavigatedFrom`），停止探测是原版"显式 Start/Stop"设计的延续，**不构成需要常驻监督的缺口**；Localserver（已做）与 AIHub 定时审计才是真正的"服务存活但失去守护"场景。
 > - 验证：`Kit.Settings` 编译 0 错误；`Kit.vcxproj` 编译并链接 Kit.exe 成功；`Kit.AiHub.UnitTests` 151 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
 > - 构建注记（本机沙箱）：需 `/p:TrackFileAccess=false`；原生项目用 `Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）；`dotnet test` 因命名管道受限改用测试 exe 直接运行。
 > - 环境限制（非回归）：`Localserver.UnitTests` 的 7 项中有 6 项失败——这些用例通过 `Process.Start` 启动**真实子进程**验证服务生命周期（进程树回收/优雅停机/关闭后恢复/就绪取消），而本机沙箱限制子进程创建（`ServiceLifecycleTests.cs:173/:272`）。已确认 `git diff main..fix` 中**不含任何 Localserver 文件**，故与本次改动无关；需在无沙箱环境复跑确认。

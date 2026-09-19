@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless supervisor for Localserver-managed services. It hosts the same
+       ServiceRunner instances the Settings page used to own, so health monitoring
+       and restart policy keep running after the Settings window closes. -->
+  <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
+  <Import Project="$(RepoRoot)src\Common.Dotnet.AotCompatibility.props" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <AssemblyName>Kit.LocalserverWorker</AssemblyName>
+    <RootNamespace>Kit.LocalserverWorker</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Self-contained so the test project (also self-contained) can reference it and the
+         worker runs without a separately installed runtime. -->
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- Follow the LightSwitchService convention: the worker lands next to the module
+         output so the native interface can resolve it from the module directory. -->
+    <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\LocalserverWorker\</OutDir>
+    <UseWinUI>false</UseWinUI>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <NoWarn>$(NoWarn);SA0001;SA1200;SA1201;SA1202;SA1309;SA1402;SA1516;SA1600;SA1633;SA1649;CA1861;CA1305;CA1303</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\common\ManagedCommon\ManagedCommon.csproj" />
+    <ProjectReference Include="..\LocalserverLib\LocalserverLib.csproj" />
+  </ItemGroup>
+</Project>

@@ -15,6 +15,7 @@
 #include <common/utils/winapi_error.h>
 
 #include <filesystem>
+#include <mutex>
 #include <set>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
@@ -45,6 +46,15 @@ class LocalserverModule : public KitModuleIface
     std::wstring app_key;
     bool m_enabled = false;
 
+    // Headless supervisor process. It hosts the service runners so health monitoring and
+    // restart policy survive the Settings window closing.
+    HANDLE m_worker_process{ nullptr };
+    std::mutex m_lifecycle_mutex;
+
+    void start_worker_if_needed();
+    void stop_worker_if_running();
+    void close_worker_handle();
+
 public:
     LocalserverModule()
     {
@@ -61,6 +71,7 @@ public:
     virtual void destroy() override
     {
         disable();
+        close_worker_handle();
         delete this;
     }
 
@@ -104,7 +115,12 @@ public:
             return;
         }
 
-        m_enabled = true;
+        {
+            std::lock_guard lifecycleLock(m_lifecycle_mutex);
+            m_enabled = true;
+            start_worker_if_needed();
+        }
+
         Trace::EnableLocalserver(true);
         Logger::info(L"Localserver module enabled");
     }
@@ -116,7 +132,12 @@ public:
             return;
         }
 
-        m_enabled = false;
+        {
+            std::lock_guard lifecycleLock(m_lifecycle_mutex);
+            m_enabled = false;
+            stop_worker_if_running();
+        }
+
         Trace::EnableLocalserver(false);
         Logger::info(L"Localserver module disabled");
     }
@@ -126,6 +147,96 @@ public:
         return m_enabled;
     }
 };
+
+void LocalserverModule::close_worker_handle()
+{
+    if (m_worker_process)
+    {
+        CloseHandle(m_worker_process);
+        m_worker_process = nullptr;
+    }
+}
+
+void LocalserverModule::start_worker_if_needed()
+{
+    if (m_worker_process && WaitForSingleObject(m_worker_process, 0) == WAIT_TIMEOUT)
+    {
+        Logger::debug(L"[Localserver] Supervisor already running; skipping start.");
+        return;
+    }
+
+    close_worker_handle();
+
+    const auto module_path = get_module_filename(reinterpret_cast<HMODULE>(&__ImageBase));
+    if (module_path.empty())
+    {
+        Logger::error(L"[Localserver] Failed to resolve the module path. {}", get_last_error_or_default(GetLastError()));
+        return;
+    }
+
+    // The worker is deployed next to the module output, following the LightSwitchService
+    // convention. It also accepts a data-directory override for a non-default catalog.
+    const auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"LocalserverWorker" / L"Kit.LocalserverWorker.exe").wstring();
+    if (!std::filesystem::exists(resolved_path))
+    {
+        Logger::warn(L"[Localserver] Supervisor executable not found at {}; services will only be supervised while Settings is open.", resolved_path);
+        return;
+    }
+
+    const std::wstring args = L"--pid " + std::to_wstring(GetCurrentProcessId());
+    std::wstring command_line = L"\"" + resolved_path + L"\" " + args;
+
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi{};
+
+    if (!CreateProcessW(
+            resolved_path.c_str(),
+            command_line.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            0,
+            nullptr,
+            nullptr,
+            &si,
+            &pi))
+    {
+        Logger::error(L"[Localserver] Failed to launch the supervisor. {}", get_last_error_or_default(GetLastError()));
+        return;
+    }
+
+    Logger::info(L"[Localserver] Supervisor launched (PID: {}).", pi.dwProcessId);
+    m_worker_process = pi.hProcess;
+    CloseHandle(pi.hThread);
+}
+
+void LocalserverModule::stop_worker_if_running()
+{
+    if (!m_worker_process)
+    {
+        return;
+    }
+
+    // The worker watches the runner PID and exits on its own. Ask nicely, then fall back
+    // to terminating it so a stale supervisor cannot outlive its module.
+    DWORD result = WaitForSingleObject(m_worker_process, 0);
+    if (result == WAIT_TIMEOUT)
+    {
+        Logger::info(L"[Localserver] Stopping the supervisor.");
+        if (TerminateProcess(m_worker_process, 0))
+        {
+            result = WaitForSingleObject(m_worker_process, 1500);
+        }
+    }
+
+    if (result != WAIT_OBJECT_0)
+    {
+        Logger::warn(L"[Localserver] Supervisor shutdown could not be confirmed.");
+        return;
+    }
+
+    close_worker_handle();
+}
 
 extern "C" __declspec(dllexport) KitModuleIface* __cdecl kit_create()
 {

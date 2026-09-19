@@ -16,5 +16,6 @@
   <ItemGroup>
     <PackageReference Include="MSTest" />
     <ProjectReference Include="..\LocalserverLib\LocalserverLib.csproj" />
+    <ProjectReference Include="..\LocalserverWorker\LocalserverWorker.csproj" />
   </ItemGroup>
 </Project>

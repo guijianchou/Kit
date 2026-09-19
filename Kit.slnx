@@ -108,6 +108,9 @@
     <Project Path="src/modules/Localserver/LocalserverLib/LocalserverLib.csproj">
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/modules/Localserver/LocalserverWorker/LocalserverWorker.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/modules/Localserver/LocalserverModuleInterface/LocalserverModuleInterface.vcxproj" Id="b749d21c-4b53-4318-9719-f5383a15dc01" />
   </Folder>
   <Folder Name="/modules/UDPtest/">

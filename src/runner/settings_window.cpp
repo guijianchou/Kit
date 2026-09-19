@@ -513,7 +513,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
         std::wstring executable_path = get_module_folderpath() + L"\\WinUI3Apps\\Kit.Settings.exe";
 
         // Args 2,3: pipe server. Generate unique names for the pipes, if getting a UUID is possible.
-        std::wstring powertoys_pipe_name(L"\\\\.\\pipe\\kit_runner_");
+        std::wstring runner_pipe_name(L"\\\\.\\pipe\\kit_runner_");
         std::wstring settings_pipe_name(L"\\\\.\\pipe\\kit_settings_");
         UUID temp_uuid;
         if (UuidCreate(&temp_uuid) == RPC_S_UUID_NO_ADDRESS)
@@ -529,7 +529,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
 
         if (uuid_chars != nullptr)
         {
-            powertoys_pipe_name += std::wstring(uuid_chars);
+            runner_pipe_name += std::wstring(uuid_chars);
             settings_pipe_name += std::wstring(uuid_chars);
             RpcStringFree(reinterpret_cast<RPC_WSTR*>(&uuid_chars));
             uuid_chars = nullptr;
@@ -567,7 +567,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
 
         std::wstring executable_args = fmt::format(L"\"{}\" {} {} {} {} {} {} {}",
                                                    executable_path,
-                                                   powertoys_pipe_name,
+                                                   runner_pipe_name,
                                                    settings_pipe_name,
                                                    std::to_wstring(powertoys_pid),
                                                    settings_theme,
@@ -633,7 +633,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
 
         {
             std::unique_lock lock{ ipc_mutex };
-            current_settings_ipc = new TwoWayPipeMessageIPC(powertoys_pipe_name, settings_pipe_name, receive_json_send_to_main_thread);
+            current_settings_ipc = new TwoWayPipeMessageIPC(runner_pipe_name, settings_pipe_name, receive_json_send_to_main_thread);
             current_settings_ipc->start(hToken);
             g_settings_process_id = process_info.dwProcessId;
             g_isLaunchInProgress = false;

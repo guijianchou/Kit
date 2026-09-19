@@ -16,7 +16,9 @@
 > - ✅ **P2/P3 文档与残留**（commit e0976ae）：补写缺失的 `src/modules/UDPtest/README.md`（含与原版 Network 的 SQLite 差距表）；修复 `.claude/CLAUDE.md` 指向不存在的 `.github/`；补齐悬空 resw 键 `Admin_Mode_Running_As`。
 > - ✅ **P3 残留**（commit 13220a6）：`settings_window.cpp` 的 `powertoys_pipe_name` 变量重命名为 `runner_pipe_name`（值为 kit_runner_，行为不变）。
 > - ✅ **P1 补测试**：新增 HealthScoreCalculator(7)、DownloadOrganizerService(4)、AuditHistoryStatistics(4)、AuditHistoryStorage(6)、EventLogService(4)、AuditSchedule(10)、OptimizationOutcome(8)——AIHub 套件 108 → 151 项。
-> - ⏳ 待办：**P0-2 Worker 化**（结构性：需新建 worker 项目 + 原生 enable() 拉起 + IPC + 解决方案/测试注册）、P1 AI 面板迁移（受 AiHubSettingsTests:84-104 断言约束）、P2 本地化 x:Uid 全量替换。
+> - ✅ **P0-2 Worker 化（Localserver 首例）**（commit fd09e88）——新增 `Kit.LocalserverWorker`（`--pid`/`--data-dir` 契约、父进程存活监视、优雅退出）+ `ServiceSupervisor`（按目录创建 runner、仅监督启用项、幂等释放）；原生 `enable()` 从模块输出目录拉起 worker，`disable()/destroy()` 停止并兜底终止；注册进 `Kit.slnx`；6 项 supervisor 测试。
+>   - **关键发现**：`ServiceRunner` **完全无 UI 线程依赖**（无 DispatcherQueue/WinUI），且**已自带健康探测与重启退避**（:2124 `MonitorHealthAsync`、:2271 重启策略）——VM 只是持有者。因此 worker 只需提供长生命周期宿主，改动面远小于预期；监督缺口 = 页面释放时 `line.Dispose()`（LocalserverViewModel:2383）连带释放 runner。
+> - ⏳ 待办：P0-2 扩展到 UDPtest/AIHub（同模式）；P1 AI 面板迁移（受 AiHubSettingsTests:84-104 断言约束）；P2 本地化 x:Uid 全量替换（AIHubPageViewModel 内 145 处 `IsChinese ?`）。
 > - 验证：`Kit.Settings` 编译 0 错误；`Kit.vcxproj` 编译并链接 Kit.exe 成功；`Kit.AiHub.UnitTests` 151 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
 > - 构建注记（本机沙箱）：需 `/p:TrackFileAccess=false`；原生项目用 `Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）；`dotnet test` 因命名管道受限改用测试 exe 直接运行。
 > - 环境限制（非回归）：`Localserver.UnitTests` 的 7 项中有 6 项失败——这些用例通过 `Process.Start` 启动**真实子进程**验证服务生命周期（进程树回收/优雅停机/关闭后恢复/就绪取消），而本机沙箱限制子进程创建（`ServiceLifecycleTests.cs:173/:272`）。已确认 `git diff main..fix` 中**不含任何 Localserver 文件**，故与本次改动无关；需在无沙箱环境复跑确认。

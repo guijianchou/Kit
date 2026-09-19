@@ -144,7 +144,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                                            <TextBlock Text="Codex / Pi" FontSize="11" FontWeight="Medium" />
+                                            <TextBlock x:Uid="AIHub_KernelBadge" Text="Codex / Pi" FontSize="11" FontWeight="Medium" />
                                         </Border>
                                         <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
                                         <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
@@ -890,8 +890,8 @@
                     <ComboBox Width="160"
                               SelectedIndex="{x:Bind ViewModel.AiHub.PendingKernelIndex, Mode=TwoWay}"
                               IsEnabled="{x:Bind ViewModel.AiHub.CanEdit, Mode=OneWay}">
-                        <ComboBoxItem Content="Codex CLI" />
-                        <ComboBoxItem Content="Pi CLI" />
+                        <ComboBoxItem x:Uid="AIHub_KernelCodexItem" Content="Codex CLI" />
+                        <ComboBoxItem x:Uid="AIHub_KernelPiItem" Content="Pi CLI" />
                     </ComboBox>
                     <Button x:Uid="AiHub_ApplyKernelButton"
                             Content="Apply"

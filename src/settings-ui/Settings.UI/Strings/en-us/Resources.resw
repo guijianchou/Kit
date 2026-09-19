@@ -2898,4 +2898,13 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Admin_Mode_Running_As.Header" xml:space="preserve">
     <value>Running as</value>
   </data>
+  <data name="AIHub_KernelBadge.Text" xml:space="preserve">
+    <value>Codex / Pi</value>
+  </data>
+  <data name="AIHub_KernelCodexItem.Content" xml:space="preserve">
+    <value>Codex CLI</value>
+  </data>
+  <data name="AIHub_KernelPiItem.Content" xml:space="preserve">
+    <value>Pi CLI</value>
+  </data>
 </root>

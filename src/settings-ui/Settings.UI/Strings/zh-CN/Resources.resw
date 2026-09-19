@@ -1586,4 +1586,13 @@
   <data name="Admin_Mode_Running_As.Header" xml:space="preserve">
     <value>运行身份</value>
   </data>
+  <data name="AIHub_KernelBadge.Text" xml:space="preserve">
+    <value>Codex / Pi</value>
+  </data>
+  <data name="AIHub_KernelCodexItem.Content" xml:space="preserve">
+    <value>Codex CLI</value>
+  </data>
+  <data name="AIHub_KernelPiItem.Content" xml:space="preserve">
+    <value>Pi CLI</value>
+  </data>
 </root>

@@ -45,8 +45,6 @@ namespace Kit.Settings.UI.ViewModels
 
         private UpdatingSettings UpdatingSettingsConfig { get; set; }
 
-        public AiHubViewModel AiHub { get; }
-
         public ButtonClickCommand CheckForUpdatesEventHandler { get; set; }
 
         public Microsoft.Windows.ApplicationModel.Resources.ResourceLoader ResourceLoader { get; set; }
@@ -197,19 +195,9 @@ namespace Kit.Settings.UI.ViewModels
 
             InitializeLanguages();
 
-            AiHub = new AiHubViewModel(_dispatcherQueue);
-            AiHub.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(AiHub.IsEnabled) && GeneralSettingsConfig?.Enabled != null)
-                {
-                    if (GeneralSettingsConfig.Enabled.AiHub != AiHub.IsEnabled)
-                    {
-                        GeneralSettingsConfig.Enabled.AiHub = AiHub.IsEnabled;
-                        var outgoing = new OutGoingGeneralSettings(GeneralSettingsConfig);
-                        SendConfigMSG(outgoing.ToString());
-                    }
-                }
-            };
+            // The AI service panel (kernel, endpoints, policy, enable toggle) is hosted by
+            // AIHubPage now. It owns the same general-settings IPC, so General only keeps
+            // the settings it still displays.
         }
 
         // Supported languages: English (default) and Chinese (Simplified)
@@ -1718,8 +1706,6 @@ namespace Kit.Settings.UI.ViewModels
             {
                 _settingsRepository.SettingsChanged -= OnSettingsChanged;
             }
-
-            AiHub?.Dispose();
 
             GC.SuppressFinalize(this);
         }

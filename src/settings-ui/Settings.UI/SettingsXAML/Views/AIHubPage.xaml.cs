@@ -38,6 +38,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility IsTrendsTab(int index) => index == 2 ? Visibility.Visible : Visibility.Collapsed;
 
+    public Visibility IsAiServicesTab(int index) => index == 3 ? Visibility.Visible : Visibility.Collapsed;
+
     public void RefreshEnabledState()
     {
         ViewModel.RefreshEnabledState();
@@ -46,6 +48,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ViewModel.RefreshEnabledState();
+        ApplyStoredApiKeys();
     }
 
     private async void OnFindingClick(object sender, RoutedEventArgs e)
@@ -112,6 +115,39 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         if (args.NewDate.HasValue)
         {
             ViewModel.SelectedAuditDate = args.NewDate.Value;
+        }
+    }
+
+    /// <summary>
+    /// Pushes the stored API keys into the password boxes. PasswordBox.Password cannot be
+    /// two-way bound safely, so the value is applied when the page loads.
+    /// </summary>
+    private void ApplyStoredApiKeys()
+    {
+        if (ViewModel?.AiHub?.MainEndpoint is { } main)
+        {
+            AiMainApiKeyBox.Password = main.ApiKey ?? string.Empty;
+        }
+
+        if (ViewModel?.AiHub?.FallbackEndpoint is { } fallback)
+        {
+            AiFallbackApiKeyBox.Password = fallback.ApiKey ?? string.Empty;
+        }
+    }
+
+    private void AiMainApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box && ViewModel?.AiHub?.MainEndpoint is { } endpoint)
+        {
+            endpoint.ApiKey = box.Password;
+        }
+    }
+
+    private void AiFallbackApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box && ViewModel?.AiHub?.FallbackEndpoint is { } endpoint)
+        {
+            endpoint.ApiKey = box.Password;
         }
     }
 

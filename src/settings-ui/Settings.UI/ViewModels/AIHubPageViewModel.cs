@@ -236,6 +236,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.AIHub);
 
+        // The AI service panel moved here from General; it only needs a dispatcher queue.
+        AiHub = new AiHubViewModel(_dispatcherQueue);
+
         // Load persisted tab
         try
         {
@@ -271,6 +274,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     public static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// AI service configuration (kernel, endpoints, policy) hosted by this page. It used to
+    /// live on General, but it belongs with the module it configures.
+    /// </summary>
+    public AiHubViewModel AiHub { get; }
 
     public bool IsEnabledGpoConfigured => _gpoConfiguration is GpoRuleConfigured.Enabled or GpoRuleConfigured.Disabled;
 
@@ -559,6 +568,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string OptimizationTabLabel => IsChinese ? "系统优化" : "Optimization";
 
     public string TrendsTabLabel => IsChinese ? "趋势" : "Trends";
+
+    public string AiServicesTabLabel => IsChinese ? "AI 服务" : "AI Services";
 
     public ObservableCollection<AuditTrendDay> TrendDays => _trendDays;
 
@@ -2347,6 +2358,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             _disposed = true;
             _scheduleTimer.Stop();
+            AiHub?.Dispose();
             _currentCts?.Cancel();
             _currentCts?.Dispose();
         }

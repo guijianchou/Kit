@@ -58,50 +58,68 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void GeneralPage_Xaml_PolicyRulesStructure_Valid()
+        public void AiHubPage_Xaml_HostsPolicyAndServiceConfiguration()
         {
-            var baseDir = System.AppDomain.CurrentDomain.BaseDirectory;
-            var dir = new DirectoryInfo(baseDir);
-            string xamlPath = null;
+            // The AI service panel (kernel, endpoints, policy) belongs with the module it
+            // configures. It used to live on General, which also meant the enable toggle
+            // existed twice with the same automation id.
+            var content = ReadPageXaml("AIHubPage.xaml");
+
+            // Removed from the panel in an earlier pass; must stay removed.
+            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_PipelineCard\""), "AIHubPage.xaml should not contain AiHub_PipelineCard");
+            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_PolicyFilePathCard\""), "AIHubPage.xaml should not contain AiHub_PolicyFilePathCard");
+            Assert.IsFalse(content.Contains("x:Name=\"AiPolicyRulesSection\""), "AIHubPage.xaml should not contain raw AiPolicyRulesSection");
+            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_SaveButton\""), "AIHubPage.xaml should not contain isolated AiHub_SaveButton card");
+
+            // Policy editor surface.
+            Assert.IsTrue(content.Contains("x:Name=\"AiPolicyRulesExpander\""), "AIHubPage.xaml should contain AiPolicyRulesExpander");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_PolicyRulesExpander\""), "AIHubPage.xaml should contain AiHub_PolicyRulesExpander");
+            Assert.IsTrue(content.Contains("x:Name=\"AiPolicySegmented\""), "AIHubPage.xaml should contain AiPolicySegmented");
+            Assert.IsTrue(content.Contains("AiHub_Segment_GlobalPolicy"), "AIHubPage.xaml should contain AiHub_Segment_GlobalPolicy");
+            Assert.IsTrue(content.Contains("AiHub_Segment_SecurityAudit"), "AIHubPage.xaml should contain AiHub_Segment_SecurityAudit");
+            Assert.IsTrue(content.Contains("AiHub_Segment_Optimization"), "AIHubPage.xaml should contain AiHub_Segment_Optimization");
+            Assert.IsTrue(content.Contains("x:Name=\"AiPolicyContentBox\""), "AIHubPage.xaml should contain AiPolicyContentBox");
+            Assert.IsTrue(content.Contains("AiHub_SavePolicyButton"), "AIHubPage.xaml should contain AiHub_SavePolicyButton");
+            Assert.IsTrue(content.Contains("AiHub_ResetPolicyButton"), "AIHubPage.xaml should contain AiHub_ResetPolicyButton");
+
+            // The kernel/endpoint configuration came along with the policy editor.
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_KernelCard\""), "AIHubPage.xaml should host the kernel card");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_MainEndpointExpander\""), "AIHubPage.xaml should host the main endpoint expander");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_FallbackEndpointExpander\""), "AIHubPage.xaml should host the fallback endpoint expander");
+        }
+
+        [TestMethod]
+        public void GeneralPage_NoLongerHostsTheAiServicePanel()
+        {
+            // Guards the migration: General must not silently regain a second AI Hub
+            // toggle, which previously shared the Toggle_AiHub automation id with the
+            // module page.
+            var content = ReadPageXaml("GeneralPage.xaml");
+
+            Assert.IsFalse(content.Contains("General_AiServices"), "GeneralPage.xaml should no longer host the AI services group");
+            Assert.IsFalse(content.Contains("ViewModel.AiHub"), "GeneralPage.xaml should no longer bind the AI Hub view model");
+            Assert.IsFalse(
+                content.Contains("Toggle_AiHub"),
+                "GeneralPage.xaml must not expose a second Toggle_AiHub: the module page owns that automation id.");
+        }
+
+        private static string ReadPageXaml(string fileName)
+        {
+            var dir = new DirectoryInfo(System.AppDomain.CurrentDomain.BaseDirectory);
 
             while (dir != null)
             {
-                var candidate = Path.Combine(dir.FullName, "src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml");
+                var candidate = Path.Combine(dir.FullName, "src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", fileName);
                 if (File.Exists(candidate))
                 {
-                    xamlPath = candidate;
-                    break;
+                    return File.ReadAllText(candidate);
                 }
 
                 dir = dir.Parent;
             }
 
-            Assert.IsNotNull(xamlPath, "Could not find GeneralPage.xaml from test directory");
-
-            var content = File.ReadAllText(xamlPath);
-
-            // Verify AI Hub Pipeline card and policy path card are removed
-            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_PipelineCard\""), "GeneralPage.xaml should not contain AiHub_PipelineCard");
-            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_PolicyFilePathCard\""), "GeneralPage.xaml should not contain AiHub_PolicyFilePathCard");
-
-            // Verify raw header and bottom standalone Save card are removed
-            Assert.IsFalse(content.Contains("x:Name=\"AiPolicyRulesSection\""), "GeneralPage.xaml should not contain raw AiPolicyRulesSection");
-            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_SaveButton\""), "GeneralPage.xaml should not contain isolated AiHub_SaveButton card");
-
-            // Verify unified Scheme A Policy Rules SettingsExpander is present
-            Assert.IsTrue(content.Contains("x:Name=\"AiPolicyRulesExpander\""), "GeneralPage.xaml should contain AiPolicyRulesExpander");
-            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_PolicyRulesExpander\""), "GeneralPage.xaml should contain AiHub_PolicyRulesExpander");
-
-            // Verify Segmented control and all 3 segment items are present
-            Assert.IsTrue(content.Contains("x:Name=\"AiPolicySegmented\""), "GeneralPage.xaml should contain AiPolicySegmented");
-            Assert.IsTrue(content.Contains("AiHub_Segment_GlobalPolicy"), "GeneralPage.xaml should contain AiHub_Segment_GlobalPolicy");
-            Assert.IsTrue(content.Contains("AiHub_Segment_SecurityAudit"), "GeneralPage.xaml should contain AiHub_Segment_SecurityAudit");
-            Assert.IsTrue(content.Contains("AiHub_Segment_Optimization"), "GeneralPage.xaml should contain AiHub_Segment_Optimization");
-
-            // Verify editor and local action buttons (Save & Reset) are present
-            Assert.IsTrue(content.Contains("x:Name=\"AiPolicyContentBox\""), "GeneralPage.xaml should contain AiPolicyContentBox");
-            Assert.IsTrue(content.Contains("AiHub_SavePolicyButton"), "GeneralPage.xaml should contain AiHub_SavePolicyButton");
-            Assert.IsTrue(content.Contains("AiHub_ResetPolicyButton"), "GeneralPage.xaml should contain AiHub_ResetPolicyButton");
+            Assert.Fail($"Could not find {fileName} from the test directory");
+            return string.Empty;
         }
     }
 }

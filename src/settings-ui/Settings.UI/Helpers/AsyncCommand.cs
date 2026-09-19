@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using ManagedCommon;
 
 namespace Kit.Settings.UI.Helpers
 {
@@ -29,9 +30,21 @@ namespace Kit.Settings.UI.Helpers
             return _canExecute == null || _canExecute();
         }
 
+        /// <summary>
+        /// Runs the command. An <c>async void</c> entry point cannot propagate its exception
+        /// to a caller, so failures are observed and logged here instead of crashing the
+        /// process through the synchronization context.
+        /// </summary>
         public async void Execute(object parameter)
         {
-            await _execute();
+            try
+            {
+                await _execute();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("An asynchronous command failed.", ex);
+            }
         }
 
         public void RaiseCanExecuteChanged()

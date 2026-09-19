@@ -102,10 +102,7 @@ public sealed class AuditScheduler : IDisposable
     /// <summary>Starts the background loop. Calling it twice is a no-op.</summary>
     public void Start()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(AuditScheduler));
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         lock (_gate)
         {

@@ -89,6 +89,7 @@
 - **证据（更正）**：模块 README 两处声称读 Security——:40"Windows Security/System/Application/Setup 日志聚合"、:99"检索 Security...涵盖登录失败（Event 4625）、提权操作（Event 4672）"——与代码只读四通道的事实不符，文档失实。
 - **影响**：审计缺失最关键的安全类事件。
 - **修复方向（P0-3）**：Full 模式读 Security 白名单（4624/4625/4672/4688/4697）+ Firewall（4946-5157，XPath 16 ID 分块）；AIHubSettings 加 mode/appMode；提权切换复用 runner 机制；同步修正模块 README:99。
+  - ✅ **已实现**（commit 727e288）：`EventLogService.AuditMode`（Extended/Full）+ Security/Firewall 通道（30 个审计 ID 白名单，16-ID XPath 分块）+ `CanReadSecurityLog` 探针；未提权时降级而非失败；`auditMode` 设置项 + 飞窗内提权感知开关。**模块 README:40/:99 的修正仍未做**（待办）。
 
 ---
 
@@ -98,7 +99,8 @@
 - AIHub 页 + FindingDetailsDialog + AiHubViewModel 用 `IsChinese ? "中文" : "英文"` 三目（VM/code-behind 内）；GeneralPage AI 面板还有硬编码 "Codex CLI"/"Apply"/"gpt-5.6-luna"（:234/:238/:299/:340），AIHubPage.xaml:146 "Codex / Pi"、:199-201 "1d/2d/1w"、:203 "Scan options"。
 - **对照（更正）**：同工程 UDPtestPage/LocalserverPage 用 `x:Uid + 内联兜底`（resw 覆盖、可维护）——项目内已有正确范本，AIHub 整改直接抄它即可，无需自创 AppText。
 - FindingDetailsDialog 的"完全本地化"（changelog 声称）属实但同样走 code-behind 三目（ApplyLocalization:28-41）。
-- resw 键体系已齐备（995 键全 x:Uid 覆盖，§0），P2 整改=纯替换。
+- resw 键体系已齐备（995 键全 x:Uid 覆盖，§0），P2 整改=纯替换。当前 AIHubPageViewModel 内有 **145 处** `IsChinese ?` 三目，全量替换为 x:Uid 需同步 resw 及测试。
+- **新发现（P1，重复的总开关）**：AI Hub 的启用开关**同时存在于两个页面**且互不感知——`GeneralPage.xaml:205-210`（绑定 `GeneralViewModel.AiHub.IsEnabled`，自动化 ID `Toggle_AiHub`）与 `AIHubPage.xaml:110-112`（绑定 `AIHubPageViewModel.IsEnabled`，**同一个自动化 ID `Toggle_AiHub`**）。两者最终写同一状态源（`generalSettings.Enabled.AiHub` + `AiHubSettingsStore.IsEnabled`），但各自持有独立的 GPO 判定与通知链路：General 侧用 `AiHub.CanToggle`，AIHub 侧用 `IsEnabledGpoConfigured` 取反。后果：(1) 同一窗口内两处开关状态可能短暂不一致；(2) UI 自动化按 ID 定位会命中两个元素。修复方向：随 P1 面板迁移一并收敛为单一开关（AIHubPage 承载），并移除重复的 `Toggle_AiHub` ID。
 
 ### 2.2 范围选择双字段 bug（P1）
 - AIHubPageViewModel：`SelectedScopeIndex`(:370) 与 `FullScanRangeIndex`(:382) 双字段映射同一 `_selectedScopeIndex`；`SelectedScopeIndex` 全仓库仅 1 处引用（定义处）——死代码，存在"选择了但未生效"的字段路径。

@@ -2907,4 +2907,34 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AIHub_KernelPiItem.Content" xml:space="preserve">
     <value>Pi CLI</value>
   </data>
+  <data name="FindingDetailsDialog.Title" xml:space="preserve">
+    <value>Finding Details</value>
+  </data>
+  <data name="FindingDetailsDialog.PrimaryButtonText" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="FindingDetailsDialog.SecondaryButtonText" xml:space="preserve">
+    <value>Copy Summary</value>
+  </data>
+  <data name="FindingDetails_Facts.Text" xml:space="preserve">
+    <value>Detection Facts</value>
+  </data>
+  <data name="FindingDetails_RootCause.Text" xml:space="preserve">
+    <value>Root Cause</value>
+  </data>
+  <data name="FindingDetails_Recommendation.Text" xml:space="preserve">
+    <value>Recommended Action</value>
+  </data>
+  <data name="FindingDetails_Evidence.Text" xml:space="preserve">
+    <value>Event Evidence</value>
+  </data>
+  <data name="FindingDetails_Timestamp.Text" xml:space="preserve">
+    <value>Timestamp:</value>
+  </data>
+  <data name="FindingDetails_Affected.Text" xml:space="preserve">
+    <value>Affected:</value>
+  </data>
+  <data name="FindingDetails_Key.Text" xml:space="preserve">
+    <value>Issue Key:</value>
+  </data>
 </root>

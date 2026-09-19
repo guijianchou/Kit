@@ -22,22 +22,6 @@ public sealed partial class FindingDetailsDialog : ContentDialog
     public FindingDetailsDialog()
     {
         InitializeComponent();
-        ApplyLocalization();
-    }
-
-    private void ApplyLocalization()
-    {
-        Title = IsChinese ? "发现详情" : "Finding Details";
-        PrimaryButtonText = IsChinese ? "关闭" : "Close";
-        SecondaryButtonText = IsChinese ? "复制摘要" : "Copy Summary";
-
-        FactsHeaderTextBlock.Text = IsChinese ? "检测事实" : "Detection Facts";
-        RootCauseHeaderTextBlock.Text = IsChinese ? "触发原因" : "Root Cause";
-        RecommendationHeaderTextBlock.Text = IsChinese ? "建议操作" : "Recommended Action";
-        EvidenceHeaderTextBlock.Text = IsChinese ? "事件证据" : "Event Evidence";
-        TimestampHeaderTextBlock.Text = IsChinese ? "发生时间:" : "Timestamp:";
-        AffectedHeaderTextBlock.Text = IsChinese ? "影响范围:" : "Affected:";
-        KeyHeaderTextBlock.Text = IsChinese ? "问题标识:" : "Issue Key:";
     }
 
     public void SetFinding(AuditIssueEnhanced issue)

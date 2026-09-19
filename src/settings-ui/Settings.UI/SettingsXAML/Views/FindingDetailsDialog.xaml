@@ -11,6 +11,7 @@
     xmlns:models="using:Kit.AIHubLib.Models"
     xmlns:ui="using:CommunityToolkit.WinUI"
     mc:Ignorable="d"
+    x:Uid="FindingDetailsDialog"
     Title="Finding Details"
     PrimaryButtonText="Close"
     SecondaryButtonText="Copy Summary"
@@ -67,7 +68,7 @@
             <StackPanel Spacing="14">
                 <!-- Section 1: Analysis & Recommended Action -->
                 <StackPanel Spacing="4">
-                    <TextBlock x:Name="FactsHeaderTextBlock" Text="Detection Facts"
+                    <TextBlock x:Name="FactsHeaderTextBlock" x:Uid="FindingDetails_Facts" Text="Detection Facts"
                                Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock x:Name="DescriptionTextBlock"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -75,7 +76,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="4">
-                    <TextBlock x:Name="RootCauseHeaderTextBlock" Text="Root Cause"
+                    <TextBlock x:Name="RootCauseHeaderTextBlock" x:Uid="FindingDetails_RootCause" Text="Root Cause"
                                Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock x:Name="RootCauseTextBlock"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -83,7 +84,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="4">
-                    <TextBlock x:Name="RecommendationHeaderTextBlock" Text="Recommended Action"
+                    <TextBlock x:Name="RecommendationHeaderTextBlock" x:Uid="FindingDetails_Recommendation" Text="Recommended Action"
                                Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <Border CornerRadius="6" Padding="12,8"
                             Background="{ThemeResource SubtleFillColorSecondaryBrush}">
@@ -96,7 +97,7 @@
 
                 <!-- Section 2: Event Evidence -->
                 <StackPanel Spacing="6">
-                    <TextBlock x:Name="EvidenceHeaderTextBlock" Text="Event Evidence"
+                    <TextBlock x:Name="EvidenceHeaderTextBlock" x:Uid="FindingDetails_Evidence" Text="Event Evidence"
                                Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <Grid RowSpacing="4" ColumnSpacing="12">
                         <Grid.ColumnDefinitions>
@@ -109,17 +110,17 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" x:Name="TimestampHeaderTextBlock" Text="Timestamp:"
+                        <TextBlock Grid.Row="0" Grid.Column="0" x:Name="TimestampHeaderTextBlock" x:Uid="FindingDetails_Timestamp" Text="Timestamp:"
                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="12" />
                         <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TimestampTextBlock"
                                    FontSize="12" IsTextSelectionEnabled="True" />
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" x:Name="AffectedHeaderTextBlock" Text="Affected:"
+                        <TextBlock Grid.Row="1" Grid.Column="0" x:Name="AffectedHeaderTextBlock" x:Uid="FindingDetails_Affected" Text="Affected:"
                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="12" />
                         <TextBlock Grid.Row="1" Grid.Column="1" x:Name="AffectedTextBlock"
                                    FontSize="12" IsTextSelectionEnabled="True" />
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" x:Name="KeyHeaderTextBlock" Text="Issue Key:"
+                        <TextBlock Grid.Row="2" Grid.Column="0" x:Name="KeyHeaderTextBlock" x:Uid="FindingDetails_Key" Text="Issue Key:"
                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="12" />
                         <TextBlock Grid.Row="2" Grid.Column="1" x:Name="KeyTextBlock"
                                    FontSize="12" IsTextSelectionEnabled="True" />

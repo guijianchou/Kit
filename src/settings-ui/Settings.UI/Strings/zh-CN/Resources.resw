@@ -1595,4 +1595,34 @@
   <data name="AIHub_KernelPiItem.Content" xml:space="preserve">
     <value>Pi CLI</value>
   </data>
+  <data name="FindingDetailsDialog.Title" xml:space="preserve">
+    <value>发现详情</value>
+  </data>
+  <data name="FindingDetailsDialog.PrimaryButtonText" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="FindingDetailsDialog.SecondaryButtonText" xml:space="preserve">
+    <value>复制摘要</value>
+  </data>
+  <data name="FindingDetails_Facts.Text" xml:space="preserve">
+    <value>检测事实</value>
+  </data>
+  <data name="FindingDetails_RootCause.Text" xml:space="preserve">
+    <value>触发原因</value>
+  </data>
+  <data name="FindingDetails_Recommendation.Text" xml:space="preserve">
+    <value>建议操作</value>
+  </data>
+  <data name="FindingDetails_Evidence.Text" xml:space="preserve">
+    <value>事件证据</value>
+  </data>
+  <data name="FindingDetails_Timestamp.Text" xml:space="preserve">
+    <value>发生时间:</value>
+  </data>
+  <data name="FindingDetails_Affected.Text" xml:space="preserve">
+    <value>影响范围:</value>
+  </data>
+  <data name="FindingDetails_Key.Text" xml:space="preserve">
+    <value>问题标识:</value>
+  </data>
 </root>

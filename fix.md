@@ -22,7 +22,9 @@
 > - ✅ **P1 AI 面板迁移**（commit 7afec58）——内核/端点/策略面板从 GeneralPage 迁至 AIHubPage 第四页签；`AiHubViewModel` 改由 AIHubPageViewModel 托管；**并修复了 §2.1 记录的"重复总开关"问题**（General 侧副本移除，全仓库仅剩一个 `Toggle_AiHub`）。迁移前已核实 AIHubPage 的 `IsEnabled` 本就发送相同的 general-settings IPC，故无持久化损失；测试同步改写为"面板位于 AIHubPage"+"General 不再承载"双向守护。
 > - ✅ **P2 规则引擎下沉**（commit c684f5b）——345 行纯逻辑 `RunRuleBasedAuditAnalysis` 从页面 VM 提取为 `AIHubLib.Services.AuditRuleEngine`（**零 UI 依赖**，仅用 SecurityEvent/AuditIssueEnhanced/CultureInfo）；VM 侧改为一行委托，**减少约 360 行**；9 项新测试。这同时是 AIHub Worker 化的前置条件（worker 需在无页面环境下执行审计）。
 > - ✅ **P2 面板本地化补齐**（commit 12efc13）——AI 面板中缺失 `x:Uid` 的可见文案（内核徽标、Codex/Pi 选项）补齐 resw 键与中文翻译；审计确认 **AIHubPage 31/31 个 x:Uid 均有资源覆盖**（协议标识类枚举值保持字面量）。
-> - ⏳ 待办：P0-2 扩展到 AIHub（规则引擎已就绪，剩调度宿主）；UDPtest 经核实**不需要 Worker**（见 §8.3 说明）。
+> - ✅ **P2/P0-2 无头审计链路**（commit 9febf37）——新增 `AuditPipeline`（采集→分类→评分→持久化，含窗口/模式/上限/retention/不落盘选项）与 `AuditScheduler`（由 `AuditSchedule` 驱动的节奏循环、增量窗口、运行时间隔调整、启停与释放）；**审计路径已完全脱离页面**，就绪于无头宿主。
+>   - **提取过程发现并修复真实竞态**：`AuditScheduler.Start()` 在循环字段赋值前检查 `IsRunning`，两次快速调用会启动两个循环；改为锁内守卫（`Start`/`StopAsync` 同锁），修复后 11 项测试连续 3 轮全绿。
+> - ⏳ 待办：AIHub 调度宿主接入（`AuditScheduler` 已就绪，剩原生 `enable()` 拉起 + 设置读取）；UDPtest 经核实**不需要 Worker**（见 §8.3 说明）。
 > - **P0-2 适用性结论**：UDPtest 的探测按用户显式 Start/Stop 运行，页面无导航钩子（`UDPtestPage.xaml.cs` 无 `OnNavigatedFrom`），停止探测是原版"显式 Start/Stop"设计的延续，**不构成需要常驻监督的缺口**；Localserver（已做）与 AIHub 定时审计才是真正的"服务存活但失去守护"场景。
 > - 验证：`Kit.Settings` 编译 0 错误；`Kit.vcxproj` 编译并链接 Kit.exe 成功；`Kit.AiHub.UnitTests` 151 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。
 > - 构建注记（本机沙箱）：需 `/p:TrackFileAccess=false`；原生项目用 `Bin\amd64\MSBuild.exe`（否则 GenerateResource 任务宿主不可用）；`dotnet test` 因命名管道受限改用测试 exe 直接运行。

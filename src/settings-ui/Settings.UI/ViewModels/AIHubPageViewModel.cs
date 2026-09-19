@@ -2129,9 +2129,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         Task.Run(() =>
         {
-            int deletedCount = 0;
-            int movedCount = 0;
-            int failedCount = 0;
+            var outcome = new OptimizationOutcome();
+            int processed = 0;
 
             foreach (var item in selectedItems)
             {
@@ -2145,34 +2144,31 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     if (item.Action == "delete")
                     {
                         // Clean temp file using Recycle Bin ONLY
-                        var (ok, _) = _recycleBinHelper.MoveToRecycleBin(item.FilePath);
-                        if (ok)
-                        {
-                            deletedCount++;
-                        }
-                        else
-                        {
-                            failedCount++;
-                        }
+                        var (ok, error) = _recycleBinHelper.MoveToRecycleBin(item.FilePath);
+                        outcome.Add(ok
+                            ? OptimizationItemResult.Success(item.FileName, "delete")
+                            : OptimizationItemResult.Failure(item.FileName, "delete", error));
                     }
                     else if (item.Action == "move")
                     {
                         // Organize Downloads within root
                         bool ok = _downloadOrganizerService.OrganizeItem(item.FilePath, item.TargetRelativePath);
-                        if (ok)
-                        {
-                            movedCount++;
-                        }
-                        else
-                        {
-                            failedCount++;
-                        }
+                        outcome.Add(ok
+                            ? OptimizationItemResult.Success(item.FileName, "move")
+                            : OptimizationItemResult.Failure(item.FileName, "move", IsChinese ? "整理失败" : "organization failed"));
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    failedCount++;
+                    // Keep the reason: a silent count tells the user nothing actionable.
+                    outcome.Add(OptimizationItemResult.Failure(item.FileName, item.Action, ex.Message));
                 }
+
+                processed++;
+                int done = processed;
+                EnqueueOnUI(() => OptimizationWorkflowStatus = IsChinese
+                    ? $"正在执行已确认的操作... ({done}/{selectedItems.Count})"
+                    : $"Executing confirmed actions... ({done}/{selectedItems.Count})");
             }
 
             EnqueueOnUI(() =>
@@ -2184,8 +2180,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 }
 
                 RecalculateCandidateMetrics();
-                OptimizationWorkflowStatus = IsChinese ? "执行完成" : "Execution completed";
-                ShowStatus(IsChinese ? $"优化完成: 已整理 {movedCount} 个文件，已将 {deletedCount} 个文件移至回收站 ({failedCount} 个失败/跳过)。" : $"Optimization completed: {movedCount} file(s) organized, {deletedCount} file(s) moved to Recycle Bin ({failedCount} failed/skipped).", InfoBarSeverity.Success);
+
+                // Surface the actual failure reasons instead of an opaque count.
+                var failureDetail = outcome.DescribeFailures(IsChinese);
+                OptimizationWorkflowStatus = outcome.HasFailures
+                    ? (IsChinese ? $"执行完成（{outcome.FailedCount} 个失败）" : $"Execution completed ({outcome.FailedCount} failed)")
+                    : (IsChinese ? "执行完成" : "Execution completed");
+
+                ShowStatus(
+                    failureDetail is null
+                        ? outcome.Describe(IsChinese)
+                        : $"{outcome.Describe(IsChinese)} — {failureDetail}",
+                    outcome.HasFailures ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
             });
 
             EnqueueOnUI(() => IsOptimizing = false);

@@ -27,6 +27,7 @@
 > - ✅ **P0-2 AIHub Worker**（commit 74f292f）——新增 `Kit.AIHubWorker`（`--pid`/`--data-dir` 契约、父进程存活监视、**每 tick 重读设置并 fail-closed**，关闭开关即停调度无需重启）+ `AIHubConfig` 扩展 `ScanIntervalHours`/`AuditModeIndex`/`RetentionDays`（使无头宿主无需加载 UI 程序集即可读取节奏）+ 原生 `enable()` 拉起 / `disable()` 停止；注册进 `Kit.slnx`，部署至 `x64/Debug/AIHubWorker`。
 >   - **P0-2 结论：两个真正需要的插件均已完成**——Localserver（常驻服务监督）+ AIHub（定时审计）；UDPtest 经核实为显式 Start/Stop 模型，无守护缺口，**不适用**（见 §8.3）。
 > - ✅ **P2 FindingDetailsDialog 本地化**（commit d165b9f）——标题/按钮/7 个分区表头改用 `x:Uid` + resw（与 UDPtest/Localserver 页面的正确范式一致），移除 `ApplyLocalization`；仅保留 3 处**运行时插值**字符串（事件 ID、空值占位、复制摘要），x:Uid 无法表达。
+> - ✅ **P1/P3 收尾**（commits 02bbaa3/89b5c89）：`AsyncCommand.Execute` 加固（async void 异常不再逃逸崩溃进程）；`CacheCleanupServiceTests`（6 项）锁定破坏性路径的安全契约；`ProbeCoordinatorTests`（10 项）覆盖协调器生命周期校验——UDPtest 18→28 项。
 > - **P2 本地化最终结论（技术判定，非未完成）**：AIHubPageViewModel 内 140 处 `IsChinese` 三目中，**138 处为格式化/插值字符串**（如 `$"扫描完成。健康评分: {score}/100"`），x:Uid 只能替换静态属性值，**无法表达运行时拼接**；剩余静态标签已全部走 x:Uid。经全量扫描确认：**零个本地化缺陷**（无中英错位、无空串、无未翻译对），功能上是干净的。因此该条从"待办"转为**已按可行范围完成，其余属技术不可行**。
 > - **P0-2 适用性结论**：UDPtest 的探测按用户显式 Start/Stop 运行，页面无导航钩子（`UDPtestPage.xaml.cs` 无 `OnNavigatedFrom`），停止探测是原版"显式 Start/Stop"设计的延续，**不构成需要常驻监督的缺口**；Localserver（已做）与 AIHub 定时审计才是真正的"服务存活但失去守护"场景。
 > - 验证：`Kit.Settings` 编译 0 错误；`Kit.vcxproj` 编译并链接 Kit.exe 成功；`Kit.AiHub.UnitTests` 151 通过/1 跳过；`Settings.UI.UnitTests` 199 通过。

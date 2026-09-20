@@ -157,13 +157,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly SecurityPolicyService _securityService = new();
     private readonly ObservableCollection<AiReportFinding> _aiReportFindings = new();
     private readonly List<SecurityEvent> _lastAuditEvents = new();
-    private readonly ObservableCollection<AuditTrendDay> _trendDays = new();
-    private readonly ObservableCollection<AuditCategoryTotal> _trendCategories = new();
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _scheduleTimer;
 
-    private int _trendWindowDays = 7;
-    private string _trendSummaryText = string.Empty;
-    private bool _hasTrendData;
     private DateTime? _lastCompletedAuditUtc;
 
     private CancellationTokenSource _currentCts;
@@ -268,9 +263,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         _scheduleTimer.Interval = TimeSpan.FromMinutes(5);
         _scheduleTimer.Tick += (_, _) => RunScheduledAuditIfDue();
 
-        // Load cached audit history and the trends derived from it
+        // Load cached audit history
         LoadRecentAudit();
-        RefreshTrends();
     }
 
     public static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
@@ -567,97 +561,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string SecurityAuditTabLabel => IsChinese ? "安全审计" : "Security Audit";
     public string OptimizationTabLabel => IsChinese ? "系统优化" : "Optimization";
 
-    public string TrendsTabLabel => IsChinese ? "趋势" : "Trends";
-
     public string AiServicesTabLabel => IsChinese ? "AI 服务" : "AI Services";
-
-    public ObservableCollection<AuditTrendDay> TrendDays => _trendDays;
-
-    public ObservableCollection<AuditCategoryTotal> TrendCategories => _trendCategories;
-
-    /// <summary>Selected trends window in days (1, 7 or 30).</summary>
-    public int TrendWindowDays
-    {
-        get => _trendWindowDays;
-        set
-        {
-            int normalized = AuditTrends.NormalizeWindowDays(value);
-            if (Set(ref _trendWindowDays, normalized))
-            {
-                OnPropertyChanged(nameof(IsTrendWindow1Day));
-                OnPropertyChanged(nameof(IsTrendWindow7Days));
-                OnPropertyChanged(nameof(IsTrendWindow30Days));
-                RefreshTrends();
-            }
-        }
-    }
-
-    public bool IsTrendWindow1Day => TrendWindowDays == 1;
-
-    public bool IsTrendWindow7Days => TrendWindowDays == 7;
-
-    public bool IsTrendWindow30Days => TrendWindowDays == 30;
-
-    /// <summary>Bilingual summary of the currently selected window.</summary>
-    public string TrendSummaryText
-    {
-        get => _trendSummaryText;
-        private set => Set(ref _trendSummaryText, value);
-    }
-
-    /// <summary>False when the window contains no audits, so the view can explain itself.</summary>
-    public bool HasTrendData
-    {
-        get => _hasTrendData;
-        private set => Set(ref _hasTrendData, value);
-    }
-
-    /// <summary>
-    /// Recomputes the trends series and category totals for the selected window from the
-    /// stored history. Never invents data: an empty history yields empty trends.
-    /// </summary>
-    public void RefreshTrends()
-    {
-        Task.Run(async () =>
-        {
-            try
-            {
-                List<AuditResult> history = await _auditHistoryStorage.LoadHistoryAsync().ConfigureAwait(false);
-                var series = AuditTrends.BuildDailySeries(history, DateTime.Now, TrendWindowDays);
-                var categories = AuditTrends.BuildCategoryTotals(history, DateTime.Now, TrendWindowDays);
-                int activeDays = AuditTrends.CountActiveDays(series);
-
-                EnqueueOnUI(() =>
-                {
-                    _trendDays.Clear();
-                    foreach (AuditTrendDay day in series)
-                    {
-                        _trendDays.Add(day);
-                    }
-
-                    _trendCategories.Clear();
-                    foreach (AuditCategoryTotal total in categories)
-                    {
-                        _trendCategories.Add(total);
-                    }
-
-                    int windowDays = TrendWindowDays;
-                    HasTrendData = activeDays > 0;
-                    TrendSummaryText = activeDays > 0
-                        ? (IsChinese
-                            ? $"最近 {windowDays} 天内有 {activeDays} 天执行过审计，共 {categories.Sum(c => c.Count)} 项发现。"
-                            : $"{activeDays} active day(s) in the last {windowDays} day(s), {categories.Sum(c => c.Count)} finding(s) total.")
-                        : (IsChinese
-                            ? $"最近 {windowDays} 天内没有审计记录。"
-                            : $"No audits recorded in the last {windowDays} day(s).");
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Failed to compute AI Hub audit trends", ex);
-            }
-        });
-    }
 
     // Audit Header & Action Labels
     public string SecurityAuditTitle => IsChinese ? "Windows 事件安全审计" : "Windows Event Security Audit";
@@ -1213,9 +1117,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         ActivityScansText = statistics.AuditCountText;
         ActiveDaysText = statistics.ActiveDayCountText;
         HealthAverageText = statistics.AverageHealthScoreText;
-
-        // The trends surface reads the same stored history, so refresh it alongside.
-        RefreshTrends();
     }
 
     /// <summary>

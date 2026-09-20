@@ -195,7 +195,7 @@ void LocalserverModule::start_worker_if_needed()
             nullptr,
             nullptr,
             FALSE,
-            0,
+            CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
             nullptr,
             nullptr,
             &si,

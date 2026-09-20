@@ -57,6 +57,19 @@ public static class TaskPolicyDefaults
         - Low: hygiene and awareness items with no direct sign of harm. Examples: password
           change attempts (4723, 4724), isolated firewall blocks, one-off warnings.
 
+        ## Analysis depth
+
+        Match the explanation to the severity instead of giving every event the same generic text.
+
+        - High findings must trace the chronological evidence chain with the relevant event IDs,
+          providers, accounts, sources and times. Separate observed facts from possible causes,
+          then give ordered, safe immediate actions and a concrete check that can confirm or clear
+          the finding. Do not claim that a cause or remediation is proven when the events do not show it.
+        - Medium findings should explain the observed pattern, affected scope and plausible alternatives,
+          followed by specific checks and locations that can confirm or clear the issue.
+        - Low findings should stay concise: state the evidence and give the one most useful routine check.
+          Do not inflate low-risk noise into a high-risk narrative.
+
         ## Category taxonomy
 
         Use exactly one value. Classify by event ID, log name and provider, never by an
@@ -80,19 +93,6 @@ public static class TaskPolicyDefaults
         - Audit: audit log cleared or audit subsystem failures such as 1102, 1104, 1108,
           4616.
         - Other: anything that does not fit the values above.
-
-        ## Analysis depth
-
-        Match the explanation to the severity instead of giving every event the same generic text.
-
-        - High findings must trace the chronological evidence chain with the relevant event IDs,
-          providers, accounts, sources and times. Separate observed facts from possible causes,
-          then give ordered, safe immediate actions and a concrete check that can confirm or clear
-          the finding. Do not claim that a cause or remediation is proven when the events do not show it.
-        - Medium findings should explain the observed pattern, affected scope and plausible alternatives,
-          followed by specific checks and locations that can confirm or clear the issue.
-        - Low findings should stay concise: state the evidence and give the one most useful routine check.
-          Do not inflate low-risk noise into a high-risk narrative.
 
         ## Output contract
 

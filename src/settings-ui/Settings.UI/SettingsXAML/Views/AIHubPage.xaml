@@ -141,22 +141,18 @@
                                         <FontIcon Glyph="&#xE943;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                         <TextBlock Text="{x:Bind ViewModel.PipelineTitle, Mode=OneWay}" FontWeight="SemiBold" FontSize="12" />
                                     </StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                                            <TextBlock x:Uid="AIHub_KernelBadge" Text="Codex / Pi" FontSize="11" FontWeight="Medium" />
-                                        </Border>
-                                        <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-                                        <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                                            <TextBlock Text="{x:Bind ViewModel.PipelinePolicyText, Mode=OneWay}" FontSize="11" FontWeight="Medium" />
-                                        </Border>
-                                        <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-                                        <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                                            <TextBlock Text="{x:Bind ViewModel.PipelineSummaryText, Mode=OneWay}" FontSize="11" FontWeight="Medium" />
-                                        </Border>
-                                        <FontIcon Glyph="&#xE76C;" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-                                        <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource AccentFillColorDefaultBrush}">
-                                            <TextBlock Text="{x:Bind ViewModel.PipelineActionText, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
-                                        </Border>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <!-- Phase label and weighted progress, visible while a scan runs -->
+                                        <TextBlock Text="{x:Bind ViewModel.ScanPhaseText, Mode=OneWay}" FontSize="11"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                        <ProgressBar Width="180" Height="4" VerticalAlignment="Center"
+                                                     Minimum="0" Maximum="100"
+                                                     Value="{x:Bind ViewModel.ScanProgressPercent, Mode=OneWay}"
+                                                     Visibility="{x:Bind ViewModel.IsWorkflowVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        <TextBlock Text="{x:Bind ViewModel.ScanProgressPercentText, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"
+                                                   MinWidth="34" TextAlignment="Right" VerticalAlignment="Center" />
+                                        <TextBlock Text="{x:Bind ViewModel.ScanStageCountText, Mode=OneWay}" FontSize="10"
+                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Grid>
                             </Border>

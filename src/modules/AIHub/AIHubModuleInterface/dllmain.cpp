@@ -39,6 +39,12 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD ul_reason_for_call, LPVOID /*lp
 const static wchar_t* MODULE_NAME = L"AI Hub";
 const static wchar_t* MODULE_DESC = L"AI Hub provides local security audit and system optimization pipelines using Codex and Pi CLI.";
 
+namespace
+{
+    // Must match the name the worker listens on so disable() can request a clean stop.
+    const wchar_t AIHUB_WORKER_STOP_EVENT[] = L"Local\\KitAIHubWorkerStopEvent-3f8c1a52-6d47-4b9e-8a11-2c7d5e9f4b60";
+}
+
 class AIHubModule : public KitModuleIface
 {
     std::wstring app_name;
@@ -221,7 +227,18 @@ void AIHubModule::stop_worker_if_running()
     if (result == WAIT_TIMEOUT)
     {
         Logger::info(L"[AIHub] Stopping the audit worker.");
-        if (TerminateProcess(m_worker_process, 0))
+
+        // Ask the worker to drain and exit first, then terminate as a fallback so a stuck
+        // worker cannot outlive the module.
+        HANDLE stopEvent = OpenEventW(EVENT_MODIFY_STATE, FALSE, AIHUB_WORKER_STOP_EVENT);
+        if (stopEvent)
+        {
+            SetEvent(stopEvent);
+            CloseHandle(stopEvent);
+            result = WaitForSingleObject(m_worker_process, 2000);
+        }
+
+        if (result == WAIT_TIMEOUT && TerminateProcess(m_worker_process, 0))
         {
             result = WaitForSingleObject(m_worker_process, 1500);
         }

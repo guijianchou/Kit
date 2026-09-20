@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Models;
 using Kit.AiHub.Storage;
+using Kit.AIHubLib.Models;
 using Kit.AIHubLib.Services;
 using ManagedCommon;
 
@@ -27,6 +28,9 @@ using ManagedCommon;
 /// </remarks>
 public static class Program
 {
+    /// <summary>Named event the module interface signals to request a clean stop.</summary>
+    private const string ExitEventName = "Local\\KitAIHubWorkerStopEvent-3f8c1a52-6d47-4b9e-8a11-2c7d5e9f4b60";
+
     /// <summary>How often the parent process is checked for liveness.</summary>
     private static readonly TimeSpan ParentCheckInterval = TimeSpan.FromSeconds(5);
 
@@ -42,6 +46,10 @@ public static class Program
         string? dataDirectory = ParseDataDirectory(args);
 
         using var shutdown = new CancellationTokenSource();
+
+        // The module interface signals this event on disable so the worker can drain and exit
+        // promptly instead of waiting to be terminated.
+        using var stopEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ExitEventName);
         Console.CancelKeyPress += (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
@@ -72,9 +80,18 @@ public static class Program
 
             Logger.LogInfo($"[AIHub.Worker] Interval {scheduler.IntervalHours} h; mode {(config.AuditModeIndex == 1 ? "full" : "extended")}.");
 
+            if (!AuditSchedule.IsSchedulingEnabled(scheduler.IntervalHours))
+            {
+                // Plugin guidance: do not keep a process alive purely for health checks.
+                // With no cadence configured there is no scheduled work, so exit instead of
+                // idling in the tray for the whole session.
+                Logger.LogInfo("[AIHub.Worker] Scheduling is off; exiting without staying resident.");
+                return 0;
+            }
+
             scheduler.Start();
 
-            await WaitForShutdownAsync(parentPid, shutdown.Token).ConfigureAwait(false);
+            await WaitForShutdownAsync(parentPid, stopEvent, shutdown.Token).ConfigureAwait(false);
 
             Logger.LogInfo("[AIHub.Worker] Stopped watching; ending the schedule.");
             return 0;
@@ -116,16 +133,14 @@ public static class Program
         }
     }
 
-    private static async Task WaitForShutdownAsync(int? parentPid, CancellationToken cancellationToken)
+    private static async Task WaitForShutdownAsync(int? parentPid, EventWaitHandle stopEvent, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            try
+            // Wait on either the cooperative stop event or the parent-liveness poll.
+            if (stopEvent.WaitOne(ParentCheckInterval))
             {
-                await Task.Delay(ParentCheckInterval, cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
+                Logger.LogInfo("[AIHub.Worker] Stop event signalled.");
                 return;
             }
 

@@ -158,8 +158,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly ObservableCollection<AiReportFinding> _aiReportFindings = new();
     private readonly List<SecurityEvent> _lastAuditEvents = new();
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _scheduleTimer;
+    private readonly ScanProgressModel _scanProgress = new();
 
     private DateTime? _lastCompletedAuditUtc;
+    private ScanPhase _scanPhase = ScanPhase.Idle;
+    private string _currentStageText = string.Empty;
 
     private CancellationTokenSource _currentCts;
     private bool _disposed;
@@ -798,6 +801,80 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     {
         get => _optimizationWorkflowStatus;
         private set => Set(ref _optimizationWorkflowStatus, value);
+    }
+
+    /// <summary>Current lifecycle stage of the optimization scan.</summary>
+    public ScanPhase ScanPhase
+    {
+        get => _scanPhase;
+        private set
+        {
+            if (Set(ref _scanPhase, value))
+            {
+                OnPropertyChanged(nameof(IsScanning));
+                OnPropertyChanged(nameof(IsWorkflowVisible));
+                OnPropertyChanged(nameof(ScanPhaseText));
+            }
+        }
+    }
+
+    /// <summary>True while a scan runs, so the UI can show a progress bar.</summary>
+    public bool IsScanning => ScanPhase == ScanPhase.Scanning;
+
+    /// <summary>True once a scan produced results worth showing.</summary>
+    public bool IsWorkflowVisible => ScanPhase is ScanPhase.Scanning or ScanPhase.SelectingTargets or ScanPhase.Failed;
+
+    /// <summary>Bilingual phase label shown beside the progress bar.</summary>
+    public string ScanPhaseText => ScanPhase switch
+    {
+        ScanPhase.Scanning => IsChinese ? "正在扫描" : "Scanning",
+        ScanPhase.SelectingTargets => IsChinese ? "请查看扫描结果" : "Review scan results",
+        ScanPhase.ExecutionPending => IsChinese ? "正在应用更改" : "Applying changes",
+        ScanPhase.Failed => IsChinese ? "扫描失败" : "Scan failed",
+        _ => IsChinese ? "就绪，等待扫描" : "Ready to scan",
+    };
+
+    /// <summary>Weighted 0-100 scan completion.</summary>
+    public double ScanProgressPercent => _scanProgress.Percent;
+
+    public string ScanProgressPercentText => _scanProgress.PercentText;
+
+    public string ScanStageCountText => _scanProgress.StageCountText;
+
+    /// <summary>Name of the stage currently running.</summary>
+    public string CurrentStageText
+    {
+        get => _currentStageText;
+        private set => Set(ref _currentStageText, value);
+    }
+
+    /// <summary>Starts a stage and publishes the new progress values.</summary>
+    private void BeginStage(string title)
+    {
+        _scanProgress.StartStage(title);
+        CurrentStageText = title;
+        PublishScanProgress();
+    }
+
+    /// <summary>Completes a stage, which also completes every earlier stage.</summary>
+    private void EndStage(string title)
+    {
+        _scanProgress.CompleteStage(title);
+        PublishScanProgress();
+    }
+
+    private void ResetScanProgress()
+    {
+        _scanProgress.Reset();
+        CurrentStageText = string.Empty;
+        PublishScanProgress();
+    }
+
+    private void PublishScanProgress()
+    {
+        OnPropertyChanged(nameof(ScanProgressPercent));
+        OnPropertyChanged(nameof(ScanProgressPercentText));
+        OnPropertyChanged(nameof(ScanStageCountText));
     }
 
     public int CandidatesCount
@@ -1536,12 +1613,22 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         var token = _currentCts.Token;
 
         IsOptimizing = true;
+        ResetScanProgress();
+        ScanPhase = ScanPhase.Scanning;
         OptimizationWorkflowStatus = IsChinese ? "正在扫描..." : "Scanning...";
+        BeginStage("Preparing scan");
 
         Task.Run(async () =>
         {
             try
             {
+                EnqueueOnUI(() =>
+                {
+                    EndStage("Preparing scan");
+                    BeginStage("Scan cache locations");
+                    BeginStage("Scan Downloads");
+                });
+
                 var downloadsTask = _downloadOrganizerService.ScanAsync(token);
                 var cacheTask = _cacheCleanupService.ScanAsync(token);
 
@@ -1559,6 +1646,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 EnqueueOnUI(() =>
                 {
+                    EndStage("Scan cache locations");
+                    EndStage("Scan Downloads");
+                    EndStage("Finish");
+                    ScanPhase = ScanPhase.SelectingTargets;
+
                     DownloadsItemCount = downloads.Count;
                     DownloadsBytes = dlBytes;
                     DownloadsStatusText = IsChinese ? $"发现 {downloads.Count} 项 ({FormatBytes(dlBytes)})" : $"{downloads.Count} item(s) found ({FormatBytes(dlBytes)})";
@@ -1583,13 +1675,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             }
             catch (OperationCanceledException)
             {
-                EnqueueOnUI(() => OptimizationWorkflowStatus = IsChinese ? "扫描已取消" : "Scan cancelled");
+                EnqueueOnUI(() =>
+                {
+                    OptimizationWorkflowStatus = IsChinese ? "扫描已取消" : "Scan cancelled";
+                    ScanPhase = ScanPhase.Idle;
+                });
             }
             catch (Exception ex)
             {
                 EnqueueOnUI(() =>
                 {
                     OptimizationWorkflowStatus = IsChinese ? "扫描失败" : "Scan failed";
+                    ScanPhase = ScanPhase.Failed;
                     ShowStatus($"Optimization scan failed: {ex.Message}", InfoBarSeverity.Error);
                 });
             }
@@ -1612,7 +1709,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         var token = _currentCts.Token;
 
         IsOptimizing = true;
+        ResetScanProgress();
+        ScanPhase = ScanPhase.Scanning;
         OptimizationWorkflowStatus = IsChinese ? "正在扫描下载目录..." : "Scanning Downloads root...";
+        BeginStage("Scan Downloads");
 
         Task.Run(async () =>
         {
@@ -1623,6 +1723,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 EnqueueOnUI(() =>
                 {
+                    EndStage("Scan Downloads");
+                    EndStage("Finish");
+                    ScanPhase = ScanPhase.SelectingTargets;
+
                     DownloadsItemCount = downloads.Count;
                     DownloadsBytes = dlBytes;
                     DownloadsStatusText = IsChinese ? $"发现 {downloads.Count} 项 ({FormatBytes(dlBytes)})" : $"{downloads.Count} item(s) found ({FormatBytes(dlBytes)})";
@@ -1670,7 +1774,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         var token = _currentCts.Token;
 
         IsOptimizing = true;
+        ResetScanProgress();
+        ScanPhase = ScanPhase.Scanning;
         OptimizationWorkflowStatus = IsChinese ? "正在扫描临时文件..." : "Scanning Temporary files...";
+        BeginStage("Scan cache locations");
 
         Task.Run(async () =>
         {
@@ -1681,6 +1788,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 EnqueueOnUI(() =>
                 {
+                    EndStage("Scan cache locations");
+                    EndStage("Finish");
+                    ScanPhase = ScanPhase.SelectingTargets;
+
                     TemporaryFilesItemCount = caches.Count;
                     TemporaryFilesBytes = cacheBytes;
                     TemporaryFilesStatusText = IsChinese ? $"发现 {caches.Count} 项 ({FormatBytes(cacheBytes)})" : $"{caches.Count} item(s) found ({FormatBytes(cacheBytes)})";

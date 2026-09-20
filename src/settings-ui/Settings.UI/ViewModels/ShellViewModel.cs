@@ -69,17 +69,6 @@ namespace Kit.Settings.UI.ViewModels
             get { return _moduleNavViewItems; }
         }
 
-        /// <summary>
-        /// Live module enable state, used by the shell to dim disabled navigation entries.
-        /// </summary>
-        public EnabledModules EnabledModules => _generalSettingsConfig?.Enabled;
-
-        /// <summary>Raised when a module is enabled or disabled so the shell can refresh.</summary>
-        public event Action ModuleEnabledChanged;
-
-        /// <summary>Notifies the shell that module enable state changed.</summary>
-        public void RaiseModuleEnabledChanged() => ModuleEnabledChanged?.Invoke();
-
         public ICommand LoadedCommand => loadedCommand ?? (loadedCommand = new RelayCommand(OnLoaded));
 
         public ICommand ItemInvokedCommand => itemInvokedCommand ?? (itemInvokedCommand = new RelayCommand<NavigationViewItemInvokedEventArgs>(OnItemInvoked));
@@ -135,13 +124,6 @@ namespace Kit.Settings.UI.ViewModels
         {
             if (args.InvokedItemContainer is NavigationViewItem item)
             {
-                if (!item.IsEnabled)
-                {
-                    // A disabled module has no usable page; skip navigation so the click does
-                    // not construct and immediately discard a heavy page (the reported stutter).
-                    return;
-                }
-
                 var pageType = item.GetValue(NavHelper.NavigateToProperty) as Type;
                 if (pageType != null)
                 {

@@ -4,6 +4,12 @@
 
 ## English
 
+### 2.2.3
+
+- **AI Hub Audit Fix - Empty Scan Results**:
+  - Fixed Fast/Full scans always reporting "health score 100/100 with 0 findings" regardless of the selected 1/2/7 day range. The manual scan reused the scheduled audit incremental window, so after the first run every later scan only covered the couple of minutes since that run and therefore collected nothing.
+  - Restored the original `GetScanStart` semantics through an explicit `ScanIntent`: manual full scans and reanalyzes always cover the whole selected range; only a cadence-driven run resumes from the previous scan.
+  - Removed the silent catch around event reads, which made a failed read indistinguishable from an empty log and let an empty result look like a clean bill of health.
 ### 2.2.2
 
 - **AI Hub Scan Progress & Workflow Stages**:
@@ -479,6 +485,12 @@
 
 ## 更新日志
 
+### 2.2.3
+
+- **AI 智能中心审计修复 —— 扫描结果为空**：
+  - 修复 Fast/Full 扫描无论选择 1/2/7 天都返回"健康评分 100/100，0 项发现"。手动扫描误用了定时审计的增量窗口，首次扫描后每次只覆盖"距上次扫描的几分钟"，因此采集不到任何事件。
+  - 通过显式 `ScanIntent` 恢复原版 `GetScanStart` 语义：手动全量扫描与重新分析始终覆盖整个选定范围；仅定时运行才从上次扫描续扫。
+  - 移除事件读取处的静默 catch：此前读取失败与日志为空无法区分，导致空结果被当成"系统健康"。
 ### 2.2.2
 
 - **AI 智能中心扫描进度与工作流阶段**：

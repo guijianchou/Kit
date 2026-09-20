@@ -4,6 +4,24 @@
 
 ## English
 
+### 2.2.2
+
+- **AI Hub Scan Progress & Workflow Stages**:
+  - Added `ScanProgressModel` with a four-stage weighted workflow (Prepare, Cache scan, Downloads scan, Finish) producing a 0-100 figure, mirroring the original project optimization view model. The port previously reported only "Scanning..." followed immediately by success, so a slow scan looked instantaneous.
+  - Introduced a `ScanPhase` state machine (Idle, Scanning, SelectingTargets, ExecutionPending, Failed) with a bilingual phase label, and wired stage reporting into all three scan commands.
+  - Replaced the static `Codex / Pi → policy → summary → action` pipeline pill row with a live phase label, progress bar, percentage and stage counter.
+- **Headless Audit Worker Hardened**:
+  - The worker now exits when no audit cadence is configured instead of staying resident with nothing to do, following the plugin guidance against keeping a process alive purely for health checks.
+  - The module interface signals a named stop event on disable and waits for a clean drain before falling back to termination, matching the documented worker lifecycle.
+- **Navigation & Shell**:
+  - Cached the General, Awake, Light Switch and Dashboard pages (`NavigationCacheMode="Required"`). They were rebuilt on every navigation, and General Page performs settings loads, a file watcher and language enumeration during construction.
+  - Reverted the module enable-state gating on navigation entries: module pages are reachable regardless of enable state (matching Home), and each page dims its own content.
+- **Optimization Execution Reporting**:
+  - Batch optimization keeps per-item failure reasons instead of an opaque counter, reports `(n/N)` progress, and lists failing files in the result banner with warning severity.
+- **Localization, Docs & Hygiene**:
+  - Localized the remaining AI Hub panel strings and moved `FindingDetailsDialog` onto the `x:Uid` resource pattern.
+  - Aligned the security-audit policy with the original project (restored the Analysis depth section) and added an Operation Safety Boundaries section covering unbounded deletion, wildcard removal, remote piping into a shell, dependency preference and secret leakage.
+  - Added the missing UDP Test module README, corrected the AI Hub README against the implementation, and fixed stale module lists in `src/README.md`, `doc/devdoc/README.md`, `doc/devdoc/AGENTS.md`, `kit-architecture.md` and `ARCHITECTURE_OVERVIEW.md`.
 ### 2.2.1
 
 - **WinUI 3 Page Crash Fixes & Navigation Stability**:
@@ -461,6 +479,24 @@
 
 ## 更新日志
 
+### 2.2.2
+
+- **AI 智能中心扫描进度与工作流阶段**：
+  - 新增 `ScanProgressModel`：四阶段加权工作流（准备、缓存扫描、下载扫描、完成）折算为 0-100 进度，对齐原项目优化视图模型。此前移植版只有"正在扫描..."随后直接成功，慢速扫描看起来像瞬间完成。
+  - 引入 `ScanPhase` 状态机（Idle/Scanning/SelectingTargets/ExecutionPending/Failed）与双语阶段文案，三个扫描命令全部接入阶段上报。
+  - 用实时阶段文字、进度条、百分比与阶段计数替换了静态的 `Codex / Pi → 策略 → 摘要 → 操作` 流水线标签行。
+- **无头审计 Worker 加固**：
+  - 未配置审计节奏时 Worker 直接退出，不再空转常驻，符合"不为健康检查单独保活进程"的插件规范。
+  - 模块接口在停用时发送命名停止事件并等待清理，超时后才兜底终止，符合文档化的 Worker 生命周期。
+- **导航与外壳**：
+  - 为 General、Awake、Light Switch、Dashboard 页面启用缓存（`NavigationCacheMode="Required"`）。此前每次导航都重建页面，而 General 页在构造期还要读取设置、启动文件监视与枚举语言。
+  - 回退了导航项的模块启用状态门控：模块页面无论启用与否都可进入（与主页行为一致），各页面自身负责置灰内容。
+- **优化执行上报**：
+  - 批量优化保留逐项失败原因而非仅计数，显示 `(n/N)` 进度，并在结果横幅中以警告级别列出失败文件。
+- **本地化、文档与卫生**：
+  - 补齐 AI Hub 面板剩余硬编码文案，并将 `FindingDetailsDialog` 迁移到 `x:Uid` 资源模式。
+  - 安全审计策略与原项目对齐（补回 Analysis depth 一节），并新增"操作安全边界"一节：无边界删除、通配符删除、远程内容管道执行、依赖优先级与密钥泄露。
+  - 补写缺失的 UDP Test 模块 README，按实现校正 AI Hub README，并修正 `src/README.md`、`doc/devdoc/README.md`、`doc/devdoc/AGENTS.md`、`kit-architecture.md`、`ARCHITECTURE_OVERVIEW.md` 中过期的模块列表。
 ### 2.2.1
 
 - **WinUI 3 页面崩溃修复与导航稳定性提升**：

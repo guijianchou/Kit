@@ -1295,23 +1295,25 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             try
             {
-                TimeSpan scope = fast ? TimeSpan.FromHours(1) : _selectedScopeIndex switch
+                // Selected range: 0 = 1 day, 1 = 2 days, 2 = 7 days.
+                int rangeDays = _selectedScopeIndex switch
                 {
-                    1 => TimeSpan.FromDays(2),
-                    2 => TimeSpan.FromDays(7),
-                    _ => TimeSpan.FromDays(1),
+                    1 => 2,
+                    2 => 7,
+                    _ => 1,
                 };
 
                 int maxEvents = fast ? 250 : 2000;
                 var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
 
-                // Continue from the previous scan when it falls inside the selected range,
-                // so repeated runs re-read only the new tail instead of the whole period.
+                // A manual scan always covers the whole selected range; only a scheduled run
+                // continues from the previous scan. Reusing the incremental window here shrank
+                // every manual scan to a couple of minutes and reported no findings at all.
                 DateTime nowUtc = DateTime.UtcNow;
-                (DateTime windowFrom, DateTime windowTo) = fast
-                    ? (nowUtc - scope, nowUtc)
-                    : AuditSchedule.ComputeWindow(_lastCompletedAuditUtc, nowUtc, scope);
-                bool incremental = !fast && AuditSchedule.IsIncremental(_lastCompletedAuditUtc, nowUtc, scope);
+                ScanIntent intent = fast ? ScanIntent.Fast : ScanIntent.ManualFull;
+                (DateTime windowFrom, DateTime windowTo) = AuditSchedule.ComputeWindow(
+                    intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
+                bool incremental = AuditSchedule.IsIncremental(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
 
                 var events = await _eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, token);
 

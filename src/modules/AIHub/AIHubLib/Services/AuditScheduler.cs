@@ -25,6 +25,7 @@ public sealed class AuditScheduler : IDisposable
     private readonly AuditPipeline _pipeline;
     private readonly TimeSpan _pollInterval;
     private readonly TimeSpan _fullRange;
+    private readonly int _fullRangeDays;
     private readonly EventLogService.AuditMode _mode;
     private readonly Func<bool> _isEnabled;
     private readonly object _gate = new();
@@ -47,6 +48,7 @@ public sealed class AuditScheduler : IDisposable
         _isEnabled = isEnabled ?? (() => true);
         _pollInterval = pollInterval ?? TimeSpan.FromMinutes(1);
         _fullRange = fullRange ?? TimeSpan.FromDays(1);
+        _fullRangeDays = Math.Max(1, (int)Math.Round(_fullRange.TotalDays));
         _mode = mode;
     }
 
@@ -85,7 +87,9 @@ public sealed class AuditScheduler : IDisposable
         }
 
         DateTime nowUtc = DateTime.UtcNow;
-        (DateTime fromUtc, DateTime toUtc) = AuditSchedule.ComputeWindow(LastCompletedUtc, nowUtc, _fullRange);
+        // Scheduled runs may continue from the previous scan; manual scans never do.
+        (DateTime fromUtc, DateTime toUtc) = AuditSchedule.ComputeWindow(
+            ScanIntent.Scheduled, LastCompletedUtc, nowUtc, _fullRangeDays);
 
         AuditResult result = await _pipeline
             .RunAsync(fromUtc, toUtc, _mode, persist: true, cancellationToken: cancellationToken)

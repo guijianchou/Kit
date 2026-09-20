@@ -9,20 +9,23 @@ using Kit.AIHubLib.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 /// <summary>
-/// Scheduling rules and scan-window arithmetic. These decide whether a scheduled audit
-/// runs and how much of the log it re-reads, so the boundaries are pinned here.
+/// Scheduling rules and scan-window arithmetic, following the original GetScanStart
+/// semantics. A regression here silently produced empty audits, so the intent split
+/// between manual and scheduled runs is pinned explicitly.
 /// </summary>
 [TestClass]
 public sealed class AuditScheduleTests
 {
+    private static readonly DateTime Now = new(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+
     [TestMethod]
     public void ZeroOrNegativeIntervalDisablesScheduling()
     {
         Assert.IsFalse(AuditSchedule.IsSchedulingEnabled(0));
         Assert.IsFalse(AuditSchedule.IsSchedulingEnabled(-5));
         Assert.AreEqual(0, AuditSchedule.NormalizeIntervalHours(0), "Off must stay off.");
-        Assert.IsNull(AuditSchedule.NextRunUtc(null, DateTime.UtcNow, 0));
-        Assert.IsFalse(AuditSchedule.IsDue(null, DateTime.UtcNow, 0), "A disabled schedule is never due.");
+        Assert.IsNull(AuditSchedule.NextRunUtc(null, Now, 0));
+        Assert.IsFalse(AuditSchedule.IsDue(null, Now, 0), "A disabled schedule is never due.");
     }
 
     [TestMethod]
@@ -36,105 +39,125 @@ public sealed class AuditScheduleTests
     [TestMethod]
     public void FirstRunIsImmediatelyDue()
     {
-        // A freshly enabled schedule must not wait a whole interval before running once.
-        Assert.IsTrue(AuditSchedule.IsDue(null, DateTime.UtcNow, 24));
+        Assert.IsTrue(AuditSchedule.IsDue(null, Now, 24));
     }
 
     [TestMethod]
     public void ScheduleBecomesDueOnceTheIntervalElapsed()
     {
-        var now = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
-
-        Assert.IsFalse(AuditSchedule.IsDue(now.AddHours(-1), now, 24), "One hour into a daily schedule is not due.");
-        Assert.IsFalse(AuditSchedule.IsDue(now.AddHours(-23), now, 24), "Just under the interval is not due.");
-        Assert.IsTrue(AuditSchedule.IsDue(now.AddHours(-24), now, 24), "Exactly the interval is due.");
-        Assert.IsTrue(AuditSchedule.IsDue(now.AddHours(-30), now, 24), "Overdue is due.");
+        Assert.IsFalse(AuditSchedule.IsDue(Now.AddHours(-1), Now, 24));
+        Assert.IsFalse(AuditSchedule.IsDue(Now.AddHours(-23), Now, 24));
+        Assert.IsTrue(AuditSchedule.IsDue(Now.AddHours(-24), Now, 24));
+        Assert.IsTrue(AuditSchedule.IsDue(Now.AddHours(-30), Now, 24));
     }
 
     [TestMethod]
     public void NextRunNeverReportsAPastTime()
     {
-        var now = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
-
-        DateTime? upcoming = AuditSchedule.NextRunUtc(now.AddHours(-1), now, 24);
-        Assert.AreEqual(now.AddHours(23), upcoming);
-
-        DateTime? overdue = AuditSchedule.NextRunUtc(now.AddHours(-48), now, 24);
-        Assert.AreEqual(now, overdue, "An overdue schedule reports now, not a past instant.");
-
-        DateTime? fresh = AuditSchedule.NextRunUtc(null, now, 24);
-        Assert.AreEqual(now.AddHours(24), fresh);
+        Assert.AreEqual(Now.AddHours(23), AuditSchedule.NextRunUtc(Now.AddHours(-1), Now, 24));
+        Assert.AreEqual(Now, AuditSchedule.NextRunUtc(Now.AddHours(-48), Now, 24));
+        Assert.AreEqual(Now.AddHours(24), AuditSchedule.NextRunUtc(null, Now, 24));
     }
 
     [TestMethod]
-    public void WindowFallsBackToTheFullRangeWithoutAUsablePreviousScan()
+    public void ManualFullScanAlwaysCoversTheWholeSelectedRange()
     {
-        var now = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
-        TimeSpan range = TimeSpan.FromDays(1);
+        // The regression this guards: a manual scan must not shrink to the time since the
+        // previous run, otherwise every re-scan after the first returns no findings.
+        DateTime previousScan = Now.AddMinutes(-5);
 
-        (DateTime from, DateTime to) = AuditSchedule.ComputeWindow(null, now, range);
-        Assert.AreEqual(now - range, from);
-        Assert.AreEqual(now, to);
+        DateTime from = AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, previousScan, Now, rangeDays: 2);
 
-        // A previous scan older than the range, or in the future, must not shrink the window.
-        (from, _) = AuditSchedule.ComputeWindow(now - TimeSpan.FromDays(5), now, range);
-        Assert.AreEqual(now - range, from);
-
-        (from, _) = AuditSchedule.ComputeWindow(now.AddMinutes(5), now, range);
-        Assert.AreEqual(now - range, from);
+        Assert.AreEqual(Now.AddDays(-2), from, "A manual full scan ignores the previous scan.");
     }
 
     [TestMethod]
-    public void WindowContinuesFromThePreviousScanWithOverlap()
+    public void ReanalyzeAlsoCoversTheWholeSelectedRange()
     {
-        var now = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
-        TimeSpan range = TimeSpan.FromDays(7);
-        DateTime lastScan = now.AddHours(-2);
+        DateTime previousScan = Now.AddMinutes(-5);
 
-        (DateTime from, DateTime to) = AuditSchedule.ComputeWindow(lastScan, now, range);
+        DateTime from = AuditSchedule.ComputeScanStart(ScanIntent.Reanalyze, previousScan, Now, rangeDays: 7);
 
-        Assert.AreEqual(lastScan - AuditSchedule.IncrementalOverlap, from, "The window must overlap the previous scan slightly.");
-        Assert.AreEqual(now, to);
-        Assert.IsTrue(AuditSchedule.IsIncremental(lastScan, now, range));
+        Assert.AreEqual(Now.AddDays(-7), from);
     }
 
     [TestMethod]
-    public void IncrementalWindowContinuesFromAPreviousScanInsideTheRange()
+    public void ManualScanCoversTheRangeEvenWhenThePreviousScanIsRecent()
     {
-        var now = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
-        TimeSpan range = TimeSpan.FromHours(3);
+        DateTime from1 = AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, 1);
+        DateTime from2 = AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, Now.AddSeconds(-10), Now, 1);
 
-        // The previous scan sits comfortably inside the range, so the window starts just
-        // before it (never at the range start) and stays inside the selected period.
-        (DateTime from, DateTime to) = AuditSchedule.ComputeWindow(now.AddHours(-2), now, range);
-
-        Assert.AreEqual(now.AddHours(-2) - AuditSchedule.IncrementalOverlap, from);
-        Assert.IsTrue(from > now - range, "The incremental window must stay inside the selected range.");
-        Assert.AreEqual(now, to);
+        Assert.AreEqual(from1, from2, "Consecutive manual scans must scan the same window.");
+        Assert.AreEqual(Now.AddDays(-1), from2);
     }
 
     [TestMethod]
-    public void OverlapIsClampedWhenItWouldReachBeforeTheRangeStart()
+    public void ScheduledRunResumesFromThePreviousScanWithOverlap()
     {
-        var now = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
-        TimeSpan range = TimeSpan.FromMinutes(30);
+        DateTime previousScan = Now.AddHours(-2);
 
-        // The previous scan is 29 minutes ago: the 2 minute overlap would reach before the
-        // 30 minute range start, so the clamp must pull the window back to the range start.
-        DateTime lastScan = now.AddMinutes(-29);
-        (DateTime from, _) = AuditSchedule.ComputeWindow(lastScan, now, range);
+        DateTime from = AuditSchedule.ComputeScanStart(ScanIntent.Scheduled, previousScan, Now, rangeDays: 7);
 
-        Assert.AreEqual(now - range, from, "The overlap must not widen the scan beyond the selected range.");
-        Assert.IsFalse(AuditSchedule.IsIncremental(lastScan, now, range), "A clamped window is the full range again.");
+        Assert.AreEqual(previousScan - AuditSchedule.IncrementalOverlap, from);
     }
 
     [TestMethod]
-    public void FullRangeScanIsNotReportedAsIncremental()
+    public void ScheduledRunFallsBackToTheRangeWhenThePreviousScanIsStale()
     {
-        var now = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
-        TimeSpan range = TimeSpan.FromDays(1);
+        DateTime from = AuditSchedule.ComputeScanStart(
+            ScanIntent.Scheduled, Now.AddDays(-30), Now, rangeDays: 7);
 
-        Assert.IsFalse(AuditSchedule.IsIncremental(null, now, range));
-        Assert.IsFalse(AuditSchedule.IsIncremental(now - TimeSpan.FromDays(9), now, range));
+        Assert.AreEqual(Now.AddDays(-7), from, "A previous scan outside the range is not a resume point.");
+    }
+
+    [TestMethod]
+    public void ScheduledRunWithoutAPreviousScanCoversTheWholeRange()
+    {
+        Assert.AreEqual(Now.AddDays(-1), AuditSchedule.ComputeScanStart(ScanIntent.Scheduled, null, Now, 1));
+    }
+
+    [TestMethod]
+    public void FastScanUsesAShortRecentWindow()
+    {
+        DateTime from = AuditSchedule.ComputeScanStart(ScanIntent.Fast, Now.AddMinutes(-1), Now, 7, fastRangeHours: 1);
+
+        Assert.AreEqual(Now.AddHours(-1), from, "A fast scan is short regardless of the selected range.");
+    }
+
+    [TestMethod]
+    public void UnsupportedRangeFallsBackToOneDay()
+    {
+        Assert.AreEqual(Now.AddDays(-1), AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, rangeDays: 5));
+        Assert.AreEqual(Now.AddDays(-1), AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, rangeDays: 0));
+    }
+
+    [TestMethod]
+    public void OnlyScheduledRunsReportThemselvesAsIncremental()
+    {
+        DateTime previousScan = Now.AddHours(-2);
+
+        Assert.IsTrue(AuditSchedule.IsIncremental(ScanIntent.Scheduled, previousScan, Now, 7));
+        Assert.IsFalse(AuditSchedule.IsIncremental(ScanIntent.ManualFull, previousScan, Now, 7));
+        Assert.IsFalse(AuditSchedule.IsIncremental(ScanIntent.Reanalyze, previousScan, Now, 7));
+        Assert.IsFalse(AuditSchedule.IsIncremental(ScanIntent.Fast, previousScan, Now, 7));
+    }
+
+    [TestMethod]
+    public void ResumingNeverStartsBeforeTheSelectedRange()
+    {
+        DateTime previousScan = Now.AddMinutes(-1);
+
+        DateTime from = AuditSchedule.ComputeScanStart(ScanIntent.Scheduled, previousScan, Now, rangeDays: 1);
+
+        Assert.IsTrue(from >= Now.AddDays(-1), "The resume point must stay inside the selected range.");
+    }
+
+    [TestMethod]
+    public void WindowPairMatchesTheComputedStart()
+    {
+        (DateTime from, DateTime to) = AuditSchedule.ComputeWindow(ScanIntent.ManualFull, null, Now, 2);
+
+        Assert.AreEqual(Now.AddDays(-2), from);
+        Assert.AreEqual(Now, to);
     }
 }

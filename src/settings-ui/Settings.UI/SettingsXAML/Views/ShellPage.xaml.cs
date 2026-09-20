@@ -121,6 +121,12 @@ namespace Kit.Settings.UI.Views
             ShellHandler = this;
             ViewModel.Initialize(shellFrame, navigationView, KeyboardAccelerators);
 
+            // Reflect each module's enabled state in the navigation. Disabled modules stay
+            // visible but dimmed, and navigation to them is skipped so a click no longer
+            // constructs a page the user cannot use (that construction was the stutter).
+            ApplyModuleNavigationState();
+            ViewModel.ModuleEnabledChanged += ApplyModuleNavigationState;
+
             // NL moved navigation to Dashboard to the moment when the window is first activated (to not make flyout window disappear)
             // shellFrame.Navigate(typeof(DashboardPage));
             IPCResponseHandleList.Add(ReceiveMessage);
@@ -295,6 +301,36 @@ namespace Kit.Settings.UI.Views
         internal static void EnsurePageIsSelected()
         {
             NavigationService.EnsurePageIsSelected(typeof(DashboardPage));
+        }
+
+        /// <summary>
+        /// Dims the navigation entry of every disabled module and blocks navigation to it.
+        /// Pages stay cached and reachable once the module is enabled.
+        /// </summary>
+        private void ApplyModuleNavigationState()
+        {
+            var enabled = ViewModel?.EnabledModules;
+            if (enabled is null)
+            {
+                return;
+            }
+
+            Apply(AwakeNavigationItem, enabled.Awake);
+            Apply(LightSwitchNavigationItem, enabled.LightSwitch);
+            Apply(LocalserverNavigationItem, enabled.Localserver);
+            Apply(UDPtestNavigationItem, enabled.UDPtest);
+            Apply(AIHubNavigationItem, enabled.AiHub);
+
+            static void Apply(NavigationViewItem item, bool isEnabled)
+            {
+                if (item is null)
+                {
+                    return;
+                }
+
+                item.IsEnabled = isEnabled;
+                item.Opacity = isEnabled ? 1.0 : 0.4;
+            }
         }
 
         private void SetWindowTitle()

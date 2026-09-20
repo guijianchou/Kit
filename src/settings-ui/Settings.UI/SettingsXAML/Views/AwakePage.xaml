@@ -1,5 +1,6 @@
 ﻿<local:NavigablePage
     x:Class="Kit.Settings.UI.Views.AwakePage"
+    NavigationCacheMode="Required"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Kit.Settings.UI.Controls"

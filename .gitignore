@@ -236,3 +236,6 @@ src/common/Telemetry/*.etl
 # Temporary UI automation scripts
 /shot.png
 /*.ps1
+
+/runner-out.txt
+/runner-err.txt

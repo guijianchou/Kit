@@ -38,10 +38,23 @@ public static class AiHubAuditAnalysisService
     private const string TaskId = "security-audit";
 
     /// <summary>
-    /// Events sent per request. Keeps the prompt focused while staying far below the
-    /// engine's 96 KB batch and 8 MB total input budgets.
+    /// Events sent per request.
     /// </summary>
-    public const int MaxEventsPerRequest = 120;
+    /// <remarks>
+    /// A full 1-month scan can collect well over a thousand events. Sending them all at a
+    /// "max" effort target exceeds the engine timeout, so the selection is bounded and
+    /// prioritised: high-severity events are always included, then the most recent of the
+    /// remainder. The rule engine still evaluates every collected event, so nothing is
+    /// lost from the audit itself.
+    /// </remarks>
+    public const int MaxEventsPerRequest = 400;
+
+    /// <summary>
+    /// Wall-clock budget for the analysis. The engine accepts at most one hour; a large
+    /// range needs materially more than the previous ten minutes, which expired mid-run
+    /// and reported the whole AI pass as failed.
+    /// </summary>
+    public const int AnalysisTimeoutSeconds = 1_800;
 
     public static string Language => IsChinese ? "zh-CN" : "en-US";
 
@@ -79,8 +92,16 @@ public static class AiHubAuditAnalysisService
             return null;
         }
 
-        List<EventAnalysisInput> items = events
+        // Prioritise what matters: errors and criticals first, then the most recent
+        // remaining events. A plain Take() would analyse only the oldest events in the
+        // window and silently ignore every later one.
+        List<SecurityEvent> selected = events
+            .OrderByDescending(e => e.Level is <= 2)
+            .ThenByDescending(e => e.TimeCreated ?? DateTime.MinValue)
             .Take(MaxEventsPerRequest)
+            .ToList();
+
+        List<EventAnalysisInput> items = selected
             .Select(ToInput)
             .ToList();
 
@@ -101,7 +122,7 @@ public static class AiHubAuditAnalysisService
             new AiTaskOptions
             {
                 Language = Language,
-                TimeoutSeconds = 600,
+                TimeoutSeconds = AnalysisTimeoutSeconds,
             },
             cancellationToken).ConfigureAwait(false);
 

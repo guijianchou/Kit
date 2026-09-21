@@ -387,9 +387,31 @@ public static class AuditRuleEngine
                     recommendationZh = $"1. 确认“{provider}”相关功能在日常使用中是否表现正常。\n2. 若系统整体运行平稳，通常属于非阻塞性运行警告，可保持常规观察。\n3. 检查 Windows 更新历史记录，安装待处理的驱动补丁或累积更新。";
                 }
 
+                // Windows event level is a floor, not a hint: a Critical (1) or Error (2)
+                // event must never be reported below the tier its own level implies just
+                // because a rule happened to classify that event ID as Medium or Low. The
+                // rules add context and guidance; the level states how serious Windows
+                // considered it.
+                if (first.Level == 1 && !string.Equals(severity, "High", StringComparison.OrdinalIgnoreCase))
+                {
+                    severity = "High";
+                    category = "Stability";
+                }
+                else if (first.Level == 2 && string.Equals(severity, "Low", StringComparison.OrdinalIgnoreCase))
+                {
+                    severity = "Medium";
+                }
+
                 issues.Add(new AuditIssueEnhanced
                 {
                     Key = $"issue-{keySeq++:D4}",
+
+                    // LogName is required by the page: the channel filter and the per-channel
+                    // counters match on it. Omitting it made every rule-based finding
+                    // unreachable through the source filter and pinned all channel counts at
+                    // zero, so a scan that had found issues displayed none of them.
+                    LogName = log,
+
                     EventRef = eventId.ToString(CultureInfo.InvariantCulture),
                     EventId = eventId.ToString(CultureInfo.InvariantCulture),
                     EventTimestamp = first.TimeCreated?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? string.Empty,

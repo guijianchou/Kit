@@ -5,6 +5,13 @@
 ## English
 
 ### 2.2.3
+- **Sidebar Audit Progress (ported from the original app)**:
+  - Audit progress now lives in the navigation pane footer - status icon, title, percentage, a compact 4px progress bar and a stage counter - so it stays visible on every page, mirroring the original layout.
+  - The audit reported no stages at all (only the optimization scans did), which is why no progress ever appeared. It now reports Collect event logs / Analyze findings / Finish, and the shared progress model accepts caller-supplied stage titles so both workflows reuse the weighting logic.
+  - The AI Hub pipeline strip (`Codex / Pi → policy → summary → action`) is removed; the sidebar occupies that region.
+
+- **Scans No Longer Start Themselves**:
+  - Selecting a scan range or switching audit mode fired a scan from the property setter, and two-way binding invoked it during page initialization. That produced bursts of unrequested scans and made results look inconsistent. Selection now only updates the label.
 
 - **AI Hub Audit Fix - Empty Scan Results**:
   - Fixed Fast/Full scans always reporting "health score 100/100 with 0 findings" regardless of the selected 1/2/7 day range. The manual scan reused the scheduled audit incremental window, so after the first run every later scan only covered the couple of minutes since that run and therefore collected nothing.
@@ -486,6 +493,13 @@
 ## 更新日志
 
 ### 2.2.3
+- **侧栏审计进度（移植自原项目）**：
+  - 审计进度移至导航栏页脚 —— 状态图标、标题、百分比、4px 紧凑进度条与阶段计数，因此在任何页面都可见，对齐原项目布局。
+  - 此前审计完全没有阶段上报（只有优化扫描有），这正是从未出现进度条的原因。现已上报"采集事件日志 / 分析发现 / 完成"，且共享进度模型支持自定义阶段名，两种工作流复用同一套加权逻辑。
+  - 移除 AI Hub 流水线条（`Codex / Pi → 策略 → 摘要 → 操作`），该区域由侧栏占据。
+
+- **扫描不再自动触发**：
+  - 选择扫描范围或切换审计模式会在属性 setter 中触发扫描，而双向绑定会在页面初始化时调用它，导致大量非用户发起的扫描并使结果看起来不一致。现在选择仅更新标签。
 
 - **AI 智能中心审计修复 —— 扫描结果为空**：
   - 修复 Fast/Full 扫描无论选择 1/2/7 天都返回"健康评分 100/100，0 项发现"。手动扫描误用了定时审计的增量窗口，首次扫描后每次只覆盖"距上次扫描的几分钟"，因此采集不到任何事件。

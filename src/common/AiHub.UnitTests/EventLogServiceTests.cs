@@ -18,6 +18,19 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 [TestClass]
 public sealed class EventLogServiceTests
 {
+    private static bool EventLogAvailable()
+    {
+        try
+        {
+            _ = Type.GetType("System.Diagnostics.EventLog, System.Diagnostics.EventLog", throwOnError: true);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     [TestMethod]
     public void ExtendedModeOverloadIsTheDefaultAndDoesNotRequireElevation()
     {
@@ -36,6 +49,11 @@ public sealed class EventLogServiceTests
     [TestMethod]
     public async Task ExtendedScanNeverTouchesTheSecurityChannel()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         var service = new EventLogService();
         DateTime to = DateTime.UtcNow;
         DateTime from = to.AddMinutes(-5);
@@ -53,6 +71,11 @@ public sealed class EventLogServiceTests
     [TestMethod]
     public async Task FullScanDegradesInsteadOfThrowingWhenSecurityIsUnreadable()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         var service = new EventLogService();
         DateTime to = DateTime.UtcNow;
         DateTime from = to.AddMinutes(-5);

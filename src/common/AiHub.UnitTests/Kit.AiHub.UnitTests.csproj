@@ -15,8 +15,25 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MSTest" />
-    <PackageReference Include="System.Diagnostics.EventLog" />
+
+    <!-- The audit reads the Windows event log, which needs this package's RID-specific
+         runtime asset. A self-contained test output does not copy it by default, so the
+         tests failed to load the assembly rather than exercising the reader. -->
+    <PackageReference Include="System.Diagnostics.EventLog">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>none</PrivateAssets>
+    </PackageReference>
     <ProjectReference Include="..\AiHub\Kit.AiHub.csproj" />
     <ProjectReference Include="..\..\modules\AIHub\AIHubLib\Kit.AIHubLib.csproj" />
   </ItemGroup>
+
+  <!-- The event-log package ships its implementation under runtimes\win\lib, and a
+       self-contained test output does not lay that down next to the test assembly. Copy it
+       explicitly so the audit tests exercise the reader instead of failing to load it. -->
+  <Target Name="CopyEventLogRuntimeAsset" AfterTargets="Build">
+    <ItemGroup>
+      <EventLogRuntimeAsset Include="$(NuGetPackageRoot)system.diagnostics.eventlog\10.0.8\runtimes\win\lib\net10.0\System.Diagnostics.EventLog.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(EventLogRuntimeAsset)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('%(EventLogRuntimeAsset.Identity)')" />
+  </Target>
 </Project>

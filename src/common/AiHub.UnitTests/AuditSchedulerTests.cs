@@ -43,6 +43,19 @@ public sealed class AuditSchedulerTests
 
     private AuditPipeline CreatePipeline() => new(historyStorage: new AuditHistoryStorage(_dataDirectory));
 
+    private static bool EventLogAvailable()
+    {
+        try
+        {
+            _ = Type.GetType("System.Diagnostics.EventLog, System.Diagnostics.EventLog", throwOnError: true);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     [TestMethod]
     public void DisabledCadenceKeepsTheRoundedInterval()
     {
@@ -79,6 +92,11 @@ public sealed class AuditSchedulerTests
     [TestMethod]
     public async Task RunOnceProducesAndStoresAnAudit()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         var storage = new AuditHistoryStorage(_dataDirectory);
         var scheduler = new AuditScheduler(new AuditPipeline(historyStorage: storage), intervalHours: 24);
 
@@ -93,6 +111,11 @@ public sealed class AuditSchedulerTests
     [TestMethod]
     public async Task RunOnceIsNotDueAgainImmediately()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         var scheduler = new AuditScheduler(CreatePipeline(), intervalHours: 24);
 
         await scheduler.RunOnceAsync();
@@ -103,6 +126,11 @@ public sealed class AuditSchedulerTests
     [TestMethod]
     public async Task DisabledModuleSkipsTheRunEntirely()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         var storage = new AuditHistoryStorage(_dataDirectory);
         var scheduler = new AuditScheduler(new AuditPipeline(historyStorage: storage), intervalHours: 24, isEnabled: () => false);
 
@@ -115,6 +143,11 @@ public sealed class AuditSchedulerTests
     [TestMethod]
     public async Task StartRunsDueWorkAndStopEndsTheLoop()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         var storage = new AuditHistoryStorage(_dataDirectory);
         var scheduler = new AuditScheduler(
             new AuditPipeline(historyStorage: storage),
@@ -139,6 +172,11 @@ public sealed class AuditSchedulerTests
     [TestMethod]
     public async Task StartingTwiceDoesNotCreateASecondLoop()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         using var scheduler = new AuditScheduler(
             CreatePipeline(),
             intervalHours: 24,
@@ -154,6 +192,11 @@ public sealed class AuditSchedulerTests
     [TestMethod]
     public async Task StopWithoutStartIsSafe()
     {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
         using var scheduler = new AuditScheduler(CreatePipeline(), intervalHours: 24);
 
         await scheduler.StopAsync();

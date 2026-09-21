@@ -1284,11 +1284,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             return;
         }
 
-        _currentCts?.Cancel();
-        _currentCts = new CancellationTokenSource();
-        var token = _currentCts.Token;
-
+        // Claim the slot before cancelling anything: setting the flag afterwards left a
+        // window where two rapid clicks both passed the guard, and the second run then
+        // cancelled the first mid-collection and reported an empty audit.
         IsAuditing = true;
+
+        _currentCts?.Cancel();
+        _currentCts?.Dispose();
+        _currentCts = new CancellationTokenSource();
+        CancellationToken token = _currentCts.Token;
         AuditStatusText = fast ? (IsChinese ? "正在执行快速安全扫描..." : "Fast scan in progress...") : (IsChinese ? "正在全量检索系统事件日志..." : "Full event audit in progress...");
 
         Task.Run(async () =>
@@ -1384,13 +1388,34 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         Timestamp = DateTime.UtcNow,
                         HealthScore = score,
                         Findings = issues,
+
+                        // Record what was actually scanned, otherwise the stored history
+                        // always claimed zero events and hid collection problems.
+                        EventsScanned = events.Count,
+                        ScanStart = windowFrom,
+                        ScanEnd = windowTo,
                     });
 
-                    ShowStatus(
-                        IsChinese
-                            ? $"扫描完成。健康评分: {score}/100，发现 {issues.Count} 项问题。"
-                            : $"Audit completed. Health score: {score}/100 with {issues.Count} findings.",
-                        InfoBarSeverity.Success);
+                    // Report skipped channels instead of implying a complete audit: a missing
+                    // channel and a clean machine previously produced the same message.
+                    var skipped = _eventLogService.SkippedChannels;
+                    if (skipped.Count > 0)
+                    {
+                        string channels = string.Join(", ", skipped);
+                        ShowStatus(
+                            IsChinese
+                                ? $"扫描完成（健康评分 {score}/100，发现 {issues.Count} 项）。未能读取: {channels}。"
+                                : $"Audit completed (health score {score}/100, {issues.Count} findings). Could not read: {channels}.",
+                            InfoBarSeverity.Warning);
+                    }
+                    else
+                    {
+                        ShowStatus(
+                            IsChinese
+                                ? $"扫描完成。健康评分: {score}/100，发现 {issues.Count} 项问题。"
+                                : $"Audit completed. Health score: {score}/100 with {issues.Count} findings.",
+                            InfoBarSeverity.Success);
+                    }
                 });
             }
             catch (OperationCanceledException)

@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AIHubLib.Models;
+using ManagedCommon;
 
 namespace Kit.AIHubLib.Services;
 
@@ -89,7 +90,9 @@ public sealed class EventLogService
     {
         var results = new List<SecurityEvent>();
 
-        async Task CollectChannelAsync(IAsyncEnumerable<SecurityEvent> stream)
+        var skippedChannels = new List<string>();
+
+        async Task CollectChannelAsync(string channelName, IAsyncEnumerable<SecurityEvent> stream)
         {
             int count = 0;
             try
@@ -104,28 +107,45 @@ public sealed class EventLogService
                     }
                 }
             }
-            catch (Exception)
+            catch (EventLogNotFoundException)
             {
-                // Channels unavailable or empty
+                // The channel does not exist on this machine (ForwardedEvents is absent on a
+                // standalone workstation). That is a normal configuration, not a failure, but
+                // it must be recorded: swallowing it silently made a missing channel look
+                // exactly like a clean audit with nothing to report.
+                skippedChannels.Add(channelName);
+            }
+            catch (Exception ex)
+            {
+                // A real read failure is reported rather than hidden.
+                Logger.LogError($"Event log channel '{channelName}' could not be read", ex);
+                skippedChannels.Add(channelName);
             }
         }
 
-        await CollectChannelAsync(ReadSystemEventsAsync(from, to, cancellationToken));
-        await CollectChannelAsync(ReadApplicationEventsAsync(from, to, cancellationToken));
-        await CollectChannelAsync(ReadSetupEventsAsync(from, to, cancellationToken));
-        await CollectChannelAsync(ReadForwardedEventsAsync(from, to, cancellationToken));
+        await CollectChannelAsync("System", ReadSystemEventsAsync(from, to, cancellationToken));
+        await CollectChannelAsync("Application", ReadApplicationEventsAsync(from, to, cancellationToken));
+        await CollectChannelAsync("Setup", ReadSetupEventsAsync(from, to, cancellationToken));
+        await CollectChannelAsync("ForwardedEvents", ReadForwardedEventsAsync(from, to, cancellationToken));
 
         // Full-access mode additionally reads Security and Firewall. The Security
         // channel requires elevation; when it is unreadable the channel reader yields
         // nothing and the result degrades to the extended set.
         if (mode == AuditMode.Full)
         {
-            await CollectChannelAsync(ReadSecurityEventsAsync(from, to, cancellationToken));
-            await CollectChannelAsync(ReadFirewallEventsAsync(from, to, cancellationToken));
+            await CollectChannelAsync("Security", ReadSecurityEventsAsync(from, to, cancellationToken));
+            await CollectChannelAsync("Firewall", ReadFirewallEventsAsync(from, to, cancellationToken));
         }
 
+        SkippedChannels = skippedChannels;
         return results;
     }
+
+    /// <summary>
+    /// Channels that were expected but could not be read during the last collection.
+    /// Empty when every requested channel was read successfully.
+    /// </summary>
+    public IReadOnlyList<string> SkippedChannels { get; private set; } = Array.Empty<string>();
 
     private static async IAsyncEnumerable<SecurityEvent> ReadEventsFromLogAsync(
         string logName,

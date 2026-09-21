@@ -183,7 +183,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private int _mediumCount;
     private int _lowCount;
     private string _auditTimestampText = IsChinese ? "尚未扫描" : "Not scanned yet";
-    private int _selectedScopeIndex; // 0 = 1d, 1 = 2d, 2 = 1w
+    private int _selectedScopeIndex; // 0 = 2d, 1 = 1w, 2 = 1mo
     private string _severityFilter = "All"; // "All", "High", "Medium", "Low"
     private string _sourceFilter = "All"; // "All", "Application", "Security", "System", "Setup", "ForwardedEvents"
     private bool _isPriorityView;
@@ -451,6 +451,17 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             if (Set(ref _selectedScopeIndex, value))
             {
                 OnPropertyChanged(nameof(ScanRangeDescription));
+
+                // Changing the range does not re-scan: the results on screen still describe the
+                // previous window. Say so, otherwise the list looks like it ignored the choice.
+                if (HasAuditData && !IsAuditing)
+                {
+                    ShowStatus(
+                        IsChinese
+                            ? $"已选择 {ScanRangeDescription}。当前显示的是上一次扫描结果，点击 Full scan 重新扫描。"
+                            : $"Range set to {ScanRangeDescription}. The results shown are from the previous scan; run Full scan to apply it.",
+                        InfoBarSeverity.Informational);
+                }
             }
         }
     }
@@ -458,9 +469,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// <summary>Selected range as a bilingual label for the status text.</summary>
     public string ScanRangeDescription => _selectedScopeIndex switch
     {
-        1 => IsChinese ? "最近 2 天" : "Past 2 days",
-        2 => IsChinese ? "最近 7 天" : "Past 7 days",
-        _ => IsChinese ? "最近 1 天" : "Past 1 day",
+        1 => IsChinese ? "最近 1 周" : "Past 1 week",
+        2 => IsChinese ? "最近 1 个月" : "Past 1 month",
+        _ => IsChinese ? "最近 2 天" : "Past 2 days",
     };
 
     /// <summary>
@@ -1433,13 +1444,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
                 bool incremental = AuditSchedule.IsIncremental(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
 
+                var events = await _eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, token);
+
+                // Advance only after the work is done; completing the stage first made the
+                // progress bar claim collection was finished while it had not started.
                 EnqueueOnUI(() =>
                 {
                     EndStage("Collect event logs");
                     BeginStage("Analyze findings");
                 });
-
-                var events = await _eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, token);
 
                 // Retain the raw events so AI deep analysis can send the same evidence.
                 lock (_lastAuditEvents)

@@ -69,6 +69,13 @@ namespace Kit.Settings.UI.ViewModels
             get { return _moduleNavViewItems; }
         }
 
+        /// <summary>
+        /// Audit progress shown in the navigation pane. The audit itself runs on the AI Hub
+        /// page, so both sides share this observable holder rather than the pane reaching
+        /// into a page that may not be loaded.
+        /// </summary>
+        public Helpers.AuditProgressState AuditProgress => Helpers.AuditProgressState.Current;
+
         public ICommand LoadedCommand => loadedCommand ?? (loadedCommand = new RelayCommand(OnLoaded));
 
         public ICommand ItemInvokedCommand => itemInvokedCommand ?? (itemInvokedCommand = new RelayCommand<NavigationViewItemInvokedEventArgs>(OnItemInvoked));

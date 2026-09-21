@@ -1,17 +1,11 @@
-// Copyright (c) Microsoft Corporation
-// The Microsoft Corporation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
-
-#nullable enable
-
-namespace Kit.AIHubLib.Models;
-
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
-/// <summary>Lifecycle stage of an optimization scan.</summary>
+namespace Kit.AIHubLib.Models;
+
+/// <summary>Lifecycle stage of a scan or audit.</summary>
 public enum ScanPhase
 {
     Idle,
@@ -21,14 +15,14 @@ public enum ScanPhase
     Failed,
 }
 
-/// <summary>One reported stage of the optimization workflow.</summary>
+/// <summary>One reported stage of a workflow.</summary>
 public sealed class OptimizationStep
 {
     public OptimizationStep(string title) => Title = title;
 
     public string Title { get; }
 
-    /// <summary>0 while pending, 1 once complete.</summary>
+    /// <summary>0 while pending, 0.5 while running, 1 once complete.</summary>
     public double CompletionFraction { get; private set; }
 
     public bool IsDone => CompletionFraction >= 1;
@@ -37,31 +31,35 @@ public sealed class OptimizationStep
 
     public void MarkDone() => CompletionFraction = 1;
 
-    /// <summary>Returns the stage to pending so a new scan starts from zero.</summary>
+    /// <summary>Returns the stage to pending so a new run starts from zero.</summary>
     public void Reset() => CompletionFraction = 0;
 }
 
 /// <summary>
-/// Weighted progress for the optimization workflow.
+/// Weighted progress for a staged workflow.
 /// </summary>
 /// <remarks>
-/// Mirrors the original OptimizationViewModel model: named stages with completion
-/// fractions averaged into a 0-100 figure. The scan previously reported only
-/// "Scanning..." and then success, so a long scan looked instant.
+/// Mirrors the original app: named stages whose completion fractions average into a
+/// 0-100 figure. Stage sets differ per workflow, so callers supply the titles.
 /// </remarks>
 public sealed class ScanProgressModel
 {
     private readonly List<OptimizationStep> _steps;
 
+    /// <summary>Creates a model with the optimization workflow stages.</summary>
     public ScanProgressModel()
+        : this(new[] { "Preparing scan", "Scan cache locations", "Scan Downloads", "Finish" })
     {
-        _steps = new List<OptimizationStep>
+    }
+
+    /// <summary>Creates a model with caller-supplied stage titles.</summary>
+    public ScanProgressModel(IEnumerable<string> stageTitles)
+    {
+        _steps = stageTitles.Select(title => new OptimizationStep(title)).ToList();
+        if (_steps.Count == 0)
         {
-            new OptimizationStep("Preparing scan"),
-            new OptimizationStep("Scan cache locations"),
-            new OptimizationStep("Scan Downloads"),
-            new OptimizationStep("Finish"),
-        };
+            _steps.Add(new OptimizationStep("Working"));
+        }
     }
 
     public IReadOnlyList<OptimizationStep> Steps => _steps;
@@ -89,7 +87,6 @@ public sealed class ScanProgressModel
 
     public bool IsComplete => _steps.All(s => s.IsDone);
 
-    /// <summary>Marks a stage as running so the UI shows which one is active.</summary>
     public void StartStage(string title) => Find(title)?.MarkStarted();
 
     /// <summary>Marks a stage complete. Completing a later stage implies earlier ones.</summary>
@@ -107,7 +104,6 @@ public sealed class ScanProgressModel
         }
     }
 
-    /// <summary>Resets every stage so a new scan starts from zero.</summary>
     public void Reset()
     {
         foreach (OptimizationStep step in _steps)
@@ -116,7 +112,6 @@ public sealed class ScanProgressModel
         }
     }
 
-    /// <summary>Marks the workflow finished, which sets every stage complete.</summary>
     public void CompleteAll()
     {
         foreach (OptimizationStep step in _steps)

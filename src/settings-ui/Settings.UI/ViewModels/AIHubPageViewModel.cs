@@ -160,6 +160,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _scheduleTimer;
     private readonly ScanProgressModel _scanProgress = new();
 
+    // Audit stages differ from the optimization scan stages.
+    private readonly ScanProgressModel _auditProgress = new(
+        new[] { "Collect event logs", "Analyze findings", "Finish" });
+
+    /// <summary>True while the active workflow is an audit rather than an optimization scan.</summary>
+    private bool _auditWorkflowActive;
+
     private DateTime? _lastCompletedAuditUtc;
     private ScanPhase _scanPhase = ScanPhase.Idle;
     private string _currentStageText = string.Empty;
@@ -429,6 +436,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// <summary>
     /// Selected full-scan range: 0 = 1 day, 1 = 2 days, 2 = 1 week.
     /// </summary>
+    /// <summary>
+    /// Selected full-scan range: 0 = 1 day, 1 = 2 days, 2 = 1 week. Changing it only
+    /// updates the label; the scan starts when the user asks for one. Auto-starting here
+    /// fired a scan on every binding initialization, which polluted the audit history with
+    /// runs nobody requested.
+    /// </summary>
     public int FullScanRangeIndex
     {
         get => _selectedScopeIndex;
@@ -436,10 +449,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             if (Set(ref _selectedScopeIndex, value))
             {
-                RunAudit(fast: false);
+                OnPropertyChanged(nameof(ScanRangeDescription));
             }
         }
     }
+
+    /// <summary>Selected range as a bilingual label for the status text.</summary>
+    public string ScanRangeDescription => _selectedScopeIndex switch
+    {
+        1 => IsChinese ? "最近 2 天" : "Past 2 days",
+        2 => IsChinese ? "最近 7 天" : "Past 7 days",
+        _ => IsChinese ? "最近 1 天" : "Past 1 day",
+    };
 
     /// <summary>
     /// Audit scan mode: 0 = extended (standard privileges), 1 = full (elevated; also
@@ -465,10 +486,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 }
                 catch
                 {
-                    // Persisting the mode is best-effort; the scan below still runs.
+                    // Persisting the mode is best-effort; the next scan picks up the change.
                 }
 
-                RunAudit(fast: false);
+                // The mode change is persisted only; switching modes must not start a scan
+                // by itself, otherwise entering the tab fired one on binding initialization.
+                ScanPhase = ScanPhase.Idle;
             }
         }
     }
@@ -814,6 +837,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 OnPropertyChanged(nameof(IsScanning));
                 OnPropertyChanged(nameof(IsWorkflowVisible));
                 OnPropertyChanged(nameof(ScanPhaseText));
+                OnPropertyChanged(nameof(SidebarWorkflowVisible));
+                OnPropertyChanged(nameof(SidebarWorkflowTitle));
+                OnPropertyChanged(nameof(SidebarWorkflowGlyph));
+                OnPropertyChanged(nameof(SidebarWorkflowTooltip));
+                PublishScanProgress();
             }
         }
     }
@@ -835,11 +863,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     };
 
     /// <summary>Weighted 0-100 scan completion.</summary>
-    public double ScanProgressPercent => _scanProgress.Percent;
+    public double ScanProgressPercent => ActiveProgress.Percent;
 
-    public string ScanProgressPercentText => _scanProgress.PercentText;
+    public string ScanProgressPercentText => ActiveProgress.PercentText;
 
-    public string ScanStageCountText => _scanProgress.StageCountText;
+    public string ScanStageCountText => ActiveProgress.StageCountText;
 
     /// <summary>Name of the stage currently running.</summary>
     public string CurrentStageText
@@ -849,9 +877,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     /// <summary>Starts a stage and publishes the new progress values.</summary>
+    /// <summary>The progress model for the workflow currently running.</summary>
+    private ScanProgressModel ActiveProgress => _auditWorkflowActive ? _auditProgress : _scanProgress;
+
     private void BeginStage(string title)
     {
-        _scanProgress.StartStage(title);
+        ActiveProgress.StartStage(title);
         CurrentStageText = title;
         PublishScanProgress();
     }
@@ -859,12 +890,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// <summary>Completes a stage, which also completes every earlier stage.</summary>
     private void EndStage(string title)
     {
-        _scanProgress.CompleteStage(title);
+        ActiveProgress.CompleteStage(title);
         PublishScanProgress();
     }
 
     private void ResetScanProgress()
     {
+        _auditWorkflowActive = false;
         _scanProgress.Reset();
         CurrentStageText = string.Empty;
         PublishScanProgress();
@@ -875,7 +907,69 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(ScanProgressPercent));
         OnPropertyChanged(nameof(ScanProgressPercentText));
         OnPropertyChanged(nameof(ScanStageCountText));
+
+        // The shell mirrors this progress in the navigation pane, so it needs the same
+        // notifications under the sidebar names.
+        OnPropertyChanged(nameof(SidebarWorkflowVisible));
+        OnPropertyChanged(nameof(SidebarWorkflowTitle));
+        OnPropertyChanged(nameof(SidebarWorkflowGlyph));
+        OnPropertyChanged(nameof(SidebarWorkflowPercent));
+        OnPropertyChanged(nameof(SidebarWorkflowPercentText));
+        OnPropertyChanged(nameof(SidebarWorkflowCountText));
+        OnPropertyChanged(nameof(SidebarWorkflowTooltip));
+
+        // Mirror into the shared state the navigation pane binds to. The pane outlives this
+        // page, so it cannot bind to the view model directly.
+        AuditProgressState.Current.Update(
+            SidebarWorkflowVisible,
+            SidebarWorkflowPercent,
+            SidebarWorkflowTitle,
+            SidebarWorkflowGlyph,
+            SidebarWorkflowPercentText,
+            SidebarWorkflowCountText,
+            SidebarWorkflowTooltip);
     }
+
+    /// <summary>
+    /// True while the navigation pane should show audit progress: during a scan or once a
+    /// result exists. Mirrors the original app, whose sidebar hosts the workflow progress.
+    /// </summary>
+    public bool SidebarWorkflowVisible => ScanPhase is ScanPhase.Scanning or ScanPhase.SelectingTargets or ScanPhase.Failed;
+
+    /// <summary>Sidebar progress bar value (0-100).</summary>
+    public double SidebarWorkflowPercent => ActiveProgress.Percent;
+
+    public string SidebarWorkflowPercentText => ActiveProgress.PercentText;
+
+    public string SidebarWorkflowCountText => ActiveProgress.StageCountText;
+
+    public string SidebarWorkflowTitle => ScanPhase switch
+    {
+        ScanPhase.Scanning => IsChinese ? "正在扫描" : "Scanning",
+        ScanPhase.SelectingTargets => IsChinese ? "扫描完成" : "Scan complete",
+        ScanPhase.Failed => IsChinese ? "扫描失败" : "Scan failed",
+        _ => IsChinese ? "审计工作流" : "Audit workflow",
+    };
+
+    /// <summary>Segoe Fluent icon matching the current workflow state.</summary>
+    public string SidebarWorkflowGlyph => ScanPhase switch
+    {
+        ScanPhase.Scanning => "\uE895",
+        ScanPhase.SelectingTargets => "\uE73E",
+        ScanPhase.Failed => "\uEA39",
+        _ => "\uEA3A",
+    };
+
+    public string SidebarWorkflowTooltip => ScanPhase switch
+    {
+        ScanPhase.Scanning => IsChinese
+            ? $"正在扫描 {ScanRangeDescription}，{CurrentStageText} {SidebarWorkflowPercentText}"
+            : $"Scanning {ScanRangeDescription}, {CurrentStageText} {SidebarWorkflowPercentText}",
+        ScanPhase.SelectingTargets => IsChinese
+            ? $"扫描完成：{ActivityFindingsText} 项发现"
+            : $"Scan complete: {ActivityFindingsText} finding(s)",
+        _ => IsChinese ? "尚未扫描" : "Not scanned yet",
+    };
 
     public int CandidatesCount
     {
@@ -1289,6 +1383,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         // cancelled the first mid-collection and reported an empty audit.
         IsAuditing = true;
 
+        // Audit progress uses its own stages so the pane shows what the audit is doing.
+        _auditWorkflowActive = true;
+        _auditProgress.Reset();
+        ScanPhase = ScanPhase.Scanning;
+        BeginStage("Collect event logs");
+
         _currentCts?.Cancel();
         _currentCts?.Dispose();
         _currentCts = new CancellationTokenSource();
@@ -1319,6 +1419,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
                 bool incremental = AuditSchedule.IsIncremental(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
 
+                EnqueueOnUI(() =>
+                {
+                    EndStage("Collect event logs");
+                    BeginStage("Analyze findings");
+                });
+
                 var events = await _eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, token);
 
                 // Retain the raw events so AI deep analysis can send the same evidence.
@@ -1336,6 +1442,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 EnqueueOnUI(() =>
                 {
+                    EndStage("Analyze findings");
+                    EndStage("Finish");
+                    ScanPhase = ScanPhase.SelectingTargets;
+
                     AllIssues.Clear();
                     foreach (var issue in issues)
                     {

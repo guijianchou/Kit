@@ -145,7 +145,41 @@
             <NavigationView.Resources>
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+
+                <!-- Compact progress bar matching the original app sidebar treatment. -->
+                <Style x:Key="SidebarProgressBarStyle" TargetType="ProgressBar">
+                    <Setter Property="Height" Value="4" />
+                    <Setter Property="MinHeight" Value="4" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                    <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                </Style>
             </NavigationView.Resources>
+
+            <!-- Audit progress lives in the pane footer so it stays visible on every page,
+                 replacing the pipeline strip that used to sit above the AI Hub tabs. -->
+            <NavigationView.PaneFooter>
+                <StackPanel Margin="8,4,8,8" Spacing="4"
+                            Visibility="{x:Bind ViewModel.AuditProgress.IsVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid ColumnDefinitions="16,*,Auto" ColumnSpacing="8" Height="20">
+                        <FontIcon Glyph="{x:Bind ViewModel.AuditProgress.Glyph, Mode=OneWay}" FontSize="14" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AuditProgress.Title, Mode=OneWay}"
+                                   FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTipService.ToolTip="{x:Bind ViewModel.AuditProgress.Tooltip, Mode=OneWay}" />
+                        <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.AuditProgress.PercentText, Mode=OneWay}"
+                                   FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </Grid>
+                    <ProgressBar Value="{x:Bind ViewModel.AuditProgress.Percent, Mode=OneWay}" Minimum="0" Maximum="100"
+                                 Style="{StaticResource SidebarProgressBarStyle}"
+                                 AutomationProperties.Name="{x:Bind ViewModel.AuditProgress.Tooltip, Mode=OneWay}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{x:Bind ViewModel.AuditProgress.Title, Mode=OneWay}" FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AuditProgress.CountText, Mode=OneWay}" FontSize="12"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                </StackPanel>
+            </NavigationView.PaneFooter>
             <NavigationView.MenuItems>
                 <NavigationViewItem
                     x:Name="DashboardNavigationItem"

@@ -127,36 +127,6 @@
                         HorizontalContentAlignment="Stretch">
                         <StackPanel Spacing="16">
 
-                            <!-- Pipeline Execution Flow -->
-                            <Border CornerRadius="8" Padding="14,10"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1">
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <FontIcon Glyph="&#xE943;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="{x:Bind ViewModel.PipelineTitle, Mode=OneWay}" FontWeight="SemiBold" FontSize="12" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <!-- Phase label and weighted progress, visible while a scan runs -->
-                                        <TextBlock Text="{x:Bind ViewModel.ScanPhaseText, Mode=OneWay}" FontSize="11"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                        <ProgressBar Width="180" Height="4" VerticalAlignment="Center"
-                                                     Minimum="0" Maximum="100"
-                                                     Value="{x:Bind ViewModel.ScanProgressPercent, Mode=OneWay}"
-                                                     Visibility="{x:Bind ViewModel.IsWorkflowVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                        <TextBlock Text="{x:Bind ViewModel.ScanProgressPercentText, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"
-                                                   MinWidth="34" TextAlignment="Right" VerticalAlignment="Center" />
-                                        <TextBlock Text="{x:Bind ViewModel.ScanStageCountText, Mode=OneWay}" FontSize="10"
-                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
                             <!-- Segmented Tab Navigation -->
                             <tkcontrols:Segmented
                                 HorizontalAlignment="Left"

@@ -4,6 +4,24 @@
 
 ## English
 
+### 2.2.4
+
+- **AI Hub Audit Reliability**:
+  - Fixed AI analysis timing out on wide ranges. A full 1-month scan collected 1590 events and reported `ai=failed` with `Timeout`, because only the first 120 events were submitted and the 600s budget could not cover the resulting batches at a "max" effort target.
+  - Events are now ranked before selection - errors and criticals first, then most recent - instead of oldest-first, so a wide range keeps a representative sample. The cap is 400 events and the budget is 1800s.
+  - Findings now carry their source channel. The rule engine omitted `LogName`, and since the page filters and counts findings by channel, every rule-based finding was dropped from the list and each channel counter read `(0)` while the scan had in fact found issues.
+  - The Windows event level is now a severity floor: a Critical (1) event always ranks High and an Error (2) event never falls below Medium, even when the rule table classifies that event ID lower. Rules still supply context and guidance.
+  - Crash findings name the failing application and faulting module by parsing the Windows Error Reporting description, so an `Application Error 1000` reads "Application Crash: AUDIODG.EXE (faulting module NahimicAPO4.dll)" instead of naming only the provider. Driver-side modules receive driver guidance.
+- **Light Switch / Awake Now Built**:
+  - The Light Switch and Awake module interfaces were absent from the build output although the runner loads all five modules by name, so Light Switch never switched the theme regardless of its settings. The full module set now builds, and `Kit.LightSwitchService.exe` runs alongside the runner.
+- **Scan Semantics Aligned With the Original**:
+  - Quick scan covers the current day (local midnight to now); the full scan range options are 2 days / 1 week / 1 month.
+  - Consecutive manual scans rescan the selected range instead of shrinking to the time since the previous run, which had produced empty audits.
+  - Security and Firewall channels remain available only in Full mode.
+- **Audit UI**:
+  - The audit reports its stages (Collect event logs / Analyze findings / Finish) and the navigation pane shows a compact workflow block with status icon, percentage, progress bar and stage counter. The pipeline strip it replaced is removed.
+  - Selecting a scan range no longer starts a scan by itself, and the page states that displayed results belong to the previous window.
+  - The results list, severity breakdown and channel counters now agree with the findings actually collected.
 ### 2.2.3
 - **Sidebar Audit Progress (ported from the original app)**:
   - Audit progress now lives in the navigation pane footer - status icon, title, percentage, a compact 4px progress bar and a stage counter - so it stays visible on every page, mirroring the original layout.
@@ -492,6 +510,24 @@
 
 ## 更新日志
 
+### 2.2.4
+
+- **AI 智能中心审计可靠性**：
+  - 修复宽范围下 AI 分析超时。1 个月全量扫描采集到 1590 条事件并报告 `ai=failed`（`Timeout`）：此前只提交前 120 条事件，且 600 秒预算无法覆盖 max effort 下的分批请求。
+  - 事件选取改为按严重度排序（错误/严重优先，其次最新），不再按时间从旧到新截断；上限提升至 400 条，超时提升至 1800 秒。
+  - 发现项现在携带来源通道。规则引擎此前未写入 `LogName`，而页面按通道过滤与计数，导致所有规则发现被列表丢弃、各通道计数显示 `(0)`，尽管扫描实际已发现问题。
+  - Windows 事件级别现在作为严重度下限：Critical (1) 至少为 High，Error (2) 不低于 Medium，即使规则表对该事件 ID 的判定更低。规则仍提供上下文与建议。
+  - 崩溃类发现通过解析 Windows 错误报告描述，直接给出出错程序与故障模块，例如 "应用程序异常崩溃: AUDIODG.EXE（故障模块 NahimicAPO4.dll）"，并针对驱动侧模块给出驱动相关建议。
+- **Light Switch / Awake 现已构建**：
+  - Light Switch 与 Awake 模块接口此前未出现在构建产物中，而 runner 会按名称加载全部五个模块，因此 Light Switch 无论设置如何都不会切换主题。现已构建完整模块集，`Kit.LightSwitchService.exe` 随 runner 一同运行。
+- **扫描语义与原项目对齐**：
+  - 快速扫描覆盖当天（本地零点至当前）；全量扫描范围选项为 2 天 / 1 周 / 1 个月。
+  - 连续手动扫描会重新扫描所选范围，而不再收缩为距上次扫描的间隔（此前会导致空审计结果）。
+  - Security 与防火墙通道仍仅在 Full 模式下可用。
+- **审计界面**：
+  - 审计会上报各阶段（采集事件日志 / 分析发现 / 完成），导航栏显示紧凑的工作流区块（状态图标、百分比、进度条、阶段计数）。其所替代的流水线条已移除。
+  - 选择扫描范围不再自动触发扫描，页面会说明当前展示的是上一次窗口的结果。
+  - 结果列表、严重度分布与通道计数现在与实际采集到的发现保持一致。
 ### 2.2.3
 - **侧栏审计进度（移植自原项目）**：
   - 审计进度移至导航栏页脚 —— 状态图标、标题、百分比、4px 紧凑进度条与阶段计数，因此在任何页面都可见，对齐原项目布局。

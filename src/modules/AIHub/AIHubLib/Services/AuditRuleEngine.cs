@@ -47,6 +47,15 @@ public static class AuditRuleEngine
                 string rawMsg = (first.Message ?? string.Empty).Trim();
                 string cleanedMsg = CleanMessageSummary(rawMsg);
 
+                // Windows Error Reporting events (1000/1002) put the useful detail in the
+                // description rather than the provider: the provider is just "Application
+                // Error" while the message names the failing application and faulting module.
+                // Without this the finding read "Application Crash: Application Error" and
+                // hid the actual culprit.
+                string faultingApp = ExtractFaultField(rawMsg, "Faulting application name");
+                string faultingModule = ExtractFaultField(rawMsg, "Faulting module name");
+                string exceptionCode = ExtractFaultField(rawMsg, "Exception code");
+
                 // Default baseline
                 string severity = "Low";
                 string category = string.Equals(log, "Setup", StringComparison.OrdinalIgnoreCase) ? "Configuration"
@@ -93,12 +102,39 @@ public static class AuditRuleEngine
                     // 3. Application Crash
                     severity = "Medium";
                     category = "Application";
-                    title = $"Application Crash: {provider}";
-                    titleZh = $"应用程序异常崩溃: {provider}";
-                    rootCause = "Application process crashed due to an unhandled exception or memory access violation (such as 0xc0000005).";
-                    rootCauseZh = "应用程序进程因未捕获的代码异常或内存访问违规 (例如 0xc0000005) 崩溃退出。";
-                    recommendation = "1. Update the software to its latest release patch.\n2. Reinstall or repair Microsoft Visual C++ Redistributable runtime packages.\n3. Run 'sfc /scannow' in CMD to ensure system DLL integrity.\n4. Check for conflicts with anti-cheat software or third-party overlays.";
-                    recommendationZh = "1. 检查并将该应用程序升级至官方最新补丁版本。\n2. 重新安装或修复 Microsoft Visual C++ Redistributable 常用运行库组件。\n3. 在管理员终端运行 'sfc /scannow' 确保系统底层动态链接库完整性。\n4. 排查后台防外挂软件或第三方屏幕覆层插件冲突。";
+
+                    // Name the crash target and the offending module when WER reported them.
+                    string subject = !string.IsNullOrWhiteSpace(faultingApp) ? faultingApp : provider;
+                    title = string.IsNullOrWhiteSpace(faultingModule)
+                        ? $"Application Crash: {subject}"
+                        : $"Application Crash: {subject} (faulting module {faultingModule})";
+                    titleZh = string.IsNullOrWhiteSpace(faultingModule)
+                        ? $"应用程序异常崩溃: {subject}"
+                        : $"应用程序异常崩溃: {subject}（故障模块 {faultingModule}）";
+
+                    rootCause = string.IsNullOrWhiteSpace(faultingModule)
+                        ? "Application process crashed due to an unhandled exception or memory access violation."
+                        : $"{subject} crashed inside {faultingModule}"
+                          + (string.IsNullOrWhiteSpace(exceptionCode) ? "." : $", reporting exception {exceptionCode}.");
+
+                    rootCauseZh = string.IsNullOrWhiteSpace(faultingModule)
+                        ? "应用程序进程因未捕获的代码异常或内存访问违规崩溃退出。"
+                        : $"{subject} 在 {faultingModule} 中发生崩溃"
+                          + (string.IsNullOrWhiteSpace(exceptionCode) ? "。" : $"，异常代码 {exceptionCode}。");
+
+                    // Driver-backed modules and audio processing objects need driver guidance,
+                    // not generic "update the app" advice.
+                    bool isSystemModule = faultingModule.Contains("APO", StringComparison.OrdinalIgnoreCase)
+                        || faultingModule.EndsWith(".sys", StringComparison.OrdinalIgnoreCase)
+                        || faultingApp.Contains("AUDIODG", StringComparison.OrdinalIgnoreCase);
+
+                    recommendation = isSystemModule
+                        ? "1. Update or roll back the audio driver and its effects (APO) package from the vendor, e.g. through Device Manager ('devmgmt.msc') under Sound, video and game controllers.\n2. If the crash started after a driver or vendor utility update, uninstall that package and retest.\n3. Run 'sfc /scannow' in an elevated CMD to verify system DLL integrity.\n4. Check the vendor's support site for a known issue with this module version."
+                        : "1. Update the software to its latest release patch.\n2. Reinstall or repair Microsoft Visual C++ Redistributable runtime packages.\n3. Run 'sfc /scannow' in CMD to ensure system DLL integrity.\n4. Check for conflicts with anti-cheat software or third-party overlays.";
+
+                    recommendationZh = isSystemModule
+                        ? "1. 通过设备管理器 ('devmgmt.msc') 的“声音、视频和游戏控制器”更新或回退该音频驱动及其音效 (APO) 组件版本。\n2. 若崩溃始于某次驱动或厂商工具更新，卸载该组件后复测。\n3. 在管理员终端运行 'sfc /scannow' 校验系统动态链接库完整性。\n4. 前往厂商支持站点确认该模块版本是否存在已知问题。"
+                        : "1. 检查并将该应用程序升级至官方最新补丁版本。\n2. 重新安装或修复 Microsoft Visual C++ Redistributable 常用运行库组件。\n3. 在管理员终端运行 'sfc /scannow' 确保系统底层动态链接库完整性。\n4. 排查后台防外挂软件或第三方屏幕覆层插件冲突。";
                 }
                 else if (eventId == 1002)
                 {
@@ -373,6 +409,49 @@ public static class AuditRuleEngine
             }
 
             return issues.OrderByDescending(i => i.IsHigh).ThenByDescending(i => i.IsMedium).ThenByDescending(i => i.Occurrences).ToList();
+    }
+
+    /// <summary>
+    /// Reads a "Name: value" line out of a Windows Error Reporting description.
+    /// </summary>
+    /// <remarks>
+    /// The WER events carry their detail as free text, so the value is read from the line
+    /// rather than a structured field. Returns an empty string when the field is absent.
+    /// </remarks>
+    private static string ExtractFaultField(string raw, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        foreach (string line in raw.Split('\n'))
+        {
+            string trimmed = line.Trim();
+            if (!trimmed.StartsWith(fieldName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            int separator = trimmed.IndexOf(':');
+            if (separator < 0 || separator + 1 >= trimmed.Length)
+            {
+                continue;
+            }
+
+            string value = trimmed[(separator + 1)..].Trim();
+
+            // Keep the filename only for paths; the directory adds no diagnostic value.
+            int lastSlash = value.LastIndexOf('\\');
+            if (lastSlash >= 0 && lastSlash + 1 < value.Length)
+            {
+                value = value[(lastSlash + 1)..];
+            }
+
+            return value.Length > 128 ? value[..128] : value;
+        }
+
+        return string.Empty;
     }
 
     private static string CleanMessageSummary(string raw)

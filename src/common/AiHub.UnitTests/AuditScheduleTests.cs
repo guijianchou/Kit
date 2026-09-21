@@ -84,11 +84,13 @@ public sealed class AuditScheduleTests
     [TestMethod]
     public void ManualScanCoversTheRangeEvenWhenThePreviousScanIsRecent()
     {
-        DateTime from1 = AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, 1);
-        DateTime from2 = AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, Now.AddSeconds(-10), Now, 1);
+        // The regression this guards: a second manual scan must not shrink to the time since
+        // the first one, which is what produced empty audits.
+        DateTime from1 = AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, 2);
+        DateTime from2 = AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, Now.AddSeconds(-10), Now, 2);
 
         Assert.AreEqual(from1, from2, "Consecutive manual scans must scan the same window.");
-        Assert.AreEqual(Now.AddDays(-1), from2);
+        Assert.AreEqual(Now.AddDays(-2), from2);
     }
 
     [TestMethod]
@@ -113,22 +115,57 @@ public sealed class AuditScheduleTests
     [TestMethod]
     public void ScheduledRunWithoutAPreviousScanCoversTheWholeRange()
     {
-        Assert.AreEqual(Now.AddDays(-1), AuditSchedule.ComputeScanStart(ScanIntent.Scheduled, null, Now, 1));
+        Assert.AreEqual(Now.AddDays(-2), AuditSchedule.ComputeScanStart(ScanIntent.Scheduled, null, Now, 2));
     }
 
     [TestMethod]
-    public void FastScanUsesAShortRecentWindow()
+    public void FastScanCoversTheCurrentDay()
     {
+        // A quick scan covers today, matching the original app, so repeated quick scans
+        // examine the same period and their results stay comparable.
         DateTime from = AuditSchedule.ComputeScanStart(ScanIntent.Fast, Now.AddMinutes(-1), Now, 7, fastRangeHours: 1);
+        DateTime todayStartUtc = DateTime.SpecifyKind(Now.ToLocalTime().Date, DateTimeKind.Local).ToUniversalTime();
 
-        Assert.AreEqual(Now.AddHours(-1), from, "A fast scan is short regardless of the selected range.");
+        Assert.AreEqual(todayStartUtc, from, "A fast scan starts at local midnight.");
+        Assert.IsTrue(from <= Now, "The quick window must not start in the future.");
     }
 
     [TestMethod]
-    public void UnsupportedRangeFallsBackToOneDay()
+    public void FastScanIgnoresTheSelectedRange()
     {
-        Assert.AreEqual(Now.AddDays(-1), AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, rangeDays: 5));
-        Assert.AreEqual(Now.AddDays(-1), AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, rangeDays: 0));
+        DateTime shortRange = AuditSchedule.ComputeScanStart(ScanIntent.Fast, null, Now, 2);
+        DateTime longRange = AuditSchedule.ComputeScanStart(ScanIntent.Fast, null, Now, 30);
+
+        Assert.AreEqual(shortRange, longRange, "The selected range only affects a full scan.");
+    }
+
+    [TestMethod]
+    public void SupportedRangesAreTwoDaysOneWeekAndOneMonth()
+    {
+        CollectionAssert.AreEqual(
+            new[] { 2, 7, 30 },
+            AuditSchedule.SupportedRangeDays,
+            "The full-scan range list is the documented 2d / 1w / 1mo set.");
+    }
+
+    [TestMethod]
+    public void FullScanHonoursTheOneMonthRange()
+    {
+        Assert.AreEqual(Now.AddDays(-30), AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, 30));
+    }
+
+    [TestMethod]
+    public void UnsupportedRangeFallsBackToTheShortestSupportedRange()
+    {
+        // 2 days is the shortest selectable range, so an unexpected value uses it.
+        Assert.AreEqual(Now.AddDays(-2), AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, rangeDays: 5));
+        Assert.AreEqual(Now.AddDays(-2), AuditSchedule.ComputeScanStart(ScanIntent.ManualFull, null, Now, rangeDays: 0));
+    }
+
+    [TestMethod]
+    public void ScheduledRunWithoutAPreviousScanUsesTheShortestRange()
+    {
+        Assert.AreEqual(Now.AddDays(-2), AuditSchedule.ComputeScanStart(ScanIntent.Scheduled, null, Now, 2));
     }
 
     [TestMethod]

@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
 using Kit.AIHubLib.Models;
+using ManagedCommon;
 
 /// <summary>
 /// Bridges the Security Audit event stream to the shared AI Hub task engine so the
@@ -104,8 +105,25 @@ public static class AiHubAuditAnalysisService
             },
             cancellationToken).ConfigureAwait(false);
 
-        return result.IsSuccess ? result.Payload?.Issues : null;
+        if (!result.IsSuccess)
+        {
+            // The engine reports a failure code and message; discarding them made a broken
+            // route look identical to "the model found nothing", which is what hid the fact
+            // that no request was ever leaving the machine.
+            LastFailure = $"{result.ErrorCode}: {result.ErrorMessage}".Trim(' ', ':');
+            Logger.LogError($"AI audit analysis failed: {LastFailure}");
+            return null;
+        }
+
+        LastFailure = null;
+        return result.Payload?.Issues;
     }
+
+    /// <summary>
+    /// Reason the most recent analysis produced no result, or null when it succeeded.
+    /// Surfaced in the audit status so a failure is never mistaken for a clean scan.
+    /// </summary>
+    public static string? LastFailure { get; private set; }
 
     /// <summary>
     /// Schema for the built-in security-audit chain: source-generated JSON metadata for
@@ -118,6 +136,15 @@ public static class AiHubAuditAnalysisService
             InputTypeInfo = AIHubLibJsonContext.Default.EventAnalysisInput,
             OutputTypeInfo = AIHubLibJsonContext.Default.AuditIssueContainer,
             ValidateOutput = ValidateOutput,
+
+            // Large event windows are split into batches (an "max" effort target batches at
+            // 15 records), and the engine rejects a multi-batch task whose schema cannot
+            // merge the per-batch outputs. Without this the audit failed with InvalidPayload
+            // before any request left the machine.
+            MergeBatches = containers => new AuditIssueContainer
+            {
+                Issues = containers.SelectMany(container => container.Issues ?? new List<AuditIssue>()).ToList(),
+            },
         };
     }
 

@@ -127,6 +127,43 @@
                         HorizontalContentAlignment="Stretch">
                         <StackPanel Spacing="16">
 
+                            <!-- Audit workflow progress. Replaces the pipeline strip that used to occupy
+                                 this row: the strip only described the pipeline, while this shows the work. -->
+                            <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    Visibility="{x:Bind ViewModel.SidebarWorkflowVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="{x:Bind ViewModel.SidebarWorkflowGlyph, Mode=OneWay}" FontSize="14"
+                                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.SidebarWorkflowTitle, Mode=OneWay}"
+                                                   FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.SidebarWorkflowPercentText, Mode=OneWay}"
+                                                   FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <ProgressBar Value="{x:Bind ViewModel.SidebarWorkflowPercent, Mode=OneWay}" Minimum="0" Maximum="100"
+                                                 Height="4" MinHeight="4"
+                                                 Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                                 AutomationProperties.Name="{x:Bind ViewModel.SidebarWorkflowTooltip, Mode=OneWay}" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind ViewModel.CurrentStageText, Mode=OneWay}" FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}" FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
                             <!-- Segmented Tab Navigation -->
                             <tkcontrols:Segmented
                                 HorizontalAlignment="Left"

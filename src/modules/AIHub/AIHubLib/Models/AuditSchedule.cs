@@ -45,8 +45,11 @@ public static class AuditSchedule
     /// <summary>Longest supported scheduled interval, in hours (one week).</summary>
     public const int MaximumIntervalHours = 168;
 
-    /// <summary>Supported full-scan ranges, in days.</summary>
-    public static readonly int[] SupportedRangeDays = [1, 2, 7];
+    /// <summary>Supported full-scan ranges, in days: 2 days, 1 week, 1 month.</summary>
+    public static readonly int[] SupportedRangeDays = [2, 7, 30];
+
+    /// <summary>Range used when a caller supplies an unsupported value.</summary>
+    public static int DefaultRangeDays => SupportedRangeDays[0];
 
     /// <summary>True when an interval value enables scheduling at all.</summary>
     public static bool IsSchedulingEnabled(int intervalHours) => intervalHours >= MinimumIntervalHours;
@@ -119,12 +122,17 @@ public static class AuditSchedule
         int rangeDays,
         double fastRangeHours = 1)
     {
-        int days = SupportedRangeDays.Contains(rangeDays) ? rangeDays : 1;
+        int days = SupportedRangeDays.Contains(rangeDays) ? rangeDays : DefaultRangeDays;
         DateTime rangeStart = endUtc.AddDays(-days);
 
         if (intent == ScanIntent.Fast)
         {
-            return endUtc.AddHours(-Math.Max(fastRangeHours, 0.1));
+            // A quick scan covers the current day, matching the original app: it starts at
+            // local midnight rather than a rolling window, so repeated quick scans see the
+            // same period and their results stay comparable.
+            DateTime localMidnight = endUtc.ToLocalTime().Date;
+            DateTime todayStartUtc = DateTime.SpecifyKind(localMidnight, DateTimeKind.Local).ToUniversalTime();
+            return todayStartUtc > endUtc ? endUtc.AddHours(-Math.Max(fastRangeHours, 0.1)) : todayStartUtc;
         }
 
         // Only a scheduled run may continue from the previous scan.
@@ -164,6 +172,6 @@ public static class AuditSchedule
         }
 
         DateTime from = ComputeScanStart(intent, lastScanUtc, endUtc, rangeDays);
-        return from > endUtc.AddDays(-(SupportedRangeDays.Contains(rangeDays) ? rangeDays : 1));
+        return from > endUtc.AddDays(-(SupportedRangeDays.Contains(rangeDays) ? rangeDays : DefaultRangeDays));
     }
 }

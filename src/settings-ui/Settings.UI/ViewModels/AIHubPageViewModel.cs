@@ -169,6 +169,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private DateTime? _lastCompletedAuditUtc;
     private ScanPhase _scanPhase = ScanPhase.Idle;
+    private string _aiAnalysisRanText = string.Empty;
     private string _currentStageText = string.Empty;
 
     private CancellationTokenSource _currentCts;
@@ -523,11 +524,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public string FullScanRangeHint => IsChinese ? "选择全量扫描时间跨度" : "Select full scan time range";
 
-    public string RangeOption1DayLabel => IsChinese ? "1 天" : "1d";
+    public string RangeOption1DayLabel => IsChinese ? "2 天" : "2d";
 
-    public string RangeOption2DaysLabel => IsChinese ? "2 天" : "2d";
+    public string RangeOption2DaysLabel => IsChinese ? "1 周" : "1w";
 
-    public string RangeOption1WeekLabel => IsChinese ? "1 周" : "1w";
+    public string RangeOption1WeekLabel => IsChinese ? "1 个月" : "1mo";
 
     public string ScanOptionsLabel => IsChinese ? "扫描选项" : "Scan options";
 
@@ -868,6 +869,16 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string ScanProgressPercentText => ActiveProgress.PercentText;
 
     public string ScanStageCountText => ActiveProgress.StageCountText;
+
+    /// <summary>
+    /// What the AI step did during the last scan. The scan previously never reached the
+    /// kernel, and nothing in the UI said so; this makes that visible either way.
+    /// </summary>
+    public string AiAnalysisRanText
+    {
+        get => _aiAnalysisRanText;
+        private set => Set(ref _aiAnalysisRanText, value);
+    }
 
     /// <summary>Name of the stage currently running.</summary>
     public string CurrentStageText
@@ -1399,15 +1410,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             try
             {
-                // Selected range: 0 = 1 day, 1 = 2 days, 2 = 7 days.
+                // Selected range: 0 = 2 days, 1 = 1 week, 2 = 1 month.
                 int rangeDays = _selectedScopeIndex switch
                 {
-                    1 => 2,
-                    2 => 7,
-                    _ => 1,
+                    1 => 7,
+                    2 => 30,
+                    _ => 2,
                 };
 
-                int maxEvents = fast ? 250 : 2000;
+                // Quick scan covers today only; the full scan honours the selected range.
+                // They also read different volumes: a quick scan is a smoke test, so it
+                // reads fewer events per channel than a full one.
+                int maxEvents = fast ? 500 : 5000;
                 var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
 
                 // A manual scan always covers the whole selected range; only a scheduled run
@@ -1434,11 +1448,98 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     _lastAuditEvents.AddRange(events);
                 }
 
-                // Run audit analysis (rule-based detection with rich bilingual solutions)
-                var issues = RunRuleBasedAuditAnalysis(events);
+                // Rule-based detection first: it is local, instant, and always available, so
+                // a machine with AI disabled still gets a usable result.
+                var ruleIssues = RunRuleBasedAuditAnalysis(events);
+                var issues = new List<AuditIssueEnhanced>(ruleIssues);
+
+                // Then hand the same evidence to the selected kernel. The original app does
+                // this inside the scan itself rather than behind a separate action; without it
+                // a scan never reached the model at all.
+                if (events.Count > 0 && AiHubAuditAnalysisService.IsAvailable)
+                {
+                    EnqueueOnUI(() => BeginStage("AI analysis"));
+
+                    Logger.LogInfo(
+                        $"Audit sending {events.Count} event(s) to {AiHubEngine.Current.ActiveKernel} for analysis.");
+
+                    var progress = new Progress<string>(message =>
+                        EnqueueOnUI(() => AuditStatusText = message));
+
+                    try
+                    {
+                        var aiIssues = await AiHubAuditAnalysisService
+                            .AnalyzeEventsAsync(events, progress, token)
+                            .ConfigureAwait(false);
+
+                        // Bound properties back a TextBlock, so they must be set on the UI
+                        // thread; assigning them here raised RPC_E_WRONG_THREAD and surfaced
+                        // as "Audit failed" even though the audit itself had succeeded.
+                        if (aiIssues is { Count: > 0 })
+                        {
+                            issues = MergeIssues(ruleIssues, aiIssues, events);
+                            string summary = IsChinese
+                                ? $"已调用 {AiHubEngine.Current.ActiveKernel}，返回 {aiIssues.Count} 项增强发现"
+                                : $"{AiHubEngine.Current.ActiveKernel} returned {aiIssues.Count} enhanced finding(s)";
+                            EnqueueOnUI(() => AiAnalysisRanText = summary);
+                        }
+                        else
+                        {
+                            // Distinguish "the model had nothing to add" from "the call never
+                            // succeeded"; the engine's failure reason explains which.
+                            var failure = AiHubAuditAnalysisService.LastFailure;
+                            string summary = failure is null
+                                ? (IsChinese
+                                    ? $"{AiHubEngine.Current.ActiveKernel} 未返回额外发现"
+                                    : $"{AiHubEngine.Current.ActiveKernel} returned no extra findings")
+                                : (IsChinese
+                                    ? $"AI 调用失败：{failure}"
+                                    : $"AI call failed: {failure}");
+
+                            EnqueueOnUI(() =>
+                            {
+                                AiAnalysisRanText = summary;
+                                if (failure is not null)
+                                {
+                                    ShowStatus(
+                                        IsChinese ? $"AI 分析未成功：{failure}" : $"AI analysis did not succeed: {failure}",
+                                        InfoBarSeverity.Warning);
+                                }
+                            });
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        // An AI failure must not discard the rule-based result.
+                        Logger.LogError("AI analysis during audit failed", ex);
+                        string summary = IsChinese
+                            ? $"AI 分析失败：{ex.Message}"
+                            : $"AI analysis failed: {ex.Message}";
+                        EnqueueOnUI(() => AiAnalysisRanText = summary);
+                    }
+                }
+                else if (events.Count == 0)
+                {
+                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "无事件，未调用 AI" : "No events; AI not called");
+                }
+                else
+                {
+                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "AI Hub 未启用，跳过 AI 分析" : "AI Hub disabled; AI analysis skipped");
+                }
 
                 // Calculate health score
                 int score = HealthScoreCalculator.Calculate(issues);
+
+                // Record the outcome: without this the log stopped after "sending ... events"
+                // and a failure was indistinguishable from a success.
+                Logger.LogInfo(
+                    $"Audit analysis finished: type={(fast ? "fast" : "full")}, events={events.Count}, " +
+                    $"ruleFindings={ruleIssues.Count}, totalFindings={issues.Count}, healthScore={score}, " +
+                    $"ai={(AiHubAuditAnalysisService.LastFailure is null ? "ok" : "failed")}");
 
                 EnqueueOnUI(() =>
                 {
@@ -1478,12 +1579,17 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                             ? (IsChinese ? "增量审计" : "Incremental audit")
                             : (IsChinese ? "全量审计" : "Full scan");
                     FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-                    WindowText = fast ? (IsChinese ? "最近 1 小时" : "Past 1 hour") : _selectedScopeIndex switch
-                    {
-                        1 => IsChinese ? "最近 2 天" : "Past 2 days",
-                        2 => IsChinese ? "最近 7 天" : "Past 7 days",
-                        _ => IsChinese ? "最近 1 天" : "Past 1 day",
-                    };
+
+                    // Report the window actually scanned instead of a hard-coded label; the
+                    // old text disagreed with the range the user had selected.
+                    WindowText = fast
+                        ? (IsChinese ? "当天" : "Today")
+                        : _selectedScopeIndex switch
+                        {
+                            1 => IsChinese ? "最近 1 周" : "Past 1 week",
+                            2 => IsChinese ? "最近 1 个月" : "Past 1 month",
+                            _ => IsChinese ? "最近 2 天" : "Past 2 days",
+                        };
                     EventCountText = IsChinese ? $"{events.Count} 事件" : $"{events.Count} events";
                     ActivityFindingsText = issues.Count.ToString(CultureInfo.InvariantCulture);
                     SelectedAuditLabel = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -1578,6 +1684,85 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(HealthVerdict));
         OnPropertyChanged(nameof(HealthSummaryText));
     }
+
+    /// <summary>
+    /// Combines the rule-based and AI findings. An AI finding for an event the rules already
+    /// flagged replaces it, because the AI result carries richer bilingual guidance; AI
+    /// findings for events the rules missed are appended.
+    /// </summary>
+    private static List<AuditIssueEnhanced> MergeIssues(
+        List<AuditIssueEnhanced> ruleIssues,
+        IReadOnlyList<AuditIssue> aiIssues,
+        IReadOnlyList<SecurityEvent> events)
+    {
+        var merged = new List<AuditIssueEnhanced>(ruleIssues);
+        var seenEventIds = new HashSet<string>(ruleIssues.Select(issue => issue.EventId), StringComparer.Ordinal);
+
+        foreach (AuditIssue ai in aiIssues)
+        {
+            if (ai is null || string.IsNullOrWhiteSpace(ai.Title))
+            {
+                continue;
+            }
+
+            // The model may omit the channel; recover it from the event so the finding stays
+            // reachable through the source filter.
+            if (string.IsNullOrWhiteSpace(ai.LogName) && int.TryParse(ai.EventId, out int eventId))
+            {
+                var origin = events.FirstOrDefault(e => e.EventId == eventId);
+                if (origin is not null)
+                {
+                    ai.LogName = origin.LogName ?? string.Empty;
+                }
+            }
+
+            if (seenEventIds.Contains(ai.EventId))
+            {
+                int index = merged.FindIndex(issue => issue.EventId == ai.EventId);
+                if (index >= 0)
+                {
+                    merged[index] = ToEnhanced(ai);
+                }
+            }
+            else
+            {
+                seenEventIds.Add(ai.EventId);
+                merged.Add(ToEnhanced(ai));
+            }
+        }
+
+        return merged;
+    }
+
+    /// <summary>
+    /// Projects an AI finding onto the shape the page displays.
+    /// </summary>
+    /// <remarks>
+    /// LogName and Category must survive the projection: the source filter matches on them,
+    /// and dropping them made AI findings disappear from the list and reset the visible
+    /// count to zero even though the analysis had returned results.
+    /// </remarks>
+    private static AuditIssueEnhanced ToEnhanced(AuditIssue ai) =>
+        new()
+        {
+            Key = ai.Key,
+            EventRef = ai.EventRef,
+            EventId = ai.EventId,
+            LogName = ai.LogName,
+            Category = string.IsNullOrWhiteSpace(ai.Category) ? "Other" : ai.Category,
+            Severity = ai.Severity,
+            Confidence = ai.Confidence,
+            Title = ai.Title,
+            TitleZh = ai.TitleZh,
+            Description = ai.Description,
+            DescriptionZh = ai.DescriptionZh,
+            RootCause = ai.RootCause,
+            RootCauseZh = ai.RootCauseZh,
+            Recommendation = ai.Recommendation,
+            RecommendationZh = ai.RecommendationZh,
+            Occurrences = ai.Occurrences,
+            Source = "AI",
+        };
 
     private static List<AuditIssueEnhanced> RunRuleBasedAuditAnalysis(List<SecurityEvent> events)
         => AuditRuleEngine.Analyze(events);

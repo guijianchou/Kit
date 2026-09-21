@@ -232,3 +232,7 @@ src/common/Telemetry/*.etl
 
 # Reference source checkout (PowerToys upstream) - local reference only, never committed
 /source/
+
+# Temporary UI automation scripts
+/shot.png
+/*.ps1

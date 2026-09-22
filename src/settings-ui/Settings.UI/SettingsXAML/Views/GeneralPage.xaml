@@ -440,7 +440,7 @@
                                          alone here; task-specific chains live on AI Hub. -->
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE72E;" FontSize="14" VerticalAlignment="Center" />
-                                        <TextBlock x:Uid="AiHub_Segment_GlobalPolicy" Text="Global security policy"
+                                        <TextBlock Text="Global security policy"
                                                    Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
                                     </StackPanel>
     

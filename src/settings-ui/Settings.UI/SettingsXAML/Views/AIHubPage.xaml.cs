@@ -36,6 +36,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility IsOptTab(int index) => index == 1 ? Visibility.Visible : Visibility.Collapsed;
 
+    public Visibility IsTaskPoliciesTab(int index) => index == 2 ? Visibility.Visible : Visibility.Collapsed;
+
     public void RefreshEnabledState()
     {
         ViewModel.RefreshEnabledState();

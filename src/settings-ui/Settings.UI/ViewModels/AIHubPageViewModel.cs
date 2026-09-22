@@ -923,10 +923,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         private set => Set(ref _aiReadinessText, value);
     }
 
+    /// <summary>Tab label for the per-chain policy editor.</summary>
+    public string TaskPoliciesTabLabel => IsChinese ? "任务策略" : "Task policies";
+
     /// <summary>Heading for the per-chain policy editor.</summary>
     public string TaskPolicyTitle => IsChinese
         ? "任务策略（各链路 AGENTS.md）"
         : "Task policies (per-chain AGENTS.md)";
+
+    /// <summary>Explains what the per-chain policies govern and where the global one lives.</summary>
+    public string TaskPolicyDescription => IsChinese
+        ? "各插件链路的专属指令，分别写入 AGENTS.md。全局安全策略已移至“常规 → AI 服务”，因为它对所有插件生效。"
+        : "Per-chain instructions written to each AGENTS.md. The global security policy moved to General > AI service because it applies to every plugin.";
 
     /// <summary>Label for the manual readiness re-check action.</summary>
     public string RecheckAiLabel => IsChinese ? "重新检测" : "Re-check";

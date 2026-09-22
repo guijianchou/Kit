@@ -4,6 +4,10 @@
 
 ## English
 
+### 2.2.5
+
+- **AI Hub Task Policies Layout**:
+  - The per-chain policy editor card now uses a vertical layout (`ContentAlignment="Vertical"`), so the Task Policies title sits directly above the Security audit / Optimization chain selector instead of leaving a large horizontal gap between them.
 ### 2.2.4
 
 - **AI Hub Audit Reliability**:
@@ -22,6 +26,12 @@
   - The audit reports its stages (Collect event logs / Analyze findings / Finish) and the navigation pane shows a compact workflow block with status icon, percentage, progress bar and stage counter. The pipeline strip it replaced is removed.
   - Selecting a scan range no longer starts a scan by itself, and the page states that displayed results belong to the previous window.
   - The results list, severity breakdown and channel counters now agree with the findings actually collected.
+- **AI Service Status & Settings Layout**:
+  - The AI service panel (kernel, main/fallback endpoints, global security policy) now lives on General under a first-class "AI Service" group, ordered between Appearance & behavior and Diagnostics & logs - the service is shared by every module, so its configuration belongs with the base settings. The AI Hub page keeps the module enable toggle and the per-chain task policies.
+  - Fixed a page crash when the global-policy editor kept a x:Uid whose replacement control has no matching property (Unable to resolve property 'Content' for Uid 'AiHub_Segment_GlobalPolicy').
+  - Readiness is now a first-class verdict (Disabled / NotConfigured / Unverified / Ready / Degraded): a cached check runs up front so a scan no longer discovers a broken AI route only after collecting everything, and a live re-check is available.
+  - The AI Hub page shows a page-level AI service status indicator - explicit enabled/disabled state plus readiness, colored by level (green/orange/blue/red/gray) - that refreshes on page load, on any engine state change (including toggling the service on General), and via a manual re-check button.
+  - "AI Service" appears as a proper group title on General (it was missing from the resource table), with the diagnostics/logs group following it.
 ### 2.2.3
 - **Sidebar Audit Progress (ported from the original app)**:
   - Audit progress now lives in the navigation pane footer - status icon, title, percentage, a compact 4px progress bar and a stage counter - so it stays visible on every page, mirroring the original layout.
@@ -510,6 +520,10 @@
 
 ## 更新日志
 
+### 2.2.5
+
+- **AI 智能中心任务策略布局**：
+  - 任务策略编辑卡片改为纵向布局（`ContentAlignment="Vertical"`），Task Policies 主标题直接位于 Security audit / Optimization 链选择器上方，消除了两者之间的大片横向空隙。
 ### 2.2.4
 
 - **AI 智能中心审计可靠性**：

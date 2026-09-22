@@ -29,6 +29,8 @@ using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 
 namespace Kit.Settings.UI.ViewModels;
 
@@ -282,16 +284,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         // Seed the indicator from the cached verdict. This deliberately does not probe:
         // opening the page must not start a kernel process, and the constraint is that the
         // AI service is only exercised while the module is enabled.
-        try
-        {
-            AiReadiness readiness = AiHubEngine.Current.GetReadiness();
-            AiReadinessLevel = readiness.Level;
-            AiReadinessText = DescribeReadiness(readiness);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError("Could not read AI readiness state", ex);
-        }
+        RefreshAiReadinessFromCache();
+
+        // Follow the shared service: toggling it on General (or any config change) must be
+        // reflected here immediately, not only on the next scan or re-check.
+        AiHubEngine.Current.StateChanged += OnEngineStateChanged;
     }
 
     public static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
@@ -912,6 +909,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 OnPropertyChanged(nameof(IsAiReady));
                 OnPropertyChanged(nameof(IsAiUsable));
                 OnPropertyChanged(nameof(AiReadinessGlyph));
+                OnPropertyChanged(nameof(AiReadinessBrush));
             }
         }
     }
@@ -956,6 +954,22 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         _ => "\uE7BA",
     };
 
+    private static readonly SolidColorBrush ReadyBrush = new(Color.FromArgb(0xFF, 0x10, 0x7C, 0x10));
+    private static readonly SolidColorBrush WarningBrush = new(Color.FromArgb(0xFF, 0xEA, 0x58, 0x0C));
+    private static readonly SolidColorBrush InfoBrush = new(Color.FromArgb(0xFF, 0x25, 0x63, 0xEB));
+    private static readonly SolidColorBrush ErrorBrush = new(Color.FromArgb(0xFF, 0xDC, 0x26, 0x26));
+    private static readonly SolidColorBrush MutedBrush = new(Color.FromArgb(0xFF, 0x8A, 0x8A, 0x8A));
+
+    /// <summary>Status color matching the readiness level (green/orange/blue/red/gray).</summary>
+    public SolidColorBrush AiReadinessBrush => AiReadinessLevel switch
+    {
+        AiReadinessLevel.Ready => ReadyBrush,
+        AiReadinessLevel.Degraded => WarningBrush,
+        AiReadinessLevel.Unverified => InfoBrush,
+        AiReadinessLevel.NotConfigured => ErrorBrush,
+        _ => MutedBrush,
+    };
+
     /// <summary>Re-checks the AI route and refreshes the indicator.</summary>
     public async Task RefreshAiReadinessAsync()
     {
@@ -981,6 +995,34 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Re-reads the cached readiness verdict. Cheap (no probe, no kernel process), so it is
+    /// safe to run on page load and on engine state-change notifications.
+    /// </summary>
+    private void RefreshAiReadinessFromCache()
+    {
+        try
+        {
+            AiReadiness readiness = AiHubEngine.Current.GetReadiness();
+            AiReadinessLevel = readiness.Level;
+            AiReadinessText = DescribeReadiness(readiness);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Could not read AI readiness state", ex);
+        }
+    }
+
+    /// <summary>
+    /// The engine raises this whenever the service configuration or enable state changes
+    /// (settings saved here or on General, IPC updates, file watcher), so the page keeps
+    /// its enabled/status indication in step with the service.
+    /// </summary>
+    private void OnEngineStateChanged(object sender, AiHubStateChangedEventArgs args)
+    {
+        EnqueueOnUI(RefreshAiReadinessFromCache);
+    }
+
     /// <summary>Renders a readiness verdict as a short bilingual line.</summary>
     private string DescribeReadiness(AiReadiness readiness)
     {
@@ -991,20 +1033,20 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         return readiness.Level switch
         {
             AiReadinessLevel.Ready => IsChinese
-                ? $"AI 服务就绪 · {kernelModel}"
-                : $"AI service ready · {kernelModel}",
+                ? $"AI 服务已启用 · 就绪 · {kernelModel}"
+                : $"AI service enabled · ready · {kernelModel}",
             AiReadinessLevel.Degraded => IsChinese
-                ? $"主链路不可用，将使用备用端点 · {readiness.Detail}"
-                : $"Main route unavailable, fallback will be used · {readiness.Detail}",
+                ? $"AI 服务已启用 · 主链路不可用，将使用备用端点 · {readiness.Detail}"
+                : $"AI service enabled · main route unavailable; fallback will be used · {readiness.Detail}",
             AiReadinessLevel.Unverified => IsChinese
-                ? $"AI 服务已配置（未验证）· {kernelModel}"
-                : $"AI service configured (unverified) · {kernelModel}",
+                ? $"AI 服务已启用 · 已配置（未验证）· {kernelModel}"
+                : $"AI service enabled · configured (unverified) · {kernelModel}",
             AiReadinessLevel.NotConfigured => IsChinese
                 ? $"AI 服务未配置：{readiness.Detail}"
                 : $"AI service not configured: {readiness.Detail}",
             _ => IsChinese
-                ? "AI 服务已关闭，本次仅执行规则检测"
-                : "AI service is off; this run only performs rule-based detection",
+                ? "AI 服务未启用 · 扫描时仅执行规则检测"
+                : "AI service disabled · rule-based detection only",
         };
     }
 
@@ -1234,6 +1276,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(IsEnabled));
         OnPropertyChanged(nameof(IsEnabledGpoConfigured));
         RefreshCommands();
+        RefreshAiReadinessFromCache();
     }
 
     private void RefreshCommands()
@@ -2488,6 +2531,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             _disposed = true;
             _scheduleTimer.Stop();
             AiHub?.Dispose();
+            AiHubEngine.Current.StateChanged -= OnEngineStateChanged;
             _currentCts?.Cancel();
             _currentCts?.Dispose();
         }

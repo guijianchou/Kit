@@ -2834,6 +2834,9 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="General_DiagnosticsGroup.Header" xml:space="preserve">
     <value>Diagnostics &amp; logs</value>
   </data>
+  <data name="General_AiServicesGroup.Header" xml:space="preserve">
+    <value>AI Service</value>
+  </data>
   <data name="General_DiagnosticsExpander.Header" xml:space="preserve">
     <value>Logging</value>
   </data>

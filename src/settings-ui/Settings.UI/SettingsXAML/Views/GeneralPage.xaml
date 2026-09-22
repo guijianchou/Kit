@@ -198,48 +198,6 @@
                 </controls:SettingsGroup>
 
 
-                <!-- Diagnostics & Logging Group -->
-                <controls:SettingsGroup x:Uid="General_DiagnosticsGroup">
-                    <tkcontrols:SettingsExpander
-                        x:Name="GeneralDiagnosticsExpander"
-                        x:Uid="General_DiagnosticsExpander"
-                        HeaderIcon="{ui:FontIcon Glyph=&#xEC19;}"
-                        IsExpanded="True">
-                        <ToggleSwitch
-                            x:Uid="ToggleSwitch"
-                            AutomationProperties.Name="{Binding ElementName=GeneralDiagnosticsExpander, Path=Header}"
-                            IsOn="{x:Bind ViewModel.EnableLogging, Mode=TwoWay}" />
-                        <tkcontrols:SettingsExpander.Items>
-                            <tkcontrols:SettingsCard
-                                x:Uid="General_LogLevelCard"
-                                IsEnabled="{x:Bind ViewModel.EnableLogging, Mode=OneWay}">
-                                <ComboBox
-                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
-                                    SelectedIndex="{x:Bind ViewModel.LogLevelIndex, Mode=TwoWay}">
-                                    <ComboBoxItem x:Uid="General_LogLevelTrace" Content="Trace (Verbose)" Tag="trace" />
-                                    <ComboBoxItem x:Uid="General_LogLevelDebug" Content="Debug" Tag="debug" />
-                                    <ComboBoxItem x:Uid="General_LogLevelInfo" Content="Info" Tag="info" />
-                                    <ComboBoxItem x:Uid="General_LogLevelWarning" Content="Warning" Tag="warn" />
-                                    <ComboBoxItem x:Uid="General_LogLevelError" Content="Error" Tag="err" />
-                                </ComboBox>
-                            </tkcontrols:SettingsCard>
-                            <tkcontrols:SettingsCard
-                                x:Uid="General_OpenLogsFolderCard"
-                                Description="{x:Bind ViewModel.LogsFolderPath, Mode=OneWay}">
-                                <Button
-                                    x:Uid="General_OpenLogsFolderButton"
-                                    Command="{x:Bind ViewModel.OpenLogsFolderCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon Glyph="&#xEC50;" FontSize="13" />
-                                        <TextBlock x:Uid="General_OpenLogsFolderText" Text="Open folder" />
-                                    </StackPanel>
-                                </Button>
-                            </tkcontrols:SettingsCard>
-                        </tkcontrols:SettingsExpander.Items>
-                    </tkcontrols:SettingsExpander>
-                </controls:SettingsGroup>
-
-
                 <!-- AI Service. Shared by every module: the execution kernel, endpoints,
                      credentials and the global security policy that applies to all plugins.
                      Moved here from the AI Hub page so it reads as a base capability. -->
@@ -494,6 +452,50 @@
                     </ContentControl>
 
                 </controls:SettingsGroup>
+
+
+                <!-- Diagnostics & Logging Group -->
+                <controls:SettingsGroup x:Uid="General_DiagnosticsGroup">
+                    <tkcontrols:SettingsExpander
+                        x:Name="GeneralDiagnosticsExpander"
+                        x:Uid="General_DiagnosticsExpander"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xEC19;}"
+                        IsExpanded="True">
+                        <ToggleSwitch
+                            x:Uid="ToggleSwitch"
+                            AutomationProperties.Name="{Binding ElementName=GeneralDiagnosticsExpander, Path=Header}"
+                            IsOn="{x:Bind ViewModel.EnableLogging, Mode=TwoWay}" />
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard
+                                x:Uid="General_LogLevelCard"
+                                IsEnabled="{x:Bind ViewModel.EnableLogging, Mode=OneWay}">
+                                <ComboBox
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    SelectedIndex="{x:Bind ViewModel.LogLevelIndex, Mode=TwoWay}">
+                                    <ComboBoxItem x:Uid="General_LogLevelTrace" Content="Trace (Verbose)" Tag="trace" />
+                                    <ComboBoxItem x:Uid="General_LogLevelDebug" Content="Debug" Tag="debug" />
+                                    <ComboBoxItem x:Uid="General_LogLevelInfo" Content="Info" Tag="info" />
+                                    <ComboBoxItem x:Uid="General_LogLevelWarning" Content="Warning" Tag="warn" />
+                                    <ComboBoxItem x:Uid="General_LogLevelError" Content="Error" Tag="err" />
+                                </ComboBox>
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard
+                                x:Uid="General_OpenLogsFolderCard"
+                                Description="{x:Bind ViewModel.LogsFolderPath, Mode=OneWay}">
+                                <Button
+                                    x:Uid="General_OpenLogsFolderButton"
+                                    Command="{x:Bind ViewModel.OpenLogsFolderCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xEC50;" FontSize="13" />
+                                        <TextBlock x:Uid="General_OpenLogsFolderText" Text="Open folder" />
+                                    </StackPanel>
+                                </Button>
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+                </controls:SettingsGroup>
+
+
                 <controls:SettingsGroup x:Uid="General_Experimentation" Visibility="Visible">
                     <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsExperimentationGpoDisallowed, Mode=OneWay}">
                         <tkcontrols:SettingsCard x:Name="GeneralPageEnableExperimentation" x:Uid="GeneralPage_EnableExperimentation">

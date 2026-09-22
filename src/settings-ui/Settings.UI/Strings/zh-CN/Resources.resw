@@ -1521,6 +1521,9 @@
   <data name="General_DiagnosticsGroup.Header" xml:space="preserve">
     <value>诊断与日志</value>
   </data>
+  <data name="General_AiServicesGroup.Header" xml:space="preserve">
+    <value>AI 服务</value>
+  </data>
   <data name="General_DiagnosticsExpander.Header" xml:space="preserve">
     <value>运行日志</value>
   </data>

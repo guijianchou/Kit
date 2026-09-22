@@ -119,6 +119,32 @@
                         Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                         Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}" />
 
+                    <!-- AI service status. Whether the shared service is enabled and how usable
+                         it is right now; follows the engine state and refreshes on re-check. -->
+                    <Border CornerRadius="8" Padding="12,8"
+                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Grid.Column="0" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}"
+                                      Foreground="{x:Bind ViewModel.AiReadinessBrush, Mode=OneWay}"
+                                      FontSize="14" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiReadinessText, Mode=OneWay}"
+                                       FontSize="12" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                            <Button Grid.Column="2" Height="28" Padding="10,0"
+                                    AutomationProperties.AutomationId="AIHub_RecheckAiButton"
+                                    Click="OnRecheckAiReadinessClick">
+                                <TextBlock Text="{x:Bind ViewModel.RecheckAiLabel, Mode=OneWay}" FontSize="12" />
+                            </Button>
+                        </Grid>
+                    </Border>
+
                     <!-- 2. Master Opacity and IsEnabled Wrapper -->
                     <ContentControl
                         IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
@@ -234,32 +260,6 @@
                                         </Button>
                                     </StackPanel>
                                 </Grid>
-
-                                <!-- AI service readiness. Shown before the scan so the operator
-                                     knows whether the AI pass will take part; a misconfigured
-                                     route used to surface only after the whole scan finished. -->
-                                <Border CornerRadius="8" Padding="12,8"
-                                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1">
-                                    <Grid ColumnSpacing="10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <FontIcon Grid.Column="0" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}"
-                                                  FontSize="14" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiReadinessText, Mode=OneWay}"
-                                                   FontSize="12" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" />
-                                        <Button Grid.Column="2" Height="28" Padding="10,0"
-                                                AutomationProperties.AutomationId="AIHub_RecheckAiButton"
-                                                Click="OnRecheckAiReadinessClick">
-                                            <TextBlock Text="{x:Bind ViewModel.RecheckAiLabel, Mode=OneWay}" FontSize="12" />
-                                        </Button>
-                                    </Grid>
-                                </Border>
 
                                 <!-- Health overview surface -->
                                 <Border CornerRadius="8" Padding="18,16"
@@ -822,7 +822,8 @@
                             <StackPanel Spacing="16" Visibility="{x:Bind IsTaskPoliciesTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
                                 <tkcontrols:SettingsCard Header="{x:Bind ViewModel.TaskPolicyTitle, Mode=OneWay}"
                                                          Description="{x:Bind ViewModel.TaskPolicyDescription, Mode=OneWay}"
-                                                         HeaderIcon="{ui:FontIcon Glyph=&#xE8A5;}">
+                                                         HeaderIcon="{ui:FontIcon Glyph=&#xE8A5;}"
+                                                         ContentAlignment="Vertical">
                                     <StackPanel Spacing="12">
 
                                     <!-- Chain selector: security audit or optimization -->

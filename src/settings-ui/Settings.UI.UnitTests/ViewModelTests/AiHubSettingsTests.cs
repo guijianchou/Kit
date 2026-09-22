@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.IO;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
@@ -58,49 +59,67 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void AiHubPage_Xaml_HostsPolicyAndServiceConfiguration()
+        public void AiHubPage_Xaml_HostsReadinessIndicatorAndTaskPolicies()
         {
-            // The AI service panel (kernel, endpoints, policy) belongs with the module it
-            // configures. It used to live on General, which also meant the enable toggle
-            // existed twice with the same automation id.
+            // The AI service panel (kernel, endpoints, global policy) moved to General;
+            // the module page keeps the shared-service status indicator and the per-chain
+            // task policies.
             var content = ReadPageXaml("AIHubPage.xaml");
 
-            // Removed from the panel in an earlier pass; must stay removed.
+            // Module enable surface (the module page owns this automation id).
+            Assert.IsTrue(content.Contains("x:Uid=\"AIHub_EnableSettingsCard\""), "AIHubPage.xaml should host the module enable card");
+            Assert.IsTrue(content.Contains("AutomationProperties.AutomationId=\"Toggle_AIHub\""), "AIHubPage.xaml should own the module toggle automation id");
+
+            // The shared AI service indicator: enabled/disabled plus readiness, colored by
+            // level, with a re-check action. Removed from the panel in an earlier pass;
+            // must stay removed.
+            Assert.IsTrue(content.Contains("AiReadinessGlyph"), "AIHubPage.xaml should show the readiness glyph");
+            Assert.IsTrue(content.Contains("AiReadinessBrush"), "AIHubPage.xaml should color the readiness glyph by level");
+            Assert.IsTrue(content.Contains("AiReadinessText"), "AIHubPage.xaml should show the readiness text");
+            Assert.IsTrue(content.Contains("AutomationProperties.AutomationId=\"AIHub_RecheckAiButton\""), "AIHubPage.xaml should offer a readiness re-check");
             Assert.IsFalse(content.Contains("x:Uid=\"AiHub_PipelineCard\""), "AIHubPage.xaml should not contain AiHub_PipelineCard");
             Assert.IsFalse(content.Contains("x:Uid=\"AiHub_PolicyFilePathCard\""), "AIHubPage.xaml should not contain AiHub_PolicyFilePathCard");
-            Assert.IsFalse(content.Contains("x:Name=\"AiPolicyRulesSection\""), "AIHubPage.xaml should not contain raw AiPolicyRulesSection");
-            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_SaveButton\""), "AIHubPage.xaml should not contain isolated AiHub_SaveButton card");
 
-            // Policy editor surface.
-            Assert.IsTrue(content.Contains("x:Name=\"AiPolicyRulesExpander\""), "AIHubPage.xaml should contain AiPolicyRulesExpander");
-            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_PolicyRulesExpander\""), "AIHubPage.xaml should contain AiHub_PolicyRulesExpander");
-            Assert.IsTrue(content.Contains("x:Name=\"AiPolicySegmented\""), "AIHubPage.xaml should contain AiPolicySegmented");
-            Assert.IsTrue(content.Contains("AiHub_Segment_GlobalPolicy"), "AIHubPage.xaml should contain AiHub_Segment_GlobalPolicy");
-            Assert.IsTrue(content.Contains("AiHub_Segment_SecurityAudit"), "AIHubPage.xaml should contain AiHub_Segment_SecurityAudit");
-            Assert.IsTrue(content.Contains("AiHub_Segment_Optimization"), "AIHubPage.xaml should contain AiHub_Segment_Optimization");
-            Assert.IsTrue(content.Contains("x:Name=\"AiPolicyContentBox\""), "AIHubPage.xaml should contain AiPolicyContentBox");
-            Assert.IsTrue(content.Contains("AiHub_SavePolicyButton"), "AIHubPage.xaml should contain AiHub_SavePolicyButton");
-            Assert.IsTrue(content.Contains("AiHub_ResetPolicyButton"), "AIHubPage.xaml should contain AiHub_ResetPolicyButton");
+            // Task policies (per-chain AGENTS.md) are the third tab.
+            Assert.IsTrue(content.Contains("x:Name=\"AiTaskPolicySegmented\""), "AIHubPage.xaml should contain AiTaskPolicySegmented");
+            Assert.IsTrue(content.Contains("AIHub_Segment_SecurityAudit"), "AIHubPage.xaml should contain AIHub_Segment_SecurityAudit");
+            Assert.IsTrue(content.Contains("AIHub_Segment_Optimization"), "AIHubPage.xaml should contain AIHub_Segment_Optimization");
+            Assert.IsTrue(content.Contains("x:Name=\"AiTaskPolicyContentBox\""), "AIHubPage.xaml should contain AiTaskPolicyContentBox");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_SavePolicyButton\""), "AIHubPage.xaml should contain the policy save button");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_ResetPolicyButton\""), "AIHubPage.xaml should contain the policy reset button");
 
-            // The kernel/endpoint configuration came along with the policy editor.
-            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_KernelCard\""), "AIHubPage.xaml should host the kernel card");
-            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_MainEndpointExpander\""), "AIHubPage.xaml should host the main endpoint expander");
-            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_FallbackEndpointExpander\""), "AIHubPage.xaml should host the fallback endpoint expander");
+            // The kernel/endpoint configuration and the global policy moved to General;
+            // they must not come back to the module page.
+            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_KernelCard\""), "AIHubPage.xaml should not host the kernel card");
+            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_MainEndpointExpander\""), "AIHubPage.xaml should not host the main endpoint expander");
+            Assert.IsFalse(content.Contains("x:Uid=\"AiHub_FallbackEndpointExpander\""), "AIHubPage.xaml should not host the fallback endpoint expander");
+            Assert.IsFalse(content.Contains("General_AiServicesGroup"), "AIHubPage.xaml should not host the General AI service group");
         }
 
         [TestMethod]
-        public void GeneralPage_NoLongerHostsTheAiServicePanel()
+        public void GeneralPage_HostsTheAiServicePanelBeforeLogs()
         {
-            // Guards the migration: General must not silently regain a second AI Hub
-            // toggle, which previously shared the Toggle_AiHub automation id with the
-            // module page.
+            // The shared AI service panel (kernel, endpoints, global policy) lives on
+            // General as a first-class group, ordered between Appearance/behavior and
+            // Diagnostics &amp; logs, and owns the service toggle automation id.
             var content = ReadPageXaml("GeneralPage.xaml");
 
-            Assert.IsFalse(content.Contains("General_AiServices"), "GeneralPage.xaml should no longer host the AI services group");
-            Assert.IsFalse(content.Contains("ViewModel.AiHub"), "GeneralPage.xaml should no longer bind the AI Hub view model");
+            Assert.IsTrue(content.Contains("x:Uid=\"General_AiServicesGroup\""), "GeneralPage.xaml should host the AI service group");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_KernelCard\""), "GeneralPage.xaml should host the kernel card");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_MainEndpointExpander\""), "GeneralPage.xaml should host the main endpoint expander");
+            Assert.IsTrue(content.Contains("x:Uid=\"AiHub_FallbackEndpointExpander\""), "GeneralPage.xaml should host the fallback endpoint expander");
+            Assert.IsTrue(content.Contains("x:Name=\"AiPolicyRulesExpander\""), "GeneralPage.xaml should host the global policy editor");
+
+            int aiServiceIndex = content.IndexOf("General_AiServicesGroup", StringComparison.Ordinal);
+            int diagnosticsIndex = content.IndexOf("General_DiagnosticsGroup", StringComparison.Ordinal);
+            Assert.IsTrue(aiServiceIndex >= 0 && diagnosticsIndex > aiServiceIndex, "The AI service group should appear before Diagnostics & logs");
+
+            Assert.IsTrue(
+                content.Contains("AutomationProperties.AutomationId=\"Toggle_AiHub\""),
+                "GeneralPage.xaml should own the AI service toggle automation id");
             Assert.IsFalse(
-                content.Contains("Toggle_AiHub"),
-                "GeneralPage.xaml must not expose a second Toggle_AiHub: the module page owns that automation id.");
+                content.Contains("AutomationProperties.AutomationId=\"Toggle_AIHub\""),
+                "GeneralPage.xaml must not duplicate the module page's toggle id");
         }
 
         private static string ReadPageXaml(string fileName)

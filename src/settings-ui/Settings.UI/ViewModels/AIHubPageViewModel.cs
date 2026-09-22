@@ -170,6 +170,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private DateTime? _lastCompletedAuditUtc;
     private ScanPhase _scanPhase = ScanPhase.Idle;
     private string _aiAnalysisRanText = string.Empty;
+    private AiReadinessLevel _aiReadinessLevel = AiReadinessLevel.Unverified;
+    private string _aiReadinessText = string.Empty;
     private string _currentStageText = string.Empty;
 
     private CancellationTokenSource _currentCts;
@@ -276,14 +278,31 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         // Load cached audit history
         LoadRecentAudit();
+
+        // Seed the indicator from the cached verdict. This deliberately does not probe:
+        // opening the page must not start a kernel process, and the constraint is that the
+        // AI service is only exercised while the module is enabled.
+        try
+        {
+            AiReadiness readiness = AiHubEngine.Current.GetReadiness();
+            AiReadinessLevel = readiness.Level;
+            AiReadinessText = DescribeReadiness(readiness);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Could not read AI readiness state", ex);
+        }
     }
 
     public static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// AI service configuration (kernel, endpoints, policy) hosted by this page. It used to
-    /// live on General, but it belongs with the module it configures.
+    /// AI service configuration (kernel, endpoints, policy) hosted by this page.
     /// </summary>
+    /// <remarks>
+    /// Scheduled for relocation to General: the service is shared by every module, so its
+    /// settings belong with the base configuration rather than inside one consumer.
+    /// </remarks>
     public AiHubViewModel AiHub { get; }
 
     public bool IsEnabledGpoConfigured => _gpoConfiguration is GpoRuleConfigured.Enabled or GpoRuleConfigured.Disabled;
@@ -599,8 +618,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string SecurityAuditTabLabel => IsChinese ? "安全审计" : "Security Audit";
     public string OptimizationTabLabel => IsChinese ? "系统优化" : "Optimization";
 
-    public string AiServicesTabLabel => IsChinese ? "AI 服务" : "AI Services";
-
     // Audit Header & Action Labels
     public string SecurityAuditTitle => IsChinese ? "Windows 事件安全审计" : "Windows Event Security Audit";
     public string FastScanLabel => IsChinese ? "快速扫描" : "Fast scan";
@@ -880,6 +897,111 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string ScanProgressPercentText => ActiveProgress.PercentText;
 
     public string ScanStageCountText => ActiveProgress.StageCountText;
+
+    /// <summary>
+    /// Current usability of the shared AI service, shown beside the scan actions so the
+    /// operator knows before starting whether the AI pass will participate.
+    /// </summary>
+    public AiReadinessLevel AiReadinessLevel
+    {
+        get => _aiReadinessLevel;
+        private set
+        {
+            if (Set(ref _aiReadinessLevel, value))
+            {
+                OnPropertyChanged(nameof(IsAiReady));
+                OnPropertyChanged(nameof(IsAiUsable));
+                OnPropertyChanged(nameof(AiReadinessGlyph));
+            }
+        }
+    }
+
+    /// <summary>Bilingual one-line explanation of the current readiness.</summary>
+    public string AiReadinessText
+    {
+        get => _aiReadinessText;
+        private set => Set(ref _aiReadinessText, value);
+    }
+
+    /// <summary>Heading for the per-chain policy editor.</summary>
+    public string TaskPolicyTitle => IsChinese
+        ? "任务策略（各链路 AGENTS.md）"
+        : "Task policies (per-chain AGENTS.md)";
+
+    /// <summary>Label for the manual readiness re-check action.</summary>
+    public string RecheckAiLabel => IsChinese ? "重新检测" : "Re-check";
+
+    /// <summary>True only once a probe has confirmed the route.</summary>
+    public bool IsAiReady => AiReadinessLevel == AiReadinessLevel.Ready;
+
+    /// <summary>True when an AI call will be attempted, including the unverified case.</summary>
+    public bool IsAiUsable => AiReadinessLevel
+        is AiReadinessLevel.Ready or AiReadinessLevel.Degraded or AiReadinessLevel.Unverified;
+
+    /// <summary>Segoe Fluent glyph matching the readiness level.</summary>
+    public string AiReadinessGlyph => AiReadinessLevel switch
+    {
+        AiReadinessLevel.Ready => "\uE73E",
+        AiReadinessLevel.Degraded => "\uE7BA",
+        AiReadinessLevel.Unverified => "\uE9CE",
+        AiReadinessLevel.NotConfigured => "\uEA39",
+        _ => "\uE7BA",
+    };
+
+    /// <summary>Re-checks the AI route and refreshes the indicator.</summary>
+    public async Task RefreshAiReadinessAsync()
+    {
+        try
+        {
+            AiReadiness readiness = await AiHubEngine.Current
+                .ProbeReadinessAsync(_currentCts?.Token ?? CancellationToken.None)
+                .ConfigureAwait(true);
+
+            EnqueueOnUI(() =>
+            {
+                AiReadinessLevel = readiness.Level;
+                AiReadinessText = DescribeReadiness(readiness);
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // A cancelled probe leaves the previous verdict in place.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("AI readiness probe failed", ex);
+        }
+    }
+
+    /// <summary>Renders a readiness verdict as a short bilingual line.</summary>
+    private string DescribeReadiness(AiReadiness readiness)
+    {
+        string kernelModel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
+            ? readiness.ActiveKernel
+            : $"{readiness.ActiveKernel} / {readiness.ActiveModel}";
+
+        return readiness.Level switch
+        {
+            AiReadinessLevel.Ready => IsChinese
+                ? $"AI 服务就绪 · {kernelModel}"
+                : $"AI service ready · {kernelModel}",
+            AiReadinessLevel.Degraded => IsChinese
+                ? $"主链路不可用，将使用备用端点 · {readiness.Detail}"
+                : $"Main route unavailable, fallback will be used · {readiness.Detail}",
+            AiReadinessLevel.Unverified => IsChinese
+                ? $"AI 服务已配置（未验证）· {kernelModel}"
+                : $"AI service configured (unverified) · {kernelModel}",
+            AiReadinessLevel.NotConfigured => IsChinese
+                ? $"AI 服务未配置：{readiness.Detail}"
+                : $"AI service not configured: {readiness.Detail}",
+            _ => IsChinese
+                ? "AI 服务已关闭，本次仅执行规则检测"
+                : "AI service is off; this run only performs rule-based detection",
+        };
+    }
+
+    /// <summary>True when the AI step should run for this scan.</summary>
+    public bool CanUseAi => IsAiUsable;
 
     /// <summary>
     /// What the AI step did during the last scan. The scan previously never reached the
@@ -1461,6 +1583,23 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     _lastAuditEvents.AddRange(events);
                 }
 
+                // Decide up front whether the AI pass can run, and say so before spending
+                // time on it. Previously availability was an optimistic switch check, so a
+                // misconfigured route only surfaced after the whole scan had finished.
+                AiReadiness readiness = AiHubEngine.Current.GetReadiness();
+
+                EnqueueOnUI(() =>
+                {
+                    AiReadinessText = DescribeReadiness(readiness);
+                    AiReadinessLevel = readiness.Level;
+                });
+
+                Logger.LogInfo(
+                    $"Audit readiness: level={readiness.Level}, kernel={readiness.ActiveKernel}, " +
+                    $"model={readiness.ActiveModel}, cached={readiness.FromCache}, detail={readiness.Detail ?? "-"}");
+
+                bool aiEligible = readiness.CanAttempt;
+
                 // Rule-based detection first: it is local, instant, and always available, so
                 // a machine with AI disabled still gets a usable result.
                 var ruleIssues = RunRuleBasedAuditAnalysis(events);
@@ -1469,7 +1608,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 // Then hand the same evidence to the selected kernel. The original app does
                 // this inside the scan itself rather than behind a separate action; without it
                 // a scan never reached the model at all.
-                if (events.Count > 0 && AiHubAuditAnalysisService.IsAvailable)
+                if (events.Count > 0 && aiEligible)
                 {
                     EnqueueOnUI(() => BeginStage("AI analysis"));
 

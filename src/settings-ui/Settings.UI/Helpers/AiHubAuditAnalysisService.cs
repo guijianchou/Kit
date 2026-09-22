@@ -61,15 +61,20 @@ public static class AiHubAuditAnalysisService
     private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// True when AI Hub is switched on, i.e. a kernel may be invoked.
+    /// True when a call can be attempted.
     /// </summary>
+    /// <remarks>
+    /// Uses the readiness verdict rather than the master switch alone: a switched-on service
+    /// with no usable endpoint would otherwise be treated as available and only fail after
+    /// the scan had already done its work.
+    /// </remarks>
     public static bool IsAvailable
     {
         get
         {
             try
             {
-                return AiHubEngine.Current.IsEnabled;
+                return AiHubEngine.Current.GetReadiness().CanAttempt;
             }
             catch (Exception)
             {

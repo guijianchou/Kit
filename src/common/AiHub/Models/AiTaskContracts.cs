@@ -147,6 +147,25 @@ public interface IAiTaskEngine : IDisposable
     event EventHandler<AiHubStateChangedEventArgs>? StateChanged;
 
     /// <summary>
+    /// Reports whether a call can be expected to succeed, without starting a kernel.
+    /// </summary>
+    /// <remarks>
+    /// Answers from a cached probe when one is still fresh, so callers can ask cheaply on
+    /// every scan. Use <see cref="ProbeReadinessAsync"/> to force a real check.
+    /// </remarks>
+    AiReadiness GetReadiness();
+
+    /// <summary>
+    /// Verifies the configured route by issuing a minimal probe request.
+    /// </summary>
+    /// <remarks>
+    /// Returns <see cref="AiReadinessLevel.Disabled"/> without touching the kernel when the
+    /// AI service is switched off: an unused service must not wake a CLI process or open a
+    /// network connection.
+    /// </remarks>
+    Task<AiReadiness> ProbeReadinessAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Executes a sandboxed AI analysis task guided by the specified task chain.
     /// </summary>
     /// <typeparam name="TInput">Type of raw input items.</typeparam>

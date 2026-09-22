@@ -72,7 +72,8 @@ extern "C" __declspec(dllexport) HRESULT WINAPI KitAiHubRequest(PCWSTR request_j
     {
         json::JsonObject request = json::JsonObject::Parse(request_json);
         const auto action = request.GetNamedString(L"action", L"");
-        if (request.GetNamedString(L"target", L"") != L"AiHub" || (action != L"ai_task_request" && action != L"get_status"))
+        if (request.GetNamedString(L"target", L"") != L"AiHub" ||
+            (action != L"ai_task_request" && action != L"get_status" && action != L"self_test"))
         {
             return E_INVALIDARG;
         }

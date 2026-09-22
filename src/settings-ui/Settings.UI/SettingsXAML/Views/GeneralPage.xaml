@@ -239,6 +239,261 @@
                     </tkcontrols:SettingsExpander>
                 </controls:SettingsGroup>
 
+
+                <!-- AI Service. Shared by every module: the execution kernel, endpoints,
+                     credentials and the global security policy that applies to all plugins.
+                     Moved here from the AI Hub page so it reads as a base capability. -->
+                <controls:SettingsGroup x:Uid="General_AiServicesGroup" Visibility="Visible">
+                <tkcontrols:SettingsCard
+                    x:Name="GeneralPageAiHubMasterCard"
+                    x:Uid="General_AiHubSettings"
+                    AutomationProperties.AutomationId="AiHubSettingsCard"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xEA80;}">
+                    <ToggleSwitch
+                        x:Uid="AiHub_EnableToggle"
+                        AutomationProperties.AutomationId="Toggle_AiHub"
+                        AutomationProperties.Name="AI Hub"
+                        IsOn="{x:Bind ViewModel.AiServices.IsEnabled, Mode=TwoWay}"
+                        IsEnabled="{x:Bind ViewModel.AiServices.CanToggle, Mode=OneWay}" />
+                </tkcontrols:SettingsCard>
+    
+                <!-- Compact configuration revealed only when AI Hub is enabled -->
+                    <!-- Dims the service configuration while it is switched off. -->
+                    <ContentControl
+                        IsEnabled="{x:Bind ViewModel.AiServices.IsEnabled, Mode=OneWay}"
+                        Opacity="{x:Bind ViewModel.AiServices.IsEnabled, Mode=OneWay, Converter={StaticResource BoolToDisabledOpacityConverter}}"
+                        IsTabStop="False"
+                        HorizontalContentAlignment="Stretch">
+                <StackPanel Spacing="8" Margin="0,4,0,0"
+                            Visibility="{x:Bind ViewModel.AiServices.HubContentVisibility, Mode=OneWay}">
+    
+                    <InfoBar
+                        IsOpen="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=TwoWay}"
+                        Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
+                        Severity="{x:Bind ViewModel.AiServices.StatusSeverity, Mode=OneWay}"
+                        IsClosable="True" />
+    
+                    <!-- 1. AI execution kernel (SettingsExpander) -->
+                    <tkcontrols:SettingsExpander
+                        x:Name="AiKernelSettingsExpander"
+                        x:Uid="AiHub_KernelCard"
+                        Description="{x:Bind ViewModel.AiServices.KernelStatusText, Mode=OneWay}"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xEDA3;}"
+                        IsExpanded="False">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ComboBox Width="160"
+                                      SelectedIndex="{x:Bind ViewModel.AiServices.PendingKernelIndex, Mode=TwoWay}"
+                                      IsEnabled="{x:Bind ViewModel.AiServices.CanEdit, Mode=OneWay}">
+                                <ComboBoxItem x:Uid="AIHub_KernelCodexItem" Content="Codex CLI" />
+                                <ComboBoxItem x:Uid="AIHub_KernelPiItem" Content="Pi CLI" />
+                            </ComboBox>
+                            <Button x:Uid="AiHub_ApplyKernelButton"
+                                    Content="Apply"
+                                    Command="{x:Bind ViewModel.AiServices.ApplyKernelSwitchCommand}"
+                                    Visibility="{x:Bind ViewModel.AiServices.IsKernelSwitchPending, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    Style="{StaticResource AccentButtonStyle}" />
+                        </StackPanel>
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_KernelUpdatesCard" Header="Kernel updates" Description="{x:Bind ViewModel.AiServices.KernelLatestText, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Command="{x:Bind ViewModel.AiServices.CheckKernelUpdatesCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                                            <TextBlock x:Uid="AiHub_CheckUpdatesText" Text="Check for updates" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{x:Bind ViewModel.AiServices.DownloadKernelCommand}" Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE896;" FontSize="13" />
+                                            <TextBlock x:Uid="AiHub_DownloadKernelText" Text="Download or update" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard Visibility="{x:Bind ViewModel.AiServices.ShowDownloadProgress, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ProgressBar Minimum="0" Maximum="1" Value="{x:Bind ViewModel.AiServices.DownloadProgress, Mode=OneWay}" HorizontalAlignment="Stretch" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_KernelLocationCard" Header="Installation path">
+                                <TextBlock Text="{x:Bind ViewModel.AiServices.KernelPathText, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           IsTextSelectionEnabled="True"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+
+                    <!-- Service self-test. Distinguishes a broken service from a broken
+                         plugin: if this passes, the engine, policy, kernel and validation
+                         all work, so the problem lies in the calling plugin. -->
+                    <tkcontrols:SettingsCard x:Uid="AiHub_SelfTestCard" Header="Service self-test"
+                                             Description="Runs a probe through the whole pipeline to verify the service independently of any plugin.">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <ProgressRing IsActive="{x:Bind ViewModel.AiServices.IsSelfTesting, Mode=OneWay}" Width="16" Height="16" />
+                            <Button x:Uid="AiHub_RunSelfTestButton" Content="Run self-test"
+                                    AutomationProperties.AutomationId="AIHub_RunSelfTestButton"
+                                    Command="{x:Bind ViewModel.AiServices.SelfTestCommand}" />
+                        </StackPanel>
+                    </tkcontrols:SettingsCard>
+
+                    <TextBlock Text="{x:Bind ViewModel.AiServices.SelfTestStatusText, Mode=OneWay}"
+                               Margin="0,-4,0,0" FontSize="12" TextWrapping="Wrap"
+                               Visibility="{x:Bind ViewModel.AiServices.IsSelfTesting, Mode=OneWay}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+    
+                    <!-- 2. Endpoints: Main Endpoint (SettingsExpander) -->
+                    <tkcontrols:SettingsExpander
+                        x:Name="AiMainEndpointExpander"
+                        x:Uid="AiHub_MainEndpointExpander"
+                        Header="Main endpoint"
+                        IsExpanded="False">
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind ViewModel.AiServices.MainEndpoint.ModelSummary, Mode=OneWay}"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center" />
+                            <Button x:Uid="AiHub_TestConnectionButton" Content="Test connection" Command="{x:Bind ViewModel.AiServices.MainEndpoint.TestCommand}" />
+                        </StackPanel>
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
+                                <TextBox Width="320" Text="{x:Bind ViewModel.AiServices.MainEndpoint.BaseUrl, Mode=TwoWay}" PlaceholderText="https://api.example.com" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiKeyCard" Header="API key">
+                                <PasswordBox x:Name="AiMainApiKeyBox" x:Uid="AiHub_MainEndpoint_ApiKeyBox" Width="320" Password="{x:Bind ViewModel.AiServices.MainEndpoint.ApiKey, Mode=OneWay}" PasswordChanged="AiMainApiKeyBox_PasswordChanged" PlaceholderText="Enter API key" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode">
+                                <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Mode, Mode=TwoWay}" SelectedValuePath="Tag">
+                                    <ComboBoxItem Content="responses (/v1/responses)" Tag="responses" />
+                                    <ComboBoxItem Content="chat (/v1/chat/completions)" Tag="chat" />
+                                </ComboBox>
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
+                                <TextBox Width="200" Text="{x:Bind ViewModel.AiServices.MainEndpoint.Model, Mode=TwoWay}" PlaceholderText="gpt-5.6-luna" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
+                                <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay}" SelectedValuePath="Tag">
+                                    <ComboBoxItem Content="low" Tag="low" />
+                                    <ComboBoxItem Content="medium" Tag="medium" />
+                                    <ComboBoxItem Content="high" Tag="high" />
+                                    <ComboBoxItem Content="xhigh" Tag="xhigh" />
+                                    <ComboBoxItem Content="max" Tag="max" />
+                                </ComboBox>
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+    
+                    <!-- Fallback Endpoint (SettingsExpander) -->
+                    <tkcontrols:SettingsExpander
+                        x:Name="AiFallbackEndpointExpander"
+                        x:Uid="AiHub_FallbackEndpointExpander"
+                        Header="Fallback endpoint"
+                        IsExpanded="False">
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.ModelSummary, Mode=OneWay}"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       VerticalAlignment="Center" />
+                            <Button x:Uid="AiHub_TestConnectionButton" Content="Test connection" Command="{x:Bind ViewModel.AiServices.FallbackEndpoint.TestCommand}" />
+                        </StackPanel>
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
+                                <TextBox Width="320" Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.BaseUrl, Mode=TwoWay}" PlaceholderText="https://api.example.com" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiKeyCard" Header="API key">
+                                <PasswordBox x:Name="AiFallbackApiKeyBox" Width="320" Password="{x:Bind ViewModel.AiServices.FallbackEndpoint.ApiKey, Mode=OneWay}" PasswordChanged="AiFallbackApiKeyBox_PasswordChanged" PlaceholderText="Enter API key" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode">
+                                <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Mode, Mode=TwoWay}" SelectedValuePath="Tag">
+                                    <ComboBoxItem Content="responses (/v1/responses)" Tag="responses" />
+                                    <ComboBoxItem Content="chat (/v1/chat/completions)" Tag="chat" />
+                                </ComboBox>
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
+                                <TextBox Width="200" Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Model, Mode=TwoWay}" PlaceholderText="gpt-5.6-luna" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
+                                <ComboBox MinWidth="200" SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay}" SelectedValuePath="Tag">
+                                    <ComboBoxItem Content="low" Tag="low" />
+                                    <ComboBoxItem Content="medium" Tag="medium" />
+                                    <ComboBoxItem Content="high" Tag="high" />
+                                    <ComboBoxItem Content="xhigh" Tag="xhigh" />
+                                    <ComboBoxItem Content="max" Tag="max" />
+                                </ComboBox>
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_ClearFallbackCard" Header="Clear fallback endpoint">
+                                <Button x:Uid="AiHub_ClearFallbackButton" Content="Clear" Command="{x:Bind ViewModel.AiServices.ClearFallbackCommand}" />
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+    
+                    <!-- 4. Policy rules (SettingsExpander) -->
+                    <tkcontrols:SettingsExpander
+                        x:Name="AiPolicyRulesExpander"
+                        x:Uid="AiHub_PolicyRulesExpander"
+                        Header="Policy rules"
+                        Description="Global security policy and task instructions (security.md and AGENTS.md)"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE946;}"
+                        IsExpanded="False">
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard ContentAlignment="Vertical" HorizontalContentAlignment="Stretch">
+                                <StackPanel Spacing="12" Margin="0,4,0,4">
+                                    <!-- The global policy governs every plugin, so it stands
+                                         alone here; task-specific chains live on AI Hub. -->
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE72E;" FontSize="14" VerticalAlignment="Center" />
+                                        <TextBlock x:Uid="AiHub_Segment_GlobalPolicy" Text="Global security policy"
+                                                   Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                                    </StackPanel>
+    
+                                    <!-- Code/Policy Content Editor -->
+                                    <TextBox
+                                        x:Name="AiPolicyContentBox"
+                                        Text="{x:Bind ViewModel.AiServices.CurrentPolicyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        MinHeight="160"
+                                        MaxHeight="320"
+                                        MaxLength="64000"
+                                        FontFamily="Consolas, Cascadia Code"
+                                        FontSize="12"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto" />
+    
+                                    <!-- Bottom action row with target file path indicator & buttons -->
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+    
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="{x:Bind ViewModel.AiServices.CurrentPolicyFilePath, Mode=OneWay}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            VerticalAlignment="Center"
+                                            TextTrimming="CharacterEllipsis" />
+    
+                                        <Button
+                                            Grid.Column="1"
+                                            x:Uid="AiHub_ResetPolicyButton"
+                                            Content="Reset to default"
+                                            Command="{x:Bind ViewModel.AiServices.ResetActivePolicyCommand}" />
+    
+                                        <Button
+                                            Grid.Column="2"
+                                            x:Uid="AiHub_SavePolicyButton"
+                                            Content="Save"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Command="{x:Bind ViewModel.AiServices.SaveActivePolicyCommand}" />
+                                    </Grid>
+                                </StackPanel>
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+                        </StackPanel>
+                    </ContentControl>
+
+                </controls:SettingsGroup>
                 <controls:SettingsGroup x:Uid="General_Experimentation" Visibility="Visible">
                     <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsExperimentationGpoDisallowed, Mode=OneWay}">
                         <tkcontrols:SettingsCard x:Name="GeneralPageEnableExperimentation" x:Uid="GeneralPage_EnableExperimentation">

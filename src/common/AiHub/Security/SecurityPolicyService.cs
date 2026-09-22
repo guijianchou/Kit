@@ -63,6 +63,10 @@ public sealed class SecurityPolicyService
 
         EnsureTaskDefaultPolicy("security-audit", TaskPolicyDefaults.DefaultSecurityAuditInstructions);
         EnsureTaskDefaultPolicy("system-optimization", TaskPolicyDefaults.DefaultSystemOptimizationInstructions);
+
+        // The self-test chain is always present so an operator can check the service without
+        // depending on a plugin's own policy being configured.
+        EnsureTaskDefaultPolicy(SelfTestPolicy.TaskId, SelfTestPolicy.Instructions);
     });
 
     private void EnsureTaskDefaultPolicy(string taskId, string defaultContent)

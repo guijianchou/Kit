@@ -39,9 +39,183 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     public event EventHandler<AiHubStateChangedEventArgs>? StateChanged;
 
+    /// <summary>
+    /// Diagnostic message produced by a readiness probe.
+    /// </summary>
+    /// <remarks>
+    /// The base service has no logging dependency on purpose: it is shared by the runner,
+    /// Settings and every plugin, and must not force a logging implementation on them.
+    /// Hosts subscribe and route these to their own log.
+    /// </remarks>
+    public event EventHandler<string>? ReadinessProbeReported;
+
+    /// <summary>
+    /// How long a probe result stays authoritative. A scan checks readiness on every run, so
+    /// the answer is cached to keep that check free and to avoid spawning a kernel process
+    /// each time.
+    /// </summary>
+    private static readonly TimeSpan ReadinessCacheLifetime = TimeSpan.FromMinutes(5);
+
+    private readonly object _readinessLock = new();
+    private AiReadiness? _cachedReadiness;
+    private DateTimeOffset _readinessCachedAtUtc;
+
     public bool IsEnabled => !_disposed && ReadState().IsEnabled;
 
     public string ActiveKernel => ReadState().SelectedKernel;
+
+    public AiReadiness GetReadiness()
+    {
+        AiHubConfig config = ReadState();
+        if (!config.IsEnabled)
+        {
+            return Describe(AiReadinessLevel.Disabled, config, "The AI service is switched off in Kit settings.");
+        }
+
+        lock (_readinessLock)
+        {
+            // Only a result obtained while enabled is reusable; a cached "disabled" answer
+            // must not outlive the switch being turned back on.
+            if (_cachedReadiness is { Level: not AiReadinessLevel.Disabled } cached &&
+                DateTimeOffset.UtcNow - _readinessCachedAtUtc < ReadinessCacheLifetime)
+            {
+                return cached with { FromCache = true };
+            }
+        }
+
+        return ValidateConfiguration(config);
+    }
+
+    public async Task<AiReadiness> ProbeReadinessAsync(CancellationToken cancellationToken = default)
+    {
+        AiHubConfig config = ReadState();
+        if (!config.IsEnabled)
+        {
+            // Do not start a kernel for a service nobody enabled.
+            return Remember(Describe(AiReadinessLevel.Disabled, config, "The AI service is switched off in Kit settings."));
+        }
+
+        AiReadiness validation = ValidateConfiguration(config);
+        if (validation.Level == AiReadinessLevel.NotConfigured)
+        {
+            return Remember(validation);
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            AiTargetSettings? main = config.GetMainTarget();
+            string kernel = config.SelectedKernel;
+            (bool success, string message) = await _dispatcher
+                .TestConnectionAsync(main!, kernel, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (success)
+            {
+                ReportReadinessProbe($"succeeded: kernel={kernel}, model={validation.ActiveModel}, latencyMs={stopwatch.ElapsedMilliseconds}");
+
+                return Remember(validation with
+                {
+                    Level = AiReadinessLevel.Ready,
+                    Detail = null,
+                    VerifiedAtUtc = DateTimeOffset.UtcNow,
+                    ProbeLatency = stopwatch.Elapsed,
+                    FromCache = false,
+                });
+            }
+
+            // The main route failed; a usable fallback still lets a caller proceed.
+            AiTargetSettings? fallback = config.GetFallbackTarget();
+            bool fallbackUsable = fallback is { IsActive: true } &&
+                RouteDispatcher.IsTargetCompatible(kernel, fallback);
+
+            ReportReadinessProbe($"failed: kernel={kernel}, route={(fallbackUsable ? "degraded-to-fallback" : "unavailable")}, detail={message}");
+
+            return Remember(validation with
+            {
+                Level = fallbackUsable ? AiReadinessLevel.Degraded : AiReadinessLevel.NotConfigured,
+                Detail = message,
+                VerifiedAtUtc = DateTimeOffset.UtcNow,
+                ProbeLatency = null,
+                FromCache = false,
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            return validation with { Detail = "The readiness probe was cancelled." };
+        }
+        catch (Exception ex)
+        {
+            return Remember(validation with
+            {
+                Level = AiReadinessLevel.NotConfigured,
+                Detail = ex.Message,
+                VerifiedAtUtc = DateTimeOffset.UtcNow,
+                ProbeLatency = null,
+                FromCache = false,
+            });
+        }
+    }
+
+    /// <summary>
+    /// Static validation of the configured route, which costs nothing and never calls out.
+    /// </summary>
+    private AiReadiness ValidateConfiguration(AiHubConfig config)
+    {
+        string kernel = config.SelectedKernel;
+        AiTargetSettings? main = config.GetMainTarget();
+        string model = main?.Model ?? string.Empty;
+
+        if (main is null || !main.IsActive || string.IsNullOrWhiteSpace(main.BaseUrl))
+        {
+            return Describe(AiReadinessLevel.NotConfigured, config, "No main endpoint is configured.");
+        }
+
+        if (!RouteDispatcher.IsTargetCompatible(kernel, main))
+        {
+            return Describe(AiReadinessLevel.NotConfigured, config,
+                "The main endpoint is incomplete or invalid (URL, API mode, model, reasoning effort or credentials).");
+        }
+
+        return new AiReadiness(AiReadinessLevel.Unverified, kernel, model);
+    }
+
+    private static AiReadiness Describe(AiReadinessLevel level, AiHubConfig config, string? detail)
+    {
+        AiTargetSettings? main = config.GetMainTarget();
+        return new AiReadiness(level, config.SelectedKernel, main?.Model ?? string.Empty, detail);
+    }
+
+    private void ReportReadinessProbe(string message)
+    {
+        if (ReadinessProbeReported is not { } handlers)
+        {
+            return;
+        }
+
+        foreach (EventHandler<string> handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(this, message);
+            }
+            catch (Exception)
+            {
+                // A subscriber must not break the probe.
+            }
+        }
+    }
+
+    private AiReadiness Remember(AiReadiness readiness)
+    {
+        lock (_readinessLock)
+        {
+            _cachedReadiness = readiness;
+            _readinessCachedAtUtc = DateTimeOffset.UtcNow;
+        }
+
+        return readiness;
+    }
 
     public TaskAiEngine(AiHubSettingsStore settingsStore, KernelManagerService kernelManager, SecurityPolicyService securityService)
     {
@@ -73,6 +247,13 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         {
             _concurrencyLimit = Math.Clamp(config.MaxConcurrentAnalysis, 1, 4);
             SignalCapacity();
+        }
+
+        // An endpoint or credential change invalidates any earlier probe: keeping the old
+        // verdict would report a stale Ready after the route was broken.
+        lock (_readinessLock)
+        {
+            _cachedReadiness = null;
         }
 
         if (!config.IsEnabled)
@@ -375,6 +556,11 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         _lifetime.Cancel();
         _lifetime.Dispose();
         StateChanged = null;
+        ReadinessProbeReported = null;
+        lock (_readinessLock)
+        {
+            _cachedReadiness = null;
+        }
         // Active requests own linked tokens until their process cleanup finishes.
     }
 

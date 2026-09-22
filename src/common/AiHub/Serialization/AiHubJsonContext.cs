@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Kit.AiHub.Contract;
+using Kit.AiHub.Engine;
 using Kit.AiHub.Models;
 
 /// <summary>
@@ -22,6 +23,7 @@ using Kit.AiHub.Models;
 [JsonSerializable(typeof(AiTaskReport))]
 [JsonSerializable(typeof(AiHubIpcRequest))]
 [JsonSerializable(typeof(AiHubIpcResponse))]
+[JsonSerializable(typeof(SelfTestInput))]
 public sealed partial class AiHubJsonContext : JsonSerializerContext
 {
 }

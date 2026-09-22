@@ -19,6 +19,7 @@ using Kit.AiHub.Storage;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
+using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -202,6 +203,10 @@ public sealed class AiHubViewModel : Observable, IDisposable
         ResetSecurityAuditPolicyCommand = new RelayCommand(() => StartOperation(ResetSecurityAuditPolicyAsync), () => CanEdit);
         SaveOptimizationPolicyCommand = new RelayCommand(() => StartOperation(SaveOptimizationPolicyAsync), () => CanEdit && !string.IsNullOrWhiteSpace(OptimizationPolicyContent));
         ResetOptimizationPolicyCommand = new RelayCommand(() => StartOperation(ResetOptimizationPolicyAsync), () => CanEdit);
+        SelfTestCommand = new RelayCommand(
+            () => StartOperation(RunSelfTestAsync),
+            () => CanRunSelfTest && IsEnabled);
+
         SaveActivePolicyCommand = new RelayCommand(
             () =>
             {
@@ -348,7 +353,12 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     public string SecurityPolicyPath => _securityService?.GlobalSecurityPolicyPath ?? string.Empty;
 
+    /// <summary>Matches the UI language used across this view model.</summary>
+    private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+
     private int _activePolicyIndex;
+    private string _selfTestStatusText = string.Empty;
+    private bool _isSelfTesting;
 
     public int ActivePolicyIndex
     {
@@ -358,6 +368,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             if (Set(ref _activePolicyIndex, value))
             {
                 OnPropertyChanged(nameof(ActivePolicyTabIndex));
+                NotifyTaskPolicyIndexChanged();
                 OnPropertyChanged(nameof(CurrentPolicyContent));
                 OnPropertyChanged(nameof(CurrentPolicyFilePath));
                 OnPropertyChanged(nameof(CurrentPolicyDescription));
@@ -372,6 +383,35 @@ public sealed class AiHubViewModel : Observable, IDisposable
         get => ActivePolicyIndex;
         set => ActivePolicyIndex = value;
     }
+
+    /// <summary>
+    /// Policy selected on the AI Hub page, which now offers only the task-specific chains:
+    /// 0 = security audit, 1 = optimization.
+    /// </summary>
+    /// <remarks>
+    /// The global security policy moved to General because it governs every plugin, so this
+    /// index is offset by one into the underlying set. Keeping the offset here means the
+    /// stored content, file path and reset/save commands need no change.
+    /// </remarks>
+    public int TaskPolicyIndex
+    {
+        get => Math.Max(0, ActivePolicyIndex - 1);
+        set => ActivePolicyIndex = Math.Max(0, value) + 1;
+    }
+
+    /// <summary>Raises change notifications for the task-scoped policy selector.</summary>
+    private void NotifyTaskPolicyIndexChanged()
+    {
+        OnPropertyChanged(nameof(TaskPolicyIndex));
+        OnPropertyChanged(nameof(IsSecurityAuditPolicyTab));
+        OnPropertyChanged(nameof(IsOptimizationPolicyTab));
+    }
+
+    /// <summary>True when the security-audit chain policy is selected.</summary>
+    public bool IsSecurityAuditPolicyTab => TaskPolicyIndex == 0;
+
+    /// <summary>True when the optimization chain policy is selected.</summary>
+    public bool IsOptimizationPolicyTab => TaskPolicyIndex == 1;
 
     public string CurrentPolicyContent
     {
@@ -521,6 +561,78 @@ public sealed class AiHubViewModel : Observable, IDisposable
     public ICommand SaveOptimizationPolicyCommand { get; }
 
     public ICommand ResetOptimizationPolicyCommand { get; }
+
+    /// <summary>
+    /// Runs the built-in service self-test and reports the outcome.
+    /// </summary>
+    /// <remarks>
+    /// Gives the operator a way to attribute a failure: if the self-test passes, the service
+    /// is sound and a plugin issue lies elsewhere.
+    /// </remarks>
+    public ICommand SelfTestCommand { get; }
+
+    /// <summary>
+    /// Runs the built-in probe and surfaces a one-line outcome.
+    /// </summary>
+    private async Task RunSelfTestAsync(CancellationToken cancellationToken)
+    {
+        if (!CanRunSelfTest)
+        {
+            return;
+        }
+
+        IsSelfTesting = true;
+        SelfTestStatusText = IsChinese ? "正在运行 AI 服务自检..." : "Running the AI service self-test...";
+
+        try
+        {
+            SelfTestResult outcome = await AiServiceSelfTest
+                .RunAsync(engine: null, cancellationToken)
+                .ConfigureAwait(true);
+
+            SelfTestStatusText = outcome.Success
+                ? (IsChinese
+                    ? $"自检通过（{outcome.Elapsed.TotalMilliseconds:F0} ms，经由 {outcome.UsedRoute}，模型 {outcome.UsedModel}）"
+                    : $"Self-test passed ({outcome.Elapsed.TotalMilliseconds:F0} ms via {outcome.UsedRoute}, model {outcome.UsedModel})")
+                : (IsChinese
+                    ? $"自检失败：{outcome.ErrorMessage}"
+                    : $"Self-test failed: {outcome.ErrorMessage}");
+
+            Logger.LogInfo($"AI service self-test: {outcome.Summary}");
+        }
+        catch (Exception ex)
+        {
+            SelfTestStatusText = IsChinese ? $"自检异常：{ex.Message}" : $"Self-test error: {ex.Message}";
+            Logger.LogError("AI service self-test threw", ex);
+        }
+        finally
+        {
+            IsSelfTesting = false;
+        }
+    }
+
+    /// <summary>Result of the most recent self-test, or an empty string.</summary>
+    public string SelfTestStatusText
+    {
+        get => _selfTestStatusText;
+        private set => Set(ref _selfTestStatusText, value);
+    }
+
+    /// <summary>True while a self-test is running.</summary>
+    public bool IsSelfTesting
+    {
+        get => _isSelfTesting;
+        private set
+        {
+            if (Set(ref _isSelfTesting, value))
+            {
+                OnPropertyChanged(nameof(CanRunSelfTest));
+            }
+        }
+    }
+
+    /// <summary>Gate for the self-test action.</summary>
+    public bool CanRunSelfTest => !IsSelfTesting && !_disposed;
 
     public ICommand SaveActivePolicyCommand { get; }
 

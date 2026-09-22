@@ -87,6 +87,11 @@ namespace Kit.Settings.UI.Views
             this.Loaded += (s, e) =>
             {
                 ViewModel.OnPageLoaded();
+
+                // The password boxes live in this page now, so their stored values are
+                // applied here rather than by the AI Hub page they moved from.
+                ApplyStoredApiKeys();
+
                 if (!_backupStatusRefreshQueued)
                 {
                     _backupStatusRefreshQueued = true;
@@ -165,5 +170,41 @@ namespace Kit.Settings.UI.Views
         public Visibility IsSecurityAuditPolicyTab(int tabIndex) => tabIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility IsOptimizationPolicyTab(int tabIndex) => tabIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+
+        /// <summary>
+        /// Pushes the stored API keys into the password boxes.
+        /// </summary>
+        /// <remarks>
+        /// PasswordBox.Password cannot be two-way bound safely, so the value is applied on
+        /// load and pushed back on change instead.
+        /// </remarks>
+        private void ApplyStoredApiKeys()
+        {
+            if (ViewModel?.AiServices?.MainEndpoint is { } main)
+            {
+                AiMainApiKeyBox.Password = main.ApiKey ?? string.Empty;
+            }
+
+            if (ViewModel?.AiServices?.FallbackEndpoint is { } fallback)
+            {
+                AiFallbackApiKeyBox.Password = fallback.ApiKey ?? string.Empty;
+            }
+        }
+
+        private void AiMainApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is PasswordBox box && ViewModel?.AiServices?.MainEndpoint is { } endpoint)
+            {
+                endpoint.ApiKey = box.Password;
+            }
+        }
+
+        private void AiFallbackApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (sender is PasswordBox box && ViewModel?.AiServices?.FallbackEndpoint is { } endpoint)
+            {
+                endpoint.ApiKey = box.Password;
+            }
+        }
     }
 }

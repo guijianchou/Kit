@@ -81,14 +81,45 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
 
         if (request.Action == "get_status")
         {
+            // Reports the cached verdict by default. Pass refresh=true to force a real
+            // probe; a status query must not spawn a kernel process on every call.
+            AiReadiness readiness = request.RefreshStatus
+                ? await _engine.ProbeReadinessAsync(cancellationToken).ConfigureAwait(false)
+                : _engine.GetReadiness();
+
             string response = JsonSerializer.Serialize(new AiHubIpcResponse
             {
                 RequestId = request.RequestId,
                 IsSuccess = true,
                 IsEnabled = _engine.IsEnabled,
                 ActiveKernel = _engine.ActiveKernel,
+                Readiness = readiness,
             }, AiHubJsonContext.Default.AiHubIpcResponse);
             return response;
+        }
+
+        if (request.Action == "self_test")
+        {
+            // Runs the same probe an operator would use to attribute a failure. Exposed over
+            // IPC so any plugin can confirm the shared service before depending on it.
+            SelfTestResult outcome = await AiServiceSelfTest
+                .RunAsync(_engine, cancellationToken)
+                .ConfigureAwait(false);
+
+            string diagnostic = JsonSerializer.Serialize(new AiHubIpcResponse
+            {
+                RequestId = request.RequestId,
+                IsSuccess = outcome.Success,
+                ErrorCode = outcome.Success ? AiErrorCode.None : MapSelfTestFailure(outcome),
+                IsEnabled = _engine.IsEnabled,
+                ActiveKernel = _engine.ActiveKernel,
+                UsedModel = outcome.UsedModel,
+                UsedRoute = outcome.UsedRoute,
+                ElapsedMilliseconds = outcome.Elapsed.TotalMilliseconds,
+                Readiness = outcome.Readiness,
+                ErrorMessage = outcome.ErrorMessage,
+            }, AiHubJsonContext.Default.AiHubIpcResponse);
+            return diagnostic;
         }
 
         if (request.Action == "ai_task_cancel")
@@ -183,6 +214,19 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
         _shutdown.Cancel();
         _shutdown.Dispose();
     }
+
+    /// <summary>
+    /// Classifies a self-test failure so a caller can act on it without parsing prose.
+    /// </summary>
+    private static AiErrorCode MapSelfTestFailure(SelfTestResult outcome) => outcome.ErrorMessage switch
+    {
+        null => AiErrorCode.ExecutionFailed,
+        var message when message.Contains("timed out", StringComparison.OrdinalIgnoreCase) => AiErrorCode.Timeout,
+        var message when message.Contains("not available", StringComparison.OrdinalIgnoreCase) => AiErrorCode.HubDisabled,
+        var message when message.Contains("instructions were not followed", StringComparison.OrdinalIgnoreCase) => AiErrorCode.InvalidPayload,
+        var message when message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase) => AiErrorCode.Cancelled,
+        _ => AiErrorCode.ExecutionFailed,
+    };
 
     private static string SerializeFailure(Guid requestId, AiErrorCode code) => JsonSerializer.Serialize(
         new AiHubIpcResponse { RequestId = requestId, ErrorCode = code }, AiHubJsonContext.Default.AiHubIpcResponse);

@@ -49,6 +49,12 @@ namespace Kit.Settings.UI.ViewModels
 
         public Microsoft.Windows.ApplicationModel.Resources.ResourceLoader ResourceLoader { get; set; }
 
+        /// <summary>
+        /// The shared AI service configuration: execution kernel, main and fallback endpoints,
+        /// credentials, and the global security policy that applies to every plugin.
+        /// </summary>
+        public AiHubViewModel AiServices { get; }
+
         private Action HideBackupAndRestoreMessageAreaAction { get; set; }
 
         private Action<int> DoBackupAndRestoreDryRun { get; set; }
@@ -105,6 +111,11 @@ namespace Kit.Settings.UI.ViewModels
             _settingsRepository = settingsRepository;
             _settingsRepository.SettingsChanged += OnSettingsChanged;
             _dispatcherQueue = GetDispatcherQueue();
+
+            // The AI service is shared by every module, so its configuration (kernel,
+            // endpoints, credentials and the global security policy) lives with the base
+            // settings rather than inside the AI Hub consumer page.
+            AiServices = new AiHubViewModel(_dispatcherQueue);
 
             GeneralSettingsConfig = settingsRepository.SettingsConfig;
             UpdatingSettingsConfig = UpdatingSettings.LoadSettings();

@@ -693,6 +693,26 @@ LExit:
     }
     Logger::info("run_settings_window: lifecycle ended, settings_process_closed={}", settings_process_closed);
 
+    // Closing the last Settings window while the tray icon is hidden ends the runner.
+    // Without this, Kit.exe would linger headless (no tray icon, no visible close path)
+    // with its modules, worker and supervised services still running. Routing through
+    // WM_CLOSE runs the normal teardown: module destructors disable modules, which lets
+    // the Localserver worker stop its services before the runner exits.
+    if (settings_process_closed && !get_general_settings().showSystemTrayIcon)
+    {
+        const HWND pt_main_window = FindWindowW(pt_tray_icon_window_class, nullptr);
+        if (pt_main_window != nullptr)
+        {
+            Logger::info("run_settings_window: Settings closed without a tray icon; requesting runner exit.");
+            PostMessageW(pt_main_window, WM_CLOSE, 0, 0);
+        }
+        else
+        {
+            Logger::info("run_settings_window: Settings closed without a tray icon and no main window; posting quit.");
+            PostQuitMessage(0);
+        }
+    }
+
     if (process_info.hProcess)
     {
         CloseHandle(process_info.hProcess);

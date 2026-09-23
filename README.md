@@ -15,7 +15,7 @@ It is a **stability-first PowerToys-derived workspace, not a full product rebran
 | PowerToys runner / module-interface / settings / dashboard patterns | Branding (`Kit`), window titles, visible UI text |
 | The `KitModuleIface` C++ contract (with `PowertoyModuleIface` aliases) | Settings storage under `%LOCALAPPDATA%\Kit` (not the official PowerToys directory) |
 | The explicit module-loading model | Automatic update, download, and telemetry surfaces are removed |
-| First-party module set: `Awake`, `Light Switch`, `Localserver`, `UDPtest`, `AI Hub` | Backup/restore defaults use Kit branding (`Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
+| PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub` | Backup/restore defaults use Kit branding (`Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
 
 Current version: `2.3.0`.
 
@@ -93,7 +93,22 @@ All runtime data lives under `%LOCALAPPDATA%\Kit`:
 
 ## 3. Plugin Architecture Skeleton Analysis
 
+The five active modules split into two groups:
+
+- **PowerToys-imported (first-party)** — `Awake`, `Light Switch`: adapted from upstream PowerToys modules onto Kit's contract.
+- **Kit-developed plugins** — `Localserver`, `UDPtest`, `AI Hub`: built for Kit's own local use.
+
 ### 3.1 Awake — keep-awake utility
+
+```mermaid
+flowchart LR
+    R["Kit.exe (runner)"]
+    MI["AwakeModuleInterface.dll"]
+    A["Kit.Awake.exe (tray app)"]
+    R -->|"enable() → CreateProcess"| MI
+    MI -->|"--use-kit-config --pid <kit_pid>"| A
+    A -.->|"watches kit_pid; exits with runner"| R
+```
 
 - **Skeleton**: module interface DLL + standalone tray executable. No in-process engine.
 - **Components**: `AwakeModuleInterface.dll` (C++) → launches `Kit.Awake.exe` (`src/modules/awake/Awake`, C# WinExe) with `--use-kit-config --pid <kit_pid>`.
@@ -102,12 +117,44 @@ All runtime data lives under `%LOCALAPPDATA%\Kit`:
 
 ### 3.2 Light Switch — scheduled theme switching
 
+```mermaid
+flowchart LR
+    R["Kit.exe (runner)"]
+    MI["LightSwitchModuleInterface.dll"]
+    LS["Kit.LightSwitchService.exe"]
+    R -->|"enable() → start service"| MI
+    MI -->|"launches"| LS
+    LS -->|"theme schedule / night light / toggle"| QA["Quick Access action"]
+```
+
 - **Skeleton**: module interface DLL + native core lib + native service executable.
 - **Components**: `LightSwitchModuleInterface.dll`, `LightSwitchLib` (C++ core), `Kit.LightSwitchService.exe`.
 - **Lifecycle**: enabling the module starts the service, which applies the theme schedule, night light, and the toggle hotkey. It keeps a direct Quick Access action.
 - **Data**: `%LOCALAPPDATA%\Kit\LightSwitch\`.
 
 ### 3.3 Localserver — local service orchestration (deepest skeleton)
+
+```mermaid
+flowchart TB
+    subgraph R["Kit.exe (runner)"]
+        MI["LocalserverModuleInterface.dll"]
+    end
+    subgraph S["Kit.Settings.exe"]
+        PG["Localserver page"]
+        PR["page runner"]
+    end
+    subgraph W["Kit.LocalserverWorker.exe"]
+        SUP["ServiceSupervisor (5s poll)"]
+        RUN["ServiceRunner / ownership / job object"]
+    end
+    PG -->|"start / stop chain"| PR
+    PR -->|"starts tree + ownership record"| RUN
+    MI -->|"enable: delete flag, start worker"| W
+    MI -->|"disable: write module-disabled.flag"| W
+    W -->|"adopt already-running trees (never relaunch)"| RUN
+    W -.->|"parent alive? adopt? flag?"| MI
+    RUN -->|"stop all on any exit path"| T["service trees"]
+```
 
 - **Skeleton**: module interface DLL + managed core lib + headless worker; the Settings page also hosts page-level runners.
 - **Components**: `LocalserverModuleInterface.dll`, `Kit.LocalserverWorker.exe`, `LocalserverLib` (catalog store, `ServiceSupervisor`, `ServiceRunner`, ownership records, named job objects).
@@ -120,6 +167,16 @@ All runtime data lives under `%LOCALAPPDATA%\Kit`:
 
 ### 3.4 UDPtest — network probe engine
 
+```mermaid
+flowchart LR
+    subgraph S["Kit.Settings.exe"]
+        PG["UDPtest page"]
+        ENG["UDPtestLib (ProbeCoordinator, TCP-HTTPS / UDP / STUN / NAT probes, MetricsEngine)"]
+    end
+    PG -->|"start / stop probes"| ENG
+    ENG -.->|"cascade shutdown on page close"| PG
+```
+
 - **Skeleton**: module interface DLL + managed core lib, **no separate process** — the probe engine runs in-process in the Settings page.
 - **Components**: `UDPtestModuleInterface.dll`, `UDPtestLib` (`ProbeCoordinator`, TCP-HTTPS / UDP-echo / STUN / NAT-type probes, `MetricsEngine`, sparkline telemetry).
 - **Lifecycle**: the page starts/stops coordinated probes and shuts the cascade down when the page closes; no worker is involved.
@@ -127,12 +184,22 @@ All runtime data lives under `%LOCALAPPDATA%\Kit`:
 
 ### 3.5 AI Hub — unified AI service + security audit
 
+```mermaid
+flowchart LR
+    R["Kit.exe (runner)"]
+    MI["AIHubModuleInterface.dll"]
+    W["Kit.AIHubWorker.exe"]
+    LIB["Kit.AIHubLib (AI engine, kernels, task chains, security policy, audit)"]
+    R -->|"load + enable"| MI
+    MI -->|"launches"| W
+    W -->|"hosts"| LIB
+    LIB -->|"chains / security.md / audit"| D["%LOCALAPPDATA%/Kit/AiHub/"]
+```
+
 - **Skeleton**: module interface DLL + managed core lib + headless worker.
 - **Components**: `AIHubModuleInterface.dll`, `Kit.AIHubWorker.exe`, `Kit.AIHubLib` (AI service engine, kernels, task chains, security policies, audit pipeline).
 - **Lifecycle**: the worker hosts the shared AI service (kernels, main/fallback endpoints, global security policy); task chains carry per-task `AGENTS.md` policies; the Security Audit collects Windows event logs, ranks findings, and runs AI analysis.
 - **Data**: `%LOCALAPPDATA%\Kit\AiHub\` — `chains\`, `kernels\`, `requests\`, `State\`, `security.md`, `settings.json`, `secrets.dat`, `Logs\`.
-
----
 
 ## 4. Build and Release
 
@@ -153,7 +220,7 @@ Kit follows the PowerToys module-loading model instead of inventing a new plugin
 - `Kit.UDPtestModuleInterface.dll`
 - `Kit.AIHubModuleInterface.dll`
 
-This fixed list is intentional for first-party modules: it avoids unstable directory probing and makes each imported module an explicit compatibility decision. A third-party plugin host (`plugins/\` + `manifest.json`) is planned but not implemented yet.
+Two of the five modules are imported from upstream PowerToys (`Awake`, `Light Switch`); the other three are Kit-developed plugins (`Localserver`, `UDPtest`, `AI Hub`). The fixed list is intentional: it avoids unstable directory probing and makes every module an explicit decision, whether imported or self-developed. A third-party plugin host (`plugins/` + `manifest.json`) is planned but not implemented yet.
 
 ### Adding another PowerToys module
 

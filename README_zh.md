@@ -15,7 +15,7 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 | PowerToys runner / 模块接口 / 设置 / 仪表板模式 | 品牌（`Kit`）、窗口标题、可见 UI 文案 |
 | `KitModuleIface` C++ 契约（含 `PowertoyModuleIface` 别名） | 设置存储迁移到 `%LOCALAPPDATA%\Kit`（非官方 PowerToys 目录） |
 | 显式的模块加载模型 | 移除自动更新、下载与遥测能力 |
-| 第一方模块集合：`Awake`、`Light Switch`、`Localserver`、`UDPtest`、`AI Hub` | 备份/恢复默认值使用 Kit 品牌（`Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
+| 源自 PowerToys 的模块：`Awake`、`Light Switch`；Kit 自研插件：`Localserver`、`UDPtest`、`AI Hub` | 备份/恢复默认值使用 Kit 品牌（`Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
 
 当前版本：`2.3.0`。
 
@@ -93,7 +93,22 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 ## 3. 插件架构骨架解析
 
+五个活动模块分为两类：
+
+- **源自 PowerToys（第一方）**—— `Awake`、`Light Switch`：由上游 PowerToys 模块适配到 Kit 契约。
+- **Kit 自研插件** —— `Localserver`、`UDPtest`、`AI Hub`：为 Kit 本地自用而开发。
+
 ### 3.1 Awake —— 保持唤醒
+
+```mermaid
+flowchart LR
+    R["Kit.exe (runner)"]
+    MI["AwakeModuleInterface.dll"]
+    A["Kit.Awake.exe (托盘程序)"]
+    R -->|"enable() → CreateProcess"| MI
+    MI -->|"--use-kit-config --pid <kit_pid>"| A
+    A -.->|"监测 kit_pid，随 runner 退出"| R
+```
 
 - **骨架**：模块接口 DLL + 独立托盘可执行程序，无进程内引擎。
 - **组件**：`AwakeModuleInterface.dll`（C++）→ 以 `--use-kit-config --pid <kit_pid>` 拉起 `Kit.Awake.exe`（`src/modules/awake/Awake`，C# WinExe）。
@@ -102,12 +117,44 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 ### 3.2 Light Switch —— 定时主题切换
 
+```mermaid
+flowchart LR
+    R["Kit.exe (runner)"]
+    MI["LightSwitchModuleInterface.dll"]
+    LS["Kit.LightSwitchService.exe"]
+    R -->|"enable() → 启动服务"| MI
+    MI -->|"拉起"| LS
+    LS -->|"主题计划 / 夜间模式 / 切换"| QA["Quick Access 动作"]
+```
+
 - **骨架**：模块接口 DLL + 原生核心库 + 原生 Service 可执行文件。
 - **组件**：`LightSwitchModuleInterface.dll`、`LightSwitchLib`（C++ 核心）、`Kit.LightSwitchService.exe`。
 - **生命周期**：启用模块即启动 Service，应用主题计划、夜间模式与切换热键；保留直接的 Quick Access 动作。
 - **数据**：`%LOCALAPPDATA%\Kit\LightSwitch\`。
 
 ### 3.3 Localserver —— 本地服务编排（最深的骨架）
+
+```mermaid
+flowchart TB
+    subgraph R["Kit.exe (runner)"]
+        MI["LocalserverModuleInterface.dll"]
+    end
+    subgraph S["Kit.Settings.exe"]
+        PG["Localserver 页面"]
+        PR["页面级 runner"]
+    end
+    subgraph W["Kit.LocalserverWorker.exe"]
+        SUP["ServiceSupervisor（5 秒轮询）"]
+        RUN["ServiceRunner / 所有权 / 作业对象"]
+    end
+    PG -->|"启动 / 停止链路"| PR
+    PR -->|"启动进程树 + 写入所有权记录"| RUN
+    MI -->|"启用：删除标记，拉起 worker"| W
+    MI -->|"禁用：写入 module-disabled.flag"| W
+    W -->|"收养已在运行的进程树（绝不重启）"| RUN
+    W -.->|"父进程存活？收养？标记？"| MI
+    RUN -->|"任何退出路径都停止全部服务"| T["服务进程树"]
+```
 
 - **骨架**：模块接口 DLL + 托管核心库 + 无头 worker；Settings 页还承载页面级 runner。
 - **组件**：`LocalserverModuleInterface.dll`、`Kit.LocalserverWorker.exe`、`LocalserverLib`（目录存储、`ServiceSupervisor`、`ServiceRunner`、所有权记录、命名作业对象）。
@@ -120,6 +167,16 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 ### 3.4 UDPtest —— 网络探测引擎
 
+```mermaid
+flowchart LR
+    subgraph S["Kit.Settings.exe"]
+        PG["UDPtest 页面"]
+        ENG["UDPtestLib（ProbeCoordinator、TCP-HTTPS / UDP / STUN / NAT 探测、MetricsEngine）"]
+    end
+    PG -->|"启动 / 停止探测"| ENG
+    ENG -.->|"页面关闭时级联关闭"| PG
+```
+
 - **骨架**：模块接口 DLL + 托管核心库，**无独立进程** —— 探测引擎在 Settings 页面进程内运行。
 - **组件**：`UDPtestModuleInterface.dll`、`UDPtestLib`（`ProbeCoordinator`、TCP-HTTPS / UDP 回显 / STUN / NAT 类型探测、`MetricsEngine`、迷你波形遥测）。
 - **生命周期**：页面启动/停止协调式探测，页面关闭时级联关闭；不涉及 worker。
@@ -127,12 +184,22 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 ### 3.5 AI Hub —— 统一 AI 服务 + 安全审计
 
+```mermaid
+flowchart LR
+    R["Kit.exe (runner)"]
+    MI["AIHubModuleInterface.dll"]
+    W["Kit.AIHubWorker.exe"]
+    LIB["Kit.AIHubLib（AI 引擎、kernels、任务链、安全策略、审计）"]
+    R -->|"加载 + 启用"| MI
+    MI -->|"拉起"| W
+    W -->|"承载"| LIB
+    LIB -->|"chains / security.md / 审计"| D["%LOCALAPPDATA%/Kit/AiHub/"]
+```
+
 - **骨架**：模块接口 DLL + 托管核心库 + 无头 worker。
 - **组件**：`AIHubModuleInterface.dll`、`Kit.AIHubWorker.exe`、`Kit.AIHubLib`（AI 服务引擎、kernels、任务链、安全策略、审计流水线）。
 - **生命周期**：worker 承载共享 AI 服务（kernels、主/备端点、全局安全策略）；任务链携带各自的 `AGENTS.md` 策略；安全审计收集 Windows 事件日志、排序发现并执行 AI 分析。
 - **数据**：`%LOCALAPPDATA%\Kit\AiHub\` —— `chains\`、`kernels\`、`requests\`、`State\`、`security.md`、`settings.json`、`secrets.dat`、`Logs\`。
-
----
 
 ## 4. 构建与发布
 
@@ -153,7 +220,7 @@ Kit 沿用 PowerToys 的模块加载模型，而非另造插件协议。runner �
 - `Kit.UDPtestModuleInterface.dll`
 - `Kit.AIHubModuleInterface.dll`
 
-对第一方模块而言这个固定列表是有意为之：避免不稳定的目录探测，让每个导入模块都成为一次明确的兼容性决策。第三方插件宿主（`plugins/\` + `manifest.json`）已规划但尚未实现。
+五个模块中，`Awake`、`Light Switch` 来自上游 PowerToys；其余三个（`Localserver`、`UDPtest`、`AI Hub`）是 Kit 自研插件。固定列表有意为之：避免不稳定的目录探测，让每个模块（无论导入还是自研）都成为一次明确的决策。第三方插件宿主（`plugins/` + `manifest.json`）已规划但尚未实现。
 
 ### 导入另一个 PowerToys 模块
 

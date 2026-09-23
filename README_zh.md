@@ -14,7 +14,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 
 ### 当前版本
 
-当前 Kit 版本：`2.2.5`。
+当前 Kit 版本：`2.2.6`。
 
 ## 文档索引
 
@@ -71,7 +71,7 @@ Kit 特定的更改应保持小而有意：品牌、设置存储、可见导航�
 - `src/settings-ui/Settings.UI.Library` 包含设置模型、设置序列化、模块设置存储库、备份和恢复助手、GPO 助手和共享设置基础设施。
 - `src/common` 保留运行器、模块和设置使用的共享本机和托管 PowerToys 基础设施，包含统一的 `Kit.AiHub` 任务引擎。
 
-Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中，尚无独立后台 Worker。完整关闭 Settings 后，不承诺日志采集、健康检查或自动重启继续运行。生命周期边界详见 [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)。
+Localserver 通过无头后台 Worker（`Kit.LocalserverWorker.exe`）托管服务运行器，因此健康监控与重启策略在设置页关闭后依然生效。启用插件仅让目录可用、不会自动启动服务；每个服务由用户在设置页单独开启；关闭插件会停止所有受管服务。生命周期边界详见 [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md)。
 
 运行时设置存储在 Kit 特定的应用程序数据下，例如 `%LOCALAPPDATA%\Kit\settings.json`，而不是官方 PowerToys 设置目录。备份和恢复默认值也使用 Kit 品牌，包括 `Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit` 和 `Kit_settings_*` 临时备份文件夹。
 

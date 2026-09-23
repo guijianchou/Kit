@@ -14,7 +14,7 @@ Kit-specific changes should stay small and intentional: branding, settings stora
 
 ## Current Version
 
-Current Kit version: `2.2.5`.
+Current Kit version: `2.2.6`.
 
 ## Documentation
 
@@ -70,7 +70,7 @@ The current stable handoff point is:
 - `src/settings-ui/Settings.UI.Library` contains settings models, settings serialization, module settings repositories, backup and restore helpers, GPO helpers, and shared settings infrastructure.
 - `src/common` retains shared native and managed PowerToys infrastructure used by the runner, modules, and Settings, including the unified `Kit.AiHub` task engine.
  
- Localserver's management logic currently runs in the Settings page's ViewModel, without a separate background worker. After Settings fully closes, continued log collection, health checks, and automatic restarts are not guaranteed. See [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) for its lifecycle boundary.
+ Localserver runs a headless worker (`Kit.LocalserverWorker.exe`) that hosts the service runners, so health monitoring and restart policy survive the Settings window closing. Enabling the module only makes the catalog available without auto-starting services; each service is started individually from the Settings page, and disabling the module stops every supervised service. See [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) for its lifecycle boundary.
  
  Runtime settings are stored under Kit-specific application data, such as `%LOCALAPPDATA%\Kit\settings.json`, rather than the official PowerToys settings directory. Backup and restore defaults also use Kit branding, including `Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`, and `Kit_settings_*` temporary backup folders.
  

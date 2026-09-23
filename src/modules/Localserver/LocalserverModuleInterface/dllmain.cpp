@@ -14,7 +14,9 @@
 #include <common/utils/os-detect.h>
 #include <common/utils/winapi_error.h>
 
+#include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <mutex>
 #include <set>
 
@@ -39,6 +41,7 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD ul_reason_for_call, LPVOID /*lp
 
 const static wchar_t* MODULE_NAME = L"Localserver";
 const static wchar_t* MODULE_DESC = L"A module that manages local servers, microservices, and development environments.";
+const static wchar_t* MODULE_DISABLED_FLAG_NAME = L"module-disabled.flag";
 
 class LocalserverModule : public KitModuleIface
 {
@@ -54,6 +57,9 @@ class LocalserverModule : public KitModuleIface
     void start_worker_if_needed();
     void stop_worker_if_running();
     void close_worker_handle();
+    std::wstring module_data_directory();
+    void write_module_disabled_flag();
+    void delete_module_disabled_flag();
 
 public:
     LocalserverModule()
@@ -118,6 +124,7 @@ public:
         {
             std::lock_guard lifecycleLock(m_lifecycle_mutex);
             m_enabled = true;
+            delete_module_disabled_flag();
             start_worker_if_needed();
         }
 
@@ -135,6 +142,7 @@ public:
         {
             std::lock_guard lifecycleLock(m_lifecycle_mutex);
             m_enabled = false;
+            write_module_disabled_flag();
             stop_worker_if_running();
         }
 
@@ -155,6 +163,53 @@ void LocalserverModule::close_worker_handle()
         CloseHandle(m_worker_process);
         m_worker_process = nullptr;
     }
+}
+
+std::wstring LocalserverModule::module_data_directory()
+{
+    wchar_t* localAppData = nullptr;
+    size_t bufferSize = 0;
+    if (_wdupenv_s(&localAppData, &bufferSize, L"LOCALAPPDATA") != 0 || localAppData == nullptr || *localAppData == L'\0')
+    {
+        free(localAppData);
+        return {};
+    }
+
+    std::wstring path(localAppData);
+    free(localAppData);
+    return (std::filesystem::path(path) / L"Kit" / L"Localserver").wstring();
+}
+
+void LocalserverModule::write_module_disabled_flag()
+{
+    std::wstring directory = module_data_directory();
+    if (directory.empty())
+    {
+        Logger::warn(L"[Localserver] Could not resolve LOCALAPPDATA; services may not stop on disable.");
+        return;
+    }
+
+    try
+    {
+        std::filesystem::create_directories(directory);
+        std::ofstream((std::filesystem::path(directory) / MODULE_DISABLED_FLAG_NAME).c_str()).close();
+    }
+    catch (...)
+    {
+        Logger::warn(L"[Localserver] Failed to write the module-disable flag; services may not stop on disable.");
+    }
+}
+
+void LocalserverModule::delete_module_disabled_flag()
+{
+    std::wstring directory = module_data_directory();
+    if (directory.empty())
+    {
+        return;
+    }
+
+    std::error_code ec;
+    std::filesystem::remove(std::filesystem::path(directory) / MODULE_DISABLED_FLAG_NAME, ec);
 }
 
 void LocalserverModule::start_worker_if_needed()
@@ -217,15 +272,22 @@ void LocalserverModule::stop_worker_if_running()
         return;
     }
 
-    // The worker watches the runner PID and exits on its own. Ask nicely, then fall back
-    // to terminating it so a stale supervisor cannot outlive its module.
+    // The worker polls for the module-disable flag, stops its supervised services and
+    // exits on its own. Wait for that graceful shutdown first so a disabled module does
+    // not leave orphaned service processes behind; terminate only as a fallback so a
+    // stale supervisor cannot outlive its module.
     DWORD result = WaitForSingleObject(m_worker_process, 0);
     if (result == WAIT_TIMEOUT)
     {
-        Logger::info(L"[Localserver] Stopping the supervisor.");
-        if (TerminateProcess(m_worker_process, 0))
+        Logger::info(L"[Localserver] Asking the supervisor to stop its services and exit.");
+        result = WaitForSingleObject(m_worker_process, 8000);
+        if (result == WAIT_TIMEOUT)
         {
-            result = WaitForSingleObject(m_worker_process, 1500);
+            Logger::warn(L"[Localserver] Supervisor did not exit in time; terminating it.");
+            if (TerminateProcess(m_worker_process, 0))
+            {
+                result = WaitForSingleObject(m_worker_process, 1500);
+            }
         }
     }
 

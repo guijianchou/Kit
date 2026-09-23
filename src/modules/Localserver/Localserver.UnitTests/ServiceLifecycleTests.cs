@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using Kit.LocalserverWorker;
 using LocalServerHub.Core.Models;
 using LocalServerHub.Windows;
 using LocalserverLib.Common;
@@ -137,6 +139,54 @@ public sealed class ServiceLifecycleTests
         Assert.AreEqual(ServiceState.Failed, runner.State);
         Assert.IsNull(runner.ProcessId);
         Assert.IsFalse(File.Exists(fixture.OwnershipPath));
+    }
+
+    [TestMethod]
+    public async Task SupervisorShutdownSequenceStopsEveryRunningService()
+    {
+        // Mirrors the worker's exit sequence: a final recovery pass adopts services the
+        // Settings page may have started, then StopAllAsync terminates every supervised
+        // tree. No exit path (module disabled, parent exited, or shutdown requested) may
+        // leave an orphaned process behind.
+        using var fixture = await ServiceFixture.CreateAsync();
+        string dataDirectory = Path.Combine(fixture.Root, "hub-data");
+        Directory.CreateDirectory(dataDirectory);
+        File.WriteAllText(
+            Path.Combine(dataDirectory, "services.json"),
+            JsonSerializer.Serialize(new
+            {
+                services = new[]
+                {
+                    new
+                    {
+                        id = fixture.Definition.Id,
+                        name = fixture.Definition.Name,
+                        cwd = fixture.Definition.Cwd,
+                        executable = fixture.Definition.Executable,
+                        baseArgs = fixture.Definition.BaseArgs,
+                        isEnabled = true,
+                    },
+                },
+            }));
+
+        using var supervisor = new ServiceSupervisor(dataDirectory);
+        await supervisor.LoadAsync();
+        Assert.AreEqual(1, supervisor.SupervisedCount);
+
+        Assert.IsTrue(await supervisor.StartServiceAsync(fixture.Definition.Id), "The supervised service should start.");
+        Assert.IsTrue(File.Exists(fixture.OwnershipPath), "Starting must create an ownership record.");
+        int processId = JsonDocument.Parse(await File.ReadAllTextAsync(fixture.OwnershipPath))
+            .RootElement.GetProperty("processId")
+            .GetInt32();
+        Process process = fixture.Track(processId);
+        Assert.IsFalse(process.HasExited);
+
+        await supervisor.RecoverRunningServicesAsync();
+        await supervisor.StopAllAsync();
+
+        Assert.IsTrue(process.HasExited, "StopAllAsync must terminate every supervised service.");
+        Assert.AreEqual("Stopped", supervisor.Describe().Single().State);
+        Assert.IsFalse(File.Exists(fixture.OwnershipPath), "Ownership must be cleared after stop.");
     }
 }
 

@@ -86,6 +86,21 @@ public sealed class ServiceSupervisorTests
     }
 
     [TestMethod]
+    public async Task StopAllIsSafeForNeverStartedServices()
+    {
+        // StopAllAsync is the worker's module-disable teardown. With nothing started it must
+        // be a no-op that keeps supervision intact (this suite never starts child processes).
+        WriteCatalog(("enabled-service", true));
+        using var supervisor = new ServiceSupervisor(_dataDirectory);
+
+        await supervisor.LoadAsync();
+        await supervisor.StopAllAsync();
+
+        Assert.AreEqual(1, supervisor.SupervisedCount, "Stopping must not remove supervision.");
+        Assert.IsTrue(supervisor.SupervisedIds.Contains("enabled-service"));
+    }
+
+    [TestMethod]
     public async Task DescribeReportsIdAndStateForEverySupervisedService()
     {
         WriteCatalog(("alpha", true));

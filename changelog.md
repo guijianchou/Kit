@@ -4,6 +4,14 @@
 
 ## English
 
+### 2.2.6
+
+- **LocalServer Lifecycle Fixed - a Disabled Module No Longer Leaves Services Running**:
+  - Enabling the LocalServer module no longer auto-starts every enabled service in the catalog. The worker used to call `StartAutoStartServicesAsync` at boot, which launched every `isEnabled: true` service (for example Deepseek and Hongguo) the moment the module was switched on. Enabling the module now only makes the catalog available; each service is started individually from the Settings page, and the worker adopts (never re-launches) process trees that are already running.
+  - Disabling the module now stops all supervised services. Previously the module hard-killed the worker with `TerminateProcess`, and because the recoverable job objects deliberately omit kill-on-close, the service process trees (cmd -> conhost -> node) were orphaned and kept running after the plugin was switched off.
+  - The module now writes a `module-disabled.flag`, gives the worker up to 8 seconds to stop its services and exit gracefully, and only then falls back to terminating it; the flag is cleared when the module is re-enabled.
+  - The worker re-adopts services the Settings page started after it booted on every 5s poll, so chains started in the page stay supervised and are stopped when the module is disabled.
+  - Added `RecoverRunningServicesAsync` and `StopAllAsync` to the worker supervisor; the new teardown path is covered by unit tests.
 ### 2.2.5
 
 - **AI Hub Task Policies Layout**:
@@ -520,6 +528,14 @@
 
 ## 更新日志
 
+### 2.2.6
+
+- **本地服务模块生命周期修复 —— 关闭插件不再残留运行中的服务**：
+  - 启用 LocalServer 插件不再自动拉起目录中的所有启用服务。此前 worker 启动时调用 `StartAutoStartServicesAsync`，只要插件一开就会启动每个 `isEnabled: true` 的服务（如 Deepseek、Hongguo）。现在启用插件仅让目录可用；每个服务由用户在设置页单独开启，worker 只收养（绝不重新启动）已在运行的进程树。
+  - 关闭插件现在会停止所有受管服务。此前插件用 `TerminateProcess` 硬杀 worker，而可恢复作业对象刻意不带 kill-on-close，导致服务进程树（cmd → conhost → node）变成孤儿继续运行。
+  - 插件现在写入 `module-disabled.flag`，给 worker 最多 8 秒优雅停止服务并退出，超时才回退到强制终止；重新启用插件时清除该标记。
+  - worker 每 5 秒轮询时会重新收养设置页在启动之后打开的服务，保证页面里开启的链路始终受监督，并在关闭插件时一并停止。
+  - 为 worker 监督器新增 `RecoverRunningServicesAsync` 与 `StopAllAsync`，新的关闭路径已有单元测试覆盖。
 ### 2.2.5
 
 - **AI 智能中心任务策略布局**：

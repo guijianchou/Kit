@@ -27,9 +27,11 @@ using ManagedCommon;
 /// window even though the child processes survived. This host keeps them alive for as
 /// long as the worker runs.
 ///
-/// The worker is deliberately additive: it never writes the catalog, and it starts
-/// services only when asked (see <see cref="WorkerOptions.AutoStart"/>), so it cannot
-/// fight the Settings page over ownership of a service.
+/// The worker is deliberately additive: it never writes the catalog and never
+/// auto-starts services. Enabling the module only makes the catalog available; each
+/// service is started from the Settings page, and the worker adopts (never re-launches)
+/// the trees that are already running so it cannot fight the Settings page over
+/// ownership of a service.
 /// </remarks>
 public sealed class ServiceSupervisor : IDisposable
 {
@@ -96,10 +98,13 @@ public sealed class ServiceSupervisor : IDisposable
     }
 
     /// <summary>
-    /// Starts every service that is marked to start with the hub. Services already running
-    /// (including trees adopted from a previous session) are left as they are.
+    /// Adopts the process trees that are already running for supervised services. Unlike
+    /// starting, recovery never launches a stopped service: it only picks up trees a
+    /// previous session or the Settings page left running, so the worker stays in sync
+    /// without ever auto-starting a service the user did not ask for. Idempotent; safe to
+    /// call repeatedly.
     /// </summary>
-    public async Task StartAutoStartServicesAsync(CancellationToken cancellationToken = default)
+    public async Task RecoverRunningServicesAsync(CancellationToken cancellationToken = default)
     {
         foreach ((string id, ServiceRunner runner) in Snapshot())
         {
@@ -108,25 +113,17 @@ public sealed class ServiceSupervisor : IDisposable
                 return;
             }
 
-            if (!runner.Definition.IsEnabled)
-            {
-                continue;
-            }
-
             try
             {
-                if (runner.State == ServiceState.Running)
+                if (runner.State == ServiceState.Stopped && runner.TryRecover())
                 {
-                    continue;
+                    Logger.LogInfo($"[Localserver.Worker] Adopted the running tree of '{id}'.");
                 }
-
-                Logger.LogInfo($"[Localserver.Worker] Starting '{id}'.");
-                await runner.StartAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 // One failing service must not stop the rest of the catalog.
-                Logger.LogError($"[Localserver.Worker] Failed to start '{id}'.", ex);
+                Logger.LogError($"[Localserver.Worker] Failed to recover '{id}'.", ex);
             }
         }
     }
@@ -212,6 +209,31 @@ public sealed class ServiceSupervisor : IDisposable
         catch (FormatException)
         {
             return fallback;
+        }
+    }
+
+    /// <summary>
+    /// Stops every supervised service that has a live or pending process. Used when the
+    /// owning module is disabled so a disabled module cannot leave orphaned process
+    /// trees behind; each runner goes through its normal stop path (graceful, then
+    /// forced), which terminates the job tree and clears the ownership record.
+    /// </summary>
+    public async Task StopAllAsync(CancellationToken cancellationToken = default)
+    {
+        foreach ((string id, ServiceRunner runner) in Snapshot())
+        {
+            try
+            {
+                if (runner.State.IsActive())
+                {
+                    Logger.LogInfo($"[Localserver.Worker] Stopping '{id}' because the module was disabled.");
+                    await runner.StopAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[Localserver.Worker] Failed to stop '{id}'.", ex);
+            }
         }
     }
 

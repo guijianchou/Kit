@@ -8,6 +8,7 @@ namespace Kit.LocalserverWorker;
 
 using System;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using LocalserverLib.Common;
@@ -27,6 +28,12 @@ public static class Program
 {
     /// <summary>How often the parent process is checked for liveness.</summary>
     private static readonly TimeSpan ParentCheckInterval = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Marker file the module writes when it is disabled. Its presence tells the worker to
+    /// stop the supervised services and exit, so a disabled module leaves nothing running.
+    /// </summary>
+    private const string ModuleDisabledFlagFileName = "module-disabled.flag";
 
     public static async Task<int> Main(string[] args)
     {
@@ -48,11 +55,20 @@ public static class Program
         {
             using var supervisor = new ServiceSupervisor(dataDirectory);
             await supervisor.LoadAsync(shutdown.Token).ConfigureAwait(false);
-            await supervisor.StartAutoStartServicesAsync(shutdown.Token).ConfigureAwait(false);
+            await supervisor.RecoverRunningServicesAsync(shutdown.Token).ConfigureAwait(false);
 
             Logger.LogInfo($"[Localserver.Worker] Supervising {supervisor.SupervisedCount} service(s).");
 
-            await WaitForShutdownAsync(parentPid, shutdown.Token).ConfigureAwait(false);
+            _ = await WaitForShutdownAsync(parentPid, dataDirectory, supervisor, shutdown.Token).ConfigureAwait(false);
+
+            // Whatever ended the watch - the module was disabled, the parent (Kit runner)
+            // exited, or shutdown was requested - stop every supervised service before
+            // leaving, so no exit path can leave orphaned process trees behind. A final
+            // recovery pass adopts services the Settings page started after the last poll.
+            Logger.LogInfo("[Localserver.Worker] Shutting down; stopping supervised services.");
+            await supervisor.RecoverRunningServicesAsync(shutdown.Token).ConfigureAwait(false);
+            await supervisor.StopAllAsync(shutdown.Token).ConfigureAwait(false);
+            TryDeleteModuleDisabledFlag(dataDirectory);
 
             Logger.LogInfo("[Localserver.Worker] Stopped watching; releasing supervision.");
             return 0;
@@ -69,11 +85,20 @@ public static class Program
     }
 
     /// <summary>
-    /// Blocks until shutdown is requested or the parent process exits. A missing parent is not
-    /// treated as immediate shutdown so the worker can still be run standalone.
+    /// Blocks until shutdown is requested, the parent process exits, or the owning module
+    /// is disabled. Every path ends the watch; the caller then stops all supervised
+    /// services, so no exit path leaves orphaned process trees behind. Each pass also
+    /// adopts services the Settings page started after this worker booted, so they stay
+    /// supervised and are covered by the shutdown stop. A missing parent is not treated as
+    /// immediate shutdown so the worker can still be run standalone.
     /// </summary>
-    private static async Task WaitForShutdownAsync(int? parentPid, CancellationToken cancellationToken)
+    private static async Task<bool> WaitForShutdownAsync(
+        int? parentPid,
+        string dataDirectory,
+        ServiceSupervisor supervisor,
+        CancellationToken cancellationToken)
     {
+        string moduleDisabledFlagPath = ModuleDisabledFlagPath(dataDirectory);
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -82,15 +107,25 @@ public static class Program
             }
             catch (OperationCanceledException)
             {
-                return;
+                return false;
             }
 
             if (parentPid is int pid && !IsProcessAlive(pid))
             {
                 Logger.LogInfo($"[Localserver.Worker] Parent process {pid} exited.");
-                return;
+                return false;
+            }
+
+            await supervisor.RecoverRunningServicesAsync(cancellationToken).ConfigureAwait(false);
+
+            if (File.Exists(moduleDisabledFlagPath))
+            {
+                Logger.LogInfo("[Localserver.Worker] Module disable requested; stopping services.");
+                return true;
             }
         }
+
+        return false;
     }
 
     private static bool IsProcessAlive(int pid)
@@ -107,6 +142,26 @@ public static class Program
         catch (InvalidOperationException)
         {
             return false;
+        }
+    }
+
+    private static string ModuleDisabledFlagPath(string dataDirectory) =>
+        Path.Combine(dataDirectory, ModuleDisabledFlagFileName);
+
+    private static void TryDeleteModuleDisabledFlag(string dataDirectory)
+    {
+        try
+        {
+            string path = ModuleDisabledFlagPath(dataDirectory);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                Logger.LogInfo("[Localserver.Worker] Removed the module-disable flag.");
+            }
+        }
+        catch (IOException)
+        {
+            // Best effort; the module also clears the flag on re-enable.
         }
     }
 

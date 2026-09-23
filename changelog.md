@@ -4,6 +4,13 @@
 
 ## English
 
+### 2.3.0
+
+- **No Orphaned Processes on Any Exit Path**:
+  - The worker now stops every supervised service whenever it exits - whether the module was disabled, the parent (Kit runner) exited, or shutdown was requested - not only on module disable. Previously a runner that died without running module destructors made the worker exit via parent-death while preserving the recoverable process trees, so service chains survived as orphans.
+  - Closing the last Settings window with "minimize to tray" disabled now ends the runner itself. Before, only the tray menu could exit Kit.exe, so closing Settings without a tray icon left a headless runner alive with its modules, worker and services still running.
+- **Log Rotation Cleanup Fixed**:
+  - Worker boot no longer logs an IOException when cleaning old version log folders: the version path carried doubled path separators, so the current version folder was never excluded and the cleanup tried to delete the very log file it was writing to.
 ### 2.2.6
 
 - **LocalServer Lifecycle Fixed - a Disabled Module No Longer Leaves Services Running**:
@@ -528,6 +535,13 @@
 
 ## 更新日志
 
+### 2.3.0
+
+- **任何退出路径都不再残留孤儿进程**：
+  - worker 现在无论因何种原因退出 —— 插件被禁用、父进程（Kit runner）退出、或收到关闭请求 —— 都会停止全部受管服务，而不只限于禁用插件这一条路径。此前 runner 若未执行模块析构就退出，worker 会走"父进程死亡"路径并保留可恢复的进程树，导致服务链变成孤儿继续运行。
+  - 关闭最后一个 Settings 窗口时，如果"最小化到托盘"未开启，现在会一并结束 runner 自身。此前只有托盘菜单能让 Kit.exe 退出，没有托盘图标时关闭设置页会留下一个无界面的 runner，连同模块、worker 和服务一起驻留。
+- **日志轮转清理修复**：
+  - worker 启动时清理旧版本日志目录不再报 IOException：版本路径携带了重复的路径分隔符，导致当前版本目录从未被排除，清理逻辑试图删除正在写入的日志文件本身。
 ### 2.2.6
 
 - **本地服务模块生命周期修复 —— 关闭插件不再残留运行中的服务**：

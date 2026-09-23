@@ -39,7 +39,7 @@ public static class Program
 
     public static async Task<int> Main(string[] args)
     {
-        Logger.InitializeLogger(@"\\AIHub\\Logs");
+        Logger.InitializeLogger(@"\AIHub\Logs");
         Logger.LogInfo("[AIHub.Worker] Starting.");
 
         int? parentPid = ParseParentPid(args);

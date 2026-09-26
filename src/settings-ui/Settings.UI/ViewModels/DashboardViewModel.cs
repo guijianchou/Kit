@@ -13,6 +13,7 @@ using Kit.Settings.UI.Controls;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.HotkeyConflicts;
 using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.Library.Utilities;
 using Kit.Settings.UI.Services;
@@ -49,6 +50,21 @@ namespace Kit.Settings.UI.ViewModels
         public int VisibleQuickAccessItemsCount => quickAccessViewModel.VisibleItemCount;
 
         public string PowerToysVersion => Helper.GetProductVersion();
+
+        private AllHotkeyConflictsData allHotkeyConflictsData = new AllHotkeyConflictsData();
+
+        /// <summary>
+        /// Gets the shortcut conflicts shown by the Dashboard header control.
+        /// </summary>
+        public AllHotkeyConflictsData AllHotkeyConflictsData
+        {
+            get => allHotkeyConflictsData;
+            private set
+            {
+                allHotkeyConflictsData = value;
+                OnPropertyChanged(nameof(AllHotkeyConflictsData));
+            }
+        }
 
         public DashboardSortOrder DashboardSortOrder
         {
@@ -88,6 +104,30 @@ namespace Kit.Settings.UI.ViewModels
 
             BuildModuleList();
             SortModuleList();
+        }
+
+        protected override void OnConflictsUpdated(object sender, AllHotkeyConflictsEventArgs e)
+        {
+            RunOnUiThread(() =>
+            {
+                if (isDisposed)
+                {
+                    return;
+                }
+
+                var conflicts = e?.Conflicts ?? new AllHotkeyConflictsData();
+                foreach (var conflict in conflicts.InAppConflicts.Concat(conflicts.SystemConflicts))
+                {
+                    var hotkey = conflict.Hotkey;
+                    if (hotkey != null)
+                    {
+                        conflict.ConflictIgnored = HotkeyConflictIgnoreHelper.IsIgnoringConflicts(
+                            new HotkeySettings(hotkey.Win, hotkey.Ctrl, hotkey.Alt, hotkey.Shift, hotkey.Key));
+                    }
+                }
+
+                AllHotkeyConflictsData = conflicts;
+            });
         }
 
         private void OnQuickAccessPropertyChanged(object sender, PropertyChangedEventArgs e)

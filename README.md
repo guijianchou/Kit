@@ -6,7 +6,7 @@
 
 ## 1. What Is Kit
 
-Kit is a local, self-use Windows utility workspace derived from **Microsoft PowerToys**. It exists so selected PowerToys utilities can be modified, isolated, and compared against an installed official PowerToys build on the same machine.
+Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. It exists so selected PowerToys utilities can be modified, isolated, and compared against an installed official PowerToys build on the same machine.
 
 It is a **stability-first PowerToys-derived workspace, not a full product rebrand**: the upstream runner, module interface, settings, and dashboard patterns are kept recognizable, so imported PowerToys modules can be validated with minimal adapter code.
 
@@ -17,7 +17,7 @@ It is a **stability-first PowerToys-derived workspace, not a full product rebran
 | The explicit module-loading model | Automatic update, download, and telemetry surfaces are removed |
 | PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub` | Backup/restore defaults use Kit branding (`Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
 
-Current version: `2.3.0`.
+Current Kit version: `2.3.0`.
 
 ---
 
@@ -51,8 +51,8 @@ Runtime layout next to `Kit.exe`:
 
 ### 2.2 Startup and lifecycle
 
-1. The runner boots, loads the known module interface DLLs (`KitKnownModules` in `src/runner/main.cpp`), calls `kit_create()` on each, and enables the modules that are turned on in settings.
-2. The runner launches the Settings app over named pipes and shows the tray icon.
+1. The runner boots, shows the tray icon and — when Settings should open — launches the Settings app over named pipes **before** loading modules, so the WinUI/.NET cold start of Settings overlaps with module loading. IPC that arrives early is queued and handled once the message loop starts.
+2. The runner loads the known module interface DLLs (`KitKnownModules` in `src/runner/main.cpp`), calls `kit_create()` on each, and enables the modules that are turned on in settings.
 3. Enabling/disabling a module in Settings is sent over IPC; the runner applies it via `apply_module_status_update` → `enable()` / `disable()` on the module object.
 4. Shutdown: when the message loop ends (tray exit, or Settings closed without a tray icon), the runner tears down modules (`modules().clear()` → `destroy()`), which lets each module clean up its worker and services before the process exits.
 
@@ -200,6 +200,7 @@ flowchart LR
 - **Components**: `AIHubModuleInterface.dll`, `Kit.AIHubWorker.exe`, `Kit.AIHubLib` (AI service engine, kernels, task chains, security policies, audit pipeline).
 - **Lifecycle**: the worker hosts the shared AI service (kernels, main/fallback endpoints, global security policy); task chains carry per-task `AGENTS.md` policies; the Security Audit collects Windows event logs, ranks findings, and runs AI analysis.
 - **Data**: `%LOCALAPPDATA%\Kit\AiHub\` — `chains\`, `kernels\`, `requests\`, `State\`, `security.md`, `settings.json`, `secrets.dat`, `Logs\`.
+- **Settings UI**: the shared AI service (kernel, main/fallback endpoints, self-test, global security policy) is configured in the **AI Service** group on the General page, laid out with the same cards as the rest of Settings. The AI Hub page hosts the master toggle, an AI-readiness card, and three tabs (Security audit / Optimization / Task policies); each tab is built on first visit (`x:Load`) and then kept. Severity colors follow the theme (light / dark / high contrast).
 
 ## 4. Build and Release
 
@@ -242,6 +243,11 @@ Two of the five modules are imported from upstream PowerToys (`Awake`, `Light Sw
 - Keep Settings, runner, module interface, Quick Access, and copied module projects buildable independently before widening to whole-solution builds.
 - Keep Kit storage, backup, window title, and visible text separate from an installed official PowerToys.
 - Do not re-enable automatic download/install or telemetry.
+- Keep DSC-only Settings command-line entry points out of Kit.
+- Deleted the inactive standalone module_loader utility and orphaned CmdPal version props until Command Palette becomes an active Kit module.
+- Retained settings: resource strings, OOBE/model assets, and no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers.
+- Shortcut Conflict hotkey lookup is explicit for Quick Access and LightSwitch.
+- Backup defaults should stay generic to Kit's active module settings.
 - Split new modules into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and registration tests.
 
 ---
@@ -257,6 +263,6 @@ Two of the five modules are imported from upstream PowerToys (`Awake`, `Light Sw
 - `doc/devdoc/startup-optimization-analysis.md` — startup optimization analysis (Chinese).
 - `fix.md` — upstream delta and fix list; `changelog.md` — version history.
 
-## 8. Changelog
+## Changelog
 
 See [changelog.md](changelog.md) for the full version history.

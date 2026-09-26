@@ -487,7 +487,8 @@ namespace ViewModelTests
 
             StringAssert.Contains(dashboard, "x:Uid=\"DashboardIntro\"");
             StringAssert.Contains(dashboard, "ms-appx:///Assets/Settings/Modules/PT.png");
-            StringAssert.Contains(dashboard, "MaxWidth=\"160\"");
+            StringAssert.Contains(dashboard, "x:Name=\"DashboardProductButton\"");
+            StringAssert.Contains(dashboard, "ShortcutConflictControl");
             StringAssert.Contains(dashboard, "QuickAccessList");
             StringAssert.Contains(dashboard, "ModuleList");
             StringAssert.Contains(dashboard, "x:Uid=\"QuickAccessTitle\"");

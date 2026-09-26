@@ -4,6 +4,7 @@
 
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -30,7 +31,35 @@ namespace Kit.Settings.UI.Views
             DataContext = ViewModel;
 
             Loaded += (s, e) => ViewModel.OnPageLoaded();
-            Unloaded += (s, e) => ViewModel?.Dispose();
+
+            // The page is cached (NavigationCacheMode=Required), so it must outlive navigation:
+            // disposing on Unloaded left a dead view model that ignored module toggles after the
+            // user came back. Release it only when the owning window closes.
+            var settingsWindow = App.GetSettingsWindow();
+            if (settingsWindow != null)
+            {
+                settingsWindow.Closed += OnSettingsWindowClosed;
+            }
+        }
+
+        private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
+        {
+            if (args.Handled)
+            {
+                return;
+            }
+
+            if (sender is Window window)
+            {
+                window.Closed -= OnSettingsWindowClosed;
+            }
+
+            ViewModel?.Dispose();
+        }
+
+        private void ProductButton_Click(object sender, RoutedEventArgs e)
+        {
+            NavigationService.Navigate(typeof(GeneralPage));
         }
 
         public void RefreshEnabledState()

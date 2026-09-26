@@ -17,7 +17,7 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 | 显式的模块加载模型 | 移除自动更新、下载与遥测能力 |
 | 源自 PowerToys 的模块：`Awake`、`Light Switch`；Kit 自研插件：`Localserver`、`UDPtest`、`AI Hub` | 备份/恢复默认值使用 Kit 品牌（`Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
 
-当前版本：`2.3.0`。
+当前 Kit 版本：`2.3.0`。
 
 ---
 
@@ -51,8 +51,8 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 ### 2.2 启动与生命周期
 
-1. runner 启动，加载已知的模块接口 DLL（`src/runner/main.cpp` 中的 `KitKnownModules`），对每个调用 `kit_create()`，并启用设置中打开的模块。
-2. runner 通过命名管道拉起 Settings 应用，并显示托盘图标。
+1. runner 启动并显示托盘图标；需要打开设置时，**先于加载模块**通过命名管道拉起 Settings 应用，让 Settings 的 WinUI/.NET 冷启动与模块加载并行。提前到达的 IPC 会排队，待消息循环启动后处理。
+2. runner 加载已知的模块接口 DLL（`src/runner/main.cpp` 中的 `KitKnownModules`），对每个调用 `kit_create()`，并启用设置中打开的模块。
 3. Settings 中的启用/禁用通过 IPC 下发，runner 通过 `apply_module_status_update` → 模块对象的 `enable()` / `disable()` 生效。
 4. 退出：消息循环结束时（托盘退出，或未开启托盘时关闭 Settings），runner 执行模块收尾（`modules().clear()` → `destroy()`），让每个模块在进程退出前清理其 worker 与服务。
 
@@ -200,6 +200,7 @@ flowchart LR
 - **组件**：`AIHubModuleInterface.dll`、`Kit.AIHubWorker.exe`、`Kit.AIHubLib`（AI 服务引擎、kernels、任务链、安全策略、审计流水线）。
 - **生命周期**：worker 承载共享 AI 服务（kernels、主/备端点、全局安全策略）；任务链携带各自的 `AGENTS.md` 策略；安全审计收集 Windows 事件日志、排序发现并执行 AI 分析。
 - **数据**：`%LOCALAPPDATA%\Kit\AiHub\` —— `chains\`、`kernels\`、`requests\`、`State\`、`security.md`、`settings.json`、`secrets.dat`、`Logs\`。
+- **设置界面**：共享 AI 服务（内核、主/备端点、自检、全局安全策略）在“常规”页的 **AI 服务** 分组中配置，卡片样式与其余设置一致。AI Hub 页面包含总开关、AI 就绪状态卡片和三个页签（安全审计 / 系统优化 / 任务策略）；每个页签首次打开时才构建（`x:Load`），之后保留。严重度颜色随主题切换（浅色 / 深色 / 高对比度）。
 
 ## 4. 构建与发布
 
@@ -242,6 +243,9 @@ Kit 沿用 PowerToys 的模块加载模型，而非另造插件协议。runner �
 - 在扩大到全解决方案构建之前，确保 Settings、runner、模块接口、Quick Access 与复制的模块工程可独立构建。
 - 保持 Kit 的存储、备份、窗口标题与可见文案与已安装的官方 PowerToys 隔离。
 - 不要重新启用自动下载/安装与遥测。
+- 保持只供 DSC 使用的 Settings 命令行入口不进入 Kit。
+- 不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper。
+- Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch。
 - 新模块拆分为可测试的核心库、worker 进程、原生模块接口、设置模型、设置页、Home 元数据与注册测试。
 
 ---

@@ -14,7 +14,13 @@ namespace Kit.Settings.UI.Library
         private const string LightSwitchKey = "LightSwitch";
         private const string LocalserverKey = "Localserver";
         private const string UDPtestKey = "UDPtest";
+
+        // "AiHub" is the wire key for general settings.json (it matches EnabledModules'
+        // JsonPropertyName and the values the Settings UI sends to the runner). The
+        // runner accepts both spellings and normalizes the key to the "AIHub" module
+        // key internally, so the alternate spelling stays readable for compatibility.
         private const string AiHubKey = "AiHub";
+        private const string AiHubAltKey = "AIHub";
 
         public override EnabledModules Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -64,7 +70,7 @@ namespace Kit.Settings.UI.Library
                         modules.UDPtest = isEnabled;
                         break;
                     case AiHubKey:
-                    case "AIHub":
+                    case AiHubAltKey:
                         modules.AiHub = isEnabled;
                         break;
                 }

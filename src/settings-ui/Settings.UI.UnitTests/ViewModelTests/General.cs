@@ -128,7 +128,6 @@ namespace ViewModelTests
             StringAssert.Contains(xaml, "x:Uid=\"StartupAndPermissions\"");
             StringAssert.Contains(xaml, "x:Uid=\"Appearance_Behavior\"");
             StringAssert.Contains(xaml, "x:Uid=\"General_SettingsBackupAndRestoreTitle\"");
-            StringAssert.Contains(xaml, "x:Uid=\"General_Experimentation\"");
             StringAssert.Contains(xaml, "x:Uid=\"GeneralPage_EnableQuickAccess\"");
             StringAssert.Contains(xaml, "x:Uid=\"ShowSystemTrayIcon\"");
             StringAssert.Contains(xaml, "x:Uid=\"GeneralPage_RunAtStartUp\"");
@@ -448,16 +447,20 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitGeneralPageShouldPlaceExperimentationBeforeBackupAndRestore()
+        public void KitShouldNotKeepExperimentationFeature()
         {
             var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+            var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
+            var generalSettingsModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "GeneralSettings.cs"));
+            var runnerGeneralSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
+            var gpoUtilities = File.ReadAllText(FindSourceFile("src", "common", "utils", "gpo.h"));
+            var gpoIdl = File.ReadAllText(FindSourceFile("src", "common", "GPOWrapper", "GPOWrapper.idl"));
+            var admx = File.ReadAllText(FindSourceFile("src", "gpo", "assets", "Kit.admx"));
 
-            var experimentationIndex = xaml.IndexOf("x:Uid=\"General_Experimentation\"", StringComparison.Ordinal);
-            var backupAndRestoreIndex = xaml.IndexOf("x:Uid=\"General_SettingsBackupAndRestoreTitle\"", StringComparison.Ordinal);
-
-            Assert.IsTrue(experimentationIndex >= 0, "General Experimentation section should be present.");
-            Assert.IsTrue(backupAndRestoreIndex >= 0, "General Back up & restore section should be present.");
-            Assert.IsTrue(experimentationIndex < backupAndRestoreIndex, "Experimentation should appear before Back up & restore on the General page.");
+            foreach (var source in new[] { xaml, generalViewModel, generalSettingsModel, runnerGeneralSettings, gpoUtilities, gpoIdl, admx })
+            {
+                Assert.IsFalse(source.Contains("Experimentation", StringComparison.OrdinalIgnoreCase), "Kit has removed the inherited experimentation setting and its GPO policy.");
+            }
         }
 
         [TestMethod]

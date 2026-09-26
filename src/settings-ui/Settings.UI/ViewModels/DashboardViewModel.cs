@@ -160,43 +160,55 @@ namespace Kit.Settings.UI.ViewModels
                 return;
             }
 
-            lock (_sortLock)
+            RunOnUiThread(() =>
             {
-                isSorting = true;
-                try
+                if (isSorting)
                 {
-                    var sortedItems = (DashboardSortOrder switch
-                    {
-                        DashboardSortOrder.ByStatus => moduleItems.OrderByDescending(x => x.IsEnabled).ThenBy(x => x.Label),
-                        _ => moduleItems.OrderBy(x => x.Label),
-                    }).ToList();
+                    return;
+                }
 
-                    if (AllModules.Count == 0)
+                lock (_sortLock)
+                {
+                    isSorting = true;
+                    try
                     {
-                        foreach (var item in sortedItems)
+                        var sortedItems = (DashboardSortOrder switch
                         {
-                            AllModules.Add(item);
+                            DashboardSortOrder.ByStatus => moduleItems.OrderByDescending(x => x.IsEnabled).ThenBy(x => x.Label),
+                            _ => moduleItems.OrderBy(x => x.Label),
+                        }).ToList();
+
+                        if (AllModules.Count == 0)
+                        {
+                            foreach (var item in sortedItems)
+                            {
+                                AllModules.Add(item);
+                            }
+
+                            return;
                         }
 
-                        return;
-                    }
-
-                    for (int i = 0; i < sortedItems.Count; i++)
-                    {
-                        var currentItem = sortedItems[i];
-                        var currentIndex = AllModules.IndexOf(currentItem);
-
-                        if (currentIndex != -1 && currentIndex != i)
+                        for (int i = 0; i < sortedItems.Count; i++)
                         {
-                            AllModules.Move(currentIndex, i);
+                            var currentItem = sortedItems[i];
+                            var currentIndex = AllModules.IndexOf(currentItem);
+
+                            if (currentIndex != -1 && currentIndex != i)
+                            {
+                                AllModules.Move(currentIndex, i);
+                            }
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError($"SortModuleList failed: {ex.Message}", ex);
+                    }
+                    finally
+                    {
+                        isSorting = false;
+                    }
                 }
-                finally
-                {
-                    RunOnUiThread(() => isSorting = false);
-                }
-            }
+            });
         }
 
         private void RefreshModuleList()
@@ -243,8 +255,15 @@ namespace Kit.Settings.UI.ViewModels
 
                 if (DashboardSortOrder == DashboardSortOrder.ByStatus)
                 {
-                    SortModuleList();
+                    dispatcher?.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                    {
+                        SortModuleList();
+                    });
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to update module status for {dashboardListItem.Tag}: {ex.Message}", ex);
             }
             finally
             {

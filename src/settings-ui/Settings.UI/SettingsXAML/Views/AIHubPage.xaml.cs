@@ -38,6 +38,20 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility IsTaskPoliciesTab(int index) => index == 2 ? Visibility.Visible : Visibility.Collapsed;
 
+    // Tabs are realized on first visit and then kept, so opening the page only builds the
+    // active tab instead of all three.
+    private readonly bool[] _realizedTabs = new bool[3];
+
+    public bool IsTabRealized(int tab, int activeIndex)
+    {
+        if (tab == activeIndex && tab >= 0 && tab < _realizedTabs.Length)
+        {
+            _realizedTabs[tab] = true;
+        }
+
+        return tab >= 0 && tab < _realizedTabs.Length && _realizedTabs[tab];
+    }
+
     public void RefreshEnabledState()
     {
         ViewModel.RefreshEnabledState();

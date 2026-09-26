@@ -18,6 +18,15 @@
 
 namespace
 {
+    std::wstring normalize_module_name(std::wstring_view name)
+    {
+        if (name == L"AiHub")
+        {
+            return L"AIHub";
+        }
+        return std::wstring{ name };
+    }
+
     json::JsonValue create_empty_shortcut_array_value()
     {
         return json::JsonValue::Parse(L"[]");
@@ -72,7 +81,6 @@ static bool run_as_elevated = false;
 static bool show_new_updates_toast_notification = false;
 static bool download_updates_automatically = false;
 static bool show_whats_new_after_updates = false;
-static bool enable_experimentation = false;
 static bool enable_warnings_elevated_apps = true;
 static bool enable_quick_access = false;
 static PowerToysSettings::HotkeyObject quick_access_shortcut;
@@ -106,7 +114,6 @@ json::JsonObject GeneralSettings::to_json()
     result.SetNamedValue(L"show_new_updates_toast_notification", json::value(showNewUpdatesToastNotification));
     result.SetNamedValue(L"download_updates_automatically", json::value(downloadUpdatesAutomatically));
     result.SetNamedValue(L"show_whats_new_after_updates", json::value(showWhatsNewAfterUpdates));
-    result.SetNamedValue(L"enable_experimentation", json::value(enableExperimentation));
     result.SetNamedValue(L"dashboard_sort_order", json::value(static_cast<int>(dashboardSortOrder)));
     result.SetNamedValue(L"is_admin", json::value(isAdmin));
     result.SetNamedValue(L"enable_warnings_elevated_apps", json::value(enableWarningsElevatedApps));
@@ -135,7 +142,6 @@ json::JsonObject load_general_settings()
     show_new_updates_toast_notification = loaded.GetNamedBoolean(L"show_new_updates_toast_notification", false);
     download_updates_automatically = loaded.GetNamedBoolean(L"download_updates_automatically", false) && check_user_is_admin();
     show_whats_new_after_updates = loaded.GetNamedBoolean(L"show_whats_new_after_updates", false);
-    enable_experimentation = loaded.GetNamedBoolean(L"enable_experimentation", false);
     enable_warnings_elevated_apps = loaded.GetNamedBoolean(L"enable_warnings_elevated_apps", true);
     enable_quick_access = loaded.GetNamedBoolean(L"enable_quick_access", false);
     if (json::has(loaded, L"quick_access_shortcut", json::JsonValueType::Object))
@@ -174,8 +180,7 @@ GeneralSettings get_general_settings()
         .showNewUpdatesToastNotification = show_new_updates_toast_notification,
         .downloadUpdatesAutomatically = download_updates_automatically && is_user_admin,
         .showWhatsNewAfterUpdates = show_whats_new_after_updates,
-        .enableExperimentation = enable_experimentation,
-    .dashboardSortOrder = dashboard_sort_order,
+        .dashboardSortOrder = dashboard_sort_order,
         .theme = settings_theme,
         .systemTheme = WindowsColors::is_dark_mode() ? L"dark" : L"light",
         .powerToysVersion = get_product_version(),
@@ -214,7 +219,7 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
         return;
     }
 
-    const std::wstring name{ element.Key().c_str() };
+    const std::wstring name = normalize_module_name(element.Key().c_str());
     if (modules().find(name) == modules().end())
     {
         Logger::warn(L"apply_module_status_update: Module {} not found", name);
@@ -321,7 +326,6 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     download_updates_automatically = general_configs.GetNamedBoolean(L"download_updates_automatically", false);
         show_whats_new_after_updates = general_configs.GetNamedBoolean(L"show_whats_new_after_updates", false);
 
-    enable_experimentation = general_configs.GetNamedBoolean(L"enable_experimentation", false);
     dashboard_sort_order = parse_dashboard_sort_order(general_configs, dashboard_sort_order);
 
     if (json::has(general_configs, L"startup", json::JsonValueType::Boolean) &&
@@ -344,7 +348,7 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
             {
                 continue;
             }
-            const std::wstring name{ enabled_element.Key().c_str() };
+            const std::wstring name = normalize_module_name(enabled_element.Key().c_str());
             const bool found = modules().find(name) != modules().end();
             if (!found)
             {
@@ -444,7 +448,7 @@ void start_enabled_kit_modules(const json::JsonObject& general_settings)
             json::JsonObject enabled = general_settings.GetNamedObject(L"enabled");
             for (const auto& disabled_element : enabled)
             {
-                std::wstring disable_module_name{ static_cast<std::wstring_view>(disabled_element.Key()) };
+                std::wstring disable_module_name = normalize_module_name(static_cast<std::wstring_view>(disabled_element.Key()));
 
                 // Disable explicitly disabled modules
                 if (!disabled_element.Value().GetBoolean())

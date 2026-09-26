@@ -113,18 +113,24 @@ internal sealed class AiHubStorageFiles
         string? component = Path.GetFullPath(fullPath);
         while (!string.IsNullOrEmpty(component))
         {
-            try
+            // Probe existence first: missing components are the normal case (e.g. the
+            // transaction journal) and throwing/catching for them floods first-chance
+            // exception handlers during startup.
+            if (File.Exists(component) || Directory.Exists(component))
             {
-                if ((File.GetAttributes(component) & FileAttributes.ReparsePoint) != 0)
+                try
                 {
-                    throw new IOException("AI Hub paths must not contain reparse points.");
+                    if ((File.GetAttributes(component) & FileAttributes.ReparsePoint) != 0)
+                    {
+                        throw new IOException("AI Hub paths must not contain reparse points.");
+                    }
                 }
-            }
-            catch (FileNotFoundException)
-            {
-            }
-            catch (DirectoryNotFoundException)
-            {
+                catch (FileNotFoundException)
+                {
+                }
+                catch (DirectoryNotFoundException)
+                {
+                }
             }
 
             component = Path.GetDirectoryName(component);
@@ -134,6 +140,11 @@ internal sealed class AiHubStorageFiles
     internal static byte[]? ReadOptionalFile(string path, int maximumBytes)
     {
         EnsureNoReparsePoints(path);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
         try
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);

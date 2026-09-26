@@ -25,7 +25,6 @@ struct GeneralSettings
     bool showNewUpdatesToastNotification;
     bool downloadUpdatesAutomatically;
     bool showWhatsNewAfterUpdates;
-    bool enableExperimentation;
     DashboardSortOrder dashboardSortOrder;
     std::wstring theme;
     std::wstring systemTheme;

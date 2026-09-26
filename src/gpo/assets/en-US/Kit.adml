@@ -38,12 +38,6 @@ If enabled, the release notes window is not shown automatically.
 
 If disabled or not configured, the user can control this in settings.
 </string>
-      <string id="AllowExperimentationDescription">This policy configures whether experimentation is allowed.
-
-If enabled or not configured, the user can control experimentation in settings.
-
-If disabled, experimentation is not allowed.
-</string>
       <string id="AllowDiagnosticDataDescription">This policy configures whether sending diagnostic data is allowed.
 
 If enabled or not configured, the user can control diagnostic data sending in settings.
@@ -64,7 +58,6 @@ If you do not configure this setting, users can enable or disable run at startup
       <string id="DisableAutomaticUpdateDownload">Disable automatic downloads</string>
       <string id="DisableNewUpdateToast">Disable Action Center notification for new updates</string>
       <string id="DoNotShowWhatsNewAfterUpdates">Do not show release notes after updates</string>
-      <string id="AllowExperimentation">Allow Experimentation</string>
       <string id="AllowDiagnosticData">Allow sending diagnostic data</string>
       <string id="ConfigureRunAtStartup">Configure the run at startup setting</string>
     </stringTable>

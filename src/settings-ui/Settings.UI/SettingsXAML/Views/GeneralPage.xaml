@@ -222,7 +222,7 @@
                         Opacity="{x:Bind ViewModel.AiServices.IsEnabled, Mode=OneWay, Converter={StaticResource BoolToDisabledOpacityConverter}}"
                         IsTabStop="False"
                         HorizontalContentAlignment="Stretch">
-                <StackPanel Spacing="8" Margin="0,4,0,0"
+                <StackPanel Spacing="{StaticResource SettingsCardSpacing}"
                             Visibility="{x:Bind ViewModel.AiServices.HubContentVisibility, Mode=OneWay}">
     
                     <InfoBar
@@ -239,7 +239,7 @@
                         HeaderIcon="{ui:FontIcon Glyph=&#xEDA3;}"
                         IsExpanded="False">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <ComboBox Width="160"
+                            <ComboBox MinWidth="{StaticResource SettingActionControlMinWidth}"
                                       SelectedIndex="{x:Bind ViewModel.AiServices.PendingKernelIndex, Mode=TwoWay}"
                                       IsEnabled="{x:Bind ViewModel.AiServices.CanEdit, Mode=OneWay}">
                                 <ComboBoxItem x:Uid="AIHub_KernelCodexItem" Content="Codex CLI" />
@@ -283,7 +283,7 @@
                     <!-- Service self-test. Distinguishes a broken service from a broken
                          plugin: if this passes, the engine, policy, kernel and validation
                          all work, so the problem lies in the calling plugin. -->
-                    <tkcontrols:SettingsCard x:Uid="AiHub_SelfTestCard" Header="Service self-test"
+                    <tkcontrols:SettingsCard x:Uid="AiHub_SelfTestCard" Header="Service self-test" HeaderIcon="{ui:FontIcon Glyph=&#xE9D9;}"
                                              Description="Runs a probe through the whole pipeline to verify the service independently of any plugin.">
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                             <ProgressRing IsActive="{x:Bind ViewModel.AiServices.IsSelfTesting, Mode=OneWay}" Width="16" Height="16" />
@@ -294,7 +294,7 @@
                     </tkcontrols:SettingsCard>
 
                     <TextBlock Text="{x:Bind ViewModel.AiServices.SelfTestStatusText, Mode=OneWay}"
-                               Margin="0,-4,0,0" FontSize="12" TextWrapping="Wrap"
+                               Margin="16,4,16,4" FontSize="12" TextWrapping="Wrap"
                                Visibility="{x:Bind ViewModel.AiServices.IsSelfTesting, Mode=OneWay}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
     
@@ -303,6 +303,7 @@
                         x:Name="AiMainEndpointExpander"
                         x:Uid="AiHub_MainEndpointExpander"
                         Header="Main endpoint"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE774;}"
                         IsExpanded="False">
                         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                             <TextBlock Text="{x:Bind ViewModel.AiServices.MainEndpoint.ModelSummary, Mode=OneWay}"
@@ -344,6 +345,7 @@
                         x:Name="AiFallbackEndpointExpander"
                         x:Uid="AiHub_FallbackEndpointExpander"
                         Header="Fallback endpoint"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE8EE;}"
                         IsExpanded="False">
                         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                             <TextBlock Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.ModelSummary, Mode=OneWay}"
@@ -495,20 +497,6 @@
                     </tkcontrols:SettingsExpander>
                 </controls:SettingsGroup>
 
-
-                <controls:SettingsGroup x:Uid="General_Experimentation" Visibility="Visible">
-                    <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsExperimentationGpoDisallowed, Mode=OneWay}">
-                        <tkcontrols:SettingsCard x:Name="GeneralPageEnableExperimentation" x:Uid="GeneralPage_EnableExperimentation">
-                            <tkcontrols:SettingsCard.HeaderIcon>
-                                <PathIcon Data="M1859 1758q14 23 21 47t7 51q0 40-15 75t-41 61-61 41-75 15H354q-40 0-75-15t-61-41-41-61-15-75q0-27 6-51t21-47l569-992q10-14 10-34V128H640V0h768v128h-128v604q0 19 10 35l569 991zM896 732q0 53-27 99l-331 577h972l-331-577q-27-46-27-99V128H896v604zm799 1188q26 0 44-19t19-45q0-10-2-17t-8-16l-164-287H464l-165 287q-9 15-9 33 0 26 18 45t46 19h1341z" />
-                            </tkcontrols:SettingsCard.HeaderIcon>
-                            <ToggleSwitch
-                                x:Uid="ToggleSwitch"
-                                AutomationProperties.Name="{Binding ElementName=GeneralPageEnableExperimentation, Path=Header}"
-                                IsOn="{x:Bind ViewModel.EnableExperimentation, Mode=TwoWay}" />
-                        </tkcontrols:SettingsCard>
-                    </controls:GPOInfoControl>
-                </controls:SettingsGroup>
 
                 <controls:SettingsGroup x:Uid="General_SettingsBackupAndRestoreTitle" Visibility="Visible">
                     <tkcontrols:SettingsExpander

@@ -1060,16 +1060,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="TextExtractor_Languages.Header" xml:space="preserve">
     <value>Preferred language</value>
   </data>
-  <data name="General_Experimentation.Header" xml:space="preserve">
-    <value>Experimentation</value>
-  </data>
-  <data name="GeneralPage_EnableExperimentation.Description" xml:space="preserve">
-    <value>Only Windows Insider builds may be selected for experimentation</value>
-    <comment>{Locked="Windows Insider"}</comment>
-  </data>
-  <data name="GeneralPage_EnableExperimentation.Header" xml:space="preserve">
-    <value>Allow experimentation with new features</value>
-  </data>
   <data name="General_DiagnosticsAndFeedback.Header" xml:space="preserve">
     <value>Diagnostics &amp; feedback</value>
   </data>

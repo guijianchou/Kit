@@ -63,22 +63,18 @@ namespace Kit.Settings.UI.Library.Helpers
                 case ModuleType.UDPtest: generalSettingsConfig.Enabled.UDPtest = isEnabled; break;
                 case ModuleType.AIHub:
                     generalSettingsConfig.Enabled.AiHub = isEnabled;
-                    new AiHubSettingsStore().Update(config => config.IsEnabled = isEnabled);
-                    AiHubEngine.RaiseStateChanged();
+                    try
+                    {
+                        new AiHubSettingsStore().Update(config => config.IsEnabled = isEnabled);
+                        AiHubEngine.RaiseStateChanged();
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Logger.LogError("Failed to persist the AI Hub enabled state", ex);
+                    }
+
                     break;
                 case ModuleType.GeneralSettings: generalSettingsConfig.EnableQuickAccess = isEnabled; break;
-            }
-        }
-
-        private static bool GetAiHubEnabled()
-        {
-            try
-            {
-                return new AiHubSettingsStore().Load().IsEnabled;
-            }
-            catch (System.Exception)
-            {
-                return false;
             }
         }
 

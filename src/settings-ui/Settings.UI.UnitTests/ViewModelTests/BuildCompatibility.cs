@@ -1094,7 +1094,6 @@ namespace ViewModelTests
                 "GetDisableAutomaticUpdateDownloadValue",
                 "GetDisableNewUpdateToastValue",
                 "GetDisableShowWhatsNewAfterUpdatesValue",
-                "GetAllowExperimentationValue",
                 "GetAllowDataDiagnosticsValue",
                 "GetConfiguredRunAtStartupValue",
             };
@@ -1713,7 +1712,6 @@ namespace ViewModelTests
                 "DisableAutomaticUpdateDownload",
                 "DisableNewUpdateToast",
                 "DoNotShowWhatsNewAfterUpdates",
-                "AllowExperimentation",
                 "AllowDiagnosticData",
                 "ConfigureRunAtStartup",
             })
@@ -3061,7 +3059,6 @@ namespace ViewModelTests
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestore");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreLocationText");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreStatusInfo");
-            AssertUsesXName(generalPage, "GeneralPageEnableExperimentation");
         }
 
         [TestMethod]

@@ -202,7 +202,7 @@
                             <!-- ============================================================== -->
                             <!-- TAB 1: SECURITY AUDIT (1:1 MATCHING DASHBOARD)                 -->
                             <!-- ============================================================== -->
-                            <StackPanel Spacing="16" Visibility="{x:Bind IsAuditTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
+                            <StackPanel x:Name="AuditTabPanel" x:Load="{x:Bind IsTabRealized(0, ViewModel.ActiveTabIndex), Mode=OneWay}" Spacing="16" Visibility="{x:Bind IsAuditTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
                                 <!-- Header: Title, ScopeHint badge, and Scan actions -->
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" Padding="0,4,0,0">
                                     <StackPanel Spacing="4" VerticalAlignment="Center">
@@ -546,7 +546,7 @@
                             <!-- ============================================================== -->
                             <!-- TAB 2: OPTIMIZATION (1:1 MATCHING SCREENSHOT)                  -->
                             <!-- ============================================================== -->
-                            <StackPanel Spacing="16" Visibility="{x:Bind IsOptTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
+                            <StackPanel x:Name="OptimizationTabPanel" x:Load="{x:Bind IsTabRealized(1, ViewModel.ActiveTabIndex), Mode=OneWay}" Spacing="16" Visibility="{x:Bind IsOptTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
                                 <!-- Optimization Header & Scan all button -->
                                 <tkcontrols:SettingsCard Header="{x:Bind ViewModel.OptimizationTabLabel, Mode=OneWay}"
                                                          Description="{x:Bind ViewModel.OptimizationDescription, Mode=OneWay}">
@@ -819,7 +819,7 @@
                             <!-- ============================================================== -->
                             <!-- TAB 3: TASK POLICIES (per-chain AGENTS.md)                     -->
                             <!-- ============================================================== -->
-                            <StackPanel Spacing="16" Visibility="{x:Bind IsTaskPoliciesTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
+                            <StackPanel x:Name="TaskPoliciesTabPanel" x:Load="{x:Bind IsTabRealized(2, ViewModel.ActiveTabIndex), Mode=OneWay}" Spacing="16" Visibility="{x:Bind IsTaskPoliciesTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
                                 <tkcontrols:SettingsCard Header="{x:Bind ViewModel.TaskPolicyTitle, Mode=OneWay}"
                                                          Description="{x:Bind ViewModel.TaskPolicyDescription, Mode=OneWay}"
                                                          HeaderIcon="{ui:FontIcon Glyph=&#xE8A5;}"

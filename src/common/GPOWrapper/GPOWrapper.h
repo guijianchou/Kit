@@ -12,6 +12,7 @@ namespace winrt::Kit::GPOWrapper::implementation
         static GpoRuleConfigured GetDisableNewUpdateToastValue();
         static GpoRuleConfigured GetDisableAutomaticUpdateDownloadValue();
         static GpoRuleConfigured GetDisableShowWhatsNewAfterUpdatesValue();
+        static GpoRuleConfigured GetAllowExperimentationValue();
         static GpoRuleConfigured GetAllowDataDiagnosticsValue();
         static GpoRuleConfigured GetConfiguredRunAtStartupValue();
     };

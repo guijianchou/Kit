@@ -175,21 +175,6 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         chdir_current_executable();
         log_timing("Chdir");
 
-        // Launch Settings before loading the module DLLs: its cold start (WinUI/.NET)
-        // dominates the perceived launch time, and it only needs the runner's message
-        // loop later, so the two can overlap. IPC that arrives early is queued on the
-        // tray window and handled once run_message_loop() starts.
-        if (openSettings)
-        {
-            std::optional<std::wstring> window;
-            if (!settingsWindow.empty())
-            {
-                window = winrt::to_hstring(settingsWindow);
-            }
-            open_settings_window(window);
-            log_timing("Settings Launch Requested");
-        }
-
         // Load Kit module DLLs
 
         for (auto moduleSubdir : KitKnownModules)
@@ -233,6 +218,16 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         Logger::info("STARTUP_TIMING: Runner initialization since WinMain: {}ms",
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - start_time).count());
+
+        if (openSettings)
+        {
+            std::optional<std::wstring> window;
+            if (!settingsWindow.empty())
+            {
+                window = winrt::to_hstring(settingsWindow);
+            }
+            open_settings_window(window);
+        }
 
         result = run_message_loop();
     }
@@ -366,7 +361,12 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         break;
     }
 
+    std::filesystem::path logFilePath(PTSettingsHelper::get_root_save_folder_location());
+    logFilePath.append(LogSettings::runnerLogPath);
+    Logger::init(LogSettings::runnerLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
+
     const std::string cmdLine{ lpCmdLine };
+    Logger::info("Running Kit with cmd args: {}", cmdLine);
 
     const bool is_autorun = (cmdLine.find("--autorun") != std::string::npos) ||
                             (cmdLine.find("--silent") != std::string::npos) ||
@@ -385,21 +385,12 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     }
 
     // Check if another instance is already running.
-    // This MUST happen before Logger::init to avoid the "Logger cannot be initialized"
-    // modal error caused by spdlog failing to exclusively open the log file that the
-    // first instance already holds.
     wil::unique_mutex_nothrow msi_mutex = create_msi_mutex();
     if (!msi_mutex)
     {
         open_menu_from_another_instance(settings_window);
         return 0;
     }
-
-    std::filesystem::path logFilePath(PTSettingsHelper::get_root_save_folder_location());
-    logFilePath.append(LogSettings::runnerLogPath);
-    Logger::init(LogSettings::runnerLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
-
-    Logger::info("Running Kit with cmd args: {}", cmdLine);
 
     int result = 0;
     try

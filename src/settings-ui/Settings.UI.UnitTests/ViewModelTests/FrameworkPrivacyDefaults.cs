@@ -326,9 +326,11 @@ namespace ViewModelTests
 
             StringAssert.Contains(generalSettings, "static bool show_new_updates_toast_notification = false;");
             StringAssert.Contains(generalSettings, "static bool download_updates_automatically = false;");
+            StringAssert.Contains(generalSettings, "static bool enable_experimentation = false;");
             StringAssert.Contains(generalSettings, "GetNamedBoolean(L\"show_new_updates_toast_notification\", false)");
             StringAssert.Contains(generalSettings, "GetNamedBoolean(L\"download_updates_automatically\", false)");
-            Assert.IsFalse(generalSettingsModel.Contains("EnableExperimentation", StringComparison.Ordinal));
+            StringAssert.Contains(generalSettings, "GetNamedBoolean(L\"enable_experimentation\", false)");
+            StringAssert.Contains(generalSettingsModel, "EnableExperimentation = false;");
         }
 
         [TestMethod]

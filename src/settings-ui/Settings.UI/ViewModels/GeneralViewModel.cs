@@ -168,6 +168,7 @@ namespace Kit.Settings.UI.ViewModels
             GeneralSettingsConfig.ShowNewUpdatesToastNotification = false;
             GeneralSettingsConfig.AutoDownloadUpdates = false;
             GeneralSettingsConfig.ShowWhatsNewAfterUpdates = false;
+            _enableExperimentation = GeneralSettingsConfig.EnableExperimentation;
             _enableLogging = GeneralSettingsConfig.EnableLogging;
             _logLevelIndex = LogLevelToIndex(GeneralSettingsConfig.LogLevel);
             SyncLogSettingsFile();
@@ -194,6 +195,7 @@ namespace Kit.Settings.UI.ViewModels
 
             _newUpdatesToastIsGpoDisabled = GPOWrapper.GetDisableNewUpdateToastValue() == GpoRuleConfigured.Enabled;
             _autoDownloadUpdatesIsGpoDisabled = GPOWrapper.GetDisableAutomaticUpdateDownloadValue() == GpoRuleConfigured.Enabled;
+            _experimentationIsGpoDisallowed = GPOWrapper.GetAllowExperimentationValue() == GpoRuleConfigured.Disabled;
             _showWhatsNewAfterUpdatesIsGpoDisabled = GPOWrapper.GetDisableShowWhatsNewAfterUpdatesValue() == GpoRuleConfigured.Enabled;
             _enableDataDiagnosticsIsGpoDisallowed = GPOWrapper.GetAllowDataDiagnosticsValue() == GpoRuleConfigured.Disabled;
 
@@ -234,6 +236,8 @@ namespace Kit.Settings.UI.ViewModels
         private bool _newUpdatesToastIsGpoDisabled;
         private bool _autoDownloadUpdatesIsGpoDisabled;
         private bool _showWhatsNewAfterUpdatesIsGpoDisabled;
+        private bool _enableExperimentation;
+        private bool _experimentationIsGpoDisallowed;
         private bool _enableDataDiagnosticsIsGpoDisallowed;
         private bool _viewDiagnosticDataViewerChanged;
 
@@ -534,6 +538,24 @@ namespace Kit.Settings.UI.ViewModels
             get => false;
         }
 
+        public bool EnableExperimentation
+        {
+            get
+            {
+                return _enableExperimentation && !_experimentationIsGpoDisallowed;
+            }
+
+            set
+            {
+                if (_enableExperimentation != value)
+                {
+                    _enableExperimentation = value;
+                    GeneralSettingsConfig.EnableExperimentation = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         public bool EnableDataDiagnostics
         {
             get
@@ -562,6 +584,11 @@ namespace Kit.Settings.UI.ViewModels
             {
                 _viewDiagnosticDataViewerChanged = false;
             }
+        }
+
+        public bool IsExperimentationGpoDisallowed
+        {
+            get => _experimentationIsGpoDisallowed;
         }
 
         public bool IsDataDiagnosticsGPOManaged

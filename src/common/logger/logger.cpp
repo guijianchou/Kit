@@ -80,12 +80,18 @@ void Logger::init(std::string loggerName, std::wstring logFilePath, std::wstring
     }
     catch (...)
     {
-        // Silently fall back to a null logger so the application can continue
-        // without blocking on a modal dialog.  The most common cause is a second
-        // instance trying to exclusively open a log file that is already locked
-        // by the first instance — the mutex check in main.cpp should prevent
-        // this, but we keep the fallback as a safety net.
         logger = spdlog::null_logger_mt(loggerName);
+        if (!wasLogFailedShown())
+        {
+            // todo: that message should be shown from init caller and strings should be localized
+            MessageBoxW(NULL,
+                        L"Logger cannot be initialized",
+                        L"PowerToys",
+                        MB_OK | MB_ICONERROR);
+
+            SetEnvironmentVariable(logFailedShown.c_str(), L"yes");
+        }
+
         return;
     }
 

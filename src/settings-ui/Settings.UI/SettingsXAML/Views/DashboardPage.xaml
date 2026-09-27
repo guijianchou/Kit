@@ -34,61 +34,35 @@
             AutomationProperties.HeadingLevel="1"
             Style="{StaticResource TitleTextBlockStyle}" />
 
-        <!--  Header: product card (opens General) on the left, shortcut-conflict status on the right, as in PowerToys. Kit keeps update checks on General only.  -->
         <Grid
             Grid.Row="1"
             MaxWidth="{StaticResource PageMaxWidth}"
-            Padding="0,0,20,0"
-            ColumnSpacing="16">
+            Margin="1,0,20,0"
+            RowSpacing="16">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <Button
-                x:Name="DashboardProductButton"
-                Padding="0,0,8,0"
+            <Border
+                MaxWidth="160"
+                Margin="0,0,16,0"
                 HorizontalAlignment="Left"
-                AutomationProperties.AutomationId="DashboardProductButton"
-                Click="ProductButton_Click"
-                Style="{StaticResource SubtleButtonStyle}">
-                <Grid ColumnSpacing="16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid CornerRadius="{StaticResource OverlayCornerRadius}">
-                        <Image
-                            Width="120"
-                            AutomationProperties.AccessibilityView="Raw"
-                            Source="ms-appx:///Assets/Settings/Modules/PT.png" />
-                    </Grid>
-                    <StackPanel
-                        x:Name="DashboardDescriptionPanel"
-                        Grid.Column="1"
-                        MaxWidth="420"
-                        VerticalAlignment="Center"
-                        Orientation="Vertical"
-                        Spacing="2">
-                        <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}" />
-                        <TextBlock
-                            x:Uid="DashboardIntro"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            TextWrapping="WrapWholeWords" />
-                    </StackPanel>
-                </Grid>
-            </Button>
-            <StackPanel
-                x:Name="TopButtonPanel"
-                Grid.Column="1"
-                VerticalAlignment="Center"
-                Orientation="Horizontal"
-                Spacing="16">
-                <controls:ShortcutConflictControl AllHotkeyConflictsData="{x:Bind ViewModel.AllHotkeyConflictsData, Mode=OneWay}" />
+                VerticalAlignment="Top"
+                CornerRadius="{StaticResource OverlayCornerRadius}">
+                <Image
+                    AutomationProperties.AccessibilityView="Raw"
+                    Source="ms-appx:///Assets/Settings/Modules/PT.png" />
+            </Border>
+
+            <StackPanel x:Name="DashboardDescriptionPanel" Grid.Column="1">
+                <TextBlock
+                    x:Uid="DashboardIntro"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="WrapWholeWords" />
             </StackPanel>
         </Grid>
 
@@ -181,9 +155,9 @@
                         <AdaptiveTrigger MinWindowWidth="0" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="TopButtonPanel.(Grid.Row)" Value="1" />
-                        <Setter Target="TopButtonPanel.(Grid.Column)" Value="0" />
-                        <Setter Target="TopButtonPanel.Margin" Value="0,16,0,0" />
+                        <Setter Target="DashboardDescriptionPanel.(Grid.Row)" Value="1" />
+                        <Setter Target="DashboardDescriptionPanel.(Grid.Column)" Value="0" />
+                        <Setter Target="DashboardDescriptionPanel.(Grid.ColumnSpan)" Value="2" />
                         <Setter Target="UtilitiesCard.(Grid.Column)" Value="0" />
                         <Setter Target="UtilitiesCard.(Grid.Row)" Value="1" />
                     </VisualState.Setters>

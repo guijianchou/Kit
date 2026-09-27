@@ -216,12 +216,6 @@ namespace Kit.Settings.UI
                 App.IPCMessageReceivedCallback = null;
                 shellPage.Dispose();
                 App.ClearSettingsWindow();
-
-                // The runner owns the exit policy: settings_window.cpp ends the runner
-                // only when the last Settings window closes while the tray icon is
-                // hidden (showSystemTrayIcon == false). Posting WM_CLOSE from here would
-                // also kill a runner that is deliberately kept alive in the tray, so
-                // closing Settings must not request shutdown on its own.
             }
             else
             {

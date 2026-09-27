@@ -82,7 +82,21 @@ namespace Kit.Settings.UI
             InitializeComponent();
 
             UnhandledException += App_UnhandledException;
-
+            AppDomain.CurrentDomain.FirstChanceException += (_, args) =>
+            {
+                var ex = args.Exception;
+                if (ex != null && !(ex is System.IO.FileNotFoundException fnf && fnf.FileName != null && fnf.FileName.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase)))
+                {
+                    try
+                    {
+                        string crashFile = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "Kit", "crash.log");
+                        System.IO.File.AppendAllText(crashFile, $"[FirstChance {System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {ex.GetType().FullName}: {ex.Message}\n{ex.StackTrace}\n\n");
+                    }
+                    catch
+                    {
+                    }
+                }
+            };
             AppDomain.CurrentDomain.ProcessExit += (_, _) => AiHubIpcBridge.Shutdown();
 
             NativeEventWaiter.WaitForEventLoop(

@@ -1094,6 +1094,7 @@ namespace ViewModelTests
                 "GetDisableAutomaticUpdateDownloadValue",
                 "GetDisableNewUpdateToastValue",
                 "GetDisableShowWhatsNewAfterUpdatesValue",
+                "GetAllowExperimentationValue",
                 "GetAllowDataDiagnosticsValue",
                 "GetConfiguredRunAtStartupValue",
             };
@@ -1214,7 +1215,7 @@ namespace ViewModelTests
             var cleanup = settingsWindow[settingsWindow.IndexOf("\nLExit:\n", StringComparison.Ordinal)..settingsWindow.IndexOf("#define MAX_TITLE_LENGTH", StringComparison.Ordinal)];
             StringAssert.Contains(cleanup, "g_settings_process_id = 0;");
             StringAssert.Contains(cleanup, "g_isLaunchInProgress = false;");
-            StringAssert.Contains(cleanup, "if (settings_process_closed && !get_general_settings().showSystemTrayIcon)");
+            Assert.IsFalse(cleanup.Contains("WM_CLOSE", StringComparison.Ordinal), "Settings failure cleanup must not request Runner shutdown.");
         }
 
         [TestMethod]
@@ -1712,6 +1713,7 @@ namespace ViewModelTests
                 "DisableAutomaticUpdateDownload",
                 "DisableNewUpdateToast",
                 "DoNotShowWhatsNewAfterUpdates",
+                "AllowExperimentation",
                 "AllowDiagnosticData",
                 "ConfigureRunAtStartup",
             })
@@ -3059,6 +3061,7 @@ namespace ViewModelTests
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestore");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreLocationText");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreStatusInfo");
+            AssertUsesXName(generalPage, "GeneralPageEnableExperimentation");
         }
 
         [TestMethod]

@@ -71,6 +71,16 @@
         <decimal value="0" />
       </disabledValue>
     </policy>
+    <policy name="AllowExperimentation" class="Both" displayName="$(string.AllowExperimentation)" explainText="$(string.AllowExperimentationDescription)" key="Software\Policies\Kit" valueName="AllowExperimentation">
+      <parentCategory ref="GeneralSettings" />
+      <supportedOn ref="SUPPORTED_KIT_2_0_7" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
     <policy name="AllowDiagnosticData" class="Both" displayName="$(string.AllowDiagnosticData)" explainText="$(string.AllowDiagnosticDataDescription)" key="Software\Policies\Kit" valueName="AllowDataDiagnostics">
       <parentCategory ref="GeneralSettings" />
       <supportedOn ref="SUPPORTED_KIT_2_0_7" />

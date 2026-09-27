@@ -38,17 +38,7 @@ $excludedRootFiles = @(
     'Kit.Settings.exe', 'Kit.Settings.deps.json', 'Kit.Settings.runtimeconfig.json',
     'Kit.QuickAccess.exe', 'Kit.QuickAccess.deps.json', 'Kit.QuickAccess.runtimeconfig.json'
 )
-$sourceZhCn = Join-Path $sourceRoot 'WinUI3Apps\zh-CN'
-if (-not (Test-Path -LiteralPath $sourceZhCn) -or @(Get-ChildItem -LiteralPath $sourceZhCn -File).Count -eq 0) {
-    $nugetPath = (Get-ChildItem -LiteralPath (Join-Path $env:USERPROFILE '.nuget\packages\microsoft.windowsappsdk.winui') -Recurse -Filter 'Microsoft.ui.xaml.dll.mui' -File |
-        Where-Object { $_.FullName -like "*win-x64*zh-CN*" } | Select-Object -Last 1).DirectoryName
-    if ($nugetPath -and (Test-Path -LiteralPath $nugetPath)) {
-        [IO.Directory]::CreateDirectory($sourceZhCn) | Out-Null
-        Get-ChildItem -LiteralPath $nugetPath -File | Copy-Item -Destination $sourceZhCn -Force
-    }
-}
 $excludedExtensions = @('.lib', '.exp', '.idb', '.ilk', '.obj', '.pch', '.tlog', '.lastcodeanalysissucceeded')
-
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Where-Object {
     $relative = [IO.Path]::GetRelativePath($sourceRoot, $_.FullName)
     $include = $relative -notmatch '^(tests|LightSwitchLib)[\\/]'

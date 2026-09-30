@@ -2,6 +2,20 @@
 
 This note captures the lessons from turning the PowerToys-derived Kit shell into a stable local workspace.
 
+## 2026-09-28 Version 2.3.3 Utilities State Sync Regression Coverage
+
+- Added regression coverage for the full PowerToys `module_status` round trip, including the Runner's actual `is_enabled()` snapshot, Settings repository notification, partial-state merge behavior, and Dashboard refresh wiring.
+- Expanded enabled-state merge coverage across all five active modules and an unmodeled official module key. This preserves compatibility without adding plugin-specific lifecycle handling.
+- Removed PowerToys' Experimentation setting from General, its persisted JSON field, and its Settings-only GPO policy surface.
+- Bumped the app and sparse package identity to `2.3.3`; the prior runtime logs showed Runner `2.3.2` communicating with Settings and official module binaries at `2.3.0`, so testing must use the matching freshly built output set.
+
+## 2026-09-28 Version 2.3.2 Utilities Module State Synchronization
+
+- Kept the upstream PowerToys `module_status` IPC contract and native module `enable()` / `disable()` lifecycle. Runner now returns `get_all_settings()` after general or module-status updates; `general.enabled` is derived from each loaded module's `is_enabled()` result, and Settings merges that result into the shared repository before notifying the Dashboard.
+- Applied each module's native GPO policy consistently for single-module updates, full `general.enabled` updates, and startup. This keeps policy decisions in the module contract rather than adding Awake/Light Switch-specific UI behavior.
+- The enabled JSON converter now round-trips unmodeled boolean module keys, so adding another official PowerToys module does not erase its persisted state when Kit updates its active module settings.
+- Added a serialization/merge regression test for preserving inactive official-module state while accepting live Runner state. Updated README, developer architecture notes, changelog, and package version to `2.3.2`.
+
 ## 2026-09-17 Version 2.2.1 WinUI 3 Page Crash Fixes & Navigation Resilience
 
 This pass moves Kit to `2.2.1` following root cause debugging and permanent remediation of fail-fast crashes (`0xC000027B` / stowed exceptions) across Settings (General), UDP test, and AI Hub pages:

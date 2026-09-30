@@ -50,6 +50,8 @@ public sealed class AiHubEndpointViewModel : Observable
             {
                 Settings.BaseUrl = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(EndpointSummary));
+                OnEdited();
             }
         }
     }
@@ -63,6 +65,7 @@ public sealed class AiHubEndpointViewModel : Observable
             {
                 Settings.ApiKey = value;
                 OnPropertyChanged();
+                OnEdited();
             }
         }
     }
@@ -76,6 +79,7 @@ public sealed class AiHubEndpointViewModel : Observable
             {
                 Settings.Mode = value;
                 OnPropertyChanged();
+                OnEdited();
             }
         }
     }
@@ -90,6 +94,7 @@ public sealed class AiHubEndpointViewModel : Observable
                 Settings.Model = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ModelSummary));
+                OnEdited();
             }
         }
     }
@@ -104,13 +109,30 @@ public sealed class AiHubEndpointViewModel : Observable
                 Settings.Effort = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ModelSummary));
+                OnEdited();
             }
         }
     }
 
     public string ModelSummary => string.IsNullOrWhiteSpace(Settings.Model)
-        ? "(Not configured)"
+        ? (AiHubViewModel.IsChinese ? "未设置模型" : "No model set")
         : $"{Settings.Model} · {Settings.Effort}";
+
+    /// <summary>Host of the configured URL, so a collapsed card still shows where it points.</summary>
+    public string EndpointSummary
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Settings.BaseUrl))
+            {
+                return AiHubViewModel.IsChinese ? "未配置" : "Not configured";
+            }
+
+            return Uri.TryCreate(Settings.BaseUrl.Trim(), UriKind.Absolute, out Uri? uri) ? uri.Host : Settings.BaseUrl.Trim();
+        }
+    }
+
+    private void OnEdited() => _owner.MarkEndpointsEdited();
 
     public void NotifyUpdated()
     {
@@ -120,11 +142,15 @@ public sealed class AiHubEndpointViewModel : Observable
         OnPropertyChanged(nameof(Model));
         OnPropertyChanged(nameof(Effort));
         OnPropertyChanged(nameof(ModelSummary));
+        OnPropertyChanged(nameof(EndpointSummary));
     }
+
+    private readonly AiHubViewModel _owner;
 
     internal AiHubEndpointViewModel(AiTargetSettings settings, AiHubViewModel owner, bool fallback)
     {
         Settings = settings;
+        _owner = owner;
         Label = fallback ? "Fallback" : "Main";
         Description = fallback ? "Optional backup for eligible network and endpoint failures." : "Primary endpoint for new AI tasks.";
         FallbackVisibility = fallback ? Visibility.Visible : Visibility.Collapsed;
@@ -163,6 +189,9 @@ public sealed class AiHubViewModel : Observable, IDisposable
     private string _statusMessage = string.Empty;
     private InfoBarSeverity _statusSeverity;
     private bool _isStatusOpen;
+    private bool _hasUnsavedEndpointChanges;
+    private string _serviceStatusText = string.Empty;
+    private string _serviceStatusGlyph = "\uE9CE";
 
     public AiHubViewModel(DispatcherQueue? dispatcherQueue = null)
     {
@@ -194,7 +223,8 @@ public sealed class AiHubViewModel : Observable, IDisposable
         ApplyKernelSwitchCommand = new RelayCommand(() => StartOperation(ApplyKernelSwitchAsync), () => CanEdit && IsKernelSwitchPending);
         CheckKernelUpdatesCommand = new RelayCommand(() => StartOperation(CheckKernelUpdatesAsync), () => CanEdit);
         DownloadKernelCommand = new RelayCommand(() => StartOperation(DownloadKernelAsync), () => CanEdit);
-        SaveEndpointsCommand = new RelayCommand(SaveEndpoints, () => CanEdit);
+        SaveEndpointsCommand = new RelayCommand(SaveEndpoints, () => CanEdit && HasUnsavedEndpointChanges);
+        DiscardEndpointChangesCommand = new RelayCommand(DiscardEndpointChanges, () => CanEdit && HasUnsavedEndpointChanges);
         SaveCommand = new RelayCommand(() => StartOperation(SaveAllAsync), () => CanEdit);
         ClearFallbackCommand = new RelayCommand(ClearFallback, () => CanEdit);
         SavePolicyCommand = new RelayCommand(() => StartOperation(SavePolicyAsync), () => CanEdit && !string.IsNullOrWhiteSpace(SecurityPolicyContent));
@@ -205,7 +235,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         ResetOptimizationPolicyCommand = new RelayCommand(() => StartOperation(ResetOptimizationPolicyAsync), () => CanEdit);
         SelfTestCommand = new RelayCommand(
             () => StartOperation(RunSelfTestAsync),
-            () => CanRunSelfTest && IsEnabled);
+            () => CanEdit && CanRunSelfTest);
 
         SaveActivePolicyCommand = new RelayCommand(
             () =>
@@ -249,6 +279,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
 
         RefreshLocalKernelStatus();
+        RefreshServiceStatus();
         _ = InitializeAsync();
     }
 
@@ -354,7 +385,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
     public string SecurityPolicyPath => _securityService?.GlobalSecurityPolicyPath ?? string.Empty;
 
     /// <summary>Matches the UI language used across this view model.</summary>
-    private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+    internal static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     private int _activePolicyIndex;
     private string _selfTestStatusText = string.Empty;
@@ -546,6 +577,63 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     public ICommand SaveEndpointsCommand { get; }
 
+    public ICommand DiscardEndpointChangesCommand { get; }
+
+    /// <summary>
+    /// True when an endpoint field differs from what is on disk. Edits stay in memory until
+    /// saved, because the engine and other plugins read the persisted configuration only.
+    /// </summary>
+    public bool HasUnsavedEndpointChanges
+    {
+        get => _hasUnsavedEndpointChanges;
+        private set
+        {
+            if (Set(ref _hasUnsavedEndpointChanges, value))
+            {
+                ((RelayCommand)SaveEndpointsCommand).OnCanExecuteChanged();
+                ((RelayCommand)DiscardEndpointChangesCommand).OnCanExecuteChanged();
+            }
+        }
+    }
+
+    internal void MarkEndpointsEdited() => HasUnsavedEndpointChanges = true;
+
+    /// <summary>One-line summary of the service state: enabled, kernel, model and route readiness.</summary>
+    public string ServiceStatusText { get => _serviceStatusText; private set => Set(ref _serviceStatusText, value); }
+
+    public string ServiceStatusGlyph { get => _serviceStatusGlyph; private set => Set(ref _serviceStatusGlyph, value); }
+
+    /// <summary>Reads the cached readiness verdict. No probe or kernel process is started.</summary>
+    private void RefreshServiceStatus()
+    {
+        if (_engine is null)
+        {
+            ServiceStatusText = IsChinese ? "AI 服务不可用" : "AI service unavailable";
+            ServiceStatusGlyph = "\uEA39";
+            return;
+        }
+
+        try
+        {
+            AiReadiness readiness = AiHubEngine.Current.GetReadiness();
+            string kernelModel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
+                ? readiness.ActiveKernel
+                : $"{readiness.ActiveKernel} · {readiness.ActiveModel}";
+            (ServiceStatusGlyph, ServiceStatusText) = readiness.Level switch
+            {
+                AiReadinessLevel.Ready => ("\uE73E", IsChinese ? $"就绪 · {kernelModel}" : $"Ready · {kernelModel}"),
+                AiReadinessLevel.Degraded => ("\uE7BA", IsChinese ? $"主端点不可用，使用备用端点 · {readiness.Detail}" : $"Main route unavailable, using fallback · {readiness.Detail}"),
+                AiReadinessLevel.Unverified => ("\uE9CE", IsChinese ? $"已配置，尚未验证 · {kernelModel}" : $"Configured, not verified yet · {kernelModel}"),
+                AiReadinessLevel.NotConfigured => ("\uEA39", IsChinese ? $"未配置：{readiness.Detail}" : $"Not configured: {readiness.Detail}"),
+                _ => ("\uE711", IsChinese ? "已关闭，插件只执行规则检测" : "Off; plugins use rule-based checks only"),
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Could not read AI readiness state", ex);
+        }
+    }
+
     public ICommand SaveCommand { get; }
 
     public ICommand ClearFallbackCommand { get; }
@@ -598,16 +686,19 @@ public sealed class AiHubViewModel : Observable, IDisposable
                     ? $"自检失败：{outcome.ErrorMessage}"
                     : $"Self-test failed: {outcome.ErrorMessage}");
 
+            ShowStatus(SelfTestStatusText, outcome.Success ? InfoBarSeverity.Success : InfoBarSeverity.Error);
             Logger.LogInfo($"AI service self-test: {outcome.Summary}");
         }
         catch (Exception ex)
         {
             SelfTestStatusText = IsChinese ? $"自检异常：{ex.Message}" : $"Self-test error: {ex.Message}";
+            ShowStatus(SelfTestStatusText, InfoBarSeverity.Error);
             Logger.LogError("AI service self-test threw", ex);
         }
         finally
         {
             IsSelfTesting = false;
+            RefreshServiceStatus();
         }
     }
 
@@ -627,6 +718,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             if (Set(ref _isSelfTesting, value))
             {
                 OnPropertyChanged(nameof(CanRunSelfTest));
+                ((RelayCommand)SelfTestCommand).OnCanExecuteChanged();
             }
         }
     }
@@ -760,13 +852,59 @@ public sealed class AiHubViewModel : Observable, IDisposable
                 return;
             }
 
+            ActivateConfiguredEndpoints();
             _settingsStore.Update(config => config.Targets = new ObservableCollection<AiTargetSettings>(_config.Targets.Select(target => target.Clone())));
+            HasUnsavedEndpointChanges = false;
             AiHubEngine.RaiseStateChanged();
-            ShowStatus("Endpoints saved successfully.", InfoBarSeverity.Success);
+            ShowStatus(IsChinese ? "端点设置已保存。" : "Endpoint settings saved.", InfoBarSeverity.Success);
         }
         catch (Exception ex)
         {
-            ShowStatus($"Failed to save endpoints: {ex.Message}", InfoBarSeverity.Error);
+            ShowStatus((IsChinese ? "保存端点失败：" : "Failed to save endpoints: ") + ex.Message, InfoBarSeverity.Error);
+        }
+    }
+
+    /// <summary>
+    /// A fallback is only used while it is active, and nothing else in the UI activates it,
+    /// so a filled-in fallback URL counts as switching the fallback on.
+    /// </summary>
+    private void ActivateConfiguredEndpoints()
+    {
+        if (_config.GetFallbackTarget() is { } fallback)
+        {
+            fallback.IsActive = !string.IsNullOrWhiteSpace(fallback.BaseUrl);
+        }
+    }
+
+    /// <summary>Restores the endpoint fields from the persisted configuration.</summary>
+    private void DiscardEndpointChanges()
+    {
+        try
+        {
+            AiHubConfig saved = _settingsStore.Load();
+            for (int index = 0; index < _config.Targets.Count && index < saved.Targets.Count; index++)
+            {
+                AiTargetSettings target = _config.Targets[index];
+                AiTargetSettings source = saved.Targets[index];
+                target.IsActive = source.IsActive;
+                target.BaseUrl = source.BaseUrl;
+                target.ApiKey = source.ApiKey;
+                target.Mode = source.Mode;
+                target.Model = source.Model;
+                target.Effort = source.Effort;
+            }
+
+            foreach (var endpoint in Endpoints)
+            {
+                endpoint.NotifyUpdated();
+            }
+
+            HasUnsavedEndpointChanges = false;
+            IsStatusOpen = false;
+        }
+        catch (Exception ex)
+        {
+            ShowStatus((IsChinese ? "无法还原端点：" : "Could not restore endpoints: ") + ex.Message, InfoBarSeverity.Error);
         }
     }
 
@@ -810,7 +948,8 @@ public sealed class AiHubViewModel : Observable, IDisposable
             target.BaseUrl = string.Empty;
             target.ApiKey = string.Empty;
             FallbackEndpoint?.NotifyUpdated();
-            ShowStatus("Fallback endpoint cleared.", InfoBarSeverity.Informational);
+            HasUnsavedEndpointChanges = true;
+            ShowStatus(IsChinese ? "备用端点已清空，保存后生效。" : "Fallback endpoint cleared. Save to apply.", InfoBarSeverity.Informational);
         }
     }
 
@@ -905,7 +1044,27 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
     }
 
-    private async Task RunOperationAsync(Func<CancellationToken, Task> operation)
+    private Task RunOperationAsync(Func<CancellationToken, Task> operation)
+    {
+        // Native UI callbacks can lack a managed synchronization context. Capture the
+        // dispatcher for the entire operation, including policy loads and busy cleanup.
+        var previousContext = SynchronizationContext.Current;
+        try
+        {
+            if (_dispatcherQueue?.HasThreadAccess == true)
+            {
+                SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(_dispatcherQueue));
+            }
+
+            return ExecuteOperationAsync(operation);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+    }
+
+    private async Task ExecuteOperationAsync(Func<CancellationToken, Task> operation)
     {
         if (_disposed || IsBusy)
         {
@@ -972,6 +1131,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             }
 
             NotifyEnabledChanged();
+            RefreshServiceStatus();
             if (enabledChanged && args.IsEnabled)
             {
                 _ = InitializeAsync();
@@ -998,7 +1158,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     private void RefreshCommands()
     {
-        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, CancelOperationCommand })
+        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, SelfTestCommand, CancelOperationCommand })
         {
             ((RelayCommand)command).OnCanExecuteChanged();
         }

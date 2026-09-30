@@ -6,6 +6,7 @@ using System;
 using Kit.AIHubLib.Models;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -46,6 +47,11 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ViewModel.RefreshEnabledState();
+    }
+
+    private void OnAiServiceSettingsClick(object sender, RoutedEventArgs e)
+    {
+        NavigationService.Navigate(typeof(GeneralPage), new NavigationParams("GeneralPageAiHubMasterCard"));
     }
 
     private async void OnFindingClick(object sender, RoutedEventArgs e)

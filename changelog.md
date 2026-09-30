@@ -4,6 +4,36 @@
 
 ## English
 
+### 2.3.4
+
+- **AI service settings**: fixed controls remaining disabled after an asynchronous operation completed outside the UI synchronization context; self-test commands now refresh with busy/enabled state.
+- **Configuration preservation**: separated shared service settings (`AiHub/service-settings.json`) from plugin settings (`AIHub/settings.json`), migrated valid legacy service files, and retained encrypted credentials. Recovery supports both transaction versions. Short custom audit policies are no longer overwritten as outdated defaults; service saves preserve existing audit preferences.
+- **AI Hub UI**: added direct navigation to AI service settings, prevented duplicate readiness checks, separated audit actions from the heading, collapsed activity statistics, simplified optimization cards, and fixed task-policy selection and save feedback.
+- **VS build dependencies**: added the AI Hub native module and Worker to the Runner's solution dependencies so building the startup project includes both runtime components.
+- **Source handoff**: synchronized app/package versions at 2.3.4; documented fresh-profile testing, the low-integrity output-folder cause of access-denied/save failures, and remaining internal-service limitations. Archived root build logs and obsolete test outputs under `TestResults`, removed temporary root scripts/cache files, and retained useful source and build inputs.
+- **Validation**: the preceding Debug run passed 226 AI Hub tests (one directory-link test skipped). On 2026-09-30, the local Release Runner loaded all five modules without load errors or logger fallback, and Release WinUI checks passed toggles, endpoint saving, async control recovery, plugin writeback and layouts after output integrity was restored. The UI harness now uses the Runner launch arguments, requires an explicit PASS, and no longer overrides its executable's integrity label. No real AI endpoints or cleanup actions were invoked. Full rebuild, real-machine validation and release packaging remain pending.
+
+### 2.3.3
+
+- **Utilities State Sync Regression Coverage**:
+  - Added regression coverage for the complete PowerToys `module_status` round trip: Runner reports each loaded module's actual `is_enabled()` state and Settings merges it without overwriting states for modules absent from the response.
+  - Extended the merge test across Awake, Light Switch, Localserver, UDPtest, AI Hub, and an unmodeled official-module key; added static checks for Runner response dispatch and Dashboard refresh wiring.
+  - Removed PowerToys' Experimentation toggle from General settings, its persisted JSON field, and its Settings-only GPO policy surface.
+  - Bumped the application and sparse package identity to `2.3.3` so this test build is distinguishable from the stale `2.3.0` Settings components found in the previous runtime logs.
+
+### 2.3.2
+
+- **Utilities Module State Synchronization**:
+  - Runner now returns the live module states after general settings and module status updates; Settings merges those states into its shared repository, so Utilities reflects the native module `is_enabled()` result.
+  - Module status updates, full general settings updates, and startup now consistently apply each module's native GPO policy through the standard interface.
+  - Enabled-module JSON preserves unmodeled official module keys, keeping settings intact as additional PowerToys modules are integrated.
+
+### 2.3.1
+
+- **Module Status Synchronization Fixed**:
+  - The Dashboard is no longer navigation-cached after its view model is disposed, so returning from a module settings page creates a live settings subscription and refreshes Utilities state.
+  - AI Hub enabled state is now written with the native module key `AIHub`, while older `AiHub` settings remain readable.
+
 ### 2.3.0
 
 - **No Orphaned Processes on Any Exit Path**:
@@ -534,6 +564,36 @@
 ## 中文
 
 ## 更新日志
+
+### 2.3.4
+
+- **AI 服务设置**：修复异步操作缺少 UI 同步上下文时，完成后子项仍置灰的问题；自检命令随忙碌及启用状态刷新。
+- **配置保留**：共享服务使用 `AiHub/service-settings.json`，插件使用 `AIHub/settings.json`，避免 Windows 目录大小写导致文件覆盖；兼容迁移有效旧配置并保留加密凭据，事务恢复兼容两个版本。短自定义审计策略不再被当作旧模板覆盖，服务保存保留已有审计偏好。
+- **AI Hub 界面**：增加服务设置直达入口、检测防重入及进行中状态；审计操作分行、活动统计折叠、优化页精简重复卡片；修复任务策略默认选择及保存反馈。
+- **VS 构建依赖**：为 Runner 补齐 AI Hub 原生模块和 Worker 的解决方案依赖，确保构建启动项目时包含这两个运行组件。
+- **源码交付**：应用与稀疏包版本统一为 2.3.4；补充全新配置测试步骤、输出目录低完整性标签导致拒绝访问/保存失败的排查方法，以及内部服务剩余边界。根目录构建日志和旧测试产物归档至 `TestResults`，移除临时脚本及缓存，保留源码和必要构建输入。
+- **验证**：此前 Debug 回归通过 226 项 AI Hub 测试，1 项目录链接测试跳过。2026-09-30 恢复输出目录正常完整性标签后，本地 Release Runner 成功加载全部五个模块，无加载错误或日志回退；Release WinUI 的开关、端点保存、异步控件恢复、插件写回和布局检查通过。UI 测试现使用 Runner 启动参数、要求明确 PASS，且不再单独覆盖测试 EXE 的完整性标签。未调用真实 AI 端点或执行清理。完整重新编译、实机验证和发布打包仍待完成。
+
+### 2.3.3
+
+- **Utilities 状态同步回归覆盖**：
+  - 增加 PowerToys `module_status` 完整往返回归覆盖：Runner 回传各已加载模块实际 `is_enabled()` 状态，Settings 合并状态时不会覆盖响应中未包含的模块。
+  - 扩展 Awake、Light Switch、Localserver、UDPtest、AI Hub 及未建模官方模块键的合并测试，并检查 Runner 回传分发与 Dashboard 刷新链路。
+  - 从常规设置、持久化 JSON 和 Kit 专属 GPO 策略中移除“实验性功能”开关。
+  - 应用与稀疏包身份版本升级到 `2.3.3`，便于与此前运行日志中发现的旧版 `2.3.0` Settings 组件区分。
+
+### 2.3.2
+
+- **Utilities 插件状态同步**：
+  - Runner 在全局设置和模块开关更新后回传运行中的真实模块状态；Settings 合并到共享仓库，Utilities 按模块原生 `is_enabled()` 结果更新。
+  - 单模块开关、完整全局设置更新和启动流程统一应用模块接口提供的 GPO 策略。
+  - enabled JSON 保留尚未建模的官方模块键，后续接入更多 PowerToys 模块时不丢失已有设置。
+
+### 2.3.1
+
+- **插件状态同步修复**：
+  - Dashboard ViewModel 销毁后不再缓存页面；从插件设置页返回时会重新创建有效的设置订阅，Utilities 状态可以随设置变化刷新。
+  - AI Hub 启用状态改用原生模块键 `AIHub` 写入，同时继续兼容读取旧键 `AiHub`。
 
 ### 2.3.0
 

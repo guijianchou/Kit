@@ -890,6 +890,7 @@ namespace Kit.Settings.UI.ViewModels
                 if (value != _isEnabled)
                 {
                     _isEnabled = value;
+                    _generalSettingsConfig = _generalSettingsRepository.SettingsConfig;
                     _generalSettingsConfig.Enabled.Localserver = value;
                     OutGoingGeneralSettings snd = new OutGoingGeneralSettings(_generalSettingsConfig);
                     _sendConfigMsg(snd.ToString());

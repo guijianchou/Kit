@@ -1060,16 +1060,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="TextExtractor_Languages.Header" xml:space="preserve">
     <value>Preferred language</value>
   </data>
-  <data name="General_Experimentation.Header" xml:space="preserve">
-    <value>Experimentation</value>
-  </data>
-  <data name="GeneralPage_EnableExperimentation.Description" xml:space="preserve">
-    <value>Only Windows Insider builds may be selected for experimentation</value>
-    <comment>{Locked="Windows Insider"}</comment>
-  </data>
-  <data name="GeneralPage_EnableExperimentation.Header" xml:space="preserve">
-    <value>Allow experimentation with new features</value>
-  </data>
   <data name="General_DiagnosticsAndFeedback.Header" xml:space="preserve">
     <value>Diagnostics &amp; feedback</value>
   </data>
@@ -2459,7 +2449,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>AI services</value>
   </data>
   <data name="General_AiHubSettings.Header" xml:space="preserve">
-    <value>AI Hub</value>
+    <value>Enable AI service</value>
   </data>
   <data name="General_AiHubSettings.Description" xml:space="preserve">
     <value>Manage shared AI services, kernels, and connections for Kit and its plugins.</value>
@@ -2592,7 +2582,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Apply both routes and their encrypted credentials together.</value>
   </data>
   <data name="AiHub_SaveEndpointsButton.Content" xml:space="preserve">
-    <value>Save endpoints</value>
+    <value>Save</value>
   </data>
   <data name="AiHub_SaveButton.Content" xml:space="preserve">
     <value>Save</value>
@@ -2715,7 +2705,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Operation cancelled.</value>
   </data>
   <data name="AiHub_EnableToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Enable AI Hub</value>
+    <value>Enable AI service</value>
   </data>
   <data name="AiHub_KernelSelector.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Select AI kernel</value>
@@ -2835,7 +2825,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Diagnostics &amp; logs</value>
   </data>
   <data name="General_AiServicesGroup.Header" xml:space="preserve">
-    <value>AI Service</value>
+    <value>AI service</value>
   </data>
   <data name="General_DiagnosticsExpander.Header" xml:space="preserve">
     <value>Logging</value>
@@ -2872,7 +2862,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Save</value>
   </data>
   <data name="AiHub_PolicyRulesExpander.Header" xml:space="preserve">
-    <value>Policy Rules</value>
+    <value>Policy rules</value>
   </data>
   <data name="AiHub_PolicyRulesExpander.Description" xml:space="preserve">
     <value>Global security policy and task instructions (security.md and AGENTS.md)</value>
@@ -2939,5 +2929,20 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="FindingDetails_Key.Text" xml:space="preserve">
     <value>Issue Key:</value>
+  </data>
+  <data name="AiHub_ServiceStatusCard.Header" xml:space="preserve">
+    <value>Service status</value>
+  </data>
+  <data name="AiHub_RunSelfTestButton.Content" xml:space="preserve">
+    <value>Run self-test</value>
+  </data>
+  <data name="AiHub_UnsavedEndpointsCard.Header" xml:space="preserve">
+    <value>Unsaved endpoint changes</value>
+  </data>
+  <data name="AiHub_UnsavedEndpointsCard.Description" xml:space="preserve">
+    <value>AI tasks keep using the saved endpoints until you save these changes.</value>
+  </data>
+  <data name="AiHub_DiscardEndpointsButton.Content" xml:space="preserve">
+    <value>Discard</value>
   </data>
 </root>

@@ -177,6 +177,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private string _currentStageText = string.Empty;
 
     private CancellationTokenSource _currentCts;
+    private CancellationTokenSource _readinessCts;
+    private bool _isCheckingAiReadiness;
     private bool _disposed;
     private int _activeTabIndex;
 
@@ -246,8 +248,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.AIHub);
 
-        // The AI service panel moved here from General; it only needs a dispatcher queue.
-        AiHub = new AiHubViewModel(_dispatcherQueue);
+        AiHub = new AiHubViewModel(_dispatcherQueue) { TaskPolicyIndex = 0 };
 
         // Load persisted tab
         try
@@ -329,23 +330,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
             if (_generalSettingsRepository.SettingsConfig.Enabled.AiHub != value)
             {
-                _generalSettingsRepository.SettingsConfig.Enabled.AiHub = value;
-
-                try
-                {
-                    new AiHubSettingsStore().Update(c => c.IsEnabled = value);
-                    AiHubEngine.RaiseStateChanged();
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError("Failed to persist the AI Hub enabled state", ex);
-                }
+                ModuleHelper.SetIsModuleEnabled(_generalSettingsRepository.SettingsConfig, ModuleType.AIHub, value);
 
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanToggle));
+                OnPropertyChanged(nameof(CanRecheckAiReadiness));
 
                 if (!value)
                 {
+                    _readinessCts?.Cancel();
                     _currentCts?.Cancel();
                     IsAuditing = false;
                     IsOptimizing = false;
@@ -926,16 +919,35 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     /// <summary>Heading for the per-chain policy editor.</summary>
     public string TaskPolicyTitle => IsChinese
-        ? "任务策略（各链路 AGENTS.md）"
-        : "Task policies (per-chain AGENTS.md)";
+        ? "任务指令"
+        : "Task instructions";
 
     /// <summary>Explains what the per-chain policies govern and where the global one lives.</summary>
     public string TaskPolicyDescription => IsChinese
-        ? "各插件链路的专属指令，分别写入 AGENTS.md。全局安全策略已移至“常规 → AI 服务”，因为它对所有插件生效。"
-        : "Per-chain instructions written to each AGENTS.md. The global security policy moved to General > AI service because it applies to every plugin.";
+        ? "分别设置安全审计和系统优化的 AI 指令。全局安全规则可在 AI 服务设置中修改。"
+        : "Customize AI instructions for security audits and optimization. Global safety rules are in AI service settings.";
 
     /// <summary>Label for the manual readiness re-check action.</summary>
-    public string RecheckAiLabel => IsChinese ? "重新检测" : "Re-check";
+    public string RecheckAiLabel => IsCheckingAiReadiness
+        ? (IsChinese ? "正在检测…" : "Checking…")
+        : (IsChinese ? "重新检测" : "Re-check");
+
+    public string AiServiceSettingsLabel => IsChinese ? "AI 服务设置" : "AI service settings";
+
+    public bool IsCheckingAiReadiness
+    {
+        get => _isCheckingAiReadiness;
+        private set
+        {
+            if (Set(ref _isCheckingAiReadiness, value))
+            {
+                OnPropertyChanged(nameof(RecheckAiLabel));
+                OnPropertyChanged(nameof(CanRecheckAiReadiness));
+            }
+        }
+    }
+
+    public bool CanRecheckAiReadiness => IsEnabled && !IsCheckingAiReadiness && !_disposed;
 
     /// <summary>True only once a probe has confirmed the route.</summary>
     public bool IsAiReady => AiReadinessLevel == AiReadinessLevel.Ready;
@@ -973,11 +985,21 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// <summary>Re-checks the AI route and refreshes the indicator.</summary>
     public async Task RefreshAiReadinessAsync()
     {
+        if (!CanRecheckAiReadiness)
+        {
+            return;
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        _readinessCts = cancellation;
+        IsCheckingAiReadiness = true;
         try
         {
             AiReadiness readiness = await AiHubEngine.Current
-                .ProbeReadinessAsync(_currentCts?.Token ?? CancellationToken.None)
+                .ProbeReadinessAsync(cancellation.Token)
                 .ConfigureAwait(true);
+
+            cancellation.Token.ThrowIfCancellationRequested();
 
             EnqueueOnUI(() =>
             {
@@ -992,6 +1014,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         catch (Exception ex)
         {
             Logger.LogError("AI readiness probe failed", ex);
+            ShowStatus(IsChinese ? "检测失败，请重试或检查 AI 服务设置。" : "Check failed. Retry or review AI service settings.", InfoBarSeverity.Error);
+        }
+        finally
+        {
+            _readinessCts = null;
+            EnqueueOnUI(() => IsCheckingAiReadiness = false);
         }
     }
 
@@ -1275,6 +1303,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     {
         OnPropertyChanged(nameof(IsEnabled));
         OnPropertyChanged(nameof(IsEnabledGpoConfigured));
+        OnPropertyChanged(nameof(CanRecheckAiReadiness));
+        if (!IsEnabled)
+        {
+            _readinessCts?.Cancel();
+        }
         RefreshCommands();
         RefreshAiReadinessFromCache();
     }
@@ -2530,6 +2563,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             _disposed = true;
             _scheduleTimer.Stop();
+            _readinessCts?.Cancel();
             AiHub?.Dispose();
             AiHubEngine.Current.StateChanged -= OnEngineStateChanged;
             _currentCts?.Cancel();

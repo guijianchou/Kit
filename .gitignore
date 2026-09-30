@@ -239,3 +239,6 @@ src/common/Telemetry/*.etl
 
 /runner-out.txt
 /runner-err.txt
+
+# Misexpanded Windows runtime cache path
+/%SystemDrive%/

@@ -199,6 +199,8 @@
     <BuildDependency Project="src/ActionRunner/ActionRunner.vcxproj" />
     <BuildDependency Project="src/common/notifications/BackgroundActivator/BackgroundActivator.vcxproj" />
     <BuildDependency Project="src/common/notifications/BackgroundActivatorDLL/BackgroundActivatorDLL.vcxproj" />
+    <BuildDependency Project="src/modules/AIHub/AIHubModuleInterface/AIHubModuleInterface.vcxproj" />
+    <BuildDependency Project="src/modules/AIHub/AIHubWorker/AIHubWorker.csproj" />
     <BuildDependency Project="src/modules/awake/Awake/Awake.csproj" />
     <BuildDependency Project="src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchModuleInterface/LightSwitchModuleInterface.vcxproj" />

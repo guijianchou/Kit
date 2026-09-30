@@ -228,10 +228,9 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
     if (module_inst_enabled == target_enabled)
     {
         Logger::info(L"apply_module_status_update: Module {} already in target state {}", name, target_enabled);
-        return;
     }
 
-    if (target_enabled)
+    if (target_enabled && !module_inst_enabled)
     {
         Logger::info(L"apply_module_status_update: Enabling powertoy {}", name);
         powertoy->enable();
@@ -239,7 +238,7 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
         hkmng.EnableHotkeyByModule(name);
 
     }
-    else
+    else if (!target_enabled && module_inst_enabled)
     {
         Logger::info(L"apply_module_status_update: Disabling powertoy {}", name);
         powertoy->disable();
@@ -255,18 +254,18 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
         json::JsonObject current_settings = PTSettingsHelper::load_general_settings();
         
         json::JsonObject enabled;
-        if (current_settings.HasKey(L"enabled"))
+        if (json::has(current_settings, L"enabled", json::JsonValueType::Object))
         {
             enabled = current_settings.GetNamedObject(L"enabled");
         }
         
-        // Check if the saved state is different from the requested state
-        bool current_saved = enabled.HasKey(name) ? enabled.GetNamedBoolean(name, true) : true;
-        
-        if (current_saved != target_enabled)
+        // Persist the module's accepted state even when no lifecycle call was
+        // needed. A missing key is not equivalent to a saved true value.
+        const bool actual_enabled = powertoy->is_enabled();
+        if (!json::has(enabled, name, json::JsonValueType::Boolean) || enabled.GetNamedBoolean(name) != actual_enabled)
         {
             // Update only this module's enabled state
-            enabled.SetNamedValue(name, json::value(target_enabled));
+            enabled.SetNamedValue(name, json::value(actual_enabled));
             current_settings.SetNamedValue(L"enabled", enabled);
             
             PTSettingsHelper::save_general_settings(current_settings);
@@ -282,7 +281,7 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     std::wstring old_settings_json_string;
     if (save)
     {
-        old_settings_json_string = get_general_settings().to_json().Stringify().c_str();
+        old_settings_json_string = PTSettingsHelper::load_general_settings().Stringify().c_str();
     }
 
     Logger::info(L"apply_general_settings: {}", std::wstring{ general_configs.ToString() });

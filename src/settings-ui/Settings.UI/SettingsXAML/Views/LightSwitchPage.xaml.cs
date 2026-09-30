@@ -278,7 +278,7 @@ namespace Kit.Settings.UI.Views
             {
                 if (generalSettings != null)
                 {
-                    this.ViewModel.IsEnabled = generalSettings.Enabled.LightSwitch;
+                    this.ViewModel.RefreshEnabledState();
                     this.ViewModel.ModuleSettings = (LightSwitchSettings)lightSwitchSettings.Clone();
 
                     UpdateEnabledState(generalSettings.Enabled.LightSwitch);

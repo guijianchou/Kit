@@ -2,8 +2,6 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Kit.AiHub.Engine;
-using Kit.AiHub.Storage;
 using Kit.Settings.UI.Library;
 using ManagedCommon;
 
@@ -61,24 +59,8 @@ namespace Kit.Settings.UI.Library.Helpers
                 case ModuleType.LightSwitch: generalSettingsConfig.Enabled.LightSwitch = isEnabled; break;
                 case ModuleType.Localserver: generalSettingsConfig.Enabled.Localserver = isEnabled; break;
                 case ModuleType.UDPtest: generalSettingsConfig.Enabled.UDPtest = isEnabled; break;
-                case ModuleType.AIHub:
-                    generalSettingsConfig.Enabled.AiHub = isEnabled;
-                    new AiHubSettingsStore().Update(config => config.IsEnabled = isEnabled);
-                    AiHubEngine.RaiseStateChanged();
-                    break;
+                case ModuleType.AIHub: generalSettingsConfig.Enabled.AiHub = isEnabled; break;
                 case ModuleType.GeneralSettings: generalSettingsConfig.EnableQuickAccess = isEnabled; break;
-            }
-        }
-
-        private static bool GetAiHubEnabled()
-        {
-            try
-            {
-                return new AiHubSettingsStore().Load().IsEnabled;
-            }
-            catch (System.Exception)
-            {
-                return false;
             }
         }
 

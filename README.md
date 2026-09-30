@@ -6,7 +6,7 @@
 
 ## 1. What Is Kit
 
-Kit is a local, self-use Windows utility workspace derived from **Microsoft PowerToys**. It exists so selected PowerToys utilities can be modified, isolated, and compared against an installed official PowerToys build on the same machine.
+Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. It exists so selected PowerToys utilities can be modified, isolated, and compared against an installed official PowerToys build on the same machine.
 
 It is a **stability-first PowerToys-derived workspace, not a full product rebrand**: the upstream runner, module interface, settings, and dashboard patterns are kept recognizable, so imported PowerToys modules can be validated with minimal adapter code.
 
@@ -17,7 +17,7 @@ It is a **stability-first PowerToys-derived workspace, not a full product rebran
 | The explicit module-loading model | Automatic update, download, and telemetry surfaces are removed |
 | PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub` | Backup/restore defaults use Kit branding (`Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
 
-Current version: `2.3.0`.
+Current Kit version: `2.3.4`.
 
 ---
 
@@ -51,9 +51,9 @@ Runtime layout next to `Kit.exe`:
 
 ### 2.2 Startup and lifecycle
 
-1. The runner boots, loads the known module interface DLLs (`KitKnownModules` in `src/runner/main.cpp`), calls `kit_create()` on each, and enables the modules that are turned on in settings.
-2. The runner launches the Settings app over named pipes and shows the tray icon.
-3. Enabling/disabling a module in Settings is sent over IPC; the runner applies it via `apply_module_status_update` → `enable()` / `disable()` on the module object.
+1. The runner boots, shows the tray icon and — when Settings should open — launches the Settings app over named pipes **before** loading modules, so the WinUI/.NET cold start of Settings overlaps with module loading. IPC that arrives early is queued and handled once the message loop starts.
+2. The runner loads the known module interface DLLs (`KitKnownModules` in `src/runner/main.cpp`), calls `kit_create()` on each, and enables the modules that are turned on in settings.
+3. Enabling/disabling a module in Settings uses the PowerToys `module_status` IPC message; the runner applies GPO policy and calls the module's native `enable()` / `disable()` interface, then returns `get_all_settings()` so Settings can synchronize Utilities from each module's actual `is_enabled()` state. The settings-file watcher remains as a fallback for external changes. Kit does not expose PowerToys' experimentation toggle or its related policy.
 4. Shutdown: when the message loop ends (tray exit, or Settings closed without a tray icon), the runner tears down modules (`modules().clear()` → `destroy()`), which lets each module clean up its worker and services before the process exits.
 
 ### 2.3 Module interface contract (`KitModuleIface`)
@@ -197,11 +197,39 @@ flowchart LR
 ```
 
 - **Skeleton**: module interface DLL + managed core lib + headless worker.
-- **Components**: `AIHubModuleInterface.dll`, `Kit.AIHubWorker.exe`, `Kit.AIHubLib` (AI service engine, kernels, task chains, security policies, audit pipeline).
-- **Lifecycle**: the worker hosts the shared AI service (kernels, main/fallback endpoints, global security policy); task chains carry per-task `AGENTS.md` policies; the Security Audit collects Windows event logs, ranks findings, and runs AI analysis.
-- **Data**: `%LOCALAPPDATA%\Kit\AiHub\` — `chains\`, `kernels\`, `requests\`, `State\`, `security.md`, `settings.json`, `secrets.dat`, `Logs\`.
+- **Components**: `Kit.AIHubModuleInterface.dll`, `Kit.AIHubWorker.exe`, `Kit.AIHubLib` (audit/optimization), and `Kit.AiHub` (shared AI engine, kernels, task chains and security policies).
+- **Lifecycle**: the worker runs scheduled audits; Settings and the worker use the in-process shared AI service and its persisted configuration. Task chains carry per-task `AGENTS.md` policies; the Security Audit collects Windows event logs, ranks findings, and runs AI analysis.
+- **Data**: `%LOCALAPPDATA%\Kit\AiHub\` — `chains\`, `kernels\`, `requests\`, `State\`, `security.md`, `service-settings.json`, `secrets.dat`, `Logs\`.
+- **Settings UI**: the shared AI service (kernel, main/fallback endpoints, self-test, global security policy) is configured in the **AI Service** group on the General page, laid out with the same cards as the rest of Settings. The AI Hub page hosts the master toggle, an AI-readiness card, and three tabs (Security audit / Optimization / Task policies). Audit actions occupy their own row, historical statistics are collapsed, and the optimization page shows selection metrics only when candidates exist. Severity colors follow the theme (light / dark / high contrast).
 
 ## 4. Build and Release
+
+The current source version is **2.3.4**. Release x64 page and Runner smoke checks passed on the local build; a full rebuild and real-machine validation are still required before publishing. No release archive is included in this handoff. Build from the repository root, and stage only after the build succeeds:
+
+```powershell
+.\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
+if ($LASTEXITCODE -ne 0) { throw 'Build failed; do not stage incomplete output.' }
+.\tools\build\Stage-Release.ps1
+```
+
+Run `x64/Release/Kit.exe` after building, or `bin/release/2.3.4/Kit.exe` after staging. The staging script creates a directory, not a ZIP. Keep the complete runtime directory together. The Runner's solution dependencies include both the AI Hub module DLL and its worker.
+
+For a fresh-profile test, stop any supervised Localserver services, exit Kit from its tray menu, and rename `%LOCALAPPDATA%\Kit` to a unique backup name such as `Kit.backup-20260930`. Closing Settings with X leaves the Runner active when the tray icon is enabled, matching PowerToys. Start the newly built Release and enter settings again for the first test; restoring old JSON immediately defeats the comparison. The backup retains credentials, policies, downloaded kernels and history. Leave official PowerToys data and external Localserver program directories alone.
+
+Configuration locations under `%LOCALAPPDATA%\Kit`:
+
+| Path | Contents |
+| --- | --- |
+| `settings.json` | General settings and module switches |
+| `AiHub/service-settings.json` | Shared AI service settings |
+| `AIHub/settings.json` | AI Hub plugin settings |
+| `AiHub/secrets.dat`, `AiHub/security.md`, `AiHub/chains/` | Encrypted credentials and policies |
+| `AiHub/kernels/`, `AiHub/State/`, `AiHub/Logs/` | Kernels, state and history/logs |
+| `Localserver/`, `UDPtest/`, `Awake/`, `LightSwitch/` | Other module settings and state |
+
+If logs show access denied and fall back to `%USERPROFILE%\AppData\LocalLow\Kit`, inspect the executable's Windows integrity label. An output directory inheriting **Low Mandatory Level** can cause normal launches to run with insufficient write access; resetting configuration will not fix it. Restore an existing build output directory to normal integrity with `icacls .\x64 /setintegritylevel "(OI)(CI)M"`; apply the same command to `.\bin` if staged output inherited the label. This changes output labels, not configuration permissions. Repeat if those directories are deleted and recreated under a low-integrity workspace. LocalLow contains fallback logs, not a second settings profile.
+
+AI service settings now use `AiHub/service-settings.json`; the AI Hub plugin uses `AIHub/settings.json`. These filenames must differ because Windows ignores directory-name casing. Valid old service settings migrate automatically; a reset is optional. The service remains internal to Kit, currently used by AI Hub. See the [AI service review](doc/ai-service-review.md) for remaining detection and worker-configuration limitations.
 
 - Build: `tools/build/build.ps1` (single project) and `tools/build/build-essentials.ps1` (solution restore + essentials); both auto-detect `x64` and initialize the VS environment.
 - Version source: `src/Version.props`; the generated header lives under `src/common/version/Generated Files/version_gen.h`.
@@ -242,6 +270,11 @@ Two of the five modules are imported from upstream PowerToys (`Awake`, `Light Sw
 - Keep Settings, runner, module interface, Quick Access, and copied module projects buildable independently before widening to whole-solution builds.
 - Keep Kit storage, backup, window title, and visible text separate from an installed official PowerToys.
 - Do not re-enable automatic download/install or telemetry.
+- Keep DSC-only Settings command-line entry points out of Kit.
+- Deleted the inactive standalone module_loader utility and orphaned CmdPal version props until Command Palette becomes an active Kit module.
+- Retained settings: resource strings, OOBE/model assets, and no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers.
+- Shortcut Conflict hotkey lookup is explicit for Quick Access and LightSwitch.
+- Backup defaults should stay generic to Kit's active module settings.
 - Split new modules into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and registration tests.
 
 ---
@@ -255,8 +288,8 @@ Two of the five modules are imported from upstream PowerToys (`Awake`, `Light Sw
 - `doc/devdoc/kit-first-plugin.md` — first-module checklist and validation baseline.
 - `doc/devdoc/kit-development-experience.md` — first-phase lessons learned and stabilization checklist.
 - `doc/devdoc/startup-optimization-analysis.md` — startup optimization analysis (Chinese).
-- `fix.md` — upstream delta and fix list; `changelog.md` — version history.
+- [AI service review](doc/ai-service-review.md) — configuration ownership, known limitations and regression evidence; `changelog.md` — version history.
 
-## 8. Changelog
+## Changelog
 
 See [changelog.md](changelog.md) for the full version history.

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Search;
@@ -129,6 +130,22 @@ namespace Kit.Settings.UI.Views
             // shellFrame.Navigate(typeof(DashboardPage));
             IPCResponseHandleList.Add(ReceiveMessage);
             IPCResponseService.Instance.RegisterForIPC();
+            shellFrame.Navigated += OnFirstNavigated;
+        }
+
+        private void OnFirstNavigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            shellFrame.Navigated -= OnFirstNavigated;
+            if (e.Content is FrameworkElement page)
+            {
+                void OnPageLoaded(object s, RoutedEventArgs args)
+                {
+                    page.Loaded -= OnPageLoaded;
+                    App.LogStartupTiming($"First page loaded ({e.SourcePageType?.Name})", last: true);
+                }
+
+                page.Loaded += OnPageLoaded;
+            }
         }
 
         public static int SendDefaultIPCMessage(string msg)
@@ -285,6 +302,21 @@ namespace Kit.Settings.UI.Views
         {
             if (json != null)
             {
+                if (json.TryGetValue("general", out IJsonValue generalSettingsJson) &&
+                    generalSettingsJson.ValueType == JsonValueType.Object &&
+                    generalSettingsJson.GetObject().TryGetValue("enabled", out IJsonValue enabledJson) &&
+                    enabledJson.ValueType == JsonValueType.Object)
+                {
+                    var enabledModules = JsonSerializer.Deserialize<EnabledModules>(enabledJson.GetObject().Stringify());
+                    if (enabledModules != null)
+                    {
+                        var repository = SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default);
+                        repository.SettingsConfig.Enabled.MergeFrom(enabledModules);
+                        repository.NotifySettingsChanged();
+                        SignalGeneralDataUpdate();
+                    }
+                }
+
                 IJsonValue whatToShowJson;
                 if (json.TryGetValue("ShowYourself", out whatToShowJson))
                 {

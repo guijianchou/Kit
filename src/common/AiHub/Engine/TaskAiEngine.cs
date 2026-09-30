@@ -566,7 +566,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     private void OnConfigurationChanged(object sender, FileSystemEventArgs args)
     {
-        if (args.Name?.EndsWith(".json", StringComparison.OrdinalIgnoreCase) == true)
+        if (string.Equals(args.Name, AiHubStorageFiles.ServiceSettingsFileName, StringComparison.OrdinalIgnoreCase))
         {
             NotifyStateChanged();
         }

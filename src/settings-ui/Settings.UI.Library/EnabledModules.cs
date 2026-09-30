@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,6 +13,46 @@ namespace Kit.Settings.UI.Library
     public class EnabledModules
     {
         private Action notifyEnabledChangedAction;
+
+        internal HashSet<string> SpecifiedModules { get; } = new(StringComparer.Ordinal);
+
+        internal Dictionary<string, bool> AdditionalModules { get; } = new(StringComparer.Ordinal);
+
+        // Runner replies may omit modules that could not be loaded. Do not
+        // replace their saved state with the deserializer's default values.
+        public void MergeFrom(EnabledModules modules)
+        {
+            ArgumentNullException.ThrowIfNull(modules);
+            if (modules.SpecifiedModules.Contains("Awake"))
+            {
+                awake = modules.Awake;
+            }
+
+            if (modules.SpecifiedModules.Contains("LightSwitch"))
+            {
+                lightSwitch = modules.LightSwitch;
+            }
+
+            if (modules.SpecifiedModules.Contains("Localserver"))
+            {
+                localserver = modules.Localserver;
+            }
+
+            if (modules.SpecifiedModules.Contains("UDPtest"))
+            {
+                udpTest = modules.UDPtest;
+            }
+
+            if (modules.SpecifiedModules.Contains("AIHub") || modules.SpecifiedModules.Contains("AiHub"))
+            {
+                aiHub = modules.AiHub;
+            }
+
+            foreach (var module in modules.AdditionalModules)
+            {
+                AdditionalModules[module.Key] = module.Value;
+            }
+        }
 
         // Default values for enabled modules should match their expected "enabled by default" values.
         // Otherwise, a run of DSC on clean settings will not match the expected default result.

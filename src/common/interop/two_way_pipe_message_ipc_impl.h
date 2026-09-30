@@ -5,6 +5,7 @@
 #include <accctrl.h>
 #include <aclapi.h>
 #include <list>
+#include <atomic>
 #include "two_way_pipe_message_ipc.h"
 
 class TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl
@@ -27,7 +28,7 @@ private:
     std::wstring outgoing_message; // Store the updated json settings.
 
     HANDLE current_connect_pipe_handle = NULL;
-    bool closed = false;
+    std::atomic_bool closed = false;
     TwoWayPipeMessageIPC::callback_function dispatch_inc_message_function;
 
     void send_pipe_message(std::wstring message);

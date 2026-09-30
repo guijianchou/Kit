@@ -6,6 +6,7 @@
 #include <common/utils/process_path.h>
 #include <common/utils/winapi_error.h>
 #include <filesystem>
+#include <chrono>
 
 std::map<std::wstring, KitModule>& modules()
 {
@@ -15,10 +16,17 @@ std::map<std::wstring, KitModule>& modules()
 
 KitModule load_kit_module(const std::wstring_view filename)
 {
+    using clock = std::chrono::steady_clock;
+    const auto elapsed_ms = [](clock::time_point from) {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - from).count();
+    };
+
     const auto runnerDirectory = std::filesystem::path(get_module_filename()).parent_path();
     const auto modulePath = runnerDirectory / filename;
+    auto stageStart = clock::now();
     std::unique_ptr<HMODULE, KitModuleDLLDeleter> handle(winrt::check_pointer(LoadLibraryExW(
         modulePath.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)));
+    const auto loadMs = elapsed_ms(stageStart);
 
     // Prefer kit_create export, fall back to legacy powertoy_create for smooth migration
     auto create = reinterpret_cast<kit_create_func>(GetProcAddress(handle.get(), "kit_create"));
@@ -31,12 +39,22 @@ KitModule load_kit_module(const std::wstring_view filename)
     {
         winrt::throw_hresult(HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND));
     }
+    stageStart = clock::now();
     auto pt_module = create();
     if (!pt_module)
     {
         winrt::throw_hresult(winrt::hresult(E_POINTER));
     }
-    return KitModule(pt_module, handle.release());
+    const auto createMs = elapsed_ms(stageStart);
+
+    stageStart = clock::now();
+    KitModule module(pt_module, handle.release());
+    Logger::debug(L"Module {}: LoadLibrary {}ms, kit_create {}ms, hotkey registration {}ms",
+                  filename,
+                  loadMs,
+                  createMs,
+                  elapsed_ms(stageStart));
+    return module;
 }
 
 json::JsonObject KitModule::json_config() const

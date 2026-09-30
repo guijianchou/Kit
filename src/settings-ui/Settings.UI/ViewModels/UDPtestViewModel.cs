@@ -45,6 +45,7 @@ namespace Kit.Settings.UI.ViewModels
         private static readonly TimeSpan NetworkIdentityRefreshInterval = TimeSpan.FromSeconds(15);
 
         private readonly SettingsUtils _settingsUtils;
+        private readonly ISettingsRepository<GeneralSettings> _generalSettingsRepository;
         private readonly TargetSettingsStore _targetStore = new();
         private readonly ProbeCoordinator _coordinator = new();
         private readonly HttpClient _identityClient = CreateIdentityClient();
@@ -103,11 +104,12 @@ namespace Kit.Settings.UI.ViewModels
         public UDPtestViewModel(SettingsUtils? settingsUtils = null)
         {
             _settingsUtils = settingsUtils ?? SettingsUtils.Default;
+            _generalSettingsRepository = SettingsRepository<GeneralSettings>.GetInstance(_settingsUtils);
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread() ?? DispatcherQueue.GetForCurrentThread();
 
             _settings = _settingsUtils.GetSettingsOrDefault<UDPtestSettings>(UDPtestSettings.ModuleName);
             _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.UDPtest);
-            _isEnabled = _settingsUtils.GetSettingsOrDefault<GeneralSettings>().Enabled.UDPtest;
+            _isEnabled = _generalSettingsRepository.SettingsConfig.Enabled.UDPtest;
 
             _runStateBrush = ThemeBrushHelper.SecondaryTextBrush;
             _healthRingBrush = ThemeBrushHelper.StrokeDefaultBrush;
@@ -121,6 +123,7 @@ namespace Kit.Settings.UI.ViewModels
             _coordinator.UdpAssessmentCommitted += OnCoordinatorUdpAssessmentCommitted;
             _coordinator.NatAssessmentCommitted += OnCoordinatorNatAssessmentCommitted;
             _coordinator.ErrorOccurred += OnCoordinatorError;
+            _generalSettingsRepository.SettingsChanged += OnGeneralSettingsChanged;
 
             _ = InitializeAsync();
         }
@@ -150,35 +153,9 @@ namespace Kit.Settings.UI.ViewModels
 
                 if (_isEnabled != value)
                 {
-                    _isEnabled = value;
-                    var generalSettings = _settingsUtils.GetSettingsOrDefault<GeneralSettings>();
+                    var generalSettings = _generalSettingsRepository.SettingsConfig;
                     generalSettings.Enabled.UDPtest = value;
-                    _settingsUtils.SaveSettings(generalSettings.ToJsonString());
-                    OnPropertyChanged();
-
-                    if (!value)
-                    {
-                        if (_state != MonitorRunState.Stopped)
-                        {
-                            _ = StopAsync();
-                        }
-                        else
-                        {
-                            _sessionTimer.Stop();
-                        }
-
-                        CanStart = false;
-                        CanStop = false;
-                        CanClear = false;
-                        RunStateText = IsChinese ? "已停止" : "Stopped";
-                        RunStateBrush = ThemeBrushHelper.SecondaryTextBrush;
-                    }
-                    else
-                    {
-                        CanStart = _state == MonitorRunState.Stopped;
-                        CanStop = _state == MonitorRunState.Running;
-                        CanClear = _state == MonitorRunState.Stopped;
-                    }
+                    RefreshEnabledState();
 
                     var outgoing = new OutGoingGeneralSettings(generalSettings);
                     Kit.Settings.UI.Views.ShellPage.SendDefaultIPCMessage(outgoing.ToString());
@@ -187,6 +164,41 @@ namespace Kit.Settings.UI.ViewModels
         }
 
         public bool IsEnabledGpoConfigured => _gpoConfiguration is GpoRuleConfigured.Enabled or GpoRuleConfigured.Disabled;
+
+        private void OnGeneralSettingsChanged(GeneralSettings settings)
+        {
+            _dispatcherQueue.TryEnqueue(RefreshEnabledState);
+        }
+
+        public void RefreshEnabledState()
+        {
+            _isEnabled = _generalSettingsRepository.SettingsConfig.Enabled.UDPtest;
+            OnPropertyChanged(nameof(IsEnabled));
+
+            if (!IsEnabled)
+            {
+                if (_state != MonitorRunState.Stopped)
+                {
+                    _ = StopAsync();
+                }
+                else
+                {
+                    _sessionTimer.Stop();
+                }
+
+                CanStart = false;
+                CanStop = false;
+                CanClear = false;
+                RunStateText = IsChinese ? "已停止" : "Stopped";
+                RunStateBrush = ThemeBrushHelper.SecondaryTextBrush;
+            }
+            else
+            {
+                CanStart = _state == MonitorRunState.Stopped;
+                CanStop = _state == MonitorRunState.Running;
+                CanClear = _state == MonitorRunState.Stopped;
+            }
+        }
 
         public ObservableCollection<UDPtestLineRowViewModel> Lines { get; } = [];
         public ObservableCollection<UDPtestLineRowViewModel> TcpLines { get; } = [];
@@ -1143,6 +1155,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public void Dispose()
         {
+            _generalSettingsRepository.SettingsChanged -= OnGeneralSettingsChanged;
             _lifecycleCancellation.Cancel();
             _sessionTimer.Stop();
             _coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();

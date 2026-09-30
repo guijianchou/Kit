@@ -17,7 +17,7 @@ public sealed class AiHubSettingsStore
 
     public string DataDirectory => _files.DataDirectory;
     public string SettingsDirectory => DataDirectory;
-    public string SettingsFilePath => _files.GetPath("settings.json");
+    public string SettingsFilePath => _files.GetPath(AiHubStorageFiles.ServiceSettingsFileName);
     public SecureKeyStore KeyStore => _keyStore;
 
     public AiHubSettingsStore()
@@ -64,6 +64,23 @@ public sealed class AiHubSettingsStore
     private AiHubConfig LoadUnlocked()
     {
         byte[]? bytes = AiHubStorageFiles.ReadOptionalFile(SettingsFilePath, AiHubStorageFiles.MaxDataFileBytes);
+        bool migrate = false;
+        if (bytes is null)
+        {
+            // Windows treats AIHub and AiHub as the same directory. The legacy file may
+            // contain either the plugin settings or the shared service configuration.
+            byte[]? legacy = AiHubStorageFiles.ReadOptionalFile(_files.GetPath("settings.json"), AiHubStorageFiles.MaxDataFileBytes);
+            if (legacy is not null)
+            {
+                using var document = JsonDocument.Parse(legacy);
+                if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("targets", out _))
+                {
+                    bytes = legacy;
+                    migrate = true;
+                }
+            }
+        }
+
         var config = bytes is null
             ? AiHubConfig.CreateDefault()
             : JsonSerializer.Deserialize(bytes, AiHubJsonContext.Default.AiHubConfig)
@@ -76,6 +93,12 @@ public sealed class AiHubSettingsStore
         }
 
         ValidateTargets(config);
+        if (migrate)
+        {
+            // Leave the legacy file intact; only publish a validated service snapshot.
+            _files.WriteAtomic(AiHubStorageFiles.ServiceSettingsFileName, bytes!);
+        }
+
         return config;
     }
 
@@ -87,6 +110,9 @@ public sealed class AiHubSettingsStore
             IsEnabled = config.IsEnabled,
             SelectedKernel = config.SelectedKernel,
             MaxConcurrentAnalysis = config.MaxConcurrentAnalysis,
+            ScanIntervalHours = config.ScanIntervalHours,
+            AuditModeIndex = config.AuditModeIndex,
+            RetentionDays = config.RetentionDays,
         };
         var secrets = _keyStore.ReadUnlocked();
         foreach (string key in secrets.Keys.Where(key => key.StartsWith("target_key_", StringComparison.Ordinal)).ToArray())

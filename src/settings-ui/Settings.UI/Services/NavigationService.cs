@@ -57,10 +57,12 @@ namespace Kit.Settings.UI.Services
             // Don't open the same page multiple times
             if (Frame.Content?.GetType() != pageType || (parameter != null && !parameter.Equals(lastParamUsed)))
             {
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var navigationResult = Frame.Navigate(pageType, parameter, infoOverride);
                 if (navigationResult)
                 {
                     lastParamUsed = parameter;
+                    LogNavigationTiming(pageType, stopwatch);
                 }
 
                 return navigationResult;
@@ -69,6 +71,33 @@ namespace Kit.Settings.UI.Services
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Logs how long a page took from the navigation request until it was loaded, so slow
+        /// pages show up in the logs (tools\diagnostics\Get-KitDiagnostics.ps1 lists them).
+        /// </summary>
+        private static void LogNavigationTiming(Type pageType, System.Diagnostics.Stopwatch stopwatch)
+        {
+            if (Frame.Content is not FrameworkElement page)
+            {
+                return;
+            }
+
+            long constructedMs = stopwatch.ElapsedMilliseconds;
+            if (page.IsLoaded)
+            {
+                ManagedCommon.Logger.LogInfo($"NAV_TIMING: {pageType.Name} cached, shown in {constructedMs}ms");
+                return;
+            }
+
+            void OnLoaded(object sender, RoutedEventArgs e)
+            {
+                page.Loaded -= OnLoaded;
+                ManagedCommon.Logger.LogInfo($"NAV_TIMING: {pageType.Name} loaded in {stopwatch.ElapsedMilliseconds}ms (navigate {constructedMs}ms)");
+            }
+
+            page.Loaded += OnLoaded;
         }
 
         public static bool Navigate<T>(object parameter = null, NavigationTransitionInfo infoOverride = null)

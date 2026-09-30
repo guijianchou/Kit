@@ -26,7 +26,7 @@ namespace ViewModelTests
     public class General
     {
         public const string GeneralSettingsFileName = "Test\\GeneralSettings";
-        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AiHub", "UDPtest" };
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AIHub", "UDPtest" };
 
         private Mock<SettingsUtils> mockGeneralSettingsUtils;
 
@@ -595,7 +595,7 @@ namespace ViewModelTests
             Assert.AreEqual(false, enabled.GetProperty("Awake").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("LightSwitch").GetBoolean());
             Assert.AreEqual(false, enabled.GetProperty("Localserver").GetBoolean());
-            Assert.AreEqual(true, enabled.GetProperty("AiHub").GetBoolean());
+            Assert.AreEqual(true, enabled.GetProperty("AIHub").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("UDPtest").GetBoolean());
             Assert.IsFalse(enabled.TryGetProperty("PowerDisplay", out _));
         }

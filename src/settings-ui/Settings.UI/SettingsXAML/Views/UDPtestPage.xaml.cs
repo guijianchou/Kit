@@ -16,7 +16,7 @@ using Windows.Foundation;
 
 namespace Kit.Settings.UI.Views
 {
-    public sealed partial class UDPtestPage : NavigablePage
+    public sealed partial class UDPtestPage : NavigablePage, IRefreshablePage
     {
         public UDPtestViewModel ViewModel { get; }
 
@@ -25,9 +25,15 @@ namespace Kit.Settings.UI.Views
             ViewModel = new UDPtestViewModel();
             DataContext = ViewModel;
             InitializeComponent();
+            Loaded += (_, _) => RefreshEnabledState();
 
             ViewModel.HealthChartNeedsRedraw += OnHealthChartNeedsRedraw;
             UpdateHealthPeriodButtons();
+        }
+
+        public void RefreshEnabledState()
+        {
+            ViewModel.RefreshEnabledState();
         }
 
         private async void OnStartClicked(object sender, RoutedEventArgs e)

@@ -179,19 +179,37 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 
         for (auto moduleSubdir : KitKnownModules)
         {
+            const auto moduleLoadStart = std::chrono::steady_clock::now();
+            std::wstring failureReason;
             try
             {
                 auto pt_module = load_kit_module(moduleSubdir);
                 modules().emplace(pt_module->get_key(), std::move(pt_module));
-                std::wstring module_msg = L"Module Loaded: ";
-                module_msg += moduleSubdir;
-                Logger::info(L"STARTUP_TIMING: {}", module_msg);
+                Logger::info(L"STARTUP_TIMING: Module Loaded: {} in {}ms",
+                             moduleSubdir,
+                             std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - moduleLoadStart).count());
+                continue;
+            }
+            catch (const winrt::hresult_error& ex)
+            {
+                wchar_t code[16]{};
+                swprintf_s(code, L"0x%08X", static_cast<uint32_t>(ex.code().value));
+                failureReason = std::wstring(L"HRESULT ") + code + L" " + std::wstring(ex.message());
+            }
+            catch (const std::exception& ex)
+            {
+                failureReason = winrt::to_hstring(ex.what()).c_str();
             }
             catch (...)
             {
+                failureReason = L"unknown exception";
+            }
+
+            {
                 std::wstring errorMessage = KIT_MODULE_LOAD_FAIL;
                 errorMessage += moduleSubdir;
-                
+                Logger::error(L"MODULE_LOAD_FAILED: {} ({})", moduleSubdir, failureReason);
+
 #ifdef _DEBUG
                 // In debug mode, simply log the warning and continue execution.
                 // This contrasts with the past approach where developers had to build all modules

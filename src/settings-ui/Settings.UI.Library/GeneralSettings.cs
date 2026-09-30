@@ -105,9 +105,6 @@ namespace Kit.Settings.UI.Library
         [JsonPropertyName("show_whats_new_after_updates")]
         public bool ShowWhatsNewAfterUpdates { get; set; }
 
-        [JsonPropertyName("enable_experimentation")]
-        public bool EnableExperimentation { get; set; }
-
         [JsonPropertyName("enable_logging")]
         public bool EnableLogging { get; set; } = true;
 
@@ -132,7 +129,6 @@ namespace Kit.Settings.UI.Library
             ShowNewUpdatesToastNotification = false;
             AutoDownloadUpdates = false;
             ShowWhatsNewAfterUpdates = false;
-            EnableExperimentation = false;
             EnableLogging = true;
             LogLevel = "trace";
             DashboardSortOrder = DashboardSortOrder.Alphabetical;

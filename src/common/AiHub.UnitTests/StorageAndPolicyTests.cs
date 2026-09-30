@@ -18,6 +18,78 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class StorageAndPolicyTests
 {
     [TestMethod]
+    public void LegacyServiceMigratesWithoutTouchingPluginSettingsOrCredentials()
+    {
+        using var fixture = new FixtureDirectory();
+        var store = new AiHubSettingsStore(fixture.PathFor("data"));
+        var config = AiHubConfig.CreateDefault();
+        config.IsEnabled = true;
+        config.Targets[0].Model = "fixture-model";
+        config.Targets[0].ApiKey = "fixture-key";
+        store.Save(config);
+        string legacyPath = Path.Combine(store.DataDirectory, "settings.json");
+        File.Move(store.SettingsFilePath, legacyPath);
+        byte[] legacy = File.ReadAllBytes(legacyPath);
+        byte[] secrets = File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat"));
+
+        var migrated = store.Load();
+        Assert.IsTrue(migrated.IsEnabled);
+        Assert.AreEqual("fixture-key", migrated.Targets[0].ApiKey);
+        CollectionAssert.AreEqual(legacy, File.ReadAllBytes(legacyPath));
+        CollectionAssert.AreEqual(secrets, File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat")));
+
+        const string plugin = "{\"name\":\"AIHub\",\"properties\":{\"activeTabIndex\":{\"value\":1}}}";
+        File.WriteAllText(legacyPath, plugin);
+        store.Update(current => current.MaxConcurrentAnalysis = 3);
+        Assert.AreEqual(plugin, File.ReadAllText(legacyPath));
+        Assert.AreEqual("fixture-model", store.Load().Targets[0].Model);
+        Assert.AreEqual("fixture-key", store.Load().Targets[0].ApiKey);
+    }
+
+    [TestMethod]
+    public async Task ExistingShortTaskPolicyIsPreservedWhenServiceIsRecreated()
+    {
+        using var fixture = new FixtureDirectory();
+        var service = new SecurityPolicyService(fixture.PathFor("data"), fixture.PathFor("modules"));
+        const string customPolicy = "Report findings only; never change files.";
+        await service.SaveTaskPolicyAsync("security-audit", customPolicy);
+
+        var reopened = new SecurityPolicyService(fixture.PathFor("data"), fixture.PathFor("modules"));
+        Assert.AreEqual(customPolicy, await reopened.LoadTaskAgentsPolicyAsync("aihub", "security-audit"));
+    }
+
+    [TestMethod]
+    public void PluginOnlyLegacyFileDoesNotBecomeServiceConfiguration()
+    {
+        using var fixture = new FixtureDirectory();
+        var store = new AiHubSettingsStore(fixture.PathFor("data"));
+        string legacyPath = Path.Combine(store.DataDirectory, "settings.json");
+        const string plugin = "{\"name\":\"AIHub\",\"properties\":{\"activeTabIndex\":{\"value\":2}}}";
+        File.WriteAllText(legacyPath, plugin);
+        Assert.IsFalse(store.Load().IsEnabled);
+        store.Update(current => current.IsEnabled = true);
+        Assert.AreEqual(plugin, File.ReadAllText(legacyPath));
+        Assert.IsTrue(store.Load().IsEnabled);
+    }
+
+    [TestMethod]
+    public void ServiceUpdatesPreserveLegacyAuditPreferences()
+    {
+        using var fixture = new FixtureDirectory();
+        var store = new AiHubSettingsStore(fixture.PathFor("data"));
+        var config = AiHubConfig.CreateDefault();
+        config.ScanIntervalHours = 8;
+        config.AuditModeIndex = 1;
+        config.RetentionDays = 14;
+        store.Save(config);
+        store.Update(current => current.IsEnabled = true);
+        var saved = store.Load();
+        Assert.AreEqual(8, saved.ScanIntervalHours);
+        Assert.AreEqual(1, saved.AuditModeIndex);
+        Assert.AreEqual(14, saved.RetentionDays);
+    }
+
+    [TestMethod]
     public void StoresReadCurrentCredentialsWithoutWritingPlaintextKeys()
     {
         using var fixture = new FixtureDirectory();
@@ -349,7 +421,9 @@ public sealed class StorageAndPolicyTests
     }
 
     [TestMethod]
-    public void PendingEncryptedTransactionIsRecoveredBeforeAReaderReturns()
+    [DataRow("1")]
+    [DataRow("2")]
+    public void PendingEncryptedTransactionIsRecoveredBeforeAReaderReturns(string version)
     {
         using var fixture = new FixtureDirectory();
         var store = new AiHubSettingsStore(fixture.PathFor("data"));
@@ -359,13 +433,18 @@ public sealed class StorageAndPolicyTests
         string secretsPath = Path.Combine(store.DataDirectory, "secrets.dat");
         var snapshot = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["version"] = "1",
+            ["version"] = version,
             ["settings"] = Convert.ToBase64String(File.ReadAllBytes(store.SettingsFilePath)),
             ["secrets"] = Convert.ToBase64String(File.ReadAllBytes(secretsPath)),
         };
         config.Targets[0].ApiKey = "fixture-uncommitted";
         config.IsEnabled = true;
         store.Save(config);
+
+        if (version == "1")
+        {
+            File.Move(store.SettingsFilePath, Path.Combine(store.DataDirectory, "settings.json"));
+        }
 
         byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(snapshot, AiHubJsonContext.Default.DictionaryStringString);
         try
@@ -383,6 +462,7 @@ public sealed class StorageAndPolicyTests
         Assert.IsFalse(recovered.IsEnabled);
         Assert.AreEqual("fixture-before-crash", recovered.Targets[0].ApiKey);
         Assert.IsFalse(File.Exists(Path.Combine(store.DataDirectory, ".settings-transaction.dat")));
+        Assert.IsTrue(File.Exists(store.SettingsFilePath));
     }
 
     [TestMethod]

@@ -24,10 +24,6 @@ namespace winrt::Kit::GPOWrapper::implementation
     {
         return static_cast<GpoRuleConfigured>(kit_gpo::getDisableShowWhatsNewAfterUpdatesValue());
     }
-    GpoRuleConfigured GPOWrapper::GetAllowExperimentationValue()
-    {
-        return static_cast<GpoRuleConfigured>(kit_gpo::getAllowExperimentationValue());
-    }
     GpoRuleConfigured GPOWrapper::GetAllowDataDiagnosticsValue()
     {
         return static_cast<GpoRuleConfigured>(kit_gpo::getAllowDataDiagnosticsValue());

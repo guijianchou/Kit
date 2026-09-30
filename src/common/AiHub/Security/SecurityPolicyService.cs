@@ -72,23 +72,7 @@ public sealed class SecurityPolicyService
     private void EnsureTaskDefaultPolicy(string taskId, string defaultContent)
     {
         string path = GetTaskPolicyPath(taskId);
-        bool shouldUpdate = !File.Exists(path);
-        if (!shouldUpdate && taskId.Equals("security-audit", StringComparison.OrdinalIgnoreCase))
-        {
-            try
-            {
-                var fileInfo = new FileInfo(path);
-                if (fileInfo.Length < 2500)
-                {
-                    shouldUpdate = true;
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        if (shouldUpdate)
+        if (!File.Exists(path))
         {
             string relativePath = Path.Combine("chains", taskId, "AGENTS.md");
             _files.WriteAtomic(relativePath, EncodePolicy(defaultContent), MaximumPolicyBytes);

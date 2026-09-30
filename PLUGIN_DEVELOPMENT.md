@@ -369,7 +369,7 @@ string json = System.Text.Json.JsonSerializer.Serialize(
 ShellPage.SendDefaultIPCMessage(json);
 ```
 
-`currentSettings` 为该页面持有的 `SampleSettings`，使用现有页面的 IPC 回调方式即可。全局开关走 `OutGoingGeneralSettings` / `general`；已有 Quick Access 单模块开关还使用 `module_status`；自定义动作使用 `action`。以 [settings_window.cpp](src/runner/settings_window.cpp) 的分派实现为准，普通模块不需要新增通用消息路由器。
+`currentSettings` 为该页面持有的 `SampleSettings`，使用现有页面的 IPC 回调方式即可。Utilities 和既有 Quick Access 单模块开关沿用 PowerToys 的 `module_status`；包含完整模块启用集合的配置走 `OutGoingGeneralSettings` / `general`；自定义动作使用 `action`。Runner 通过模块接口的 GPO 查询和 `enable()` / `disable()` 处理开关，随后把 `is_enabled()` 实际状态包含在 `get_all_settings()` 响应中，Settings 合并到共享仓库后刷新 Utilities。不要增加插件专属启停路由；enabled JSON 转换器会保留尚未建模的布尔模块键。以 [settings_window.cpp](src/runner/settings_window.cpp) 和 [general_settings.cpp](src/runner/general_settings.cpp) 为准。
 
 读取配置可使用 `SettingsRepository<SampleSettings>.GetInstance(SettingsUtils.Default).SettingsConfig`。`ISettingsRepository<T>` **没有 `SaveSettings` 方法**。离线工具、初始化或明确负责落盘的代码使用：
 
@@ -842,9 +842,9 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 
 ## 14. AI Hub：原生模块、任务策略编排管线与移植约束
 
-AI Hub 在 `2.2.0` 版本中已演进为完整的原生第一方模块：拥有原生模块接口 DLL（`Kit.AIHubModuleInterface.dll`，在 Runner `KitKnownModules` 中注册）、独立二级设置主页（`AIHubPage.xaml`，包含“安全审计”与“服务设置”两大功能标签页），并由底层共享库 [Kit.AiHub.csproj](src/common/AiHub/Kit.AiHub.csproj)、[IAiTaskEngine](src/common/AiHub/Models/AiTaskContracts.cs)、[TaskAiEngine](src/common/AiHub/Engine/TaskAiEngine.cs) 提供统一的高性能任务执行引擎。
+AI Hub 在 `2.2.0` 版本中已演进为完整的原生第一方模块：拥有原生模块接口 DLL（`Kit.AIHubModuleInterface.dll`，在 Runner `KitKnownModules` 中注册）、独立二级设置主页（`AIHubPage.xaml`，包含“安全审计”“优化”“任务策略”三个标签页；共享 AI 服务设置位于 Kit 常规设置），并由底层共享库 [Kit.AiHub.csproj](src/common/AiHub/Kit.AiHub.csproj)、[IAiTaskEngine](src/common/AiHub/Models/AiTaskContracts.cs)、[TaskAiEngine](src/common/AiHub/Engine/TaskAiEngine.cs) 提供统一的高性能任务执行引擎。
 
-全局启用状态通过 `GeneralSettings.Enabled.AIHub` 与 `%LOCALAPPDATA%\Kit\AiHub\settings.json` 同步联动。底层项目跟随 Kit 的 `net10.0-windows10.0.26100.0` 和集中包版本管理；JSON 序列化必须使用 source-generated metadata（禁止反射）。共享库的 Native AOT smoke 与整个 WinUI Settings 应用的发布方式独立验证，不宣称未测量的性能数据。
+插件开关 `GeneralSettings.Enabled.AIHub` 与共享 AI 服务开关相互独立；前者控制 AI Hub，后者只服务于 Kit 内部调用方，目前为 AI Hub。服务配置保存在 `%LOCALAPPDATA%\Kit\AiHub\service-settings.json`，插件配置仍使用 `%LOCALAPPDATA%\Kit\AIHub\settings.json`。Windows 不区分目录大小写，因此二者必须使用不同文件名。首次读取时仅迁移仍包含有效服务配置的旧文件，保留原文件和 DPAPI 凭据；不要求清空用户配置。底层项目跟随 Kit 的 `net10.0-windows10.0.26100.0` 和集中包版本管理；JSON 序列化必须使用 source-generated metadata（禁止反射）。共享库的 Native AOT smoke 与整个 WinUI Settings 应用的发布方式独立验证，不宣称未测量的性能数据。
 
 ### 14.1 三种获取方式
 

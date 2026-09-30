@@ -30,8 +30,7 @@ namespace UnitTestsCommonUtils
 
         TEST_METHOD(CompatibilityPolicyReaders_AllReturnNotConfigured)
         {
-            for (const auto readPolicy : { getAllowExperimentationValue,
-                                           getAllowDataDiagnosticsValue,
+            for (const auto readPolicy : { getAllowDataDiagnosticsValue,
                                            getConfiguredAwakeEnabledValue,
                                            getConfiguredLightSwitchEnabledValue,
                                            getConfiguredRunAtStartupValue,

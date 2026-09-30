@@ -235,7 +235,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         ResetOptimizationPolicyCommand = new RelayCommand(() => StartOperation(ResetOptimizationPolicyAsync), () => CanEdit);
         SelfTestCommand = new RelayCommand(
             () => StartOperation(RunSelfTestAsync),
-            () => CanRunSelfTest && IsEnabled);
+            () => CanEdit && CanRunSelfTest);
 
         SaveActivePolicyCommand = new RelayCommand(
             () =>
@@ -718,6 +718,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             if (Set(ref _isSelfTesting, value))
             {
                 OnPropertyChanged(nameof(CanRunSelfTest));
+                ((RelayCommand)SelfTestCommand).OnCanExecuteChanged();
             }
         }
     }
@@ -1043,7 +1044,27 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
     }
 
-    private async Task RunOperationAsync(Func<CancellationToken, Task> operation)
+    private Task RunOperationAsync(Func<CancellationToken, Task> operation)
+    {
+        // Native UI callbacks can lack a managed synchronization context. Capture the
+        // dispatcher for the entire operation, including policy loads and busy cleanup.
+        var previousContext = SynchronizationContext.Current;
+        try
+        {
+            if (_dispatcherQueue?.HasThreadAccess == true)
+            {
+                SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(_dispatcherQueue));
+            }
+
+            return ExecuteOperationAsync(operation);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+    }
+
+    private async Task ExecuteOperationAsync(Func<CancellationToken, Task> operation)
     {
         if (_disposed || IsBusy)
         {
@@ -1137,7 +1158,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     private void RefreshCommands()
     {
-        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, CancelOperationCommand })
+        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, SelfTestCommand, CancelOperationCommand })
         {
             ((RelayCommand)command).OnCanExecuteChanged();
         }

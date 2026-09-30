@@ -103,6 +103,33 @@ $cwd = if ($Path -ne '') {
 }
 $built = BuildProjectsInDirectory -DirectoryPath $cwd -ExtraArgs $ExtraArgs -Platform $Platform -Configuration $Configuration -RestoreOnly:$RestoreOnly
 if ($built) {
+    if (-not $RestoreOnly -and $Platform -in @('x64', 'ARM64') -and $Configuration -in @('Debug', 'Release')) {
+        # A sandbox-labelled checkout can give newly built executables a Low
+        # mandatory label. Windows then starts even an Explorer launch at Low
+        # integrity, blocking Settings/Runner writes to the user's profile.
+        # Normalize only runtime executables, not the checkout or user data ACLs.
+        $runtimeRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\$Platform\$Configuration"))
+        if (Test-Path -LiteralPath (Join-Path $runtimeRoot 'Kit.exe')) {
+            foreach ($directory in @((Split-Path -Parent $runtimeRoot), $runtimeRoot)) {
+                if ((Get-Item -LiteralPath $directory).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                    throw 'Refusing to change runtime integrity through a redirected output directory.'
+                }
+            }
+            $runtimePrefix = $runtimeRoot + [IO.Path]::DirectorySeparatorChar
+            $runtimeExecutables = @(Get-ChildItem -LiteralPath $runtimeRoot -Filter '*.exe' -File -Recurse)
+            foreach ($runtimeExecutable in $runtimeExecutables) {
+                if (-not $runtimeExecutable.FullName.StartsWith($runtimePrefix, [StringComparison]::OrdinalIgnoreCase) -or
+                    ($runtimeExecutable.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                    throw 'Refusing to change the integrity of a redirected runtime executable.'
+                }
+                & icacls.exe $runtimeExecutable.FullName /setintegritylevel M | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Could not set normal runtime integrity: $($runtimeExecutable.FullName)"
+                }
+            }
+            Write-Host "[BUILD] Normal integrity applied to $($runtimeExecutables.Count) runtime executables."
+        }
+    }
     Write-Host "[BUILD] Local projects built; exiting."
     exit 0
 } else {

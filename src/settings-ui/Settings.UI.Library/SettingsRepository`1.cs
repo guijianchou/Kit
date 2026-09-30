@@ -108,6 +108,11 @@ namespace Kit.Settings.UI.Library
             }
         }
 
+        public void NotifySettingsChanged()
+        {
+            SettingsChanged?.Invoke(SettingsConfig);
+        }
+
         // Settings configurations shared across all viewmodels
         public T SettingsConfig
         {

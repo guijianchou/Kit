@@ -17,7 +17,7 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 | 显式的模块加载模型 | 移除自动更新、下载与遥测能力 |
 | 源自 PowerToys 的模块：`Awake`、`Light Switch`；Kit 自研插件：`Localserver`、`UDPtest`、`AI Hub` | 备份/恢复默认值使用 Kit 品牌（`Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
 
-当前 Kit 版本：`2.3.0`。
+当前 Kit 版本：`2.3.4`。
 
 ---
 
@@ -53,7 +53,7 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 1. runner 启动并显示托盘图标；需要打开设置时，**先于加载模块**通过命名管道拉起 Settings 应用，让 Settings 的 WinUI/.NET 冷启动与模块加载并行。提前到达的 IPC 会排队，待消息循环启动后处理。
 2. runner 加载已知的模块接口 DLL（`src/runner/main.cpp` 中的 `KitKnownModules`），对每个调用 `kit_create()`，并启用设置中打开的模块。
-3. Settings 中的启用/禁用通过 IPC 下发，runner 通过 `apply_module_status_update` → 模块对象的 `enable()` / `disable()` 生效。
+3. Settings 中的启用/禁用沿用 PowerToys 的 `module_status` IPC 消息；runner 应用 GPO 策略并调用模块原生 `enable()` / `disable()` 接口，随后回传 `get_all_settings()`，Settings 用模块实际 `is_enabled()` 状态同步 Utilities。设置文件监听仍作为外部修改的兜底。Kit 不提供 PowerToys 的实验性功能开关及对应策略。
 4. 退出：消息循环结束时（托盘退出，或未开启托盘时关闭 Settings），runner 执行模块收尾（`modules().clear()` → `destroy()`），让每个模块在进程退出前清理其 worker 与服务。
 
 ### 2.3 模块接口契约（`KitModuleIface`）
@@ -197,12 +197,39 @@ flowchart LR
 ```
 
 - **骨架**：模块接口 DLL + 托管核心库 + 无头 worker。
-- **组件**：`AIHubModuleInterface.dll`、`Kit.AIHubWorker.exe`、`Kit.AIHubLib`（AI 服务引擎、kernels、任务链、安全策略、审计流水线）。
-- **生命周期**：worker 承载共享 AI 服务（kernels、主/备端点、全局安全策略）；任务链携带各自的 `AGENTS.md` 策略；安全审计收集 Windows 事件日志、排序发现并执行 AI 分析。
-- **数据**：`%LOCALAPPDATA%\Kit\AiHub\` —— `chains\`、`kernels\`、`requests\`、`State\`、`security.md`、`settings.json`、`secrets.dat`、`Logs\`。
-- **设置界面**：共享 AI 服务（内核、主/备端点、自检、全局安全策略）在“常规”页的 **AI 服务** 分组中配置，卡片样式与其余设置一致。AI Hub 页面包含总开关、AI 就绪状态卡片和三个页签（安全审计 / 系统优化 / 任务策略）；每个页签首次打开时才构建（`x:Load`），之后保留。严重度颜色随主题切换（浅色 / 深色 / 高对比度）。
+- **组件**：`Kit.AIHubModuleInterface.dll`、`Kit.AIHubWorker.exe`、`Kit.AIHubLib`（审计/优化）及 `Kit.AiHub`（共享 AI 引擎、内核、任务链和安全策略）。
+- **生命周期**：Worker 执行定时审计；Settings 和 Worker 使用进程内共享 AI 服务及其持久化配置。任务链携带各自的 `AGENTS.md` 策略；安全审计收集 Windows 事件日志、排序发现并执行 AI 分析。
+- **数据**：`%LOCALAPPDATA%\Kit\AiHub\` —— `chains\`、`kernels\`、`requests\`、`State\`、`security.md`、`service-settings.json`、`secrets.dat`、`Logs\`。
+- **设置界面**：共享 AI 服务（内核、主/备端点、自检、全局安全策略）在“常规”页的 **AI 服务** 分组中配置，卡片样式与其余设置一致。AI Hub 页面包含总开关、AI 就绪状态卡片和三个页签（安全审计 / 系统优化 / 任务策略）；审计操作独立成行、历史统计默认折叠，优化页仅在存在候选项时显示选择统计。严重度颜色随主题切换（浅色 / 深色 / 高对比度）。
 
 ## 4. 构建与发布
+
+当前源码版本为 **2.3.4**。本地 Release x64 产物已通过设置页和 Runner 冒烟验证；完整重新编译和实机测试仍需在正式发布前完成。本次未生成发布压缩包。在仓库根目录构建，成功后再整理发布目录：
+
+```powershell
+.\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
+if ($LASTEXITCODE -ne 0) { throw 'Build failed; do not stage incomplete output.' }
+.\tools\build\Stage-Release.ps1
+```
+
+构建后运行 `x64/Release/Kit.exe`；整理后运行 `bin/release/2.3.4/Kit.exe`。整理脚本生成目录，不生成 ZIP。请保留整个运行目录。解决方案中主程序已依赖 AI Hub 模块 DLL 和 Worker，避免 VS 构建主程序时遗漏它们。
+
+要排除旧配置影响，先停止 Localserver 中运行的受管服务，从托盘菜单退出 Kit，再将 `%LOCALAPPDATA%\Kit` 改为不重复的备份名，例如 `Kit.backup-20260930`。启用托盘图标时，Settings 的 X 只关闭设置窗口，Runner 继续运行，与 PowerToys 一致。启动新编译的 Release，首次测试重新填写设置；立即恢复旧 JSON 会失去对照意义。备份保留凭据、策略、下载的内核和历史。不要清理官方 PowerToys 数据或 Localserver 配置指向的外部程序目录。
+
+`%LOCALAPPDATA%\Kit` 内的配置位置：
+
+| 路径 | 内容 |
+| --- | --- |
+| `settings.json` | 常规设置和模块开关 |
+| `AiHub/service-settings.json` | 共享 AI 服务设置 |
+| `AIHub/settings.json` | AI Hub 插件设置 |
+| `AiHub/secrets.dat`、`AiHub/security.md`、`AiHub/chains/` | 加密凭据和策略 |
+| `AiHub/kernels/`、`AiHub/State/`、`AiHub/Logs/` | 内核、状态和历史/日志 |
+| `Localserver/`、`UDPtest/`、`Awake/`、`LightSwitch/` | 其他模块配置和状态 |
+
+若日志出现拒绝访问并回退到 `%USERPROFILE%\AppData\LocalLow\Kit`，检查 EXE 的 Windows 完整性标签。输出目录继承 **Low Mandatory Level** 会使正常启动的程序缺少写入权限，清空配置无法修复。可对已存在的构建目录执行 `icacls .\x64 /setintegritylevel "(OI)(CI)M"` 恢复正常标签；整理目录 `.\bin` 若也继承该标签，同样处理。这只修改产物标签，不修改配置权限。若在低完整性工作区中删除并重建输出目录，需要重新处理。LocalLow 仅存放回退日志，并非第二套设置。
+
+AI 服务配置现为 `AiHub/service-settings.json`，AI Hub 插件配置为 `AIHub/settings.json`。Windows 不区分目录大小写，因此必须采用不同文件名。有效的旧服务配置自动迁移，无需强制清空。AI 服务仅面向 Kit 内部，目前由 AI Hub 使用；检测与后台配置的后续优化点见 [AI 服务 review](doc/ai-service-review.md)。
 
 - 构建：`tools/build/build.ps1`（单工程）与 `tools/build/build-essentials.ps1`（解决方案还原 + 基础工程）；均自动检测 `x64` 并初始化 VS 环境。
 - 版本来源：`src/Version.props`；生成的版本头位于 `src/common/version/Generated Files/version_gen.h`。
@@ -259,7 +286,7 @@ Kit 沿用 PowerToys 的模块加载模型，而非另造插件协议。runner �
 - `doc/devdoc/kit-first-plugin.md` —— 首模块落地检查清单与验证基线。
 - `doc/devdoc/kit-development-experience.md` —— 第一阶段经验总结与稳定化检查清单。
 - `doc/devdoc/startup-optimization-analysis.md` —— 启动耗时优化分析报告（中文）。
-- `fix.md` —— 上游差异与修复记录；`changelog.md` —— 版本历史。
+- [AI 服务 review](doc/ai-service-review.md) —— 配置归属、已知边界与回归证据；`changelog.md` —— 版本历史。
 
 ## 8. 变更记录
 

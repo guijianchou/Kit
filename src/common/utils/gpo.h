@@ -20,7 +20,6 @@ namespace kit_gpo
     const std::wstring POLICY_DISABLE_AUTOMATIC_UPDATE_DOWNLOAD = L"AutomaticUpdateDownloadDisabled";
     const std::wstring POLICY_DISABLE_NEW_UPDATE_TOAST = L"DisableNewUpdateAvailableToast";
     const std::wstring POLICY_DISABLE_SHOW_WHATS_NEW_AFTER_UPDATES = L"DoNotShowWhatsNewAfterUpdates";
-    const std::wstring POLICY_ALLOW_EXPERIMENTATION = L"AllowExperimentation";
     const std::wstring POLICY_ALLOW_DATA_DIAGNOSTICS = L"AllowDataDiagnostics";
     const std::wstring POLICY_CONFIGURE_RUN_AT_STARTUP = L"ConfigureRunAtStartup";
 
@@ -59,11 +58,6 @@ namespace kit_gpo
     inline gpo_rule_configured_t getDisableShowWhatsNewAfterUpdatesValue()
     {
         return getConfiguredValue(POLICY_DISABLE_SHOW_WHATS_NEW_AFTER_UPDATES);
-    }
-
-    inline gpo_rule_configured_t getAllowExperimentationValue()
-    {
-        return getConfiguredValue(POLICY_ALLOW_EXPERIMENTATION);
     }
 
     inline gpo_rule_configured_t getAllowDataDiagnosticsValue()

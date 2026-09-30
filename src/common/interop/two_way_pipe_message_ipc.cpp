@@ -89,7 +89,7 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::end()
 void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstring message)
 {
     // Adapted from https://learn.microsoft.com/windows/win32/ipc/named-pipe-client
-    HANDLE output_pipe_handle;
+    HANDLE output_pipe_handle = INVALID_HANDLE_VALUE;
     const wchar_t* message_send = message.c_str();
     BOOL fSuccess = FALSE;
     DWORD cbToWrite, cbWritten, dwMode;
@@ -97,7 +97,8 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
 
     // Try to open a named pipe; wait for it, if necessary.
 
-    while (1)
+    const ULONGLONG deadline = GetTickCount64() + 20000;
+    while (!closed && GetTickCount64() < deadline)
     {
         output_pipe_handle = CreateFile(
             lpszPipename, // pipe name
@@ -114,19 +115,27 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
         if (output_pipe_handle != INVALID_HANDLE_VALUE)
             break;
 
-        // Exit if an error other than ERROR_PIPE_BUSY occurs.
-        DWORD curr_error = 0;
-        if ((curr_error = GetLastError()) != ERROR_PIPE_BUSY)
+        // The server recreates its instance after each message. A missing pipe
+        // during that gap (or startup) is transient, just like a busy instance.
+        const DWORD curr_error = GetLastError();
+        if (curr_error != ERROR_PIPE_BUSY && curr_error != ERROR_FILE_NOT_FOUND)
         {
             return;
         }
 
-        // All pipe instances are busy, so wait for 20 seconds.
-
-        if (!WaitNamedPipe(lpszPipename, 20000))
+        if (!WaitNamedPipe(lpszPipename, 100))
         {
-            return;
+            const DWORD wait_error = GetLastError();
+            if (wait_error != ERROR_FILE_NOT_FOUND && wait_error != ERROR_SEM_TIMEOUT)
+            {
+                return;
+            }
+            Sleep(1);
         }
+    }
+    if (output_pipe_handle == INVALID_HANDLE_VALUE)
+    {
+        return;
     }
     dwMode = PIPE_READMODE_MESSAGE;
     fSuccess = SetNamedPipeHandleState(
@@ -136,6 +145,7 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
         NULL); // don't set maximum time
     if (!fSuccess)
     {
+        CloseHandle(output_pipe_handle);
         return;
     }
 
@@ -151,8 +161,12 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
         NULL); // not overlapped
     if (!fSuccess)
     {
+        CloseHandle(output_pipe_handle);
         return;
     }
+    // Keep the connection alive until the server reads the message. Closing
+    // earlier can make ConnectNamedPipe return ERROR_NO_DATA and lose it.
+    FlushFileBuffers(output_pipe_handle);
     CloseHandle(output_pipe_handle);
     return;
 }
@@ -395,7 +409,10 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::handle_pipe_connection(HAND
         message.resize(nullCharPos + 1);
     }
 
-    input_queue.queue_message(std::move(message));
+    if (ok)
+    {
+        input_queue.queue_message(std::move(message));
+    }
 
     // Flush the pipe to allow the client to read the pipe's contents
     // before disconnecting. Then disconnect the pipe, and close the
@@ -403,7 +420,6 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::handle_pipe_connection(HAND
 
     FlushFileBuffers(input_pipe_handle);
     DisconnectNamedPipe(input_pipe_handle);
-    CloseHandle(input_pipe_handle);
 }
 
 void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::start_named_pipe_server(HANDLE token)
@@ -441,17 +457,15 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::start_named_pipe_server(HAN
             current_connect_pipe_handle = connect_pipe_handle;
         }
         connected = ConnectNamedPipe(connect_pipe_handle, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
+        if (connected)
+        {
+            // Read and enqueue in connection order. Detached readers can deliver
+            // an old enabled-state snapshot after a newer toggle command.
+            handle_pipe_connection(connect_pipe_handle);
+        }
         {
             std::unique_lock lock(pipe_connect_handle_mutex);
             current_connect_pipe_handle = NULL;
-        }
-        if (connected)
-        {
-            std::thread(&TwoWayPipeMessageIPCImpl::handle_pipe_connection, this, connect_pipe_handle).detach();
-        }
-        else
-        {
-            // Client could not connect.
             CloseHandle(connect_pipe_handle);
         }
     }

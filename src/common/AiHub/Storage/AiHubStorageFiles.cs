@@ -15,6 +15,7 @@ using Kit.AiHub.Serialization;
 internal sealed class AiHubStorageFiles
 {
     internal const int MaxDataFileBytes = 1024 * 1024;
+    internal const string ServiceSettingsFileName = "service-settings.json";
     private const int MaxJournalBytes = 4 * MaxDataFileBytes;
     private const string JournalFileName = ".settings-transaction.dat";
     private readonly string _mutexName;
@@ -113,18 +114,13 @@ internal sealed class AiHubStorageFiles
         string? component = Path.GetFullPath(fullPath);
         while (!string.IsNullOrEmpty(component))
         {
-            try
+            // Most probes target files that do not exist yet (the transaction journal, first-run
+            // data). FileInfo reports a missing entry as -1 instead of throwing, and like
+            // File.GetAttributes it reads the entry itself, so links are still seen, not followed.
+            var attributes = new FileInfo(component).Attributes;
+            if ((int)attributes != -1 && (attributes & FileAttributes.ReparsePoint) != 0)
             {
-                if ((File.GetAttributes(component) & FileAttributes.ReparsePoint) != 0)
-                {
-                    throw new IOException("AI Hub paths must not contain reparse points.");
-                }
-            }
-            catch (FileNotFoundException)
-            {
-            }
-            catch (DirectoryNotFoundException)
-            {
+                throw new IOException("AI Hub paths must not contain reparse points.");
             }
 
             component = Path.GetDirectoryName(component);
@@ -134,6 +130,11 @@ internal sealed class AiHubStorageFiles
     internal static byte[]? ReadOptionalFile(string path, int maximumBytes)
     {
         EnsureNoReparsePoints(path);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
         try
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -213,9 +214,9 @@ internal sealed class AiHubStorageFiles
 
         var snapshot = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["version"] = "1",
+            ["version"] = "2",
         };
-        AddSnapshot(snapshot, "settings", "settings.json");
+        AddSnapshot(snapshot, "settings", ServiceSettingsFileName);
         AddSnapshot(snapshot, "secrets", "secrets.dat");
 
         byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(snapshot, AiHubJsonContext.Default.DictionaryStringString);
@@ -234,7 +235,7 @@ internal sealed class AiHubStorageFiles
         try
         {
             WriteAtomic("secrets.dat", secrets);
-            WriteAtomic("settings.json", settings);
+            WriteAtomic(ServiceSettingsFileName, settings);
             DeleteJournal();
         }
         catch (Exception)
@@ -274,7 +275,7 @@ internal sealed class AiHubStorageFiles
         {
             var snapshot = JsonSerializer.Deserialize(plaintext, AiHubJsonContext.Default.DictionaryStringString)
                 ?? throw new InvalidDataException("The AI Hub recovery journal is invalid.");
-            if (!snapshot.TryGetValue("version", out string? version) || version != "1" || snapshot.Count > 3)
+            if (!snapshot.TryGetValue("version", out string? version) || version is not ("1" or "2") || snapshot.Count > 3)
             {
                 throw new InvalidDataException("The AI Hub recovery journal is invalid.");
             }
@@ -292,7 +293,7 @@ internal sealed class AiHubStorageFiles
             try
             {
                 secrets = ReadSnapshot(snapshot, "secrets");
-                RestoreFile("settings.json", settings);
+                RestoreFile(version == "1" ? "settings.json" : ServiceSettingsFileName, settings);
                 RestoreFile("secrets.dat", secrets);
                 DeleteJournal();
             }

@@ -160,27 +160,55 @@ namespace ManagedCommon
         public static void InitializeLogger(string applicationLogPath, bool isLocalLow = false)
         {
             LoadLogSettings();
-            string versionedPath = LogDirectoryPath(applicationLogPath, isLocalLow);
-            string basePath = Path.GetDirectoryName(versionedPath);
+            var logFile = "Log_" + DateTime.Now.ToString(@"yyyy-MM-dd", CultureInfo.InvariantCulture) + ".log";
+            string requestedPath = LogDirectoryPath(applicationLogPath, isLocalLow);
+            string failure = null;
 
-            if (!Directory.Exists(versionedPath))
+            // A process that cannot write %LOCALAPPDATA% (low integrity, redirected profile) must
+            // still start and still leave a log, so the location falls back instead of throwing.
+            foreach (string versionedPath in LogDirectoryCandidates(applicationLogPath, isLocalLow))
             {
-                Directory.CreateDirectory(versionedPath);
+                try
+                {
+                    Directory.CreateDirectory(versionedPath);
+                    var logFilePath = Path.Combine(versionedPath, logFile);
+                    var listener = new TextWriterTraceListener(new StreamWriter(new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete)));
+
+                    string basePath = Path.GetDirectoryName(versionedPath);
+                    AppLogDirectoryPath = basePath;
+                    CurrentVersionLogDirectoryPath = versionedPath;
+                    CurrentLogFile = logFilePath;
+
+                    Trace.Listeners.Add(listener);
+                    Trace.AutoFlush = true;
+
+                    if (failure != null)
+                    {
+                        LogWarning($"LOGGER_FALLBACK: '{requestedPath}' is not writable ({failure}); logging to '{versionedPath}' instead.");
+                    }
+
+                    // Clean up old version log folders
+                    Task.Run(() => DeleteOldVersionLogFolders(basePath, versionedPath));
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    failure ??= ex.GetType().Name + ": " + ex.Message;
+                }
             }
 
-            AppLogDirectoryPath = basePath;
-            CurrentVersionLogDirectoryPath = versionedPath;
+            _isLoggingEnabled = false;
+            System.Diagnostics.Debug.WriteLine($"[Kit] Logger cannot be initialized for '{requestedPath}': {failure}");
+        }
 
-            var logFile = "Log_" + DateTime.Now.ToString(@"yyyy-MM-dd", CultureInfo.InvariantCulture) + ".log";
-            var logFilePath = Path.Combine(versionedPath, logFile);
-            CurrentLogFile = logFilePath;
-
-            Trace.Listeners.Add(new TextWriterTraceListener(logFilePath));
-
-            Trace.AutoFlush = true;
-
-            // Clean up old version log folders
-            Task.Run(() => DeleteOldVersionLogFolders(basePath, versionedPath));
+        private static string[] LogDirectoryCandidates(string applicationLogPath, bool isLocalLow)
+        {
+            return new[]
+            {
+                LogDirectoryPath(applicationLogPath, isLocalLow),
+                LogDirectoryPath(applicationLogPath, isLocalLow: true),
+                Path.Combine(Path.GetTempPath(), "Kit" + applicationLogPath, Version),
+            }.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         }
 
         public static string LogDirectoryPath(string applicationLogPath, bool isLocalLow = false)
@@ -301,7 +329,7 @@ namespace ManagedCommon
                 return;
             }
 
-            Trace.WriteLine("[" + DateTime.Now.TimeOfDay + "] [" + type + "] " + GetCallerInfo(memberName, sourceFilePath, sourceLineNumber));
+            Trace.WriteLine("[" + DateTime.Now.TimeOfDay + "] [" + type + "] [t-" + Environment.CurrentManagedThreadId + "] " + GetCallerInfo(memberName, sourceFilePath, sourceLineNumber));
             Trace.Indent();
             if (message != string.Empty)
             {

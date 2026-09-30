@@ -75,6 +75,14 @@ json::JsonObject get_all_settings()
     return result;
 }
 
+void send_all_settings_to_settings()
+{
+    const std::wstring settings_string{ get_all_settings().Stringify().c_str() };
+    std::unique_lock lock{ ipc_mutex };
+    if (current_settings_ipc)
+        current_settings_ipc->send(settings_string);
+}
+
 std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObject& powertoys_configs)
 {
     std::optional<std::wstring> result;
@@ -213,37 +221,23 @@ void dispatch_received_json(const std::wstring& json_to_parse)
         if (name == L"general")
         {
             apply_general_settings(value.GetObjectW());
-            // const std::wstring settings_string{ get_all_settings().Stringify().c_str() };
-            // {
-            //     std::unique_lock lock{ ipc_mutex };
-            //     if (current_settings_ipc)
-            //         current_settings_ipc->send(settings_string);
-            // }
+            send_all_settings_to_settings();
         }
         else if (name == L"module_status")
         {
             // Handle single module enable/disable update
             // Expected format: {"module_status": {"ModuleName": true/false}}
             apply_module_status_update(value.GetObjectW());
+            send_all_settings_to_settings();
         }
         else if (name == L"powertoys" || name == L"kit")
         {
             dispatch_json_config_to_modules(value.GetObjectW());
-            const std::wstring settings_string{ get_all_settings().Stringify().c_str() };
-            {
-                std::unique_lock lock{ ipc_mutex };
-                if (current_settings_ipc)
-                    current_settings_ipc->send(settings_string);
-            }
+            send_all_settings_to_settings();
         }
         else if (name == L"refresh")
         {
-            const std::wstring settings_string{ get_all_settings().Stringify().c_str() };
-            {
-                std::unique_lock lock{ ipc_mutex };
-                if (current_settings_ipc)
-                    current_settings_ipc->send(settings_string);
-            }
+            send_all_settings_to_settings();
         }
         else if (name == L"action")
         {

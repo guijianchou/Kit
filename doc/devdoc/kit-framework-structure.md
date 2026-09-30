@@ -832,29 +832,16 @@ private:
 }
 ```
 
-### 8.3 Runner 消息分发
+### 8.3 Utilities 启用状态往返
 
-**settings_window.cpp**:
-```cpp
-void runner_to_settings_callback(const std::wstring& message)
-{
-    auto json = json::JsonObject::Parse(message);
-    auto action = json.GetNamedString(L"action");
-    
-    if (action == L"apply_module_status_update")
-    {
-        apply_module_status_update(json);  // → general_settings.cpp
-    }
-    else if (action == L"dispatch_json_config_to_modules")
-    {
-        dispatch_json_config_to_modules(json);  // → 调用模块 set_config
-    }
-    else if (action == L"dispatch_json_action_to_module")
-    {
-        dispatch_json_action_to_module(json);  // → 调用模块 call_custom_action
-    }
-}
-```
+Kit 沿用 PowerToys Dashboard 的 `module_status` 消息及模块原生生命周期接口，不按插件类型增加启停分支：
+
+1. Settings Dashboard 发送 `{"module_status":{"Awake":false}}`；Settings 处理其他全局配置时仍发送 `{"general":{...}}`。
+2. Runner 的 `settings_window.cpp` 将状态交给 `apply_module_status_update` 或 `apply_general_settings`；`general_settings.cpp` 按模块接口的 GPO 结果确定目标状态，并通过 `enable()` / `disable()` 和热键管理器应用。
+3. Runner 回送 `get_all_settings()`。其中 `general.enabled` 由已加载模块的 `is_enabled()` 生成，表示实际运行态，而不是仅回显 UI 请求值。
+4. Settings 的 IPC 接收器把启用状态合并进共享 `SettingsRepository<GeneralSettings>` 并通知订阅者，Dashboard 通过 DispatcherQueue 更新 Utilities。合并会保留 Runner 当前未加载模块的 enabled 键；文件 watcher 继续处理外部文件修改。
+
+启动时 `start_enabled_kit_modules()` 也通过相同的模块接口 GPO 配置与 `is_enabled_by_default()` / 持久化 enabled 值确定模块状态。新增官方模块应提供正确的原生 GPO 查询与生命周期实现；Settings 与 Runner 都不应为单个插件另写开关逻辑。
 
 ---
 
@@ -1059,7 +1046,6 @@ struct GeneralSettings
     bool showNewUpdatesToastNotification;
     bool downloadUpdatesAutomatically;
     bool showWhatsNewAfterUpdates;
-    bool enableExperimentation;
     DashboardSortOrder dashboardSortOrder;
     bool isAdmin;
     bool enableWarningsElevatedApps;

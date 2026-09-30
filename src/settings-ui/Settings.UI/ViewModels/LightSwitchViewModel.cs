@@ -29,14 +29,16 @@ namespace Kit.Settings.UI.ViewModels
 
         private Func<string, int> SendConfigMSG { get; }
 
-        private GeneralSettings GeneralSettingsConfig { get; set; }
+        private readonly ISettingsRepository<GeneralSettings> settingsRepository;
+
+        private GeneralSettings GeneralSettingsConfig => settingsRepository.SettingsConfig;
 
         public ObservableCollection<SearchLocation> SearchLocations { get; } = new();
 
         public LightSwitchViewModel(ISettingsRepository<GeneralSettings> settingsRepository, LightSwitchSettings? initialSettings = null, Func<string, int>? ipcMSGCallBackFunc = null)
         {
             ArgumentNullException.ThrowIfNull(settingsRepository);
-            GeneralSettingsConfig = settingsRepository.SettingsConfig;
+            this.settingsRepository = settingsRepository;
             InitializeEnabledValue();
 
             _moduleSettings = initialSettings ?? new LightSwitchSettings();
@@ -509,6 +511,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RefreshEnabledState()
         {
+            InitializeEnabledValue();
             OnPropertyChanged(nameof(IsEnabled));
         }
 

@@ -181,6 +181,12 @@
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/UDPtest.png}" />
 
                 <NavigationViewItem
+                    x:Name="NetMapNavigationItem"
+                    x:Uid="Shell_NetMap"
+                    AutomationProperties.AutomationId="NetMapNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/NetMap.png}" />
+
+                <NavigationViewItem
                     x:Name="AIHubNavigationItem"
                     x:Uid="Shell_AIHub"
                     AutomationProperties.AutomationId="AIHubNavItem"

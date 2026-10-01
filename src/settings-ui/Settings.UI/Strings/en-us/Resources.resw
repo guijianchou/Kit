@@ -2945,4 +2945,433 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AiHub_DiscardEndpointsButton.Content" xml:space="preserve">
     <value>Discard</value>
   </data>
+  <data name="Shell_NetMap.Content" xml:space="preserve">
+    <value>NetMap</value>
+  </data>
+  <data name="NetMap/ModuleTitle" xml:space="preserve">
+    <value>NetMap</value>
+  </data>
+  <data name="NetMap_EnableCard.Header" xml:space="preserve">
+    <value>NetMap</value>
+  </data>
+  <data name="NetMap_EnableCard.Description" xml:space="preserve">
+    <value>Observe direct and proxy egress as nodes change.</value>
+  </data>
+  <data name="NetMap_Enable.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable NetMap</value>
+  </data>
+  <data name="NetMap_Detect.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Detection</value>
+  </data>
+  <data name="NetMap_Stop.Content" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="NetMap_MapTitle.Text" xml:space="preserve">
+    <value>MTR route and map</value>
+  </data>
+  <data name="NetMap_MapNotice.Text" xml:space="preserve">
+    <value>Natural Earth · solid: consecutive located hops; dashed: unlocated gaps / egress illustration. Positions are approximate. Select a hop for RTT and loss.</value>
+  </data>
+  <data name="NetMap_ServicesTitle.Text" xml:space="preserve">
+    <value>Proxy service connectivity</value>
+  </data>
+  <data name="NetMap_Endpoint.Text" xml:space="preserve">
+    <value>Service</value>
+  </data>
+  <data name="NetMap_ServiceNotice.Text" xml:space="preserve">
+    <value>Proxy configuration only. Claude and ChatGPT validate trace checkpoints; Gemini and Google check web pages. Timing measures HTTP response headers. Missing ICMP replies do not prove application packet loss.</value>
+  </data>
+  <data name="NetMap_Route.Header" xml:space="preserve">
+    <value>Local route observations</value>
+  </data>
+  <data name="NetMap_RouteNotice.Text" xml:space="preserve">
+    <value>System ICMP route to the egress IP. RTT is from this device to each hop. Red means no reply; the first two failures retain the last RTT, then N/A. Average/loss remain cumulative.</value>
+  </data>
+  <data name="NetMap_Settings.Header" xml:space="preserve">
+    <value>Connection and map settings</value>
+  </data>
+  <data name="NetMap_ProxyMode.Header" xml:space="preserve">
+    <value>Proxy connection</value>
+  </data>
+  <data name="NetMap_SystemMode.Content" xml:space="preserve">
+    <value>System proxy</value>
+  </data>
+  <data name="NetMap_ExplicitMode.Content" xml:space="preserve">
+    <value>Explicit HTTP / HTTPS / SOCKS5</value>
+  </data>
+  <data name="NetMap_TunMode.Content" xml:space="preserve">
+    <value>System route / TUN</value>
+  </data>
+  <data name="NetMap_ProxyAddress.Header" xml:space="preserve">
+    <value>Explicit proxy address</value>
+  </data>
+  <data name="NetMap_ProxyNotice.Text" xml:space="preserve">
+    <value>No credentials. Direct bypasses application proxy settings, not TUN. System mode honors Windows bypass rules.</value>
+  </data>
+  <data name="NetMap_AsnPath.Header" xml:space="preserve">
+    <value>GeoLite2-ASN database (optional)</value>
+  </data>
+  <data name="NetMap_BrowseAsn.Content" xml:space="preserve">
+    <value>Choose ASN database</value>
+  </data>
+  <data name="NetMap_CityPath.Header" xml:space="preserve">
+    <value>Local City MMDB (optional)</value>
+  </data>
+  <data name="NetMap_BrowseCity.Content" xml:space="preserve">
+    <value>Choose City database</value>
+  </data>
+  <data name="NetMap_DatabaseNotice.Text" xml:space="preserve">
+    <value>Local MMDB takes priority. Online lookup sends public IPs to ipwho.is via the selected proxy mode, caches results for this session and skips private/reserved addresses. Disable the switch to use only local data. ASN downloads are manual below.</value>
+  </data>
+  <data name="NetMap_Apply.Content" xml:space="preserve">
+    <value>Apply settings</value>
+  </data>
+  <data name="NetMap_UnknownLocation" xml:space="preserve">
+    <value>Location unknown</value>
+  </data>
+  <data name="NetMap_UnknownAsn" xml:space="preserve">
+    <value>ASN unknown</value>
+  </data>
+  <data name="NetMap_NoSuccess" xml:space="preserve">
+    <value>No successful observation</value>
+  </data>
+  <data name="NetMap_LastSuccess" xml:space="preserve">
+    <value>Last success</value>
+  </data>
+  <data name="NetMap_Stopped" xml:space="preserve">
+    <value>Stopped · results frozen</value>
+  </data>
+  <data name="NetMap_Waiting" xml:space="preserve">
+    <value>Waiting for response</value>
+  </data>
+  <data name="NetMap_Responded" xml:space="preserve">
+    <value>Responded</value>
+  </data>
+  <data name="NetMap_LastKnown" xml:space="preserve">
+    <value>Last known result</value>
+  </data>
+  <data name="NetMap_Stabilizing" xml:space="preserve">
+    <value>Observing egress stability…</value>
+  </data>
+  <data name="NetMap_Running" xml:space="preserve">
+    <value>Detecting · follows external node changes</value>
+  </data>
+  <data name="NetMap_SameEgress" xml:space="preserve">
+    <value>Both sources returned the same IP. Routing rules or TUN can cause this; it does not prove node failure.</value>
+  </data>
+  <data name="NetMap_RouteBoundary" xml:space="preserve">
+    <value>Direct bypasses application proxy settings; TUN and domain routing can affect both observations.</value>
+  </data>
+  <data name="NetMap_Route_Direct" xml:space="preserve">
+    <value>No application proxy</value>
+  </data>
+  <data name="NetMap_Route_System" xml:space="preserve">
+    <value>Windows system proxy</value>
+  </data>
+  <data name="NetMap_Route_SystemProxy" xml:space="preserve">
+    <value>Windows proxy selected</value>
+  </data>
+  <data name="NetMap_Route_SystemBypass" xml:space="preserve">
+    <value>Windows: no proxy or bypass rule</value>
+  </data>
+  <data name="NetMap_Route_Explicit" xml:space="preserve">
+    <value>Explicit proxy</value>
+  </data>
+  <data name="NetMap_Route_SystemRoute" xml:space="preserve">
+    <value>System route / TUN (not verified)</value>
+  </data>
+  <data name="NetMap_Ipv6Route" xml:space="preserve">
+    <value>IPv6 egress observed; route probing is IPv4-only in this release.</value>
+  </data>
+  <data name="NetMap_RouteComplete" xml:space="preserve">
+    <value>Route sampling ended</value>
+  </data>
+  <data name="NetMap_NoRoute" xml:space="preserve">
+    <value>Waiting for ICMP replies</value>
+  </data>
+  <data name="NetMap_RouteSampling" xml:space="preserve">
+    <value>MTR sampling · up to 24 hops · continues until Stop</value>
+  </data>
+  <data name="NetMap_Database_00" xml:space="preserve">
+    <value>Local ASN/City databases not loaded</value>
+  </data>
+  <data name="NetMap_Database_10" xml:space="preserve">
+    <value>Local ASN loaded · City unavailable</value>
+  </data>
+  <data name="NetMap_Database_01" xml:space="preserve">
+    <value>Local City loaded · ASN unavailable</value>
+  </data>
+  <data name="NetMap_Database_11" xml:space="preserve">
+    <value>Local ASN and City loaded</value>
+  </data>
+  <data name="NetMap_NoServices" xml:space="preserve">
+    <value>Waiting for Proxy checks</value>
+  </data>
+  <data name="NetMap_MeasuredAt" xml:space="preserve">
+    <value>Measured at</value>
+  </data>
+  <data name="NetMap_HopDetail" xml:space="preserve">
+    <value>Sent {0} · loss {1:F1}% · last {2} ms · avg {3} ms</value>
+  </data>
+  <data name="NetMap_InvalidProxy" xml:space="preserve">
+    <value>Enter a valid http://, https:// or socks5:// host:port without credentials, path or query.</value>
+  </data>
+  <data name="NetMap_SettingsApplied" xml:space="preserve">
+    <value>Settings submitted. Detection stopped; click Start to use the new settings.</value>
+  </data>
+  <data name="NetMap_AuthRequired" xml:space="preserve">
+    <value>Authentication required</value>
+  </data>
+  <data name="NetMap_Restricted" xml:space="preserve">
+    <value>Access restricted (reason unverified)</value>
+  </data>
+  <data name="NetMap_RateLimited" xml:space="preserve">
+    <value>rate limited</value>
+  </data>
+  <data name="NetMap_ServerError" xml:space="preserve">
+    <value>server error</value>
+  </data>
+  <data name="NetMap_Redirect" xml:space="preserve">
+    <value>Unresolved redirect</value>
+  </data>
+  <data name="NetMap_MapEmpty" xml:space="preserve">
+    <value>Start detection to locate observed egress.</value>
+  </data>
+  <data name="NetMap_CountryPoint" xml:space="preserve">
+    <value>country illustration</value>
+  </data>
+  <data name="NetMap_ApproxLocation" xml:space="preserve">
+    <value>approximate IP location</value>
+  </data>
+  <data name="NetMap_PickerFailed" xml:space="preserve">
+    <value>File picker unavailable. Enter a local MMDB path in settings.</value>
+  </data>
+  <data name="NetMap_Error_Timeout" xml:space="preserve">
+    <value>Timed out</value>
+  </data>
+  <data name="NetMap_Error_Dns" xml:space="preserve">
+    <value>DNS failed</value>
+  </data>
+  <data name="NetMap_Error_Connection" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+  <data name="NetMap_Error_Tls" xml:space="preserve">
+    <value>TLS failed</value>
+  </data>
+  <data name="NetMap_Error_InvalidResponse" xml:space="preserve">
+    <value>Invalid response</value>
+  </data>
+  <data name="NetMap_Error_InvalidProxy" xml:space="preserve">
+    <value>Invalid proxy</value>
+  </data>
+  <data name="NetMap_Error_None" xml:space="preserve">
+    <value>Responded</value>
+  </data>
+  <data name="NetMap_UnexpectedFailure" xml:space="preserve">
+    <value>Detection stopped after an unexpected error. Click Start to retry.</value>
+  </data>
+  <data name="NetMap_DiagnosticFailed" xml:space="preserve">
+    <value>Some diagnostic results are unavailable. Egress observation continues.</value>
+  </data>
+  <data name="NetMap_DetectLabel.Text" xml:space="preserve">
+    <value>Detection</value>
+  </data>
+  <data name="NetMap_CardDetails.Content" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NetMap_Direct" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="NetMap_Proxy" xml:space="preserve">
+    <value>Proxy</value>
+  </data>
+  <data name="NetMap_DirectHeader.Text" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="NetMap_ProxyHeader.Text" xml:space="preserve">
+    <value>Result (Proxy)</value>
+  </data>
+  <data name="NetMap_Start.Content" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="NetMap_ThisDevice" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="NetMap_WaitingProxy" xml:space="preserve">
+    <value>waiting for proxy IP</value>
+  </data>
+  <data name="NetMap_HopHeader.Text" xml:space="preserve">
+    <value>#</value>
+  </data>
+  <data name="NetMap_RouterHeader.Text" xml:space="preserve">
+    <value>Router IP</value>
+  </data>
+  <data name="NetMap_LossHeader.Text" xml:space="preserve">
+    <value>Loss</value>
+  </data>
+  <data name="NetMap_RttHeader.Text" xml:space="preserve">
+    <value>Avg ms</value>
+  </data>
+  <data name="NetMap_PageResponded" xml:space="preserve">
+    <value>Page responded</value>
+  </data>
+  <data name="NetMap_SignIn" xml:space="preserve">
+    <value>Sign-in page</value>
+  </data>
+  <data name="NetMap_BrowserCheck" xml:space="preserve">
+    <value>Browser verification required</value>
+  </data>
+  <data name="NetMap_HttpError" xml:space="preserve">
+    <value>HTTP error</value>
+  </data>
+  <data name="NetMap_OnlineLookup.Header" xml:space="preserve">
+    <value>Fill missing ASN and locations online</value>
+  </data>
+  <data name="NetMap_GeoSource" xml:space="preserve">
+    <value>Geography source:</value>
+  </data>
+  <data name="NetMap_Asn_NotFound" xml:space="preserve">
+    <value>ASN not returned by data source</value>
+  </data>
+  <data name="NetMap_Asn_Pending" xml:space="preserve">
+    <value>Looking up ASN…</value>
+  </data>
+  <data name="NetMap_Asn_Ready" xml:space="preserve">
+    <value>ASN not returned by data source</value>
+  </data>
+  <data name="NetMap_Asn_Private" xml:space="preserve">
+    <value>Private/reserved IP · ASN not queried</value>
+  </data>
+  <data name="NetMap_Asn_LocalUnavailable" xml:space="preserve">
+    <value>ASN database missing or no matching entry</value>
+  </data>
+  <data name="NetMap_Asn_Unavailable" xml:space="preserve">
+    <value>ASN lookup unavailable · check connection</value>
+  </data>
+  <data name="NetMap_Asn_RateLimited" xml:space="preserve">
+    <value>ASN lookup limit reached · try later</value>
+  </data>
+  <data name="NetMap_OnlineEnabled" xml:space="preserve">
+    <value>Online lookup enabled</value>
+  </data>
+  <data name="NetMap_OnlineDisabled" xml:space="preserve">
+    <value>Online lookup disabled</value>
+  </data>
+  <data name="NetMap_Enable.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="NetMap_Enable.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="NetMap_OnlineLookup.OnContent" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="NetMap_OnlineLookup.OffContent" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="NetMap_DataUpdates.Header" xml:space="preserve">
+    <value>ASN database update</value>
+  </data>
+  <data name="NetMap_UpdateAsn.Content" xml:space="preserve">
+    <value>Download / update ASN</value>
+  </data>
+  <data name="NetMap_CancelUpdate.Content" xml:space="preserve">
+    <value>Cancel download</value>
+  </data>
+  <data name="NetMap_UpdateNotice.Text" xml:space="preserve">
+    <value>Manual ASN downloads use the applied proxy settings and stop detection. SHA-256 and MMDB validation must pass before replacement. Source: P3TERX mirror of MaxMind GeoLite2, subject to its license. Leave the custom ASN path empty to use the downloaded database; click Start after updating.</value>
+  </data>
+  <data name="NetMap_UpdateWorking" xml:space="preserve">
+    <value>Downloading and verifying data…</value>
+  </data>
+  <data name="NetMap_UpdateCurrent" xml:space="preserve">
+    <value>Already current · SHA-256 verified</value>
+  </data>
+  <data name="NetMap_UpdateDone" xml:space="preserve">
+    <value>Updated · SHA-256 verified</value>
+  </data>
+  <data name="NetMap_UpdateCancelled" xml:space="preserve">
+    <value>Download cancelled; existing data retained.</value>
+  </data>
+  <data name="NetMap_UpdateTimeout" xml:space="preserve">
+    <value>Download timed out; existing data retained.</value>
+  </data>
+  <data name="NetMap_UpdateHashUnavailable" xml:space="preserve">
+    <value>Release has no valid SHA-256; update refused.</value>
+  </data>
+  <data name="NetMap_UpdateHashMismatch" xml:space="preserve">
+    <value>SHA-256 mismatch; downloaded file rejected and existing data retained.</value>
+  </data>
+  <data name="NetMap_UpdateTooLarge" xml:space="preserve">
+    <value>Download exceeds the permitted size; existing data retained.</value>
+  </data>
+  <data name="NetMap_UpdateInvalidData" xml:space="preserve">
+    <value>Invalid release metadata or data format; existing data retained.</value>
+  </data>
+  <data name="NetMap_UpdateConnection" xml:space="preserve">
+    <value>GitHub request failed. Check the applied proxy settings or try again later; existing data retained.</value>
+  </data>
+  <data name="NetMap_UpdateFailed" xml:space="preserve">
+    <value>Unable to validate or save the data. Existing data retained; check file access and retry.</value>
+  </data>
+  <data name="NetMap_LastRttHeader.Text" xml:space="preserve">
+    <value>Last ms</value>
+  </data>
+  <data name="NetMap_BestWorst" xml:space="preserve">
+    <value>Best / worst</value>
+  </data>
+  <data name="NetMap_TargetLatency" xml:space="preserve">
+    <value>Target ICMP RTT</value>
+  </data>
+  <data name="NetMap_TargetPending" xml:space="preserve">
+    <value>Target ICMP RTT: waiting for a reply; HTTP reachability does not imply ICMP replies.</value>
+  </data>
+  <data name="NetMap_ResponseTime" xml:space="preserve">
+    <value>headers</value>
+  </data>
+  <data name="NetMap_HttpResponded" xml:space="preserve">
+    <value>HTTP reachable</value>
+  </data>
+  <data name="NetMap_BodyIncomplete" xml:space="preserve">
+    <value>body incomplete</value>
+  </data>
+  <data name="NetMap_LocLimited" xml:space="preserve">
+    <value>Lookup limit</value>
+  </data>
+  <data name="NetMap_TraceResponded" xml:space="preserve">
+    <value>Trace checkpoint reached</value>
+  </data>
+  <data name="NetMap_LocPending" xml:space="preserve">
+    <value>Locating…</value>
+  </data>
+  <data name="NetMap_TraceInvalid" xml:space="preserve">
+    <value>Trace incomplete or invalid</value>
+  </data>
+  <data name="NetMap_MainlandChina" xml:space="preserve">
+    <value>Mainland China</value>
+  </data>
+  <data name="NetMap_LocPrivate" xml:space="preserve">
+    <value>Private network</value>
+  </data>
+  <data name="NetMap_LocHeader.Text" xml:space="preserve">
+    <value>Loc</value>
+  </data>
+  <data name="NetMap_Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="NetMap_Disconnected" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+  <data name="NetMap_NeedsAttention" xml:space="preserve">
+    <value>Needs attention</value>
+  </data>
+  <data name="NetMap_Slow" xml:space="preserve">
+    <value>Slow</value>
+  </data>
+  <data name="NetMap_ProxyUnavailable" xml:space="preserve">
+    <value>Proxy unavailable</value>
+  </data>
+  <data name="NetMap_HealthLegend.Text" xml:space="preserve">
+    <value>Every 10 s · Green ≤75 ms · Yellow >75 ms / needs attention · Red error · Three consecutive failures: N/A</value>
+  </data>
 </root>

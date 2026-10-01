@@ -15,7 +15,7 @@ It is a **stability-first PowerToys-derived workspace, not a full product rebran
 | PowerToys runner / module-interface / settings / dashboard patterns | Branding (`Kit`), window titles, visible UI text |
 | The `KitModuleIface` C++ contract (with `PowertoyModuleIface` aliases) | Settings storage under `%LOCALAPPDATA%\Kit` (not the official PowerToys directory) |
 | The explicit module-loading model | Automatic update, download, and telemetry surfaces are removed |
-| PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub` | Backup/restore defaults use Kit branding (`Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
+| PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub`, `NetMap` | Backup/restore defaults use Kit branding (`Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
 
 Current Kit version: `2.3.4`.
 
@@ -46,7 +46,9 @@ Runtime layout next to `Kit.exe`:
 ├── Kit.LightSwitchService.exe
 └── WinUI3Apps/
     ├── Kit.Settings.exe
-    └── Kit.QuickAccess.exe
+    ├── Kit.QuickAccess.exe
+    ├── Kit.NetMapLib.dll                   # NetMap runs inside Settings
+    └── modules/NetMap/                     # third-party license notices
 ```
 
 ### 2.2 Startup and lifecycle
@@ -72,7 +74,7 @@ Defined in `src/modules/interface/kit_module_interface.h`. A module DLL exports 
 Every Kit module follows the same five-piece skeleton:
 
 1. **Native module interface DLL** (C++) — the runner-facing contract, enabled/disabled with the module.
-2. **Core library** — the engine, either managed (`LocalserverLib`, `UDPtestLib`, `AIHubLib`) or native (`LightSwitchLib`).
+2. **Core library** — the engine, either managed (`LocalserverLib`, `UDPtestLib`, `AIHubLib`, `NetMapLib`) or native (`LightSwitchLib`).
 3. **Optional worker/service executable** — a headless process that hosts the engine outside the Settings process.
 4. **Settings page + view model** (WinUI 3) — the per-module UI in the Settings app.
 5. **Registration points** — runner `KitKnownModules`, Settings navigation/routes, Home dashboard metadata, and tests.
@@ -93,10 +95,10 @@ All runtime data lives under `%LOCALAPPDATA%\Kit`:
 
 ## 3. Plugin Architecture Skeleton Analysis
 
-The five active modules split into two groups:
+The six active modules split into two groups:
 
 - **PowerToys-imported (first-party)** — `Awake`, `Light Switch`: adapted from upstream PowerToys modules onto Kit's contract.
-- **Kit-developed plugins** — `Localserver`, `UDPtest`, `AI Hub`: built for Kit's own local use.
+- **Kit-developed plugins** — `Localserver`, `UDPtest`, `AI Hub`, `NetMap`: built for Kit's own local use.
 
 ### 3.1 Awake — keep-awake utility
 
@@ -202,6 +204,19 @@ flowchart LR
 - **Data**: `%LOCALAPPDATA%\Kit\AiHub\` — `chains\`, `kernels\`, `requests\`, `State\`, `security.md`, `service-settings.json`, `secrets.dat`, `Logs\`.
 - **Settings UI**: the shared AI service (kernel, main/fallback endpoints, self-test, global security policy) is configured in the **AI Service** group on the General page, laid out with the same cards as the rest of Settings. The AI Hub page hosts the master toggle, an AI-readiness card, and three tabs (Security audit / Optimization / Task policies). Audit actions occupy their own row, historical statistics are collapsed, and the optimization page shows selection metrics only when candidates exist. Severity colors follow the theme (light / dark / high contrast).
 
+### 3.6 NetMap — direct and proxy egress observation
+
+NetMap follows the egress you are currently using as you switch nodes in an external proxy client. It does not require subscriptions, a specific client, or a node inventory. UDPtest measures configured lines; NetMap observes the current Direct and Proxy paths.
+
+- **Start**: open NetMap in Settings, enable the module, select the Proxy connection mode if needed, apply changes, then click **Start** next to **Stop**. The indicator shows sampling status. Module enablement and detection both default off. **Stop**, leaving the page, hiding/minimizing Settings, or disabling the module stops sampling and retains the last in-memory results; returning requires a manual start.
+- **Egress sources**: Direct reads [Bilibili zone](https://api.bilibili.com/x/web-interface/zone) without an application proxy; Proxy reads `ip` and `loc` from [Cloudflare trace](https://1.1.1.1/cdn-cgi/trace). Proxy supports Windows system proxy, an explicit HTTP/HTTPS/SOCKS5 address, or system routing/TUN. Direct cannot bypass a system TUN, and a successful Proxy response alone does not prove that a proxy was used.
+- **Map and ASN**: the offline Natural Earth v5.1.2 map uses country representative points. User-supplied GeoLite2-ASN/City databases take priority; missing fields are filled through ipwho.is by default. Online lookup sends public IPs to the provider, skips private/reserved addresses and caches results. It can be disabled. A manual ASN updater downloads `GeoLite2-ASN.mmdb` from P3TERX/GeoLite.mmdb GitHub Releases, verifies the Release SHA-256 and MMDB format, then replaces only the managed copy. Custom database paths take priority. The bundled map is not updated online.
+- **Diagnostics**: after two matching successful Proxy observations, check four services through Proxy every 10 seconds: Claude/ChatGPT trace checkpoints and the Gemini/Google websites. Results arrive independently, and rounds do not overlap. Trace results show each domain’s own egress IP/location; website checks distinguish page responses, sign-in, browser verification and access restrictions. IPv4 ICMP hops to the egress IP are sampled continuously through system routing. These are neither model calls nor a view inside the proxy tunnel. HTTP status codes do not establish account/model availability.
+- **Status and latency**: service indicators and ICMP RTT are green at ≤75 ms, yellow above 75 ms, and red on errors; sign-in, verification and rate-limit responses stay yellow. Successful Direct/Proxy IPs are green. Three consecutive failures show N/A for unavailable live values; a successful observation restores them. MTR average RTT/loss remain cumulative, and stopped indicators turn gray. Colors follow the light/dark theme. Service timing measures HTTP response headers; identity observation intervals remain Direct 30 seconds / Proxy 5 seconds.
+- **Layout**: a single-line Start/Stop toolbar, compact egress cards with a Details flyout, and a map beside a compact MTR table with per-hop IP, Loc, loss and RTT. The map gets the remaining width and centers on the occupied longitude arc, keeping China-US-Singapore routes continuous across the Pacific. Solid lines join adjacent located hops; dashed lines mark unlocated gaps and egress illustrations. Last/average RTT and loss stay visible, and sampling preserves list scroll and selection. Labels follow Kit’s English/Chinese setting. Narrow windows stack the cards and place the MTR table below the map. The synthetic WinUI check fits the complete map in a 1200×900 window.
+- **Components and data**: `Kit.NetMapModuleInterface.dll` handles Runner enablement/settings; `Kit.NetMapLib.dll` runs in Settings without a Worker or AI service dependency. Settings live in `%LOCALAPPDATA%\Kit\NetMap\settings.json`; observations are not persisted.
+- **Verification**: targeted x64 Debug builds, 103 core tests, 3 NetMap settings tests and real English/Chinese WinUI lifecycle/layout checks passed. The latest checks cover the 75 ms boundary, N/A after three failures and recovery, light/dark themes, and preservation of the selected hop 19 and scroll position across 12 updates and delayed location enrichment. Real Claude/ChatGPT trace validation and Gemini/Google page responses passed; all four exceeded 75 ms and were correctly yellow on this network. The broader settings/registration run had 88 passes and 4 pre-existing failures. A real GitHub ASN download, SHA-256 check, local lookup and repeat-update skip also passed. Real proxy/PAC/TUN combinations, City MMDB data and Release validation remain pending. See the [module README](src/modules/NetMap/README.md) and [verification record](src/modules/NetMap/plan.md).
+
 ## 4. Build and Release
 
 The current source version is **2.3.4**. Release x64 page and Runner smoke checks passed on the local build; a full rebuild and real-machine validation are still required before publishing. No release archive is included in this handoff. Build from the repository root, and stage only after the build succeeds:
@@ -223,6 +238,7 @@ Configuration locations under `%LOCALAPPDATA%\Kit`:
 | `settings.json` | General settings and module switches |
 | `AiHub/service-settings.json` | Shared AI service settings |
 | `AIHub/settings.json` | AI Hub plugin settings |
+| `NetMap/settings.json` | Proxy settings, local ASN/City database paths and the online lookup switch |
 | `AiHub/secrets.dat`, `AiHub/security.md`, `AiHub/chains/` | Encrypted credentials and policies |
 | `AiHub/kernels/`, `AiHub/State/`, `AiHub/Logs/` | Kernels, state and history/logs |
 | `Localserver/`, `UDPtest/`, `Awake/`, `LightSwitch/` | Other module settings and state |
@@ -246,9 +262,10 @@ Kit follows the PowerToys module-loading model instead of inventing a new plugin
 - `Kit.LightSwitchModuleInterface.dll`
 - `Kit.LocalserverModuleInterface.dll`
 - `Kit.UDPtestModuleInterface.dll`
+- `Kit.NetMapModuleInterface.dll`
 - `Kit.AIHubModuleInterface.dll`
 
-Two of the five modules are imported from upstream PowerToys (`Awake`, `Light Switch`); the other three are Kit-developed plugins (`Localserver`, `UDPtest`, `AI Hub`). The fixed list is intentional: it avoids unstable directory probing and makes every module an explicit decision, whether imported or self-developed. A third-party plugin host (`plugins/` + `manifest.json`) is planned but not implemented yet.
+Two of the six modules are imported from upstream PowerToys (`Awake`, `Light Switch`); the other four are Kit-developed plugins (`Localserver`, `UDPtest`, `AI Hub`, `NetMap`). The fixed list is intentional: it avoids unstable directory probing and makes every module an explicit decision, whether imported or self-developed. A third-party plugin host (`plugins/` + `manifest.json`) is planned but not implemented yet.
 
 ### Adding another PowerToys module
 
@@ -281,6 +298,7 @@ Two of the five modules are imported from upstream PowerToys (`Awake`, `Light Sw
 
 ## 7. Documentation
 
+- [NetMap](src/modules/NetMap/README.md) — setup, egress sources, offline map/ASN data, lifecycle, build steps and validation boundaries.
 - [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) — Kit plugin and module requirements: the C++ contract, registration, WinUI 3 + Mica Alt, logo specs, isolated data paths, lifecycle, and templates.
 - `doc/devdoc/kit-architecture.md` — Kit architecture reference (lightweight plugin-host direction).
 - `doc/devdoc/powertoys-architecture.md` — verified upstream PowerToys framework architecture (Chinese).

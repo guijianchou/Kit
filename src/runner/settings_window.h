@@ -10,6 +10,7 @@ enum class ESettingsWindowNames
     LightSwitch,
     Localserver,
     UDPtest,
+    NetMap,
     AiHub,
 };
 

@@ -19,6 +19,7 @@ namespace Common.UI
             LightSwitch,
             Localserver,
             UDPtest,
+            NetMap,
             AIHub,
         }
 
@@ -38,6 +39,8 @@ namespace Common.UI
                     return "Localserver";
                 case SettingsWindow.UDPtest:
                     return "UDPtest";
+                case SettingsWindow.NetMap:
+                    return "NetMap";
                 case SettingsWindow.AIHub:
                     return "AIHub";
                 default:

@@ -43,6 +43,11 @@ namespace Kit.Settings.UI.Library
                 udpTest = modules.UDPtest;
             }
 
+            if (modules.SpecifiedModules.Contains("NetMap"))
+            {
+                netMap = modules.NetMap;
+            }
+
             if (modules.SpecifiedModules.Contains("AIHub") || modules.SpecifiedModules.Contains("AiHub"))
             {
                 aiHub = modules.AiHub;
@@ -596,6 +601,22 @@ namespace Kit.Settings.UI.Library
                 if (udpTest != value)
                 {
                     udpTest = value;
+                    NotifyChange();
+                }
+            }
+        }
+
+        private bool netMap;
+
+        [JsonPropertyName("NetMap")]
+        public bool NetMap
+        {
+            get => netMap;
+            set
+            {
+                if (netMap != value)
+                {
+                    netMap = value;
                     NotifyChange();
                 }
             }

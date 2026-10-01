@@ -4,6 +4,19 @@
 
 ## English
 
+### Unreleased
+
+- **NetMap map space and Pacific routes**: compacted MTR columns and row spacing, giving the map more width. The viewport now centers on the occupied longitude arc and repeats the basemap across the date line, keeping China-US-Singapore routes connected inside the map. Debug builds and bilingual WinUI checks pass, including Pacific/date-line geometry, light/dark layouts and stable scrolling during sampling.
+- **NetMap status and cadence**: added Google as the fourth Proxy service and check all four every 10 seconds without overlapping rounds. Service/ICMP indicators are green at ≤75 ms, yellow above 75 ms or for verification/sign-in issues, and red on errors. Successful egress IPs are green; three consecutive failures show N/A for unavailable live values, with automatic recovery on success. MTR cumulative statistics and scroll position are preserved, and colors follow light/dark themes. All 103 core tests, the x64 Debug build and bilingual WinUI checks pass, including failure recovery and the exact 75 ms boundary. Real requests reached all four services; Gemini remains a website check without an API key or model call.
+- **NetMap Proxy checkpoints and regions**: service checks now use only Proxy. Claude and ChatGPT validate their `/cdn-cgi/trace` endpoints and show each domain’s egress; Gemini checks `gemini.google.com`. Added the MTR Loc column, preserved province/city fields, localized GeoIP names, and prevented conflicting country data from placing an observed mainland egress abroad. Core tests pass 90 cases; x64 Debug and bilingual WinUI checks pass, including delayed location updates without scroll jumps. Real checks returned valid Claude/ChatGPT traces and a Gemini page response.
+- **NetMap latency and refresh**: MTR now updates existing rows to preserve scroll and selection, exposes last/average RTT and loss, and shows target timing without hover. The map zooms to known hops and distinguishes observed links from dashed gaps/egress illustrations. Website checks retain HTTP response evidence when body reads fail, measure header response time, handle compressed pages and redirect cookies, and publish each result independently. Map labels follow the page theme; returning quickly to the cached page restores its controls without restarting detection. Core tests pass 77 cases; the final x64 Debug build and English/Chinese WinUI checks pass, including 12 refreshes preserving the scroll position at hop 19.
+- **NetMap ASN updates**: added a manual GitHub Release downloader for GeoLite2-ASN from P3TERX/GeoLite.mmdb. Release SHA-256, size and MMDB type must match before replacing the managed copy; failures and cancellation preserve the old database, and custom paths remain preferred. The Natural Earth map stays bundled with no updater. Core tests now pass 68 cases; a real download, hash check, local ASN lookup and repeat-update skip passed.
+- **NetMap plugin**: added a default-off module that follows the current Direct and Proxy egress as users switch nodes in an external client. Direct reads Bilibili zone; Proxy reads Cloudflare trace through Windows system proxy, explicit HTTP/HTTPS/SOCKS5, or system routing/TUN. Registered the native interface, Settings page, module state, navigation/deep links and Dashboard/QuickAccess assets.
+- **NetMap feedback**: replaced Detection with adjacent Start/Stop buttons and a status indicator; localized controls and dynamic labels to Kit’s English/Chinese setting. Local MMDB now takes priority with optional, default-on ipwho.is lookup for missing ASN/locations; private addresses stay local, queries are cached and rate-limited. MTR continuously samples per-hop loss/RTT and draws only adjacent located hops. Website checks now target claude.ai, chatgpt.com and gemini.google.com, distinguishing browser challenges and login pages instead of relying on unauthenticated model-list APIs. Updated checks pass 53 core tests, 3 settings tests and English/Chinese WinUI smoke runs.
+- **NetMap map and diagnostics**: bundled the Natural Earth v5.1.2 offline map and optional local GeoLite2-ASN/City support through MaxMind.GeoIP2. Two matching Proxy observations start unauthenticated service-response comparisons and IPv4 ICMP route observations. No AI/model calls or history storage; country points and system ICMP routes do not reveal exact device locations or the proxy tunnel.
+- **NetMap layout and lifetime**: compacted detection into one row, moved secondary egress details into a flyout, stacked cards at narrow widths and kept the full map visible in the 1200×900 synthetic layout check. Fixed narrow-card alignment, map-caption encoding and dark-theme markers. Stop, navigation away, hiding/minimizing and external module disable stop sampling; cached-page return does not restart it, and late results cannot overwrite a replaced session.
+- **NetMap verification and docs**: targeted x64 Debug builds passed, along with 28 core tests, 3 NetMap settings tests and real WinUI lifecycle/layout checks using synthetic probes. The broader settings/registration run passed 88 of 92 cases; four existing failures are recorded in the module plan. Real proxy/PAC/TUN, valid MMDB data and Release validation remain pending. Added the module README and synchronized both root READMEs with the six-module inventory.
+
 ### 2.3.4
 
 - **AI service settings**: fixed controls remaining disabled after an asynchronous operation completed outside the UI synchronization context; self-test commands now refresh with busy/enabled state.
@@ -564,6 +577,19 @@
 ## 中文
 
 ## 更新日志
+
+### 未发布
+
+- **NetMap 地图空间与跨太平洋路径**：收紧 MTR 列宽和行距，将更多宽度分给地图。地图按节点经度分布选择中心，跨日期变更线连续铺设底图，中国经美国到新加坡的路线可在图内连续呈现。Debug 构建和双语 WinUI 检查通过，覆盖太平洋/日期变更线几何、明暗布局及采样滚动保持。
+- **NetMap 状态与周期**：新增 Google，四项 Proxy 服务每 10 秒检测一轮，轮次不重叠。服务/ICMP 指示灯按 ≤75 ms 绿色、>75 ms 或验证/登录问题黄色、错误红色显示。成功出口 IP 为绿色；连续三次失败后不可用实时值显示 N/A，成功后自动恢复。保留 MTR 累计统计和滚动位置，颜色适配明暗主题。103 项核心测试、x64 Debug 构建和双语 WinUI 检查通过，覆盖失败恢复及 75 ms 边界；实际请求均到达四个服务。Gemini 保留网页检测，不引入 API Key 或模型调用。
+- **NetMap Proxy 检查点与地区**：服务检测仅使用 Proxy；Claude/ChatGPT 校验各自 `/cdn-cgi/trace` 并展示域名出口，Gemini 检测 `gemini.google.com`。MTR 新增 Loc 地区列，保留省市字段并跟随 Kit 语言，避免国家冲突数据将已观测的大陆出口绘制到境外。90 项核心测试、x64 Debug 与双语 WinUI 检查通过，包括地区延迟补齐不跳动；真实 Claude/ChatGPT trace 校验和 Gemini 网页响应通过。
+- **NetMap 延迟与刷新**：MTR 行原位更新，保留滚动和选中项，常驻最近/平均 RTT 与丢包率，并直接展示目标延迟。地图放大已知节点区域，区分观测实线和未知段/出口示意虚线。网页正文读取失败时保留 HTTP 响应证据，单独计量响应头耗时，支持页面解压与跳转 Cookie，各项结果独立回填。地图标签跟随页面主题；快速返回缓存页后恢复操作，不自动重启检测。核心测试 77 项通过，最终 x64 Debug 构建和中英文 WinUI 检查通过，包括第 19 跳连续刷新 12 次后保持滚动位置。
+- **NetMap ASN 更新**：新增手动 GitHub Release 下载入口，来源为 P3TERX/GeoLite.mmdb 的 GeoLite2-ASN。发布方 SHA-256、大小和 MMDB 类型全部通过校验后才替换托管副本，失败或取消保留旧库，自定义路径继续优先；Natural Earth 底图保持内置，不提供更新器。核心测试增至 68 项通过，实际下载、哈希校验、本地 ASN 查询和重复更新跳过已通过。
+- **NetMap 插件**：新增默认关闭的出口观测模块，随用户在外部客户端换节点而更新 Direct 与 Proxy。Direct 读取 Bilibili zone；Proxy 读取 Cloudflare trace，支持 Windows 系统代理、指定 HTTP/HTTPS/SOCKS5 或系统路由/TUN。完成原生接口、设置页、模块开关、导航/深链及 Dashboard/QuickAccess 资源注册。
+- **NetMap 反馈修订**：检测开关改为同侧开始/停止按钮与状态灯，控件和动态文案跟随 Kit 中英文配置。本地 MMDB 优先，缺失的 ASN/位置默认由可关闭的 ipwho.is 在线查询补齐，跳过内网地址，加入缓存与限额。MTR 持续累计各跳丢包率/RTT，仅连接相邻已定位节点。网页改测 claude.ai、chatgpt.com、gemini.google.com，区分浏览器验证和登录页，不再依赖未鉴权的模型列表 API。修订后 53 项核心测试、3 项设置测试及中英文 WinUI 冒烟检查通过。
+- **NetMap 地图与诊断**：内置 Natural Earth v5.1.2 离线地图，通过 MaxMind.GeoIP2 可选读取本地 GeoLite2-ASN/City。连续两次 Proxy 成功且一致后，进行无凭据服务响应比较和 IPv4 ICMP 路径观测。没有 AI/模型调用或历史存储；国家代表点和系统 ICMP 路径不表示设备精确位置或代理隧道。
+- **NetMap 布局与生命周期**：检测栏收为单行，出口次要信息放入详情，窄窗口卡片堆叠，合成数据检查中 1200×900 窗口可完整显示地图。修正窄卡片对齐、地图说明乱码和深色标记。停止、离页、隐藏/最小化及外部关闭模块均停止采样，缓存页返回不自动启动；迟到结果不能覆盖已替换会话。
+- **NetMap 验证与文档**：定向 x64 Debug 构建、28 项核心测试、3 项 NetMap 设置测试，以及使用合成探针的实际 WinUI 生命周期/布局检查通过。较广的设置/注册回归为 92 项中 88 项通过，4 项既有失败已记录于插件计划。真实代理/PAC/TUN、有效 MMDB 数据和 Release 验证尚待完成。补全插件 README，并将根目录中英文 README 同步为六个模块。
 
 ### 2.3.4
 

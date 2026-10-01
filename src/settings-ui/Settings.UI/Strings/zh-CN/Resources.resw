@@ -1643,4 +1643,433 @@
   <data name="AiHub_DiscardEndpointsButton.Content" xml:space="preserve">
     <value>放弃更改</value>
   </data>
+  <data name="Shell_NetMap.Content" xml:space="preserve">
+    <value>NetMap</value>
+  </data>
+  <data name="NetMap/ModuleTitle" xml:space="preserve">
+    <value>NetMap</value>
+  </data>
+  <data name="NetMap_EnableCard.Header" xml:space="preserve">
+    <value>NetMap</value>
+  </data>
+  <data name="NetMap_EnableCard.Description" xml:space="preserve">
+    <value>随节点变化，观察直连与代理出口。</value>
+  </data>
+  <data name="NetMap_Enable.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>启用 NetMap</value>
+  </data>
+  <data name="NetMap_Detect.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>检测</value>
+  </data>
+  <data name="NetMap_Stop.Content" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="NetMap_MapTitle.Text" xml:space="preserve">
+    <value>MTR 路径与地图</value>
+  </data>
+  <data name="NetMap_MapNotice.Text" xml:space="preserve">
+    <value>Natural Earth · 实线：相邻已定位节点；虚线：跨未定位段或出口示意。位置均为近似值，选择节点查看延迟与丢包。</value>
+  </data>
+  <data name="NetMap_ServicesTitle.Text" xml:space="preserve">
+    <value>代理服务连通性</value>
+  </data>
+  <data name="NetMap_Endpoint.Text" xml:space="preserve">
+    <value>服务</value>
+  </data>
+  <data name="NetMap_ServiceNotice.Text" xml:space="preserve">
+    <value>仅使用 Proxy 配置。Claude 和 ChatGPT 校验 trace；Gemini 与 Google 检测网页。服务耗时为 HTTP 响应头耗时；检查点可达不代表完整聊天功能可用。</value>
+  </data>
+  <data name="NetMap_Route.Header" xml:space="preserve">
+    <value>本机路径观测</value>
+  </data>
+  <data name="NetMap_RouteNotice.Text" xml:space="preserve">
+    <value>探测至出口 IP 的系统 ICMP 路径，RTT 为本机到该跳。无回复标红，前两次保留上次 RTT，第三次显示 N/A；平均/丢包率继续累计，不等于业务丢包。</value>
+  </data>
+  <data name="NetMap_Settings.Header" xml:space="preserve">
+    <value>连接与地图设置</value>
+  </data>
+  <data name="NetMap_ProxyMode.Header" xml:space="preserve">
+    <value>代理连接方式</value>
+  </data>
+  <data name="NetMap_SystemMode.Content" xml:space="preserve">
+    <value>系统代理</value>
+  </data>
+  <data name="NetMap_ExplicitMode.Content" xml:space="preserve">
+    <value>指定 HTTP / HTTPS / SOCKS5</value>
+  </data>
+  <data name="NetMap_TunMode.Content" xml:space="preserve">
+    <value>系统路由 / TUN</value>
+  </data>
+  <data name="NetMap_ProxyAddress.Header" xml:space="preserve">
+    <value>指定代理地址</value>
+  </data>
+  <data name="NetMap_ProxyNotice.Text" xml:space="preserve">
+    <value>不支持用户名和密码。直连绕过应用代理，无法绕过 TUN；系统代理遵循 Windows 绕过规则。</value>
+  </data>
+  <data name="NetMap_AsnPath.Header" xml:space="preserve">
+    <value>GeoLite2-ASN 数据库（可选）</value>
+  </data>
+  <data name="NetMap_BrowseAsn.Content" xml:space="preserve">
+    <value>选择 ASN 数据库</value>
+  </data>
+  <data name="NetMap_CityPath.Header" xml:space="preserve">
+    <value>本地城市数据库（可选）</value>
+  </data>
+  <data name="NetMap_BrowseCity.Content" xml:space="preserve">
+    <value>选择城市数据库</value>
+  </data>
+  <data name="NetMap_DatabaseNotice.Text" xml:space="preserve">
+    <value>优先读取本地 MMDB。在线查询按所选代理方式将公网 IP 发送给 ipwho.is，本次会话缓存结果，跳过内网和保留地址。关闭上方开关可仅用本地数据；ASN 库可在下方手动下载。</value>
+  </data>
+  <data name="NetMap_Apply.Content" xml:space="preserve">
+    <value>应用设置</value>
+  </data>
+  <data name="NetMap_UnknownLocation" xml:space="preserve">
+    <value>位置未知</value>
+  </data>
+  <data name="NetMap_UnknownAsn" xml:space="preserve">
+    <value>ASN 未知</value>
+  </data>
+  <data name="NetMap_NoSuccess" xml:space="preserve">
+    <value>尚无成功观测</value>
+  </data>
+  <data name="NetMap_LastSuccess" xml:space="preserve">
+    <value>最后成功</value>
+  </data>
+  <data name="NetMap_Stopped" xml:space="preserve">
+    <value>已停止 · 结果保留</value>
+  </data>
+  <data name="NetMap_Waiting" xml:space="preserve">
+    <value>等待响应</value>
+  </data>
+  <data name="NetMap_Responded" xml:space="preserve">
+    <value>已响应</value>
+  </data>
+  <data name="NetMap_LastKnown" xml:space="preserve">
+    <value>上次成功结果</value>
+  </data>
+  <data name="NetMap_Stabilizing" xml:space="preserve">
+    <value>正在确认出口稳定…</value>
+  </data>
+  <data name="NetMap_Running" xml:space="preserve">
+    <value>检测中 · 自动跟随外部节点变化</value>
+  </data>
+  <data name="NetMap_SameEgress" xml:space="preserve">
+    <value>两来源返回相同 IP。路由规则或 TUN 均可能造成此现象，不据此判断节点失效。</value>
+  </data>
+  <data name="NetMap_RouteBoundary" xml:space="preserve">
+    <value>直连仅绕过应用代理；TUN 和域名分流可能影响两条观测。</value>
+  </data>
+  <data name="NetMap_Route_Direct" xml:space="preserve">
+    <value>不使用应用代理</value>
+  </data>
+  <data name="NetMap_Route_System" xml:space="preserve">
+    <value>Windows 系统代理</value>
+  </data>
+  <data name="NetMap_Route_SystemProxy" xml:space="preserve">
+    <value>请求使用 Windows 代理配置</value>
+  </data>
+  <data name="NetMap_Route_SystemBypass" xml:space="preserve">
+    <value>Windows：未配置代理或命中绕过规则</value>
+  </data>
+  <data name="NetMap_Route_Explicit" xml:space="preserve">
+    <value>指定代理</value>
+  </data>
+  <data name="NetMap_Route_SystemRoute" xml:space="preserve">
+    <value>系统路由 / TUN（未验证）</value>
+  </data>
+  <data name="NetMap_Ipv6Route" xml:space="preserve">
+    <value>已识别 IPv6 出口；此版本仅探测 IPv4 路径。</value>
+  </data>
+  <data name="NetMap_RouteComplete" xml:space="preserve">
+    <value>路径采样已结束</value>
+  </data>
+  <data name="NetMap_NoRoute" xml:space="preserve">
+    <value>等待 ICMP 路径响应</value>
+  </data>
+  <data name="NetMap_RouteSampling" xml:space="preserve">
+    <value>MTR 采样中 · 最多 24 跳 · 停止后结束</value>
+  </data>
+  <data name="NetMap_Database_00" xml:space="preserve">
+    <value>本地 ASN 和城市数据库未加载</value>
+  </data>
+  <data name="NetMap_Database_10" xml:space="preserve">
+    <value>本地 ASN 已加载 · 城市库未加载</value>
+  </data>
+  <data name="NetMap_Database_01" xml:space="preserve">
+    <value>本地城市库已加载 · ASN 库未加载</value>
+  </data>
+  <data name="NetMap_Database_11" xml:space="preserve">
+    <value>本地 ASN 和城市库已加载</value>
+  </data>
+  <data name="NetMap_NoServices" xml:space="preserve">
+    <value>等待代理链路检测</value>
+  </data>
+  <data name="NetMap_MeasuredAt" xml:space="preserve">
+    <value>检测于</value>
+  </data>
+  <data name="NetMap_HopDetail" xml:space="preserve">
+    <value>发送 {0} · 丢包 {1:F1}% · 最近 {2} ms · 平均 {3} ms</value>
+  </data>
+  <data name="NetMap_InvalidProxy" xml:space="preserve">
+    <value>请输入合法的 http://、https:// 或 socks5:// 主机:端口，不含凭据、路径或参数。</value>
+  </data>
+  <data name="NetMap_SettingsApplied" xml:space="preserve">
+    <value>配置已提交，检测已停止；点击“开始”使用新设置。</value>
+  </data>
+  <data name="NetMap_AuthRequired" xml:space="preserve">
+    <value>需要认证</value>
+  </data>
+  <data name="NetMap_Restricted" xml:space="preserve">
+    <value>访问受限（原因未确认）</value>
+  </data>
+  <data name="NetMap_RateLimited" xml:space="preserve">
+    <value>限流</value>
+  </data>
+  <data name="NetMap_ServerError" xml:space="preserve">
+    <value>服务异常</value>
+  </data>
+  <data name="NetMap_Redirect" xml:space="preserve">
+    <value>跳转未完成</value>
+  </data>
+  <data name="NetMap_MapEmpty" xml:space="preserve">
+    <value>开始检测后显示可定位的出口。</value>
+  </data>
+  <data name="NetMap_CountryPoint" xml:space="preserve">
+    <value>地区示意</value>
+  </data>
+  <data name="NetMap_ApproxLocation" xml:space="preserve">
+    <value>IP 近似位置</value>
+  </data>
+  <data name="NetMap_PickerFailed" xml:space="preserve">
+    <value>文件选择器不可用，可在设置中直接填写本地 MMDB 路径。</value>
+  </data>
+  <data name="NetMap_Error_Timeout" xml:space="preserve">
+    <value>超时</value>
+  </data>
+  <data name="NetMap_Error_Dns" xml:space="preserve">
+    <value>DNS 失败</value>
+  </data>
+  <data name="NetMap_Error_Connection" xml:space="preserve">
+    <value>连接失败</value>
+  </data>
+  <data name="NetMap_Error_Tls" xml:space="preserve">
+    <value>TLS 失败</value>
+  </data>
+  <data name="NetMap_Error_InvalidResponse" xml:space="preserve">
+    <value>响应无效</value>
+  </data>
+  <data name="NetMap_Error_InvalidProxy" xml:space="preserve">
+    <value>代理配置无效</value>
+  </data>
+  <data name="NetMap_Error_None" xml:space="preserve">
+    <value>已响应</value>
+  </data>
+  <data name="NetMap_UnexpectedFailure" xml:space="preserve">
+    <value>发生异常，检测已停止；点击“开始”重试。</value>
+  </data>
+  <data name="NetMap_DiagnosticFailed" xml:space="preserve">
+    <value>部分诊断结果不可用，出口观测仍继续。</value>
+  </data>
+  <data name="NetMap_DetectLabel.Text" xml:space="preserve">
+    <value>检测</value>
+  </data>
+  <data name="NetMap_CardDetails.Content" xml:space="preserve">
+    <value>详情</value>
+  </data>
+  <data name="NetMap_Direct" xml:space="preserve">
+    <value>直连</value>
+  </data>
+  <data name="NetMap_Proxy" xml:space="preserve">
+    <value>代理</value>
+  </data>
+  <data name="NetMap_DirectHeader.Text" xml:space="preserve">
+    <value>直连</value>
+  </data>
+  <data name="NetMap_ProxyHeader.Text" xml:space="preserve">
+    <value>检测结果（Proxy）</value>
+  </data>
+  <data name="NetMap_Start.Content" xml:space="preserve">
+    <value>开始</value>
+  </data>
+  <data name="NetMap_ThisDevice" xml:space="preserve">
+    <value>本机</value>
+  </data>
+  <data name="NetMap_WaitingProxy" xml:space="preserve">
+    <value>等待代理出口</value>
+  </data>
+  <data name="NetMap_HopHeader.Text" xml:space="preserve">
+    <value>跳</value>
+  </data>
+  <data name="NetMap_RouterHeader.Text" xml:space="preserve">
+    <value>节点 IP</value>
+  </data>
+  <data name="NetMap_LossHeader.Text" xml:space="preserve">
+    <value>丢包率</value>
+  </data>
+  <data name="NetMap_RttHeader.Text" xml:space="preserve">
+    <value>平均 ms</value>
+  </data>
+  <data name="NetMap_PageResponded" xml:space="preserve">
+    <value>页面已响应</value>
+  </data>
+  <data name="NetMap_SignIn" xml:space="preserve">
+    <value>需要登录</value>
+  </data>
+  <data name="NetMap_BrowserCheck" xml:space="preserve">
+    <value>需要浏览器验证</value>
+  </data>
+  <data name="NetMap_HttpError" xml:space="preserve">
+    <value>HTTP 错误</value>
+  </data>
+  <data name="NetMap_OnlineLookup.Header" xml:space="preserve">
+    <value>在线补齐 ASN 和节点位置</value>
+  </data>
+  <data name="NetMap_GeoSource" xml:space="preserve">
+    <value>位置数据来源：</value>
+  </data>
+  <data name="NetMap_Asn_NotFound" xml:space="preserve">
+    <value>数据源未提供 ASN</value>
+  </data>
+  <data name="NetMap_Asn_Pending" xml:space="preserve">
+    <value>正在查询 ASN…</value>
+  </data>
+  <data name="NetMap_Asn_Ready" xml:space="preserve">
+    <value>数据源未提供 ASN</value>
+  </data>
+  <data name="NetMap_Asn_Private" xml:space="preserve">
+    <value>内网或保留地址 · 不查询 ASN</value>
+  </data>
+  <data name="NetMap_Asn_LocalUnavailable" xml:space="preserve">
+    <value>ASN 库未加载或没有匹配记录</value>
+  </data>
+  <data name="NetMap_Asn_Unavailable" xml:space="preserve">
+    <value>ASN 查询失败 · 请检查连接</value>
+  </data>
+  <data name="NetMap_Asn_RateLimited" xml:space="preserve">
+    <value>ASN 查询限额已用完 · 请稍后再试</value>
+  </data>
+  <data name="NetMap_OnlineEnabled" xml:space="preserve">
+    <value>在线补齐已开启</value>
+  </data>
+  <data name="NetMap_OnlineDisabled" xml:space="preserve">
+    <value>在线补齐已关闭</value>
+  </data>
+  <data name="NetMap_Enable.OnContent" xml:space="preserve">
+    <value>启用</value>
+  </data>
+  <data name="NetMap_Enable.OffContent" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="NetMap_OnlineLookup.OnContent" xml:space="preserve">
+    <value>启用</value>
+  </data>
+  <data name="NetMap_OnlineLookup.OffContent" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="NetMap_DataUpdates.Header" xml:space="preserve">
+    <value>ASN 数据库更新</value>
+  </data>
+  <data name="NetMap_UpdateAsn.Content" xml:space="preserve">
+    <value>下载 / 更新 ASN 库</value>
+  </data>
+  <data name="NetMap_CancelUpdate.Content" xml:space="preserve">
+    <value>取消下载</value>
+  </data>
+  <data name="NetMap_UpdateNotice.Text" xml:space="preserve">
+    <value>手动下载 ASN 库使用已应用的代理配置，并停止检测。SHA-256 和 MMDB 格式校验通过后才替换旧文件。来源为 P3TERX 的 MaxMind GeoLite2 镜像，遵循其许可。自定义 ASN 路径为空时使用下载版本；更新后点击开始。</value>
+  </data>
+  <data name="NetMap_UpdateWorking" xml:space="preserve">
+    <value>正在下载并校验数据…</value>
+  </data>
+  <data name="NetMap_UpdateCurrent" xml:space="preserve">
+    <value>已是当前版本 · SHA-256 校验通过</value>
+  </data>
+  <data name="NetMap_UpdateDone" xml:space="preserve">
+    <value>更新完成 · SHA-256 校验通过</value>
+  </data>
+  <data name="NetMap_UpdateCancelled" xml:space="preserve">
+    <value>下载已取消，保留已有数据。</value>
+  </data>
+  <data name="NetMap_UpdateTimeout" xml:space="preserve">
+    <value>下载超时，保留已有数据。</value>
+  </data>
+  <data name="NetMap_UpdateHashUnavailable" xml:space="preserve">
+    <value>Release 未提供有效 SHA-256，已拒绝更新。</value>
+  </data>
+  <data name="NetMap_UpdateHashMismatch" xml:space="preserve">
+    <value>SHA-256 不匹配，已拒绝下载文件并保留已有数据。</value>
+  </data>
+  <data name="NetMap_UpdateTooLarge" xml:space="preserve">
+    <value>下载文件超出大小限制，保留已有数据。</value>
+  </data>
+  <data name="NetMap_UpdateInvalidData" xml:space="preserve">
+    <value>发布信息或数据格式无效，保留已有数据。</value>
+  </data>
+  <data name="NetMap_UpdateConnection" xml:space="preserve">
+    <value>GitHub 请求失败，请检查已应用的代理配置或稍后重试；保留已有数据。</value>
+  </data>
+  <data name="NetMap_UpdateFailed" xml:space="preserve">
+    <value>无法校验或保存数据，保留已有数据；请检查文件访问权限后重试。</value>
+  </data>
+  <data name="NetMap_LastRttHeader.Text" xml:space="preserve">
+    <value>最近 ms</value>
+  </data>
+  <data name="NetMap_BestWorst" xml:space="preserve">
+    <value>最快 / 最慢</value>
+  </data>
+  <data name="NetMap_TargetLatency" xml:space="preserve">
+    <value>目标 ICMP 延迟</value>
+  </data>
+  <data name="NetMap_TargetPending" xml:space="preserve">
+    <value>目标 ICMP 延迟：等待目标回复；网页可达不表示目标会回复 ICMP。</value>
+  </data>
+  <data name="NetMap_ResponseTime" xml:space="preserve">
+    <value>响应头</value>
+  </data>
+  <data name="NetMap_HttpResponded" xml:space="preserve">
+    <value>HTTP 已响应</value>
+  </data>
+  <data name="NetMap_BodyIncomplete" xml:space="preserve">
+    <value>正文未读完</value>
+  </data>
+  <data name="NetMap_LocLimited" xml:space="preserve">
+    <value>查询限额</value>
+  </data>
+  <data name="NetMap_TraceResponded" xml:space="preserve">
+    <value>检查点可达</value>
+  </data>
+  <data name="NetMap_LocPending" xml:space="preserve">
+    <value>查询中…</value>
+  </data>
+  <data name="NetMap_TraceInvalid" xml:space="preserve">
+    <value>检查点内容无效或未读完</value>
+  </data>
+  <data name="NetMap_MainlandChina" xml:space="preserve">
+    <value>中国大陆</value>
+  </data>
+  <data name="NetMap_LocPrivate" xml:space="preserve">
+    <value>内网</value>
+  </data>
+  <data name="NetMap_LocHeader.Text" xml:space="preserve">
+    <value>地区</value>
+  </data>
+  <data name="NetMap_Connected" xml:space="preserve">
+    <value>连通</value>
+  </data>
+  <data name="NetMap_Disconnected" xml:space="preserve">
+    <value>连接失败</value>
+  </data>
+  <data name="NetMap_NeedsAttention" xml:space="preserve">
+    <value>需注意</value>
+  </data>
+  <data name="NetMap_Slow" xml:space="preserve">
+    <value>较慢</value>
+  </data>
+  <data name="NetMap_ProxyUnavailable" xml:space="preserve">
+    <value>代理不可用</value>
+  </data>
+  <data name="NetMap_HealthLegend.Text" xml:space="preserve">
+    <value>每 10 秒 · 绿 ≤75 ms · 黄 >75 ms / 需注意 · 红 错误 · 连续失败 3 次显示 N/A</value>
+  </data>
 </root>

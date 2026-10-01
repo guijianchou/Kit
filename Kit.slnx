@@ -122,6 +122,15 @@
     </Project>
     <Project Path="src/modules/UDPtest/UDPtestModuleInterface/UDPtestModuleInterface.vcxproj" Id="d36a8e32-1549-417b-8914-7e8e569528be" />
   </Folder>
+  <Folder Name="/modules/NetMap/">
+    <Project Path="src/modules/NetMap/NetMap.UnitTests/NetMap.UnitTests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/NetMap/NetMapLib/NetMapLib.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/NetMap/NetMapModuleInterface/NetMapModuleInterface.vcxproj" Id="08715d85-f96d-44ab-a674-d353105282bf" />
+  </Folder>
   <Folder Name="/modules/AIHub/">
     <Project Path="src/modules/AIHub/AIHubLib/Kit.AIHubLib.csproj">
       <Platform Solution="*|x64" Project="x64" />
@@ -207,6 +216,7 @@
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchService/LightSwitchService.vcxproj" />
     <BuildDependency Project="src/modules/Localserver/LocalserverModuleInterface/LocalserverModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/UDPtest/UDPtestModuleInterface/UDPtestModuleInterface.vcxproj" />
+    <BuildDependency Project="src/modules/NetMap/NetMapModuleInterface/NetMapModuleInterface.vcxproj" />
     <BuildDependency Project="src/PackageIdentity/PackageIdentity.vcxproj" />
     <BuildDependency Project="src/settings-ui/QuickAccess.UI/Kit.QuickAccess.csproj" />
     <BuildDependency Project="src/settings-ui/Settings.UI/Kit.Settings.csproj" />

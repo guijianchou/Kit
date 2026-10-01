@@ -15,7 +15,7 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 | PowerToys runner / 模块接口 / 设置 / 仪表板模式 | 品牌（`Kit`）、窗口标题、可见 UI 文案 |
 | `KitModuleIface` C++ 契约（含 `PowertoyModuleIface` 别名） | 设置存储迁移到 `%LOCALAPPDATA%\Kit`（非官方 PowerToys 目录） |
 | 显式的模块加载模型 | 移除自动更新、下载与遥测能力 |
-| 源自 PowerToys 的模块：`Awake`、`Light Switch`；Kit 自研插件：`Localserver`、`UDPtest`、`AI Hub` | 备份/恢复默认值使用 Kit 品牌（`Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
+| 源自 PowerToys 的模块：`Awake`、`Light Switch`；Kit 自研插件：`Localserver`、`UDPtest`、`AI Hub`、`NetMap` | 备份/恢复默认值使用 Kit 品牌（`Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
 
 当前 Kit 版本：`2.3.4`。
 
@@ -46,7 +46,9 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 ├── Kit.LightSwitchService.exe
 └── WinUI3Apps/
     ├── Kit.Settings.exe
-    └── Kit.QuickAccess.exe
+    ├── Kit.QuickAccess.exe
+    ├── Kit.NetMapLib.dll                   # NetMap 在 Settings 内运行
+    └── modules/NetMap/                     # 第三方许可声明
 ```
 
 ### 2.2 启动与生命周期
@@ -72,7 +74,7 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 每个 Kit 模块都遵循相同的五段式骨架：
 
 1. **原生模块接口 DLL**（C++）—— runner 侧契约，随模块启用/禁用。
-2. **核心库** —— 引擎本体，托管（`LocalserverLib`、`UDPtestLib`、`AIHubLib`）或原生（`LightSwitchLib`）。
+2. **核心库** —— 引擎本体，托管（`LocalserverLib`、`UDPtestLib`、`AIHubLib`、`NetMapLib`）或原生（`LightSwitchLib`）。
 3. **可选的 Worker/Service 可执行文件** —— 在 Settings 进程之外承载引擎的无头进程。
 4. **设置页 + ViewModel**（WinUI 3）—— Settings 应用中的模块 UI。
 5. **注册点** —— runner `KitKnownModules`、Settings 导航/路由、Home 仪表板元数据、测试。
@@ -93,10 +95,10 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 ## 3. 插件架构骨架解析
 
-五个活动模块分为两类：
+六个活动模块分为两类：
 
 - **源自 PowerToys（第一方）**—— `Awake`、`Light Switch`：由上游 PowerToys 模块适配到 Kit 契约。
-- **Kit 自研插件** —— `Localserver`、`UDPtest`、`AI Hub`：为 Kit 本地自用而开发。
+- **Kit 自研插件** —— `Localserver`、`UDPtest`、`AI Hub`、`NetMap`：为 Kit 本地自用而开发。
 
 ### 3.1 Awake —— 保持唤醒
 
@@ -202,6 +204,19 @@ flowchart LR
 - **数据**：`%LOCALAPPDATA%\Kit\AiHub\` —— `chains\`、`kernels\`、`requests\`、`State\`、`security.md`、`service-settings.json`、`secrets.dat`、`Logs\`。
 - **设置界面**：共享 AI 服务（内核、主/备端点、自检、全局安全策略）在“常规”页的 **AI 服务** 分组中配置，卡片样式与其余设置一致。AI Hub 页面包含总开关、AI 就绪状态卡片和三个页签（安全审计 / 系统优化 / 任务策略）；审计操作独立成行、历史统计默认折叠，优化页仅在存在候选项时显示选择统计。严重度颜色随主题切换（浅色 / 深色 / 高对比度）。
 
+### 3.6 NetMap —— 直连与代理出口观测
+
+NetMap 随外部代理客户端换节点而观察当前出口，不需要导入订阅、绑定代理品牌或维护节点列表。UDPtest 面向已配置线路的质量探测，NetMap 面向当前 Direct 和 Proxy 的实际出口。
+
+- **开始使用**：在设置中打开 NetMap，启用模块，按需选择代理接入方式并应用，再点击同侧的“开始/停止”按钮；左侧指示灯显示采样状态。模块与检测默认均关闭。“停止”、离开页面、隐藏/最小化 Settings 或关闭模块都会停止采样并保留上次内存结果；返回后需手动开始。
+- **出口来源**：Direct 不使用应用层代理，读取 [Bilibili zone](https://api.bilibili.com/x/web-interface/zone)；Proxy 读取 [Cloudflare trace](https://1.1.1.1/cdn-cgi/trace) 的 `ip`、`loc`，支持 Windows 系统代理、指定 HTTP/HTTPS/SOCKS5 地址或系统路由/TUN。Direct 无法绕过系统 TUN，Proxy 请求成功也不能单独证明经过代理。
+- **地图与 ASN**：内置 Natural Earth v5.1.2 离线地图，使用国家代表点示意地区；优先使用用户自己的 GeoLite2-ASN/City 数据库，缺失字段默认由 ipwho.is 补齐。在线方式会发送待查公网 IP，跳过内网和保留地址并缓存结果，可在设置中关闭。提供 ASN 手动更新入口，从 P3TERX/GeoLite.mmdb 的 GitHub Release 下载，校验发布方 SHA-256 与 MMDB 格式后才替换托管副本，自定义数据库路径始终优先；底图不在线更新。
+- **诊断**：连续两次 Proxy 成功且一致后，仅使用 Proxy 每 10 秒检测四个服务：Claude/ChatGPT 的 trace 检查点和 Gemini/Google 网页。结果独立回填，轮次不重叠。校验 trace 并分别展示域名出口；网页检测区分页面响应、登录、浏览器验证及访问受限。通过系统路由持续采样到出口 IP 的 IPv4 ICMP 逐跳结果。没有模型调用，不展示代理隧道内部路径；HTTP 状态码不代表账号或模型可用。
+- **状态与延迟**：服务指示灯和 ICMP RTT 按 ≤75 ms 绿色、>75 ms 黄色、错误红色显示，登录、验证或限流响应保持黄色。成功的 Direct/Proxy IP 显示绿色；连续三次失败后不可用的实时值显示 N/A，成功后自动恢复。MTR 平均 RTT/丢包率继续累计，停止时状态灯变灰。颜色适配明暗主题。服务耗时计量 HTTP 响应头，身份观测仍按 Direct 30 秒 / Proxy 5 秒间隔执行。
+- **布局**：单行开始/停止栏、带“详情”的紧凑出口卡片；MTR 表格收紧列宽和行距，展示各跳 IP、Loc 地区、丢包率与 RTT，其余宽度优先分给地图。地图按节点经度分布选择中心，中国经美国到新加坡的路径可跨太平洋连续显示；实线连接相邻已定位节点，虚线标示未定位段和出口示意。常驻最近/平均 RTT 与丢包率，采样保留列表滚动和选中项。文案跟随 Kit 的中英文配置。窄窗口卡片上下排列，MTR 表格排到地图下方；合成数据 WinUI 检查中 1200×900 窗口可完整显示地图。
+- **组件与数据**：`Kit.NetMapModuleInterface.dll` 处理 Runner 开关和设置，`Kit.NetMapLib.dll` 在 Settings 进程内运行，无 Worker 或 AI 服务依赖。设置保存到 `%LOCALAPPDATA%\Kit\NetMap\settings.json`，观测结果不持久化。
+- **验证**：定向 x64 Debug 构建、103 项核心测试、3 项 NetMap 设置测试及中英文实际 WinUI 生命周期/布局检查通过。最新检查覆盖 75 ms 边界、三次失败显示 N/A 与恢复、明暗主题；第 19 跳连续刷新 12 次后滚动和选中项保持不变，异步补齐省市也不跳动。实际 Claude/ChatGPT trace 校验及 Gemini/Google 网页响应通过，本轮网络下四项均超过 75 ms，正确显示黄色。较广的设置/注册回归为 88 项通过、4 项既有失败。实际 GitHub ASN 下载、SHA-256 校验、本地查询及重复更新跳过也已通过；真实代理/PAC/TUN 组合、城市库数据和 Release 验证尚待完成。详见[插件 README](src/modules/NetMap/README.md)与[验收记录](src/modules/NetMap/plan.md)。
+
 ## 4. 构建与发布
 
 当前源码版本为 **2.3.4**。本地 Release x64 产物已通过设置页和 Runner 冒烟验证；完整重新编译和实机测试仍需在正式发布前完成。本次未生成发布压缩包。在仓库根目录构建，成功后再整理发布目录：
@@ -223,6 +238,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed; do not stage incomplete output.'
 | `settings.json` | 常规设置和模块开关 |
 | `AiHub/service-settings.json` | 共享 AI 服务设置 |
 | `AIHub/settings.json` | AI Hub 插件设置 |
+| `NetMap/settings.json` | 代理接入方式/地址、本地 ASN/城市库路径和在线补齐开关 |
 | `AiHub/secrets.dat`、`AiHub/security.md`、`AiHub/chains/` | 加密凭据和策略 |
 | `AiHub/kernels/`、`AiHub/State/`、`AiHub/Logs/` | 内核、状态和历史/日志 |
 | `Localserver/`、`UDPtest/`、`Awake/`、`LightSwitch/` | 其他模块配置和状态 |
@@ -246,9 +262,10 @@ Kit 沿用 PowerToys 的模块加载模型，而非另造插件协议。runner �
 - `Kit.LightSwitchModuleInterface.dll`
 - `Kit.LocalserverModuleInterface.dll`
 - `Kit.UDPtestModuleInterface.dll`
+- `Kit.NetMapModuleInterface.dll`
 - `Kit.AIHubModuleInterface.dll`
 
-五个模块中，`Awake`、`Light Switch` 来自上游 PowerToys；其余三个（`Localserver`、`UDPtest`、`AI Hub`）是 Kit 自研插件。固定列表有意为之：避免不稳定的目录探测，让每个模块（无论导入还是自研）都成为一次明确的决策。第三方插件宿主（`plugins/` + `manifest.json`）已规划但尚未实现。
+六个模块中，`Awake`、`Light Switch` 来自上游 PowerToys；其余四个（`Localserver`、`UDPtest`、`AI Hub`、`NetMap`）是 Kit 自研插件。固定列表有意为之：避免不稳定的目录探测，让每个模块（无论导入还是自研）都成为一次明确的决策。第三方插件宿主（`plugins/` + `manifest.json`）已规划但尚未实现。
 
 ### 导入另一个 PowerToys 模块
 
@@ -279,6 +296,7 @@ Kit 沿用 PowerToys 的模块加载模型，而非另造插件协议。runner �
 
 ## 7. 文档
 
+- [NetMap](src/modules/NetMap/README.md) —— 使用步骤、出口来源、离线地图/ASN 数据、生命周期、构建方法与验证边界。
 - [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) —— Kit 插件与模块开发规范：C++ 契约、注册、WinUI 3 + Mica Alt、Logo 规范、数据隔离、生命周期与模板工程。
 - `doc/devdoc/kit-architecture.md` —— Kit 架构说明（轻量化插件宿主方向）。
 - `doc/devdoc/powertoys-architecture.md` —— 经过工程验证的 PowerToys 框架架构参考（中文）。

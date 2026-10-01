@@ -896,6 +896,8 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
         return "Localserver";
     case ESettingsWindowNames::UDPtest:
         return "UDPtest";
+    case ESettingsWindowNames::NetMap:
+        return "NetMap";
     case ESettingsWindowNames::AiHub:
         return "AiHub";
     default:
@@ -932,6 +934,10 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     else if (value == "UDPtest")
     {
         return ESettingsWindowNames::UDPtest;
+    }
+    else if (value == "NetMap")
+    {
+        return ESettingsWindowNames::NetMap;
     }
     else if (value == "AiHub" || value == "AIHub")
     {

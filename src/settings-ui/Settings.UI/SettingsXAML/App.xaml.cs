@@ -370,6 +370,7 @@ namespace Kit.Settings.UI
                 "LightSwitch" => typeof(LightSwitchPage),
                 "Localserver" => typeof(LocalserverPage),
                 "UDPtest" => typeof(UDPtestPage),
+                "NetMap" => typeof(NetMapPage),
                 "AIHub" => typeof(AIHubPage),
                 "AiHub" => typeof(AIHubPage),
                 _ => typeof(DashboardPage),

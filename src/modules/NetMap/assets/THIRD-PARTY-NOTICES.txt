@@ -1,0 +1,19 @@
+NetMap third-party notices
+
+Natural Earth v5.1.2, 1:110m administrative country boundaries.
+Public domain. https://www.naturalearthdata.com/about/terms-of-use/
+Source: https://github.com/nvkelso/natural-earth-vector/tree/v5.1.2
+Reduced and rounded outlines and published label coordinates are bundled.
+
+MaxMind.GeoIP2 6.1.0 and MaxMind.Db 5.1.0
+Copyright (c) 2013-2026 MaxMind, Inc.
+Licensed under the Apache License, Version 2.0 (included in Apache-2.0.txt).
+https://github.com/maxmind/GeoIP2-dotnet
+https://github.com/maxmind/MaxMind-DB-Reader-dotnet
+
+GeoLite2 databases are not bundled. Users may provide their own licensed local databases.
+The optional manual ASN downloader uses the community P3TERX/GeoLite.mmdb GitHub mirror.
+Database and contents copyright MaxMind, Inc.; see the source repository's license:
+https://github.com/P3TERX/GeoLite.mmdb#license
+https://www.maxmind.com/en/geolite2/eula
+https://creativecommons.org/licenses/by-sa/4.0/

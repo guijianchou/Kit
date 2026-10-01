@@ -14,6 +14,7 @@ namespace Kit.Settings.UI.Library
         private const string LightSwitchKey = "LightSwitch";
         private const string LocalserverKey = "Localserver";
         private const string UDPtestKey = "UDPtest";
+        private const string NetMapKey = "NetMap";
         private const string AIHubKey = "AIHub";
 
         public override EnabledModules Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -64,6 +65,9 @@ namespace Kit.Settings.UI.Library
                     case UDPtestKey:
                         modules.UDPtest = isEnabled;
                         break;
+                    case NetMapKey:
+                        modules.NetMap = isEnabled;
+                        break;
                     case AIHubKey:
                     case "AiHub":
                         modules.AiHub = isEnabled;
@@ -87,6 +91,7 @@ namespace Kit.Settings.UI.Library
             writer.WriteBoolean(LightSwitchKey, value.LightSwitch);
             writer.WriteBoolean(LocalserverKey, value.Localserver);
             writer.WriteBoolean(UDPtestKey, value.UDPtest);
+            writer.WriteBoolean(NetMapKey, value.NetMap);
             writer.WriteBoolean(AIHubKey, value.AiHub);
             foreach (var module in value.AdditionalModules)
             {

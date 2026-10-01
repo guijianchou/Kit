@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
+  <PropertyGroup>
+    <RootNamespace>NetMapLib</RootNamespace>
+    <AssemblyName>Kit.NetMapLib</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Keep the small related snapshot records together. -->
+    <NoWarn>$(NoWarn);SA1402;SA1649</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MaxMind.GeoIP2" />
+    <EmbeddedResource Include="Data\world.json" />
+    <Content Include="..\assets\THIRD-PARTY-NOTICES.txt;..\assets\Apache-2.0.txt">
+      <TargetPath>modules\NetMap\%(Filename)%(Extension)</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

@@ -66,6 +66,7 @@ namespace
         L"Kit.LightSwitchModuleInterface.dll",
         L"Kit.LocalserverModuleInterface.dll",
         L"Kit.UDPtestModuleInterface.dll",
+        L"Kit.NetMapModuleInterface.dll",
         L"Kit.AIHubModuleInterface.dll",
     };
 

@@ -18,6 +18,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.LightSwitch,
                 ModuleType.Localserver,
                 ModuleType.UDPtest,
+                ModuleType.NetMap,
                 ModuleType.AIHub,
             };
 
@@ -37,6 +38,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 LightSwitchSettings.ModuleName,
                 LocalserverSettings.ModuleName,
                 UDPtestSettings.ModuleName,
+                NetMapSettings.ModuleName,
                 AIHubSettings.ModuleName,
                 "General",
             };
@@ -48,6 +50,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 LightSwitchSettings.ModuleName,
                 LocalserverSettings.ModuleName,
                 UDPtestSettings.ModuleName,
+                NetMapSettings.ModuleName,
                 AIHubSettings.ModuleName,
             };
 

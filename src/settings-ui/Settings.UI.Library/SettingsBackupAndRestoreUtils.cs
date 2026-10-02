@@ -386,14 +386,14 @@ namespace Kit.Settings.UI.Library
         /// Method <c>GetSettingsBackupAndRestoreDir</c> returns the path of the backup and restore location.
         /// </summary>
         /// <remarks>
-        /// This will return a default location based on user documents if non is set.
+        /// Returns the dedicated local Kit backup directory when no location is set.
         /// </remarks>
         public string GetSettingsBackupAndRestoreDir()
         {
             string settingsBackupAndRestoreDir = GetRegSettingsBackupAndRestoreRegItem("SettingsBackupAndRestoreDir");
-            if (settingsBackupAndRestoreDir == null)
+            if (string.IsNullOrWhiteSpace(settingsBackupAndRestoreDir))
             {
-                settingsBackupAndRestoreDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Kit\\Backup");
+                settingsBackupAndRestoreDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit", "Backup");
             }
 
             return settingsBackupAndRestoreDir;
@@ -410,9 +410,9 @@ namespace Kit.Settings.UI.Library
         /// <remarks>
         /// The backup will usually be a backup file that has to be extracted to a temp folder. This will do that for us.
         /// </remarks>
-        private string GetLatestSettingsFolder()
+        private string GetLatestSettingsFolder(string settingsBackupAndRestoreDir = null)
         {
-            string settingsBackupAndRestoreDir = GetSettingsBackupAndRestoreDir();
+            settingsBackupAndRestoreDir ??= GetSettingsBackupAndRestoreDir();
 
             if (settingsBackupAndRestoreDir == null)
             {
@@ -563,7 +563,26 @@ namespace Kit.Settings.UI.Library
                 return Array.Empty<string>();
             }
 
-            return Directory.GetFiles(path, "*.json", SearchOption.AllDirectories).Where(s => IsIncludeFile(settings, s) && !IsIgnoreFile(settings, s)).ToArray();
+            var files = new List<string>();
+            var pending = new Stack<string>();
+            string backupDirectory = Path.Combine(Path.GetFullPath(path), "Backup");
+            pending.Push(path);
+            while (pending.Count > 0)
+            {
+                string directory = pending.Pop();
+                files.AddRange(Directory.EnumerateFiles(directory, "*.json", SearchOption.TopDirectoryOnly)
+                    .Where(s => (File.GetAttributes(s) & FileAttributes.ReparsePoint) == 0 && IsIncludeFile(settings, s) && !IsIgnoreFile(settings, s)));
+                foreach (string child in Directory.EnumerateDirectories(directory))
+                {
+                    if (!string.Equals(Path.GetFullPath(child), backupDirectory, StringComparison.OrdinalIgnoreCase)
+                        && (File.GetAttributes(child) & FileAttributes.ReparsePoint) == 0)
+                    {
+                        pending.Push(child);
+                    }
+                }
+            }
+
+            return files.ToArray();
         }
 
         /// <summary>
@@ -581,7 +600,7 @@ namespace Kit.Settings.UI.Library
             var sw = Stopwatch.StartNew();
             var results = BackupSettingsInternal(appBasePath, settingsBackupAndRestoreDir, dryRun);
             sw.Stop();
-            Logger.LogInfo($"BackupSettings took {sw.ElapsedMilliseconds}");
+            Logger.LogInfo($"BackupSettings completed: dryRun={dryRun}, success={results.Success}, severity={results.Severity}, previousBackup={results.LastBackupExists}, elapsedMs={sw.ElapsedMilliseconds}");
             lastBackupSettingsResults = (results.Success, results.Severity, results.LastBackupExists, DateTime.UtcNow);
             return results;
         }
@@ -645,10 +664,15 @@ namespace Kit.Settings.UI.Library
                         return (false, $"Invalid settingsBackupAndRestoreDir, not rooted", "Error", lastBackupExists, "\n" + settingsBackupAndRestoreDir);
                     }
 
-                    if (settingsBackupAndRestoreDir.StartsWith(appBasePath, StringComparison.InvariantCultureIgnoreCase))
+                    appBasePath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(appBasePath));
+                    settingsBackupAndRestoreDir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(settingsBackupAndRestoreDir));
+                    string backupDirectory = Path.Combine(appBasePath, "Backup");
+                    bool insideApp = settingsBackupAndRestoreDir.StartsWith(appBasePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+                    bool insideBackup = string.Equals(settingsBackupAndRestoreDir, backupDirectory, StringComparison.OrdinalIgnoreCase)
+                        || settingsBackupAndRestoreDir.StartsWith(backupDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+                    if (string.Equals(settingsBackupAndRestoreDir, appBasePath, StringComparison.OrdinalIgnoreCase) || (insideApp && !insideBackup))
                     {
-                        // backup cannot be under app
-                        Logger.LogError($"BackupSettings, backup cannot be under app");
+                        Logger.LogError("BackupSettings: locations inside the app data directory must use its dedicated Backup folder.");
                         return (false, "General_SettingsBackupAndRestore_InvalidBackupLocation", "Error", lastBackupExists, "\n" + appBasePath);
                     }
 
@@ -667,7 +691,7 @@ namespace Kit.Settings.UI.Library
                     var backupRestoreSettings = JsonNode.Parse(GetBackupRestoreSettingsJson());
                     var currentSettingsFiles = GetSettingsFiles(backupRestoreSettings, appBasePath).ToList().ToDictionary(x => x.Substring(appBasePath.Length));
                     var fullBackupDir = Path.Combine(Path.GetTempPath(), $"settings_{DateTime.UtcNow.ToFileTimeUtc().ToString(CultureInfo.InvariantCulture)}");
-                    var latestSettingsFolder = GetLatestSettingsFolder();
+                    var latestSettingsFolder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
                     var lastBackupSettingsFiles = GetSettingsFiles(backupRestoreSettings, latestSettingsFolder).ToList().ToDictionary(x => x.Substring(latestSettingsFolder.Length));
 
                     lastBackupExists = lastBackupSettingsFiles.Count > 0;
@@ -698,13 +722,13 @@ namespace Kit.Settings.UI.Library
                             if (JsonNormalizer.Normalize(currentSettingsFileToBackup) != JsonNormalizer.Normalize(lastSettingsFileDoc))
                             {
                                 doBackup = true;
-                                Logger.LogInfo($"BackupSettings, {currentFile.Value} content is different.");
+                                Logger.LogDebug($"BackupSettings: {currentFile.Key} differs from the previous backup.");
                             }
                         }
                         else
                         {
                             // this has never been backed up, we need to do it now.
-                            Logger.LogInfo($"BackupSettings, {currentFile.Value} does not exist.");
+                            Logger.LogDebug($"BackupSettings: no previous backup entry for {currentFile.Key}.");
                             doBackup = true;
                         }
 
@@ -720,7 +744,7 @@ namespace Kit.Settings.UI.Library
                             var relativePath = currentFile.Value.Substring(appBasePath.Length + 1);
                             var backupFullPath = Path.Combine(fullBackupDir, relativePath);
 
-                            Logger.LogInfo($"BackupSettings writing, {backupFullPath}, dryRun:{dryRun}.");
+                            Logger.LogDebug($"BackupSettings: {(dryRun ? "would include" : "including")} {currentFile.Key}.");
                             if (!dryRun)
                             {
                                 TryCreateDirectory(fullBackupDir);
@@ -749,7 +773,7 @@ namespace Kit.Settings.UI.Library
                         var relativePath = currentFile.Value.Path.Substring(appBasePath.Length + 1);
                         var backupFullPath = Path.Combine(fullBackupDir, relativePath);
 
-                        Logger.LogInfo($"BackupSettings writing, {backupFullPath}, dryRun:{dryRun}");
+                        Logger.LogDebug($"BackupSettings: {(dryRun ? "would include" : "including")} unchanged {currentFile.Key}.");
                         if (!dryRun)
                         {
                             TryCreateDirectory(fullBackupDir);

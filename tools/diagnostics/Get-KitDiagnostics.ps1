@@ -116,7 +116,7 @@ foreach ($file in $logFiles) {
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $line = $lines[$i]
         $isError = $line -match '\] \[(error|err|critical)\] ' -or $line -match '^\[[^\]]+\] \[Error\]'
-        $isWarning = $line -match '\] \[warning\] ' -or $line -match '^\[[^\]]+\] \[Warning\]'
+        $isWarning = $line -match '\] \[(warning|warn)\] ' -or $line -match '^\[[^\]]+\] \[Warning\]'
         if ($line -match 'LOGGER_FALLBACK') { $fallbacks.Add("$($file.Name): $line") }
         if (-not ($isError -or $isWarning)) { continue }
         if ($isError) { $errors++ } else { $warnings++ }
@@ -164,7 +164,7 @@ if ($crashFiles) {
         $sig = "$($m.Groups['type'].Value): $($m.Groups['msg'].Value)"
         $firstChance[$sig] = [int]$m.Groups['n'].Value - 1 + [int]$firstChance[$sig]
     }
-    Out-Report '  Most frequent first-chance exceptions:'
+    Out-Report '  Most frequent first-chance observations (not proof of a crash):'
     $firstChance.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 10 | ForEach-Object {
         $sig = if ($_.Key.Length -gt 150) { $_.Key.Substring(0, 150) } else { $_.Key }
         Out-Report ("    x{0,-5} {1}" -f $_.Value, $sig)

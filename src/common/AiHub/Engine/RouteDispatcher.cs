@@ -70,7 +70,7 @@ public sealed class RouteDispatcher
         if (target is null || string.IsNullOrWhiteSpace(kernel) || !AiKernelCatalog.SupportedKernels.Contains(kernel.Trim()) ||
             string.IsNullOrWhiteSpace(target.Model) || target.Model.Length > 256 || target.Model.Any(char.IsControl) ||
             (target.ApiKey is { } key && (key.Length > 8192 || key.Any(char.IsControl))) ||
-            target.Effort is not ("low" or "medium" or "high" or "xhigh" or "max") ||
+            target.Effort is not ("low" or "high" or "max") ||
             target.Mode is not ("responses" or "chat") ||
             (AiKernelCatalog.Normalize(kernel) == AiKernelCatalog.Codex && target.Mode != "responses"))
         {
@@ -122,11 +122,20 @@ public sealed class RouteDispatcher
         return (false, "The endpoint returned an invalid connection probe.");
     }
 
+    public Task<KernelExecutionResult> ExecuteAsync(
+        string kernel,
+        AiTargetSettings target,
+        string prompt,
+        int timeoutSeconds,
+        CancellationToken cancellationToken = default) =>
+        ExecuteAsync(kernel, target, prompt, timeoutSeconds, reportDiagnostic: null, cancellationToken);
+
     public async Task<KernelExecutionResult> ExecuteAsync(
         string kernel,
         AiTargetSettings target,
         string prompt,
         int timeoutSeconds,
+        Action<string>? reportDiagnostic,
         CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -156,6 +165,14 @@ public sealed class RouteDispatcher
         string? requestDirectory = null;
         IDisposable? executionLease = null;
         KernelExecutionResult result = Failure(AiErrorCode.ExecutionFailed);
+        var elapsed = Stopwatch.StartNew();
+        KernelProcessFailure processFailure = KernelProcessFailure.None;
+        int? exitCode = null;
+        int nativeEvents = 0;
+        int suppressedEvents = 0;
+        using var heartbeat = reportDiagnostic is null ? null : new Timer(
+            _ => Report($"AI route waiting: request={Path.GetFileName(requestDirectory) ?? "pending"}, elapsedMs={elapsed.ElapsedMilliseconds}"),
+            null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         try
         {
             executionLease = await _kernelManager.AcquireExecutionLeaseAsync(normalized, lifetime.Token).ConfigureAwait(false);
@@ -177,9 +194,17 @@ public sealed class RouteDispatcher
             }
             else
             {
+                Report($"AI route configured: request={Path.GetFileName(requestDirectory)}, kernel={normalized}, " +
+                    $"route={(target.Name is "Main" or "Fallback" ? target.Name : "Custom")}, mode={target.Mode}, " +
+                    $"model=\"{JsonEncodedText.Encode(target.Model.Trim())}\", configuredEffort={target.Effort}, nativeEffortInput={target.Effort}");
+
                 KernelProcessResult process = await KernelProcessRunner.RunAsync(startInfo,
                     normalized == AiKernelCatalog.Codex ? prompt : null,
-                    TimeSpan.FromSeconds(timeoutSeconds), lifetime.Token).ConfigureAwait(false);
+                    TimeSpan.FromSeconds(timeoutSeconds), lifetime.Token,
+                    standardOutputLine: reportDiagnostic is null ? null : line => ReportNativeLine(line, false),
+                    standardErrorLine: reportDiagnostic is null ? null : line => ReportNativeLine(line, true)).ConfigureAwait(false);
+                processFailure = process.Failure;
+                exitCode = process.ExitCode;
                 if (process.Failure != KernelProcessFailure.None)
                 {
                     result = ProcessFailure(process.Failure);
@@ -265,18 +290,57 @@ public sealed class RouteDispatcher
                 }
                 catch (Exception)
                 {
-                    if (!result.IsSuccess)
-                    {
-                        result = Failure(AiErrorCode.ExecutionFailed);
-                    }
+                    result = Failure(AiErrorCode.ExecutionFailed);
                 }
             }
 
             executionLease?.Dispose();
+            if (heartbeat is not null)
+            {
+                await heartbeat.DisposeAsync().ConfigureAwait(false);
+            }
         }
 
-        return cancellationToken.IsCancellationRequested ? Failure(AiErrorCode.Cancelled)
-            : deadline.IsCancellationRequested ? Failure(AiErrorCode.Timeout) : result;
+        // Cleanup and validation failures must not become timeout-based permission to fail over.
+        result = cancellationToken.IsCancellationRequested ? Failure(AiErrorCode.Cancelled)
+            : deadline.IsCancellationRequested && (result.IsSuccess || result.ErrorCode is AiErrorCode.Cancelled or AiErrorCode.Timeout)
+                ? Failure(AiErrorCode.Timeout) : result;
+        string cancellationSource = cancellationToken.IsCancellationRequested ? "upstream"
+            : deadline.IsCancellationRequested ? "routeDeadline"
+            : processFailure == KernelProcessFailure.Timeout ? "processDeadline" : "none";
+        Report($"AI route finished: request={Path.GetFileName(requestDirectory) ?? "pending"}, kernel={normalized}, code={result.ErrorCode}, " +
+            $"processFailure={processFailure}, exitCode={(exitCode.HasValue ? exitCode.Value.ToString(CultureInfo.InvariantCulture) : "notStarted")}, " +
+            $"elapsedMs={elapsed.ElapsedMilliseconds}, cancellationSource={cancellationSource}, nativeEvents={nativeEvents}, suppressedEvents={suppressedEvents}");
+        return result;
+
+        void Report(string message)
+        {
+            try
+            {
+                reportDiagnostic?.Invoke(message);
+            }
+            catch (Exception)
+            {
+                // A diagnostic subscriber cannot interrupt a request or native retries.
+            }
+        }
+
+        void ReportNativeLine(string line, bool standardError)
+        {
+            string? diagnostic = DescribeNativeLine(normalized, line, standardError);
+            if (diagnostic is null)
+            {
+                return;
+            }
+
+            if (Interlocked.Increment(ref nativeEvents) > 128)
+            {
+                Interlocked.Increment(ref suppressedEvents);
+                return;
+            }
+
+            Report($"AI native event: request={Path.GetFileName(requestDirectory)}, {diagnostic}, elapsedMs={elapsed.ElapsedMilliseconds}");
+        }
     }
 
     private static void DeleteDirectorySafe(string path)
@@ -341,9 +405,8 @@ public sealed class RouteDispatcher
         {
             string home = Path.Combine(directory, "codex-home");
             Directory.CreateDirectory(home);
-            string effort = target.Effort == "max" ? "xhigh" : target.Effort;
             string config = $"model = {TomlString(target.Model.Trim())}\n" +
-                $"model_reasoning_effort = {TomlString(effort)}\n" +
+                $"model_reasoning_effort = {TomlString(target.Effort)}\n" +
                 "model_provider = \"kit\"\napproval_policy = \"never\"\nweb_search = \"disabled\"\n" +
                 "project_doc_max_bytes = 0\ncheck_for_update_on_startup = false\ncli_auth_credentials_store = \"ephemeral\"\n" +
                 $"model_instructions_file = {TomlString(instructionsPath)}\n" +
@@ -587,6 +650,129 @@ public sealed class RouteDispatcher
         response.Completed = true;
     }
 
+    private static string? DescribeNativeLine(string kernel, string line, bool standardError)
+    {
+        if (standardError)
+        {
+            bool retry = line.Contains("retry", StringComparison.OrdinalIgnoreCase) || line.Contains("reconnect", StringComparison.OrdinalIgnoreCase);
+            KernelExecutionResult classification = ClassifyEndpointFailure(line);
+            if (!retry && classification.ErrorCode == AiErrorCode.ExecutionFailed && !line.Contains("error", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return DescribeError(retry ? "retry" : "error", line, null, "stderr");
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(line, new JsonDocumentOptions { MaxDepth = 64 });
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            string type = GetString(root, "type");
+            if (type is "error" or "turn.failed")
+            {
+                JsonElement error = root.TryGetProperty("error", out JsonElement nested) && nested.ValueKind == JsonValueKind.Object ? nested : root;
+                return DescribeError(type, GetString(error, "message"), error, "stdout");
+            }
+
+            if (kernel == AiKernelCatalog.Codex)
+            {
+                if ((type is "item.started" or "item.completed") && root.TryGetProperty("item", out JsonElement item) && item.ValueKind == JsonValueKind.Object)
+                {
+                    string itemType = GetString(item, "type");
+                    if (itemType is "command_execution" or "mcp_tool_call" or "web_search" or "file_change")
+                    {
+                        return DescribeTool(itemType);
+                    }
+                }
+
+                return type == "turn.completed" ? "event=completed, source=stdout, code=None, httpStatus=0, reason=None" : null;
+            }
+
+            if (type is "tool_execution_start" or "tool_execution_end")
+            {
+                return DescribeTool(type);
+            }
+
+            if (type == "message_end" && root.TryGetProperty("message", out JsonElement message))
+            {
+                return DescribePiMessage(message);
+            }
+
+            if (type == "agent_end" && root.TryGetProperty("messages", out JsonElement messages) && messages.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement completed in messages.EnumerateArray())
+                {
+                    if (DescribePiMessage(completed) is { } failure)
+                    {
+                        return failure;
+                    }
+                }
+            }
+
+            return type == "agent_end" ? "event=completed, source=stdout, code=None, httpStatus=0, reason=None" : null;
+        }
+        catch (JsonException)
+        {
+            // The result parser still validates every full line; diagnostics never emit payload text.
+            return null;
+        }
+
+        static string DescribeTool(string type) => $"event=tool, source=stdout, code=PolicyViolation, httpStatus=0, reason=PolicyViolation, toolType={type}";
+
+        static string? DescribePiMessage(JsonElement message)
+        {
+            if (message.ValueKind != JsonValueKind.Object || GetString(message, "role") != "assistant")
+            {
+                return null;
+            }
+
+            if (GetString(message, "stopReason") == "error")
+            {
+                return DescribeError("turn.failed", GetString(message, "errorMessage"), message, "stdout");
+            }
+
+            if (GetString(message, "stopReason") == "toolUse")
+            {
+                return DescribeTool("toolUse");
+            }
+
+            if (message.TryGetProperty("content", out JsonElement content) && content.ValueKind == JsonValueKind.Array &&
+                content.EnumerateArray().Any(part => part.ValueKind == JsonValueKind.Object && GetString(part, "type") == "toolCall"))
+            {
+                return DescribeTool("toolCall");
+            }
+
+            return null;
+        }
+
+        static string DescribeError(string type, string detail, JsonElement? error, string source)
+        {
+            int status = ReadHttpStatus(detail, error);
+            string reason = status is 408 or 504 ? "HttpTimeout"
+                : status == 429 ? "RateLimited"
+                : status >= 500 ? "ServerError"
+                : status >= 400 ? "RequestRejected"
+                : TransportTimeouts.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase)) ? "TransportTimeout"
+                : detail.Contains("stream", StringComparison.OrdinalIgnoreCase) &&
+                    (detail.Contains("disconnect", StringComparison.OrdinalIgnoreCase) || detail.Contains("closed", StringComparison.OrdinalIgnoreCase)) ? "StreamDisconnected"
+                : detail.Contains("ENOTFOUND", StringComparison.OrdinalIgnoreCase) || detail.Contains("dns error", StringComparison.OrdinalIgnoreCase)
+                    || detail.Contains("failed to lookup address", StringComparison.OrdinalIgnoreCase) ? "DnsFailure"
+                : detail.Contains("ECONNRESET", StringComparison.OrdinalIgnoreCase) || detail.Contains("connection reset", StringComparison.OrdinalIgnoreCase) ? "ConnectionReset"
+                : detail.Contains("ECONNREFUSED", StringComparison.OrdinalIgnoreCase) || detail.Contains("connection refused", StringComparison.OrdinalIgnoreCase) ? "ConnectionRefused"
+                : detail.Contains("EHOSTUNREACH", StringComparison.OrdinalIgnoreCase) || detail.Contains("ENETUNREACH", StringComparison.OrdinalIgnoreCase)
+                    || detail.Contains("network is unreachable", StringComparison.OrdinalIgnoreCase) ? "NetworkUnavailable"
+                : detail.Contains("error sending request for url", StringComparison.OrdinalIgnoreCase) ? "TransportFailure"
+                : ConfigurationFailures.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase)) ? "Configuration" : "Unknown";
+            return $"event={type}, source={source}, code={ClassifyEndpointFailure(detail, error).ErrorCode}, httpStatus={status}, reason={reason}";
+        }
+    }
+
     private static KernelExecutionResult ClassifyEndpointFailure(string detail, JsonElement? error = null)
     {
         if (ConfigurationFailures.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase)))
@@ -594,6 +780,29 @@ public sealed class RouteDispatcher
             return Failure(AiErrorCode.InvalidConfiguration);
         }
 
+        int status = ReadHttpStatus(detail, error);
+        if (status is 408 or 504)
+        {
+            return Failure(AiErrorCode.Timeout, canFailover: true);
+        }
+
+        if (status == 429 || status is >= 500 and <= 599)
+        {
+            return Failure(AiErrorCode.EndpointFailed, canFailover: true);
+        }
+
+        if (status is >= 400 and <= 499)
+        {
+            return Failure(AiErrorCode.InvalidConfiguration);
+        }
+
+        bool transportTimeout = TransportTimeouts.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase));
+        bool networkFailure = transportTimeout || NetworkFailures.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Failure(transportTimeout ? AiErrorCode.Timeout : networkFailure ? AiErrorCode.EndpointFailed : AiErrorCode.ExecutionFailed, networkFailure);
+    }
+
+    private static int ReadHttpStatus(string detail, JsonElement? error)
+    {
         int status = 0;
         if (error is { ValueKind: JsonValueKind.Object } element)
         {
@@ -618,24 +827,7 @@ public sealed class RouteDispatcher
             }
         }
 
-        if (status is 408 or 504)
-        {
-            return Failure(AiErrorCode.Timeout, canFailover: true);
-        }
-
-        if (status == 429 || status is >= 500 and <= 599)
-        {
-            return Failure(AiErrorCode.EndpointFailed, canFailover: true);
-        }
-
-        if (status is >= 400 and <= 499)
-        {
-            return Failure(AiErrorCode.InvalidConfiguration);
-        }
-
-        bool transportTimeout = TransportTimeouts.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase));
-        bool networkFailure = transportTimeout || NetworkFailures.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase));
-        return Failure(transportTimeout ? AiErrorCode.Timeout : networkFailure ? AiErrorCode.EndpointFailed : AiErrorCode.ExecutionFailed, networkFailure);
+        return status is >= 100 and <= 599 ? status : 0;
     }
 
     private static KernelExecutionResult ProcessFailure(KernelProcessFailure failure) => Failure(failure switch

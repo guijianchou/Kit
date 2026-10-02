@@ -15,9 +15,9 @@ It is a **stability-first PowerToys-derived workspace, not a full product rebran
 | PowerToys runner / module-interface / settings / dashboard patterns | Branding (`Kit`), window titles, visible UI text |
 | The `KitModuleIface` C++ contract (with `PowertoyModuleIface` aliases) | Settings storage under `%LOCALAPPDATA%\Kit` (not the official PowerToys directory) |
 | The explicit module-loading model | Automatic update, download, and telemetry surfaces are removed |
-| PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub`, `NetMap` | Backup/restore defaults use Kit branding (`Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
+| PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub`, `NetMap` | Backup/restore defaults use Kit branding (`%LOCALAPPDATA%\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
 
-Current Kit version: `2.3.4`.
+Current Kit version: `2.3.6`.
 
 ---
 
@@ -53,7 +53,7 @@ Runtime layout next to `Kit.exe`:
 
 ### 2.2 Startup and lifecycle
 
-1. The runner boots, shows the tray icon and — when Settings should open — launches the Settings app over named pipes **before** loading modules, so the WinUI/.NET cold start of Settings overlaps with module loading. IPC that arrives early is queued and handled once the message loop starts.
+1. The runner boots, shows the tray icon, loads and enables the modules, then launches Settings when requested. The Settings lifecycle thread starts the WinUI/.NET process and named-pipe IPC; incoming messages are dispatched to the runner's main thread.
 2. The runner loads the known module interface DLLs (`KitKnownModules` in `src/runner/main.cpp`), calls `kit_create()` on each, and enables the modules that are turned on in settings.
 3. Enabling/disabling a module in Settings uses the PowerToys `module_status` IPC message; the runner applies GPO policy and calls the module's native `enable()` / `disable()` interface, then returns `get_all_settings()` so Settings can synchronize Utilities from each module's actual `is_enabled()` state. The settings-file watcher remains as a fallback for external changes. Kit does not expose PowerToys' experimentation toggle or its related policy.
 4. Shutdown: when the message loop ends (tray exit, or Settings closed without a tray icon), the runner tears down modules (`modules().clear()` → `destroy()`), which lets each module clean up its worker and services before the process exits.
@@ -203,6 +203,11 @@ flowchart LR
 - **Lifecycle**: the worker runs scheduled audits; Settings and the worker use the in-process shared AI service and its persisted configuration. Task chains carry per-task `AGENTS.md` policies; the Security Audit collects Windows event logs, ranks findings, and runs AI analysis.
 - **Data**: `%LOCALAPPDATA%\Kit\AiHub\` — `chains\`, `kernels\`, `requests\`, `State\`, `security.md`, `service-settings.json`, `secrets.dat`, `Logs\`.
 - **Settings UI**: the shared AI service (kernel, main/fallback endpoints, self-test, global security policy) is configured in the **AI Service** group on the General page, laid out with the same cards as the rest of Settings. The AI Hub page hosts the master toggle, an AI-readiness card, and three tabs (Security audit / Optimization / Task policies). Audit actions occupy their own row, historical statistics are collapsed, and the optimization page shows selection metrics only when candidates exist. Severity colors follow the theme (light / dark / high contrast).
+- **Independent workflows**: Security Audit and Optimization can run at the same time. Each owns its cancellation, progress, results and status message; the banner follows the selected tab, and the audit progress card/sidebar remains dedicated to the audit. Each tab has its own **Cancel task** button. Cancellation stops future work and retains optimization items that have not been processed; it does not undo completed file operations. Turning AI Hub off cancels both workflows; switching tabs does not interrupt them. Optimization uses local file services and does not invoke AI.
+- **Native execution**: Codex/Pi own transport and connection retries. Model names are freely configurable and reasoning effort offers `low/high/max`; Kit passes the selected Main effort through unchanged.
+- **Audit batching**: AI analysis selects up to 400 events, prioritizing severity and recency. Each batch contains at most 100 records and 96,000 bytes of encoded record data; larger records create smaller batches. For example, 103 small records use two native calls instead of seven at the previous `max` batch size. Waiting batches start in FIFO order under the configured concurrency limit.
+- **Long-running routes**: each Main or Fallback attempt has a 5-minute budget within the 30-minute overall audit deadline, which also includes queue time. On a recoverable endpoint failure or route timeout, Kit finishes Main cleanup before trying Fallback once. Configure and enable Fallback in **General → AI Service**, including its endpoint, model, credentials and effort. An empty or disabled Fallback is not used, and Kit does not automatically lower Main effort. User cancellation, the overall deadline, validation failures and cleanup failures do not trigger fallback. Validated results from successful batches remain available with an incomplete warning if other batches fail.
+- **Audit diagnostics**: Settings logs under `%LOCALAPPDATA%\Kit\Settings\Logs\<version>\` record the analysis ID, batch count, input byte count, selected route/model/effort, elapsed time and cancellation source. The UI shows completed batches and retry/fallback status while AI analysis is running. Endpoint addresses, credentials, prompts and raw responses are excluded from these diagnostics. The AI Hub concurrent workflows in 2.3.6 await runtime verification. Start an audit, run an Optimization scan while the AI step is pending, then cancel Optimization and confirm the audit keeps advancing. Repeat in the other direction and switch tabs to check retained status messages. Synthetic Codex/Pi tests cover two independent AI requests, cancellation, per-request fallback and the shared concurrency limit; these new tests have not been run. The concurrency limit applies to each engine instance, and queued batches use FIFO order.
 
 ### 3.6 NetMap — direct and proxy egress observation
 
@@ -219,7 +224,7 @@ NetMap follows the egress you are currently using as you switch nodes in an exte
 
 ## 4. Build and Release
 
-The current source version is **2.3.4**. Release x64 page and Runner smoke checks passed on the local build; a full rebuild and real-machine validation are still required before publishing. No release archive is included in this handoff. Build from the repository root, and stage only after the build succeeds:
+The current source version is **2.3.6**. Release validation and packaging are still required before publishing. Build from the repository root, and stage only after the build succeeds:
 
 ```powershell
 .\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
@@ -227,7 +232,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed; do not stage incomplete output.'
 .\tools\build\Stage-Release.ps1
 ```
 
-Run `x64/Release/Kit.exe` after building, or `bin/release/2.3.4/Kit.exe` after staging. The staging script creates a directory, not a ZIP. Keep the complete runtime directory together. The Runner's solution dependencies include both the AI Hub module DLL and its worker.
+Run `x64/Release/Kit.exe` after building, or `bin/release/2.3.6/Kit.exe` after staging. The staging script creates a directory, not a ZIP. Keep the complete runtime directory together. The Runner's solution dependencies include both the AI Hub module DLL and its worker.
 
 For a fresh-profile test, stop any supervised Localserver services, exit Kit from its tray menu, and rename `%LOCALAPPDATA%\Kit` to a unique backup name such as `Kit.backup-20260930`. Closing Settings with X leaves the Runner active when the tray icon is enabled, matching PowerToys. Start the newly built Release and enter settings again for the first test; restoring old JSON immediately defeats the comparison. The backup retains credentials, policies, downloaded kernels and history. Leave official PowerToys data and external Localserver program directories alone.
 

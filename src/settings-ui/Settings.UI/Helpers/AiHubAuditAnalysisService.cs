@@ -8,6 +8,7 @@ namespace Kit.Settings.UI.Helpers;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -56,6 +57,13 @@ public static class AiHubAuditAnalysisService
     /// </summary>
     public const int AnalysisTimeoutSeconds = 1_800;
 
+    // Keep related evidence together and avoid repeating the full policy for every 15 events.
+    // The engine still splits at its 96 KB encoded input limit.
+    public const int AnalysisBatchSize = 100;
+
+    // Each native route owns its retries within this budget; a slow Main can then use Fallback.
+    public const int AnalysisRouteTimeoutSeconds = 300;
+
     public static string Language => IsChinese ? "zh-CN" : "en-US";
 
     private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
@@ -92,8 +100,17 @@ public static class AiHubAuditAnalysisService
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        if (events is null || events.Count == 0 || !IsAvailable)
+        LastFailure = null;
+        LastWasPartial = false;
+        if (events is null || events.Count == 0)
         {
+            return null;
+        }
+
+        if (!IsAvailable)
+        {
+            LastFailure = "AI Hub unavailable";
+            Logger.LogInfo("AI audit skipped: service unavailable.");
             return null;
         }
 
@@ -119,30 +136,109 @@ public static class AiHubAuditAnalysisService
             ? $"正在请求 AI 深度分析（{items.Count} 条事件）..."
             : $"Requesting AI deep analysis for {items.Count} event(s)...");
 
-        AiTaskResult<AuditIssueContainer> result = await AiHubEngine.Current.ExecuteTaskAsync(
-            PluginId,
-            TaskId,
-            items,
-            CreateSchema(),
-            new AiTaskOptions
-            {
-                Language = Language,
-                TimeoutSeconds = AnalysisTimeoutSeconds,
-            },
-            cancellationToken).ConfigureAwait(false);
+        string analysisId = Guid.NewGuid().ToString("N")[..8];
+        var stopwatch = Stopwatch.StartNew();
+        Logger.LogInfo($"AI audit started: id={analysisId}, collected={events.Count}, selected={items.Count}, timeoutSeconds={AnalysisTimeoutSeconds}, batchSize={AnalysisBatchSize}, routeTimeoutSeconds={AnalysisRouteTimeoutSeconds}");
+        var batchProgress = new AuditProgress(analysisId, stopwatch, progress);
+        string outcome = "failed";
+        try
+        {
+            AiTaskResult<AuditIssueContainer> result = await AiHubEngine.Current.ExecuteTaskAsync(
+                PluginId,
+                TaskId,
+                items,
+                CreateSchema(),
+                new AiTaskOptions
+                {
+                    Language = Language,
+                    TimeoutSeconds = AnalysisTimeoutSeconds,
+                    BatchSize = AnalysisBatchSize,
+                    RouteTimeoutSeconds = AnalysisRouteTimeoutSeconds,
+                    Progress = batchProgress,
+                    AllowPartialResults = true,
+                },
+                cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            outcome = result.IsSuccess ? "ok" : result.HasPartialResult ? "partial" : "failed";
+            return ReadAnalysisResult(result, analysisId);
+        }
+        catch (OperationCanceledException)
+        {
+            LastFailure = "Cancelled";
+            outcome = "cancelled";
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LastFailure = ex.GetType().Name;
+            Logger.LogError($"AI audit failed: id={analysisId}, type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+            throw;
+        }
+        finally
+        {
+            Logger.LogInfo($"AI audit finished: id={analysisId}, outcome={outcome}, elapsedMs={stopwatch.ElapsedMilliseconds}");
+        }
+    }
 
+    private static IReadOnlyList<AuditIssue>? ReadAnalysisResult(AiTaskResult<AuditIssueContainer> result, string analysisId)
+    {
+        LastWasPartial = result.HasPartialResult;
+        LastFailure = result.IsSuccess ? null : $"{result.ErrorCode}; {result.CompletedBatches}/{result.TotalBatches} batches completed";
         if (!result.IsSuccess)
         {
-            // The engine reports a failure code and message; discarding them made a broken
-            // route look identical to "the model found nothing", which is what hid the fact
-            // that no request was ever leaving the machine.
-            LastFailure = $"{result.ErrorCode}: {result.ErrorMessage}".Trim(' ', ':');
-            Logger.LogError($"AI audit analysis failed: {LastFailure}");
-            return null;
+            Logger.LogWarning($"AI audit incomplete: id={analysisId}, code={result.ErrorCode}, partial={result.HasPartialResult}, batches={result.CompletedBatches}/{result.TotalBatches}");
         }
 
-        LastFailure = null;
-        return result.Payload?.Issues;
+        return result.IsSuccess || result.HasPartialResult ? result.Payload?.Issues : null;
+    }
+
+    private sealed class AuditProgress(string analysisId, Stopwatch stopwatch, IProgress<string>? progress) : IProgress<AiTaskProgress>
+    {
+        private readonly object _sync = new();
+        private int _completed;
+        private string _connectionStatus = string.Empty;
+
+        public void Report(AiTaskProgress value)
+        {
+            lock (_sync)
+            {
+                _completed = Math.Max(_completed, value.CompletedBatches);
+                Logger.LogInfo($"AI audit progress: id={analysisId}, stage={value.Stage}, batches={_completed}/{value.TotalBatches}, elapsedMs={stopwatch.ElapsedMilliseconds}");
+                if (value.Stage == "Route" && !string.IsNullOrEmpty(value.StatusMessage))
+                {
+                    Logger.LogInfo($"AI audit id={analysisId}: {value.StatusMessage}");
+                    if (value.StatusMessage.Contains("AI native event:", StringComparison.Ordinal))
+                    {
+                        if (value.StatusMessage.Contains("event=retry,", StringComparison.Ordinal))
+                        {
+                            _connectionStatus = IsChinese ? "连接重试中" : "Retrying connection";
+                        }
+                        else if (value.StatusMessage.Contains("reason=StreamDisconnected", StringComparison.Ordinal))
+                        {
+                            _connectionStatus = IsChinese ? "连接中断，等待恢复" : "Connection interrupted; waiting for recovery";
+                        }
+                        else if (value.StatusMessage.Contains("event=completed,", StringComparison.Ordinal))
+                        {
+                            _connectionStatus = string.Empty;
+                        }
+                    }
+                }
+
+                if (value.Stage == "Validate")
+                {
+                    _connectionStatus = string.Empty;
+                }
+                else if (value.Stage == "Failover")
+                {
+                    _connectionStatus = IsChinese ? "主链未完成，正在使用备用链路" : "Main did not complete; using fallback";
+                }
+
+                string status = IsChinese
+                    ? $"AI 分析：已完成 {_completed}/{value.TotalBatches} 批，耗时 {stopwatch.Elapsed.TotalMinutes:F1} 分钟"
+                    : $"AI analysis: {_completed}/{value.TotalBatches} batches complete, {stopwatch.Elapsed.TotalMinutes:F1} min elapsed";
+                progress?.Report(string.IsNullOrEmpty(_connectionStatus) ? status : $"{status} · {_connectionStatus}");
+            }
+        }
     }
 
     /// <summary>
@@ -150,6 +246,8 @@ public static class AiHubAuditAnalysisService
     /// Surfaced in the audit status so a failure is never mistaken for a clean scan.
     /// </summary>
     public static string? LastFailure { get; private set; }
+
+    public static bool LastWasPartial { get; private set; }
 
     /// <summary>
     /// Schema for the built-in security-audit chain: source-generated JSON metadata for
@@ -163,8 +261,8 @@ public static class AiHubAuditAnalysisService
             OutputTypeInfo = AIHubLibJsonContext.Default.AuditIssueContainer,
             ValidateOutput = ValidateOutput,
 
-            // Large event windows are split into batches (an "max" effort target batches at
-            // 15 records), and the engine rejects a multi-batch task whose schema cannot
+            // Large event windows are split at the record and encoded-size limits,
+            // and the engine rejects a multi-batch task whose schema cannot
             // merge the per-batch outputs. Without this the audit failed with InvalidPayload
             // before any request left the machine.
             MergeBatches = containers => new AuditIssueContainer
@@ -183,27 +281,60 @@ public static class AiHubAuditAnalysisService
     {
         if (output?.Issues is null)
         {
-            return false;
+            return RejectOutput(0, "issues", "missing");
         }
 
-        foreach (AuditIssue issue in output.Issues)
+        for (int index = 0; index < output.Issues.Count; index++)
         {
-            if (issue is null
-                || string.IsNullOrWhiteSpace(issue.Key)
-                || issue.Key.Length > 48
-                || string.IsNullOrWhiteSpace(issue.EventRef)
-                || !itemIds.Contains(issue.EventRef)
-                || !IsKnownSeverity(issue.Severity)
-                || issue.Occurrences < 1
-                || issue.RelatedEventRefs is null
-                || issue.RelatedEventRefs.Count == 0
-                || issue.RelatedEventRefs.Any(reference => !itemIds.Contains(reference))
-                || !HasBilingualText(issue.Title, issue.TitleZh)
-                || !HasBilingualText(issue.Description, issue.DescriptionZh)
-                || !HasBilingualText(issue.RootCause, issue.RootCauseZh)
-                || !HasBilingualText(issue.Recommendation, issue.RecommendationZh))
+            AuditIssue issue = output.Issues[index];
+            int issueIndex = index + 1;
+            if (issue is null)
             {
-                return false;
+                return RejectOutput(issueIndex, "issue", "missing");
+            }
+
+            if (string.IsNullOrWhiteSpace(issue.Key) || issue.Key.Length > 48)
+            {
+                return RejectOutput(issueIndex, "key", "missing_or_too_long");
+            }
+
+            if (string.IsNullOrWhiteSpace(issue.EventRef) || !itemIds.Contains(issue.EventRef))
+            {
+                return RejectOutput(issueIndex, "eventRef", "unknown_input_reference");
+            }
+
+            if (!IsKnownSeverity(issue.Severity))
+            {
+                return RejectOutput(issueIndex, "severity", "unsupported_value");
+            }
+
+            if (issue.Occurrences < 1)
+            {
+                return RejectOutput(issueIndex, "occurrences", "below_minimum");
+            }
+
+            if (issue.RelatedEventRefs is null || issue.RelatedEventRefs.Count == 0)
+            {
+                return RejectOutput(issueIndex, "relatedEventRefs", "missing");
+            }
+
+            if (issue.RelatedEventRefs.Any(reference => !itemIds.Contains(reference)))
+            {
+                return RejectOutput(issueIndex, "relatedEventRefs", "unknown_input_reference");
+            }
+
+            foreach (var field in new[]
+            {
+                (Name: "title", Value: issue.Title), (Name: "titleZh", Value: issue.TitleZh),
+                (Name: "description", Value: issue.Description), (Name: "descriptionZh", Value: issue.DescriptionZh),
+                (Name: "rootCause", Value: issue.RootCause), (Name: "rootCauseZh", Value: issue.RootCauseZh),
+                (Name: "recommendation", Value: issue.Recommendation), (Name: "recommendationZh", Value: issue.RecommendationZh),
+            })
+            {
+                if (string.IsNullOrWhiteSpace(field.Value) || field.Value.Length > 8_192)
+                {
+                    return RejectOutput(issueIndex, field.Name, "missing_or_too_long");
+                }
             }
         }
 
@@ -215,12 +346,10 @@ public static class AiHubAuditAnalysisService
         return severity is "High" or "Medium" or "Low";
     }
 
-    private static bool HasBilingualText(string? english, string? chinese)
+    private static bool RejectOutput(int issueIndex, string field, string reason)
     {
-        return !string.IsNullOrWhiteSpace(english)
-            && !string.IsNullOrWhiteSpace(chinese)
-            && english.Length <= 8_192
-            && chinese.Length <= 8_192;
+        Logger.LogWarning($"AI audit output rejected: issueIndex={issueIndex}, field={field}, reason={reason}");
+        return false;
     }
 
     /// <summary>

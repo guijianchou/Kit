@@ -10,7 +10,6 @@
     xmlns:models="using:Kit.AIHubLib.Models"
     xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
     xmlns:ui="using:CommunityToolkit.WinUI"
-    xmlns:converters="using:Kit.Settings.UI.Converters"
     xmlns:viewModels="using:Kit.Settings.UI.ViewModels"
     xmlns:views="using:Kit.Settings.UI.Views"
     d:DataContext="{d:DesignInstance Type=viewModels:AIHubPageViewModel}"
@@ -19,15 +18,33 @@
     mc:Ignorable="d">
 
     <local:NavigablePage.Resources>
-        <converters:SeverityToBrushConverter x:Key="SeverityToBrushConverter" />
         <FontFamily x:Key="MonoFontFamily">Consolas, Segoe UI Mono, Cascadia Mono</FontFamily>
 
-        <SolidColorBrush x:Key="SeverityHighFillBrush" Color="#DC2626" />
-        <SolidColorBrush x:Key="SeverityMediumFillBrush" Color="#EA580C" />
-        <SolidColorBrush x:Key="SeverityLowFillBrush" Color="#2563EB" />
-        <SolidColorBrush x:Key="SeverityHighTextBrush" Color="#DC2626" />
-        <SolidColorBrush x:Key="SeverityMediumTextBrush" Color="#EA580C" />
-        <SolidColorBrush x:Key="SeverityLowTextBrush" Color="#2563EB" />
+        <!-- Keep theme resources in XAML setters so cached pages follow live theme changes. -->
+        <Style x:Key="ReadinessReadyStyle" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style x:Key="ReadinessDegradedStyle" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
+        </Style>
+        <Style x:Key="ReadinessUnverifiedStyle" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorAttentionBrush}" />
+        </Style>
+        <Style x:Key="ReadinessNotConfiguredStyle" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        </Style>
+        <Style x:Key="ReadinessDisabledStyle" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style x:Key="HealthGoodStyle" TargetType="Ellipse">
+            <Setter Property="Fill" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style x:Key="HealthWarningStyle" TargetType="Ellipse">
+            <Setter Property="Fill" Value="{ThemeResource SystemFillColorCautionBrush}" />
+        </Style>
+        <Style x:Key="HealthCriticalStyle" TargetType="Ellipse">
+            <Setter Property="Fill" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        </Style>
 
         <Style x:Key="MetricNumberStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
@@ -57,14 +74,14 @@
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     AutomationProperties.Name="{x:Bind DisplayTitle}">
                 <Grid ColumnDefinitions="3,*,Auto" ColumnSpacing="12">
-                    <Border Background="{StaticResource SeverityHighFillBrush}" CornerRadius="2" Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}" />
-                    <Border Background="{StaticResource SeverityMediumFillBrush}" CornerRadius="2" Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}" />
-                    <Border Background="{StaticResource SeverityLowFillBrush}" CornerRadius="2" Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <Border Background="{ThemeResource SystemFillColorCriticalBrush}" CornerRadius="2" Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <Border Background="{ThemeResource SystemFillColorCautionBrush}" CornerRadius="2" Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <Border Background="{ThemeResource SystemFillColorAttentionBrush}" CornerRadius="2" Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}" />
                     <StackPanel Grid.Column="1" Spacing="5">
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                            <TextBlock Text="{x:Bind SeverityText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SeverityHighTextBrush}" Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}" />
-                            <TextBlock Text="{x:Bind SeverityText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SeverityMediumTextBrush}" Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}" />
-                            <TextBlock Text="{x:Bind SeverityText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SeverityLowTextBrush}" Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            <TextBlock Text="{x:Bind SeverityText}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            <TextBlock Text="{x:Bind SeverityText}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCautionBrush}" Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            <TextBlock Text="{x:Bind SeverityText}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}" />
                             <TextBlock Grid.Column="1" Text="{x:Bind CategoryLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock Grid.Column="2" Text="{x:Bind ModelLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                         </Grid>
@@ -125,19 +142,19 @@
                             Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1">
-                        <Grid ColumnSpacing="10">
+                        <Grid ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="8" SizeChanged="OnReadinessSizeChanged">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <FontIcon Grid.Column="0" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}"
-                                      Foreground="{x:Bind ViewModel.AiReadinessBrush, Mode=OneWay}"
+                            <FontIcon x:Name="AiReadinessIcon" Grid.Column="0" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}"
+                                      Style="{x:Bind AiReadinessStyle(ViewModel.AiReadinessLevel), Mode=OneWay}"
                                       FontSize="14" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiReadinessText, Mode=OneWay}"
                                        FontSize="12" VerticalAlignment="Center"
                                        TextWrapping="Wrap" />
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <tkcontrols:WrapPanel x:Name="AiReadinessActions" Grid.Column="2" HorizontalSpacing="8" VerticalSpacing="8" VerticalAlignment="Center">
                                 <HyperlinkButton Content="{x:Bind ViewModel.AiServiceSettingsLabel}"
                                                  AutomationProperties.AutomationId="AIHub_OpenServiceSettingsButton"
                                                  Click="OnAiServiceSettingsClick" />
@@ -147,7 +164,7 @@
                                         Click="OnRecheckAiReadinessClick">
                                     <TextBlock Text="{x:Bind ViewModel.RecheckAiLabel, Mode=OneWay}" FontSize="12" />
                                 </Button>
-                            </StackPanel>
+                            </tkcontrols:WrapPanel>
                         </Grid>
                     </Border>
 
@@ -180,7 +197,8 @@
                                         <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.SidebarWorkflowPercentText, Mode=OneWay}"
                                                    FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     </Grid>
-                                    <ProgressBar Value="{x:Bind ViewModel.SidebarWorkflowPercent, Mode=OneWay}" Minimum="0" Maximum="100"
+                                    <ProgressBar x:Name="AuditWorkflowProgress" Value="{x:Bind ViewModel.SidebarWorkflowPercent, Mode=OneWay}" Minimum="0" Maximum="100"
+                                                 IsIndeterminate="{x:Bind ViewModel.IsAuditProgressIndeterminate, Mode=OneWay}"
                                                  Height="4" MinHeight="4"
                                                  Foreground="{ThemeResource AccentFillColorDefaultBrush}"
                                                  AutomationProperties.Name="{x:Bind ViewModel.SidebarWorkflowTooltip, Mode=OneWay}" />
@@ -194,6 +212,9 @@
                                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}" FontSize="12"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                     </Grid>
+                                    <TextBlock x:Name="AuditWorkflowStatus" Text="{x:Bind ViewModel.AuditStatusText, Mode=OneWay}"
+                                               FontSize="12" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
                             </Border>
                             <!-- Segmented Tab Navigation -->
@@ -231,6 +252,7 @@
                                             </StackPanel>
                                         </Button>
                                         <ComboBox Width="76" Height="32" SelectedIndex="{x:Bind ViewModel.FullScanRangeIndex, Mode=TwoWay}"
+                                                  AutomationProperties.Name="{x:Bind ViewModel.FullScanRangeHint, Mode=OneWay}"
                                                   ToolTipService.ToolTip="{x:Bind ViewModel.FullScanRangeHint, Mode=OneWay}">
                                             <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1DayLabel, Mode=OneWay}" />
                                             <ComboBoxItem Content="{x:Bind ViewModel.RangeOption2DaysLabel, Mode=OneWay}" />
@@ -245,7 +267,11 @@
                                                 <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel, Mode=OneWay}" FontSize="13" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Height="32" Padding="8,0" ToolTipService.ToolTip="{x:Bind ViewModel.ScanOptionsLabel, Mode=OneWay}">
+                                        <Button Height="32" Padding="12,0" Command="{x:Bind ViewModel.CancelAuditCommand}"
+                                                Content="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}"
+                                                AutomationProperties.AutomationId="AIHub_CancelAuditButton" />
+                                        <Button Height="32" Padding="8,0" ToolTipService.ToolTip="{x:Bind ViewModel.ScanOptionsLabel, Mode=OneWay}"
+                                                AutomationProperties.Name="{x:Bind ViewModel.ScanOptionsLabel, Mode=OneWay}">
                                             <FontIcon Glyph="&#xE712;" FontSize="14" />
                                             <Button.Flyout>
                                                 <MenuFlyout>
@@ -288,14 +314,15 @@
                                         </Grid>
 
                                         <!-- 2-Column Split: Score Hero on left, Summary and Priority callout on right -->
-                                        <Grid ColumnDefinitions="2*,3*" ColumnSpacing="24">
-                                            <StackPanel Spacing="8" VerticalAlignment="Center">
+                                        <Grid x:Name="AuditOverviewGrid" ColumnDefinitions="2*,3*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="16" SizeChanged="OnAuditOverviewSizeChanged">
+                                            <StackPanel x:Name="AuditScoreSummary" Spacing="8" VerticalAlignment="Center">
                                                 <TextBlock Text="{x:Bind ViewModel.HealthScoreLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
-                                                    <TextBlock Text="{x:Bind ViewModel.HealthScore, Mode=OneWay}" FontSize="48" FontWeight="Bold" LineHeight="54" />
+                                                    <TextBlock x:Name="AuditScoreText" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" FontSize="48" FontWeight="Bold" LineHeight="54" />
                                                     <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="7" VerticalAlignment="Center">
-                                                        <Ellipse Width="8" Height="8" VerticalAlignment="Center"
-                                                                 Fill="{x:Bind ViewModel.HealthScoreGrade, Mode=OneWay, Converter={StaticResource SeverityToBrushConverter}}" />
+                                                        <Ellipse x:Name="AuditHealthIndicator" Width="8" Height="8" VerticalAlignment="Center"
+                                                                 Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                 Style="{x:Bind HealthScoreStyle(ViewModel.HealthScore), Mode=OneWay}" />
                                                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.HealthVerdict, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" MaxLines="2" VerticalAlignment="Center" />
                                                     </Grid>
                                                 </Grid>
@@ -304,20 +331,20 @@
                                             </StackPanel>
 
                                             <!-- Right: Findings counters & Priority callout -->
-                                            <StackPanel Grid.Column="1" Spacing="10">
+                                            <StackPanel x:Name="AuditFindingsSummary" Grid.Column="1" Spacing="10">
                                                 <TextBlock Text="{x:Bind ViewModel.FindingsInAuditLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                                                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
                                                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                                         <TextBlock Text="{x:Bind ViewModel.HighCount, Mode=OneWay}" FontSize="24" FontWeight="SemiBold" />
-                                                        <TextBlock Text="{x:Bind ViewModel.HighLabel, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" Foreground="{StaticResource SeverityHighTextBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.HighLabel, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                                         <TextBlock Text="{x:Bind ViewModel.MediumCount, Mode=OneWay}" FontSize="24" FontWeight="SemiBold" />
-                                                        <TextBlock Text="{x:Bind ViewModel.MediumLabel, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" Foreground="{StaticResource SeverityMediumTextBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.MediumLabel, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                                         <TextBlock Text="{x:Bind ViewModel.LowCount, Mode=OneWay}" FontSize="24" FontWeight="SemiBold" />
-                                                        <TextBlock Text="{x:Bind ViewModel.LowLabel, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" Foreground="{StaticResource SeverityLowTextBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.LowLabel, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                                     </StackPanel>
                                                 </Grid>
 
@@ -403,63 +430,68 @@
                                         BorderThickness="1">
                                     <StackPanel Spacing="14">
                                         <!-- Title & Severity Filter Bar -->
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                        <Grid RowDefinitions="Auto,Auto" RowSpacing="12">
                                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                                 <TextBlock Text="{x:Bind ViewModel.FindingsHeading, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                                                 <TextBlock Text="{x:Bind ViewModel.FindingsSummaryText, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <tkcontrols:WrapPanel Grid.Row="1" HorizontalSpacing="6" VerticalSpacing="6" VerticalAlignment="Center">
                                                 <ToggleButton Tag="All" Height="28" MinHeight="28" Padding="10,0" CornerRadius="4" Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterAll, Mode=OneWay}">
                                                     <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.FilterAllLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.TotalFindings, Mode=OneWay}" /></TextBlock>
                                                 </ToggleButton>
                                                 <ToggleButton Tag="High" Height="28" MinHeight="28" Padding="10,0" CornerRadius="4" Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterHigh, Mode=OneWay}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Ellipse Width="8" Height="8" Fill="{StaticResource SeverityHighFillBrush}" VerticalAlignment="Center" />
+                                                        <Ellipse Width="8" Height="8" Fill="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center" />
                                                         <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.HighLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.HighCount, Mode=OneWay}" /></TextBlock>
                                                     </StackPanel>
                                                 </ToggleButton>
                                                 <ToggleButton Tag="Medium" Height="28" MinHeight="28" Padding="10,0" CornerRadius="4" Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterMedium, Mode=OneWay}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Ellipse Width="8" Height="8" Fill="{StaticResource SeverityMediumFillBrush}" VerticalAlignment="Center" />
+                                                        <Ellipse Width="8" Height="8" Fill="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Center" />
                                                         <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.MediumLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.MediumCount, Mode=OneWay}" /></TextBlock>
                                                     </StackPanel>
                                                 </ToggleButton>
                                                 <ToggleButton Tag="Low" Height="28" MinHeight="28" Padding="10,0" CornerRadius="4" Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterLow, Mode=OneWay}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Ellipse Width="8" Height="8" Fill="{StaticResource SeverityLowFillBrush}" VerticalAlignment="Center" />
+                                                        <Ellipse Width="8" Height="8" Fill="{ThemeResource SystemFillColorAttentionBrush}" VerticalAlignment="Center" />
                                                         <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.LowLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.LowCount, Mode=OneWay}" /></TextBlock>
                                                     </StackPanel>
                                                 </ToggleButton>
-                                            </StackPanel>
+                                            </tkcontrols:WrapPanel>
                                         </Grid>
 
                                         <!-- Channel / Source Filter Pills -->
-                                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <tkcontrols:WrapPanel HorizontalSpacing="4" VerticalSpacing="4">
                                                 <ToggleButton Tag="All" Content="{x:Bind ViewModel.OverviewLabel, Mode=OneWay}" Height="30" MinHeight="30" Padding="10,0" CornerRadius="4" BorderThickness="0" Background="Transparent"
                                                               IsChecked="{x:Bind ViewModel.IsSourceAll, Mode=OneWay}" Click="OnSourceFilterClick" />
                                                 <ToggleButton Tag="Application" Content="{x:Bind ViewModel.ApplicationLabel, Mode=OneWay}" Height="30" MinHeight="30" Padding="10,0" CornerRadius="4" BorderThickness="0" Background="Transparent"
                                                               IsChecked="{x:Bind ViewModel.IsSourceApplication, Mode=OneWay}" Click="OnSourceFilterClick" />
+                                                <ToggleButton Tag="Security" Content="{x:Bind ViewModel.SecurityLabel, Mode=OneWay}" Height="30" MinHeight="30" Padding="10,0" CornerRadius="4" BorderThickness="0" Background="Transparent"
+                                                              IsChecked="{x:Bind ViewModel.IsSourceSecurity, Mode=OneWay}" Click="OnSourceFilterClick" />
                                                 <ToggleButton Tag="System" Content="{x:Bind ViewModel.SystemLabel, Mode=OneWay}" Height="30" MinHeight="30" Padding="10,0" CornerRadius="4" BorderThickness="0" Background="Transparent"
                                                               IsChecked="{x:Bind ViewModel.IsSourceSystem, Mode=OneWay}" Click="OnSourceFilterClick" />
                                                 <ToggleButton Tag="Setup" Content="{x:Bind ViewModel.SetupLabel, Mode=OneWay}" Height="30" MinHeight="30" Padding="10,0" CornerRadius="4" BorderThickness="0" Background="Transparent"
                                                               IsChecked="{x:Bind ViewModel.IsSourceSetup, Mode=OneWay}" Click="OnSourceFilterClick" />
                                                 <ToggleButton Tag="ForwardedEvents" Content="{x:Bind ViewModel.ForwardedLabel, Mode=OneWay}" Height="30" MinHeight="30" Padding="10,0" CornerRadius="4" BorderThickness="0" Background="Transparent"
                                                               IsChecked="{x:Bind ViewModel.IsSourceForwarded, Mode=OneWay}" Click="OnSourceFilterClick" />
-                                            </StackPanel>
-                                        </ScrollViewer>
+                                        </tkcontrols:WrapPanel>
 
                                         <!-- Search Bar + View Mode Toggles -->
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <TextBox Text="{x:Bind ViewModel.FindingSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     AutomationProperties.Name="{x:Bind ViewModel.SearchPlaceholder, Mode=OneWay}"
                                                      PlaceholderText="{x:Bind ViewModel.SearchPlaceholder, Mode=OneWay}" />
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                            <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                                                 <ToggleButton Tag="Priority" Content="{x:Bind ViewModel.PriorityViewLabel, Mode=OneWay}"
                                                               IsChecked="{x:Bind ViewModel.IsPriorityView, Mode=OneWay}" Click="OnFindingsViewClick" />
                                                 <ToggleButton Tag="All" Content="{x:Bind ViewModel.AllFindingsLabel, Mode=OneWay}"
                                                               IsChecked="{x:Bind ViewModel.ShowAllFindings, Mode=OneWay}" Click="OnFindingsViewClick" />
-                                            </StackPanel>
-                                        </Grid>
+                                                <Button Content="{x:Bind ViewModel.ResetFindingFiltersLabel}"
+                                                        Command="{x:Bind ViewModel.ResetFindingFiltersCommand}"
+                                                        AutomationProperties.AutomationId="AIHub_ResetFindingFiltersButton"
+                                                        Visibility="{x:Bind ViewModel.HasFindingFilters, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                            </tkcontrols:WrapPanel>
+                                        </StackPanel>
 
                                         <!-- Priority View (Flat Top-5) -->
                                         <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.ShowPriorityFindings, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -481,9 +513,9 @@
                                                                     <TextBlock Text="{x:Bind SeveritySummary}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                 </StackPanel>
                                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                                                                    <Border Width="{x:Bind HighBarWidth}" Height="6" CornerRadius="3" Background="{StaticResource SeverityHighFillBrush}" Visibility="{x:Bind HasHigh, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                                    <Border Width="{x:Bind MediumBarWidth}" Height="6" CornerRadius="3" Background="{StaticResource SeverityMediumFillBrush}" Visibility="{x:Bind HasMedium, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                                    <Border Width="{x:Bind LowBarWidth}" Height="6" CornerRadius="3" Background="{StaticResource SeverityLowFillBrush}" Visibility="{x:Bind HasLow, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                    <Border Width="{x:Bind HighBarWidth}" Height="6" CornerRadius="3" Background="{ThemeResource SystemFillColorCriticalBrush}" Visibility="{x:Bind HasHigh, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                    <Border Width="{x:Bind MediumBarWidth}" Height="6" CornerRadius="3" Background="{ThemeResource SystemFillColorCautionBrush}" Visibility="{x:Bind HasMedium, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                    <Border Width="{x:Bind LowBarWidth}" Height="6" CornerRadius="3" Background="{ThemeResource SystemFillColorAttentionBrush}" Visibility="{x:Bind HasLow, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                                 </StackPanel>
                                                                 <TextBlock Grid.Column="2" Text="{x:Bind CountLabel}" Style="{StaticResource CaptionTextBlockStyle}" MinWidth="76" TextAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                             </Grid>
@@ -502,20 +534,17 @@
                                         </StackPanel>
                                         <StackPanel Padding="0,28" Spacing="6" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowEmptyIssues, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <FontIcon Glyph="&#xE946;" FontSize="26" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind ViewModel.EmptyFindingsTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind ViewModel.EmptyFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind ViewModel.EmptyFindingsTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind ViewModel.EmptyFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
                                         </StackPanel>
                                         <StackPanel Padding="0,20" Spacing="4" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoFilterMatches, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <TextBlock Text="{x:Bind ViewModel.NoMatchingFindingsTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind ViewModel.NoMatchingFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind ViewModel.NoMatchingFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
-                            </StackPanel>
-
-
                                 <!-- AI deep-analysis report (produced by the configured Codex/Pi kernel) -->
-                                <Border Margin="0,4,0,0" Padding="14,12" CornerRadius="6"
+                                <Border x:Name="AuditAiReport" Margin="0,4,0,0" Padding="14,12" CornerRadius="6"
                                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                         Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -548,6 +577,7 @@
                                         </ItemsControl>
                                     </StackPanel>
                                 </Border>
+                            </StackPanel>
 
                             <!-- ============================================================== -->
                             <!-- TAB 2: OPTIMIZATION (1:1 MATCHING SCREENSHOT)                  -->
@@ -556,7 +586,7 @@
                                 <!-- Optimization Header & Scan all button -->
                                 <tkcontrols:SettingsCard Header="{x:Bind ViewModel.OptimizationTabLabel, Mode=OneWay}"
                                                          Description="{x:Bind ViewModel.OptimizationDescription, Mode=OneWay}">
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="8">
                                         <ProgressRing IsActive="{x:Bind ViewModel.IsOptimizing, Mode=OneWay}" Width="16" Height="16" />
                                         <TextBlock Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}"
                                                    VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" />
@@ -566,7 +596,10 @@
                                             <TextBlock Text="{x:Bind ViewModel.ScanAllLabel, Mode=OneWay}" />
                                         </StackPanel>
                                     </Button>
-                                    </StackPanel>
+                                    <Button Command="{x:Bind ViewModel.CancelOptimizationCommand}"
+                                            Content="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}"
+                                            AutomationProperties.AutomationId="AIHub_CancelOptimizationButton" />
+                                    </tkcontrols:WrapPanel>
                                 </tkcontrols:SettingsCard>
 
                                 <!-- Selection summary appears after a scan finds candidates. -->
@@ -699,11 +732,12 @@
                                                             <ColumnDefinition Width="Auto" />
                                                         </Grid.ColumnDefinitions>
 
-                                                        <CheckBox Grid.Column="0" IsChecked="{x:Bind IsSelected, Mode=TwoWay}" />
+                                                        <CheckBox Grid.Column="0" IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                                                  AutomationProperties.Name="{x:Bind FileName}" />
 
                                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                             <TextBlock Text="{x:Bind FileName}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Text="{x:Bind FilePath}" FontSize="10"
+                                                            <TextBlock Text="{x:Bind FilePath}" FontSize="12" ToolTipService.ToolTip="{x:Bind FilePath}"
                                                                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
 

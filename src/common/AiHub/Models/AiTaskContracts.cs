@@ -55,6 +55,24 @@ public sealed class AiTaskOptions
     /// Custom timeout override in seconds (default 600s).
     /// </summary>
     public int TimeoutSeconds { get; set; } = 600;
+
+    /// <summary>
+    /// Maximum seconds per native route attempt. Zero uses the whole task budget.
+    /// A main-route timeout may use the configured fallback within the remaining task budget.
+    /// </summary>
+    public int RouteTimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// Maximum records per batch (1-100). Zero uses the effort-based default.
+    /// The encoded input size limit still applies independently.
+    /// </summary>
+    public int BatchSize { get; set; }
+
+    /// <summary>
+    /// Retains validated batches when an advisory task cannot complete every batch.
+    /// Callers must explicitly handle a failed result containing a partial payload.
+    /// </summary>
+    public bool AllowPartialResults { get; set; }
 }
 
 /// <summary>
@@ -71,6 +89,9 @@ public sealed class AiTaskResult<TOutput> where TOutput : class
     public AiErrorCode ErrorCode { get; init; } = AiErrorCode.None;
     public string? ErrorMessage { get; init; }
     public TOutput? Payload { get; init; }
+    public bool HasPartialResult => !IsSuccess && Payload is not null;
+    public int CompletedBatches { get; init; }
+    public int TotalBatches { get; init; }
     public string UsedModel { get; init; } = string.Empty;
     public string UsedRoute { get; init; } = string.Empty;
     public TimeSpan Elapsed { get; init; }

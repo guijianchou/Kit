@@ -97,7 +97,7 @@ public sealed partial class AiHubConfig : ObservableObject
             ApiKey = string.Empty,
             Mode = "responses",
             Model = AiTargetSettings.DefaultLunaModel,
-            Effort = "medium",
+            Effort = "high",
             IsExpanded = true
         });
 
@@ -109,7 +109,7 @@ public sealed partial class AiHubConfig : ObservableObject
             ApiKey = string.Empty,
             Mode = "responses",
             Model = AiTargetSettings.DefaultLunaModel,
-            Effort = "medium",
+            Effort = "high",
             IsExpanded = false
         });
 

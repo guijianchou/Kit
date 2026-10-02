@@ -6,9 +6,8 @@ using System;
 using System.Globalization;
 using System.Text;
 using Kit.AIHubLib.Models;
-using Microsoft.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Windows.ApplicationModel.DataTransfer;
 
 namespace Kit.Settings.UI.Views;
@@ -35,18 +34,7 @@ public sealed partial class FindingDetailsDialog : ContentDialog
         FindingTitleTextBlock.Text = issue.DisplayTitle;
         SeverityTextBlock.Text = issue.SeverityText;
 
-        if (issue.IsHigh)
-        {
-            SeverityBadge.Background = new SolidColorBrush(Colors.IndianRed);
-        }
-        else if (issue.IsMedium)
-        {
-            SeverityBadge.Background = new SolidColorBrush(Colors.DarkOrange);
-        }
-        else
-        {
-            SeverityBadge.Background = new SolidColorBrush(Colors.DodgerBlue);
-        }
+        SeverityBadge.Style = (Style)Resources[issue.IsHigh ? "HighSeverityBadgeStyle" : issue.IsMedium ? "MediumSeverityBadgeStyle" : "LowSeverityBadgeStyle"];
 
         CategoryTextBlock.Text = issue.CategoryLabel;
         EventIdTextBlock.Text = IsChinese ? $"事件 {issue.EventId}" : $"Event {issue.EventId}";

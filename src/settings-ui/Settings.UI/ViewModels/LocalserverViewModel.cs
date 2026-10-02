@@ -1404,7 +1404,7 @@ namespace Kit.Settings.UI.ViewModels
                 var rows = Lines.ToArray();
                 await Task.Run(() =>
                 {
-                    var snapshot = ProcessTreeSnapshot.Capture();
+                    var snapshot = new Lazy<ProcessTreeSnapshot>(ProcessTreeSnapshot.Capture);
                     foreach (var line in rows)
                     {
                         if (_disposed)

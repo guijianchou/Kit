@@ -78,7 +78,7 @@ public sealed class DownloadOrganizerServiceTests
 
         var knownCategories = new HashSet<string>(StringComparer.Ordinal)
         {
-            "Documents", "Archives", "Images", "Installers", "Videos", "Audio", "Code", "Other",
+            "Documents", "Compressed", "Programs", "Music", "Video",
         };
 
         foreach (var item in items)

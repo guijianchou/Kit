@@ -32,7 +32,9 @@ internal static class KernelProcessRunner
         TimeSpan timeout,
         CancellationToken cancellationToken,
         int maximumOutputCharacters = 8 * 1024 * 1024,
-        int maximumErrorCharacters = 64 * 1024)
+        int maximumErrorCharacters = 64 * 1024,
+        Action<string>? standardOutputLine = null,
+        Action<string>? standardErrorLine = null)
     {
         ArgumentNullException.ThrowIfNull(startInfo);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeout, TimeSpan.Zero);
@@ -87,8 +89,8 @@ internal static class KernelProcessRunner
             {
                 // Closing the host closes its job handle and terminates every assigned child.
                 cancellationRegistration = lifetime.Token.Register(() => StopProcess(process, job));
-                outputTask = ReadBoundedAsync(process.StandardOutput, maximumOutputCharacters, lifetime.Token);
-                errorTask = ReadBoundedAsync(process.StandardError, maximumErrorCharacters, lifetime.Token);
+                outputTask = ReadBoundedAsync(process.StandardOutput, maximumOutputCharacters, lifetime.Token, standardOutputLine);
+                errorTask = ReadBoundedAsync(process.StandardError, maximumErrorCharacters, lifetime.Token, standardErrorLine);
                 inputTask = WriteInputAsync(process.StandardInput, input, lifetime.Token);
                 exitTask = process.WaitForExitAsync(lifetime.Token);
                 var pending = new List<Task> { outputTask, errorTask, inputTask, exitTask };
@@ -156,6 +158,7 @@ internal static class KernelProcessRunner
                 {
                     using var cleanupDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                     await process.WaitForExitAsync(cleanupDeadline.Token).ConfigureAwait(false);
+                    exitCode = process.ExitCode;
                 }
                 catch (Exception)
                 {
@@ -176,10 +179,13 @@ internal static class KernelProcessRunner
             : new(exitCode, string.Empty, string.Empty, failure);
     }
 
-    internal static async Task<string> ReadBoundedAsync(StreamReader reader, int maximumCharacters, CancellationToken cancellationToken)
+    internal static async Task<string> ReadBoundedAsync(StreamReader reader, int maximumCharacters, CancellationToken cancellationToken,
+        Action<string>? lineReceived = null)
     {
         var text = new StringBuilder(Math.Min(maximumCharacters, 4096));
         var buffer = new char[4096];
+        var line = lineReceived is null ? null : new StringBuilder();
+        bool discardLine = false;
         int count;
         while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) > 0)
         {
@@ -189,9 +195,53 @@ internal static class KernelProcessRunner
             }
 
             text.Append(buffer, 0, count);
+            if (line is not null)
+            {
+                for (int index = 0; index < count; index++)
+                {
+                    char character = buffer[index];
+                    if (character == '\n')
+                    {
+                        if (!discardLine)
+                        {
+                            ReportLine(line.ToString().TrimEnd('\r'));
+                        }
+
+                        line.Clear();
+                        discardLine = false;
+                    }
+                    else if (!discardLine && line.Length < 16_384)
+                    {
+                        line.Append(character);
+                    }
+                    else
+                    {
+                        // Large payload lines still reach the parser, but never the diagnostic callback.
+                        line.Clear();
+                        discardLine = true;
+                    }
+                }
+            }
+        }
+
+        if (line is { Length: > 0 } && !discardLine)
+        {
+            ReportLine(line.ToString().TrimEnd('\r'));
         }
 
         return text.ToString();
+
+        void ReportLine(string value)
+        {
+            try
+            {
+                lineReceived?.Invoke(value);
+            }
+            catch (Exception)
+            {
+                // Diagnostics must not break pipe draining, execution, or cancellation.
+            }
+        }
     }
 
     private static async Task WriteInputAsync(StreamWriter writer, string? input, CancellationToken cancellationToken)

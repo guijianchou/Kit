@@ -3,9 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using Kit.Interop;
 using Kit.Settings.UI.Library.Utilities;
 using ManagedCommon;
@@ -17,8 +18,8 @@ namespace Kit.Settings.UI.Helpers
     /// analyzed after the fact (tools\diagnostics\Get-KitDiagnostics.ps1 summarizes the file).
     /// </summary>
     /// <remarks>
-    /// Unhandled exceptions are written in full. First-chance exceptions are only sampled: each
-    /// distinct type/message/site is written once per session and then counted, because handled
+    /// Unhandled exceptions retain types, HRESULTs and stacks. First-chance exceptions are sampled: each
+    /// distinct type/HResult/site is written once per session and then counted, because handled
     /// exceptions are routine and writing every one synchronously made the thrower pay a file
     /// append (a single AI Hub settings read used to produce dozens).
     /// </remarks>
@@ -28,8 +29,10 @@ namespace Kit.Settings.UI.Helpers
         private const int MaxDistinctFirstChance = 200;
 
         private static readonly object FileLock = new();
-        private static readonly ConcurrentDictionary<string, int> FirstChanceCounts = new();
+        private static readonly Dictionary<string, int> FirstChanceCounts = new();
+        private static readonly object CountsLock = new();
         private static readonly string FilePath = Path.Combine(Constants.AppDataPath(), "crash.log");
+        private static int _unsampledCount;
 
         [ThreadStatic]
         private static bool _inHandler;
@@ -53,6 +56,7 @@ namespace Kit.Settings.UI.Helpers
             }
 
             Append($"[Session {Now}] {processName} started, pid {Environment.ProcessId}, version {Helper.GetProductVersion()}");
+            Append("FirstChance entries are sampled exception observations, not proof of a crash. Unhandled entries report failures.");
         }
 
         public static void RecordUnhandled(string source, Exception ex)
@@ -62,8 +66,15 @@ namespace Kit.Settings.UI.Helpers
                 return;
             }
 
-            Append($"[Unhandled {Now}] ({source}) {ex}");
-            Logger.LogError($"Unhandled exception ({source})", ex);
+            var details = new StringBuilder();
+            for (int depth = 0; ex != null && depth < 10; depth++, ex = ex.InnerException)
+            {
+                details.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"{ex.GetType().FullName}: HRESULT=0x{ex.HResult:X8}");
+                details.AppendLine(ex.StackTrace);
+            }
+
+            Append($"[Unhandled {Now}] ({source}) {details}");
+            Logger.LogError($"Unhandled exception ({source}): {details}");
         }
 
         public static void RecordFirstChance(Exception ex)
@@ -79,11 +90,31 @@ namespace Kit.Settings.UI.Helpers
                 string site = new StackTrace(ex, false).GetFrame(0)?.GetMethod() is { } method
                     ? $"{method.DeclaringType?.FullName}.{method.Name}"
                     : "unknown";
-                string key = $"{ex.GetType().FullName}|{ex.Message}|{site}";
-                int count = FirstChanceCounts.AddOrUpdate(key, 1, (_, current) => current + 1);
-                if (count == 1 && FirstChanceCounts.Count <= MaxDistinctFirstChance)
+
+                // Exception messages can contain URLs, credentials and private file names.
+                string signature = $"HRESULT=0x{ex.HResult:X8}";
+                string key = $"{ex.GetType().FullName}|{signature}|{site}";
+                bool firstSample = false;
+                lock (CountsLock)
                 {
-                    Append($"[FirstChance {Now}] {ex.GetType().FullName}: {ex.Message}\n   at {site}");
+                    if (FirstChanceCounts.TryGetValue(key, out int count))
+                    {
+                        FirstChanceCounts[key] = count + 1;
+                    }
+                    else if (FirstChanceCounts.Count < MaxDistinctFirstChance)
+                    {
+                        FirstChanceCounts.Add(key, 1);
+                        firstSample = true;
+                    }
+                    else
+                    {
+                        _unsampledCount++;
+                    }
+                }
+
+                if (firstSample)
+                {
+                    Append($"[FirstChance {Now}] {ex.GetType().FullName}: {signature}\n   at {site}");
                 }
             }
             catch (Exception)
@@ -98,12 +129,25 @@ namespace Kit.Settings.UI.Helpers
         /// <summary>Writes how often each sampled first-chance exception recurred this session.</summary>
         public static void EndSession()
         {
-            foreach (var entry in FirstChanceCounts)
+            Dictionary<string, int> counts;
+            int unsampled;
+            lock (CountsLock)
+            {
+                counts = new Dictionary<string, int>(FirstChanceCounts);
+                unsampled = _unsampledCount;
+            }
+
+            foreach (var entry in counts)
             {
                 if (entry.Value > 1)
                 {
                     Append($"[FirstChanceSummary {Now}] x{entry.Value} {entry.Key}");
                 }
+            }
+
+            if (unsampled > 0)
+            {
+                Append($"[FirstChanceLimit {Now}] additional observations={unsampled}");
             }
 
             Append($"[SessionEnd {Now}] pid {Environment.ProcessId}");

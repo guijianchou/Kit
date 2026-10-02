@@ -9,6 +9,22 @@
     <ManifestTool Condition="Exists('$(WindowsSdkDir)bin\x64\mt.exe')">$(WindowsSdkDir)bin\x64\mt.exe</ManifestTool>
   </PropertyGroup>
 
+  <!-- EXEs can inherit a Low integrity label from the checkout. Apply normal
+       user integrity after both VS and command-line builds, including .NET apphosts. -->
+  <Target Name="KitSetExecutableIntegrity"
+          AfterTargets="Build"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(_IsSkippedTestProject)' != 'true'
+            and (('$(MSBuildProjectExtension)' == '.vcxproj' and '$(ConfigurationType)' == 'Application')
+              or ('$(MSBuildProjectExtension)' == '.csproj' and '$(UseAppHost)' == 'true'
+                and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe')))">
+    <PropertyGroup>
+      <_KitExecutablePath>$(TargetDir)$(TargetName).exe</_KitExecutablePath>
+    </PropertyGroup>
+    <Exec Command="icacls.exe &quot;$(_KitExecutablePath)&quot; /setintegritylevel M /L"
+          Condition="Exists('$(_KitExecutablePath)')"
+          StandardOutputImportance="Low" />
+  </Target>
+
   <!-- Common.Dotnet.CsWinRT.props sets Release DebugType back to pdbonly after Directory.Build.props. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(MSBuildProjectExtension)' == '.csproj'">
     <DebugType>none</DebugType>

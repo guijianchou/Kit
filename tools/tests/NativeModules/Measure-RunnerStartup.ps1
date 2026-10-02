@@ -3,6 +3,8 @@ param(
     [string]$ExecutablePath,
     [ValidateRange(1, 10)]
     [int]$Runs = 3,
+    [ValidateRange(1, 100)]
+    [int]$ExpectedModuleCount = 6,
     [string]$ReportPath
 )
 
@@ -16,7 +18,7 @@ $runtimeBoundary = $runtimeDirectory + [IO.Path]::DirectorySeparatorChar
 if ([IO.Path]::GetFileName($ExecutablePath) -ne 'Kit.exe' -or -not (Test-Path -LiteralPath $ExecutablePath -PathType Leaf)) {
     throw 'Select an existing Kit.exe build.'
 }
-if (Get-Process -Name Kit,Kit.Settings,Kit.QuickAccess,Kit.Awake,Kit.LightSwitchService -ErrorAction SilentlyContinue) {
+if (Get-Process -Name Kit,Kit.Settings,Kit.QuickAccess,Kit.Awake,Kit.LightSwitchService,Kit.LocalserverWorker,Kit.AIHubWorker -ErrorAction SilentlyContinue) {
     throw 'Close existing Kit processes before measuring startup.'
 }
 $logDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Kit\RunnerLogs'
@@ -44,6 +46,9 @@ for ($run = 1; $run -le $Runs; $run++) {
                         RunnerInitMilliseconds = [int]$match.Matches[0].Groups[1].Value
                         LaunchToLogMilliseconds = $elapsed.ElapsedMilliseconds
                         LoadedModules = @($lines | Select-String -Pattern 'STARTUP_TIMING: Module Loaded:').Count
+                        ModuleLoadMilliseconds = @($lines | Select-String -Pattern 'STARTUP_TIMING: Module Loaded: (\S+) in (\d+)ms' | ForEach-Object {
+                            [ordered]@{ Module = $_.Matches[0].Groups[1].Value; Milliseconds = [int]$_.Matches[0].Groups[2].Value }
+                        })
                     }
                     break
                 }
@@ -59,7 +64,7 @@ for ($run = 1; $run -le $Runs; $run++) {
             $null = $ownedChild.Handle
             $children.Add($ownedChild)
         }
-        if ($record.LoadedModules -ne 3) { throw 'The runner did not load all three module DLLs.' }
+        if ($record.LoadedModules -ne $ExpectedModuleCount) { throw "The runner loaded $($record.LoadedModules) module DLLs; expected $ExpectedModuleCount." }
         $process.Kill()
         $process.WaitForExit(5000) | Out-Null
         $record.ChildrenExitedAfterRunnerTermination = $true

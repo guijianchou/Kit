@@ -10,24 +10,40 @@ namespace Kit.AIHubLib.Services;
 
 public sealed class DownloadOrganizerService
 {
-    private static readonly Dictionary<string, string> ExtensionToCategory = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly TimeSpan MinimumAge = TimeSpan.FromMinutes(10);
+    private readonly string? _downloadsRoot;
+
+    private static readonly Dictionary<string, string> ExtensionToCategory = new(StringComparer.OrdinalIgnoreCase);
+
+    static DownloadOrganizerService()
     {
-        { ".pdf", "Documents" }, { ".docx", "Documents" }, { ".doc", "Documents" },
-        { ".xlsx", "Documents" }, { ".xls", "Documents" }, { ".pptx", "Documents" },
-        { ".txt", "Documents" }, { ".md", "Documents" }, { ".epub", "Documents" },
-        { ".zip", "Archives" }, { ".rar", "Archives" }, { ".7z", "Archives" },
-        { ".tar", "Archives" }, { ".gz", "Archives" },
-        { ".png", "Images" }, { ".jpg", "Images" }, { ".jpeg", "Images" },
-        { ".webp", "Images" }, { ".svg", "Images" }, { ".gif", "Images" },
-        { ".exe", "Installers" }, { ".msi", "Installers" }, { ".iso", "Installers" },
-        { ".mp4", "Videos" }, { ".mkv", "Videos" }, { ".avi", "Videos" }, { ".mov", "Videos" },
-        { ".mp3", "Audio" }, { ".wav", "Audio" }, { ".flac", "Audio" },
-        { ".cs", "Code" }, { ".cpp", "Code" }, { ".h", "Code" }, { ".py", "Code" },
-        { ".js", "Code" }, { ".ts", "Code" }, { ".json", "Code" }, { ".html", "Code" },
-    };
+        // IDM-style categories; images and unrecognized extensions stay where they are.
+        AddCategory("Documents", ".doc .docx .xls .xlsx .ppt .pptx .pdf .txt .rtf .odt .ods .odp .csv .md .epub .mobi .azw .azw3 .chm .djvu");
+        AddCategory("Compressed", ".zip .rar .7z .tar .gz .gzip .bz2 .xz .tgz .tbz .tbz2 .txz .z .lz .lzma .zst .cab .arj .ace");
+        AddCategory("Programs", ".exe .msi .msix .msixbundle .appx .appxbundle .msu .msp .iso .img .com");
+        AddCategory("Music", ".mp3 .mp2 .mpa .wav .wma .aac .m4a .flac .ogg .oga .opus .mid .midi .aif .aiff .ape .alac");
+        AddCategory("Video", ".mp4 .m4v .mkv .avi .mov .wmv .mpg .mpeg .mpe .webm .flv .f4v .3gp .3g2 .vob .asf .rm .rmvb .m2ts .mts");
+    }
+
+    public DownloadOrganizerService() { }
+
+    internal DownloadOrganizerService(string downloadsRoot) => _downloadsRoot = Path.GetFullPath(downloadsRoot);
+
+    private static void AddCategory(string category, string extensions)
+    {
+        foreach (string extension in extensions.Split(' '))
+        {
+            ExtensionToCategory.Add(extension, category);
+        }
+    }
 
     public string? GetDownloadsPath()
     {
+        if (_downloadsRoot != null)
+        {
+            return Directory.Exists(_downloadsRoot) ? _downloadsRoot : null;
+        }
+
         try
         {
             var guid = new Guid("374DE290-123F-4565-9164-39C4925E467B"); // FOLDERID_Downloads
@@ -54,32 +70,23 @@ public sealed class DownloadOrganizerService
         return Directory.Exists(fallback) ? fallback : null;
     }
 
-    public Task<List<TempFileInfo>> ScanDownloadsAsync(CancellationToken cancellationToken = default)
+    public Task<List<TempFileInfo>> ScanDownloadsAsync(CancellationToken cancellationToken = default) => Task.Run(() =>
     {
-        return Task.Run(() =>
+        var results = new List<TempFileInfo>();
+        string? root = GetDownloadsPath();
+        if (root == null || !OptimizationFileSafety.HasNoReparsePoints(root)) return results;
+
+        foreach (var file in new DirectoryInfo(root).EnumerateFiles("*", SearchOption.TopDirectoryOnly))
         {
-            var results = new List<TempFileInfo>();
-            string? downloadsRoot = GetDownloadsPath();
-            if (downloadsRoot == null || !Directory.Exists(downloadsRoot))
+            cancellationToken.ThrowIfCancellationRequested();
+            try
             {
-                return results;
-            }
-
-            var dir = new DirectoryInfo(downloadsRoot);
-            int index = 1;
-
-            foreach (var file in dir.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
-            {
-                if (cancellationToken.IsCancellationRequested) break;
-                if ((file.Attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0) continue;
-
-                string ext = file.Extension;
-                string category = ExtensionToCategory.TryGetValue(ext, out var cat) ? cat : "Other";
-                string targetSubfolder = Path.Combine(downloadsRoot, category);
+                if (!ExtensionToCategory.TryGetValue(file.Extension, out string? category) ||
+                    !OptimizationFileSafety.IsEligible(file, MinimumAge)) continue;
 
                 results.Add(new TempFileInfo
                 {
-                    ItemId = $"item-{index++:D6}",
+                    ItemId = $"item-{results.Count + 1:D6}",
                     FilePath = file.FullName,
                     FileName = file.Name,
                     SizeInBytes = file.Length,
@@ -88,108 +95,69 @@ public sealed class DownloadOrganizerService
                     Risk = RiskLevel.Low,
                     Action = "move",
                     TargetRelativePath = category,
-                    ReasonEn = $"Organize into {category} subfolder based on {ext} extension",
-                    ReasonZh = $"根据文件类型 {ext} 整理至 {category} 文件夹"
+                    ReasonEn = $"Unchanged for at least 10 minutes; organize by {file.Extension} into {category}",
+                    ReasonZh = $"至少 10 分钟未修改；按 {file.Extension} 类型整理至 {category}"
                 });
-
-                if (results.Count >= 500) break;
             }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
 
-            return results;
-        }, cancellationToken);
-    }
+            if (results.Count >= 500) break;
+        }
 
-    public Task<(int Succeeded, int Failed)> OrganizeSelectedAsync(IEnumerable<TempFileInfo> items, CancellationToken cancellationToken = default)
-    {
-        return Task.Run(() =>
-        {
-            int succeeded = 0;
-            int failed = 0;
-            string? downloadsRoot = GetDownloadsPath();
-            if (downloadsRoot == null) return (0, 0);
-
-            string canonicalRoot = Path.GetFullPath(downloadsRoot).TrimEnd('\\') + Path.DirectorySeparatorChar;
-
-            foreach (var item in items)
-            {
-                if (cancellationToken.IsCancellationRequested) break;
-                if (!item.IsSelected || string.IsNullOrEmpty(item.TargetRelativePath)) continue;
-
-                try
-                {
-                    string sourcePath = Path.GetFullPath(item.FilePath);
-                    if (!sourcePath.StartsWith(canonicalRoot, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Forbidden: file is outside downloads root!
-                        failed++;
-                        continue;
-                    }
-
-                    string targetDir = Path.GetFullPath(Path.Combine(downloadsRoot, item.TargetRelativePath));
-                    if (!targetDir.StartsWith(canonicalRoot, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Target directory escapes downloads root!
-                        failed++;
-                        continue;
-                    }
-
-                    Directory.CreateDirectory(targetDir);
-
-                    string targetFile = Path.Combine(targetDir, item.FileName);
-                    if (File.Exists(targetFile))
-                    {
-                        string stem = Path.GetFileNameWithoutExtension(item.FileName);
-                        string ext = Path.GetExtension(item.FileName);
-                        int counter = 1;
-                        while (File.Exists(targetFile))
-                        {
-                            targetFile = Path.Combine(targetDir, $"{stem}_{counter++}{ext}");
-                        }
-                    }
-
-                    File.Move(sourcePath, targetFile);
-                    succeeded++;
-                }
-                catch
-                {
-                    failed++;
-                }
-            }
-
-            return (succeeded, failed);
-        }, cancellationToken);
-    }
+        return results;
+    }, cancellationToken);
 
     public Task<List<TempFileInfo>> ScanAsync(CancellationToken cancellationToken = default) => ScanDownloadsAsync(cancellationToken);
 
-    public bool OrganizeItem(string sourceFilePath, string targetRelativePath)
+    public Task<(int Succeeded, int Failed)> OrganizeSelectedAsync(IEnumerable<TempFileInfo> items, CancellationToken cancellationToken = default) => Task.Run(() =>
     {
-        string? downloadsRoot = GetDownloadsPath();
-        if (downloadsRoot == null) return false;
-
-        string canonicalRoot = Path.GetFullPath(downloadsRoot).TrimEnd('\\') + Path.DirectorySeparatorChar;
-        string sourcePath = Path.GetFullPath(sourceFilePath);
-        if (!sourcePath.StartsWith(canonicalRoot, StringComparison.OrdinalIgnoreCase)) return false;
-
-        string targetDir = Path.GetFullPath(Path.Combine(downloadsRoot, targetRelativePath));
-        if (!targetDir.StartsWith(canonicalRoot, StringComparison.OrdinalIgnoreCase)) return false;
-
-        Directory.CreateDirectory(targetDir);
-        string fileName = Path.GetFileName(sourcePath);
-        string targetFile = Path.Combine(targetDir, fileName);
-        if (File.Exists(targetFile))
+        int succeeded = 0;
+        int failed = 0;
+        foreach (var item in items)
         {
-            string stem = Path.GetFileNameWithoutExtension(fileName);
-            string ext = Path.GetExtension(fileName);
-            int counter = 1;
-            while (File.Exists(targetFile))
-            {
-                targetFile = Path.Combine(targetDir, $"{stem}_{counter++}{ext}");
-            }
+            if (cancellationToken.IsCancellationRequested) break;
+            if (!item.IsSelected) continue;
+            if (OrganizeItem(item)) succeeded++;
+            else failed++;
         }
 
-        File.Move(sourcePath, targetFile);
-        return true;
+        return (succeeded, failed);
+    }, cancellationToken);
+
+    public bool OrganizeItem(TempFileInfo item)
+    {
+        try
+        {
+            string? root = GetDownloadsPath();
+            if (root == null || item.Action != "move") return false;
+
+            root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+            var file = new FileInfo(item.FilePath);
+            if (!string.Equals(file.DirectoryName, root, StringComparison.OrdinalIgnoreCase) ||
+                !ExtensionToCategory.TryGetValue(file.Extension, out string? category) ||
+                !string.Equals(item.TargetRelativePath, category, StringComparison.Ordinal) ||
+                !OptimizationFileSafety.IsEligible(file, MinimumAge, item)) return false;
+
+            string targetDir = Path.Combine(root, category);
+            if (!OptimizationFileSafety.HasNoReparsePoints(targetDir)) return false;
+            Directory.CreateDirectory(targetDir);
+            if (!OptimizationFileSafety.HasNoReparsePoints(targetDir)) return false;
+
+            // Derive the name from the validated source, never from recommendation metadata.
+            string targetFile = Path.Combine(targetDir, file.Name);
+            int counter = 1;
+            while (File.Exists(targetFile) || Directory.Exists(targetFile))
+            {
+                targetFile = Path.Combine(targetDir, $"{Path.GetFileNameWithoutExtension(file.Name)}_{counter++}{file.Extension}");
+            }
+
+            File.Move(file.FullName, targetFile); // Never overwrite an existing download.
+            return true;
+        }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
+        catch (ArgumentException) { return false; }
     }
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]

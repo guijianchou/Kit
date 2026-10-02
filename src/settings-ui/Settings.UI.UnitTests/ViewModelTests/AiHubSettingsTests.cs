@@ -74,7 +74,7 @@ namespace ViewModelTests
             // level, with a re-check action. Removed from the panel in an earlier pass;
             // must stay removed.
             Assert.IsTrue(content.Contains("AiReadinessGlyph"), "AIHubPage.xaml should show the readiness glyph");
-            Assert.IsTrue(content.Contains("AiReadinessBrush"), "AIHubPage.xaml should color the readiness glyph by level");
+            Assert.IsTrue(content.Contains("AiReadinessStyle(ViewModel.AiReadinessLevel)"), "AIHubPage.xaml should theme the readiness glyph by level");
             Assert.IsTrue(content.Contains("AiReadinessText"), "AIHubPage.xaml should show the readiness text");
             Assert.IsTrue(content.Contains("AutomationProperties.AutomationId=\"AIHub_RecheckAiButton\""), "AIHubPage.xaml should offer a readiness re-check");
             Assert.IsFalse(content.Contains("x:Uid=\"AiHub_PipelineCard\""), "AIHubPage.xaml should not contain AiHub_PipelineCard");

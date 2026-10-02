@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using LocalServerHub.Core.Configuration;
 using LocalServerHub.Core.Models;
 using LocalServerHub.Windows;
+using LocalServerHub.Windows.Native;
 using LocalserverLib.Common;
 using ManagedCommon;
 
@@ -106,6 +107,7 @@ public sealed class ServiceSupervisor : IDisposable
     /// </summary>
     public async Task RecoverRunningServicesAsync(CancellationToken cancellationToken = default)
     {
+        var snapshot = new Lazy<ProcessTreeSnapshot>(ProcessTreeSnapshot.Capture);
         foreach ((string id, ServiceRunner runner) in Snapshot())
         {
             if (cancellationToken.IsCancellationRequested)
@@ -115,7 +117,7 @@ public sealed class ServiceSupervisor : IDisposable
 
             try
             {
-                if (runner.State == ServiceState.Stopped && runner.TryRecover())
+                if (runner.State == ServiceState.Stopped && runner.TryRecover(snapshot))
                 {
                     Logger.LogInfo($"[Localserver.Worker] Adopted the running tree of '{id}'.");
                 }

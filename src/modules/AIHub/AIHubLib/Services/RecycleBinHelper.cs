@@ -29,6 +29,8 @@ public sealed class RecycleBinHelper
                 fileOperation = (IFileOperation)new FileOperation();
                 fileOperation.SetOperationFlags(
                     FileOperationFlags.FOF_ALLOWUNDO |
+                    FileOperationFlags.FOFX_RECYCLEONDELETE |
+                    FileOperationFlags.FOFX_EARLYFAILURE |
                     FileOperationFlags.FOF_NOCONFIRMATION |
                     FileOperationFlags.FOF_SILENT |
                     FileOperationFlags.FOF_NOERRORUI);
@@ -47,7 +49,7 @@ public sealed class RecycleBinHelper
                 fileOperation.DeleteItem(shellItem, IntPtr.Zero);
                 hr = fileOperation.PerformOperations();
 
-                if (hr != 0)
+                if (hr != 0 || fileOperation.GetAnyOperationsAborted())
                 {
                     return (false, $"Failed to perform operations: HRESULT=0x{hr:X8}");
                 }
@@ -123,7 +125,9 @@ public sealed class RecycleBinHelper
         FOF_SILENT = 0x0004,
         FOF_NOCONFIRMATION = 0x0010,
         FOF_ALLOWUNDO = 0x0040,
-        FOF_NOERRORUI = 0x0400
+        FOF_NOERRORUI = 0x0400,
+        FOFX_EARLYFAILURE = 0x00100000,
+        FOFX_RECYCLEONDELETE = 0x00080000
     }
 
     private static class NativeMethods

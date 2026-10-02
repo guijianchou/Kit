@@ -231,7 +231,7 @@ src/common/Telemetry/*.etl
 .github/workflows/**squad**.yml
 
 # Reference source checkout (PowerToys upstream) - local reference only, never committed
-/source/
+/Source/
 
 # Temporary UI automation scripts
 /shot.png

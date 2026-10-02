@@ -191,6 +191,11 @@ public sealed class ServiceRunner : IDisposable
     public bool TryRecover() => TryRecover(processSnapshot: null);
 
     public bool TryRecover(ProcessTreeSnapshot? processSnapshot)
+        => TryRecover(new Lazy<ProcessTreeSnapshot>(() => processSnapshot ?? ProcessTreeSnapshot.Capture()));
+
+    // A recovery pass shares one snapshot, but idle services without ownership records
+    // must not trigger a machine-wide process scan.
+    public bool TryRecover(Lazy<ProcessTreeSnapshot> snapshot)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (State != ServiceState.Stopped)
@@ -225,7 +230,7 @@ public sealed class ServiceRunner : IDisposable
             if (!TryPrepareRecordedOwnership(
                     definition,
                     record,
-                    processSnapshot ?? ProcessTreeSnapshot.Capture(),
+                    snapshot.Value,
                     diagnostics,
                     out prepared)
                 || prepared is null)

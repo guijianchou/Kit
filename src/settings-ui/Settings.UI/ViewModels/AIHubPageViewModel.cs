@@ -29,8 +29,6 @@ using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using Windows.UI;
 
 namespace Kit.Settings.UI.ViewModels;
 
@@ -154,7 +152,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly EventLogService _eventLogService = new();
     private readonly CacheCleanupService _cacheCleanupService = new();
     private readonly DownloadOrganizerService _downloadOrganizerService = new();
-    private readonly RecycleBinHelper _recycleBinHelper = new();
     private readonly AuditHistoryStorage _auditHistoryStorage = new();
     private readonly SecurityPolicyService _securityService = new();
     private readonly ObservableCollection<AiReportFinding> _aiReportFindings = new();
@@ -166,17 +163,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly ScanProgressModel _auditProgress = new(
         new[] { "Collect event logs", "Analyze findings", "Finish" });
 
-    /// <summary>True while the active workflow is an audit rather than an optimization scan.</summary>
-    private bool _auditWorkflowActive;
-
     private DateTime? _lastCompletedAuditUtc;
+    private bool _hasAuditResult;
     private ScanPhase _scanPhase = ScanPhase.Idle;
+    private ScanPhase _auditPhase = ScanPhase.Idle;
     private string _aiAnalysisRanText = string.Empty;
     private AiReadinessLevel _aiReadinessLevel = AiReadinessLevel.Unverified;
     private string _aiReadinessText = string.Empty;
-    private string _currentStageText = string.Empty;
-
-    private CancellationTokenSource _currentCts;
+    private CancellationTokenSource _auditCts;
+    private CancellationTokenSource _optimizationCts;
     private CancellationTokenSource _readinessCts;
     private bool _isCheckingAiReadiness;
     private bool _disposed;
@@ -203,17 +198,17 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private string _aiReportSummaryText = string.Empty;
     private string _aiReportMetaText = string.Empty;
 
-    private string _healthVerdict = IsChinese ? "系统状态良好 · 多数指标稳定" : "System state healthy · Majority of indicators stable";
+    private string _healthVerdict = IsChinese ? "尚未扫描" : "Not scanned yet";
     private string _healthSummaryText = IsChinese ? "尚未进行全面事件扫描，点击上方扫描按钮以开始。" : "Comprehensive event scan has not been performed yet. Click scan above to begin.";
     private string _selectedAuditLabel = IsChinese ? "最新审计" : "Latest audit";
     private DateTimeOffset? _selectedAuditDate = DateTimeOffset.Now;
-    private string _activityScansText = "1";
+    private string _activityScansText = "0";
     private string _activityFindingsText = "0";
-    private string _activeDaysText = "1";
-    private string _healthAverageText = "100";
+    private string _activeDaysText = "0";
+    private string _healthAverageText = "—";
     private string _scanTypeText = IsChinese ? "快速扫描" : "Fast scan";
-    private string _finishedText = IsChinese ? "刚刚" : "Just now";
-    private string _windowText = IsChinese ? "最近 1 小时" : "Last 1 hour";
+    private string _finishedText = "—";
+    private string _windowText = "—";
     private string _eventCountText = IsChinese ? "0 事件" : "0 events";
 
     // Optimization state
@@ -233,6 +228,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     // Status bar
     private string _statusMessage = string.Empty;
     private InfoBarSeverity _statusSeverity = InfoBarSeverity.Informational;
+    private string _optimizationStatusMessage = string.Empty;
+    private InfoBarSeverity _optimizationStatusSeverity = InfoBarSeverity.Informational;
+    private bool _isOptimizationStatusOpen;
     private bool _isStatusOpen;
 
     public AIHubPageViewModel(
@@ -261,11 +259,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
 
         // Commands
-        FastScanCommand = new RelayCommand(() => RunAudit(fast: true), () => IsEnabled && !_isAuditing);
-        FullScanCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing);
+        FastScanCommand = new RelayCommand(() => RunAudit(fast: true), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
+        FullScanCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
         SelectLatestCommand = new RelayCommand(LoadRecentAudit, () => IsEnabled && !_isAuditing);
-        ReanalyzeRangeCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing);
+        ReanalyzeRangeCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
         DeepAnalyzeCommand = new RelayCommand(RunDeepAnalysis, () => CanRunDeepAnalysis);
+        CancelAuditCommand = new RelayCommand(() => _auditCts?.Cancel(), () => IsAuditing || IsAiAnalyzing);
+        ResetFindingFiltersCommand = new RelayCommand(ResetFindingFilters);
 
         ScanAllCommand = new RelayCommand(RunScanAll, () => IsEnabled && !_isOptimizing);
         ScanDownloadsCommand = new RelayCommand(RunScanDownloads, () => IsEnabled && !_isOptimizing);
@@ -273,6 +273,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         SelectAllCandidatesCommand = new RelayCommand(SelectAllCandidates, () => HasCandidates && !_isOptimizing);
         DeselectAllCandidatesCommand = new RelayCommand(DeselectAllCandidates, () => HasCandidates && !_isOptimizing);
         ExecuteOptimizationCommand = new RelayCommand(RunExecuteOptimization, () => CanExecuteOptimization);
+        CancelOptimizationCommand = new RelayCommand(() => _optimizationCts?.Cancel(), () => IsOptimizing);
 
         // Scheduled audits: check every few minutes whether the configured cadence is due.
         _scheduleTimer = _dispatcherQueue.CreateTimer();
@@ -339,10 +340,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 if (!value)
                 {
                     _readinessCts?.Cancel();
-                    _currentCts?.Cancel();
-                    IsAuditing = false;
-                    IsOptimizing = false;
-                    OptimizationWorkflowStatus = IsChinese ? "就绪，等待扫描" : "Ready to scan";
+                    _auditCts?.Cancel();
+                    _optimizationCts?.Cancel();
                 }
 
                 RefreshCommands();
@@ -362,6 +361,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             if (Set(ref _activeTabIndex, value))
             {
+                OnPropertyChanged(nameof(StatusMessage));
+                OnPropertyChanged(nameof(StatusSeverity));
+                OnPropertyChanged(nameof(IsStatusOpen));
                 try
                 {
                     _moduleSettingsRepository.SettingsConfig.Properties.ActiveTabIndex.Value = value;
@@ -390,6 +392,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     public string HealthScoreLabel => IsChinese ? "系统健康评分" : "Health score";
+    public string HealthScoreText => HasAuditData ? HealthScore.ToString(CultureInfo.CurrentCulture) : "—";
 
     public string HealthVerdict
     {
@@ -512,7 +515,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 // The mode change is persisted only; switching modes must not start a scan
                 // by itself, otherwise entering the tab fired one on binding initialization.
-                ScanPhase = ScanPhase.Idle;
+                if (!IsAuditing)
+                {
+                    AuditPhase = ScanPhase.Idle;
+                }
             }
         }
     }
@@ -591,12 +597,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string WindowText { get => _windowText; private set => Set(ref _windowText, value); }
     public string EventCountText { get => _eventCountText; private set => Set(ref _eventCountText, value); }
 
-    public bool HasAuditData => AllIssues.Count > 0;
-    public bool ShowNoAudit => AllIssues.Count == 0 && !IsAuditing;
-    public bool ShowEmptyIssues => HasAuditData && TotalFindings == 0;
+    public bool HasAuditData => _hasAuditResult || AllIssues.Count > 0;
+    public bool ShowNoAudit => !HasAuditData && !IsAuditing;
+    public bool ShowEmptyIssues => HasAuditData && TotalFindings == 0 && !IsAuditing;
     public bool ShowNoFilterMatches => HasAuditData && FindingSections.Count == 0 && TotalFindings > 0;
     public string EmptyFindingsTitle => IsChinese ? "未检测到安全或稳定性异常" : "No security or reliability anomalies detected";
-    public string EmptyFindingsDescription => IsChinese ? "系统所有日志均在基线运行标准内。" : "All system events are operating within healthy parameters.";
+    public string EmptyFindingsDescription => IsChinese ? "所选时段及已读取的日志中未发现异常。可更换时段后再次扫描。" : "No anomalies were found in the selected period and the logs read. You can scan a different period.";
 
     // Pipeline Labels
     public string PipelineTitle => IsChinese ? "AI Hub 执行链路" : "AI Hub Pipeline";
@@ -649,9 +655,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string SearchPlaceholder => IsChinese ? "搜索事件 ID、提供者或标题..." : "Search event ID, provider or title...";
     public string NoMatchingFindingsTitle => IsChinese ? "未匹配到发现项" : "No matching findings";
     public string NoMatchingFindingsDescription => IsChinese ? "尝试更换搜索关键词、日志通道或严重度筛选。" : "Try a different search keyword, channel, or severity filter.";
+    public string ResetFindingFiltersLabel => IsChinese ? "清除筛选" : "Clear filters";
+    public bool HasFindingFilters => _severityFilter != "All" || _sourceFilter != "All" || !string.IsNullOrWhiteSpace(_findingSearchText);
+    public ICommand ResetFindingFiltersCommand { get; }
 
     // Optimization Tab Labels
-    public string OptimizationDescription => IsChinese ? "整理“下载”目录并清理安全缓存白名单项。" : "Organize Downloads and clean safe cache-whitelisted items.";
+    public string OptimizationDescription => IsChinese ? "按五类整理下载散文件，审查并清理过期临时文件和缓存。" : "Organize loose downloads into five categories and review old temporary/cache files.";
     public string ScanAllLabel => IsChinese ? "全量扫描" : "Scan all";
     public string OptimizationWorkflowTitle => IsChinese ? "优化工作流" : "Optimization workflow";
     public string OptimizationWorkflowDescription => IsChinese ? "在执行任何写入操作前，先扫描、审查并确认。" : "Scan, review and confirm before any write action.";
@@ -662,10 +671,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string SafetyBoundaryLabel => IsChinese ? "安全边界" : "Safety boundary";
     public string DownloadsLabel => IsChinese ? "下载目录" : "Downloads";
     public string DownloadsRootOnlyLabel => IsChinese ? "仅根目录" : "Downloads root only";
-    public string DownloadsDescription => IsChinese ? "下载扫描在移动前预览文件类型、目标路径与冲突。" : "Download scan previews types, destinations and collisions before any move.";
+    public string DownloadsDescription => IsChinese ? "仅整理至少 10 分钟未修改的散文件至 Documents、Compressed、Programs、Music、Video；图片、未知类型和未完成下载留在原处。" : "Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music or Video. Leave images, unknown types and incomplete downloads in place.";
     public string TemporaryFilesLabel => IsChinese ? "临时文件" : "Temporary files";
     public string WhitelistOnlyLabel => IsChinese ? "仅白名单" : "Whitelist only";
-    public string CacheDescription => IsChinese ? "缓存清理严格使用许可路径，仅移动选定项至回收站。" : "Cache scan uses approved locations and moves selected items only to the recycle bin.";
+    public string CacheDescription => IsChinese ? "仅扫描白名单中至少 7 天未修改的缓存文件及 Temp 内 .tmp/.temp 文件；跳过占用文件和目录链接，确认后逐文件移入回收站。" : "Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; recycle confirmed files individually.";
     public string ScanButtonLabel => IsChinese ? "扫描" : "Scan";
     public string SelectAllLabel => IsChinese ? "全选" : "Select all";
     public string DeselectAllLabel => IsChinese ? "取消全选" : "Deselect all";
@@ -677,13 +686,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string RecoverableCleanupTitle => IsChinese ? "可逆清理" : "Recoverable cleanup";
     public string RecoverableCleanupDescription => IsChinese ? "清理操作移入回收站，杜绝不可逆彻底删除。" : "Cleanup uses recycle bin and never permanently deletes.";
 
-    public AuditIssueEnhanced AuditPriorityFinding => PriorityFindings.FirstOrDefault();
+    public AuditIssueEnhanced AuditPriorityFinding => AllIssues.OrderByDescending(issue => issue.IsHigh)
+        .ThenByDescending(issue => issue.IsMedium).ThenByDescending(issue => issue.Occurrences).FirstOrDefault();
     public bool HasAuditPriority => AuditPriorityFinding != null;
     public string PriorityCalloutBadgeText => IsChinese ? "优先处理" : "Review first";
     public string AuditPriorityTitle => AuditPriorityFinding?.DisplayTitle ?? string.Empty;
     public string AuditPriorityAction => AuditPriorityFinding?.PriorityActionText ?? string.Empty;
-    public string AuditSummaryEmptyTitle => IsChinese ? "未发现优先处理项" : "No priority items";
-    public string AuditSummaryEmptyText => IsChinese ? "当前审计未发现需要立即干预的高风险问题。" : "No high-risk issues requiring immediate intervention.";
+    public string AuditSummaryEmptyTitle => HasAuditData ? EmptyFindingsTitle : (IsChinese ? "等待首次扫描" : "Ready for your first scan");
+    public string AuditSummaryEmptyText => HasAuditData ? EmptyFindingsDescription : (IsChinese ? "扫描后会在这里显示发现与处理建议。" : "Scan to see findings and suggested actions here.");
     public bool ShowPriorityFindings => IsPriorityView && PriorityFindings.Count > 0;
 
     // Filters
@@ -758,6 +768,24 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         RebuildSections(expandMatches: true);
     }
 
+    public void ResetFindingFilters()
+    {
+        _severityFilter = "All";
+        _sourceFilter = "All";
+        _findingSearchText = string.Empty;
+        foreach (string property in new[]
+        {
+            nameof(IsFilterAll), nameof(IsFilterHigh), nameof(IsFilterMedium), nameof(IsFilterLow),
+            nameof(IsSourceAll), nameof(IsSourceApplication), nameof(IsSourceSecurity), nameof(IsSourceSystem),
+            nameof(IsSourceSetup), nameof(IsSourceForwarded), nameof(FindingSearchText), nameof(SearchQuery),
+        })
+        {
+            OnPropertyChanged(property);
+        }
+
+        RebuildSections(expandMatches: true);
+    }
+
     public void SetSourceFilter(string tag)
     {
         _sourceFilter = tag;
@@ -797,6 +825,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             if (Set(ref _isAuditing, value))
             {
                 RefreshCommands();
+                OnPropertyChanged(nameof(CanRunDeepAnalysis));
+                OnPropertyChanged(nameof(ShowNoAudit));
+                OnPropertyChanged(nameof(ShowEmptyIssues));
+                PublishScanProgress();
             }
         }
     }
@@ -825,6 +857,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     /// <summary>Runs the configured AI kernel over the highest-severity findings.</summary>
     public ICommand DeepAnalyzeCommand { get; }
+
+    public ICommand CancelAuditCommand { get; }
+
+    public string CancelTaskLabel => IsChinese ? "取消任务" : "Cancel task";
 
     // Optimization Properties (1:1 with Screenshot)
     public bool IsOptimizing
@@ -856,10 +892,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 OnPropertyChanged(nameof(IsScanning));
                 OnPropertyChanged(nameof(IsWorkflowVisible));
                 OnPropertyChanged(nameof(ScanPhaseText));
-                OnPropertyChanged(nameof(SidebarWorkflowVisible));
-                OnPropertyChanged(nameof(SidebarWorkflowTitle));
-                OnPropertyChanged(nameof(SidebarWorkflowGlyph));
-                OnPropertyChanged(nameof(SidebarWorkflowTooltip));
                 PublishScanProgress();
             }
         }
@@ -882,11 +914,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     };
 
     /// <summary>Weighted 0-100 scan completion.</summary>
-    public double ScanProgressPercent => ActiveProgress.Percent;
+    public double ScanProgressPercent => _scanProgress.Percent;
 
-    public string ScanProgressPercentText => ActiveProgress.PercentText;
+    public string ScanProgressPercentText => _scanProgress.PercentText;
 
-    public string ScanStageCountText => ActiveProgress.StageCountText;
+    public string ScanStageCountText => _scanProgress.StageCountText;
 
     /// <summary>
     /// Current usability of the shared AI service, shown beside the scan actions so the
@@ -902,7 +934,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 OnPropertyChanged(nameof(IsAiReady));
                 OnPropertyChanged(nameof(IsAiUsable));
                 OnPropertyChanged(nameof(AiReadinessGlyph));
-                OnPropertyChanged(nameof(AiReadinessBrush));
             }
         }
     }
@@ -964,22 +995,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         AiReadinessLevel.Unverified => "\uE9CE",
         AiReadinessLevel.NotConfigured => "\uEA39",
         _ => "\uE7BA",
-    };
-
-    private static readonly SolidColorBrush ReadyBrush = new(Color.FromArgb(0xFF, 0x10, 0x7C, 0x10));
-    private static readonly SolidColorBrush WarningBrush = new(Color.FromArgb(0xFF, 0xEA, 0x58, 0x0C));
-    private static readonly SolidColorBrush InfoBrush = new(Color.FromArgb(0xFF, 0x25, 0x63, 0xEB));
-    private static readonly SolidColorBrush ErrorBrush = new(Color.FromArgb(0xFF, 0xDC, 0x26, 0x26));
-    private static readonly SolidColorBrush MutedBrush = new(Color.FromArgb(0xFF, 0x8A, 0x8A, 0x8A));
-
-    /// <summary>Status color matching the readiness level (green/orange/blue/red/gray).</summary>
-    public SolidColorBrush AiReadinessBrush => AiReadinessLevel switch
-    {
-        AiReadinessLevel.Ready => ReadyBrush,
-        AiReadinessLevel.Degraded => WarningBrush,
-        AiReadinessLevel.Unverified => InfoBrush,
-        AiReadinessLevel.NotConfigured => ErrorBrush,
-        _ => MutedBrush,
     };
 
     /// <summary>Re-checks the AI route and refreshes the indicator.</summary>
@@ -1092,40 +1107,42 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     /// <summary>Name of the stage currently running.</summary>
-    public string CurrentStageText
+    public ScanPhase AuditPhase
     {
-        get => _currentStageText;
-        private set => Set(ref _currentStageText, value);
+        get => _auditPhase;
+        private set
+        {
+            if (Set(ref _auditPhase, value))
+            {
+                PublishScanProgress();
+            }
+        }
     }
 
-    /// <summary>Starts a stage and publishes the new progress values.</summary>
-    /// <summary>The progress model for the workflow currently running.</summary>
-    private ScanProgressModel ActiveProgress => _auditWorkflowActive ? _auditProgress : _scanProgress;
+    public string CurrentStageText => _auditProgress.CurrentStage ?? string.Empty;
 
-    private void BeginStage(string title)
+    private void BeginStage(string title, bool audit = false)
     {
-        ActiveProgress.StartStage(title);
-        CurrentStageText = title;
+        (audit ? _auditProgress : _scanProgress).StartStage(title);
         PublishScanProgress();
     }
 
     /// <summary>Completes a stage, which also completes every earlier stage.</summary>
-    private void EndStage(string title)
+    private void EndStage(string title, bool audit = false)
     {
-        ActiveProgress.CompleteStage(title);
+        (audit ? _auditProgress : _scanProgress).CompleteStage(title);
         PublishScanProgress();
     }
 
     private void ResetScanProgress()
     {
-        _auditWorkflowActive = false;
         _scanProgress.Reset();
-        CurrentStageText = string.Empty;
         PublishScanProgress();
     }
 
     private void PublishScanProgress()
     {
+        OnPropertyChanged(nameof(CurrentStageText));
         OnPropertyChanged(nameof(ScanProgressPercent));
         OnPropertyChanged(nameof(ScanProgressPercentText));
         OnPropertyChanged(nameof(ScanStageCountText));
@@ -1137,6 +1154,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(SidebarWorkflowGlyph));
         OnPropertyChanged(nameof(SidebarWorkflowPercent));
         OnPropertyChanged(nameof(SidebarWorkflowPercentText));
+        OnPropertyChanged(nameof(IsAuditProgressIndeterminate));
         OnPropertyChanged(nameof(SidebarWorkflowCountText));
         OnPropertyChanged(nameof(SidebarWorkflowTooltip));
 
@@ -1156,16 +1174,20 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// True while the navigation pane should show audit progress: during a scan or once a
     /// result exists. Mirrors the original app, whose sidebar hosts the workflow progress.
     /// </summary>
-    public bool SidebarWorkflowVisible => ScanPhase is ScanPhase.Scanning or ScanPhase.SelectingTargets or ScanPhase.Failed;
+    public bool SidebarWorkflowVisible => AuditPhase is ScanPhase.Scanning or ScanPhase.SelectingTargets or ScanPhase.Failed;
 
     /// <summary>Sidebar progress bar value (0-100).</summary>
-    public double SidebarWorkflowPercent => ActiveProgress.Percent;
+    public double SidebarWorkflowPercent => _auditProgress.Percent;
 
-    public string SidebarWorkflowPercentText => ActiveProgress.PercentText;
+    public bool IsAuditProgressIndeterminate => IsAuditing && _auditProgress.CurrentStage == "Analyze findings";
 
-    public string SidebarWorkflowCountText => ActiveProgress.StageCountText;
+    public string SidebarWorkflowPercentText => IsAuditProgressIndeterminate
+        ? (IsChinese ? "分析中" : "Analyzing")
+        : _auditProgress.PercentText;
 
-    public string SidebarWorkflowTitle => ScanPhase switch
+    public string SidebarWorkflowCountText => _auditProgress.StageCountText;
+
+    public string SidebarWorkflowTitle => AuditPhase switch
     {
         ScanPhase.Scanning => IsChinese ? "正在扫描" : "Scanning",
         ScanPhase.SelectingTargets => IsChinese ? "扫描完成" : "Scan complete",
@@ -1174,7 +1196,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     };
 
     /// <summary>Segoe Fluent icon matching the current workflow state.</summary>
-    public string SidebarWorkflowGlyph => ScanPhase switch
+    public string SidebarWorkflowGlyph => AuditPhase switch
     {
         ScanPhase.Scanning => "\uE895",
         ScanPhase.SelectingTargets => "\uE73E",
@@ -1182,7 +1204,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         _ => "\uEA3A",
     };
 
-    public string SidebarWorkflowTooltip => ScanPhase switch
+    public string SidebarWorkflowTooltip => AuditPhase switch
     {
         ScanPhase.Scanning => IsChinese
             ? $"正在扫描 {ScanRangeDescription}，{CurrentStageText} {SidebarWorkflowPercentText}"
@@ -1279,23 +1301,27 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public ICommand ExecuteOptimizationCommand { get; }
 
-    // Status Bar Properties
-    public string StatusMessage
-    {
-        get => _statusMessage;
-        private set => Set(ref _statusMessage, value);
-    }
+    public ICommand CancelOptimizationCommand { get; }
 
-    public InfoBarSeverity StatusSeverity
-    {
-        get => _statusSeverity;
-        private set => Set(ref _statusSeverity, value);
-    }
+    // Status Bar Properties
+    public string StatusMessage => ActiveTabIndex == 1 ? _optimizationStatusMessage : _statusMessage;
+
+    public InfoBarSeverity StatusSeverity => ActiveTabIndex == 1 ? _optimizationStatusSeverity : _statusSeverity;
 
     public bool IsStatusOpen
     {
-        get => _isStatusOpen;
-        set => Set(ref _isStatusOpen, value);
+        get => ActiveTabIndex == 1 ? _isOptimizationStatusOpen : _isStatusOpen;
+        set
+        {
+            if (ActiveTabIndex == 1)
+            {
+                Set(ref _isOptimizationStatusOpen, value);
+            }
+            else
+            {
+                Set(ref _isStatusOpen, value);
+            }
+        }
     }
 
     // Methods & Execution Logic
@@ -1307,6 +1333,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         if (!IsEnabled)
         {
             _readinessCts?.Cancel();
+            _auditCts?.Cancel();
+            _optimizationCts?.Cancel();
         }
         RefreshCommands();
         RefreshAiReadinessFromCache();
@@ -1318,31 +1346,35 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         ((RelayCommand)FullScanCommand).OnCanExecuteChanged();
         ((RelayCommand)SelectLatestCommand).OnCanExecuteChanged();
         ((RelayCommand)ReanalyzeRangeCommand).OnCanExecuteChanged();
+        ((RelayCommand)DeepAnalyzeCommand).OnCanExecuteChanged();
+        ((RelayCommand)CancelAuditCommand).OnCanExecuteChanged();
         ((RelayCommand)ScanAllCommand).OnCanExecuteChanged();
         ((RelayCommand)ScanDownloadsCommand).OnCanExecuteChanged();
         ((RelayCommand)ScanTemporaryFilesCommand).OnCanExecuteChanged();
         ((RelayCommand)SelectAllCandidatesCommand).OnCanExecuteChanged();
         ((RelayCommand)DeselectAllCandidatesCommand).OnCanExecuteChanged();
         ((RelayCommand)ExecuteOptimizationCommand).OnCanExecuteChanged();
+        ((RelayCommand)CancelOptimizationCommand).OnCanExecuteChanged();
     }
 
-    private void ShowStatus(string message, InfoBarSeverity severity)
+    private void ShowStatus(string message, InfoBarSeverity severity, bool optimization = false)
     {
-        void Update()
+        if (optimization)
         {
-            StatusMessage = message;
-            StatusSeverity = severity;
-            IsStatusOpen = true;
-        }
-
-        if (_dispatcherQueue != null)
-        {
-            _dispatcherQueue.TryEnqueue(Update);
+            _optimizationStatusMessage = message;
+            _optimizationStatusSeverity = severity;
+            _isOptimizationStatusOpen = true;
         }
         else
         {
-            Update();
+            _statusMessage = message;
+            _statusSeverity = severity;
+            _isStatusOpen = true;
         }
+
+        OnPropertyChanged(nameof(StatusMessage));
+        OnPropertyChanged(nameof(StatusSeverity));
+        OnPropertyChanged(nameof(IsStatusOpen));
     }
 
     public bool IsAiAnalyzing
@@ -1353,6 +1385,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             if (Set(ref _isAiAnalyzing, value))
             {
                 OnPropertyChanged(nameof(CanRunDeepAnalysis));
+                RefreshCommands();
             }
         }
     }
@@ -1539,23 +1572,37 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         IsAiAnalyzing = true;
         AiStatusText = IsChinese ? "正在请求 AI 深度分析..." : "Requesting AI deep analysis...";
 
-        var progress = new Progress<string>(message => EnqueueOnUI(() => AiStatusText = message));
+        _auditCts?.Cancel();
+        _auditCts?.Dispose();
+        _auditCts = new CancellationTokenSource();
+        CancellationToken token = _auditCts.Token;
+        var progress = new Progress<string>(message => EnqueueOnUI(() =>
+        {
+            if (IsAiAnalyzing)
+            {
+                AiStatusText = message;
+            }
+        }, token));
 
         Task.Run(async () =>
         {
             try
             {
                 IReadOnlyList<AuditIssue> issues = await AiHubAuditAnalysisService
-                    .AnalyzeEventsAsync(events, progress, CancellationToken.None)
+                    .AnalyzeEventsAsync(events, progress, token)
                     .ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                bool partial = AiHubAuditAnalysisService.LastWasPartial;
+                string failure = AiHubAuditAnalysisService.LastFailure;
 
                 EnqueueOnUI(() =>
                 {
                     if (issues is null)
                     {
                         AiStatusText = IsChinese
-                            ? "AI 分析不可用或未返回有效结果。请在“常规 → AI 服务”中确认已启用 AI Hub 并选择内核。"
-                            : "AI analysis unavailable or returned nothing valid. Enable AI Hub and select a kernel under General > AI Services.";
+                            ? $"AI 分析未完成：{failure}"
+                            : $"AI analysis did not complete: {failure}";
+                        ShowStatus(AiStatusText, InfoBarSeverity.Warning);
                         return;
                     }
 
@@ -1569,17 +1616,21 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                             $"{issue.Severity} · Event {issue.EventId} · {issue.Occurrences}x"));
                     }
 
-                    AiReportSummaryText = IsChinese
-                        ? $"AI 深度分析完成：{issues.Count} 项增强发现。"
-                        : $"AI deep analysis completed: {issues.Count} enhanced finding(s).";
+                    AiReportSummaryText = partial
+                        ? (IsChinese ? $"AI 部分完成：已保留 {issues.Count} 项增强发现（{failure}）。" : $"AI partially completed: retained {issues.Count} enhanced finding(s) ({failure}).")
+                        : (IsChinese ? $"AI 深度分析完成：{issues.Count} 项增强发现。" : $"AI deep analysis completed: {issues.Count} enhanced finding(s).");
                     AiReportMetaText = IsChinese
                         ? $"内核 {AiHubEngine.Current.ActiveKernel} · {DateTime.Now:HH:mm:ss}"
                         : $"Kernel {AiHubEngine.Current.ActiveKernel} · {DateTime.Now:HH:mm:ss}";
                     HasAiReport = true;
-                    AiStatusText = IsChinese ? "AI 深度分析完成" : "AI deep analysis completed";
+                    AiStatusText = AiReportSummaryText;
+                    if (partial)
+                    {
+                        ShowStatus(AiStatusText, InfoBarSeverity.Warning);
+                    }
 
                     OnPropertyChanged(nameof(CanRunDeepAnalysis));
-                });
+                }, token);
             }
             catch (OperationCanceledException)
             {
@@ -1594,14 +1645,22 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             }
             finally
             {
-                EnqueueOnUI(() => IsAiAnalyzing = false);
+                EnqueueOnUI(() =>
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        AiStatusText = IsChinese ? "AI 分析已取消" : "AI analysis cancelled";
+                    }
+
+                    IsAiAnalyzing = false;
+                });
             }
         });
     }
 
     private void RunAudit(bool fast)
     {
-        if (!IsEnabled || IsAuditing)
+        if (!IsEnabled || IsAuditing || IsAiAnalyzing)
         {
             return;
         }
@@ -1612,15 +1671,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         IsAuditing = true;
 
         // Audit progress uses its own stages so the pane shows what the audit is doing.
-        _auditWorkflowActive = true;
         _auditProgress.Reset();
-        ScanPhase = ScanPhase.Scanning;
-        BeginStage("Collect event logs");
+        AiAnalysisRanText = string.Empty;
+        AuditPhase = ScanPhase.Scanning;
+        BeginStage("Collect event logs", audit: true);
 
-        _currentCts?.Cancel();
-        _currentCts?.Dispose();
-        _currentCts = new CancellationTokenSource();
-        CancellationToken token = _currentCts.Token;
+        _auditCts?.Cancel();
+        _auditCts?.Dispose();
+        _auditCts = new CancellationTokenSource();
+        CancellationToken token = _auditCts.Token;
         AuditStatusText = fast ? (IsChinese ? "正在执行快速安全扫描..." : "Fast scan in progress...") : (IsChinese ? "正在全量检索系统事件日志..." : "Full event audit in progress...");
 
         Task.Run(async () =>
@@ -1656,9 +1715,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 // progress bar claim collection was finished while it had not started.
                 EnqueueOnUI(() =>
                 {
-                    EndStage("Collect event logs");
-                    BeginStage("Analyze findings");
-                });
+                    if (_auditCts?.Token != token)
+                    {
+                        return;
+                    }
+
+                    EndStage("Collect event logs", audit: true);
+                    BeginStage("Analyze findings", audit: true);
+                }, token);
 
                 // Retain the raw events so AI deep analysis can send the same evidence.
                 lock (_lastAuditEvents)
@@ -1676,7 +1740,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 {
                     AiReadinessText = DescribeReadiness(readiness);
                     AiReadinessLevel = readiness.Level;
-                });
+                }, token);
 
                 Logger.LogInfo(
                     $"Audit readiness: level={readiness.Level}, kernel={readiness.ActiveKernel}, " +
@@ -1688,25 +1752,35 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 // a machine with AI disabled still gets a usable result.
                 var ruleIssues = RunRuleBasedAuditAnalysis(events);
                 var issues = new List<AuditIssueEnhanced>(ruleIssues);
+                string aiOutcome = "skipped";
 
                 // Then hand the same evidence to the selected kernel. The original app does
                 // this inside the scan itself rather than behind a separate action; without it
                 // a scan never reached the model at all.
                 if (events.Count > 0 && aiEligible)
                 {
-                    EnqueueOnUI(() => BeginStage("AI analysis"));
+                    EnqueueOnUI(() => BeginStage("Analyze findings", audit: true), token);
 
                     Logger.LogInfo(
                         $"Audit sending {events.Count} event(s) to {AiHubEngine.Current.ActiveKernel} for analysis.");
 
                     var progress = new Progress<string>(message =>
-                        EnqueueOnUI(() => AuditStatusText = message));
+                        EnqueueOnUI(() =>
+                        {
+                            if (IsAuditing && !token.IsCancellationRequested)
+                            {
+                                AuditStatusText = message;
+                            }
+                        }, token));
 
                     try
                     {
                         var aiIssues = await AiHubAuditAnalysisService
                             .AnalyzeEventsAsync(events, progress, token)
                             .ConfigureAwait(false);
+                        token.ThrowIfCancellationRequested();
+                        bool partial = AiHubAuditAnalysisService.LastWasPartial;
+                        aiOutcome = partial ? "partial" : aiIssues != null ? "ok" : "failed";
 
                         // Bound properties back a TextBlock, so they must be set on the UI
                         // thread; assigning them here raised RPC_E_WRONG_THREAD and surfaced
@@ -1714,17 +1788,19 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         if (aiIssues is { Count: > 0 })
                         {
                             issues = MergeIssues(ruleIssues, aiIssues, events);
-                            string summary = IsChinese
-                                ? $"已调用 {AiHubEngine.Current.ActiveKernel}，返回 {aiIssues.Count} 项增强发现"
-                                : $"{AiHubEngine.Current.ActiveKernel} returned {aiIssues.Count} enhanced finding(s)";
-                            EnqueueOnUI(() => AiAnalysisRanText = summary);
+                            string summary = partial
+                                ? (IsChinese ? $"AI 部分完成，保留 {aiIssues.Count} 项增强发现（{AiHubAuditAnalysisService.LastFailure}）" : $"AI partially completed; retained {aiIssues.Count} enhanced finding(s) ({AiHubAuditAnalysisService.LastFailure})")
+                                : (IsChinese ? $"已调用 {AiHubEngine.Current.ActiveKernel}，返回 {aiIssues.Count} 项增强发现" : $"{AiHubEngine.Current.ActiveKernel} returned {aiIssues.Count} enhanced finding(s)");
+                            EnqueueOnUI(() => AiAnalysisRanText = summary, token);
                         }
                         else
                         {
                             // Distinguish "the model had nothing to add" from "the call never
                             // succeeded"; the engine's failure reason explains which.
                             var failure = AiHubAuditAnalysisService.LastFailure;
-                            string summary = failure is null
+                            string summary = partial
+                                ? (IsChinese ? $"AI 部分完成，已验证批次未发现额外问题（{failure}）" : $"AI partially completed; validated batches had no extra findings ({failure})")
+                                : failure is null
                                 ? (IsChinese
                                     ? $"{AiHubEngine.Current.ActiveKernel} 未返回额外发现"
                                     : $"{AiHubEngine.Current.ActiveKernel} returned no extra findings")
@@ -1741,7 +1817,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                                         IsChinese ? $"AI 分析未成功：{failure}" : $"AI analysis did not succeed: {failure}",
                                         InfoBarSeverity.Warning);
                                 }
-                            });
+                            }, token);
                         }
                     }
                     catch (OperationCanceledException)
@@ -1751,23 +1827,25 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     catch (Exception ex)
                     {
                         // An AI failure must not discard the rule-based result.
-                        Logger.LogError("AI analysis during audit failed", ex);
+                        aiOutcome = "failed";
+                        Logger.LogError($"AI analysis during audit failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
                         string summary = IsChinese
                             ? $"AI 分析失败：{ex.Message}"
                             : $"AI analysis failed: {ex.Message}";
-                        EnqueueOnUI(() => AiAnalysisRanText = summary);
+                        EnqueueOnUI(() => AiAnalysisRanText = summary, token);
                     }
                 }
                 else if (events.Count == 0)
                 {
-                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "无事件，未调用 AI" : "No events; AI not called");
+                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "无事件，未调用 AI" : "No events; AI not called", token);
                 }
                 else
                 {
-                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "AI Hub 未启用，跳过 AI 分析" : "AI Hub disabled; AI analysis skipped");
+                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "AI Hub 未启用，跳过 AI 分析" : "AI Hub disabled; AI analysis skipped", token);
                 }
 
                 // Calculate health score
+                token.ThrowIfCancellationRequested();
                 int score = HealthScoreCalculator.Calculate(issues);
 
                 // Record the outcome: without this the log stopped after "sending ... events"
@@ -1775,13 +1853,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 Logger.LogInfo(
                     $"Audit analysis finished: type={(fast ? "fast" : "full")}, events={events.Count}, " +
                     $"ruleFindings={ruleIssues.Count}, totalFindings={issues.Count}, healthScore={score}, " +
-                    $"ai={(AiHubAuditAnalysisService.LastFailure is null ? "ok" : "failed")}");
+                    $"ai={aiOutcome}");
 
                 EnqueueOnUI(() =>
                 {
-                    EndStage("Analyze findings");
-                    EndStage("Finish");
-                    ScanPhase = ScanPhase.SelectingTargets;
+                    if (_auditCts?.Token != token || token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    EndStage("Analyze findings", audit: true);
+                    EndStage("Finish", audit: true);
+                    AuditPhase = ScanPhase.SelectingTargets;
 
                     AllIssues.Clear();
                     foreach (var issue in issues)
@@ -1789,6 +1872,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         AllIssues.Add(issue);
                     }
 
+                    _hasAuditResult = true;
                     HealthScore = score;
                     HealthScoreGrade = score >= 80 ? (IsChinese ? "良好" : "Good") : score >= 60 ? (IsChinese ? "警告" : "Warning") : (IsChinese ? "严重" : "Critical");
                     HighCount = issues.Count(i => i.IsHigh);
@@ -1800,8 +1884,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         IsChinese ? "上次扫描: {0:yyyy-MM-dd HH:mm:ss} ({1} 项发现)" : "Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)",
                         DateTime.Now,
                         issues.Count);
-
-                    AuditStatusText = IsChinese ? "审计完成" : "Audit completed";
 
                     // Update Verdict & Health Summary
                     UpdateHealthSummary(score, HighCount, MediumCount, LowCount);
@@ -1848,49 +1930,77 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         ScanEnd = windowTo,
                     });
 
-                    // Report skipped channels instead of implying a complete audit: a missing
-                    // channel and a clean machine previously produced the same message.
-                    var skipped = _eventLogService.SkippedChannels;
-                    if (skipped.Count > 0)
-                    {
-                        string channels = string.Join(", ", skipped);
-                        ShowStatus(
-                            IsChinese
-                                ? $"扫描完成（健康评分 {score}/100，发现 {issues.Count} 项）。未能读取: {channels}。"
-                                : $"Audit completed (health score {score}/100, {issues.Count} findings). Could not read: {channels}.",
-                            InfoBarSeverity.Warning);
-                    }
-                    else
-                    {
-                        ShowStatus(
-                            IsChinese
-                                ? $"扫描完成。健康评分: {score}/100，发现 {issues.Count} 项问题。"
-                                : $"Audit completed. Health score: {score}/100 with {issues.Count} findings.",
-                            InfoBarSeverity.Success);
-                    }
-                });
+                    FinishAuditStatus(score, issues.Count, aiOutcome, _eventLogService.SkippedChannels);
+                }, token);
             }
             catch (OperationCanceledException)
             {
-                EnqueueOnUI(() => AuditStatusText = IsChinese ? "扫描已取消" : "Audit cancelled");
+                EnqueueOnUI(() =>
+                {
+                    if (_auditCts?.Token == token)
+                    {
+                        StopAudit(cancelled: true);
+                    }
+                });
             }
             catch (Exception ex)
             {
                 EnqueueOnUI(() =>
                 {
-                    AuditStatusText = IsChinese ? "扫描失败" : "Audit failed";
-                    ShowStatus($"Audit failed: {ex.Message}", InfoBarSeverity.Error);
+                    if (_auditCts?.Token == token)
+                    {
+                        StopAudit(cancelled: false);
+                    }
                 });
+                Logger.LogError($"Audit failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
             }
             finally
             {
                 EnqueueOnUI(() =>
                 {
+                    if (_auditCts?.Token != token)
+                    {
+                        return;
+                    }
+
+                    if (token.IsCancellationRequested && AuditPhase == ScanPhase.Scanning)
+                    {
+                        StopAudit(cancelled: true);
+                    }
+
                     IsAuditing = false;
                     OnPropertyChanged(nameof(CanRunDeepAnalysis));
                 });
             }
-        }, token);
+        });
+    }
+
+    private void FinishAuditStatus(int score, int findingCount, string aiOutcome, IReadOnlyList<string> skippedChannels)
+    {
+        string message = aiOutcome switch
+        {
+            "partial" => IsChinese ? "审计部分完成，已保留验证通过的 AI 结果。" : "Audit partially completed; validated AI results were retained.",
+            "failed" => IsChinese ? "本地审计完成，AI 分析失败；结果仅包含规则发现。" : "Local audit completed; AI analysis failed. Results contain rule-based findings only.",
+            _ => IsChinese ? "审计完成。" : "Audit completed.",
+        };
+        message += IsChinese ? $" 健康评分 {score}/100，发现 {findingCount} 项。" : $" Health score {score}/100; {findingCount} finding(s).";
+        if (skippedChannels.Count > 0)
+        {
+            message += IsChinese ? $" 未能读取：{string.Join(", ", skippedChannels)}。" : $" Could not read: {string.Join(", ", skippedChannels)}.";
+        }
+
+        AuditStatusText = message;
+        ShowStatus(message, aiOutcome is "partial" or "failed" || skippedChannels.Count > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
+    }
+
+    private void StopAudit(bool cancelled)
+    {
+        _auditProgress.Reset();
+        AuditStatusText = cancelled ? (IsChinese ? "扫描已取消" : "Audit cancelled") : (IsChinese ? "扫描失败" : "Audit failed");
+        AuditPhase = cancelled ? ScanPhase.Idle : ScanPhase.Failed;
+        IsAuditing = false;
+        PublishScanProgress();
+        ShowStatus(AuditStatusText, cancelled ? InfoBarSeverity.Informational : InfoBarSeverity.Error);
     }
 
     private void UpdateHealthSummary(int score, int high, int medium, int low)
@@ -2097,6 +2207,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(ShowEmptyIssues));
         OnPropertyChanged(nameof(ShowNoFilterMatches));
         OnPropertyChanged(nameof(HasAuditData));
+        OnPropertyChanged(nameof(HealthScoreText));
+        OnPropertyChanged(nameof(HasFindingFilters));
         OnPropertyChanged(nameof(OverviewLabel));
         OnPropertyChanged(nameof(ApplicationLabel));
         OnPropertyChanged(nameof(SecurityLabel));
@@ -2107,24 +2219,37 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void LoadRecentAudit()
     {
+        var auditAtLoad = _auditCts;
         Task.Run(async () =>
         {
             try
             {
                 AuditHistoryStatistics statistics = await _auditHistoryStorage.GetStatisticsAsync().ConfigureAwait(false);
-                EnqueueOnUI(() => ApplyStatistics(statistics));
+                EnqueueOnUI(() =>
+                {
+                    if (!IsAuditing && !IsAiAnalyzing && _auditCts == auditAtLoad)
+                    {
+                        ApplyStatistics(statistics);
+                    }
+                });
 
                 var history = await _auditHistoryStorage.LoadLatestHistoryAsync();
-                if (history != null && history.Findings.Count > 0)
+                if (history != null)
                 {
                     EnqueueOnUI(() =>
                     {
+                        if (IsAuditing || IsAiAnalyzing || _auditCts != auditAtLoad)
+                        {
+                            return;
+                        }
+
                         AllIssues.Clear();
                         foreach (var issue in history.Findings)
                         {
                             AllIssues.Add(issue);
                         }
 
+                        _hasAuditResult = true;
                         HealthScore = history.HealthScore;
                         HealthScoreGrade = HealthScore >= 80 ? (IsChinese ? "良好" : "Good") : HealthScore >= 60 ? (IsChinese ? "警告" : "Warning") : (IsChinese ? "严重" : "Critical");
                         HighCount = history.HighCount;
@@ -2166,9 +2291,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             return;
         }
 
-        _currentCts?.Cancel();
-        _currentCts = new CancellationTokenSource();
-        var token = _currentCts.Token;
+        _optimizationCts?.Dispose();
+        _optimizationCts = new CancellationTokenSource();
+        var token = _optimizationCts.Token;
 
         IsOptimizing = true;
         ResetScanProgress();
@@ -2185,7 +2310,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     EndStage("Preparing scan");
                     BeginStage("Scan cache locations");
                     BeginStage("Scan Downloads");
-                });
+                }, token);
 
                 var downloadsTask = _downloadOrganizerService.ScanAsync(token);
                 var cacheTask = _cacheCleanupService.ScanAsync(token);
@@ -2228,31 +2353,31 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     OptimizationWorkflowStatus = allCandidates.Count > 0
                         ? (IsChinese ? "请检查候选项目并确认" : "Review candidates and confirm")
                         : (IsChinese ? "扫描就绪 (未发现候选项目)" : "Ready to scan (0 items found)");
-                    ShowStatus(IsChinese ? $"扫描完成: 检测到 {allCandidates.Count} 个候选项目 ({FormatBytes(dlBytes + cacheBytes)})。" : $"Scan complete: {allCandidates.Count} candidate items detected ({FormatBytes(dlBytes + cacheBytes)}).", InfoBarSeverity.Success);
-                });
+                    ShowStatus(IsChinese ? $"扫描完成: 检测到 {allCandidates.Count} 个候选项目 ({FormatBytes(dlBytes + cacheBytes)})。" : $"Scan complete: {allCandidates.Count} candidate items detected ({FormatBytes(dlBytes + cacheBytes)}).", InfoBarSeverity.Success, optimization: true);
+                }, token);
             }
             catch (OperationCanceledException)
             {
-                EnqueueOnUI(() =>
-                {
-                    OptimizationWorkflowStatus = IsChinese ? "扫描已取消" : "Scan cancelled";
-                    ScanPhase = ScanPhase.Idle;
-                });
+                EnqueueOnUI(() => StopOptimization(cancelled: true));
             }
             catch (Exception ex)
             {
-                EnqueueOnUI(() =>
-                {
-                    OptimizationWorkflowStatus = IsChinese ? "扫描失败" : "Scan failed";
-                    ScanPhase = ScanPhase.Failed;
-                    ShowStatus($"Optimization scan failed: {ex.Message}", InfoBarSeverity.Error);
-                });
+                Logger.LogError($"Optimization scan failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+                EnqueueOnUI(() => StopOptimization(cancelled: false));
             }
             finally
             {
-                EnqueueOnUI(() => IsOptimizing = false);
+                EnqueueOnUI(() =>
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        StopOptimization(cancelled: true);
+                    }
+
+                    IsOptimizing = false;
+                });
             }
-        }, token);
+        });
     }
 
     private void RunScanDownloads()
@@ -2262,9 +2387,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             return;
         }
 
-        _currentCts?.Cancel();
-        _currentCts = new CancellationTokenSource();
-        var token = _currentCts.Token;
+        _optimizationCts?.Dispose();
+        _optimizationCts = new CancellationTokenSource();
+        var token = _optimizationCts.Token;
 
         IsOptimizing = true;
         ResetScanProgress();
@@ -2306,18 +2431,31 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     OptimizationWorkflowStatus = OptimizationCandidates.Count > 0
                         ? (IsChinese ? "请检查候选项目并确认" : "Review candidates and confirm")
                         : (IsChinese ? "就绪，等待扫描" : "Ready to scan");
-                    ShowStatus(IsChinese ? $"下载扫描完成: 发现 {downloads.Count} 个项目。" : $"Downloads scan complete: {downloads.Count} item(s) found.", InfoBarSeverity.Success);
-                });
+                    ShowStatus(IsChinese ? $"下载扫描完成: 发现 {downloads.Count} 个项目。" : $"Downloads scan complete: {downloads.Count} item(s) found.", InfoBarSeverity.Success, optimization: true);
+                }, token);
+            }
+            catch (OperationCanceledException)
+            {
+                EnqueueOnUI(() => StopOptimization(cancelled: true));
             }
             catch (Exception ex)
             {
-                EnqueueOnUI(() => ShowStatus($"Downloads scan failed: {ex.Message}", InfoBarSeverity.Error));
+                Logger.LogError($"Optimization scan failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+                EnqueueOnUI(() => StopOptimization(cancelled: false));
             }
             finally
             {
-                EnqueueOnUI(() => IsOptimizing = false);
+                EnqueueOnUI(() =>
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        StopOptimization(cancelled: true);
+                    }
+
+                    IsOptimizing = false;
+                });
             }
-        }, token);
+        });
     }
 
     private void RunScanTemporaryFiles()
@@ -2327,9 +2465,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             return;
         }
 
-        _currentCts?.Cancel();
-        _currentCts = new CancellationTokenSource();
-        var token = _currentCts.Token;
+        _optimizationCts?.Dispose();
+        _optimizationCts = new CancellationTokenSource();
+        var token = _optimizationCts.Token;
 
         IsOptimizing = true;
         ResetScanProgress();
@@ -2371,18 +2509,31 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     OptimizationWorkflowStatus = OptimizationCandidates.Count > 0
                         ? (IsChinese ? "请检查候选项目并确认" : "Review candidates and confirm")
                         : (IsChinese ? "就绪，等待扫描" : "Ready to scan");
-                    ShowStatus(IsChinese ? $"缓存扫描完成: 发现 {caches.Count} 个项目。" : $"Cache scan complete: {caches.Count} item(s) found.", InfoBarSeverity.Success);
-                });
+                    ShowStatus(IsChinese ? $"缓存扫描完成: 发现 {caches.Count} 个项目。" : $"Cache scan complete: {caches.Count} item(s) found.", InfoBarSeverity.Success, optimization: true);
+                }, token);
+            }
+            catch (OperationCanceledException)
+            {
+                EnqueueOnUI(() => StopOptimization(cancelled: true));
             }
             catch (Exception ex)
             {
-                EnqueueOnUI(() => ShowStatus($"Cache scan failed: {ex.Message}", InfoBarSeverity.Error));
+                Logger.LogError($"Optimization scan failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+                EnqueueOnUI(() => StopOptimization(cancelled: false));
             }
             finally
             {
-                EnqueueOnUI(() => IsOptimizing = false);
+                EnqueueOnUI(() =>
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        StopOptimization(cancelled: true);
+                    }
+
+                    IsOptimizing = false;
+                });
             }
-        }, token);
+        });
     }
 
     private void SelectAllCandidates()
@@ -2392,6 +2543,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             item.IsSelected = true;
         }
         RecalculateCandidateMetrics();
+    }
+
+    private void StopOptimization(bool cancelled)
+    {
+        _scanProgress.Reset();
+        ScanPhase = cancelled ? ScanPhase.Idle : ScanPhase.Failed;
+        OptimizationWorkflowStatus = cancelled ? (IsChinese ? "扫描已取消" : "Scan cancelled") : (IsChinese ? "扫描失败" : "Scan failed");
+        PublishScanProgress();
+        ShowStatus(OptimizationWorkflowStatus, cancelled ? InfoBarSeverity.Informational : InfoBarSeverity.Error, optimization: true);
     }
 
     private void DeselectAllCandidates()
@@ -2434,11 +2594,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             return;
         }
 
-        _currentCts?.Cancel();
-        _currentCts = new CancellationTokenSource();
-        var token = _currentCts.Token;
+        _optimizationCts?.Dispose();
+        _optimizationCts = new CancellationTokenSource();
+        var token = _optimizationCts.Token;
 
         IsOptimizing = true;
+        ScanPhase = ScanPhase.ExecutionPending;
         OptimizationWorkflowStatus = IsChinese ? "正在执行已确认的操作..." : "Executing confirmed actions...";
 
         var selectedItems = OptimizationCandidates.Where(c => c.IsSelected).ToList();
@@ -2447,71 +2608,86 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             var outcome = new OptimizationOutcome();
             int processed = 0;
+            var processedItems = new List<TempFileInfo>();
 
-            foreach (var item in selectedItems)
-            {
-                if (token.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                try
-                {
-                    if (item.Action == "delete")
-                    {
-                        // Clean temp file using Recycle Bin ONLY
-                        var (ok, error) = _recycleBinHelper.MoveToRecycleBin(item.FilePath);
-                        outcome.Add(ok
-                            ? OptimizationItemResult.Success(item.FileName, "delete")
-                            : OptimizationItemResult.Failure(item.FileName, "delete", error));
-                    }
-                    else if (item.Action == "move")
-                    {
-                        // Organize Downloads within root
-                        bool ok = _downloadOrganizerService.OrganizeItem(item.FilePath, item.TargetRelativePath);
-                        outcome.Add(ok
-                            ? OptimizationItemResult.Success(item.FileName, "move")
-                            : OptimizationItemResult.Failure(item.FileName, "move", IsChinese ? "整理失败" : "organization failed"));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Keep the reason: a silent count tells the user nothing actionable.
-                    outcome.Add(OptimizationItemResult.Failure(item.FileName, item.Action, ex.Message));
-                }
-
-                processed++;
-                int done = processed;
-                EnqueueOnUI(() => OptimizationWorkflowStatus = IsChinese
-                    ? $"正在执行已确认的操作... ({done}/{selectedItems.Count})"
-                    : $"Executing confirmed actions... ({done}/{selectedItems.Count})");
-            }
-
-            EnqueueOnUI(() =>
+            try
             {
                 foreach (var item in selectedItems)
                 {
-                    item.PropertyChanged -= Candidate_PropertyChanged;
-                    OptimizationCandidates.Remove(item);
+                    if (token.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    try
+                    {
+                        if (item.Action == "delete")
+                        {
+                            // Clean temp file using Recycle Bin ONLY
+                            var (ok, error) = _cacheCleanupService.CleanupItem(item);
+                            outcome.Add(ok
+                                ? OptimizationItemResult.Success(item.FileName, "delete")
+                                : OptimizationItemResult.Failure(item.FileName, "delete", error));
+                        }
+                        else if (item.Action == "move")
+                        {
+                            // Organize Downloads within root
+                            bool ok = _downloadOrganizerService.OrganizeItem(item);
+                            outcome.Add(ok
+                                ? OptimizationItemResult.Success(item.FileName, "move")
+                                : OptimizationItemResult.Failure(item.FileName, "move", IsChinese ? "文件不符合分类规则、正在使用或已变化，请重新扫描" : "File is ineligible, in use or changed; scan again"));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Keep the reason: a silent count tells the user nothing actionable.
+                        outcome.Add(OptimizationItemResult.Failure(item.FileName, item.Action, ex.Message));
+                    }
+
+                    processedItems.Add(item);
+                    processed++;
+                    int done = processed;
+                    EnqueueOnUI(() => OptimizationWorkflowStatus = IsChinese
+                        ? $"正在执行已确认的操作... ({done}/{selectedItems.Count})"
+                        : $"Executing confirmed actions... ({done}/{selectedItems.Count})", token);
                 }
 
-                RecalculateCandidateMetrics();
+                EnqueueOnUI(() =>
+                {
+                    foreach (var item in processedItems)
+                    {
+                        item.PropertyChanged -= Candidate_PropertyChanged;
+                        OptimizationCandidates.Remove(item);
+                    }
 
-                // Surface the actual failure reasons instead of an opaque count.
-                var failureDetail = outcome.DescribeFailures(IsChinese);
-                OptimizationWorkflowStatus = outcome.HasFailures
-                    ? (IsChinese ? $"执行完成（{outcome.FailedCount} 个失败）" : $"Execution completed ({outcome.FailedCount} failed)")
-                    : (IsChinese ? "执行完成" : "Execution completed");
+                    RecalculateCandidateMetrics();
 
-                ShowStatus(
-                    failureDetail is null
-                        ? outcome.Describe(IsChinese)
-                        : $"{outcome.Describe(IsChinese)} — {failureDetail}",
-                    outcome.HasFailures ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
-            });
+                    // Surface the actual failure reasons instead of an opaque count.
+                    var failureDetail = outcome.DescribeFailures(IsChinese);
+                    ScanPhase = token.IsCancellationRequested ? ScanPhase.Idle : ScanPhase.SelectingTargets;
+                    OptimizationWorkflowStatus = token.IsCancellationRequested
+                        ? (IsChinese ? $"执行已取消（已处理 {processed}/{selectedItems.Count} 项）" : $"Execution cancelled ({processed}/{selectedItems.Count} processed)")
+                        : outcome.HasFailures
+                        ? (IsChinese ? $"执行完成（{outcome.FailedCount} 个失败）" : $"Execution completed ({outcome.FailedCount} failed)")
+                        : (IsChinese ? "执行完成" : "Execution completed");
 
-            EnqueueOnUI(() => IsOptimizing = false);
-        }, token);
+                    ShowStatus(
+                        token.IsCancellationRequested ? OptimizationWorkflowStatus : failureDetail is null
+                            ? outcome.Describe(IsChinese)
+                            : $"{outcome.Describe(IsChinese)} — {failureDetail}",
+                        token.IsCancellationRequested || outcome.HasFailures ? InfoBarSeverity.Warning : InfoBarSeverity.Success, optimization: true);
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Optimization execution failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+                EnqueueOnUI(() => StopOptimization(cancelled: token.IsCancellationRequested));
+            }
+            finally
+            {
+                EnqueueOnUI(() => IsOptimizing = false);
+            }
+        });
     }
 
     private void EnqueueOnUI(Action action)
@@ -2536,6 +2712,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             action();
         }
     }
+
+    private void EnqueueOnUI(Action action, CancellationToken token) => EnqueueOnUI(() =>
+    {
+        if (!token.IsCancellationRequested)
+        {
+            action();
+        }
+    });
 
     private static string FormatBytes(long bytes)
     {
@@ -2566,8 +2750,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             _readinessCts?.Cancel();
             AiHub?.Dispose();
             AiHubEngine.Current.StateChanged -= OnEngineStateChanged;
-            _currentCts?.Cancel();
-            _currentCts?.Dispose();
+            _auditCts?.Cancel();
+            _auditCts?.Dispose();
+            _optimizationCts?.Cancel();
+            _optimizationCts?.Dispose();
         }
     }
 }

@@ -468,6 +468,11 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     stop_tray_icon();
     const bool settings_closed = close_settings_window();
 
+    // Finish module teardown while this instance still owns the singleton lock.
+    // A new runner must not start workers while the old modules signal their stop events.
+    CentralizedKeyboardHook::Stop();
+    modules().clear();
+
     // We need to release the mutexes to be able to restart the application
     if (msi_mutex)
     {
@@ -476,7 +481,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
 
     if (is_restart_scheduled())
     {
-        modules().clear();
         if (!settings_closed)
         {
             Logger::error("Scheduled restart cancelled because the old Settings process did not exit.");

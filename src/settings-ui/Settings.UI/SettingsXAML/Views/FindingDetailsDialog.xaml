@@ -18,6 +18,18 @@
     DefaultButton="Primary"
     SecondaryButtonClick="OnCopySummaryClick">
 
+    <ContentDialog.Resources>
+        <Style x:Key="HighSeverityBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}" />
+        </Style>
+        <Style x:Key="MediumSeverityBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}" />
+        </Style>
+        <Style x:Key="LowSeverityBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorAttentionBackgroundBrush}" />
+        </Style>
+    </ContentDialog.Resources>
+
     <Grid MinWidth="480" MaxWidth="600" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -32,10 +44,9 @@
 
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Border x:Name="SeverityBadge"
-                        CornerRadius="4" Padding="6,2"
-                        Background="{ThemeResource AccentFillColorDefaultBrush}">
+                        CornerRadius="4" Padding="6,2">
                     <TextBlock x:Name="SeverityTextBlock"
-                               Foreground="White"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                FontSize="11" FontWeight="SemiBold" />
                 </Border>
 

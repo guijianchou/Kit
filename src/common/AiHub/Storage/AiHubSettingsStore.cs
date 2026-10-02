@@ -85,7 +85,20 @@ public sealed class AiHubSettingsStore
             ? AiHubConfig.CreateDefault()
             : JsonSerializer.Deserialize(bytes, AiHubJsonContext.Default.AiHubConfig)
                 ?? throw new InvalidDataException("The AI Hub settings file is invalid.");
-        ValidateTargets(config);
+        ValidateTargets(config, allowLegacyEfforts: true);
+
+        // Normalize existing profiles in memory; a normal save persists the three levels.
+        foreach (var target in config.Targets)
+        {
+            target.Effort = target.Effort switch
+            {
+                "none" or "minimal" => "low",
+                "medium" => "high",
+                "xhigh" or "ultra" => "max",
+                _ => target.Effort,
+            };
+        }
+
         var secrets = _keyStore.ReadUnlocked();
         foreach (var target in config.Targets)
         {
@@ -136,7 +149,7 @@ public sealed class AiHubSettingsStore
         _files.CommitSettingsAndSecrets(settings, SecureKeyStore.Encrypt(secrets));
     }
 
-    private static void ValidateTargets(AiHubConfig config)
+    private static void ValidateTargets(AiHubConfig config, bool allowLegacyEfforts = false)
     {
         if (config.SelectedKernel is not (AiKernelCatalog.Codex or AiKernelCatalog.Pi) ||
             config.MaxConcurrentAnalysis is < 1 or > 4 ||
@@ -152,7 +165,8 @@ public sealed class AiHubSettingsStore
                 target.ApiKey is null || target.ApiKey.Length > 8192 ||
                 target.Model is null || target.Model.Length > 256 ||
                 target.Mode is not ("responses" or "chat") ||
-                target.Effort is not ("low" or "medium" or "high" or "xhigh" or "max"))
+                (target.Effort is not ("low" or "high" or "max") &&
+                    (!allowLegacyEfforts || target.Effort is not ("none" or "minimal" or "medium" or "xhigh" or "ultra"))))
             {
                 throw new InvalidDataException("The AI Hub target fields are invalid or exceed their size limits.");
             }

@@ -2813,6 +2813,35 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void KitRunnerShouldFinishModuleShutdownBeforeReleasingSingleton()
+        {
+            var source = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            int settingsClosed = source.IndexOf("const bool settings_closed = close_settings_window();", StringComparison.Ordinal);
+            int hookStopped = source.IndexOf("CentralizedKeyboardHook::Stop();", settingsClosed, StringComparison.Ordinal);
+            int modulesDestroyed = source.IndexOf("modules().clear();", settingsClosed, StringComparison.Ordinal);
+            int mutexReleased = source.IndexOf("msi_mutex.reset(nullptr);", settingsClosed, StringComparison.Ordinal);
+            int restart = source.IndexOf("if (is_restart_scheduled())", settingsClosed, StringComparison.Ordinal);
+
+            Assert.IsTrue(settingsClosed >= 0 && hookStopped > settingsClosed);
+            Assert.IsTrue(
+                modulesDestroyed > hookStopped && modulesDestroyed < mutexReleased,
+                "Module stop events must be finished before a new runner can acquire the singleton lock.");
+            Assert.IsTrue(mutexReleased < restart, "Normal exit and restart must use the same teardown order.");
+        }
+
+        [TestMethod]
+        public void LocalserverWorkerShouldFinishCleanupAfterCancellationOrFailure()
+        {
+            var source = File.ReadAllText(FindSourceFile("src", "modules", "Localserver", "LocalserverWorker", "Program.cs"));
+            int cleanup = source.IndexOf("finally", StringComparison.Ordinal);
+            Assert.IsTrue(cleanup >= 0, "Worker failures must still enter cleanup.");
+            int recovery = source.IndexOf("await supervisor.RecoverRunningServicesAsync(CancellationToken.None)", cleanup, StringComparison.Ordinal);
+            int stop = source.IndexOf("await supervisor.StopAllAsync(CancellationToken.None)", cleanup, StringComparison.Ordinal);
+            Assert.IsTrue(recovery > cleanup && stop > recovery, "Shutdown must adopt and stop services without the cancelled watch token.");
+            Assert.IsFalse(source.Contains("StopAllAsync(shutdown.Token)", StringComparison.Ordinal));
+        }
+
+        [TestMethod]
         public void KitRunnerShouldReuseStartupGeneralSettingsForInitialModuleEnablement()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));

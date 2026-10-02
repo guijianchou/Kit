@@ -15,9 +15,11 @@ public static class TaskPolicyDefaults
 
         - Base every finding on fields of the supplied events: event ID, log name, provider,
           level, account, logon type, source address, process and timestamps.
-        - Cite the events you used. `eventRef` names the primary event, copied exactly (for
-          example `event-3`); `relatedEventRefs` lists every supplied event that supports the
-          same finding.
+        - Cite the events you used. Copy `eventRef` exactly from the primary event's
+          `input.itemId` in the current batch (for example `item-000003`). Every entry in
+          `relatedEventRefs` must also be an `input.itemId` from this same batch.
+          Never invent references, copy example IDs, use Windows event IDs as references,
+          or refer to events from another batch.
         - A finding is not proof of compromise. State what the events show and express doubt
           through the `confidence` field rather than through hedging sentences.
         - Recommendations are safe, reversible and specific: what to check, where, and what
@@ -106,8 +108,8 @@ public static class TaskPolicyDefaults
         - key (string): stable snake_case pattern id, at most 48 characters, reused for the
           same kind of finding across batches, for example failed_logon_burst,
           service_start_failure, firewall_rule_change.
-        - eventRef (string): reference of the primary event, copied exactly from the supplied
-          data.
+        - eventRef (string): copy the primary event's `input.itemId` from the current batch
+          exactly.
         - eventId (string): event ID of the primary event as text, for example "4625".
         - eventTimestamp (string): timestamp of the primary event in ISO-8601 UTC, copied from
           the supplied data.
@@ -135,12 +137,50 @@ public static class TaskPolicyDefaults
         paths, identifiers and uncertainty. No Markdown or line breaks inside strings.
         Never rename, omit or add properties.
 
-        Example:
+        Example (illustrative only; copy actual IDs and evidence from the current batch):
 
-        {"issues":[{"key":"failed_logon_burst","eventRef":"event-4","eventId":"4625","eventTimestamp":"2026-01-01T00:00:00Z","title":"Six failed logons for jdoe within two minutes","description":"Six 4625 events for jdoe from 192.168.1.20 failed with a bad password between 00:00 and 00:02 and no successful logon followed.","severity":"Medium","confidence":"High","category":"Login","affected":"jdoe from 192.168.1.20","rootCause":"Most likely a mistyped or expired password, although a password-guessing attempt cannot be excluded.","recommendation":"Confirm with the user, check that 192.168.1.20 is a known device, and review later 4624 events for the same account.","occurrences":6,"relatedEventRefs":["event-4","event-5","event-6","event-7","event-8","event-9"],"titleZh":"两分钟内发生六次 jdoe 登录失败","descriptionZh":"jdoe 从 192.168.1.20 发起的六次 4625 登录在 00:00 至 00:02 因密码错误失败，之后未出现成功登录。","rootCauseZh":"可能是密码输入错误或已过期，也不能排除密码猜测。","recommendationZh":"与用户确认，核对 192.168.1.20 是否为已知设备，并检查同一账号后续的 4624 事件。"}]}
+        {"issues":[{"key":"failed_logon_burst","eventRef":"item-000004","eventId":"4625","eventTimestamp":"2026-01-01T00:00:00Z","title":"Six failed logons for jdoe within two minutes","description":"Six 4625 events for jdoe from 192.168.1.20 failed with a bad password between 00:00 and 00:02 and no successful logon followed.","severity":"Medium","confidence":"High","category":"Login","affected":"jdoe from 192.168.1.20","rootCause":"Most likely a mistyped or expired password, although a password-guessing attempt cannot be excluded.","recommendation":"Confirm with the user, check that 192.168.1.20 is a known device, and review later 4624 events for the same account.","occurrences":6,"relatedEventRefs":["item-000004","item-000005","item-000006","item-000007","item-000008","item-000009"],"titleZh":"两分钟内发生六次 jdoe 登录失败","descriptionZh":"jdoe 从 192.168.1.20 发起的六次 4625 登录在 00:00 至 00:02 因密码错误失败，之后未出现成功登录。","rootCauseZh":"可能是密码输入错误或已过期，也不能排除密码猜测。","recommendationZh":"与用户确认，核对 192.168.1.20 是否为已知设备，并检查同一账号后续的 4624 事件。"}]}
         """;
 
     public const string DefaultSystemOptimizationInstructions = """
+        # System Optimization policy
+
+        Receive desensitized file metadata only. Never request file contents, absolute paths,
+        user directory names or credentials. The host's deterministic classification and
+        eligibility checks are authoritative; AI suggestions never authorize a write.
+
+        Organize loose files directly in Downloads only. Never traverse or reorganize existing
+        subdirectories. Use exactly these IDM-style target folder names and extension groups:
+        - Documents: doc docx xls xlsx ppt pptx pdf txt rtf odt ods odp csv md epub mobi azw azw3 chm djvu.
+        - Compressed: zip rar 7z tar gz gzip bz2 xz tgz tbz tbz2 txz z lz lzma zst cab arj ace.
+        - Programs: exe msi msix msixbundle appx appxbundle msu msp iso img com.
+        - Music: mp3 mp2 mpa wav wma aac m4a flac ogg oga opus mid midi aif aiff ape alac.
+        - Video: mp4 m4v mkv avi mov wmv mpg mpeg mpe webm flv f4v 3gp 3g2 vob asf rm rmvb m2ts mts.
+        Extensions are case-insensitive. Images and all unlisted extensions stay in place (skip).
+        Downloads must be unchanged for at least 10 minutes. Skip incomplete downloads, their
+        sidecars, files in use, hidden/system files, symbolic links and directory junctions.
+
+        Cleanup is limited to host-whitelisted leaf files unchanged for at least 7 days:
+        .tmp/.temp files in current-user Temp; Chrome/Edge Default Cache; npm _cacache;
+        pip http/http-v2/wheels; pnpm cache; and Explorer thumbcache_*.db only.
+        Never delete entire cache folders, active downloads, configuration, credentials,
+        arbitrary databases, program directories or system directories. The explicit thumbnail
+        cache exception does not permit other Explorer databases. If uncertain, use skip.
+
+        Every recommendation must use the supplied itemId and return strict JSON with:
+        {"recommendations":[{"itemId":"...","action":"move|delete|skip","targetRelative":"...","risk":"low|medium|high","reasonEn":"...","reasonZh":"..."}]}
+        For move, keep the host-provided category as targetRelative (one of the five names above).
+        Use null targetRelative for delete or skip. Reasons must be concise, evidence-based,
+        bilingual, and contain no Markdown or line breaks.
+
+        The user confirms selected operations. Immediately before execution the host rechecks
+        scope, whitelist, age, availability, size and modification time. Changed files require
+        a new scan. Moves never overwrite existing files; use a numbered filename on collision.
+        Cleanup uses the Windows Recycle Bin only; fail if recycling is unavailable.
+        """;
+
+    // Only this exact shipped policy is eligible for automatic migration. Custom policies survive.
+    internal const string LegacySystemOptimizationInstructions = """
         # System Optimization policy
 
         Receive desensitized file metadata only. Never request or read file contents, absolute

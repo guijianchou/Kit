@@ -1256,13 +1256,14 @@ namespace Kit.Settings.UI.ViewModels
 
         public void NotifyAllBackupAndRestoreProperties()
         {
-            NotifyPropertyChanged(nameof(LastSettingsBackupDate), false);
-            NotifyPropertyChanged(nameof(LastSettingsBackupSource), false);
-            NotifyPropertyChanged(nameof(LastSettingsBackupFileName), false);
-            NotifyPropertyChanged(nameof(CurrentSettingMatchText), false);
-            NotifyPropertyChanged(nameof(SettingsBackupMessage), false);
-            NotifyPropertyChanged(nameof(BackupRestoreMessageSeverity), false);
-            NotifyPropertyChanged(nameof(SettingsBackupRestoreMessageVisible), false);
+            // Refreshing status must not send settings back to the Runner.
+            OnPropertyChanged(nameof(LastSettingsBackupDate));
+            OnPropertyChanged(nameof(LastSettingsBackupSource));
+            OnPropertyChanged(nameof(LastSettingsBackupFileName));
+            OnPropertyChanged(nameof(CurrentSettingMatchText));
+            OnPropertyChanged(nameof(SettingsBackupMessage));
+            OnPropertyChanged(nameof(BackupRestoreMessageSeverity));
+            OnPropertyChanged(nameof(SettingsBackupRestoreMessageVisible));
         }
 
         private void CheckForUpdatesClick()
@@ -1635,7 +1636,8 @@ namespace Kit.Settings.UI.ViewModels
 
         internal void RefreshSettingsOnExternalChange()
         {
-            NotifyPropertyChanged(nameof(EnableDataDiagnostics));
+            // Echoing this notification would trigger another Runner response and backup refresh.
+            OnPropertyChanged(nameof(EnableDataDiagnostics));
         }
 
         // Per retention policy

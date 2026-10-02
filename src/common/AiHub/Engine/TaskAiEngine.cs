@@ -31,6 +31,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
     private readonly CancellationTokenSource _lifetime = new();
     private readonly FileSystemWatcher _watcher;
     private readonly object _schedulerLock = new();
+    private readonly LinkedList<object> _waitingBatches = new();
     private readonly object _lifecycleLock = new();
     private TaskCompletionSource _capacityChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _runningBatches;
@@ -320,7 +321,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         }
 
         options ??= new AiTaskOptions();
-        if (options.TimeoutSeconds is < 1 or > 3_600)
+        if (options.TimeoutSeconds is < 1 or > 3_600 || options.RouteTimeoutSeconds is < 0 or > 3_600
+            || options.BatchSize is < 0 or > 100)
         {
             return Failure<TOutput>(AiErrorCode.InvalidPayload, stopwatch);
         }
@@ -352,6 +354,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             lock (_schedulerLock)
             {
                 _concurrencyLimit = Math.Clamp(config.MaxConcurrentAnalysis, 1, 4);
+                SignalCapacity();
             }
 
             string globalSecurity = await _securityService.LoadGlobalPolicyAsync(token).ConfigureAwait(false);
@@ -386,8 +389,10 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 prepared.Add(new PreparedItem($"item-{index + 1:D6}", sanitized, size));
             }
 
-            int batchSize = DynamicBatcher.CalculateBatchSize(items.Count, main.Effort);
+            int batchSize = options.BatchSize > 0 ? options.BatchSize : DynamicBatcher.CalculateBatchSize(items.Count, main.Effort);
             var batches = DynamicBatcher.CreateBatches(prepared, batchSize, item => item.Size, 96_000).ToList();
+            int routeTimeoutSeconds = options.RouteTimeoutSeconds > 0
+                ? Math.Min(options.RouteTimeoutSeconds, options.TimeoutSeconds) : options.TimeoutSeconds;
             if (batches.Count > 1 && schema.MergeBatches is null)
             {
                 return Failure<TOutput>(AiErrorCode.InvalidPayload, stopwatch);
@@ -427,9 +432,22 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             AiTaskResult<TOutput>? firstFailure = null;
             int completed = 0;
             int responseCharacters = 0;
-            var results = await Task.WhenAll(batches.Select(async batch =>
+            var results = await Task.WhenAll(batches.Select(async (batch, batchIndex) =>
             {
                 bool acquired = false;
+                string validationStage = "execute";
+                void ReportDiagnostic(string message)
+                {
+                    try
+                    {
+                        options.Progress?.Report(new AiTaskProgress("Route", $"batch={batchIndex + 1}/{batches.Count}, {message}", Volatile.Read(ref completed), batches.Count));
+                    }
+                    catch (Exception)
+                    {
+                        // Observability must not change a batch's result or cancellation.
+                    }
+                }
+
                 try
                 {
                     await AcquireSlotAsync(token).ConfigureAwait(false);
@@ -440,15 +458,20 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     }
 
                     options.Progress?.Report(new AiTaskProgress("Execute", string.Empty, Volatile.Read(ref completed), batches.Count));
+                    ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}");
                     string prompt = prefix + SerializeBatch(batch);
-                    KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, options.TimeoutSeconds, token).ConfigureAwait(false);
+                    KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, routeTimeoutSeconds,
+                        ReportDiagnostic, token).ConfigureAwait(false);
                     string route = "Main";
                     AiTargetSettings usedTarget = main;
-                    if (!execution.IsSuccess && execution.CanFailover && fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl))
+                    if (!execution.IsSuccess && (execution.CanFailover || execution.ErrorCode == AiErrorCode.Timeout)
+                        && fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl))
                     {
                         token.ThrowIfCancellationRequested();
+                        ReportDiagnostic($"AI batch failover: reason={execution.ErrorCode}, from=Main, to=Fallback");
                         options.Progress?.Report(new AiTaskProgress("Failover", string.Empty, Volatile.Read(ref completed), batches.Count));
-                        execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, fallback, prompt, options.TimeoutSeconds, token).ConfigureAwait(false);
+                        execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, fallback, prompt, routeTimeoutSeconds,
+                            ReportDiagnostic, token).ConfigureAwait(false);
                         route = "Fallback";
                         usedTarget = fallback;
                     }
@@ -457,21 +480,32 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     {
                         var failure = Failure<TOutput>(execution.ErrorCode, stopwatch);
                         Interlocked.CompareExchange(ref firstFailure, failure, null);
-                        await requestCancellation.CancelAsync().ConfigureAwait(false);
+                        ReportDiagnostic($"AI batch failed: code={execution.ErrorCode}");
+                        if (!options.AllowPartialResults || execution.ErrorCode is AiErrorCode.PolicyViolation or AiErrorCode.InvalidConfiguration
+                            or AiErrorCode.KernelNotInstalled or AiErrorCode.HubDisabled or AiErrorCode.HostUnavailable)
+                        {
+                            await requestCancellation.CancelAsync().ConfigureAwait(false);
+                        }
+
                         return failure;
                     }
 
                     token.ThrowIfCancellationRequested();
+                    validationStage = "response-limit";
                     if (Interlocked.Add(ref responseCharacters, execution.Output.Length) > 1_048_576)
                     {
                         throw new InvalidOperationException("The combined task response exceeds the output budget.");
                     }
 
                     var ids = batch.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+                    validationStage = "json";
                     string json = OutputContractAuditor.ExtractJsonPayload(execution.Output);
                     using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 32 });
+                    validationStage = "contract";
                     _auditor.Validate(document.RootElement, ids, schema.AllowedActions);
+                    validationStage = "deserialize";
                     TOutput? output = JsonSerializer.Deserialize(json, schema.OutputTypeInfo);
+                    validationStage = "schema";
                     if (output is null || !schema.ValidateOutput(output, ids))
                     {
                         throw new InvalidOperationException("The task output did not pass validation.");
@@ -483,13 +517,19 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 }
                 catch (OperationCanceledException)
                 {
+                    ReportDiagnostic($"AI batch cancelled: callerCancelled={cancellationToken.IsCancellationRequested}, taskCancelled={token.IsCancellationRequested}");
                     return Failure<TOutput>(CancellationCode(cancellationToken), stopwatch);
                 }
                 catch (Exception ex) when (ex is JsonException or InvalidOperationException or NotSupportedException)
                 {
                     var failure = Failure<TOutput>(AiErrorCode.PolicyViolation, stopwatch);
                     Interlocked.CompareExchange(ref firstFailure, failure, null);
-                    await requestCancellation.CancelAsync().ConfigureAwait(false);
+                    ReportDiagnostic($"AI batch rejected: phase={validationStage}, exception={ex.GetType().Name}");
+                    if (!options.AllowPartialResults || validationStage == "response-limit")
+                    {
+                        await requestCancellation.CancelAsync().ConfigureAwait(false);
+                    }
+
                     return failure;
                 }
                 finally
@@ -501,22 +541,58 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 }
             })).ConfigureAwait(false);
 
-            var failed = firstFailure ?? results.FirstOrDefault(result => !result.IsSuccess);
-            if (failed is not null)
+            // An explicit stop must not be turned into a partial audit or hidden by an
+            // earlier failed batch. The task deadline may still retain validated work.
+            if (cancellationToken.IsCancellationRequested || _disposed || !IsEnabled)
             {
-                return failed.ErrorCode == AiErrorCode.Cancelled ? Failure<TOutput>(CancellationCode(cancellationToken), stopwatch) : failed;
+                return Failure<TOutput>(CancellationCode(cancellationToken), stopwatch);
             }
 
-            token.ThrowIfCancellationRequested();
-            TOutput payload = results.Length == 1 ? results[0].Payload! : schema.MergeBatches!(results.Select(result => result.Payload!).ToArray());
-            var allIds = prepared.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+            var failed = firstFailure ?? results.FirstOrDefault(result => !result.IsSuccess);
+            if (failed?.ErrorCode == AiErrorCode.Cancelled)
+            {
+                failed = Failure<TOutput>(CancellationCode(cancellationToken), stopwatch);
+            }
+
+            var successful = results.Where(result => result.IsSuccess).ToArray();
+            if (failed is not null && (!options.AllowPartialResults || successful.Length == 0))
+            {
+                return new AiTaskResult<TOutput>
+                {
+                    ErrorCode = failed.ErrorCode,
+                    ErrorMessage = failed.ErrorMessage,
+                    CompletedBatches = successful.Length,
+                    TotalBatches = batches.Count,
+                    Elapsed = stopwatch.Elapsed,
+                };
+            }
+
+            if (failed is null)
+            {
+                token.ThrowIfCancellationRequested();
+            }
+
+            TOutput payload = successful.Length == 1 ? successful[0].Payload! : schema.MergeBatches!(successful.Select(result => result.Payload!).ToArray());
+            var allIds = batches.Where((_, index) => results[index].IsSuccess).SelectMany(batch => batch).Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
             if (payload is null || !schema.ValidateOutput(payload, allIds))
             {
                 return Failure<TOutput>(AiErrorCode.PolicyViolation, stopwatch);
             }
 
             _auditor.Validate(JsonSerializer.SerializeToElement(payload, schema.OutputTypeInfo), allIds, schema.AllowedActions);
-            return AiTaskResult.Success(payload, string.Join(" + ", results.Select(result => result.UsedModel).Distinct()), string.Join(" + ", results.Select(result => result.UsedRoute).Distinct()), stopwatch.Elapsed);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new AiTaskResult<TOutput>
+            {
+                IsSuccess = failed is null,
+                ErrorCode = failed?.ErrorCode ?? AiErrorCode.None,
+                ErrorMessage = failed?.ErrorMessage,
+                Payload = payload,
+                CompletedBatches = successful.Length,
+                TotalBatches = batches.Count,
+                UsedModel = string.Join(" + ", successful.Select(result => result.UsedModel).Distinct()),
+                UsedRoute = string.Join(" + ", successful.Select(result => result.UsedRoute).Distinct()),
+                Elapsed = stopwatch.Elapsed,
+            };
         }
         catch (OperationCanceledException)
         {
@@ -591,22 +667,48 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     private async Task AcquireSlotAsync(CancellationToken token)
     {
-        while (true)
+        LinkedListNode<object> waiter;
+        lock (_schedulerLock)
         {
-            Task changed;
-            lock (_schedulerLock)
+            waiter = _waitingBatches.AddLast(new object());
+        }
+
+        try
+        {
+            while (true)
             {
-                token.ThrowIfCancellationRequested();
-                if (_runningBatches < _concurrencyLimit)
+                Task changed;
+                lock (_schedulerLock)
                 {
-                    _runningBatches++;
-                    return;
+                    token.ThrowIfCancellationRequested();
+                    if (_waitingBatches.First == waiter && _runningBatches < _concurrencyLimit)
+                    {
+                        _waitingBatches.Remove(waiter);
+                        _runningBatches++;
+                        if (_runningBatches < _concurrencyLimit)
+                        {
+                            SignalCapacity();
+                        }
+
+                        return;
+                    }
+
+                    changed = _capacityChanged.Task;
                 }
 
-                changed = _capacityChanged.Task;
+                await changed.WaitAsync(token).ConfigureAwait(false);
             }
-
-            await changed.WaitAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (_schedulerLock)
+            {
+                if (waiter.List is not null)
+                {
+                    _waitingBatches.Remove(waiter);
+                    SignalCapacity();
+                }
+            }
         }
     }
 

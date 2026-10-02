@@ -15,9 +15,9 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 | PowerToys runner / 模块接口 / 设置 / 仪表板模式 | 品牌（`Kit`）、窗口标题、可见 UI 文案 |
 | `KitModuleIface` C++ 契约（含 `PowertoyModuleIface` 别名） | 设置存储迁移到 `%LOCALAPPDATA%\Kit`（非官方 PowerToys 目录） |
 | 显式的模块加载模型 | 移除自动更新、下载与遥测能力 |
-| 源自 PowerToys 的模块：`Awake`、`Light Switch`；Kit 自研插件：`Localserver`、`UDPtest`、`AI Hub`、`NetMap` | 备份/恢复默认值使用 Kit 品牌（`Documents\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
+| 源自 PowerToys 的模块：`Awake`、`Light Switch`；Kit 自研插件：`Localserver`、`UDPtest`、`AI Hub`、`NetMap` | 备份/恢复默认值使用 Kit 品牌（`%LOCALAPPDATA%\Kit\Backup`、`HKCU\Software\Microsoft\Kit`） |
 
-当前 Kit 版本：`2.3.4`。
+当前 Kit 版本：`2.3.6`。
 
 ---
 
@@ -53,7 +53,7 @@ Kit 是一个**稳定性优先的 PowerToys 衍生工作区，而非完整的产
 
 ### 2.2 启动与生命周期
 
-1. runner 启动并显示托盘图标；需要打开设置时，**先于加载模块**通过命名管道拉起 Settings 应用，让 Settings 的 WinUI/.NET 冷启动与模块加载并行。提前到达的 IPC 会排队，待消息循环启动后处理。
+1. runner 启动并显示托盘图标，加载和启用模块后，按需打开 Settings。Settings 生命周期线程负责启动 WinUI/.NET 进程和命名管道 IPC；收到的消息转交 runner 主线程处理。
 2. runner 加载已知的模块接口 DLL（`src/runner/main.cpp` 中的 `KitKnownModules`），对每个调用 `kit_create()`，并启用设置中打开的模块。
 3. Settings 中的启用/禁用沿用 PowerToys 的 `module_status` IPC 消息；runner 应用 GPO 策略并调用模块原生 `enable()` / `disable()` 接口，随后回传 `get_all_settings()`，Settings 用模块实际 `is_enabled()` 状态同步 Utilities。设置文件监听仍作为外部修改的兜底。Kit 不提供 PowerToys 的实验性功能开关及对应策略。
 4. 退出：消息循环结束时（托盘退出，或未开启托盘时关闭 Settings），runner 执行模块收尾（`modules().clear()` → `destroy()`），让每个模块在进程退出前清理其 worker 与服务。
@@ -203,6 +203,11 @@ flowchart LR
 - **生命周期**：Worker 执行定时审计；Settings 和 Worker 使用进程内共享 AI 服务及其持久化配置。任务链携带各自的 `AGENTS.md` 策略；安全审计收集 Windows 事件日志、排序发现并执行 AI 分析。
 - **数据**：`%LOCALAPPDATA%\Kit\AiHub\` —— `chains\`、`kernels\`、`requests\`、`State\`、`security.md`、`service-settings.json`、`secrets.dat`、`Logs\`。
 - **设置界面**：共享 AI 服务（内核、主/备端点、自检、全局安全策略）在“常规”页的 **AI 服务** 分组中配置，卡片样式与其余设置一致。AI Hub 页面包含总开关、AI 就绪状态卡片和三个页签（安全审计 / 系统优化 / 任务策略）；审计操作独立成行、历史统计默认折叠，优化页仅在存在候选项时显示选择统计。严重度颜色随主题切换（浅色 / 深色 / 高对比度）。
+- **独立任务**：Security Audit 与 Optimization 可以同时运行，各自保留取消、进度、结果和提示信息；横幅跟随当前标签页，审计进度卡片与侧栏始终显示审计。两个标签页各有“取消任务”按钮，取消只停止后续工作，保留尚未处理的优化候选项，不撤销已完成的文件操作。关闭 AI Hub 会取消两项任务；切换标签页不会中断任务。Optimization 使用本地文件服务，不调用 AI。
+- **原生执行**：网络传输和连接重试继续由 Codex/Pi 负责。模型名可自由配置，推理强度提供 `low/high/max`，Kit 原样传入所选的 Main 强度。
+- **审计分批**：AI 分析最多选取 400 条事件，优先严重事件和近期事件。每批最多 100 条，编码后的记录数据不超过 96,000 字节；较大的记录会拆成更小的批次。例如 103 条较小记录只需两次原生调用，原先 `max` 默认分批需要七次。等待批次按先后顺序进入执行，并遵守配置的并发上限。
+- **长时间回退**：每次 Main 或 Fallback 尝试限 5 分钟，整轮审计限 30 分钟，包含排队时间。主链遇到可恢复的端点错误或单链路超时，Kit 完成清理后尝试一次 Fallback。请在 **常规 → AI 服务** 配置并启用 Fallback，填写端点、模型、凭据和强度；备用为空或关闭时不会启用，也不会自动降低 Main 强度。用户取消、整轮超时、输出校验失败和清理失败不会触发回退。部分批次失败时，保留成功批次已验证的结果，并标明分析不完整。
+- **审计诊断**：`%LOCALAPPDATA%\Kit\Settings\Logs\<version>\` 记录分析 ID、批次数、输入字节数、链路/模型/强度、耗时及取消来源；运行时界面显示已完成批次及重试/回退状态。这些诊断不记录端点地址、凭据、提示词或原始响应。2.3.6 的 AI Hub 并发流程尚待运行验证：先启动审计，在 AI 分析期间扫描 Optimization，再取消 Optimization，确认审计继续推进；反向重复，并切换标签页检查提示是否保留。新增 Codex/Pi 合成测试覆盖两条独立 AI 请求、取消隔离、单任务回退和共享并发上限，尚未运行。并发上限按引擎实例生效，等待批次按先后顺序执行。
 
 ### 3.6 NetMap —— 直连与代理出口观测
 
@@ -219,7 +224,7 @@ NetMap 随外部代理客户端换节点而观察当前出口，不需要导入�
 
 ## 4. 构建与发布
 
-当前源码版本为 **2.3.4**。本地 Release x64 产物已通过设置页和 Runner 冒烟验证；完整重新编译和实机测试仍需在正式发布前完成。本次未生成发布压缩包。在仓库根目录构建，成功后再整理发布目录：
+当前源码版本为 **2.3.6**。正式发布前仍需完成 Release 验证与打包。在仓库根目录构建，成功后再整理发布目录：
 
 ```powershell
 .\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
@@ -227,7 +232,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed; do not stage incomplete output.'
 .\tools\build\Stage-Release.ps1
 ```
 
-构建后运行 `x64/Release/Kit.exe`；整理后运行 `bin/release/2.3.4/Kit.exe`。整理脚本生成目录，不生成 ZIP。请保留整个运行目录。解决方案中主程序已依赖 AI Hub 模块 DLL 和 Worker，避免 VS 构建主程序时遗漏它们。
+构建后运行 `x64/Release/Kit.exe`；整理后运行 `bin/release/2.3.6/Kit.exe`。整理脚本生成目录，不生成 ZIP。请保留整个运行目录。解决方案中主程序已依赖 AI Hub 模块 DLL 和 Worker，避免 VS 构建主程序时遗漏它们。
 
 要排除旧配置影响，先停止 Localserver 中运行的受管服务，从托盘菜单退出 Kit，再将 `%LOCALAPPDATA%\Kit` 改为不重复的备份名，例如 `Kit.backup-20260930`。启用托盘图标时，Settings 的 X 只关闭设置窗口，Runner 继续运行，与 PowerToys 一致。启动新编译的 Release，首次测试重新填写设置；立即恢复旧 JSON 会失去对照意义。备份保留凭据、策略、下载的内核和历史。不要清理官方 PowerToys 数据或 Localserver 配置指向的外部程序目录。
 

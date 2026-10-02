@@ -4,7 +4,7 @@
 
 ## English
 
-### Unreleased
+### 2.3.6
 
 - **NetMap map space and Pacific routes**: compacted MTR columns and row spacing, giving the map more width. The viewport now centers on the occupied longitude arc and repeats the basemap across the date line, keeping China-US-Singapore routes connected inside the map. Debug builds and bilingual WinUI checks pass, including Pacific/date-line geometry, light/dark layouts and stable scrolling during sampling.
 - **NetMap status and cadence**: added Google as the fourth Proxy service and check all four every 10 seconds without overlapping rounds. Service/ICMP indicators are green at ≤75 ms, yellow above 75 ms or for verification/sign-in issues, and red on errors. Successful egress IPs are green; three consecutive failures show N/A for unavailable live values, with automatic recovery on success. MTR cumulative statistics and scroll position are preserved, and colors follow light/dark themes. All 103 core tests, the x64 Debug build and bilingual WinUI checks pass, including failure recovery and the exact 75 ms boundary. Real requests reached all four services; Gemini remains a website check without an API key or model call.
@@ -16,6 +16,23 @@
 - **NetMap map and diagnostics**: bundled the Natural Earth v5.1.2 offline map and optional local GeoLite2-ASN/City support through MaxMind.GeoIP2. Two matching Proxy observations start unauthenticated service-response comparisons and IPv4 ICMP route observations. No AI/model calls or history storage; country points and system ICMP routes do not reveal exact device locations or the proxy tunnel.
 - **NetMap layout and lifetime**: compacted detection into one row, moved secondary egress details into a flyout, stacked cards at narrow widths and kept the full map visible in the 1200×900 synthetic layout check. Fixed narrow-card alignment, map-caption encoding and dark-theme markers. Stop, navigation away, hiding/minimizing and external module disable stop sampling; cached-page return does not restart it, and late results cannot overwrite a replaced session.
 - **NetMap verification and docs**: targeted x64 Debug builds passed, along with 28 core tests, 3 NetMap settings tests and real WinUI lifecycle/layout checks using synthetic probes. The broader settings/registration run passed 88 of 92 cases; four existing failures are recorded in the module plan. Real proxy/PAC/TUN, valid MMDB data and Release validation remain pending. Added the module README and synchronized both root READMEs with the six-module inventory.
+- **Build correction**: moved the UI dispatch overload's cancellation token to the last parameter and updated all callers (CA1068); removed the blank line before the optimization execution block's closing brace (SA1508). Release rebuild remains pending.
+- **Concurrent AI Hub workflows**: Security Audit and Optimization now own separate cancellation, progress and status state. Either workflow can start while the other is active; switching tabs retains each result message, and optimization progress no longer overwrites the audit card or sidebar.
+- **Independent cancellation**: each tab has a Cancel task button. Deep analysis follows the audit cancellation lifetime; disabling the module or disposing its page cancels both workflows. Cancelled scans cannot publish stale results, and cancelled optimization execution retains unprocessed candidates.
+- **Concurrency coverage**: added synthetic Codex/Pi cases for two independent AI tasks, cancellation isolation, one task falling back while another continues, and the shared native-process limit. WinUI smoke assertions cover task controls, progress and status isolation. Optimization itself remains a local file workflow.
+- **Source handoff**: app and sparse-package versions remain 2.3.6. README documents the manual verification sequence and the per-engine concurrency boundary. The new AI Hub concurrency tests and real AI requests have not been run; Release and real-machine feedback remain pending. The NetMap Debug checks above do not validate the AI Hub concurrent workflows.
+
+### 2.3.5
+
+- **AI service responsiveness**: stopped General settings and backup-status refreshes from echoing settings commands to the Runner. This removes the IPC feedback loop and repeated backup jobs that delayed AI service initialization after toggling it back on.
+- **Audit throughput and fallback**: audit batches now allow up to 100 records within the existing 96 KB input budget and enter execution in FIFO order. Each native route has a 5-minute budget within the 30-minute audit deadline; a timed-out main route is cleaned up before using an enabled, configured fallback. Validated partial results remain available, and the UI shows batch and fallback status.
+- **Fallback boundaries**: process or request-directory cleanup failures retain their failure classification instead of becoming route timeouts. Cancellation, the overall deadline and invalid model output do not send the batch to Fallback. Main effort and persisted endpoint settings are unchanged.
+- **Current verification status**: regression cases were added for batching, byte limits, FIFO dispatch, Codex/Pi timeout fallback, process cleanup and cancellation. These latest cases have not been run; compilation, regression and real-endpoint feedback are left to the maintainer for this handoff. Earlier validation below predates the batching/fallback changes.
+- **Native AI routes**: kept Pi/Codex responsible for Responses transport and removed Kit's Codex `max` to `xhigh` conversion. Model names remain unrestricted; the UI offers `low/high/max` with `high` as the default. Legacy effort values are normalized on load without rewriting settings or credentials until a normal save. Audit route diagnostics record model and native effort input without endpoints or keys.
+- **Backups and diagnostics**: default backups now use `%LOCALAPPDATA%\Kit\Backup` and exclude that subtree from collection. Backup logs distinguish previews and missing prior entries; AI audit logs include batch progress, elapsed time and outcomes. Exception sampling is bounded and omits exception messages while retaining types, HRESULTs and crash stacks.
+- **Optimization**: loose Downloads use Documents, Compressed, Programs, Music and Video; images and unknown types stay in place. Downloads require 10 minutes without changes; known temporary/cache files require 7 days. Execution rechecks scope and metadata, skips links and files in use, and recycles individual cache files only. Built-in Task policies migrate to these rules without replacing custom policies.
+- **Regression coverage**: General-page smoke checks now simulate Runner replies and verify that status refreshes send no settings commands while a user edit sends exactly one.
+- **Validation**: the VS 2026 Debug x64 solution build passed. AI Hub tests passed 252 cases; one directory-link test was skipped because link creation is unavailable. WinUI checks passed backup creation/comparison under the data directory, recursive-backup exclusion, two AI service off/on cycles, control recovery, endpoint saving and plugin settings writeback. The earlier IPC regression reproduced 86 unintended commands on 2.3.4 and passed on 2.3.5. No real AI endpoints or user-file cleanup operations were invoked.
 
 ### 2.3.4
 
@@ -578,7 +595,7 @@
 
 ## 更新日志
 
-### 未发布
+### 2.3.6
 
 - **NetMap 地图空间与跨太平洋路径**：收紧 MTR 列宽和行距，将更多宽度分给地图。地图按节点经度分布选择中心，跨日期变更线连续铺设底图，中国经美国到新加坡的路线可在图内连续呈现。Debug 构建和双语 WinUI 检查通过，覆盖太平洋/日期变更线几何、明暗布局及采样滚动保持。
 - **NetMap 状态与周期**：新增 Google，四项 Proxy 服务每 10 秒检测一轮，轮次不重叠。服务/ICMP 指示灯按 ≤75 ms 绿色、>75 ms 或验证/登录问题黄色、错误红色显示。成功出口 IP 为绿色；连续三次失败后不可用实时值显示 N/A，成功后自动恢复。保留 MTR 累计统计和滚动位置，颜色适配明暗主题。103 项核心测试、x64 Debug 构建和双语 WinUI 检查通过，覆盖失败恢复及 75 ms 边界；实际请求均到达四个服务。Gemini 保留网页检测，不引入 API Key 或模型调用。
@@ -590,6 +607,23 @@
 - **NetMap 地图与诊断**：内置 Natural Earth v5.1.2 离线地图，通过 MaxMind.GeoIP2 可选读取本地 GeoLite2-ASN/City。连续两次 Proxy 成功且一致后，进行无凭据服务响应比较和 IPv4 ICMP 路径观测。没有 AI/模型调用或历史存储；国家代表点和系统 ICMP 路径不表示设备精确位置或代理隧道。
 - **NetMap 布局与生命周期**：检测栏收为单行，出口次要信息放入详情，窄窗口卡片堆叠，合成数据检查中 1200×900 窗口可完整显示地图。修正窄卡片对齐、地图说明乱码和深色标记。停止、离页、隐藏/最小化及外部关闭模块均停止采样，缓存页返回不自动启动；迟到结果不能覆盖已替换会话。
 - **NetMap 验证与文档**：定向 x64 Debug 构建、28 项核心测试、3 项 NetMap 设置测试，以及使用合成探针的实际 WinUI 生命周期/布局检查通过。较广的设置/注册回归为 92 项中 88 项通过，4 项既有失败已记录于插件计划。真实代理/PAC/TUN、有效 MMDB 数据和 Release 验证尚待完成。补全插件 README，并将根目录中英文 README 同步为六个模块。
+- **构建修正**：UI 调度重载的取消令牌移至最后一个参数，并同步所有调用点（CA1068）；移除优化执行块结束大括号前的空行（SA1508）。尚待重新编译 Release 验证。
+- **AI Hub 任务并行**：Security Audit 与 Optimization 分别管理取消、进度和提示状态，任一任务运行时均可启动另一项；切换标签页保留各自提示，优化进度不再覆盖审计卡片或侧栏。
+- **独立取消**：两页各提供“取消任务”按钮，深度分析纳入审计取消生命周期；关闭模块或销毁页面会取消两项任务。取消扫描后不再写回过期结果，取消优化执行后保留尚未处理的候选项。
+- **并发覆盖**：新增 Codex/Pi 合成用例，覆盖两条独立 AI 任务、取消隔离、单任务回退时另一任务继续，以及共享原生进程上限；WinUI 冒烟断言覆盖按钮、进度和提示隔离。Optimization 本身仍使用本地文件服务。
+- **源码交付**：应用与稀疏包版本保持 2.3.6，README 同步手工验证步骤和按引擎实例生效的并发边界。新增 AI Hub 并发测试及真实 AI 请求尚未运行，Release 与实机表现等待反馈；上述 NetMap Debug 检查不代表 AI Hub 并发流程已经验收。
+
+### 2.3.5
+
+- **AI 服务响应**：常规设置与备份状态刷新不再向 Runner 回发设置命令，消除 IPC 循环和反复排队的备份任务，避免 AI 服务重新开启时初始化被拖延。
+- **审计加速与回退**：每批最多 100 条记录，保留原有 96 KB 输入预算，按排队顺序执行。整轮仍限 30 分钟，每次原生链路限 5 分钟；主链超时并完成清理后，切换到已配置且启用的备用链路。保留已验证的部分结果，界面显示批次及回退状态。
+- **回退边界**：进程或请求目录清理失败保留原失败类型，不再被覆盖成链路超时。用户取消、整轮超时和输出校验失败不会将批次转给 Fallback。Main 强度与已保存的端点配置保持原值。
+- **本轮验证状态**：已补充分批、字节上限、先进先出、Codex/Pi 超时回退、进程清理及取消的回归用例，新增用例尚未运行；本次交付由维护者编译、回归并反馈真实端点表现。下文历史验证记录早于本轮分批和回退修改。
+- **原生 AI 链路**：继续由 Pi/Codex 负责 Responses 调用，移除 Kit 对 Codex 的 `max→xhigh` 转换。模型名保持自由输入，界面只提供 `low/high/max`，默认 `high`；旧档位读取时兼容归并，正常保存前不改写配置或凭据。审计路由日志记录模型及传入内核的强度，不记录端点或密钥。
+- **备份与诊断**：默认备份目录改为 `%LOCALAPPDATA%\Kit\Backup`，采集时跳过该子目录。备份日志区分预览与缺少历史记录；AI 审计记录批次进度、耗时及结果。异常采样限制条目数，省略异常消息，保留类型、HRESULT 和崩溃堆栈。
+- **Optimization**：下载散文件按 Documents、Compressed、Programs、Music、Video 五类整理，图片与未知类型留在原处。下载文件要求至少 10 分钟未修改，明确的临时/缓存文件要求至少 7 天；执行前复查范围与元数据，跳过链接和占用文件，缓存只逐文件移入回收站。默认 Task policies 自动同步，保留自定义策略。
+- **回归覆盖**：常规页冒烟检查模拟 Runner 回传，验证状态刷新不发送设置命令，用户修改设置只发送一次命令。
+- **验证**：VS 2026 Debug x64 全解决方案构建通过。AI Hub 测试通过 252 项，1 项目录链接测试因环境不支持创建链接而跳过。WinUI 的数据目录内备份创建/比较、递归排除、两轮 AI 服务开关、控件恢复、端点保存及插件设置写回检查均通过。此前 IPC 回归在 2.3.4 上复现 86 次多余命令，在 2.3.5 上通过。未调用真实 AI 端点，也未对用户文件执行清理。
 
 ### 2.3.4
 

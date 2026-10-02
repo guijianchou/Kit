@@ -5,6 +5,7 @@ using System.Text.Json;
 using Kit.LocalserverWorker;
 using LocalServerHub.Core.Models;
 using LocalServerHub.Windows;
+using LocalServerHub.Windows.Native;
 using LocalserverLib.Common;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -77,6 +78,48 @@ public sealed class ServiceLifecycleTests
         await recovered.StopAsync();
         Assert.IsTrue(process.HasExited);
         Assert.AreEqual(ServiceState.Stopped, recovered.State);
+    }
+
+    [TestMethod]
+    public async Task RecoveryWithoutOwnershipDoesNotScanProcesses()
+    {
+        using var fixture = await ServiceFixture.CreateAsync();
+        using var runner = new ServiceRunner(fixture.Definition);
+        var snapshot = new Lazy<ProcessTreeSnapshot>(() => throw new InvalidOperationException("An idle service must not scan processes."));
+
+        Assert.IsFalse(runner.TryRecover(snapshot));
+        Assert.IsFalse(snapshot.IsValueCreated);
+    }
+
+    [TestMethod]
+    public async Task MultipleRecoveriesShareOneProcessScan()
+    {
+        using var first = await ServiceFixture.CreateAsync();
+        using var second = await ServiceFixture.CreateAsync();
+        using var firstOwner = new ServiceRunner(first.Definition);
+        using var secondOwner = new ServiceRunner(second.Definition);
+        await firstOwner.StartAsync();
+        await secondOwner.StartAsync();
+        Process firstProcess = first.Track(firstOwner.ProcessId!.Value);
+        Process secondProcess = second.Track(secondOwner.ProcessId!.Value);
+        firstOwner.Dispose();
+        secondOwner.Dispose();
+        int scans = 0;
+        var snapshot = new Lazy<ProcessTreeSnapshot>(() =>
+        {
+            scans++;
+            return ProcessTreeSnapshot.Capture();
+        });
+        using var firstRecovered = new ServiceRunner(first.Definition);
+        using var secondRecovered = new ServiceRunner(second.Definition);
+
+        Assert.IsTrue(firstRecovered.TryRecover(snapshot));
+        Assert.IsTrue(secondRecovered.TryRecover(snapshot));
+        Assert.AreEqual(1, scans);
+        await firstRecovered.StopAsync();
+        await secondRecovered.StopAsync();
+        Assert.IsTrue(firstProcess.HasExited);
+        Assert.IsTrue(secondProcess.HasExited);
     }
 
     [TestMethod]

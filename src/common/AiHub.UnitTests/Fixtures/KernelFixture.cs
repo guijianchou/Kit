@@ -201,6 +201,51 @@ internal sealed class KernelFixture : IDisposable
                 File.Move(Path.Combine(directory, "children.tmp"), Path.Combine(directory, "children.json"));
             }
 
+            private static void TrackConcurrentProcess(string directory)
+            {
+                using (var activity = new Mutex(false, "Local\\KitAiHubFixture-" + Path.GetFileName(directory) + "-activity"))
+                {
+                    activity.WaitOne();
+                    try
+                    {
+                        File.WriteAllText(Path.Combine(directory, "active-" + Process.GetCurrentProcess().Id + ".txt"), Process.GetCurrentProcess().Id.ToString());
+                        int active = 0;
+                        foreach (string path in Directory.GetFiles(directory, "active-*.txt"))
+                        {
+                            try
+                            {
+                                using (var process = Process.GetProcessById(int.Parse(File.ReadAllText(path))))
+                                {
+                                    if (!process.HasExited) active++;
+                                }
+                            }
+                            catch (ArgumentException) { }
+                        }
+                        string maximumPath = Path.Combine(directory, "maximum-active.txt");
+                        int maximum = File.Exists(maximumPath) ? int.Parse(File.ReadAllText(maximumPath)) : 0;
+                        File.WriteAllText(maximumPath, Math.Max(active, maximum).ToString());
+                        if (active >= 2) File.WriteAllText(Path.Combine(directory, "two-active.ready"), string.Empty);
+                    }
+                    finally { activity.ReleaseMutex(); }
+                }
+            }
+
+            private static bool WaitForTestRelease(string directory, string input)
+            {
+                string marker = Regex.Match(input, @"\bkit-gate-[a-z0-9]+\b").Value;
+                if (marker.Length == 0) return false;
+                using (var release = new EventWaitHandle(false, EventResetMode.ManualReset,
+                    "Local\\KitAiHubFixture-" + Path.GetFileName(directory) + "-" + marker))
+                {
+                    string ready = Path.Combine(directory, marker + ".ready");
+                    string temporary = ready + "." + Process.GetCurrentProcess().Id + ".tmp";
+                    File.WriteAllText(temporary, Process.GetCurrentProcess().Id.ToString());
+                    try { File.Move(temporary, ready); }
+                    catch (IOException) { if (!File.Exists(ready)) throw; File.Delete(temporary); }
+                    return release.WaitOne(TimeSpan.FromSeconds(30));
+                }
+            }
+
             private static int Main(string[] args)
             {
                 Console.OutputEncoding = new UTF8Encoding(false);
@@ -244,6 +289,8 @@ internal sealed class KernelFixture : IDisposable
                 string input = codex ? Console.In.ReadToEnd() : File.ReadAllText(args.Last().Substring(1));
                 string capture = Json.Serialize(new
                 {
+                    ProcessId = Process.GetCurrentProcess().Id,
+                    StartedAtUtcTicks = DateTime.UtcNow.Ticks,
                     Args = args,
                     Config = config,
                     Model = model,
@@ -260,7 +307,39 @@ internal sealed class KernelFixture : IDisposable
                 try { File.WriteAllText(Path.Combine(captureRoot, "capture.json"), capture); }
                 catch (IOException) { }
 
-                if (model == "fixture-timeout") { Thread.Sleep(Timeout.Infinite); return 0; }
+                if (model == "fixture-handshake" || model == "fixture-tracked-success")
+                {
+                    string fixtureRoot = Directory.GetParent(captureRoot).FullName;
+                    TrackConcurrentProcess(fixtureRoot);
+                    if (model == "fixture-handshake" && !WaitForTestRelease(fixtureRoot, input)) return 9;
+                }
+
+                if (model == "fixture-timeout-child")
+                {
+                    SpawnChild(Directory.GetParent(captureRoot).FullName);
+                    Thread.Sleep(Timeout.Infinite);
+                    return 0;
+                }
+                if (model == "fixture-timeout" || (model == "fixture-mixed-timeout" && input.Contains("item-000016")))
+                {
+                    Thread.Sleep(Timeout.Infinite);
+                    return 0;
+                }
+                if (model == "fixture-nonzero-transport")
+                {
+                    Console.Error.WriteLine("HTTP 503 https://synthetic.invalid/private synthetic-fixture-secret synthetic input");
+                    return 7;
+                }
+                if (model == "fixture-recovered" || model == "fixture-error-then-wait" || model == "fixture-many-errors")
+                {
+                    int errors = model == "fixture-many-errors" ? 256 : 1;
+                    for (int index = 0; index < errors; index++)
+                    {
+                        Emit(new { type = "error", message = "stream disconnected before response.completed https://synthetic.invalid/private synthetic-fixture-secret synthetic input" });
+                    }
+                    Console.Error.WriteLine("Reconnecting: stream disconnected https://synthetic.invalid/private synthetic-fixture-secret synthetic input");
+                    if (model == "fixture-error-then-wait") { Thread.Sleep(Timeout.Infinite); return 0; }
+                }
                 string detail = model == "fixture-auth" ? "HTTP 401 synthetic-fixture-secret" :
                     model == "fixture-transport-timeout" ? "HTTP 504 synthetic-fixture-secret" :
                     model == "fixture-transport" ? "HTTP 503 synthetic-fixture-secret" : "synthetic configuration rejection synthetic-fixture-secret";
@@ -280,6 +359,12 @@ internal sealed class KernelFixture : IDisposable
                 {
                     string itemId = Regex.Match(input, "\\\"itemId\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"").Groups[1].Value;
                     payload = File.ReadAllText(responsePath).Replace("{{itemId}}", itemId);
+                }
+                if (model == "fixture-mixed-batches" && input.Contains("item-000016"))
+                {
+                    payload = payload.Contains("item-000016")
+                        ? payload.Replace("item-000016", "item-invalid-reference")
+                        : "{\"issues\":[{\"itemId\":\"item-invalid-reference\"}]}";
                 }
                 if (codex)
                 {

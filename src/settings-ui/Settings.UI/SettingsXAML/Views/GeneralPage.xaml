@@ -352,7 +352,7 @@
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox
                                         Width="200"
-                                        PlaceholderText="gpt-5.6-luna"
+                                        PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
@@ -361,9 +361,7 @@
                                         SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
                                         <ComboBoxItem Content="low" Tag="low" />
-                                        <ComboBoxItem Content="medium" Tag="medium" />
                                         <ComboBoxItem Content="high" Tag="high" />
-                                        <ComboBoxItem Content="xhigh" Tag="xhigh" />
                                         <ComboBoxItem Content="max" Tag="max" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
@@ -420,7 +418,7 @@
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox
                                         Width="200"
-                                        PlaceholderText="gpt-5.6-luna"
+                                        PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
@@ -429,9 +427,7 @@
                                         SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
                                         <ComboBoxItem Content="low" Tag="low" />
-                                        <ComboBoxItem Content="medium" Tag="medium" />
                                         <ComboBoxItem Content="high" Tag="high" />
-                                        <ComboBoxItem Content="xhigh" Tag="xhigh" />
                                         <ComboBoxItem Content="max" Tag="max" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>

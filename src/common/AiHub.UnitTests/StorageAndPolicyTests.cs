@@ -18,6 +18,90 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class StorageAndPolicyTests
 {
     [TestMethod]
+    [DataRow("low")]
+    [DataRow("high")]
+    [DataRow("max")]
+    public void EndpointModelsAndEffortsSurviveReopeningAndUnrelatedUpdates(string effort)
+    {
+        using var fixture = new FixtureDirectory();
+        var store = new AiHubSettingsStore(fixture.PathFor("data"));
+        var config = AiHubConfig.CreateDefault();
+        config.Targets[0].Model = "gpt-6.1-sol";
+        config.Targets[0].Effort = effort;
+        config.Targets[1].Model = "provider/custom-next-model";
+        config.Targets[1].Effort = effort;
+        store.Save(config);
+
+        var reopened = new AiHubSettingsStore(store.DataDirectory);
+        reopened.Update(current => current.RetentionDays = 14);
+        var saved = reopened.Load();
+        Assert.AreEqual("gpt-6.1-sol", saved.Targets[0].Model);
+        Assert.AreEqual("provider/custom-next-model", saved.Targets[1].Model);
+        Assert.AreEqual(effort, saved.Targets[0].Effort);
+        Assert.AreEqual(effort, saved.Targets[1].Effort);
+    }
+
+    [TestMethod]
+    [DataRow("none", "low")]
+    [DataRow("minimal", "low")]
+    [DataRow("medium", "high")]
+    [DataRow("xhigh", "max")]
+    [DataRow("ultra", "max")]
+    public void LegacyEffortsNormalizeOnLoadWithoutWritingUntilAnUpdate(string legacyEffort, string expectedEffort)
+    {
+        using var fixture = new FixtureDirectory();
+        var store = new AiHubSettingsStore(fixture.PathFor("data"));
+        var config = AiHubConfig.CreateDefault();
+        config.Targets[0].Model = "gpt-5.6-luna";
+        config.Targets[0].ApiKey = "fixture-main-key";
+        config.Targets[1].ApiKey = "fixture-fallback-key";
+        store.Save(config);
+        config.Targets[0].Effort = legacyEffort;
+        config.Targets[1].Effort = legacyEffort;
+        byte[] legacy = JsonSerializer.SerializeToUtf8Bytes(config, AiHubJsonContext.Default.AiHubConfig);
+        File.WriteAllBytes(store.SettingsFilePath, legacy);
+        string secretsPath = Path.Combine(store.DataDirectory, "secrets.dat");
+        byte[] secrets = File.ReadAllBytes(secretsPath);
+
+        var loaded = store.Load();
+        Assert.AreEqual(expectedEffort, loaded.Targets[0].Effort);
+        Assert.AreEqual(expectedEffort, loaded.Targets[1].Effort);
+        Assert.AreEqual("gpt-5.6-luna", loaded.Targets[0].Model);
+        Assert.AreEqual("fixture-main-key", loaded.Targets[0].ApiKey);
+        Assert.AreEqual("fixture-fallback-key", loaded.Targets[1].ApiKey);
+        Assert.ThrowsExactly<InvalidDataException>(() => store.Save(config));
+        CollectionAssert.AreEqual(legacy, File.ReadAllBytes(store.SettingsFilePath));
+        CollectionAssert.AreEqual(secrets, File.ReadAllBytes(secretsPath));
+
+        store.Update(current => current.RetentionDays = 14);
+        var persisted = JsonSerializer.Deserialize(File.ReadAllBytes(store.SettingsFilePath), AiHubJsonContext.Default.AiHubConfig)!;
+        Assert.AreEqual(expectedEffort, persisted.Targets[0].Effort);
+        Assert.AreEqual(expectedEffort, persisted.Targets[1].Effort);
+        var saved = store.Load();
+        Assert.AreEqual("gpt-5.6-luna", saved.Targets[0].Model);
+        Assert.AreEqual("fixture-main-key", saved.Targets[0].ApiKey);
+        Assert.AreEqual("fixture-fallback-key", saved.Targets[1].ApiKey);
+    }
+
+    [TestMethod]
+    public void UnknownPersistedEffortIsRejectedWithoutChangingSettingsOrCredentials()
+    {
+        using var fixture = new FixtureDirectory();
+        var store = new AiHubSettingsStore(fixture.PathFor("data"));
+        var config = AiHubConfig.CreateDefault();
+        store.Save(config);
+        config.Targets[0].Effort = "unknown";
+        byte[] invalid = JsonSerializer.SerializeToUtf8Bytes(config, AiHubJsonContext.Default.AiHubConfig);
+        File.WriteAllBytes(store.SettingsFilePath, invalid);
+        string secretsPath = Path.Combine(store.DataDirectory, "secrets.dat");
+        byte[] secrets = File.ReadAllBytes(secretsPath);
+
+        Assert.ThrowsExactly<InvalidDataException>(() => store.Load());
+        CollectionAssert.AreEqual(invalid, File.ReadAllBytes(store.SettingsFilePath));
+        CollectionAssert.AreEqual(secrets, File.ReadAllBytes(secretsPath));
+    }
+
+    [TestMethod]
     public void LegacyServiceMigratesWithoutTouchingPluginSettingsOrCredentials()
     {
         using var fixture = new FixtureDirectory();
@@ -609,6 +693,84 @@ public sealed class StorageAndPolicyTests
 
         Assert.AreEqual("Custom security audit policy content", auditPolicy);
         Assert.AreEqual("Custom system optimization policy content", optPolicy);
+    }
+
+    [TestMethod]
+    [DataRow(false, "\n")]
+    [DataRow(true, "\n")]
+    [DataRow(false, "\r\n")]
+    [DataRow(true, "\r\n")]
+    public async Task ShippedAuditPolicyMigratesReferencesAcrossBomAndLineEndings(bool bom, string newline)
+    {
+        using var fixture = new FixtureDirectory();
+        string path = fixture.PathFor("data", "chains", "security-audit", "AGENTS.md");
+        string legacy = LegacyAuditPolicy();
+        Assert.IsTrue(legacy.Contains("`event-3`", StringComparison.Ordinal));
+        Assert.IsTrue(legacy.Contains("\"eventRef\":\"event-4\"", StringComparison.Ordinal));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, legacy.ReplaceLineEndings(newline), new UTF8Encoding(bom));
+
+        var service = new SecurityPolicyService(fixture.PathFor("data"), fixture.PathFor("modules"));
+        string updated = await service.LoadTaskAgentsPolicyAsync("aihub", "security-audit");
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSecurityAuditInstructions, updated);
+        Assert.IsTrue(updated.Contains("`input.itemId`", StringComparison.Ordinal));
+        Assert.IsFalse(updated.Contains("event-4", StringComparison.Ordinal));
+        byte[] migrated = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(migrated, File.ReadAllBytes(path));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task AuditPolicyMigrationPreservesUserEdits(bool nearDefault)
+    {
+        using var fixture = new FixtureDirectory();
+        string path = fixture.PathFor("data", "chains", "security-audit", "AGENTS.md");
+        string custom = nearDefault
+            ? LegacyAuditPolicy().Replace("Local Security Audit policy", "Custom Security Audit policy", StringComparison.Ordinal)
+            : "Custom policy with event-3 and event-4 examples.";
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, custom, new UTF8Encoding(true));
+        byte[] original = File.ReadAllBytes(path);
+
+        var service = new SecurityPolicyService(fixture.PathFor("data"), fixture.PathFor("modules"));
+        Assert.AreEqual(custom, await service.LoadTaskAgentsPolicyAsync("aihub", "security-audit"));
+        CollectionAssert.AreEqual(original, File.ReadAllBytes(path));
+    }
+
+    private static string LegacyAuditPolicy()
+    {
+        // Reconstruct the prior shipped document without duplicating the entire audit policy.
+        string legacy = TaskPolicyDefaults.DefaultSecurityAuditInstructions.ReplaceLineEndings("\n")
+            .Replace(
+                """
+                - Cite the events you used. Copy `eventRef` exactly from the primary event's
+                  `input.itemId` in the current batch (for example `item-000003`). Every entry in
+                  `relatedEventRefs` must also be an `input.itemId` from this same batch.
+                  Never invent references, copy example IDs, use Windows event IDs as references,
+                  or refer to events from another batch.
+                """.ReplaceLineEndings("\n"),
+                """
+                - Cite the events you used. `eventRef` names the primary event, copied exactly (for
+                  example `event-3`); `relatedEventRefs` lists every supplied event that supports the
+                  same finding.
+                """.ReplaceLineEndings("\n"),
+                StringComparison.Ordinal)
+            .Replace(
+                "- eventRef (string): copy the primary event's `input.itemId` from the current batch\n  exactly.",
+                "- eventRef (string): reference of the primary event, copied exactly from the supplied\n  data.",
+                StringComparison.Ordinal)
+            .Replace(
+                "Example (illustrative only; copy actual IDs and evidence from the current batch):",
+                "Example:",
+                StringComparison.Ordinal);
+        for (int index = 4; index <= 9; index++)
+        {
+            legacy = legacy.Replace($"item-{index:D6}", $"event-{index}", StringComparison.Ordinal);
+        }
+
+        return legacy;
     }
 
     private static void WritePolicy(string path, string content)

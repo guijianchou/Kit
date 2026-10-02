@@ -15,4 +15,6 @@ The LightSwitch wrapper refuses to run with existing Kit processes. It saves and
 
 Startup measurement refuses existing Kit processes, launches `--silent`, observes the per-process startup log, and terminates only its own process handles to check worker exit. It preserves the current enabled-module configuration and does not measure Settings rendering or plugin readiness. `-ExecutablePath` can select a staged `Kit.exe`, and `-ReportPath` selects the JSON report.
 
+The current default is six module DLLs (`-ExpectedModuleCount` can select a different build). Reports include each DLL's load duration. Existing Localserver and AI Hub workers also block measurement. Run only in an idle test session: enabled workers use the current Kit configuration and may adopt existing managed services.
+
 Generated binaries and fixture backups live under the ignored `x64/Debug/tests/NativeModules` directory. These checks do not exercise real system theme scheduling or WinUI interactions.

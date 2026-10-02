@@ -3,6 +3,7 @@ namespace Kit.AiHub.Security;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -76,6 +77,26 @@ public sealed class SecurityPolicyService
         {
             string relativePath = Path.Combine("chains", taskId, "AGENTS.md");
             _files.WriteAtomic(relativePath, EncodePolicy(defaultContent), MaximumPolicyBytes);
+        }
+        else if (taskId is "security-audit" or "system-optimization")
+        {
+            byte[]? bytes = AiHubStorageFiles.ReadOptionalFile(path, MaximumPolicyBytes);
+            if (bytes == null)
+            {
+                return;
+            }
+
+            string content = PolicyEncoding.GetString(bytes).TrimStart('\uFEFF').ReplaceLineEndings("\n").Trim();
+            // Hash only the exact shipped audit policy, normalized for BOM and line endings.
+            // Never replace a user-edited policy merely because it contains old example IDs.
+            bool isLegacy = taskId == "security-audit"
+                ? Convert.ToHexString(SHA256.HashData(PolicyEncoding.GetBytes(content))) ==
+                    "25EBA8FF5CA6E01BC5F80D394729D84196469C9E2FE7B2BA41356F98C5C8C099"
+                : content == TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\n").Trim();
+            if (isLegacy)
+            {
+                _files.WriteAtomic(Path.Combine("chains", taskId, "AGENTS.md"), EncodePolicy(defaultContent), MaximumPolicyBytes);
+            }
         }
     }
 

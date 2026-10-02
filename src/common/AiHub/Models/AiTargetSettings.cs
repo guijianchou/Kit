@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 /// </summary>
 public sealed partial class AiTargetSettings : ObservableObject
 {
-    public const string DefaultLunaModel = "gpt-5.6-luna";
+    public const string DefaultLunaModel = "gpt-6-luna";
     public const string DefaultTerraModel = "gpt-5.6-terra";
     public const string DefaultSolModel = "gpt-5.6-sol";
     public const string DefaultAstraModel = "gpt-6-astra";
@@ -20,7 +20,7 @@ public sealed partial class AiTargetSettings : ObservableObject
     private string _apiKey = string.Empty;
     private string _mode = "responses"; // "chat" or "responses"
     private string _model = DefaultLunaModel;
-    private string _effort = "medium"; // low, medium, high, xhigh, max
+    private string _effort = "high"; // low, high, max
     private bool _isExpanded;
 
     public string Name

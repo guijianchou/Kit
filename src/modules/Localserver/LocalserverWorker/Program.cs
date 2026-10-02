@@ -55,20 +55,23 @@ public static class Program
         {
             using var supervisor = new ServiceSupervisor(dataDirectory);
             await supervisor.LoadAsync(shutdown.Token).ConfigureAwait(false);
-            await supervisor.RecoverRunningServicesAsync(shutdown.Token).ConfigureAwait(false);
+            try
+            {
+                await supervisor.RecoverRunningServicesAsync(shutdown.Token).ConfigureAwait(false);
 
-            Logger.LogInfo($"[Localserver.Worker] Supervising {supervisor.SupervisedCount} service(s).");
+                Logger.LogInfo($"[Localserver.Worker] Supervising {supervisor.SupervisedCount} service(s).");
 
-            _ = await WaitForShutdownAsync(parentPid, dataDirectory, supervisor, shutdown.Token).ConfigureAwait(false);
-
-            // Whatever ended the watch - the module was disabled, the parent (Kit runner)
-            // exited, or shutdown was requested - stop every supervised service before
-            // leaving, so no exit path can leave orphaned process trees behind. A final
-            // recovery pass adopts services the Settings page started after the last poll.
-            Logger.LogInfo("[Localserver.Worker] Shutting down; stopping supervised services.");
-            await supervisor.RecoverRunningServicesAsync(shutdown.Token).ConfigureAwait(false);
-            await supervisor.StopAllAsync(shutdown.Token).ConfigureAwait(false);
-            TryDeleteModuleDisabledFlag(dataDirectory);
+                _ = await WaitForShutdownAsync(parentPid, dataDirectory, supervisor, shutdown.Token).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Shutdown cancellation must not skip adoption or stopping. The final
+                // recovery also covers services started by Settings after the last poll.
+                Logger.LogInfo("[Localserver.Worker] Shutting down; stopping supervised services.");
+                await supervisor.RecoverRunningServicesAsync(CancellationToken.None).ConfigureAwait(false);
+                await supervisor.StopAllAsync(CancellationToken.None).ConfigureAwait(false);
+                TryDeleteModuleDisabledFlag(dataDirectory);
+            }
 
             Logger.LogInfo("[Localserver.Worker] Stopped watching; releasing supervision.");
             return 0;

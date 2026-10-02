@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using Kit.AiHub.Contract;
 using Kit.AIHubLib.Models;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
@@ -39,6 +40,17 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility IsTaskPoliciesTab(int index) => index == 2 ? Visibility.Visible : Visibility.Collapsed;
 
+    public Style AiReadinessStyle(AiReadinessLevel level) => (Style)Resources[level switch
+    {
+        AiReadinessLevel.Ready => "ReadinessReadyStyle",
+        AiReadinessLevel.Degraded => "ReadinessDegradedStyle",
+        AiReadinessLevel.Unverified => "ReadinessUnverifiedStyle",
+        AiReadinessLevel.NotConfigured => "ReadinessNotConfiguredStyle",
+        _ => "ReadinessDisabledStyle",
+    }];
+
+    public Style HealthScoreStyle(int score) => (Style)Resources[score >= 80 ? "HealthGoodStyle" : score >= 60 ? "HealthWarningStyle" : "HealthCriticalStyle"];
+
     public void RefreshEnabledState()
     {
         ViewModel.RefreshEnabledState();
@@ -47,6 +59,23 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ViewModel.RefreshEnabledState();
+    }
+
+    private void OnReadinessSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool narrow = e.NewSize.Width < 640;
+        Grid.SetRow(AiReadinessActions, narrow ? 1 : 0);
+        Grid.SetColumn(AiReadinessActions, narrow ? 1 : 2);
+        Grid.SetColumnSpan(AiReadinessActions, narrow ? 2 : 1);
+    }
+
+    private void OnAuditOverviewSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool narrow = e.NewSize.Width < 640;
+        Grid.SetColumnSpan(AuditScoreSummary, narrow ? 2 : 1);
+        Grid.SetRow(AuditFindingsSummary, narrow ? 1 : 0);
+        Grid.SetColumn(AuditFindingsSummary, narrow ? 0 : 1);
+        Grid.SetColumnSpan(AuditFindingsSummary, narrow ? 2 : 1);
     }
 
     private void OnAiServiceSettingsClick(object sender, RoutedEventArgs e)
@@ -61,6 +90,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             var dialog = new FindingDetailsDialog
             {
                 XamlRoot = this.XamlRoot,
+                RequestedTheme = ActualTheme,
             };
             dialog.SetFinding(issue);
             await dialog.ShowAsync();
@@ -74,6 +104,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             var dialog = new FindingDetailsDialog
             {
                 XamlRoot = this.XamlRoot,
+                RequestedTheme = ActualTheme,
             };
             dialog.SetFinding(issue);
             await dialog.ShowAsync();
@@ -83,6 +114,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             var dialog = new FindingDetailsDialog
             {
                 XamlRoot = this.XamlRoot,
+                RequestedTheme = ActualTheme,
             };
             dialog.SetFinding(ViewModel.AuditPriorityFinding);
             await dialog.ShowAsync();

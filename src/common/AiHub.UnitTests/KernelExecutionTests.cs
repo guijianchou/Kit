@@ -1,9 +1,11 @@
 namespace Kit.AiHub.UnitTests;
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -102,7 +104,7 @@ public sealed class KernelExecutionTests
             string config = capture.RootElement.GetProperty("Config").GetString()!;
             if (kernel == "codex")
             {
-                Assert.IsTrue(config.Contains("model_reasoning_effort = \"xhigh\"", StringComparison.Ordinal));
+                Assert.IsTrue(config.Contains("model_reasoning_effort = \"max\"", StringComparison.Ordinal));
                 Assert.IsTrue(config.Contains("shell_tool = false", StringComparison.Ordinal));
                 Assert.IsTrue(config.Contains("approval_policy = \"never\"", StringComparison.Ordinal));
                 using JsonDocument catalog = JsonDocument.Parse(capture.RootElement.GetProperty("Catalog").GetString()!);
@@ -119,6 +121,172 @@ public sealed class KernelExecutionTests
                 Assert.IsTrue(capture.RootElement.GetProperty("SessionHome").GetString()!.StartsWith(fixture.RequestRoot, StringComparison.OrdinalIgnoreCase));
             }
         }
+    }
+
+    [TestMethod]
+    [DataRow("codex", "gpt-6-luna", "max")]
+    [DataRow("codex", "gpt-6.1-sol", "max")]
+    [DataRow("codex", "future-provider-model", "low")]
+    [DataRow("codex", "future-provider-model", "high")]
+    [DataRow("codex", "future-provider-model", "max")]
+    [DataRow("pi", "gpt-6-luna", "max")]
+    [DataRow("pi", "gpt-6.1-sol", "high")]
+    [DataRow("pi", "future-provider-model", "low")]
+    public async Task ModelAndEffortReachTheNativeKernelUnchanged(string kernel, string model, string effort)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        AiTargetSettings target = KernelFixture.Target();
+        target.Model = model;
+        target.Effort = effort;
+        string? diagnostic = null;
+
+        KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, target, "synthetic input", 10,
+            reportDiagnostic: message =>
+            {
+                if (message.StartsWith("AI route configured:", StringComparison.Ordinal))
+                {
+                    diagnostic = message;
+                }
+            });
+
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        Assert.IsNotNull(diagnostic);
+        StringAssert.Contains(diagnostic, $"model=\"{model}\"");
+        StringAssert.Contains(diagnostic, $"configuredEffort={effort}, nativeEffortInput={effort}");
+        Assert.IsFalse(diagnostic.Contains(target.ApiKey, StringComparison.Ordinal));
+        Assert.IsFalse(diagnostic.Contains(target.BaseUrl, StringComparison.Ordinal));
+        Assert.IsFalse(diagnostic.Contains("synthetic input", StringComparison.Ordinal));
+        Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
+        using JsonDocument capture = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.RequestRoot, "capture.json")));
+        Assert.AreEqual(model, capture.RootElement.GetProperty("Model").GetString());
+        Assert.IsTrue(capture.RootElement.GetProperty("KeyMatches").GetBoolean());
+        Assert.IsTrue(capture.RootElement.GetProperty("InheritedKeysAbsent").GetBoolean());
+        Assert.IsFalse(capture.RootElement.GetProperty("SecretInArguments").GetBoolean());
+        Assert.IsFalse(capture.RootElement.GetProperty("SecretInConfig").GetBoolean());
+        string config = capture.RootElement.GetProperty("Config").GetString()!;
+        if (kernel == "codex")
+        {
+            Assert.IsTrue(config.Contains($"model_reasoning_effort = \"{effort}\"", StringComparison.Ordinal));
+            Assert.IsTrue(config.Contains("wire_api = \"responses\"", StringComparison.Ordinal));
+            using JsonDocument catalog = JsonDocument.Parse(capture.RootElement.GetProperty("Catalog").GetString()!);
+            Assert.IsFalse(catalog.RootElement.GetProperty("models")[0].GetProperty("use_responses_lite").GetBoolean());
+            Assert.AreEqual("capability", catalog.RootElement.GetProperty("models")[0].GetProperty("retained").GetString());
+        }
+        else
+        {
+            string[] arguments = capture.RootElement.GetProperty("Args").EnumerateArray().Select(value => value.GetString()!).ToArray();
+            Assert.AreEqual(effort, arguments[Array.IndexOf(arguments, "--thinking") + 1]);
+            using JsonDocument models = JsonDocument.Parse(config);
+            Assert.AreEqual("openai-responses", models.RootElement.GetProperty("providers").GetProperty("kit").GetProperty("api").GetString());
+        }
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task NativeRetryDiagnosticsRemainSafeAndDoNotTurnRecoveryIntoFailure(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        var diagnostics = new ConcurrentQueue<string>();
+        KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("recovered"),
+            "synthetic input", 10, diagnostics.Enqueue);
+
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("event=error, source=stdout", StringComparison.Ordinal) && value.Contains("reason=StreamDisconnected", StringComparison.Ordinal)));
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("event=retry, source=stderr", StringComparison.Ordinal)));
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("event=completed", StringComparison.Ordinal)));
+        Assert.IsTrue(diagnostics.Any(value => value.StartsWith("AI route finished:", StringComparison.Ordinal) && value.Contains("code=None", StringComparison.Ordinal) && value.Contains("exitCode=0", StringComparison.Ordinal)));
+        string messages = string.Join('\n', diagnostics);
+        Assert.IsFalse(messages.Contains("synthetic-fixture-secret", StringComparison.Ordinal));
+        Assert.IsFalse(messages.Contains("synthetic.invalid", StringComparison.Ordinal));
+        Assert.IsFalse(messages.Contains("synthetic input", StringComparison.Ordinal));
+        Assert.IsFalse(messages.Contains("{\"issues\":[]}", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task NonzeroNativeExitRetainsSafeHttpStatusAndExitCode(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        var diagnostics = new ConcurrentQueue<string>();
+        KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("nonzero-transport"),
+            "synthetic input", 10, diagnostics.Enqueue);
+
+        Assert.AreEqual(AiErrorCode.EndpointFailed, result.ErrorCode);
+        Assert.IsTrue(result.CanFailover);
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("httpStatus=503, reason=ServerError", StringComparison.Ordinal)));
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("exitCode=7", StringComparison.Ordinal)));
+        Assert.IsFalse(string.Join('\n', diagnostics).Contains("synthetic-fixture-secret", StringComparison.Ordinal));
+        Assert.IsFalse(string.Join('\n', diagnostics).Contains("synthetic.invalid", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task CancellationKeepsDiagnosticsReportedBeforeTheProcessExited(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var cancellation = new CancellationTokenSource();
+        var diagnostics = new ConcurrentQueue<string>();
+        var observedError = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<KernelExecutionResult> running = fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("error-then-wait"),
+            "synthetic input", 10, message =>
+            {
+                diagnostics.Enqueue(message);
+                if (message.Contains("event=error, source=stdout", StringComparison.Ordinal))
+                {
+                    observedError.TrySetResult(true);
+                }
+            }, cancellation.Token);
+        await observedError.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.IsFalse(running.IsCompleted, "The native error must be reported while its process is still waiting.");
+        cancellation.Cancel();
+        KernelExecutionResult result = await running;
+
+        Assert.AreEqual(AiErrorCode.Cancelled, result.ErrorCode);
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("reason=StreamDisconnected", StringComparison.Ordinal)));
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("cancellationSource=upstream", StringComparison.Ordinal)));
+        Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task FailingDiagnosticSubscriberDoesNotChangeNativeResult(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("recovered"),
+            "synthetic input", 10, _ => throw new InvalidOperationException("synthetic callback failure"));
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+    }
+
+    [TestMethod]
+    public async Task DiagnosticLinesAreBoundedWithoutChangingCapturedOutput()
+    {
+        string output = new string('x', 20_000) + "\nfirst\r\nlast";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(output));
+        using var reader = new StreamReader(stream);
+        var lines = new ConcurrentQueue<string>();
+        string captured = await KernelProcessRunner.ReadBoundedAsync(reader, 32_768, CancellationToken.None, line =>
+        {
+            lines.Enqueue(line);
+            throw new InvalidOperationException("synthetic callback failure");
+        });
+        Assert.AreEqual(output, captured);
+        CollectionAssert.AreEqual(new[] { "first", "last" }, lines.ToArray());
+    }
+
+    [TestMethod]
+    public async Task RepeatedNativeErrorsHaveABoundedDiagnosticBudget()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        var diagnostics = new ConcurrentQueue<string>();
+        KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync("codex", KernelFixture.Target("many-errors"),
+            "synthetic input", 10, diagnostics.Enqueue);
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        Assert.IsTrue(diagnostics.Count <= 130);
+        Assert.IsTrue(diagnostics.Any(value => value.StartsWith("AI route finished:", StringComparison.Ordinal) && value.Contains("suppressedEvents=130", StringComparison.Ordinal)));
     }
 
     [TestMethod]
@@ -143,7 +311,8 @@ public sealed class KernelExecutionTests
         {
             foreach (string scenario in new[] { "transport", "transport-timeout", "auth", "error", "incomplete", "tool" })
             {
-                KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target(scenario), "synthetic input", 10);
+                var diagnostics = new ConcurrentQueue<string>();
+                KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target(scenario), "synthetic input", 10, diagnostics.Enqueue);
                 Assert.IsFalse(result.IsSuccess);
                 Assert.AreEqual(scenario is "transport" or "transport-timeout", result.CanFailover);
                 Assert.IsFalse(result.ErrorMessage.Contains("synthetic-fixture-secret", StringComparison.Ordinal));
@@ -160,6 +329,12 @@ public sealed class KernelExecutionTests
                 if (scenario == "tool")
                 {
                     Assert.AreEqual(AiErrorCode.PolicyViolation, result.ErrorCode);
+                    Assert.IsTrue(diagnostics.Any(value => value.Contains("event=tool", StringComparison.Ordinal)));
+                }
+
+                if (scenario == "transport")
+                {
+                    Assert.IsTrue(diagnostics.Any(value => value.Contains("event=turn.failed", StringComparison.Ordinal) && value.Contains("httpStatus=503", StringComparison.Ordinal)));
                 }
             }
         }
@@ -200,6 +375,34 @@ public sealed class KernelExecutionTests
         Assert.AreEqual(AiErrorCode.Timeout, timeout.ErrorCode);
         Assert.IsFalse(timeout.CanFailover);
         Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task CleanupFailureIsNotOverwrittenByRouteTimeout(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        FileStream? lockedFile = null;
+        try
+        {
+            KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("timeout"), "input", 1, message =>
+            {
+                if (message.StartsWith("AI route configured:", StringComparison.Ordinal))
+                {
+                    string request = Directory.GetDirectories(fixture.RequestRoot).Single();
+                    lockedFile = new FileStream(Path.Combine(request, "cleanup-lock"), FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+                }
+            }, CancellationToken.None);
+
+            Assert.IsNotNull(lockedFile, "The fixture must prevent request-directory deletion.");
+            Assert.AreEqual(AiErrorCode.ExecutionFailed, result.ErrorCode);
+            Assert.IsFalse(result.CanFailover);
+        }
+        finally
+        {
+            lockedFile?.Dispose();
+        }
     }
 
     [TestMethod]

@@ -3,12 +3,15 @@ param(
     [string]$Configuration = 'Debug',
     [ValidateSet('en-US', 'zh-CN')]
     [string]$Language = 'en-US',
-    [switch]$LayoutOnly
+    [switch]$LayoutOnly,
+    [string]$RuntimeRoot = '',
+    [string]$WorkingDirectory = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
-$runtimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps"
+$runtimeRoot = if ($RuntimeRoot) { (Resolve-Path -LiteralPath $RuntimeRoot).ProviderPath } else { Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
+$launchDirectory = if ($WorkingDirectory) { (Resolve-Path -LiteralPath $WorkingDirectory).ProviderPath } else { $runtimeRoot }
 $reportRoot = Join-Path $repoRoot "TestResults\Dashboard\$Language"
 $testName = 'DashboardPageSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $runtimeRoot ($testName + $_) }
@@ -63,7 +66,7 @@ try {
     # Release Settings requires the Runner launch contract; use private, unused pipes.
     $pipeSuffix = [guid]::NewGuid().ToString('N')
     $launchArguments = @("KitPageSmokeRunner-$pipeSuffix", "KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
-    $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $runtimeRoot -WindowStyle Hidden -PassThru
+    $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $launchDirectory -WindowStyle Hidden -PassThru
     $testDeadline = [Diagnostics.Stopwatch]::StartNew()
     while (-not $testProcess.WaitForExit(1000)) {
         if ($testDeadline.Elapsed.TotalSeconds -ge 120) { throw 'Page smoke test timed out.' }

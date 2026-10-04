@@ -100,7 +100,7 @@
                 <x:Double x:Key="TitleBarContentMinWidth">516</x:Double>
             </controls:TitleBar.Resources>
             <controls:TitleBar.Icon>
-                <BitmapIcon ShowAsMonochrome="False" UriSource="/Assets/Settings/icon.ico" />
+                <BitmapIcon ShowAsMonochrome="False" UriSource="ms-appx:///Assets/Settings/icon.ico" />
             </controls:TitleBar.Icon>
             <controls:TitleBar.Content>
                 <AutoSuggestBox
@@ -162,38 +162,56 @@
                 <NavigationViewItem
                     x:Name="AIHubNavigationItem"
                     x:Uid="Shell_AIHub"
-                    AutomationProperties.AutomationId="AIHubNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/AiHub.png}" />
+                    AutomationProperties.AutomationId="AIHubNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/AiHub.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="AwakeNavigationItem"
                     x:Uid="Shell_Awake"
-                    AutomationProperties.AutomationId="AwakeNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Awake.png}" />
+                    AutomationProperties.AutomationId="AwakeNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/Awake.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="LightSwitchNavigationItem"
                     x:Uid="Shell_LightSwitch"
-                    AutomationProperties.AutomationId="LightSwitchNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/LightSwitch.png}" />
+                    AutomationProperties.AutomationId="LightSwitchNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/LightSwitch.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="LocalserverNavigationItem"
                     x:Uid="Shell_Localserver"
-                    AutomationProperties.AutomationId="LocalserverNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Localserver.png}" />
+                    AutomationProperties.AutomationId="LocalserverNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/Localserver.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="NetMapNavigationItem"
                     x:Uid="Shell_NetMap"
-                    AutomationProperties.AutomationId="NetMapNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/NetMap.png}" />
+                    AutomationProperties.AutomationId="NetMapNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/NetMap.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="UDPtestNavigationItem"
                     x:Uid="Shell_UDPtest"
-                    AutomationProperties.AutomationId="UDPtestNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/UDPtest.png}" />
+                    AutomationProperties.AutomationId="UDPtestNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/UDPtest.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>

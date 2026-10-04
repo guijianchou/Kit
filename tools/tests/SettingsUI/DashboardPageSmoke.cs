@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.Settings.UI;
+using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Library.Helpers;
 using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Kit.Settings.UI.Views;
@@ -17,6 +19,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using NetMapLib;
 using LocalServerHub.Windows;
+using ManagedCommon;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 
@@ -34,6 +37,7 @@ internal static class DashboardPageSmoke
         WindowsAppRuntime_EnsureIsLoaded();
         WinRT.ComWrappersSupport.InitializeComWrappers();
         File.WriteAllText(Path.Combine(Output, "page-smoke.log"), "Real WinUI; live read-only initial snapshot; synthetic display captures.\n");
+        File.AppendAllText(Path.Combine(Output, "page-smoke.log"), $"Runtime: {AppContext.BaseDirectory}; working directory: {Environment.CurrentDirectory}\n");
         Application.Start(_ =>
         {
             SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread()));
@@ -226,6 +230,7 @@ internal static class DashboardPageSmoke
                 scroll.ChangeView(null, 0, null, true);
             }
         }
+        await VerifyHomeIcons(page, window);
         Require(vm.ProxyEgress.Route == NetMapViewModel.Text("Route_SystemBypass"), "Proxy bypass is explicitly labeled: " + vm.ProxyEgress.Route + " / " + NetMapViewModel.Text("Route_SystemBypass"));
         var failure = new IdentityResult(null, ProbeError.Timeout, now, "Explicit");
         Set(vm, "ProxyEgress", new NetMapCard("Proxy", new(failure), true));
@@ -475,7 +480,125 @@ internal static class DashboardPageSmoke
         if (!condition) throw new InvalidOperationException(message);
         File.AppendAllText(Path.Combine(Output, "page-smoke.log"), message + "\n");
     }
-    private static async Task Capture(FrameworkElement element, string name)
+    private static async Task VerifyHomeIcons(DashboardPage page, Window window)
+    {
+        var root = window.Content as ShellPage ?? Descendants(window.Content).OfType<ShellPage>().Single();
+        var quick = (QuickAccessList)page.FindName("QuickAccessItemsControl");
+        var emptyState = ((Grid)quick.Parent).Children.OfType<TextBlock>().Single();
+        var originalItems = quick.ItemsSource;
+        var originalVisibility = quick.Visibility;
+        var originalEmptyVisibility = emptyState.Visibility;
+        var originalTheme = root.RequestedTheme;
+        var originalSize = window.AppWindow.Size;
+        var modules = new[] { ModuleType.AIHub, ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.NetMap, ModuleType.UDPtest };
+        try
+        {
+            // These display-only items never invoke module launchers or change settings.
+            quick.ItemsSource = modules.Select(module => new QuickAccessItem
+            {
+                Title = module.ToString(),
+                Icon = ModuleHelper.GetModuleTypeFluentIconName(module),
+            }).ToArray();
+            quick.Visibility = Visibility.Visible;
+            emptyState.Visibility = Visibility.Collapsed;
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1100));
+            ((ScrollViewer)page.FindName("MainScrollViewer")).ChangeView(null, 0, null, true);
+            int transition = 0;
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark, ElementTheme.Light })
+            {
+                root.RequestedTheme = theme;
+                await Task.Delay(400);
+                root.UpdateLayout();
+                var frame = await Capture(root, $"home-icons-{++transition}-{theme}-1280.png");
+                foreach (var module in modules)
+                {
+                    var item = (NavigationViewItem)root.FindName(module + "NavigationItem");
+                    await VerifyIconPixels(item.Icon, root, frame, $"Sidebar {module} ({theme}, transition {transition})", module == ModuleType.NetMap);
+                }
+
+                var quickImages = Descendants(quick).OfType<Image>().Where(image => image.Source is BitmapImage).ToArray();
+                Require(quickImages.Length == modules.Length, "Synthetic Quick access displays all six module icons.");
+                foreach (var image in quickImages)
+                {
+                    string source = ((BitmapImage)image.Source).UriSource.ToString();
+                    bool netMap = source.EndsWith("/NetMap.png", StringComparison.OrdinalIgnoreCase);
+                    await VerifyIconPixels(image, root, frame, $"Quick access {Path.GetFileName(source)} ({theme}, transition {transition})", netMap);
+                }
+            }
+        }
+        finally
+        {
+            quick.ItemsSource = originalItems;
+            quick.Visibility = originalVisibility;
+            emptyState.Visibility = originalEmptyVisibility;
+            root.RequestedTheme = originalTheme;
+            window.AppWindow.Resize(originalSize);
+        }
+    }
+
+    private static async Task VerifyIconPixels(FrameworkElement icon, FrameworkElement root,
+        (byte[] Bytes, int Width, int Height) frame, string description, bool verifyContrast)
+    {
+        Require(icon != null && icon.ActualWidth > 0 && icon.ActualHeight > 0, description + " has visible bounds.");
+        var rendered = new RenderTargetBitmap();
+        await rendered.RenderAsync(icon);
+        var buffer = await rendered.GetPixelsAsync();
+        var pixels = new byte[buffer.Length];
+        using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(buffer)) reader.ReadBytes(pixels);
+        int painted = 0;
+        for (int offset = 3; offset < pixels.Length; offset += 4)
+        {
+            if (pixels[offset] >= 32) painted++;
+        }
+
+        Require(painted >= 8, $"{description} paints nontransparent pixels ({painted}).");
+        if (!verifyContrast) return;
+
+        var transform = icon.TransformToVisual(root);
+        var bounds = transform.TransformBounds(new Windows.Foundation.Rect(0, 0, icon.ActualWidth, icon.ActualHeight));
+        double scaleX = frame.Width / root.ActualWidth;
+        double scaleY = frame.Height / root.ActualHeight;
+        File.AppendAllText(Path.Combine(Output, "page-smoke.log"),
+            $"{description}: element={icon.ActualWidth:F2}x{icon.ActualHeight:F2}, RTB={rendered.PixelWidth}x{rendered.PixelHeight}, " +
+            $"bounds=({bounds.X:F2},{bounds.Y:F2},{bounds.Width:F2},{bounds.Height:F2}), frameScale={scaleX:F3}x{scaleY:F3}\n");
+        double background = LuminanceAt(bounds.X - 2, bounds.Y + bounds.Height / 2);
+        var contrasts = new System.Collections.Generic.List<double>();
+        for (int y = 0; y < rendered.PixelHeight; y++)
+        {
+            for (int x = 0; x < rendered.PixelWidth; x++)
+            {
+                if (pixels[(y * rendered.PixelWidth + x) * 4 + 3] < 245) continue;
+                // NavigationView scales ImageIcon inside its template. Convert every local
+                // pixel through the full visual transform, not just the element's origin.
+                var position = transform.TransformPoint(new Windows.Foundation.Point(
+                    (x + 0.5) * icon.ActualWidth / rendered.PixelWidth,
+                    (y + 0.5) * icon.ActualHeight / rendered.PixelHeight));
+                double foreground = LuminanceAt(position.X, position.Y);
+                contrasts.Add((Math.Max(foreground, background) + 0.05) / (Math.Min(foreground, background) + 0.05));
+            }
+        }
+
+        Require(contrasts.Count >= 8, description + " has opaque foreground pixels for contrast measurement.");
+        contrasts.Sort();
+        double contrast = contrasts[contrasts.Count / 2];
+        Require(contrast >= 3, $"{description} foreground/background contrast is {contrast:F2}:1 (minimum 3:1).");
+
+        double LuminanceAt(double x, double y)
+        {
+            int px = Math.Clamp((int)(x * scaleX), 0, frame.Width - 1);
+            int py = Math.Clamp((int)(y * scaleY), 0, frame.Height - 1);
+            int offset = (py * frame.Width + px) * 4;
+            return 0.2126 * Linear(frame.Bytes[offset + 2]) + 0.7152 * Linear(frame.Bytes[offset + 1]) + 0.0722 * Linear(frame.Bytes[offset]);
+        }
+
+        static double Linear(byte channel)
+        {
+            double value = channel / 255d;
+            return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+        }
+    }
+
+    private static async Task<(byte[] Bytes, int Width, int Height)> Capture(FrameworkElement element, string name)
     {
         // RenderTargetBitmap does not capture the window's Mica backdrop.
         var surface = (Control)element;
@@ -500,5 +623,6 @@ internal static class DashboardPageSmoke
         using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(pixels)) reader.ReadBytes(bytes);
         encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied, (uint)bitmap.PixelWidth, (uint)bitmap.PixelHeight, 96, 96, bytes);
         await encoder.FlushAsync();
+        return (bytes, bitmap.PixelWidth, bitmap.PixelHeight);
     }
 }

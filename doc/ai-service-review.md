@@ -1,5 +1,23 @@
 # AI service / AI Hub review（2026-09-30）
 
+## 执行底座补充 review（2026-10-02）
+
+本轮按“现有任务更稳定更快：并发、流式进度、失败恢复”收敛，修改共享引擎及回归测试。
+
+- **并发排队**：此前单个请求通过 `Task.WhenAll` 一次排入全部批次，后来的短任务需要等待整个大任务队列。现在每个请求只保持配置并发数以内的批次参与现有 FIFO 调度，结果仍按输入顺序合并。并发上限属于同一个 `TaskAiEngine` 实例，不是跨进程的系统总上限；改善的是竞争时的排队响应，没有宣称模型推理本身加速。
+- **进度隔离**：增加 `Queue` 阶段，隔离直接从 `IProgress.Report` 抛出的订阅方异常，避免展示进度失败改变任务结果。异步 UI 回调自身的异常仍需调用方处理。
+- **流式阶段**：读取 Codex/Pi 原生 JSON 事件，实时报告开始、推理、生成阶段和 Pi 重试信息；重复阶段去重，沿用诊断数量上限。不把模型正文或推理内容放入诊断。本轮只接通服务层阶段信号，没有新增 Settings UI 阶段文案。
+- **原生恢复**：Pi 的失败 assistant 消息可能出现在内核自动重试之前。可恢复传输失败现在允许后续完整成功消息覆盖；认证、配置和策略违规仍拒绝，只有重试成功标记而没有有效最终输出也不会算成功。继续复用内核重试，未新增外层重试循环。
+- **退出确认**：终止 Windows Job 后，仅等待根进程退出不足以确认子进程已结束。现在在原有清理期限内检查 Job 活跃进程归零，再允许返回及备用路由接续；清理失败不进入备用路由。
+
+没有改动 PowerToys 主框架、插件 ABI、IPC 或设置 JSON 格式，也没有新增依赖。适配集中于 Kit 的任务执行和原生事件解析；后续内核升级仍需运行协议回归，不能保证任意上游协议变化自动兼容。
+
+参考：[Codex 非交互执行](https://developers.openai.com/codex/noninteractive)、[Pi 会话和重试](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/core/agent-session.ts)、[Pi JSON 事件转换](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/modes/json-event.ts)。
+
+本轮使用合成 CLI 子进程验证调度、事件、取消、超时及进程树清理，没有调用真实模型端点，没有替换运行中的 Kit 或更新发布压缩包。两项超时测试的路由预算由 1 秒调整为 3 秒，给 Codex 预检及夹具创建子进程留出时间；生产超时配置未改。
+
+验证：通过仓库构建脚本完成 AI Hub 测试项目 Debug x64 构建，退出码 0；完整回归 312 项，311 通过，1 项因环境无法创建目录符号链接跳过，0 失败。报告：`TestResults/AiServiceReview/ai-service-full-final.trx`。本轮未进行完整 Kit 发布构建或真实端点性能测试。
+
 范围：AI service 是 Kit 内部共享底座，目前消费者是 AI Hub；不新增外部服务、接口层或宿主。
 
 ## 本次修复

@@ -286,7 +286,62 @@ public sealed class KernelExecutionTests
             "synthetic input", 10, diagnostics.Enqueue);
         Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
         Assert.IsTrue(diagnostics.Count <= 130);
-        Assert.IsTrue(diagnostics.Any(value => value.StartsWith("AI route finished:", StringComparison.Ordinal) && value.Contains("suppressedEvents=130", StringComparison.Ordinal)));
+        Assert.IsTrue(diagnostics.Any(value => value.StartsWith("AI route finished:", StringComparison.Ordinal) && value.Contains("suppressedEvents=131", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    [DataRow("recovered", AiErrorCode.None)]
+    [DataRow("exhausted", AiErrorCode.EndpointFailed)]
+    [DataRow("incomplete", AiErrorCode.EndpointFailed)]
+    [DataRow("auth-recovered", AiErrorCode.InvalidConfiguration)]
+    [DataRow("tool-recovered", AiErrorCode.PolicyViolation)]
+    public async Task PiNativeAssistantRetryOnlyRecoversTransportFailures(string scenario, AiErrorCode expected)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        var diagnostics = new ConcurrentQueue<string>();
+        var result = await fixture.Dispatcher.ExecuteAsync("pi", KernelFixture.Target("pi-native-" + scenario), "synthetic input", 10, diagnostics.Enqueue);
+        Assert.AreEqual(expected, result.ErrorCode);
+        Assert.AreEqual(expected == AiErrorCode.None, result.IsSuccess);
+        Assert.IsTrue(diagnostics.Any(value => value.Contains("event=retry, source=stdout", StringComparison.Ordinal)));
+        Assert.IsFalse(string.Join('\n', diagnostics).Contains("synthetic-fixture-secret", StringComparison.Ordinal));
+        Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task NativeActivityIsReportedBeforeCompletionWithoutStreamingPayloads(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var release = new EventWaitHandle(false, EventResetMode.ManualReset,
+            $"Local\\KitAiHubFixture-{Path.GetFileName(fixture.Root)}-kit-gate-activity");
+        using var cancellation = new CancellationTokenSource();
+        var responding = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var diagnostics = new ConcurrentQueue<string>();
+        Task<KernelExecutionResult> running = fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("activity-wait"),
+            "kit-gate-activity", 15, message =>
+            {
+                diagnostics.Enqueue(message);
+                if (message.Contains("phase=responding", StringComparison.Ordinal))
+                {
+                    responding.TrySetResult();
+                }
+            }, cancellation.Token);
+        try
+        {
+            await responding.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.IsFalse(running.IsCompleted);
+            Assert.AreEqual(3, diagnostics.Count(message => message.Contains("event=activity,", StringComparison.Ordinal)));
+            Assert.IsFalse(string.Join('\n', diagnostics).Contains("synthetic-private-content", StringComparison.Ordinal));
+            release.Set();
+            Assert.IsTrue((await running).IsSuccess);
+        }
+        finally
+        {
+            cancellation.Cancel();
+            release.Set();
+            await running;
+        }
     }
 
     [TestMethod]

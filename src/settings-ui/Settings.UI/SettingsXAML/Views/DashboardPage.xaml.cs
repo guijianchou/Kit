@@ -5,6 +5,7 @@
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -15,6 +16,10 @@ namespace Kit.Settings.UI.Views
     /// </summary>
     public sealed partial class DashboardPage : NavigablePage, IRefreshablePage
     {
+        private readonly MainWindow settingsWindow;
+        private bool windowSubscribed;
+        private bool isCurrentPage;
+
         public DashboardViewModel ViewModel { get; set; }
 
         /// <summary>
@@ -28,9 +33,72 @@ namespace Kit.Settings.UI.Views
             ViewModel = new DashboardViewModel(
                SettingsRepository<GeneralSettings>.GetInstance(settingsUtils), ShellPage.SendDefaultIPCMessage);
             DataContext = ViewModel;
+            settingsWindow = App.GetSettingsWindow();
 
-            Loaded += (s, e) => ViewModel.OnPageLoaded();
-            Unloaded += (s, e) => ViewModel?.Dispose();
+            Loaded += Page_Loaded;
+            Unloaded += Page_Unloaded;
+        }
+
+        private void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (!windowSubscribed)
+            {
+                settingsWindow.AppWindow.Changed += Window_Changed;
+                settingsWindow.Closed += Window_Closed;
+                windowSubscribed = true;
+            }
+
+            ViewModel.OnPageLoaded();
+            UpdateVisibility();
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            UnsubscribeWindow();
+            ViewModel.Dispose();
+        }
+
+        protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            isCurrentPage = true;
+            UpdateVisibility();
+        }
+
+        protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            isCurrentPage = false;
+            ViewModel.SetOverviewActive(false);
+            base.OnNavigatedFrom(e);
+        }
+
+        private void Window_Changed(AppWindow sender, AppWindowChangedEventArgs args) => UpdateVisibility();
+
+        private void UpdateVisibility()
+        {
+            bool visible = isCurrentPage && IsLoaded && settingsWindow.AppWindow.IsVisible &&
+                !(settingsWindow.AppWindow.Presenter is OverlappedPresenter presenter && presenter.State == OverlappedPresenterState.Minimized);
+            ViewModel.SetOverviewActive(visible);
+        }
+
+        private void Window_Closed(object sender, WindowEventArgs args)
+        {
+            ViewModel.SetOverviewActive(false);
+            if (!args.Handled)
+            {
+                UnsubscribeWindow();
+                ViewModel.Dispose();
+            }
+        }
+
+        private void UnsubscribeWindow()
+        {
+            if (windowSubscribed)
+            {
+                settingsWindow.AppWindow.Changed -= Window_Changed;
+                settingsWindow.Closed -= Window_Closed;
+                windowSubscribed = false;
+            }
         }
 
         public void RefreshEnabledState()

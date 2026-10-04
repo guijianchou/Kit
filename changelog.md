@@ -4,6 +4,19 @@
 
 ## English
 
+### 2.3.7
+
+- **Home system overview**: added device/Windows details, CPU load, memory, uptime, storage usage and available GPU driver/VRAM/usage/temperature readings. System, storage and GPU labels, values and progress bars now align consistently, with less empty space and layouts that adapt to narrow windows.
+- **Network egress**: Home now compares Direct and Proxy public IPs, locations and connection routes from the saved NetMap settings. Failed lookups show their error and N/A instead of stale success. Removed manual Refresh buttons from both overview cards, along with collection timestamps, success-status chatter and refresh-frequency footers.
+- **Automatic refresh**: uptime and dynamic CPU/memory/GPU telemetry update every second, storage every 5 minutes, and network egress every 10 seconds while Home is visible. Leaving Home or hiding/minimizing Settings pauses polling and cancels page requests; returning resumes it. Pending probes are shared instead of overlapped, and late results cannot overwrite a replaced page request.
+- **Mica and Settings**: coordinated shell/content/card colors with native WinUI translucent surfaces and high-contrast fallbacks. Kept Quick access and Utilities controls, removed the promotional page image, placed appearance settings first, and added six compact colored icon buttons for direct section navigation with responsive wrapping and native keyboard/hover/pressed feedback.
+- **AI scheduling and progress**: bounded the queued batches contributed by each request so later short requests can run before an earlier large audit drains. Input order and the per-engine FIFO concurrency limit are preserved. Added queue/native activity phases, deduplicated repeated activity diagnostics and isolated synchronous progress-callback exceptions without logging model text.
+- **AI retry, timeout and cancellation**: Pi accepts a valid final response after a recoverable native transport retry while retaining authentication/configuration/policy failures. Windows Job cleanup now waits for every child process to exit before permitting fallback; cleanup failures still block fallback. Production route/deadline budgets and cancellation boundaries are unchanged.
+- **Sparse-package build**: `BuildSparsePackage.ps1` explicitly loads the Security module bundled with its current PowerShell host. This prevents Windows PowerShell launched by MSBuild from a PowerShell 7 session from loading the incompatible PowerShell 7 module and losing the `Cert:` provider; the global environment and PowerShell version are unchanged.
+- **Release metadata and localization**: added VERSIONINFO to the native AI Hub module. `Stage-Release.ps1` no longer requires the `zh-CN` satellite directory excluded by the build configuration; translations remain in PRI resources and Chinese runtime checks passed.
+- **Release validation**: the full x64 Release rebuild completed with 0 errors and 63 warnings. Final AI regression: 312 cases, 311 passed, one skipped because directory-link creation was unavailable. One short-timeout Pi case failed initially, then the unchanged binaries passed both targeted cases and the full rerun. English/Chinese Dashboard and Settings checks passed light/dark and narrow layouts, refresh and cancellation; ModulePage smoke passed. No real AI endpoints were called. UI captures used a neutral synthetic background rather than the desktop Mica backdrop.
+- **Staging and startup**: staged 1,409 files totaling 817,610,935 bytes and verified dependency hashes. All 48 Kit-owned EXE/DLL files and KitSparse report version 2.3.7.0. The staged `Kit.exe` started and loaded six modules successfully; its 116 ms initialization was a single observation, not a benchmark.
+
 ### 2.3.6
 
 - **NetMap map space and Pacific routes**: compacted MTR columns and row spacing, giving the map more width. The viewport now centers on the occupied longitude arc and repeats the basemap across the date line, keeping China-US-Singapore routes connected inside the map. Debug builds and bilingual WinUI checks pass, including Pacific/date-line geometry, light/dark layouts and stable scrolling during sampling.
@@ -594,6 +607,19 @@
 ## 中文
 
 ## 更新日志
+
+### 2.3.7
+
+- **首页系统概览**：新增设备与 Windows 信息、CPU 负载、内存、运行时间、磁盘空间及可用的 GPU 驱动/显存/占用/温度读数。系统、存储与 GPU 的标签、数值和进度条统一对齐，减少留白，并适配窄窗口。
+- **网络出口**：首页使用已保存的 NetMap 设置，对比直连与代理的公网 IP、地区和连接方式。查询失败时显示错误和 N/A，避免保留过期的成功状态。移除两块概览的手动刷新按钮、采集时间、成功状态说明及刷新频率底栏。
+- **自动刷新**：首页可见时，运行时间及 CPU/内存/GPU 动态数据每秒更新，存储每 5 分钟更新，网络出口每 10 秒更新。离开首页或隐藏/最小化 Settings 时暂停轮询并取消页面请求，返回后恢复；在途探测复用而不重叠，旧请求的迟到结果不能覆盖新请求。
+- **Mica 与设置**：主框架、内容层和卡片统一采用原生 WinUI 半透明色彩及高对比度回退。保留快捷访问和实用工具控件，移除宣传页头图片，将外观设置前置，并加入六个紧凑彩色图标按钮，按宽度换行、直接定位分组，保留原生键盘、悬停和按下反馈。
+- **AI 调度与进度**：限制单请求同时排队的批次数，让后来的短请求不必等待大审计全部批次完成；结果顺序和按引擎实例生效的 FIFO 并发上限保持不变。补充排队及原生活动阶段，去除重复阶段诊断，隔离同步进度回调异常，不记录模型正文。
+- **AI 重试、超时与取消**：Pi 原生传输重试后可接纳有效的最终成功响应，认证、配置和策略错误仍判失败。Windows Job 清理会确认所有子进程退出，再允许备用链路接续；清理失败仍禁止回退。生产链路/整轮超时预算和取消边界未改变。
+- **稀疏包构建**：`BuildSparsePackage.ps1` 显式加载当前 PowerShell 宿主自带的 Security 模块，避免从 PowerShell 7 会话经 MSBuild 启动的 Windows PowerShell 误加载 PowerShell 7 模块、导致 `Cert:` 提供程序缺失；不修改全局环境，也不更换 PowerShell 版本。
+- **发布版本与本地化**：补齐 AI Hub 原生模块 VERSIONINFO。`Stage-Release.ps1` 不再要求已按构建配置剔除的 `zh-CN` 卫星目录；翻译保留在 PRI 资源中，中文实际运行检查通过。
+- **Release 验证**：完整 x64 Release 重新构建完成，0 个错误、63 个警告。最终 AI 回归共 312 项，311 项通过，1 项因目录链接创建不可用跳过；首轮一个 Pi 短时限用例失败，原二进制定向复测 2/2 及完整复测均通过。中英文 Dashboard、Settings 的明暗/窄窗口布局、刷新和取消检查通过，ModulePage 冒烟检查通过；未调用真实 AI 端点。界面截图使用合成中性色背景，不代表桌面 Mica 背景效果。
+- **整理与启动**：发布目录含 1,409 个文件、817,610,935 字节，依赖哈希校验通过；48 个 Kit 自有 EXE/DLL 及 KitSparse 版本均为 2.3.7.0。整理后的 `Kit.exe` 实际启动并成功加载六个模块，初始化 116 ms 仅为单次观察，不是性能基准。
 
 ### 2.3.6
 

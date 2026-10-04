@@ -2,51 +2,73 @@
 
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="KitContentLayerBrush" Color="{StaticResource LayerFillColorDefault}" Opacity="0.35" />
+            <SolidColorBrush x:Key="KitSurfaceBrush" Color="{StaticResource CardBackgroundFillColorDefault}" />
             <SolidColorBrush x:Key="InfoBarInformationalSeverityBackgroundBrush" Color="#FF34424d" />
             <SolidColorBrush x:Key="InfoBarInformationalSeverityIconBackground" Color="#FF5fb2f2" />
             <SolidColorBrush x:Key="SolidBackgroundBrush" Color="Black" />
 
-            <!-- Card surfaces on Mica Alt: Dark theme subtle acrylic matching Locals -->
-            <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#0AFFFFFF" />
-            <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#06FFFFFF" />
-            <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#1AFFFFFF" />
-            <SolidColorBrush x:Key="CardStrokeColorDefaultSolidBrush" Color="#303030" />
+            <!-- Telemetry & Metric chips on Mica Alt -->
+            <SolidColorBrush x:Key="MetricCardBackgroundBrush" Color="#0EFFFFFF" />
+            <SolidColorBrush x:Key="MetricCardStrokeBrush" Color="#1CFFFFFF" />
+            <SolidColorBrush x:Key="MetricCardHoverBackgroundBrush" Color="#18FFFFFF" />
+            <SolidColorBrush x:Key="PillBadgeBackgroundBrush" Color="#16FFFFFF" />
+            <SolidColorBrush x:Key="PillBadgeBorderBrush" Color="#28FFFFFF" />
 
-            <SolidColorBrush x:Key="SettingsCardBackground" Color="#0AFFFFFF" />
-            <SolidColorBrush x:Key="SettingsCardBackgroundPointerOver" Color="#14FFFFFF" />
-            <SolidColorBrush x:Key="SettingsCardBackgroundPressed" Color="#08FFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderHeaderBackground" Color="#0AFFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderHeaderBackgroundPointerOver" Color="#14FFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderHeaderBackgroundPressed" Color="#08FFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderItemsBackground" Color="#06FFFFFF" />
-            <SolidColorBrush x:Key="SettingsCardWrapBackground" Color="#06FFFFFF" />
+            <!-- Status badges -->
+            <SolidColorBrush x:Key="BadgeSuccessBackgroundBrush" Color="#25107C41" />
+            <SolidColorBrush x:Key="BadgeSuccessForegroundBrush" Color="#5CE094" />
+            <SolidColorBrush x:Key="BadgeWarningBackgroundBrush" Color="#25D83B01" />
+            <SolidColorBrush x:Key="BadgeWarningForegroundBrush" Color="#FFA066" />
+            <SolidColorBrush x:Key="BadgeInfoBackgroundBrush" Color="#250078D4" />
+            <SolidColorBrush x:Key="BadgeInfoForegroundBrush" Color="#60CDFF" />
+
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="KitContentLayerBrush" Color="{StaticResource LayerFillColorDefault}" Opacity="0.35" />
+            <SolidColorBrush x:Key="KitSurfaceBrush" Color="{StaticResource CardBackgroundFillColorDefault}" />
             <SolidColorBrush x:Key="InfoBarInformationalSeverityBackgroundBrush" Color="#FFd3e7f7" />
             <SolidColorBrush x:Key="InfoBarInformationalSeverityIconBackground" Color="#FF0063b1" />
             <SolidColorBrush x:Key="SolidBackgroundBrush" Color="White" />
 
-            <!-- Card surfaces on Mica Alt: Light theme soft translucent white matching Locals (#80FFFFFF) to eliminate stark white glare -->
-            <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#80FFFFFF" />
-            <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#50FFFFFF" />
-            <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#18000000" />
-            <SolidColorBrush x:Key="CardStrokeColorDefaultSolidBrush" Color="#E5E5E5" />
+            <!-- Telemetry & Metric chips on Mica Alt -->
+            <SolidColorBrush x:Key="MetricCardBackgroundBrush" Color="#70FFFFFF" />
+            <SolidColorBrush x:Key="MetricCardStrokeBrush" Color="#18000000" />
+            <SolidColorBrush x:Key="MetricCardHoverBackgroundBrush" Color="#85FFFFFF" />
+            <SolidColorBrush x:Key="PillBadgeBackgroundBrush" Color="#55FFFFFF" />
+            <SolidColorBrush x:Key="PillBadgeBorderBrush" Color="#1E000000" />
 
-            <SolidColorBrush x:Key="SettingsCardBackground" Color="#80FFFFFF" />
-            <SolidColorBrush x:Key="SettingsCardBackgroundPointerOver" Color="#90FFFFFF" />
-            <SolidColorBrush x:Key="SettingsCardBackgroundPressed" Color="#70FFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderHeaderBackground" Color="#80FFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderHeaderBackgroundPointerOver" Color="#90FFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderHeaderBackgroundPressed" Color="#70FFFFFF" />
-            <SolidColorBrush x:Key="SettingsExpanderItemsBackground" Color="#50FFFFFF" />
-            <SolidColorBrush x:Key="SettingsCardWrapBackground" Color="#50FFFFFF" />
+            <!-- Status badges -->
+            <SolidColorBrush x:Key="BadgeSuccessBackgroundBrush" Color="#22107C41" />
+            <SolidColorBrush x:Key="BadgeSuccessForegroundBrush" Color="#0E703C" />
+            <SolidColorBrush x:Key="BadgeWarningBackgroundBrush" Color="#22D83B01" />
+            <SolidColorBrush x:Key="BadgeWarningForegroundBrush" Color="#BC2F00" />
+            <SolidColorBrush x:Key="BadgeInfoBackgroundBrush" Color="#220078D4" />
+            <SolidColorBrush x:Key="BadgeInfoForegroundBrush" Color="#005FB8" />
+
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="HighContrast">
+            <SolidColorBrush x:Key="KitContentLayerBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="KitSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="InfoBarInformationalSeverityBackgroundBrush" Color="{StaticResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="SolidBackgroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="InfoBarInformationalSeverityIconBackground" Color="#FF5fb2f2" />
+
+            <SolidColorBrush x:Key="MetricCardBackgroundBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="MetricCardStrokeBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="MetricCardHoverBackgroundBrush" Color="{StaticResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="PillBadgeBackgroundBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="PillBadgeBorderBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+
+            <SolidColorBrush x:Key="BadgeSuccessBackgroundBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="BadgeSuccessForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="BadgeWarningBackgroundBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="BadgeWarningForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="BadgeInfoBackgroundBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="BadgeInfoForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
+
 </ResourceDictionary>

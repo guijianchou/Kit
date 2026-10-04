@@ -3,7 +3,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Kit.Settings.UI.Controls">
 
-    <Style TargetType="controls:SettingsGroup">
+    <Style BasedOn="{StaticResource DefaultSettingsGroupStyle}" TargetType="controls:SettingsGroup" />
+
+    <Style x:Key="DefaultSettingsGroupStyle" TargetType="controls:SettingsGroup">
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
@@ -15,6 +17,7 @@
             </Setter.Value>
         </Setter>
         <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Padding" Value="1,32,0,0" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
@@ -29,7 +32,7 @@
                         <TextBlock
                             x:Name="HeaderPresenter"
                             Grid.Row="0"
-                            Margin="1,32,0,0"
+                            Margin="{TemplateBinding Padding}"
                             AutomationProperties.HeadingLevel="Level2"
                             Style="{ThemeResource BodyStrongTextBlockStyle}"
                             Text="{TemplateBinding Header}" />

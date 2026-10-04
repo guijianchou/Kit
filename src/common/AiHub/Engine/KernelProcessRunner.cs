@@ -158,6 +158,25 @@ internal static class KernelProcessRunner
                 {
                     using var cleanupDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                     await process.WaitForExitAsync(cleanupDeadline.Token).ConfigureAwait(false);
+                    // TerminateJobObject initiates termination; waiting for the root alone
+                    // does not establish that descendants have released files and pipes.
+                    while (true)
+                    {
+                        if (!QueryInformationJobObject(job, 1, out JobBasicAccounting accounting,
+                            (uint)Marshal.SizeOf<JobBasicAccounting>(), IntPtr.Zero))
+                        {
+                            failure = KernelProcessFailure.CleanupFailed;
+                            break;
+                        }
+
+                        if (accounting.ActiveProcesses == 0)
+                        {
+                            break;
+                        }
+
+                        await Task.Delay(10, cleanupDeadline.Token).ConfigureAwait(false);
+                    }
+
                     exitCode = process.ExitCode;
                 }
                 catch (Exception)
@@ -290,6 +309,19 @@ internal static class KernelProcessRunner
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct JobBasicAccounting
+    {
+        internal long TotalUserTime;
+        internal long TotalKernelTime;
+        internal long ThisPeriodTotalUserTime;
+        internal long ThisPeriodTotalKernelTime;
+        internal uint TotalPageFaultCount;
+        internal uint TotalProcesses;
+        internal uint ActiveProcesses;
+        internal uint TotalTerminatedProcesses;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct JobBasicLimits
     {
         internal long PerProcessUserTimeLimit;
@@ -331,6 +363,10 @@ internal static class KernelProcessRunner
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetInformationJobObject(SafeFileHandle job, int informationClass, ref JobExtendedLimits information, uint informationLength);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool QueryInformationJobObject(SafeFileHandle job, int informationClass, out JobBasicAccounting information, uint informationLength, IntPtr returnLength);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

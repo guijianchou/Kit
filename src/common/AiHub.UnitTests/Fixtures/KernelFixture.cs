@@ -350,6 +350,35 @@ internal sealed class KernelFixture : IDisposable
                     return 0;
                 }
 
+                if (model.StartsWith("fixture-pi-native-"))
+                {
+                    if (model == "fixture-pi-native-tool-recovered") Emit(new { type = "tool_execution_start" });
+                    var failedMessage = new { role = "assistant", stopReason = "error", errorMessage =
+                        model == "fixture-pi-native-auth-recovered" ? "HTTP 401 synthetic-fixture-secret" : "HTTP 503 synthetic-fixture-secret" };
+                    Emit(new { type = "message_end", message = failedMessage });
+                    Emit(new { type = "agent_end", messages = new[] { failedMessage } });
+                    Emit(new { type = "auto_retry_start", attempt = 1, maxAttempts = 3, delayMs = 2000, errorMessage = failedMessage.errorMessage });
+                    if (model == "fixture-pi-native-exhausted")
+                    {
+                        Emit(new { type = "auto_retry_end", success = false, attempt = 3, finalError = failedMessage.errorMessage });
+                        return 0;
+                    }
+                    Emit(new { type = "auto_retry_end", success = true, attempt = 1 });
+                    if (model == "fixture-pi-native-incomplete") return 0;
+                }
+                if (model == "fixture-activity-wait")
+                {
+                    Emit(new { type = codex ? "turn.started" : "agent_start" });
+                    for (int index = 0; index < 300; index++)
+                    {
+                        if (codex) Emit(new { type = "item.updated", item = new { type = "reasoning", text = "synthetic-private-content" } });
+                        else Emit(new { type = "message_update", assistantMessageEvent = new { type = "thinking_delta", delta = "synthetic-private-content" } });
+                    }
+                    if (codex) Emit(new { type = "item.started", item = new { type = "agent_message", text = "synthetic-private-content" } });
+                    else Emit(new { type = "message_update", assistantMessageEvent = new { type = "text_delta", delta = "synthetic-private-content" } });
+                    if (!WaitForTestRelease(Directory.GetParent(captureRoot).FullName, input)) return 9;
+                }
+
                 string payload = model == "fixture-nonempty" ? "{\"issues\":[{}]}" :
                     model == "fixture-missing" ? "{}" : model == "fixture-wrongtype" ? "{\"issues\":null}" :
                     model == "fixture-duplicate" ? "{\"issues\":[],\"issues\":[]}" :

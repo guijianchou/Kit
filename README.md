@@ -17,7 +17,7 @@ It is a **stability-first PowerToys-derived workspace, not a full product rebran
 | The explicit module-loading model | Automatic update, download, and telemetry surfaces are removed |
 | PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub`, `NetMap` | Backup/restore defaults use Kit branding (`%LOCALAPPDATA%\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
 
-Current Kit version: `2.3.6`.
+Current Kit version: `2.3.7`.
 
 ---
 
@@ -90,6 +90,13 @@ All runtime data lives under `%LOCALAPPDATA%\Kit`:
 | `crash.log` | First-chance / unhandled exception log |
 | `<ModuleKey>\` | Per-module data: settings, state, logs, catalogs (e.g. `Localserver\services.json`, `Localserver\State\`, `AiHub\chains\`) |
 | `<ModuleKey>\Logs\<version>\` | Versioned module/worker logs |
+
+### 2.6 Home and Settings
+
+- **System overview** shows device and Windows information, CPU load, memory, uptime, storage usage and available GPU readings. Labels, values and usage bars share consistent columns across the system, storage and GPU sections. Unsupported readings remain unavailable.
+- **Network egress** compares Direct and Proxy public IPs, locations and the selected connection route using the saved NetMap settings. Errors remain visible; successful lookups omit collection-status text. Both Home overview cards update automatically without manual Refresh buttons, collection timestamps or cadence footers.
+- **Refresh lifetime**: while Home is visible, uptime and CPU/memory/GPU readings update every second, storage every 5 minutes, and network egress every 10 seconds. Leaving Home or hiding/minimizing Settings pauses the timers and cancels pending page requests; returning resumes automatic updates. Slow probes do not create overlapping reads.
+- **Mica and navigation**: the shell and overview surfaces use coordinated native WinUI colors with translucent layers and opaque high-contrast fallbacks. Quick access and Utilities retain their existing controls. Settings puts appearance first and offers six compact, colored icon buttons that wrap to the available width and jump directly to each section, with native hover, pressed and keyboard-focus feedback.
 
 ---
 
@@ -207,7 +214,8 @@ flowchart LR
 - **Native execution**: Codex/Pi own transport and connection retries. Model names are freely configurable and reasoning effort offers `low/high/max`; Kit passes the selected Main effort through unchanged.
 - **Audit batching**: AI analysis selects up to 400 events, prioritizing severity and recency. Each batch contains at most 100 records and 96,000 bytes of encoded record data; larger records create smaller batches. For example, 103 small records use two native calls instead of seven at the previous `max` batch size. Waiting batches start in FIFO order under the configured concurrency limit.
 - **Long-running routes**: each Main or Fallback attempt has a 5-minute budget within the 30-minute overall audit deadline, which also includes queue time. On a recoverable endpoint failure or route timeout, Kit finishes Main cleanup before trying Fallback once. Configure and enable Fallback in **General → AI Service**, including its endpoint, model, credentials and effort. An empty or disabled Fallback is not used, and Kit does not automatically lower Main effort. User cancellation, the overall deadline, validation failures and cleanup failures do not trigger fallback. Validated results from successful batches remain available with an incomplete warning if other batches fail.
-- **Audit diagnostics**: Settings logs under `%LOCALAPPDATA%\Kit\Settings\Logs\<version>\` record the analysis ID, batch count, input byte count, selected route/model/effort, elapsed time and cancellation source. The UI shows completed batches and retry/fallback status while AI analysis is running. Endpoint addresses, credentials, prompts and raw responses are excluded from these diagnostics. The AI Hub concurrent workflows in 2.3.6 await runtime verification. Start an audit, run an Optimization scan while the AI step is pending, then cancel Optimization and confirm the audit keeps advancing. Repeat in the other direction and switch tabs to check retained status messages. Synthetic Codex/Pi tests cover two independent AI requests, cancellation, per-request fallback and the shared concurrency limit; these new tests have not been run. The concurrency limit applies to each engine instance, and queued batches use FIFO order.
+- **Audit diagnostics**: Settings logs under `%LOCALAPPDATA%\Kit\Settings\Logs\<version>\` record the analysis ID, batch count, input byte count, selected route/model/effort, elapsed time and cancellation source. The UI shows completed batches and retry/fallback status while AI analysis is running. Endpoint addresses, credentials, prompts and raw responses are excluded from these diagnostics. Native activity diagnostics report start, reasoning, response and Pi retry phases without recording model text; repeated activity phases are deduplicated. Synthetic Codex/Pi coverage includes independent requests, cancellation, timeout cleanup and per-request fallback. Current Release verification is tracked in section 4.
+- **Execution isolation**: each request queues only up to its configured concurrency, so a large audit cannot place all its batches ahead of later short requests; the shared FIFO limit remains per engine instance and results retain input order. Synchronous progress-callback exceptions cannot change task results. Pi can accept a complete valid response after a recoverable native transport retry, while authentication, configuration and policy failures remain failures. On cancellation or timeout, cleanup confirms that the entire Windows Job has exited. A timed-out route can use Fallback only after successful cleanup; user cancellation and cleanup failure do not trigger fallback. Production timeout budgets are unchanged.
 
 ### 3.6 NetMap — direct and proxy egress observation
 
@@ -224,7 +232,13 @@ NetMap follows the egress you are currently using as you switch nodes in an exte
 
 ## 4. Build and Release
 
-The current source version is **2.3.6**. Release validation and packaging are still required before publishing. Build from the repository root, and stage only after the build succeeds:
+The current version is **2.3.7**. The full x64 Release rebuild completed with **0 errors and 63 warnings**.
+
+- **Regression**: the final AI suite ran 312 cases: 311 passed and one case was skipped because directory-link creation was unavailable. One short-timeout Pi case failed initially; the unchanged binaries then passed both targeted cases and the complete rerun. No real AI endpoints were called.
+- **UI and startup**: English/Chinese Dashboard and Settings smoke checks passed light/dark and narrow layouts, automatic refresh and cancellation; ModulePage smoke also passed. Layout captures used a neutral synthetic background, not the desktop Mica backdrop. The staged `Kit.exe` started and loaded all six modules. Its recorded 116 ms initialization was one observation, not a benchmark.
+- **Staging**: 1,409 files totaling 817,610,935 bytes; dependency hashes passed verification. All 48 Kit-owned EXE/DLL files report `2.3.7.0`, matching KitSparse. Added native AI Hub module VERSIONINFO and removed the staging requirement for a `zh-CN` satellite directory excluded by the build configuration; Chinese translations remain in PRI resources and passed the runtime checks.
+
+To rebuild, run from the repository root and stage only after the build succeeds:
 
 ```powershell
 .\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
@@ -232,7 +246,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed; do not stage incomplete output.'
 .\tools\build\Stage-Release.ps1
 ```
 
-Run `x64/Release/Kit.exe` after building, or `bin/release/2.3.6/Kit.exe` after staging. The staging script creates a directory, not a ZIP. Keep the complete runtime directory together. The Runner's solution dependencies include both the AI Hub module DLL and its worker.
+Run `x64/Release/Kit.exe` after building, or `bin/release/2.3.7/Kit.exe` after staging. The staging script creates a directory, not a ZIP. Keep the complete runtime directory together. The Runner's solution dependencies include both the AI Hub module DLL and its worker.
 
 For a fresh-profile test, stop any supervised Localserver services, exit Kit from its tray menu, and rename `%LOCALAPPDATA%\Kit` to a unique backup name such as `Kit.backup-20260930`. Closing Settings with X leaves the Runner active when the tray icon is enabled, matching PowerToys. Start the newly built Release and enter settings again for the first test; restoring old JSON immediately defeats the comparison. The backup retains credentials, policies, downloaded kernels and history. Leave official PowerToys data and external Localserver program directories alone.
 

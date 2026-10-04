@@ -140,7 +140,9 @@ foreach ($relative in @(
         throw "Required runtime asset is missing: $relative"
     }
 }
-foreach ($relative in @('svgs', 'WinUI3Apps\SettingsXAML', 'WinUI3Apps\QuickAccessXaml', 'WinUI3Apps\Assets', 'WinUI3Apps\zh-CN')) {
+# WinUI translations are compiled into the required PRI files; managed satellite
+# assemblies are intentionally limited to en-US by Directory.Build.props.
+foreach ($relative in @('svgs', 'WinUI3Apps\SettingsXAML', 'WinUI3Apps\QuickAccessXaml', 'WinUI3Apps\Assets')) {
     if (@(Get-ChildItem -LiteralPath (Join-Path $destinationRoot $relative) -Recurse -File).Count -eq 0) {
         throw "Required runtime resource directory is empty: $relative"
     }

@@ -22,6 +22,9 @@ Param(
 
 $ErrorActionPreference = 'Stop'
 
+# MSBuild may inherit a PS7 module path while this script runs in Windows PowerShell.
+Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1') -ErrorAction Stop
+
 $isCIBuild = $false
 if ($CIBuild.IsPresent) {
     $isCIBuild = $true

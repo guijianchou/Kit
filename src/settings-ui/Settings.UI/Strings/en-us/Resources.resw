@@ -100,7 +100,7 @@
     <value>Current shortcut remappings</value>
   </data>
   <data name="General.ModuleTitle" xml:space="preserve">
-    <value>General</value>
+    <value>Settings</value>
   </data>
   <data name="GeneralPage_CheckForUpdates.Content" xml:space="preserve">
     <value>Check for updates</value>
@@ -247,7 +247,7 @@
     <value>Encoding</value>
   </data>
   <data name="General.ModuleDescription" xml:space="preserve">
-    <value>Kit is a local PowerToys-derived workspace for comparing behavior, testing focused changes, and running selected utilities side-by-side with an official PowerToys installation.</value>
+    <value>Personalize Kit, manage startup and appearance, and configure shared services.</value>
     <comment>Kit is the local project name. PowerToys is the upstream project name.</comment>
   </data>
   <data name="General_About.Header" xml:space="preserve">
@@ -1165,7 +1165,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Home</value>
   </data>
   <data name="DashboardIntro.Text" xml:space="preserve">
-    <value>Kit is a local workspace for running selected Windows utilities, comparing behavior with upstream PowerToys, and validating focused changes without sharing the official PowerToys runtime state.</value>
+    <value>Monitor your system, check network connectivity, and manage your utilities.</value>
   </data>
   <data name="Shell_Dashboard.Content" xml:space="preserve">
     <value>Home</value>
@@ -3373,5 +3373,128 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="NetMap_HealthLegend.Text" xml:space="preserve">
     <value>Every 10 s · Green ≤75 ms · Yellow >75 ms / needs attention · Red error · Three consecutive failures: N/A</value>
+  </data>
+  <data name="Dashboard_NetworkCard.Text" xml:space="preserve">
+    <value>Network egress</value>
+  </data>
+  <data name="Dashboard_SystemCard.Text" xml:space="preserve">
+    <value>System overview</value>
+  </data>
+  <data name="Dashboard_RefreshOverview.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Dashboard_RefreshOverview.AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh network information</value>
+  </data>
+  <data name="Dashboard_NetworkNote.Text" xml:space="preserve">
+    <value>Compare the public IP and location of each connection.</value>
+  </data>
+  <data name="Dashboard_StorageHeading.Text" xml:space="preserve">
+    <value>Storage · used / total</value>
+  </data>
+  <data name="Dashboard_OverviewLoading" xml:space="preserve">
+    <value>Reading network information…</value>
+  </data>
+  <data name="Dashboard_OverviewUpdated" xml:space="preserve">
+    <value>Updated {0} · Auto-refresh every 10 seconds</value>
+  </data>
+  <data name="Dashboard_OverviewUnavailable" xml:space="preserve">
+    <value>Some information is unavailable. Refresh to try again.</value>
+  </data>
+  <data name="Dashboard_Device" xml:space="preserve">
+    <value>Device</value>
+  </data>
+  <data name="Dashboard_Windows" xml:space="preserve">
+    <value>Windows</value>
+  </data>
+  <data name="Dashboard_Processor" xml:space="preserve">
+    <value>Processor</value>
+  </data>
+  <data name="Dashboard_LogicalProcessors" xml:space="preserve">
+    <value>Logical CPUs</value>
+  </data>
+  <data name="Dashboard_CpuLoad" xml:space="preserve">
+    <value>CPU load</value>
+  </data>
+  <data name="Dashboard_Memory" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="Dashboard_Graphics" xml:space="preserve">
+    <value>Graphics</value>
+  </data>
+  <data name="Dashboard_Driver" xml:space="preserve">
+    <value>Driver</value>
+  </data>
+  <data name="Dashboard_VideoMemory" xml:space="preserve">
+    <value>VRAM</value>
+  </data>
+  <data name="Dashboard_GpuLoad" xml:space="preserve">
+    <value>Usage</value>
+  </data>
+  <data name="Dashboard_Temperature" xml:space="preserve">
+    <value>Temperature</value>
+  </data>
+  <data name="Dashboard_Storage" xml:space="preserve">
+    <value>Storage · used / total</value>
+  </data>
+  <data name="Dashboard_Uptime" xml:space="preserve">
+    <value>Uptime</value>
+  </data>
+  <data name="Dashboard_RefreshSystem.Content" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Dashboard_RefreshSystem.AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh system information</value>
+  </data>
+  <data name="Dashboard_SystemNote.Text" xml:space="preserve">
+    <value>Recent snapshots are reused when you return Home. Refresh reads device information and usage again.</value>
+  </data>
+  <data name="Dashboard_SystemLoading" xml:space="preserve">
+    <value>Refreshing system information…</value>
+  </data>
+  <data name="Dashboard_SystemSampleTimes" xml:space="preserve">
+    <value>Usage {0} · Storage {1} · Graphics {2}</value>
+  </data>
+  <data name="Dashboard_SystemPartial" xml:space="preserve">
+    <value>Some readings failed. Unchanged items show the previous snapshot; refresh to retry.</value>
+  </data>
+  <data name="Dashboard_GpuUnavailable" xml:space="preserve">
+    <value>Live readings are unavailable or cannot be matched to this GPU. Refresh to retry.</value>
+  </data>
+  <data name="Dashboard_GpuUnsupported" xml:space="preserve">
+    <value>Live usage and temperature monitoring is not available for this GPU.</value>
+  </data>
+  <data name="Dashboard_GpuNotDetected" xml:space="preserve">
+    <value>No supported graphics adapter detected</value>
+  </data>
+  <data name="Dashboard_DirectRouteTitle.Text" xml:space="preserve">
+    <value>Direct</value>
+  </data>
+  <data name="Dashboard_LocationLabel.Text" xml:space="preserve">
+    <value>Location: </value>
+  </data>
+  <data name="Dashboard_ProxyRouteTitle.Text" xml:space="preserve">
+    <value>Proxy route</value>
+  </data>
+  <data name="Dashboard_PublicIpLabel.Text" xml:space="preserve">
+    <value>Public IP</value>
+  </data>
+  <data name="General_SectionAppearance.Text" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="General_SectionStartup.Text" xml:space="preserve">
+    <value>Startup</value>
+  </data>
+  <data name="General_SectionAi.Text" xml:space="preserve">
+    <value>AI service</value>
+  </data>
+  <data name="General_SectionDiagnostics.Text" xml:space="preserve">
+    <value>Diagnostics</value>
+  </data>
+  <data name="General_SectionBackup.Text" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="General_SectionUpdates.Text" xml:space="preserve">
+    <value>Updates</value>
   </data>
 </root>

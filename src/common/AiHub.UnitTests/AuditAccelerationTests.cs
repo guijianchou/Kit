@@ -31,23 +31,33 @@ public sealed class AuditAccelerationTests
         using TaskAiEngine engine = await CreateEngineAsync(fixture, "timeout-child", fallback: true, kernel: kernel);
         bool mainExitedBeforeFallback = false;
         int capturesAtFailover = 0;
+        Exception? observationFailure = null;
         var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(1), Schema(), new AiTaskOptions
         {
-            RouteTimeoutSeconds = 1,
+            // Include Codex catalog/startup time before the fixture publishes its child IDs.
+            RouteTimeoutSeconds = 3,
             TimeoutSeconds = 15,
             Progress = new ImmediateProgress(value =>
             {
                 if (value.Stage == "Failover")
                 {
-                    using JsonDocument children = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.Root, "children.json")));
-                    mainExitedBeforeFallback = children.RootElement.EnumerateArray().All(item => HasExited(item.GetInt32()));
-                    capturesAtFailover = Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length;
+                    try
+                    {
+                        using JsonDocument children = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.Root, "children.json")));
+                        mainExitedBeforeFallback = children.RootElement.EnumerateArray().All(item => HasExited(item.GetInt32()));
+                        capturesAtFailover = Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length;
+                    }
+                    catch (Exception exception)
+                    {
+                        observationFailure = exception;
+                    }
                 }
             }),
         });
 
         Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
         Assert.AreEqual("Fallback", result.UsedRoute);
+        Assert.IsNull(observationFailure, observationFailure?.ToString());
         Assert.IsTrue(mainExitedBeforeFallback, "Fallback must not start while the timed-out main process tree survives.");
         Assert.AreEqual(1, capturesAtFailover);
         Assert.AreEqual(2, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
@@ -99,7 +109,7 @@ public sealed class AuditAccelerationTests
         var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(37), Schema(), new AiTaskOptions
         {
             AllowPartialResults = true,
-            RouteTimeoutSeconds = 1,
+            RouteTimeoutSeconds = 3,
             TimeoutSeconds = 15,
         });
 
@@ -109,6 +119,34 @@ public sealed class AuditAccelerationTests
         Assert.AreEqual(3, result.TotalBatches);
         CollectionAssert.AreEqual(new[] { "item-000001", "item-000031" }, result.Payload!.Findings.Select(item => item.ItemId).ToArray());
         Assert.AreEqual(3, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task ProgressSubscriberFailuresDoNotChangeTaskResults(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        foreach (string stage in new[] { "Prepare", "Queue", "Execute", "Route", "Failover", "Validate" })
+        {
+            using TaskAiEngine engine = await CreateEngineAsync(fixture,
+                stage == "Failover" ? "transport" : "success", fallback: true, kernel: kernel);
+            int callbacks = 0;
+            var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(1), Schema(), new AiTaskOptions
+            {
+                Progress = new ImmediateProgress(value =>
+                {
+                    if (value.Stage == stage)
+                    {
+                        Interlocked.Increment(ref callbacks);
+                        throw new InvalidOperationException("Synthetic progress subscriber failure.");
+                    }
+                }),
+            });
+            Assert.IsTrue(callbacks > 0, stage);
+            Assert.IsTrue(result.IsSuccess, $"{stage}: {result.ErrorCode}");
+            Assert.AreEqual(stage == "Failover" ? "Fallback" : "Main", result.UsedRoute);
+        }
     }
 
     private static bool HasExited(int processId)

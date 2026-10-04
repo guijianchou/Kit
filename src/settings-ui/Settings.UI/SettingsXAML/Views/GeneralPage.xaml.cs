@@ -11,6 +11,7 @@ using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 
 namespace Kit.Settings.UI.Views
 {
@@ -98,6 +99,24 @@ namespace Kit.Settings.UI.Views
                     doRefreshBackupRestoreStatus(500);
                 }
             };
+        }
+
+        private void SettingsSection_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button { Tag: string sectionName } && FindName(sectionName) is FrameworkElement section)
+            {
+                if (FocusManager.FindFirstFocusableElement(section) is Control control)
+                {
+                    control.Focus(FocusState.Programmatic);
+                }
+
+                section.StartBringIntoView(new BringIntoViewOptions
+                {
+                    AnimationDesired = true,
+                    VerticalAlignmentRatio = 0,
+                    VerticalOffset = 8,
+                });
+            }
         }
 
         private void OpenColorsSettings_Click(object sender, RoutedEventArgs e)

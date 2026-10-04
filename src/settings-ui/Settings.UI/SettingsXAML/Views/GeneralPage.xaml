@@ -17,102 +17,206 @@
     mc:Ignorable="d">
 
     <local:NavigablePage.Resources>
-        <converters:StringToInfoBarSeverityConverter x:Key="StringToInfoBarSeverityConverter" />
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <Color x:Key="SectionAppearanceFillColor">#22B7A4EE</Color>
+                    <Color x:Key="SectionAppearanceHoverColor">#33B7A4EE</Color>
+                    <Color x:Key="SectionAppearancePressedColor">#44B7A4EE</Color>
+                    <Color x:Key="SectionStartupFillColor">#2282B9F0</Color>
+                    <Color x:Key="SectionStartupHoverColor">#3382B9F0</Color>
+                    <Color x:Key="SectionStartupPressedColor">#4482B9F0</Color>
+                    <Color x:Key="SectionAiFillColor">#226ACBC7</Color>
+                    <Color x:Key="SectionAiHoverColor">#336ACBC7</Color>
+                    <Color x:Key="SectionAiPressedColor">#446ACBC7</Color>
+                    <Color x:Key="SectionDiagnosticsFillColor">#22E8BC70</Color>
+                    <Color x:Key="SectionDiagnosticsHoverColor">#33E8BC70</Color>
+                    <Color x:Key="SectionDiagnosticsPressedColor">#44E8BC70</Color>
+                    <Color x:Key="SectionBackupFillColor">#228ACB9D</Color>
+                    <Color x:Key="SectionBackupHoverColor">#338ACB9D</Color>
+                    <Color x:Key="SectionBackupPressedColor">#448ACB9D</Color>
+                    <Color x:Key="SectionUpdatesFillColor">#22E4A2BF</Color>
+                    <Color x:Key="SectionUpdatesHoverColor">#33E4A2BF</Color>
+                    <Color x:Key="SectionUpdatesPressedColor">#44E4A2BF</Color>
+                    <StaticResource x:Key="SettingsCardBackground" ResourceKey="KitSurfaceBrush" />
+                    <StaticResource x:Key="ExpanderContentBackground" ResourceKey="KitContentLayerBrush" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SectionAppearanceFillColor">#227659C0</Color>
+                    <Color x:Key="SectionAppearanceHoverColor">#337659C0</Color>
+                    <Color x:Key="SectionAppearancePressedColor">#447659C0</Color>
+                    <Color x:Key="SectionStartupFillColor">#222476C7</Color>
+                    <Color x:Key="SectionStartupHoverColor">#332476C7</Color>
+                    <Color x:Key="SectionStartupPressedColor">#442476C7</Color>
+                    <Color x:Key="SectionAiFillColor">#22008C99</Color>
+                    <Color x:Key="SectionAiHoverColor">#33008C99</Color>
+                    <Color x:Key="SectionAiPressedColor">#44008C99</Color>
+                    <Color x:Key="SectionDiagnosticsFillColor">#22B36B12</Color>
+                    <Color x:Key="SectionDiagnosticsHoverColor">#33B36B12</Color>
+                    <Color x:Key="SectionDiagnosticsPressedColor">#44B36B12</Color>
+                    <Color x:Key="SectionBackupFillColor">#2234824D</Color>
+                    <Color x:Key="SectionBackupHoverColor">#3334824D</Color>
+                    <Color x:Key="SectionBackupPressedColor">#4434824D</Color>
+                    <Color x:Key="SectionUpdatesFillColor">#22AD5078</Color>
+                    <Color x:Key="SectionUpdatesHoverColor">#33AD5078</Color>
+                    <Color x:Key="SectionUpdatesPressedColor">#44AD5078</Color>
+                    <StaticResource x:Key="SettingsCardBackground" ResourceKey="KitSurfaceBrush" />
+                    <StaticResource x:Key="ExpanderContentBackground" ResourceKey="KitContentLayerBrush" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <StaticResource x:Key="SectionAppearanceFillColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="SectionAppearanceHoverColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionAppearancePressedColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionStartupFillColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="SectionStartupHoverColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionStartupPressedColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionAiFillColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="SectionAiHoverColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionAiPressedColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionDiagnosticsFillColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="SectionDiagnosticsHoverColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionDiagnosticsPressedColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionBackupFillColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="SectionBackupHoverColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionBackupPressedColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionUpdatesFillColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="SectionUpdatesHoverColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SectionUpdatesPressedColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="SettingsCardBackground" ResourceKey="SystemColorButtonFaceColorBrush" />
+                    <StaticResource x:Key="ExpanderContentBackground" ResourceKey="SystemColorWindowColorBrush" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <converters:StringToInfoBarSeverityConverter x:Key="StringToInfoBarSeverityConverter" />
+            <Style BasedOn="{StaticResource DefaultSettingsGroupStyle}" TargetType="controls:SettingsGroup">
+                <Setter Property="Padding" Value="1,0,0,0" />
+            </Style>
+        </ResourceDictionary>
     </local:NavigablePage.Resources>
 
-    <controls:SettingsPageControl x:Uid="General" ModuleImageSource="ms-appx:///Assets/Settings/Modules/PT.png">
+    <controls:SettingsPageControl x:Uid="General">
         <controls:SettingsPageControl.ModuleContent>
-            <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
-                <controls:SettingsGroup x:Uid="General_VersionAndUpdate" Margin="0,-32,0,0">
-                    <tkcontrols:SettingsExpander Header="{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}" HeaderIcon="{ui:FontIcon Glyph=&#xE895;}">
-                        <tkcontrols:SettingsExpander.Description>
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Style="{StaticResource SecondaryTextStyle}">
-                                    <Run x:Uid="General_VersionLastChecked" />
-                                    <Run Text="{x:Bind ViewModel.UpdateCheckedDate, Mode=OneWay}" />
-                                </TextBlock>
-                                <HyperlinkButton
-                                    x:Uid="ReleaseNotes"
-                                    Margin="0,2,0,0"
-                                    FontWeight="SemiBold"
-                                    NavigateUri="https://github.com/guijianchou/Kit/releases/" />
-                            </StackPanel>
-                        </tkcontrols:SettingsExpander.Description>
-                        <Grid Visibility="{x:Bind ViewModel.IsUpdatePanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <StackPanel
-                                VerticalAlignment="Center"
-                                Orientation="Horizontal"
-                                Spacing="18"
-                                Visibility="{x:Bind ViewModel.IsCheckingForUpdates, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
-                                <ProgressRing Width="24" Height="24" />
-                                <TextBlock
-                                    x:Uid="General_CheckingForUpdates"
-                                    VerticalAlignment="Center"
-                                    FontWeight="SemiBold"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
-                            <Button
-                                x:Uid="GeneralPage_CheckForUpdates"
-                                HorizontalAlignment="Right"
-                                Command="{Binding CheckForUpdatesEventHandler}"
-                                IsEnabled="{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}"
-                                Visibility="{Binding Mode=OneWay, Path=IsCheckingForUpdates, Converter={StaticResource BoolNegationConverter}}" />
-                        </Grid>
-                    </tkcontrols:SettingsExpander>
+            <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical" Spacing="24">
+                <tkcontrols:WrapPanel x:Name="SettingsSectionNavigation" HorizontalSpacing="8" VerticalSpacing="8">
+                    <tkcontrols:WrapPanel.Resources>
+                        <Style BasedOn="{StaticResource DefaultButtonStyle}" TargetType="Button">
+                            <Setter Property="MinHeight" Value="36" />
+                            <Setter Property="MinWidth" Value="96" />
+                            <Setter Property="Padding" Value="10,4" />
+                            <Setter Property="CornerRadius" Value="8" />
+                            <Setter Property="FontSize" Value="13" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Style>
+                    </tkcontrols:WrapPanel.Resources>
+                    <Button
+                        AutomationProperties.Name="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
+                        Click="SettingsSection_Click"
+                        Tag="AppearanceAndBehaviorGroup"
+                        ToolTipService.ToolTip="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionAppearanceFillColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionAppearanceHoverColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionAppearancePressedColor}" />
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE790;" />
+                            <TextBlock x:Uid="General_SectionAppearance" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
+                        Click="SettingsSection_Click"
+                        Tag="StartupAndPermissionsGroup"
+                        ToolTipService.ToolTip="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionStartupFillColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionStartupHoverColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionStartupPressedColor}" />
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xF71C;" />
+                            <TextBlock x:Uid="General_SectionStartup" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="{Binding ElementName=AiServicesGroup, Path=Header}"
+                        Click="SettingsSection_Click"
+                        Tag="AiServicesGroup"
+                        ToolTipService.ToolTip="{Binding ElementName=AiServicesGroup, Path=Header}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionAiFillColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionAiHoverColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionAiPressedColor}" />
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEA80;" />
+                            <TextBlock x:Uid="General_SectionAi" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="{Binding ElementName=DiagnosticsGroup, Path=Header}"
+                        Click="SettingsSection_Click"
+                        Tag="DiagnosticsGroup"
+                        ToolTipService.ToolTip="{Binding ElementName=DiagnosticsGroup, Path=Header}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionDiagnosticsFillColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionDiagnosticsHoverColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionDiagnosticsPressedColor}" />
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEC19;" />
+                            <TextBlock x:Uid="General_SectionDiagnostics" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
+                        Click="SettingsSection_Click"
+                        Tag="BackupAndRestoreGroup"
+                        ToolTipService.ToolTip="{Binding ElementName=BackupAndRestoreGroup, Path=Header}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionBackupFillColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionBackupHoverColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionBackupPressedColor}" />
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE777;" />
+                            <TextBlock x:Uid="General_SectionBackup" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button
+                        AutomationProperties.Name="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
+                        Click="SettingsSection_Click"
+                        Tag="VersionAndUpdateGroup"
+                        ToolTipService.ToolTip="{Binding ElementName=VersionAndUpdateGroup, Path=Header}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionUpdatesFillColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionUpdatesHoverColor}" />
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionUpdatesPressedColor}" />
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE895;" />
+                            <TextBlock x:Uid="General_SectionUpdates" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </tkcontrols:WrapPanel>
 
-                    <StackPanel Orientation="Vertical">
-                        <InfoBar
-                            Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
-                            IsClosable="False"
-                            IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
-                            IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
-                            Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}">
-                            <InfoBar.ActionButton>
-                                <HyperlinkButton
-                                    x:Uid="GeneralPage_ViewRelease"
-                                    NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
-                                    Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
-                            </InfoBar.ActionButton>
-                        </InfoBar>
-                    </StackPanel>
-                </controls:SettingsGroup>
-
-                <controls:SettingsGroup x:Uid="StartupAndPermissions">
+                <controls:SettingsGroup x:Name="AppearanceAndBehaviorGroup" x:Uid="Appearance_Behavior" IsEnabled="True">
                     <tkcontrols:SettingsCard
-                        x:Name="GeneralPageRunAtStartUp"
-                        x:Uid="GeneralPage_RunAtStartUp"
-                        HeaderIcon="{ui:FontIcon Glyph=&#xF71C;}"
-                        IsEnabled="{x:Bind ViewModel.IsRunAtStartupGPOManaged, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
-                        <ToggleSwitch
-                            x:Uid="ToggleSwitch"
-                            AutomationProperties.Name="{Binding ElementName=GeneralPageRunAtStartUp, Path=Header}"
-                            IsOn="{x:Bind ViewModel.Startup, Mode=TwoWay}" />
+                        x:Name="ColorModeHeader"
+                        x:Uid="ColorModeHeader"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE790;}">
+                        <tkcontrols:SettingsCard.Description>
+                            <HyperlinkButton x:Uid="Windows_Color_Settings" Click="OpenColorsSettings_Click" />
+                        </tkcontrols:SettingsCard.Description>
+                        <ComboBox
+                            MinWidth="{StaticResource SettingActionControlMinWidth}"
+                            AutomationProperties.Name="{Binding ElementName=ColorModeHeader, Path=Header}"
+                            SelectedIndex="{x:Bind ViewModel.ThemeIndex, Mode=TwoWay}">
+                            <ComboBoxItem x:Uid="Radio_Theme_Dark" />
+                            <ComboBoxItem x:Uid="Radio_Theme_Light" />
+                            <ComboBoxItem x:Uid="Radio_Theme_Default" />
+                        </ComboBox>
                     </tkcontrols:SettingsCard>
-                    <tkcontrols:SettingsExpander
-                        x:Name="AdminModeRunningAs"
-                        x:Uid="Admin_Mode_Running_As"
-                        Header="{x:Bind ViewModel.RunningAsText, Mode=OneWay}"
-                        HeaderIcon="{ui:FontIcon Glyph=&#xE7EF;}"
-                        IsExpanded="True">
-                        <tkcontrols:SettingsExpander.Description>
-                            <HyperlinkButton x:Uid="GeneralPage_ToggleSwitch_AlwaysRunElevated_Link" NavigateUri="https://github.com/guijianchou/Kit" />
-                        </tkcontrols:SettingsExpander.Description>
-                        <Button
-                            x:Uid="GeneralPage_RestartAsAdmin_Button"
-                            Command="{Binding RestartElevatedButtonEventHandler}"
-                            IsEnabled="{Binding IsAdminButtonEnabled}" />
-                        <tkcontrols:SettingsExpander.Items>
-                            <tkcontrols:SettingsCard ContentAlignment="Left" IsEnabled="{x:Bind ViewModel.IsElevated, Mode=OneWay}">
-                                <ptcontrols:CheckBoxWithDescriptionControl x:Uid="GeneralSettings_AlwaysRunAsAdminText" IsChecked="{x:Bind ViewModel.RunElevated, Mode=TwoWay}" />
-                            </tkcontrols:SettingsCard>
-                            <tkcontrols:SettingsCard ContentAlignment="Left">
-                                <CheckBox x:Uid="GeneralPage_WarningsElevatedApps" IsChecked="{Binding Mode=TwoWay, Path=EnableWarningsElevatedApps}" />
-                            </tkcontrols:SettingsCard>
-                        </tkcontrols:SettingsExpander.Items>
-                    </tkcontrols:SettingsExpander>
-                </controls:SettingsGroup>
 
-                <controls:SettingsGroup x:Uid="Appearance_Behavior" IsEnabled="True">
                     <tkcontrols:SettingsCard
                         x:Name="LanguageHeader"
                         x:Uid="LanguageHeader"
@@ -135,23 +239,6 @@
                             <Button x:Uid="LanguageRestartInfoButton" Click="Click_LanguageRestart" />
                         </InfoBar.ActionButton>
                     </InfoBar>
-
-                    <tkcontrols:SettingsCard
-                        x:Name="ColorModeHeader"
-                        x:Uid="ColorModeHeader"
-                        HeaderIcon="{ui:FontIcon Glyph=&#xE790;}">
-                        <tkcontrols:SettingsCard.Description>
-                            <HyperlinkButton x:Uid="Windows_Color_Settings" Click="OpenColorsSettings_Click" />
-                        </tkcontrols:SettingsCard.Description>
-                        <ComboBox
-                            MinWidth="{StaticResource SettingActionControlMinWidth}"
-                            AutomationProperties.Name="{Binding ElementName=ColorModeHeader, Path=Header}"
-                            SelectedIndex="{x:Bind ViewModel.ThemeIndex, Mode=TwoWay}">
-                            <ComboBoxItem x:Uid="Radio_Theme_Dark" />
-                            <ComboBoxItem x:Uid="Radio_Theme_Light" />
-                            <ComboBoxItem x:Uid="Radio_Theme_Default" />
-                        </ComboBox>
-                    </tkcontrols:SettingsCard>
 
                     <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsRunAtStartupGPOManaged, Mode=OneWay}">
                         <tkcontrols:SettingsExpander
@@ -197,10 +284,42 @@
                     </tkcontrols:SettingsExpander>
                 </controls:SettingsGroup>
 
+                <controls:SettingsGroup x:Name="StartupAndPermissionsGroup" x:Uid="StartupAndPermissions">
+                    <tkcontrols:SettingsCard
+                        x:Name="GeneralPageRunAtStartUp"
+                        x:Uid="GeneralPage_RunAtStartUp"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xF71C;}"
+                        IsEnabled="{x:Bind ViewModel.IsRunAtStartupGPOManaged, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                        <ToggleSwitch
+                            x:Uid="ToggleSwitch"
+                            AutomationProperties.Name="{Binding ElementName=GeneralPageRunAtStartUp, Path=Header}"
+                            IsOn="{x:Bind ViewModel.Startup, Mode=TwoWay}" />
+                    </tkcontrols:SettingsCard>
+                    <tkcontrols:SettingsExpander
+                        x:Name="AdminModeRunningAs"
+                        x:Uid="Admin_Mode_Running_As"
+                        Header="{x:Bind ViewModel.RunningAsText, Mode=OneWay}"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE7EF;}"
+                        IsExpanded="False">
+                        <tkcontrols:SettingsExpander.Description>
+                            <HyperlinkButton x:Uid="GeneralPage_ToggleSwitch_AlwaysRunElevated_Link" NavigateUri="https://github.com/guijianchou/Kit" />
+                        </tkcontrols:SettingsExpander.Description>
+                        <Button
+                            x:Uid="GeneralPage_RestartAsAdmin_Button"
+                            Command="{Binding RestartElevatedButtonEventHandler}"
+                            IsEnabled="{Binding IsAdminButtonEnabled}" />
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard ContentAlignment="Left" IsEnabled="{x:Bind ViewModel.IsElevated, Mode=OneWay}">
+                                <ptcontrols:CheckBoxWithDescriptionControl x:Uid="GeneralSettings_AlwaysRunAsAdminText" IsChecked="{x:Bind ViewModel.RunElevated, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard ContentAlignment="Left">
+                                <CheckBox x:Uid="GeneralPage_WarningsElevatedApps" IsChecked="{Binding Mode=TwoWay, Path=EnableWarningsElevatedApps}" />
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+                </controls:SettingsGroup>
 
-                <!-- AI service. Shared by every module: the execution kernel, endpoints,
-                     credentials and the global security policy that applies to all plugins. -->
-                <controls:SettingsGroup x:Uid="General_AiServicesGroup">
+                <controls:SettingsGroup x:Name="AiServicesGroup" x:Uid="General_AiServicesGroup">
                     <tkcontrols:SettingsCard
                         x:Name="GeneralPageAiHubMasterCard"
                         x:Uid="General_AiHubSettings"
@@ -509,13 +628,12 @@
                     </StackPanel>
                 </controls:SettingsGroup>
 
-                <!-- Diagnostics & Logging Group -->
-                <controls:SettingsGroup x:Uid="General_DiagnosticsGroup">
+                <controls:SettingsGroup x:Name="DiagnosticsGroup" x:Uid="General_DiagnosticsGroup">
                     <tkcontrols:SettingsExpander
                         x:Name="GeneralDiagnosticsExpander"
                         x:Uid="General_DiagnosticsExpander"
                         HeaderIcon="{ui:FontIcon Glyph=&#xEC19;}"
-                        IsExpanded="True">
+                        IsExpanded="False">
                         <ToggleSwitch
                             x:Uid="ToggleSwitch"
                             AutomationProperties.Name="{Binding ElementName=GeneralDiagnosticsExpander, Path=Header}"
@@ -549,7 +667,8 @@
                         </tkcontrols:SettingsExpander.Items>
                     </tkcontrols:SettingsExpander>
                 </controls:SettingsGroup>
-                <controls:SettingsGroup x:Uid="General_SettingsBackupAndRestoreTitle" Visibility="Visible">
+
+                <controls:SettingsGroup x:Name="BackupAndRestoreGroup" x:Uid="General_SettingsBackupAndRestoreTitle" Visibility="Visible">
                     <tkcontrols:SettingsExpander
                         x:Name="GeneralSettingsBackupAndRestore"
                         x:Uid="General_SettingsBackupAndRestore"
@@ -650,13 +769,70 @@
                             </tkcontrols:SettingsCard>
                         </tkcontrols:SettingsExpander.Items>
                     </tkcontrols:SettingsExpander>
+                    <InfoBar
+                        Title="{x:Bind ViewModel.SettingsBackupMessage, Mode=OneWay}"
+                        IsClosable="False"
+                        CornerRadius="8"
+                        IsOpen="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
+                        IsTabStop="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
+                        Severity="{x:Bind ViewModel.BackupRestoreMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}}" />
                 </controls:SettingsGroup>
-                <InfoBar
-                    Title="{x:Bind ViewModel.SettingsBackupMessage, Mode=OneWay}"
-                    IsClosable="False"
-                    IsOpen="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
-                    IsTabStop="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
-                    Severity="{x:Bind ViewModel.BackupRestoreMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}}" />
+
+                <controls:SettingsGroup x:Name="VersionAndUpdateGroup" x:Uid="General_VersionAndUpdate">
+                    <tkcontrols:SettingsCard Header="{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}" HeaderIcon="{ui:FontIcon Glyph=&#xE895;}">
+                        <tkcontrols:SettingsCard.Description>
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Style="{StaticResource SecondaryTextStyle}">
+                                    <Run x:Uid="General_VersionLastChecked" />
+                                    <Run Text="{x:Bind ViewModel.UpdateCheckedDate, Mode=OneWay}" />
+                                </TextBlock>
+                                <HyperlinkButton
+                                    x:Uid="ReleaseNotes"
+                                    Margin="0,2,0,0"
+                                    FontWeight="SemiBold"
+                                    NavigateUri="https://github.com/guijianchou/Kit/releases/" />
+                            </StackPanel>
+                        </tkcontrols:SettingsCard.Description>
+                        <Grid Visibility="{x:Bind ViewModel.IsUpdatePanelVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                Spacing="18"
+                                Visibility="{x:Bind ViewModel.IsCheckingForUpdates, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                <ProgressRing Width="20" Height="20" />
+                                <TextBlock
+                                    x:Uid="General_CheckingForUpdates"
+                                    VerticalAlignment="Center"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <Button
+                                x:Uid="GeneralPage_CheckForUpdates"
+                                HorizontalAlignment="Right"
+                                Command="{Binding CheckForUpdatesEventHandler}"
+                                IsEnabled="{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Visibility="{Binding Mode=OneWay, Path=IsCheckingForUpdates, Converter={StaticResource BoolNegationConverter}}" />
+                        </Grid>
+                    </tkcontrols:SettingsCard>
+
+                    <StackPanel Orientation="Vertical" Margin="0,8,0,0">
+                        <InfoBar
+                            Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
+                            IsClosable="False"
+                            CornerRadius="8"
+                            IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                            IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                            Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}">
+                            <InfoBar.ActionButton>
+                                <HyperlinkButton
+                                    x:Uid="GeneralPage_ViewRelease"
+                                    NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
+                                    Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+                            </InfoBar.ActionButton>
+                        </InfoBar>
+                    </StackPanel>
+                </controls:SettingsGroup>
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>
     </controls:SettingsPageControl>

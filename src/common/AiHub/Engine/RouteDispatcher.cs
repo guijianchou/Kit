@@ -170,6 +170,7 @@ public sealed class RouteDispatcher
         int? exitCode = null;
         int nativeEvents = 0;
         int suppressedEvents = 0;
+        string? lastActivity = null;
         using var heartbeat = reportDiagnostic is null ? null : new Timer(
             _ => Report($"AI route waiting: request={Path.GetFileName(requestDirectory) ?? "pending"}, elapsedMs={elapsed.ElapsedMilliseconds}"),
             null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
@@ -329,6 +330,12 @@ public sealed class RouteDispatcher
         {
             string? diagnostic = DescribeNativeLine(normalized, line, standardError);
             if (diagnostic is null)
+            {
+                return;
+            }
+
+            if (diagnostic.StartsWith("event=activity,", StringComparison.Ordinal) &&
+                Interlocked.Exchange(ref lastActivity, diagnostic) == diagnostic)
             {
                 return;
             }
@@ -618,7 +625,20 @@ public sealed class RouteDispatcher
         string stopReason = GetString(message, "stopReason");
         if (stopReason == "error")
         {
-            response.Failure = ClassifyEndpointFailure(GetString(message, "errorMessage"), message);
+            KernelExecutionResult failure = ClassifyEndpointFailure(GetString(message, "errorMessage"), message);
+            // Pi emits failed assistant messages before its native retry. A later valid
+            // response can recover transport failures, but never a policy/configuration failure.
+            if (failure.CanFailover || failure.ErrorCode == AiErrorCode.Timeout)
+            {
+                response.TransientFailure = failure;
+            }
+            else
+            {
+                response.Failure = failure;
+            }
+
+            response.Completed = false;
+            response.Text = string.Empty;
             return;
         }
 
@@ -682,16 +702,50 @@ public sealed class RouteDispatcher
 
             if (kernel == AiKernelCatalog.Codex)
             {
-                if ((type is "item.started" or "item.completed") && root.TryGetProperty("item", out JsonElement item) && item.ValueKind == JsonValueKind.Object)
+                if (type == "turn.started")
+                {
+                    return "event=activity, phase=started, source=stdout";
+                }
+
+                if ((type is "item.started" or "item.updated" or "item.completed") && root.TryGetProperty("item", out JsonElement item) && item.ValueKind == JsonValueKind.Object)
                 {
                     string itemType = GetString(item, "type");
                     if (itemType is "command_execution" or "mcp_tool_call" or "web_search" or "file_change")
                     {
                         return DescribeTool(itemType);
                     }
+
+                    if (itemType is "reasoning" or "agent_message")
+                    {
+                        return itemType == "reasoning" ? "event=activity, phase=reasoning, source=stdout" : "event=activity, phase=responding, source=stdout";
+                    }
                 }
 
                 return type == "turn.completed" ? "event=completed, source=stdout, code=None, httpStatus=0, reason=None" : null;
+            }
+
+            if (type == "agent_start")
+            {
+                return "event=activity, phase=started, source=stdout";
+            }
+
+            if (type == "message_update" && root.TryGetProperty("assistantMessageEvent", out JsonElement update) && update.ValueKind == JsonValueKind.Object)
+            {
+                string updateType = GetString(update, "type");
+                if (updateType is "thinking_start" or "thinking_delta")
+                {
+                    return "event=activity, phase=reasoning, source=stdout";
+                }
+
+                if (updateType is "text_start" or "text_delta")
+                {
+                    return "event=activity, phase=responding, source=stdout";
+                }
+            }
+
+            if (type == "auto_retry_start")
+            {
+                return DescribeError("retry", GetString(root, "errorMessage"), root, "stdout");
             }
 
             if (type is "tool_execution_start" or "tool_execution_end")

@@ -125,11 +125,61 @@ public sealed class ConcurrentTaskTests
         Assert.AreEqual(2, MaximumConcurrentProcesses(fixture));
     }
 
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task SmallTaskStartsBeforeAnEarlierLargeTaskDrainsItsBatches(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using TaskAiEngine engine = await CreateEngineAsync(fixture, kernel);
+        new AiHubSettingsStore(fixture.Root).Update(config => config.MaxConcurrentAnalysis = 1);
+        using EventWaitHandle auditGate = CreateGate(fixture, "audit");
+        using EventWaitHandle optimizationGate = CreateGate(fixture, "optimization");
+        using var cancellation = new CancellationTokenSource();
+        Task<AiTaskResult<AiTaskReport>> audit = Run(engine, "audit", "audit", records: 12, cancellationToken: cancellation.Token);
+        await fixture.WaitForFileAsync("kit-gate-audit.ready");
+        var queued = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<AiTaskResult<AiTaskReport>> optimization = Run(engine, "optimization", "optimization", cancellationToken: cancellation.Token,
+            progress: new ImmediateProgress(value =>
+            {
+                if (value.Stage == "Prepare")
+                {
+                    queued.TrySetResult();
+                }
+            }));
+        try
+        {
+            await queued.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            auditGate.Set();
+            await fixture.WaitForFileAsync("kit-gate-optimization.ready");
+            Assert.IsFalse(audit.IsCompleted, "The small task must run before all twelve earlier batches finish.");
+            Assert.IsTrue(Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length < 13);
+            optimizationGate.Set();
+            var results = await Task.WhenAll(audit, optimization).WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.IsTrue(results.All(result => result.IsSuccess));
+            CollectionAssert.AreEqual(Enumerable.Range(1, 12).Select(index => $"item-{index:D6}").ToArray(),
+                results[0].Payload!.Findings.Select(finding => finding.ItemId).ToArray());
+            Assert.AreEqual(1, MaximumConcurrentProcesses(fixture));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            auditGate.Set();
+            optimizationGate.Set();
+            await Task.WhenAll(audit, optimization);
+        }
+    }
+
+    private sealed class ImmediateProgress(Action<AiTaskProgress> report) : IProgress<AiTaskProgress>
+    {
+        public void Report(AiTaskProgress value) => report(value);
+    }
+
     private static Task<AiTaskResult<AiTaskReport>> Run(TaskAiEngine engine, string taskId, string gate, int routeTimeoutSeconds = 15,
-        int records = 1, CancellationToken cancellationToken = default) => engine.ExecuteTaskAsync("Sample", taskId,
+        int records = 1, IProgress<AiTaskProgress>? progress = null, CancellationToken cancellationToken = default) => engine.ExecuteTaskAsync("Sample", taskId,
             Enumerable.Range(0, records).Select(_ => new TestInput($"kit-gate-{gate}", string.Empty, string.Empty)).ToArray(),
             AiTaskReport.CreateSchema(EngineTestJsonContext.Default.TestInput),
-            new AiTaskOptions { BatchSize = 1, TimeoutSeconds = 25, RouteTimeoutSeconds = routeTimeoutSeconds }, cancellationToken);
+            new AiTaskOptions { BatchSize = 1, TimeoutSeconds = 25, RouteTimeoutSeconds = routeTimeoutSeconds, Progress = progress }, cancellationToken);
 
     private static EventWaitHandle CreateGate(KernelFixture fixture, string gate) => new(false, EventResetMode.ManualReset,
         $"Local\\KitAiHubFixture-{Path.GetFileName(fixture.Root)}-kit-gate-{gate}");

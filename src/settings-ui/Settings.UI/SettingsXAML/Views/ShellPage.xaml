@@ -106,6 +106,7 @@
                 <AutoSuggestBox
                     x:Name="SearchBox"
                     x:Uid="Shell_SearchBox"
+                    MaxWidth="480"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Center"
                     GotFocus="SearchBox_GotFocus"
@@ -136,10 +137,12 @@
             IsPaneToggleButtonVisible="False"
             IsSettingsVisible="False"
             IsTitleBarAutoPaddingEnabled="False"
-            OpenPaneLength="176"
+            OpenPaneLength="208"
             CompactPaneLength="48"
+            CompactModeThresholdWidth="640"
+            ExpandedModeThresholdWidth="1008"
             PaneClosed="NavigationView_PaneClosed"
-            PaneDisplayMode="Left"
+            PaneDisplayMode="Auto"
             PaneOpened="NavigationView_PaneOpened"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}">
             <NavigationView.Resources>
@@ -155,6 +158,12 @@
                     Icon="{ui:FontIcon Glyph=&#xE80F;}" />
 
                 <NavigationViewItemSeparator />
+
+                <NavigationViewItem
+                    x:Name="AIHubNavigationItem"
+                    x:Uid="Shell_AIHub"
+                    AutomationProperties.AutomationId="AIHubNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/AiHub.png}" />
 
                 <NavigationViewItem
                     x:Name="AwakeNavigationItem"
@@ -175,22 +184,16 @@
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Localserver.png}" />
 
                 <NavigationViewItem
-                    x:Name="UDPtestNavigationItem"
-                    x:Uid="Shell_UDPtest"
-                    AutomationProperties.AutomationId="UDPtestNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/UDPtest.png}" />
-
-                <NavigationViewItem
                     x:Name="NetMapNavigationItem"
                     x:Uid="Shell_NetMap"
                     AutomationProperties.AutomationId="NetMapNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/NetMap.png}" />
 
                 <NavigationViewItem
-                    x:Name="AIHubNavigationItem"
-                    x:Uid="Shell_AIHub"
-                    AutomationProperties.AutomationId="AIHubNavItem"
-                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/AiHub.png}" />
+                    x:Name="UDPtestNavigationItem"
+                    x:Uid="Shell_UDPtest"
+                    AutomationProperties.AutomationId="UDPtestNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/UDPtest.png}" />
 
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
@@ -215,7 +218,21 @@
                     <ic:InvokeCommandAction Command="{x:Bind ViewModel.ItemInvokedCommand}" />
                 </ic:EventTriggerBehavior>
             </i:Interaction.Behaviors>
-            <Frame x:Name="shellFrame" />
+            <Border
+                Margin="0,0,8,8"
+                Padding="0,24,0,0"
+                Background="{ThemeResource KitContentLayerBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Frame x:Name="shellFrame">
+                    <Frame.ContentTransitions>
+                        <TransitionCollection>
+                            <NavigationThemeTransition />
+                        </TransitionCollection>
+                    </Frame.ContentTransitions>
+                </Frame>
+            </Border>
         </NavigationView>
     </Grid>
 </UserControl>

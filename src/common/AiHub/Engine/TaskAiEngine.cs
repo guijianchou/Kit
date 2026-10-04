@@ -327,6 +327,18 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             return Failure<TOutput>(AiErrorCode.InvalidPayload, stopwatch);
         }
 
+        void ReportProgress(AiTaskProgress progress)
+        {
+            try
+            {
+                options.Progress?.Report(progress);
+            }
+            catch (Exception)
+            {
+                // Progress is observational; a host callback must not fail validated work.
+            }
+        }
+
         var requestId = Guid.NewGuid();
         CancellationTokenSource requestCancellation;
         lock (_lifecycleLock)
@@ -372,7 +384,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 return Failure<TOutput>(AiErrorCode.InvalidConfiguration, stopwatch);
             }
 
-            options.Progress?.Report(new AiTaskProgress("Prepare", string.Empty, 0, 0));
+            ReportProgress(new AiTaskProgress("Prepare", string.Empty, 0, 0));
             var prepared = new List<PreparedItem>(items.Count);
             int totalSize = 0;
             for (int index = 0; index < items.Count; index++)
@@ -432,7 +444,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             AiTaskResult<TOutput>? firstFailure = null;
             int completed = 0;
             int responseCharacters = 0;
-            var results = await Task.WhenAll(batches.Select(async (batch, batchIndex) =>
+            async Task<AiTaskResult<TOutput>> ExecuteBatchAsync(List<PreparedItem> batch, int batchIndex)
             {
                 bool acquired = false;
                 string validationStage = "execute";
@@ -440,7 +452,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 {
                     try
                     {
-                        options.Progress?.Report(new AiTaskProgress("Route", $"batch={batchIndex + 1}/{batches.Count}, {message}", Volatile.Read(ref completed), batches.Count));
+                        ReportProgress(new AiTaskProgress("Route", $"batch={batchIndex + 1}/{batches.Count}, {message}", Volatile.Read(ref completed), batches.Count));
                     }
                     catch (Exception)
                     {
@@ -450,6 +462,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
                 try
                 {
+                    token.ThrowIfCancellationRequested();
+                    ReportProgress(new AiTaskProgress("Queue", string.Empty, Volatile.Read(ref completed), batches.Count));
                     await AcquireSlotAsync(token).ConfigureAwait(false);
                     acquired = true;
                     if (!IsEnabled)
@@ -457,7 +471,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         return Failure<TOutput>(AiErrorCode.HubDisabled, stopwatch);
                     }
 
-                    options.Progress?.Report(new AiTaskProgress("Execute", string.Empty, Volatile.Read(ref completed), batches.Count));
+                    ReportProgress(new AiTaskProgress("Execute", string.Empty, Volatile.Read(ref completed), batches.Count));
                     ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}");
                     string prompt = prefix + SerializeBatch(batch);
                     KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, routeTimeoutSeconds,
@@ -469,7 +483,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     {
                         token.ThrowIfCancellationRequested();
                         ReportDiagnostic($"AI batch failover: reason={execution.ErrorCode}, from=Main, to=Fallback");
-                        options.Progress?.Report(new AiTaskProgress("Failover", string.Empty, Volatile.Read(ref completed), batches.Count));
+                        ReportProgress(new AiTaskProgress("Failover", string.Empty, Volatile.Read(ref completed), batches.Count));
                         execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, fallback, prompt, routeTimeoutSeconds,
                             ReportDiagnostic, token).ConfigureAwait(false);
                         route = "Fallback";
@@ -512,7 +526,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     }
 
                     int count = Interlocked.Increment(ref completed);
-                    options.Progress?.Report(new AiTaskProgress("Validate", string.Empty, count, batches.Count));
+                    ReportProgress(new AiTaskProgress("Validate", string.Empty, count, batches.Count));
                     return AiTaskResult.Success(output, string.IsNullOrWhiteSpace(execution.UsedModel) ? usedTarget.Model : execution.UsedModel, route, stopwatch.Elapsed);
                 }
                 catch (OperationCanceledException)
@@ -539,7 +553,14 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         ReleaseSlot();
                     }
                 }
-            })).ConfigureAwait(false);
+            }
+
+            // Bound each request's queue footprint so a large audit cannot enqueue every
+            // batch ahead of later plugin requests. Result indexes still preserve input order.
+            var results = new AiTaskResult<TOutput>[batches.Count];
+            await Parallel.ForEachAsync(Enumerable.Range(0, batches.Count),
+                new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(config.MaxConcurrentAnalysis, 1, 4) },
+                async (index, _) => results[index] = await ExecuteBatchAsync(batches[index], index).ConfigureAwait(false)).ConfigureAwait(false);
 
             // An explicit stop must not be turned into a partial audit or hidden by an
             // earlier failed batch. The task deadline may still retain validated work.

@@ -296,6 +296,7 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             isDisposed = true;
+            SetOverviewActive(false);
             base.Dispose();
             quickAccessViewModel.PropertyChanged -= OnQuickAccessPropertyChanged;
             settingsRepository.SettingsChanged -= OnSettingsChanged;

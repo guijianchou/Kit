@@ -340,8 +340,7 @@
                             Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
                             Severity="{x:Bind ViewModel.AiServices.StatusSeverity, Mode=OneWay}" />
 
-                        <!-- Service status: cached readiness (no probe) plus the pipeline self-test.
-                             If the self-test passes, a failing plugin is the plugin's problem. -->
+                        <!-- Cached service readiness; each endpoint has its own connection test. -->
                         <tkcontrols:SettingsCard
                             x:Name="AiServiceStatusCard"
                             x:Uid="AiHub_ServiceStatusCard"
@@ -349,16 +348,6 @@
                             <tkcontrols:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="{x:Bind ViewModel.AiServices.ServiceStatusGlyph, Mode=OneWay}" />
                             </tkcontrols:SettingsCard.HeaderIcon>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <ProgressRing
-                                    Width="16"
-                                    Height="16"
-                                    IsActive="{x:Bind ViewModel.AiServices.IsSelfTesting, Mode=OneWay}" />
-                                <Button
-                                    x:Uid="AiHub_RunSelfTestButton"
-                                    AutomationProperties.AutomationId="AIHub_RunSelfTestButton"
-                                    Command="{x:Bind ViewModel.AiServices.SelfTestCommand}" />
-                            </StackPanel>
                         </tkcontrols:SettingsCard>
 
                         <!-- AI execution kernel -->

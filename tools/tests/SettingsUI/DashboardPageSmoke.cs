@@ -449,6 +449,23 @@ internal static class DashboardPageSmoke
         var assembly = typeof(DashboardViewModel).Assembly;
         var info = assembly.GetType("Kit.Settings.UI.Helpers.DashboardSystemInfo");
         var vendor = info.GetMethod("VendorForDevice", staticFlags);
+        var formatDriver = info.GetMethod("FormatDriverVersion", staticFlags);
+        foreach (var (raw, maker, expected) in new[]
+        {
+            ("32.0.15.6636", "NVIDIA", "566.36"),
+            ("31.0.15.6601", "NVIDIA", "566.01"),
+            ("31.0.15.900", "NVIDIA", "509.00"),
+            ("566.03", "NVIDIA", "566.03"),
+            ("566", "NVIDIA", "566"),
+            ("32.0.21037.1004", "AMD", "32.0.21037.1004"),
+            ("32.0.101.6557", "Intel", "32.0.101.6557"),
+            ("not-a-version", "NVIDIA", "not-a-version"),
+            ("—", "NVIDIA", "—"),
+        })
+        {
+            Require((string)formatDriver.Invoke(null, new object[] { raw, maker }) == expected,
+                $"GPU driver preserves the detailed version: {maker} {raw} -> {expected}");
+        }
         foreach (var pair in new[] { ("10DE", "NVIDIA"), ("1002", "AMD"), ("8086", "Intel") })
         {
             Require((string)vendor.Invoke(null, new object[] { "PCI\\VEN_" + pair.Item1 + "&DEV_0001" }) == pair.Item2, "Detect vendor " + pair.Item2);

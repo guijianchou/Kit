@@ -137,7 +137,7 @@ internal static class DashboardSystemInfo
 
     /// <summary>
     /// Converts a raw WMI or nvidia-smi DriverVersion string to a user-friendly display format.
-    /// For NVIDIA: "31.0.15.6601" or "566.03" → "566" (the well-known 3-digit branch number).
+    /// For NVIDIA: "32.0.15.6636" → "566.36"; public versions such as "566.03" stay intact.
     /// </summary>
     internal static string FormatDriverVersion(string rawVersion, string vendor)
     {
@@ -146,21 +146,13 @@ internal static class DashboardSystemInfo
             return rawVersion ?? "—";
         }
 
-        if (string.Equals(vendor, "NVIDIA", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(vendor, "NVIDIA", StringComparison.OrdinalIgnoreCase) &&
+            Version.TryParse(rawVersion, out var version) && version.Revision is >= 0 and <= 9999)
         {
-            var parts = rawVersion.Split('.');
-            if (parts.Length >= 4)
-            {
-                string combined = parts[2] + parts[3];
-                if (combined.Length >= 5)
-                {
-                    return combined[^5..^2]; // "156601" → "566"
-                }
-            }
-            else if (parts.Length >= 1 && int.TryParse(parts[0], out int branch) && branch >= 100 && branch <= 999)
-            {
-                return parts[0]; // "566.03" → "566"
-            }
+            // The last digit of the Windows build and its four-digit revision encode
+            // NVIDIA's public version. Numeric parsing also restores leading zeroes.
+            string digits = ((version.Build % 10 * 10000) + version.Revision).ToString("D5", CultureInfo.InvariantCulture);
+            return digits[..3] + "." + digits[3..];
         }
 
         return rawVersion;

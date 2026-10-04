@@ -233,9 +233,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
         ResetSecurityAuditPolicyCommand = new RelayCommand(() => StartOperation(ResetSecurityAuditPolicyAsync), () => CanEdit);
         SaveOptimizationPolicyCommand = new RelayCommand(() => StartOperation(SaveOptimizationPolicyAsync), () => CanEdit && !string.IsNullOrWhiteSpace(OptimizationPolicyContent));
         ResetOptimizationPolicyCommand = new RelayCommand(() => StartOperation(ResetOptimizationPolicyAsync), () => CanEdit);
-        SelfTestCommand = new RelayCommand(
-            () => StartOperation(RunSelfTestAsync),
-            () => CanEdit && CanRunSelfTest);
 
         SaveActivePolicyCommand = new RelayCommand(
             () =>
@@ -388,8 +385,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
     internal static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     private int _activePolicyIndex;
-    private string _selfTestStatusText = string.Empty;
-    private bool _isSelfTesting;
 
     public int ActivePolicyIndex
     {
@@ -649,82 +644,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
     public ICommand SaveOptimizationPolicyCommand { get; }
 
     public ICommand ResetOptimizationPolicyCommand { get; }
-
-    /// <summary>
-    /// Runs the built-in service self-test and reports the outcome.
-    /// </summary>
-    /// <remarks>
-    /// Gives the operator a way to attribute a failure: if the self-test passes, the service
-    /// is sound and a plugin issue lies elsewhere.
-    /// </remarks>
-    public ICommand SelfTestCommand { get; }
-
-    /// <summary>
-    /// Runs the built-in probe and surfaces a one-line outcome.
-    /// </summary>
-    private async Task RunSelfTestAsync(CancellationToken cancellationToken)
-    {
-        if (!CanRunSelfTest)
-        {
-            return;
-        }
-
-        IsSelfTesting = true;
-        SelfTestStatusText = IsChinese ? "正在运行 AI 服务自检..." : "Running the AI service self-test...";
-
-        try
-        {
-            SelfTestResult outcome = await AiServiceSelfTest
-                .RunAsync(engine: null, cancellationToken)
-                .ConfigureAwait(true);
-
-            SelfTestStatusText = outcome.Success
-                ? (IsChinese
-                    ? $"自检通过（{outcome.Elapsed.TotalMilliseconds:F0} ms，经由 {outcome.UsedRoute}，模型 {outcome.UsedModel}）"
-                    : $"Self-test passed ({outcome.Elapsed.TotalMilliseconds:F0} ms via {outcome.UsedRoute}, model {outcome.UsedModel})")
-                : (IsChinese
-                    ? $"自检失败：{outcome.ErrorMessage}"
-                    : $"Self-test failed: {outcome.ErrorMessage}");
-
-            ShowStatus(SelfTestStatusText, outcome.Success ? InfoBarSeverity.Success : InfoBarSeverity.Error);
-            Logger.LogInfo($"AI service self-test: {outcome.Summary}");
-        }
-        catch (Exception ex)
-        {
-            SelfTestStatusText = IsChinese ? $"自检异常：{ex.Message}" : $"Self-test error: {ex.Message}";
-            ShowStatus(SelfTestStatusText, InfoBarSeverity.Error);
-            Logger.LogError("AI service self-test threw", ex);
-        }
-        finally
-        {
-            IsSelfTesting = false;
-            RefreshServiceStatus();
-        }
-    }
-
-    /// <summary>Result of the most recent self-test, or an empty string.</summary>
-    public string SelfTestStatusText
-    {
-        get => _selfTestStatusText;
-        private set => Set(ref _selfTestStatusText, value);
-    }
-
-    /// <summary>True while a self-test is running.</summary>
-    public bool IsSelfTesting
-    {
-        get => _isSelfTesting;
-        private set
-        {
-            if (Set(ref _isSelfTesting, value))
-            {
-                OnPropertyChanged(nameof(CanRunSelfTest));
-                ((RelayCommand)SelfTestCommand).OnCanExecuteChanged();
-            }
-        }
-    }
-
-    /// <summary>Gate for the self-test action.</summary>
-    public bool CanRunSelfTest => !IsSelfTesting && !_disposed;
 
     public ICommand SaveActivePolicyCommand { get; }
 
@@ -1158,7 +1077,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     private void RefreshCommands()
     {
-        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, SelfTestCommand, CancelOperationCommand })
+        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, CancelOperationCommand })
         {
             ((RelayCommand)command).OnCanExecuteChanged();
         }

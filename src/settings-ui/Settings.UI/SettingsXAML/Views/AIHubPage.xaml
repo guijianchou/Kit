@@ -202,16 +202,12 @@
                                                  Height="4" MinHeight="4"
                                                  Foreground="{ThemeResource AccentFillColorDefaultBrush}"
                                                  AutomationProperties.Name="{x:Bind ViewModel.SidebarWorkflowTooltip, Mode=OneWay}" />
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="4">
                                         <TextBlock Text="{x:Bind ViewModel.CurrentStageText, Mode=OneWay}" FontSize="12"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}" FontSize="12"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                                    </Grid>
+                                        <TextBlock Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}" FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
                                     <TextBlock x:Name="AuditWorkflowStatus" Text="{x:Bind ViewModel.AuditStatusText, Mode=OneWay}"
                                                FontSize="12" TextWrapping="Wrap"
                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -262,7 +258,6 @@
                                                 AutomationProperties.AutomationId="AIHub_DeepAnalyzeButton"
                                                 ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint, Mode=OneWay}">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <ProgressRing IsActive="{x:Bind ViewModel.IsAiAnalyzing, Mode=OneWay}" Width="14" Height="14" />
                                                 <FontIcon Glyph="&#xE9D9;" FontSize="12" />
                                                 <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel, Mode=OneWay}" FontSize="13" />
                                             </StackPanel>

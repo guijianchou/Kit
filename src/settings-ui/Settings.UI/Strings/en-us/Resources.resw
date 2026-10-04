@@ -2933,9 +2933,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AiHub_ServiceStatusCard.Header" xml:space="preserve">
     <value>Service status</value>
   </data>
-  <data name="AiHub_RunSelfTestButton.Content" xml:space="preserve">
-    <value>Run self-test</value>
-  </data>
   <data name="AiHub_UnsavedEndpointsCard.Header" xml:space="preserve">
     <value>Unsaved endpoint changes</value>
   </data>

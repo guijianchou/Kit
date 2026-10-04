@@ -269,15 +269,16 @@ internal static class ModulePageSmoke
         {
             IsSuccess = false, ErrorCode = AiErrorCode.PolicyViolation, Payload = output, CompletedBatches = 1, TotalBatches = 7,
         };
-        var retained = (IReadOnlyList<AuditIssue>)readResult.Invoke(null, new object[] { partial, "smoke" });
-        if (retained.Count != 1 || !AiHubAuditAnalysisService.LastWasPartial || !AiHubAuditAnalysisService.LastFailure.Contains("1/7"))
+        var retained = (AiHubAuditAnalysisService.AuditAnalysisResult)readResult.Invoke(null, new object[] { partial, "smoke" });
+        if (retained.Issues.Count != 1 || !retained.IsPartial || !retained.Failure.Contains("1/7"))
             throw new InvalidOperationException("Partial audit results or their incomplete status were lost.");
         var failed = new AiTaskResult<AuditIssueContainer> { ErrorCode = AiErrorCode.EndpointFailed, TotalBatches = 7 };
-        if (readResult.Invoke(null, new object[] { failed, "smoke" }) != null || AiHubAuditAnalysisService.LastWasPartial || AiHubAuditAnalysisService.LastFailure == null)
+        var rejected = (AiHubAuditAnalysisService.AuditAnalysisResult)readResult.Invoke(null, new object[] { failed, "smoke" });
+        if (rejected.Issues != null || rejected.IsPartial || rejected.Failure == null)
             throw new InvalidOperationException("Failed audit result was presented as usable.");
         var successful = new AiTaskResult<AuditIssueContainer> { IsSuccess = true, Payload = output, CompletedBatches = 7, TotalBatches = 7 };
-        readResult.Invoke(null, new object[] { successful, "smoke" });
-        if (AiHubAuditAnalysisService.LastWasPartial || AiHubAuditAnalysisService.LastFailure != null)
+        var completed = (AiHubAuditAnalysisService.AuditAnalysisResult)readResult.Invoke(null, new object[] { successful, "smoke" });
+        if (completed.IsPartial || completed.Failure != null || !retained.IsPartial || !retained.Failure.Contains("1/7") || rejected.Failure == null)
             throw new InvalidOperationException("Successful audit retained stale failure state.");
         File.AppendAllText(Report, "Audit output: real reference/bilingual/severity/size validation, partial retention and failure reset passed.\n");
     }
@@ -292,6 +293,8 @@ internal static class ModulePageSmoke
         int previousTab = vm.ActiveTabIndex;
         var previousAudit = type.GetField("_auditCts", instance).GetValue(vm);
         var previousOptimization = type.GetField("_optimizationCts", instance).GetValue(vm);
+        var progressFields = new[] { "_auditDetailedPercent", "_auditWasDeepAnalysis", "_auditIncomplete" }
+            .ToDictionary(name => name, name => type.GetField(name, instance).GetValue(vm));
         using var auditCancellation = new CancellationTokenSource();
         using var optimizationCancellation = new CancellationTokenSource();
         using var nextOptimizationCancellation = new CancellationTokenSource();
@@ -303,14 +306,29 @@ internal static class ModulePageSmoke
             type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, true);
             type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.Scanning);
             model.Reset();
+            type.GetField("_auditWasDeepAnalysis", instance).SetValue(vm, false);
+            type.GetField("_auditIncomplete", instance).SetValue(vm, false);
+            type.GetMethod("BeginStage", instance).Invoke(vm, new object[] { "Collect event logs", true });
+            type.GetMethod("ApplyAuditCollectionProgress", instance).Invoke(vm, new object[]
+            {
+                new Kit.AIHubLib.Services.EventCollectionProgress("Application", 2, 4, 12, 32, true, false),
+            });
+            await Task.Delay(100);
+            var bar = (ProgressBar)page.FindName("AuditWorkflowProgress");
+            var status = (TextBlock)page.FindName("AuditWorkflowStatus");
+            if (bar.IsIndeterminate || Math.Abs(bar.Value - 15) > 0.01 || status.Text != vm.AuditStatusText || !status.Text.Contains("2/4"))
+                throw new InvalidOperationException("Collected channel counts are not bound to the shared audit progress bar.");
             model.CompleteStage("Collect event logs");
             type.GetMethod("BeginStage", instance).Invoke(vm, new object[] { "Analyze findings", true });
+            type.GetMethod("ApplyAuditAiProgress", instance).Invoke(vm, new object[] { new AiTaskProgress("Prepare", "Preparing analysis", 0, 0) });
 
             var captured = new CapturedProgress();
             var progressType = typeof(AiHubAuditAnalysisService).GetNestedType("AuditProgress", BindingFlags.NonPublic);
             var progress = (IProgress<AiTaskProgress>)Activator.CreateInstance(progressType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                 binder: null, args: new object[] { "smoke", Stopwatch.StartNew(), captured }, culture: null);
             progress.Report(new AiTaskProgress("Route", "batch=1/7, AI native event: request=request-fixture, event=retry, source=stderr, code=EndpointFailed, httpStatus=0, reason=StreamDisconnected", 1, 7));
+            if (captured.Value.Stage != "Route" || captured.Value.CompletedBatches != 1 || captured.Value.TotalBatches != 7)
+                throw new InvalidOperationException("Audit progress translation lost its typed phase or batch counts.");
             if (!captured.Message.Contains("1/7") || captured.Message.Contains("request-fixture") || captured.Message.Contains("StreamDisconnected"))
                 throw new InvalidOperationException("Audit retry progress omitted batch counts or exposed diagnostic details.");
             if (!captured.Message.Contains("Retrying connection") && !captured.Message.Contains("连接重试中"))
@@ -322,10 +340,57 @@ internal static class ModulePageSmoke
                 throw new InvalidOperationException("Audit failover status omitted the fallback message or retained retry/diagnostic details.");
             type.GetProperty(nameof(vm.AuditStatusText)).SetValue(vm, captured.Message);
             await Task.Delay(100);
-            var bar = (ProgressBar)page.FindName("AuditWorkflowProgress");
-            var status = (TextBlock)page.FindName("AuditWorkflowStatus");
             if (!bar.IsIndeterminate || vm.SidebarWorkflowPercentText == "50%" || status.Text != captured.Message)
                 throw new InvalidOperationException("AI audit progress is still fixed at 50% or its batch status is not bound.");
+            var applyAiProgress = type.GetMethod("ApplyAuditAiProgress", instance);
+            applyAiProgress.Invoke(vm, new object[] { captured.Value });
+            await Task.Delay(100);
+            if (bar.IsIndeterminate || Math.Abs(bar.Value - (30 + (65.0 / 7))) > 0.01 || status.Text != captured.Message)
+                throw new InvalidOperationException("Known AI batch counts did not replace indeterminate progress.");
+            applyAiProgress.Invoke(vm, new object[] { new AiTaskProgress("Validate", "Validated 3/7", 3, 7) });
+            double validatedPercent = vm.SidebarWorkflowPercent;
+            applyAiProgress.Invoke(vm, new object[] { new AiTaskProgress("Queue", "Queued batch", 1, 7) });
+            if (vm.SidebarWorkflowPercent != validatedPercent || validatedPercent <= 30 || validatedPercent >= 100)
+                throw new InvalidOperationException("Out-of-order batch progress regressed or prematurely completed the audit.");
+
+            type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, false);
+            type.GetField("_auditWasDeepAnalysis", instance).SetValue(vm, true);
+            type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, true);
+            model.Reset();
+            model.CompleteStage("Collect event logs");
+            type.GetMethod("BeginStage", instance).Invoke(vm, new object[] { "Analyze findings", true });
+            await Task.Delay(100);
+            if (!bar.IsIndeterminate || !vm.SidebarWorkflowVisible)
+                throw new InvalidOperationException("Deep analysis with unknown batch count did not use the shared indeterminate bar.");
+            applyAiProgress.Invoke(vm, new object[] { new AiTaskProgress("Validate", "Deep analysis 2/4", 2, 4) });
+            type.GetField("_auditIncomplete", instance).SetValue(vm, true);
+            type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.SelectingTargets);
+            type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, false);
+            await Task.Delay(100);
+            if (bar.IsIndeterminate || Math.Abs(bar.Value - 47.5) > 0.01 ||
+                (vm.SidebarWorkflowTitle != "Partially completed" && vm.SidebarWorkflowTitle != "部分完成"))
+                throw new InvalidOperationException("Partial deep analysis was displayed as fully complete.");
+            type.GetField("_auditIncomplete", instance).SetValue(vm, false);
+            type.GetMethod("EndStage", instance).Invoke(vm, new object[] { "Analyze findings", true });
+            type.GetMethod("EndStage", instance).Invoke(vm, new object[] { "Finish", true });
+            await Task.Delay(100);
+            if (bar.Value != 100 || bar.IsIndeterminate ||
+                (vm.SidebarWorkflowTitle != "AI analysis complete" && vm.SidebarWorkflowTitle != "AI 分析完成"))
+                throw new InvalidOperationException("Successful deep analysis did not complete the shared bar.");
+            type.GetMethod("BeginStage", instance).Invoke(vm, new object[] { "Analyze findings", true });
+            type.GetField("_auditIncomplete", instance).SetValue(vm, true);
+            type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.Failed);
+            await Task.Delay(100);
+            if (bar.Value >= 100 || bar.IsIndeterminate || vm.SidebarWorkflowGlyph == "\uE73E")
+                throw new InvalidOperationException("Failed deep analysis retained success progress or its success glyph.");
+
+            type.GetField("_auditWasDeepAnalysis", instance).SetValue(vm, false);
+            type.GetField("_auditIncomplete", instance).SetValue(vm, false);
+            type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, true);
+            type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.Scanning);
+            model.Reset();
+            model.CompleteStage("Collect event logs");
+            type.GetMethod("BeginStage", instance).Invoke(vm, new object[] { "Analyze findings", true });
             if (!vm.ScanAllCommand.CanExecute(null) || !vm.ScanDownloadsCommand.CanExecute(null) || !vm.ScanTemporaryFilesCommand.CanExecute(null))
                 throw new InvalidOperationException("A running audit still disables Optimization scans.");
             type.GetProperty(nameof(vm.SelectedCandidatesCount)).SetValue(vm, 1);
@@ -335,6 +400,7 @@ internal static class ModulePageSmoke
 
             type.GetProperty(nameof(vm.IsOptimizing)).SetValue(vm, true);
             type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, false);
+            type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, false);
             if (!vm.FastScanCommand.CanExecute(null) || !vm.FullScanCommand.CanExecute(null))
                 throw new InvalidOperationException("A running Optimization still disables audit commands.");
             type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, true);
@@ -366,7 +432,7 @@ internal static class ModulePageSmoke
             type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, true);
             type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.Scanning);
             type.GetMethod("StopAudit", instance).Invoke(vm, new object[] { false });
-            if (vm.IsAuditing || vm.AuditPhase != ScanPhase.Failed || vm.StatusSeverity != InfoBarSeverity.Error || !vm.IsScanning)
+            if (vm.IsAuditing || vm.AuditPhase != ScanPhase.Failed || vm.StatusSeverity != InfoBarSeverity.Error || !vm.IsScanning || vm.SidebarWorkflowPercent >= 100)
                 throw new InvalidOperationException("Audit failure changed the independent Optimization phase.");
 
             foreach (string outcome in new[] { "failed", "partial", "ok" })
@@ -388,13 +454,14 @@ internal static class ModulePageSmoke
             vm.ActiveTabIndex = 0;
             if (vm.StatusMessage != "audit result" || !vm.IsStatusOpen)
                 throw new InvalidOperationException("Closing the Optimization banner closed the audit banner.");
-            File.AppendAllText(Report, "Audit UI: bound batch/retry/failover status, concurrent commands, independent cancellation/progress/banners and partial-result warnings passed.\n");
+            File.AppendAllText(Report, "Audit UI: bound channel/batch progress, shared deep-analysis unknown/partial/success/failure states, retry/failover status, concurrent commands, and independent cancellation/progress/banners passed.\n");
         }
         finally
         {
             type.GetField("_auditCts", instance).SetValue(vm, previousAudit);
             type.GetField("_optimizationCts", instance).SetValue(vm, previousOptimization);
             type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, false);
+            type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, false);
             type.GetProperty(nameof(vm.IsOptimizing)).SetValue(vm, false);
             type.GetProperty(nameof(vm.SelectedCandidatesCount)).SetValue(vm, 0);
             type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.Idle);
@@ -408,14 +475,99 @@ internal static class ModulePageSmoke
             vm.ActiveTabIndex = 0;
             vm.IsStatusOpen = false;
             vm.ActiveTabIndex = previousTab;
+            foreach (var field in progressFields) type.GetField(field.Key, instance).SetValue(vm, field.Value);
+            type.GetMethod("PublishScanProgress", instance).Invoke(vm, null);
         }
     }
 
-    private sealed class CapturedProgress : IProgress<string>
+    private static async Task CheckSelectedAuditRange(AIHubPage page)
     {
-        public string Message { get; private set; } = string.Empty;
+        var vm = page.ViewModel;
+        var type = typeof(AIHubPageViewModel);
+        const BindingFlags instance = BindingFlags.Instance | BindingFlags.NonPublic;
+        var fields = new[] { "_auditCts", "_selectedScopeIndex", "_hasAuditResult", "_lastCompletedAuditUtc", "_auditDetailedPercent", "_auditWasDeepAnalysis", "_auditIncomplete" }
+            .ToDictionary(name => name, name => type.GetField(name, instance).GetValue(vm));
+        var properties = new[]
+        {
+            "HealthScoreGrade", "HighCount", "MediumCount", "LowCount", "ActivityFindingsText", "EventCountText", "FinishedText", "WindowText",
+            "ScanTypeText", "HealthVerdict", "HealthSummaryText", "AuditTimestampText", "AiReportSummaryText", "AiReportMetaText", "AiStatusText",
+            "AiAnalysisRanText", "AuditStatusText", "HasAiReport", "IsAuditing", "IsAiAnalyzing", "AuditPhase",
+        }.ToDictionary(name => name, name => type.GetProperty(name).GetValue(vm));
+        var rawEvents = (List<SecurityEvent>)type.GetField("_lastAuditEvents", instance).GetValue(vm);
+        var previousEvents = rawEvents.ToArray();
+        var previousIssues = vm.AllIssues.ToArray();
+        var previousReport = vm.AiReportFindings.ToArray();
+        var schedule = (DispatcherQueueTimer)type.GetField("_scheduleTimer", instance).GetValue(vm);
+        bool scheduled = schedule.IsRunning;
+        var history = type.GetField("_auditHistoryStorage", instance).GetValue(vm);
+        string historyPath = (string)history.GetType().GetField("_storagePath", instance).GetValue(history);
+        byte[] historyBefore = File.Exists(historyPath) ? File.ReadAllBytes(historyPath) : null;
+        var pending = new CancellationTokenSource();
+        try
+        {
+            schedule.Stop();
+            type.GetField("_auditCts", instance).SetValue(vm, pending);
+            type.GetField("_selectedScopeIndex", instance).SetValue(vm, 0);
+            type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, true);
+            foreach (int range in new[] { 1, 2 })
+            {
+                vm.AllIssues.Clear();
+                vm.AllIssues.Add(new AuditIssueEnhanced { Title = "Previous range finding", Severity = "High", EventId = "1000", LogName = "Application" });
+                rawEvents.Clear();
+                rawEvents.Add(new SecurityEvent(1000, "Application", "Range fixture", 2, DateTime.UtcNow, "Previous range evidence"));
+                vm.AiReportFindings.Clear();
+                vm.AiReportFindings.Add(new AiReportFinding("Previous report", "High", "Previous evidence", "Review", "1000"));
+                type.GetField("_hasAuditResult", instance).SetValue(vm, true);
+                type.GetProperty(nameof(vm.HasAiReport)).SetValue(vm, true);
+                CancellationToken oldToken = pending.Token;
+                vm.FullScanRangeIndex = range;
+                pending = (CancellationTokenSource)type.GetField("_auditCts", instance).GetValue(vm);
+                if (!oldToken.IsCancellationRequested || pending.Token == oldToken || !vm.IsAuditing || vm.IsAiAnalyzing ||
+                    vm.AllIssues.Count != 0 || rawEvents.Count != 0 || vm.AiReportFindings.Count != 0 || vm.HasAiReport || vm.HasAuditData ||
+                    vm.WindowText != vm.ScanRangeDescription || vm.HighCount != 0 || vm.MediumCount != 0 || vm.LowCount != 0)
+                    throw new InvalidOperationException("Changing the top range did not cancel and clear the previous audit before collecting the new range.");
+            }
 
-        public void Report(string value) => Message = value;
+            // Cancel before yielding the UI thread: this only exercises local collection,
+            // and no queued completion may save history or start an AI request.
+            vm.CancelAuditCommand.Execute(null);
+            for (int attempt = 0; attempt < 50 && vm.IsAuditing; attempt++) await Task.Delay(100);
+            if (vm.IsAuditing || vm.IsAiAnalyzing || vm.HasAuditData || rawEvents.Count != 0 || vm.AiReportFindings.Count != 0 ||
+                !Equals(type.GetField("_lastCompletedAuditUtc", instance).GetValue(vm), fields["_lastCompletedAuditUtc"]) ||
+                vm.WindowText != vm.ScanRangeDescription || vm.AuditPhase != ScanPhase.Idle)
+                throw new InvalidOperationException("Cancelled range collection published stale results or advanced the audit history cursor.");
+            byte[] historyAfter = File.Exists(historyPath) ? File.ReadAllBytes(historyPath) : null;
+            if ((historyBefore == null) != (historyAfter == null) || (historyBefore != null && !historyBefore.SequenceEqual(historyAfter)))
+                throw new InvalidOperationException("Changing the top range wrote an audit history entry.");
+            File.AppendAllText(Report, "Audit range: rapid 1-week/1-month changes cancel old lifetimes, clear findings/evidence/AI report, update the window, and leave history unchanged after cancellation.\n");
+        }
+        finally
+        {
+            pending.Cancel();
+            pending.Dispose();
+            foreach (var field in fields) type.GetField(field.Key, instance).SetValue(vm, field.Value);
+            vm.AllIssues.Clear();
+            foreach (var issue in previousIssues) vm.AllIssues.Add(issue);
+            rawEvents.Clear();
+            rawEvents.AddRange(previousEvents);
+            vm.AiReportFindings.Clear();
+            foreach (var finding in previousReport) vm.AiReportFindings.Add(finding);
+            foreach (var property in properties) type.GetProperty(property.Key).SetValue(vm, property.Value);
+            ((ScanProgressModel)type.GetField("_auditProgress", instance).GetValue(vm)).Reset();
+            type.GetMethod("RebuildSections", instance).Invoke(vm, new object[] { false });
+            type.GetMethod("PublishScanProgress", instance).Invoke(vm, null);
+            vm.IsStatusOpen = false;
+            if (scheduled) schedule.Start();
+        }
+    }
+
+    private sealed class CapturedProgress : IProgress<AiTaskProgress>
+    {
+        public AiTaskProgress Value { get; private set; } = new(string.Empty, string.Empty, 0, 0);
+
+        public string Message => Value.StatusMessage;
+
+        public void Report(AiTaskProgress value) => Value = value;
     }
 
     private static async Task CheckAiHubPage(SettingsRepository<GeneralSettings> repository)
@@ -441,6 +593,7 @@ internal static class ModulePageSmoke
         var vm = page.ViewModel;
         vm.RefreshEnabledState();
         await CheckAuditWorkflowStates(page);
+        await CheckSelectedAuditRange(page);
         await CheckAuditUxStates(page);
         if (vm.AiHub.ActivePolicyIndex != 1) throw new InvalidOperationException("Task policy editor initially selects the global policy.");
 
@@ -727,7 +880,7 @@ internal static class ModulePageSmoke
             toggle.IsOn = false;
             await Task.Delay(200);
             if (service.IsEnabled || service.HubContentVisibility != Visibility.Collapsed) throw new InvalidOperationException("AI service did not switch off.");
-            if (service.SelfTestCommand.CanExecute(null) || service.MainEndpoint.TestCommand.CanExecute(null)) throw new InvalidOperationException("AI service commands remain enabled while off.");
+            if (service.MainEndpoint.TestCommand.CanExecute(null) || service.FallbackEndpoint.TestCommand.CanExecute(null)) throw new InvalidOperationException("AI endpoint tests remain enabled while the service is off.");
             var toggled = new TaskCompletionSource();
             page.DispatcherQueue.TryEnqueue(() =>
             {
@@ -807,7 +960,7 @@ internal static class ModulePageSmoke
             {
                 SynchronizationContext.SetSynchronizationContext(operationContext);
             }
-            if (!service.IsBusy || service.SelfTestCommand.CanExecute(null)) throw new InvalidOperationException("Self-test remains enabled while an operation is running.");
+            if (!service.IsBusy || service.MainEndpoint.TestCommand.CanExecute(null) || service.FallbackEndpoint.TestCommand.CanExecute(null)) throw new InvalidOperationException("AI endpoint tests remain enabled while an operation is running.");
             await Task.Run(() => completion.SetResult());
             await operation;
             if (required.Any(control => !control.IsEnabled)) throw new InvalidOperationException("AI service controls did not recover after the operation.");

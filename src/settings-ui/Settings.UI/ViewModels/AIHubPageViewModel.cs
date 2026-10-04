@@ -149,7 +149,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly Func<string, int> _ipcSendMethod;
     private readonly DispatcherQueue _dispatcherQueue;
     private readonly GpoRuleConfigured _gpoConfiguration;
-    private readonly EventLogService _eventLogService = new();
     private readonly CacheCleanupService _cacheCleanupService = new();
     private readonly DownloadOrganizerService _downloadOrganizerService = new();
     private readonly AuditHistoryStorage _auditHistoryStorage = new();
@@ -167,6 +166,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private bool _hasAuditResult;
     private ScanPhase _scanPhase = ScanPhase.Idle;
     private ScanPhase _auditPhase = ScanPhase.Idle;
+    private double? _auditDetailedPercent;
+    private bool _auditWasDeepAnalysis;
+    private bool _auditIncomplete;
     private string _aiAnalysisRanText = string.Empty;
     private AiReadinessLevel _aiReadinessLevel = AiReadinessLevel.Unverified;
     private string _aiReadinessText = string.Empty;
@@ -447,35 +449,52 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     /// <summary>
-    /// Selected full-scan range: 0 = 1 day, 1 = 2 days, 2 = 1 week.
-    /// </summary>
-    /// <summary>
-    /// Selected full-scan range: 0 = 1 day, 1 = 2 days, 2 = 1 week. Changing it only
-    /// updates the label; the scan starts when the user asks for one. Auto-starting here
-    /// fired a scan on every binding initialization, which polluted the audit history with
-    /// runs nobody requested.
+    /// Selected range: 0 = 2 days, 1 = 1 week, 2 = 1 month. Once an audit exists,
+    /// refresh its local findings without issuing AI requests or saving another history entry.
     /// </summary>
     public int FullScanRangeIndex
     {
         get => _selectedScopeIndex;
         set
         {
-            if (Set(ref _selectedScopeIndex, value))
+            if (value is >= 0 and <= 2 && Set(ref _selectedScopeIndex, value))
             {
                 OnPropertyChanged(nameof(ScanRangeDescription));
 
-                // Changing the range does not re-scan: the results on screen still describe the
-                // previous window. Say so, otherwise the list looks like it ignored the choice.
-                if (HasAuditData && !IsAuditing)
+                if (HasAuditData || IsAuditing || IsAiAnalyzing)
                 {
-                    ShowStatus(
-                        IsChinese
-                            ? $"已选择 {ScanRangeDescription}。当前显示的是上一次扫描结果，点击 Full scan 重新扫描。"
-                            : $"Range set to {ScanRangeDescription}. The results shown are from the previous scan; run Full scan to apply it.",
-                        InfoBarSeverity.Informational);
+                    RefreshSelectedRange();
                 }
             }
         }
+    }
+
+    private void RefreshSelectedRange()
+    {
+        _auditCts?.Cancel();
+        IsAuditing = false;
+        IsAiAnalyzing = false;
+        AllIssues.Clear();
+        _hasAuditResult = false;
+        lock (_lastAuditEvents)
+        {
+            _lastAuditEvents.Clear();
+        }
+
+        _aiReportFindings.Clear();
+        HasAiReport = false;
+        AiReportSummaryText = AiReportMetaText = AiStatusText = string.Empty;
+        HighCount = MediumCount = LowCount = 0;
+        HealthScoreGrade = "—";
+        ActivityFindingsText = "0";
+        EventCountText = FinishedText = "—";
+        WindowText = ScanRangeDescription;
+        ScanTypeText = IsChinese ? "本地发现" : "Local findings";
+        HealthVerdict = IsChinese ? "正在更新" : "Updating";
+        HealthSummaryText = IsChinese ? "正在读取所选时段的事件并更新发现。" : "Reading events and updating findings for the selected range.";
+        AuditTimestampText = HealthSummaryText;
+        RebuildSections();
+        RunAudit(fast: false, rangeRefresh: true);
     }
 
     /// <summary>Selected range as a bilingual label for the status text.</summary>
@@ -548,7 +567,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
     }
 
-    public string FullScanRangeHint => IsChinese ? "选择全量扫描时间跨度" : "Select full scan time range";
+    public string FullScanRangeHint => IsChinese ? "选择时间范围并更新本地发现" : "Select a time range and refresh local findings";
 
     public string RangeOption1DayLabel => IsChinese ? "2 天" : "2d";
 
@@ -1119,11 +1138,22 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
     }
 
-    public string CurrentStageText => _auditProgress.CurrentStage ?? string.Empty;
+    public string CurrentStageText => _auditProgress.CurrentStage switch
+    {
+        "Collect event logs" => IsChinese ? "收集事件日志" : "Collect event logs",
+        "Analyze findings" => IsChinese ? "分析发现" : "Analyze findings",
+        "Finish" => IsChinese ? "整理结果" : "Finalize results",
+        _ => string.Empty,
+    };
 
     private void BeginStage(string title, bool audit = false)
     {
         (audit ? _auditProgress : _scanProgress).StartStage(title);
+        if (audit)
+        {
+            _auditDetailedPercent = title == "Collect event logs" ? 0 : null;
+        }
+
         PublishScanProgress();
     }
 
@@ -1131,6 +1161,41 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private void EndStage(string title, bool audit = false)
     {
         (audit ? _auditProgress : _scanProgress).CompleteStage(title);
+        if (audit && title == "Finish")
+        {
+            _auditDetailedPercent = 100;
+        }
+
+        PublishScanProgress();
+    }
+
+    private void ApplyAuditCollectionProgress(EventCollectionProgress progress)
+    {
+        if (progress.TotalChannels > 0)
+        {
+            _auditDetailedPercent = Math.Max(_auditDetailedPercent ?? 0, 30.0 * progress.CompletedChannels / progress.TotalChannels);
+        }
+        string state = progress.Skipped ? (IsChinese ? "无法读取" : "Unavailable")
+            : progress.IsComplete ? (IsChinese ? "已读取" : "Read") : (IsChinese ? "正在读取" : "Reading");
+        AuditStatusText = IsChinese
+            ? $"{state} {progress.Channel} · {progress.CompletedChannels}/{progress.TotalChannels} 个日志通道 · 当前通道 {progress.ChannelEvents} 条事件 · 共 {progress.TotalEvents} 条事件"
+            : $"{state} {progress.Channel} · {progress.CompletedChannels}/{progress.TotalChannels} log channels · {progress.ChannelEvents} events in channel · {progress.TotalEvents} events collected";
+        PublishScanProgress();
+    }
+
+    private void ApplyAuditAiProgress(AiTaskProgress progress)
+    {
+        if (progress.TotalBatches > 0)
+        {
+            double percent = (_auditWasDeepAnalysis ? 0 : 30) + (_auditWasDeepAnalysis ? 95.0 : 65.0) * Math.Clamp((double)progress.CompletedBatches / progress.TotalBatches, 0, 1);
+            _auditDetailedPercent = Math.Max(_auditDetailedPercent ?? 0, percent);
+        }
+        AuditStatusText = progress.StatusMessage;
+        if (_auditWasDeepAnalysis)
+        {
+            AiStatusText = progress.StatusMessage;
+        }
+
         PublishScanProgress();
     }
 
@@ -1177,21 +1242,22 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public bool SidebarWorkflowVisible => AuditPhase is ScanPhase.Scanning or ScanPhase.SelectingTargets or ScanPhase.Failed;
 
     /// <summary>Sidebar progress bar value (0-100).</summary>
-    public double SidebarWorkflowPercent => _auditProgress.Percent;
+    public double SidebarWorkflowPercent => _auditDetailedPercent ?? (_auditIncomplete ? 0 : _auditProgress.Percent);
 
-    public bool IsAuditProgressIndeterminate => IsAuditing && _auditProgress.CurrentStage == "Analyze findings";
+    public bool IsAuditProgressIndeterminate => (IsAuditing || IsAiAnalyzing) && !_auditDetailedPercent.HasValue;
 
     public string SidebarWorkflowPercentText => IsAuditProgressIndeterminate
         ? (IsChinese ? "分析中" : "Analyzing")
-        : _auditProgress.PercentText;
+        : SidebarWorkflowPercent.ToString("0'%'", CultureInfo.InvariantCulture);
 
     public string SidebarWorkflowCountText => _auditProgress.StageCountText;
 
     public string SidebarWorkflowTitle => AuditPhase switch
     {
-        ScanPhase.Scanning => IsChinese ? "正在扫描" : "Scanning",
-        ScanPhase.SelectingTargets => IsChinese ? "扫描完成" : "Scan complete",
-        ScanPhase.Failed => IsChinese ? "扫描失败" : "Scan failed",
+        ScanPhase.Scanning => _auditWasDeepAnalysis ? (IsChinese ? "AI 深度分析" : "AI deep analysis") : (IsChinese ? "正在扫描" : "Scanning"),
+        ScanPhase.SelectingTargets when _auditIncomplete => IsChinese ? "部分完成" : "Partially completed",
+        ScanPhase.SelectingTargets => _auditWasDeepAnalysis ? (IsChinese ? "AI 分析完成" : "AI analysis complete") : (IsChinese ? "扫描完成" : "Scan complete"),
+        ScanPhase.Failed => _auditWasDeepAnalysis ? (IsChinese ? "AI 分析未完成" : "AI analysis incomplete") : (IsChinese ? "扫描失败" : "Scan failed"),
         _ => IsChinese ? "审计工作流" : "Audit workflow",
     };
 
@@ -1199,21 +1265,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string SidebarWorkflowGlyph => AuditPhase switch
     {
         ScanPhase.Scanning => "\uE895",
-        ScanPhase.SelectingTargets => "\uE73E",
+        ScanPhase.SelectingTargets => _auditIncomplete ? "\uE7BA" : "\uE73E",
         ScanPhase.Failed => "\uEA39",
         _ => "\uEA3A",
     };
 
-    public string SidebarWorkflowTooltip => AuditPhase switch
-    {
-        ScanPhase.Scanning => IsChinese
-            ? $"正在扫描 {ScanRangeDescription}，{CurrentStageText} {SidebarWorkflowPercentText}"
-            : $"Scanning {ScanRangeDescription}, {CurrentStageText} {SidebarWorkflowPercentText}",
-        ScanPhase.SelectingTargets => IsChinese
-            ? $"扫描完成：{ActivityFindingsText} 项发现"
-            : $"Scan complete: {ActivityFindingsText} finding(s)",
-        _ => IsChinese ? "尚未扫描" : "Not scanned yet",
-    };
+    public string SidebarWorkflowTooltip => $"{SidebarWorkflowTitle} · {SidebarWorkflowPercentText} · {AuditStatusText}";
 
     public int CandidatesCount
     {
@@ -1386,6 +1443,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             {
                 OnPropertyChanged(nameof(CanRunDeepAnalysis));
                 RefreshCommands();
+                PublishScanProgress();
             }
         }
     }
@@ -1569,18 +1627,26 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
         _aiReportFindings.Clear();
         HasAiReport = false;
+        _auditProgress.Reset();
+        _auditWasDeepAnalysis = true;
+        _auditIncomplete = false;
+        AiAnalysisRanText = string.Empty;
         IsAiAnalyzing = true;
+        AuditPhase = ScanPhase.Scanning;
+        EndStage("Collect event logs", audit: true);
+        BeginStage("Analyze findings", audit: true);
         AiStatusText = IsChinese ? "正在请求 AI 深度分析..." : "Requesting AI deep analysis...";
+        AuditStatusText = AiStatusText;
 
         _auditCts?.Cancel();
         _auditCts?.Dispose();
         _auditCts = new CancellationTokenSource();
         CancellationToken token = _auditCts.Token;
-        var progress = new Progress<string>(message => EnqueueOnUI(() =>
+        var progress = new Progress<AiTaskProgress>(update => EnqueueOnUI(() =>
         {
-            if (IsAiAnalyzing)
+            if (_auditCts?.Token == token && IsAiAnalyzing && AuditPhase == ScanPhase.Scanning)
             {
-                AiStatusText = message;
+                ApplyAuditAiProgress(update);
             }
         }, token));
 
@@ -1588,20 +1654,29 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             try
             {
-                IReadOnlyList<AuditIssue> issues = await AiHubAuditAnalysisService
+                var result = await AiHubAuditAnalysisService
                     .AnalyzeEventsAsync(events, progress, token)
                     .ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
-                bool partial = AiHubAuditAnalysisService.LastWasPartial;
-                string failure = AiHubAuditAnalysisService.LastFailure;
+                IReadOnlyList<AuditIssue> issues = result.Issues;
+                bool partial = result.IsPartial;
+                string failure = result.Failure;
 
                 EnqueueOnUI(() =>
                 {
+                    if (_auditCts?.Token != token)
+                    {
+                        return;
+                    }
+
                     if (issues is null)
                     {
                         AiStatusText = IsChinese
                             ? $"AI 分析未完成：{failure}"
                             : $"AI analysis did not complete: {failure}";
+                        AuditStatusText = AiStatusText;
+                        _auditIncomplete = true;
+                        AuditPhase = ScanPhase.Failed;
                         ShowStatus(AiStatusText, InfoBarSeverity.Warning);
                         return;
                     }
@@ -1624,6 +1699,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         : $"Kernel {AiHubEngine.Current.ActiveKernel} · {DateTime.Now:HH:mm:ss}";
                     HasAiReport = true;
                     AiStatusText = AiReportSummaryText;
+                    AuditStatusText = AiStatusText;
+                    _auditIncomplete = partial;
+                    if (!partial)
+                    {
+                        EndStage("Analyze findings", audit: true);
+                        EndStage("Finish", audit: true);
+                    }
+
+                    AuditPhase = ScanPhase.SelectingTargets;
                     if (partial)
                     {
                         ShowStatus(AiStatusText, InfoBarSeverity.Warning);
@@ -1634,22 +1718,45 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             }
             catch (OperationCanceledException)
             {
-                EnqueueOnUI(() => AiStatusText = IsChinese ? "AI 分析已取消" : "AI analysis cancelled");
+                EnqueueOnUI(() =>
+                {
+                    if (_auditCts?.Token == token)
+                    {
+                        AiStatusText = IsChinese ? "AI 分析已取消" : "AI analysis cancelled";
+                        AuditStatusText = AiStatusText;
+                        _auditIncomplete = true;
+                        AuditPhase = ScanPhase.Failed;
+                    }
+                });
             }
             catch (Exception ex)
             {
                 EnqueueOnUI(() =>
                 {
-                    AiStatusText = IsChinese ? $"AI 分析失败：{ex.Message}" : $"AI analysis failed: {ex.Message}";
+                    if (_auditCts?.Token == token)
+                    {
+                        AiStatusText = IsChinese ? $"AI 分析失败：{ex.Message}" : $"AI analysis failed: {ex.Message}";
+                        AuditStatusText = AiStatusText;
+                        _auditIncomplete = true;
+                        AuditPhase = ScanPhase.Failed;
+                    }
                 });
             }
             finally
             {
                 EnqueueOnUI(() =>
                 {
-                    if (token.IsCancellationRequested)
+                    if (_auditCts?.Token != token)
+                    {
+                        return;
+                    }
+
+                    if (token.IsCancellationRequested && AuditPhase == ScanPhase.Scanning)
                     {
                         AiStatusText = IsChinese ? "AI 分析已取消" : "AI analysis cancelled";
+                        AuditStatusText = AiStatusText;
+                        _auditIncomplete = true;
+                        AuditPhase = ScanPhase.Failed;
                     }
 
                     IsAiAnalyzing = false;
@@ -1658,7 +1765,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         });
     }
 
-    private void RunAudit(bool fast)
+    private void RunAudit(bool fast, bool rangeRefresh = false)
     {
         if (!IsEnabled || IsAuditing || IsAiAnalyzing)
         {
@@ -1672,6 +1779,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         // Audit progress uses its own stages so the pane shows what the audit is doing.
         _auditProgress.Reset();
+        _auditWasDeepAnalysis = false;
+        _auditIncomplete = false;
+        _aiReportFindings.Clear();
+        HasAiReport = false;
+        AiStatusText = AiReportSummaryText = AiReportMetaText = string.Empty;
         AiAnalysisRanText = string.Empty;
         AuditPhase = ScanPhase.Scanning;
         BeginStage("Collect event logs", audit: true);
@@ -1682,34 +1794,30 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         CancellationToken token = _auditCts.Token;
         AuditStatusText = fast ? (IsChinese ? "正在执行快速安全扫描..." : "Fast scan in progress...") : (IsChinese ? "正在全量检索系统事件日志..." : "Full event audit in progress...");
 
+        // Snapshot the user's selection before dispatching. Later selections cancel this run.
+        int rangeDays = _selectedScopeIndex switch { 1 => 7, 2 => 30, _ => 2 };
+        string rangeDescription = ScanRangeDescription;
+        int maxEvents = fast ? 500 : 5000;
+        var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
+        DateTime nowUtc = DateTime.UtcNow;
+        ScanIntent intent = fast ? ScanIntent.Fast : ScanIntent.ManualFull;
+        (DateTime windowFrom, DateTime windowTo) = AuditSchedule.ComputeWindow(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
+        bool incremental = AuditSchedule.IsIncremental(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
+        var eventLogService = new EventLogService();
+        var collectionProgress = new Progress<EventCollectionProgress>(update => EnqueueOnUI(() =>
+        {
+            if (_auditCts?.Token == token && IsAuditing && _auditProgress.CurrentStage == "Collect event logs")
+            {
+                ApplyAuditCollectionProgress(update);
+            }
+        }, token));
+
         Task.Run(async () =>
         {
             try
             {
-                // Selected range: 0 = 2 days, 1 = 1 week, 2 = 1 month.
-                int rangeDays = _selectedScopeIndex switch
-                {
-                    1 => 7,
-                    2 => 30,
-                    _ => 2,
-                };
-
-                // Quick scan covers today only; the full scan honours the selected range.
-                // They also read different volumes: a quick scan is a smoke test, so it
-                // reads fewer events per channel than a full one.
-                int maxEvents = fast ? 500 : 5000;
-                var auditMode = IsFullAuditMode ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
-
-                // A manual scan always covers the whole selected range; only a scheduled run
-                // continues from the previous scan. Reusing the incremental window here shrank
-                // every manual scan to a couple of minutes and reported no findings at all.
-                DateTime nowUtc = DateTime.UtcNow;
-                ScanIntent intent = fast ? ScanIntent.Fast : ScanIntent.ManualFull;
-                (DateTime windowFrom, DateTime windowTo) = AuditSchedule.ComputeWindow(
-                    intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
-                bool incremental = AuditSchedule.IsIncremental(intent, _lastCompletedAuditUtc, nowUtc, rangeDays);
-
-                var events = await _eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, token);
+                var events = await eventLogService.CollectEventsAsync(windowFrom, windowTo, auditMode, maxEvents, collectionProgress, token);
+                token.ThrowIfCancellationRequested();
 
                 // Advance only after the work is done; completing the stage first made the
                 // progress bar claim collection was finished while it had not started.
@@ -1722,14 +1830,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     EndStage("Collect event logs", audit: true);
                     BeginStage("Analyze findings", audit: true);
+                    AuditStatusText = IsChinese ? $"正在分析 {events.Count} 条事件的本地规则..." : $"Checking local rules for {events.Count} events...";
                 }, token);
-
-                // Retain the raw events so AI deep analysis can send the same evidence.
-                lock (_lastAuditEvents)
-                {
-                    _lastAuditEvents.Clear();
-                    _lastAuditEvents.AddRange(events);
-                }
 
                 // Decide up front whether the AI pass can run, and say so before spending
                 // time on it. Previously availability was an optimistic switch check, so a
@@ -1746,7 +1848,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     $"Audit readiness: level={readiness.Level}, kernel={readiness.ActiveKernel}, " +
                     $"model={readiness.ActiveModel}, cached={readiness.FromCache}, detail={readiness.Detail ?? "-"}");
 
-                bool aiEligible = readiness.CanAttempt;
+                bool aiEligible = !rangeRefresh && readiness.CanAttempt;
 
                 // Rule-based detection first: it is local, instant, and always available, so
                 // a machine with AI disabled still gets a usable result.
@@ -1764,22 +1866,23 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     Logger.LogInfo(
                         $"Audit sending {events.Count} event(s) to {AiHubEngine.Current.ActiveKernel} for analysis.");
 
-                    var progress = new Progress<string>(message =>
+                    var progress = new Progress<AiTaskProgress>(update =>
                         EnqueueOnUI(() =>
                         {
-                            if (IsAuditing && !token.IsCancellationRequested)
+                            if (_auditCts?.Token == token && IsAuditing && AuditPhase == ScanPhase.Scanning)
                             {
-                                AuditStatusText = message;
+                                ApplyAuditAiProgress(update);
                             }
                         }, token));
 
                     try
                     {
-                        var aiIssues = await AiHubAuditAnalysisService
+                        var result = await AiHubAuditAnalysisService
                             .AnalyzeEventsAsync(events, progress, token)
                             .ConfigureAwait(false);
                         token.ThrowIfCancellationRequested();
-                        bool partial = AiHubAuditAnalysisService.LastWasPartial;
+                        var aiIssues = result.Issues;
+                        bool partial = result.IsPartial;
                         aiOutcome = partial ? "partial" : aiIssues != null ? "ok" : "failed";
 
                         // Bound properties back a TextBlock, so they must be set on the UI
@@ -1789,7 +1892,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         {
                             issues = MergeIssues(ruleIssues, aiIssues, events);
                             string summary = partial
-                                ? (IsChinese ? $"AI 部分完成，保留 {aiIssues.Count} 项增强发现（{AiHubAuditAnalysisService.LastFailure}）" : $"AI partially completed; retained {aiIssues.Count} enhanced finding(s) ({AiHubAuditAnalysisService.LastFailure})")
+                                ? (IsChinese ? $"AI 部分完成，保留 {aiIssues.Count} 项增强发现（{result.Failure}）" : $"AI partially completed; retained {aiIssues.Count} enhanced finding(s) ({result.Failure})")
                                 : (IsChinese ? $"已调用 {AiHubEngine.Current.ActiveKernel}，返回 {aiIssues.Count} 项增强发现" : $"{AiHubEngine.Current.ActiveKernel} returned {aiIssues.Count} enhanced finding(s)");
                             EnqueueOnUI(() => AiAnalysisRanText = summary, token);
                         }
@@ -1797,7 +1900,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         {
                             // Distinguish "the model had nothing to add" from "the call never
                             // succeeded"; the engine's failure reason explains which.
-                            var failure = AiHubAuditAnalysisService.LastFailure;
+                            var failure = result.Failure;
                             string summary = partial
                                 ? (IsChinese ? $"AI 部分完成，已验证批次未发现额外问题（{failure}）" : $"AI partially completed; validated batches had no extra findings ({failure})")
                                 : failure is null
@@ -1835,6 +1938,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         EnqueueOnUI(() => AiAnalysisRanText = summary, token);
                     }
                 }
+                else if (rangeRefresh)
+                {
+                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "已更新本地发现；可按需运行 AI 深度分析" : "Local findings refreshed; AI deep analysis is available on request", token);
+                }
                 else if (events.Count == 0)
                 {
                     EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "无事件，未调用 AI" : "No events; AI not called", token);
@@ -1862,9 +1969,21 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         return;
                     }
 
-                    EndStage("Analyze findings", audit: true);
-                    EndStage("Finish", audit: true);
+                    _auditIncomplete = aiOutcome is "partial" or "failed";
+                    if (!_auditIncomplete)
+                    {
+                        EndStage("Analyze findings", audit: true);
+                        EndStage("Finish", audit: true);
+                    }
+
                     AuditPhase = ScanPhase.SelectingTargets;
+
+                    // Only the accepted result can supply evidence to a later deep analysis.
+                    lock (_lastAuditEvents)
+                    {
+                        _lastAuditEvents.Clear();
+                        _lastAuditEvents.AddRange(events);
+                    }
 
                     AllIssues.Clear();
                     foreach (var issue in issues)
@@ -1890,8 +2009,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     OnPropertyChanged(nameof(ScheduleSummaryText));
 
                     // Update Scan Details & Activity
-                    _lastCompletedAuditUtc = DateTime.UtcNow;
-                    ScanTypeText = fast
+                    if (!rangeRefresh)
+                    {
+                        _lastCompletedAuditUtc = DateTime.UtcNow;
+                    }
+
+                    ScanTypeText = rangeRefresh ? (IsChinese ? "本地发现" : "Local findings") : fast
                         ? (IsChinese ? "快速扫描" : "Fast scan")
                         : incremental
                             ? (IsChinese ? "增量审计" : "Incremental audit")
@@ -1902,12 +2025,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     // old text disagreed with the range the user had selected.
                     WindowText = fast
                         ? (IsChinese ? "当天" : "Today")
-                        : _selectedScopeIndex switch
-                        {
-                            1 => IsChinese ? "最近 1 周" : "Past 1 week",
-                            2 => IsChinese ? "最近 1 个月" : "Past 1 month",
-                            _ => IsChinese ? "最近 2 天" : "Past 2 days",
-                        };
+                        : rangeDescription;
                     EventCountText = IsChinese ? $"{events.Count} 事件" : $"{events.Count} events";
                     ActivityFindingsText = issues.Count.ToString(CultureInfo.InvariantCulture);
                     SelectedAuditLabel = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -1917,20 +2035,20 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     // Save history, then derive the activity counters from what is stored
                     // so scan/active-day/average figures reflect the real history.
-                    _ = SaveHistoryAndRefreshStatisticsAsync(new AuditResult
+                    if (!rangeRefresh)
                     {
-                        Timestamp = DateTime.UtcNow,
-                        HealthScore = score,
-                        Findings = issues,
+                        _ = SaveHistoryAndRefreshStatisticsAsync(new AuditResult
+                        {
+                            Timestamp = DateTime.UtcNow,
+                            HealthScore = score,
+                            Findings = issues,
+                            EventsScanned = events.Count,
+                            ScanStart = windowFrom,
+                            ScanEnd = windowTo,
+                        });
+                    }
 
-                        // Record what was actually scanned, otherwise the stored history
-                        // always claimed zero events and hid collection problems.
-                        EventsScanned = events.Count,
-                        ScanStart = windowFrom,
-                        ScanEnd = windowTo,
-                    });
-
-                    FinishAuditStatus(score, issues.Count, aiOutcome, _eventLogService.SkippedChannels);
+                    FinishAuditStatus(score, issues.Count, aiOutcome, eventLogService.SkippedChannels);
                 }, token);
             }
             catch (OperationCanceledException)
@@ -1996,6 +2114,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private void StopAudit(bool cancelled)
     {
         _auditProgress.Reset();
+        _auditDetailedPercent = 0;
         AuditStatusText = cancelled ? (IsChinese ? "扫描已取消" : "Audit cancelled") : (IsChinese ? "扫描失败" : "Audit failed");
         AuditPhase = cancelled ? ScanPhase.Idle : ScanPhase.Failed;
         IsAuditing = false;

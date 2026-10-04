@@ -5,6 +5,8 @@
 namespace Kit.AiHub.UnitTests;
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AIHubLib.Services;
@@ -85,6 +87,95 @@ public sealed class EventLogServiceTests
         var events = await service.CollectEventsAsync(from, to, EventLogService.AuditMode.Full, 10, CancellationToken.None);
 
         Assert.IsNotNull(events);
+    }
+
+    [TestMethod]
+    [DataRow(EventLogService.AuditMode.Extended, 4)]
+    [DataRow(EventLogService.AuditMode.Full, 6)]
+    public async Task CollectionProgressMatchesCompletedChannelsAndReturnedEvents(EventLogService.AuditMode mode, int channelCount)
+    {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
+        var service = new EventLogService();
+        var reports = new List<EventCollectionProgress>();
+        DateTime to = DateTime.UtcNow;
+        var events = await service.CollectEventsAsync(to.AddMinutes(-5), to, mode, 10,
+            new InlineProgress(reports.Add), CancellationToken.None);
+
+        var completed = reports.Where(report => report.IsComplete).ToArray();
+        Assert.AreEqual(channelCount, completed.Length);
+        CollectionAssert.AreEqual(Enumerable.Range(1, channelCount).ToArray(), completed.Select(report => report.CompletedChannels).ToArray());
+        Assert.IsTrue(reports.All(report => report.TotalChannels == channelCount));
+        Assert.AreEqual(events.Count, completed[^1].TotalEvents);
+        Assert.AreEqual(events.Count, completed.Sum(report => report.ChannelEvents));
+        CollectionAssert.AreEqual(service.SkippedChannels.ToArray(), completed.Where(report => report.Skipped).Select(report => report.Channel).ToArray());
+        int previousCount = 0;
+        foreach (var channel in completed)
+        {
+            var updates = reports.Where(report => report.Channel == channel.Channel).ToArray();
+            Assert.IsFalse(updates[0].IsComplete);
+            Assert.AreEqual(0, updates[0].ChannelEvents);
+            Assert.AreEqual(channel.CompletedChannels - 1, updates[0].CompletedChannels);
+        }
+
+        foreach (var report in reports)
+        {
+            Assert.IsTrue(report.TotalEvents >= previousCount, "Collected event counts must not regress.");
+            previousCount = report.TotalEvents;
+        }
+
+        if (mode == EventLogService.AuditMode.Extended)
+        {
+            Assert.IsFalse(reports.Any(report => report.Channel is "Security" or "Firewall"));
+        }
+    }
+
+    [TestMethod]
+    public async Task CancelledCollectionDoesNotPublishProgressOrReadChannels()
+    {
+        var service = new EventLogService();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        int reports = 0;
+        DateTime to = DateTime.UtcNow;
+
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => service.CollectEventsAsync(to.AddMinutes(-5), to,
+            EventLogService.AuditMode.Extended, 10, new InlineProgress(_ => reports++), cancellation.Token));
+        Assert.AreEqual(0, reports);
+    }
+
+    [TestMethod]
+    public async Task CancellationDuringAChannelIsNotReportedAsSkippedOrComplete()
+    {
+        if (!EventLogAvailable())
+        {
+            Assert.Inconclusive("The Windows event-log assembly cannot be loaded in this test host.");
+        }
+
+        var service = new EventLogService();
+        using var cancellation = new CancellationTokenSource();
+        var reports = new List<EventCollectionProgress>();
+        DateTime to = DateTime.UtcNow;
+        var progress = new InlineProgress(value =>
+        {
+            reports.Add(value);
+            cancellation.Cancel();
+        });
+
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => service.CollectEventsAsync(to.AddMinutes(-5), to,
+            EventLogService.AuditMode.Extended, 10, progress, cancellation.Token));
+        Assert.AreEqual(1, reports.Count);
+        Assert.AreEqual("System", reports[0].Channel);
+        Assert.IsFalse(reports[0].IsComplete || reports[0].Skipped);
+        Assert.AreEqual(0, service.SkippedChannels.Count);
+    }
+
+    private sealed class InlineProgress(Action<EventCollectionProgress> report) : IProgress<EventCollectionProgress>
+    {
+        public void Report(EventCollectionProgress value) => report(value);
     }
 
     [TestMethod]

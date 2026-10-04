@@ -12,6 +12,16 @@ using ManagedCommon;
 
 namespace Kit.AIHubLib.Services;
 
+/// <summary>Observed collection counts; IsComplete describes the current channel.</summary>
+public sealed record EventCollectionProgress(
+    string Channel,
+    int CompletedChannels,
+    int TotalChannels,
+    int ChannelEvents,
+    int TotalEvents,
+    bool IsComplete,
+    bool Skipped);
+
 public sealed class EventLogService
 {
     private const string FailureLevels = "(Level=1 or Level=2 or Level=3)";
@@ -87,25 +97,64 @@ public sealed class EventLogService
         AuditMode mode,
         int maxEventsPerChannel = 200,
         CancellationToken cancellationToken = default)
-    {
-        var results = new List<SecurityEvent>();
+        => await CollectEventsAsync(from, to, mode, maxEventsPerChannel, null, cancellationToken).ConfigureAwait(false);
 
+    public async Task<List<SecurityEvent>> CollectEventsAsync(
+        DateTime from,
+        DateTime to,
+        AuditMode mode,
+        int maxEventsPerChannel,
+        IProgress<EventCollectionProgress>? progress,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var results = new List<SecurityEvent>();
         var skippedChannels = new List<string>();
+        int completedChannels = 0;
+        int totalChannels = mode == AuditMode.Full ? 6 : 4;
+
+        void Report(string channel, int count, bool complete, bool skipped)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                progress?.Report(new(channel, completedChannels, totalChannels, count, results.Count, complete, skipped));
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                // A progress subscriber must not turn a readable channel into a skipped one.
+            }
+        }
 
         async Task CollectChannelAsync(string channelName, IAsyncEnumerable<SecurityEvent> stream)
         {
             int count = 0;
+            bool skipped = false;
+            Report(channelName, count, complete: false, skipped: false);
             try
             {
                 await foreach (var evt in stream.WithCancellation(cancellationToken))
                 {
                     results.Add(evt);
                     count++;
+                    if (count % 100 == 0)
+                    {
+                        Report(channelName, count, complete: false, skipped: false);
+                    }
+
                     if (count >= maxEventsPerChannel)
                     {
                         break;
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (EventLogNotFoundException)
             {
@@ -114,13 +163,18 @@ public sealed class EventLogService
                 // it must be recorded: swallowing it silently made a missing channel look
                 // exactly like a clean audit with nothing to report.
                 skippedChannels.Add(channelName);
+                skipped = true;
             }
             catch (Exception ex)
             {
                 // A real read failure is reported rather than hidden.
                 Logger.LogError($"Event log channel '{channelName}' could not be read", ex);
                 skippedChannels.Add(channelName);
+                skipped = true;
             }
+
+            completedChannels++;
+            Report(channelName, count, complete: true, skipped: skipped);
         }
 
         await CollectChannelAsync("System", ReadSystemEventsAsync(from, to, cancellationToken));
@@ -152,32 +206,19 @@ public sealed class EventLogService
         string query,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        EventLogQuery eventQuery;
-        try
+        cancellationToken.ThrowIfCancellationRequested();
+        var eventQuery = new EventLogQuery(logName, PathType.LogName, query)
         {
-            eventQuery = new EventLogQuery(logName, PathType.LogName, query)
-            {
-                ReverseDirection = true
-            };
-        }
-        catch (Exception)
-        {
-            yield break;
-        }
+            ReverseDirection = true
+        };
 
         using var reader = new EventLogReader(eventQuery);
 
-        while (!cancellationToken.IsCancellationRequested)
+        while (true)
         {
-            EventRecord? record = null;
-            try
-            {
-                record = reader.ReadEvent();
-            }
-            catch (Exception)
-            {
-                break;
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+            // Collection owns read failures so partial/unreadable channels are reported.
+            EventRecord? record = reader.ReadEvent();
 
             if (record == null)
             {
@@ -190,6 +231,10 @@ public sealed class EventLogService
                 try
                 {
                     message = record.FormatDescription();
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch
                 {

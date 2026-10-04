@@ -1631,9 +1631,6 @@
   <data name="AiHub_ServiceStatusCard.Header" xml:space="preserve">
     <value>服务状态</value>
   </data>
-  <data name="AiHub_RunSelfTestButton.Content" xml:space="preserve">
-    <value>运行自检</value>
-  </data>
   <data name="AiHub_UnsavedEndpointsCard.Header" xml:space="preserve">
     <value>端点有未保存的更改</value>
   </data>

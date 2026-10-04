@@ -92,26 +92,28 @@ public static class AiHubAuditAnalysisService
     }
 
     /// <summary>
-    /// Runs a sandboxed AI pass over the supplied audit events and returns the parsed
-    /// advisory issues, or null when AI Hub is disabled or the call fails validation.
+    /// A single analysis result, including its own partial-completion and failure state.
     /// </summary>
-    public static async Task<IReadOnlyList<AuditIssue>?> AnalyzeEventsAsync(
+    public sealed record AuditAnalysisResult(IReadOnlyList<AuditIssue>? Issues, bool IsPartial, string? Failure);
+
+    /// <summary>
+    /// Runs a sandboxed AI pass over the supplied audit events and returns the parsed
+    /// advisory issues together with this request's completion state.
+    /// </summary>
+    public static async Task<AuditAnalysisResult> AnalyzeEventsAsync(
         IReadOnlyList<SecurityEvent> events,
-        IProgress<string>? progress = null,
+        IProgress<AiTaskProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        LastFailure = null;
-        LastWasPartial = false;
         if (events is null || events.Count == 0)
         {
-            return null;
+            return new(null, false, null);
         }
 
         if (!IsAvailable)
         {
-            LastFailure = "AI Hub unavailable";
             Logger.LogInfo("AI audit skipped: service unavailable.");
-            return null;
+            return new(null, false, "AI Hub unavailable");
         }
 
         // Prioritise what matters: errors and criticals first, then the most recent
@@ -129,12 +131,13 @@ public static class AiHubAuditAnalysisService
 
         if (items.Count == 0)
         {
-            return null;
+            return new(null, false, null);
         }
 
-        progress?.Report(IsChinese
+        string initialStatus = IsChinese
             ? $"正在请求 AI 深度分析（{items.Count} 条事件）..."
-            : $"Requesting AI deep analysis for {items.Count} event(s)...");
+            : $"Requesting AI deep analysis for {items.Count} event(s)...";
+        progress?.Report(new("Prepare", initialStatus, 0, 0));
 
         string analysisId = Guid.NewGuid().ToString("N")[..8];
         var stopwatch = Stopwatch.StartNew();
@@ -164,13 +167,11 @@ public static class AiHubAuditAnalysisService
         }
         catch (OperationCanceledException)
         {
-            LastFailure = "Cancelled";
             outcome = "cancelled";
             throw;
         }
         catch (Exception ex)
         {
-            LastFailure = ex.GetType().Name;
             Logger.LogError($"AI audit failed: id={analysisId}, type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
             throw;
         }
@@ -180,22 +181,25 @@ public static class AiHubAuditAnalysisService
         }
     }
 
-    private static IReadOnlyList<AuditIssue>? ReadAnalysisResult(AiTaskResult<AuditIssueContainer> result, string analysisId)
+    private static AuditAnalysisResult ReadAnalysisResult(AiTaskResult<AuditIssueContainer> result, string analysisId)
     {
-        LastWasPartial = result.HasPartialResult;
-        LastFailure = result.IsSuccess ? null : $"{result.ErrorCode}; {result.CompletedBatches}/{result.TotalBatches} batches completed";
+        string? failure = result.IsSuccess ? null : result.TotalBatches > 0
+            ? $"{result.ErrorCode}; {result.CompletedBatches}/{result.TotalBatches} batches completed"
+            : result.ErrorCode.ToString();
         if (!result.IsSuccess)
         {
             Logger.LogWarning($"AI audit incomplete: id={analysisId}, code={result.ErrorCode}, partial={result.HasPartialResult}, batches={result.CompletedBatches}/{result.TotalBatches}");
         }
 
-        return result.IsSuccess || result.HasPartialResult ? result.Payload?.Issues : null;
+        return new(result.IsSuccess || result.HasPartialResult ? result.Payload?.Issues : null, result.HasPartialResult, failure);
     }
 
-    private sealed class AuditProgress(string analysisId, Stopwatch stopwatch, IProgress<string>? progress) : IProgress<AiTaskProgress>
+    private sealed class AuditProgress(string analysisId, Stopwatch stopwatch, IProgress<AiTaskProgress>? progress) : IProgress<AiTaskProgress>
     {
         private readonly object _sync = new();
         private int _completed;
+        private int _total;
+        private string _activityStatus = string.Empty;
         private string _connectionStatus = string.Empty;
 
         public void Report(AiTaskProgress value)
@@ -203,7 +207,17 @@ public static class AiHubAuditAnalysisService
             lock (_sync)
             {
                 _completed = Math.Max(_completed, value.CompletedBatches);
+                _total = Math.Max(_total, value.TotalBatches);
                 Logger.LogInfo($"AI audit progress: id={analysisId}, stage={value.Stage}, batches={_completed}/{value.TotalBatches}, elapsedMs={stopwatch.ElapsedMilliseconds}");
+                _activityStatus = value.Stage switch
+                {
+                    "Prepare" => IsChinese ? "正在准备分析" : "Preparing analysis",
+                    "Queue" => IsChinese ? "正在等待分析空位" : "Waiting for analysis capacity",
+                    "Execute" => IsChinese ? "正在请求模型" : "Requesting model analysis",
+                    "Validate" => IsChinese ? "已验证批次结果" : "Batch results validated",
+                    "Failover" => IsChinese ? "正在请求备用模型" : "Requesting fallback analysis",
+                    _ => _activityStatus,
+                };
                 if (value.Stage == "Route" && !string.IsNullOrEmpty(value.StatusMessage))
                 {
                     Logger.LogInfo($"AI audit id={analysisId}: {value.StatusMessage}");
@@ -220,6 +234,17 @@ public static class AiHubAuditAnalysisService
                         else if (value.StatusMessage.Contains("event=completed,", StringComparison.Ordinal))
                         {
                             _connectionStatus = string.Empty;
+                            _activityStatus = IsChinese ? "模型已返回，正在验证结果" : "Model responded; validating results";
+                        }
+                        else if (value.StatusMessage.Contains("event=activity,", StringComparison.Ordinal))
+                        {
+                            _activityStatus = value.StatusMessage.Contains("phase=reasoning,", StringComparison.Ordinal)
+                                ? (IsChinese ? "模型正在分析" : "Model is analyzing")
+                                : value.StatusMessage.Contains("phase=responding,", StringComparison.Ordinal)
+                                    ? (IsChinese ? "模型正在生成结果" : "Model is generating results")
+                                    : value.StatusMessage.Contains("phase=started,", StringComparison.Ordinal)
+                                        ? (IsChinese ? "模型已开始处理" : "Model has started processing")
+                                        : _activityStatus;
                         }
                     }
                 }
@@ -233,21 +258,22 @@ public static class AiHubAuditAnalysisService
                     _connectionStatus = IsChinese ? "主链未完成，正在使用备用链路" : "Main did not complete; using fallback";
                 }
 
-                string status = IsChinese
-                    ? $"AI 分析：已完成 {_completed}/{value.TotalBatches} 批，耗时 {stopwatch.Elapsed.TotalMinutes:F1} 分钟"
-                    : $"AI analysis: {_completed}/{value.TotalBatches} batches complete, {stopwatch.Elapsed.TotalMinutes:F1} min elapsed";
-                progress?.Report(string.IsNullOrEmpty(_connectionStatus) ? status : $"{status} · {_connectionStatus}");
+                string status = _total > 0
+                    ? (IsChinese
+                        ? $"AI 分析：已完成 {_completed}/{_total} 批，耗时 {stopwatch.Elapsed.TotalMinutes:F1} 分钟"
+                        : $"AI analysis: {_completed}/{_total} batches complete, {stopwatch.Elapsed.TotalMinutes:F1} min elapsed")
+                    : (IsChinese
+                        ? $"AI 分析：耗时 {stopwatch.Elapsed.TotalMinutes:F1} 分钟"
+                        : $"AI analysis: {stopwatch.Elapsed.TotalMinutes:F1} min elapsed");
+                if (!string.IsNullOrEmpty(_activityStatus))
+                {
+                    status += $" · {_activityStatus}";
+                }
+
+                progress?.Report(new(value.Stage, string.IsNullOrEmpty(_connectionStatus) ? status : $"{status} · {_connectionStatus}", _completed, _total));
             }
         }
     }
-
-    /// <summary>
-    /// Reason the most recent analysis produced no result, or null when it succeeded.
-    /// Surfaced in the audit status so a failure is never mistaken for a clean scan.
-    /// </summary>
-    public static string? LastFailure { get; private set; }
-
-    public static bool LastWasPartial { get; private set; }
 
     /// <summary>
     /// Schema for the built-in security-audit chain: source-generated JSON metadata for

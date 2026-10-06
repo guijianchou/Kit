@@ -92,10 +92,10 @@
             <tkcontrols:MarkdownConfig x:Key="DescriptionTextMarkdownConfig" Themes="{StaticResource DescriptionTextMarkdownThemeConfig}" />
 
             <TransitionCollection x:Key="SettingsCardsAnimations">
-                <EntranceThemeTransition FromVerticalOffset="50" />
-                <!--  Animates cards when loaded  -->
+                <EntranceThemeTransition FromVerticalOffset="20" IsStaggeringEnabled="True" />
+                <!--  Fluid staggered entrance when cards load  -->
                 <RepositionThemeTransition IsStaggeringEnabled="False" />
-                <!--  Smoothly animates individual cards upon whenever Expanders are expanded/collapsed  -->
+                <!--  Smoothly animates individual cards whenever Expanders are expanded/collapsed  -->
             </TransitionCollection>
         </ResourceDictionary>
     </Application.Resources>

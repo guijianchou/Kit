@@ -51,6 +51,10 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Style HealthScoreStyle(int score) => (Style)Resources[score >= 80 ? "HealthGoodStyle" : score >= 60 ? "HealthWarningStyle" : "HealthCriticalStyle"];
 
+    public Style HealthScoreRingStyle(int score) => (Style)Resources[score >= 80 ? "HealthRingGoodStyle" : score >= 60 ? "HealthRingWarningStyle" : "HealthRingCriticalStyle"];
+
+    public double HealthScoreToDouble(int score) => Math.Clamp(score, 0, 100);
+
     public void RefreshEnabledState()
     {
         ViewModel.RefreshEnabledState();
@@ -71,11 +75,24 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     private void OnAuditOverviewSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool narrow = e.NewSize.Width < 640;
-        Grid.SetColumnSpan(AuditScoreSummary, narrow ? 2 : 1);
+        bool narrow = e.NewSize.Width < 760;
+        Grid.SetColumnSpan(AuditScoreCard, narrow ? 2 : 1);
         Grid.SetRow(AuditFindingsSummary, narrow ? 1 : 0);
         Grid.SetColumn(AuditFindingsSummary, narrow ? 0 : 1);
         Grid.SetColumnSpan(AuditFindingsSummary, narrow ? 2 : 1);
+    }
+
+    private void OnCommandHeaderSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var grid = (Grid)sender;
+        var title = (FrameworkElement)grid.Children[0];
+        var actions = (FrameworkElement)grid.Children[1];
+        bool narrow = e.NewSize.Width < 960;
+        Grid.SetColumnSpan(title, narrow ? 2 : 1);
+        Grid.SetRow(actions, narrow ? 1 : 0);
+        Grid.SetColumn(actions, narrow ? 0 : 1);
+        Grid.SetColumnSpan(actions, narrow ? 2 : 1);
+        actions.HorizontalAlignment = narrow ? HorizontalAlignment.Left : HorizontalAlignment.Right;
     }
 
     private void OnAiServiceSettingsClick(object sender, RoutedEventArgs e)

@@ -162,6 +162,28 @@ internal static class DashboardPageSmoke
                 new(chinese ? "温度" : "Temperature", "48 °C"),
             }, string.Empty),
         });
+        await Task.Delay(600);
+        var cpuDetail = vm.SystemDetails.First(detail => detail.Percent == 12);
+        var cpuBar = Descendants((DependencyObject)page.FindName("SystemDetailsList"))
+            .OfType<Kit.Settings.UI.Helpers.UsageProgressBar>().First(bar => bar.Visibility == Visibility.Visible);
+        cpuDetail.Update("85%", 85);
+        await Task.Delay(100);
+        Require(cpuDetail.UsageValue == 85 && Microsoft.UI.Xaml.Automation.AutomationProperties.GetHelpText(cpuBar) == "85%", "CPU text and accessible help retain the actual sample during interpolation.");
+        if (new Windows.UI.ViewManagement.UISettings().AnimationsEnabled)
+        {
+            Require(cpuBar.Value > 12 && cpuBar.Value < 85, "CPU usage passes through intermediate values instead of jumping.");
+            double intermediate = cpuBar.Value;
+            cpuDetail.Update("5%", 5);
+            await Task.Delay(100);
+            Require(cpuBar.Value > 5 && cpuBar.Value < intermediate, "An unfinished CPU transition retargets smoothly downward.");
+        }
+        else
+        {
+            Require(cpuBar.Value == 85, "CPU usage respects disabled system animations.");
+        }
+        cpuDetail.Update("12%", 12);
+        await Task.Delay(600);
+        Require(cpuBar.Value == 12, "CPU animation settles on the exact latest sample.");
         foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
         {
             ((FrameworkElement)window.Content).RequestedTheme = theme;
@@ -170,6 +192,7 @@ internal static class DashboardPageSmoke
                 window.AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 1100));
                 await Task.Delay(250);
                 page.UpdateLayout();
+                if (width == 1280) await VerifyUsageAnchor(cpuBar, cpuDetail);
                 Require(ReferenceEquals(vm.ProxyEgress, fixtureProxy) && !Timer(vm).IsRunning, "Display captures retain synthetic network data with polling stopped.");
                 var systemBars = Descendants((DependencyObject)page.FindName("SystemDetailsList")).OfType<ProgressBar>().Where(bar => bar.Visibility == Visibility.Visible).ToArray();
                 Require(systemBars.Length == 2 && systemBars[0].Value == 12 && Math.Abs(systemBars[1].Value - 23.4 / 64 * 100) < 0.01, "CPU and memory bars show numeric usage.");
@@ -313,6 +336,47 @@ internal static class DashboardPageSmoke
             }
             Require(top >= -1 && top < pageScroll.ViewportHeight, $"Settings shortcut reveals its section heading: {name}; top={top}, offset={pageScroll.VerticalOffset}");
         }
+    }
+
+    private static async Task VerifyUsageAnchor(ProgressBar bar, DashboardDetail detail)
+    {
+        var color = ((SolidColorBrush)bar.Foreground).Color;
+        async Task<int> LeadingPixel()
+        {
+            var bitmap = new RenderTargetBitmap();
+            await bitmap.RenderAsync(bar);
+            var buffer = await bitmap.GetPixelsAsync();
+            var pixels = new byte[buffer.Length];
+            using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(buffer)) reader.ReadBytes(pixels);
+            for (int x = 0; x < bitmap.PixelWidth; x++)
+                for (int y = 0; y < bitmap.PixelHeight; y++)
+                {
+                    int offset = (y * bitmap.PixelWidth + x) * 4;
+                    if (pixels[offset + 3] > 200 && Math.Abs(pixels[offset] - color.B) +
+                        Math.Abs(pixels[offset + 1] - color.G) + Math.Abs(pixels[offset + 2] - color.R) < 40)
+                        return x;
+                }
+            throw new InvalidOperationException("Usage indicator has no visible foreground pixels.");
+        }
+
+        detail.Update("90%", 90);
+        await Task.Delay(700);
+        int anchor = await LeadingPixel();
+        Require(anchor <= 1, "The stationary CPU indicator starts at the left edge of its track.");
+        int maxOffset = 0;
+        foreach (double target in new[] { 10d, 85d, 20d })
+        {
+            detail.Update(target + "%", target);
+            for (int frame = 0; frame < 8; frame++)
+            {
+                await Task.Delay(16);
+                maxOffset = Math.Max(maxOffset, await LeadingPixel() - anchor);
+            }
+        }
+        File.AppendAllText(Path.Combine(Output, "page-smoke.log"), $"CPU indicator rendered left-edge drift ({bar.ActualTheme}): {maxOffset}px across 24 animation frames.\n");
+        Require(maxOffset <= 1, "The rendered CPU indicator stays anchored to the left during increases, decreases, and retargeting.");
+        detail.Update("12%", 12);
+        await Task.Delay(700);
     }
 
     private static void RequireAligned(ProgressBar[] bars, FrameworkElement page, string label, int width)

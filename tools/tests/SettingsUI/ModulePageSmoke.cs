@@ -291,6 +291,7 @@ internal static class ModulePageSmoke
         var model = (ScanProgressModel)type.GetField("_auditProgress", instance).GetValue(vm);
         var optimizationModel = (ScanProgressModel)type.GetField("_scanProgress", instance).GetValue(vm);
         int previousTab = vm.ActiveTabIndex;
+        double previousOptimizationProgress = vm.OptimizationProgress;
         var previousAudit = type.GetField("_auditCts", instance).GetValue(vm);
         var previousOptimization = type.GetField("_optimizationCts", instance).GetValue(vm);
         var progressFields = new[] { "_auditDetailedPercent", "_auditWasDeepAnalysis", "_auditIncomplete" }
@@ -454,6 +455,66 @@ internal static class ModulePageSmoke
             vm.ActiveTabIndex = 0;
             if (vm.StatusMessage != "audit result" || !vm.IsStatusOpen)
                 throw new InvalidOperationException("Closing the Optimization banner closed the audit banner.");
+
+            bool IsShown(DependencyObject element)
+            {
+                for (; element != null; element = VisualTreeHelper.GetParent(element))
+                    if (element is UIElement ui && ui.Visibility == Visibility.Collapsed) return false;
+                return true;
+            }
+            var auditCard = (FrameworkElement)page.FindName("AuditWorkflowCard");
+            var optimizationCard = (FrameworkElement)page.FindName("OptimizationWorkflowCard");
+            var optimizationBar = (ProgressBar)page.FindName("OptimizationWorkflowProgress");
+            var optimizationStatus = (TextBlock)page.FindName("OptimizationWorkflowStatus");
+            model.CompleteAll();
+            type.GetField("_auditDetailedPercent", instance).SetValue(vm, (double?)100);
+            type.GetField("_auditIncomplete", instance).SetValue(vm, false);
+            type.GetProperty(nameof(vm.AuditStatusText)).SetValue(vm, "Audit completed. Health score 97/100; 2 findings.");
+            type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.SelectingTargets);
+            type.GetMethod("ResetScanProgress", instance).Invoke(vm, null);
+            type.GetProperty(nameof(vm.ScanPhase)).SetValue(vm, ScanPhase.Scanning);
+            vm.ActiveTabIndex = 1;
+            foreach (string message in new[] { "Scanning Downloads root...", "Scanning cache locations...", "AI analysis (2/7 batches)", "Main route did not complete. Reviewing with Fallback..." })
+            {
+                type.GetProperty(nameof(vm.OptimizationWorkflowStatus)).SetValue(vm, message);
+                await Task.Delay(40);
+                if (IsShown(auditCard) || !IsShown(optimizationCard) || !optimizationBar.IsIndeterminate ||
+                    optimizationStatus.Text != message || vm.OptimizationWorkflowPercentText.Length != 0 || bar.Value != 100)
+                    throw new InvalidOperationException("Optimization scanning must show its own live status and preserve the completed audit off-tab.");
+            }
+            await RenderPage(page, "aihub-optimization-progress.png");
+            vm.ActiveTabIndex = 0;
+            await Task.Delay(40);
+            if (!IsShown(auditCard) || IsShown(optimizationCard) || status.Text != vm.AuditStatusText || bar.Value != 100)
+                throw new InvalidOperationException("Returning to Audit did not restore its independent result.");
+            vm.ActiveTabIndex = 2;
+            await Task.Delay(40);
+            if (IsShown(auditCard) || IsShown(optimizationCard))
+                throw new InvalidOperationException("Task policies must not inherit scan progress cards.");
+            vm.ActiveTabIndex = 1;
+            type.GetProperty(nameof(vm.ScanPhase)).SetValue(vm, ScanPhase.ExecutionPending);
+            foreach (double percent in new[] { 42d, 75d })
+            {
+                type.GetProperty(nameof(vm.OptimizationProgress)).SetValue(vm, percent);
+                await Task.Delay(40);
+                if (!IsShown(optimizationCard) || optimizationBar.IsIndeterminate || optimizationBar.Value != percent)
+                    throw new InvalidOperationException("Optimization execution must display its actual processed percentage.");
+            }
+            type.GetMethod("StopOptimization", instance).Invoke(vm, new object[] { false });
+            await Task.Delay(40);
+            if (!IsShown(optimizationCard) || optimizationBar.IsIndeterminate || optimizationBar.Value != 0 || optimizationStatus.Text != vm.OptimizationWorkflowStatus)
+                throw new InvalidOperationException("Optimization failure retained a scanning or stale progress state.");
+            type.GetMethod("StopOptimization", instance).Invoke(vm, new object[] { true });
+            await Task.Delay(40);
+            if (IsShown(optimizationCard) || IsShown(auditCard))
+                throw new InvalidOperationException("Cancelling Optimization exposed Audit's previous result.");
+            optimizationModel.CompleteAll();
+            type.GetProperty(nameof(vm.OptimizationWorkflowStatus)).SetValue(vm, "AI analysis complete: 3 actionable, 1 skipped.");
+            type.GetProperty(nameof(vm.ScanPhase)).SetValue(vm, ScanPhase.SelectingTargets);
+            await Task.Delay(40);
+            if (!IsShown(optimizationCard) || IsShown(auditCard) || optimizationBar.IsIndeterminate || optimizationBar.Value != 100 || optimizationStatus.Text != vm.OptimizationWorkflowStatus)
+                throw new InvalidOperationException("Completed Optimization must show its own result.");
+            File.AppendAllText(Report, "Workflow cards: completed Audit followed by Downloads/cache/AI/fallback progress, execution percentage, failure/cancellation/completion, and all tab switches remain isolated.\n");
             File.AppendAllText(Report, "Audit UI: bound channel/batch progress, shared deep-analysis unknown/partial/success/failure states, retry/failover status, concurrent commands, and independent cancellation/progress/banners passed.\n");
         }
         finally
@@ -463,6 +524,7 @@ internal static class ModulePageSmoke
             type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, false);
             type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, false);
             type.GetProperty(nameof(vm.IsOptimizing)).SetValue(vm, false);
+            type.GetProperty(nameof(vm.OptimizationProgress)).SetValue(vm, previousOptimizationProgress);
             type.GetProperty(nameof(vm.SelectedCandidatesCount)).SetValue(vm, 0);
             type.GetProperty(nameof(vm.AuditPhase)).SetValue(vm, ScanPhase.Idle);
             type.GetProperty(nameof(vm.ScanPhase)).SetValue(vm, ScanPhase.Idle);
@@ -666,6 +728,11 @@ internal static class ModulePageSmoke
             }
             refresh.Invoke(vm, null);
             await Task.Delay(100);
+            if (((TextBlock)page.FindName("OptimizationScannedCandidatesText")).Text != "7" ||
+                ((TextBlock)page.FindName("OptimizationApprovedCandidatesText")).Text != "3" ||
+                ((TextBlock)page.FindName("OptimizationCleanableCapacityText")).Text != vm.CleanableCapacityText ||
+                vm.CleanableCapacityText != "14 B")
+                throw new InvalidOperationException("Optimization metrics must separate scanned, approved, and deletable bytes; Downloads and unreviewed caches are not cleanable space.");
             if (vm.OptimizationCategories.Count != 6 || vm.DownloadCategories.Count != 1 || vm.CacheCategories.Count != 5 || !vm.CleanAllCommand.CanExecute(null)) throw new InvalidOperationException("Optimization category binding or clean-all availability failed.");
             if (!vm.CacheGroups.Select(group => group.Family).SequenceEqual(new[] { "development", "packages", "editors", "browsers", "system" })) throw new InvalidOperationException("The five broad cache groups are missing or unordered.");
             if (vm.CacheGroups.Sum(group => group.ApprovedCount) != 2 || vm.CacheGroups.Any(group => group.ApprovedCount == 0 && group.IsEnabled) || vm.CacheCategories.Any(group => group.ApprovedCount == 0 && group.IsEnabled)) throw new InvalidOperationException("AI failure enabled cleanup or group totals are incorrect.");
@@ -821,9 +888,20 @@ internal static class ModulePageSmoke
                         foreach (var viewer in Descendants(page).OfType<ScrollViewer>()) viewer.ChangeView(null, 0, null, true);
                         await Task.Delay(100);
                         var summary = (FrameworkElement)page.FindName("AuditFindingsSummary");
+                        if (tab < 2)
+                        {
+                            var header = (Grid)page.FindName(tab == 0 ? "AuditCommandHeader" : "OptimizationCommandHeader");
+                            if (Grid.GetRow((FrameworkElement)header.Children[1]) != (header.ActualWidth < 960 ? 1 : 0) ||
+                                ((FrameworkElement)header.Children[0]).ActualWidth < 280)
+                                throw new InvalidOperationException("Command actions must wrap below the title before squeezing it.");
+                        }
                         var overview = (Grid)page.FindName("AuditOverviewGrid");
-                        if (tab == 0 && Grid.GetRow(summary) != (overview.ActualWidth < 640 ? 1 : 0))
+                        if (tab == 0 && Grid.GetRow(summary) != (overview.ActualWidth < 760 ? 1 : 0))
                             throw new InvalidOperationException("Audit summary did not adapt to its content width.");
+                        var scoreCard = (FrameworkElement)page.FindName("AuditScoreCard");
+                        if (tab == 0 && (Grid.GetColumnSpan(scoreCard) != (overview.ActualWidth < 760 ? 2 : 1) ||
+                            !ReferenceEquals(VisualTreeHelper.GetParent(scoreCard), overview)))
+                            throw new InvalidOperationException("The audit score card must span the actual overview grid at narrow widths.");
                         await RenderPage(page, $"aihub-{theme}-tab-{tab}-{width}.png");
                     }
                 }

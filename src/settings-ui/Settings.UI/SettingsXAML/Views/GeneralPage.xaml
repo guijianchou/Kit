@@ -101,10 +101,12 @@
                         <Style BasedOn="{StaticResource DefaultButtonStyle}" TargetType="Button">
                             <Setter Property="MinHeight" Value="36" />
                             <Setter Property="MinWidth" Value="96" />
-                            <Setter Property="Padding" Value="10,4" />
+                            <Setter Property="Padding" Value="12,4" />
                             <Setter Property="CornerRadius" Value="8" />
                             <Setter Property="FontSize" Value="13" />
                             <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
                         </Style>
                     </tkcontrols:WrapPanel.Resources>
                     <Button
@@ -231,12 +233,18 @@
                     </tkcontrols:SettingsCard>
                     <InfoBar
                         x:Uid="LanguageRestartInfo"
+                        CornerRadius="8"
                         IsClosable="False"
                         IsOpen="{x:Bind Mode=OneWay, Path=ViewModel.LanguageChanged}"
                         IsTabStop="True"
                         Severity="Informational">
                         <InfoBar.ActionButton>
-                            <Button x:Uid="LanguageRestartInfoButton" Click="Click_LanguageRestart" />
+                            <Button
+                                x:Uid="LanguageRestartInfoButton"
+                                MinHeight="32"
+                                CornerRadius="6"
+                                Padding="12,5"
+                                Click="Click_LanguageRestart" />
                         </InfoBar.ActionButton>
                     </InfoBar>
 
@@ -306,6 +314,9 @@
                         </tkcontrols:SettingsExpander.Description>
                         <Button
                             x:Uid="GeneralPage_RestartAsAdmin_Button"
+                            MinHeight="32"
+                            CornerRadius="6"
+                            Padding="14,5"
                             Command="{Binding RestartElevatedButtonEventHandler}"
                             IsEnabled="{Binding IsAdminButtonEnabled}" />
                         <tkcontrols:SettingsExpander.Items>
@@ -333,8 +344,12 @@
                     </tkcontrols:SettingsCard>
 
                     <!-- The service configuration is only shown while the service is on. -->
-                    <StackPanel Spacing="{StaticResource SettingsCardSpacing}" Visibility="{x:Bind ViewModel.AiServices.HubContentVisibility, Mode=OneWay}">
+                    <StackPanel
+                        ChildrenTransitions="{StaticResource SettingsCardsAnimations}"
+                        Spacing="{StaticResource SettingsCardSpacing}"
+                        Visibility="{x:Bind ViewModel.AiServices.HubContentVisibility, Mode=OneWay}">
                         <InfoBar
+                            CornerRadius="8"
                             IsClosable="True"
                             IsOpen="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=TwoWay}"
                             Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
@@ -367,6 +382,10 @@
                                 </ComboBox>
                                 <Button
                                     x:Uid="AiHub_ApplyKernelButton"
+                                    MinHeight="32"
+                                    CornerRadius="6"
+                                    Padding="14,5"
+                                    MinWidth="80"
                                     Command="{x:Bind ViewModel.AiServices.ApplyKernelSwitchCommand}"
                                     Content="Apply"
                                     Style="{StaticResource AccentButtonStyle}"
@@ -378,13 +397,22 @@
                                     Description="{x:Bind ViewModel.AiServices.KernelLatestText, Mode=OneWay}"
                                     Header="Kernel updates">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button Command="{x:Bind ViewModel.AiServices.CheckKernelUpdatesCommand}">
+                                        <Button
+                                            MinHeight="32"
+                                            CornerRadius="6"
+                                            Padding="12,5"
+                                            Command="{x:Bind ViewModel.AiServices.CheckKernelUpdatesCommand}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon FontSize="13" Glyph="&#xE72C;" />
                                                 <TextBlock x:Uid="AiHub_CheckUpdatesText" Text="Check for updates" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Command="{x:Bind ViewModel.AiServices.DownloadKernelCommand}" Style="{StaticResource AccentButtonStyle}">
+                                        <Button
+                                            MinHeight="32"
+                                            CornerRadius="6"
+                                            Padding="12,5"
+                                            Command="{x:Bind ViewModel.AiServices.DownloadKernelCommand}"
+                                            Style="{StaticResource AccentButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon FontSize="13" Glyph="&#xE896;" />
                                                 <TextBlock x:Uid="AiHub_DownloadKernelText" Text="Download or update" />
@@ -429,6 +457,9 @@
                                     Text="{x:Bind ViewModel.AiServices.MainEndpoint.ModelSummary, Mode=OneWay}" />
                                 <Button
                                     x:Uid="AiHub_TestConnectionButton"
+                                    MinHeight="32"
+                                    CornerRadius="6"
+                                    Padding="14,5"
                                     Command="{x:Bind ViewModel.AiServices.MainEndpoint.TestCommand}"
                                     Content="Test connection" />
                             </StackPanel>
@@ -495,6 +526,9 @@
                                     Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.ModelSummary, Mode=OneWay}" />
                                 <Button
                                     x:Uid="AiHub_TestConnectionButton"
+                                    MinHeight="32"
+                                    CornerRadius="6"
+                                    Padding="14,5"
                                     Command="{x:Bind ViewModel.AiServices.FallbackEndpoint.TestCommand}"
                                     Content="Test connection" />
                             </StackPanel>
@@ -504,7 +538,7 @@
                                         Width="320"
                                         PlaceholderText="https://api.example.com"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.BaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                </tkcontrols:SettingsCard>
+                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiKeyCard" Header="API key">
                                     <PasswordBox
                                         x:Name="AiFallbackApiKeyBox"
@@ -542,6 +576,9 @@
                                 <tkcontrols:SettingsCard x:Uid="AiHub_ClearFallbackCard" Header="Clear fallback endpoint">
                                     <Button
                                         x:Uid="AiHub_ClearFallbackButton"
+                                        MinHeight="32"
+                                        CornerRadius="6"
+                                        Padding="14,5"
                                         Command="{x:Bind ViewModel.AiServices.ClearFallbackCommand}"
                                         Content="Clear" />
                                 </tkcontrols:SettingsCard>
@@ -556,9 +593,17 @@
                             HeaderIcon="{ui:FontIcon Glyph=&#xE7BA;}"
                             Visibility="{x:Bind ViewModel.AiServices.HasUnsavedEndpointChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button x:Uid="AiHub_DiscardEndpointsButton" Command="{x:Bind ViewModel.AiServices.DiscardEndpointChangesCommand}" />
+                                <Button
+                                    x:Uid="AiHub_DiscardEndpointsButton"
+                                    MinHeight="32"
+                                    CornerRadius="6"
+                                    Padding="14,5"
+                                    Command="{x:Bind ViewModel.AiServices.DiscardEndpointChangesCommand}" />
                                 <Button
                                     x:Uid="AiHub_SaveEndpointsButton"
+                                    MinHeight="32"
+                                    CornerRadius="6"
+                                    Padding="14,5"
                                     AutomationProperties.AutomationId="AiHub_SaveEndpointsButton"
                                     Command="{x:Bind ViewModel.AiServices.SaveEndpointsCommand}"
                                     Style="{StaticResource AccentButtonStyle}" />
@@ -600,11 +645,17 @@
                                                 TextTrimming="CharacterEllipsis" />
                                             <Button
                                                 x:Uid="AiHub_ResetPolicyButton"
+                                                MinHeight="32"
+                                                CornerRadius="6"
+                                                Padding="14,5"
                                                 Grid.Column="1"
                                                 Command="{x:Bind ViewModel.AiServices.ResetActivePolicyCommand}"
                                                 Content="Reset to default" />
                                             <Button
                                                 x:Uid="AiHub_SavePolicyButton"
+                                                MinHeight="32"
+                                                CornerRadius="6"
+                                                Padding="14,5"
                                                 Grid.Column="2"
                                                 Command="{x:Bind ViewModel.AiServices.SaveActivePolicyCommand}"
                                                 Content="Save"
@@ -646,6 +697,9 @@
                                 Description="{x:Bind ViewModel.LogsFolderPath, Mode=OneWay}">
                                 <Button
                                     x:Uid="General_OpenLogsFolderButton"
+                                    MinHeight="32"
+                                    CornerRadius="6"
+                                    Padding="12,5"
                                     Command="{x:Bind ViewModel.OpenLogsFolderCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xEC50;" FontSize="13" />
@@ -663,8 +717,18 @@
                         x:Uid="General_SettingsBackupAndRestore"
                         HeaderIcon="{ui:FontIcon Glyph=&#xE777;}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button x:Uid="General_SettingsBackupAndRestore_ButtonBackup" Command="{Binding BackupConfigsEventHandler}" />
-                            <Button x:Uid="General_SettingsBackupAndRestore_ButtonRestore" Command="{Binding RestoreConfigsEventHandler}" />
+                            <Button
+                                x:Uid="General_SettingsBackupAndRestore_ButtonBackup"
+                                MinHeight="32"
+                                CornerRadius="6"
+                                Padding="14,5"
+                                Command="{Binding BackupConfigsEventHandler}" />
+                            <Button
+                                x:Uid="General_SettingsBackupAndRestore_ButtonRestore"
+                                MinHeight="32"
+                                CornerRadius="6"
+                                Padding="14,5"
+                                Command="{Binding RestoreConfigsEventHandler}" />
                         </StackPanel>
                         <tkcontrols:SettingsExpander.Items>
                             <tkcontrols:SettingsCard x:Name="GeneralSettingsBackupAndRestoreLocationText" x:Uid="General_SettingsBackupAndRestoreLocationText">
@@ -690,6 +754,10 @@
                                     </TextBlock>
                                     <Button
                                         x:Uid="General_SettingsBackupAndRestore_ButtonSelectFolder"
+                                        Width="34"
+                                        MinHeight="32"
+                                        CornerRadius="6"
+                                        Padding="0"
                                         Grid.Column="1"
                                         Command="{Binding SelectSettingBackupDirEventHandler}"
                                         Content="&#xe8da;"
@@ -797,6 +865,9 @@
                             </StackPanel>
                             <Button
                                 x:Uid="GeneralPage_CheckForUpdates"
+                                MinHeight="32"
+                                CornerRadius="6"
+                                Padding="14,5"
                                 HorizontalAlignment="Right"
                                 Command="{Binding CheckForUpdatesEventHandler}"
                                 IsEnabled="{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}"

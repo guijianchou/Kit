@@ -23,7 +23,7 @@
             NoResultsSuggestionTemplate="{StaticResource NoResultSearchResultTemplate}"
             ShowAllSuggestionTemplate="{StaticResource ShowAllSearchResultTemplate}" />
         <DataTemplate x:Key="DefaultSearchResultTemplate" x:DataType="models:SuggestionItem">
-            <Grid Padding="16,8">
+            <Grid Padding="12,6" CornerRadius="6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -41,11 +41,11 @@
                 </Viewbox>
                 <StackPanel
                     Grid.Column="1"
-                    Margin="12,0,0,0"
+                    Margin="10,0,0,0"
                     VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Header}" />
+                    <TextBlock Text="{x:Bind Header}" FontWeight="SemiBold" FontSize="13" />
                     <TextBlock
-                        FontSize="12"
+                        FontSize="11"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{x:Bind Subtitle}"
                         Visibility="{x:Bind Subtitle, Converter={StaticResource StringVisibilityConverter}}" />
@@ -107,6 +107,8 @@
                     x:Name="SearchBox"
                     x:Uid="Shell_SearchBox"
                     MaxWidth="480"
+                    MinHeight="34"
+                    CornerRadius="8"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Center"
                     GotFocus="SearchBox_GotFocus"

@@ -933,7 +933,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public bool IsScanning => ScanPhase == ScanPhase.Scanning;
 
     /// <summary>True once a scan produced results worth showing.</summary>
-    public bool IsWorkflowVisible => ScanPhase is ScanPhase.Scanning or ScanPhase.SelectingTargets or ScanPhase.Failed;
+    public bool IsWorkflowVisible => ScanPhase is ScanPhase.Scanning or ScanPhase.SelectingTargets or ScanPhase.ExecutionPending or ScanPhase.Failed;
 
     /// <summary>Bilingual phase label shown beside the progress bar.</summary>
     public string ScanPhaseText => ScanPhase switch
@@ -951,6 +951,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string ScanProgressPercentText => _scanProgress.PercentText;
 
     public string ScanStageCountText => _scanProgress.StageCountText;
+
+    public double OptimizationWorkflowPercent => ScanPhase == ScanPhase.ExecutionPending ? OptimizationProgress : ScanProgressPercent;
+
+    public string OptimizationWorkflowPercentText => IsScanning ? string.Empty : OptimizationWorkflowPercent.ToString("0'%'", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Current usability of the shared AI service, shown beside the scan actions so the
@@ -1224,6 +1228,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(ScanProgressPercent));
         OnPropertyChanged(nameof(ScanProgressPercentText));
         OnPropertyChanged(nameof(ScanStageCountText));
+        OnPropertyChanged(nameof(OptimizationWorkflowPercent));
+        OnPropertyChanged(nameof(OptimizationWorkflowPercentText));
 
         // The shell mirrors this progress in the navigation pane, so it needs the same
         // notifications under the sidebar names.
@@ -1313,9 +1319,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public string SelectedCandidatesSummary => $"{SelectedCandidatesCount} / {FormatBytes(SelectedCandidatesBytes)}";
 
-    public string SafetyBoundary => "Read-only";
-
-    public string SafetyBoundaryDesc => "Recycle Bin only; no permanent delete";
+    public string ScannedCandidatesLabel => IsChinese ? "已扫描文件" : "Files scanned";
+    public string ApprovedCandidatesLabel => IsChinese ? "AI 已通过" : "AI approved";
+    public string CleanableCapacityLabel => IsChinese ? "可清理容量" : "Cleanable space";
+    public string ScannedCandidatesText => _observedOptimizationItems.Count.ToString("N0", CultureInfo.CurrentCulture);
+    public string ApprovedCandidatesText => OptimizationCandidates.Count.ToString("N0", CultureInfo.CurrentCulture);
+    public string CleanableCapacityText => FormatBytes(OptimizationCandidates.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes));
 
     public string DownloadsStatusText
     {
@@ -1380,7 +1389,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string CleanAllLabel => IsChinese ? "一键清理" : "Clean all";
     private double _optimizationProgress;
     private bool _isExecutingOptimization;
-    public double OptimizationProgress { get => _optimizationProgress; private set => Set(ref _optimizationProgress, value); }
+    public double OptimizationProgress
+    {
+        get => _optimizationProgress;
+        private set
+        {
+            if (Set(ref _optimizationProgress, value))
+            {
+                OnPropertyChanged(nameof(OptimizationWorkflowPercent));
+                OnPropertyChanged(nameof(OptimizationWorkflowPercentText));
+            }
+        }
+    }
     public bool IsExecutingOptimization { get => _isExecutingOptimization; private set => Set(ref _isExecutingOptimization, value); }
 
     public bool HasCandidates => OptimizationCandidates.Count > 0;
@@ -2906,6 +2926,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(DownloadsResultSummary));
         OnPropertyChanged(nameof(CacheResultSummary));
         OnPropertyChanged(nameof(OptimizationResultsSummary));
+        OnPropertyChanged(nameof(ScannedCandidatesText));
+        OnPropertyChanged(nameof(ApprovedCandidatesText));
+        OnPropertyChanged(nameof(CleanableCapacityText));
         OnPropertyChanged(nameof(HasDownloadResults));
         OnPropertyChanged(nameof(HasCacheResults));
         CandidatesCount = OptimizationCandidates.Count;

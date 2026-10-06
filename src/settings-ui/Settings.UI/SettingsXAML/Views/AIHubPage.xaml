@@ -18,6 +18,71 @@
     mc:Ignorable="d">
 
     <local:NavigablePage.Resources>
+        <DataTemplate x:Key="OptimizationCategoryTemplate" x:DataType="viewModels:OptimizationCategoryViewModel">
+            <Expander Margin="0,0,0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                <Expander.Header>
+                    <Grid ColumnSpacing="16" HorizontalAlignment="Stretch">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel Spacing="4" VerticalAlignment="Center">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Name}" />
+                                <TextBlock Grid.Column="1" Text="{x:Bind ReviewStatus}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBlock Text="{x:Bind LocationLabel}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Destination}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
+                            <TextBlock Text="{x:Bind Summary, Mode=OneWay}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                            <TextBlock Text="{x:Bind ReviewSummary}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right" />
+                        </StackPanel>
+                        <Button Grid.Column="2" Content="{x:Bind ActionLabel}" Command="{x:Bind ExecuteCommand}" IsEnabled="{x:Bind IsEnabled, Mode=OneWay}" VerticalAlignment="Center" />
+                    </Grid>
+                </Expander.Header>
+                <StackPanel x:Name="OptimizationLeafDetails" x:Load="{x:Bind IsExpanded, Mode=OneWay}" Spacing="10">
+                    <TextBlock Text="{x:Bind Destination}" FontSize="12" TextWrapping="Wrap" />
+                    <ProgressBar Minimum="0" Maximum="100" Value="{x:Bind Progress, Mode=OneWay}" Visibility="{x:Bind HasProgress, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <ListView ItemsSource="{x:Bind Items}" SelectionMode="None" MaxHeight="320" HorizontalContentAlignment="Stretch">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:TempFileInfo">
+                                <Grid Padding="0,6" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="{x:Bind FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind FilePath}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind FilePath}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Text="{x:Bind DisplayReason}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4" HorizontalAlignment="Right">
+                                        <TextBlock Text="{x:Bind SizeFormatted}" HorizontalAlignment="Right" />
+                                        <TextBlock Text="{x:Bind ReviewLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </Expander>
+        </DataTemplate>
+
+        <DataTemplate x:Key="OptimizationProjectTemplate" x:DataType="viewModels:OptimizationGroupViewModel">
+            <Expander Margin="0,0,0,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}">
+                <Expander.Header>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{x:Bind Name}" FontSize="16" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Location}" />
+                            <TextBlock Text="{x:Bind Summary}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{x:Bind Size}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Content="{x:Bind CleanLabel}" Command="{x:Bind ExecuteCommand}" IsEnabled="{x:Bind IsEnabled, Mode=OneWay}" VerticalAlignment="Center" />
+                    </Grid>
+                </Expander.Header>
+                <StackPanel x:Name="OptimizationProjectDetails" x:Load="{x:Bind IsExpanded, Mode=OneWay}" Spacing="8">
+                    <TextBlock Text="{x:Bind Location}" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ListView ItemsSource="{x:Bind Categories}" ItemTemplate="{StaticResource OptimizationCategoryTemplate}" SelectionMode="None" MaxHeight="360" HorizontalContentAlignment="Stretch" />
+                </StackPanel>
+            </Expander>
+        </DataTemplate>
+
         <FontFamily x:Key="MonoFontFamily">Consolas, Segoe UI Mono, Cascadia Mono</FontFamily>
 
         <!-- Keep theme resources in XAML setters so cached pages follow live theme changes. -->
@@ -578,185 +643,84 @@
                             <!-- TAB 2: OPTIMIZATION (1:1 MATCHING SCREENSHOT)                  -->
                             <!-- ============================================================== -->
                             <StackPanel Spacing="16" Visibility="{x:Bind IsOptTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
-                                <!-- Optimization Header & Scan all button -->
-                                <tkcontrols:SettingsCard Header="{x:Bind ViewModel.OptimizationTabLabel, Mode=OneWay}"
-                                                         Description="{x:Bind ViewModel.OptimizationDescription, Mode=OneWay}">
-                                    <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="8">
-                                        <ProgressRing IsActive="{x:Bind ViewModel.IsOptimizing, Mode=OneWay}" Width="16" Height="16" />
-                                        <TextBlock Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}"
-                                                   VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" />
-                                    <Button Command="{x:Bind ViewModel.ScanAllCommand}" Style="{StaticResource AccentButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon Glyph="&#xE8FE;" FontSize="14" />
-                                            <TextBlock Text="{x:Bind ViewModel.ScanAllLabel, Mode=OneWay}" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Command="{x:Bind ViewModel.CancelOptimizationCommand}"
-                                            Content="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}"
-                                            AutomationProperties.AutomationId="AIHub_CancelOptimizationButton" />
+                                <tkcontrols:SettingsCard Header="{x:Bind ViewModel.OptimizationTabLabel, Mode=OneWay}">
+                                    <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                                        <ProgressRing IsActive="{x:Bind ViewModel.IsOptimizing, Mode=OneWay}" Width="18" Height="18" />
+                                        <Button Content="{x:Bind ViewModel.ScanAllLabel, Mode=OneWay}" Command="{x:Bind ViewModel.ScanAllCommand}" AutomationProperties.AutomationId="AIHub_RescanOptimization" />
+                                        <Button Content="{x:Bind ViewModel.CleanAllLabel, Mode=OneWay}" Command="{x:Bind ViewModel.CleanAllCommand}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.AutomationId="AIHub_CleanAll" />
+                                        <Button Content="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}" Command="{x:Bind ViewModel.CancelOptimizationCommand}" AutomationProperties.AutomationId="AIHub_CancelOptimizationButton" />
                                     </tkcontrols:WrapPanel>
                                 </tkcontrols:SettingsCard>
-
-                                <!-- Selection summary appears after a scan finds candidates. -->
-                                <Grid ColumnSpacing="12" Visibility="{x:Bind ViewModel.HasCandidates, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- 1. Candidates -->
-                                    <Border Grid.Column="0" CornerRadius="8" Padding="16,12"
-                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                            BorderThickness="1">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="{x:Bind ViewModel.CandidatesLabel, Mode=OneWay}" Style="{StaticResource MetricLabelStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.CandidatesSummary, Mode=OneWay}"
-                                                       Style="{StaticResource MetricNumberStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.DetectedObjectsLabel, Mode=OneWay}" FontSize="11"
-                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- 2. Selected items -->
-                                    <Border Grid.Column="1" CornerRadius="8" Padding="16,12"
-                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                            BorderThickness="1">
-                                        <StackPanel Spacing="4">
-                                            <TextBlock Text="{x:Bind ViewModel.SelectedItemsLabel, Mode=OneWay}" Style="{StaticResource MetricLabelStyle}" />
-                                            <TextBlock Text="{x:Bind ViewModel.SelectedCandidatesSummary, Mode=OneWay}"
-                                                       Style="{StaticResource MetricNumberStyle}"
-                                                       Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.StagedForExecutionLabel, Mode=OneWay}" FontSize="11"
-                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                        </StackPanel>
-                                    </Border>
-
-                                </Grid>
-
-                                <!-- 2 Scan Area Cards -->
-                                <!-- Area 1: Downloads -->
-                                <Border CornerRadius="8" Padding="16,14"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1">
-                                    <Grid RowSpacing="10">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-
-                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                                            <FontIcon Glyph="&#xE8B7;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.DownloadsLabel, Mode=OneWay}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{x:Bind ViewModel.DownloadsRootOnlyLabel, Mode=OneWay}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="12" VerticalAlignment="Center" />
-                                        </StackPanel>
-
-                                        <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.DownloadsDescription, Mode=OneWay}"
-                                                   FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-
-                                        <Grid Grid.Row="2">
-                                            <TextBlock Text="{x:Bind ViewModel.DownloadsStatusText, Mode=OneWay}"
-                                                       FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <Button HorizontalAlignment="Right" Content="{x:Bind ViewModel.ScanButtonLabel, Mode=OneWay}" Command="{x:Bind ViewModel.ScanDownloadsCommand}" />
-                                        </Grid>
-                                    </Grid>
+                                <TextBlock Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" />
+                                <ProgressBar Minimum="0" Maximum="100" Value="{x:Bind ViewModel.OptimizationProgress, Mode=OneWay}"
+                                             Visibility="{x:Bind ViewModel.IsExecutingOptimization, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Border Padding="16,12" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                    <TextBlock Text="{x:Bind ViewModel.OptimizationResultsSummary, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap" />
                                 </Border>
-
-                                <!-- Area 2: Temporary files -->
-                                <Border CornerRadius="8" Padding="16,14"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1">
-                                    <Grid RowSpacing="10">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-
-                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                                            <FontIcon Glyph="&#xE74D;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.TemporaryFilesLabel, Mode=OneWay}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{x:Bind ViewModel.WhitelistOnlyLabel, Mode=OneWay}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="12" VerticalAlignment="Center" />
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{x:Bind ViewModel.DownloadsLabel, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" />
+                                            <TextBlock Text="{x:Bind ViewModel.DownloadsPath}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="Documents · Compressed · Programs · Music · Video" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="{x:Bind ViewModel.DownloadsResultSummary, Mode=OneWay}" FontSize="12" />
                                         </StackPanel>
-
-                                        <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.CacheDescription, Mode=OneWay}"
-                                                   FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-
-                                        <Grid Grid.Row="2">
-                                            <TextBlock Text="{x:Bind ViewModel.TemporaryFilesStatusText, Mode=OneWay}"
-                                                       FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <Button HorizontalAlignment="Right" Content="{x:Bind ViewModel.ScanButtonLabel, Mode=OneWay}" Command="{x:Bind ViewModel.ScanTemporaryFilesCommand}" />
-                                        </Grid>
-                                    </Grid>
-                                </Border>
-
-                                <!-- Candidate Items Review & Confirmation Panel -->
-                                <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.HasCandidates, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Grid>
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Button Content="{x:Bind ViewModel.SelectAllLabel, Mode=OneWay}" Command="{x:Bind ViewModel.SelectAllCandidatesCommand}" />
-                                            <Button Content="{x:Bind ViewModel.DeselectAllLabel, Mode=OneWay}" Command="{x:Bind ViewModel.DeselectAllCandidatesCommand}" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <Button Content="{x:Bind ViewModel.ScanButtonLabel}" Command="{x:Bind ViewModel.ScanDownloadsCommand}" AutomationProperties.AutomationId="AIHub_ScanDownloads" />
+                                            <Button Content="{x:Bind ViewModel.OrganizeDownloadsLabel}" Command="{x:Bind ViewModel.OrganizeDownloadsCommand}" AutomationProperties.AutomationId="AIHub_OrganizeDownloads" />
                                         </StackPanel>
-                                        <Button HorizontalAlignment="Right"
-                                                Style="{StaticResource AccentButtonStyle}"
-                                                Command="{x:Bind ViewModel.ExecuteOptimizationCommand}">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon Glyph="&#xE73E;" FontSize="14" />
-                                                <TextBlock Text="{x:Bind ViewModel.ConfirmAndExecuteLabel, Mode=OneWay}" />
-                                            </StackPanel>
-                                        </Button>
                                     </Grid>
-
-                                    <!-- Candidate list -->
-                                    <ListView ItemsSource="{x:Bind ViewModel.OptimizationCandidates, Mode=OneWay}"
-                                              SelectionMode="None"
-                                              MaxHeight="320">
-                                        <ListView.ItemTemplate>
-                                            <DataTemplate x:DataType="models:TempFileInfo">
-                                                <Border Margin="0,2" Padding="8,6" CornerRadius="4"
-                                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                                                    <Grid ColumnSpacing="12">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto" />
-                                                            <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="Auto" />
-                                                            <ColumnDefinition Width="Auto" />
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <CheckBox Grid.Column="0" IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
-                                                                  AutomationProperties.Name="{x:Bind FileName}" />
-
-                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                            <TextBlock Text="{x:Bind FileName}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Text="{x:Bind FilePath}" FontSize="12" ToolTipService.ToolTip="{x:Bind FilePath}"
-                                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
-                                                        </StackPanel>
-
-                                                        <Border Grid.Column="2" VerticalAlignment="Center" CornerRadius="4" Padding="6,2"
-                                                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                                                            <TextBlock Text="{x:Bind Category}" FontSize="11"
-                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        </Border>
-
-                                                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{x:Bind SizeFormatted}"
-                                                                   FontFamily="{StaticResource MonoFontFamily}" FontSize="12" />
-                                                    </Grid>
-                                                </Border>
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.DownloadCategories}" ItemTemplate="{StaticResource OptimizationCategoryTemplate}" HorizontalContentAlignment="Stretch" />
+                                </StackPanel>
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{x:Bind ViewModel.TemporaryFilesLabel, Mode=OneWay}" FontSize="18" FontWeight="SemiBold" />
+                                            <TextBlock Text="{x:Bind ViewModel.CacheResultSummary, Mode=OneWay}" FontSize="12" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Content="{x:Bind ViewModel.ScanButtonLabel}" Command="{x:Bind ViewModel.ScanTemporaryFilesCommand}" VerticalAlignment="Center" AutomationProperties.AutomationId="AIHub_ScanCaches" />
+                                    </Grid>
+                                    <Expander Header="{x:Bind ViewModel.UserDirectoryLabel}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Visibility="{x:Bind ViewModel.HasUserDirectorySummaries, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.UserDirectorySummaries}" HorizontalContentAlignment="Stretch">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{x:Bind}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             </DataTemplate>
-                                        </ListView.ItemTemplate>
-                                    </ListView>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    </Expander>
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.CacheGroups}" HorizontalContentAlignment="Stretch">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="viewModels:OptimizationGroupViewModel">
+                                                <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}">
+                                                    <Expander.Header>
+                                                        <Grid ColumnSpacing="16">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                            <StackPanel Spacing="4">
+                                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                    <FontIcon Glyph="{x:Bind Glyph}" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                                                    <TextBlock Text="{x:Bind Name}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Name}" />
+                                                                </StackPanel>
+                                                                <TextBlock Text="{x:Bind Summary}" FontSize="12" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Summary}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind Size}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            <Button Grid.Column="2" Content="{x:Bind CleanLabel}" Command="{x:Bind ExecuteCommand}" IsEnabled="{x:Bind IsEnabled, Mode=OneWay}" VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </Expander.Header>
+                                                    <Border x:Name="OptimizationGroupDetails" x:Load="{x:Bind IsExpanded, Mode=OneWay}" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="2,0,0,0" Padding="12,8,0,8">
+                                                        <Grid>
+                                                            <ListView x:Name="OptimizationProjectList" x:Load="{x:Bind HasProjects}" ItemsSource="{x:Bind Projects}" ItemTemplate="{StaticResource OptimizationProjectTemplate}" SelectionMode="None" MaxHeight="520" HorizontalContentAlignment="Stretch" />
+                                                            <ListView x:Name="OptimizationDirectCategoryList" x:Load="{x:Bind HasDirectCategories}" ItemsSource="{x:Bind Categories}" ItemTemplate="{StaticResource OptimizationCategoryTemplate}" SelectionMode="None" MaxHeight="440" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                                                        </Grid>
+                                                    </Border>
+                                                </Expander>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
 
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="{x:Bind ViewModel.OptimizationWorkflowDescription}" TextWrapping="Wrap"
-                                               Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Text="{x:Bind ViewModel.RecoverableCleanupDescription}" TextWrapping="Wrap"
-                                               Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
                             </StackPanel>
 
                             <!-- ============================================================== -->

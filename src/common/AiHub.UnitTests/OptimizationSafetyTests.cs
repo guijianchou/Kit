@@ -144,7 +144,7 @@ public sealed class OptimizationSafetyTests
         WriteOld(Path.Combine(local, "npm-cache", "_cacache", "extra"));
         Assert.AreEqual(500, (await new DownloadOrganizerService(downloads).ScanAsync()).Count);
         var cleanup = new CacheCleanupService(local, temp, _ => throw new AssertFailedException("No cleanup expected."));
-        Assert.AreEqual(500, (await cleanup.ScanAsync()).Count);
+        Assert.AreEqual(506, (await cleanup.ScanAsync()).Count, "Cache categories must not be hidden behind the old 500-file cap.");
     }
 
     [TestMethod]
@@ -154,6 +154,18 @@ public sealed class OptimizationSafetyTests
         string root = fixture.PathFor("data");
         var service = new SecurityPolicyService(root);
         await service.SaveTaskPolicyAsync("system-optimization", TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\r\n") + "\r\n");
+        service = new SecurityPolicyService(root);
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
+        await service.SaveTaskPolicyAsync("system-optimization", TaskPolicyDefaults.PreviousSystemOptimizationInstructions);
+        service = new SecurityPolicyService(root);
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
+        await service.SaveTaskPolicyAsync("system-optimization", TaskPolicyDefaults.AiReviewedSystemOptimizationInstructions);
+        service = new SecurityPolicyService(root);
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
+        await service.SaveTaskPolicyAsync("system-optimization", TaskPolicyDefaults.GroupedSystemOptimizationInstructions);
+        service = new SecurityPolicyService(root);
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
+        await service.SaveTaskPolicyAsync("system-optimization", TaskPolicyDefaults.ProjectSystemOptimizationInstructions);
         service = new SecurityPolicyService(root);
         Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
         const string custom = "My custom optimization rules.";

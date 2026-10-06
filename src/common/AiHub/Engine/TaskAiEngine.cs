@@ -472,7 +472,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     }
 
                     ReportProgress(new AiTaskProgress("Execute", string.Empty, Volatile.Read(ref completed), batches.Count));
-                    ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}");
+                    ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}, fallbackAvailable={fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl)}");
                     string prompt = prefix + SerializeBatch(batch);
                     KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, routeTimeoutSeconds,
                         ReportDiagnostic, token).ConfigureAwait(false);

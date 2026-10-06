@@ -92,7 +92,11 @@ public sealed class SecurityPolicyService
             bool isLegacy = taskId == "security-audit"
                 ? Convert.ToHexString(SHA256.HashData(PolicyEncoding.GetBytes(content))) ==
                     "25EBA8FF5CA6E01BC5F80D394729D84196469C9E2FE7B2BA41356F98C5C8C099"
-                : content == TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\n").Trim();
+                : content == TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
+                    content == TaskPolicyDefaults.PreviousSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
+                    content == TaskPolicyDefaults.AiReviewedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
+                    content == TaskPolicyDefaults.GroupedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
+                    content == TaskPolicyDefaults.ProjectSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim();
             if (isLegacy)
             {
                 _files.WriteAtomic(Path.Combine("chains", taskId, "AGENTS.md"), EncodePolicy(defaultContent), MaximumPolicyBytes);

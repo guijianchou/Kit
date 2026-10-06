@@ -595,6 +595,7 @@ internal static class ModulePageSmoke
         await CheckAuditWorkflowStates(page);
         await CheckSelectedAuditRange(page);
         await CheckAuditUxStates(page);
+        await CheckOptimizationCleanup(page);
         if (vm.AiHub.ActivePolicyIndex != 1) throw new InvalidOperationException("Task policy editor initially selects the global policy.");
 
         await CheckAiHubThemes(page);
@@ -625,6 +626,162 @@ internal static class ModulePageSmoke
         if (NavigationService.Frame.Content is not GeneralPage general || !general.ViewModel.AiServices.CanEdit)
             throw new InvalidOperationException("AI service settings navigation did not open an editable service.");
         File.AppendAllText(Report, "AI Hub: native-style plugin writeback, policy selection/save feedback, disabled re-check, service navigation, and themed layout renders passed.\n");
+    }
+
+    private static async Task CheckOptimizationCleanup(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        string parent = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Kit.Optimization.UI.Tests"));
+        string fixture = Path.Combine(parent, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(fixture);
+        string old = Path.Combine(fixture, "old.tmp");
+        string locked = Path.Combine(fixture, "locked.tmp");
+        var refresh = typeof(AIHubPageViewModel).GetMethod("RecalculateCandidateMetrics", BindingFlags.Instance | BindingFlags.NonPublic);
+        var observed = (List<TempFileInfo>)typeof(AIHubPageViewModel).GetField("_observedOptimizationItems", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(vm);
+        var organizerField = typeof(AIHubPageViewModel).GetField("_downloadOrganizerService", BindingFlags.Instance | BindingFlags.NonPublic);
+        var originalOrganizer = organizerField.GetValue(vm);
+        try
+        {
+            vm.ActiveTabIndex = 1;
+            organizerField.SetValue(vm, Activator.CreateInstance(typeof(Kit.AIHubLib.Services.DownloadOrganizerService), BindingFlags.Instance | BindingFlags.NonPublic, null, new object[] { fixture }, null));
+            foreach (string path in new[] { old, locked })
+            {
+                File.WriteAllText(path, "fixture");
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddDays(-10));
+                var file = new FileInfo(path);
+                vm.OptimizationCandidates.Add(new TempFileInfo { FilePath = path, FileName = file.Name, CacheRoot = fixture, Category = "Temporary files", Action = "delete", SizeInBytes = file.Length, LastModified = file.LastWriteTimeUtc, ReviewState = "approved" });
+            }
+            string reportPath = Path.Combine(fixture, "report.pdf");
+            File.WriteAllText(reportPath, "fixture");
+            File.SetLastWriteTimeUtc(reportPath, DateTime.UtcNow.AddDays(-10));
+            var reportFile = new FileInfo(reportPath);
+            var download = new TempFileInfo { FilePath = reportPath, FileName = "report.pdf", Category = "Documents", Action = "move", TargetRelativePath = "Documents", SizeInBytes = reportFile.Length, LastModified = reportFile.LastWriteTimeUtc, ReviewState = "approved", ReasonEn = "Document will be moved into Documents.", ReasonZh = "文档将移入 Documents 分类目录。" };
+            vm.OptimizationCandidates.Add(download);
+            observed.AddRange(vm.OptimizationCandidates);
+            observed.Add(new TempFileInfo { FilePath = Path.Combine(fixture, "unreviewed.tmp"), FileName = "unreviewed.tmp", CacheRoot = fixture, Category = "NuGet packages", Action = "delete", ReviewState = "failed", SizeInBytes = 2000000000, ReasonEn = "Review timed out. This file cannot be cleaned." });
+            foreach (var entry in new[] { ("C++ precompiled headers", "Example/x64/Debug", 18000000000L), ("VS Code CachedData", "Code/CachedData", 200000000L), ("Edge cache", "Edge/Default/Cache", 100000000L) })
+            {
+                string scope = Path.Combine(fixture, entry.Item2.Replace('/', Path.DirectorySeparatorChar));
+                observed.Add(new TempFileInfo { FilePath = Path.Combine(scope, "cache"), FileName = "cache", CacheRoot = scope, Category = entry.Item1, DevelopmentRepository = entry.Item1.StartsWith("C++", StringComparison.Ordinal) ? Path.Combine(fixture, "Example") : string.Empty, Action = "delete", ReviewState = "skipped", SizeInBytes = entry.Item3 });
+            }
+            refresh.Invoke(vm, null);
+            await Task.Delay(100);
+            if (vm.OptimizationCategories.Count != 6 || vm.DownloadCategories.Count != 1 || vm.CacheCategories.Count != 5 || !vm.CleanAllCommand.CanExecute(null)) throw new InvalidOperationException("Optimization category binding or clean-all availability failed.");
+            if (!vm.CacheGroups.Select(group => group.Family).SequenceEqual(new[] { "development", "packages", "editors", "browsers", "system" })) throw new InvalidOperationException("The five broad cache groups are missing or unordered.");
+            if (vm.CacheGroups.Sum(group => group.ApprovedCount) != 2 || vm.CacheGroups.Any(group => group.ApprovedCount == 0 && group.IsEnabled) || vm.CacheCategories.Any(group => group.ApprovedCount == 0 && group.IsEnabled)) throw new InvalidOperationException("AI failure enabled cleanup or group totals are incorrect.");
+            if (!Descendants(page).OfType<Button>().Any(button => AutomationProperties.GetAutomationId(button) == "AIHub_ScanDownloads" && button.IsEnabled)) throw new InvalidOperationException("Independent Downloads scan is missing.");
+            vm.UserDirectorySummaries.Add(@"C:\Users\Fixture\.dsh · 20 MB · State retained; no verified cache path.");
+            typeof(AIHubPageViewModel).GetMethod("OnPropertyChanged", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(string) }, null).Invoke(vm, new object[] { nameof(vm.HasUserDirectorySummaries) });
+            await Task.Delay(100);
+            var inventory = Descendants(page).OfType<Expander>().Single(item => item.Header as string == vm.UserDirectoryLabel);
+            if (inventory.Visibility != Visibility.Visible) throw new InvalidOperationException("User-directory inventory was hidden.");
+            inventory.IsExpanded = true;
+            await Task.Delay(300);
+            if (!Descendants(inventory).OfType<TextBlock>().Any(item => item.Text.Contains(".dsh"))) throw new InvalidOperationException("Protected user directory is missing from the inventory.");
+            await RenderPage(page, "aihub-user-directory-inventory.png");
+            inventory.IsExpanded = false;
+            await RenderPage(page, "aihub-optimization-categories.png");
+            var details = Descendants(page).OfType<Expander>().First(expander => expander.DataContext is OptimizationCategoryViewModel);
+            details.IsExpanded = true;
+            await Task.Delay(500);
+            if (!Descendants(details).OfType<TextBlock>().Any(text => text.Text.Contains(" → Documents"))) throw new InvalidOperationException("Downloads target is missing from expanded details.");
+            await RenderPage(page, "aihub-optimization-details.png");
+            details.IsExpanded = false;
+            var development = Descendants(page).OfType<Expander>().Single(expander => expander.DataContext is OptimizationGroupViewModel group && group.Family == "development");
+            development.IsExpanded = true;
+            await Task.Delay(150);
+            var projectGroup = vm.CacheGroups.Single(group => group.Family == "development").Projects.Single();
+            if (projectGroup.Name != "Example" || projectGroup.Categories.Count != 1 || projectGroup.IsEnabled) throw new InvalidOperationException("Project aggregation or approval scope is incorrect.");
+            Descendants(development).OfType<Expander>().Single(item => item.DataContext is OptimizationGroupViewModel group && group.Family == "project").IsExpanded = true;
+            await Task.Delay(200);
+            if (!Descendants(development).OfType<TextBlock>().Any(text => text.Text.Contains("Example\\x64\\Debug"))) throw new InvalidOperationException("Development output location is missing from its broad group.");
+            await RenderPage(page, "aihub-optimization-development.png");
+            var window = App.GetSettingsWindow().AppWindow;
+            var originalSize = window.Size;
+            var presenter = window.Presenter as Microsoft.UI.Windowing.OverlappedPresenter;
+            presenter?.Restore();
+            try
+            {
+                foreach (int width in new[] { 1050, 850 })
+                {
+                    window.Resize(new Windows.Graphics.SizeInt32(width, 1100));
+                    await Task.Delay(250);
+                    await RenderPage(page, $"aihub-optimization-development-{width}.png");
+                }
+            }
+            finally
+            {
+                window.Resize(originalSize);
+            }
+            var stress = Enumerable.Range(0, 267).Select(index => new TempFileInfo
+            {
+                FilePath = Path.Combine(fixture, "Example", $"Module{index}", "Debug", "cache.pch"),
+                FileName = "cache.pch",
+                CacheRoot = Path.Combine(fixture, "Example", $"Module{index}", "Debug"),
+                DevelopmentRepository = Path.Combine(fixture, "Example"),
+                Category = "C++ precompiled headers",
+                Action = "delete",
+                ReviewState = "failed",
+                SizeInBytes = 100000,
+            }).ToList();
+            observed.AddRange(stress);
+            refresh.Invoke(vm, null);
+            await Task.Delay(150);
+            if (Descendants(page).OfType<Expander>().Count(item => item.DataContext is OptimizationCategoryViewModel) > 2)
+                throw new InvalidOperationException("Collapsed cache groups eagerly created their child views.");
+            var largeGroup = Descendants(page).OfType<Expander>().Single(item => item.DataContext is OptimizationGroupViewModel group && group.Family == "development");
+            largeGroup.IsExpanded = true;
+            await Task.Delay(150);
+            var projectRow = Descendants(largeGroup).OfType<Expander>().Single(item => item.DataContext is OptimizationGroupViewModel group && group.Family == "project");
+            if (((OptimizationGroupViewModel)projectRow.DataContext).Categories.Count != 268) throw new InvalidOperationException("Development locations were not consolidated by project.");
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            projectRow.IsExpanded = true;
+            await Task.Delay(150);
+            int realized = Descendants(largeGroup).OfType<Expander>().Count(item => item.DataContext is OptimizationCategoryViewModel);
+            if (realized == 0 || realized > 30 || timer.ElapsedMilliseconds > 5000)
+                throw new InvalidOperationException($"Cache virtualization failed: {realized} rows, {timer.ElapsedMilliseconds} ms.");
+            if (Descendants(largeGroup).OfType<ListView>().Count() != 2)
+                throw new InvalidOperationException("Collapsed child rows eagerly created file lists.");
+            File.AppendAllText(Report, $"Optimization virtualization: 268 locations, {realized} realized rows, {timer.ElapsedMilliseconds} ms including 150 ms settle.\n");
+            await RenderPage(page, "aihub-optimization-many-projects.png");
+            observed.RemoveAll(stress.Contains);
+            refresh.Invoke(vm, null);
+            await Task.Delay(100);
+            var editors = Descendants(page).OfType<Expander>().Single(item => item.DataContext is OptimizationGroupViewModel group && group.Family == "editors");
+            editors.IsExpanded = true;
+            await Task.Delay(500);
+            if (!Descendants(editors).OfType<Expander>().All(item => item.IsEnabled)) throw new InvalidOperationException("Unreviewed cache details cannot be inspected.");
+            await RenderPage(page, "aihub-optimization-editors.png");
+            using (var held = File.Open(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                vm.CleanAllCommand.Execute(null);
+                if (!vm.IsExecutingOptimization || vm.CleanAllCommand.CanExecute(null)) throw new InvalidOperationException("Cleanup progress or command exclusion failed.");
+                for (int attempt = 0; attempt < 100 && vm.IsOptimizing; attempt++) await Task.Delay(50);
+                if (vm.IsOptimizing || vm.OptimizationProgress != 100 || File.Exists(old) || !File.Exists(locked)) throw new InvalidOperationException("Cleanup did not delete only the available snapshot.");
+            }
+            if (!vm.OptimizationCandidates.Contains(download) || vm.OptimizationCandidates.Count != 2) throw new InvalidOperationException("Clean all touched Downloads or discarded a failed candidate.");
+            vm.CacheGroups.Single(group => group.Family == "system").ExecuteCommand.Execute(null);
+            for (int attempt = 0; attempt < 100 && vm.IsOptimizing; attempt++) await Task.Delay(50);
+            if (vm.IsOptimizing || File.Exists(locked)) throw new InvalidOperationException("Per-category cleanup retry failed.");
+            vm.OrganizeDownloadsCommand.Execute(null);
+            for (int attempt = 0; attempt < 100 && vm.IsOptimizing; attempt++) await Task.Delay(50);
+            if (vm.IsOptimizing || File.Exists(reportPath) || !File.Exists(Path.Combine(fixture, "Documents", "report.pdf"))) throw new InvalidOperationException("Downloads organization failed.");
+            if (vm.CacheCategories.Count != 4 || vm.CacheGroups.Any(group => group.IsEnabled) || vm.CleanAllCommand.CanExecute(null)) throw new InvalidOperationException("Unapproved results disappeared or enabled a write.");
+            File.AppendAllText(Report, "Optimization: five broad groups, Debug output location, direct cleanup, clean-all excludes Downloads, progress, failed-item retention and group retry passed.\n");
+        }
+        finally
+        {
+            vm.UserDirectorySummaries.Clear();
+            vm.OptimizationCandidates.Clear();
+            observed.Clear();
+            organizerField.SetValue(vm, originalOrganizer);
+            refresh.Invoke(vm, null);
+            vm.ActiveTabIndex = 0;
+            if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(fixture)), parent, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid cleanup fixture boundary.");
+            foreach (string path in new[] { old, locked, Path.Combine(fixture, "report.pdf"), Path.Combine(fixture, "Documents", "report.pdf") }) if (File.Exists(path)) File.Delete(path);
+            if (Directory.Exists(Path.Combine(fixture, "Documents"))) Directory.Delete(Path.Combine(fixture, "Documents"), recursive: false);
+            Directory.Delete(fixture, recursive: false);
+        }
     }
 
     private static async Task CheckAiHubThemes(AIHubPage page)

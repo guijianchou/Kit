@@ -150,6 +150,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly DispatcherQueue _dispatcherQueue;
     private readonly GpoRuleConfigured _gpoConfiguration;
     private readonly CacheCleanupService _cacheCleanupService = new();
+    private readonly OptimizationAnalysisService _optimizationAnalysisService = new();
     private readonly DownloadOrganizerService _downloadOrganizerService = new();
     private readonly AuditHistoryStorage _auditHistoryStorage = new();
     private readonly SecurityPolicyService _securityService = new();
@@ -274,7 +275,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         ScanTemporaryFilesCommand = new RelayCommand(RunScanTemporaryFiles, () => IsEnabled && !_isOptimizing);
         SelectAllCandidatesCommand = new RelayCommand(SelectAllCandidates, () => HasCandidates && !_isOptimizing);
         DeselectAllCandidatesCommand = new RelayCommand(DeselectAllCandidates, () => HasCandidates && !_isOptimizing);
-        ExecuteOptimizationCommand = new RelayCommand(RunExecuteOptimization, () => CanExecuteOptimization);
+        ExecuteOptimizationCommand = new RelayCommand(() => RunExecuteOptimization(), () => CanExecuteOptimization);
+        CleanAllCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "delete").ToList()), () => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "delete"));
+        OrganizeDownloadsCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "move").ToList()), () => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "move"));
         CancelOptimizationCommand = new RelayCommand(() => _optimizationCts?.Cancel(), () => IsOptimizing);
 
         // Scheduled audits: check every few minutes whether the configured cadence is due.
@@ -680,7 +683,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     // Optimization Tab Labels
     public string OptimizationDescription => IsChinese ? "按五类整理下载散文件，审查并清理过期临时文件和缓存。" : "Organize loose downloads into five categories and review old temporary/cache files.";
-    public string ScanAllLabel => IsChinese ? "全量扫描" : "Scan all";
+    public string ScanAllLabel => IsChinese ? "重新扫描" : "Rescan";
     public string OptimizationWorkflowTitle => IsChinese ? "优化工作流" : "Optimization workflow";
     public string OptimizationWorkflowDescription => IsChinese ? "在执行任何写入操作前，先扫描、审查并确认。" : "Scan, review and confirm before any write action.";
     public string CandidatesLabel => IsChinese ? "候选项目" : "Candidates";
@@ -691,7 +694,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string DownloadsLabel => IsChinese ? "下载目录" : "Downloads";
     public string DownloadsRootOnlyLabel => IsChinese ? "仅根目录" : "Downloads root only";
     public string DownloadsDescription => IsChinese ? "仅整理至少 10 分钟未修改的散文件至 Documents、Compressed、Programs、Music、Video；图片、未知类型和未完成下载留在原处。" : "Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music or Video. Leave images, unknown types and incomplete downloads in place.";
-    public string TemporaryFilesLabel => IsChinese ? "临时文件" : "Temporary files";
+    public string TemporaryFilesLabel => IsChinese ? "缓存与临时文件" : "Caches & temporary files";
     public string WhitelistOnlyLabel => IsChinese ? "仅白名单" : "Whitelist only";
     public string CacheDescription => IsChinese ? "仅扫描白名单中至少 7 天未修改的缓存文件及 Temp 内 .tmp/.temp 文件；跳过占用文件和目录链接，确认后逐文件移入回收站。" : "Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; recycle confirmed files individually.";
     public string ScanButtonLabel => IsChinese ? "扫描" : "Scan";
@@ -889,6 +892,16 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             if (Set(ref _isOptimizing, value))
             {
+                foreach (var group in OptimizationCategories)
+                {
+                    group.IsEnabled = IsEnabled && !value && group.ApprovedCount > 0;
+                }
+
+                if (!value)
+                {
+                    IsExecutingOptimization = false;
+                }
+
                 RefreshCommands();
             }
         }
@@ -1341,6 +1354,34 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     public ObservableCollection<TempFileInfo> OptimizationCandidates { get; } = new();
+    public ObservableCollection<OptimizationCategoryViewModel> OptimizationCategories { get; } = new();
+    public ObservableCollection<OptimizationCategoryViewModel> DownloadCategories { get; } = new();
+    public ObservableCollection<OptimizationCategoryViewModel> CacheCategories { get; } = new();
+    public string UserDirectoryLabel => IsChinese ? "用户目录空间分析" : "User directory space analysis";
+    public bool HasUserDirectorySummaries => UserDirectorySummaries.Count > 0;
+
+    public ObservableCollection<string> UserDirectorySummaries { get; } = new();
+
+    public ObservableCollection<OptimizationGroupViewModel> CacheGroups { get; } = new();
+    private readonly List<TempFileInfo> _observedOptimizationItems = new();
+    private bool _downloadsScanned;
+    private bool _cachesScanned;
+    public ICommand OrganizeDownloadsCommand { get; }
+    public string OrganizeDownloadsLabel => IsChinese ? "整理下载" : "Organize downloads";
+    public string DownloadsPath => _downloadOrganizerService.GetDownloadsPath() ?? (IsChinese ? "下载目录不存在" : "Downloads folder unavailable");
+    public bool HasDownloadResults => DownloadCategories.Count > 0;
+    public bool HasCacheResults => CacheCategories.Count > 0;
+    public string DownloadsResultSummary => DescribeOptimizationScope("move", _downloadsScanned);
+    public string CacheResultSummary => DescribeOptimizationScope("delete", _cachesScanned);
+    public string OptimizationResultsSummary => IsChinese
+        ? $"已扫描 {_observedOptimizationItems.Count:N0} 个候选文件 · AI 通过 {OptimizationCandidates.Count:N0} 个 · 可清理 {FormatBytes(OptimizationCandidates.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes))}"
+        : $"{_observedOptimizationItems.Count:N0} candidates scanned · {OptimizationCandidates.Count:N0} AI approved · {FormatBytes(OptimizationCandidates.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes))} cleanable";
+    public ICommand CleanAllCommand { get; }
+    public string CleanAllLabel => IsChinese ? "一键清理" : "Clean all";
+    private double _optimizationProgress;
+    private bool _isExecutingOptimization;
+    public double OptimizationProgress { get => _optimizationProgress; private set => Set(ref _optimizationProgress, value); }
+    public bool IsExecutingOptimization { get => _isExecutingOptimization; private set => Set(ref _isExecutingOptimization, value); }
 
     public bool HasCandidates => OptimizationCandidates.Count > 0;
 
@@ -1411,6 +1452,16 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         ((RelayCommand)SelectAllCandidatesCommand).OnCanExecuteChanged();
         ((RelayCommand)DeselectAllCandidatesCommand).OnCanExecuteChanged();
         ((RelayCommand)ExecuteOptimizationCommand).OnCanExecuteChanged();
+        ((RelayCommand)CleanAllCommand).OnCanExecuteChanged();
+        ((RelayCommand)OrganizeDownloadsCommand).OnCanExecuteChanged();
+        foreach (var group in OptimizationCategories)
+        {
+            group.IsEnabled = IsEnabled && !IsOptimizing && group.ApprovedCount > 0;
+        }
+        foreach (var group in CacheGroups.Concat(CacheGroups.SelectMany(group => group.Projects)))
+        {
+            group.IsEnabled = IsEnabled && !IsOptimizing && group.ApprovedCount > 0;
+        }
         ((RelayCommand)CancelOptimizationCommand).OnCanExecuteChanged();
     }
 
@@ -2403,12 +2454,96 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     // Optimization Execution (1:1 with Screenshot)
+    private void ClearOptimizationCandidates(string action)
+    {
+        _observedOptimizationItems.RemoveAll(item => action is null || item.Action == action);
+        foreach (var item in OptimizationCandidates.Where(item => action is null || item.Action == action).ToList())
+        {
+            item.PropertyChanged -= Candidate_PropertyChanged;
+            OptimizationCandidates.Remove(item);
+        }
+
+        RecalculateCandidateMetrics();
+    }
+
+    private async Task<OptimizationAnalysisResult> AnalyzeOptimizationCandidatesAsync(List<TempFileInfo> items, CancellationToken token, string action = null)
+    {
+        EnqueueOnUI(() =>
+        {
+            if (action is null || action == "move")
+            {
+                _downloadsScanned = true;
+            }
+
+            if (action is null || action == "delete")
+            {
+                _cachesScanned = true;
+                UserDirectorySummaries.Clear();
+                foreach (string summary in _cacheCleanupService.UserDirectorySummaries)
+                {
+                    UserDirectorySummaries.Add(summary);
+                }
+
+                OnPropertyChanged(nameof(HasUserDirectorySummaries));
+            }
+
+            _observedOptimizationItems.AddRange(items);
+            RecalculateCandidateMetrics();
+            OptimizationWorkflowStatus = IsChinese ? "本地扫描完成，正在进行 AI 审核…" : "Local scan complete. Reviewing with AI…";
+        }, token);
+        int finished = 0;
+        var progress = new Progress<AiTaskProgress>(update =>
+        {
+            if (update.Stage == "Route")
+            {
+                Logger.LogInfo($"Optimization route: {update.StatusMessage}");
+                return;
+            }
+
+            EnqueueOnUI(() =>
+            {
+                if (Volatile.Read(ref finished) != 0)
+                {
+                    return;
+                }
+                OptimizationWorkflowStatus = update.Stage == "Failover"
+                    ? (IsChinese ? "主节点未完成，正在使用 Fallback 节点审核…" : "Main route did not complete. Reviewing with Fallback…")
+                    : update.TotalBatches > 0
+                    ? (IsChinese ? $"AI 分析中（{update.CompletedBatches}/{update.TotalBatches} 批）" : $"AI analysis ({update.CompletedBatches}/{update.TotalBatches} batches)")
+                    : (IsChinese ? "正在进行 AI 分析..." : "Analyzing with AI...");
+            }, token);
+        });
+        try
+        {
+            var result = await _optimizationAnalysisService.AnalyzeAsync(items, IsChinese ? "zh-CN" : "en-US", progress, token);
+            Logger.LogInfo($"Optimization review finished: code={result.ErrorCode}, approved={result.Items.Count}, unreviewed={result.UnreviewedCount}, skipped={result.SkippedCount}");
+            token.ThrowIfCancellationRequested();
+            return result;
+        }
+        catch
+        {
+            foreach (var item in items)
+            {
+                item.ReviewState = "failed";
+            }
+
+            EnqueueOnUI(RecalculateCandidateMetrics);
+            throw;
+        }
+        finally
+        {
+            Interlocked.Exchange(ref finished, 1);
+        }
+    }
+
     private void RunScanAll()
     {
         if (!IsEnabled || IsOptimizing)
         {
             return;
         }
+
+        ClearOptimizationCandidates(null);
 
         _optimizationCts?.Dispose();
         _optimizationCts = new CancellationTokenSource();
@@ -2438,6 +2573,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                 var downloads = await downloadsTask;
                 var caches = await cacheTask;
+                var analysis = await AnalyzeOptimizationCandidatesAsync(downloads.Concat(caches).ToList(), token);
+                downloads = analysis.Items.Where(item => item.Action == "move").ToList();
+                caches = analysis.Items.Where(item => item.Action == "delete").ToList();
 
                 long dlBytes = downloads.Sum(d => d.SizeInBytes);
                 long cacheBytes = caches.Sum(c => c.SizeInBytes);
@@ -2469,10 +2607,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     }
 
                     RecalculateCandidateMetrics();
-                    OptimizationWorkflowStatus = allCandidates.Count > 0
-                        ? (IsChinese ? "请检查候选项目并确认" : "Review candidates and confirm")
-                        : (IsChinese ? "扫描就绪 (未发现候选项目)" : "Ready to scan (0 items found)");
-                    ShowStatus(IsChinese ? $"扫描完成: 检测到 {allCandidates.Count} 个候选项目 ({FormatBytes(dlBytes + cacheBytes)})。" : $"Scan complete: {allCandidates.Count} candidate items detected ({FormatBytes(dlBytes + cacheBytes)}).", InfoBarSeverity.Success, optimization: true);
+                    OptimizationWorkflowStatus = analysis.Describe(IsChinese);
+                    if (_cacheCleanupService.ScanTruncated)
+                    {
+                        OptimizationWorkflowStatus += IsChinese ? " · 扫描达到上限，仅展示已分析部分" : " · Scan limit reached; showing reviewed subset";
+                    }
+
+                    ShowStatus(analysis.Describe(IsChinese), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
                 }, token);
             }
             catch (OperationCanceledException)
@@ -2506,6 +2647,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             return;
         }
 
+        ClearOptimizationCandidates("move");
+
         _optimizationCts?.Dispose();
         _optimizationCts = new CancellationTokenSource();
         var token = _optimizationCts.Token;
@@ -2521,6 +2664,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             try
             {
                 var downloads = await _downloadOrganizerService.ScanAsync(token);
+                var analysis = await AnalyzeOptimizationCandidatesAsync(downloads, token, "move");
+                downloads = analysis.Items.ToList();
                 long dlBytes = downloads.Sum(d => d.SizeInBytes);
 
                 EnqueueOnUI(() =>
@@ -2547,10 +2692,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     }
 
                     RecalculateCandidateMetrics();
-                    OptimizationWorkflowStatus = OptimizationCandidates.Count > 0
-                        ? (IsChinese ? "请检查候选项目并确认" : "Review candidates and confirm")
-                        : (IsChinese ? "就绪，等待扫描" : "Ready to scan");
-                    ShowStatus(IsChinese ? $"下载扫描完成: 发现 {downloads.Count} 个项目。" : $"Downloads scan complete: {downloads.Count} item(s) found.", InfoBarSeverity.Success, optimization: true);
+                    OptimizationWorkflowStatus = analysis.Describe(IsChinese);
+                    if (_cacheCleanupService.ScanTruncated)
+                    {
+                        OptimizationWorkflowStatus += IsChinese ? " · 扫描达到上限，仅展示已分析部分" : " · Scan limit reached; showing reviewed subset";
+                    }
+
+                    ShowStatus(analysis.Describe(IsChinese), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
                 }, token);
             }
             catch (OperationCanceledException)
@@ -2584,6 +2732,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             return;
         }
 
+        ClearOptimizationCandidates("delete");
+
         _optimizationCts?.Dispose();
         _optimizationCts = new CancellationTokenSource();
         var token = _optimizationCts.Token;
@@ -2599,6 +2749,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             try
             {
                 var caches = await _cacheCleanupService.ScanAsync(token);
+                var analysis = await AnalyzeOptimizationCandidatesAsync(caches, token, "delete");
+                caches = analysis.Items.ToList();
                 long cacheBytes = caches.Sum(c => c.SizeInBytes);
 
                 EnqueueOnUI(() =>
@@ -2625,10 +2777,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     }
 
                     RecalculateCandidateMetrics();
-                    OptimizationWorkflowStatus = OptimizationCandidates.Count > 0
-                        ? (IsChinese ? "请检查候选项目并确认" : "Review candidates and confirm")
-                        : (IsChinese ? "就绪，等待扫描" : "Ready to scan");
-                    ShowStatus(IsChinese ? $"缓存扫描完成: 发现 {caches.Count} 个项目。" : $"Cache scan complete: {caches.Count} item(s) found.", InfoBarSeverity.Success, optimization: true);
+                    OptimizationWorkflowStatus = analysis.Describe(IsChinese);
+                    if (_cacheCleanupService.ScanTruncated)
+                    {
+                        OptimizationWorkflowStatus += IsChinese ? " · 扫描达到上限，仅展示已分析部分" : " · Scan limit reached; showing reviewed subset";
+                    }
+
+                    ShowStatus(analysis.Describe(IsChinese), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
                 }, token);
             }
             catch (OperationCanceledException)
@@ -2690,8 +2845,69 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
     }
 
+    private string DescribeOptimizationScope(string action, bool scanned)
+    {
+        var items = _observedOptimizationItems.Concat(OptimizationCandidates).Distinct().Where(item => item.Action == action).ToList();
+        if (items.Count == 0)
+        {
+            return IsChinese ? (scanned ? "没有符合条件的文件" : "尚未扫描") : (scanned ? "No eligible files found" : "Not scanned yet");
+        }
+
+        int approved = OptimizationCandidates.Count(item => item.Action == action);
+        return IsChinese
+            ? $"发现 {items.Count:N0} 个文件 · {FormatBytes(items.Sum(item => item.SizeInBytes))} · {approved:N0} 个可执行"
+            : $"{items.Count:N0} files found · {FormatBytes(items.Sum(item => item.SizeInBytes))} · {approved:N0} actionable";
+    }
+
     private void RecalculateCandidateMetrics()
     {
+        OptimizationCategories.Clear();
+        DownloadCategories.Clear();
+        CacheCategories.Clear();
+        CacheGroups.Clear();
+        var approved = OptimizationCandidates.ToHashSet();
+        foreach (var items in _observedOptimizationItems.Concat(OptimizationCandidates).Distinct().GroupBy(item => (item.Action, item.Category, Root: string.IsNullOrEmpty(item.CacheRoot) ? Path.GetDirectoryName(item.FilePath) : item.CacheRoot))
+            .OrderBy(group => group.Key.Action == "move" ? 0 : 1).ThenByDescending(group => group.Sum(item => item.SizeInBytes)))
+        {
+            var snapshot = items.ToList();
+            var actionable = snapshot.Where(approved.Contains).ToList();
+            var group = new OptimizationCategoryViewModel(snapshot, actionable.Count, () => RunExecuteOptimization(actionable)) { IsEnabled = IsEnabled && !IsOptimizing && actionable.Count > 0 };
+            OptimizationCategories.Add(group);
+            (items.Key.Action == "move" ? DownloadCategories : CacheCategories).Add(group);
+        }
+
+        foreach (string family in new[] { "development", "packages", "editors", "browsers", "system" })
+        {
+            var categories = CacheCategories.Where(category => category.Family == family).ToList();
+            if (categories.Count == 0)
+            {
+                continue;
+            }
+
+            var actionable = categories.SelectMany(category => category.Items).Where(approved.Contains).ToList();
+            var projects = new List<OptimizationGroupViewModel>();
+            if (family == "development")
+            {
+                foreach (var project in categories.GroupBy(category => category.Items[0].DevelopmentRepository, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(project => project.Sum(category => category.Items.Sum(item => item.SizeInBytes))))
+                {
+                    var projectItems = project.SelectMany(category => category.Items).Where(approved.Contains).ToList();
+                    projects.Add(new OptimizationGroupViewModel("project", project.ToList(), () => RunExecuteOptimization(projectItems))
+                    {
+                        Name = Path.GetFileName(project.Key),
+                        Location = project.Key,
+                    });
+                }
+            }
+
+            CacheGroups.Add(new OptimizationGroupViewModel(family, categories, () => RunExecuteOptimization(actionable)) { Projects = projects });
+        }
+
+        OnPropertyChanged(nameof(DownloadsResultSummary));
+        OnPropertyChanged(nameof(CacheResultSummary));
+        OnPropertyChanged(nameof(OptimizationResultsSummary));
+        OnPropertyChanged(nameof(HasDownloadResults));
+        OnPropertyChanged(nameof(HasCacheResults));
         CandidatesCount = OptimizationCandidates.Count;
         CandidatesBytes = OptimizationCandidates.Sum(c => c.SizeInBytes);
 
@@ -2706,9 +2922,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         RefreshCommands();
     }
 
-    private void RunExecuteOptimization()
+    private void RunExecuteOptimization(List<TempFileInfo> requestedItems = null)
     {
-        if (!CanExecuteOptimization)
+        if (!IsEnabled || IsOptimizing)
         {
             return;
         }
@@ -2717,11 +2933,26 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         _optimizationCts = new CancellationTokenSource();
         var token = _optimizationCts.Token;
 
+        var available = OptimizationCandidates.ToHashSet();
+        var selectedItems = (requestedItems ?? OptimizationCandidates.Where(c => c.IsSelected).ToList())
+            .Where(available.Contains)
+            .OrderBy(item => item.FileName.Equals(".nupkg.metadata", StringComparison.OrdinalIgnoreCase) ? 0 : 1).ToList();
+        if (selectedItems.Count == 0)
+        {
+            return;
+        }
+
         IsOptimizing = true;
+        IsExecutingOptimization = true;
+        OptimizationProgress = 0;
+        foreach (var group in OptimizationCategories)
+        {
+            group.Processed = 0;
+        }
+
+        var categoryByItem = OptimizationCategories.SelectMany(group => group.Items.Select(item => (item, group))).ToDictionary(pair => pair.item, pair => pair.group);
         ScanPhase = ScanPhase.ExecutionPending;
         OptimizationWorkflowStatus = IsChinese ? "正在执行已确认的操作..." : "Executing confirmed actions...";
-
-        var selectedItems = OptimizationCandidates.Where(c => c.IsSelected).ToList();
 
         Task.Run(() =>
         {
@@ -2742,7 +2973,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     {
                         if (item.Action == "delete")
                         {
-                            // Clean temp file using Recycle Bin ONLY
+                            // Delete only the reviewed leaf snapshot after local revalidation.
                             var (ok, error) = _cacheCleanupService.CleanupItem(item);
                             outcome.Add(ok
                                 ? OptimizationItemResult.Success(item.FileName, "delete")
@@ -2763,20 +2994,44 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         outcome.Add(OptimizationItemResult.Failure(item.FileName, item.Action, ex.Message));
                     }
 
-                    processedItems.Add(item);
+                    if (outcome.Results.Count > 0 && outcome.Results[^1].Succeeded)
+                    {
+                        processedItems.Add(item);
+                    }
+                    else if (outcome.Results.Count > 0)
+                    {
+                        item.ExecutionError = outcome.Results[^1].Reason ?? (IsChinese ? "操作失败，请重新扫描" : "Action failed; scan again");
+                    }
+
                     processed++;
                     int done = processed;
-                    EnqueueOnUI(() => OptimizationWorkflowStatus = IsChinese
+                    EnqueueOnUI(() =>
+                    {
+                        OptimizationProgress = 100.0 * done / selectedItems.Count;
+                        if (categoryByItem.TryGetValue(item, out var group))
+                        {
+                            group.Processed++;
+                        }
+
+                        OptimizationWorkflowStatus = IsChinese
                         ? $"正在执行已确认的操作... ({done}/{selectedItems.Count})"
-                        : $"Executing confirmed actions... ({done}/{selectedItems.Count})", token);
+                        : $"Executing confirmed actions... ({done}/{selectedItems.Count})";
+                    });
                 }
 
                 EnqueueOnUI(() =>
                 {
+                    var removed = processedItems.ToHashSet();
+                    _observedOptimizationItems.RemoveAll(removed.Contains);
+                    var remaining = OptimizationCandidates.Where(item => !removed.Contains(item)).ToList();
                     foreach (var item in processedItems)
                     {
                         item.PropertyChanged -= Candidate_PropertyChanged;
-                        OptimizationCandidates.Remove(item);
+                    }
+                    OptimizationCandidates.Clear();
+                    foreach (var item in remaining)
+                    {
+                        OptimizationCandidates.Add(item);
                     }
 
                     RecalculateCandidateMetrics();

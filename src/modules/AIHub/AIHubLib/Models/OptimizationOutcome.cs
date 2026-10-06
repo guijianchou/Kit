@@ -56,8 +56,8 @@ public sealed class OptimizationOutcome
     public string Describe(bool chinese)
     {
         return chinese
-            ? $"优化完成：已整理 {MovedCount} 个文件，已将 {RecycledCount} 个文件移至回收站，{FailedCount} 个失败"
-            : $"Optimization completed: {MovedCount} file(s) organized, {RecycledCount} file(s) recycled, {FailedCount} failed";
+            ? $"优化完成：已整理 {MovedCount} 个文件，已删除 {RecycledCount} 个文件，{FailedCount} 个失败"
+            : $"Optimization completed: {MovedCount} file(s) organized, {RecycledCount} file(s) deleted, {FailedCount} failed";
     }
 }
 

@@ -16,31 +16,42 @@ public sealed class EventAnalysisInput
 
 public sealed class OptimizationItemInput
 {
+    public int FileCount { get; set; } = 1;
+    public string LocalRisk { get; set; } = "low";
+    public int MinimumAgeMinutes { get; set; }
+    public string Evidence { get; set; } = string.Empty;
     public string ItemId { get; set; } = string.Empty;
     public string Extension { get; set; } = string.Empty;
     public long SizeInBytes { get; set; }
     public string LastModifiedUtc { get; set; } = string.Empty;
     public string CategoryHint { get; set; } = string.Empty;
+    public string AllowedAction { get; set; } = string.Empty;
 }
 
 public sealed class OptimizationRecommendation
 {
     [JsonPropertyName("itemId")]
+    [JsonRequired]
     public string ItemId { get; set; } = string.Empty;
 
     [JsonPropertyName("action")]
+    [JsonRequired]
     public string Action { get; set; } = "skip"; // "move" or "delete" or "skip"
 
     [JsonPropertyName("targetRelative")]
+    [JsonRequired]
     public string? TargetRelative { get; set; }
 
     [JsonPropertyName("risk")]
+    [JsonRequired]
     public string Risk { get; set; } = "low"; // "low", "medium", "high"
 
     [JsonPropertyName("reasonEn")]
+    [JsonRequired]
     public string ReasonEn { get; set; } = string.Empty;
 
     [JsonPropertyName("reasonZh")]
+    [JsonRequired]
     public string ReasonZh { get; set; } = string.Empty;
 }
 

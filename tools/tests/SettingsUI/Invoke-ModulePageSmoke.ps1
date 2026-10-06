@@ -59,7 +59,7 @@ try {
     $pipeSuffix = [guid]::NewGuid().ToString('N')
     $launchArguments = @("KitPageSmokeRunner-$pipeSuffix", "KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
     $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $runtimeRoot -WindowStyle Hidden -PassThru
-    if (-not $testProcess.WaitForExit(45000)) { throw 'Page smoke test timed out.' }
+    if (-not $testProcess.WaitForExit(60000)) { throw 'Page smoke test timed out.' }
     Get-Content -LiteralPath (Join-Path $reportRoot 'module-pages-smoke.log')
     if ($testProcess.ExitCode -ne 0) { throw "Page smoke test failed: $($testProcess.ExitCode)" }
     if ((Get-Content -LiteralPath (Join-Path $reportRoot 'module-pages-smoke.log') -Tail 1) -ne 'PASS') {

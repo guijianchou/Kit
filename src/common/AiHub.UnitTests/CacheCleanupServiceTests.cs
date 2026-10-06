@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -34,12 +34,14 @@ public sealed class CacheCleanupServiceTests
     [TestMethod]
     public async Task ScanNeverOffersFilesOutsideTheWhitelistedLocations()
     {
-        var service = new CacheCleanupService();
+        using var fixture = new FixtureDirectory();
+        var service = CreateService(fixture);
 
         List<TempFileInfo> items = await service.ScanAsync(CancellationToken.None);
 
         Assert.IsNotNull(items);
-        Assert.IsTrue(items.Count <= 5000, "The scan must stay bounded.");
+        CollectionAssert.AreEquivalent(new[] { "first.tmp", "second.temp" }, items.Select(item => item.FileName).ToArray());
+        Assert.IsTrue(items.Count <= 200000, "The scan must stay bounded.");
 
         foreach (TempFileInfo item in items)
         {
@@ -53,7 +55,8 @@ public sealed class CacheCleanupServiceTests
     [TestMethod]
     public async Task ProtectedRootsAreNeverOfferedForCleanup()
     {
-        var service = new CacheCleanupService();
+        using var fixture = new FixtureDirectory();
+        var service = CreateService(fixture);
 
         List<TempFileInfo> items = await service.ScanAsync(CancellationToken.None);
 
@@ -68,22 +71,24 @@ public sealed class CacheCleanupServiceTests
     }
 
     [TestMethod]
-    public async Task DestructiveActionsAreReservedForRecycleBinCapableItems()
+    public async Task CacheCandidatesUseOnlyTheDeleteAction()
     {
-        var service = new CacheCleanupService();
+        using var fixture = new FixtureDirectory();
+        var service = CreateService(fixture);
 
         List<TempFileInfo> items = await service.ScanAsync(CancellationToken.None);
 
-        // The service may only ever ask for a recycle-bin move, never a hard delete.
+        // Downloads moves must never enter the cache cleanup pipeline.
         Assert.IsTrue(
             items.All(item => string.Equals(item.Action, "delete", StringComparison.OrdinalIgnoreCase)),
-            "Cache cleanup uses the recycle bin, so every candidate is a 'delete' action.");
+            "Every cache candidate must use the 'delete' action.");
     }
 
     [TestMethod]
     public async Task CancellationSurfacesAsTaskCanceledRatherThanAPartialResult()
     {
-        var service = new CacheCleanupService();
+        using var fixture = new FixtureDirectory();
+        var service = CreateService(fixture);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -95,7 +100,8 @@ public sealed class CacheCleanupServiceTests
     [TestMethod]
     public async Task CleaningNothingIsANoOp()
     {
-        var service = new CacheCleanupService();
+        using var fixture = new FixtureDirectory();
+        var service = CreateService(fixture);
 
         (int succeeded, int failed) = await service.CleanupSelectedAsync(new List<TempFileInfo>());
 
@@ -106,7 +112,8 @@ public sealed class CacheCleanupServiceTests
     [TestMethod]
     public async Task ItemsCarryAnOpaqueIdentifierForTheAiContract()
     {
-        var service = new CacheCleanupService();
+        using var fixture = new FixtureDirectory();
+        var service = CreateService(fixture);
 
         List<TempFileInfo> items = await service.ScanAsync(CancellationToken.None);
 
@@ -119,5 +126,20 @@ public sealed class CacheCleanupServiceTests
         {
             Assert.AreEqual(items.Count, items.Select(i => i.ItemId).Distinct(StringComparer.Ordinal).Count());
         }
+    }
+
+    private static CacheCleanupService CreateService(FixtureDirectory fixture)
+    {
+        string local = fixture.PathFor("Local");
+        string temp = Path.Combine(local, "Temp");
+        Directory.CreateDirectory(temp);
+        foreach (string name in new[] { "first.tmp", "second.temp", "keep.docx" })
+        {
+            string path = Path.Combine(temp, name);
+            File.WriteAllText(path, "fixture");
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddDays(-10));
+        }
+
+        return new CacheCleanupService(local, temp, _ => throw new AssertFailedException("No deletion expected."));
     }
 }

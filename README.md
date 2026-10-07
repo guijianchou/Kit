@@ -2,331 +2,282 @@
 
 **Language / 语言:** English | [中文](README_zh.md)
 
----
+Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). It reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-## 1. What Is Kit
+Current source version: **2.3.8**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
-Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. It exists so selected PowerToys utilities can be modified, isolated, and compared against an installed official PowerToys build on the same machine.
+[Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
-It is a **stability-first PowerToys-derived workspace, not a full product rebrand**: the upstream runner, module interface, settings, and dashboard patterns are kept recognizable, so imported PowerToys modules can be validated with minimal adapter code.
+## 1. Overview
 
-| Keeps | Changes |
-| --- | --- |
-| PowerToys runner / module-interface / settings / dashboard patterns | Branding (`Kit`), window titles, visible UI text |
-| The `KitModuleIface` C++ contract (with `PowertoyModuleIface` aliases) | Settings storage under `%LOCALAPPDATA%\Kit` (not the official PowerToys directory) |
-| The explicit module-loading model | Automatic update, download, and telemetry surfaces are removed |
-| PowerToys-imported modules: `Awake`, `Light Switch`; Kit-developed plugins: `Localserver`, `UDPtest`, `AI Hub`, `NetMap` | Backup/restore defaults use Kit branding (`%LOCALAPPDATA%\Kit\Backup`, `HKCU\Software\Microsoft\Kit`) |
+Kit currently includes six modules. “Plugin” here means a module built and explicitly registered with Kit. Installing third-party plugins by dropping in a DLL or manifest is not supported yet.
 
-Current Kit version: `2.3.7`.
+| Module | Purpose | Business logic runs in | Origin |
+| --- | --- | --- | --- |
+| [Awake](#31-awake-keep-the-system-awake) | Keep Windows awake under selected conditions | Separate Awake process | PowerToys |
+| [Light Switch](#32-light-switch-theme-scheduling) | Switch light/dark themes on a schedule or manually | Separate Service process | PowerToys |
+| [Localserver](#33-localserver-local-service-management) | Configure, start, monitor and stop local services | Settings + supervision Worker | Kit |
+| [UDPtest](#34-udptest-configured-line-quality) | Measure configured targets: latency, jitter, success rate and NAT | Settings process | Kit |
+| [AI Hub](#35-ai-hub-auditing-and-system-optimization) | Audit system events, organize downloads and clean caches | Settings + scheduled-audit Worker | Kit |
+| [NetMap](#36-netmap-current-egress-and-route-observation) | Observe Direct / Proxy egress, service reachability and ICMP routes | Settings process | Kit |
 
----
+Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
 
-## 2. Kit Main Architecture
+Home shows system resources and network egress; General contains appearance, startup behavior and shared AI service settings; Quick Access provides shortcuts and module actions. With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
 
-### 2.1 Process and component overview
+## 2. Framework
 
-| Component | Executable / Project | Role |
-| --- | --- | --- |
-| **Runner** | `Kit.exe` (`src/runner`) | Loads module interface DLLs, owns module lifetime, hosts the tray icon, coordinates settings IPC, launches the Settings and Quick Access apps |
-| **Settings app** | `Kit.Settings.exe` (`src/settings-ui/Settings.UI`, WinUI 3) | Home, General, per-module pages, navigation, page-level view models |
-| **Quick Access** | `Kit.QuickAccess.exe` (`src/settings-ui/Settings.UI.Controls`) | Quick actions / dashboard shortcuts |
-| **Module interfaces** | `Kit.<Module>ModuleInterface.dll` (`src/modules/*/...ModuleInterface`, C++) | Loaded into the runner process; implement `KitModuleIface` |
-| **Workers / services** | e.g. `Kit.Awake.exe`, `Kit.LightSwitchService.exe`, `Kit.LocalserverWorker.exe`, `Kit.AIHubWorker.exe` | Headless processes launched by module interfaces; host per-module engines so behavior survives Settings closing |
-| **Shared libs** | `src/common` (interop WinMD, managed libs, `Logger`, settings helpers) | Common infrastructure used by runner, modules, and Settings |
-
-Runtime layout next to `Kit.exe`:
-
-```
-<runner dir>/
-├── Kit.exe
-├── Kit.<Module>ModuleInterface.dll          # loaded by the runner
-├── LocalserverWorker/Kit.LocalserverWorker.exe
-├── AIHubWorker/Kit.AIHubWorker.exe
-├── Kit.Awake.exe
-├── Kit.LightSwitchService.exe
-└── WinUI3Apps/
-    ├── Kit.Settings.exe
-    ├── Kit.QuickAccess.exe
-    ├── Kit.NetMapLib.dll                   # NetMap runs inside Settings
-    └── modules/NetMap/                     # third-party license notices
-```
-
-### 2.2 Startup and lifecycle
-
-1. The runner boots, shows the tray icon, loads and enables the modules, then launches Settings when requested. The Settings lifecycle thread starts the WinUI/.NET process and named-pipe IPC; incoming messages are dispatched to the runner's main thread.
-2. The runner loads the known module interface DLLs (`KitKnownModules` in `src/runner/main.cpp`), calls `kit_create()` on each, and enables the modules that are turned on in settings.
-3. Enabling/disabling a module in Settings uses the PowerToys `module_status` IPC message; the runner applies GPO policy and calls the module's native `enable()` / `disable()` interface, then returns `get_all_settings()` so Settings can synchronize Utilities from each module's actual `is_enabled()` state. The settings-file watcher remains as a fallback for external changes. Kit does not expose PowerToys' experimentation toggle or its related policy.
-4. Shutdown: when the message loop ends (tray exit, or Settings closed without a tray icon), the runner tears down modules (`modules().clear()` → `destroy()`), which lets each module clean up its worker and services before the process exits.
-
-### 2.3 Module interface contract (`KitModuleIface`)
-
-Defined in `src/modules/interface/kit_module_interface.h`. A module DLL exports `kit_create()` returning an object implementing:
-
-- `get_key()` — non-localized module ID
-- `enable()` / `disable()` / `is_enabled()` — lifecycle
-- `get_config()` / `set_config()` — settings JSON schema and updates
-- `call_custom_action()` — custom UI actions
-- `get_hotkeys()` / `on_hotkey()` — hotkey registration and dispatch
-- `destroy()` — free all resources, delete the instance (called at teardown)
-
-### 2.4 Generic plugin skeleton
-
-Every Kit module follows the same five-piece skeleton:
-
-1. **Native module interface DLL** (C++) — the runner-facing contract, enabled/disabled with the module.
-2. **Core library** — the engine, either managed (`LocalserverLib`, `UDPtestLib`, `AIHubLib`, `NetMapLib`) or native (`LightSwitchLib`).
-3. **Optional worker/service executable** — a headless process that hosts the engine outside the Settings process.
-4. **Settings page + view model** (WinUI 3) — the per-module UI in the Settings app.
-5. **Registration points** — runner `KitKnownModules`, Settings navigation/routes, Home dashboard metadata, and tests.
-
-### 2.5 Data and log layout
-
-All runtime data lives under `%LOCALAPPDATA%\Kit`:
-
-| Path | Purpose |
-| --- | --- |
-| `settings.json` | General settings |
-| `RunnerLogs\` | Runner log |
-| `crash.log` | First-chance / unhandled exception log |
-| `<ModuleKey>\` | Per-module data: settings, state, logs, catalogs (e.g. `Localserver\services.json`, `Localserver\State\`, `AiHub\chains\`) |
-| `<ModuleKey>\Logs\<version>\` | Versioned module/worker logs |
-
-### 2.6 Home and Settings
-
-- **System overview** shows device and Windows information, CPU load, memory, uptime, storage usage and available GPU readings. Labels, values and usage bars share consistent columns across the system, storage and GPU sections. Unsupported readings remain unavailable.
-- **Network egress** compares Direct and Proxy public IPs, locations and the selected connection route using the saved NetMap settings. Errors remain visible; successful lookups omit collection-status text. Both Home overview cards update automatically without manual Refresh buttons, collection timestamps or cadence footers.
-- **Refresh lifetime**: while Home is visible, uptime and CPU/memory/GPU readings update every second, storage every 5 minutes, and network egress every 10 seconds. Leaving Home or hiding/minimizing Settings pauses the timers and cancels pending page requests; returning resumes automatic updates. Slow probes do not create overlapping reads.
-- **Mica and navigation**: the shell and overview surfaces use coordinated native WinUI colors with translucent layers and opaque high-contrast fallbacks. Quick access and Utilities retain their existing controls. Settings puts appearance first and offers six compact, colored icon buttons that wrap to the available width and jump directly to each section, with native hover, pressed and keyboard-focus feedback.
-
----
-
-## 3. Plugin Architecture Skeleton Analysis
-
-The six active modules split into two groups:
-
-- **PowerToys-imported (first-party)** — `Awake`, `Light Switch`: adapted from upstream PowerToys modules onto Kit's contract.
-- **Kit-developed plugins** — `Localserver`, `UDPtest`, `AI Hub`, `NetMap`: built for Kit's own local use.
-
-### 3.1 Awake — keep-awake utility
-
-```mermaid
-flowchart LR
-    R["Kit.exe (runner)"]
-    MI["AwakeModuleInterface.dll"]
-    A["Kit.Awake.exe (tray app)"]
-    R -->|"enable() → CreateProcess"| MI
-    MI -->|"--use-kit-config --pid <kit_pid>"| A
-    A -.->|"watches kit_pid; exits with runner"| R
-```
-
-- **Skeleton**: module interface DLL + standalone tray executable. No in-process engine.
-- **Components**: `AwakeModuleInterface.dll` (C++) → launches `Kit.Awake.exe` (`src/modules/awake/Awake`, C# WinExe) with `--use-kit-config --pid <kit_pid>`.
-- **Lifecycle**: enabling the module launches the tray app, which keeps the system awake per the configured mode (indefinite / timer / battery-aware) and exits when the runner dies (watches `kit_pid`).
-- **Data**: `%LOCALAPPDATA%\Kit\Awake\`.
-
-### 3.2 Light Switch — scheduled theme switching
-
-```mermaid
-flowchart LR
-    R["Kit.exe (runner)"]
-    MI["LightSwitchModuleInterface.dll"]
-    LS["Kit.LightSwitchService.exe"]
-    R -->|"enable() → start service"| MI
-    MI -->|"launches"| LS
-    LS -->|"theme schedule / night light / toggle"| QA["Quick Access action"]
-```
-
-- **Skeleton**: module interface DLL + native core lib + native service executable.
-- **Components**: `LightSwitchModuleInterface.dll`, `LightSwitchLib` (C++ core), `Kit.LightSwitchService.exe`.
-- **Lifecycle**: enabling the module starts the service, which applies the theme schedule, night light, and the toggle hotkey. It keeps a direct Quick Access action.
-- **Data**: `%LOCALAPPDATA%\Kit\LightSwitch\`.
-
-### 3.3 Localserver — local service orchestration (deepest skeleton)
+### 2.1 Processes and calls
 
 ```mermaid
 flowchart TB
-    subgraph R["Kit.exe (runner)"]
-        MI["LocalserverModuleInterface.dll"]
+    subgraph R["Kit.exe / Runner"]
+        HOST["Tray, module registration, process and IPC management"]
+        MI["Six native module interface DLLs"]
+        HOST -->|"load / enable / disable"| MI
     end
-    subgraph S["Kit.Settings.exe"]
-        PG["Localserver page"]
-        PR["page runner"]
+    subgraph S["Kit.Settings.exe / WinUI 3"]
+        UI["Home, General and plugin pages"]
+        CORE["Page ViewModels + managed business libraries"]
+        UI -->|"commands and result binding"| CORE
     end
-    subgraph W["Kit.LocalserverWorker.exe"]
-        SUP["ServiceSupervisor (5s poll)"]
-        RUN["ServiceRunner / ownership / job object"]
-    end
-    PG -->|"start / stop chain"| PR
-    PR -->|"starts tree + ownership record"| RUN
-    MI -->|"enable: delete flag, start worker"| W
-    MI -->|"disable: write module-disabled.flag"| W
-    W -->|"adopt already-running trees (never relaunch)"| RUN
-    W -.->|"parent alive? adopt? flag?"| MI
-    RUN -->|"stop all on any exit path"| T["service trees"]
+    HOST -->|"launch"| S
+    UI <-->|"settings / state IPC"| HOST
+    HOST -->|"launch"| QA["Kit.QuickAccess.exe"]
+    MI -->|"start / stop as needed by each module"| W["Awake / LightSwitchService / LocalserverWorker / AIHubWorker"]
 ```
 
-- **Skeleton**: module interface DLL + managed core lib + headless worker; the Settings page also hosts page-level runners.
-- **Components**: `LocalserverModuleInterface.dll`, `Kit.LocalserverWorker.exe`, `LocalserverLib` (catalog store, `ServiceSupervisor`, `ServiceRunner`, ownership records, named job objects).
-- **Lifecycle**:
-  - Enabling the module only makes the catalog available — it **never auto-starts** services. Each service (e.g. Deepseek, Hongguo) is started individually from the Settings page; the worker *adopts* already-running process trees instead of relaunching them.
-  - The worker polls every 5 s: parent alive? adopt page-started chains? module-disable flag present?
-  - Disabling the module writes `module-disabled.flag`; the worker stops every supervised service and exits gracefully (up to 8 s, then force-terminated).
-  - On **any** exit path (flag, parent died, shutdown), the worker stops all supervised services, so no orphaned process tree survives.
-- **Data**: `%LOCALAPPDATA%\Kit\Localserver\` — `services.json` (catalog), `State\` (ownership), `settings.json`, `module-disabled.flag`, `Logs\<version>\`.
+| Layer | Responsibility | Source |
+| --- | --- | --- |
+| Runner | Single-instance entry point, tray, module loading, configuration and process shutdown | [src/runner](src/runner) |
+| Settings | Configuration and interaction; hosts some modules' running sessions | [Settings.UI](src/settings-ui/Settings.UI) |
+| Quick Access | Shortcut panel, module entry points and available actions | [QuickAccess.UI](src/settings-ui/QuickAccess.UI) |
+| Native module interfaces | Common enablement, configuration and action contract, loaded in Runner | [modules](src/modules), [kit_module_interface.h](src/modules/interface/kit_module_interface.h) |
+| Business libraries and optional Workers | Execute module work; use a Worker / Service when an independent lifetime is needed | Each module directory |
+| Shared infrastructure | Logging, settings, interop and AI execution | [src/common](src/common), [Settings.UI.Library](src/settings-ui/Settings.UI.Library) |
 
-### 3.4 UDPtest — network probe engine
+Settings sends configuration and module switches over the existing IPC channel. Runner calls the module interfaces and returns their actual enabled state. **Where work runs determines its lifetime**: separate processes can continue after Settings closes, while tasks hosted in Settings depend on that process. Each plugin handles navigation, minimization and stop events according to its own requirements.
+
+### 2.2 Shared AI services versus AI Hub
+
+| Component | Responsibility |
+| --- | --- |
+| **AI Services** in General | Configure Codex / Pi kernels, Main / Fallback endpoints, models, credentials and policies; `Kit.AiHub` provides execution, cancellation, batching and output validation |
+| **AI Hub** plugin page | Organize audits, optimization candidates and user actions; business logic lives in `Kit.AIHubLib` |
+| **AIHubWorker** | Run scheduled local rule-based audits and save history, without calling AI kernels |
+
+The shared AI service is an internal Kit library currently consumed by AI Hub. AI analysis in Settings uses external CLI kernels to access the configured endpoints. Fallback must be configured and enabled before it can handle eligible failures. See the [AI service notes](doc/ai-service-review.md) for configuration ownership and known limitations.
+
+### 2.3 Runtime layout
+
+Only the main components are shown. Keep the complete build or staged directory and its dependencies when deploying:
+
+```text
+<runtime directory>/
+├── Kit.exe
+├── Kit.*ModuleInterface.dll
+├── Kit.Awake.exe
+├── LightSwitchService/Kit.LightSwitchService.exe
+├── LocalserverWorker/Kit.LocalserverWorker.exe
+├── AIHubWorker/Kit.AIHubWorker.exe
+└── WinUI3Apps/
+    ├── Kit.Settings.exe
+    ├── Kit.QuickAccess.exe
+    ├── Kit.AiHub.dll
+    ├── Kit.AIHubLib.dll
+    ├── LocalserverLib.dll
+    ├── UDPtestLib.dll
+    └── Kit.NetMapLib.dll
+```
+
+## 3. Plugins
+
+### 3.1 Awake: keep the system awake
+
+Keep Windows awake indefinitely, for a set period or under battery-related conditions.
 
 ```mermaid
 flowchart LR
-    subgraph S["Kit.Settings.exe"]
-        PG["UDPtest page"]
-        ENG["UDPtestLib (ProbeCoordinator, TCP-HTTPS / UDP / STUN / NAT probes, MetricsEngine)"]
-    end
-    PG -->|"start / stop probes"| ENG
-    ENG -.->|"cascade shutdown on page close"| PG
+    R["Runner"] -->|"load / enable"| MI["Kit.AwakeModuleInterface.dll"]
+    MI -->|"pass configuration and Runner PID"| A["Kit.Awake.exe"]
+    A -->|"apply awake policy"| OS["Windows power state"]
 ```
 
-- **Skeleton**: module interface DLL + managed core lib, **no separate process** — the probe engine runs in-process in the Settings page.
-- **Components**: `UDPtestModuleInterface.dll`, `UDPtestLib` (`ProbeCoordinator`, TCP-HTTPS / UDP-echo / STUN / NAT-type probes, `MetricsEngine`, sparkline telemetry).
-- **Lifecycle**: the page starts/stops coordinated probes and shuts the cascade down when the page closes; no worker is involved.
-- **Data**: `%LOCALAPPDATA%\Kit\UDPtest\`.
+- **Runtime**: a separate Awake process applies the policy; disabling the module or exiting Runner ends it.
+- **Configuration and details**: `Awake/`; [module documentation](src/modules/awake/README.md).
 
-### 3.5 AI Hub — unified AI service + security audit
+### 3.2 Light Switch: theme scheduling
+
+Switch Windows light/dark themes by time or sunrise/sunset, with manual actions and shortcuts.
 
 ```mermaid
 flowchart LR
-    R["Kit.exe (runner)"]
-    MI["AIHubModuleInterface.dll"]
-    W["Kit.AIHubWorker.exe"]
-    LIB["Kit.AIHubLib (AI engine, kernels, task chains, security policy, audit)"]
-    R -->|"load + enable"| MI
-    MI -->|"launches"| W
-    W -->|"hosts"| LIB
-    LIB -->|"chains / security.md / audit"| D["%LOCALAPPDATA%/Kit/AiHub/"]
+    R["Runner"] -->|"load / enable"| MI["Kit.LightSwitchModuleInterface.dll"]
+    MI -->|"start / stop"| S["Kit.LightSwitchService.exe"]
+    S -->|"scheduled changes"| LIB["LightSwitchLib"]
+    MI -->|"manual action / shortcut"| LIB
+    LIB --> OS["Windows light/dark theme"]
 ```
 
-- **Skeleton**: module interface DLL + managed core lib + headless worker.
-- **Components**: `Kit.AIHubModuleInterface.dll`, `Kit.AIHubWorker.exe`, `Kit.AIHubLib` (audit/optimization), and `Kit.AiHub` (shared AI engine, kernels, task chains and security policies).
-- **Lifecycle**: the worker runs scheduled audits; Settings and the worker use the in-process shared AI service and its persisted configuration. Task chains carry per-task `AGENTS.md` policies; the Security Audit collects Windows event logs, ranks findings, and runs AI analysis.
-- **Data**: `%LOCALAPPDATA%\Kit\AiHub\` — `chains\`, `kernels\`, `requests\`, `State\`, `security.md`, `service-settings.json`, `secrets.dat`, `Logs\`.
-- **Settings UI**: the shared AI service (kernel, main/fallback endpoints, self-test, global security policy) is configured in the **AI Service** group on the General page, laid out with the same cards as the rest of Settings. The AI Hub page hosts the master toggle, an AI-readiness card, and three tabs (Security audit / Optimization / Task policies). Audit actions occupy their own row, historical statistics are collapsed, and the optimization page shows selection metrics only when candidates exist. Severity colors follow the theme (light / dark / high contrast).
-- **Independent workflows**: Security Audit and Optimization can run at the same time. Each owns its cancellation, progress, results and status message; the banner follows the selected tab, and the audit progress card/sidebar remains dedicated to the audit. Each tab has its own **Cancel task** button. Cancellation stops future work and retains optimization items that have not been processed; it does not undo completed file operations. Turning AI Hub off cancels both workflows; switching tabs does not interrupt them. Optimization uses local file services and does not invoke AI.
-- **Native execution**: Codex/Pi own transport and connection retries. Model names are freely configurable and reasoning effort offers `low/high/max`; Kit passes the selected Main effort through unchanged.
-- **Audit batching**: AI analysis selects up to 400 events, prioritizing severity and recency. Each batch contains at most 100 records and 96,000 bytes of encoded record data; larger records create smaller batches. For example, 103 small records use two native calls instead of seven at the previous `max` batch size. Waiting batches start in FIFO order under the configured concurrency limit.
-- **Long-running routes**: each Main or Fallback attempt has a 5-minute budget within the 30-minute overall audit deadline, which also includes queue time. On a recoverable endpoint failure or route timeout, Kit finishes Main cleanup before trying Fallback once. Configure and enable Fallback in **General → AI Service**, including its endpoint, model, credentials and effort. An empty or disabled Fallback is not used, and Kit does not automatically lower Main effort. User cancellation, the overall deadline, validation failures and cleanup failures do not trigger fallback. Validated results from successful batches remain available with an incomplete warning if other batches fail.
-- **Audit diagnostics**: Settings logs under `%LOCALAPPDATA%\Kit\Settings\Logs\<version>\` record the analysis ID, batch count, input byte count, selected route/model/effort, elapsed time and cancellation source. The UI shows completed batches and retry/fallback status while AI analysis is running. Endpoint addresses, credentials, prompts and raw responses are excluded from these diagnostics. Native activity diagnostics report start, reasoning, response and Pi retry phases without recording model text; repeated activity phases are deduplicated. Synthetic Codex/Pi coverage includes independent requests, cancellation, timeout cleanup and per-request fallback. Current Release verification is tracked in section 4.
-- **Execution isolation**: each request queues only up to its configured concurrency, so a large audit cannot place all its batches ahead of later short requests; the shared FIFO limit remains per engine instance and results retain input order. Synchronous progress-callback exceptions cannot change task results. Pi can accept a complete valid response after a recoverable native transport retry, while authentication, configuration and policy failures remain failures. On cancellation or timeout, cleanup confirms that the entire Windows Job has exited. A timed-out route can use Fallback only after successful cleanup; user cancellation and cleanup failure do not trigger fallback. Production timeout budgets are unchanged.
+- **Runtime**: the Service runs the schedule independently of the Settings window. Disabling the module stops the Service.
+- **Configuration and source**: `LightSwitch/`; [module directory](src/modules/LightSwitch).
 
-### 3.6 NetMap — direct and proxy egress observation
+### 3.3 Localserver: local service management
 
-NetMap follows the egress you are currently using as you switch nodes in an external proxy client. It does not require subscriptions, a specific client, or a node inventory. UDPtest measures configured lines; NetMap observes the current Direct and Proxy paths.
+Manage local programs and services: launch commands, environment, ports, health and process trees.
 
-- **Start**: open NetMap in Settings, enable the module, select the Proxy connection mode if needed, apply changes, then click **Start** next to **Stop**. The indicator shows sampling status. Module enablement and detection both default off. **Stop**, leaving the page, hiding/minimizing Settings, or disabling the module stops sampling and retains the last in-memory results; returning requires a manual start.
-- **Egress sources**: Direct reads [Bilibili zone](https://api.bilibili.com/x/web-interface/zone) without an application proxy; Proxy reads `ip` and `loc` from [Cloudflare trace](https://1.1.1.1/cdn-cgi/trace). Proxy supports Windows system proxy, an explicit HTTP/HTTPS/SOCKS5 address, or system routing/TUN. Direct cannot bypass a system TUN, and a successful Proxy response alone does not prove that a proxy was used.
-- **Map and ASN**: the offline Natural Earth v5.1.2 map uses country representative points. User-supplied GeoLite2-ASN/City databases take priority; missing fields are filled through ipwho.is by default. Online lookup sends public IPs to the provider, skips private/reserved addresses and caches results. It can be disabled. A manual ASN updater downloads `GeoLite2-ASN.mmdb` from P3TERX/GeoLite.mmdb GitHub Releases, verifies the Release SHA-256 and MMDB format, then replaces only the managed copy. Custom database paths take priority. The bundled map is not updated online.
-- **Diagnostics**: after two matching successful Proxy observations, check four services through Proxy every 10 seconds: Claude/ChatGPT trace checkpoints and the Gemini/Google websites. Results arrive independently, and rounds do not overlap. Trace results show each domain’s own egress IP/location; website checks distinguish page responses, sign-in, browser verification and access restrictions. IPv4 ICMP hops to the egress IP are sampled continuously through system routing. These are neither model calls nor a view inside the proxy tunnel. HTTP status codes do not establish account/model availability.
-- **Status and latency**: service indicators and ICMP RTT are green at ≤75 ms, yellow above 75 ms, and red on errors; sign-in, verification and rate-limit responses stay yellow. Successful Direct/Proxy IPs are green. Three consecutive failures show N/A for unavailable live values; a successful observation restores them. MTR average RTT/loss remain cumulative, and stopped indicators turn gray. Colors follow the light/dark theme. Service timing measures HTTP response headers; identity observation intervals remain Direct 30 seconds / Proxy 5 seconds.
-- **Layout**: a single-line Start/Stop toolbar, compact egress cards with a Details flyout, and a map beside a compact MTR table with per-hop IP, Loc, loss and RTT. The map gets the remaining width and centers on the occupied longitude arc, keeping China-US-Singapore routes continuous across the Pacific. Solid lines join adjacent located hops; dashed lines mark unlocated gaps and egress illustrations. Last/average RTT and loss stay visible, and sampling preserves list scroll and selection. Labels follow Kit’s English/Chinese setting. Narrow windows stack the cards and place the MTR table below the map. The synthetic WinUI check fits the complete map in a 1200×900 window.
-- **Components and data**: `Kit.NetMapModuleInterface.dll` handles Runner enablement/settings; `Kit.NetMapLib.dll` runs in Settings without a Worker or AI service dependency. Settings live in `%LOCALAPPDATA%\Kit\NetMap\settings.json`; observations are not persisted.
-- **Verification**: targeted x64 Debug builds, 103 core tests, 3 NetMap settings tests and real English/Chinese WinUI lifecycle/layout checks passed. The latest checks cover the 75 ms boundary, N/A after three failures and recovery, light/dark themes, and preservation of the selected hop 19 and scroll position across 12 updates and delayed location enrichment. Real Claude/ChatGPT trace validation and Gemini/Google page responses passed; all four exceeded 75 ms and were correctly yellow on this network. The broader settings/registration run had 88 passes and 4 pre-existing failures. A real GitHub ASN download, SHA-256 check, local lookup and repeat-update skip also passed. Real proxy/PAC/TUN combinations, City MMDB data and Release validation remain pending. See the [module README](src/modules/NetMap/README.md) and [verification record](src/modules/NetMap/plan.md).
+```mermaid
+flowchart TB
+    MI["Runner / Kit.LocalserverModuleInterface.dll"] -->|"launch supervisor"| W["Kit.LocalserverWorker.exe"]
+    subgraph S["Settings process"]
+        PG["Localserver page"] --> LIB["LocalserverLib / ServiceRunner"]
+    end
+    LIB -->|"user start / stop"| P["Managed service process trees"]
+    LIB -->|"write ownership records"| STATE["Localserver/State"]
+    STATE -->|"recover supervision of existing services"| W
+    W -->|"supervise; stop on module disable or shutdown"| P
+```
+
+- **Startup and supervision**: enabling the module does not start the service catalog automatically. Users start services from the page; the Worker adopts them through ownership records without starting duplicates.
+- **Lifetime**: navigation pauses UI sampling. Established services can survive Settings closing. Disabling the module or exiting Runner makes the Worker stop its managed services.
+- **Scope**: only process trees with verified ownership are managed. Catalog, state and logs live under `Localserver/`. See the [module documentation](src/modules/Localserver/README.md).
+
+### 3.4 UDPtest: configured line quality
+
+Run TCP/HTTPS, UDP Echo, STUN and NAT probes against configured targets, with latency, jitter, success rates and live charts.
+
+```mermaid
+flowchart LR
+    subgraph S["Settings process"]
+        PG["UDPtest page"] -->|"Start / Stop"| ENG["UDPtestLib / ProbeCoordinator"]
+        ENG --> METRICS["MetricsEngine / live charts"]
+    end
+    ENG -->|"parallel probes"| TARGET["Configured TCP/HTTPS, UDP and STUN targets"]
+```
+
+- **Runtime**: users control Start / Stop. The engine runs in Settings without a separate Worker.
+- **Interpretation**: HTTPS timing measures response-header arrival. NAT behavior, UDP echo and TCP/HTTPS use distinct probes and represent different network measurements.
+- **Data**: target configuration is saved under `UDPtest/`; sample history stays in memory. See the [module documentation](src/modules/UDPtest/README.md).
+
+### 3.5 AI Hub: auditing and system optimization
+
+Provides Security Audit, Optimization and task policies, using the shared AI service configured in General.
+
+```mermaid
+flowchart TB
+    subgraph S["Settings process"]
+        PG["AI Hub page"] --> LIB["Kit.AIHubLib / auditing and optimization"]
+        LIB -->|"audit enrichment / optimization review"| AI["Kit.AiHub / shared AI service"]
+    end
+    AI --> CLI["Codex / Pi CLI → configured model endpoints"]
+    LIB -->|"audit results"| H["Audit history"]
+    MI["Runner / Kit.AIHubModuleInterface.dll"] --> W["Kit.AIHubWorker.exe"]
+    W -->|"scheduled rule-based audits, no AI calls"| H
+```
+
+- **Security Audit**: collect Windows events and run local rules, with AI enrichment when available. Existing results can also receive deep analysis. AI failures preserve rule-based findings and report the analysis status.
+- **Optimization**: local scan of downloads and allowlisted caches → AI review of candidate metadata → user review and confirmation → local execution. Unapproved items cannot enter the executable set. Items are revalidated before execution, and cleanup uses the Recycle Bin.
+- **Task lifetime**: audit and optimization can run concurrently and be cancelled separately. Switching tabs preserves work; disabling the module cancels both tasks. Cancellation does not undo completed file operations.
+- **Background audits**: the Worker performs scheduled rule-based scans only and exits when scheduling is off. It currently reads its schedule from shared service settings; see the [AI service notes](doc/ai-service-review.md) for differences from page-owned plugin settings.
+- **Details**: the [module documentation](src/modules/AIHub/README.md) covers architecture and maintenance; historical validation is recorded in the [changelog](changelog.md).
+
+### 3.6 NetMap: current egress and route observation
+
+Observe the current egress as an external proxy client changes nodes, without importing subscriptions. UDPtest measures configured lines; NetMap shows where traffic currently exits.
+
+```mermaid
+flowchart TB
+    subgraph S["Settings process"]
+        PG["NetMap page"] -->|"Start / Stop"| ENG["Kit.NetMapLib / NetMapSession"]
+        ENG -->|"locate egress and hops"| GEO["Local GeoLite2-ASN / City"]
+        ENG -->|"two matching successful Proxy observations"| DIAG["Service and route diagnostics"]
+    end
+    ENG -->|"Direct: bypass application proxy"| D["Bilibili zone"]
+    ENG -->|"Proxy: selected connection mode"| P["Cloudflare trace"]
+    GEO -->|"optional enrichment of missing fields"| ONLINE["ipwho.is"]
+    DIAG -->|"Proxy: every 10 seconds"| WEB["Claude / ChatGPT trace, Gemini / Google websites"]
+    DIAG -->|"local system routing: ICMP hop sampling"| MTR["Proxy egress IPv4"]
+    ENG -.->|"egress cards / offline map / MTR / service status"| PG
+```
+
+- **Start and stop**: enable the module, apply connection settings, then click Start. Navigation and taskbar minimization preserve detection; returning shows the latest results from the same session. Stop, module disablement and hiding/closing Settings stop detection; restarting is manual.
+- **Connection modes**: Proxy supports the system proxy, explicit HTTP/HTTPS/SOCKS5, or system routing/TUN. Direct bypasses application proxies only and cannot bypass a system TUN.
+- **Map and data**: bundled Natural Earth offline map, with local ASN/City databases taking priority. Optional online enrichment queries public IPs and can be disabled. ASN databases support manual download with hash verification.
+- **Diagnostic limits**: service checks establish checkpoint or website reachability, not account or model availability. ICMP follows local system routing and does not reveal the inside of a proxy tunnel.
+- **Runtime**: the native `Kit.NetMapModuleInterface.dll` manages enablement and configuration; detection runs in Settings and results remain in memory. See the [module documentation](src/modules/NetMap/README.md) for setup, sources and validation scope.
 
 ## 4. Build and Release
 
-The current version is **2.3.7**. The full x64 Release rebuild completed with **0 errors and 63 warnings**.
+### 4.1 Development environment
 
-- **Regression**: the final AI suite ran 312 cases: 311 passed and one case was skipped because directory-link creation was unavailable. One short-timeout Pi case failed initially; the unchanged binaries then passed both targeted cases and the complete rerun. No real AI endpoints were called.
-- **UI and startup**: English/Chinese Dashboard and Settings smoke checks passed light/dark and narrow layouts, automatic refresh and cancellation; ModulePage smoke also passed. Layout captures used a neutral synthetic background, not the desktop Mica backdrop. The staged `Kit.exe` started and loaded all six modules. Its recorded 116 ms initialization was one observation, not a benchmark.
-- **Staging**: 1,409 files totaling 817,610,935 bytes; dependency hashes passed verification. All 48 Kit-owned EXE/DLL files report `2.3.7.0`, matching KitSparse. Added native AI Hub module VERSIONINFO and removed the staging requirement for a `zh-CN` satellite directory excluded by the build configuration; Chinese translations remain in PRI resources and passed the runtime checks.
+Use **Windows 11, PowerShell 7, Visual Studio 2026 and the .NET 10 SDK**. The primary build target is **x64**. Install the C++ desktop, .NET desktop and Windows App SDK components listed in [.vsconfig](.vsconfig). Projects target Windows SDK `10.0.26100.0`.
 
-To rebuild, run from the repository root and stage only after the build succeeds:
+### 4.2 Build and stage
+
+Run from the repository root. The build script initializes the VS environment:
+
+```powershell
+# Debug: everyday development
+.\tools\build\build.ps1 -Platform x64 -Configuration Debug -Path . /restore /p:BuildTests=false
+if ($LASTEXITCODE -ne 0) { throw 'Debug build failed.' }
+```
+
+After success, launch `x64/Debug/Kit.exe`. For a Release build and staged runtime directory:
 
 ```powershell
 .\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
-if ($LASTEXITCODE -ne 0) { throw 'Build failed; do not stage incomplete output.' }
+if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete output.' }
 .\tools\build\Stage-Release.ps1
 ```
 
-Run `x64/Release/Kit.exe` after building, or `bin/release/2.3.7/Kit.exe` after staging. The staging script creates a directory, not a ZIP. Keep the complete runtime directory together. The Runner's solution dependencies include both the AI Hub module DLL and its worker.
+[Stage-Release.ps1](tools/build/Stage-Release.ps1) reads the version file and creates `bin/release/<version>/` plus a verification manifest, not a ZIP. [Stage-Debug.ps1](tools/build/Stage-Debug.ps1) stages Debug output under `bin/debug/<version>/`. Distribute the whole directory, rather than only `Kit.exe` or a plugin DLL.
 
-For a fresh-profile test, stop any supervised Localserver services, exit Kit from its tray menu, and rename `%LOCALAPPDATA%\Kit` to a unique backup name such as `Kit.backup-20260930`. Closing Settings with X leaves the Runner active when the tray icon is enabled, matching PowerToys. Start the newly built Release and enter settings again for the first test; restoring old JSON immediately defeats the comparison. The backup retains credentials, policies, downloaded kernels and history. Leave official PowerToys data and external Localserver program directories alone.
+### 4.3 Validation and real-machine testing
 
-Configuration locations under `%LOCALAPPDATA%\Kit`:
+The commands above skip tests; a successful build is not functional validation. Unit tests live in `*.UnitTests` projects in the source tree and run through VS Test Explorer or `vstest.console.exe`. WinUI and native module checks live in [tools/tests](tools/tests). Read the relevant module documentation and script requirements before running them. Local test output goes to `TestResults/`.
 
-| Path | Contents |
+Before testing a new version, exit the old Kit completely from the tray, then launch `Kit.exe` from the new directory. Runner uses a single-instance mechanism, so a running old process can receive the new launch request. To isolate configuration issues, exit Kit and rename `%LOCALAPPDATA%\Kit` as a backup; use fresh settings for the first comparison.
+
+Historical build and regression results are in [changelog.md](changelog.md) and module validation records. They do not certify every real-machine scenario for the current source.
+
+## 5. Data and Logs
+
+The default data root is `%LOCALAPPDATA%\Kit`:
+
+| Relative path | Contents |
 | --- | --- |
 | `settings.json` | General settings and module switches |
-| `AiHub/service-settings.json` | Shared AI service settings |
-| `AIHub/settings.json` | AI Hub plugin settings |
-| `NetMap/settings.json` | Proxy settings, local ASN/City database paths and the online lookup switch |
-| `AiHub/secrets.dat`, `AiHub/security.md`, `AiHub/chains/` | Encrypted credentials and policies |
-| `AiHub/kernels/`, `AiHub/State/`, `AiHub/Logs/` | Kernels, state and history/logs |
-| `Localserver/`, `UDPtest/`, `Awake/`, `LightSwitch/` | Other module settings and state |
+| `<ModuleName>/settings.json` | Module configuration, such as `AIHub/settings.json` and `NetMap/settings.json` |
+| `AiHub/service-settings.json` | Shared AI service configuration |
+| `AiHub/secrets.dat`, `AiHub/security.md`, `AiHub/chains/` | Encrypted credentials, global and task policies |
+| `AiHub/kernels/`, `AiHub/State/` | CLI kernels, audit history and other state |
+| `Localserver/services.json`, `Localserver/State/` | Service catalog and process ownership records |
+| `NetMap/Data/` | Manually downloaded managed ASN database |
+| `RunnerLogs/`, `Settings/Logs/<version>/`, module log directories | Runner, UI and Worker diagnostics |
+| `crash.log` | Exception diagnostics |
 
-If logs show access denied and fall back to `%USERPROFILE%\AppData\LocalLow\Kit`, inspect the executable's Windows integrity label. An output directory inheriting **Low Mandatory Level** can cause normal launches to run with insufficient write access; resetting configuration will not fix it. Restore an existing build output directory to normal integrity with `icacls .\x64 /setintegritylevel "(OI)(CI)M"`; apply the same command to `.\bin` if staged output inherited the label. This changes output labels, not configuration permissions. Repeat if those directories are deleted and recreated under a low-integrity workspace. LocalLow contains fallback logs, not a second settings profile.
+Windows ignores directory-name casing, so the AI Hub plugin and shared AI service use different filenames: `settings.json` and `service-settings.json`.
 
-AI service settings now use `AiHub/service-settings.json`; the AI Hub plugin uses `AIHub/settings.json`. These filenames must differ because Windows ignores directory-name casing. Valid old service settings migrate automatically; a reset is optional. The service remains internal to Kit, currently used by AI Hub. See the [AI service review](doc/ai-service-review.md) for remaining detection and worker-configuration limitations.
+If configuration writes are denied and logs fall back to `AppData/LocalLow/Kit`, check the Windows integrity labels of the build output first. Resetting settings does not repair output permissions. See the [AI service notes](doc/ai-service-review.md) for the known case and remediation.
 
-- Build: `tools/build/build.ps1` (single project) and `tools/build/build-essentials.ps1` (solution restore + essentials); both auto-detect `x64` and initialize the VS environment.
-- Version source: `src/Version.props`; the generated header lives under `src/common/version/Generated Files/version_gen.h`.
-- Outputs: x64 builds land in `x64/<Configuration>/` (`Kit.exe`, `WinUI3Apps\`, module DLLs, workers); `tools/build/Stage-Debug.ps1` / `Stage-Release.ps1` produce staged test/package directories.
-- `x64`, `Debug`, `Release`, `.vs`, `TestResults`, project `bin`/`obj`, and root `packages` are disposable build state and can be removed after a handoff; the next build regenerates them.
+## 6. Development and Extension
 
----
+Modules retain the PowerToys C++ contract and export `kit_create()`. Core interfaces cover enablement, configuration, actions and destruction. Runner explicitly loads the six modules listed in [KitKnownModules](src/runner/main.cpp).
 
-## 5. Module Compatibility and Extension
+Adding a module requires:
 
-Kit follows the PowerToys module-loading model instead of inventing a new plugin protocol. The runner loads known module interface DLLs through the maintained `KitKnownModules` list in `src/runner/main.cpp`:
+1. Add the business projects, native module interface and dependencies to `Kit.slnx`. Add a Worker only when independent execution is needed.
+2. Register the Runner module list, Settings models and serialization, page navigation and module catalog.
+3. Add Home, Quick Access, icons and English/Chinese resources where applicable.
+4. Define start/stop, navigation, window-close and Runner-exit behavior; reuse Kit data paths, logging and IPC.
+5. Validate core behavior, configuration round trips, registration and lifetime, then run a full build and real-machine checks.
 
-- `Kit.AwakeModuleInterface.dll`
-- `Kit.LightSwitchModuleInterface.dll`
-- `Kit.LocalserverModuleInterface.dll`
-- `Kit.UDPtestModuleInterface.dll`
-- `Kit.NetMapModuleInterface.dll`
-- `Kit.AIHubModuleInterface.dll`
+See [src/README.md](src/README.md) for source organization and [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) for the full requirements and template entry points.
 
-Two of the six modules are imported from upstream PowerToys (`Awake`, `Light Switch`); the other four are Kit-developed plugins (`Localserver`, `UDPtest`, `AI Hub`, `NetMap`). The fixed list is intentional: it avoids unstable directory probing and makes every module an explicit decision, whether imported or self-developed. A third-party plugin host (`plugins/` + `manifest.json`) is planned but not implemented yet.
+## 7. More Documentation
 
-### Adding another PowerToys module
-
-1. Copy the module source, keeping its upstream project shape.
-2. Add its projects and build dependencies to `Kit.slnx`.
-3. Add its interface DLL to the runner `KitKnownModules` list.
-4. Add Settings navigation, route mapping, and page/view model inclusion.
-5. Keep upstream CsWinRT references; build once from a clean Release tree so `Kit.Interop` / `Kit.GPOWrapper` projections regenerate.
-6. Add Home dashboard metadata and Quick Access behavior only when relevant.
-7. Add static/unit coverage for the runner list, routes, dashboard, and Quick Access.
-8. Validate targeted builds before whole-solution builds.
-
----
-
-## 6. Stability Direction
-
-- Prefer upstream PowerToys patterns and small deltas over new local abstractions.
-- Keep module registration explicit until the runner/settings/module compatibility is boringly stable.
-- Keep Settings, runner, module interface, Quick Access, and copied module projects buildable independently before widening to whole-solution builds.
-- Keep Kit storage, backup, window title, and visible text separate from an installed official PowerToys.
-- Do not re-enable automatic download/install or telemetry.
-- Keep DSC-only Settings command-line entry points out of Kit.
-- Deleted the inactive standalone module_loader utility and orphaned CmdPal version props until Command Palette becomes an active Kit module.
-- Retained settings: resource strings, OOBE/model assets, and no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers.
-- Shortcut Conflict hotkey lookup is explicit for Quick Access and LightSwitch.
-- Backup defaults should stay generic to Kit's active module settings.
-- Split new modules into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and registration tests.
-
----
-
-## 7. Documentation
-
-- [NetMap](src/modules/NetMap/README.md) — setup, egress sources, offline map/ASN data, lifecycle, build steps and validation boundaries.
-- [PLUGIN_DEVELOPMENT.md](PLUGIN_DEVELOPMENT.md) — Kit plugin and module requirements: the C++ contract, registration, WinUI 3 + Mica Alt, logo specs, isolated data paths, lifecycle, and templates.
-- `doc/devdoc/kit-architecture.md` — Kit architecture reference (lightweight plugin-host direction).
-- `doc/devdoc/powertoys-architecture.md` — verified upstream PowerToys framework architecture (Chinese).
-- `doc/devdoc/architecture-comparison.md` — PowerToys vs Kit comparison and startup optimization analysis (Chinese).
-- `doc/devdoc/kit-first-plugin.md` — first-module checklist and validation baseline.
-- `doc/devdoc/kit-development-experience.md` — first-phase lessons learned and stabilization checklist.
-- `doc/devdoc/startup-optimization-analysis.md` — startup optimization analysis (Chinese).
-- [AI service review](doc/ai-service-review.md) — configuration ownership, known limitations and regression evidence; `changelog.md` — version history.
-
-## Changelog
-
-See [changelog.md](changelog.md) for the full version history.
+- [Plugin development requirements](PLUGIN_DEVELOPMENT.md): contracts, registration, data isolation, WinUI, localization and lifetime.
+- [AI service notes](doc/ai-service-review.md): configuration ownership, execution, known limitations and historical validation.
+- [NetMap validation record](src/modules/NetMap/plan.md): data sources, design decisions and test scope.
+- [Architecture documentation index](doc/devdoc/README.md): PowerToys architecture, Kit design and development notes; proposed directions are not implemented capabilities.
+- [Changelog](changelog.md) · [License](LICENSE).

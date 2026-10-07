@@ -1,6 +1,6 @@
 # Kit Dev Docs
 
-Kit-specific developer notes. Kit's active module set is: `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, and `AIHub`.
+Kit-specific developer notes. For the current framework and module lifetimes, start with the [project README](../../README.md) or [中文说明](../../README_zh.md). Architecture proposals and historical validation below describe their recorded scope, not necessarily the current implementation.
 
 > 📖 **新来的？** 从 [ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md) 开始 — 架构文档导航入口
 
@@ -21,7 +21,7 @@ Kit-specific developer notes. Kit's active module set is: `Awake`, `LightSwitch`
 
 ## Kit Notes
 
-- The current active Kit modules are `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, and `AIHub`.
+- The current active Kit modules are `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, `AIHub`, and `NetMap`.
 - All official modules use the modern `KitModuleIface` / `kit_create()` contract.
 - Settings and Quick Access surfaces are powered by `Kit.Settings` and `Kit.QuickAccess`.
 

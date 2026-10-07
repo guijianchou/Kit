@@ -57,11 +57,12 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         // Returning during a transition can reuse a page without another Loaded event.
         ViewModel.RefreshEnabledState();
         UpdateVisibility();
+        DrawPoints();
     }
 
     protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
-        // Cached pages can remain loaded during the navigation transition.
+        // Deactivate page-specific work while the cached page keeps its detection session.
         isCurrentPage = false;
         ViewModel.SetPageActive(false);
         base.OnNavigatedFrom(e);
@@ -117,8 +118,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
+        // Keep receiving window lifetime events while detection runs on another page.
         ViewModel.SetPageActive(false);
-        UnsubscribeWindow();
     }
 
     private void UnsubscribeWindow()
@@ -135,14 +136,19 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void UpdateVisibility()
     {
-        bool visible = isCurrentPage && IsLoaded && settingsWindow.AppWindow.IsVisible &&
+        bool visible = settingsWindow.AppWindow.IsVisible &&
             !(settingsWindow.AppWindow.Presenter is OverlappedPresenter presenter && presenter.State == OverlappedPresenterState.Minimized);
-        ViewModel.SetPageActive(visible);
+        ViewModel.SetPageActive(isCurrentPage && IsLoaded && visible);
+        if (!settingsWindow.AppWindow.IsVisible)
+        {
+            ViewModel.IsDetectionOn = false;
+        }
     }
 
     private void Window_Closed(object sender, WindowEventArgs args)
     {
         ViewModel.SetPageActive(false);
+        ViewModel.IsDetectionOn = false;
         if (!args.Handled)
         {
             UnsubscribeWindow();
@@ -214,7 +220,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void DrawPoints()
     {
-        if (MapPoints == null || MapDescription == null)
+        if (!isCurrentPage || !IsLoaded || MapPoints == null || MapDescription == null)
         {
             return;
         }

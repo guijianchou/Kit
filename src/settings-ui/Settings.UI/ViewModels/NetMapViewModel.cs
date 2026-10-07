@@ -512,7 +512,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
         if (!active)
         {
             CancelDataUpdate();
-            IsDetectionOn = false;
         }
     }
 

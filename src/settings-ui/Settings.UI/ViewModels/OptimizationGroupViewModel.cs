@@ -52,7 +52,21 @@ public sealed class OptimizationGroupViewModel : Observable
     public bool HasProjects => Projects.Count > 0;
     public bool HasDirectCategories => !HasProjects;
     public string Location { get; init; } = string.Empty;
-    public bool IsExpanded { get => _isExpanded; set => Set(ref _isExpanded, value); }
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (Set(ref _isExpanded, value) && value && !HasBeenExpanded)
+            {
+                HasBeenExpanded = true;
+                OnPropertyChanged(nameof(HasBeenExpanded));
+            }
+        }
+    }
+
+    // Keep lazily loaded details alive so collapsing does not tear down nested lists.
+    public bool HasBeenExpanded { get; private set; }
     public string Glyph => Family switch
     {
         "development" => "\uE943",

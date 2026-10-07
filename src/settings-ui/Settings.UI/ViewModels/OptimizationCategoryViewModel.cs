@@ -29,7 +29,21 @@ public sealed class OptimizationCategoryViewModel : Observable
         ExecuteCommand = new RelayCommand(execute);
     }
 
-    public bool IsExpanded { get => _isExpanded; set => Set(ref _isExpanded, value); }
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (Set(ref _isExpanded, value) && value && !HasBeenExpanded)
+            {
+                HasBeenExpanded = true;
+                OnPropertyChanged(nameof(HasBeenExpanded));
+            }
+        }
+    }
+
+    // Keep lazily loaded details alive so collapsing does not tear down the file list.
+    public bool HasBeenExpanded { get; private set; }
     public IReadOnlyList<TempFileInfo> Items { get; }
     public string Family => Name.StartsWith("VS Code", StringComparison.Ordinal) || Name == "Visual Studio indexes" ? "editors"
         : !string.IsNullOrEmpty(Items[0].DevelopmentRepository) ? "development"

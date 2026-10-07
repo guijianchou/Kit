@@ -113,7 +113,7 @@
                                     MinHeight="30" Padding="12,0" CornerRadius="6" />
                         </Grid>
                     </Expander.Header>
-                    <StackPanel x:Name="OptimizationLeafDetails" x:Load="{x:Bind IsExpanded, Mode=OneWay}" Spacing="10" Padding="4,8">
+                    <StackPanel x:Name="OptimizationLeafDetails" x:Load="{x:Bind HasBeenExpanded, Mode=OneWay}" Spacing="10" Padding="4,8">
                         <Border CornerRadius="4" Padding="8,4" Background="{ThemeResource PillBadgeBackgroundBrush}">
                             <TextBlock Text="{x:Bind Destination}" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="{StaticResource MonoFontFamily}" />
                         </Border>
@@ -174,7 +174,7 @@
                                     MinHeight="30" Padding="12,0" CornerRadius="6" />
                         </Grid>
                     </Expander.Header>
-                    <StackPanel x:Name="OptimizationProjectDetails" x:Load="{x:Bind IsExpanded, Mode=OneWay}" Spacing="8" Padding="4,8">
+                    <StackPanel x:Name="OptimizationProjectDetails" x:Load="{x:Bind HasBeenExpanded, Mode=OneWay}" Spacing="8" Padding="4,8">
                         <Border CornerRadius="4" Padding="8,4" Background="{ThemeResource PillBadgeBackgroundBrush}">
                             <TextBlock Text="{x:Bind Location}" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontFamily="{StaticResource MonoFontFamily}" />
                         </Border>
@@ -1188,7 +1188,7 @@
                                                                             IsEnabled="{x:Bind IsEnabled, Mode=OneWay}" VerticalAlignment="Center" MinHeight="32" Padding="12,0" CornerRadius="6" />
                                                                 </Grid>
                                                             </Expander.Header>
-                                                            <Border x:Name="OptimizationGroupDetails" x:Load="{x:Bind IsExpanded, Mode=OneWay}"
+                                                            <Border x:Name="OptimizationGroupDetails" x:Load="{x:Bind HasBeenExpanded, Mode=OneWay}"
                                                                     Padding="8,10,0,8">
                                                                 <Grid>
                                                                     <ListView x:Name="OptimizationProjectList" x:Load="{x:Bind HasProjects}" ItemsSource="{x:Bind Projects}"

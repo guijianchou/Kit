@@ -811,7 +811,44 @@ internal static class ModulePageSmoke
                 throw new InvalidOperationException("Collapsed child rows eagerly created file lists.");
             File.AppendAllText(Report, $"Optimization virtualization: 268 locations, {realized} realized rows, {timer.ElapsedMilliseconds} ms including 150 ms settle.\n");
             await RenderPage(page, "aihub-optimization-many-projects.png");
+            await CheckOptimizationExpanderReuse(projectRow, "development project");
+            await CheckOptimizationExpanderReuse(largeGroup, "development group");
             observed.RemoveAll(stress.Contains);
+            refresh.Invoke(vm, null);
+            await Task.Delay(100);
+            foreach (var entry in new[] { ("packages", "NuGet packages"), ("browsers", "Edge cache"), ("system", "Temporary files") })
+            {
+                var files = Enumerable.Range(0, 8192).Select(index => new TempFileInfo
+                {
+                    FilePath = Path.Combine(fixture, entry.Item1, $"cache{index}.tmp"),
+                    FileName = $"cache{index}.tmp",
+                    CacheRoot = Path.Combine(fixture, entry.Item1),
+                    Category = entry.Item2,
+                    Action = "delete",
+                    ReviewState = "failed",
+                    SizeInBytes = 100000,
+                }).ToList();
+                observed.AddRange(files);
+                refresh.Invoke(vm, null);
+                await Task.Delay(100);
+                var cacheGroup = Descendants(page).OfType<Expander>().Single(item => item.DataContext is OptimizationGroupViewModel group && group.Family == entry.Item1);
+                if (Descendants(cacheGroup).OfType<ListView>().Any()) throw new InvalidOperationException("An unopened cache group eagerly loaded its lists.");
+                cacheGroup.IsExpanded = true;
+                await Task.Delay(100);
+                var categoryRow = Descendants(cacheGroup).OfType<Expander>().Single(item => item.DataContext is OptimizationCategoryViewModel category && category.Items.Count == files.Count);
+                if (Descendants(categoryRow).OfType<ListView>().Any()) throw new InvalidOperationException("An unopened cache category eagerly loaded its file list.");
+                categoryRow.IsExpanded = true;
+                await Task.Delay(100);
+                var fileList = Descendants(categoryRow).OfType<ListView>().Single();
+                int fileRows = Descendants(fileList).OfType<ListViewItem>().Count();
+                if (fileList.Items.Count != files.Count || fileRows == 0 || fileRows > 100)
+                    throw new InvalidOperationException($"Cache file virtualization failed for {entry.Item1}: {fileRows} realized rows.");
+                await CheckOptimizationExpanderReuse(categoryRow, $"{entry.Item1} category ({files.Count} files, {fileRows} realized)");
+                await CheckOptimizationExpanderReuse(cacheGroup, $"{entry.Item1} group");
+                if (!categoryRow.IsExpanded || !ReferenceEquals(fileList, Descendants(categoryRow).OfType<ListView>().Single()))
+                    throw new InvalidOperationException($"Collapsing {entry.Item1} lost the expanded child file list.");
+                observed.RemoveRange(observed.Count - files.Count, files.Count);
+            }
             refresh.Invoke(vm, null);
             await Task.Delay(100);
             var editors = Descendants(page).OfType<Expander>().Single(item => item.DataContext is OptimizationGroupViewModel group && group.Family == "editors");
@@ -849,6 +886,31 @@ internal static class ModulePageSmoke
             if (Directory.Exists(Path.Combine(fixture, "Documents"))) Directory.Delete(Path.Combine(fixture, "Documents"), recursive: false);
             Directory.Delete(fixture, recursive: false);
         }
+    }
+
+    private static async Task CheckOptimizationExpanderReuse(Expander expander, string label)
+    {
+        object content = expander.Content;
+        if (content == null || !expander.IsExpanded) throw new InvalidOperationException($"Missing expanded content for {label}.");
+        long maxCollapse = 0;
+        long maxExpand = 0;
+        for (int cycle = 0; cycle < 3; cycle++)
+        {
+            var timer = Stopwatch.StartNew();
+            expander.IsExpanded = false;
+            expander.UpdateLayout();
+            maxCollapse = Math.Max(maxCollapse, timer.ElapsedMilliseconds);
+            if (!ReferenceEquals(content, expander.Content)) throw new InvalidOperationException($"Collapsing {label} unloaded its content on the UI thread ({maxCollapse} ms).");
+            await Task.Delay(100);
+            timer.Restart();
+            expander.IsExpanded = true;
+            expander.UpdateLayout();
+            maxExpand = Math.Max(maxExpand, timer.ElapsedMilliseconds);
+            await Task.Delay(100);
+            if (!ReferenceEquals(content, expander.Content)) throw new InvalidOperationException($"Reopening {label} recreated its content.");
+        }
+        if (maxCollapse > 1000 || maxExpand > 1000) throw new InvalidOperationException($"Slow cache toggle for {label}: collapse {maxCollapse} ms, expand {maxExpand} ms.");
+        File.AppendAllText(Report, $"Optimization toggle reuse: {label}, 3 cycles, max synchronous collapse {maxCollapse} ms / expand {maxExpand} ms.\n");
     }
 
     private static async Task CheckAiHubThemes(AIHubPage page)

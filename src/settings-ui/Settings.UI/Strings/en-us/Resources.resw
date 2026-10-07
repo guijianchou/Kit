@@ -1685,7 +1685,13 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Localserver_StartAllButton.Content" xml:space="preserve">
     <value>Start all</value>
   </data>
+  <data name="Localserver_StartAllButtonText.Text" xml:space="preserve">
+    <value>Start all</value>
+  </data>
   <data name="Localserver_StopAllButton.Content" xml:space="preserve">
+    <value>Stop all</value>
+  </data>
+  <data name="Localserver_StopAllButtonText.Text" xml:space="preserve">
     <value>Stop all</value>
   </data>
   <data name="Localserver_RefreshButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
@@ -1696,6 +1702,33 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="Localserver_AddLineButton.Content" xml:space="preserve">
     <value>Add Line</value>
+  </data>
+  <data name="Localserver_AddLineButtonText.Text" xml:space="preserve">
+    <value>Add service</value>
+  </data>
+  <data name="Localserver_BrowseFileButtonText.Text" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="Localserver_BrowseFolderButtonText.Text" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="Localserver_RunningBadge.Text" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Localserver_FaultedBadge.Text" xml:space="preserve">
+    <value>Faulted</value>
+  </data>
+  <data name="Localserver_TotalBadge.Text" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Localserver_TelemetryUptimeLabel.Text" xml:space="preserve">
+    <value>Uptime:</value>
+  </data>
+  <data name="Localserver_RefreshButtonText.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Localserver_ConfiguredBadge.Text" xml:space="preserve">
+    <value>configured</value>
   </data>
   <data name="Localserver_ReloadCatalogButton.Content" xml:space="preserve">
     <value>Reload</value>
@@ -2845,7 +2878,7 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="General_OpenLogsFolderText.Text" xml:space="preserve">
     <value>Open folder</value>
   </data>
-<data name="AiHub_MainEndpoint_UrlCard.Header" xml:space="preserve"><value>Endpoint URL</value></data><data name="AiHub_MainEndpoint_ApiKeyCard.Header" xml:space="preserve"><value>API key</value></data><data name="AiHub_MainEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve"><value>Enter API key</value></data><data name="AiHub_MainEndpoint_ApiModeCard.Header" xml:space="preserve"><value>API mode</value></data><data name="AiHub_MainEndpoint_ModelCard.Header" xml:space="preserve"><value>Model</value></data><data name="AiHub_MainEndpoint_ReasoningCard.Header" xml:space="preserve"><value>Reasoning effort</value></data><data name="AiHub_ClearFallbackCard.Header" xml:space="preserve"><value>Clear fallback endpoint</value></data><data name="AiHub_Pipeline_Step1.Text" xml:space="preserve"><value>Codex / Pi</value></data><data name="AiHub_Pipeline_Step2.Text" xml:space="preserve"><value>Security policy + agents.md</value></data><data name="AiHub_Pipeline_Step3.Text" xml:space="preserve"><value>Analysis summary</value></data><data name="AiHub_Pipeline_Step4.Text" xml:space="preserve"><value>Suggested action</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Header" xml:space="preserve"><value>Global Security Policy</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Description" xml:space="preserve"><value>Global security policy (security.md) and task boundaries for AI execution</value></data><data name="AiHub_GlobalSecurityBoundaryCard.Header" xml:space="preserve"><value>Global Security Boundary (security.md)</value></data><data name="AiHub_PolicyFilePathCard.Header" xml:space="preserve"><value>Policy file path</value></data><data name="AiHub_EssentialPolicyExpander.Header" xml:space="preserve"><value>Essential Policy</value></data><data name="AiHub_EssentialPolicyExpander.Description" xml:space="preserve"><value>Task policies (AGENTS.md) for Security Audit and Optimization</value></data><data name="AiHub_SecurityAuditCard.Header" xml:space="preserve"><value>Security Audit</value></data><data name="AiHub_OptimizationCard.Header" xml:space="preserve"><value>Optimization</value></data><data name="Localserver_AdoptedBadge.Text" xml:space="preserve"><value>ADOPTED</value></data><data name="General_LogLevelTrace.Content" xml:space="preserve"><value>Trace (Verbose)</value></data><data name="General_LogLevelDebug.Content" xml:space="preserve"><value>Debug</value></data><data name="General_LogLevelInfo.Content" xml:space="preserve"><value>Info</value></data><data name="General_LogLevelWarning.Content" xml:space="preserve"><value>Warning</value></data><data name="General_LogLevelError.Content" xml:space="preserve"><value>Error</value></data><data name="UDPtest_StatusLabel.Text" xml:space="preserve"><value>Status:</value></data><data name="UDPtest_ConfigNameLabel.Text" xml:space="preserve"><value>Target Name</value></data><data name="UDPtest_ConfigNameInput.PlaceholderText" xml:space="preserve"><value>e.g. Cloudflare, Singapore</value></data><data name="UDPtest_ConfigKindLabel.Text" xml:space="preserve"><value>Protocol Kind</value></data><data name="UDPtest_ConfigKindStun.Content" xml:space="preserve"><value>STUN (Binding Probe)</value></data><data name="UDPtest_ConfigKindEcho.Content" xml:space="preserve"><value>ECHO (UDP Reflection)</value></data><data name="UDPtest_ConfigEndpointLabel.Text" xml:space="preserve"><value>Endpoint</value></data><data name="UDPtest_ConfigPortLabel.Text" xml:space="preserve"><value>Parsed Port</value></data><data name="UDPtest_DeleteButtonText.Text" xml:space="preserve"><value>Delete</value></data><data name="UDPtest_DeleteDialogTitle.Text" xml:space="preserve"><value>Delete this UDP line?</value></data><data name="UDPtest_DeleteDialogMessage.Text" xml:space="preserve"><value>This link will be permanently removed from your target list.</value></data><data name="UDPtest_DeleteDialogConfirm.Content" xml:space="preserve"><value>Confirm Delete</value></data><data name="UDPtest_SaveButtonText.Text" xml:space="preserve"><value>Save</value></data><data name="UDPtest_StartButtonText.Text" xml:space="preserve"><value>Start</value></data><data name="UDPtest_StopButtonText.Text" xml:space="preserve"><value>Stop</value></data><data name="UDPtest_SamplingInterval.Text" xml:space="preserve"><value>Sampling Interval</value></data><data name="UDPtest_AddLinkButtonText.Text" xml:space="preserve"><value>Add UDP Link</value></data><data name="UDPtest_HealthLabel.Text" xml:space="preserve"><value>HEALTH</value></data><data name="UDPtest_ConditionLabel.Text" xml:space="preserve"><value>CONDITION</value></data><data name="UDPtest_RealtimeLabel.Text" xml:space="preserve"><value>REALTIME</value></data><data name="UDPtest_QualityLabel.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_AvgRttLabel.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_PeakRttLabel.Text" xml:space="preserve"><value>PEAK RTT</value></data><data name="UDPtest_PeriodAvgLabel.Text" xml:space="preserve"><value>PERIOD AVG</value></data><data name="UDPtest_RttTrendLabel.Text" xml:space="preserve"><value>RTT TREND</value></data><data name="UDPtest_NoSamplesLabel.Text" xml:space="preserve"><value>No samples in this period</value></data><data name="UDPtest_UdpAssessmentLabel.Text" xml:space="preserve"><value>UDP ASSESSMENT</value></data><data name="UDPtest_TcpBaselineLabel.Text" xml:space="preserve"><value>TCP BASELINE</value></data><data name="UDPtest_CurrentPathLabel.Text" xml:space="preserve"><value>CURRENT PATH</value></data><data name="UDPtest_PublicIpLabel.Text" xml:space="preserve"><value>PUBLIC IP</value></data><data name="UDPtest_LocationLabel.Text" xml:space="preserve"><value>LOCATION</value></data><data name="UDPtest_NatTypeLabel.Text" xml:space="preserve"><value>NAT TYPE</value></data><data name="UDPtest_LocalRouteLabel.Text" xml:space="preserve"><value>LOCAL ROUTE</value></data><data name="UDPtest_ColTarget.Text" xml:space="preserve"><value>TARGET</value></data><data name="UDPtest_ColPort.Text" xml:space="preserve"><value>PORT</value></data><data name="UDPtest_ColAvgRtt.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_ColJitter.Text" xml:space="preserve"><value>JITTER</value></data><data name="UDPtest_ColQuality.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_ColOkFail.Text" xml:space="preserve"><value>OK / FAIL</value></data><data name="UDPtest_ColHttpIp.Text" xml:space="preserve"><value>HTTP IP</value></data><data name="UDPtest_ColUdpIp.Text" xml:space="preserve"><value>UDP IP</value></data><data name="UDPtest_ColLastError.Text" xml:space="preserve"><value>LAST ERROR</value></data><data name="UDPtest_ColOn.Text" xml:space="preserve"><value>ON</value></data><data name="UDPtest_ColActions.Text" xml:space="preserve"><value>ACTIONS</value></data><data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Clear RTT sample history for the selected line</value></data><data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Configure line settings</value></data><data name="GPOWarning.Text" xml:space="preserve"><value>This setting is managed by your organization.</value></data><data name="General_OpenLogsFolderButton.Content" xml:space="preserve"><value>Open logs folder</value></data><data name="NewInfoBadge.Text" xml:space="preserve"><value>NEW</value></data>
+<data name="AiHub_MainEndpoint_UrlCard.Header" xml:space="preserve"><value>Endpoint URL</value></data><data name="AiHub_MainEndpoint_ApiKeyCard.Header" xml:space="preserve"><value>API key</value></data><data name="AiHub_MainEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve"><value>Enter API key</value></data><data name="AiHub_MainEndpoint_ApiModeCard.Header" xml:space="preserve"><value>API mode</value></data><data name="AiHub_MainEndpoint_ModelCard.Header" xml:space="preserve"><value>Model</value></data><data name="AiHub_MainEndpoint_ReasoningCard.Header" xml:space="preserve"><value>Reasoning effort</value></data><data name="AiHub_ClearFallbackCard.Header" xml:space="preserve"><value>Clear fallback endpoint</value></data><data name="AiHub_Pipeline_Step1.Text" xml:space="preserve"><value>Codex / Pi</value></data><data name="AiHub_Pipeline_Step2.Text" xml:space="preserve"><value>Security policy + agents.md</value></data><data name="AiHub_Pipeline_Step3.Text" xml:space="preserve"><value>Analysis summary</value></data><data name="AiHub_Pipeline_Step4.Text" xml:space="preserve"><value>Suggested action</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Header" xml:space="preserve"><value>Global Security Policy</value></data><data name="AiHub_GlobalSecurityPolicyExpander.Description" xml:space="preserve"><value>Global security policy (security.md) and task boundaries for AI execution</value></data><data name="AiHub_GlobalSecurityBoundaryCard.Header" xml:space="preserve"><value>Global Security Boundary (security.md)</value></data><data name="AiHub_PolicyFilePathCard.Header" xml:space="preserve"><value>Policy file path</value></data><data name="AiHub_EssentialPolicyExpander.Header" xml:space="preserve"><value>Essential Policy</value></data><data name="AiHub_EssentialPolicyExpander.Description" xml:space="preserve"><value>Task policies (AGENTS.md) for Security Audit and Optimization</value></data><data name="AiHub_SecurityAuditCard.Header" xml:space="preserve"><value>Security Audit</value></data><data name="AiHub_OptimizationCard.Header" xml:space="preserve"><value>Optimization</value></data><data name="Localserver_AdoptedBadge.Text" xml:space="preserve"><value>ADOPTED</value></data><data name="General_LogLevelTrace.Content" xml:space="preserve"><value>Trace (Verbose)</value></data><data name="General_LogLevelDebug.Content" xml:space="preserve"><value>Debug</value></data><data name="General_LogLevelInfo.Content" xml:space="preserve"><value>Info</value></data><data name="General_LogLevelWarning.Content" xml:space="preserve"><value>Warning</value></data><data name="General_LogLevelError.Content" xml:space="preserve"><value>Error</value></data><data name="UDPtest_StatusLabel.Text" xml:space="preserve"><value>Status:</value></data><data name="UDPtest_ConfigNameLabel.Text" xml:space="preserve"><value>Target Name</value></data><data name="UDPtest_ConfigNameInput.PlaceholderText" xml:space="preserve"><value>e.g. Cloudflare, Singapore</value></data><data name="UDPtest_ConfigKindLabel.Text" xml:space="preserve"><value>Protocol Kind</value></data><data name="UDPtest_ConfigKindStun.Content" xml:space="preserve"><value>STUN (Binding Probe)</value></data><data name="UDPtest_ConfigKindEcho.Content" xml:space="preserve"><value>ECHO (UDP Reflection)</value></data><data name="UDPtest_ConfigEndpointLabel.Text" xml:space="preserve"><value>Endpoint</value></data><data name="UDPtest_ConfigPortLabel.Text" xml:space="preserve"><value>Parsed Port</value></data><data name="UDPtest_DeleteButtonText.Text" xml:space="preserve"><value>Delete</value></data><data name="UDPtest_DeleteDialogTitle.Text" xml:space="preserve"><value>Delete this UDP line?</value></data><data name="UDPtest_DeleteDialogMessage.Text" xml:space="preserve"><value>This link will be permanently removed from your target list.</value></data><data name="UDPtest_DeleteDialogConfirm.Content" xml:space="preserve"><value>Confirm Delete</value></data><data name="UDPtest_SaveButtonText.Text" xml:space="preserve"><value>Save</value></data><data name="UDPtest_StartButtonText.Text" xml:space="preserve"><value>Start</value></data><data name="UDPtest_StopButtonText.Text" xml:space="preserve"><value>Stop</value></data><data name="UDPtest_SamplingInterval.Text" xml:space="preserve"><value>Sampling Interval</value></data><data name="UDPtest_AddLinkButtonText.Text" xml:space="preserve"><value>Add UDP Link</value></data><data name="UDPtest_HealthLabel.Text" xml:space="preserve"><value>HEALTH</value></data><data name="UDPtest_ConditionLabel.Text" xml:space="preserve"><value>CONDITION</value></data><data name="UDPtest_RealtimeLabel.Text" xml:space="preserve"><value>REALTIME</value></data><data name="UDPtest_QualityLabel.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_AvgRttLabel.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_PeakRttLabel.Text" xml:space="preserve"><value>PEAK RTT</value></data><data name="UDPtest_PeriodAvgLabel.Text" xml:space="preserve"><value>PERIOD AVG</value></data><data name="UDPtest_RttTrendLabel.Text" xml:space="preserve"><value>RTT TREND</value></data><data name="UDPtest_NoSamplesLabel.Text" xml:space="preserve"><value>No samples in this period</value></data><data name="UDPtest_UdpAssessmentLabel.Text" xml:space="preserve"><value>UDP ASSESSMENT</value></data><data name="UDPtest_TcpBaselineLabel.Text" xml:space="preserve"><value>TCP BASELINE</value></data><data name="UDPtest_CurrentPathLabel.Text" xml:space="preserve"><value>CURRENT PATH</value></data><data name="UDPtest_PublicIpLabel.Text" xml:space="preserve"><value>PUBLIC IP</value></data><data name="UDPtest_LocationLabel.Text" xml:space="preserve"><value>LOCATION</value></data><data name="UDPtest_NatTypeLabel.Text" xml:space="preserve"><value>NAT TYPE</value></data><data name="UDPtest_LocalRouteLabel.Text" xml:space="preserve"><value>LOCAL ROUTE</value></data><data name="UDPtest_ColTarget.Text" xml:space="preserve"><value>TARGET</value></data><data name="UDPtest_ColPort.Text" xml:space="preserve"><value>PORT</value></data><data name="UDPtest_ColAvgRtt.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_ColJitter.Text" xml:space="preserve"><value>JITTER</value></data><data name="UDPtest_ColQuality.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_ColOkFail.Text" xml:space="preserve"><value>OK / FAIL</value></data><data name="UDPtest_ColHttpIp.Text" xml:space="preserve"><value>HTTP IP</value></data><data name="UDPtest_ColUdpIp.Text" xml:space="preserve"><value>UDP IP</value></data><data name="UDPtest_ColLastError.Text" xml:space="preserve"><value>LAST ERROR</value></data><data name="UDPtest_ColOn.Text" xml:space="preserve"><value>ON</value></data><data name="UDPtest_ColActions.Text" xml:space="preserve"><value>ACTIONS</value></data><data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Clear RTT sample history for the selected line</value></data><data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Configure line settings</value></data><data name="UDPtest_IntervalButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sampling interval</value></data><data name="UDPtest_IntervalButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sampling interval</value></data><data name="GPOWarning.Text" xml:space="preserve"><value>This setting is managed by your organization.</value></data><data name="General_OpenLogsFolderButton.Content" xml:space="preserve"><value>Open logs folder</value></data><data name="NewInfoBadge.Text" xml:space="preserve"><value>NEW</value></data>
   <data name="AiHub_SecurityAuditTabItem.Content" xml:space="preserve">
     <value>Security Audit</value>
   </data>
@@ -3493,5 +3526,41 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="General_SectionUpdates.Text" xml:space="preserve">
     <value>Updates</value>
+  </data>
+  <data name="NetMap_StartButtonText.Text" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="NetMap_StopButtonText.Text" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="NetMap_CardDetailsButtonText.Text" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NetMap_BrowseAsnButtonText.Text" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NetMap_BrowseCityButtonText.Text" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NetMap_UpdateAsnButtonText.Text" xml:space="preserve">
+    <value>Download / update ASN</value>
+  </data>
+  <data name="NetMap_CancelUpdateButtonText.Text" xml:space="preserve">
+    <value>Cancel download</value>
+  </data>
+  <data name="NetMap_ApplyButtonText.Text" xml:space="preserve">
+    <value>Apply settings</value>
+  </data>
+  <data name="NetMap_DetectionBadge.Text" xml:space="preserve">
+    <value>Detection</value>
+  </data>
+  <data name="NetMap_RunningBadge.Text" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="NetMap_StoppedBadge.Text" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="NetMap_ServicesHeader.Text" xml:space="preserve">
+    <value>AI &amp; Cloud Services</value>
   </data>
 </root>

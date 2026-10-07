@@ -75,27 +75,33 @@ internal static class NetMapPageSmoke
         var page = (NetMapPage)NavigationService.Frame.Content;
         var vm = page.ViewModel;
         var window = App.GetSettingsWindow();
+        bool lifecycleOnly = Environment.GetEnvironmentVariable("KIT_NETMAP_TEST_LIFECYCLE_ONLY") == "1";
         bool chinese = System.Globalization.CultureInfo.CurrentUICulture.Name == "zh-CN";
         var start = (Button)page.FindName("StartButton");
         var stop = (Button)page.FindName("StopButton");
-        Require((string)start.Content == (chinese ? "开始" : "Start") && (string)stop.Content == (chinese ? "停止" : "Stop"), "Start/Stop follow Kit language: " + System.Globalization.CultureInfo.CurrentUICulture.Name);
-        Require(vm.Direct.Title == (chinese ? "直连" : "Direct") && vm.Proxy.Title == (chinese ? "代理" : "Proxy"), "Dynamic egress labels follow Kit language.");
-        var enabledSwitch = (ToggleSwitch)page.FindName("EnableSwitch");
-        Require((string)enabledSwitch.OnContent == (chinese ? "启用" : "On"), "Module switch text follows Kit language rather than Windows language.");
         var updateAsn = (Button)page.FindName("UpdateAsnButton");
-        Require((string)updateAsn.Content == (chinese ? "下载 / 更新 ASN 库" : "Download / update ASN"), "ASN download action follows Kit language.");
-        Require(page.FindName("UpdateMapButton") == null, "Map remains embedded without a download action.");
+        if (!lifecycleOnly)
+        {
+            Require((string)start.Content == (chinese ? "开始" : "Start") && (string)stop.Content == (chinese ? "停止" : "Stop"), "Start/Stop follow Kit language: " + System.Globalization.CultureInfo.CurrentUICulture.Name);
+            Require(vm.Direct.Title == (chinese ? "直连" : "Direct") && vm.Proxy.Title == (chinese ? "代理" : "Proxy"), "Dynamic egress labels follow Kit language.");
+            var enabledSwitch = (ToggleSwitch)page.FindName("EnableSwitch");
+            Require((string)enabledSwitch.OnContent == (chinese ? "启用" : "On"), "Module switch text follows Kit language rather than Windows language.");
+            Require((string)updateAsn.Content == (chinese ? "下载 / 更新 ASN 库" : "Download / update ASN"), "ASN download action follows Kit language.");
+            Require(page.FindName("UpdateMapButton") == null, "Map remains embedded without a download action.");
+            var world = (Microsoft.UI.Xaml.Shapes.Path)page.FindName("WorldOutline");
+            Require(world.Data is PathGeometry geometry && geometry.Figures.Count > 170, "Offline map loads while module is disabled.");
+        }
         Require(!vm.IsEnabled && !vm.IsDetectionOn, "New module and detection default off.");
-        var world = (Microsoft.UI.Xaml.Shapes.Path)page.FindName("WorldOutline");
-        Require(world.Data is PathGeometry geometry && geometry.Figures.Count > 170, "Offline map loads while module is disabled.");
 
         // Replace only the test instance's transport before enabling detection.
         var session = (NetMapSession)typeof(NetMapViewModel).GetField("session", PrivateInstance).GetValue(vm);
+        typeof(NetMapSession).GetField("directInterval", PrivateInstance).SetValue(session, TimeSpan.FromMilliseconds(25));
+        typeof(NetMapSession).GetField("proxyInterval", PrivateInstance).SetValue(session, TimeSpan.FromMilliseconds(25));
         typeof(NetMapSession).GetField("observe", PrivateInstance).SetValue(session,
             new Func<bool, NetMapOptions, CancellationToken, Task<IdentityResult>>(async (_, _, token) =>
             {
-                await Task.Delay(Timeout.Infinite, token);
-                throw new InvalidOperationException("Cancelled synthetic transport should not return.");
+                await Task.Delay(25, token);
+                return new IdentityResult(null, ProbeError.Timeout, DateTimeOffset.Now, "Direct");
             }));
         vm.IsEnabled = true;
         ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(start)).Invoke();
@@ -106,13 +112,21 @@ internal static class NetMapPageSmoke
         Require(!vm.IsDetectionOn && start.IsEnabled && !stop.IsEnabled, "Stop cancels detection and restores Start.");
         vm.IsDetectionOn = true;
 
-        ((OverlappedPresenter)window.AppWindow.Presenter).Minimize();
-        await Task.Delay(250);
-        Require(!vm.IsDetectionOn, "Minimizing stops detection.");
-        ((OverlappedPresenter)window.AppWindow.Presenter).Restore();
-        await Task.Delay(200);
-        Require(!vm.IsDetectionOn, "Restoring does not restart detection.");
-        vm.IsDetectionOn = true;
+        var minimizedSession = session.Completion;
+        var minimizedToken = ((CancellationTokenSource)typeof(NetMapSession).GetField("cancellation", PrivateInstance).GetValue(session)).Token;
+        for (int cycle = 0; cycle < 3; cycle++)
+        {
+            var previousDirect = vm.Snapshot.Direct.Latest;
+            var previousProxy = vm.Snapshot.Proxy.Latest;
+            ((OverlappedPresenter)window.AppWindow.Presenter).Minimize();
+            await Task.Delay(250);
+            Require(vm.IsDetectionOn && !minimizedToken.IsCancellationRequested && !minimizedSession.IsCompleted, "Minimizing preserves the running session: " + cycle);
+            Require(vm.Snapshot.Direct.Latest != null && vm.Snapshot.Direct.Latest != previousDirect &&
+                vm.Snapshot.Proxy.Latest != null && vm.Snapshot.Proxy.Latest != previousProxy, "Both probes keep publishing fresh results while minimized: " + cycle);
+            ((OverlappedPresenter)window.AppWindow.Presenter).Restore();
+            await Task.Delay(200);
+            Require(vm.IsDetectionOn && ReferenceEquals(minimizedSession, session.Completion) && !start.IsEnabled && stop.IsEnabled, "Restoring preserves the same session and running controls: " + cycle);
+        }
         window.AppWindow.Hide();
         await Task.Delay(250);
         Require(!vm.IsDetectionOn, "Hiding stops detection.");
@@ -124,16 +138,59 @@ internal static class NetMapPageSmoke
         repository.NotifySettingsChanged();
         await Task.Delay(200);
         Require(!vm.IsDetectionOn, "Runner enabled-state reply stops detection.");
+        await session.Completion.WaitAsync(TimeSpan.FromSeconds(2));
+        var observation = new TaskCompletionSource<IdentityResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        typeof(NetMapSession).GetField("observe", PrivateInstance).SetValue(session,
+            new Func<bool, NetMapOptions, CancellationToken, Task<IdentityResult>>((_, _, token) => observation.Task.WaitAsync(token)));
+        var backgroundResult = new IdentityResult(null, ProbeError.Timeout, DateTimeOffset.Now, "Direct");
         vm.IsEnabled = true;
         vm.IsDetectionOn = true;
-        NavigationService.Navigate(typeof(DashboardPage));
-        await Task.Delay(200);
-        Require(!vm.IsDetectionOn, "Navigating away stops detection.");
-        NavigationService.Navigate(typeof(NetMapPage));
-        await Task.Delay(200);
-        for (int attempt = 0; attempt < 40 && !(bool)typeof(NetMapViewModel).GetField("pageActive", PrivateInstance).GetValue(vm); attempt++) await Task.Delay(50);
-        Require(ReferenceEquals(page, NavigationService.Frame.Content) && (bool)typeof(NetMapViewModel).GetField("pageActive", PrivateInstance).GetValue(vm), "Cached page becomes active after the navigation transition.");
-        Require(!vm.IsDetectionOn, "Cached page does not restart detection.");
+        var runningSession = session.Completion;
+        var runningToken = ((CancellationTokenSource)typeof(NetMapSession).GetField("cancellation", PrivateInstance).GetValue(session)).Token;
+        foreach (var destination in new[] { typeof(AwakePage), typeof(DashboardPage), typeof(AwakePage) })
+        {
+            NavigationService.Navigate(destination);
+            Require(vm.IsDetectionOn && !runningToken.IsCancellationRequested, "Navigation preserves detection immediately.");
+            for (int attempt = 0; attempt < 40 && page.IsLoaded; attempt++) await Task.Delay(50);
+            Require(!page.IsLoaded && vm.IsDetectionOn && !runningSession.IsCompleted && !runningToken.IsCancellationRequested, "Detection survives unloading the cached page.");
+            observation.TrySetResult(backgroundResult);
+            for (int attempt = 0; attempt < 40 && (vm.Snapshot.Direct.Latest != backgroundResult || vm.Snapshot.Proxy.Latest != backgroundResult); attempt++) await Task.Delay(50);
+            Require(vm.Snapshot.Direct.Latest == backgroundResult && vm.Snapshot.Proxy.Latest == backgroundResult, "Both probes publish results while another page is active.");
+            ((OverlappedPresenter)window.AppWindow.Presenter).Minimize();
+            await Task.Delay(150);
+            Require(vm.IsDetectionOn && !runningToken.IsCancellationRequested && !runningSession.IsCompleted, "Minimizing while another page is active preserves detection.");
+            ((OverlappedPresenter)window.AppWindow.Presenter).Restore();
+            await Task.Delay(150);
+            NavigationService.Navigate(typeof(NetMapPage));
+            for (int attempt = 0; attempt < 40 && !(bool)typeof(NetMapViewModel).GetField("pageActive", PrivateInstance).GetValue(vm); attempt++) await Task.Delay(50);
+            Require(ReferenceEquals(page, NavigationService.Frame.Content) && (bool)typeof(NetMapViewModel).GetField("pageActive", PrivateInstance).GetValue(vm), "Cached page becomes active after the navigation transition.");
+            Require(vm.IsDetectionOn && ReferenceEquals(runningSession, session.Completion) && !start.IsEnabled && stop.IsEnabled, "Returning preserves the same running session and button states.");
+        }
+
+        foreach (string action in new[] { "hide", "disable" })
+        {
+            NavigationService.Navigate(typeof(AwakePage));
+            for (int attempt = 0; attempt < 40 && page.IsLoaded; attempt++) await Task.Delay(50);
+            Require(!page.IsLoaded && vm.IsDetectionOn, "Cached-page stop check starts with detection running: " + action);
+            var completion = session.Completion;
+            if (action == "hide") window.AppWindow.Hide();
+            else
+            {
+                repository.SettingsConfig.Enabled.NetMap = false;
+                repository.NotifySettingsChanged();
+            }
+            await Task.Delay(250);
+            Require(!vm.IsDetectionOn, "Cached page still stops detection on " + action + ".");
+            await completion.WaitAsync(TimeSpan.FromSeconds(2));
+            if (action == "hide") window.AppWindow.Show();
+            else vm.IsEnabled = true;
+            NavigationService.Navigate(typeof(NetMapPage));
+            for (int attempt = 0; attempt < 40 && !(bool)typeof(NetMapViewModel).GetField("pageActive", PrivateInstance).GetValue(vm); attempt++) await Task.Delay(50);
+            Require(!vm.IsDetectionOn, "Returning does not restart an explicitly stopped session: " + action);
+            vm.IsDetectionOn = true;
+        }
+        vm.IsDetectionOn = false;
+        await session.Completion.WaitAsync(TimeSpan.FromSeconds(2));
 
         // Hold session teardown so the real update command can be cancelled before any HTTP request.
         var blockedCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -150,6 +207,21 @@ internal static class NetMapPageSmoke
         Require(!vm.IsUpdating && vm.UpdateStatus == NetMapViewModel.Text("UpdateCancelled"), "Page deactivation cancels ASN update.");
         blockedCompletion.SetResult();
         vm.SetPageActive(true);
+
+        if (lifecycleOnly)
+        {
+            vm.IsDetectionOn = true;
+            NavigationService.Navigate(typeof(AwakePage));
+            for (int attempt = 0; attempt < 40 && page.IsLoaded; attempt++) await Task.Delay(50);
+            Require(!page.IsLoaded && vm.IsDetectionOn, "Close check starts with detection running on a cached page.");
+            // The harness has no pending settings writes or other background work to keep alive.
+            typeof(MainWindow).GetProperty("FlushPendingSettingsAsync", PrivateInstance).SetValue(window, null);
+            typeof(MainWindow).GetProperty("KeepAliveForBackgroundWork", PrivateInstance).SetValue(window, null);
+            window.Close();
+            Require(!session.Current.Running && (bool)typeof(NetMapViewModel).GetField("disposed", PrivateInstance).GetValue(vm) &&
+                !(bool)typeof(NetMapPage).GetField("windowSubscribed", PrivateInstance).GetValue(page), "Closing from another page stops and disposes NetMap and removes window subscriptions.");
+            return;
+        }
 
         // Render realistic, explicitly synthetic state without invoking a probe.
         var now = DateTimeOffset.Now;

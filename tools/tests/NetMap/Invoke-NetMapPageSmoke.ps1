@@ -2,7 +2,8 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Debug',
     [ValidateSet('en-US', 'zh-CN')]
-    [string]$Language = 'en-US'
+    [string]$Language = 'en-US',
+    [switch]$LifecycleOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,6 +34,7 @@ foreach ($name in @('settings.json', 'settings-placement.json', 'log_settings.js
     $backups[$path] = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllBytes($path) } else { $null }
 }
 $previousOutput = $env:KIT_NETMAP_TEST_OUTPUT
+$previousLifecycleOnly = $env:KIT_NETMAP_TEST_LIFECYCLE_ONLY
 $testProcess = $null
 try {
     [IO.File]::WriteAllText((Join-Path $env:LOCALAPPDATA 'Kit\language.json'), ('{"language":"' + $Language + '"}'))
@@ -57,6 +59,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $runtimeRoot ('Kit.Settings' + $extension)) -Destination (Join-Path $runtimeRoot ($testName + $extension))
     }
     $env:KIT_NETMAP_TEST_OUTPUT = $reportRoot
+    $env:KIT_NETMAP_TEST_LIFECYCLE_ONLY = if ($LifecycleOnly) { '1' } else { $null }
     # Release Settings requires the Runner launch contract; use private, unused pipes
     # because the harness supplies its own in-memory replies after startup.
     $pipeSuffix = [guid]::NewGuid().ToString('N')
@@ -71,6 +74,7 @@ try {
 } finally {
     if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit() }
     $env:KIT_NETMAP_TEST_OUTPUT = $previousOutput
+    $env:KIT_NETMAP_TEST_LIFECYCLE_ONLY = $previousLifecycleOnly
     foreach ($path in $backups.Keys) {
         if ($null -ne $backups[$path]) { [IO.File]::WriteAllBytes($path, $backups[$path]) }
         elseif (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }

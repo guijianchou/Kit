@@ -2270,6 +2270,69 @@
   <data name="TitleBar_BackButton_ToolTip" xml:space="preserve">
     <value>返回</value>
   </data>
+  <data name="AIHub_Action_Organize" xml:space="preserve">
+    <value>整理</value>
+  </data>
+  <data name="AIHub_Action_Clean" xml:space="preserve">
+    <value>清理</value>
+  </data>
+  <data name="AIHub_Category_ReviewSummary" xml:space="preserve">
+    <value>{0:N0} 个文件 · {1:N0} 个可执行</value>
+  </data>
+  <data name="AIHub_Status_ActionFailed" xml:space="preserve">
+    <value>操作失败，可重试</value>
+  </data>
+  <data name="AIHub_Status_AiApproved" xml:space="preserve">
+    <value>AI 已通过</value>
+  </data>
+  <data name="AIHub_Status_AiIncomplete" xml:space="preserve">
+    <value>AI 审核未完成</value>
+  </data>
+  <data name="AIHub_Status_AiSkipped" xml:space="preserve">
+    <value>AI 已跳过</value>
+  </data>
+  <data name="AIHub_Status_AwaitingAi" xml:space="preserve">
+    <value>等待 AI 审核</value>
+  </data>
+  <data name="AIHub_Group_Development" xml:space="preserve">
+    <value>开发项目</value>
+  </data>
+  <data name="AIHub_Group_Packages" xml:space="preserve">
+    <value>包管理器</value>
+  </data>
+  <data name="AIHub_Group_Editors" xml:space="preserve">
+    <value>编辑器与 IDE</value>
+  </data>
+  <data name="AIHub_Group_Browsers" xml:space="preserve">
+    <value>浏览器</value>
+  </data>
+  <data name="AIHub_Group_System" xml:space="preserve">
+    <value>系统缓存</value>
+  </data>
+  <data name="AIHub_Group_Summary" xml:space="preserve">
+    <value>{0:N0} 个位置/类型 · {1:N0} 个文件 · {2:N0} 个可执行</value>
+  </data>
+  <data name="AIHub_Clean_Project" xml:space="preserve">
+    <value>清理项目</value>
+  </data>
+  <data name="AIHub_Clean_Group" xml:space="preserve">
+    <value>清理本类</value>
+  </data>
+  <data name="AIHub_SecurityAuditPolicySaved" xml:space="preserve">
+    <value>安全审计任务策略 (AGENTS.md) 已保存。</value>
+  </data>
+  <data name="AIHub_SecurityAuditPolicyReset" xml:space="preserve">
+    <value>安全审计任务策略已恢复为默认模板。</value>
+  </data>
+  <data name="AIHub_OptimizationPolicySaved" xml:space="preserve">
+    <value>系统优化任务策略 (AGENTS.md) 已保存。</value>
+  </data>
+  <data name="AIHub_OptimizationPolicyReset" xml:space="preserve">
+    <value>系统优化任务策略已恢复为默认模板。</value>
+  </data>
+  <data name="AIHub_SettingsSaved" xml:space="preserve">
+    <value>设置已成功保存。</value>
+  </data>
   <data name="TitleBar_PaneButton_ToolTip" xml:space="preserve">
     <value>切换菜单</value>
   </data>

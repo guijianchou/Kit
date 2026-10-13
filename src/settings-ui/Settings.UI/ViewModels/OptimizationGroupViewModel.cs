@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Input;
 using Kit.AIHubLib.Models;
@@ -21,31 +22,23 @@ public sealed class OptimizationGroupViewModel : Observable
     {
         Categories = categories;
         Family = family;
-        Name = AIHubPageViewModel.IsChinese ? family switch
+        Name = family switch
         {
-            "development" => "开发项目",
-            "packages" => "包管理器",
-            "editors" => "编辑器与 IDE",
-            "browsers" => "浏览器",
-            _ => "系统缓存",
-        }
-        : family switch
-        {
-            "development" => "Development projects",
-            "packages" => "Package managers",
-            "editors" => "Editors & IDEs",
-            "browsers" => "Browsers",
-            _ => "System caches",
+            "development" => Text("AIHub_Group_Development"),
+            "packages" => Text("AIHub_Group_Packages"),
+            "editors" => Text("AIHub_Group_Editors"),
+            "browsers" => Text("AIHub_Group_Browsers"),
+            _ => Text("AIHub_Group_System"),
         };
         ApprovedCount = categories.Sum(category => category.ApprovedCount);
         Size = new TempFileInfo { SizeInBytes = categories.Sum(category => category.Items.Sum(item => item.SizeInBytes)) }.SizeFormatted;
         int files = categories.Sum(category => category.Items.Count);
-        Summary = AIHubPageViewModel.IsChinese
-            ? $"{categories.Count:N0} 个位置/类型 · {files:N0} 个文件 · {ApprovedCount:N0} 个可执行"
-            : $"{categories.Count:N0} locations/types · {files:N0} files · {ApprovedCount:N0} actionable";
-        CleanLabel = AIHubPageViewModel.IsChinese ? (family == "project" ? "清理项目" : "清理本类") : (family == "project" ? "Clean project" : "Clean group");
+        Summary = string.Format(CultureInfo.CurrentCulture, Text("AIHub_Group_Summary"), categories.Count, files, ApprovedCount);
+        CleanLabel = family == "project" ? Text("AIHub_Clean_Project") : Text("AIHub_Clean_Group");
         ExecuteCommand = new RelayCommand(execute);
     }
+
+    private static string Text(string key) => ResourceLoaderInstance.ResourceLoader.GetString(key);
 
     public IReadOnlyList<OptimizationCategoryViewModel> Categories { get; }
     public IReadOnlyList<OptimizationGroupViewModel> Projects { get; init; } = Array.Empty<OptimizationGroupViewModel>();

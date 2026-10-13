@@ -314,7 +314,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             catch (Exception)
             {
                 OnPropertyChanged();
-                ShowStatus("Save failed.", InfoBarSeverity.Error);
+                ShowStatus(Text("AiHub_SaveFailed"), InfoBarSeverity.Error);
             }
         }
     }
@@ -364,7 +364,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             }
             catch (Exception)
             {
-                ShowStatus("Save failed.", InfoBarSeverity.Error);
+                ShowStatus(Text("AiHub_SaveFailed"), InfoBarSeverity.Error);
             }
         }
     }
@@ -660,7 +660,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
         if (_loadFailed)
         {
-            ShowStatus("Failed to load AI Hub settings.", InfoBarSeverity.Error);
+            ShowStatus(Text("AiHub_LoadFailed"), InfoBarSeverity.Error);
             return;
         }
 
@@ -856,7 +856,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             await _securityService.SaveTaskPolicyAsync("system-optimization", OptimizationPolicyContent, token);
         }
 
-        ShowStatus("Settings saved successfully.", InfoBarSeverity.Success);
+        ShowStatus(Text("AIHub_SettingsSaved"), InfoBarSeverity.Success);
     }
 
     private void ClearFallback()
@@ -886,7 +886,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
 
         SecurityPolicyStatusText = "Saved";
-        ShowStatus("Security policy saved successfully.", InfoBarSeverity.Success);
+        ShowStatus(Text("AiHub_PolicySaved"), InfoBarSeverity.Success);
     }
 
     private async Task ResetPolicyAsync(CancellationToken token)
@@ -895,7 +895,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         _securityService.ResetGlobalPolicy();
         SecurityPolicyContent = await _securityService.LoadGlobalPolicyAsync(token);
         SecurityPolicyStatusText = "Default";
-        ShowStatus("Security policy reset to default template.", InfoBarSeverity.Success);
+        ShowStatus(Text("AiHub_PolicyReset"), InfoBarSeverity.Success);
     }
 
     private async Task ResetSecurityAuditPolicyAsync(CancellationToken token)
@@ -903,7 +903,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         token.ThrowIfCancellationRequested();
         _securityService.ResetTaskPolicy("security-audit");
         SecurityAuditPolicyContent = await _securityService.LoadTaskAgentsPolicyAsync("aihub", "security-audit", token);
-        ShowStatus("Security audit policy reset to default template.", InfoBarSeverity.Success);
+        ShowStatus(Text("AIHub_SecurityAuditPolicyReset"), InfoBarSeverity.Success);
     }
 
     private async Task ResetOptimizationPolicyAsync(CancellationToken token)
@@ -911,7 +911,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         token.ThrowIfCancellationRequested();
         _securityService.ResetTaskPolicy("system-optimization");
         OptimizationPolicyContent = await _securityService.LoadTaskAgentsPolicyAsync("aihub", "system-optimization", token);
-        ShowStatus("Optimization policy reset to default template.", InfoBarSeverity.Success);
+        ShowStatus(Text("AIHub_OptimizationPolicyReset"), InfoBarSeverity.Success);
     }
 
     private async Task SaveSecurityAuditPolicyAsync(CancellationToken token)
@@ -920,7 +920,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         if (!string.IsNullOrWhiteSpace(SecurityAuditPolicyContent))
         {
             await _securityService.SaveTaskPolicyAsync("security-audit", SecurityAuditPolicyContent, token);
-            ShowStatus("Security audit policy (AGENTS.md) saved successfully.", InfoBarSeverity.Success);
+            ShowStatus(Text("AIHub_SecurityAuditPolicySaved"), InfoBarSeverity.Success);
         }
     }
 
@@ -930,7 +930,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         if (!string.IsNullOrWhiteSpace(OptimizationPolicyContent))
         {
             await _securityService.SaveTaskPolicyAsync("system-optimization", OptimizationPolicyContent, token);
-            ShowStatus("Optimization policy (AGENTS.md) saved successfully.", InfoBarSeverity.Success);
+            ShowStatus(Text("AIHub_OptimizationPolicySaved"), InfoBarSeverity.Success);
         }
     }
 
@@ -1001,7 +1001,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         {
             if (IsEnabled)
             {
-                ShowStatus("Operation cancelled.", InfoBarSeverity.Informational);
+                ShowStatus(Text("AiHub_Cancelled"), InfoBarSeverity.Informational);
             }
         }
         catch (Exception ex)
@@ -1087,6 +1087,8 @@ public sealed class AiHubViewModel : Observable, IDisposable
             ((RelayCommand)endpoint.TestCommand).OnCanExecuteChanged();
         }
     }
+
+    private static string Text(string key) => ResourceLoaderInstance.ResourceLoader.GetString(key);
 
     private void ShowStatus(string message, InfoBarSeverity severity)
     {

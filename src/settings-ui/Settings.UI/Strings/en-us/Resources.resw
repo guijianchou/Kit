@@ -3572,6 +3572,69 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="TitleBar_BackButton_ToolTip" xml:space="preserve">
     <value>Back</value>
   </data>
+  <data name="AIHub_Action_Organize" xml:space="preserve">
+    <value>Organize</value>
+  </data>
+  <data name="AIHub_Action_Clean" xml:space="preserve">
+    <value>Clean</value>
+  </data>
+  <data name="AIHub_Category_ReviewSummary" xml:space="preserve">
+    <value>{0:N0} files · {1:N0} actionable</value>
+  </data>
+  <data name="AIHub_Status_ActionFailed" xml:space="preserve">
+    <value>Action failed; retry available</value>
+  </data>
+  <data name="AIHub_Status_AiApproved" xml:space="preserve">
+    <value>AI approved</value>
+  </data>
+  <data name="AIHub_Status_AiIncomplete" xml:space="preserve">
+    <value>AI review incomplete</value>
+  </data>
+  <data name="AIHub_Status_AiSkipped" xml:space="preserve">
+    <value>AI skipped</value>
+  </data>
+  <data name="AIHub_Status_AwaitingAi" xml:space="preserve">
+    <value>Awaiting AI review</value>
+  </data>
+  <data name="AIHub_Group_Development" xml:space="preserve">
+    <value>Development projects</value>
+  </data>
+  <data name="AIHub_Group_Packages" xml:space="preserve">
+    <value>Package managers</value>
+  </data>
+  <data name="AIHub_Group_Editors" xml:space="preserve">
+    <value>Editors &amp; IDEs</value>
+  </data>
+  <data name="AIHub_Group_Browsers" xml:space="preserve">
+    <value>Browsers</value>
+  </data>
+  <data name="AIHub_Group_System" xml:space="preserve">
+    <value>System caches</value>
+  </data>
+  <data name="AIHub_Group_Summary" xml:space="preserve">
+    <value>{0:N0} locations/types · {1:N0} files · {2:N0} actionable</value>
+  </data>
+  <data name="AIHub_Clean_Project" xml:space="preserve">
+    <value>Clean project</value>
+  </data>
+  <data name="AIHub_Clean_Group" xml:space="preserve">
+    <value>Clean group</value>
+  </data>
+  <data name="AIHub_SecurityAuditPolicySaved" xml:space="preserve">
+    <value>Security audit policy (AGENTS.md) saved successfully.</value>
+  </data>
+  <data name="AIHub_SecurityAuditPolicyReset" xml:space="preserve">
+    <value>Security audit policy reset to default template.</value>
+  </data>
+  <data name="AIHub_OptimizationPolicySaved" xml:space="preserve">
+    <value>Optimization policy (AGENTS.md) saved successfully.</value>
+  </data>
+  <data name="AIHub_OptimizationPolicyReset" xml:space="preserve">
+    <value>Optimization policy reset to default template.</value>
+  </data>
+  <data name="AIHub_SettingsSaved" xml:space="preserve">
+    <value>Settings saved successfully.</value>
+  </data>
   <data name="TitleBar_PaneButton_ToolTip" xml:space="preserve">
     <value>Toggle menu</value>
   </data>

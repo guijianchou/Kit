@@ -40,6 +40,20 @@
         <Setter Property="Padding" Value="12,10" />
     </Style>
 
+    <Style x:Key="KitMetricTileValueStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource KitMonoFontFamily}" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="KitMetricTileLabelStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
     <!-- 标准进度条（高 4 / 圆角 2 / Accent 前景） -->
     <Style x:Key="KitProgressBarStyle" TargetType="ProgressBar">
         <Setter Property="Height" Value="4" />

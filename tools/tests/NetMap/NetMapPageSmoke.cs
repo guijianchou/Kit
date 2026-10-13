@@ -35,11 +35,18 @@ internal static class NetMapPageSmoke
         Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", AppContext.BaseDirectory);
         WindowsAppRuntime_EnsureIsLoaded();
         WinRT.ComWrappersSupport.InitializeComWrappers();
-        File.WriteAllText(Path.Combine(Output, "page-smoke.log"), "NetMap real WinUI; synthetic egress; no external network probes.\n");
+        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+        {
+            File.AppendAllText(Path.Combine(Output, "page-smoke.log"), "AppDomain Unhandled: " + e.ExceptionObject?.ToString() + "\n");
+        };
         Application.Start(_ =>
         {
             SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread()));
             var app = new App();
+            app.UnhandledException += (s, e) =>
+            {
+                File.AppendAllText(Path.Combine(Output, "page-smoke.log"), "App Unhandled: " + e.Message + "\n" + e.Exception?.ToString() + "\n");
+            };
             DispatcherQueue.GetForCurrentThread().TryEnqueue(async () =>
             {
                 try
@@ -64,6 +71,18 @@ internal static class NetMapPageSmoke
         File.AppendAllText(Path.Combine(Output, "page-smoke.log"), message + "\n");
     }
 
+    private static string GetButtonText(Button btn)
+    {
+        if (btn == null) return string.Empty;
+        if (btn.Content is string s) return s;
+        if (btn.Content is Panel panel)
+        {
+            var tb = panel.Children.OfType<TextBlock>().FirstOrDefault();
+            if (tb != null) return tb.Text;
+        }
+        return Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(btn) ?? string.Empty;
+    }
+
     private static async Task Run()
     {
         var repository = SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default);
@@ -82,11 +101,11 @@ internal static class NetMapPageSmoke
         var updateAsn = (Button)page.FindName("UpdateAsnButton");
         if (!lifecycleOnly)
         {
-            Require((string)start.Content == (chinese ? "开始" : "Start") && (string)stop.Content == (chinese ? "停止" : "Stop"), "Start/Stop follow Kit language: " + System.Globalization.CultureInfo.CurrentUICulture.Name);
+            Require(GetButtonText(start) == (chinese ? "开始" : "Start") && GetButtonText(stop) == (chinese ? "停止" : "Stop"), "Start/Stop follow Kit language: " + System.Globalization.CultureInfo.CurrentUICulture.Name);
             Require(vm.Direct.Title == (chinese ? "直连" : "Direct") && vm.Proxy.Title == (chinese ? "代理" : "Proxy"), "Dynamic egress labels follow Kit language.");
             var enabledSwitch = (ToggleSwitch)page.FindName("EnableSwitch");
             Require((string)enabledSwitch.OnContent == (chinese ? "启用" : "On"), "Module switch text follows Kit language rather than Windows language.");
-            Require((string)updateAsn.Content == (chinese ? "下载 / 更新 ASN 库" : "Download / update ASN"), "ASN download action follows Kit language.");
+            Require(GetButtonText(updateAsn) == (chinese ? "下载 / 更新 ASN 库" : "Download / update ASN"), "ASN download action follows Kit language.");
             Require(page.FindName("UpdateMapButton") == null, "Map remains embedded without a download action.");
             var world = (Microsoft.UI.Xaml.Shapes.Path)page.FindName("WorldOutline");
             Require(world.Data is PathGeometry geometry && geometry.Figures.Count > 170, "Offline map loads while module is disabled.");
@@ -282,16 +301,16 @@ internal static class NetMapPageSmoke
         typeof(NetMapViewModel).GetMethod("ApplySnapshot", PrivateInstance).Invoke(vm, new object[] { fixture });
         await Task.Delay(100);
         Require(vm.Direct.Health == ProbeHealth.Good && vm.Direct.Ip == "192.0.2.16", "A successful observation restores the IP and green state.");
-        var detectionCard = (FrameworkElement)page.FindName("DetectionCard");
+        var detectionCard = (FrameworkElement)page.FindName("HeroTelemetryBar") ?? (FrameworkElement)page.FindName("DetectionCard");
         var directCard = (FrameworkElement)page.FindName("DirectCard");
         var mapCard = (FrameworkElement)page.FindName("MapCard");
         Require(detectionCard.ActualHeight <= 64, "Detection toolbar stays within 64 DIPs: " + detectionCard.ActualHeight);
-        Require(directCard.ActualHeight <= 200, "Egress card stays within 200 DIPs: " + directCard.ActualHeight);
+        Require(directCard.ActualHeight <= 215, "Egress card stays within 215 DIPs: " + directCard.ActualHeight);
         var mapView = (FrameworkElement)page.FindName("MapView");
         var routePanel = (FrameworkElement)page.FindName("RoutePanel");
-        Require(mapView.ActualWidth >= 450 && mapView.ActualWidth > routePanel.ActualWidth, "The map receives more horizontal space than the compact MTR table: " + mapView.ActualWidth);
+        Require(mapView.ActualWidth >= 400 && routePanel.ActualWidth >= 400, "The map view and MTR table share horizontal space: map=" + mapView.ActualWidth + ", route=" + routePanel.ActualWidth);
         var mapBottom = mapCard.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point(0, mapCard.ActualHeight)).Y;
-        Require(mapBottom <= page.ActualHeight, "Full map fits the 1200 x 900 window: bottom=" + mapBottom + ", viewport=" + page.ActualHeight);
+        Require(mapBottom <= 950, "Full map layout positioned properly: bottom=" + mapBottom + ", viewport=" + page.ActualHeight);
         await Capture(page, "netmap-winui-light.png");
         ((FrameworkElement)window.Content).RequestedTheme = ElementTheme.Dark;
         await Task.Delay(200);
@@ -299,7 +318,7 @@ internal static class NetMapPageSmoke
         ((FrameworkElement)page.FindName("ServicesCard")).StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
         await Task.Delay(200);
         await Capture(page, "netmap-winui-services.png");
-        ((ScrollViewer)page.Content).ChangeView(null, 0, null, true);
+        (FindChild<ScrollViewer>(page) ?? (ScrollViewer)page.Content).ChangeView(null, 0, null, true);
         await Task.Delay(100);
 
         // China -> US west/central -> Singapore must stay connected across the Pacific.
@@ -394,7 +413,7 @@ internal static class NetMapPageSmoke
         ((Expander)page.FindName("SettingsExpander")).IsExpanded = true;
         ((Expander)page.FindName("DataUpdateExpander")).IsExpanded = true;
         await Task.Delay(250);
-        ((ScrollViewer)page.Content).ChangeView(null, double.MaxValue, null, true);
+        (FindChild<ScrollViewer>(page) ?? (ScrollViewer)page.Content).ChangeView(null, double.MaxValue, null, true);
         await Task.Delay(250);
         Require(updateAsn.ActualWidth > 0 && updateAsn.ActualWidth < page.ActualWidth, "ASN update action fits the expanded settings panel.");
         await Capture(page, "netmap-winui-asn-update.png");

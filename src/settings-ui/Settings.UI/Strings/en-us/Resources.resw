@@ -2978,8 +2978,11 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Shell_NetMap.Content" xml:space="preserve">
     <value>NetMap</value>
   </data>
-  <data name="NetMap/ModuleTitle" xml:space="preserve">
+  <data name="NetMap.ModuleTitle" xml:space="preserve">
     <value>NetMap</value>
+  </data>
+  <data name="NetMap.ModuleDescription" xml:space="preserve">
+    <value>Observe direct and proxy egress as nodes change.</value>
   </data>
   <data name="NetMap_EnableCard.Header" xml:space="preserve">
     <value>NetMap</value>
@@ -2992,9 +2995,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="NetMap_Detect.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Detection</value>
-  </data>
-  <data name="NetMap_Stop.Content" xml:space="preserve">
-    <value>Stop</value>
   </data>
   <data name="NetMap_MapTitle.Text" xml:space="preserve">
     <value>MTR route and map</value>
@@ -3041,26 +3041,14 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_AsnPath.Header" xml:space="preserve">
     <value>GeoLite2-ASN database (optional)</value>
   </data>
-  <data name="NetMap_BrowseAsn.Content" xml:space="preserve">
-    <value>Choose ASN database</value>
-  </data>
   <data name="NetMap_CityPath.Header" xml:space="preserve">
     <value>Local City MMDB (optional)</value>
-  </data>
-  <data name="NetMap_BrowseCity.Content" xml:space="preserve">
-    <value>Choose City database</value>
   </data>
   <data name="NetMap_DatabaseNotice.Text" xml:space="preserve">
     <value>Local MMDB takes priority. Online lookup sends public IPs to ipwho.is via the selected proxy mode, caches results for this session and skips private/reserved addresses. Disable the switch to use only local data. ASN downloads are manual below.</value>
   </data>
-  <data name="NetMap_Apply.Content" xml:space="preserve">
-    <value>Apply settings</value>
-  </data>
   <data name="NetMap_UnknownLocation" xml:space="preserve">
     <value>Location unknown</value>
-  </data>
-  <data name="NetMap_UnknownAsn" xml:space="preserve">
-    <value>ASN unknown</value>
   </data>
   <data name="NetMap_NoSuccess" xml:space="preserve">
     <value>No successful observation</value>
@@ -3109,18 +3097,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="NetMap_Route_SystemRoute" xml:space="preserve">
     <value>System route / TUN (not verified)</value>
-  </data>
-  <data name="NetMap_Ipv6Route" xml:space="preserve">
-    <value>IPv6 egress observed; route probing is IPv4-only in this release.</value>
-  </data>
-  <data name="NetMap_RouteComplete" xml:space="preserve">
-    <value>Route sampling ended</value>
-  </data>
-  <data name="NetMap_NoRoute" xml:space="preserve">
-    <value>Waiting for ICMP replies</value>
-  </data>
-  <data name="NetMap_RouteSampling" xml:space="preserve">
-    <value>MTR sampling · up to 24 hops · continues until Stop</value>
   </data>
   <data name="NetMap_Database_00" xml:space="preserve">
     <value>Local ASN/City databases not loaded</value>
@@ -3200,29 +3176,14 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_UnexpectedFailure" xml:space="preserve">
     <value>Detection stopped after an unexpected error. Click Start to retry.</value>
   </data>
-  <data name="NetMap_DiagnosticFailed" xml:space="preserve">
-    <value>Some diagnostic results are unavailable. Egress observation continues.</value>
-  </data>
-  <data name="NetMap_DetectLabel.Text" xml:space="preserve">
-    <value>Detection</value>
-  </data>
-  <data name="NetMap_CardDetails.Content" xml:space="preserve">
-    <value>Details</value>
-  </data>
   <data name="NetMap_Direct" xml:space="preserve">
     <value>Direct</value>
   </data>
   <data name="NetMap_Proxy" xml:space="preserve">
     <value>Proxy</value>
   </data>
-  <data name="NetMap_DirectHeader.Text" xml:space="preserve">
-    <value>Direct</value>
-  </data>
   <data name="NetMap_ProxyHeader.Text" xml:space="preserve">
     <value>Result (Proxy)</value>
-  </data>
-  <data name="NetMap_Start.Content" xml:space="preserve">
-    <value>Start</value>
   </data>
   <data name="NetMap_ThisDevice" xml:space="preserve">
     <value>This device</value>
@@ -3302,12 +3263,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_DataUpdates.Header" xml:space="preserve">
     <value>ASN database update</value>
   </data>
-  <data name="NetMap_UpdateAsn.Content" xml:space="preserve">
-    <value>Download / update ASN</value>
-  </data>
-  <data name="NetMap_CancelUpdate.Content" xml:space="preserve">
-    <value>Cancel download</value>
-  </data>
   <data name="NetMap_UpdateNotice.Text" xml:space="preserve">
     <value>Manual ASN downloads use the applied proxy settings and stop detection. SHA-256 and MMDB validation must pass before replacement. Source: P3TERX mirror of MaxMind GeoLite2, subject to its license. Leave the custom ASN path empty to use the downloaded database; click Start after updating.</value>
   </data>
@@ -3356,9 +3311,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_TargetPending" xml:space="preserve">
     <value>Target ICMP RTT: waiting for a reply; HTTP reachability does not imply ICMP replies.</value>
   </data>
-  <data name="NetMap_ResponseTime" xml:space="preserve">
-    <value>headers</value>
-  </data>
   <data name="NetMap_HttpResponded" xml:space="preserve">
     <value>HTTP reachable</value>
   </data>
@@ -3400,9 +3352,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="NetMap_ProxyUnavailable" xml:space="preserve">
     <value>Proxy unavailable</value>
-  </data>
-  <data name="NetMap_HealthLegend.Text" xml:space="preserve">
-    <value>Every 10 s · Green ≤75 ms · Yellow >75 ms / needs attention · Red error · Three consecutive failures: N/A</value>
   </data>
   <data name="Dashboard_NetworkCard.Text" xml:space="preserve">
     <value>Network egress</value>
@@ -3554,14 +3503,71 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_DetectionBadge.Text" xml:space="preserve">
     <value>Detection</value>
   </data>
-  <data name="NetMap_RunningBadge.Text" xml:space="preserve">
-    <value>Running</value>
+  <data name="NetMap_SourceEndpointLabel.Text" xml:space="preserve">
+    <value>Source Endpoint:</value>
   </data>
-  <data name="NetMap_StoppedBadge.Text" xml:space="preserve">
-    <value>Stopped</value>
+  <data name="NetMap_RouteModeLabel.Text" xml:space="preserve">
+    <value>Route Mode:</value>
   </data>
-  <data name="NetMap_ServicesHeader.Text" xml:space="preserve">
-    <value>AI &amp; Cloud Services</value>
+  <data name="NetMap_AsnLabel.Text" xml:space="preserve">
+    <value>Autonomous System (ASN):</value>
+  </data>
+  <data name="NetMap_GeoProviderLabel.Text" xml:space="preserve">
+    <value>Geo Provider:</value>
+  </data>
+  <data name="NetMap_LocalGeoDatabases.Text" xml:space="preserve">
+    <value>Local Geolocation Databases</value>
+  </data>
+  <data name="NetMap_Colon.Text" xml:space="preserve">
+    <value>:</value>
+  </data>
+  <data name="NetMap_CardDetailsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>View egress details</value>
+  </data>
+  <data name="NetMap_CardDetailsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>View egress details</value>
+  </data>
+  <data name="NetMap_StartButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Start network detection</value>
+  </data>
+  <data name="NetMap_StartButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Start network detection</value>
+  </data>
+  <data name="NetMap_StopButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Stop network detection</value>
+  </data>
+  <data name="NetMap_StopButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Stop network detection</value>
+  </data>
+  <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Choose ASN database</value>
+  </data>
+  <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Choose ASN database</value>
+  </data>
+  <data name="NetMap_BrowseCityButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Choose City database</value>
+  </data>
+  <data name="NetMap_BrowseCityButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Choose City database</value>
+  </data>
+  <data name="NetMap_UpdateAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Download / update ASN</value>
+  </data>
+  <data name="NetMap_UpdateAsnButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Download / update ASN</value>
+  </data>
+  <data name="NetMap_CancelUpdateButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Cancel download</value>
+  </data>
+  <data name="NetMap_CancelUpdateButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Cancel download</value>
+  </data>
+  <data name="NetMap_ApplyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Apply settings</value>
+  </data>
+  <data name="NetMap_ApplyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Apply settings</value>
   </data>
   <data name="TitleBar_BackButton_ToolTip" xml:space="preserve">
     <value>Back</value>

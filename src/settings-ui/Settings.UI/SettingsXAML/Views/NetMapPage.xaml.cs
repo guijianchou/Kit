@@ -208,7 +208,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void MapBody_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool narrow = e.NewSize.Width < 880;
+        bool narrow = e.NewSize.Width < 860;
         Grid.SetColumn(RoutePanel, narrow ? 0 : 1);
         Grid.SetRow(RoutePanel, narrow ? 1 : 0);
         MapBody.ColumnSpacing = narrow ? 0 : 12;

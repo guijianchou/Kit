@@ -1676,8 +1676,11 @@
   <data name="Shell_NetMap.Content" xml:space="preserve">
     <value>NetMap</value>
   </data>
-  <data name="NetMap/ModuleTitle" xml:space="preserve">
+  <data name="NetMap.ModuleTitle" xml:space="preserve">
     <value>NetMap</value>
+  </data>
+  <data name="NetMap.ModuleDescription" xml:space="preserve">
+    <value>随节点变化，观察直连与代理出口。</value>
   </data>
   <data name="NetMap_EnableCard.Header" xml:space="preserve">
     <value>NetMap</value>
@@ -1690,9 +1693,6 @@
   </data>
   <data name="NetMap_Detect.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>检测</value>
-  </data>
-  <data name="NetMap_Stop.Content" xml:space="preserve">
-    <value>停止</value>
   </data>
   <data name="NetMap_MapTitle.Text" xml:space="preserve">
     <value>MTR 路径与地图</value>
@@ -1739,26 +1739,14 @@
   <data name="NetMap_AsnPath.Header" xml:space="preserve">
     <value>GeoLite2-ASN 数据库（可选）</value>
   </data>
-  <data name="NetMap_BrowseAsn.Content" xml:space="preserve">
-    <value>选择 ASN 数据库</value>
-  </data>
   <data name="NetMap_CityPath.Header" xml:space="preserve">
     <value>本地城市数据库（可选）</value>
-  </data>
-  <data name="NetMap_BrowseCity.Content" xml:space="preserve">
-    <value>选择城市数据库</value>
   </data>
   <data name="NetMap_DatabaseNotice.Text" xml:space="preserve">
     <value>优先读取本地 MMDB。在线查询按所选代理方式将公网 IP 发送给 ipwho.is，本次会话缓存结果，跳过内网和保留地址。关闭上方开关可仅用本地数据；ASN 库可在下方手动下载。</value>
   </data>
-  <data name="NetMap_Apply.Content" xml:space="preserve">
-    <value>应用设置</value>
-  </data>
   <data name="NetMap_UnknownLocation" xml:space="preserve">
     <value>位置未知</value>
-  </data>
-  <data name="NetMap_UnknownAsn" xml:space="preserve">
-    <value>ASN 未知</value>
   </data>
   <data name="NetMap_NoSuccess" xml:space="preserve">
     <value>尚无成功观测</value>
@@ -1807,18 +1795,6 @@
   </data>
   <data name="NetMap_Route_SystemRoute" xml:space="preserve">
     <value>系统路由 / TUN（未验证）</value>
-  </data>
-  <data name="NetMap_Ipv6Route" xml:space="preserve">
-    <value>已识别 IPv6 出口；此版本仅探测 IPv4 路径。</value>
-  </data>
-  <data name="NetMap_RouteComplete" xml:space="preserve">
-    <value>路径采样已结束</value>
-  </data>
-  <data name="NetMap_NoRoute" xml:space="preserve">
-    <value>等待 ICMP 路径响应</value>
-  </data>
-  <data name="NetMap_RouteSampling" xml:space="preserve">
-    <value>MTR 采样中 · 最多 24 跳 · 停止后结束</value>
   </data>
   <data name="NetMap_Database_00" xml:space="preserve">
     <value>本地 ASN 和城市数据库未加载</value>
@@ -1898,29 +1874,14 @@
   <data name="NetMap_UnexpectedFailure" xml:space="preserve">
     <value>发生异常，检测已停止；点击“开始”重试。</value>
   </data>
-  <data name="NetMap_DiagnosticFailed" xml:space="preserve">
-    <value>部分诊断结果不可用，出口观测仍继续。</value>
-  </data>
-  <data name="NetMap_DetectLabel.Text" xml:space="preserve">
-    <value>检测</value>
-  </data>
-  <data name="NetMap_CardDetails.Content" xml:space="preserve">
-    <value>详情</value>
-  </data>
   <data name="NetMap_Direct" xml:space="preserve">
     <value>直连</value>
   </data>
   <data name="NetMap_Proxy" xml:space="preserve">
     <value>代理</value>
   </data>
-  <data name="NetMap_DirectHeader.Text" xml:space="preserve">
-    <value>直连</value>
-  </data>
   <data name="NetMap_ProxyHeader.Text" xml:space="preserve">
     <value>检测结果（Proxy）</value>
-  </data>
-  <data name="NetMap_Start.Content" xml:space="preserve">
-    <value>开始</value>
   </data>
   <data name="NetMap_ThisDevice" xml:space="preserve">
     <value>本机</value>
@@ -2000,12 +1961,6 @@
   <data name="NetMap_DataUpdates.Header" xml:space="preserve">
     <value>ASN 数据库更新</value>
   </data>
-  <data name="NetMap_UpdateAsn.Content" xml:space="preserve">
-    <value>下载 / 更新 ASN 库</value>
-  </data>
-  <data name="NetMap_CancelUpdate.Content" xml:space="preserve">
-    <value>取消下载</value>
-  </data>
   <data name="NetMap_UpdateNotice.Text" xml:space="preserve">
     <value>手动下载 ASN 库使用已应用的代理配置，并停止检测。SHA-256 和 MMDB 格式校验通过后才替换旧文件。来源为 P3TERX 的 MaxMind GeoLite2 镜像，遵循其许可。自定义 ASN 路径为空时使用下载版本；更新后点击开始。</value>
   </data>
@@ -2054,9 +2009,6 @@
   <data name="NetMap_TargetPending" xml:space="preserve">
     <value>目标 ICMP 延迟：等待目标回复；网页可达不表示目标会回复 ICMP。</value>
   </data>
-  <data name="NetMap_ResponseTime" xml:space="preserve">
-    <value>响应头</value>
-  </data>
   <data name="NetMap_HttpResponded" xml:space="preserve">
     <value>HTTP 已响应</value>
   </data>
@@ -2098,9 +2050,6 @@
   </data>
   <data name="NetMap_ProxyUnavailable" xml:space="preserve">
     <value>代理不可用</value>
-  </data>
-  <data name="NetMap_HealthLegend.Text" xml:space="preserve">
-    <value>每 10 秒 · 绿 ≤75 ms · 黄 >75 ms / 需注意 · 红 错误 · 连续失败 3 次显示 N/A</value>
   </data>
   <data name="Dashboard_NetworkCard.Text" xml:space="preserve">
     <value>网络出口</value>
@@ -2241,7 +2190,7 @@
     <value>浏览</value>
   </data>
   <data name="NetMap_UpdateAsnButtonText.Text" xml:space="preserve">
-    <value>下载 / 更新 ASN</value>
+    <value>下载 / 更新 ASN 库</value>
   </data>
   <data name="NetMap_CancelUpdateButtonText.Text" xml:space="preserve">
     <value>取消下载</value>
@@ -2252,14 +2201,71 @@
   <data name="NetMap_DetectionBadge.Text" xml:space="preserve">
     <value>检测状态</value>
   </data>
-  <data name="NetMap_RunningBadge.Text" xml:space="preserve">
-    <value>运行中</value>
+  <data name="NetMap_SourceEndpointLabel.Text" xml:space="preserve">
+    <value>源端点:</value>
   </data>
-  <data name="NetMap_StoppedBadge.Text" xml:space="preserve">
-    <value>已停止</value>
+  <data name="NetMap_RouteModeLabel.Text" xml:space="preserve">
+    <value>路由模式:</value>
   </data>
-  <data name="NetMap_ServicesHeader.Text" xml:space="preserve">
-    <value>AI 与云服务连通性</value>
+  <data name="NetMap_AsnLabel.Text" xml:space="preserve">
+    <value>自治系统 (ASN):</value>
+  </data>
+  <data name="NetMap_GeoProviderLabel.Text" xml:space="preserve">
+    <value>地理信息源:</value>
+  </data>
+  <data name="NetMap_LocalGeoDatabases.Text" xml:space="preserve">
+    <value>本地地理位置数据库</value>
+  </data>
+  <data name="NetMap_Colon.Text" xml:space="preserve">
+    <value>:</value>
+  </data>
+  <data name="NetMap_CardDetailsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>查看出口详情</value>
+  </data>
+  <data name="NetMap_CardDetailsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>查看出口详情</value>
+  </data>
+  <data name="NetMap_StartButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>开始网络探测</value>
+  </data>
+  <data name="NetMap_StartButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>开始网络探测</value>
+  </data>
+  <data name="NetMap_StopButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>停止网络探测</value>
+  </data>
+  <data name="NetMap_StopButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>停止网络探测</value>
+  </data>
+  <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择 ASN 数据库</value>
+  </data>
+  <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>选择 ASN 数据库</value>
+  </data>
+  <data name="NetMap_BrowseCityButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择 City 数据库</value>
+  </data>
+  <data name="NetMap_BrowseCityButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>选择 City 数据库</value>
+  </data>
+  <data name="NetMap_UpdateAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>下载 / 更新 ASN 数据库</value>
+  </data>
+  <data name="NetMap_UpdateAsnButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>下载 / 更新 ASN 数据库</value>
+  </data>
+  <data name="NetMap_CancelUpdateButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>取消下载</value>
+  </data>
+  <data name="NetMap_CancelUpdateButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>取消下载</value>
+  </data>
+  <data name="NetMap_ApplyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>应用设置</value>
+  </data>
+  <data name="NetMap_ApplyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>应用设置</value>
   </data>
   <data name="TitleBar_BackButton_ToolTip" xml:space="preserve">
     <value>返回</value>

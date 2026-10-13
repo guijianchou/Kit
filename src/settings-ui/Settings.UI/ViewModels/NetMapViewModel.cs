@@ -275,8 +275,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
 
     public string EvidenceNote => snapshot.Direct.Latest?.Success == true && snapshot.Proxy.Latest?.Success == true && snapshot.Direct.Latest.Identity!.Ip == snapshot.Proxy.Latest.Identity!.Ip ? Text("SameEgress") : Text("RouteBoundary");
 
-    public string RouteStatus => !snapshot.Running ? Text("Stopped") : snapshot.DiagnosticFailed ? Text("DiagnosticFailed") : snapshot.Stabilizing ? Text("Stabilizing") : snapshot.Proxy.LastSuccess?.Identity?.Ip.Contains(':') == true ? Text("Ipv6Route") : snapshot.RouteComplete ? Text("RouteComplete") : snapshot.Hops.Count == 0 ? Text("NoRoute") : Text("RouteSampling");
-
     public string RouteTarget => Text("ThisDevice") + " → " + (snapshot.Proxy.LastSuccess?.Identity?.Ip ?? Text("WaitingProxy"));
 
     public string DatabaseStatus => Text("Database_" + snapshot.DatabaseStatus) + " · " + Text(options.OnlineLookup ? "OnlineEnabled" : "OnlineDisabled");
@@ -342,7 +340,17 @@ public sealed class NetMapViewModel : Observable, IDisposable
         private set => Set(ref message, value);
     }
 
-    public static string Text(string key) => ResourceLoaderInstance.ResourceLoader.GetString("NetMap_" + key);
+    public static string Text(string key)
+    {
+        try
+        {
+            return ResourceLoaderInstance.ResourceLoader.GetString("NetMap_" + key);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"[NetMap] ResourceLoader failed for key: NetMap_{key}", ex);
+        }
+    }
 
     public static string LocationText(EgressIdentity? identity, GeoInfo? geography)
     {
@@ -596,7 +604,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(RunStatus));
         OnPropertyChanged(nameof(EvidenceNote));
-        OnPropertyChanged(nameof(RouteStatus));
         OnPropertyChanged(nameof(RouteTarget));
         OnPropertyChanged(nameof(DatabaseStatus));
         if (!ReferenceEquals(previous.Services, value.Services) || previous.Running != value.Running || previous.Proxy.ConsecutiveFailures != value.Proxy.ConsecutiveFailures)

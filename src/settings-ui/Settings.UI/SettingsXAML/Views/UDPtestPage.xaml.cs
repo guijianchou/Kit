@@ -99,6 +99,9 @@ namespace Kit.Settings.UI.Views
                 HealthPeriod1hButton,
             ];
             int selectedSeconds = ViewModel.SelectedPeriodSeconds;
+            var accentStyle = Resources.TryGetValue("AccentHealthButtonStyle", out object s) ? s as Style : null;
+            var defaultStyle = App.Current.Resources.TryGetValue("KitPeriodButtonStyle", out object d) ? d as Style : null;
+
             foreach (Button button in buttons)
             {
                 if (button == null)
@@ -108,9 +111,7 @@ namespace Kit.Settings.UI.Views
 
                 bool selected = int.TryParse(button.Tag?.ToString(), out int seconds)
                     && seconds == selectedSeconds;
-                button.Style = selected
-                    ? (Resources.TryGetValue("AccentHealthButtonStyle", out object s) ? s as Style : null)
-                    : null;
+                button.Style = selected ? accentStyle : defaultStyle;
             }
         }
 
@@ -164,14 +165,16 @@ namespace Kit.Settings.UI.Views
             var points = ViewModel.GetCurrentChartPoints();
             if (points.Count == 0)
             {
-                HealthChartEmptyText.Text = "No samples in this period";
+                string emptyText = ResourceLoaderInstance.ResourceLoader.GetString("UDPtest_NoSamplesLabel/Text");
+                HealthChartEmptyText.Text = string.IsNullOrEmpty(emptyText) ? "No samples in this period" : emptyText;
                 HealthChartEmptyText.Visibility = Visibility.Visible;
                 return;
             }
 
             var successes = points.Where(p => p.IsSuccess).ToList();
+            string noSuccessText = ResourceLoaderInstance.ResourceLoader.GetString("UDPtest_NoSuccessfulRttLabel");
             HealthChartEmptyText.Text = successes.Count == 0
-                ? "No successful RTT in this period"
+                ? (string.IsNullOrEmpty(noSuccessText) ? "No successful RTT in this period" : noSuccessText)
                 : string.Empty;
             HealthChartEmptyText.Visibility = successes.Count == 0
                 ? Visibility.Visible

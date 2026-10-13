@@ -16,10 +16,12 @@
     mc:Ignorable="d">
 
     <local:NavigablePage.Resources>
-        <Style x:Key="AccentHealthButtonStyle" BasedOn="{StaticResource AccentButtonStyle}" TargetType="Button">
-            <Setter Property="CornerRadius" Value="4" />
+        <Style x:Key="AccentPeriodButtonStyle" BasedOn="{StaticResource KitPeriodButtonStyle}" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
         </Style>
-        <FontFamily x:Key="MonoFontFamily">Consolas, Segoe UI Mono, Cascadia Mono</FontFamily>
+        <Style x:Key="AccentHealthButtonStyle" BasedOn="{StaticResource AccentPeriodButtonStyle}" TargetType="Button" />
+        <FontFamily x:Key="MonoFontFamily">Cascadia Code, Cascadia Mono, Consolas, Courier New</FontFamily>
 
         <Style x:Key="MetricPrimaryStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
@@ -49,8 +51,8 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <SolidColorBrush x:Key="TcpBrush" Color="#FFFF745A" />
-        <SolidColorBrush x:Key="UdpBrush" Color="#FF20C9A6" />
+        <StaticResource x:Key="TcpBrush" ResourceKey="KitDataSeriesTcpBrush" />
+        <StaticResource x:Key="UdpBrush" ResourceKey="KitDataSeriesUdpBrush" />
 
         <!-- TCP Row Template (Clean, non-foldable) -->
         <DataTemplate x:Key="TcpLineTemplate" x:DataType="viewModels:UDPtestLineRowViewModel">
@@ -81,7 +83,7 @@
                     <TextBlock Grid.Row="0" Grid.Column="5" VerticalAlignment="Center" Text="{x:Bind Counts, Mode=OneWay}" />
                     <TextBlock Grid.Row="0" Grid.Column="6" VerticalAlignment="Center" Text="{x:Bind IpAddress, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind IpAddressDescription, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Grid.Row="0" Grid.Column="7" HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind LastErrorDisplay, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LastError, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                    <ToggleSwitch Grid.Row="0" Grid.Column="8" MinWidth="0" Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind ToggleLabel, Mode=OneWay}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" IsEnabled="{x:Bind IsToggleEnabled, Mode=OneWay}" OnContent="" OffContent="" ToolTipService.ToolTip="{x:Bind ToggleLabel, Mode=OneWay}" />
+                    <ToggleSwitch Grid.Row="0" Grid.Column="8" MinWidth="0" Width="40" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind ToggleLabel, Mode=OneWay}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" IsEnabled="{x:Bind IsToggleEnabled, Mode=OneWay}" OnContent="" OffContent="" ToolTipService.ToolTip="{x:Bind ToggleLabel, Mode=OneWay}" />
 
                     <!-- Status History Micro-ticks Sub-Row (Status in Col 0 under TARGET, RecentBars in Col 1..7 starting under PORT and spanning across to LAST ERROR) -->
                     <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,8,0,8" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
@@ -147,8 +149,8 @@
 
                     <!-- Actions Column: ToggleSwitch + Chevron Folded Button -->
                     <StackPanel Grid.Row="0" Grid.Column="8" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <ToggleSwitch MinWidth="0" Width="40" Height="40" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind ToggleLabel, Mode=OneWay}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" IsEnabled="{x:Bind IsToggleEnabled, Mode=OneWay}" OnContent="" OffContent="" ToolTipService.ToolTip="{x:Bind ToggleLabel, Mode=OneWay}" />
-                        <Button x:Name="UdpExpandButton" x:Uid="UDPtest_ConfigureTooltip" Width="32" Height="32" CornerRadius="6" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Click="ToggleConfigExpanded_Click" DataContext="{x:Bind}" ToolTipService.ToolTip="Configure UDP Target">
+                        <ToggleSwitch MinWidth="0" Width="40" Height="36" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind ToggleLabel, Mode=OneWay}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" IsEnabled="{x:Bind IsToggleEnabled, Mode=OneWay}" OnContent="" OffContent="" ToolTipService.ToolTip="{x:Bind ToggleLabel, Mode=OneWay}" />
+                        <Button x:Name="UdpExpandButton" x:Uid="UDPtest_ConfigureTooltip" Style="{StaticResource KitSubtleIconButtonStyle}" Click="ToggleConfigExpanded_Click" DataContext="{x:Bind}" ToolTipService.ToolTip="Configure UDP Target">
                             <FontIcon FontSize="12" Glyph="{x:Bind ExpandGlyph, Mode=OneWay}" />
                         </Button>
                     </StackPanel>
@@ -188,24 +190,24 @@
                             Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
-                            CornerRadius="6"
+                            CornerRadius="4"
                             Visibility="{x:Bind ConfigVisibility, Mode=OneWay}">
                         <StackPanel Spacing="12">
                             <Grid ColumnDefinitions="110,*" ColumnSpacing="12" RowSpacing="10" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                                 <!-- NAME -->
                                 <TextBlock x:Uid="UDPtest_ConfigNameLabel" Text="Target Name" Style="{StaticResource ColumnHeaderStyle}" VerticalAlignment="Center" />
-                                <TextBox x:Uid="UDPtest_ConfigNameInput" Grid.Column="1" Text="{x:Bind EditName, Mode=TwoWay}" CornerRadius="6" PlaceholderText="e.g. Cloudflare, Singapore" />
+                                <TextBox x:Uid="UDPtest_ConfigNameInput" Grid.Column="1" Text="{x:Bind EditName, Mode=TwoWay}" CornerRadius="4" PlaceholderText="e.g. Cloudflare, Singapore" />
 
                                 <!-- KIND (STUN / ECHO) -->
                                 <TextBlock x:Uid="UDPtest_ConfigKindLabel" Grid.Row="1" Text="Protocol Kind" Style="{StaticResource ColumnHeaderStyle}" VerticalAlignment="Center" />
-                                <ComboBox Grid.Row="1" Grid.Column="1" SelectedIndex="{x:Bind EditKindIndex, Mode=TwoWay}" MinWidth="180" CornerRadius="6">
+                                <ComboBox Grid.Row="1" Grid.Column="1" SelectedIndex="{x:Bind EditKindIndex, Mode=TwoWay}" MinWidth="180" CornerRadius="4">
                                     <ComboBoxItem x:Uid="UDPtest_ConfigKindStun" Content="STUN (Binding Probe)" />
                                     <ComboBoxItem x:Uid="UDPtest_ConfigKindEcho" Content="ECHO (UDP Reflection)" />
                                 </ComboBox>
 
                                 <!-- ENDPOINT (HOST:PORT) -->
                                 <TextBlock x:Uid="UDPtest_ConfigEndpointLabel" Grid.Row="2" Text="Endpoint" Style="{StaticResource ColumnHeaderStyle}" VerticalAlignment="Center" />
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{x:Bind EditEndpoint, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="6" PlaceholderText="e.g. stun.cloudflare.com:3478 or 150.242.146.124:7" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{x:Bind EditEndpoint, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="4" PlaceholderText="e.g. stun.cloudflare.com:3478 or 150.242.146.124:7" />
 
                                 <!-- PORT & CAPABILITY HINT -->
                                 <TextBlock x:Uid="UDPtest_ConfigPortLabel" Grid.Row="3" Text="Parsed Port" Style="{StaticResource ColumnHeaderStyle}" VerticalAlignment="Center" />
@@ -222,7 +224,7 @@
                             <!-- Panel Bottom Actions: Delete on Left, Save on Right -->
                             <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4" />
                             <Grid Margin="0,4,0,0">
-                                <Button HorizontalAlignment="Left" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Height="32" CornerRadius="6" Padding="12,5">
+                                <Button HorizontalAlignment="Left" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Style="{StaticResource KitActionButtonStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE74D;" FontSize="13" />
                                         <TextBlock x:Uid="UDPtest_DeleteButtonText" Text="Delete" />
@@ -232,13 +234,13 @@
                                             <StackPanel MaxWidth="280" Spacing="10">
                                                 <TextBlock x:Uid="UDPtest_DeleteDialogTitle" Text="Delete this UDP line?" FontWeight="SemiBold" />
                                                 <TextBlock x:Uid="UDPtest_DeleteDialogMessage" Text="This link will be permanently removed from your target list." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                                <Button x:Uid="UDPtest_DeleteDialogConfirm" Content="Confirm Delete" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Height="32" CornerRadius="6" Padding="14,5" Click="DeleteLine_Click" DataContext="{x:Bind}" />
+                                                <Button x:Uid="UDPtest_DeleteDialogConfirm" Content="Confirm Delete" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Style="{StaticResource KitActionButtonStyle}" Click="DeleteLine_Click" DataContext="{x:Bind}" />
                                             </StackPanel>
                                         </Flyout>
                                     </Button.Flyout>
                                 </Button>
 
-                                <Button HorizontalAlignment="Right" Style="{ThemeResource AccentButtonStyle}" Height="32" CornerRadius="6" Padding="14,5" Click="SaveLine_Click" DataContext="{x:Bind}" IsEnabled="{x:Bind CanSave, Mode=OneWay}">
+                                <Button HorizontalAlignment="Right" Style="{StaticResource KitPrimaryActionButtonStyle}" Click="SaveLine_Click" DataContext="{x:Bind}" IsEnabled="{x:Bind CanSave, Mode=OneWay}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE74E;" FontSize="13" />
                                         <TextBlock x:Uid="UDPtest_SaveButtonText" Text="Save" />
@@ -253,13 +255,13 @@
     </local:NavigablePage.Resources>
 
     <Grid>
-        <controls:SettingsPageControl x:Uid="UDPtest" ModuleTitle="UDP Test" IsTabStop="False">
+        <controls:SettingsPageControl x:Uid="UDPtest" ModuleTitle="UDP Test" ModuleImageSource="ms-appx:///Assets/Settings/Modules/UDPtest.png" IsTabStop="False">
             <controls:SettingsPageControl.ModuleContent>
                 <StackPanel Spacing="16">
                     <!-- ============================================================== -->
                     <!-- 1. HERO MASTER GLASS CARD: UDP Control Center & Live Telemetry -->
                     <!-- ============================================================== -->
-                    <Border CornerRadius="8"
+                    <Border CornerRadius="{StaticResource OverlayCornerRadius}"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1">
@@ -279,7 +281,7 @@
 
                             <!-- Live Telemetry & Control Glass Sub-Bar -->
                             <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0"
-                                    Background="{ThemeResource MetricCardBackgroundBrush}"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     Padding="16,10" CornerRadius="0,0,8,8">
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                     <!-- Live Status Pill with Running Dot & Elapsed Timer -->
@@ -302,29 +304,29 @@
 
                                     <!-- Master Actions Toolbar aligned on right -->
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <Button AutomationProperties.Name="Start monitoring" Height="32" CornerRadius="6" Padding="14,0" Click="OnStartClicked" IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}" Style="{StaticResource AccentButtonStyle}" ToolTipService.ToolTip="Start monitoring">
+                                        <Button AutomationProperties.Name="Start monitoring" Style="{StaticResource KitPrimaryActionButtonStyle}" Click="OnStartClicked" IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}" ToolTipService.ToolTip="Start monitoring">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE768;" FontSize="12" />
                                                 <TextBlock x:Uid="UDPtest_StartButtonText" FontSize="13" Text="Start" />
                                             </StackPanel>
                                         </Button>
-                                        <Button AutomationProperties.Name="Stop monitoring" Height="32" CornerRadius="6" Padding="14,0" Click="OnStopClicked" IsEnabled="{x:Bind ViewModel.CanStop, Mode=OneWay}" ToolTipService.ToolTip="Stop monitoring">
+                                        <Button AutomationProperties.Name="Stop monitoring" Style="{StaticResource KitActionButtonStyle}" Click="OnStopClicked" IsEnabled="{x:Bind ViewModel.CanStop, Mode=OneWay}" ToolTipService.ToolTip="Stop monitoring">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE71A;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                                 <TextBlock x:Uid="UDPtest_StopButtonText" FontSize="13" Text="Stop" />
                                             </StackPanel>
                                         </Button>
                                         <Border Width="1" Height="20" Margin="2,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                        <Button x:Uid="UDPtest_ClearHistoryButton" AutomationProperties.Name="Clear history" Width="32" Height="32" CornerRadius="6" Padding="0" Click="OnClearClicked" IsEnabled="{x:Bind ViewModel.CanClear, Mode=OneWay}" ToolTipService.ToolTip="Clear history">
+                                        <Button x:Uid="UDPtest_ClearHistoryButton" AutomationProperties.Name="Clear history" Style="{StaticResource KitIconButtonStyle}" Click="OnClearClicked" IsEnabled="{x:Bind ViewModel.CanClear, Mode=OneWay}" ToolTipService.ToolTip="Clear history">
                                             <FontIcon Glyph="&#xE74D;" FontSize="13" />
                                         </Button>
-                                        <Button x:Uid="UDPtest_IntervalButton" AutomationProperties.Name="Sampling interval" Width="32" Height="32" CornerRadius="6" Padding="0" ToolTipService.ToolTip="Sampling interval">
+                                        <Button x:Uid="UDPtest_IntervalButton" AutomationProperties.Name="Sampling interval" Style="{StaticResource KitIconButtonStyle}" ToolTipService.ToolTip="Sampling interval">
                                             <FontIcon Glyph="&#xE713;" FontSize="13" />
                                             <Button.Flyout>
                                                 <Flyout>
                                                     <StackPanel Spacing="10" MinWidth="170">
                                                         <TextBlock x:Uid="UDPtest_SamplingInterval" Text="Sampling Interval" FontWeight="SemiBold" FontSize="12" />
-                                                        <ComboBox x:Name="RefreshIntervalComboBox" Loaded="OnRefreshIntervalLoaded" SelectionChanged="OnRefreshIntervalChanged" CornerRadius="6" HorizontalAlignment="Stretch">
+                                                        <ComboBox x:Name="RefreshIntervalComboBox" Loaded="OnRefreshIntervalLoaded" SelectionChanged="OnRefreshIntervalChanged" CornerRadius="4" HorizontalAlignment="Stretch">
                                                             <ComboBoxItem Content="500 ms" Tag="500" />
                                                             <ComboBoxItem Content="1000 ms" Tag="1000" />
                                                             <ComboBoxItem Content="2000 ms" Tag="2000" />
@@ -334,7 +336,7 @@
                                                 </Flyout>
                                             </Button.Flyout>
                                         </Button>
-                                        <Button AutomationProperties.Name="Add UDP line" Height="32" CornerRadius="6" Padding="12,0" Click="OnAddUdpLineClicked" ToolTipService.ToolTip="Add a new UDP line">
+                                        <Button AutomationProperties.Name="Add UDP line" Style="{StaticResource KitActionButtonStyle}" Click="OnAddUdpLineClicked" ToolTipService.ToolTip="Add a new UDP line">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon Glyph="&#xE710;" FontSize="12" />
                                                 <TextBlock x:Uid="UDPtest_AddLinkButtonText" FontSize="13" Text="Add UDP Link" />
@@ -351,8 +353,7 @@
                         IsClosable="True"
                         IsOpen="{x:Bind ViewModel.IsErrorOpen, Mode=TwoWay}"
                         Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}"
-                        CornerRadius="8" />
+                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}" />
 
                     <!-- All module settings disabled when master switch is OFF -->
                     <ContentControl IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
@@ -446,10 +447,10 @@
                                             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                     <Ellipse Width="8" Height="8" Fill="{ThemeResource AccentFillColorDefaultBrush}" />
-                                                    <TextBlock x:Uid="UDPtest_RealtimeLabel" Style="{StaticResource MicroLabelStyle}" FontSize="11" Text="REALTIME" />
+                                                    <TextBlock x:Uid="UDPtest_RealtimeLabel" Style="{StaticResource MicroLabelStyle}" FontSize="11" Text="REALTIME" AutomationProperties.HeadingLevel="Level2" />
                                                     <FontIcon Glyph="&#xE946;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="Live metrics for the selected line" />
                                                 </StackPanel>
-                                                <ComboBox Grid.Column="2" MinWidth="0" Width="140" Height="32" Padding="10,0" CornerRadius="6" DisplayMemberPath="Name" FontSize="12" ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedLine, Mode=TwoWay}" ToolTipService.ToolTip="Choose link to inspect" />
+                                                <ComboBox Grid.Column="2" MinWidth="0" Width="140" Height="32" Padding="10,0" CornerRadius="4" DisplayMemberPath="Name" FontSize="12" ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedLine, Mode=TwoWay}" ToolTipService.ToolTip="Choose link to inspect" AutomationProperties.Name="Selected link" />
                                             </Grid>
 
                                             <!-- 4 Metrics Baseline -->
@@ -458,15 +459,15 @@
                                                     <TextBlock x:Uid="UDPtest_QualityLabel" Style="{StaticResource MicroLabelStyle}" Text="QUALITY" />
                                                     <TextBlock Style="{StaticResource MetricPrimaryStyle}" Text="{x:Bind ViewModel.QualityText, Mode=OneWay}" />
                                                 </StackPanel>
-                                                <StackPanel Spacing="1" MinWidth="96">
+                                                <StackPanel Grid.Column="1" Spacing="1" MinWidth="96">
                                                     <TextBlock x:Uid="UDPtest_AvgRttLabel" Style="{StaticResource MicroLabelStyle}" Text="AVG RTT" />
                                                     <TextBlock Style="{StaticResource MetricPrimaryStyle}" Text="{x:Bind ViewModel.AvgRttText, Mode=OneWay}" />
                                                 </StackPanel>
-                                                <StackPanel Spacing="1" MinWidth="86">
+                                                <StackPanel Grid.Column="2" Spacing="1" MinWidth="86">
                                                     <TextBlock x:Uid="UDPtest_PeakRttLabel" Style="{StaticResource MicroLabelStyle}" Text="PEAK RTT" />
                                                     <TextBlock Style="{StaticResource MetricPrimaryStyle}" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.PeakRttText, Mode=OneWay}" />
                                                 </StackPanel>
-                                                <StackPanel Spacing="1" MinWidth="96">
+                                                <StackPanel Grid.Column="3" Spacing="1" MinWidth="96">
                                                     <TextBlock x:Uid="UDPtest_PeriodAvgLabel" Style="{StaticResource MicroLabelStyle}" Text="PERIOD AVG" />
                                                     <TextBlock Style="{StaticResource MetricPrimaryStyle}" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.PeriodAvgText, Mode=OneWay}" />
                                                 </StackPanel>
@@ -479,13 +480,13 @@
                                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                                     <TextBlock x:Uid="UDPtest_RttTrendLabel" Style="{StaticResource MicroLabelStyle}" VerticalAlignment="Center" Text="RTT TREND" />
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                                                        <Button x:Name="HealthPeriod1mButton" Content="1m" Width="36" Height="26" CornerRadius="4" Padding="0" FontSize="11" Click="OnPeriodClicked" Tag="60" ToolTipService.ToolTip="Show the last minute" />
-                                                        <Button x:Name="HealthPeriod5mButton" Content="5m" Width="36" Height="26" CornerRadius="4" Padding="0" FontSize="11" Click="OnPeriodClicked" Tag="300" ToolTipService.ToolTip="Show the last five minutes" />
-                                                        <Button x:Name="HealthPeriod30mButton" Content="30m" Width="42" Height="26" CornerRadius="4" Padding="0" FontSize="11" Click="OnPeriodClicked" Tag="1800" ToolTipService.ToolTip="Show the last thirty minutes" />
-                                                        <Button x:Name="HealthPeriod1hButton" Content="1h" Width="36" Height="26" CornerRadius="4" Padding="0" FontSize="11" Click="OnPeriodClicked" Tag="3600" ToolTipService.ToolTip="Show the last hour" />
+                                                        <Button x:Name="HealthPeriod1mButton" AutomationProperties.Name="1 minute" Content="1m" Style="{StaticResource KitPeriodButtonStyle}" Click="OnPeriodClicked" Tag="60" ToolTipService.ToolTip="Show the last minute" />
+                                                        <Button x:Name="HealthPeriod5mButton" AutomationProperties.Name="5 minutes" Content="5m" Style="{StaticResource KitPeriodButtonStyle}" Click="OnPeriodClicked" Tag="300" ToolTipService.ToolTip="Show the last five minutes" />
+                                                        <Button x:Name="HealthPeriod30mButton" AutomationProperties.Name="30 minutes" Content="30m" Style="{StaticResource KitPeriodButtonStyle}" Click="OnPeriodClicked" Tag="1800" ToolTipService.ToolTip="Show the last thirty minutes" />
+                                                        <Button x:Name="HealthPeriod1hButton" AutomationProperties.Name="1 hour" Content="1h" Style="{StaticResource KitPeriodButtonStyle}" Click="OnPeriodClicked" Tag="3600" ToolTipService.ToolTip="Show the last hour" />
                                                     </StackPanel>
                                                 </Grid>
-                                                <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="6" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="6,4">
+                                                <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="4" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Padding="6,4">
                                                     <Canvas x:Name="HealthChartCanvas" Height="68" SizeChanged="OnHealthChartSizeChanged">
                                                         <Path x:Name="HealthCurvePath" Stroke="{ThemeResource AccentFillColorDefaultBrush}" StrokeThickness="1.75" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                                                         <Path x:Name="HealthFailuresPath" Stroke="{StaticResource TcpBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
@@ -505,13 +506,13 @@
                                         CornerRadius="{StaticResource OverlayCornerRadius}">
                                     <Grid RowDefinitions="Auto,Auto,1,Auto,Auto" RowSpacing="12">
                                         <StackPanel Spacing="3">
-                                            <TextBlock x:Uid="UDPtest_UdpAssessmentLabel" FontSize="11" FontWeight="SemiBold" CharacterSpacing="60" Foreground="{StaticResource UdpBrush}" Text="UDP ASSESSMENT" />
+                                            <TextBlock x:Uid="UDPtest_UdpAssessmentLabel" FontSize="11" FontWeight="SemiBold" CharacterSpacing="60" Foreground="{StaticResource UdpBrush}" Text="UDP ASSESSMENT" AutomationProperties.HeadingLevel="Level2" />
                                             <TextBlock FontSize="18" FontWeight="SemiBold" LineHeight="22" Text="{x:Bind ViewModel.UdpAssessmentText, Mode=OneWay}" TextWrapping="Wrap" />
                                             <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.UdpDetailText, Mode=OneWay}" />
                                         </StackPanel>
 
                                         <StackPanel Grid.Row="1" Spacing="2">
-                                            <TextBlock x:Uid="UDPtest_TcpBaselineLabel" FontSize="10" FontWeight="SemiBold" CharacterSpacing="60" Foreground="{StaticResource TcpBrush}" Text="TCP BASELINE" />
+                                            <TextBlock x:Uid="UDPtest_TcpBaselineLabel" FontSize="10" FontWeight="SemiBold" CharacterSpacing="60" Foreground="{StaticResource TcpBrush}" Text="TCP BASELINE" AutomationProperties.HeadingLevel="Level2" />
                                             <TextBlock FontSize="14" FontWeight="SemiBold" Text="{x:Bind ViewModel.TcpAssessmentText, Mode=OneWay}" TextWrapping="Wrap" />
                                             <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.TcpDetailText, Mode=OneWay}" />
                                         </StackPanel>
@@ -520,7 +521,7 @@
 
                                         <StackPanel Grid.Row="3" Spacing="3">
                                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBlock x:Uid="UDPtest_CurrentPathLabel" Style="{StaticResource MicroLabelStyle}" Text="CURRENT PATH" />
+                                                <TextBlock x:Uid="UDPtest_CurrentPathLabel" Style="{StaticResource MicroLabelStyle}" Text="CURRENT PATH" AutomationProperties.HeadingLevel="Level2" />
                                                 <FontIcon Glyph="&#xE946;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" ToolTipService.ToolTip="Combined TCP and UDP summary for the current Windows outbound path" />
                                             </StackPanel>
                                             <TextBlock FontSize="13" FontWeight="SemiBold" Text="{x:Bind ViewModel.PathSummaryText, Mode=OneWay}" TextWrapping="Wrap" />
@@ -545,7 +546,7 @@
                                 <StackPanel Spacing="0">
                                     <Grid Padding="16,11" ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="10">
                                         <Border Height="16" CornerRadius="2" VerticalAlignment="Center" Background="{StaticResource TcpBrush}" />
-                                        <TextBlock Grid.Column="1" FontSize="15" FontWeight="SemiBold" CharacterSpacing="40" VerticalAlignment="Center" Text="TCP" />
+                                        <TextBlock Grid.Column="1" FontSize="15" FontWeight="SemiBold" CharacterSpacing="40" VerticalAlignment="Center" Text="TCP" AutomationProperties.HeadingLevel="Level2" />
                                         <TextBlock Grid.Column="3" Style="{StaticResource MicroLabelStyle}" VerticalAlignment="Center" Text="{x:Bind ViewModel.TcpLinksSummaryText, Mode=OneWay}" />
                                     </Grid>
                                     <Grid Padding="16,0,16,7" ColumnSpacing="10">
@@ -573,14 +574,7 @@
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.TcpLines, Mode=OneWay}" ItemTemplate="{StaticResource TcpLineTemplate}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0">
-                                                    <StackPanel.ChildrenTransitions>
-                                                        <TransitionCollection>
-                                                            <RepositionThemeTransition IsStaggeringEnabled="False" />
-                                                            <EntranceThemeTransition FromVerticalOffset="12" IsStaggeringEnabled="True" />
-                                                        </TransitionCollection>
-                                                    </StackPanel.ChildrenTransitions>
-                                                </StackPanel>
+                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>
@@ -595,7 +589,7 @@
                                 <StackPanel Spacing="0">
                                     <Grid Padding="16,11" ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="10">
                                         <Border Height="16" CornerRadius="2" VerticalAlignment="Center" Background="{StaticResource UdpBrush}" />
-                                        <TextBlock Grid.Column="1" FontSize="15" FontWeight="SemiBold" CharacterSpacing="40" VerticalAlignment="Center" Text="UDP" />
+                                        <TextBlock Grid.Column="1" FontSize="15" FontWeight="SemiBold" CharacterSpacing="40" VerticalAlignment="Center" Text="UDP" AutomationProperties.HeadingLevel="Level2" />
                                         <TextBlock Grid.Column="3" Style="{StaticResource MicroLabelStyle}" VerticalAlignment="Center" Text="{x:Bind ViewModel.UdpLinksSummaryText, Mode=OneWay}" />
                                     </Grid>
                                     <Grid Padding="16,0,16,7" ColumnSpacing="10">
@@ -623,14 +617,7 @@
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.UdpLines, Mode=OneWay}" ItemTemplate="{StaticResource UdpLineTemplate}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0">
-                                                    <StackPanel.ChildrenTransitions>
-                                                        <TransitionCollection>
-                                                            <RepositionThemeTransition IsStaggeringEnabled="False" />
-                                                            <EntranceThemeTransition FromVerticalOffset="12" IsStaggeringEnabled="True" />
-                                                        </TransitionCollection>
-                                                    </StackPanel.ChildrenTransitions>
-                                                </StackPanel>
+                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>

@@ -3563,4 +3563,10 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_ServicesHeader.Text" xml:space="preserve">
     <value>AI &amp; Cloud Services</value>
   </data>
+  <data name="TitleBar_BackButton_ToolTip" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="TitleBar_PaneButton_ToolTip" xml:space="preserve">
+    <value>Toggle menu</value>
+  </data>
 </root>

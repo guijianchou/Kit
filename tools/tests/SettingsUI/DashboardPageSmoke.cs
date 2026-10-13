@@ -295,21 +295,8 @@ internal static class DashboardPageSmoke
                     ? buttons.All(button => Math.Abs(button.TransformToVisual(general).TransformPoint(new()).Y - firstPosition.Y) < 1)
                     : buttons.Last().TransformToVisual(general).TransformPoint(new()).Y > firstPosition.Y,
                     "Settings section tags share one wide row and wrap in a narrow window.");
-                var fills = buttons.Select(button => ((SolidColorBrush)button.Background).Color).ToArray();
-                Require(fills.Distinct().Count() == 6 && fills.All(color => color.A > 0 && color.A < 100), "Settings section tags use six translucent colors in " + theme);
-                Require(fills[0].R == (theme == ElementTheme.Dark ? 0xB7 : 0x76), "Section colors follow the current theme.");
                 Require(buttons.All(button => Descendants(button).OfType<FontIcon>().Count() == 1 && button.IsTabStop), "Each settings section offers an icon and keyboard focus.");
-                foreach (var button in buttons)
-                {
-                    var normal = ((SolidColorBrush)button.Background).Color;
-                    var presenter = Descendants(button).OfType<ContentPresenter>().First(item => item.Name == "ContentPresenter");
-                    VisualStateManager.GoToState(button, "PointerOver", false);
-                    var hover = ((SolidColorBrush)presenter.Background).Color;
-                    VisualStateManager.GoToState(button, "Pressed", false);
-                    var pressed = ((SolidColorBrush)presenter.Background).Color;
-                    Require(hover.R == normal.R && hover.G == normal.G && hover.B == normal.B && hover.A > normal.A && pressed.A > hover.A, "Section hover and pressed states retain their color.");
-                    VisualStateManager.GoToState(button, "Normal", false);
-                }
+                Require(buttons.All(button => button.CornerRadius.TopLeft == 4), "Section tags use standard ControlCornerRadius.");
             }
         }
 

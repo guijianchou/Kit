@@ -2261,4 +2261,10 @@
   <data name="NetMap_ServicesHeader.Text" xml:space="preserve">
     <value>AI 与云服务连通性</value>
   </data>
+  <data name="TitleBar_BackButton_ToolTip" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="TitleBar_PaneButton_ToolTip" xml:space="preserve">
+    <value>切换菜单</value>
+  </data>
 </root>

@@ -18,74 +18,6 @@
 
     <local:NavigablePage.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Default">
-                    <Color x:Key="SectionAppearanceFillColor">#22B7A4EE</Color>
-                    <Color x:Key="SectionAppearanceHoverColor">#33B7A4EE</Color>
-                    <Color x:Key="SectionAppearancePressedColor">#44B7A4EE</Color>
-                    <Color x:Key="SectionStartupFillColor">#2282B9F0</Color>
-                    <Color x:Key="SectionStartupHoverColor">#3382B9F0</Color>
-                    <Color x:Key="SectionStartupPressedColor">#4482B9F0</Color>
-                    <Color x:Key="SectionAiFillColor">#226ACBC7</Color>
-                    <Color x:Key="SectionAiHoverColor">#336ACBC7</Color>
-                    <Color x:Key="SectionAiPressedColor">#446ACBC7</Color>
-                    <Color x:Key="SectionDiagnosticsFillColor">#22E8BC70</Color>
-                    <Color x:Key="SectionDiagnosticsHoverColor">#33E8BC70</Color>
-                    <Color x:Key="SectionDiagnosticsPressedColor">#44E8BC70</Color>
-                    <Color x:Key="SectionBackupFillColor">#228ACB9D</Color>
-                    <Color x:Key="SectionBackupHoverColor">#338ACB9D</Color>
-                    <Color x:Key="SectionBackupPressedColor">#448ACB9D</Color>
-                    <Color x:Key="SectionUpdatesFillColor">#22E4A2BF</Color>
-                    <Color x:Key="SectionUpdatesHoverColor">#33E4A2BF</Color>
-                    <Color x:Key="SectionUpdatesPressedColor">#44E4A2BF</Color>
-                    <StaticResource x:Key="SettingsCardBackground" ResourceKey="KitSurfaceBrush" />
-                    <StaticResource x:Key="ExpanderContentBackground" ResourceKey="KitContentLayerBrush" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Light">
-                    <Color x:Key="SectionAppearanceFillColor">#227659C0</Color>
-                    <Color x:Key="SectionAppearanceHoverColor">#337659C0</Color>
-                    <Color x:Key="SectionAppearancePressedColor">#447659C0</Color>
-                    <Color x:Key="SectionStartupFillColor">#222476C7</Color>
-                    <Color x:Key="SectionStartupHoverColor">#332476C7</Color>
-                    <Color x:Key="SectionStartupPressedColor">#442476C7</Color>
-                    <Color x:Key="SectionAiFillColor">#22008C99</Color>
-                    <Color x:Key="SectionAiHoverColor">#33008C99</Color>
-                    <Color x:Key="SectionAiPressedColor">#44008C99</Color>
-                    <Color x:Key="SectionDiagnosticsFillColor">#22B36B12</Color>
-                    <Color x:Key="SectionDiagnosticsHoverColor">#33B36B12</Color>
-                    <Color x:Key="SectionDiagnosticsPressedColor">#44B36B12</Color>
-                    <Color x:Key="SectionBackupFillColor">#2234824D</Color>
-                    <Color x:Key="SectionBackupHoverColor">#3334824D</Color>
-                    <Color x:Key="SectionBackupPressedColor">#4434824D</Color>
-                    <Color x:Key="SectionUpdatesFillColor">#22AD5078</Color>
-                    <Color x:Key="SectionUpdatesHoverColor">#33AD5078</Color>
-                    <Color x:Key="SectionUpdatesPressedColor">#44AD5078</Color>
-                    <StaticResource x:Key="SettingsCardBackground" ResourceKey="KitSurfaceBrush" />
-                    <StaticResource x:Key="ExpanderContentBackground" ResourceKey="KitContentLayerBrush" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="HighContrast">
-                    <StaticResource x:Key="SectionAppearanceFillColor" ResourceKey="SystemColorButtonFaceColor" />
-                    <StaticResource x:Key="SectionAppearanceHoverColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionAppearancePressedColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionStartupFillColor" ResourceKey="SystemColorButtonFaceColor" />
-                    <StaticResource x:Key="SectionStartupHoverColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionStartupPressedColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionAiFillColor" ResourceKey="SystemColorButtonFaceColor" />
-                    <StaticResource x:Key="SectionAiHoverColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionAiPressedColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionDiagnosticsFillColor" ResourceKey="SystemColorButtonFaceColor" />
-                    <StaticResource x:Key="SectionDiagnosticsHoverColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionDiagnosticsPressedColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionBackupFillColor" ResourceKey="SystemColorButtonFaceColor" />
-                    <StaticResource x:Key="SectionBackupHoverColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionBackupPressedColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionUpdatesFillColor" ResourceKey="SystemColorButtonFaceColor" />
-                    <StaticResource x:Key="SectionUpdatesHoverColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SectionUpdatesPressedColor" ResourceKey="SystemColorHighlightTextColor" />
-                    <StaticResource x:Key="SettingsCardBackground" ResourceKey="SystemColorButtonFaceColorBrush" />
-                    <StaticResource x:Key="ExpanderContentBackground" ResourceKey="SystemColorWindowColorBrush" />
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
             <converters:StringToInfoBarSeverityConverter x:Key="StringToInfoBarSeverityConverter" />
             <Style BasedOn="{StaticResource DefaultSettingsGroupStyle}" TargetType="controls:SettingsGroup">
                 <Setter Property="Padding" Value="1,0,0,0" />
@@ -97,30 +29,14 @@
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical" Spacing="24">
                 <tkcontrols:WrapPanel x:Name="SettingsSectionNavigation" HorizontalSpacing="8" VerticalSpacing="8">
-                    <tkcontrols:WrapPanel.Resources>
-                        <Style BasedOn="{StaticResource DefaultButtonStyle}" TargetType="Button">
-                            <Setter Property="MinHeight" Value="36" />
-                            <Setter Property="MinWidth" Value="96" />
-                            <Setter Property="Padding" Value="12,4" />
-                            <Setter Property="CornerRadius" Value="8" />
-                            <Setter Property="FontSize" Value="13" />
-                            <Setter Property="FontWeight" Value="SemiBold" />
-                            <Setter Property="BorderThickness" Value="1" />
-                            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-                        </Style>
-                    </tkcontrols:WrapPanel.Resources>
                     <Button
                         AutomationProperties.Name="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
                         Click="SettingsSection_Click"
                         Tag="AppearanceAndBehaviorGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}">
-                        <Button.Resources>
-                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionAppearanceFillColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionAppearanceHoverColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionAppearancePressedColor}" />
-                        </Button.Resources>
+                        ToolTipService.ToolTip="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
+                        Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE790;" />
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE790;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             <TextBlock x:Uid="General_SectionAppearance" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -128,14 +44,10 @@
                         AutomationProperties.Name="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
                         Click="SettingsSection_Click"
                         Tag="StartupAndPermissionsGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}">
-                        <Button.Resources>
-                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionStartupFillColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionStartupHoverColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionStartupPressedColor}" />
-                        </Button.Resources>
+                        ToolTipService.ToolTip="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
+                        Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xF71C;" />
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xF71C;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             <TextBlock x:Uid="General_SectionStartup" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -143,14 +55,10 @@
                         AutomationProperties.Name="{Binding ElementName=AiServicesGroup, Path=Header}"
                         Click="SettingsSection_Click"
                         Tag="AiServicesGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=AiServicesGroup, Path=Header}">
-                        <Button.Resources>
-                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionAiFillColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionAiHoverColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionAiPressedColor}" />
-                        </Button.Resources>
+                        ToolTipService.ToolTip="{Binding ElementName=AiServicesGroup, Path=Header}"
+                        Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEA80;" />
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEA80;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             <TextBlock x:Uid="General_SectionAi" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -158,14 +66,10 @@
                         AutomationProperties.Name="{Binding ElementName=DiagnosticsGroup, Path=Header}"
                         Click="SettingsSection_Click"
                         Tag="DiagnosticsGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=DiagnosticsGroup, Path=Header}">
-                        <Button.Resources>
-                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionDiagnosticsFillColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionDiagnosticsHoverColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionDiagnosticsPressedColor}" />
-                        </Button.Resources>
+                        ToolTipService.ToolTip="{Binding ElementName=DiagnosticsGroup, Path=Header}"
+                        Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEC19;" />
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEC19;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             <TextBlock x:Uid="General_SectionDiagnostics" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -173,14 +77,10 @@
                         AutomationProperties.Name="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
                         Click="SettingsSection_Click"
                         Tag="BackupAndRestoreGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=BackupAndRestoreGroup, Path=Header}">
-                        <Button.Resources>
-                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionBackupFillColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionBackupHoverColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionBackupPressedColor}" />
-                        </Button.Resources>
+                        ToolTipService.ToolTip="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
+                        Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE777;" />
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE777;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             <TextBlock x:Uid="General_SectionBackup" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -188,14 +88,10 @@
                         AutomationProperties.Name="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
                         Click="SettingsSection_Click"
                         Tag="VersionAndUpdateGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=VersionAndUpdateGroup, Path=Header}">
-                        <Button.Resources>
-                            <SolidColorBrush x:Key="ButtonBackground" Color="{ThemeResource SectionUpdatesFillColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource SectionUpdatesHoverColor}" />
-                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource SectionUpdatesPressedColor}" />
-                        </Button.Resources>
+                        ToolTipService.ToolTip="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
+                        Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE895;" />
+                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE895;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             <TextBlock x:Uid="General_SectionUpdates" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -233,7 +129,6 @@
                     </tkcontrols:SettingsCard>
                     <InfoBar
                         x:Uid="LanguageRestartInfo"
-                        CornerRadius="8"
                         IsClosable="False"
                         IsOpen="{x:Bind Mode=OneWay, Path=ViewModel.LanguageChanged}"
                         IsTabStop="True"
@@ -241,9 +136,7 @@
                         <InfoBar.ActionButton>
                             <Button
                                 x:Uid="LanguageRestartInfoButton"
-                                MinHeight="32"
-                                CornerRadius="6"
-                                Padding="12,5"
+                                Style="{StaticResource KitActionButtonStyle}"
                                 Click="Click_LanguageRestart" />
                         </InfoBar.ActionButton>
                     </InfoBar>
@@ -314,9 +207,7 @@
                         </tkcontrols:SettingsExpander.Description>
                         <Button
                             x:Uid="GeneralPage_RestartAsAdmin_Button"
-                            MinHeight="32"
-                            CornerRadius="6"
-                            Padding="14,5"
+                            Style="{StaticResource KitActionButtonStyle}"
                             Command="{Binding RestartElevatedButtonEventHandler}"
                             IsEnabled="{Binding IsAdminButtonEnabled}" />
                         <tkcontrols:SettingsExpander.Items>
@@ -349,7 +240,6 @@
                         Spacing="{StaticResource SettingsCardSpacing}"
                         Visibility="{x:Bind ViewModel.AiServices.HubContentVisibility, Mode=OneWay}">
                         <InfoBar
-                            CornerRadius="8"
                             IsClosable="True"
                             IsOpen="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=TwoWay}"
                             Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
@@ -382,13 +272,10 @@
                                 </ComboBox>
                                 <Button
                                     x:Uid="AiHub_ApplyKernelButton"
-                                    MinHeight="32"
-                                    CornerRadius="6"
-                                    Padding="14,5"
                                     MinWidth="80"
                                     Command="{x:Bind ViewModel.AiServices.ApplyKernelSwitchCommand}"
                                     Content="Apply"
-                                    Style="{StaticResource AccentButtonStyle}"
+                                    Style="{StaticResource KitPrimaryActionButtonStyle}"
                                     Visibility="{x:Bind ViewModel.AiServices.IsKernelSwitchPending, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                             </StackPanel>
                             <tkcontrols:SettingsExpander.Items>
@@ -398,9 +285,7 @@
                                     Header="Kernel updates">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Button
-                                            MinHeight="32"
-                                            CornerRadius="6"
-                                            Padding="12,5"
+                                            Style="{StaticResource KitActionButtonStyle}"
                                             Command="{x:Bind ViewModel.AiServices.CheckKernelUpdatesCommand}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon FontSize="13" Glyph="&#xE72C;" />
@@ -408,11 +293,8 @@
                                             </StackPanel>
                                         </Button>
                                         <Button
-                                            MinHeight="32"
-                                            CornerRadius="6"
-                                            Padding="12,5"
-                                            Command="{x:Bind ViewModel.AiServices.DownloadKernelCommand}"
-                                            Style="{StaticResource AccentButtonStyle}">
+                                            Style="{StaticResource KitActionButtonStyle}"
+                                            Command="{x:Bind ViewModel.AiServices.DownloadKernelCommand}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon FontSize="13" Glyph="&#xE896;" />
                                                 <TextBlock x:Uid="AiHub_DownloadKernelText" Text="Download or update" />
@@ -457,9 +339,7 @@
                                     Text="{x:Bind ViewModel.AiServices.MainEndpoint.ModelSummary, Mode=OneWay}" />
                                 <Button
                                     x:Uid="AiHub_TestConnectionButton"
-                                    MinHeight="32"
-                                    CornerRadius="6"
-                                    Padding="14,5"
+                                    Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.AiServices.MainEndpoint.TestCommand}"
                                     Content="Test connection" />
                             </StackPanel>
@@ -526,9 +406,7 @@
                                     Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.ModelSummary, Mode=OneWay}" />
                                 <Button
                                     x:Uid="AiHub_TestConnectionButton"
-                                    MinHeight="32"
-                                    CornerRadius="6"
-                                    Padding="14,5"
+                                    Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.AiServices.FallbackEndpoint.TestCommand}"
                                     Content="Test connection" />
                             </StackPanel>
@@ -538,7 +416,7 @@
                                         Width="320"
                                         PlaceholderText="https://api.example.com"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.BaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                 </tkcontrols:SettingsCard>
+                                </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiKeyCard" Header="API key">
                                     <PasswordBox
                                         x:Name="AiFallbackApiKeyBox"
@@ -576,9 +454,7 @@
                                 <tkcontrols:SettingsCard x:Uid="AiHub_ClearFallbackCard" Header="Clear fallback endpoint">
                                     <Button
                                         x:Uid="AiHub_ClearFallbackButton"
-                                        MinHeight="32"
-                                        CornerRadius="6"
-                                        Padding="14,5"
+                                        Style="{StaticResource KitActionButtonStyle}"
                                         Command="{x:Bind ViewModel.AiServices.ClearFallbackCommand}"
                                         Content="Clear" />
                                 </tkcontrols:SettingsCard>
@@ -595,18 +471,13 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button
                                     x:Uid="AiHub_DiscardEndpointsButton"
-                                    MinHeight="32"
-                                    CornerRadius="6"
-                                    Padding="14,5"
+                                    Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.AiServices.DiscardEndpointChangesCommand}" />
                                 <Button
                                     x:Uid="AiHub_SaveEndpointsButton"
-                                    MinHeight="32"
-                                    CornerRadius="6"
-                                    Padding="14,5"
                                     AutomationProperties.AutomationId="AiHub_SaveEndpointsButton"
                                     Command="{x:Bind ViewModel.AiServices.SaveEndpointsCommand}"
-                                    Style="{StaticResource AccentButtonStyle}" />
+                                    Style="{StaticResource KitPrimaryActionButtonStyle}" />
                             </StackPanel>
                         </tkcontrols:SettingsCard>
 
@@ -624,7 +495,7 @@
                                             MinHeight="160"
                                             MaxHeight="320"
                                             AcceptsReturn="True"
-                                            FontFamily="Consolas, Cascadia Code"
+                                            FontFamily="{StaticResource KitMonoFontFamily}"
                                             FontSize="12"
                                             MaxLength="64000"
                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -645,21 +516,16 @@
                                                 TextTrimming="CharacterEllipsis" />
                                             <Button
                                                 x:Uid="AiHub_ResetPolicyButton"
-                                                MinHeight="32"
-                                                CornerRadius="6"
-                                                Padding="14,5"
                                                 Grid.Column="1"
+                                                Style="{StaticResource KitActionButtonStyle}"
                                                 Command="{x:Bind ViewModel.AiServices.ResetActivePolicyCommand}"
                                                 Content="Reset to default" />
                                             <Button
                                                 x:Uid="AiHub_SavePolicyButton"
-                                                MinHeight="32"
-                                                CornerRadius="6"
-                                                Padding="14,5"
                                                 Grid.Column="2"
                                                 Command="{x:Bind ViewModel.AiServices.SaveActivePolicyCommand}"
                                                 Content="Save"
-                                                Style="{StaticResource AccentButtonStyle}" />
+                                                Style="{StaticResource KitPrimaryActionButtonStyle}" />
                                         </Grid>
                                     </StackPanel>
                                 </tkcontrols:SettingsCard>
@@ -697,9 +563,7 @@
                                 Description="{x:Bind ViewModel.LogsFolderPath, Mode=OneWay}">
                                 <Button
                                     x:Uid="General_OpenLogsFolderButton"
-                                    MinHeight="32"
-                                    CornerRadius="6"
-                                    Padding="12,5"
+                                    Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.OpenLogsFolderCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xEC50;" FontSize="13" />
@@ -719,15 +583,11 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button
                                 x:Uid="General_SettingsBackupAndRestore_ButtonBackup"
-                                MinHeight="32"
-                                CornerRadius="6"
-                                Padding="14,5"
+                                Style="{StaticResource KitActionButtonStyle}"
                                 Command="{Binding BackupConfigsEventHandler}" />
                             <Button
                                 x:Uid="General_SettingsBackupAndRestore_ButtonRestore"
-                                MinHeight="32"
-                                CornerRadius="6"
-                                Padding="14,5"
+                                Style="{StaticResource KitActionButtonStyle}"
                                 Command="{Binding RestoreConfigsEventHandler}" />
                         </StackPanel>
                         <tkcontrols:SettingsExpander.Items>
@@ -754,10 +614,7 @@
                                     </TextBlock>
                                     <Button
                                         x:Uid="General_SettingsBackupAndRestore_ButtonSelectFolder"
-                                        Width="34"
-                                        MinHeight="32"
-                                        CornerRadius="6"
-                                        Padding="0"
+                                        Style="{StaticResource KitIconButtonStyle}"
                                         Grid.Column="1"
                                         Command="{Binding SelectSettingBackupDirEventHandler}"
                                         Content="&#xe8da;"
@@ -829,7 +686,6 @@
                     <InfoBar
                         Title="{x:Bind ViewModel.SettingsBackupMessage, Mode=OneWay}"
                         IsClosable="False"
-                        CornerRadius="8"
                         IsOpen="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
                         IsTabStop="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
                         Severity="{x:Bind ViewModel.BackupRestoreMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}}" />
@@ -865,13 +721,10 @@
                             </StackPanel>
                             <Button
                                 x:Uid="GeneralPage_CheckForUpdates"
-                                MinHeight="32"
-                                CornerRadius="6"
-                                Padding="14,5"
                                 HorizontalAlignment="Right"
                                 Command="{Binding CheckForUpdatesEventHandler}"
                                 IsEnabled="{x:Bind ViewModel.IsCheckForUpdatesButtonEnabled, Mode=OneWay}"
-                                Style="{StaticResource AccentButtonStyle}"
+                                Style="{StaticResource KitPrimaryActionButtonStyle}"
                                 Visibility="{Binding Mode=OneWay, Path=IsCheckingForUpdates, Converter={StaticResource BoolNegationConverter}}" />
                         </Grid>
                     </tkcontrols:SettingsCard>
@@ -880,7 +733,6 @@
                         <InfoBar
                             Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
                             IsClosable="False"
-                            CornerRadius="8"
                             IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
                             IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
                             Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}">

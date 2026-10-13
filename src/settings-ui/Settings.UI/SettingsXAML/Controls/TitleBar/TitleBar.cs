@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -97,12 +97,24 @@ public partial class TitleBar : Control
         {
             backButton.Click -= BackButton_Click;
             backButton.Click += BackButton_Click;
+            string backTip = Helpers.ResourceLoaderInstance.ResourceLoader.GetString("TitleBar_BackButton_ToolTip");
+            if (!string.IsNullOrEmpty(backTip))
+            {
+                ToolTipService.SetToolTip(backButton, backTip);
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(backButton, backTip);
+            }
         }
 
         if (GetTemplateChild(PartPaneButton) is Button paneButton)
         {
             paneButton.Click -= PaneButton_Click;
             paneButton.Click += PaneButton_Click;
+            string paneTip = Helpers.ResourceLoaderInstance.ResourceLoader.GetString("TitleBar_PaneButton_ToolTip");
+            if (!string.IsNullOrEmpty(paneTip))
+            {
+                ToolTipService.SetToolTip(paneButton, paneTip);
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(paneButton, paneTip);
+            }
         }
 
         SizeChanged -= this.TitleBar_SizeChanged;

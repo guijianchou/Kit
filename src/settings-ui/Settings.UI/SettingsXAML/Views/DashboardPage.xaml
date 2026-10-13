@@ -21,7 +21,7 @@
             <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="20" />
+            <Setter Property="Padding" Value="16,14" />
         </Style>
         <ResourceDictionary x:Key="DashboardEgressStyles">
             <Style x:Key="UnknownText" TargetType="TextBlock">
@@ -102,13 +102,7 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Orientation="Vertical" Spacing="16">
-                        <StackPanel.ChildrenTransitions>
-                            <TransitionCollection>
-                                <EntranceThemeTransition FromVerticalOffset="20" IsStaggeringEnabled="True" />
-                                <RepositionThemeTransition IsStaggeringEnabled="False" />
-                            </TransitionCollection>
-                        </StackPanel.ChildrenTransitions>
+                    <StackPanel Orientation="Vertical" Spacing="16" ChildrenTransitions="{StaticResource SettingsCardsAnimations}">
                         <controls:Card x:Name="QuickAccessCard" x:Uid="QuickAccessTitle" VerticalAlignment="Top">
                             <Grid>
                                 <controls:QuickAccessList
@@ -177,13 +171,7 @@
                         </Border>
                     </StackPanel>
 
-                    <StackPanel x:Name="SecondaryColumn" Grid.Column="1" Spacing="16">
-                        <StackPanel.ChildrenTransitions>
-                            <TransitionCollection>
-                                <EntranceThemeTransition FromVerticalOffset="20" IsStaggeringEnabled="True" />
-                                <RepositionThemeTransition IsStaggeringEnabled="False" />
-                            </TransitionCollection>
-                        </StackPanel.ChildrenTransitions>
+                    <StackPanel x:Name="SecondaryColumn" Grid.Column="1" Spacing="16" ChildrenTransitions="{StaticResource SettingsCardsAnimations}">
                         <controls:Card
                             x:Name="UtilitiesCard"
                             x:Uid="UtilitiesHeader"
@@ -193,13 +181,9 @@
                             <controls:Card.TitleContent>
                                 <Button
                                     x:Uid="Dashboard_SortBy"
-                                    Width="32"
-                                    Height="32"
-                                    Padding="0"
-                                    CornerRadius="6"
                                     Margin="0,0,4,0"
                                     VerticalAlignment="Center"
-                                    Style="{StaticResource SubtleButtonStyle}">
+                                    Style="{StaticResource KitSubtleIconButtonStyle}">
                                     <ToolTipService.ToolTip>
                                         <TextBlock x:Uid="Dashboard_SortBy_ToolTip" />
                                     </ToolTipService.ToolTip>

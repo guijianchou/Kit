@@ -1,4 +1,4 @@
-﻿<Page
+<Page
     x:Class="Kit.QuickAccess.Flyout.AppsListPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -29,8 +29,7 @@
                 <Button
                     x:Uid="Dashboard_SortBy"
                     VerticalAlignment="Center"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{StaticResource SubtleButtonStyle}">
+                    Style="{StaticResource KitSubtleIconButtonStyle}">
                     <ToolTipService.ToolTip>
                         <TextBlock x:Uid="Dashboard_SortBy_ToolTip" />
                     </ToolTipService.ToolTip>
@@ -52,8 +51,8 @@
                 </Button>
                 <Button
                     x:Uid="BackBtn"
-                    Padding="8,4,8,4"
                     VerticalAlignment="Center"
+                    Style="{StaticResource KitActionButtonStyle}"
                     Click="BackButton_Click">
                     <Button.Content>
                         <StackPanel

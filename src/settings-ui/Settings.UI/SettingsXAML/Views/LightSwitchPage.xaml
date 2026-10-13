@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <local:NavigablePage
     x:Class="Kit.Settings.UI.Views.LightSwitchPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -89,6 +89,7 @@
                                             Text="{x:Bind ViewModel.SyncButtonInformation, Mode=OneWay}" />
                                         <Button
                                             x:Uid="LightSwitch_SetLocationButton"
+                                            Style="{StaticResource KitActionButtonStyle}"
                                             AutomationProperties.AutomationId="SetLocationButton_LightSwitch"
                                             Click="SyncLocationButton_Click" />
                                     </StackPanel>
@@ -135,29 +136,21 @@
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard
                                     x:Name="NoScheduleCard"
-                                    Padding="0"
                                     HorizontalContentAlignment="Stretch"
-                                    Background="{ThemeResource InfoBarInformationalSeverityBackgroundBrush}"
                                     ContentAlignment="Vertical"
                                     Visibility="Visible">
                                     <InfoBar
                                         x:Uid="LightSwitch_ScheduleOffMessage"
-                                        Background="Transparent"
-                                        BorderThickness="0"
                                         IsClosable="False"
                                         IsOpen="True"
                                         Severity="Informational" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard
                                     x:Name="FollowNightLightCard"
-                                    Padding="0"
                                     HorizontalContentAlignment="Stretch"
-                                    Background="{ThemeResource InfoBarInformationalSeverityBackgroundBrush}"
                                     ContentAlignment="Vertical"
                                     Visibility="Collapsed">
                                     <InfoBar
-                                        Background="Transparent"
-                                        BorderThickness="0"
                                         IsClosable="False"
                                         IsOpen="True"
                                         Severity="Informational">
@@ -223,34 +216,6 @@
                                 x:Uid="LightSwitch_LocationDialog_Description"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 TextWrapping="Wrap" />
-                            <!--<AutoSuggestBox
-                                x:Name="CityAutoSuggestBox"
-                                Grid.Row="1"
-                                Margin="0,16,0,8"
-                                AutomationProperties.AutomationId="CitySearchBox_LightSwitch"
-                                ItemsSource="{x:Bind ViewModel.SearchLocations, Mode=OneWay}"
-                                PlaceholderText="Search for a city near you.."
-                                QueryIcon="Find"
-                                SuggestionChosen="CityAutoSuggestBox_SuggestionChosen"
-                                TextChanged="CityAutoSuggestBox_TextChanged">
-                                <AutoSuggestBox.ItemTemplate>
-                                    <DataTemplate x:DataType="helpers:SearchLocation">
-                                        <Grid Padding="12,8,0,8">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Text="{x:Bind City}" />
-                                            <TextBlock
-                                                Grid.Row="1"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Text="{x:Bind Country}" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </AutoSuggestBox.ItemTemplate>
-                            </AutoSuggestBox>-->
-
                             <Grid
                                 Grid.Row="1"
                                 Margin="0,12,0,0"
@@ -284,6 +249,7 @@
                                     Margin="4,0,0,0"
                                     HorizontalAlignment="Stretch"
                                     VerticalAlignment="Bottom"
+                                    Style="{StaticResource KitActionButtonStyle}"
                                     AutomationProperties.AutomationId="SyncLocationButton_LightSwitch"
                                     Click="GetGeoLocation_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="8">

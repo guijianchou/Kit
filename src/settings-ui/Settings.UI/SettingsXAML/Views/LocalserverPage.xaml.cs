@@ -241,11 +241,6 @@ namespace Kit.Settings.UI.Views
             ViewModel.AddNewLine();
         }
 
-        private void ReloadCatalog_Click(object sender, RoutedEventArgs e)
-        {
-            _ = ViewModel.LoadLinesAsync();
-        }
-
         private void SaveCatalog_Click(object sender, RoutedEventArgs e)
         {
             _ = ViewModel.SaveLinesAsync(markDirty: false, showSuccess: true);

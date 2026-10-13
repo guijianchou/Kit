@@ -74,6 +74,7 @@
         <controls:SettingsPageControl
             x:Uid="Localserver"
             ModuleTitle="Local Server"
+            ModuleImageSource="ms-appx:///Assets/Settings/Modules/Localserver.png"
             IsTabStop="False">
             <controls:SettingsPageControl.ModuleContent>
                 <StackPanel Spacing="16">
@@ -100,7 +101,7 @@
 
                             <!-- Live Session Telemetry Glass Sub-Bar -->
                             <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0"
-                                    Background="{ThemeResource MetricCardBackgroundBrush}"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     Padding="16,10" CornerRadius="0,0,8,8">
                                 <Grid ColumnSpacing="14" ColumnDefinitions="Auto,*,Auto">
                                     <!-- Live Status Dot & Quick Session Summary -->
@@ -144,7 +145,7 @@
                                     <!-- Quick Refresh Action on Right -->
                                     <Button Grid.Column="2" x:Uid="Localserver_RefreshButton" AutomationProperties.Name="Refresh telemetry" ToolTipService.ToolTip="Refresh status and resource usage"
                                             Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}"
-                                            Height="28" CornerRadius="6" Padding="10,0">
+                                            Style="{StaticResource KitCompactToolbarButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon FontSize="11" Glyph="&#xE72C;" />
                                             <TextBlock x:Uid="Localserver_RefreshButtonText" Text="Refresh" FontSize="12" />
@@ -160,8 +161,7 @@
                         IsClosable="True"
                         IsOpen="{x:Bind ViewModel.IsErrorOpen, Mode=TwoWay}"
                         Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}"
-                        CornerRadius="8" />
+                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}" />
 
                     <!-- All module settings disabled when master switch is OFF -->
                     <ContentControl IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}"
@@ -184,26 +184,26 @@
                                     </Border>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Button AutomationProperties.Name="Add service" Click="AddLine_Click" IsEnabled="{x:Bind ViewModel.CanAddLine, Mode=OneWay}" Style="{ThemeResource AccentButtonStyle}" Height="32" CornerRadius="6" Padding="12,0" ToolTipService.ToolTip="Add a new local service">
+                                    <Button AutomationProperties.Name="Add service" Click="AddLine_Click" IsEnabled="{x:Bind ViewModel.CanAddLine, Mode=OneWay}" Style="{StaticResource KitPrimaryActionButtonStyle}" ToolTipService.ToolTip="Add a new local service">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE710;" FontSize="12" />
                                             <TextBlock x:Uid="Localserver_AddLineButtonText" FontSize="13" Text="Add service" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button AutomationProperties.Name="Start all" Click="StartAll_Click" IsEnabled="{x:Bind ViewModel.CanStartAll, Mode=OneWay}" Height="32" CornerRadius="6" Padding="12,0" ToolTipService.ToolTip="Start all registered services">
+                                    <Button AutomationProperties.Name="Start all" Click="StartAll_Click" IsEnabled="{x:Bind ViewModel.CanStartAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}" ToolTipService.ToolTip="Start all registered services">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE768;" FontSize="12" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
                                             <TextBlock x:Uid="Localserver_StartAllButtonText" FontSize="13" Text="Start all" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button AutomationProperties.Name="Stop all" Click="StopAll_Click" IsEnabled="{x:Bind ViewModel.CanStopAll, Mode=OneWay}" Height="32" CornerRadius="6" Padding="12,0" ToolTipService.ToolTip="Stop all running services">
+                                    <Button AutomationProperties.Name="Stop all" Click="StopAll_Click" IsEnabled="{x:Bind ViewModel.CanStopAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}" ToolTipService.ToolTip="Stop all running services">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE71A;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                             <TextBlock x:Uid="Localserver_StopAllButtonText" FontSize="13" Text="Stop all" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                     <Border Width="1" Height="20" Margin="2,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                    <Button AutomationProperties.Name="Refresh status" ToolTipService.ToolTip="Refresh status and resource usage" Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}" Width="32" Height="32" CornerRadius="6" Padding="0">
+                                    <Button AutomationProperties.Name="Refresh status" ToolTipService.ToolTip="Refresh status and resource usage" Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}" Style="{StaticResource KitIconButtonStyle}">
                                         <FontIcon FontSize="13" Glyph="&#xE72C;" />
                                     </Button>
                                 </StackPanel>
@@ -230,7 +230,7 @@
                                     CornerRadius="{StaticResource OverlayCornerRadius}">
                                 <StackPanel Spacing="0">
                                     <!-- Table Header -->
-                                    <Grid Padding="17,10" ColumnSpacing="10" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <Grid Padding="16,10" ColumnSpacing="10" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="1.1*" MinWidth="96" />
                                             <ColumnDefinition Width="0.5*" MinWidth="48" />
@@ -254,14 +254,7 @@
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0">
-                                                    <StackPanel.ChildrenTransitions>
-                                                        <TransitionCollection>
-                                                            <RepositionThemeTransition IsStaggeringEnabled="False" />
-                                                            <EntranceThemeTransition FromVerticalOffset="12" IsStaggeringEnabled="True" />
-                                                        </TransitionCollection>
-                                                    </StackPanel.ChildrenTransitions>
-                                                </StackPanel>
+                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
@@ -285,10 +278,10 @@
                                                         <!-- Row 0: NAME + Tag + Lock -->
                                                         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                             <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" />
-                                                            <Border Padding="4,1" CornerRadius="3" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind TagVisibility, Mode=OneWay}" VerticalAlignment="Center">
+                                                            <Border Padding="4,1" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind TagVisibility, Mode=OneWay}" VerticalAlignment="Center">
                                                                 <TextBlock Text="{x:Bind TagLabel, Mode=OneWay}" FontSize="10" FontWeight="SemiBold" Foreground="{x:Bind TagBrush, Mode=OneWay}" />
                                                             </Border>
-                                                            <Border Padding="4,1" CornerRadius="3" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind AdoptedVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind AdoptedTooltip, Mode=OneWay}" VerticalAlignment="Center">
+                                                            <Border Padding="4,1" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind AdoptedVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind AdoptedTooltip, Mode=OneWay}" VerticalAlignment="Center">
                                                                 <TextBlock x:Uid="Localserver_AdoptedBadge" Text="ADOPTED" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
                                                             </Border>
                                                             <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind LockVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LockTooltip, Mode=OneWay}" VerticalAlignment="Center" />
@@ -329,22 +322,14 @@
                                                                 IsEnabled="{x:Bind CanToggle, Mode=OneWay}"
                                                                 AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
                                                             <Button
-                                                                Width="32"
-                                                                Height="32"
-                                                                CornerRadius="6"
-                                                                Padding="0"
-                                                                Style="{ThemeResource SubtleButtonStyle}"
+                                                                Style="{StaticResource KitSubtleIconButtonStyle}"
                                                                 Click="ToggleConfigExpanded_Click"
                                                                 DataContext="{x:Bind}"
                                                                 ToolTipService.ToolTip="Configure service">
                                                                 <FontIcon FontSize="12" Glyph="{x:Bind ExpandGlyph, Mode=OneWay}" />
                                                             </Button>
                                                             <Button
-                                                                Width="32"
-                                                                Height="32"
-                                                                CornerRadius="6"
-                                                                Padding="0"
-                                                                Style="{ThemeResource SubtleButtonStyle}"
+                                                                Style="{StaticResource KitSubtleIconButtonStyle}"
                                                                 ToolTipService.ToolTip="More options">
                                                                 <FontIcon FontSize="14" Glyph="&#xE712;" />
                                                                 <Button.Flyout>
@@ -418,19 +403,19 @@
                                                                 Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
                                                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                                                 BorderThickness="1"
-                                                                CornerRadius="6"
+                                                                CornerRadius="4"
                                                                 Visibility="{x:Bind ConfigVisibility, Mode=OneWay}">
                                                             <StackPanel Spacing="12">
                                                                 <Grid ColumnDefinitions="110,*" ColumnSpacing="12" RowSpacing="10" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
                                                                     <!-- NAME -->
                                                                     <TextBlock x:Uid="Localserver_ConfigName" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                                                    <TextBox Grid.Column="1" Text="{x:Bind Name, Mode=TwoWay}" CornerRadius="6" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
+                                                                    <TextBox Grid.Column="1" Text="{x:Bind Name, Mode=TwoWay}" CornerRadius="4" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
 
                                                                     <!-- COMMAND -->
                                                                     <TextBlock Grid.Row="1" x:Uid="Localserver_ConfigCommand" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                                                     <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                                        <TextBox Text="{x:Bind Executable, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="6" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
-                                                                        <Button Grid.Column="1" Click="BrowseExecutable_Click" DataContext="{x:Bind}" Height="32" CornerRadius="6" Padding="10,0" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                                                        <TextBox Text="{x:Bind Executable, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="4" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
+                                                                        <Button Grid.Column="1" Click="BrowseExecutable_Click" DataContext="{x:Bind}" Style="{StaticResource KitActionButtonStyle}" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
                                                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                                                 <FontIcon Glyph="&#xE8B7;" FontSize="12" />
                                                                                 <TextBlock x:Uid="Localserver_BrowseFileButtonText" FontSize="12" Text="Browse..." VerticalAlignment="Center" />
@@ -440,13 +425,13 @@
 
                                                                     <!-- ARGUMENTS -->
                                                                     <TextBlock Grid.Row="2" x:Uid="Localserver_ConfigArguments" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{x:Bind BaseArgsText, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="6" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
+                                                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{x:Bind BaseArgsText, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="4" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
 
                                                                     <!-- WORKING DIR -->
                                                                     <TextBlock Grid.Row="3" x:Uid="Localserver_ConfigWorkingDir" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                                                     <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                                        <TextBox Text="{x:Bind Cwd, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="6" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
-                                                                        <Button Grid.Column="1" Click="BrowseCwd_Click" DataContext="{x:Bind}" Height="32" CornerRadius="6" Padding="10,0" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                                                        <TextBox Text="{x:Bind Cwd, Mode=TwoWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="4" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
+                                                                        <Button Grid.Column="1" Click="BrowseCwd_Click" DataContext="{x:Bind}" Style="{StaticResource KitActionButtonStyle}" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
                                                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                                                 <FontIcon Glyph="&#xE838;" FontSize="12" />
                                                                                 <TextBlock x:Uid="Localserver_BrowseFolderButtonText" FontSize="12" Text="Browse..." VerticalAlignment="Center" />
@@ -457,13 +442,13 @@
                                                                     <!-- PORT -->
                                                                     <TextBlock Grid.Row="4" x:Uid="Localserver_ConfigPort" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                                                     <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                                                                        <NumberBox Value="{x:Bind PortValue, Mode=TwoWay}" Width="130" Minimum="0" Maximum="65535" SpinButtonPlacementMode="Compact" CornerRadius="6" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
+                                                                        <NumberBox Value="{x:Bind PortValue, Mode=TwoWay}" Width="130" Minimum="0" Maximum="65535" SpinButtonPlacementMode="Compact" CornerRadius="4" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
                                                                         <TextBlock Text="{x:Bind PortHintText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                                                     </StackPanel>
 
                                                                     <!-- RESOLVED COMMAND -->
                                                                     <TextBlock Grid.Row="5" x:Uid="Localserver_ConfigResolvedCommand" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                                                    <TextBox Grid.Row="5" Grid.Column="1" Text="{x:Bind ResolvedCommandText, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="6" IsReadOnly="True" TextWrapping="Wrap" />
+                                                                    <TextBox Grid.Row="5" Grid.Column="1" Text="{x:Bind ResolvedCommandText, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" CornerRadius="4" IsReadOnly="True" TextWrapping="Wrap" />
                                                                 </Grid>
 
                                                                 <!-- Bottom of Expanded Panel: Action buttons (Delete on left, Save on right) -->
@@ -473,9 +458,7 @@
                                                                     <Button
                                                                         HorizontalAlignment="Left"
                                                                         Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                                                        Height="32"
-                                                                        CornerRadius="6"
-                                                                        Padding="12,5"
+                                                                        Style="{StaticResource KitActionButtonStyle}"
                                                                         IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
                                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                                             <FontIcon Glyph="&#xE74D;" FontSize="13" />
@@ -486,7 +469,7 @@
                                                                                 <StackPanel MaxWidth="300" Spacing="10">
                                                                                     <TextBlock x:Uid="Localserver_ConfirmDeleteTitle" FontWeight="SemiBold" />
                                                                                     <TextBlock x:Uid="Localserver_ConfirmDeleteDescription" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                                                                    <Button x:Uid="Localserver_ConfirmDeleteConfirmButton" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Height="32" CornerRadius="6" Padding="14,5" Click="DeleteLine_Click" DataContext="{x:Bind}" />
+                                                                                    <Button x:Uid="Localserver_ConfirmDeleteConfirmButton" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Style="{StaticResource KitActionButtonStyle}" Click="DeleteLine_Click" DataContext="{x:Bind}" />
                                                                                 </StackPanel>
                                                                             </Flyout>
                                                                         </Button.Flyout>
@@ -494,10 +477,7 @@
 
                                                                     <Button
                                                                         HorizontalAlignment="Right"
-                                                                        Style="{ThemeResource AccentButtonStyle}"
-                                                                        Height="32"
-                                                                        CornerRadius="6"
-                                                                        Padding="14,5"
+                                                                        Style="{StaticResource KitPrimaryActionButtonStyle}"
                                                                         Click="SaveCatalog_Click"
                                                                         IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
                                                                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -556,7 +536,7 @@
                                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                                     <Ellipse Width="8" Height="8" Fill="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
-                                                    <TextBlock x:Uid="Localserver_SectionEnvironment" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                    <TextBlock x:Uid="Localserver_SectionEnvironment" Style="{StaticResource BodyStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
                                                 </StackPanel>
                                                 <ComboBox
                                                     x:Uid="Localserver_SelectedLineComboBox"
@@ -565,7 +545,7 @@
                                                     Width="180"
                                                     Height="32"
                                                     Padding="10,0"
-                                                    CornerRadius="6"
+                                                    CornerRadius="4"
                                                     DisplayMemberPath="Name"
                                                     FontSize="12"
                                                     ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}"
@@ -615,11 +595,11 @@
                                                         </ItemsControl.ItemsPanel>
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate x:DataType="viewModels:EnvironmentCheckChipModel">
-                                                                <Border Padding="8,4" Background="{ThemeResource PillBadgeBackgroundBrush}" BorderBrush="{x:Bind Brush}" BorderThickness="1" CornerRadius="6" ToolTipService.ToolTip="{x:Bind Tooltip}">
+                                                                <Border Padding="8,4" Background="{ThemeResource PillBadgeBackgroundBrush}" BorderBrush="{x:Bind Brush}" BorderThickness="1" CornerRadius="4" ToolTipService.ToolTip="{x:Bind Tooltip}">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                                                         <Ellipse Width="6" Height="6" Fill="{x:Bind Brush}" VerticalAlignment="Center" />
                                                                         <TextBlock VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Label}" />
-                                                                        <Button Width="22" Height="22" CornerRadius="4" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Visibility="{x:Bind FixVisibility}">
+                                                                        <Button AutomationProperties.Name="Fix" Width="22" Height="22" CornerRadius="4" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Visibility="{x:Bind FixVisibility}">
                                                                             <FontIcon FontSize="10" Glyph="&#xE712;" />
                                                                             <Button.Flyout>
                                                                                 <MenuFlyout>
@@ -658,7 +638,7 @@
                                                     <TextBlock x:Uid="Localserver_CpuTrendLabel" Style="{StaticResource MetaLabelStyle}" />
                                                     <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.StatusChartRangeText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                                                 </Grid>
-                                                <Border Grid.Row="1" Height="50" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="6" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" SizeChanged="OnStatusChartSizeChanged">
+                                                <Border Grid.Row="1" Height="50" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="4" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" SizeChanged="OnStatusChartSizeChanged">
                                                     <Grid>
                                                         <Path Data="{x:Bind ViewModel.StatusCurveFillGeometry, Mode=OneWay}"
                                                               Fill="{ThemeResource AccentFillColorDefaultBrush}"
@@ -686,7 +666,7 @@
                                         BorderThickness="1"
                                         CornerRadius="{StaticResource OverlayCornerRadius}">
                                         <StackPanel Spacing="10">
-                                            <TextBlock x:Uid="Localserver_SectionSystem" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock x:Uid="Localserver_SectionSystem" Style="{StaticResource BodyStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
 
                                             <!-- GPU info -->
                                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="2">
@@ -753,7 +733,7 @@
                                         CornerRadius="{StaticResource OverlayCornerRadius}">
                                         <StackPanel Spacing="10">
                                             <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock x:Uid="Localserver_SectionSession" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                <TextBlock x:Uid="Localserver_SectionSession" Style="{StaticResource BodyStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
                                                 <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.SessionUptimeText, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             </Grid>
                                             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
@@ -790,9 +770,7 @@
                                         <Button
                                             Width="30"
                                             Height="30"
-                                            CornerRadius="6"
-                                            Padding="0"
-                                            Style="{ThemeResource SubtleButtonStyle}"
+                                            Style="{StaticResource KitCompactIconButtonStyle}"
                                             Click="ToggleLogPanel_Click"
                                             ToolTipService.ToolTip="Toggle output console">
                                             <FontIcon Glyph="{x:Bind ViewModel.LogToggleGlyph, Mode=OneWay}" FontSize="12" />
@@ -802,26 +780,20 @@
                                         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="{x:Bind ViewModel.LogActionsVisibility, Mode=OneWay}">
                                             <ToggleButton
                                                 Height="28"
-                                                CornerRadius="6"
+                                                CornerRadius="4"
                                                 Padding="10,0"
                                                 FontSize="12"
                                                 x:Uid="Localserver_LogFollowToggle"
                                                 IsChecked="{x:Bind ViewModel.IsLogFollowEnabled, Mode=TwoWay}"
                                                 ToolTipService.ToolTip="Auto scroll to latest log" />
                                             <Button
-                                                Height="28"
-                                                Width="28"
-                                                CornerRadius="6"
-                                                Padding="0"
+                                                Style="{StaticResource KitCompactIconButtonStyle}"
                                                 Click="OpenLogFolder_Click"
                                                 ToolTipService.ToolTip="Open log directory">
                                                 <FontIcon Glyph="&#xE8B7;" FontSize="13" />
                                             </Button>
                                             <Button
-                                                Height="28"
-                                                Width="28"
-                                                CornerRadius="6"
-                                                Padding="0"
+                                                Style="{StaticResource KitCompactIconButtonStyle}"
                                                 Click="ClearLogs_Click"
                                                 ToolTipService.ToolTip="Clear current logs">
                                                 <FontIcon Glyph="&#xE74D;" FontSize="13" />

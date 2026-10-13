@@ -16,4 +16,46 @@
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
         <Setter Property="FontWeight" Value="Bold" />
     </Style>
+
+    <!-- ============================================================ -->
+    <!-- Kit 共享排版令牌（批次 0 新增）                                -->
+    <!-- ============================================================ -->
+
+    <!-- 等宽字体唯一令牌（替代 4 份页面级 MonoFontFamily 与反序写法） -->
+    <FontFamily x:Key="KitMonoFontFamily">Cascadia Code, Cascadia Mono, Consolas, Courier New</FontFamily>
+
+    <!-- 微标签（合并 MetaLabelStyle / MicroLabelStyle 三份重复定义） -->
+    <Style x:Key="KitMicroLabelTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="CharacterSpacing" Value="60" />
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- Hero 指标数字（健康分 / 活动统计） -->
+    <Style x:Key="KitMetricHeroTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource KitMonoFontFamily}" />
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+    </Style>
+
+    <!-- 卡片指标数字（IP / 端口 / 大小） -->
+    <Style x:Key="KitMetricTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource KitMonoFontFamily}" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- 行内紧凑数字 -->
+    <Style x:Key="KitMetricCompactTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource KitMonoFontFamily}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
 </ResourceDictionary>

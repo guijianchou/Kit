@@ -646,4 +646,87 @@
             </Setter>
         </Style.Setters>
     </Style>
+
+    <!-- ============================================================ -->
+    <!-- Kit 共享按钮样式族（批次 0 新增）                              -->
+    <!-- 规则：控件圆角=ControlCornerRadius；状态反馈全部由系统提供      -->
+    <!-- ============================================================ -->
+
+    <!-- 默认操作按钮（替代散落的 MinHeight=32 / CornerRadius=6 / Padding=14,5） -->
+    <Style x:Key="KitActionButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="12,4" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
+    <!-- 主操作按钮（每个可见区块至多一个） -->
+    <Style x:Key="KitPrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="12,4" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
+    <!-- 图标按钮 32×32（必须配 ToolTip + AutomationProperties.Name） -->
+    <Style x:Key="KitIconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
+    <!-- 次级图标按钮 32×32（行内配置展开 / 更多选项） -->
+    <Style x:Key="KitSubtleIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
+    <!-- 紧凑工具条按钮 28 高（日志抽屉 / hero 刷新条，带文字） -->
+    <Style x:Key="KitCompactToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!-- 紧凑工具条图标按钮 28×28 -->
+    <Style x:Key="KitCompactIconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
+    <!-- 滤镜胶囊 ToggleButton（AIHub 严重级/来源筛选） -->
+    <Style x:Key="KitFilterPillToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource DefaultToggleButtonStyle}">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!-- General 分类导航 chip（中性风格，替代彩色块） -->
+    <Style x:Key="KitSectionChipButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="MinWidth" Value="96" />
+        <Setter Property="Padding" Value="12,4" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+    </Style>
+
+    <!-- UDPtest 图表周期按钮（1m / 5m / 30m / 1h，统一宽度） -->
+    <Style x:Key="KitPeriodButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="Width" Value="42" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="MinHeight" Value="26" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
 </ResourceDictionary>

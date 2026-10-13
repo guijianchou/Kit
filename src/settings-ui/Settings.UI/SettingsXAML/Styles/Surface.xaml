@@ -1,0 +1,49 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================================ -->
+    <!-- Kit 共享表面样式（批次 0 新增）                                -->
+    <!-- 用途：统一全项目手写 Border 卡面 / 状态胶囊 / 指标瓦片 / 进度条  -->
+    <!-- ============================================================ -->
+
+    <Style x:Key="KitCardSurfaceStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+        <Setter Property="Padding" Value="16,14" />
+    </Style>
+
+    <!-- 工作流进度卡（审计 / 优化共用；Accent 描边） -->
+    <Style x:Key="KitWorkflowCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+        <Setter Property="Padding" Value="18,14" />
+    </Style>
+
+    <!-- 状态胶囊（dot + 文本 / 单一文本，28 高） -->
+    <Style x:Key="KitStatusPillStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="10,4" />
+    </Style>
+
+    <!-- 指标瓦片（label + 数值） -->
+    <Style x:Key="KitMetricTileBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+        <Setter Property="Padding" Value="12,10" />
+    </Style>
+
+    <!-- 标准进度条（高 4 / 圆角 2 / Accent 前景） -->
+    <Style x:Key="KitProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Height" Value="4" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+    </Style>
+</ResourceDictionary>

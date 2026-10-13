@@ -33,8 +33,6 @@ namespace
     NOTIFYICONDATAW tray_icon_data;
     bool tray_icon_created = false;
 
-    bool about_box_shown = false;
-
     HMENU h_menu = nullptr;
     HMENU h_sub_menu = nullptr;
     bool double_click_timer_running = false;
@@ -100,15 +98,6 @@ void handle_tray_command(HWND window, const WPARAM command_id, LPARAM lparam)
             DestroyMenu(h_menu);
         }
         DestroyWindow(window);
-        break;
-    case ID_ABOUT_MENU_COMMAND:
-        if (!about_box_shown)
-        {
-            about_box_shown = true;
-            std::wstring about_msg = L"Kit\nVersion " + get_product_version() + L"\nDerived from Microsoft PowerToys";
-            MessageBoxW(nullptr, about_msg.c_str(), L"About Kit", MB_OK);
-            about_box_shown = false;
-        }
         break;
     case ID_DOCUMENTATION_MENU_COMMAND:
     {

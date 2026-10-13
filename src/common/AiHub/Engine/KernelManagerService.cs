@@ -754,23 +754,31 @@ public sealed partial class KernelManagerService : IDisposable
 
     private async Task MoveDirectoryAsync(string source, string destination, CancellationToken cancellationToken)
     {
+        EnsureManagedPath(source);
+        EnsureManagedPath(destination);
         Stopwatch elapsed = Stopwatch.StartNew();
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            EnsureManagedPath(source);
-            EnsureManagedPath(destination);
             try
             {
                 Directory.Move(source, destination);
                 return;
             }
-            catch (IOException exception) when (IsSharingViolation(exception) && elapsed.Elapsed < TimeSpan.FromSeconds(5))
+            catch (Exception exception) when (IsTransientMoveException(exception) && elapsed.Elapsed < TimeSpan.FromSeconds(10))
             {
-                await Task.Delay(100, cancellationToken);
+                await Task.Delay(150, cancellationToken);
             }
         }
     }
+
+    private static bool IsTransientMoveException(Exception exception) =>
+        exception switch
+        {
+            IOException io => (io.HResult & 0xffff) is 5 or 32 or 33,
+            UnauthorizedAccessException => true,
+            _ => false,
+        };
 
     private static bool IsSharingViolation(IOException exception) => (exception.HResult & 0xffff) is 32 or 33;
 

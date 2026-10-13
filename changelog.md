@@ -4,6 +4,12 @@
 
 ## English
 
+### 2.3.10
+
+- **AI Kernel Installation Transient Lock Resilience**:
+  - Resolved an issue where downloading or updating the Pi kernel failed with `Access is denied` (`0x80070005`) during the atomic staging directory move.
+  - Expanded `MoveDirectoryAsync` transient retry classification to include Windows access-denied error codes (caused by brief background file handle teardown and antivirus file inspection after running `--version` self-tests), allowing clean retry without impacting Codex CLI or other kernel workflows.
+
 ### 2.3.9
 
 - **WinUI 3 Fluent Design UI/UX Overhaul**:
@@ -625,6 +631,12 @@
 ## 中文
 
 ## 更新日志
+
+### 2.3.10
+
+- **AI 内核安装瞬时文件锁容错优化**：
+  - 修复下载或更新 Pi 内核时因临时暂存目录原子重命名报错 `拒绝访问`（`0x80070005`）而导致安装失败的问题。
+  - 扩展 `MoveDirectoryAsync` 瞬时错误重试机制，纳入 Windows 系统在自检进程刚刚退出后因杀毒软件瞬时扫描和句柄释放延迟而返回的拒绝访问状态（Access Denied），确保无感重试并成功安装；完全不影响 Codex CLI 现有的下载与更新逻辑。
 
 ### 2.3.9
 

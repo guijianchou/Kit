@@ -23,7 +23,7 @@ Kit currently includes six modules. “Plugin” here means a module built and e
 
 Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
 
-Home shows system resources and network egress; General contains appearance, startup behavior and shared AI service settings; Quick Access provides shortcuts and module actions. With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
+Home provides real-time system resource telemetry (CPU, memory, storage, dual-GPU / iGPU & dGPU hardware details, driver version, and temperatures) and dual-egress network observation. General contains appearance, startup behavior and shared AI service settings; Quick Access provides shortcuts and module actions. The entire UI is built on native WinUI 3 Fluent Design styling with semantic surface tokens, responsive cards, Cascadia Code monospace typography, and complete bilingual localization (en-US / zh-CN). With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
 
 ## 2. Framework
 
@@ -214,16 +214,21 @@ Use **Windows 11, PowerShell 7, Visual Studio 2026 and the .NET 10 SDK**. The pr
 
 ### 4.2 Build and stage
 
-Run from the repository root. The build script initializes the VS environment:
+Run from the repository root. The build scripts initialize the VS environment:
 
 ```powershell
-# Debug: everyday development
+# Fast build of essential runtime targets (Runner, Settings UI, Quick Access and modules)
+.\tools\build\build-essentials.ps1 -Platform x64 -Configuration Debug
+
+# Or full solution build
 .\tools\build\build.ps1 -Platform x64 -Configuration Debug -Path . /restore /p:BuildTests=false
 if ($LASTEXITCODE -ne 0) { throw 'Debug build failed.' }
 ```
 
-After success, launch `x64/Debug/Kit.exe`. For a Release build and staged runtime directory:
-
+After a successful build:
+- **Debug binaries**: Launch `x64\Debug\Kit.exe` (Runner) directly. WinUI 3 applications reside in `x64\Debug\WinUI3Apps\Kit.Settings.exe` and `Kit.QuickAccess.exe`.
+- **Debug staging**: Run `.\tools\build\Stage-Debug.ps1` to stage the verified debug runtime tree into `bin/debug/<version>/`.
+- **Release build and staging**:
 ```powershell
 .\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
 if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete output.' }
@@ -234,9 +239,20 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete 
 
 ### 4.3 Validation and real-machine testing
 
-The commands above skip tests; a successful build is not functional validation. Unit tests live in `*.UnitTests` projects in the source tree and run through VS Test Explorer or `vstest.console.exe`. WinUI and native module checks live in [tools/tests](tools/tests). Read the relevant module documentation and script requirements before running them. Local test output goes to `TestResults/`.
+The commands above skip tests; a successful build is not functional validation. Unit tests live in `*.UnitTests` projects in the source tree and run through VS Test Explorer or `vstest.console.exe`. Automated WinUI smoke tests and native module checks live in [tools/tests](tools/tests):
 
-Before testing a new version, exit the old Kit completely from the tray, then launch `Kit.exe` from the new directory. Runner uses a single-instance mechanism, so a running old process can receive the new launch request. To isolate configuration issues, exit Kit and rename `%LOCALAPPDATA%\Kit` as a backup; use fresh settings for the first comparison.
+```powershell
+# Settings UI and module smoke tests
+pwsh -ExecutionPolicy Bypass -File .\tools\tests\SettingsUI\Invoke-ModulePageSmoke.ps1 -Configuration Debug
+
+# Dashboard lifecycle and hardware telemetry smoke tests
+pwsh -ExecutionPolicy Bypass -File .\tools\tests\SettingsUI\Invoke-DashboardPageSmoke.ps1 -Configuration Debug
+
+# NetMap network diagnostics and route smoke tests
+pwsh -ExecutionPolicy Bypass -File .\tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1 -Configuration Debug
+```
+
+Before testing a new version on a real machine, exit the old Kit completely from the tray, then launch `x64\Debug\Kit.exe`. Runner uses a single-instance mechanism, so a running old process can receive the new launch request. To isolate configuration issues, exit Kit and rename `%LOCALAPPDATA%\Kit` as a backup; use fresh settings for the first comparison.
 
 Historical build and regression results are in [changelog.md](changelog.md) and module validation records. They do not certify every real-machine scenario for the current source.
 

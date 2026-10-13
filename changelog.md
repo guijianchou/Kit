@@ -4,6 +4,24 @@
 
 ## English
 
+### 2.3.9
+
+- **WinUI 3 Fluent Design UI/UX Overhaul**:
+  - Full design system alignment across all Settings surfaces using native WinUI 3 semantic tokens (`SubtleFillColorSecondaryBrush`, `CardStrokeColorDefaultBrush`, `ControlCornerRadius`).
+  - Standardized monospace typography using Cascadia Code (`KitMonoFontFamily`) across technical readings, IP addresses, route hops, RTT timings, diagnostic charts, log viewers, and policy code editors.
+  - Complete bilingual localization with 100% string coverage in English (`en-us`) and Simplified Chinese (`zh-CN`), removing all hardcoded UI strings.
+  - Refactored AI Hub with filter pill toggles (`KitFilterPillToggleStyle`), severity badges, metric tiles, downloadable optimization review, policy code editor, and localized dialogs.
+  - Refactored NetMap with responsive dual-egress cards, compact two-row MTR hop routes, Pacific-centered Natural Earth offline map, and live proxy service health lights.
+  - Refactored UDPtest, Localserver, Awake, LightSwitch, and Dashboard with elevated cards, responsive stacking, and cohesive telemetry layouts.
+  - Cleaned up obsolete About box tray menu code in Runner.
+- **Verification**: x64 Debug build succeeded with 0 errors. Passed 100% of Settings UI module smoke tests (`Invoke-ModulePageSmoke.ps1`), bilingual Dashboard lifecycle smoke tests (`Invoke-DashboardPageSmoke.ps1`), and NetMap network diagnostic smoke tests (`Invoke-NetMapPageSmoke.ps1`).
+
+### 2.3.8
+
+- **System Overview Integrated GPU (iGPU) Detection**:
+  - Fixed an issue where integrated GPUs (iGPU) or adapters lacking dedicated VRAM or driver information displayed unreadable or missing rows in the Home system overview.
+  - Added clean fallback handling for shared-memory graphics adapters, hardware driver version reporting, and consistent layout alignment on single-GPU and dual-GPU (iGPU + dGPU) systems.
+
 ### 2.3.7
 
 - **Home system overview**: added device/Windows details, CPU load, memory, uptime, storage usage and available GPU driver/VRAM/usage/temperature readings. System, storage and GPU labels, values and progress bars now align consistently, with less empty space and layouts that adapt to narrow windows.
@@ -607,6 +625,24 @@
 ## 中文
 
 ## 更新日志
+
+### 2.3.9
+
+- **WinUI 3 Fluent Design 全面 UI/UX 重构**：
+  - 设置界面全面对齐 Windows 11 Fluent Design 规范，引入层级设计令牌与语义化画刷（`SubtleFillColorSecondaryBrush`、`CardStrokeColorDefaultBrush`、`ControlCornerRadius` 等）。
+  - 统一技术数据排版，采用标准 Cascadia Code 等宽字体家族（`KitMonoFontFamily`），覆盖公网 IP、路由跳数、延迟耗时、控制台日志与策略编辑器。
+  - 实现 100% 完整中英双语本地化（`en-us` 与 `zh-CN`），消除所有界面硬编码字符串，规范严重级别与弹窗文案。
+  - 深度重构 AI Hub：引入过滤胶囊按钮组（`KitFilterPillToggleStyle`）、严重级别角标、三项关键指标磁贴、优化候选项审核卡片、策略编辑器与本地化详情弹窗。
+  - 深度重构 NetMap：双出口卡片自适应换行堆叠、紧凑两行地理信息 MTR 路由列表、太平洋居中 Natural Earth 离线地图与四项代理服务健康状态指示灯。
+  - 深度重构 UDPtest、Localserver、Awake、LightSwitch 与 Dashboard 页面，提升卡片交互质感与响应式布局。
+  - 清理 Runner 托盘关于弹窗冗余代码。
+- **构建与测试验证**：x64 Debug 构建 0 错误通过；全量通过模块页面冒烟（`Invoke-ModulePageSmoke.ps1`）、双语仪表盘生命周期冒烟（`Invoke-DashboardPageSmoke.ps1`）与 NetMap 网络诊断冒烟（`Invoke-NetMapPageSmoke.ps1`）。
+
+### 2.3.8
+
+- **首页系统概览核显（iGPU）信息修复**：
+  - 修复核芯显卡（iGPU）或缺少独立显存/驱动读数的显卡在首页系统概览中显示错位或缺失的问题。
+  - 完善共享显存显卡降级容错、显卡驱动版本显示逻辑，确保单显卡与双显卡（核显 + 独显）配置下的优雅展示。
 
 ### 2.3.7
 

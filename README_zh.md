@@ -23,7 +23,7 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 
 启动运行目录中的 `Kit.exe` 后，在 Settings 中启用需要的模块并配置。**模块开关与任务开始是两层操作**：例如 Localserver 启用后仍需单独启动服务，NetMap 启用后仍需点击 Start。
 
-首页提供系统资源和网络出口概览；常规页管理外观、启动行为和共享 AI 服务；Quick Access 提供快捷入口与模块动作。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
+首页提供实时系统资源监控（CPU、内存、磁盘空间、双显卡/核显与独显硬件信息、驱动版本及温度）与网络双出口（Direct / Proxy）对比；常规页管理外观、启动行为和共享 AI 服务；Quick Access 提供快捷入口与模块动作。全界面基于原生 WinUI 3 Fluent Design 规范设计，采用层级设计令牌、响应式卡片布局、Cascadia Code 规范等宽字体排版以及 100% 完整中英双语本地化（零硬编码字符串）。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
 
 ## 2. 主框架
 
@@ -217,13 +217,18 @@ flowchart TB
 从仓库根目录执行；构建脚本会初始化 VS 环境：
 
 ```powershell
-# Debug：日常调试
+# 快速构建核心运行时（Runner、Settings UI、Quick Access 及各模块）：
+.\tools\build\build-essentials.ps1 -Platform x64 -Configuration Debug
+
+# 或完整解决方案构建：
 .\tools\build\build.ps1 -Platform x64 -Configuration Debug -Path . /restore /p:BuildTests=false
 if ($LASTEXITCODE -ne 0) { throw 'Debug build failed.' }
 ```
 
-成功后运行 `x64/Debug/Kit.exe`。Release 构建及发布目录整理：
-
+构建成功后的可执行文件位置：
+- **Debug 运行文件**：直接运行 `x64\Debug\Kit.exe`（主程序 Runner）。WinUI 3 应用位于 `x64\Debug\WinUI3Apps\Kit.Settings.exe` 和 `Kit.QuickAccess.exe`。
+- **Debug 目录整理**：执行 `.\tools\build\Stage-Debug.ps1`，将校验后的完整运行时归档至 `bin/debug/<版本>/`。
+- **Release 构建与发布**：
 ```powershell
 .\tools\build\build.ps1 -Platform x64 -Configuration Release -Path . /restore /p:BuildTests=false
 if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete output.' }
@@ -234,9 +239,20 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete 
 
 ### 4.3 验证与实机测试
 
-上面的命令跳过测试；编译成功不等于功能验证通过。单元测试位于源码中的 `*.UnitTests` 工程，使用 VS Test Explorer 或 `vstest.console.exe` 运行；WinUI 和原生模块检查位于 [tools/tests](tools/tests)。操作前先阅读对应模块文档及脚本要求，测试输出写入本地 `TestResults/`。
+上面的命令跳过测试；编译成功不等于功能验证通过。单元测试位于源码中的 `*.UnitTests` 工程，使用 VS Test Explorer 或 `vstest.console.exe` 运行；WinUI 自动化冒烟测试与原生模块检查位于 [tools/tests](tools/tests)：
 
-测试新版本前，从托盘彻底退出旧 Kit，再启动新目录中的 `Kit.exe`。Runner 使用单实例机制，旧进程仍在时，新启动请求可能转交旧实例。排查配置影响时，可退出 Kit 后将 `%LOCALAPPDATA%\Kit` 改名备份；首次对照测试先使用新配置。
+```powershell
+# 模块页面自动化冒烟测试
+pwsh -ExecutionPolicy Bypass -File .\tools\tests\SettingsUI\Invoke-ModulePageSmoke.ps1 -Configuration Debug
+
+# 仪表盘全生命周期与硬件监控冒烟测试
+pwsh -ExecutionPolicy Bypass -File .\tools\tests\SettingsUI\Invoke-DashboardPageSmoke.ps1 -Configuration Debug
+
+# NetMap 网络诊断与路由链路冒烟测试
+pwsh -ExecutionPolicy Bypass -File .\tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1 -Configuration Debug
+```
+
+实机测试新版本前，务必先从系统托盘彻底退出旧 Kit，再启动 `x64\Debug\Kit.exe`。Runner 使用单实例机制，旧进程仍在时，新启动请求会转交旧实例。排查配置影响时，可退出 Kit 后将 `%LOCALAPPDATA%\Kit` 改名备份；首次对照测试先使用新配置。
 
 历史构建与回归记录见 [changelog.md](changelog.md) 和各模块验证文档，不作为当前源码已通过全部实机测试的承诺。
 

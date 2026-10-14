@@ -1703,6 +1703,9 @@
   <data name="NetMap_ServicesTitle.Text" xml:space="preserve">
     <value>代理服务连通性</value>
   </data>
+  <data name="NetMap_ServicesSubtitle.Text" xml:space="preserve">
+    <value>实时代理节点、响应延迟与出口追踪检查点</value>
+  </data>
   <data name="NetMap_Endpoint.Text" xml:space="preserve">
     <value>服务</value>
   </data>
@@ -1716,7 +1719,7 @@
     <value>探测至出口 IP 的系统 ICMP 路径，RTT 为本机到该跳。无回复标红，前两次保留上次 RTT，第三次显示 N/A；平均/丢包率继续累计，不等于业务丢包。</value>
   </data>
   <data name="NetMap_Settings.Header" xml:space="preserve">
-    <value>连接与地图设置</value>
+    <value>地图设置</value>
   </data>
   <data name="NetMap_ProxyMode.Header" xml:space="preserve">
     <value>代理连接方式</value>

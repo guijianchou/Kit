@@ -36,7 +36,9 @@
                         ToolTipService.ToolTip="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
                         Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE790;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionAppearanceTintBrush}" VerticalAlignment="Center">
+                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE790;" Foreground="{ThemeResource SectionAppearanceForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
                             <TextBlock x:Uid="General_SectionAppearance" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -47,7 +49,9 @@
                         ToolTipService.ToolTip="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
                         Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xF71C;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionStartupTintBrush}" VerticalAlignment="Center">
+                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xF71C;" Foreground="{ThemeResource SectionStartupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
                             <TextBlock x:Uid="General_SectionStartup" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -58,7 +62,9 @@
                         ToolTipService.ToolTip="{Binding ElementName=AiServicesGroup, Path=Header}"
                         Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEA80;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionAiTintBrush}" VerticalAlignment="Center">
+                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xEA80;" Foreground="{ThemeResource SectionAiForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
                             <TextBlock x:Uid="General_SectionAi" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -69,7 +75,9 @@
                         ToolTipService.ToolTip="{Binding ElementName=DiagnosticsGroup, Path=Header}"
                         Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xEC19;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionDiagnosticsTintBrush}" VerticalAlignment="Center">
+                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xEC19;" Foreground="{ThemeResource SectionDiagnosticsForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
                             <TextBlock x:Uid="General_SectionDiagnostics" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -80,7 +88,9 @@
                         ToolTipService.ToolTip="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
                         Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE777;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionBackupTintBrush}" VerticalAlignment="Center">
+                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE777;" Foreground="{ThemeResource SectionBackupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
                             <TextBlock x:Uid="General_SectionBackup" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -91,7 +101,9 @@
                         ToolTipService.ToolTip="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
                         Style="{StaticResource KitSectionChipButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="16" Glyph="&#xE895;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionUpdatesTintBrush}" VerticalAlignment="Center">
+                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE895;" Foreground="{ThemeResource SectionUpdatesForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
                             <TextBlock x:Uid="General_SectionUpdates" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>

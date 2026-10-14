@@ -3005,6 +3005,9 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_ServicesTitle.Text" xml:space="preserve">
     <value>Proxy service connectivity</value>
   </data>
+  <data name="NetMap_ServicesSubtitle.Text" xml:space="preserve">
+    <value>Live proxy endpoints, response latencies, and egress trace checkpoints</value>
+  </data>
   <data name="NetMap_Endpoint.Text" xml:space="preserve">
     <value>Service</value>
   </data>
@@ -3018,7 +3021,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>System ICMP route to the egress IP. RTT is from this device to each hop. Red means no reply; the first two failures retain the last RTT, then N/A. Average/loss remain cumulative.</value>
   </data>
   <data name="NetMap_Settings.Header" xml:space="preserve">
-    <value>Connection and map settings</value>
+    <value>Map settings</value>
   </data>
   <data name="NetMap_ProxyMode.Header" xml:space="preserve">
     <value>Proxy connection</value>

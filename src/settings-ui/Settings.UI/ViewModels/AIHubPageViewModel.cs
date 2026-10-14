@@ -269,6 +269,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         DeepAnalyzeCommand = new RelayCommand(RunDeepAnalysis, () => CanRunDeepAnalysis);
         CancelAuditCommand = new RelayCommand(() => _auditCts?.Cancel(), () => IsAuditing || IsAiAnalyzing);
         ResetFindingFiltersCommand = new RelayCommand(ResetFindingFilters);
+        FilterHighSeverityCommand = new RelayCommand(() => SetSeverityFilter("High"));
+        JumpToAiReportCommand = new RelayCommand(() => RequestJumpToAiReport?.Invoke(this, EventArgs.Empty));
 
         ScanAllCommand = new RelayCommand(RunScanAll, () => IsEnabled && !_isOptimizing);
         ScanDownloadsCommand = new RelayCommand(RunScanDownloads, () => IsEnabled && !_isOptimizing);
@@ -387,7 +389,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public int HealthScore
     {
         get => _healthScore;
-        private set => Set(ref _healthScore, value);
+        private set
+        {
+            if (Set(ref _healthScore, value))
+            {
+                OnPropertyChanged(nameof(HealthScoreText));
+                OnPropertyChanged(nameof(IsCriticalScore));
+            }
+        }
     }
 
     public string HealthScoreGrade
@@ -398,6 +407,19 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public string HealthScoreLabel => IsChinese ? "系统健康评分" : "Health score";
     public string HealthScoreText => HasAuditData ? HealthScore.ToString(CultureInfo.CurrentCulture) : "—";
+
+    public bool IsCriticalScore => HasAuditData && HealthScore < 60 && HighCount > 0;
+    public string FilterHighQuickActionLabel => IsChinese ? "仅看高危发现" : "Filter High findings";
+    public string FilterHighQuickActionHint => IsChinese ? "快速筛选当前健康评分中的高危安全与稳定性事件" : "Filter high-severity security and reliability events";
+
+    public string ViewAiReportLabel => IsChinese ? "查看 AI 诊断报告" : "View AI report";
+    public string JumpToAiReportHint => IsChinese ? "直接跳转到下方的 AI 诊断与处置建议报告" : "Jump directly to the AI diagnostic report below";
+    public string CopyReportLabel => IsChinese ? "复制报告" : "Copy report";
+    public string CopyAiReportHint => IsChinese ? "将 AI 诊断结果与处置建议复制到剪贴板" : "Copy AI diagnostic findings and recommendations to clipboard";
+
+    public event EventHandler RequestJumpToAiReport;
+    public ICommand FilterHighSeverityCommand { get; }
+    public ICommand JumpToAiReportCommand { get; }
 
     public string HealthVerdict
     {
@@ -428,7 +450,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public int HighCount
     {
         get => _highCount;
-        private set => Set(ref _highCount, value);
+        private set
+        {
+            if (Set(ref _highCount, value))
+            {
+                OnPropertyChanged(nameof(IsCriticalScore));
+            }
+        }
     }
 
     public int MediumCount
@@ -1056,6 +1084,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             {
                 AiReadinessLevel = readiness.Level;
                 AiReadinessText = DescribeReadiness(readiness);
+                UpdateEngineAndModelInfo(readiness);
             });
         }
         catch (OperationCanceledException)
@@ -1085,11 +1114,45 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             AiReadiness readiness = AiHubEngine.Current.GetReadiness();
             AiReadinessLevel = readiness.Level;
             AiReadinessText = DescribeReadiness(readiness);
+            UpdateEngineAndModelInfo(readiness);
         }
         catch (Exception ex)
         {
             Logger.LogError("Could not read AI readiness state", ex);
         }
+    }
+
+    private string _currentEngineAndModelLabel = string.Empty;
+
+    public string CurrentEngineAndModelLabel
+    {
+        get => _currentEngineAndModelLabel;
+        private set
+        {
+            if (Set(ref _currentEngineAndModelLabel, value))
+            {
+                OnPropertyChanged(nameof(HasActiveModelInfo));
+            }
+        }
+    }
+
+    public bool HasActiveModelInfo => !string.IsNullOrWhiteSpace(CurrentEngineAndModelLabel);
+
+    private void UpdateEngineAndModelInfo(AiReadiness readiness)
+    {
+        if (!AiHubEngine.Current.IsEnabled || string.IsNullOrWhiteSpace(readiness.ActiveKernel))
+        {
+            CurrentEngineAndModelLabel = string.Empty;
+            return;
+        }
+
+        string kernelDisplay = readiness.ActiveKernel.Equals("codex", StringComparison.OrdinalIgnoreCase)
+            ? "Codex CLI"
+            : (readiness.ActiveKernel.Equals("pi", StringComparison.OrdinalIgnoreCase) ? "Pi Engine" : readiness.ActiveKernel);
+
+        CurrentEngineAndModelLabel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
+            ? kernelDisplay
+            : $"{kernelDisplay} · {readiness.ActiveModel}";
     }
 
     /// <summary>
@@ -1504,6 +1567,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(StatusSeverity));
         OnPropertyChanged(nameof(IsStatusOpen));
     }
+
+    public void PostStatusNotification(string message, InfoBarSeverity severity, bool optimization = false) => ShowStatus(message, severity, optimization);
 
     public bool IsAiAnalyzing
     {

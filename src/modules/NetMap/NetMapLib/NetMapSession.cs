@@ -196,7 +196,8 @@ public sealed class NetMapSession : IDisposable
                     tasks.Add(EnrichEgressAsync(id, isProxy, result.Identity.Ip, geo, token));
                 }
 
-                await Task.Delay(isProxy ? proxyInterval : directInterval, token).ConfigureAwait(false);
+                var delay = isProxy ? (candidate != null && !diagnosed ? (proxyInterval < TimeSpan.FromMilliseconds(400) ? proxyInterval : TimeSpan.FromMilliseconds(400)) : proxyInterval) : directInterval;
+                await Task.Delay(delay, token).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException)

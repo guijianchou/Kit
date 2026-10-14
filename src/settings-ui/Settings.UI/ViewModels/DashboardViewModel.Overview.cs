@@ -625,7 +625,7 @@ public partial class DashboardViewModel
             try
             {
                 var settings = SettingsUtils.Default.GetSettings<NetMapSettings>(NetMapSettings.ModuleName).Properties;
-                options = new((ProxyMode)(settings?.ProxyMode?.Value ?? 0), settings?.ProxyAddress?.Value ?? string.Empty);
+                options = new(settings?.AsnDatabase?.Value ?? string.Empty, settings?.CityDatabase?.Value ?? string.Empty, settings?.OnlineLookup?.Value ?? true);
             }
             catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
             {
@@ -633,7 +633,7 @@ public partial class DashboardViewModel
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
             {
-                options = new((ProxyMode)(-1));
+                options = new();
             }
 
             var probe = new NetworkProbe();
@@ -642,9 +642,7 @@ public partial class DashboardViewModel
                 IdentityResult result;
                 try
                 {
-                    result = proxy && !options.IsValid
-                        ? new IdentityResult(null, ProbeError.InvalidProxy, DateTimeOffset.Now, "Explicit")
-                        : await probe.ObserveAsync(proxy, options, cancellation.Token).ConfigureAwait(false);
+                    result = await probe.ObserveAsync(proxy, options, cancellation.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
                 {
@@ -652,7 +650,7 @@ public partial class DashboardViewModel
                 }
                 catch (Exception)
                 {
-                    result = new(null, ProbeError.Connection, DateTimeOffset.Now, proxy ? options.Mode.ToString() : "Direct");
+                    result = new(null, ProbeError.Connection, DateTimeOffset.Now, proxy ? "SystemProxy" : "Direct");
                 }
 
                 Publish(() =>

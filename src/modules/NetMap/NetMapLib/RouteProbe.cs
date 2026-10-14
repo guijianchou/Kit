@@ -25,7 +25,7 @@ public static class RouteProbe
             try
             {
                 long started = Stopwatch.GetTimestamp();
-                var reply = await ping.SendPingAsync(address, TimeSpan.FromMilliseconds(800), payload, new PingOptions(ttl, true), token).ConfigureAwait(false);
+                var reply = await ping.SendPingAsync(address, TimeSpan.FromMilliseconds(400), payload, new PingOptions(ttl, true), token).ConfigureAwait(false);
                 if (reply.Status is IPStatus.Success or IPStatus.TtlExpired)
                 {
                     return (reply.Address.ToString(), Stopwatch.GetElapsedTime(started).TotalMilliseconds, reply.Status == IPStatus.Success);
@@ -39,7 +39,7 @@ public static class RouteProbe
             return (string.Empty, null, false);
         }
 
-        await SampleAsync(progress, SendAsync, TimeSpan.FromSeconds(2), cancellationToken).ConfigureAwait(false);
+        await SampleAsync(progress, SendAsync, TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
     }
 
     internal static async Task SampleAsync(Action<IReadOnlyList<HopResult>> progress, Func<int, CancellationToken, Task<(string Ip, double? Elapsed, bool Reached)>> send, TimeSpan interval, CancellationToken token)

@@ -28,7 +28,7 @@ public sealed class NetworkProbe
 
     public async Task<IdentityResult> ObserveAsync(bool isProxy, NetMapOptions options, CancellationToken cancellationToken)
     {
-        string route = isProxy ? options.Mode.ToString() : "Direct";
+        string route = isProxy ? "SystemProxy" : "Direct";
         try
         {
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -205,19 +205,9 @@ public sealed class NetworkProbe
     {
         IWebProxy? proxy = null;
         route = isProxy ? "SystemRoute" : "Direct";
-        if (isProxy && options.Mode == ProxyMode.Explicit)
+        if (isProxy)
         {
-            if (!NetMapOptions.TryGetProxy(options.ProxyAddress, out var address))
-            {
-                throw new ArgumentException("Invalid proxy address.");
-            }
-
-            proxy = new WebProxy(address!);
-            route = "Explicit";
-        }
-        else if (isProxy && options.Mode == ProxyMode.System)
-        {
-            // Get a fresh Windows proxy resolver, not HttpClient.DefaultProxy's cached instance.
+            // Query the system web proxy configuration.
             proxy = WebRequest.GetSystemWebProxy();
             route = proxy.IsBypassed(target) ? "SystemBypass" : "SystemProxy";
         }

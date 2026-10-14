@@ -31,6 +31,20 @@
             <!-- 数据序列语义色（TCP/UDP 曲线；全项目唯一允许保留 hex 的定义处） -->
             <SolidColorBrush x:Key="KitDataSeriesTcpBrush" Color="#FFFF745A" />
             <SolidColorBrush x:Key="KitDataSeriesUdpBrush" Color="#FF20C9A6" />
+
+            <!-- 设置导航标签色彩体系（外观/启动/AI/诊断/备份/更新） -->
+            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FFCE93D8" />
+            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#25CE93D8" />
+            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="#FF60CDFF" />
+            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="#2560CDFF" />
+            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="#FFFFA154" />
+            <SolidColorBrush x:Key="SectionAiTintBrush" Color="#25FFA154" />
+            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="#FF6CCB5F" />
+            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="#256CCB5F" />
+            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="#FF4DD0E1" />
+            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#254DD0E1" />
+            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FFFF77A9" />
+            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#25FF77A9" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
@@ -53,6 +67,20 @@
 
             <SolidColorBrush x:Key="KitDataSeriesTcpBrush" Color="#FFFF745A" />
             <SolidColorBrush x:Key="KitDataSeriesUdpBrush" Color="#FF20C9A6" />
+
+            <!-- 设置导航标签色彩体系（外观/启动/AI/诊断/备份/更新） -->
+            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FF6A1B9A" />
+            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#156A1B9A" />
+            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="#FF0066B4" />
+            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="#150066B4" />
+            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="#FFC43E00" />
+            <SolidColorBrush x:Key="SectionAiTintBrush" Color="#15C43E00" />
+            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="#FF0E703C" />
+            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="#150E703C" />
+            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="#FF006E7A" />
+            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#15006E7A" />
+            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FFA8226A" />
+            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#15A8226A" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="HighContrast">
@@ -75,6 +103,19 @@
 
             <SolidColorBrush x:Key="KitDataSeriesTcpBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="KitDataSeriesUdpBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+
+            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionAiTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="{StaticResource SystemColorWindowColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

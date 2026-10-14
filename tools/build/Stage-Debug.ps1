@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version
+    [string]$Version,
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,10 +18,14 @@ $destinationRoot = Join-Path $repoRoot "bin\debug\$Version"
 $reportPath = Join-Path $reportDirectory "Debug-$Version.manifest.json"
 
 if (Test-Path -LiteralPath $destinationRoot) {
-    throw "The $Version delivery directory already exists; refusing to overwrite it."
+    if ($Force) {
+        Remove-Item -LiteralPath $destinationRoot -Recurse -Force
+    } else {
+        throw "The $Version delivery directory already exists; use -Force to overwrite it."
+    }
 }
 foreach ($path in @($sourceRoot, (Split-Path -Parent $destinationRoot))) {
-    if ((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    if ((Test-Path -LiteralPath $path) -and ((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
         throw 'Refusing to stage through a reparse point.'
     }
 }

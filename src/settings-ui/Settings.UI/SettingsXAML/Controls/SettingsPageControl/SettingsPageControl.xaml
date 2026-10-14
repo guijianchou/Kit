@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="Kit.Settings.UI.Controls.SettingsPageControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -31,7 +31,6 @@
         <ScrollViewer Grid.Row="1" AutomationProperties.AutomationId="PageScrollViewer">
             <Grid
                 Padding="0,0,24,32"
-                ChildrenTransitions="{StaticResource SettingsCardsAnimations}"
                 RowSpacing="24">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

@@ -72,9 +72,9 @@ public sealed class IdentityTests
     }
 
     [TestMethod]
-    public void InactiveProxyDraftCannotPersistCredentials()
+    public void MapOptionsAreValidByDefault()
     {
-        Assert.IsFalse(new NetMapOptions(ProxyAddress: "http://user:secret@localhost:7890").IsValid);
+        Assert.IsTrue(new NetMapOptions().IsValid);
     }
 
     [TestMethod]
@@ -82,18 +82,6 @@ public sealed class IdentityTests
     {
         using var body = new StringContent(new string('x', 65537));
         await Assert.ThrowsExceptionAsync<FormatException>(() => NetworkProbe.ReadBoundedAsync(body, CancellationToken.None));
-    }
-
-    [DataTestMethod]
-    [DataRow("socks5://127.0.0.1:1080", true)]
-    [DataRow("http://localhost:7890", true)]
-    [DataRow("http://user:secret@localhost:7890", false)]
-    [DataRow("http://localhost:7890/path", false)]
-    [DataRow("socks5h://localhost:7890", false)]
-    [DataRow("file:///C:/proxy", false)]
-    public void ExplicitProxyValidatesWithoutPersistingCredentials(string value, bool valid)
-    {
-        Assert.AreEqual(valid, NetMapOptions.TryGetProxy(value, out _));
     }
 
     [TestMethod]

@@ -4,6 +4,24 @@
 
 ## English
 
+### 2.3.11
+
+- **NetMap UI/UX & Card Presentation Enhancements**:
+  - Added prominent Fluent icon badges (36x36) and subtitles to `Proxy service connectivity` (`ServicesCard`) and `MTR route and map` (`MapCard`).
+  - Polished service connectivity items with brand icons, monospace latency pill badges, and health indicator lights.
+  - Simplified settings expander to "Map settings" (`地图设置`).
+- **NetMap Settings Simplification & Backend Decoupling**:
+  - Completely removed proxy mode and custom proxy address inputs from the UI, retaining clean Map and GeoIP database configuration (GeoLite2 ASN/City paths, file pickers, online MMDB fallback toggle, and ASN updater).
+  - Streamlined backend probe client initialization to use system web proxy defaults without maintaining dead proxy configuration fields or interfaces.
+- **MTR Route & Map Latency Acceleration**:
+  - Reduced identity stabilization delay from 5.0s to 400ms for near-instantaneous route and map initialization.
+  - Reduced ICMP ping probe timeout per hop from 800ms to 400ms.
+  - Decreased MTR continuous sampling loop interval from 2.0s to 1.0s.
+  - Accelerated online IP/ASN enrichment throttle from 1000ms to 200ms per hop.
+- **Settings Page Instant Load & Transition Optimization**:
+  - Eliminated the blank white content flash and stagger lag when opening Settings (`GeneralPage`) by removing redundant `EntranceThemeTransition` staggered cascades.
+  - Retained fluid `RepositionThemeTransition` for card adjustments during expander collapse/expand while allowing WinUI 3 `NavigationThemeTransition` and Mica to render the page immediately without transparent blank frames.
+
 ### 2.3.10
 
 - **AI Kernel Installation Transient Lock Resilience**:
@@ -631,6 +649,24 @@
 ## 中文
 
 ## 更新日志
+
+### 2.3.11
+
+- **NetMap UI/UX 视觉质感全面优化**：
+  - 为 `代理服务连通性`（`ServicesCard`）与 `MTR 路由与地图`（`MapCard`）增加 Fluent 36x36 大标题图标徽章与清晰副标题说明。
+  - 优化服务项排版，增加品牌专属 Fluent 图标、等宽字体延迟胶囊标签以及实时健康状态指示灯。
+  - 将设置折叠项精简为“地图设置”（`Map settings`）。
+- **NetMap 配置精简与后台解耦**：
+  - 完全移除界面上的代理模式（`ProxyMode`）下拉框与代理地址输入框，仅保留纯粹的地图与 GeoIP 数据库配置项（GeoLite2 ASN/City 路径、浏览文件按钮、在线 MMDB 兜底开关及 ASN 更新器）。
+  - 清理后台冗余字段与接口，探测客户端统一复用系统网络代理设置，无需再手动维护与传递代理配置参数。
+- **MTR 路由探测与地图链路响应大幅提速**：
+  - 将节点链路探测初始就绪稳定延时由 5.0 秒骤降至 400 毫秒，开启诊断后几乎瞬间完成拓扑路由与地图呈现。
+  - 将单跳 ICMP Ping 探测超时由 800 毫秒缩短至 400 毫秒。
+  - 将 MTR 路由多跳轮询采样周期由 2.0 秒缩短至 1.0 秒。
+  - 将在线 IP/ASN 地理信息富化请求的流控限速由每跳 1000 毫秒缩短至 200 毫秒。
+- **设置页面即时呈现与加载过渡优化**：
+  - 彻底消除点击进入设置（`GeneralPage`）时内容区域先“白屏/空白”再缓慢逐项浮现的卡顿问题。移除冗余且触发元素隐藏（`Opacity=0`）的 `EntranceThemeTransition` 级联交错延迟动画，同时保留卡片折叠与展开时的平滑位移过渡（`RepositionThemeTransition`）。
+  - 让 WinUI 3 原生 `NavigationThemeTransition` 与 Mica 材质平滑承载页面整页切入，内容卡片与顶部彩色标签首帧完整呈现，杜绝白屏延迟。
 
 ### 2.3.10
 

@@ -92,7 +92,7 @@ public sealed class GeoDatabase : IDisposable
             onlineRequests++;
             var result = await online(ip, cancellationToken).ConfigureAwait(false);
             rateLimited = result.LookupStatus == "RateLimited";
-            nextLookup = DateTimeOffset.UtcNow.AddSeconds(1);
+            nextLookup = DateTimeOffset.UtcNow.AddMilliseconds(200);
             bool sameCountry = local.CountryCode.Length == 0 || result.CountryCode.Length == 0 || local.CountryCode == result.CountryCode;
             return cache[ip] = local with
             {

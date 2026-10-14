@@ -4,13 +4,6 @@
 
 namespace NetMapLib;
 
-public enum ProxyMode
-{
-    System,
-    Explicit,
-    SystemRoute,
-}
-
 public enum ProbeError
 {
     None,
@@ -31,26 +24,9 @@ public enum ProbeHealth
     Error,
 }
 
-public sealed record NetMapOptions(ProxyMode Mode = ProxyMode.System, string ProxyAddress = "", string AsnDatabase = "", string CityDatabase = "", bool OnlineLookup = true)
+public sealed record NetMapOptions(string AsnDatabase = "", string CityDatabase = "", bool OnlineLookup = true)
 {
-    public bool IsValid => Enum.IsDefined(Mode) &&
-        (string.IsNullOrEmpty(ProxyAddress) ? Mode != ProxyMode.Explicit : TryGetProxy(ProxyAddress, out _));
-
-    public static bool TryGetProxy(string address, out Uri? proxy)
-    {
-        proxy = null;
-        if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) ||
-            uri.Scheme is not ("http" or "https" or "socks5") ||
-            string.IsNullOrEmpty(uri.Host) || uri.Port < 1 || uri.Port > 65535 ||
-            !string.IsNullOrEmpty(uri.UserInfo) || uri.AbsolutePath != "/" ||
-            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-        {
-            return false;
-        }
-
-        proxy = uri;
-        return true;
-    }
+    public bool IsValid => true;
 }
 
 public sealed record GeoInfo(long? Asn = null, string Organization = "", string City = "", string CountryCode = "", double? Latitude = null, double? Longitude = null, int? AccuracyKm = null, string LookupStatus = "", string Source = "", string Region = "");

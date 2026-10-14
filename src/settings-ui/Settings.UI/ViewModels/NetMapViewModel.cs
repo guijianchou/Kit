@@ -180,8 +180,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
     private bool pageActive;
     private bool disposed;
     private string message = string.Empty;
-    private int proxyMode;
-    private string proxyAddress = string.Empty;
     private string asnDatabase = string.Empty;
     private string cityDatabase = string.Empty;
     private bool onlineLookup;
@@ -195,8 +193,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
         dispatcher = DispatcherQueue.GetForCurrentThread();
         general = SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default);
         var settings = SettingsUtils.Default.GetSettingsOrDefault<NetMapSettings>(NetMapSettings.ModuleName).Properties ?? new NetMapProperties();
-        proxyMode = settings.ProxyMode?.Value ?? 0;
-        proxyAddress = settings.ProxyAddress?.Value ?? string.Empty;
         asnDatabase = settings.AsnDatabase?.Value ?? string.Empty;
         cityDatabase = settings.CityDatabase?.Value ?? string.Empty;
         onlineLookup = settings.OnlineLookup?.Value ?? true;
@@ -234,13 +230,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
         {
             if (value && IsEnabled && pageActive && !disposed && !IsUpdating)
             {
-                if (!options.IsValid)
-                {
-                    Message = Text("InvalidProxy");
-                    OnPropertyChanged();
-                    return;
-                }
-
                 Message = string.Empty;
                 session.Start(options);
             }
@@ -302,18 +291,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
             return Text("TargetLatency") + " · " + string.Format(CultureInfo.CurrentCulture, Text("HopDetail"), target.Sent, target.NoResponsePercent, last, target.AverageMs?.ToString("F1", CultureInfo.CurrentCulture) ?? "—") +
                 (target.LastMs == null && target.LastKnownMs != null ? " · " + Text("LastKnown") : string.Empty);
         }
-    }
-
-    public int ProxyModeIndex
-    {
-        get => proxyMode;
-        set => Set(ref proxyMode, value);
-    }
-
-    public string ProxyAddress
-    {
-        get => proxyAddress;
-        set => Set(ref proxyAddress, value);
     }
 
     public string AsnDatabase
@@ -424,12 +401,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
             return;
         }
 
-        if (!options.IsValid)
-        {
-            UpdateStatus = Text("InvalidProxy");
-            return;
-        }
-
         using var source = new CancellationTokenSource();
         updateCancellation = source;
         isUpdating = true;
@@ -502,8 +473,6 @@ public sealed class NetMapViewModel : Observable, IDisposable
         {
             Properties = new NetMapProperties
             {
-                ProxyMode = new IntProperty((int)options.Mode),
-                ProxyAddress = new StringProperty(options.ProxyAddress),
                 AsnDatabase = new StringProperty(options.AsnDatabase),
                 CityDatabase = new StringProperty(options.CityDatabase),
                 OnlineLookup = new BoolProperty(options.OnlineLookup),
@@ -573,7 +542,7 @@ public sealed class NetMapViewModel : Observable, IDisposable
         return detail + (result.BodyIncomplete ? " · " + Text("BodyIncomplete") : string.Empty) + checkpoint;
     }
 
-    private NetMapOptions DraftOptions() => new((ProxyMode)proxyMode, proxyAddress.Trim(), asnDatabase.Trim(), cityDatabase.Trim(), onlineLookup);
+    private NetMapOptions DraftOptions() => new(asnDatabase.Trim(), cityDatabase.Trim(), onlineLookup);
 
     private void OnGeneralChanged(GeneralSettings settings) => dispatcher.TryEnqueue(RefreshEnabledState);
 

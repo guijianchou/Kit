@@ -40,7 +40,7 @@
 |------|------|------|----------|
 | **[kit-first-plugin.md](kit-first-plugin.md)** | **新插件开发指南** | 5.7KB | 2026-09-12 |
 | [kit-development-experience.md](kit-development-experience.md) | 模块集成经验与教训 | 13.8KB | 2026-09-12 |
-| [ui-ux-refactor-plan.md](ui-ux-refactor-plan.md) | **UI/UX 优化方案 v4（主框架 / Settings 壳 + 加载速度；下一步执行稿）** | ~12KB | 2026-10-14 |
+| [ui-ux-refactor-plan.md](ui-ux-refactor-plan.md) | **UI/UX 优化方案 v5（2.3.12 复审后：主框架 / Settings 壳 + 加载速度；下一步执行稿）** | ~13KB | 2026-10-14 |
 
 **重点**：
 - `kit-first-plugin.md` — 模块契约、注册检查清单、验证步骤

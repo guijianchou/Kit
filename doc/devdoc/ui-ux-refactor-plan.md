@@ -1,173 +1,176 @@
-# Kit UI/UX 优化方案（v7）— 主框架 / Settings 壳 + 加载速度（下一步执行稿）
+# Kit UI/UX 优化方案（v8）— 主框架 / Settings 壳 + 加载速度（下一步执行稿）
 
-> 状态：**下一步执行稿（2026-10-15 第二轮复查）** ｜ 基线：`main@65a4866`（代码仍 `0b824cf`；本轮无新代码变更，无完成项可剔除）
-> 本版新增：03:55 复测数据；启动前段归属修正（72ms 内已含 App.xaml 解析，ctor→OnLaunched 的 211ms 为框架内部）；新增 L8（启动前段细分）与 L9（QuickAccess 呼出延迟仪表）；新增 §4.4（dev 路径 dry-run 备份检查报错）；L3 仪表点位精确到行号；验收表顺延为 L10。
-> 历史版本：v2 = `782c626`、v3 = `41f7bdd`、v4 = `748445e`、v5 = `20ec501`、v6 = `adbb06e` + `65a4866`（`git show <commit>:doc/devdoc/ui-ux-refactor-plan.md` 取回）。
+> 状态：**下一步执行稿（2026-10-15 第三轮：2.3.13 复审后）** ｜ 基线：`main@4f52f47`（v2.3.13，批次 8 大部分落地）
+> 本版：剔除 2.3.13 已完成项（L3 仪表、L5 去重与死代码、L6、T1、§4.4）；L1 结案（实测 Release ≈ Debug，无显著启动收益）；刷新 runner 路径实测（Debug/Release 对照 + 子阶段细分）；记录测试换位（:1342 修复、:2871 新失败）与 Dashboard 系统概览 Fluent 化；L5 风暴排除多项、剩 Localserver 采样候选。
+> 历史版本：v2 = `782c626`、v3 = `41f7bdd`、v4 = `748445e`、v5 = `20ec501`、v6 = `adbb06e`+`65a4866`、v7 = `db8630c`（`git show <commit>:doc/devdoc/ui-ux-refactor-plan.md` 取回）。
 
 ## 0. 现状基线
 
-- **部署形态**：`x64\Debug` 构建产物已是 **2.3.12**（2026-10-15 03:32 VS 构建，Kit.exe / Kit.Settings.exe 均 2.3.12.0，与提交源码一致）；日常实例 `C:\Users\Zen\Repos\Projects\Kit`（`WinUI3Apps\Kit.Settings.exe`）仍为 **2.3.11.0**（2026-10-13 23:31）；2.3.12 staging 目录（`bin\debug\2.3.12`）不存在 → 部署待执行（`tools\build\Stage-Debug.ps1` 后复制，用户既有流程）；`x64\Release` 仅剩空脚手架目录（03:29，无二进制）。
-- **2026-10-15 实测（x64/Debug 无 runner 启动路径，进程起点 = 0）**：
+- **部署形态**：`x64\Debug` 与 `x64\Release` 均已是 **2.3.13**（05:06 / 05:11 构建）；`bin\debug\2.3.13`、`bin\release\2.3.13` 已 stage；日常实例 `C:\Users\Zen\Repos\Projects\Kit`（`WinUI3Apps\Kit.Settings.exe`）仍为 **2.3.11.0**（2026-10-13 23:31）→ 部署待执行（复制 `bin\debug\2.3.13` 到 Projects\Kit，用户既有流程）。
+- **2026-10-15 实测（2.3.13 runner 路径，trace 协议；Debug = 05:19 会话，Release = 05:56 会话）**：
 
-| 阶段 | 时刻 | 增量 |
+| 阶段 | Debug | Release |
 |---|---|---|
-| App constructed | 72ms | 72（含 App.xaml 解析，见 L8） |
-| OnLaunched | 283ms | +211（ctor 结束→框架派发 OnLaunched，属运行时内部） |
-| MainWindow 实例化（含 WindowEx 基类建窗） | 392ms | +109 |
-| theme applied | 393ms | +1 |
-| placement restored（含 `ExtendsContentIntoTitleBar` 首触） | 553ms | **+160** |
-| callbacks registered | 566ms | +13 |
-| InitializeComponent 完成（ShellPage 构建） | 756ms | **+190** |
-| SetTitleBar 完成 | 757ms | +1 |
-| First page loaded (DashboardPage) | 1274ms | **+517**（navigate 156 + 布局/渲染/数据 ~360） |
+| App InitializeComponent completed | 181ms | 183ms |
+| App constructed | 182ms | 194ms |
+| OnLaunched | 385ms | 400ms |
+| MainWindow ctor enter | 470ms | 492ms |
+| titlebar extended（`ExtendsContentIntoTitleBar=true` 首触） | 535ms（+64） | 561ms（+68） |
+| placement deserialized | 568ms（+33） | 592ms（+31） |
+| placement set（`SetWindowPlacement`） | 615ms（+47） | 646ms（+54） |
+| callbacks registered | 620ms | 652ms |
+| ShellPage InitializeComponent completed | 790ms（块 170） | 819ms（块 167） |
+| ShellPage navigation items bound | 791ms（+1） | 820ms（+1） |
+| ShellPage ViewModel initialized | 805ms（+14） | 834ms（+14） |
+| Main window created | 809ms（段 339） | 838ms（段 346） |
+| Startup page navigated | 963ms | 990ms |
+| Main window activated | 963ms | 991ms |
+| First page loaded (DashboardPage) | 1321ms | 1353ms |
+| NAV DashboardPage | 511ms（navigate 153） | 514ms（navigate 151） |
 
-- **NAV_TIMING（2.3.12）**：DashboardPage 冷访问 516ms（navigate 156ms）——与 2.3.11 持平（Dashboard 未改动）；GeneralPage 冷访问 577–616ms（03:55 复测 603ms，见 L4）。
-- **03:55 复测（同构建直启）**：GeneralPage 冷访问 603ms（navigate 231ms）；加载后 500ms 触发的 dry-run 备份检查在 dev 路径报错（§4.4）。
-- **结论**：主窗段（392→757 = **365ms**）两大头 = placement/Extends 段 160ms + ShellPage InitializeComponent 190ms；全局最大单段 = Dashboard 首帧 ~517ms；启动前段 283ms = ctor 72ms（含 App.xaml 解析）+ 框架内部 211ms（L8）。
-- **异常与噪音**：当日测量会话 crash.log 0 条 first-chance；无 runner 启动时出现 x15 socket（热键冲突 IPC 无对端所致，测试环境噪音，非真实场景）。
-- **日志机制（实测确认）**：① STARTUP_TIMING / NAV_TIMING 走 ManagedCommon Logger，受 `log_settings.json` 级别控制（`off` 时静默）；② `Debug.WriteLine`（如 `=== PAGE LOADED ===`）经 Logger 注册的 Trace 监听器直达同一日志文件，**不受级别控制**；③ 复测协议：先把 `%LOCALAPPDATA%\Kit\log_settings.json` 置 `{"logLevel":"trace"}` 再启动，测后按需恢复。
-- 已定决策（保持不动）：动画系统原生；chips 令牌化彩色；QA 3 处 hex 例外；AIHub 单文件；动态键族（`Text(shortKey)`、`State{suffix}`）；材质透出链（§3.1）。
+- **runner 侧**：初始化（WinMain→模块启用）129ms（Debug）/ 140ms（Release）；设置进程创建 +142ms / +135ms。
+- **结论**：① **L1 结案：Release ≈ Debug（±3%）**，启动耗时由框架/XAML 段主导，Debug 日常部署即可，Release 用于发布；② 主窗段两大头细化为 placement 段 ~144-155ms（其中 `ExtendsContentIntoTitleBar` 首触 45-68ms 最大）与 ShellPage InitializeComponent 167-170ms（XAML 膨胀；导航绑定 1ms、VM 初始化 14ms 可忽略）；③ 首帧 ~1321-1353ms（trace 协议下；`off` 时更快但无 STARTUP 行可读）。
+- **单测**：212 / 16 失败 / 196 通过，与基线同数但有一项换位：`BuildCompatibility.cs:1342`（sparse 版本）因 AppxManifest 随版本升级**已修复**；`BuildCompatibility.cs:2871`（断言 Helper.cs 仍含 `Process.GetProcessesByName("Kit")`）因删除 `AllowRunnerToForeground` **新失败**（随 §4.1 更新断言）。
+- **验证链（本机 2.3.13）**：构建 exit 0（**注意：须 `-ExecutionPolicy Bypass`**，否则 build-common.ps1 被策略拦截而脚本仍 exit 0 不产出）；模块页烟雾 PASS、仪表盘烟雾（zh-CN）PASS、NetMap 烟雾 PASS。
+- **异常与噪音**：本轮全部测量/烟雾会话（05:40-05:56）first-chance 为 socket IOException ×5-10 或 0 条；仅用户 05:09 会话出现 OpenProcess 风暴（x396/8s，见 L5）。
+- **日志机制（保持）**：STARTUP_TIMING / NAV_TIMING 受 `log_settings.json` 级别控制（`off` 时静默）；`Debug.WriteLine` 经 Logger 的 Trace 监听器直达日志文件、不受级别控制；复测协议：置 trace → 测量 → 恢复。
+- 已定决策（保持 + 新增）：动画系统原生；chips 令牌化彩色；QA 3 处 hex 例外；AIHub 单文件；动态键族（`Text(shortKey)`、`State{suffix}`）；材质透出链（§3.1）；**新增：Dashboard `UsageProgressBar` 类别语义色板（CPU 青、内存紫、存储绿、GPU 琥珀，亮/暗双色，硬编码于 UsageProgressBar.cs）**。
 
 ## 1. 执行纪律
 
 - 只动 UI/UX 与展示层；x:Name / AutomationId / x:Uid 契约零改动；文案 en-us + zh-CN 同步；新增面板走半透明材质体系。
 - 性能类改动：先按 §0 的日志机制取 STARTUP_TIMING / NAV_TIMING 基线，改后用同一协议复测（`pwsh tools\diagnostics\Get-KitDiagnostics.ps1 -Days 2`）。
-- 涉及运行数据的结论必须先部署 2.3.12（或更高）到 `Projects\Kit` 再测（或用 x64/Debug 直启并注明路径差异）。
-- 核心零改动守卫与验证链同 §6；越界项（如 sparse 清单）单列提交。
+- 涉及运行数据的结论必须先部署到 `Projects\Kit` 再测（或用 x64/Debug 直启并注明路径差异）。
+- 核心零改动守卫与验证链同 §6；越界项单列提交。
 
 ## 2. 加载速度
 
-### L1 Debug→Release 对照（未做；最大单杠杆）
+### L1 Debug→Release 对照（已测结案：无显著差异）
 
-- 现状仍为 Debug 部署；`x64\Release` 仅剩空脚手架（无二进制），2.3.12 无 Release 产物。动作：用 `Stage-Release.ps1` 构建 Release，同协议测量 STARTUP_TIMING 对照；据结果决定日常部署。
+- Release 2.3.13 已构建并 stage；runner 路径实测：主窗段 339（Debug）→ 346（Release）、激活 963 → 991、首帧 1321 → 1353，均在 ±3% 内。结论：启动耗时由框架/XAML 段主导，**换 Release 无显著启动收益**；日常维持 Debug，Release 用于发布。备注：单样本 + trace 协议，如需更严谨可再采 2-3 次。
 
-### L2 首帧体验（已落地；效果待 runner 路径确认）
+### L2 首帧体验（已验证）
 
-- 2.3.12 已把 `NavigateToSection` 前移到 `Activate` 之前并新增 "Main window activated" 仪表（App.xaml.cs runner 路径）。
-- 遗留：无 runner 的 `#if DEBUG` 分支仍是旧顺序（Activate→Navigate），如需在开发路径验证先同步该分支；真实收益待部署后从托盘打开实测。
+- runner 路径 2.3.13：navigate 先于 activate（navigate 段 151-156ms，随后 activated 与 navigated 同刻 963/991），首帧体验符合预期。
+- 遗留：无 runner 的 `#if DEBUG` 分支仍为旧顺序（Activate→Navigate），仅开发路径受影响，低优先级。
 
-### L3 主窗段细分与优化（数字已取得；优化未做）
+### L3 主窗段优化（仪表已落地；优化未做）
 
-- 实测拆解见 §0：**placement/Extends 段 160ms** 与 **ShellPage InitializeComponent 段 190ms** 为两大头。
-- 动作 A（placement 段，MainWindow.xaml.cs，现有仪表 :35/:40/:58）：在 :42（`ExtendsContentIntoTitleBar = true` 后）、:48（`DeserializePlacementOrDefault` 后）、:56（`SetWindowPlacement` 后）各插一条 STARTUP_TIMING，定位 160ms 归属；候选优化：placement 文件预读、`SetWindowPlacement` 延后到首帧后、`AppWindow.Changed`（:57）订阅后置。
-- 动作 B（ShellPage 段，ShellPage.xaml.cs:108-133）：在 :110（`InitializeComponent()` 后）、:119（NavHelper×8 + SetWindowTitle 后）、:124（`ViewModel.Initialize` 后）各插一条（:133 `RegisterForIPC` 已由 "InitializeComponent completed" 仪表覆盖），定位 190ms 归属；候选优化：导航项图标/模板延迟、ShellViewModel 初始化后置。
-- 验收：主窗段（ctor→SetTitleBar）≤ 250ms（当前 365ms）。
+- 两大头与细分（见 §0 表）：placement 段 144-155ms = titlebar extended 45-68 + deserialize 31-33 + SetWindowPlacement 47-54；ShellPage 段 167-170ms 几乎全在 `InitializeComponent()`（XAML 膨胀）。
+- 动作 A（placement 段，MainWindow.xaml.cs:42-57）：候选：`ExtendsContentIntoTitleBar` 首触后置到首帧后（需评估视觉影响）、placement 文件预读、`SetWindowPlacement` 延后到首帧后、`AppWindow.Changed`（:57）订阅后置。
+- 动作 B（ShellPage 段，ShellPage.xaml.cs:110-133）：代码段（nav 绑定 1ms + VM 初始化 14ms）已可忽略，优化必须动 ShellPage.xaml 本身：导航项图标/模板延迟、页脚精简、或评估 XAML 编译策略。
+- 验收：主窗段（ctor→SetTitleBar）≤ 250ms（当前 339-346ms）。
 
-### L4 GeneralPage 冷访问（部分生效；未完成）
+### L4 GeneralPage 冷访问（未完成；x:Load 未加）
 
-- 已做（2.3.12）：`AiServices` 惰性属性；`InitializeAsync`（策略加载）由 `CurrentPolicyContent` 触发。
-- 未完成原因：GeneralPage.xaml **无任何 x:Load**，`x:Bind ViewModel.AiServices.*`（约 20 处）在页面加载时即求值 → `AiHubViewModel` 本体仍随页面构造；实测 navigate 260→134–232ms（03:55 复测 231ms），但 loaded 555→577–616ms（03:55 复测 603ms），总耗时持平。
+- 2.3.13 复测：冷访问 573ms（navigate 186）/ 652ms（navigate 269），与 2.3.11/2.3.12 持平。
 - 动作：给 AI 面板区（`GeneralPageAiHubMasterCard` 起的服务配置区）加 `x:Load`（惰性元素+绑定），或把绑定改为激活后赋值。验收：GeneralPage 冷访问（navigate+loaded）≤ 250ms。
 
-### L5 Dashboard 常驻开销（部分落地；含两处遗留 + 归因修正）
+### L5 Dashboard 常驻开销（去重与死代码已完成；OpenProcess 风暴未闭合）
 
-- 已做（2.3.12）：`GpuInspector.SampleAsync` 失败缓存 15s / 成功缓存 3s（进程 churn 降低，保留）。
-- **遗留 1**：`uptimeTimer` 未移除，同时 `UpdateUptimeTick()` 又被加进 telemetry tick → uptime 每秒更新两次；二选一（建议删 uptimeTimer）。
-- **归因修正**：OpenProcess 风暴（x4668/2 天）**不来自** Dashboard 遥测——修后 Dashboard 活跃 136s 会话 0 条 first-chance；后续新会话同样 0 条；风暴来源**仍待定位**。
-- **未完成（bisect 协议）**：带 runner 启动，逐项只用一个功能（AIHub AI 路由 / Localserver / NetMap MTR / 热键冲突窗口 / 仅浏览页面），每轮 ≥5 分钟后比对 crash.log 的 OpenProcess 计数。静态候选：`KernelProcessRunner`、Localserver `ServiceRunner`（`Process.GetProcessById` 路径）、runner 参数 IPC 路径。Settings 进程内托管进程枚举仅剩 `Helper.AllowRunnerToForeground`（无调用者，死代码，顺带删）。
+- 已完成（2.3.13，剔除）：`UpdateUptimeTick()` 重复调用移除（uptime 每秒一次）；`Helper.AllowRunnerToForeground` 死代码删除（注意：该删除使 BuildCompatibility.cs:2871 失败，见 §4.1）。
+- **OpenProcess 风暴证据**：用户 05:09 会话（NetMap 烟雾）x396/8s ≈ 51/s，`Win32Exception E_FAIL`，栈顶 `System.Diagnostics.ProcessManager.OpenProcess`；受控复跑同一 NetMap 烟雾（05:42）0 条；其余会话（含 Release 测量）0 条。
+- **本轮排除项**（静态核查）：`RunnerHelper`（原生 OpenProcess，非托管栈）、`SystemResourceInspector`（纯 GetSystemTimes/GlobalMemoryStatusEx）、`KernelProcessRunner`（无进程调用）、`PowerToysPID` 路径、nvidia-smi（Process.Start）。
+- **剩余候选**：LocalserverViewModel 资源采样（1s telemetry timer → `ProcessResourceInspector.Sample` → `GetProcessById` + `TotalProcessorTime`/`WorkingSet64`，ProcessResourceInspector.cs:108-110；Win32Exception 已捕获于 :125 但仍记录 first-chance）；`PortInspector`/`ServiceRunner`（仅 Localserver 活跃时）。**注**：当前 settings 中 Localserver 模块为 disabled，与风暴会话不符 → 未闭合，勿下结论。
+- **下一步实验**：① 复跑 NetMap 烟雾 ×3 统计复现率；② 以提权 shell 运行烟雾（验证"对端不可打开"假说）；③ 给采样路径加降噪（Access-Denied 预检 + 失败缓存，或 CrashLog 忽略名单）。
 
-### L6 CrashLog 采样（已落地；一处 minor 遗留）
+### L6 CrashLog 采样（已完成，剔除）
 
-- 遗留：达到 `MaxDistinctFirstChance` 上限后仍会先捕获 StackTrace 再丢弃；先判上限再取栈即可。
+- `RecordFirstChance` 已改为先判上限再取栈（2.3.13），原遗留关闭。
 
 ### L7 网络失败风暴（未做）
 
-- 定位来源（NetMap 地理库下载 / AIHub kernel 更新 / 更新检查在受限网络下的重试），加退避与预期失败静默、必要时先做连通性预检。验收：FirstChanceSummary 网络类计数下降 >90%。
+- 每次会话仍出现 socket IOException ×5-10（`AwaitableSocketAsyncEventArgs.ThrowException`）。定位来源（NetMap 地理库下载 / AIHub kernel 更新 / 更新检查在受限网络下的重试），加退避与预期失败静默。验收：FirstChanceSummary 网络类计数下降 >90%。
 
-### L8 App 启动前段细分与瘦身（新）
+### L8 App 启动前段（部分完成；修正 + 字典审计未做）
 
-- 实测：进程→App ctor 完成 72ms（App.xaml.cs:116 仪表；**已含 App.xaml 解析**——11 个合并字典在 App.xaml:14-25）；ctor 结束→OnLaunched 283ms（+211ms，**框架内部**：消息循环/合成器/派发；我方仅 :118 `NativeEventWaiter.WaitForEventLoop` 起线程）。
-- 动作：① App ctor 内补两条仪表（:85 ctor 入口、:101 `InitializeComponent()` 后），把 72ms 拆为"运行时+Logger/语言初始化（:86-99）"与"App.xaml 解析"两段；② 审计可延后的合并字典（候选：`TimelineStyles` → NetMap 页面资源；`KeyVisual`/`KeyCharPresenter`/`IsEnabledTextBlock`/`ShortcutWithTextLabelControl` → 仅快捷键相关页面），移出全局后复测；③ 211ms 框架段不在 Debug 上优化，只做 L1 Release 对照。
-- 验收：App ctor 段（进程→constructed）≤ 50ms（当前 72ms，细分后定最终目标）。
+- 2.3.13 已加 2 条仪表，但 "App ctor enter" 位于 `Logger.InitializeLogger` 之前 → 日志未初始化被吞（所有会话均无此行）。修正：ctor 入口先捕获 `StartupStopwatch` 值，Logger 初始化后补记。
+- App InitializeComponent 段实测 ≈ 181-183ms（runner 路径；含 App.xaml 全部 11 个合并字典）。动作：审计可延后的字典（候选：`TimelineStyles` → NetMap 页面资源；`KeyVisual`/`KeyCharPresenter`/`IsEnabledTextBlock`/`ShortcutWithTextLabelControl` → 仅快捷键相关页面），移出全局后复测；211ms 框架段（ctor→OnLaunched）不在 Debug 上优化。
+- 验收：App ctor 段（进程→constructed）≤ 150ms（当前 182-194ms，细分后定最终目标）。
 
-### L9 QuickAccess 呼出延迟仪表与测量（新）
+### L9 QuickAccess 呼出延迟仪表与测量（未做）
 
 - QuickAccess.UI 全项目无 STARTUP_TIMING 仪表；runner 侧 `quick_access_host.cpp:215/248` 已用 `CREATE_SUSPENDED` + `ResumeThread` 预热进程，但冷/热呼出的实际延迟无数据。
-- 动作：给 QuickAccess.UI 加同族仪表（App ctor / MainWindow ctor / ShellPage InitializeComponent / LaunchPage Loaded），取"首次呼出（冷）"与"预热后呼出（热）"两组数字；据此定优化目标（候选：XAML 精简、延后启动页导航——现 `Page_Loaded` 即导航 LaunchPage）。
-- 验收：两组数字入库并写入 L10 表。
+- 动作：给 QuickAccess.UI 加同族仪表（App ctor / MainWindow ctor / ShellPage InitializeComponent / LaunchPage Loaded），取"首次呼出（冷）"与"预热后呼出（热）"两组数字；据此定优化目标。验收：两组数字入库并写入 L10 表。
 
 ### L10 验收协议与目标
 
 | 指标 | 现状（2026-10-15 实测） | 目标 |
 |---|---|---|
-| 主窗段（ctor→SetTitleBar） | 365ms（placement 160 + ShellPage 190） | ≤ 250ms（L3） |
-| App ctor 段（进程→constructed） | 72ms（含 App.xaml 解析） | ≤ 50ms（L8） |
-| Dashboard 首帧 | ~517ms（navigate 156 + 布局/数据 ~360） | ≤ 350ms（细分仪表后定，或 T5 骨架兜底） |
-| Settings 首屏（runner 路径，待部署复测） | 2.3.11 为 940–1230ms | ≤ 800ms（L1+L2+L3 后） |
-| GeneralPage 冷访问 | 577–616ms（03:55 复测 603ms） | ≤ 250ms（L4 完成 x:Load 后） |
+| 主窗段（ctor→SetTitleBar） | 339-346ms（placement 144-155 + ShellPage IC 167-170） | ≤ 250ms（L3） |
+| App ctor 段（进程→constructed） | 182-194ms | ≤ 150ms（L8 细分后定） |
+| Dashboard 首帧 | ~1321-1353ms（trace 协议；NAV 511-514） | ≤ 1100ms（L3 优化后复测） |
+| GeneralPage 冷访问 | 573-652ms | ≤ 250ms（L4 完成 x:Load 后） |
 | QuickAccess 冷/热呼出 | 未测量（无仪表） | 取得两组数字并定目标（L9） |
-| OpenProcess first-chance / 会话 | 最高 ×635（来源未定） | 定位并归零（L5 bisect） |
-| 网络类 first-chance / 会话 | ×146–205 | 下降 >90%（L7） |
+| Debug vs Release | 已结案：无显著差异（±3%） | —（L1 关闭） |
+| OpenProcess first-chance / 会话 | 最高 ×396/8s（来源未闭合，候选见 L5） | 定位并归零（L5 实验） |
+| 网络类 first-chance / 会话 | ×5-10（2.3.13 会话） | 定位并归零（L7） |
 | 复测工具 | — | `Get-KitDiagnostics.ps1 -Days 2` + §0 日志协议 |
 
 ## 3. 主框架 & Settings 壳 UI/UX（Mica + WinUI 3）
 
-### 3.1 材质审计结论（2026-10-14，保持）
+### 3.1 材质审计结论（保持 + 2.3.13 补充）
 
 - 透出链完整、无阻断：主窗 `MicaBackdrop Kind="BaseAlt"`（MainWindow.xaml:13）→ 透明根（ShellPage.xaml:85）→ `NavigationViewContentBackground` 透明覆盖（:151）→ 内容层 `LayerFillColorDefaultBrush`（:244）→ 半透明卡片；唯一实色面为对话框内容（系统设计）；QA `DesktopAcrylicBackdrop` 被测试钉死（BuildCompatibility.cs:3097-3107），勿换类型。
+- 2.3.13 补充：Dashboard 系统概览卡改用 32×32 / 24×24 圆角徽标容器（`SubtleFillColorSecondaryBrush` + `CardStrokeColorDefaultBrush`，令牌化 ✓）；进度条 6px、`CornerRadius="3"`、轨道 `ControlFillColorDefaultBrush`（半透明，融入 Mica ✓）。
 - 省电/远程桌面回退、DWM 圆角阴影：系统自动；ContentDialog / Flyout / NavigationView 面板材质：系统默认，不自定义。
 
 ### 3.2 已落地与遗留
 
-- **T1 标题栏 HC（已落地，附风险）**：HC 时调用 `AppWindowTitleBar.ResetToDefault()`。**风险**：官方文档称其会"重置/切回系统标题栏"（即重置 `ExtendsContentIntoTitleBar`）→ HC 下可能同时出现系统标题栏与自定义 TitleBar。→ 未完成：HC 下实测；若确认，改为 ResetToDefault 后重新 `ExtendsContentIntoTitleBar = true` + `SetDragRegionForCustomTitleBar()`，或仅恢复系统颜色。
-- **T2 动态列表过渡（已落地）**：`DynamicListTransitions`（AddDelete + Reposition）已用于 Localserver 服务表、UDPtest TCP/UDP 表、NetMap 服务列表；日志流式容器未加（符合计划）。
-- **T3 AIHub 过渡（已落地）**：6 处非虚拟化 ItemsControl（:820/:825/:849/:923/:1101/:1147）已补 `SettingsCardsAnimations`（仅 Reposition，可接受）。
-- **T5 首屏骨架（未定，价值上升）**：Dashboard 首帧 ~517ms 的布局/数据段给了骨架明确的用武之地；待 L3 细分仪表后决定。
+- **T1 标题栏 HC（已完成，剔除）**：2.3.13 改为 HC 时将按钮四色置 `null` 恢复系统默认（不再用 `ResetToDefault()`），风险解除；HC 视觉核验并入 §4.3 手工过检。
+- **T2 动态列表过渡（已完成）**：`DynamicListTransitions` 已用于 Localserver 服务表、UDPtest TCP/UDP 表、NetMap 服务列表。
+- **T3 AIHub 过渡（已完成）**：6 处非工业虚拟化 ItemsControl 已补 `SettingsCardsAnimations`。
+- **T5 首屏骨架（未定，数据支撑增强）**：首帧 ~1321-1353ms（trace）中布局/数据段仍占大头；待 L3 优化后复测决定是否加骨架。
 
 ## 4. 模块页与文案遗留（降级收尾）
 
-### 4.1 单测 16 项修复（未动；2.3.12 复审复测仍为同样 16 项）
+### 4.1 单测 16 项修复（2.3.13 换位：:1342 修复、:2871 新失败）
 
 | 族 | 失败测试（文件:行） | 建议动作 |
 |---|---|---|
 | 实验特性移除遗留 ×6 | BuildCompatibility.cs:1104 / 1721 / 3093；General.cs:131 / 458；FrameworkPrivacyDefaults.cs:331 | 按"已移除"改写断言 |
-| 版本与元数据 ×2 | BuildCompatibility.cs:1342（sparse 仍 2.3.7.0，版本已 2.3.12）；General.cs:748（README 措辞） | sparse 版本随 `Version.props`（越界项单列提交）；README 断言更新 |
+| 版本与元数据 ×1 | General.cs:748（README 措辞） | README 断言更新（**原 :1342 sparse 版本已随 AppxManifest 升级修复，剔除**） |
 | GeneralPage 结构 ×2 | General.cs:158 / 707 | 按现布局更新断言 |
 | 品牌与文案 ×3 | General.cs:469 / 486 / 514 | 按现文案/资产更新断言 |
-| 模块目录 ×2 | General.cs:539 / 589（NetMap 后为 6 项） | 断言更新为 6 项 |
+| 模块目录 ×2 | General.cs:539 / 589 | 断言更新为 6 项 |
 | 运行器启动清理 ×1 | BuildCompatibility.cs:1218（`WM_CLOSE`） | 核对 61d6ed4 意图后更新断言 |
+| **新增 ×1** | BuildCompatibility.cs:2871（断言 Helper.cs 含 `Process.GetProcessesByName("Kit")`，随 `AllowRunnerToForeground` 删除而失败） | 更新断言为不依赖该行（死代码已按计划删除） |
 
 ### 4.2 字符串迁移（未动）
 
 - UDPtest 57 + 11 处、AIHubPageViewModel 232 处、AiHubViewModel 13 处 IsChinese → resw（`UDPtest_*` / `AIHub_` 前缀，PRI277 逐一核对）。
 
-### 4.3 其余（未动）
+### 4.3 其余（未动 + 2.3.13 新增观察）
 
 - HealthStyles 共享化（DashboardEgressStyles vs NetMapHealthStyles 去重，键名保持）。
 - NetMap 死键 ~18（`Text()` 加白名单后清理）+ `AiHub_PipelineCard` 2 键（随 AiHubSettingsTests.cs:80 一并清）。
 - a11y 收尾：LiveSetting 除 NetMap 外全缺；AccessibilityView AIHub/Localserver/UDPtest 为 0 处；General HeadingLevel 0 处。
-- 手工过检：浅/深/HC × 全页 + 键盘导航 + 系统"动画效果"关闭时全静默。
-- 死代码：`Helper.AllowRunnerToForeground`（无调用者）。
+- 手工过检：浅/深/HC × 全页（含 T1 的 HC 标题栏核验）+ 键盘导航 + 系统"动画效果"关闭时全静默。
+- **新增**：备份位置校验失败以 [Error] 记录（SettingsBackupAndRestoreUtils.cs:675，用户选到 app 数据目录内非法路径时；建议降为 Warning）。
+- **新增**：`UsageProgressBar` 类别色依赖 `AutomationProperties.Name` 字符串匹配（中英文关键字硬编码于 DetectCategory），脆弱耦合；后续可改显式附加属性（如 `kit:UsageCategory`）或构造参数。
 
-### 4.4 dev 路径 dry-run 备份检查报错（03:55 日志捕获，未修）
-
-- 现象（x64\Debug 直启）：GeneralPage 加载后 500ms（GeneralPage.xaml.cs:88 `Loaded` → :99 `RefreshBackupRestoreStatus(500)`）在后台执行 `DryRunBackup()`（SettingsBackupAndRestoreUtils.cs:611）→ 抛 `FileNotFoundException`（dev 工作目录无 `backup_restore_settings.json`）→ 以 **[Error]** 记录，消息含空占位："There was an error in  : …"（:815，`tempFile.Value` 尚未赋值）。
-- 影响：① 每次进 GeneralPage 一条 [Error] 日志噪音；② `lastBackupSettingsResults` 被置为 Error（:617）→ 卡片"设置匹配"文案走错误分支（GeneralViewModel.cs:867-916 `CurrentSettingMatchText` 读 `GetLastBackupSettingsResults`）；③ 真实备份路径（点击 Back up → SettingsUtils.cs:249 → 同一内部方法 :691）在 dev 下同样失败，且文案会显示"设置格式错误"（`General_SettingsBackupAndRestore_SettingsFormatError`）；部署实例有该文件（`Projects\Kit` 根与 `WinUI3Apps` 各一份），正式安装不受影响。
-- 动作：① 缺文件时优雅降级（返回空配置 `{}` 或跳过 dry-run），不落 [Error]、不置 Error 状态；② 修 :815 消息空占位；③ 复核卡片在"无备份配置"下的文案分支。
-- 验收：dev 直启进出 GeneralPage 无 [Error] 行，卡片状态正常。
-
-## 5. 下一步批次（8–12，每批原子提交）
+## 5. 下一步批次（9–13，每批原子提交）
 
 | 批次 | 内容 | 验收 |
 |---|---|---|
-| 8 | 主窗与首帧：L3 细分（按行号插仪表）并优化两大头；L8 启动前段细分与 App.xaml 瘦身；L4 加 x:Load；L5 删 uptimeTimer + OpenProcess bisect；T1 HC 实测与修复；L6 上限微调；清死代码 | 构建 + 3 烟雾 + 主窗段 ≤ 250ms + App ctor 段 ≤ 50ms + crash.log 计数 |
-| 9 | 部署 2.3.12 到 `Projects\Kit`，取 runner 路径真实首屏；L9 QuickAccess 仪表与冷/热测量；L1 Release 对照；据结果定 T5 骨架 | 托盘实测 + Get-KitDiagnostics + QA 冷/热两组数字 |
-| 10 | 修复批次：单测 16 项（§4.1）+ dry-run 备份检查（§4.4） | 212/212 + dev 直启进出 GeneralPage 无 [Error] |
-| 11 | 字符串迁移（§4.2）+ 死键清理 | 构建 + 源码扫描单测 |
-| 12 | HealthStyles + a11y + 手工过检 + 文档/changelog | 全量回归 |
+| 9 | 部署 2.3.13 到 `Projects\Kit`（bin 已 stage）；L9 QuickAccess 仪表与冷/热测量；据结果定 T5 骨架 | 托盘实测 + Get-KitDiagnostics + QA 冷/热两组数字 |
+| 10 | 性能优化批次：L3 两大头优化（placement 段 / ShellPage.xaml）、L8 修正（ctor-enter 补记）+ 合并字典审计、L4 加 x:Load | 构建 + 3 烟雾 + 主窗段 ≤ 250ms + GeneralPage ≤ 250ms |
+| 11 | 修复批次：单测 16 项（含 :2871）+ L5 采样降噪 + 备份校验 severity | 212/212（或记录无法修复项与原因）+ crash.log 计数 |
+| 12 | 字符串迁移（§4.2）+ 死键清理 | 构建 + 源码扫描单测 |
+| 13 | HealthStyles + a11y + 手工过检 + 文档/changelog | 全量回归 |
 
 ## 6. 验证与回退
 
 ```bash
-# 构建（exit 0 = 成功；失败先读 src/settings-ui/build.debug.x64.errors.log）
-pwsh tools\build\build.ps1 -Platform x64 -Configuration Debug -Path "src\settings-ui"
+# 构建（本机须 -ExecutionPolicy Bypass；成功标志：exit 0 且输出含 "[BUILD] Local projects built"）
+pwsh -ExecutionPolicy Bypass -File tools/build/build.ps1 -Platform x64 -Configuration Debug -Path "src/settings-ui"
 ```
 
 ```powershell
-# 烟雾（pwsh 7；必须先关闭 Kit 全部进程）
-pwsh -File tools\tests\SettingsUI\Invoke-ModulePageSmoke.ps1 -Configuration Debug
-pwsh -File tools\tests\SettingsUI\Invoke-DashboardPageSmoke.ps1 -Configuration Debug -Language zh-CN
-pwsh -File tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1
+# 烟雾（pwsh 7 + Bypass；必须先关闭 Kit 全部进程）
+pwsh -ExecutionPolicy Bypass -File tools\tests\SettingsUI\Invoke-ModulePageSmoke.ps1 -Configuration Debug
+pwsh -ExecutionPolicy Bypass -File tools\tests\SettingsUI\Invoke-DashboardPageSmoke.ps1 -Configuration Debug -Language zh-CN
+pwsh -ExecutionPolicy Bypass -File tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1
 ```
 
 ```powershell
@@ -175,6 +178,6 @@ pwsh -File tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1
 pwsh -File tools\diagnostics\Get-KitDiagnostics.ps1 -Days 2
 ```
 
-- 单元测试：`Debug\x64\tests\SettingsTests\net10.0-windows10.0.26100.0\Settings.UI.UnitTests.exe`（本机 vstest.console testhost 崩溃，用 MSTest 直接运行器；禁 `dotnet test`）。
+- 单元测试：`Debug\x64\tests\SettingsTests\net10.0-windows10.0.26100.0\Settings.UI.UnitTests.exe`（仓库根 `Debug\` 下；本机 vstest.console testhost 崩溃，用 MSTest 直接运行器；禁 `dotnet test`）。
 - 部署：`tools\build\Stage-Debug.ps1` 产出 `bin\debug\<版本>` 后复制到 `C:\Users\Zen\Repos\Projects\Kit`（用户既有流程）。
-- 回退点：`0b824cf`（代码基线；后续批次提交后以最新提交为准）。
+- 回退点：`4f52f47`（本稿基线；后续批次提交后以最新提交为准）。

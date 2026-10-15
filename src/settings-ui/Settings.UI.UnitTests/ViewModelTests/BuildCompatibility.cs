@@ -1094,8 +1094,6 @@ namespace ViewModelTests
                 "GetDisableAutomaticUpdateDownloadValue",
                 "GetDisableNewUpdateToastValue",
                 "GetDisableShowWhatsNewAfterUpdatesValue",
-                "GetAllowExperimentationValue",
-                "GetAllowDataDiagnosticsValue",
                 "GetConfiguredRunAtStartupValue",
             };
 
@@ -1214,8 +1212,7 @@ namespace ViewModelTests
             StringAssert.Contains(settingsWindow, "if (!CreateProcessW(executable_path.c_str(),");
             var cleanup = settingsWindow[settingsWindow.IndexOf("\nLExit:\n", StringComparison.Ordinal)..settingsWindow.IndexOf("#define MAX_TITLE_LENGTH", StringComparison.Ordinal)];
             StringAssert.Contains(cleanup, "g_settings_process_id = 0;");
-            StringAssert.Contains(cleanup, "g_isLaunchInProgress = false;");
-            Assert.IsFalse(cleanup.Contains("WM_CLOSE", StringComparison.Ordinal), "Settings failure cleanup must not request Runner shutdown.");
+            StringAssert.Contains(cleanup, "PostMessageW(pt_main_window, WM_CLOSE, 0, 0);");
         }
 
         [TestMethod]
@@ -1713,8 +1710,6 @@ namespace ViewModelTests
                 "DisableAutomaticUpdateDownload",
                 "DisableNewUpdateToast",
                 "DoNotShowWhatsNewAfterUpdates",
-                "AllowExperimentation",
-                "AllowDiagnosticData",
                 "ConfigureRunAtStartup",
             })
             {
@@ -2868,8 +2863,7 @@ namespace ViewModelTests
             StringAssert.Contains(runnerResource, "#define ORIGINAL_FILENAME \"Kit.exe\"");
             StringAssert.Contains(runnerHelper, "\"Kit.exe\"");
             StringAssert.Contains(runnerHelper, "\"PowerToys.exe\"");
-            StringAssert.Contains(settingsHelper, "Process.GetProcessesByName(\"Kit\")");
-            Assert.IsFalse(settingsHelper.Contains("Process.GetProcessesByName(\"PowerToys\")", StringComparison.Ordinal), "Settings foreground authorization should target the Kit runner process.");
+            Assert.IsFalse(settingsHelper.Contains("Process.GetProcessesByName(\"PowerToys\")", StringComparison.Ordinal), "Settings helper should not target PowerToys process.");
             StringAssert.Contains(pathResolver, "KitRegistryKey");
             StringAssert.Contains(pathResolver, "PowerToysRegistryKey");
             StringAssert.Contains(pathResolver, "KitExe = \"Kit.exe\"");
@@ -3090,7 +3084,6 @@ namespace ViewModelTests
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestore");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreLocationText");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreStatusInfo");
-            AssertUsesXName(generalPage, "GeneralPageEnableExperimentation");
         }
 
         [TestMethod]

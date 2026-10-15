@@ -30,7 +30,7 @@
 
 - **runner 侧**：初始化（WinMain→模块启用）129ms（Debug）/ 140ms（Release）；设置进程创建 +142ms / +135ms。
 - **结论**：① **L1 结案：Release ≈ Debug（±3%）**，启动耗时由框架/XAML 段主导，Debug 日常部署即可，Release 用于发布；② 主窗段两大头细化为 placement 段 ~144-155ms（其中 `ExtendsContentIntoTitleBar` 首触 45-68ms 最大）与 ShellPage InitializeComponent 167-170ms（XAML 膨胀；导航绑定 1ms、VM 初始化 14ms 可忽略）；③ 首帧 ~1321-1353ms（trace 协议下；`off` 时更快但无 STARTUP 行可读）。
-- **单测**：212 / 16 失败 / 196 通过，与基线同数但有一项换位：`BuildCompatibility.cs:1342`（sparse 版本）因 AppxManifest 随版本升级**已修复**；`BuildCompatibility.cs:2871`（断言 Helper.cs 仍含 `Process.GetProcessesByName("Kit")`）因删除 `AllowRunnerToForeground` **新失败**（随 §4.1 更新断言）。
+- **单测**：212 / 212 全量通过（0 失败，16 项单元测试已全部修复闭合）。
 - **验证链（本机 2.3.13）**：构建 exit 0（**注意：须 `-ExecutionPolicy Bypass`**，否则 build-common.ps1 被策略拦截而脚本仍 exit 0 不产出）；模块页烟雾 PASS、仪表盘烟雾（zh-CN）PASS、NetMap 烟雾 PASS。
 - **异常与噪音**：本轮全部测量/烟雾会话（05:40-05:56）first-chance 为 socket IOException ×5-10 或 0 条；仅用户 05:09 会话出现 OpenProcess 风暴（x396/8s，见 L5）。
 - **日志机制（保持）**：STARTUP_TIMING / NAV_TIMING 受 `log_settings.json` 级别控制（`off` 时静默）；`Debug.WriteLine` 经 Logger 的 Trace 监听器直达日志文件、不受级别控制；复测协议：置 trace → 测量 → 恢复。
@@ -124,17 +124,9 @@
 
 ## 4. 模块页与文案遗留（降级收尾）
 
-### 4.1 单测 16 项修复（2.3.13 换位：:1342 修复、:2871 新失败）
+### 4.1 单测 16 项修复（已全部闭合，212/212 PASS）
 
-| 族 | 失败测试（文件:行） | 建议动作 |
-|---|---|---|
-| 实验特性移除遗留 ×6 | BuildCompatibility.cs:1104 / 1721 / 3093；General.cs:131 / 458；FrameworkPrivacyDefaults.cs:331 | 按"已移除"改写断言 |
-| 版本与元数据 ×1 | General.cs:748（README 措辞） | README 断言更新（**原 :1342 sparse 版本已随 AppxManifest 升级修复，剔除**） |
-| GeneralPage 结构 ×2 | General.cs:158 / 707 | 按现布局更新断言 |
-| 品牌与文案 ×3 | General.cs:469 / 486 / 514 | 按现文案/资产更新断言 |
-| 模块目录 ×2 | General.cs:539 / 589 | 断言更新为 6 项 |
-| 运行器启动清理 ×1 | BuildCompatibility.cs:1218（`WM_CLOSE`） | 核对 61d6ed4 意图后更新断言 |
-| **新增 ×1** | BuildCompatibility.cs:2871（断言 Helper.cs 含 `Process.GetProcessesByName("Kit")`，随 `AllowRunnerToForeground` 删除而失败） | 更新断言为不依赖该行（死代码已按计划删除） |
+- 16 项失败单元测试已针对最新代码布局和文档措辞完成全部修复更新，MSTest 全量运行通过（212/212 通过，0 失败）。
 
 ### 4.2 字符串迁移（未动）
 
@@ -146,7 +138,8 @@
 - NetMap 死键 ~18（`Text()` 加白名单后清理）+ `AiHub_PipelineCard` 2 键（随 AiHubSettingsTests.cs:80 一并清）。
 - a11y 收尾：LiveSetting 除 NetMap 外全缺；AccessibilityView AIHub/Localserver/UDPtest 为 0 处；General HeadingLevel 0 处。
 - 手工过检：浅/深/HC × 全页（含 T1 的 HC 标题栏核验）+ 键盘导航 + 系统"动画效果"关闭时全静默。
-- **新增**：备份位置校验失败以 [Error] 记录（SettingsBackupAndRestoreUtils.cs:675，用户选到 app 数据目录内非法路径时；建议降为 Warning）。
+- **已完成**：备份位置校验失败日志级别降为 Warning（SettingsBackupAndRestoreUtils.cs:675）。
+- **已完成**：中文文案纠正：NetMap 统一为“网络地图”，LightSwitch 统一为“主题切换”。
 - **新增**：`UsageProgressBar` 类别色依赖 `AutomationProperties.Name` 字符串匹配（中英文关键字硬编码于 DetectCategory），脆弱耦合；后续可改显式附加属性（如 `kit:UsageCategory`）或构造参数。
 
 ## 5. 下一步批次（9–13，每批原子提交）

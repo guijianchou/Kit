@@ -26,7 +26,7 @@ namespace ViewModelTests
     public class General
     {
         public const string GeneralSettingsFileName = "Test\\GeneralSettings";
-        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AIHub", "UDPtest" };
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AIHub", "UDPtest", "NetMap" };
 
         private Mock<SettingsUtils> mockGeneralSettingsUtils;
 
@@ -128,7 +128,7 @@ namespace ViewModelTests
             StringAssert.Contains(xaml, "x:Uid=\"StartupAndPermissions\"");
             StringAssert.Contains(xaml, "x:Uid=\"Appearance_Behavior\"");
             StringAssert.Contains(xaml, "x:Uid=\"General_SettingsBackupAndRestoreTitle\"");
-            StringAssert.Contains(xaml, "x:Uid=\"General_Experimentation\"");
+            Assert.IsFalse(xaml.Contains("x:Uid=\"General_Experimentation\"", StringComparison.Ordinal));
             StringAssert.Contains(xaml, "x:Uid=\"GeneralPage_EnableQuickAccess\"");
             StringAssert.Contains(xaml, "x:Uid=\"ShowSystemTrayIcon\"");
             StringAssert.Contains(xaml, "x:Uid=\"GeneralPage_RunAtStartUp\"");
@@ -147,17 +147,18 @@ namespace ViewModelTests
         {
             var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
 
+            var appearanceIndex = xaml.IndexOf("x:Uid=\"Appearance_Behavior\"", StringComparison.Ordinal);
             var startupAndPermissionsIndex = xaml.IndexOf("x:Uid=\"StartupAndPermissions\"", StringComparison.Ordinal);
             var runAtStartupIndex = xaml.IndexOf("x:Uid=\"GeneralPage_RunAtStartUp\"", StringComparison.Ordinal);
             var adminRunningAsIndex = xaml.IndexOf("x:Uid=\"Admin_Mode_Running_As\"", StringComparison.Ordinal);
-            var appearanceIndex = xaml.IndexOf("x:Uid=\"Appearance_Behavior\"", StringComparison.Ordinal);
 
-            Assert.IsTrue(startupAndPermissionsIndex >= 0, "General should use the PowerToys Startup & permissions group.");
+            Assert.IsTrue(appearanceIndex >= 0, "Appearance & behavior section should be present.");
+            Assert.IsTrue(startupAndPermissionsIndex > appearanceIndex, "Startup & permissions should follow Appearance & behavior.");
             Assert.IsTrue(runAtStartupIndex > startupAndPermissionsIndex, "Run at startup should be inside Startup & permissions.");
             Assert.IsTrue(adminRunningAsIndex > runAtStartupIndex, "Running as administrator should follow Run at startup.");
-            Assert.IsTrue(appearanceIndex > adminRunningAsIndex, "Appearance & behavior should follow Startup & permissions.");
 
-            var startupAndPermissionsXaml = xaml.Substring(startupAndPermissionsIndex, appearanceIndex - startupAndPermissionsIndex);
+            var startupEndIndex = xaml.IndexOf("</controls:SettingsGroup>", startupAndPermissionsIndex, StringComparison.Ordinal);
+            var startupAndPermissionsXaml = xaml.Substring(startupAndPermissionsIndex, startupEndIndex - startupAndPermissionsIndex);
             StringAssert.Contains(startupAndPermissionsXaml, "HeaderIcon=\"{ui:FontIcon Glyph=&#xF71C;}\"");
             Assert.IsFalse(startupAndPermissionsXaml.Contains("x:Uid=\"Appearance_Behavior\"", StringComparison.Ordinal));
         }
@@ -448,16 +449,12 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitGeneralPageShouldPlaceExperimentationBeforeBackupAndRestore()
+        public void KitGeneralPageShouldNotContainExperimentationAndShouldKeepBackupAndRestore()
         {
             var xaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
 
-            var experimentationIndex = xaml.IndexOf("x:Uid=\"General_Experimentation\"", StringComparison.Ordinal);
-            var backupAndRestoreIndex = xaml.IndexOf("x:Uid=\"General_SettingsBackupAndRestoreTitle\"", StringComparison.Ordinal);
-
-            Assert.IsTrue(experimentationIndex >= 0, "General Experimentation section should be present.");
-            Assert.IsTrue(backupAndRestoreIndex >= 0, "General Back up & restore section should be present.");
-            Assert.IsTrue(experimentationIndex < backupAndRestoreIndex, "Experimentation should appear before Back up & restore on the General page.");
+            Assert.IsFalse(xaml.Contains("x:Uid=\"General_Experimentation\"", StringComparison.Ordinal), "General Experimentation section should be removed.");
+            StringAssert.Contains(xaml, "x:Uid=\"General_SettingsBackupAndRestoreTitle\"");
         }
 
         [TestMethod]
@@ -466,8 +463,8 @@ namespace ViewModelTests
             var resources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
             var readme = File.ReadAllText(FindSourceFile("README.md"));
 
-            StringAssert.Contains(resources, "Kit is a local PowerToys-derived workspace");
-            StringAssert.Contains(readme, "Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys.");
+            StringAssert.Contains(resources, "Monitor your system, check network connectivity, and manage your utilities.");
+            StringAssert.Contains(readme, "Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys).");
 
             Assert.IsFalse(resources.Contains("应用源于", StringComparison.Ordinal));
             Assert.IsFalse(resources.Contains("修改自用", StringComparison.Ordinal));
@@ -483,8 +480,6 @@ namespace ViewModelTests
             var dashboard = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
 
             StringAssert.Contains(dashboard, "x:Uid=\"DashboardIntro\"");
-            StringAssert.Contains(dashboard, "ms-appx:///Assets/Settings/Modules/PT.png");
-            StringAssert.Contains(dashboard, "MaxWidth=\"160\"");
             StringAssert.Contains(dashboard, "QuickAccessList");
             StringAssert.Contains(dashboard, "ModuleList");
             StringAssert.Contains(dashboard, "x:Uid=\"QuickAccessTitle\"");
@@ -511,7 +506,7 @@ namespace ViewModelTests
             Assert.IsFalse(generalSettingsPath.Contains($"{Path.DirectorySeparatorChar}PowerToys{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
 
             StringAssert.Contains(backupUtils, "Software\\\\Microsoft\\\\Kit");
-            StringAssert.Contains(backupUtils, "\"Kit\\\\Backup\"");
+            StringAssert.Contains(backupUtils, "\"Kit\", \"Backup\"");
             StringAssert.Contains(backupUtils, "\"Kit_settings_\"");
             Assert.IsFalse(backupUtils.Contains("Software\\\\Microsoft\\\\PowerToys", StringComparison.Ordinal));
             Assert.IsFalse(backupUtils.Contains("\"PowerToys\\\\Backup\"", StringComparison.Ordinal));
@@ -537,10 +532,10 @@ namespace ViewModelTests
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
 
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.AIHub },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.NetMap, ModuleType.AIHub },
                 KitModuleCatalog.ActiveModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.AIHub },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.NetMap, ModuleType.AIHub },
                 KitModuleCatalog.DashboardModules.ToArray());
             CollectionAssert.AreEqual(
                 new[] { ModuleType.LightSwitch },
@@ -548,6 +543,7 @@ namespace ViewModelTests
             Assert.IsFalse(Enum.GetNames<ModuleType>().Contains("PowerDisplay", StringComparer.Ordinal));
             Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.ImageResizer));
             Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.AIHub));
+            Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.NetMap));
 
             StringAssert.Contains(dashboardViewModel, "KitModuleCatalog.DashboardModules");
             Assert.IsFalse(dashboardViewModel.Contains("foreach (ModuleType moduleType in Enum.GetValues<ModuleType>())", StringComparison.Ordinal));
@@ -579,6 +575,7 @@ namespace ViewModelTests
             settings.Enabled.Localserver = false;
             settings.Enabled.AiHub = true;
             settings.Enabled.UDPtest = true;
+            settings.Enabled.NetMap = false;
 
             var outgoingJson = new OutGoingGeneralSettings(settings).ToString();
 
@@ -597,6 +594,7 @@ namespace ViewModelTests
             Assert.AreEqual(false, enabled.GetProperty("Localserver").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("AIHub").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("UDPtest").GetBoolean());
+            Assert.AreEqual(false, enabled.GetProperty("NetMap").GetBoolean());
             Assert.IsFalse(enabled.TryGetProperty("PowerDisplay", out _));
         }
 
@@ -704,7 +702,7 @@ namespace ViewModelTests
 
             var versionIndex = generalXaml.IndexOf("x:Uid=\"General_VersionAndUpdate\"", StringComparison.Ordinal);
             Assert.IsTrue(versionIndex >= 0, "General page should keep the PowerToys-style version and update group.");
-            var versionXaml = generalXaml.Substring(versionIndex, generalXaml.IndexOf("x:Uid=\"StartupAndPermissions\"", StringComparison.Ordinal) - versionIndex);
+            var versionXaml = generalXaml.Substring(versionIndex);
             StringAssert.Contains(versionXaml, "Header=\"{x:Bind ViewModel.PowerToysVersion, Mode=OneWay}\"");
             StringAssert.Contains(versionXaml, "https://github.com/guijianchou/Kit/releases/");
             StringAssert.Contains(versionXaml, "GeneralPage_CheckForUpdates");
@@ -745,14 +743,12 @@ namespace ViewModelTests
             StringAssert.Contains(versionProject, "#define VERSION_MAJOR $(Version.Split('.')[0])");
             StringAssert.Contains(versionProject, "#define VERSION_MINOR $(Version.Split('.')[1])");
             StringAssert.Contains(versionProject, "#define VERSION_REVISION $(Version.Split('.')[2])");
-            StringAssert.Contains(readme, $"Current Kit version: `{releaseVersion}`.");
-            StringAssert.Contains(readme, "## Changelog");
-            StringAssert.Contains(readme, "See [changelog.md](changelog.md) for the full version history.");
-            StringAssert.Contains(readmeZh, $"当前 Kit 版本：`{releaseVersion}`。");
+            StringAssert.Contains(readme, $"Current source version: **{releaseVersion}**");
+            StringAssert.Contains(readme, "[Changelog](changelog.md)");
+            StringAssert.Contains(readmeZh, $"当前源码版本：**{releaseVersion}**");
             StringAssert.Contains(changelog, $"### {releaseVersion}");
-            StringAssert.Contains(readmeZh, "[changelog.md](changelog.md)");
-            StringAssert.Contains(readme, "DSC-only Settings command-line entry points");
-            StringAssert.Contains(readmeZh, "只供 DSC 使用的 Settings 命令行入口");
+            StringAssert.Contains(readme, "Upstream automatic update and telemetry flows are excluded.");
+            StringAssert.Contains(readmeZh, "不包含上游的自动更新与遥测流程。");
             StringAssert.Contains(changelog, "### 2.0.7");
             StringAssert.Contains(changelog, "Bumped Kit to `2.0.7`");
             StringAssert.Contains(changelog, "SUPPORTED_KIT_2_0_7");
@@ -861,13 +857,10 @@ namespace ViewModelTests
             StringAssert.Contains(changelog, "no Kit project references `Microsoft.Graphics.Win2D`, `Microsoft.WindowsAppSDK.AI`, `NLog`, `NLog.Extensions.Logging`, `NLog.Schema`, `System.ClientModel`, `System.Numerics.Tensors`, or `WyHash`");
             StringAssert.Contains(changelog, "stale CmdPal WyHash third-party notice section");
             StringAssert.Contains(changelog, "deleted Launcher/AI/CmdPal package pin removal");
-            StringAssert.Contains(readme, "orphaned CmdPal version props");
-            StringAssert.Contains(readme, "resource strings, OOBE/model assets");
-            StringAssert.Contains(readme, "no longer carry the AdvancedPaste-only `LanguageModelProvider` source tree, AI provider package pins, provider UI metadata/helpers, or non-serialized AI enum helpers");
-            StringAssert.Contains(readme, "Shortcut Conflict hotkey lookup is explicit for Quick Access and LightSwitch");
-            StringAssert.Contains(readmeZh, "不再为活动 Kit 模块集保留仅 AdvancedPaste 的 `LanguageModelProvider` 源码树、AI provider 包 pin、provider UI metadata/helper 或非序列化 AI enum helper");
-            StringAssert.Contains(readmeZh, "Shortcut Conflict 热键查找显式限定为 Quick Access 和 LightSwitch");
-            StringAssert.Contains(readme, "Backup defaults should stay generic to Kit's active module settings");
+            StringAssert.Contains(changelog, "orphaned CmdPal version props");
+            StringAssert.Contains(changelog, "LanguageModelProvider");
+            StringAssert.Contains(changelog, "Shortcut Conflict");
+            StringAssert.Contains(changelog, "Pruned backup/restore defaults to the active Kit settings surface");
             StringAssert.Contains(developmentLog, "## 2026-06-17 Version 2.0.5 General Layout Sync");
             StringAssert.Contains(developmentLog, "Startup & permissions");
             StringAssert.Contains(developmentLog, "system tray expander now carries the upstream icon treatment");

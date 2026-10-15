@@ -19,7 +19,7 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 | [Localserver](#33-localserver本地服务管理) | 配置、启动、监控和停止本地服务 | Settings + 监督 Worker | Kit |
 | [UDPtest](#34-udptest线路质量探测) | 检测已配置线路的延迟、抖动、成功率及 NAT | Settings 进程 | Kit |
 | [AI Hub](#35-ai-hub审计与系统优化) | 系统事件审计、下载整理与缓存清理 | Settings + 定时审计 Worker | Kit |
-| [NetMap](#36-netmap当前出口与路径观测) | 观察当前 Direct / Proxy 出口、服务连通性和 ICMP 路径 | Settings 进程 | Kit |
+| [NetMap](#36-netmap网络地图与路径观测) | 观察当前 Direct / Proxy 出口、服务连通性和 ICMP 路径 | Settings 进程 | Kit |
 
 启动运行目录中的 `Kit.exe` 后，在 Settings 中启用需要的模块并配置。**模块开关与任务开始是两层操作**：例如 Localserver 启用后仍需单独启动服务，NetMap 启用后仍需点击 Start。
 
@@ -181,7 +181,7 @@ flowchart TB
 - **后台审计**：Worker 只执行定时规则扫描；未配置计划时退出。其计划目前读取共享服务配置，和页面插件配置的归属差异见 [AI 服务说明](doc/ai-service-review.md)。
 - **详细资料**：[模块文档](src/modules/AIHub/README.md)记录架构与维护细节；历史验证见[变更记录](changelog.md)。
 
-### 3.6 NetMap：当前出口与路径观测
+### 3.6 NetMap：网络地图与路径观测
 
 在外部代理客户端切换节点时持续观察当前出口，无需导入订阅。UDPtest 检测“已配置线路的质量”，NetMap 观察“当前实际从哪里出去”。
 

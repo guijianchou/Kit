@@ -672,7 +672,7 @@ namespace Kit.Settings.UI.Library
                         || settingsBackupAndRestoreDir.StartsWith(backupDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
                     if (string.Equals(settingsBackupAndRestoreDir, appBasePath, StringComparison.OrdinalIgnoreCase) || (insideApp && !insideBackup))
                     {
-                        Logger.LogError("BackupSettings: locations inside the app data directory must use its dedicated Backup folder.");
+                        Logger.LogWarning("BackupSettings: locations inside the app data directory must use its dedicated Backup folder.");
                         return (false, "General_SettingsBackupAndRestore_InvalidBackupLocation", "Error", lastBackupExists, "\n" + appBasePath);
                     }
 

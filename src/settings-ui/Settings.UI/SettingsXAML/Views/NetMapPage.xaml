@@ -34,7 +34,6 @@
             <vm:NetMapHealthStyleConverter x:Key="NetMapHealthStyleConverter" Styles="{StaticResource NetMapHealthStyles}" />
 
             <!-- Core Fonts & Typography Styles -->
-            <FontFamily x:Key="MonoFontFamily">Cascadia Code, Cascadia Mono, Consolas, Courier New</FontFamily>
 
             <Style x:Key="NetMapCardStyle" TargetType="Border" BasedOn="{StaticResource KitCardSurfaceStyle}">
                 <Setter Property="Padding" Value="18,16" />
@@ -46,13 +45,6 @@
                 <Setter Property="FontSize" Value="12" />
             </Style>
 
-            <Style x:Key="MicroLabelStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="10" />
-                <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="CharacterSpacing" Value="60" />
-                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
-                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-            </Style>
 
             <Style x:Key="TableHeaderTextStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="11" />
@@ -118,7 +110,7 @@
                                 CornerRadius="4">
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Text="{x:Bind Ip}"
-                                           FontFamily="{StaticResource MonoFontFamily}"
+                                           FontFamily="{StaticResource KitMonoFontFamily}"
                                            FontSize="20"
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap"
@@ -172,19 +164,19 @@
                                             </StackPanel>
                                             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_SourceEndpointLabel" Text="Source Endpoint:" Style="{StaticResource MicroLabelStyle}" />
-                                                <TextBlock Text="{x:Bind Source}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontFamily="{StaticResource MonoFontFamily}" FontSize="12" />
+                                                <TextBlock x:Uid="NetMap_SourceEndpointLabel" Text="Source Endpoint:" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <TextBlock Text="{x:Bind Source}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" />
                                             </StackPanel>
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_RouteModeLabel" Text="Route Mode:" Style="{StaticResource MicroLabelStyle}" />
+                                                <TextBlock x:Uid="NetMap_RouteModeLabel" Text="Route Mode:" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind Route}" TextWrapping="Wrap" FontSize="12" />
                                             </StackPanel>
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_AsnLabel" Text="Autonomous System (ASN):" Style="{StaticResource MicroLabelStyle}" />
+                                                <TextBlock x:Uid="NetMap_AsnLabel" Text="Autonomous System (ASN):" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind Asn}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="12" />
                                             </StackPanel>
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_GeoProviderLabel" Text="Geo Provider:" Style="{StaticResource MicroLabelStyle}" />
+                                                <TextBlock x:Uid="NetMap_GeoProviderLabel" Text="Geo Provider:" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind GeographySource}" Style="{StaticResource NetMapSecondary}" />
                                             </StackPanel>
                                             <Border CornerRadius="4" Padding="6,4" Background="{ThemeResource BadgeWarningBackgroundBrush}" Visibility="{x:Bind IsStale, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -441,11 +433,11 @@
                                                                             <TextBlock Text="{x:Bind Ttl}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                                                         </Grid>
                                                                     </Border>
-                                                                    <TextBlock Grid.Column="1" Text="{x:Bind Ip, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                                    <TextBlock Grid.Column="1" Text="{x:Bind Ip, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                                     <TextBlock Grid.Column="2" Text="{x:Bind Location, Mode=OneWay}" Style="{StaticResource NetMapSecondary}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Location, Mode=OneWay}" />
-                                                                    <TextBlock Grid.Column="3" Text="{x:Bind Loss, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                                                                    <TextBlock Grid.Column="4" Text="{x:Bind Last, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" />
-                                                                    <TextBlock Grid.Column="5" Text="{x:Bind Rtt, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                    <TextBlock Grid.Column="3" Text="{x:Bind Loss, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                                    <TextBlock Grid.Column="4" Text="{x:Bind Last, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" />
+                                                                    <TextBlock Grid.Column="5" Text="{x:Bind Rtt, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                 </Grid>
                                                             </DataTemplate>
                                                         </ListView.ItemTemplate>
@@ -539,7 +531,7 @@
                                                                 </Border>
                                                                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
                                                             </StackPanel>
-                                                            <TextBlock Text="{x:Bind Endpoint}" Style="{StaticResource NetMapSecondary}" FontFamily="{StaticResource MonoFontFamily}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="30,0,0,0" />
+                                                            <TextBlock Text="{x:Bind Endpoint}" Style="{StaticResource NetMapSecondary}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="30,0,0,0" />
                                                         </StackPanel>
 
                                                         <!-- Col 1: Health Status, Latency Pill, and Diagnostic Text -->
@@ -553,7 +545,7 @@
 
                                                                 <!-- Monospace Latency Pill -->
                                                                 <Border Grid.Column="2" Style="{StaticResource KitStatusPillStyle}" Padding="8,2" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{x:Bind Latency, Mode=OneWay}" FontFamily="{StaticResource MonoFontFamily}" FontSize="13" FontWeight="SemiBold" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" VerticalAlignment="Center" />
+                                                                    <TextBlock Text="{x:Bind Latency, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="13" FontWeight="SemiBold" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" VerticalAlignment="Center" />
                                                                 </Border>
                                                             </Grid>
                                                             <TextBlock Grid.Row="1" Text="{x:Bind Proxy, Mode=OneWay}" Style="{StaticResource NetMapSecondary}" FontSize="11" />
@@ -582,7 +574,7 @@
 
                                             <!-- ASN Database Row with inline Browse Button -->
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalAlignment="Bottom">
-                                                <TextBox x:Uid="NetMap_AsnPath" Header="GeoLite2-ASN database (optional)" Text="{x:Bind ViewModel.AsnDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource MonoFontFamily}" />
+                                                <TextBox x:Uid="NetMap_AsnPath" Header="GeoLite2-ASN database (optional)" Text="{x:Bind ViewModel.AsnDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
                                                 <Button x:Uid="NetMap_BrowseAsnButton" ToolTipService.ToolTip="Choose ASN database" Click="BrowseDatabase_Click" Tag="ASN" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE838;" FontSize="12" />
@@ -593,7 +585,7 @@
 
                                             <!-- City Database Row with inline Browse Button -->
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalAlignment="Bottom">
-                                                <TextBox x:Uid="NetMap_CityPath" Header="GeoLite2-City database (optional)" Text="{x:Bind ViewModel.CityDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource MonoFontFamily}" />
+                                                <TextBox x:Uid="NetMap_CityPath" Header="GeoLite2-City database (optional)" Text="{x:Bind ViewModel.CityDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
                                                 <Button x:Uid="NetMap_BrowseCityButton" ToolTipService.ToolTip="Choose City database" Click="BrowseDatabase_Click" Tag="City" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE838;" FontSize="12" />

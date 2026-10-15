@@ -1,8 +1,77 @@
-# Kit UI/UX 重构方案 — 原生 Fluent 规范化 + Mica（v1）
+# Kit UI/UX 重构方案与实施记录 — 原生 Fluent 规范化 + Mica（v2 · as-built）
 
-> 状态：待评审 ｜ 2026-10-12 ｜ 基线：`main@4da08bd`（origin 已备份，随时可回退）
+> 状态：**批次 0–6 已实施并直接合入 `main`（2026-10-12/13）；2026-10-14 复审清理轮完成（验证证据见 E）** ｜ 基线：`main@4da08bd`（origin 已备份，随时可回退）
 > 范围：主框架（Shell / TitleBar / Dashboard / General / QuickAccess / 托盘）+ 全部 6 个模块页（Awake、LightSwitch、Localserver、UDPtest、NetMap、AIHub）
 > 原则：**只动 UI/UX 层**，不碰底层核心；观感目标：**对齐 Windows 11 原生设置**，充分利用 WinUI 3 + Mica；修复重点：**样式不统一、拼凑感**。
+> 阅读指引：以下 as-built 记录反映实际落地状态；§1 起为 v1 原始设计与逐按钮/逐动画规格，凡未在 as-built 中标注偏差的条目均已按稿实施。
+
+## 实施结果（as-built）
+
+### A. 批次 → 提交映射（直接提交 `main`）
+
+| 阶段 | 提交 | 日期 | 内容 |
+|---|---|---|---|
+| 计划入库 | `ae5d5c7` | 10-12 | 本方案 + DOCUMENT_INDEX 注册 |
+| 批次 0 | `30b4f77` | 10-12 | 共享设计令牌与样式族（Colors alias-first / Button / TextBlock / Surface） |
+| 批次 1 | `ad5d21d` | 10-12 | Shell / TitleBar / Dashboard / General / QuickAccess |
+| 批次 2 | `8b57daf` | 10-12 | Awake / LightSwitch |
+| 批次 3 | `87714a9` | 10-12 | Localserver |
+| 批次 4 | `da64a82` | 10-12 | UDPtest |
+| 批次 5 | `20929f5` | 10-13 | NetMap |
+| 批次 6 | `535a6ce` | 10-13 | AIHub |
+| 定版 | `ca9b7fb` + `a86af9f` | 10-13 | v2.3.9 定版与 README/changelog |
+| 补丁 | `6e6bac9` | 10-13 | v2.3.10 AIHub kernel 暂存目录重试 |
+| 补丁 | `4ab8ff4` | 10-13 | v2.3.11 NetMap UX/延迟优化、Settings 导航配色、白屏加载修复 |
+| 清理轮 | 本次提交 | 10-14 | 死代码/死键/令牌残留清理 + 全量验证（见 C/E） |
+
+### B. 与 v1 计划的偏差（as-built）
+
+| v1 计划 | 实际落地 | 说明 |
+|---|---|---|
+| §4.6A AIHub 拆分 5 文件 | **未拆分**：保持单文件（AIHubPage.xaml 1297 行、`x:Load` 惰性 5 处） | 规避 FindName/虚拟化契约风险；就地 Fluent 对齐，烟雾与源码扫描契约天然保绿 |
+| §2.5 #2 入场动画 | 页级 `SettingsCardsAnimations`（App.xaml 定义、13 处引用）；**SettingsPageControl 不再挂载**（2.3.11 白屏修复）；AIHub 页无入场过渡 | 加载性能优先；内联 Entrance/Reposition 已全清除（0 残留） |
+| §3.3 / §4.5 HealthStyles 共享 | **未提升**：`DashboardEgressStyles` 在 DashboardPage.xaml:19、`NetMapHealthStyles` 在 NetMapPage.xaml:20（code-behind :244/:434 引用） | 键名契约优先；两处重复登记 backlog（D-4） |
+| §3.4 chips 中性化 | **令牌化彩色**：6 chips 用 `KitSectionChipButtonStyle` + `Section*Foreground/TintBrush`（12 键 ×3 主题含 HC） | 保留分类色识别；颜色全部收敛到 Colors.xaml 并补 HC |
+| §2.1 页面 hex 清零 | General 36 处、UDPtest 2 处清零；QuickAccess App.xaml 保留 3 处 hex（`LayerOnAcrylicFillColorDefaultBrush`，Opacity 0.7/0.6 + HC 变体） | 自定义 acrylic 瓦片底色为有意例外 |
+| §2.7 UDPtest IsChinese 全量迁移 | **未执行**：UDPtestViewModel 57 + UDPtestLineRowViewModel 11 处仍在 | backlog（D-1） |
+| §2.7 Optimization 段迁移 | **已完成**：OptimizationCategory/GroupViewModel 走 `AIHub_*` 键 | — |
+| §2.7 AIHubPageViewModel ~226 处 | 232 处未迁移（v1 已声明延后） | backlog（D-2） |
+| §2.7 AiHubViewModel 英文状态 | 大部分已迁，余 13 处 | backlog（D-3） |
+| §4.3 Localserver 死键 ~50 | 实删 39 个基键（含 MoveUp/MoveDown 菜单键）；死 handler 已删 | 按引用证据精确化 |
+| §4.5 NetMap 死键 19 | 仅删 `NetMap_HttpResponded` | `Text(shortKey)` 前缀助手（NetMapViewModel.cs:324）使其余键静态不可证死（D-5） |
+| §5 批次 7 清理 | 由清理轮执行（C） | — |
+| §7 分支策略 | **直接提交 `main`**（原计划分支 `uiux/fluent-refactor` 未采用） | 用户已确认 GitHub 备份可回退；提交仍按批次原子化 |
+| 只动 UI 层 | 例外：`4ab8ff4` 含 NetMapLib 延迟优化（独立提交，可单独回退） | 用户验收通过 |
+
+### C. 清理轮记录（2026-10-14）
+
+- **死代码**：删 `Converters/ModuleItemTemplateSelector.cs`、`ViewModels/DashboardModuleItem.cs`（4 个类、全项目 0 引用）；`ShellViewModel.ShowCloseMenu`（只写不读）及其在 `GeneralPage` 的 Toggled handler；`DashboardListItem.DashboardModuleItems` 空集合链。
+- **令牌残留**：`Colors.xaml` 删 8 个 alias 空壳族（KitContentLayer / KitSurface / SolidBackground / MetricCard* / PillBadge*）；页面归一到系统刷（PillBadge → `SubtleFillColorSecondaryBrush` / `CardStrokeColorDefaultBrush`，AIHub 32 + Localserver 5 + UDPtest 2 处）；`MonoFontFamily → KitMonoFontFamily`；`MetaLabel / MicroLabel / Metric*` 本地样式 → Kit 共享样式；ShortcutConflictWindow 本地渐变上收 `KitWindowsLogoGradientBrush`；CheckUpdate 金/绿渐变 → 顶层 Color 令牌；InfoBadge `#F09A2A` → `KitUpdateBadgeBrush`。
+- **死 resw 键**：en/zh 各删 **168** 键（1248→1080 / 961→793；146 个基键 = Localserver 39 + AIHub 旧布局 106 + NetMap 1）。保留 `AiHub_Segment_SecurityAudit/Optimization`（MRT 大小写不敏感命中）、`Localserver_State*`（插值 `$"Localserver_State{suffix}"`）与全部 `NetMap_*`（`Text(shortKey)` 助手）。首轮大小写敏感守卫曾误删 Segment 键，已回滚并改用大小写不敏感复核（PRI277 教训）。
+
+### D. 剩余 backlog
+
+1. UDPtest 字符串迁移：UDPtestViewModel 57 + UDPtestLineRowViewModel 11 处 IsChinese → resw。
+2. AIHubPageViewModel 232 处 IsChinese → resw。
+3. AiHubViewModel 余 13 处英文状态 → resw。
+4. HealthStyles 共享化（DashboardEgressStyles 与 NetMapHealthStyles 去重）。
+5. NetMap 死键 ~18：待 `Text(shortKey)` 助手改造或白名单机制后清理。
+6. 手工过检：浅色/深色/高对比 × 每页（自动化未覆盖的视觉抽查）。
+7. **单测遗留 16 项失败**（基线 `4da08bd` 即红，非重构/清理轮引入；建议逐族更新断言或修复源码）：
+   - 实验特性移除遗留 ×6：GpoPolicySurface / GpoPolicyAssets / SettingsXamlNamedElements / GeneralPage 两处 Experimentation 断言 / UpdateSettingsDefaultOff —— b108d90（09-25）移除实验特性后，测试与 runner `general_settings.cpp` 未同步；
+   - 版本与文档元数据 ×2：`src/PackageIdentity/AppxManifest.xml` 版本停留 2.3.7（未随 2.3.8–2.3.11 递增）；README 措辞由「Current Kit version」改为「Current source version」；
+   - GeneralPage 结构断言 ×2：Startup & permissions 与 Appearance & behavior 顺序、VersionAndUpdate 段 Substring 边界；
+   - 品牌与文案 ×3：Intro 文案、Dashboard PT.png 资产引用（2.3.7 起替换）、`Kit\Backup` 字面量；
+   - 模块目录 ×2：NetMap 激活后 `KitModuleCatalog.ActiveModules/DashboardModules` 与 enabled-states 序列化均为 6 项，断言仍为 5 项；
+   - 运行器启动清理 ×1：`settings_window.cpp` LExit 清理块含 `WM_CLOSE`，断言要求不含。
+8. `AiHub_PipelineCard` 残留 2 键：生产代码零引用（仅单测反向断言字符串命中），可随测试改造一并清理。
+
+### E. 验证证据（2026-10-14 清理轮）
+
+- 工具备注：烟雾脚本必须用 **pwsh 7** 运行（Windows PowerShell 5.1 无法加载 .NET 10 SDK 的 HostWriter 类型）；单测用 MSTest 直接运行器 `Debug\x64\tests\SettingsTests\net10.0-windows10.0.26100.0\Settings.UI.UnitTests.exe`（本机 vstest.console 18.11.0 的 testhost 启动即崩溃：OpenProcess 父进程 Access Denied）。
+- 构建：`pwsh tools\build\build.ps1 -Platform x64 -Configuration Debug -Path "src\settings-ui"` → **exit 0**（修复 3 处 StyleCop 空白错误后）。
+- 烟雾：ModulePageSmoke、DashboardPageSmoke（en-US、zh-CN）、NetMapPageSmoke → **全部 PASS**。
+- 单元测试：212 项 **196 通过 / 16 失败**；对照实验（同一测试 DLL 分别在清理轮工作树、HEAD、基线 `4da08bd` 三态运行）证明 16 项失败在基线即已存在，与批次 0–6 及清理轮无关（分族见 D-7）。
 
 ---
 
@@ -420,14 +489,14 @@ SettingsXAML/Controls/AIHub/AIHubTemplates.xaml  （FindingPreview/OptimizationC
 
 ```bash
 # 构建（exit 0 才算成功；首次或缺包先跑 build-essentials.cmd）
-tools\build\build.cmd
+pwsh tools\build\build.ps1 -Platform x64 -Configuration Debug -Path "src\settings-ui"
 ```
 
 ```powershell
 # 烟雾（必须先关闭 Kit 进程）
-powershell -File tools\tests\SettingsUI\Invoke-ModulePageSmoke.ps1 -Configuration Debug
-powershell -File tools\tests\SettingsUI\Invoke-DashboardPageSmoke.ps1 -Configuration Debug -Language zh-CN
-powershell -File tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1   # 批次 5 修复后
+pwsh -File tools\tests\SettingsUI\Invoke-ModulePageSmoke.ps1 -Configuration Debug
+pwsh -File tools\tests\SettingsUI\Invoke-DashboardPageSmoke.ps1 -Configuration Debug -Language zh-CN
+pwsh -File tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1   # 批次 5 修复后
 ```
 
 - 单元测试：VS Test Explorer 或 `vstest.console.exe`（**禁止 `dotnet test`**）。
@@ -436,7 +505,7 @@ powershell -File tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1   # 批次 5 修�
 
 ## 7. 回退策略
 
-- 新分支 `uiux/fluent-refactor`，逐批次提交；`main@4da08bd` 为回退点（origin 已备份）。
+- 实际直接提交 `main`（原计划分支 `uiux/fluent-refactor` 未采用；用户已确认 GitHub 备份可回退）；逐批次原子提交，`main@4da08bd` 为回退点。
 - 每批次提交信息注明批次号与范围，便于单批 revert。
 
 ## 8. 风险与对策

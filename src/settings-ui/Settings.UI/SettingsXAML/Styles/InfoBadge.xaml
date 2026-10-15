@@ -24,7 +24,7 @@
         <Setter Property="Padding" Value="0" />
         <Setter Property="Width" Value="8" />
         <Setter Property="Height" Value="8" />
-        <Setter Property="Background" Value="#F09A2A" />
+        <Setter Property="Background" Value="{ThemeResource KitUpdateBadgeBrush}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="InfoBadge">

@@ -174,18 +174,6 @@ namespace Kit.Settings.UI.Views
             ViewModel.RefreshSettingsOnExternalChange();
         }
 
-        private void ShowSystemTrayIcon_Toggled(object sender, RoutedEventArgs e)
-        {
-            if (sender is ToggleSwitch toggleSwitch)
-            {
-                var shellViewModel = ShellPage.ShellHandler?.ViewModel;
-                if (shellViewModel != null)
-                {
-                    shellViewModel.ShowCloseMenu = !toggleSwitch.IsOn;
-                }
-            }
-        }
-
         public Visibility IsSecurityAuditPolicyTab(int tabIndex) => tabIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         public Visibility IsOptimizationPolicyTab(int tabIndex) => tabIndex == 1 ? Visibility.Visible : Visibility.Collapsed;

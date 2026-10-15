@@ -16,13 +16,6 @@
     <local:NavigablePage.Resources>
         <controlConverters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
         <converters:EnumToModuleListSortOptionConverter x:Key="EnumToModuleListSortOptionConverter" />
-        <Style x:Key="OverviewSurfaceStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource KitSurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="16,14" />
-        </Style>
         <ResourceDictionary x:Key="DashboardEgressStyles">
             <Style x:Key="UnknownText" TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -118,7 +111,7 @@
                                     Visibility="{x:Bind ViewModel.VisibleQuickAccessItemsCount, Mode=OneWay, Converter={StaticResource DoubleToInvertedVisibilityConverter}}" />
                             </Grid>
                         </controls:Card>
-                        <Border x:Name="SystemOverviewCard" Style="{StaticResource OverviewSurfaceStyle}">
+                        <Border x:Name="SystemOverviewCard" Style="{StaticResource KitCardSurfaceStyle}">
                             <StackPanel Spacing="12">
                                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
                                     <FontIcon Glyph="&#xE7F4;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
@@ -209,7 +202,7 @@
                                 ItemsSource="{x:Bind ViewModel.AllModules, Mode=OneWay}"
                                 SortOption="{x:Bind ViewModel.DashboardSortOrder, Mode=TwoWay, Converter={StaticResource EnumToModuleListSortOptionConverter}}" />
                         </controls:Card>
-                        <Border x:Name="NetworkOverviewCard" Style="{StaticResource OverviewSurfaceStyle}">
+                        <Border x:Name="NetworkOverviewCard" Style="{StaticResource KitCardSurfaceStyle}">
                             <StackPanel Spacing="12">
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <FontIcon Glyph="&#xE774;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />

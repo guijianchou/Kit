@@ -24,8 +24,8 @@
                     CornerRadius="10">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0.5,1">
-                            <GradientStop Offset="0.0" Color="#FFC328" />
-                            <GradientStop Offset="1.0" Color="#FC9A03" />
+                            <GradientStop Offset="0.0" Color="{StaticResource KitUpdateGoldStart}" />
+                            <GradientStop Offset="1.0" Color="{StaticResource KitUpdateGoldEnd}" />
                         </LinearGradientBrush>
                     </Border.Background>
                     <FontIcon
@@ -58,8 +58,8 @@
                 CornerRadius="10">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0.5,1">
-                        <GradientStop Offset="0.0" Color="#6FB538" />
-                        <GradientStop Offset="1.0" Color="#397A24" />
+                        <GradientStop Offset="0.0" Color="{StaticResource KitUpToDateGreenStart}" />
+                        <GradientStop Offset="1.0" Color="{StaticResource KitUpToDateGreenEnd}" />
                     </LinearGradientBrush>
                 </Border.Background>
                 <FontIcon

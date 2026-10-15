@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Kit.Settings.UI.Controls;
@@ -37,7 +36,5 @@ namespace Kit.Settings.UI.ViewModels
                 }
             }
         }
-
-        public ObservableCollection<DashboardModuleItem> DashboardModuleItems { get; set; } = new ObservableCollection<DashboardModuleItem>();
     }
 }

@@ -29,7 +29,6 @@ namespace Kit.Settings.UI.ViewModels
         private readonly KeyboardAccelerator backKeyboardAccelerator = BuildKeyboardAccelerator(VirtualKey.GoBack);
 
         private bool isBackEnabled;
-        private bool showCloseMenu;
         private IList<KeyboardAccelerator> keyboardAccelerators;
         private NavigationView navigationView;
         private NavigationViewItem selected;
@@ -44,12 +43,6 @@ namespace Kit.Settings.UI.ViewModels
         {
             get => isBackEnabled;
             set => Set(ref isBackEnabled, value);
-        }
-
-        public bool ShowCloseMenu
-        {
-            get => showCloseMenu;
-            set => Set(ref showCloseMenu, value);
         }
 
         public NavigationViewItem Selected
@@ -83,7 +76,6 @@ namespace Kit.Settings.UI.ViewModels
         public ShellViewModel(ISettingsRepository<GeneralSettings> settingsRepository)
         {
             _generalSettingsConfig = settingsRepository.SettingsConfig;
-            ShowCloseMenu = !_generalSettingsConfig.ShowSysTrayIcon;
         }
 
         public void Initialize(Frame frame, NavigationView navigationView, IList<KeyboardAccelerator> keyboardAccelerators)

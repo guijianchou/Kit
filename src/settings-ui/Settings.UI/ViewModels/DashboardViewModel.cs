@@ -145,7 +145,6 @@ namespace Kit.Settings.UI.ViewModels
                     IsLocked = gpo == GpoRuleConfigured.Enabled || gpo == GpoRuleConfigured.Disabled,
                     Icon = ModuleHelper.GetModuleTypeFluentIconName(moduleType),
                     IsNew = false,
-                    DashboardModuleItems = new ObservableCollection<DashboardModuleItem>(),
                     ClickCommand = new RelayCommand<object>(DashboardListItemClick),
                 };
                 newItem.EnabledChangedCallback = EnabledChangedOnUI;

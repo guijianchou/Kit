@@ -40,7 +40,7 @@
 |------|------|------|----------|
 | **[kit-first-plugin.md](kit-first-plugin.md)** | **新插件开发指南** | 5.7KB | 2026-09-12 |
 | [kit-development-experience.md](kit-development-experience.md) | 模块集成经验与教训 | 13.8KB | 2026-09-12 |
-| [ui-ux-refactor-plan.md](ui-ux-refactor-plan.md) | **UI/UX 重构方案（原生 Fluent；逐按钮/逐动画规格）** | ~15KB | 2026-10-12 |
+| [ui-ux-refactor-plan.md](ui-ux-refactor-plan.md) | **UI/UX 重构方案与实施记录（原生 Fluent；逐按钮/逐动画规格；as-built）** | ~48KB | 2026-10-14 |
 
 **重点**：
 - `kit-first-plugin.md` — 模块契约、注册检查清单、验证步骤

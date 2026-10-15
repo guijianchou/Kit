@@ -18,7 +18,6 @@
     mc:Ignorable="d">
 
     <local:NavigablePage.Resources>
-        <FontFamily x:Key="MonoFontFamily">Cascadia Code, Cascadia Mono, Consolas, Segoe UI Mono</FontFamily>
 
         <!-- Readiness styles required by theme & contrast smoke assertions -->
         <Style x:Key="ReadinessReadyStyle" TargetType="FontIcon">
@@ -55,16 +54,7 @@
             <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
         </Style>
 
-        <Style x:Key="MetricNumberStyle" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource KitMonoFontFamily}" />
-            <Setter Property="FontSize" Value="24" />
-            <Setter Property="FontWeight" Value="Bold" />
-        </Style>
 
-        <Style x:Key="MetricLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
-        </Style>
 
         <Style x:Key="SafetyCardTitleStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13" />
@@ -213,7 +203,7 @@
                                            Foreground="{ThemeResource SystemFillColorCautionBrush}" />
                             </Border>
                             <!-- Low Severity Pill -->
-                            <Border CornerRadius="4" Padding="6,2" Background="{ThemeResource PillBadgeBackgroundBrush}"
+                            <Border CornerRadius="4" Padding="6,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <TextBlock Text="{x:Bind SeverityText}" FontSize="11" FontWeight="SemiBold"
                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
@@ -304,8 +294,8 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Border Width="28" Height="28" CornerRadius="14" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                            BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                    <Border Width="28" Height="28" CornerRadius="14" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                             HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <FontIcon x:Name="AiReadinessIcon" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}"
                                                   Style="{x:Bind AiReadinessStyle(ViewModel.AiReadinessLevel), Mode=OneWay}"
@@ -315,8 +305,8 @@
                                         <TextBlock Text="{x:Bind ViewModel.AiReadinessText, Mode=OneWay}"
                                                    FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
                                         <Border Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                CornerRadius="4" Padding="6,1" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                                CornerRadius="4" Padding="6,1" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Center">
                                             <TextBlock Text="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}"
                                                        Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Medium" />
                                         </Border>
@@ -408,14 +398,14 @@
                                 <!-- Hero Command Header: Scope info & command controls aligned on Mica canvas -->
                                 <Grid x:Name="AuditCommandHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="12" ColumnSpacing="12" Margin="0,4,0,0" SizeChanged="OnCommandHeaderSizeChanged">
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalAlignment="Center">
-                                        <Border Width="40" Height="40" CornerRadius="10" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                        <Border Width="40" Height="40" CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <FontIcon Glyph="&#xE72E;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                                             <TextBlock Text="{x:Bind ViewModel.SecurityAuditTitle, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="18" AutomationProperties.HeadingLevel="Level2" />
-                                            <Border CornerRadius="10" Padding="8,2" Background="{ThemeResource PillBadgeBackgroundBrush}" BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1" HorizontalAlignment="Left">
+                                            <Border CornerRadius="10" Padding="8,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Left">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <FontIcon Glyph="&#xE72E;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                     <TextBlock Text="{x:Bind ViewModel.ScopeHint, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -866,8 +856,8 @@
 
                                         <!-- Empty States with Rich Visual Illustration (绘图) -->
                                         <StackPanel Padding="0,32" Spacing="8" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoAudit, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
+                                            <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Center">
                                                 <FontIcon Glyph="&#xE9D9;" FontSize="22" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Text="{x:Bind ViewModel.HealthVerdict, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" HorizontalAlignment="Center" />
@@ -883,8 +873,8 @@
                                         <StackPanel Padding="0,32" Spacing="10" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoFilterMatches, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <!-- Visual Empty State Drawing (绘图) -->
                                             <Border Width="52" Height="52" CornerRadius="26"
-                                                    Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                                     HorizontalAlignment="Center">
                                                 <FontIcon Glyph="&#xE721;" FontSize="22" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -910,8 +900,8 @@
                                         Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <StackPanel Spacing="14">
                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
-                                            <Border Width="28" Height="28" CornerRadius="14" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1">
+                                            <Border Width="28" Height="28" CornerRadius="14" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                                                 <FontIcon Glyph="&#xE9D9;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiReportSummaryText, Mode=OneWay}"
@@ -924,8 +914,8 @@
                                                     <TextBlock Text="{x:Bind ViewModel.CopyReportLabel}" FontSize="12" />
                                                 </StackPanel>
                                             </Button>
-                                            <Border Grid.Column="3" CornerRadius="4" Padding="6,2" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                            <Border Grid.Column="3" CornerRadius="4" Padding="6,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{x:Bind ViewModel.AiReportMetaText, Mode=OneWay}"
                                                            Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             </Border>
@@ -939,13 +929,13 @@
                                                         <StackPanel Spacing="6">
                                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                                 <TextBlock Text="{x:Bind Title}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
-                                                                <Border Grid.Column="1" CornerRadius="4" Padding="6,1" Background="{ThemeResource PillBadgeBackgroundBrush}">
+                                                                <Border Grid.Column="1" CornerRadius="4" Padding="6,1" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                                                     <TextBlock Text="{x:Bind SeverityLabel}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                 </Border>
                                                             </Grid>
                                                             <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}"
                                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                                            <Border CornerRadius="6" Padding="10,6" Background="{ThemeResource PillBadgeBackgroundBrush}">
+                                                            <Border CornerRadius="6" Padding="10,6" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                                                                 <TextBlock Text="{x:Bind Recommendation}" Style="{StaticResource CaptionTextBlockStyle}"
                                                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
                                                             </Border>
@@ -987,14 +977,14 @@
                                 <!-- Optimization Header directly on Mica Canvas with Clean Icon Badge -->
                                 <Grid x:Name="OptimizationCommandHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="12" ColumnSpacing="12" Margin="0,4,0,0" SizeChanged="OnCommandHeaderSizeChanged">
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalAlignment="Center">
-                                        <Border Width="40" Height="40" CornerRadius="10" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                        <Border Width="40" Height="40" CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <FontIcon Glyph="&#xE9F5;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                                             <TextBlock Text="{x:Bind ViewModel.OptimizationTabLabel, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="18" AutomationProperties.HeadingLevel="Level2" />
-                                            <Border CornerRadius="10" Padding="8,2" Background="{ThemeResource PillBadgeBackgroundBrush}" BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1" HorizontalAlignment="Left"
+                                            <Border CornerRadius="10" Padding="8,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Left"
                                                     Visibility="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
                                                 <TextBlock Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             </Border>
@@ -1073,8 +1063,8 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Spacing="4">
                                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                    <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                            BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                                    <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                                             VerticalAlignment="Center" HorizontalAlignment="Center">
                                                         <FontIcon Glyph="&#xE8B7;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -1083,7 +1073,7 @@
                                                         <TextBlock Text="{x:Bind ViewModel.DownloadsLabel, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" />
                                                     </StackPanel>
                                                 </Grid>
-                                                <Border CornerRadius="4" Padding="6,2" Background="{ThemeResource PillBadgeBackgroundBrush}" HorizontalAlignment="Left" Margin="0,4,0,0">
+                                                <Border CornerRadius="4" Padding="6,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Left" Margin="0,4,0,0">
                                                     <TextBlock Text="{x:Bind ViewModel.DownloadsPath}" FontSize="11" TextTrimming="CharacterEllipsis"
                                                                 Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontFamily="{StaticResource KitMonoFontFamily}" />
                                                 </Border>
@@ -1126,8 +1116,8 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Spacing="4">
                                                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                    <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                            BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                                    <Border Width="36" Height="36" CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                                             VerticalAlignment="Center" HorizontalAlignment="Center">
                                                         <FontIcon Glyph="&#xEDA2;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -1183,8 +1173,8 @@
                                                                         <ColumnDefinition Width="Auto" />
                                                                         <ColumnDefinition Width="Auto" />
                                                                     </Grid.ColumnDefinitions>
-                                                                    <Border Width="34" Height="34" CornerRadius="6" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                                            BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                                                    <Border Width="34" Height="34" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                                                             VerticalAlignment="Center" HorizontalAlignment="Center">
                                                                         <FontIcon Glyph="{x:Bind Glyph}" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -1234,8 +1224,8 @@
                                     <StackPanel Spacing="16">
                                         <!-- Header row with Policy Icon Badge -->
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                                            <Border Width="40" Height="40" CornerRadius="10" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                    BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1"
+                                            <Border Width="40" Height="40" CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <FontIcon Glyph="&#xE8A5;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
@@ -1277,8 +1267,8 @@
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="8,4" Background="{ThemeResource PillBadgeBackgroundBrush}"
-                                                            BorderBrush="{ThemeResource PillBadgeBorderBrush}" BorderThickness="1" HorizontalAlignment="Left">
+                                                    <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="8,4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Left">
                                                         <TextBlock Text="{x:Bind ViewModel.AiHub.CurrentPolicyFilePath, Mode=OneWay}"
                                                                    Style="{StaticResource CaptionTextBlockStyle}"
                                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"

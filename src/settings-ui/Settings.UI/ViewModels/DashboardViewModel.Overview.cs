@@ -290,8 +290,6 @@ public partial class DashboardViewModel
             return;
         }
 
-        UpdateUptimeTick();
-
         var cancellation = new CancellationTokenSource();
         telemetryCancellation = cancellation;
 

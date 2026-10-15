@@ -83,6 +83,7 @@ namespace Kit.Settings.UI
         /// </summary>
         public App()
         {
+            LogStartupTiming("App ctor enter");
             Logger.InitializeLogger(@"\Settings\Logs");
             CrashLog.StartSession("Settings");
 
@@ -99,6 +100,7 @@ namespace Kit.Settings.UI
                 || cultureName.Equals("zh-SG", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en-US");
 
             InitializeComponent();
+            LogStartupTiming("App InitializeComponent completed");
 
             UnhandledException += App_UnhandledException;
             AppDomain.CurrentDomain.FirstChanceException += (_, args) => CrashLog.RecordFirstChance(args.Exception);

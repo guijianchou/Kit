@@ -29,7 +29,7 @@
         </ResourceDictionary>
         <viewmodels:NetMapHealthStyleConverter x:Key="DashboardEgressStyleConverter" Styles="{StaticResource DashboardEgressStyles}" />
         <DataTemplate x:Key="DashboardDetailTemplate" x:DataType="viewmodels:DashboardDetail">
-            <Grid Margin="0,1" ColumnSpacing="12" MinHeight="24">
+            <Grid Margin="0,1" ColumnSpacing="12" MinHeight="26">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="96" />
                     <ColumnDefinition Width="*" />
@@ -50,7 +50,9 @@
                         TextWrapping="Wrap" Typography.NumeralAlignment="Tabular"
                         Foreground="{ThemeResource TextFillColorPrimaryBrush}" IsTextSelectionEnabled="True"
                         VerticalAlignment="Center" />
-                    <local:UsageProgressBar Grid.Column="1" Height="4" CornerRadius="2" VerticalAlignment="Center" Maximum="100" TargetValue="{x:Bind UsageValue, Mode=OneWay}"
+                    <local:UsageProgressBar Grid.Column="1" Height="6" CornerRadius="3"
+                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                        VerticalAlignment="Center" Maximum="100" TargetValue="{x:Bind UsageValue, Mode=OneWay}"
                         AutomationProperties.Name="{x:Bind Label, Mode=OneWay}" AutomationProperties.HelpText="{x:Bind Value, Mode=OneWay}"
                         Visibility="{x:Bind HasUsage, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
                 </Grid>
@@ -113,21 +115,37 @@
                         </controls:Card>
                         <Border x:Name="SystemOverviewCard" Style="{StaticResource KitCardSurfaceStyle}">
                             <StackPanel Spacing="12">
-                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
-                                    <FontIcon Glyph="&#xE7F4;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    <TextBlock x:Uid="Dashboard_SystemCard" FontSize="16" FontWeight="SemiBold" AutomationProperties.HeadingLevel="Level2" />
-                                </StackPanel>
+                                <Grid ColumnSpacing="10" Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="32" Height="32" CornerRadius="8"
+                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE7F4;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1" x:Uid="Dashboard_SystemCard" FontSize="16" FontWeight="SemiBold" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
+                                </Grid>
                                 <ItemsControl x:Name="SystemDetailsList" ItemsSource="{x:Bind ViewModel.SystemDetails, Mode=OneWay}"
                                     ItemTemplate="{StaticResource DashboardDetailTemplate}" />
 
                                 <!-- Storage Section -->
-                                <Border Padding="0,10,0,0"
+                                <Border Padding="0,12,0,0"
                                     BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-                                    <StackPanel Spacing="4">
+                                    <StackPanel Spacing="6">
                                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xEDA2;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            <Border Width="24" Height="24" CornerRadius="6"
+                                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xEDA2;" FontSize="12" Foreground="{ThemeResource SystemFillColorSuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
                                             <TextBlock x:Uid="Dashboard_StorageHeading" Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                                Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                         </StackPanel>
                                         <ItemsControl x:Name="StorageDetailsList" ItemsSource="{x:Bind ViewModel.StorageDetails, Mode=OneWay}"
                                             ItemTemplate="{StaticResource DashboardDetailTemplate}" />
@@ -138,17 +156,23 @@
                                 <ItemsControl x:Name="GraphicsCardsList" ItemsSource="{x:Bind ViewModel.GraphicsCards, Mode=OneWay}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="viewmodels:DashboardGpuCard">
-                                            <Border Margin="0,0,0,8" Padding="0,10,0,0"
+                                            <Border Margin="0,0,0,8" Padding="0,12,0,0"
                                                 BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-                                                <StackPanel Spacing="4">
+                                                <StackPanel Spacing="6">
                                                     <Grid ColumnSpacing="8">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto" />
                                                             <ColumnDefinition Width="*" />
                                                         </Grid.ColumnDefinitions>
-                                                        <FontIcon Glyph="&#xE7F8;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                                        <Border Width="24" Height="24" CornerRadius="6"
+                                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                                BorderThickness="1"
+                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <FontIcon Glyph="&#xE7F8;" FontSize="12" Foreground="{ThemeResource SystemFillColorCautionBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Border>
                                                         <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" TextWrapping="Wrap" Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                                            Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                                     </Grid>
                                                     <ItemsControl ItemsSource="{x:Bind Details, Mode=OneWay}" ItemTemplate="{StaticResource DashboardDetailTemplate}" />
                                                     <TextBlock Text="{x:Bind Status, Mode=OneWay}" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"

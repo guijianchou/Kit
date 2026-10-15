@@ -4,8 +4,11 @@
 
 using System;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Windows.UI;
 using Windows.UI.ViewManagement;
 
 namespace Kit.Settings.UI.Helpers;
@@ -21,6 +24,8 @@ public sealed partial class UsageProgressBar : ProgressBar
     public UsageProgressBar()
     {
         Unloaded += (_, _) => SetUsage(animate: false);
+        Loaded += (_, _) => UpdateIndicatorColor(TargetValue);
+        ActualThemeChanged += (_, _) => UpdateIndicatorColor(TargetValue);
     }
 
     public double TargetValue
@@ -67,6 +72,7 @@ public sealed partial class UsageProgressBar : ProgressBar
         transition?.Stop();
         transition = null;
         Value = target;
+        UpdateIndicatorColor(target);
         if (!animate || Math.Abs(target - current) < 0.01)
         {
             return;
@@ -85,5 +91,59 @@ public sealed partial class UsageProgressBar : ProgressBar
         transition = new Storyboard();
         transition.Children.Add(animation);
         transition.Begin();
+    }
+
+    private void UpdateIndicatorColor(double value)
+    {
+        bool isDark = ActualTheme == ElementTheme.Dark;
+        string category = DetectCategory();
+        Color color = category switch
+        {
+            "Cpu" => isDark ? Color.FromArgb(0xFF, 0x38, 0xB6, 0xFF) : Color.FromArgb(0xFF, 0x00, 0x78, 0xD4),
+            "Memory" => isDark ? Color.FromArgb(0xFF, 0xB1, 0x46, 0xC2) : Color.FromArgb(0xFF, 0x74, 0x4D, 0xA9),
+            "Disk" => isDark ? Color.FromArgb(0xFF, 0x38, 0xAD, 0x62) : Color.FromArgb(0xFF, 0x0E, 0x7A, 0x0D),
+            "Gpu" => isDark ? Color.FromArgb(0xFF, 0xFF, 0x8C, 0x00) : Color.FromArgb(0xFF, 0xD8, 0x3B, 0x01),
+            _ => isDark ? Color.FromArgb(0xFF, 0x4C, 0xC2, 0xFF) : Color.FromArgb(0xFF, 0x00, 0x78, 0xD4),
+        };
+
+        Foreground = new SolidColorBrush(color);
+    }
+
+    private string DetectCategory()
+    {
+        string name = AutomationProperties.GetName(this) ?? string.Empty;
+        if (name.Contains("CPU", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("处理器", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Cpu";
+        }
+
+        if (name.Contains("内存", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Memory", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("RAM", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Memory";
+        }
+
+        if (name.Contains(":\\", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("磁盘", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Disk", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("存储", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Storage", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Disk";
+        }
+
+        if (name.Contains("GPU", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("显存", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("VRAM", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("显卡", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Usage", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("使用率", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Gpu";
+        }
+
+        return "Default";
     }
 }

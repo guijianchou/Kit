@@ -108,6 +108,7 @@ namespace Kit.Settings.UI.Views
         public ShellPage()
         {
             InitializeComponent();
+            App.LogStartupTiming("ShellPage: InitializeComponent completed");
             NavHelper.SetNavigateTo(DashboardNavigationItem, typeof(DashboardPage));
             NavHelper.SetNavigateTo(GeneralNavigationItem, typeof(GeneralPage));
             NavHelper.SetNavigateTo(AwakeNavigationItem, typeof(AwakePage));
@@ -117,11 +118,13 @@ namespace Kit.Settings.UI.Views
             NavHelper.SetNavigateTo(NetMapNavigationItem, typeof(NetMapPage));
             NavHelper.SetNavigateTo(AIHubNavigationItem, typeof(AIHubPage));
             SetWindowTitle();
+            App.LogStartupTiming("ShellPage: navigation items bound");
             var settingsUtils = SettingsUtils.Default;
             ViewModel = new ShellViewModel(SettingsRepository<GeneralSettings>.GetInstance(settingsUtils));
             DataContext = ViewModel;
             ShellHandler = this;
             ViewModel.Initialize(shellFrame, navigationView, KeyboardAccelerators);
+            App.LogStartupTiming("ShellPage: ViewModel initialized");
 
             // Reflect each module's enabled state in the navigation. Disabled modules stay
             // visible but dimmed, and navigation to them is skipped so a click no longer

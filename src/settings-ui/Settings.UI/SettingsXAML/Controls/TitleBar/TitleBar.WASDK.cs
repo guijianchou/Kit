@@ -95,7 +95,10 @@ public partial class TitleBar : Control
         var accessibilitySettings = new Windows.UI.ViewManagement.AccessibilitySettings();
         if (accessibilitySettings.HighContrast)
         {
-            Window.AppWindow.TitleBar.ResetToDefault();
+            Window.AppWindow.TitleBar.ButtonBackgroundColor = null;
+            Window.AppWindow.TitleBar.ButtonForegroundColor = null;
+            Window.AppWindow.TitleBar.ButtonInactiveBackgroundColor = null;
+            Window.AppWindow.TitleBar.ButtonInactiveForegroundColor = null;
             return;
         }
 

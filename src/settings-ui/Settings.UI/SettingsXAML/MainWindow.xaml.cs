@@ -40,12 +40,14 @@ namespace Kit.Settings.UI
             App.LogStartupTiming("MainWindow: theme applied");
 
             this.ExtendsContentIntoTitleBar = true;
+            App.LogStartupTiming("MainWindow: titlebar extended");
 
             ShellPage.SetElevationStatus(App.IsElevated);
             ShellPage.SetIsUserAnAdmin(App.IsUserAnAdmin);
 
             var hWnd = WindowNative.GetWindowHandle(this);
             var placement = WindowHelper.DeserializePlacementOrDefault(hWnd);
+            App.LogStartupTiming("MainWindow: placement deserialized");
             if (createHidden)
             {
                 placement.ShowCmd = NativeMethods.SW_HIDE;
@@ -54,6 +56,7 @@ namespace Kit.Settings.UI
             // Restore the last known placement on the first activation
             this.Activated += Window_Activated;
             NativeMethods.SetWindowPlacement(hWnd, ref placement);
+            App.LogStartupTiming("MainWindow: placement set");
             this.AppWindow.Changed += OnAppWindowChanged;
             App.LogStartupTiming("MainWindow: placement restored");
 

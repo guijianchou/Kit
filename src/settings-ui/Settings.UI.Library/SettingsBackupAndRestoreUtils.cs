@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -688,7 +688,17 @@ namespace Kit.Settings.UI.Library
                     }
 
                     // get data needed for process
-                    var backupRestoreSettings = JsonNode.Parse(GetBackupRestoreSettingsJson());
+                    JsonNode backupRestoreSettings;
+                    try
+                    {
+                        backupRestoreSettings = JsonNode.Parse(GetBackupRestoreSettingsJson());
+                    }
+                    catch (FileNotFoundException fnf) when (dryRun)
+                    {
+                        Logger.LogInfo($"BackupSettings: dry-run skipped as backup_restore_settings.json was not found: {fnf.Message}");
+                        return (true, string.Empty, "None", lastBackupExists, string.Empty);
+                    }
+
                     var currentSettingsFiles = GetSettingsFiles(backupRestoreSettings, appBasePath).ToList().ToDictionary(x => x.Substring(appBasePath.Length));
                     var fullBackupDir = Path.Combine(Path.GetTempPath(), $"settings_{DateTime.UtcNow.ToFileTimeUtc().ToString(CultureInfo.InvariantCulture)}");
                     var latestSettingsFolder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
@@ -812,32 +822,38 @@ namespace Kit.Settings.UI.Library
                 }
                 catch (Exception ex2)
                 {
-                    Logger.LogError($"There was an error in {tempFile.Value} : {ex2.Message}", ex2);
-                    return (false, $"General_SettingsBackupAndRestore_SettingsFormatError", "Error", lastBackupExists, "\n" + tempFile.Value);
+                    string fileContext = !string.IsNullOrEmpty(tempFile.Value) ? tempFile.Value : (!string.IsNullOrEmpty(tempFile.Key) ? tempFile.Key : "settings backup");
+                    Logger.LogError($"There was an error in {fileContext} : {ex2.Message}", ex2);
+                    return (false, $"General_SettingsBackupAndRestore_SettingsFormatError", "Error", lastBackupExists, "\n" + fileContext);
                 }
             }
         }
 
         /// <summary>
-        /// Searches for the config file (Json) in two possible paths and returns its content.
+        /// Searches for the config file (Json) in possible paths and returns its content.
         /// </summary>
         /// <returns>Returns the content of the config file (Json) as string.</returns>
         /// <exception cref="FileNotFoundException">Thrown if file is not found.</exception>
         /// <remarks>If the settings window is launched from an installed instance of PT we need the path "...\Settings\\backup_restore_settings.json" and if the settings window is launched from a local VS build of PT we need the path "...\backup_restore_settings.json".</remarks>
         private static string GetBackupRestoreSettingsJson()
         {
-            if (File.Exists("backup_restore_settings.json"))
+            string[] candidatePaths = new[]
             {
-                return File.ReadAllText("backup_restore_settings.json");
-            }
-            else if (File.Exists("Settings\\backup_restore_settings.json"))
+                Path.Combine(AppContext.BaseDirectory, "backup_restore_settings.json"),
+                Path.Combine(AppContext.BaseDirectory, "Settings", "backup_restore_settings.json"),
+                "backup_restore_settings.json",
+                Path.Combine("Settings", "backup_restore_settings.json"),
+            };
+
+            foreach (var path in candidatePaths)
             {
-                return File.ReadAllText("Settings\\backup_restore_settings.json");
+                if (File.Exists(path))
+                {
+                    return File.ReadAllText(path);
+                }
             }
-            else
-            {
-                throw new FileNotFoundException($"The backup_restore_settings.json could not be found at {Environment.CurrentDirectory}");
-            }
+
+            throw new FileNotFoundException($"The backup_restore_settings.json could not be found at {AppContext.BaseDirectory} or {Environment.CurrentDirectory}");
         }
 
         /// <summary>

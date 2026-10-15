@@ -4,6 +4,19 @@
 
 ## English
 
+### 2.3.13
+
+- **Dashboard UI/UX & Dynamic Fluent Visuals (Mica + WinUI 3)**:
+  - Enhanced `UsageProgressBar` with category-specific Fluent accent colors (Cyan for CPU, Purple for Memory, Emerald for Storage, Amber for GPU), smoothly adapting across Light and Dark themes while preserving pixel stability.
+  - Upgraded `DashboardDetailTemplate` progress bars with 6px height, rounded corners (`CornerRadius="3"`), and translucent track backgrounds blending seamlessly into Mica backdrops.
+  - Redesigned `SystemOverviewCard` section headers with rounded squircle badge containers (`32x32 CornerRadius="8"`) and semantic icon badges for Storage (Emerald) and GPU (Amber).
+- **Startup Instrumentation & Telemetry Deduplication (Batch 8)**:
+  - Added sub-stage startup timing instrumentation across `MainWindow` (`titlebar extended`, `placement deserialized`, `placement set`), `ShellPage` (`InitializeComponent completed`, `navigation items bound`, `ViewModel initialized`), and `App` constructor milestones (`App ctor enter`, `InitializeComponent completed`).
+  - Removed duplicate `UpdateUptimeTick()` in `RefreshFastTelemetryAsync`, eliminating double-tick per second while preserving the existing timer contracts.
+  - Optimized `CrashLog.RecordFirstChance` to inspect limits before allocating native `StackTrace`.
+  - Added graceful fallback and fixed empty string formatting in `SettingsBackupAndRestoreUtils` dry-run inspection under dev environments.
+  - Removed unused `Helper.AllowRunnerToForeground` dead code.
+
 ### 2.3.12
 
 - **Settings Shell Launch & First-Frame Experience**:
@@ -665,6 +678,19 @@
 ## 中文
 
 ## 更新日志
+
+### 2.3.13
+
+- **仪表盘 UI/UX 与 Fluent 动态色彩呈现（深度结合 Mica + WinUI 3）**：
+  - 增强 `UsageProgressBar`，按指标类别动态应用 Fluent 语义色彩（CPU 青蓝、内存亮紫、存储翠绿、GPU 琥珀橙），并根据浅色/深色主题动态适配，卡片层次与辨识度显著提升。
+  - 升级 `DashboardDetailTemplate` 进度条规范至 6px 高度、3px 圆角，配合半透明底轨材质无缝融入 Windows 11 Mica 云母背景。
+  - 系统概览卡片（`SystemOverviewCard`）采用现代 WinUI 3 风格圆角图标容器（32x32 CornerRadius="8"），为存储与 GPU 增加彩色语义徽标。
+- **启动各阶段细分仪表化与遥测去重（批次 8 项）**：
+  - 补齐 `MainWindow`（标题栏扩展、位置反序列化、位置应用）、`ShellPage`（组件加载完成、导航绑定、ViewModel 初始化）与 `App` 构造函数细分子阶段的 `STARTUP_TIMING` 启动耗时度量。
+  - 剔除 `RefreshFastTelemetryAsync` 中的冗余 `UpdateUptimeTick()` 调用，消除一秒双刷并保持既有时钟接口契约。
+  - 优化 `CrashLog.RecordFirstChance`，在达到上限时直接跳过 `StackTrace` 原生栈抓取与内存分配。
+  - 优化 `SettingsBackupAndRestoreUtils` 在 dev 开发环境直接启动时的 dry-run 备份检查逻辑，缺文件时优雅回退并修复日志空占位符。
+  - 清理无调用者的死代码 `Helper.AllowRunnerToForeground`。
 
 ### 2.3.12
 

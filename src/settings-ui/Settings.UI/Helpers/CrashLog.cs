@@ -99,6 +99,12 @@ namespace Kit.Settings.UI.Helpers
                         FirstChanceCounts[existingKey]++;
                         return;
                     }
+
+                    if (FirstChanceCounts.Count >= MaxDistinctFirstChance)
+                    {
+                        _unsampledCount++;
+                        return;
+                    }
                 }
 
                 // First time seeing this (type, HRESULT): capture call site once

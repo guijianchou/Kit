@@ -6,7 +6,7 @@
 
 ## 0. 现状基线
 
-- **部署形态**：`C:\Users\Zen\Repos\Projects\Kit` 仍为 **2.3.11（Debug）**；2.3.12 的 staging 目录（`bin\debug\2.3.12`）当前不存在 → 部署待执行（`tools\build\Stage-Debug.ps1` 后复制，用户既有流程）。
+- **部署形态**：`x64\Debug` 构建产物已是 **2.3.12**（2026-10-15 03:32 VS 构建，Kit.exe / Kit.Settings.exe 均 2.3.12.0，与提交源码一致）；日常实例 `C:\Users\Zen\Repos\Projects\Kit`（`WinUI3Apps\Kit.Settings.exe`）仍为 **2.3.11.0**（2026-10-13 23:31）；2.3.12 staging 目录（`bin\debug\2.3.12`）不存在 → 部署待执行（`tools\build\Stage-Debug.ps1` 后复制，用户既有流程）。
 - **2026-10-15 实测（x64/Debug 无 runner 启动路径，进程起点 = 0）**：
 
 | 阶段 | 时刻 | 增量 |

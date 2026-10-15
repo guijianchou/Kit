@@ -1,12 +1,12 @@
-# Kit UI/UX 优化方案（v8）— 主框架 / Settings 壳 + 加载速度（下一步执行稿）
+# Kit UI/UX 优化方案（v9）— 主框架 / Settings 壳 + 加载速度（下一步执行稿）
 
-> 状态：**下一步执行稿（2026-10-15 第三轮：2.3.13 复审后）** ｜ 基线：`main@4f52f47`（v2.3.13，批次 8 大部分落地）
-> 本版：剔除 2.3.13 已完成项（L3 仪表、L5 去重与死代码、L6、T1、§4.4）；L1 结案（实测 Release ≈ Debug，无显著启动收益）；刷新 runner 路径实测（Debug/Release 对照 + 子阶段细分）；记录测试换位（:1342 修复、:2871 新失败）与 Dashboard 系统概览 Fluent 化；L5 风暴排除多项、剩 Localserver 采样候选。
-> 历史版本：v2 = `782c626`、v3 = `41f7bdd`、v4 = `748445e`、v5 = `20ec501`、v6 = `adbb06e`+`65a4866`、v7 = `db8630c`（`git show <commit>:doc/devdoc/ui-ux-refactor-plan.md` 取回）。
+> 状态：**下一步执行稿（2026-10-15 第四轮：i18n 与单测闭合后）** ｜ 基线：`main@449cebf`（v2.3.13 + i18n 修复 + 单测 212/212）
+> 本版：剔除已完成项（单测 16 项全部修复、备份校验 severity、中文文案纠正）；新增 runner 托盘菜单未本地化（主框架 i18n 遗留）；L5 风暴、L3/L4/L8 优化、L9 仪表保持未做；批次顺延为 9–12。
+> 历史版本：v2 = `782c626`、v3 = `41f7bdd`、v4 = `748445e`、v5 = `20ec501`、v6 = `adbb06e`+`65a4866`、v7 = `db8630c`、v8 = `3ebf328`（`git show <commit>:doc/devdoc/ui-ux-refactor-plan.md` 取回）。
 
 ## 0. 现状基线
 
-- **部署形态**：`x64\Debug` 与 `x64\Release` 均已是 **2.3.13**（05:06 / 05:11 构建）；`bin\debug\2.3.13`、`bin\release\2.3.13` 已 stage；日常实例 `C:\Users\Zen\Repos\Projects\Kit`（`WinUI3Apps\Kit.Settings.exe`）仍为 **2.3.11.0**（2026-10-13 23:31）→ 部署待执行（复制 `bin\debug\2.3.13` 到 Projects\Kit，用户既有流程）。
+- **部署形态**：`x64\Debug` 与 `x64\Release` 均已是 **2.3.13**（Debug 已含 07:22 i18n 修复重建）；`bin\debug\2.3.13`、`bin\release\2.3.13` 已 stage；日常实例 `C:\Users\Zen\Repos\Projects\Kit`（`WinUI3Apps\Kit.Settings.exe`）仍为 **2.3.11.0**（2026-10-13 23:31）→ 部署待执行（复制 `bin\debug\2.3.13` 到 Projects\Kit，用户既有流程）。
 - **2026-10-15 实测（2.3.13 runner 路径，trace 协议；Debug = 05:19 会话，Release = 05:56 会话）**：
 
 | 阶段 | Debug | Release |
@@ -30,11 +30,12 @@
 
 - **runner 侧**：初始化（WinMain→模块启用）129ms（Debug）/ 140ms（Release）；设置进程创建 +142ms / +135ms。
 - **结论**：① **L1 结案：Release ≈ Debug（±3%）**，启动耗时由框架/XAML 段主导，Debug 日常部署即可，Release 用于发布；② 主窗段两大头细化为 placement 段 ~144-155ms（其中 `ExtendsContentIntoTitleBar` 首触 45-68ms 最大）与 ShellPage InitializeComponent 167-170ms（XAML 膨胀；导航绑定 1ms、VM 初始化 14ms 可忽略）；③ 首帧 ~1321-1353ms（trace 协议下；`off` 时更快但无 STARTUP 行可读）。
-- **单测**：212 / 212 全量通过（0 失败，16 项单元测试已全部修复闭合）。
-- **验证链（本机 2.3.13）**：构建 exit 0（**注意：须 `-ExecutionPolicy Bypass`**，否则 build-common.ps1 被策略拦截而脚本仍 exit 0 不产出）；模块页烟雾 PASS、仪表盘烟雾（zh-CN）PASS、NetMap 烟雾 PASS。
+- **单测**：**212 / 212 全量通过（0 失败；2026-10-15 07:24 本机复跑验证）**，16 项历史遗留已全部闭合（断言已按现布局/文案/删除的死代码更新；`WM_CLOSE` 断言改为匹配 settings_window.cpp:690-708 的既有意图：托盘隐藏时关闭最后一个设置窗口经 WM_CLOSE 走正常拆卸）。
+- **i18n（2026-10-15）**：zh-CN 文案纠正 **NetMap → 网络地图**（4 键：Shell/ModuleTitle/EnableCard/AutomationProperties）、**LightSwitch → 主题切换**（5 键，全库无残留"深浅切换"）；QuickAccess 显示名走 resw（`LightSwitch/ModuleTitle`）随同生效。**runner 托盘菜单仍为英文**（`runner.base.rc` 的 `ID_TRAY_MENU` 硬编码 "Settings"/"Documentation"/"Close"，无 zh-CN LANGUAGE 块）→ 见 §4.1。
+- **验证链（本机 2.3.13）**：构建 exit 0（**注意：须 `-ExecutionPolicy Bypass`**，否则 build-common.ps1 被策略拦截而脚本仍 exit 0 不产出）；单测 212/212；模块页烟雾 PASS、仪表盘烟雾（zh-CN）PASS、NetMap 烟雾 PASS。
 - **异常与噪音**：本轮全部测量/烟雾会话（05:40-05:56）first-chance 为 socket IOException ×5-10 或 0 条；仅用户 05:09 会话出现 OpenProcess 风暴（x396/8s，见 L5）。
 - **日志机制（保持）**：STARTUP_TIMING / NAV_TIMING 受 `log_settings.json` 级别控制（`off` 时静默）；`Debug.WriteLine` 经 Logger 的 Trace 监听器直达日志文件、不受级别控制；复测协议：置 trace → 测量 → 恢复。
-- 已定决策（保持 + 新增）：动画系统原生；chips 令牌化彩色；QA 3 处 hex 例外；AIHub 单文件；动态键族（`Text(shortKey)`、`State{suffix}`）；材质透出链（§3.1）；**新增：Dashboard `UsageProgressBar` 类别语义色板（CPU 青、内存紫、存储绿、GPU 琥珀，亮/暗双色，硬编码于 UsageProgressBar.cs）**。
+- 已定决策（保持 + 新增）：动画系统原生；chips 令牌化彩色；QA 3 处 hex 例外；AIHub 单文件；动态键族（`Text(shortKey)`、`State{suffix}`）；材质透出链（§3.1）；Dashboard `UsageProgressBar` 类别语义色板（CPU 青、内存紫、存储绿、GPU 琥珀，亮/暗双色，硬编码于 UsageProgressBar.cs）。
 
 ## 1. 执行纪律
 
@@ -68,9 +69,9 @@
 
 ### L5 Dashboard 常驻开销（去重与死代码已完成；OpenProcess 风暴未闭合）
 
-- 已完成（2.3.13，剔除）：`UpdateUptimeTick()` 重复调用移除（uptime 每秒一次）；`Helper.AllowRunnerToForeground` 死代码删除（注意：该删除使 BuildCompatibility.cs:2871 失败，见 §4.1）。
+- 已完成（2.3.13，已剔除）：`UpdateUptimeTick()` 重复调用移除（uptime 每秒一次）；`Helper.AllowRunnerToForeground` 死代码删除（其测试断言已随 212/212 修复一并更新）。
 - **OpenProcess 风暴证据**：用户 05:09 会话（NetMap 烟雾）x396/8s ≈ 51/s，`Win32Exception E_FAIL`，栈顶 `System.Diagnostics.ProcessManager.OpenProcess`；受控复跑同一 NetMap 烟雾（05:42）0 条；其余会话（含 Release 测量）0 条。
-- **本轮排除项**（静态核查）：`RunnerHelper`（原生 OpenProcess，非托管栈）、`SystemResourceInspector`（纯 GetSystemTimes/GlobalMemoryStatusEx）、`KernelProcessRunner`（无进程调用）、`PowerToysPID` 路径、nvidia-smi（Process.Start）。
+- **已排除项**（静态核查）：`RunnerHelper`（原生 OpenProcess，非托管栈）、`SystemResourceInspector`（纯 GetSystemTimes/GlobalMemoryStatusEx）、`KernelProcessRunner`（无进程调用）、`PowerToysPID` 路径、nvidia-smi（Process.Start）。
 - **剩余候选**：LocalserverViewModel 资源采样（1s telemetry timer → `ProcessResourceInspector.Sample` → `GetProcessById` + `TotalProcessorTime`/`WorkingSet64`，ProcessResourceInspector.cs:108-110；Win32Exception 已捕获于 :125 但仍记录 first-chance）；`PortInspector`/`ServiceRunner`（仅 Localserver 活跃时）。**注**：当前 settings 中 Localserver 模块为 disabled，与风暴会话不符 → 未闭合，勿下结论。
 - **下一步实验**：① 复跑 NetMap 烟雾 ×3 统计复现率；② 以提权 shell 运行烟雾（验证"对端不可打开"假说）；③ 给采样路径加降噪（Access-Denied 预检 + 失败缓存，或 CrashLog 忽略名单）。
 
@@ -105,6 +106,7 @@
 | Debug vs Release | 已结案：无显著差异（±3%） | —（L1 关闭） |
 | OpenProcess first-chance / 会话 | 最高 ×396/8s（来源未闭合，候选见 L5） | 定位并归零（L5 实验） |
 | 网络类 first-chance / 会话 | ×5-10（2.3.13 会话） | 定位并归零（L7） |
+| 单元测试 | **212/212 全通过**（07:24 复跑） | —（已闭合） |
 | 复测工具 | — | `Get-KitDiagnostics.ps1 -Days 2` + §0 日志协议 |
 
 ## 3. 主框架 & Settings 壳 UI/UX（Mica + WinUI 3）
@@ -117,40 +119,36 @@
 
 ### 3.2 已落地与遗留
 
-- **T1 标题栏 HC（已完成，剔除）**：2.3.13 改为 HC 时将按钮四色置 `null` 恢复系统默认（不再用 `ResetToDefault()`），风险解除；HC 视觉核验并入 §4.3 手工过检。
+- **T1 标题栏 HC（已完成，剔除）**：2.3.13 改为 HC 时将按钮四色置 `null` 恢复系统默认（不再用 `ResetToDefault()`），风险解除；HC 视觉核验并入 §4.2 手工过检。
 - **T2 动态列表过渡（已完成）**：`DynamicListTransitions` 已用于 Localserver 服务表、UDPtest TCP/UDP 表、NetMap 服务列表。
 - **T3 AIHub 过渡（已完成）**：6 处非工业虚拟化 ItemsControl 已补 `SettingsCardsAnimations`。
 - **T5 首屏骨架（未定，数据支撑增强）**：首帧 ~1321-1353ms（trace）中布局/数据段仍占大头；待 L3 优化后复测决定是否加骨架。
 
 ## 4. 模块页与文案遗留（降级收尾）
 
-### 4.1 单测 16 项修复（已全部闭合，212/212 PASS）
+已闭合（本轮剔除，不再跟踪）：单测 16 项（212/212）、备份位置校验 severity（降 Warning）、中文文案（网络地图 / 主题切换）。
 
-- 16 项失败单元测试已针对最新代码布局和文档措辞完成全部修复更新，MSTest 全量运行通过（212/212 通过，0 失败）。
+### 4.1 i18n 收尾（未完成）
 
-### 4.2 字符串迁移（未动）
+- **runner 托盘菜单未本地化（新）**：`src/runner/runner.base.rc` 的 `ID_TRAY_MENU` 为单语言英文（"Settings"/"Documentation"/"Close"；"更新可用"项走 `IDS_UPDATE_AVAILABLE_MENU_TEXT`，需一并核对语言来源），无 zh-CN LANGUAGE 块 → 中文系统下托盘菜单显示英文。方案：为 runner 增加 zh-CN 语言资源（或改从共享资源取串）。验收：zh-CN 系统下托盘菜单显示中文。
+- 字符串迁移（未动）：UDPtest 57 + 11 处、AIHubPageViewModel 232 处、AiHubViewModel 13 处 IsChinese → resw（`UDPtest_*` / `AIHub_` 前缀，PRI277 逐一核对）。
 
-- UDPtest 57 + 11 处、AIHubPageViewModel 232 处、AiHubViewModel 13 处 IsChinese → resw（`UDPtest_*` / `AIHub_` 前缀，PRI277 逐一核对）。
-
-### 4.3 其余（未动 + 2.3.13 新增观察）
+### 4.2 其余（未动）
 
 - HealthStyles 共享化（DashboardEgressStyles vs NetMapHealthStyles 去重，键名保持）。
 - NetMap 死键 ~18（`Text()` 加白名单后清理）+ `AiHub_PipelineCard` 2 键（随 AiHubSettingsTests.cs:80 一并清）。
 - a11y 收尾：LiveSetting 除 NetMap 外全缺；AccessibilityView AIHub/Localserver/UDPtest 为 0 处；General HeadingLevel 0 处。
 - 手工过检：浅/深/HC × 全页（含 T1 的 HC 标题栏核验）+ 键盘导航 + 系统"动画效果"关闭时全静默。
-- **已完成**：备份位置校验失败日志级别降为 Warning（SettingsBackupAndRestoreUtils.cs:675）。
-- **已完成**：中文文案纠正：NetMap 统一为“网络地图”，LightSwitch 统一为“主题切换”。
-- **新增**：`UsageProgressBar` 类别色依赖 `AutomationProperties.Name` 字符串匹配（中英文关键字硬编码于 DetectCategory），脆弱耦合；后续可改显式附加属性（如 `kit:UsageCategory`）或构造参数。
+- `UsageProgressBar` 类别色依赖 `AutomationProperties.Name` 字符串匹配（中英文关键字硬编码于 DetectCategory），脆弱耦合；后续可改显式附加属性（如 `kit:UsageCategory`）或构造参数。
 
-## 5. 下一步批次（9–13，每批原子提交）
+## 5. 下一步批次（9–12，每批原子提交）
 
 | 批次 | 内容 | 验收 |
 |---|---|---|
-| 9 | 部署 2.3.13 到 `Projects\Kit`（bin 已 stage）；L9 QuickAccess 仪表与冷/热测量；据结果定 T5 骨架 | 托盘实测 + Get-KitDiagnostics + QA 冷/热两组数字 |
+| 9 | 部署 2.3.13 到 `Projects\Kit`（bin 已 stage，含 i18n 修复）；L9 QuickAccess 仪表与冷/热测量；据结果定 T5 骨架 | 托盘实测 + Get-KitDiagnostics + QA 冷/热两组数字 |
 | 10 | 性能优化批次：L3 两大头优化（placement 段 / ShellPage.xaml）、L8 修正（ctor-enter 补记）+ 合并字典审计、L4 加 x:Load | 构建 + 3 烟雾 + 主窗段 ≤ 250ms + GeneralPage ≤ 250ms |
-| 11 | 修复批次：单测 16 项（含 :2871）+ L5 采样降噪 + 备份校验 severity | 212/212（或记录无法修复项与原因）+ crash.log 计数 |
-| 12 | 字符串迁移（§4.2）+ 死键清理 | 构建 + 源码扫描单测 |
-| 13 | HealthStyles + a11y + 手工过检 + 文档/changelog | 全量回归 |
+| 11 | i18n 收尾：runner 托盘本地化 + 字符串迁移（§4.1）+ 死键清理 | zh-CN 托盘菜单中文 + 构建 + 源码扫描单测 |
+| 12 | L5 采样降噪 + HealthStyles + a11y + 手工过检 + 文档/changelog | 全量回归 + crash.log 计数 |
 
 ## 6. 验证与回退
 
@@ -173,4 +171,4 @@ pwsh -File tools\diagnostics\Get-KitDiagnostics.ps1 -Days 2
 
 - 单元测试：`Debug\x64\tests\SettingsTests\net10.0-windows10.0.26100.0\Settings.UI.UnitTests.exe`（仓库根 `Debug\` 下；本机 vstest.console testhost 崩溃，用 MSTest 直接运行器；禁 `dotnet test`）。
 - 部署：`tools\build\Stage-Debug.ps1` 产出 `bin\debug\<版本>` 后复制到 `C:\Users\Zen\Repos\Projects\Kit`（用户既有流程）。
-- 回退点：`4f52f47`（本稿基线；后续批次提交后以最新提交为准）。
+- 回退点：`449cebf`（本稿基线；后续批次提交后以最新提交为准）。

@@ -32,10 +32,12 @@ namespace Kit.Settings.UI
 
         public MainWindow(bool createHidden = false)
         {
+            App.LogStartupTiming("MainWindow: ctor enter");
             this.Activated += Window_Activated_SetIcon;
 
             App.ThemeService.ThemeChanged += OnThemeChanged;
             App.ThemeService.ApplyTheme();
+            App.LogStartupTiming("MainWindow: theme applied");
 
             this.ExtendsContentIntoTitleBar = true;
 
@@ -53,6 +55,7 @@ namespace Kit.Settings.UI
             this.Activated += Window_Activated;
             NativeMethods.SetWindowPlacement(hWnd, ref placement);
             this.AppWindow.Changed += OnAppWindowChanged;
+            App.LogStartupTiming("MainWindow: placement restored");
 
             var loader = ResourceLoaderInstance.ResourceLoader;
             Title = App.IsElevated ? loader.GetString("SettingsWindow_AdminTitle") : loader.GetString("SettingsWindow_Title");
@@ -132,8 +135,12 @@ namespace Kit.Settings.UI
                 return needToUpdate;
             });
 
+            App.LogStartupTiming("MainWindow: callbacks registered");
+
             this.InitializeComponent();
+            App.LogStartupTiming("MainWindow: InitializeComponent completed");
             SetTitleBar();
+            App.LogStartupTiming("MainWindow: SetTitleBar completed");
 
             // receive IPC Message
             App.IPCMessageReceivedCallback = (string msg) =>

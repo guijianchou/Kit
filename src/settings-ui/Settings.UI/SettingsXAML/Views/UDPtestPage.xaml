@@ -560,7 +560,7 @@
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.TcpLines, Mode=OneWay}" ItemTemplate="{StaticResource TcpLineTemplate}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource DynamicListTransitions}" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>
@@ -603,7 +603,7 @@
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.UdpLines, Mode=OneWay}" ItemTemplate="{StaticResource UdpLineTemplate}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource DynamicListTransitions}" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>

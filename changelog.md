@@ -4,6 +4,22 @@
 
 ## English
 
+### 2.3.12
+
+- **Settings Shell Launch & First-Frame Experience**:
+  - Accelerated initial frame presentation by navigating to the startup section before activating the main window, eliminating the brief empty shell delay upon opening Settings.
+  - Added sub-stage startup timing instrumentation across `MainWindow` constructor milestones (theme application, window placement, callbacks, and component initialization).
+- **GeneralPage & AI Service Initialization Optimization**:
+  - Deferred heavy AI service initialization in `GeneralViewModel` so kernel scans and policy loads occur lazily on demand rather than blocking GeneralPage navigation.
+  - Eliminated redundant disk writes in `SyncLogSettingsFile` by skipping writes when configuration content is unchanged.
+- **Telemetry Throttling & Process Churn Elimination**:
+  - Added short-term failure caching (15s) and success caching (3s) to `GpuInspector.SampleAsync`, eliminating repeated `nvidia-smi` process spawn storms and reducing `Win32Exception` first-chance occurrences.
+  - Optimized `CrashLog.RecordFirstChance` to deduplicate repeating exceptions before allocating native stack traces, dramatically reducing CPU overhead during high-frequency exception reporting.
+- **Shell UI/UX & Transitions**:
+  - Added high-contrast fallback support to `TitleBar.WASDK.cs` caption buttons, ensuring native contrast when High Contrast mode is active.
+  - Added shared `DynamicListTransitions` (`AddDeleteThemeTransition` + `RepositionThemeTransition`) for dynamic list items across Localserver, UDPtest, and NetMap.
+  - Added smooth card reposition transitions (`SettingsCardsAnimations`) across AI Hub's non-virtualized preview lists.
+
 ### 2.3.11
 
 - **NetMap UI/UX & Card Presentation Enhancements**:
@@ -649,6 +665,22 @@
 ## 中文
 
 ## 更新日志
+
+### 2.3.12
+
+- **设置主窗口首帧体验与启动性能提速**：
+  - 调整窗口激活时序，在激活主窗口之前先行导航至启动页面，彻底消除打开设置时可能出现的短暂空壳延迟，实现首帧即时呈现。
+  - 在 `MainWindow` 构造流程各子阶段（主题应用、窗口位置恢复、回调绑定、组件加载）补齐详细的启动耗时埋点仪表化（`STARTUP_TIMING`）。
+- **通用设置页与 AI 服务惰性化加载**：
+  - 将 `GeneralViewModel` 中的 AI 服务模型改为惰性按需构造，避免进入通用设置页时因内核扫描与安全策略文件 I/O 阻塞导航，显著压降导航耗时。
+  - 优化 `SyncLogSettingsFile` 文件同步逻辑，在内容未变动时跳过冗余磁盘写入。
+- **后台遥测降频与子进程风暴治理**：
+  - 为 `GpuInspector.SampleAsync` 引入失败缓存（15秒）与成功缓存（3秒），彻底治理每秒高频拉起 `nvidia-smi` 造成的子进程颠簸与 `Win32Exception` first-chance 异常风暴。
+  - 优化 `CrashLog.RecordFirstChance` 异常采样逻辑，在生成栈信息前先执行键值查重，杜绝重复异常频繁分配 StackTrace 带来的性能损耗。
+- **主框架与壳 UI/UX 过渡动效完善**：
+  - 标题栏最小化/最大化/关闭按钮增加高对比度主题自动检测与回退，高对比模式下自动恢复系统默认样式以确保可访问性。
+  - 在 `App.xaml` 中增加共享的 `DynamicListTransitions`（增删与平滑位移动画），并应用于 Localserver、UDPtest 以及 NetMap 动态列表。
+  - 为 AI Hub 页面内多处非虚拟化 ItemsControl 列表补充平滑过渡动效（`SettingsCardsAnimations`）。
 
 ### 2.3.11
 

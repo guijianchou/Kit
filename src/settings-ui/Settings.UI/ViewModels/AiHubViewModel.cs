@@ -277,7 +277,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
         RefreshLocalKernelStatus();
         RefreshServiceStatus();
-        _ = InitializeAsync();
     }
 
     public bool CanToggle => !_loadFailed && !_disposed;
@@ -439,14 +438,31 @@ public sealed class AiHubViewModel : Observable, IDisposable
     /// <summary>True when the optimization chain policy is selected.</summary>
     public bool IsOptimizationPolicyTab => TaskPolicyIndex == 1;
 
+    private bool _policiesLoaded;
+
+    public void EnsurePoliciesLoaded()
+    {
+        if (_policiesLoaded || _disposed || _loadFailed)
+        {
+            return;
+        }
+
+        _policiesLoaded = true;
+        _ = InitializeAsync();
+    }
+
     public string CurrentPolicyContent
     {
-        get => ActivePolicyIndex switch
+        get
         {
-            1 => SecurityAuditPolicyContent,
-            2 => OptimizationPolicyContent,
-            _ => SecurityPolicyContent,
-        };
+            EnsurePoliciesLoaded();
+            return ActivePolicyIndex switch
+            {
+                1 => SecurityAuditPolicyContent,
+                2 => OptimizationPolicyContent,
+                _ => SecurityPolicyContent,
+            };
+        }
         set
         {
             switch (ActivePolicyIndex)
@@ -663,6 +679,8 @@ public sealed class AiHubViewModel : Observable, IDisposable
             ShowStatus(Text("AiHub_LoadFailed"), InfoBarSeverity.Error);
             return;
         }
+
+        _policiesLoaded = true;
 
         await RunOperationAsync(async token =>
         {

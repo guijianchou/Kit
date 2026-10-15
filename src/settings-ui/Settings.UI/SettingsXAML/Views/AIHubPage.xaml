@@ -818,12 +818,22 @@
                                         <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.ShowPriorityFindings, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <TextBlock Text="{x:Bind ViewModel.PriorityPreviewLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" />
                                             <ItemsControl ItemsSource="{x:Bind ViewModel.PriorityFindings, Mode=OneWay}" ItemTemplate="{StaticResource FindingPreviewTemplate}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
                                             </ItemsControl>
                                         </StackPanel>
 
                                         <!-- Category Grouped Expanders View -->
                                         <ItemsControl ItemsSource="{x:Bind ViewModel.FindingSections, Mode=OneWay}"
                                                       Visibility="{x:Bind ViewModel.ShowAllFindings, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="viewModels:FindingSection">
                                                     <Border Margin="0,0,0,8" CornerRadius="{StaticResource OverlayCornerRadius}"
@@ -847,6 +857,11 @@
                                                                 </Grid>
                                                             </Expander.Header>
                                                             <ItemsControl ItemsSource="{x:Bind Issues}" ItemTemplate="{StaticResource FindingPreviewTemplate}" Margin="0,4,0,0">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
                                                             </ItemsControl>
                                                         </Expander>
                                                     </Border>
@@ -921,6 +936,11 @@
                                             </Border>
                                         </Grid>
                                         <ItemsControl ItemsSource="{x:Bind ViewModel.AiReportFindings, Mode=OneWay}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="viewModels:AiReportFinding">
                                                     <Border Margin="0,0,0,8" Padding="14,10" CornerRadius="{StaticResource OverlayCornerRadius}"
@@ -1099,6 +1119,11 @@
                                             </StackPanel>
                                         </Grid>
                                         <ItemsControl ItemsSource="{x:Bind ViewModel.DownloadCategories}" ItemTemplate="{StaticResource OptimizationCategoryTemplate}" HorizontalContentAlignment="Stretch">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
                                         </ItemsControl>
                                     </StackPanel>
                                 </Border>
@@ -1145,6 +1170,11 @@
                                             <Expander Header="{x:Bind ViewModel.UserDirectoryLabel}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                                       Background="Transparent" BorderThickness="0">
                                                 <ItemsControl ItemsSource="{x:Bind ViewModel.UserDirectorySummaries}" HorizontalContentAlignment="Stretch" Padding="6,8">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="x:String">
                                                             <TextBlock Text="{x:Bind}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"

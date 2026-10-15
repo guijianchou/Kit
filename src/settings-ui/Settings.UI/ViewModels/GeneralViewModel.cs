@@ -49,11 +49,13 @@ namespace Kit.Settings.UI.ViewModels
 
         public Microsoft.Windows.ApplicationModel.Resources.ResourceLoader ResourceLoader { get; set; }
 
+        private AiHubViewModel _aiServices;
+
         /// <summary>
         /// The shared AI service configuration: execution kernel, main and fallback endpoints,
         /// credentials, and the global security policy that applies to every plugin.
         /// </summary>
-        public AiHubViewModel AiServices { get; }
+        public AiHubViewModel AiServices => _aiServices ??= new AiHubViewModel(_dispatcherQueue);
 
         private Action HideBackupAndRestoreMessageAreaAction { get; set; }
 
@@ -112,11 +114,8 @@ namespace Kit.Settings.UI.ViewModels
             _settingsRepository.SettingsChanged += OnSettingsChanged;
             _dispatcherQueue = GetDispatcherQueue();
 
-            // The AI service is shared by every module, so its configuration (kernel,
-            // endpoints, credentials and the global security policy) lives with the base
-            // settings rather than inside the AI Hub consumer page.
-            AiServices = new AiHubViewModel(_dispatcherQueue);
-
+            // The AI service configuration (kernel, endpoints, credentials, policy)
+            // is initialized lazily via the AiServices property when first accessed.
             GeneralSettingsConfig = settingsRepository.SettingsConfig;
             UpdatingSettingsConfig = UpdatingSettings.LoadSettings();
             if (UpdatingSettingsConfig == null)
@@ -660,6 +659,21 @@ namespace Kit.Settings.UI.ViewModels
 
                 string filePath = Path.Combine(dir, "log_settings.json");
                 string content = $"{{\"logLevel\":\"{targetLevel}\"}}";
+                if (File.Exists(filePath))
+                {
+                    try
+                    {
+                        string existing = File.ReadAllText(filePath);
+                        if (string.Equals(existing.Trim(), content.Trim(), StringComparison.Ordinal))
+                        {
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+
                 File.WriteAllText(filePath, content);
             }
             catch (Exception ex)
@@ -1692,6 +1706,8 @@ namespace Kit.Settings.UI.ViewModels
             {
                 _settingsRepository.SettingsChanged -= OnSettingsChanged;
             }
+
+            _aiServices?.Dispose();
 
             GC.SuppressFinalize(this);
         }

@@ -96,6 +96,11 @@
                 <RepositionThemeTransition IsStaggeringEnabled="False" />
                 <!--  Smoothly animates individual cards whenever Expanders are expanded/collapsed  -->
             </TransitionCollection>
+
+            <TransitionCollection x:Key="DynamicListTransitions">
+                <AddDeleteThemeTransition />
+                <RepositionThemeTransition IsStaggeringEnabled="False" />
+            </TransitionCollection>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -27,9 +27,29 @@ public sealed record GpuSnapshot(
 public static class GpuInspector
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(3);
+    private static (GpuSnapshot Snapshot, DateTime ExpiresAt)? _cachedFailure;
+    private static (GpuSnapshot Snapshot, DateTime ExpiresAt)? _cachedSuccess;
+    private static readonly TimeSpan FailureCacheDuration = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan SuccessCacheDuration = TimeSpan.FromSeconds(3);
+
+    private static GpuSnapshot CacheFailure(GpuSnapshot failure)
+    {
+        _cachedFailure = (failure, DateTime.UtcNow.Add(FailureCacheDuration));
+        return failure;
+    }
 
     public static async Task<GpuSnapshot> SampleAsync(CancellationToken cancellationToken = default)
     {
+        if (_cachedFailure is { } cachedFail && DateTime.UtcNow < cachedFail.ExpiresAt)
+        {
+            return cachedFail.Snapshot;
+        }
+
+        if (_cachedSuccess is { } cachedSucc && DateTime.UtcNow < cachedSucc.ExpiresAt)
+        {
+            return cachedSucc.Snapshot;
+        }
+
         ProcessStartInfo startInfo = new()
         {
             FileName = "nvidia-smi",
@@ -53,14 +73,14 @@ public static class GpuInspector
             if (!process.Start())
             {
                 process.Dispose();
-                return new([], "nvidia-smi did not start.");
+                return CacheFailure(new([], "nvidia-smi did not start."));
             }
         }
         catch (Exception ex) when (ex is InvalidOperationException
             or System.ComponentModel.Win32Exception
             or IOException)
         {
-            return new([], "NVIDIA telemetry unavailable: nvidia-smi was not found or could not start.");
+            return CacheFailure(new([], "NVIDIA telemetry unavailable: nvidia-smi was not found or could not start."));
         }
 
         try
@@ -72,9 +92,9 @@ public static class GpuInspector
             string error = await errorTask.ConfigureAwait(false);
             if (process.ExitCode != 0)
             {
-                return new([], string.IsNullOrWhiteSpace(error)
+                return CacheFailure(new([], string.IsNullOrWhiteSpace(error)
                     ? $"nvidia-smi exited with code {process.ExitCode}."
-                    : error.Trim());
+                    : error.Trim()));
             }
 
             string output = await outputTask.ConfigureAwait(false);
@@ -87,13 +107,19 @@ public static class GpuInspector
                 }
             }
 
-            return devices.Count == 0
-                ? new([], "nvidia-smi returned no readable GPU telemetry.")
-                : new(devices, null);
+            if (devices.Count == 0)
+            {
+                return CacheFailure(new([], "nvidia-smi returned no readable GPU telemetry."));
+            }
+
+            _cachedFailure = null;
+            var snapshot = new GpuSnapshot(devices, null);
+            _cachedSuccess = (snapshot, DateTime.UtcNow.Add(SuccessCacheDuration));
+            return snapshot;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new([], "NVIDIA telemetry probe timed out.");
+            return CacheFailure(new([], "NVIDIA telemetry probe timed out."));
         }
         catch (OperationCanceledException)
         {
@@ -101,7 +127,7 @@ public static class GpuInspector
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException)
         {
-            return new([], $"NVIDIA telemetry failed: {ex.Message}");
+            return CacheFailure(new([], $"NVIDIA telemetry failed: {ex.Message}"));
         }
         finally
         {

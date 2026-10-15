@@ -157,9 +157,9 @@ public partial class DashboardViewModel
     private CancellationTokenSource? telemetryCancellation;
     private CancellationTokenSource? storageCancellation;
 
-    // Distinct polling timers per requirement:
+    // Distinct polling timers:
     // Uptime: 1s
-    // Memory, CPU load, VRAM usage, GPU temp: 1s
+    // Memory, CPU load, VRAM usage, GPU temp: 1s (GPU process spawn throttled to 3s in GpuInspector)
     // Storage: 5m
     // Network overview: 10s
     private DispatcherQueueTimer? uptimeTimer;
@@ -289,6 +289,8 @@ public partial class DashboardViewModel
         {
             return;
         }
+
+        UpdateUptimeTick();
 
         var cancellation = new CancellationTokenSource();
         telemetryCancellation = cancellation;

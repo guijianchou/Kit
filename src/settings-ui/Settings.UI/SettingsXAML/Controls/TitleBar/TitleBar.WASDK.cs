@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -92,6 +92,13 @@ public partial class TitleBar : Control
 
     private void UpdateCaptionButtons(FrameworkElement rootElement)
     {
+        var accessibilitySettings = new Windows.UI.ViewManagement.AccessibilitySettings();
+        if (accessibilitySettings.HighContrast)
+        {
+            Window.AppWindow.TitleBar.ResetToDefault();
+            return;
+        }
+
         Window.AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
         Window.AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
         if (rootElement.ActualTheme == ElementTheme.Dark)

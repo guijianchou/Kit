@@ -245,9 +245,10 @@ namespace Kit.Settings.UI
             LogStartupTiming("IPC started");
             settingsWindow = new MainWindow();
             LogStartupTiming("Main window created");
-            settingsWindow.Activate();
             settingsWindow.NavigateToSection(StartupPage);
             LogStartupTiming("Startup page navigated");
+            settingsWindow.Activate();
+            LogStartupTiming("Main window activated");
 
             // https://github.com/microsoft/microsoft-ui-xaml/issues/7595 - Activate doesn't bring window to the foreground
             // Need to call SetForegroundWindow to actually gain focus.

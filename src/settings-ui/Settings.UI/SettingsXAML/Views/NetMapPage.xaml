@@ -513,6 +513,11 @@
 
                                     <!-- Service Rows -->
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.Services, Mode=OneWay}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource DynamicListTransitions}" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:NetMapServiceRow">
                                                 <Border Padding="14,11"

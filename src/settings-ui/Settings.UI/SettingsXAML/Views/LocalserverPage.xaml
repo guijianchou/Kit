@@ -234,7 +234,7 @@
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" />
+                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource DynamicListTransitions}" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>

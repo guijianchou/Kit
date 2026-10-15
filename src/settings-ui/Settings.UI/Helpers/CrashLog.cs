@@ -30,6 +30,7 @@ namespace Kit.Settings.UI.Helpers
 
         private static readonly object FileLock = new();
         private static readonly Dictionary<string, int> FirstChanceCounts = new();
+        private static readonly Dictionary<string, string> FirstChancePrefixToKey = new();
         private static readonly object CountsLock = new();
         private static readonly string FilePath = Path.Combine(Constants.AppDataPath(), "crash.log");
         private static int _unsampledCount;
@@ -87,13 +88,26 @@ namespace Kit.Settings.UI.Helpers
             _inHandler = true;
             try
             {
+                string typeName = ex.GetType().FullName ?? "UnknownException";
+                string signature = $"HRESULT=0x{ex.HResult:X8}";
+                string prefix = $"{typeName}|{signature}";
+
+                lock (CountsLock)
+                {
+                    if (FirstChancePrefixToKey.TryGetValue(prefix, out string existingKey))
+                    {
+                        FirstChanceCounts[existingKey]++;
+                        return;
+                    }
+                }
+
+                // First time seeing this (type, HRESULT): capture call site once
                 string site = new StackTrace(ex, false).GetFrame(0)?.GetMethod() is { } method
                     ? $"{method.DeclaringType?.FullName}.{method.Name}"
                     : "unknown";
 
                 // Exception messages can contain URLs, credentials and private file names.
-                string signature = $"HRESULT=0x{ex.HResult:X8}";
-                string key = $"{ex.GetType().FullName}|{signature}|{site}";
+                string key = $"{prefix}|{site}";
                 bool firstSample = false;
                 lock (CountsLock)
                 {
@@ -104,6 +118,7 @@ namespace Kit.Settings.UI.Helpers
                     else if (FirstChanceCounts.Count < MaxDistinctFirstChance)
                     {
                         FirstChanceCounts.Add(key, 1);
+                        FirstChancePrefixToKey[prefix] = key;
                         firstSample = true;
                     }
                     else
@@ -114,7 +129,7 @@ namespace Kit.Settings.UI.Helpers
 
                 if (firstSample)
                 {
-                    Append($"[FirstChance {Now}] {ex.GetType().FullName}: {signature}\n   at {site}");
+                    Append($"[FirstChance {Now}] {typeName}: {signature}\n   at {site}");
                 }
             }
             catch (Exception)

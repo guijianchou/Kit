@@ -1,115 +1,132 @@
-# Kit UI/UX 优化方案（v3）— 遗留收尾 + Mica / WinUI 3 深化
+# Kit UI/UX 优化方案（v4）— 主框架 / Settings 壳 + 加载速度（下一步执行稿）
 
-> 状态：**下一步执行稿** ｜ 2026-10-14 ｜ 基线：`main@782c626`（v2.3.11 + 清理轮，已合入并通过验证）
-> 说明：v1 逐按钮/逐折叠/逐下拉规格与 v2 as-built 对照已随 git 历史存档（取回：`git show 782c626:doc/devdoc/ui-ux-refactor-plan.md`）。本稿只列【未完成项】与【新增深化项】，供下一轮直接执行。
+> 状态：**下一步执行稿** ｜ 2026-10-14 ｜ 基线：`main@41f7bdd`（v2.3.11 + 清理轮，已合入并验证）
+> 本版重心（用户指定）：**主框架 Kit + Settings 壳的 UI/UX** 与 **加载速度**；证据来自 `%LOCALAPPDATA%\Kit` 日志（STARTUP_TIMING / NAV_TIMING 仪表 + crash.log），可用 `tools\diagnostics\Get-KitDiagnostics.ps1` 复现。
+> 历史版本：v2 as-built 取 `git show 782c626:doc/devdoc/ui-ux-refactor-plan.md`；v3 取 `git show 41f7bdd:doc/devdoc/ui-ux-refactor-plan.md`。
 
-## 0. 现状基线
+## 0. 现状基线（测量）
 
-- 验证（2026-10-14）：构建 exit 0；4 项烟雾（ModulePage / Dashboard en+zh / NetMap）PASS；单测 196/212（16 项历史遗留 → §2.1）。
-- 设计基础：`Themes/Colors.xaml`（唯一色彩定义处）、`Styles/Button|TextBlock|Surface.xaml` 样式族、页级 `SettingsCardsAnimations`（13 处引用）。
-- 材质：主窗 `MicaBackdrop Kind="BaseAlt"`；快捷方式冲突窗 `MicaBackdrop`；QuickAccess `DesktopAcrylicBackdrop`；全透明内容链（审计见 §3.1）。
-- **已定决策**（不再改动，除非用户重新拍板）：
-  - 动画一律系统原生、禁自定义 Storyboard（唯二保留：QA `FlyoutMenuButton` 图标缩放、`UsageProgressBar` 数值动画）。
-  - General 分类 chips 保留令牌化彩色（Section* 体系 + HC）；QuickAccess `App.xaml` 3 处 hex（`LayerOnAcrylicFillColorDefaultBrush`）为有意例外。
-  - `SettingsPageControl` 不挂入场动画（2.3.11 白屏性能修复）；AIHub 保持单文件（不拆 UserControl）。
-  - 动态键族必须保留：NetMap `Text(shortKey)`、Localserver `$"Localserver_State{suffix}"`；MRT 大小写不敏感（PRI277）。
+- **部署形态**：日常运行的 `C:\Users\Zen\Repos\Projects\Kit` 由 `tools\build\Stage-Debug.ps1` 从 `x64\Debug` 发布，即 **Debug 构建**（`Stage-Release.ps1` 已存在但未使用）。
+- **Runner 启动**（近 20 次会话）：min 61ms / avg 257ms / max 923ms（历史最大 1639ms）；托盘图标 74–188ms；模块逐个 1–75ms。结论：达标，保持。
+- **Settings 启动**（典型会话，进程起点 = 0）：
 
-## 1. 执行纪律（每批次必守）
-
-- 只动 UI/UX 层；x:Name / AutomationId / x:Uid 契约零改动；文案改动 en-us + zh-CN 同步。
-- 新增面板/容器一律走半透明材质体系（`CardBackground*` / `LayerFill*` / `SubtleFill*`），禁新增不透明面与字面 hex。
-- 验证链：build.ps1（exit 0）→ 烟雾（pwsh 7，先关 Kit）→ 单测（MSTest 直接运行器）；命令见 §5。
-- 核心零改动守卫：`git diff --name-only` 仅允许 `src/settings-ui/**`、`tools/tests/**`、`doc/**`；越界项（如 §2.1 的 sparse 清单）须单列提交并说明。
-
-## 2. 遗留收尾
-
-### 2.1 单测 16 项修复（最高优先：恢复契约绿）
-
-> 对照实验结论（2026-10-14）：16 项失败在重构基线 `4da08bd` 即存在，与批次 0–6 及清理轮无关；详见下表的族与建议。
-
-| 族 | 失败测试（文件:行） | 原因 | 建议动作 |
-|---|---|---|---|
-| 实验特性移除遗留 ×6 | BuildCompatibility.cs:1104 / 1721 / 3093；General.cs:131 / 458；FrameworkPrivacyDefaults.cs:331 | b108d90（09-25）移除实验特性后，测试与 runner `general_settings.cpp` 未同步 | 按"已移除"改写断言；核对 `enable_experimentation` 残留是否有意保留，死代码则另单删除 |
-| 版本与元数据 ×2 | BuildCompatibility.cs:1342；General.cs:748 | `src/PackageIdentity/AppxManifest.xml` 版本停留 2.3.7；README 措辞已改为「Current source version」 | sparse 版本改为随 `Version.props` 递增（**越界项，单列提交**）；README 断言按现措辞更新 |
-| GeneralPage 结构 ×2 | General.cs:158 / 707 | Startup & permissions 与 Appearance & behavior 顺序、VersionAndUpdate 段 Substring 边界 | 按现布局更新断言 |
-| 品牌与文案 ×3 | General.cs:469 / 486 / 514 | Intro 文案、`PT.png` 引用（2.3.7 起替换）、`Kit\Backup` 字面量 | 按现文案/资产更新断言 |
-| 模块目录 ×2 | General.cs:539 / 589 | NetMap 激活后目录与 enabled-states 序列化为 6 项，断言仍 5 项 | 断言更新为含 NetMap 的 6 项 |
-| 运行器启动清理 ×1 | BuildCompatibility.cs:1218 | `settings_window.cpp` LExit 块含 `WM_CLOSE`，断言要求不含 | 先核对 61d6ed4 意图（很可能是有意行为）→ 更新断言 |
-
-### 2.2 字符串迁移收尾
-
-- UDPtest：`UDPtestViewModel` 57 处 + `UDPtestLineRowViewModel` 11 处 IsChinese 三元 → resw（`UDPtest_*` 前缀）。
-- AIHub：`AIHubPageViewModel` 232 处；`AiHubViewModel` 余 13 处（`AiHub_`/`AIHub_` 前缀逐一核对 PRI277）。
-- 验收：中英切换无硬编码英文残留；en/zh 键数一致。
-
-### 2.3 HealthStyles 共享化
-
-- 现状：`DashboardEgressStyles`（DashboardPage.xaml:19）与 `NetMapHealthStyles`（NetMapPage.xaml:20；code-behind :244/:434 引用）两份重复。
-- 目标：提升为共享资源（`Themes/` 或 `Styles/Surface.xaml`）；键名（`UnknownText/GoodText/ErrorText`、`*Dot/*Box`）保持不变（烟雾断言）。
-- 风险：先核对 NetMapPageSmoke 对资源键的查找方式（页面级 vs 全局链）再移动。
-
-### 2.4 死键与残留
-
-- NetMap 死键 ~18：`Text(shortKey)` 使静态不可证死 → 为 `Text()` 增加显式映射/白名单后清理（批次 10）。
-- `AiHub_PipelineCard` 2 键：生产代码零引用（仅 AiHubSettingsTests.cs:80 反向断言字符串）→ 随该测试更新一并清理。
-
-### 2.5 可访问性收尾（WinUI 3 原生属性）
-
-- `AutomationProperties.LiveSetting="Polite"`：除 NetMap（3 处）外全缺 → Localserver / UDPtest 状态区、AIHub 工作流状态补。
-- `AccessibilityView="Raw"`：AIHub / Localserver / UDPtest 装饰元素为 0 处 → 补。
-- `HeadingLevel`：General 0 处（按分组语义补 Level2）；核对其余页卡头齐全（现 AIHub 3 / Localserver 4 / UDPtest 6 / NetMap 4）。
-
-### 2.6 手工过检（批次 12）
-
-浅色/深色/高对比 × 全页；Mica 透出观感与文字对比；键盘导航（Tab 顺序、焦点视觉）；系统"动画效果"关闭时全静默。
-
-## 3. Mica + WinUI 3 深化
-
-### 3.1 材质现状审计（2026-10-14，结论：透出链完整、无阻断）
-
-| 层 | 现状 | 结论 |
+| 阶段 | 时刻 | 增量 |
 |---|---|---|
-| 主窗 | `MicaBackdrop Kind="BaseAlt"`（MainWindow.xaml:13） | 保持（带自定义标题栏窗口的推荐值） |
-| 快捷方式冲突窗 | `MicaBackdrop`（默认 Base，对话框场景） | 保持 |
-| QuickAccess | `DesktopAcrylicBackdrop`（MainWindow.xaml:20-22） | 保持；测试钉死 `<Window.SystemBackdrop>` + `<DesktopAcrylicBackdrop`（BuildCompatibility.cs:3097-3107），勿换类型 |
-| 透明链 | App.xaml 页面底色 `Transparent`（:68）；ShellPage 根 Grid `Transparent`（:85）；`NavigationViewContentBackground` 透明覆盖（:151-152）；内容层 Border `LayerFillColorDefaultBrush`（:244） | 保持；Mica 经内容层透出 |
-| 卡片/面板 | `CardBackgroundFillColorDefaultBrush` ×22、`SubtleFillColorSecondaryBrush` ×60、`LayerFillColorDefaultBrush` ×3，全半透明 | 保持 |
-| 实色面 | 仅 `ShortcutDialogContentControl.xaml:215`（对话框内容，系统设计） | 保留 |
-| 字面 hex 背景 | Views/Controls 0 处 | ✓ |
+| App constructed | 65ms | 65 |
+| OnLaunched | 229ms | 164（App.xaml 合并字典 + 框架初始化） |
+| IPC started | 233ms | 4 |
+| **Main window created** | **684ms** | **+405（最大段，无子阶段仪表）** |
+| Startup page navigated | 837ms | +153 |
+| **First page loaded (Dashboard)** | **1186ms** | **+349** |
 
-### 3.2 深化项（批次 8 执行）
+- **页面冷访问 / 二次访问**（NAV_TIMING）：General 555–577 / 67–94ms（navigate 260–279ms 最慢）；Dashboard 500 / 76–129；AIHub 490–595 / 105–152；NetMap 255–285 / 20–27；LightSwitch 250 / 125–230；UDPtest 239 / 36–49；Localserver 188 / 51–65；Awake 174 / 59–86。
+- **异常风暴**（crash.log 近 2 天采样计数）：OpenProcess Win32Exception ×4668（单会话最高 ×635，集中于 Dashboard 活跃期，约每秒 0.6 次）；Socket IOException ×2192；HttpRequestException ×1114 + ×216（受限网络下的重试）；其余 InvalidCast / FileNotFound / EventLog 属既有噪音。
+- 已定决策（保持不动）：动画系统原生；chips 令牌化彩色；QA 3 处 hex 例外；AIHub 单文件；动态键族（`Text(shortKey)`、`State{suffix}`）；材质透出链（§3.1）。
 
-- **T1 标题栏高对比回退**：`TitleBar.WASDK.cs` 的 `UpdateCaptionButtons` 硬编码 `ButtonForegroundColor=White/Black`、`ButtonInactiveForegroundColor=DarkGray`，HC 下不可读风险 → 检测 `AccessibilitySettings.HighContrast` 时跳过覆写并 `ResetToDefault()`。验收：HC 主题下标题栏按钮可读、悬停正常。
-- **T2 动态列表增删过渡**：以下 `ItemsControl` 现仅 Reposition（`SettingsCardsAnimations`），行增删为瞬现 → App.xaml 新增共享 `TransitionCollection`（`AddDeleteThemeTransition` + `RepositionThemeTransition`，建议命名 `KitDynamicListAnimations`）替换用于：
-  - Localserver 服务表（LocalserverPage.xaml:233-238）
-  - UDPtest TCP 表 / UDP 表（UDPtestPage.xaml:563 / 606）
-  - NetMap 服务列表（NetMapPage.xaml:515）；`HopList`（ListView，:412）系统默认已带容器过渡，核对未被覆盖即可。
-  - 约束：不改 x:Name/ItemsSource；日志流式容器（高频增行）先不加，观察后再定。
-- **T3 AIHub 过渡补齐**：AIHubPage.xaml 现无任何 ChildrenTransitions → 为非虚拟化 `ItemsControl` 的 ItemsPanel 补 `SettingsCardsAnimations`（需要处加 AddDelete）：:820（PriorityFindings）、:825（FindingSections）、:849（嵌套 Issues）、:923（AiReportFindings）、:1101（DownloadCategories）、:1147（UserDirectorySummaries）；`x:Load`（:105/:166）与 `MaxHeight` 虚拟化参数保持不变。
-- **T4 评估结论（暂不做）**：ConnectedAnimation（Dashboard 卡 → 模块页）——Win11 原生设置不使用此模式，与"对齐原生"方向冲突；如用户点名再评估。
+## 1. 执行纪律
 
-### 3.3 已核对、保持不动
+- 只动 UI/UX 与展示层；x:Name / AutomationId / x:Uid 契约零改动；文案 en-us + zh-CN 同步；新增面板走半透明材质体系。
+- 性能类改动：先取 STARTUP_TIMING / NAV_TIMING 基线，改后用同一协议复测（`pwsh tools\diagnostics\Get-KitDiagnostics.ps1 -Days 2`）。
+- 核心零改动守卫与验证链同 §6；越界项单列提交。
 
-- Mica 种类与窗口圆角/阴影（DWM 自动）；省电/远程桌面下材质由系统自动回退（无代码）。
-- ContentDialog / MenuFlyout / NavigationView 面板：系统材质，不自定义。
-- 不引入 ThemeShadow 重投影、不新增自定义 Acrylic 面板（拼凑感风险）。
+## 2. 加载速度（本版重心）
 
-### 3.4 验收
+### L1 Debug→Release 对照（最大单杠杆）
 
-- T1/T2/T3：构建 + ModulePageSmoke + DashboardPageSmoke + NetMapPageSmoke 回归；动画须尊重系统"动画效果"开关。
-- Mica 与 HC 观感并入 §2.6 手工过检。
+- 现状运行 Debug 构建；Release 可显著降低 XAML 解析、JIT 与 IL 开销。动作：用 `Stage-Release.ps1` 构建一份 Release 部署，按同一协议测量 STARTUP_TIMING 对照；据结果决定是否切换日常部署。
 
-## 4. 下一步批次（8–12，每批原子提交）
+### L2 首帧体验（窗口 684ms 可见，内容 1186ms 才到，空壳约 0.5s）
+
+- 方案 A（首选，无新 UI）：把 `NavigateToSection` 前移到 `Activate` 之前，让页面构造（~150ms）发生在窗口尚不可见时；需验证首布局/Loaded 是否依赖激活，依赖则回退。
+- 方案 B（配合 T5）：shell 内容区加轻量骨架（ProgressRing / 占位），把空壳期变为"有意的加载态"。
+
+### L3 仪表化补齐（先测量后优化）
+
+- "Main window created" +405ms 无子阶段。在 `MainWindow` 构造关键步骤（ThemeService.ApplyTheme / placement 恢复 / InitializeComponent(ShellPage) / SetTitleBar / 回调接线）插入 `LogStartupTiming` 子阶段，一轮构建定位大头，再做针对性优化。
+
+### L4 GeneralPage 冷访问 555ms（navigate 260ms）
+
+- 根因之一：`GeneralViewModel` 构造时即 `AiServices = new AiHubViewModel(...)`（文件 IO + `AiHubEngine.Current` 静态初始化 + kernel 状态扫描 + readiness 检查），即使 AI 面板未展开。
+- 动作：AI 面板 VM 惰性化（首次展开 AI 区或进入 AIHub 页时构造）；顺带核对 `SyncLogSettingsFile` 每次构造写盘无额外 IO。验收：GeneralPage navigate < 150ms。
+
+### L5 Dashboard 常驻开销（1s 遥测）
+
+- 现状：`telemetryTimer` 1s + `force:true` → 每秒 `ReadCpuMemoryAsync`（含 250ms 采样窗）+ `ReadGpuTelemetryOnlyAsync`；后者在 NVIDIA 机器上 **每秒 spawn 一次 `nvidia-smi` 子进程**（`GpuInspector.SampleAsync` 每次 `Process.Start`）。
+- 影响：每秒一次进程创建/回收（CPU、磁盘、杀软扫描）；且**高度疑似 OpenProcess first-chance 风暴来源**（时间吻合：×635/17min ≈ 每秒 0.6 次且仅 Dashboard 活跃期；栈为 `ProcessManager.OpenProcess`；本机对子进程句柄操作另有同类失败先例）。`DashboardProbeCache` 的 5s WaitAsync 超时也会贡献 TimeoutException 噪音。
+- 动作：GPU 遥测降频至 3–5s（CPU/内存保持 1s）；`nvidia-smi` 失败/超时结果加短期缓存（避免每 tick 重复失败）；uptime 与 telemetry 两个 1s 定时器合并为一个 tick；改后以 crash.log 计数验证因果（OpenProcess 计数应大幅下降或归零）。
+
+### L6 CrashLog 采样微调（minor）
+
+- `RecordFirstChance` 对重复异常仍执行 `new StackTrace(ex)`；建议先按键查重、仅在首次采样时取栈（键改为 type+HRESULT 级别，site 只记录一次）。
+
+### L7 网络失败风暴（x2192 socket + x1114/x216 Http）
+
+- 定位来源（NetMap 地理库下载 / AIHub kernel 更新 / 更新检查在受限网络下的重试），加退避与预期失败静默、必要时先做连通性预检。验收：FirstChanceSummary 网络类计数下降 >90%。
+
+### L8 验收协议与目标
+
+| 指标 | 现状 | 目标 |
+|---|---|---|
+| Settings 首屏（First page loaded） | 940–1230ms | ≤ 800ms（L1+L2+L3 后） |
+| GeneralPage 冷访问 | 555–577ms | ≤ 250ms（L4） |
+| OpenProcess first-chance / 会话 | 最高 ×635 | 0（L5 后验证） |
+| 网络类 first-chance / 会话 | ×146–205 | 下降 >90%（L7） |
+| 复测工具 | — | `Get-KitDiagnostics.ps1 -Days 2` + STARTUP/NAV 对照 |
+
+### 日志机制备注（观察，不列任务）
+
+- `log_settings.json` 由 General 页构造时按 GeneralSettings 写入；用户 settings.json 无 `enable_logging` 键 → 文件当前为 `off`；runner 仅在启动时读取一次。如需"持续记录"，建议核对日志开关的持久化与 runner/Settings 两进程的一致性。
+
+## 3. 主框架 & Settings 壳 UI/UX（Mica + WinUI 3）
+
+### 3.1 材质审计结论（2026-10-14，保持）
+
+- 透出链完整、无阻断：主窗 `MicaBackdrop Kind="BaseAlt"`（MainWindow.xaml:13）→ 透明根（ShellPage.xaml:85）→ `NavigationViewContentBackground` 透明覆盖（:151）→ 内容层 `LayerFillColorDefaultBrush`（:244）→ 半透明卡片（Card ×22 / SubtleFill ×60）；唯一实色面为对话框内容（系统设计）；QA `DesktopAcrylicBackdrop` 被测试钉死（BuildCompatibility.cs:3097-3107），勿换类型。
+- 省电/远程桌面回退、DWM 圆角阴影：系统自动；ContentDialog / Flyout / NavigationView 面板材质：系统默认，不自定义。
+
+### 3.2 待办
+
+- **T1 标题栏高对比回退**：`TitleBar.WASDK.cs::UpdateCaptionButtons` 硬编码白/黑/DarkGray → 检测 HC 时跳过覆写并 `ResetToDefault()`。
+- **T2 动态列表增删过渡**：App.xaml 增共享 `TransitionCollection`（AddDeleteThemeTransition + RepositionThemeTransition）用于 Localserver 服务表（:233-238）、UDPtest TCP/UDP 表（:563/:606）、NetMap 服务列表（:515）；`HopList`（ListView）系统默认已带容器过渡，核对未被覆盖即可。
+- **T3 AIHub 过渡补齐**：AIHubPage 现无任何 ChildrenTransitions → 非虚拟化 ItemsControl 的 ItemsPanel 补 SettingsCardsAnimations（:820/:825/:849/:923/:1101/:1147）；x:Load 与 MaxHeight 虚拟化参数不动。
+- **T5 首屏加载态**：配合 L2 的骨架/进度（若 L2 方案 A 已达标则降级为可选）。
+- T4 ConnectedAnimation：不做（Win11 原生设置无此模式）。
+
+## 4. 模块页与文案遗留（降级收尾）
+
+### 4.1 单测 16 项修复（六族；基线 `4da08bd` 即红，非重构/清理轮引入）
+
+| 族 | 失败测试（文件:行） | 建议动作 |
+|---|---|---|
+| 实验特性移除遗留 ×6 | BuildCompatibility.cs:1104 / 1721 / 3093；General.cs:131 / 458；FrameworkPrivacyDefaults.cs:331 | 按"已移除"改写断言 |
+| 版本与元数据 ×2 | BuildCompatibility.cs:1342（sparse 停留 2.3.7）；General.cs:748（README 措辞） | sparse 版本随 `Version.props`（越界项单列提交）；README 断言更新 |
+| GeneralPage 结构 ×2 | General.cs:158 / 707 | 按现布局更新断言 |
+| 品牌与文案 ×3 | General.cs:469 / 486 / 514 | 按现文案/资产更新断言 |
+| 模块目录 ×2 | General.cs:539 / 589（NetMap 后为 6 项） | 断言更新为 6 项 |
+| 运行器启动清理 ×1 | BuildCompatibility.cs:1218（`WM_CLOSE`） | 核对 61d6ed4 意图后更新断言 |
+
+### 4.2 字符串迁移
+
+- UDPtest 57 + 11 处、AIHubPageViewModel 232 处、AiHubViewModel 13 处 IsChinese → resw（`UDPtest_*` / `AIHub_` 前缀，PRI277 逐一核对）。
+
+### 4.3 其余
+
+- HealthStyles 共享化（DashboardEgressStyles vs NetMapHealthStyles 去重，键名保持）。
+- NetMap 死键 ~18（`Text()` 加白名单后清理）+ `AiHub_PipelineCard` 2 键（随 AiHubSettingsTests.cs:80 一并清）。
+- a11y 收尾：LiveSetting 除 NetMap 外全缺；AccessibilityView AIHub/Localserver/UDPtest 为 0 处；General HeadingLevel 0 处。
+- 手工过检：浅/深/HC × 全页 + 键盘导航 + 系统"动画效果"关闭时全静默。
+
+## 5. 下一步批次（8–12，每批原子提交）
 
 | 批次 | 内容 | 验收 |
 |---|---|---|
-| 8 | Mica / WinUI 3 深化（§3.2 T1–T3） | 构建 + 3 烟雾 + 手动（HC 标题栏、列表增删、动画开关） |
-| 9 | 单测 16 项修复（§2.1） | 212/212（或记录仍无法修复项与原因） |
-| 10 | 字符串迁移（§2.2）+ 死键清理（§2.4） | 构建 + 单测源码扫描（AiHubSettingsTests / Localserver / UDPtest） |
-| 11 | HealthStyles 共享化（§2.3）+ a11y 收尾（§2.5） | 构建 + NetMapPageSmoke + 单测 |
-| 12 | 手工过检（§2.6）+ 文档/changelog 收尾 | 全量回归 |
+| 8 | 加载速度：L3 仪表化 → L2 首帧 → L4 General 惰性 → L5 遥测降频（含 L1 Release 对照测量、L6） | 构建 + 烟雾 + STARTUP/NAV 复测 + crash.log 计数 |
+| 9 | 壳 UI/UX：T1 标题栏 HC、T2/T3 过渡、T5 骨架（若未并入 8） | 构建 + 3 烟雾 + 手动（HC、动画开关） |
+| 10 | 单测 16 项修复（§4.1） | 212/212（或记录无法修复项与原因） |
+| 11 | 字符串迁移（§4.2）+ 死键清理 | 构建 + 源码扫描单测 |
+| 12 | HealthStyles + a11y + 手工过检 + 文档/changelog | 全量回归 |
 
-## 5. 验证与回退
+## 6. 验证与回退
 
 ```bash
 # 构建（exit 0 = 成功；失败先读 src/settings-ui/build.debug.x64.errors.log）
@@ -121,7 +138,10 @@ pwsh tools\build\build.ps1 -Platform x64 -Configuration Debug -Path "src\setting
 pwsh -File tools\tests\SettingsUI\Invoke-ModulePageSmoke.ps1 -Configuration Debug
 pwsh -File tools\tests\SettingsUI\Invoke-DashboardPageSmoke.ps1 -Configuration Debug -Language zh-CN
 pwsh -File tools\tests\NetMap\Invoke-NetMapPageSmoke.ps1
+
+# 启动/异常基线（只读）
+pwsh -File tools\diagnostics\Get-KitDiagnostics.ps1 -Days 2
 ```
 
 - 单元测试：`Debug\x64\tests\SettingsTests\net10.0-windows10.0.26100.0\Settings.UI.UnitTests.exe`（本机 vstest.console testhost 崩溃，用 MSTest 直接运行器；禁 `dotnet test`）。
-- 回退点：`782c626`（本稿基线；后续批次提交后以最新提交为准）。
+- 回退点：`41f7bdd`（本稿基线；后续批次提交后以最新提交为准）。

@@ -37,7 +37,7 @@ public sealed partial class NetMapHealthStyleConverter : IValueConverter
 
 public sealed class NetMapCard
 {
-    public NetMapCard(string title, ChannelState state, bool running)
+    public NetMapCard(string title, ChannelState state, bool running, string? aiRoute = null, string? aiRouteSummary = null, string? aiRouteDetails = null)
     {
         Title = NetMapViewModel.Text(title);
         var identity = state.LastSuccess?.Identity;
@@ -57,6 +57,9 @@ public sealed class NetMapCard
         Source = title == "Direct" ? "api.bilibili.com/x/web-interface/zone" : "1.1.1.1/cdn-cgi/trace";
         IsStale = state.LastSuccess != null && (!running || state.Latest?.Success != true);
         Freshness = IsStale ? NetMapViewModel.Text("LastKnown") : string.Empty;
+        AiRoute = aiRoute;
+        AiRouteSummary = aiRouteSummary;
+        AiRouteDetails = aiRouteDetails;
     }
 
     public string Title { get; }
@@ -82,6 +85,12 @@ public sealed class NetMapCard
     public string Freshness { get; }
 
     public bool IsStale { get; }
+
+    public string? AiRoute { get; }
+
+    public string? AiRouteSummary { get; }
+
+    public string? AiRouteDetails { get; }
 }
 
 public sealed class NetMapServiceRow(string name) : Observable
@@ -187,6 +196,10 @@ public sealed class NetMapViewModel : Observable, IDisposable
     private bool isUpdating;
     private double updateProgress;
     private string updateStatus = string.Empty;
+    private bool isAiChecking;
+    private string? aiRoute;
+    private string? aiRouteSummary;
+    private string? aiRouteDetails;
 
     public NetMapViewModel()
     {
@@ -207,7 +220,17 @@ public sealed class NetMapViewModel : Observable, IDisposable
 
     public NetMapCard Direct => new("Direct", snapshot.Direct, snapshot.Running);
 
-    public NetMapCard Proxy => new("Proxy", snapshot.Proxy, snapshot.Running);
+    public NetMapCard Proxy => new("Proxy", snapshot.Proxy, snapshot.Running, isAiChecking ? Text("AiAnalyzing") : aiRoute, aiRouteSummary, aiRouteDetails);
+
+    public bool IsAiChecking => isAiChecking;
+
+    public bool CanAiCheck => IsEnabled && !isAiChecking && (snapshot.Hops.Count > 0 || File.Exists(NetMapAiService.MtrTempFilePath));
+
+    public string? AiRoute => aiRoute;
+
+    public string? AiRouteSummary => aiRouteSummary;
+
+    public string? AiRouteDetails => aiRouteDetails;
 
     public bool IsEnabled
     {
@@ -453,10 +476,74 @@ public sealed class NetMapViewModel : Observable, IDisposable
             OnPropertyChanged(nameof(IsUpdating));
             OnPropertyChanged(nameof(CanUpdate));
             OnPropertyChanged(nameof(CanStart));
+            OnPropertyChanged(nameof(CanAiCheck));
         }
     }
 
     public void CancelDataUpdate() => updateCancellation?.Cancel();
+
+    public async Task CheckRouteWithAiAsync()
+    {
+        if (!CanAiCheck)
+        {
+            return;
+        }
+
+        if (snapshot.Hops.Count > 0)
+        {
+            NetMapAiService.SaveLatestMtrSnapshot(snapshot);
+        }
+
+        if (!File.Exists(NetMapAiService.MtrTempFilePath))
+        {
+            Message = Text("AiNoMtrData");
+            return;
+        }
+
+        isAiChecking = true;
+        OnPropertyChanged(nameof(IsAiChecking));
+        OnPropertyChanged(nameof(CanAiCheck));
+        OnPropertyChanged(nameof(Proxy));
+
+        try
+        {
+            var response = await NetMapAiService.AnalyzeRouteAsync().ConfigureAwait(false);
+            dispatcher.TryEnqueue(() =>
+            {
+                if (response.Success)
+                {
+                    aiRoute = response.LineType;
+                    aiRouteSummary = response.Summary;
+                    aiRouteDetails = response.Details;
+                    Message = string.Empty;
+                }
+                else
+                {
+                    Message = response.ErrorMessage ?? Text("AiCheckFailed");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            dispatcher.TryEnqueue(() =>
+            {
+                Message = Text("AiCheckFailed") + ": " + ex.Message;
+            });
+        }
+        finally
+        {
+            dispatcher.TryEnqueue(() =>
+            {
+                isAiChecking = false;
+                OnPropertyChanged(nameof(IsAiChecking));
+                OnPropertyChanged(nameof(CanAiCheck));
+                OnPropertyChanged(nameof(AiRoute));
+                OnPropertyChanged(nameof(AiRouteSummary));
+                OnPropertyChanged(nameof(AiRouteDetails));
+                OnPropertyChanged(nameof(Proxy));
+            });
+        }
+    }
 
     public void ApplySettings()
     {
@@ -502,6 +589,7 @@ public sealed class NetMapViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(IsEnabled));
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(CanUpdate));
+        OnPropertyChanged(nameof(CanAiCheck));
         if (!IsEnabled)
         {
             CancelDataUpdate();
@@ -571,6 +659,7 @@ public sealed class NetMapViewModel : Observable, IDisposable
 
         OnPropertyChanged(nameof(IsDetectionOn));
         OnPropertyChanged(nameof(CanStart));
+        OnPropertyChanged(nameof(CanAiCheck));
         OnPropertyChanged(nameof(RunStatus));
         OnPropertyChanged(nameof(EvidenceNote));
         OnPropertyChanged(nameof(RouteTarget));
@@ -588,6 +677,17 @@ public sealed class NetMapViewModel : Observable, IDisposable
         if (previous.Generation != value.Generation)
         {
             Hops.Clear();
+            aiRoute = null;
+            aiRouteSummary = null;
+            aiRouteDetails = null;
+            OnPropertyChanged(nameof(AiRoute));
+            OnPropertyChanged(nameof(AiRouteSummary));
+            OnPropertyChanged(nameof(AiRouteDetails));
+        }
+
+        if (value.Hops.Count > 0)
+        {
+            NetMapAiService.SaveLatestMtrSnapshot(value);
         }
 
         for (int i = 0; i < value.Hops.Count; i++)

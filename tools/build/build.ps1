@@ -70,6 +70,10 @@ if ($Configuration -and $Configuration -match '^[\/-]') {
     $positionalExtra += $Configuration
     $Configuration = 'Debug'
 }
+if ($Path -and $Path -match '^[\/-]') {
+    $positionalExtra += $Path
+    $Path = ''
+}
 if ($positionalExtra.Count -gt 0) {
     if (-not $ExtraArgs) { $ExtraArgs = @() }
     $ExtraArgs = $positionalExtra + $ExtraArgs

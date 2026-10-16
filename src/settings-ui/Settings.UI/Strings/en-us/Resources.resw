@@ -3014,6 +3014,9 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_StopButtonText.Text" xml:space="preserve">
     <value>Stop</value>
   </data>
+  <data name="NetMap_AiCheckButtonText.Text" xml:space="preserve">
+    <value>AI Check</value>
+  </data>
   <data name="NetMap_CardDetailsButtonText.Text" xml:space="preserve">
     <value>Details</value>
   </data>
@@ -3070,6 +3073,30 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="NetMap_StopButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Stop network detection</value>
+  </data>
+  <data name="NetMap_AiCheckButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Use AI to analyze current MTR route line type (CN2 / 163 / CMI, etc.)</value>
+  </data>
+  <data name="NetMap_AiCheckButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>AI Route Analysis</value>
+  </data>
+  <data name="NetMap_AiRouteLabel.Text" xml:space="preserve">
+    <value>AI Route Analysis:</value>
+  </data>
+  <data name="NetMap_AiAnalyzing" xml:space="preserve">
+    <value>Analyzing…</value>
+  </data>
+  <data name="NetMap_AiServiceDisabled" xml:space="preserve">
+    <value>AI Hub is disabled. Please enable AI service in Settings.</value>
+  </data>
+  <data name="NetMap_AiNoEndpoint" xml:space="preserve">
+    <value>No available AI model endpoint configured.</value>
+  </data>
+  <data name="NetMap_AiNoMtrData" xml:space="preserve">
+    <value>No MTR route data available. Please click "Start" to probe the route first.</value>
+  </data>
+  <data name="NetMap_AiCheckFailed" xml:space="preserve">
+    <value>AI route analysis failed.</value>
   </data>
   <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Choose ASN database</value>

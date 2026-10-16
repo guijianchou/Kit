@@ -133,6 +133,16 @@
                                 <FontIcon Glyph="&#xE770;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="1" Text="{x:Bind Asn}" FontSize="12" Style="{StaticResource NetMapSecondary}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Asn}" VerticalAlignment="Center" />
                             </Grid>
+                            <!-- AI Route Analysis (Shown on Proxy Card when available) -->
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Visibility="{x:Bind AiRoute, Converter={StaticResource StringVisibilityConverter}}">
+                                <FontIcon Glyph="&#xE9D9;" FontSize="12" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
+                                <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
+                                    <Border Grid.Column="0" Style="{StaticResource KitStatusPillStyle}" Padding="7,2" VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind AiRoute}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="{x:Bind AiRouteSummary}" FontSize="12" Style="{StaticResource NetMapSecondary}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind AiRouteSummary}" VerticalAlignment="Center" Visibility="{x:Bind AiRouteSummary, Converter={StaticResource StringVisibilityConverter}}" />
+                                </Grid>
+                            </Grid>
                         </StackPanel>
 
                         <!-- Row 3: Divider -->
@@ -178,6 +188,11 @@
                                             <StackPanel Spacing="3">
                                                 <TextBlock x:Uid="NetMap_GeoProviderLabel" Text="Geo Provider:" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind GeographySource}" Style="{StaticResource NetMapSecondary}" />
+                                            </StackPanel>
+                                            <StackPanel Spacing="3" Visibility="{x:Bind AiRoute, Converter={StaticResource StringVisibilityConverter}}">
+                                                <TextBlock x:Uid="NetMap_AiRouteLabel" Text="AI Route Analysis:" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <TextBlock Text="{x:Bind AiRoute}" FontWeight="SemiBold" FontSize="12" />
+                                                <TextBlock Text="{x:Bind AiRouteDetails}" TextWrapping="Wrap" FontSize="12" Style="{StaticResource NetMapSecondary}" IsTextSelectionEnabled="True" />
                                             </StackPanel>
                                             <Border CornerRadius="4" Padding="6,4" Background="{ThemeResource BadgeWarningBackgroundBrush}" Visibility="{x:Bind IsStale, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -300,6 +315,20 @@
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE71A;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                                 <TextBlock x:Uid="NetMap_StopButtonText" FontSize="13" Text="Stop" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="AiCheckButton"
+                                                x:Uid="NetMap_AiCheckButton"
+                                                AutomationProperties.Name="AI Route Analysis"
+                                                Click="AiCheck_Click"
+                                                IsEnabled="{x:Bind ViewModel.CanAiCheck, Mode=OneWay}"
+                                                Style="{StaticResource KitActionButtonStyle}"
+                                                ToolTipService.ToolTip="AI check route"
+                                                AutomationProperties.AutomationId="NetMapAiCheck">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                                <ProgressRing Width="14" Height="14" IsActive="{x:Bind ViewModel.IsAiChecking, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                <FontIcon Glyph="&#xE9D9;" FontSize="12" Foreground="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}" />
+                                                <TextBlock x:Uid="NetMap_AiCheckButtonText" FontSize="13" Text="AI check" />
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>

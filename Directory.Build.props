@@ -19,6 +19,8 @@
     <AnalysisMode>Recommended</AnalysisMode>
     <_SkipUpgradeNetAnalyzersNuGetWarning>true</_SkipUpgradeNetAnalyzersNuGetWarning>
     <NuGetAuditMode>direct</NuGetAuditMode>
+    <NuGetAuditLevel>high</NuGetAuditLevel>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>    <!-- Don't add source revision hash to the product version of binaries. -->
     <PlatformTarget>$(Platform)</PlatformTarget>
     <RestoreEnablePackagePruning Condition=" '$(VisualStudioVersion)' == '17.0'">false </RestoreEnablePackagePruning>

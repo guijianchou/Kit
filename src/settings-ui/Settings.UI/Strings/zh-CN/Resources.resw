@@ -1712,6 +1712,9 @@
   <data name="NetMap_StopButtonText.Text" xml:space="preserve">
     <value>停止</value>
   </data>
+  <data name="NetMap_AiCheckButtonText.Text" xml:space="preserve">
+    <value>AI 分析</value>
+  </data>
   <data name="NetMap_CardDetailsButtonText.Text" xml:space="preserve">
     <value>详情</value>
   </data>
@@ -1768,6 +1771,30 @@
   </data>
   <data name="NetMap_StopButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>停止网络探测</value>
+  </data>
+  <data name="NetMap_AiCheckButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>使用 AI 分析当前 MTR 跨境链路类型 (CN2 / 163 / CMI 等)</value>
+  </data>
+  <data name="NetMap_AiCheckButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>AI 链路分析</value>
+  </data>
+  <data name="NetMap_AiRouteLabel.Text" xml:space="preserve">
+    <value>AI 链路分析:</value>
+  </data>
+  <data name="NetMap_AiAnalyzing" xml:space="preserve">
+    <value>分析中…</value>
+  </data>
+  <data name="NetMap_AiServiceDisabled" xml:space="preserve">
+    <value>AI 智能中心未开启，请在设置中开启 AI 服务。</value>
+  </data>
+  <data name="NetMap_AiNoEndpoint" xml:space="preserve">
+    <value>未配置可用的 AI 模型端点。</value>
+  </data>
+  <data name="NetMap_AiNoMtrData" xml:space="preserve">
+    <value>暂无 MTR 链路数据，请先点击“开始”探测链路。</value>
+  </data>
+  <data name="NetMap_AiCheckFailed" xml:space="preserve">
+    <value>AI 链路分析失败。</value>
   </data>
   <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>选择 ASN 数据库</value>

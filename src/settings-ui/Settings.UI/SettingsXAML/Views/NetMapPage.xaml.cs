@@ -161,6 +161,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void Start_Click(object sender, RoutedEventArgs e) => ViewModel.IsDetectionOn = true;
 
+    private async void AiCheck_Click(object sender, RoutedEventArgs e) => await ViewModel.CheckRouteWithAiAsync();
+
     private void Apply_Click(object sender, RoutedEventArgs e) => ViewModel.ApplySettings();
 
     private async void UpdateAsn_Click(object sender, RoutedEventArgs e) => await ViewModel.UpdateAsnAsync();

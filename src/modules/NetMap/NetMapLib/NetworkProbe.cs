@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -11,11 +12,41 @@ using System.Text.Json;
 
 namespace NetMapLib;
 
-public sealed class NetworkProbe
+public sealed class NetworkProbe : IDisposable
 {
     public static readonly Uri DirectSource = new("https://api.bilibili.com/x/web-interface/zone");
     public static readonly Uri ProxySource = new("https://1.1.1.1/cdn-cgi/trace");
     private const int BodyLimit = 65536;
+
+    private readonly object clientGate = new();
+    private readonly Dictionary<string, HttpClient> reusedClients = new(StringComparer.Ordinal);
+    private readonly Func<string, Uri, HttpClient>? clientFactory;
+    private long clientGeneration = long.MinValue;
+
+    public NetworkProbe()
+    {
+    }
+
+    internal NetworkProbe(Func<string, Uri, HttpClient> clientFactory)
+    {
+        this.clientFactory = clientFactory;
+    }
+
+    public void Dispose()
+    {
+        HttpClient[] clients;
+        lock (clientGate)
+        {
+            clients = reusedClients.Values.ToArray();
+            reusedClients.Clear();
+            clientGeneration = long.MinValue;
+        }
+
+        foreach (var client in clients)
+        {
+            client.Dispose();
+        }
+    }
 
     public static Uri ServiceEndpoint(string name) => new(name switch
     {
@@ -55,20 +86,84 @@ public sealed class NetworkProbe
         }
     }
 
-    public Task<IReadOnlyList<ServiceResult>> CheckServicesAsync(NetMapOptions options, CancellationToken cancellationToken) => CheckServicesAsync(options, _ => { }, cancellationToken);
-
-    public async Task<IReadOnlyList<ServiceResult>> CheckServicesAsync(NetMapOptions options, Action<ServiceResult> progress, CancellationToken cancellationToken)
+    /// <summary>
+    /// Probes the four endpoints concurrently. Claude and ChatGPT reuse one HTTP handler per
+    /// egress generation; Gemini and Google keep a fresh handler per request so a redirect
+    /// chain never carries cookies into the next round.
+    /// </summary>
+    public async Task<IReadOnlyList<ServiceResult>> CheckServicesAsync(NetMapOptions options, long generation, Action<ServiceResult> progress, CancellationToken cancellationToken)
     {
         string[] endpoints = ["Claude", "ChatGPT", "Gemini", "Google"];
         async Task<ServiceResult> CheckAsync(string name)
         {
-            var result = await CheckServiceAsync(name, ServiceEndpoint(name), true, options, cancellationToken).ConfigureAwait(false);
+            var uri = ServiceEndpoint(name);
+            var pooled = AcquirePooledClient(name, uri, generation, options);
+            var result = await CheckServiceAsync(name, uri, true, options, cancellationToken, pooled ?? CreateServiceClient(name, uri, options)).ConfigureAwait(false);
+            if (pooled != null && result.Error is ProbeError.Connection or ProbeError.Timeout or ProbeError.Dns or ProbeError.Tls)
+            {
+                // A stale pooled connection must reconnect instead of repeating the failure.
+                DropPooledClient(name, pooled);
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             progress(result);
             return result;
         }
 
         return await Task.WhenAll(endpoints.Select(CheckAsync)).ConfigureAwait(false);
+    }
+
+    private static bool KeepsAConnectionPerRequest(string name) => name is "Gemini" or "Google";
+
+    private HttpClient CreateServiceClient(string name, Uri uri, NetMapOptions options) =>
+        clientFactory != null
+            ? clientFactory(name, uri)
+            : CreateClient(uri, true, options, out _, followRedirects: KeepsAConnectionPerRequest(name));
+
+    private HttpClient? AcquirePooledClient(string name, Uri uri, long generation, NetMapOptions options)
+    {
+        if (KeepsAConnectionPerRequest(name))
+        {
+            return null;
+        }
+
+        lock (clientGate)
+        {
+            if (generation != clientGeneration)
+            {
+                // A proxy may bind a connection to the exit that was current when it opened.
+                foreach (var retired in reusedClients.Values)
+                {
+                    retired.Dispose();
+                }
+
+                reusedClients.Clear();
+                clientGeneration = generation;
+            }
+
+            if (!reusedClients.TryGetValue(name, out var client))
+            {
+                client = CreateServiceClient(name, uri, options);
+                reusedClients[name] = client;
+            }
+
+            return client;
+        }
+    }
+
+    private void DropPooledClient(string name, HttpClient client)
+    {
+        lock (clientGate)
+        {
+            if (!reusedClients.TryGetValue(name, out var existing) || !ReferenceEquals(existing, client))
+            {
+                return;
+            }
+
+            reusedClients.Remove(name);
+        }
+
+        client.Dispose();
     }
 
     public static ProbeError Classify(Exception exception) => exception switch
@@ -201,6 +296,46 @@ public sealed class NetworkProbe
         throw new FormatException("Identity response too large.");
     }
 
+    /// <summary>
+    /// Reads at most <see cref="BodyLimit"/> bytes within the body deadline. The buffer is rented
+    /// because four endpoints read a body on every service round.
+    /// </summary>
+    private static async Task<BodyRead> ReadServiceBodyAsync(HttpContent content, CancellationToken deadlineToken, CancellationToken cancellationToken)
+    {
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(BodyLimit);
+        try
+        {
+            using var stream = await content.ReadAsStreamAsync(deadlineToken).ConfigureAwait(false);
+            int count = 0;
+            bool incomplete = false;
+            try
+            {
+                while (count < BodyLimit)
+                {
+                    int read = await stream.ReadAsync(buffer.AsMemory(count), deadlineToken).ConfigureAwait(false);
+                    if (read == 0)
+                    {
+                        break;
+                    }
+
+                    count += read;
+                }
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is OperationCanceledException or IOException or HttpRequestException)
+            {
+                incomplete = true;
+            }
+
+            return new BodyRead(Encoding.UTF8.GetString(buffer, 0, count), count, incomplete);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    private readonly record struct BodyRead(string Body, int Count, bool Incomplete);
+
     internal static HttpClient CreateClient(Uri target, bool isProxy, NetMapOptions options, out string route, bool followRedirects = false)
     {
         IWebProxy? proxy = null;
@@ -248,33 +383,14 @@ public sealed class NetworkProbe
             // A slow or interrupted body must not erase successful HTTP connectivity evidence.
             using var bodyDeadline = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
             bodyDeadline.CancelAfter(TimeSpan.FromSeconds(2));
-            using var stream = await response.Content.ReadAsStreamAsync(bodyDeadline.Token).ConfigureAwait(false);
-            var buffer = new byte[BodyLimit];
-            int count = 0;
-            bool incomplete = false;
-            try
-            {
-                while (count < buffer.Length)
-                {
-                    int read = await stream.ReadAsync(buffer.AsMemory(count), bodyDeadline.Token).ConfigureAwait(false);
-                    if (read == 0)
-                    {
-                        break;
-                    }
-
-                    count += read;
-                }
-            }
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is OperationCanceledException or IOException or HttpRequestException)
-            {
-                incomplete = true;
-            }
-
-            string body = Encoding.UTF8.GetString(buffer, 0, count);
+            var read = await ReadServiceBodyAsync(response.Content, bodyDeadline.Token, cancellationToken).ConfigureAwait(false);
+            int count = read.Count;
+            bool incomplete = read.Incomplete;
+            string body = read.Body;
             string outcome = ClassifyWebsite((int)response.StatusCode, body, challenge, signIn);
             if ((name is "ChatGPT" or "Claude") && response.IsSuccessStatusCode && outcome != "BrowserCheck")
             {
-                if (!incomplete && count < buffer.Length)
+                if (!incomplete && count < BodyLimit)
                 {
                     try
                     {
@@ -286,7 +402,7 @@ public sealed class NetworkProbe
                     }
                 }
 
-                return observed with { Outcome = "TraceInvalid", BodyIncomplete = incomplete || count == buffer.Length };
+                return observed with { Outcome = "TraceInvalid", BodyIncomplete = incomplete || count == BodyLimit };
             }
 
             return observed with { Outcome = outcome, BodyIncomplete = incomplete };
@@ -298,6 +414,12 @@ public sealed class NetworkProbe
         catch (Exception ex) when (ex is HttpRequestException or IOException or ArgumentException)
         {
             return observed != null ? observed with { BodyIncomplete = true, Outcome = (name is "ChatGPT" or "Claude") && observed.Status is >= 200 and < 300 ? "TraceInvalid" : observed.Outcome } : new(name, isProxy, Classify(ex), null, DateTimeOffset.Now);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Keep an unexpected fault on this row: the batch shares a Task.WhenAll, and a round
+            // that escapes ends the whole service loop until the egress changes.
+            return observed != null ? observed with { BodyIncomplete = true } : new(name, isProxy, ProbeError.Connection, null, DateTimeOffset.Now);
         }
     }
 }

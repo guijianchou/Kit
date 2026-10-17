@@ -12,7 +12,8 @@ public sealed class NetMapSession : IDisposable
 {
     private readonly object gate = new();
     private readonly Func<bool, NetMapOptions, CancellationToken, Task<IdentityResult>> observe;
-    private readonly Func<NetMapOptions, Action<ServiceResult>, CancellationToken, Task<IReadOnlyList<ServiceResult>>> services;
+    private readonly Func<NetMapOptions, long, Action<ServiceResult>, CancellationToken, Task<IReadOnlyList<ServiceResult>>> services;
+    private readonly NetworkProbe? ownedProbe;
     private readonly Func<string, Action<IReadOnlyList<HopResult>>, CancellationToken, Task> trace;
     private readonly TimeSpan directInterval;
     private readonly TimeSpan proxyInterval;
@@ -25,13 +26,20 @@ public sealed class NetMapSession : IDisposable
     private bool disposed;
 
     public NetMapSession()
-        : this(new NetworkProbe().ObserveAsync, new NetworkProbe().CheckServicesAsync, RouteProbe.TraceAsync, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(5))
     {
+        var probe = new NetworkProbe();
+        ownedProbe = probe;
+        observe = probe.ObserveAsync;
+        services = probe.CheckServicesAsync;
+        trace = RouteProbe.TraceAsync;
+        directInterval = TimeSpan.FromSeconds(30);
+        proxyInterval = TimeSpan.FromSeconds(5);
+        serviceInterval = TimeSpan.FromSeconds(10);
     }
 
     internal NetMapSession(
         Func<bool, NetMapOptions, CancellationToken, Task<IdentityResult>> observe,
-        Func<NetMapOptions, Action<ServiceResult>, CancellationToken, Task<IReadOnlyList<ServiceResult>>> services,
+        Func<NetMapOptions, long, Action<ServiceResult>, CancellationToken, Task<IReadOnlyList<ServiceResult>>> services,
         Func<string, Action<IReadOnlyList<HopResult>>, CancellationToken, Task> trace,
         TimeSpan directInterval,
         TimeSpan proxyInterval,
@@ -116,6 +124,7 @@ public sealed class NetMapSession : IDisposable
     public void Dispose()
     {
         Stop();
+        ownedProbe?.Dispose();
         lock (gate)
         {
             disposed = true;
@@ -342,7 +351,7 @@ public sealed class NetMapSession : IDisposable
                             };
                             return snapshot with { Services = snapshot.Services.Where(item => item.Name != result.Name || item.IsProxy != result.IsProxy).Append(measured).ToArray() };
                         });
-                        var results = await services(options, Report, token).ConfigureAwait(false);
+                        var results = await services(options, generation, Report, token).ConfigureAwait(false);
                         foreach (var result in results)
                         {
                             Report(result);

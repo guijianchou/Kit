@@ -27,7 +27,7 @@ public sealed class SessionTests
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 throw new InvalidOperationException();
             },
-            async (_, progress, token) =>
+            async (_, _, progress, token) =>
             {
                 var result = new ServiceResult("ChatGPT", true, ProbeError.None, 403, DateTimeOffset.Now, "BrowserCheck", 15);
                 progress(result);
@@ -126,7 +126,7 @@ public sealed class SessionTests
 
                 return await incoming.Reader.ReadAsync(token);
             },
-            (_, _, _) => Task.FromResult<IReadOnlyList<ServiceResult>>([]),
+            (_, _, _, _) => Task.FromResult<IReadOnlyList<ServiceResult>>([]),
             (_, _, _) => Task.CompletedTask,
             TimeSpan.FromMilliseconds(2),
             TimeSpan.FromMilliseconds(2));
@@ -182,7 +182,7 @@ public sealed class SessionTests
     {
         using var session = new NetMapSession(
             (_, _, _) => throw new InvalidOperationException("Synthetic transport failure"),
-            (_, _, _) => Task.FromResult<IReadOnlyList<ServiceResult>>([]),
+            (_, _, _, _) => Task.FromResult<IReadOnlyList<ServiceResult>>([]),
             (_, _, _) => Task.CompletedTask,
             TimeSpan.FromMilliseconds(2),
             TimeSpan.FromMilliseconds(2));
@@ -294,7 +294,7 @@ public sealed class SessionTests
                 await Task.Delay(Timeout.Infinite, token);
                 throw new InvalidOperationException();
             },
-            async (_, report, token) =>
+            async (_, _, report, token) =>
             {
                 Assert.AreEqual(1, Interlocked.Increment(ref active), "Service rounds must not overlap.");
                 try
@@ -341,7 +341,7 @@ public sealed class SessionTests
 
     private static NetMapSession Create(Channel<IdentityResult> direct, Channel<IdentityResult> proxy, Func<NetMapOptions, CancellationToken, Task<IReadOnlyList<ServiceResult>>>? services = null) => new(
         async (isProxy, _, token) => await (isProxy ? proxy : direct).Reader.ReadAsync(token),
-        (options, _, token) => services?.Invoke(options, token) ?? Task.FromResult<IReadOnlyList<ServiceResult>>([]),
+        (options, _, _, token) => services?.Invoke(options, token) ?? Task.FromResult<IReadOnlyList<ServiceResult>>([]),
         (_, _, _) => Task.CompletedTask,
         TimeSpan.FromMilliseconds(2),
         TimeSpan.FromMilliseconds(2));

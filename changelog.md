@@ -12,6 +12,12 @@
   - Smooth recovery on the same proxy IP without restarting MTR or wiping AI Check badges; switching to a new proxy node immediately triggers new stabilization and fresh traceroute diagnostics.
   - Added `NetMapAiService.DeleteLatestMtrSnapshot()` to automatically purge stale MTR trace snapshots when generation genuinely increments (node change or 3-failure disconnection).
   - Added unit tests in `NetMap.UnitTests` (`TransientProxyFailurePreservesGenerationAndCandidateUntilThreeFailures`) and `Settings.UI.UnitTests` (`DeleteLatestMtrSnapshot_DeletesExistingSnapshotFile`), with 98/98 NetMap and 222/222 Settings.UI tests passing.
+- **NetMap service check connection reuse**:
+  - Claude and ChatGPT reuse one HTTP handler per egress generation instead of building a new one per request, so their latency is the real response-header time instead of a fresh TLS handshake; the handler is rebuilt when the egress changes or a connection-level failure occurs.
+  - Gemini and Google keep a fresh handler per request so a redirect chain never carries cookies into the next round.
+  - An unexpected fault now stays on its own row: previously an exception escaping `Task.WhenAll` ended the whole service loop until the egress changed and froze all four rows.
+  - The response body buffer is rented from `ArrayPool` instead of allocated per request, and the service loop receives the egress generation so a pooled connection cannot survive a node change.
+  - Added `ServiceClientReuseTests` covering reuse, generation invalidation, rebuild after a failed connection and generation forwarding; NetMap.UnitTests 102/102 and Settings.UI.UnitTests 222/222 pass.
 
 ### 2.6.0
 
@@ -708,6 +714,12 @@
   - 同 IP 恢复探测时无感衔接，不重复发起 MTR；真实切换代理节点时自动感知并重新采样诊断。
   - 新增 `NetMapAiService.DeleteLatestMtrSnapshot()`，在节点真正切换或连续 3 次断连导致 Generation 变更时自动清除过期 MTR 记录，防止分析陈旧数据。
   - 补充 `TransientProxyFailurePreservesGenerationAndCandidateUntilThreeFailures` 与 `DeleteLatestMtrSnapshot_DeletesExistingSnapshotFile` 单元测试，98 项 NetMap 测试与 222 项 Settings.UI 测试全部通过。
+- **NetMap 服务检测连接复用**：
+  - Claude 与 ChatGPT 在同一出口代次内复用同一个 HTTP handler，不再每轮新建，耗时为真实响应头时间而非新的 TLS 握手；出口变更或连接级失败时重建。
+  - Gemini 与 Google 保持每轮新建 handler，跳转链的 Cookie 不会带到下一轮。
+  - 单个端点的意外异常不再影响整代服务轮询：此前异常逃逸 `Task.WhenAll` 会终止整个服务循环并冻结四行状态。
+  - 正文缓冲改为 `ArrayPool` 租借；服务循环接收出口代次，连接不会跨节点复用。
+  - 新增 `ServiceClientReuseTests`，覆盖代次内复用、代次失效重建、失败重建与代次透传；NetMap 单测 102/102、Settings.UI 单测 222/222 通过。
 
 ### 2.6.0
 

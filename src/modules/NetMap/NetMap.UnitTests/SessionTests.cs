@@ -218,6 +218,66 @@ public sealed class SessionTests
     }
 
     [TestMethod]
+    public async Task TransientProxyFailurePreservesGenerationAndCandidateUntilThreeFailures()
+    {
+        var direct = Channel.CreateUnbounded<IdentityResult>();
+        var proxy = Channel.CreateUnbounded<IdentityResult>();
+        using var session = Create(direct, proxy);
+        session.Start(new(OnlineLookup: false));
+        await direct.Writer.WriteAsync(Success("192.0.2.1", "CN"));
+        await proxy.Writer.WriteAsync(Success("192.0.2.2", "JP"));
+        await WaitFor(session, s => s.Direct.LastSuccess != null && s.Proxy.LastSuccess != null);
+        long initialGeneration = session.Current.Generation;
+
+        // Failure 1 (transient): Generation must NOT change, LastSuccess must NOT be cleared.
+        await proxy.Writer.WriteAsync(new(null, ProbeError.Timeout, DateTimeOffset.Now, "Explicit"));
+        await WaitFor(session, s => s.Proxy.ConsecutiveFailures == 1);
+        Assert.AreEqual(initialGeneration, session.Current.Generation);
+        Assert.AreEqual("192.0.2.2", session.Current.Proxy.LastSuccess?.Identity?.Ip);
+
+        // Failure 2 (transient): Still no generation bump.
+        await proxy.Writer.WriteAsync(new(null, ProbeError.Timeout, DateTimeOffset.Now, "Explicit"));
+        await WaitFor(session, s => s.Proxy.ConsecutiveFailures == 2);
+        Assert.AreEqual(initialGeneration, session.Current.Generation);
+        Assert.AreEqual("192.0.2.2", session.Current.Proxy.LastSuccess?.Identity?.Ip);
+
+        // Recover on SAME IP: Generation must remain unchanged!
+        await proxy.Writer.WriteAsync(Success("192.0.2.2", "JP"));
+        await WaitFor(session, s => s.Proxy.ConsecutiveFailures == 0);
+        Assert.AreEqual(initialGeneration, session.Current.Generation);
+        Assert.AreEqual("192.0.2.2", session.Current.Proxy.LastSuccess?.Identity?.Ip);
+
+        // Now 3 consecutive failures:
+        await proxy.Writer.WriteAsync(new(null, ProbeError.Timeout, DateTimeOffset.Now, "Explicit"));
+        await WaitFor(session, s => s.Proxy.ConsecutiveFailures == 1);
+        Assert.AreEqual(initialGeneration, session.Current.Generation);
+
+        await proxy.Writer.WriteAsync(new(null, ProbeError.Timeout, DateTimeOffset.Now, "Explicit"));
+        await WaitFor(session, s => s.Proxy.ConsecutiveFailures == 2);
+        Assert.AreEqual(initialGeneration, session.Current.Generation);
+
+        await proxy.Writer.WriteAsync(new(null, ProbeError.Timeout, DateTimeOffset.Now, "Explicit"));
+        await WaitFor(session, s => s.Proxy.ConsecutiveFailures == 3);
+
+        // On 3rd failure, sustained failure triggers generation bump and candidate clear!
+        Assert.AreEqual(initialGeneration + 1, session.Current.Generation);
+        Assert.IsNull(session.Current.Proxy.LastSuccess);
+
+        // Further failures must not keep bumping generation indefinitely.
+        await proxy.Writer.WriteAsync(new(null, ProbeError.Timeout, DateTimeOffset.Now, "Explicit"));
+        await Task.Delay(50);
+        Assert.AreEqual(initialGeneration + 1, session.Current.Generation);
+
+        // Recovery after 3 failures treats new probe as fresh candidate, bumping generation again.
+        await proxy.Writer.WriteAsync(Success("192.0.2.2", "JP"));
+        await WaitFor(session, s => s.Proxy.ConsecutiveFailures == 0 && s.Proxy.LastSuccess?.Identity?.Ip == "192.0.2.2");
+        Assert.AreEqual(initialGeneration + 2, session.Current.Generation);
+
+        session.Stop();
+        await session.Completion.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [TestMethod]
     public async Task RepeatedServiceChecksCountProgressAndBatchOnceAndRecover()
     {
         var proxy = Channel.CreateUnbounded<IdentityResult>();

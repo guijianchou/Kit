@@ -680,6 +680,7 @@ public sealed class NetMapViewModel : Observable, IDisposable
             aiRoute = null;
             aiRouteSummary = null;
             aiRouteDetails = null;
+            NetMapAiService.DeleteLatestMtrSnapshot();
             OnPropertyChanged(nameof(AiRoute));
             OnPropertyChanged(nameof(AiRouteSummary));
             OnPropertyChanged(nameof(AiRouteDetails));

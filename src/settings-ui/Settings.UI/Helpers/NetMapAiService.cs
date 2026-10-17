@@ -130,6 +130,24 @@ public static class NetMapAiService
     }
 
     /// <summary>
+    /// Deletes the temporary MTR trace record file if it exists.
+    /// </summary>
+    public static void DeleteLatestMtrSnapshot()
+    {
+        try
+        {
+            if (File.Exists(MtrTempFilePath))
+            {
+                File.Delete(MtrTempFilePath);
+            }
+        }
+        catch
+        {
+            // Observational delete must not crash runtime
+        }
+    }
+
+    /// <summary>
     /// The lightweight instruction for the route classification chain in Simplified Chinese.
     /// </summary>
     public const string RouteClassificationInstructionZh =

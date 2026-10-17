@@ -155,4 +155,24 @@ public class NetMapAiServiceTests
         Assert.IsNull(cardDefault.AiRouteSummary);
         Assert.IsNull(cardDefault.AiRouteDetails);
     }
+
+    [TestMethod]
+    public void DeleteLatestMtrSnapshot_DeletesExistingSnapshotFile()
+    {
+        string path = NetMapAiService.MtrTempFilePath;
+        string dir = System.IO.Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            System.IO.Directory.CreateDirectory(dir);
+        }
+
+        System.IO.File.WriteAllText(path, "{}");
+        Assert.IsTrue(System.IO.File.Exists(path));
+
+        NetMapAiService.DeleteLatestMtrSnapshot();
+        Assert.IsFalse(System.IO.File.Exists(path));
+
+        // Calling it when file doesn't exist must not throw
+        NetMapAiService.DeleteLatestMtrSnapshot();
+    }
 }

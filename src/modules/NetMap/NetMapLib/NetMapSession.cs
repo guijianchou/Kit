@@ -166,24 +166,42 @@ public sealed class NetMapSession : IDisposable
                     var next = isProxy ? current with { Proxy = channel } : current with { Direct = channel };
                     if (isProxy)
                     {
-                        string? identityKey = result.Success ? $"{result.Identity!.Ip}|{result.Identity.CountryCode}|{result.Route}" : null;
-                        if (identityKey == null || identityKey != candidate)
+                        if (result.Success)
                         {
-                            diagnosticCancellation?.Cancel();
-                            diagnosticCancellation = null;
-                            candidate = identityKey;
-                            diagnosed = false;
-                            next = next with { Generation = next.Generation + 1, Stabilizing = result.Success, Services = [], Hops = [], RouteComplete = false, DiagnosticFailed = false };
+                            string identityKey = $"{result.Identity!.Ip}|{result.Identity.CountryCode}|{result.Route}";
+                            if (identityKey != candidate)
+                            {
+                                diagnosticCancellation?.Cancel();
+                                diagnosticCancellation = null;
+                                candidate = identityKey;
+                                diagnosed = false;
+                                next = next with { Generation = next.Generation + 1, Stabilizing = true, Services = [], Hops = [], RouteComplete = false, DiagnosticFailed = false };
+                            }
+                            else if (!diagnosed)
+                            {
+                                diagnosed = true;
+                                next = next with { Stabilizing = false };
+                                var source = CancellationTokenSource.CreateLinkedTokenSource(token);
+                                diagnosticCancellation = source;
+                                long generation = next.Generation;
+                                tasks.RemoveAll(task => task.IsCompleted);
+                                tasks.Add(Task.Run(() => DiagnoseAsync(id, generation, result.Identity!.Ip, options, geo, source), CancellationToken.None));
+                            }
                         }
-                        else if (!diagnosed)
+                        else
                         {
-                            diagnosed = true;
-                            next = next with { Stabilizing = false };
-                            var source = CancellationTokenSource.CreateLinkedTokenSource(token);
-                            diagnosticCancellation = source;
-                            long generation = next.Generation;
-                            tasks.RemoveAll(task => task.IsCompleted);
-                            tasks.Add(Task.Run(() => DiagnoseAsync(id, generation, result.Identity!.Ip, options, geo, source), CancellationToken.None));
+                            if (failures >= 3 && candidate != null)
+                            {
+                                diagnosticCancellation?.Cancel();
+                                diagnosticCancellation = null;
+                                candidate = null;
+                                diagnosed = false;
+                                next = next with { Generation = next.Generation + 1, Stabilizing = false, Services = [], Hops = [], RouteComplete = false, DiagnosticFailed = false };
+                            }
+                            else if (candidate == null)
+                            {
+                                next = next with { Stabilizing = false };
+                            }
                         }
                     }
 

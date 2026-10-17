@@ -4,6 +4,17 @@
 
 ## English
 
+### 2.6.0
+
+- **NetMap AI route check on the shared AI Hub engine**:
+  - NetMap now classifies the latest MTR result into a cross-border line type (such as CMI, CN2 or 163, covering China Mobile, Unicom and Telecom lines) and shows the line type with a one-line summary on the Proxy card, with route evidence in its details.
+  - The check runs on the AI Hub unified entry as the lightweight `route-analysis` task: a single inline instruction replaces the deployed `Chains/route-analysis/AGENTS.md` policy file, while host and plugin security policies, input sanitization, output auditing, failover and cancellation are unchanged.
+  - Added `AiTaskOptions.InlineInstructions` to the AI Hub contract: single-line tasks no longer need a deployed task policy file; an inline instruction takes precedence over a deployed file and shares the 64 KiB policy cap.
+  - A disabled hub, missing endpoint, missing kernel or missing MTR data now report specific, actionable messages instead of a generic failure.
+- **Documentation & localization**:
+  - `PLUGIN_DEVELOPMENT.md` 14.3 documents the lightweight inline-instruction chain with the NetMap call as the example; the README NetMap diagram now shows the AI route check chain.
+  - Corrected NetMap and LightSwitch Chinese strings.
+
 ### 2.3.13
 
 - **Dashboard UI/UX & Dynamic Fluent Visuals (Mica + WinUI 3)**:
@@ -678,6 +689,17 @@
 ## 中文
 
 ## 更新日志
+
+### 2.6.0
+
+- **NetMap AI 链路判定改走统一 AI Hub 引擎**：
+  - NetMap 按最新 MTR 结果判定跨境链路类型（如 CMI、CN2、163，可含移动、联通、电信线路），在代理出口卡片显示链路徽标与一句话摘要，路径证据收进“详情”。
+  - 判定运行在 AI Hub 统一入口的轻量 `route-analysis` 任务上：一条内联指令替代部署的 `Chains/route-analysis/AGENTS.md` 任务策略，宿主与插件安全策略、输入脱敏、输出审计、备用链路与取消语义均不变。
+  - AI Hub 契约新增 `AiTaskOptions.InlineInstructions`：单句任务无需部署任务策略文件；内联指令优先于部署文件，上限与策略文件一致（64 KiB）。
+  - AI 中心未开启、未配置端点、未安装内核或缺少 MTR 数据时改为分别给出可操作的提示，不再只报通用错误。
+- **文档与本地化**：
+  - `PLUGIN_DEVELOPMENT.md` 14.3 新增轻量内联指令链路说明并以 NetMap 调用为例；README NetMap 图示链路加入 AI 判定。
+  - 修正 NetMap 与 LightSwitch 中文文案。
 
 ### 2.3.13
 

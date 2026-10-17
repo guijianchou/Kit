@@ -322,7 +322,9 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
         options ??= new AiTaskOptions();
         if (options.TimeoutSeconds is < 1 or > 3_600 || options.RouteTimeoutSeconds is < 0 or > 3_600
-            || options.BatchSize is < 0 or > 100)
+            || options.BatchSize is < 0 or > 100
+            || (options.InlineInstructions is { Length: > 0 } inlineInstructions
+                && Encoding.UTF8.GetByteCount(inlineInstructions) > SecurityPolicyService.MaximumPolicyBytes))
         {
             return Failure<TOutput>(AiErrorCode.InvalidPayload, stopwatch);
         }
@@ -371,7 +373,11 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
             string globalSecurity = await _securityService.LoadGlobalPolicyAsync(token).ConfigureAwait(false);
             string taskSecurity = await _securityService.LoadTaskSecurityPolicyAsync(pluginId, taskId, token).ConfigureAwait(false);
-            string instructions = await _securityService.LoadTaskAgentsPolicyAsync(pluginId, taskId, token).ConfigureAwait(false);
+            // A lightweight task may carry its instruction inline instead of deploying a
+            // Chains/<taskId>/AGENTS.md policy file; an inline instruction takes precedence.
+            string instructions = options.InlineInstructions is { Length: > 0 } inline
+                ? inline
+                : await _securityService.LoadTaskAgentsPolicyAsync(pluginId, taskId, token).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(instructions))
             {
                 return Failure<TOutput>(AiErrorCode.PolicyViolation, stopwatch);

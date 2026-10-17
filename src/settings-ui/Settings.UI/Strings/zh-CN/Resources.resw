@@ -1790,6 +1790,9 @@
   <data name="NetMap_AiNoEndpoint" xml:space="preserve">
     <value>未配置可用的 AI 模型端点。</value>
   </data>
+  <data name="NetMap_AiKernelMissing" xml:space="preserve">
+    <value>未安装 AI 内核，请在 AI Hub 设置中安装并验证内核。</value>
+  </data>
   <data name="NetMap_AiNoMtrData" xml:space="preserve">
     <value>暂无 MTR 链路数据，请先点击“开始”探测链路。</value>
   </data>

@@ -3092,6 +3092,9 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_AiNoEndpoint" xml:space="preserve">
     <value>No available AI model endpoint configured.</value>
   </data>
+  <data name="NetMap_AiKernelMissing" xml:space="preserve">
+    <value>No AI kernel installed. Install and verify one in AI Hub settings.</value>
+  </data>
   <data name="NetMap_AiNoMtrData" xml:space="preserve">
     <value>No MTR route data available. Please click "Start" to probe the route first.</value>
   </data>

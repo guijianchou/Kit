@@ -363,6 +363,63 @@ public sealed class EngineAndIpcTests
         Assert.AreEqual(AiErrorCode.Cancelled, response.ErrorCode);
     }
 
+    [TestMethod]
+    public async Task InlineInstructionsRunWithoutDeployedTaskPolicy()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, writeTaskPolicy: false);
+        await fixture.SetResponseAsync(ValidReport);
+        const string instruction = "kit-inline-instruction-marker classify the latest sample";
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema(),
+            new AiTaskOptions { InlineInstructions = instruction });
+
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        using JsonDocument capture = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(fixture.RequestRoot, "capture.json")));
+        string prompt = capture.RootElement.GetProperty("Input").GetString()!;
+        StringAssert.Contains(prompt, "PLUGIN TASK INSTRUCTIONS:");
+        StringAssert.Contains(prompt, instruction);
+    }
+
+    [TestMethod]
+    public async Task InlineInstructionsTakePrecedenceOverDeployedTaskPolicy()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture);
+        await fixture.SetResponseAsync(ValidReport);
+        const string instruction = "kit-inline-instruction-marker";
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema(),
+            new AiTaskOptions { InlineInstructions = instruction });
+
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        using JsonDocument capture = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(fixture.RequestRoot, "capture.json")));
+        string prompt = capture.RootElement.GetProperty("Input").GetString()!;
+        StringAssert.Contains(prompt, instruction);
+        Assert.IsFalse(prompt.Contains("Return a report conforming to the host schema. Do not execute actions.", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task MissingTaskPolicyWithoutInlineInstructionsIsRejected()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, writeTaskPolicy: false);
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema());
+
+        Assert.AreEqual(AiErrorCode.PolicyViolation, result.ErrorCode);
+        Assert.IsFalse(Directory.Exists(fixture.RequestRoot));
+    }
+
+    [TestMethod]
+    public async Task OversizedInlineInstructionsAreRejectedBeforeKernelAccess()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, writeTaskPolicy: false);
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema(),
+            new AiTaskOptions { InlineInstructions = new string('x', (64 * 1024) + 1) });
+
+        Assert.AreEqual(AiErrorCode.InvalidPayload, result.ErrorCode);
+        Assert.IsFalse(Directory.Exists(fixture.RequestRoot));
+    }
+
     private static AiTaskSchema<TestInput, AiTaskReport> Schema() => AiTaskReport.CreateSchema(EngineTestJsonContext.Default.TestInput);
 
     private static JsonDocument ReadInputRecords(JsonDocument capture)
@@ -374,7 +431,7 @@ public sealed class EngineAndIpcTests
         return JsonDocument.Parse(prompt[(index + marker.Length)..]);
     }
 
-    private static async Task<TaskAiEngine> CreateEngineAsync(KernelFixture fixture, string scenario = "success", bool fallback = false, string kernel = "codex")
+    private static async Task<TaskAiEngine> CreateEngineAsync(KernelFixture fixture, string scenario = "success", bool fallback = false, string kernel = "codex", bool writeTaskPolicy = true)
     {
         var store = new AiHubSettingsStore(fixture.Root);
         var config = AiHubConfig.CreateDefault();
@@ -392,7 +449,11 @@ public sealed class EngineAndIpcTests
         string packages = Path.Combine(fixture.Root, "modules");
         string task = Path.Combine(packages, "Sample", "Chains", "diagnostic");
         Directory.CreateDirectory(task);
-        await File.WriteAllTextAsync(Path.Combine(task, "AGENTS.md"), "Return a report conforming to the host schema. Do not execute actions.");
+        if (writeTaskPolicy)
+        {
+            await File.WriteAllTextAsync(Path.Combine(task, "AGENTS.md"), "Return a report conforming to the host schema. Do not execute actions.");
+        }
+
         return new TaskAiEngine(store, fixture.Manager, new SecurityPolicyService(fixture.Root, packages));
     }
 

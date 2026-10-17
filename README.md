@@ -4,7 +4,7 @@
 
 Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). It reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-Current source version: **2.3.13**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
+Current source version: **2.6.0**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
 [Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
@@ -191,12 +191,17 @@ flowchart TB
         PG["NetMap page"] -->|"Start / Stop"| ENG["Kit.NetMapLib / NetMapSession"]
         ENG -->|"locate egress and hops"| GEO["Local GeoLite2-ASN / City"]
         ENG -->|"two matching successful Proxy observations"| DIAG["Service and route diagnostics"]
+        PG -->|"AI Check (manual)"| AISVC["NetMapAiService / route analysis"]
+        AISVC -->|"one inline instruction, no AGENTS.md"| HUB["Kit.AiHub engine / route-analysis task"]
     end
     ENG -->|"Direct: bypass application proxy"| D["Bilibili zone"]
     ENG -->|"Proxy: selected connection mode"| P["Cloudflare trace"]
     GEO -->|"optional enrichment of missing fields"| ONLINE["ipwho.is"]
     DIAG -->|"Proxy: every 10 seconds"| WEB["Claude / ChatGPT trace, Gemini / Google websites"]
     DIAG -->|"local system routing: ICMP hop sampling"| MTR["Proxy egress IPv4"]
+    MTR -->|"latest snapshot: mtr-latest.json"| AISVC
+    HUB -->|"security policy, sanitization, output audit"| K["Installed AI kernel CLI"]
+    HUB -.->|"line type / one-line summary / route evidence"| PG
     ENG -.->|"egress cards / offline map / MTR / service status"| PG
 ```
 
@@ -204,6 +209,7 @@ flowchart TB
 - **Connection modes**: Proxy supports the system proxy, explicit HTTP/HTTPS/SOCKS5, or system routing/TUN. Direct bypasses application proxies only and cannot bypass a system TUN.
 - **Map and data**: bundled Natural Earth offline map, with local ASN/City databases taking priority. Optional online enrichment queries public IPs and can be disabled. ASN databases support manual download with hash verification.
 - **Diagnostic limits**: service checks establish checkpoint or website reachability, not account or model availability. ICMP follows local system routing and does not reveal the inside of a proxy tunnel.
+- **AI route check**: a manual **AI Check** on the page classifies the latest MTR snapshot into a cross-border line type (such as CMI, CN2 or 163, covering China Mobile, Unicom and Telecom lines) and shows the result on the Proxy card with a one-line summary and route evidence in its details. The check runs through the shared Kit.AiHub engine as the lightweight `route-analysis` task with a single inline instruction, so no `Chains/route-analysis/AGENTS.md` is deployed; host and plugin security policies, sanitization, output auditing and failover all apply. An installed and verified AI kernel in AI Hub is required; missing MTR data, a disabled hub or a missing kernel report specific messages. The result follows the same in-memory lifetime as detection.
 - **Runtime**: the native `Kit.NetMapModuleInterface.dll` manages enablement and configuration; detection runs in Settings and results remain in memory. See the [module documentation](src/modules/NetMap/README.md) for setup, sources and validation scope.
 
 ## 4. Build and Release

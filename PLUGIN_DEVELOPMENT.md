@@ -889,7 +889,7 @@ src/modules/Sample/SampleLib/
   modules/Sample/Chains/diagnostic/security.md
 ```
 
-`pluginId`、`taskId` 必须是受限的 ASCII 单段标识，不接受绝对路径、斜杠、`..` 或重解析点。不同插件的同名任务互相隔离。缺少任务策略即拒绝执行，不隐式选择另一个任务。
+`pluginId`、`taskId` 必须是受限的 ASCII 单段标识，不接受绝对路径、斜杠、`..` 或重解析点。不同插件的同名任务互相隔离。缺少任务策略即拒绝执行，不隐式选择另一个任务；单句轻量任务可用 `AiTaskOptions.InlineInstructions` 内联指令替代部署文件（见 14.3）。
 在插件库中将资源部署到统一位置，不能依赖开发机的源码绝对路径：
 
 ```xml
@@ -955,6 +955,24 @@ using IAiTaskEngine worker = AiHubEngine.Create();
 
 示例最后两种获取方式放在调用方的方法体中。`Language` 应传 Kit 当前 UI 语言，只有 `en-US` / `zh-CN`；状态逻辑和错误处理使用 `AiErrorCode`，不能解析英文 `ErrorMessage`。
 
+单句任务不必部署 `Chains/<taskId>/AGENTS.md`：把一条任务指令放进 `AiTaskOptions.InlineInstructions`（UTF-8 上限 64 KiB，与策略文件相同）即可，宿主与全局安全策略、输入脱敏、输出审计、备用端点与取消语义完全一致。内联指令与部署文件同时存在时以内联为准；两者都缺失时仍按缺少任务策略拒绝执行。NetMap 的链路判定即此形态，不需要单独 AGENTS.md，只需要一条信息，例如“根据最新 MTR 结果分析跨境链路类型（如 CMI、CN2、163，可包含移动、联通、电信线路）；lineType 保持简短，summary 用极短短语且不复述 lineType，details 用 1-2 句说明关键 IP、ASN 与路径证据。”（[NetMapAiService.cs](src/settings-ui/Settings.UI/Helpers/NetMapAiService.cs)）：
+
+```csharp
+AiTaskResult<NetMapAiRouteResult> result = await AiHubEngine.Current.ExecuteTaskAsync(
+    "NetMap",
+    "route-analysis",
+    new[] { traceData },
+    CreateRouteSchema(),
+    new AiTaskOptions
+    {
+        Language = isChinese ? "zh-CN" : "en-US",
+        TimeoutSeconds = 120,
+        RouteTimeoutSeconds = 60,
+        InlineInstructions = RouteClassificationInstruction,
+    },
+    cancellationToken).ConfigureAwait(false);
+```
+
 引擎将输入包装为 `{ "itemId": "item-000001", "data": ... }`；编号在一次调用内按输入顺序固定，跨批次不重排。插件保留本地快照，用编号映射回自己的服务名或对象，避免将名称、绝对路径或业务 ID 当成模型引用。结果只能引用当前批次的编号。输入先逐字段、逐字符串脱敏，再序列化发送，不能对已转义的整个 JSON 做正则替换。
 
 自定义输出类型应使用 `JsonUnmappedMemberHandling.Disallow` 和必要的 required 属性。插件的 validator 必须检查必填内容、双语字段、重复引用和业务约束；合并函数返回后还会再校验。`AllowedActions` 默认仅 `skip`；需要 move/delete/restart 建议的插件必须明确声明并验证目标路径，随后在自己的执行入口重新核实当前对象和用户确认。模型返回的 `isConfirmedByUser`、命令、脚本或越界路径不能成为执行授权。
@@ -1019,7 +1037,7 @@ Runner 自动写入协议 `version: 1` 和唯一 `requestId`；Settings 的 [AiH
 
 图标沿用第 7 节的 36×36 与 400×266 RGBA PNG，已切换为原项目标志性紫色浅色 Logo（`#A756FF`），实际位于 `Assets/Settings/Icons/AiHub.png` 和 `Assets/Settings/Modules/AiHub.png`，并加入产物裁剪保留清单。所有新增代码及示例注释使用英文，UI 文案放在 en-us／zh-CN 资源文件。
 
-维护回归在 [AiHub.UnitTests](src/common/AiHub.UnitTests/Kit.AiHub.UnitTests.csproj)。使用独立临时目录、合成 CLI 和内存 HTTP handler 覆盖凭据事务、策略边界、脱敏、协议、分批、容灾、取消及 IPC；不得用用户真实端点替代 fixture。Native AOT smoke 位于 [AiHub.AotSmoke](tools/tests/AiHub.AotSmoke/AiHub.AotSmoke.csproj)：
+维护回归在 [AiHub.UnitTests](src/common/AiHub.UnitTests/Kit.AiHub.UnitTests.csproj)。使用独立临时目录、合成 CLI 和内存 HTTP handler 覆盖凭据事务、策略边界（含内联指令）、脱敏、协议、分批、容灾、取消及 IPC；不得用用户真实端点替代 fixture。Native AOT smoke 位于 [AiHub.AotSmoke](tools/tests/AiHub.AotSmoke/AiHub.AotSmoke.csproj)：
 
 ```powershell
 .\tools\build\build.ps1 -Platform x64 -Configuration Debug -Path src\common\AiHub.UnitTests

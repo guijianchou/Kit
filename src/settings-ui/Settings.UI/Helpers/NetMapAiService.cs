@@ -10,15 +10,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
-using Kit.AiHub.Models;
-using Kit.AiHub.Storage;
 using Kit.Settings.UI.ViewModels;
 using NetMapLib;
 
@@ -43,6 +40,7 @@ public sealed record NetMapMtrTraceData(
     string DirectAsn,
     IReadOnlyList<NetMapMtrHopItem> Hops);
 
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record NetMapAiRouteResult(
     string LineType,
     string Summary,
@@ -132,7 +130,17 @@ public static class NetMapAiService
     }
 
     /// <summary>
-    /// Invokes the underlying Kit AI service to analyze the MTR route trace.
+    /// The single lightweight instruction for the route classification chain. The engine
+    /// wraps it with the host and plugin security policies, the JSON output schema and the
+    /// untrusted input records, so no Chains/route-analysis/AGENTS.md file is deployed.
+    /// </summary>
+    public const string RouteClassificationInstruction =
+        "根据最新 MTR 结果分析跨境链路类型（如 CMI、CN2、163，可包含移动、联通、电信线路）；" +
+        "lineType 保持简短，summary 用极短短语且不复述 lineType，details 用 1-2 句说明关键 IP、ASN 与路径证据。";
+
+    /// <summary>
+    /// Classifies the latest MTR trace through the shared AI Hub engine on the lightweight
+    /// "route-analysis" chain with a single inline instruction.
     /// </summary>
     public static async Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(CancellationToken cancellationToken = default)
     {
@@ -157,268 +165,63 @@ public static class NetMapAiService
             return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiNoMtrData"));
         }
 
-        var settingsStore = new AiHubSettingsStore();
-        AiHubConfig config;
+        bool isChinese = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+        AiTaskResult<NetMapAiRouteResult> result;
         try
         {
-            config = settingsStore.Load();
+            result = await AiHubEngine.Current.ExecuteTaskAsync(
+                "NetMap",
+                "route-analysis",
+                new[] { traceData },
+                CreateRouteSchema(),
+                new AiTaskOptions
+                {
+                    Language = isChinese ? "zh-CN" : "en-US",
+                    TimeoutSeconds = 120,
+                    RouteTimeoutSeconds = 60,
+                    InlineInstructions = RouteClassificationInstruction,
+                },
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            return NetMapAiAnalysisResponse.Failed("Failed to load AI settings: " + ex.Message);
+            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiCheckFailed") + ": " + ex.Message);
         }
 
-        if (!config.IsEnabled)
+        NetMapAiRouteResult? payload = result.Payload;
+        if (!result.IsSuccess || payload is null)
         {
-            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiServiceDisabled"));
+            return NetMapAiAnalysisResponse.Failed(MapErrorText(result.ErrorCode));
         }
 
-        var target = config.GetMainTarget();
-        if (target == null || !target.IsActive || string.IsNullOrWhiteSpace(target.BaseUrl))
-        {
-            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiNoEndpoint"));
-        }
-
-        bool isChinese = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-        string prompt = BuildPrompt(traceData, isChinese);
-
-        string output = string.Empty;
-        bool executed = false;
-
-        // Try RouteDispatcher kernel first
-        try
-        {
-            using var kernelManager = new KernelManagerService();
-            var dispatcher = new RouteDispatcher(kernelManager);
-            var kernelResult = await dispatcher.ExecuteAsync(config.SelectedKernel, target, prompt, 60, cancellationToken).ConfigureAwait(false);
-            if (kernelResult.IsSuccess && !string.IsNullOrWhiteSpace(kernelResult.Output))
-            {
-                output = kernelResult.Output;
-                executed = true;
-            }
-            else if (kernelResult.CanFailover && config.GetFallbackTarget() is { IsActive: true } fallback)
-            {
-                var fallbackResult = await dispatcher.ExecuteAsync(config.SelectedKernel, fallback, prompt, 60, cancellationToken).ConfigureAwait(false);
-                if (fallbackResult.IsSuccess && !string.IsNullOrWhiteSpace(fallbackResult.Output))
-                {
-                    output = fallbackResult.Output;
-                    executed = true;
-                }
-            }
-        }
-        catch
-        {
-            // Proceed to direct HTTP fallback
-        }
-
-        // Direct HTTP fallback if kernel was not ready or failed
-        if (!executed)
-        {
-            try
-            {
-                output = await ExecuteDirectHttpAsync(target, prompt, cancellationToken).ConfigureAwait(false);
-                executed = true;
-            }
-            catch (Exception ex)
-            {
-                if (config.GetFallbackTarget() is { IsActive: true } fallback)
-                {
-                    try
-                    {
-                        output = await ExecuteDirectHttpAsync(fallback, prompt, cancellationToken).ConfigureAwait(false);
-                        executed = true;
-                    }
-                    catch
-                    {
-                        return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiCheckFailed") + ": " + ex.Message);
-                    }
-                }
-                else
-                {
-                    return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiCheckFailed") + ": " + ex.Message);
-                }
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(output))
-        {
-            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiCheckFailed"));
-        }
-
-        var parsed = ParseResponse(output, isChinese);
-        return NetMapAiAnalysisResponse.Successful(parsed.LineType, parsed.Summary, parsed.Details);
+        return NetMapAiAnalysisResponse.Successful(payload.LineType, SanitizeSummary(payload.Summary, payload.LineType), payload.Details);
     }
 
-    private static string BuildPrompt(NetMapMtrTraceData data, bool isChinese)
+    /// <summary>
+    /// Source-generated serialization metadata and output validation for the route chain.
+    /// </summary>
+    public static AiTaskSchema<NetMapMtrTraceData, NetMapAiRouteResult> CreateRouteSchema()
     {
-        var sb = new StringBuilder();
-        sb.AppendLine(isChinese
-            ? "你是一个专业的网络路由分析专家。请根据以下从中国大陆客户端到代理节点的 MTR 链路追踪记录，分析其跨境链路类型。"
-            : "You are a professional network routing analysis expert. Analyze the following MTR route trace from a client in Mainland China to a proxy node and determine the cross-border transit line type.");
-        sb.AppendLine();
-        sb.AppendLine("## Target & Egress Information");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"- Direct (Local): {data.DirectIp} ({data.DirectLocation}, {data.DirectAsn})");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"- Proxy (Target): {data.TargetIp} ({data.TargetLocation}, {data.TargetAsn})");
-        sb.AppendLine();
-        sb.AppendLine("## MTR Hop Records");
-        sb.AppendLine("TTL | Router IP | Location | ASN | Loss% | Avg Latency");
-        foreach (var hop in data.Hops)
+        return new AiTaskSchema<NetMapMtrTraceData, NetMapAiRouteResult>
         {
-            string ip = string.IsNullOrEmpty(hop.Ip) ? "*" : hop.Ip;
-            string loc = string.IsNullOrEmpty(hop.Location) ? "-" : hop.Location;
-            string asn = string.IsNullOrEmpty(hop.Asn) ? "-" : hop.Asn;
-            string avg = hop.AvgMs.HasValue ? $"{hop.AvgMs.Value} ms" : "N/A";
-            sb.AppendLine(CultureInfo.InvariantCulture, $"{hop.Ttl} | {ip} | {loc} | {asn} | {hop.LossPercent}% | {avg}");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("## Routing Knowledge");
-        sb.AppendLine("- CMI: China Mobile International (AS58453), typically routes via 223.120.*, 223.118.*, 223.119.* or 58.218.*, entering HK/Tokyo/Singapore direct peering.");
-        sb.AppendLine("- CN2 GIA: China Telecom Next Generation Carrier (AS4809), dual-direction 59.43.* hops domestically and at international gateway.");
-        sb.AppendLine("- CN2 GT: China Telecom Next Generation Carrier (AS4809), enters via 202.97 domestically and transfers to 59.43 at international gateway.");
-        sb.AppendLine("- 163 骨干网: China Telecom Standard Backbone (AS4134), standard 202.97.* international transit hops.");
-        sb.AppendLine("- CU169 / 4837: China Unicom Standard Backbone (AS4837), 219.158.* hops.");
-        sb.AppendLine("- CU Premium / 9929: China Unicom Industrial Backbone (AS9929 / AS10099).");
-        sb.AppendLine("- BGP / 国际直连 / Other: Direct peering or standard overseas transit.");
-        sb.AppendLine();
-        sb.AppendLine("## Required Output");
-        sb.AppendLine("Return strictly one single JSON object with no Markdown formatting or code fences, following this format:");
-        sb.AppendLine("{");
-        sb.AppendLine("  \"lineType\": \"CMI / CN2 GIA / CN2 GT / 163 / 4837 / 9929 / BGP\",");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"  \"summary\": \"Extremely short phrase under {(isChinese ? "10 字" : "5 words")} (e.g. '{(isChinese ? "223.120.* 直连香港" : "223.120.* HK Direct")}'). Do NOT repeat the lineType name, do NOT write a full sentence.\",");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"  \"details\": \"1-2 concise sentences in {(isChinese ? "Simplified Chinese" : "English")} explaining key router IPs, transit ASNs and path evidence.\"");
-        sb.AppendLine("}");
-
-        return sb.ToString();
-    }
-
-    private static async Task<string> ExecuteDirectHttpAsync(AiTargetSettings target, string prompt, CancellationToken cancellationToken)
-    {
-        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(50) };
-        string baseUrl = target.BaseUrl.Trim().TrimEnd('/');
-        string url = baseUrl.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)
-            ? $"{baseUrl}/chat/completions"
-            : $"{baseUrl}/v1/chat/completions";
-
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        if (!string.IsNullOrWhiteSpace(target.ApiKey))
-        {
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", target.ApiKey.Trim());
-        }
-
-        var payload = new
-        {
-            model = target.Model.Trim(),
-            messages = new object[]
-            {
-                new { role = "system", content = "You are a network routing analysis assistant. Return strictly one valid JSON object without Markdown formatting or code fences." },
-                new { role = "user", content = prompt },
-            },
-            temperature = 0.2,
+            InputTypeInfo = NetMapAiJsonContext.Default.NetMapMtrTraceData,
+            OutputTypeInfo = NetMapAiJsonContext.Default.NetMapAiRouteResult,
+            ValidateOutput = static (route, _) =>
+                !string.IsNullOrWhiteSpace(route.LineType) &&
+                route.LineType.Length <= 40 &&
+                !string.IsNullOrWhiteSpace(route.Summary) &&
+                route.Summary.Length <= 120 &&
+                (route.Details?.Length ?? 0) <= 600,
         };
-
-        request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        string responseText = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-        using var doc = JsonDocument.Parse(responseText);
-        if (doc.RootElement.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
-        {
-            var choice = choices[0];
-            if (choice.TryGetProperty("message", out var msg) && msg.TryGetProperty("content", out var content))
-            {
-                return content.GetString() ?? string.Empty;
-            }
-        }
-
-        return responseText;
     }
 
-    public static NetMapAiRouteResult ParseResponse(string text, bool isChinese)
+    private static string MapErrorText(AiErrorCode errorCode) => errorCode switch
     {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return new NetMapAiRouteResult(isChinese ? "未知链路" : "Unknown", isChinese ? "未返回有效分析" : "No analysis returned", string.Empty);
-        }
-
-        string cleaned = text.Trim();
-        if (cleaned.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-        {
-            cleaned = cleaned[7..];
-        }
-        else if (cleaned.StartsWith("```", StringComparison.Ordinal))
-        {
-            cleaned = cleaned[3..];
-        }
-
-        if (cleaned.EndsWith("```", StringComparison.Ordinal))
-        {
-            cleaned = cleaned[..^3];
-        }
-
-        cleaned = cleaned.Trim();
-        int start = cleaned.IndexOf('{');
-        int end = cleaned.LastIndexOf('}');
-        if (start >= 0 && end > start)
-        {
-            cleaned = cleaned.Substring(start, end - start + 1);
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(cleaned);
-            var root = doc.RootElement;
-            string lineType = root.TryGetProperty("lineType", out var lt) ? lt.GetString() ?? string.Empty : string.Empty;
-            string summary = root.TryGetProperty("summary", out var sm) ? sm.GetString() ?? string.Empty : string.Empty;
-            string details = root.TryGetProperty("details", out var dt) ? dt.GetString() ?? string.Empty : string.Empty;
-
-            if (!string.IsNullOrWhiteSpace(lineType))
-            {
-                string compactSummary = SanitizeSummary(summary, lineType);
-                return new NetMapAiRouteResult(lineType, compactSummary, details);
-            }
-        }
-        catch
-        {
-            // JSON parse fallback
-        }
-
-        // Heuristic detection if model answered in text
-        string detected = isChinese ? "BGP / 国际直连" : "BGP / Direct";
-        if (text.Contains("CN2 GIA", StringComparison.OrdinalIgnoreCase))
-        {
-            detected = "CN2 GIA";
-        }
-        else if (text.Contains("CN2 GT", StringComparison.OrdinalIgnoreCase))
-        {
-            detected = "CN2 GT";
-        }
-        else if (text.Contains("CN2", StringComparison.OrdinalIgnoreCase))
-        {
-            detected = "CN2";
-        }
-        else if (text.Contains("CMI", StringComparison.OrdinalIgnoreCase))
-        {
-            detected = "CMI";
-        }
-        else if (text.Contains("9929", StringComparison.OrdinalIgnoreCase) || text.Contains("CUG", StringComparison.OrdinalIgnoreCase))
-        {
-            detected = isChinese ? "联通 9929" : "CU 9929";
-        }
-        else if (text.Contains("4837", StringComparison.OrdinalIgnoreCase) || text.Contains("169", StringComparison.OrdinalIgnoreCase))
-        {
-            detected = isChinese ? "联通 4837" : "CU 4837";
-        }
-        else if (text.Contains("163", StringComparison.OrdinalIgnoreCase) || text.Contains("4134", StringComparison.OrdinalIgnoreCase))
-        {
-            detected = isChinese ? "163 骨干网" : "163 Backbone";
-        }
-
-        string trimmedSummary = text.Length > 200 ? text[..200] + "..." : text;
-        string sanitizedFallback = SanitizeSummary(trimmedSummary, detected);
-        return new NetMapAiRouteResult(detected, sanitizedFallback, text);
-    }
+        AiErrorCode.HubDisabled => NetMapViewModel.Text("AiServiceDisabled"),
+        AiErrorCode.InvalidConfiguration => NetMapViewModel.Text("AiNoEndpoint"),
+        AiErrorCode.KernelNotInstalled => NetMapViewModel.Text("AiKernelMissing"),
+        _ => NetMapViewModel.Text("AiCheckFailed"),
+    };
 
     public static string SanitizeSummary(string summary, string lineType)
     {

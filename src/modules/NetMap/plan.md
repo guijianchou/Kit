@@ -56,6 +56,13 @@
 
 无网络/禁用/未检测可以打开地图；Stop 后无回填；单通道失败、恢复、同出口、IPv6、错误/超限正文分别可判定。模拟旧请求迟到，切换及重启后不会覆盖。普通失焦不停，隐藏/最小化/离页/外部关闭会停止。缺失/损坏 MMDB 时在线补齐，关闭在线查询或查询失败时显示具体原因；地图含来源与地区示意说明。NetMap 无 AIHub 引用或模型请求。Windows x64 Debug 使用 tools/build/build.ps1 顺序构建，使用 VSTest 运行相关测试；真实代理/TUN 与实际 GUI 验证单独记录。
 
+## AI 链路判定修订（2026-10-16）
+
+- 用户决定恢复 AI 链路判定，并按“统一入口 + 轻量链路”实现：NetMap 经 `AiHubEngine.ExecuteTaskAsync("NetMap", "route-analysis", ...)` 调用，任务指令由 `AiTaskOptions.InlineInstructions` 内联提供，不部署 `Chains/route-analysis/AGENTS.md`；宿主与全局策略、脱敏、输出审计、备用与取消语义沿用统一入口。本节取代此前“删除 NetMap AI 分析”的冻结条目。
+- 判定仅手动触发（“AI 分析”按钮），输入为最近一次 MTR 快照（`%LOCALAPPDATA%\Kit\NetMap\mtr-latest.json`），输出为链路类型 + 一句话摘要 + 路径证据，显示在代理出口卡片与详情。
+- 需要已在 AI Hub 安装并验证内核；未启用、无端点、无内核、无数据分别给出对应提示，不再静默失败。规范见 PLUGIN_DEVELOPMENT.md 14.3。
+- 验证（2026-10-16）：x64 Debug 构建通过；Kit.AiHub 单测 348/349（1 例环境跳过）、Settings 单测 218/218；内联指令引擎用例与 NetMap schema/JSON 用例全部通过。
+
 ## 地图空间与跨太平洋连线修订（2026-10-01）
 
 - 根因：地图/列表按 2:3 分配空间，MTR 的 IP/地区使用比例列且行容器留白较大；底图固定为大西洋居中，跨 ±180° 连线被拆至左右边缘，相关节点跨度超过半张地图时不缩放。

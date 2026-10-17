@@ -73,6 +73,14 @@ public sealed class AiTaskOptions
     /// Callers must explicitly handle a failed result containing a partial payload.
     /// </summary>
     public bool AllowPartialResults { get; set; }
+
+    /// <summary>
+    /// One-line task instruction for lightweight tasks that do not deploy a
+    /// <c>Chains/&lt;taskId&gt;/AGENTS.md</c> policy file. When set, it replaces the deployed
+    /// task policy for this call; host and global security policies, sanitization and
+    /// output auditing are unchanged. Limited to 64 KiB UTF-8, the same cap as policy files.
+    /// </summary>
+    public string? InlineInstructions { get; set; }
 }
 
 /// <summary>
@@ -192,7 +200,7 @@ public interface IAiTaskEngine : IDisposable
     /// <typeparam name="TInput">Type of raw input items.</typeparam>
     /// <typeparam name="TOutput">Type of validated structured output.</typeparam>
     /// <param name="pluginId">Unique identifier of the calling plugin.</param>
-    /// <param name="taskId">Name of the sub-folder under Chains containing AGENTS.md.</param>
+    /// <param name="taskId">Name of the sub-folder under Chains containing AGENTS.md, or any label when <see cref="AiTaskOptions.InlineInstructions"/> is supplied.</param>
     /// <param name="items">List of input records to analyze or organize.</param>
     /// <param name="schema">Source-generated metadata and plugin-specific validation.</param>
     /// <param name="options">Execution and language options.</param>

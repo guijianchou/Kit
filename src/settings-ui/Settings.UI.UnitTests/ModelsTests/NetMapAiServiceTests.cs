@@ -16,44 +16,6 @@ namespace ModelsTests;
 public class NetMapAiServiceTests
 {
     [TestMethod]
-    public void ParseResponse_ValidJson_ReturnsParsedResult()
-    {
-        string json = """
-            {
-              "lineType": "CMI",
-              "summary": "经过 223.120.* 移动国际骨干网直连香港出口",
-              "details": "国内端直接交由 CMI AS58453 处理，无绕美情况。"
-            }
-            """;
-
-        var result = NetMapAiService.ParseResponse(json, isChinese: true);
-
-        Assert.AreEqual("CMI", result.LineType);
-        Assert.AreEqual("经过 223.120.* 移动国际骨干网直连香港出口", result.Summary);
-        Assert.AreEqual("国内端直接交由 CMI AS58453 处理，无绕美情况。", result.Details);
-    }
-
-    [TestMethod]
-    public void ParseResponse_MarkdownCodeBlock_StripsFencesAndParses()
-    {
-        string markdown = """
-            ```json
-            {
-              "lineType": "CN2 GIA",
-              "summary": "China Telecom CN2 GIA premium line",
-              "details": "Dual-direction 59.43.* hops observed at domestic and international border."
-            }
-            ```
-            """;
-
-        var result = NetMapAiService.ParseResponse(markdown, isChinese: false);
-
-        Assert.AreEqual("CN2 GIA", result.LineType);
-        Assert.AreEqual("Premium line", result.Summary);
-        Assert.AreEqual("Dual-direction 59.43.* hops observed at domestic and international border.", result.Details);
-    }
-
-    [TestMethod]
     public void SanitizeSummary_CompactsVerboseSentencesAndRemovesRepeats()
     {
         string verbose = "The route most likely uses China Mobile International (CMI) for cross-border transit to Singapore via Hong Kong.";
@@ -66,38 +28,36 @@ public class NetMapAiServiceTests
     }
 
     [TestMethod]
-    public void ParseResponse_HeuristicFallback_DetectsRouteKeywords()
+    public void RouteSchema_ValidatesModelResult()
     {
-        var cmi = NetMapAiService.ParseResponse("经过分析，该跨境路由属于中国移动 CMI 香港直连线路。", isChinese: true);
-        Assert.AreEqual("CMI", cmi.LineType);
+        var schema = NetMapAiService.CreateRouteSchema();
+        var itemIds = new HashSet<string>(StringComparer.Ordinal);
 
-        var cn2Gia = NetMapAiService.ParseResponse("Routing trace shows CN2 GIA bidirectional transit with low latency.", isChinese: false);
-        Assert.AreEqual("CN2 GIA", cn2Gia.LineType);
-
-        var cn2Gt = NetMapAiService.ParseResponse("出口阶段切入 CN2 GT 节点。", isChinese: true);
-        Assert.AreEqual("CN2 GT", cn2Gt.LineType);
-
-        var b163 = NetMapAiService.ParseResponse("通过电信 163 骨干网出境。", isChinese: true);
-        Assert.AreEqual("163 骨干网", b163.LineType);
-
-        var cu9929 = NetMapAiService.ParseResponse("Matched China Unicom 9929 enterprise routing.", isChinese: false);
-        Assert.AreEqual("CU 9929", cu9929.LineType);
-
-        var cu4837 = NetMapAiService.ParseResponse("普通联通 4837 回国链路。", isChinese: true);
-        Assert.AreEqual("联通 4837", cu4837.LineType);
-
-        var bgp = NetMapAiService.ParseResponse("Standard international direct routing without special acceleration.", isChinese: false);
-        Assert.AreEqual("BGP / Direct", bgp.LineType);
+        Assert.IsTrue(schema.ValidateOutput(new NetMapAiRouteResult("CMI", "223.120.* 直连香港", "AS58453 承载，无绕美。"), itemIds));
+        Assert.IsFalse(schema.ValidateOutput(new NetMapAiRouteResult(string.Empty, "223.120.* 直连香港", "详情"), itemIds));
+        Assert.IsFalse(schema.ValidateOutput(new NetMapAiRouteResult("CMI", string.Empty, "详情"), itemIds));
+        Assert.IsFalse(schema.ValidateOutput(new NetMapAiRouteResult("CMI", new string('x', 121), "详情"), itemIds));
+        Assert.IsFalse(schema.ValidateOutput(new NetMapAiRouteResult("CMI", "短句", new string('x', 601)), itemIds));
     }
 
     [TestMethod]
-    public void ParseResponse_EmptyOrNull_ReturnsUnknown()
+    public void RouteClassificationInstruction_IsSingleLine()
     {
-        var zh = NetMapAiService.ParseResponse(string.Empty, isChinese: true);
-        Assert.AreEqual("未知链路", zh.LineType);
+        string instruction = NetMapAiService.RouteClassificationInstruction;
+        Assert.IsFalse(instruction.Contains('\n'));
+        Assert.IsTrue(instruction.Length is > 0 and <= 512);
+    }
 
-        var en = NetMapAiService.ParseResponse(null!, isChinese: false);
-        Assert.AreEqual("Unknown", en.LineType);
+    [TestMethod]
+    public void RouteResult_JsonContext_RejectsUnmappedMembers()
+    {
+        string valid = """{"lineType":"CMI","summary":"Direct via AS58453","details":"223.120.* hops observed."}""";
+        var parsed = JsonSerializer.Deserialize(valid, NetMapAiJsonContext.Default.NetMapAiRouteResult);
+        Assert.IsNotNull(parsed);
+        Assert.AreEqual("CMI", parsed.LineType);
+
+        string unmapped = """{"lineType":"CMI","summary":"Direct","details":"d","extra":"unexpected"}""";
+        Assert.ThrowsExactly<JsonException>(() => JsonSerializer.Deserialize(unmapped, NetMapAiJsonContext.Default.NetMapAiRouteResult));
     }
 
     [TestMethod]

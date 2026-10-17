@@ -4,7 +4,7 @@
 
 Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 Windows 11 本地工具集。它复用 Runner、原生模块接口和 WinUI 3 设置框架，整合系统工具、本地服务管理、网络诊断与 AI 辅助维护。
 
-当前源码版本：**2.3.13**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
+当前源码版本：**2.6.0**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
 
 [功能概览](#1-功能概览) · [主框架](#2-主框架) · [插件](#3-插件) · [构建与发布](#4-构建与发布) · [数据与日志](#5-数据与日志) · [开发与扩展](#6-开发与扩展)
 
@@ -191,12 +191,17 @@ flowchart TB
         PG["NetMap 页面"] -->|"Start / Stop"| ENG["Kit.NetMapLib / NetMapSession"]
         ENG -->|"出口与节点定位"| GEO["本地 GeoLite2-ASN / City"]
         ENG -->|"两次 Proxy 成功且一致"| DIAG["服务与路径诊断"]
+        PG -->|"AI 分析（手动）"| AISVC["NetMapAiService / 链路判定"]
+        AISVC -->|"一条内联指令，无需 AGENTS.md"| HUB["Kit.AiHub 引擎 / route-analysis 任务"]
     end
     ENG -->|"Direct：绕过应用层代理"| D["Bilibili zone"]
     ENG -->|"Proxy：所选连接方式"| P["Cloudflare trace"]
     GEO -->|"缺失字段可在线补齐"| ONLINE["ipwho.is"]
     DIAG -->|"Proxy：每 10 秒"| WEB["Claude / ChatGPT trace、Gemini / Google 网页"]
     DIAG -->|"本机系统路由：ICMP 逐跳采样"| MTR["Proxy 出口 IPv4"]
+    MTR -->|"最新快照：mtr-latest.json"| AISVC
+    HUB -->|"安全策略 / 脱敏 / 输出审计"| K["已安装的 AI 内核 CLI"]
+    HUB -.->|"链路类型 / 一句话摘要 / 路径证据"| PG
     ENG -.->|"出口卡片 / 离线地图 / MTR / 服务状态"| PG
 ```
 
@@ -204,6 +209,7 @@ flowchart TB
 - **连接方式**：Proxy 支持系统代理、显式 HTTP/HTTPS/SOCKS5 或系统路由/TUN。Direct 只绕过应用层代理，无法绕过系统 TUN。
 - **地图与数据**：内置 Natural Earth 离线底图，优先使用本地 ASN/City 数据库；在线补齐会查询公网 IP，可关闭。ASN 数据库支持手动下载及哈希校验。
 - **诊断边界**：服务检查反映检查点或网页连通性，不代表账号或模型可用；ICMP 路径经本机系统路由，不是代理隧道内部路径。
+- **AI 链路判定**：页面上的手动 **AI 分析** 按最新 MTR 快照判定跨境链路类型（如 CMI、CN2、163，可含移动、联通、电信线路），结论以徽标和一句话摘要显示在代理出口卡片，证据在“详情”中。判定经统一 Kit.AiHub 引擎的轻量 `route-analysis` 任务执行，只需一条内联指令，不部署 `Chains/route-analysis/AGENTS.md`；宿主与插件安全策略、脱敏、输出审计与备用链路全部生效。需先在 AI Hub 安装并验证内核；缺少 MTR 数据、AI 中心未开启或内核缺失都有明确提示。结果与检测一样仅保留在当前进程内存。
 - **运行方式**：原生 `Kit.NetMapModuleInterface.dll` 管理开关与配置，检测运行于 Settings，结果仅在内存。使用方法、数据来源与验证范围见[模块文档](src/modules/NetMap/README.md)。
 
 ## 4. 构建与发布

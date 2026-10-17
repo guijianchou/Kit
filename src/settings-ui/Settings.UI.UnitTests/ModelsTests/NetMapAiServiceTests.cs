@@ -41,11 +41,59 @@ public class NetMapAiServiceTests
     }
 
     [TestMethod]
-    public void RouteClassificationInstruction_IsSingleLine()
+    public void RouteClassificationInstruction_IsSingleLineAndLanguageAware()
     {
-        string instruction = NetMapAiService.RouteClassificationInstruction;
-        Assert.IsFalse(instruction.Contains('\n'));
-        Assert.IsTrue(instruction.Length is > 0 and <= 512);
+        string instructionZh = NetMapAiService.GetRouteInstruction(true);
+        Assert.IsFalse(instructionZh.Contains('\n'));
+        Assert.IsTrue(instructionZh.Length is > 0 and <= 512);
+
+        string instructionEn = NetMapAiService.GetRouteInstruction(false);
+        Assert.IsFalse(instructionEn.Contains('\n'));
+        Assert.IsTrue(instructionEn.Length is > 0 and <= 512);
+
+        string current = NetMapAiService.RouteClassificationInstruction;
+        Assert.IsFalse(current.Contains('\n'));
+        Assert.IsTrue(current.Length is > 0 and <= 512);
+    }
+
+    [TestMethod]
+    public void SelectLanguageSegment_PicksCorrectSideForBilingualText()
+    {
+        string bilingual = "中国移动 CMI / China Mobile CMI";
+        Assert.AreEqual("China Mobile CMI", NetMapAiService.SelectLanguageSegment(bilingual, isChinese: false));
+        Assert.AreEqual("中国移动 CMI", NetMapAiService.SelectLanguageSegment(bilingual, isChinese: true));
+
+        string summaryBilingual = "香港转接，约 67 ms / Via Hong Kong, approx 67 ms";
+        Assert.AreEqual("Via Hong Kong, approx 67 ms", NetMapAiService.SelectLanguageSegment(summaryBilingual, isChinese: false));
+        Assert.AreEqual("香港转接，约 67 ms", NetMapAiService.SelectLanguageSegment(summaryBilingual, isChinese: true));
+    }
+
+    [TestMethod]
+    public void SanitizeLineType_NormalizesAndFollowsLanguage()
+    {
+        // Bilingual slash input
+        string bilingual = "中国移动 CMI / China Mobile CMI";
+        Assert.AreEqual("CMI", NetMapAiService.SanitizeLineType(bilingual, isChinese: false));
+        Assert.AreEqual("移动 CMI", NetMapAiService.SanitizeLineType(bilingual, isChinese: true));
+
+        // Long carrier names
+        Assert.AreEqual("CMI", NetMapAiService.SanitizeLineType("China Mobile International (CMI)", isChinese: false));
+        Assert.AreEqual("CN2 GIA", NetMapAiService.SanitizeLineType("China Telecom CN2 GIA", isChinese: false));
+        Assert.AreEqual("163 Net", NetMapAiService.SanitizeLineType("China Telecom 163", isChinese: false));
+        Assert.AreEqual("CU 9929", NetMapAiService.SanitizeLineType("China Unicom 9929", isChinese: false));
+
+        Assert.AreEqual("移动 CMI", NetMapAiService.SanitizeLineType("中国移动 CMI", isChinese: true));
+        Assert.AreEqual("电信 CN2 GIA", NetMapAiService.SanitizeLineType("中国电信 CN2 GIA", isChinese: true));
+        Assert.AreEqual("电信 163", NetMapAiService.SanitizeLineType("中国电信 163", isChinese: true));
+        Assert.AreEqual("联通 9929", NetMapAiService.SanitizeLineType("中国联通 9929", isChinese: true));
+    }
+
+    [TestMethod]
+    public void SanitizeDetails_SelectsCorrectLanguage()
+    {
+        string detailsBilingual = "关键 IP 223.120.3.197 (AS58453 CMI) / Key IP 223.120.3.197 (AS58453 CMI) via Hong Kong";
+        Assert.AreEqual("Key IP 223.120.3.197 (AS58453 CMI) via Hong Kong", NetMapAiService.SanitizeDetails(detailsBilingual, isChinese: false));
+        Assert.AreEqual("关键 IP 223.120.3.197 (AS58453 CMI)", NetMapAiService.SanitizeDetails(detailsBilingual, isChinese: true));
     }
 
     [TestMethod]

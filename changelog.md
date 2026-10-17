@@ -13,6 +13,7 @@
   - A disabled hub, missing endpoint, missing kernel or missing MTR data now report specific, actionable messages instead of a generic failure.
 - **Documentation & localization**:
   - `PLUGIN_DEVELOPMENT.md` 14.3 documents the lightweight inline-instruction chain with the NetMap call as the example; the README NetMap diagram now shows the AI route check chain.
+  - Fixed NetMap AI check output to dynamically follow UI language, added dual-language extractor and lineType/summary sanitizers to prevent Proxy card badge overflow, and verified 221/221 Settings.UI unit tests.
   - Corrected NetMap and LightSwitch Chinese strings.
 
 ### 2.3.13
@@ -699,6 +700,7 @@
   - AI 中心未开启、未配置端点、未安装内核或缺少 MTR 数据时改为分别给出可操作的提示，不再只报通用错误。
 - **文档与本地化**：
   - `PLUGIN_DEVELOPMENT.md` 14.3 新增轻量内联指令链路说明并以 NetMap 调用为例；README NetMap 图示链路加入 AI 判定。
+  - 修复 NetMap AI 链路分析输出语言跟随系统 UI 语言，新增双语段提取与运营商标签精炼清洗，严格控制卡片徽章与摘要字数，防止 Proxy 出口卡片内容溢出排版。
   - 修正 NetMap 与 LightSwitch 中文文案。
 
 ### 2.3.13

@@ -955,7 +955,7 @@ using IAiTaskEngine worker = AiHubEngine.Create();
 
 示例最后两种获取方式放在调用方的方法体中。`Language` 应传 Kit 当前 UI 语言，只有 `en-US` / `zh-CN`；状态逻辑和错误处理使用 `AiErrorCode`，不能解析英文 `ErrorMessage`。
 
-单句任务不必部署 `Chains/<taskId>/AGENTS.md`：把一条任务指令放进 `AiTaskOptions.InlineInstructions`（UTF-8 上限 64 KiB，与策略文件相同）即可，宿主与全局安全策略、输入脱敏、输出审计、备用端点与取消语义完全一致。内联指令与部署文件同时存在时以内联为准；两者都缺失时仍按缺少任务策略拒绝执行。NetMap 的链路判定即此形态，不需要单独 AGENTS.md，只需要一条信息，例如“根据最新 MTR 结果分析跨境链路类型（如 CMI、CN2、163，可包含移动、联通、电信线路）；lineType 保持简短，summary 用极短短语且不复述 lineType，details 用 1-2 句说明关键 IP、ASN 与路径证据。”（[NetMapAiService.cs](src/settings-ui/Settings.UI/Helpers/NetMapAiService.cs)）：
+单句任务不必部署 `Chains/<taskId>/AGENTS.md`：把一条任务指令放进 `AiTaskOptions.InlineInstructions`（UTF-8 上限 64 KiB，与策略文件相同）即可，宿主与全局安全策略、输入脱敏、输出审计、备用端点与取消语义完全一致。内联指令与部署文件同时存在时以内联为准；两者都缺失时仍按缺少任务策略拒绝执行。指令语言应跟随系统语言（如中文或英文指令），并要求模型完全使用目标语言输出、避免双语斜杠并列。NetMap 的链路判定即此形态，不需要单独 AGENTS.md（[NetMapAiService.cs](src/settings-ui/Settings.UI/Helpers/NetMapAiService.cs)）：
 
 ```csharp
 AiTaskResult<NetMapAiRouteResult> result = await AiHubEngine.Current.ExecuteTaskAsync(
@@ -968,7 +968,7 @@ AiTaskResult<NetMapAiRouteResult> result = await AiHubEngine.Current.ExecuteTask
         Language = isChinese ? "zh-CN" : "en-US",
         TimeoutSeconds = 120,
         RouteTimeoutSeconds = 60,
-        InlineInstructions = RouteClassificationInstruction,
+        InlineInstructions = GetRouteInstruction(isChinese),
     },
     cancellationToken).ConfigureAwait(false);
 ```

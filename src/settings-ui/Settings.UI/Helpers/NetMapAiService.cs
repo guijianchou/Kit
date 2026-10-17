@@ -130,13 +130,37 @@ public static class NetMapAiService
     }
 
     /// <summary>
-    /// The single lightweight instruction for the route classification chain. The engine
-    /// wraps it with the host and plugin security policies, the JSON output schema and the
-    /// untrusted input records, so no Chains/route-analysis/AGENTS.md file is deployed.
+    /// The lightweight instruction for the route classification chain in Simplified Chinese.
     /// </summary>
-    public const string RouteClassificationInstruction =
-        "根据最新 MTR 结果分析跨境链路类型（如 CMI、CN2、163，可包含移动、联通、电信线路）；" +
-        "lineType 保持简短，summary 用极短短语且不复述 lineType，details 用 1-2 句说明关键 IP、ASN 与路径证据。";
+    public const string RouteClassificationInstructionZh =
+        "根据最新 MTR 跟踪结果分析跨境链路类型（如 CMI、CN2 GIA、163、9929、4837 等）。" +
+        "语言规则：所有字段（lineType、summary、details）必须完全使用简体中文输出，严禁中英双语斜杠并列。" +
+        "精简规则：" +
+        "- lineType: 极简链路标签，如'移动 CMI'、'电信 CN2 GIA'、'联通 9929'、'163 骨干'，控制在 10 字以内，不要冗长前缀；" +
+        "- summary: 卡片副标题极短短语，控制在 16 字以内（如'香港转接 · 约67ms'），严禁复述或包含 lineType；" +
+        "- details: 1-2 句说明关键 IP、中继 ASN 与路径证据（详细分析内容放于此处）。";
+
+    /// <summary>
+    /// The lightweight instruction for the route classification chain in English.
+    /// </summary>
+    public const string RouteClassificationInstructionEn =
+        "Analyze cross-border route type from MTR trace (e.g. CMI, CN2 GIA, 163, 9929, 4837, or BGP transit). " +
+        "Output ALL fields STRICTLY in English only. Never use Chinese or bilingual slash text. " +
+        "lineType: Short tag only (e.g. 'CMI', 'CN2 GIA', 'AS4837', '163 Net'), max 14 chars. " +
+        "summary: Ultra-concise badge subtitle (e.g. 'Via HK · ~67ms'), max 22 chars, never repeat lineType. " +
+        "details: 1-2 concise sentences with key IP, transit ASN, and latency evidence.";
+
+    /// <summary>
+    /// Returns the single lightweight instruction for the route classification chain based on current culture.
+    /// </summary>
+    public static string RouteClassificationInstruction =>
+        GetRouteInstruction(CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Resolves the route instruction according to UI language.
+    /// </summary>
+    public static string GetRouteInstruction(bool isChinese) =>
+        isChinese ? RouteClassificationInstructionZh : RouteClassificationInstructionEn;
 
     /// <summary>
     /// Classifies the latest MTR trace through the shared AI Hub engine on the lightweight
@@ -179,7 +203,7 @@ public static class NetMapAiService
                     Language = isChinese ? "zh-CN" : "en-US",
                     TimeoutSeconds = 120,
                     RouteTimeoutSeconds = 60,
-                    InlineInstructions = RouteClassificationInstruction,
+                    InlineInstructions = GetRouteInstruction(isChinese),
                 },
                 cancellationToken).ConfigureAwait(false);
         }
@@ -194,7 +218,11 @@ public static class NetMapAiService
             return NetMapAiAnalysisResponse.Failed(MapErrorText(result.ErrorCode));
         }
 
-        return NetMapAiAnalysisResponse.Successful(payload.LineType, SanitizeSummary(payload.Summary, payload.LineType), payload.Details);
+        string cleanLineType = SanitizeLineType(payload.LineType, isChinese);
+        string cleanSummary = SanitizeSummary(payload.Summary, cleanLineType, isChinese);
+        string cleanDetails = SanitizeDetails(payload.Details, isChinese);
+
+        return NetMapAiAnalysisResponse.Successful(cleanLineType, cleanSummary, cleanDetails);
     }
 
     /// <summary>
@@ -223,14 +251,185 @@ public static class NetMapAiService
         _ => NetMapViewModel.Text("AiCheckFailed"),
     };
 
-    public static string SanitizeSummary(string summary, string lineType)
+    /// <summary>
+    /// Selects the language appropriate portion if a model returned dual-language slash-separated text (e.g. "中文 / English").
+    /// </summary>
+    public static string SelectLanguageSegment(string text, bool isChinese)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        int slash = text.IndexOf(" / ", StringComparison.Ordinal);
+        if (slash < 0)
+        {
+            slash = text.IndexOf('/');
+        }
+
+        if (slash > 0 && slash < text.Length - 1)
+        {
+            string part1 = text[..slash].Trim();
+            string part2 = text[(slash + 1)..].TrimStart('/', ' ');
+            if (part1.Length > 0 && part2.Length > 0)
+            {
+                bool part1HasCjk = ContainsCjk(part1);
+                bool part2HasCjk = ContainsCjk(part2);
+                if (part1HasCjk != part2HasCjk)
+                {
+                    return isChinese ? (part1HasCjk ? part1 : part2) : (!part1HasCjk ? part1 : part2);
+                }
+
+                return isChinese ? part1 : part2;
+            }
+        }
+
+        return text.Trim();
+    }
+
+    /// <summary>
+    /// Checks if a string contains Chinese/CJK characters.
+    /// </summary>
+    public static bool ContainsCjk(string text)
+    {
+        foreach (char c in text)
+        {
+            if (c >= 0x4E00 && c <= 0x9FFF)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Sanitizes the route line type tag to ensure single-language brevity suitable for the card badge.
+    /// </summary>
+    public static string SanitizeLineType(string lineType, bool isChinese)
+    {
+        if (string.IsNullOrWhiteSpace(lineType))
+        {
+            return string.Empty;
+        }
+
+        string s = SelectLanguageSegment(lineType, isChinese);
+
+        if (!isChinese)
+        {
+            // Normalize known carriers to short acronyms in English
+            string[] cmiPatterns = ["China Mobile International (CMI)", "China Mobile International", "China Mobile CMI", "中国移动 CMI", "移动 CMI", "中国移动国际", "中国移动"];
+            foreach (var p in cmiPatterns)
+            {
+                if (s.Equals(p, StringComparison.OrdinalIgnoreCase) || s.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    s = "CMI" + s[p.Length..];
+                    break;
+                }
+            }
+
+            string[] cn2GiaPatterns = ["China Telecom CN2 GIA", "中国电信 CN2 GIA", "电信 CN2 GIA"];
+            foreach (var p in cn2GiaPatterns)
+            {
+                if (s.Equals(p, StringComparison.OrdinalIgnoreCase) || s.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    s = "CN2 GIA" + s[p.Length..];
+                    break;
+                }
+            }
+
+            string[] cn2Patterns = ["China Telecom CN2", "中国电信 CN2", "电信 CN2"];
+            foreach (var p in cn2Patterns)
+            {
+                if (s.Equals(p, StringComparison.OrdinalIgnoreCase) || s.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    s = "CN2" + s[p.Length..];
+                    break;
+                }
+            }
+
+            string[] net163Patterns = ["China Telecom 163", "中国电信 163", "电信 163", "163 骨干网", "163 骨干"];
+            foreach (var p in net163Patterns)
+            {
+                if (s.Equals(p, StringComparison.OrdinalIgnoreCase) || s.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    s = "163 Net" + s[p.Length..];
+                    break;
+                }
+            }
+
+            string[] cu9929Patterns = ["China Unicom 9929", "中国联通 9929", "联通 9929"];
+            foreach (var p in cu9929Patterns)
+            {
+                if (s.Equals(p, StringComparison.OrdinalIgnoreCase) || s.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    s = "CU 9929" + s[p.Length..];
+                    break;
+                }
+            }
+
+            string[] cu4837Patterns = ["China Unicom 4837", "中国联通 4837", "联通 4837"];
+            foreach (var p in cu4837Patterns)
+            {
+                if (s.Equals(p, StringComparison.OrdinalIgnoreCase) || s.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    s = "CU 4837" + s[p.Length..];
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // Normalize in Chinese
+            if (s.StartsWith("China Mobile International (CMI)", StringComparison.OrdinalIgnoreCase) ||
+                s.StartsWith("China Mobile CMI", StringComparison.OrdinalIgnoreCase) ||
+                s.StartsWith("中国移动国际 (CMI)", StringComparison.OrdinalIgnoreCase) ||
+                s.StartsWith("中国移动 CMI", StringComparison.OrdinalIgnoreCase))
+            {
+                s = "移动 CMI";
+            }
+            else if (s.StartsWith("China Telecom CN2 GIA", StringComparison.OrdinalIgnoreCase) ||
+                     s.StartsWith("中国电信 CN2 GIA", StringComparison.OrdinalIgnoreCase))
+            {
+                s = "电信 CN2 GIA";
+            }
+            else if (s.StartsWith("China Telecom 163", StringComparison.OrdinalIgnoreCase) ||
+                     s.StartsWith("中国电信 163", StringComparison.OrdinalIgnoreCase))
+            {
+                s = "电信 163";
+            }
+            else if (s.StartsWith("China Unicom 9929", StringComparison.OrdinalIgnoreCase) ||
+                     s.StartsWith("中国联通 9929", StringComparison.OrdinalIgnoreCase))
+            {
+                s = "联通 9929";
+            }
+            else if (s.StartsWith("China Unicom 4837", StringComparison.OrdinalIgnoreCase) ||
+                     s.StartsWith("中国联通 4837", StringComparison.OrdinalIgnoreCase))
+            {
+                s = "联通 4837";
+            }
+        }
+
+        s = s.Trim();
+        if (s.Length > 20)
+        {
+            s = s[..18].Trim() + "…";
+        }
+
+        return s;
+    }
+
+    public static string SanitizeSummary(string summary, string lineType) =>
+        SanitizeSummary(summary, lineType, CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
+
+    public static string SanitizeSummary(string summary, string lineType, bool isChinese)
     {
         if (string.IsNullOrWhiteSpace(summary))
         {
             return string.Empty;
         }
 
-        string s = summary.Trim();
+        string s = SelectLanguageSegment(summary, isChinese);
 
         // Strip conversational AI prefixes
         string[] prefixes =
@@ -266,17 +465,27 @@ public static class NetMapAiService
         [
             "China Mobile International (CMI)",
             "China Mobile International",
+            "China Mobile CMI",
             "China Telecom CN2 GIA",
             "China Telecom CN2 GT",
             "China Telecom CN2",
             "China Telecom 163",
             "China Unicom 9929",
             "China Unicom 4837",
+            "中国移动国际 (CMI)",
             "中国移动国际",
+            "中国移动 CMI",
+            "移动 CMI",
+            "中国电信 CN2 GIA",
+            "电信 CN2 GIA",
             "中国电信 CN2",
+            "电信 CN2",
             "中国电信 163",
+            "电信 163",
             "中国联通 9929",
+            "联通 9929",
             "中国联通 4837",
+            "联通 4837",
         ];
 
         foreach (var carrier in carrierPrefixes)
@@ -322,16 +531,16 @@ public static class NetMapAiService
         }
 
         // Cap length to keep it concise and single-line
-        if (s.Length > 32)
+        if (s.Length > 28)
         {
             int cut = s.IndexOfAny([',', '，', ';', '；', '。', '.']);
-            if (cut > 6 && cut <= 30)
+            if (cut > 6 && cut <= 26)
             {
                 s = s[..cut].Trim();
             }
             else
             {
-                s = s[..30].Trim() + "…";
+                s = s[..26].Trim() + "…";
             }
         }
 
@@ -341,5 +550,19 @@ public static class NetMapAiService
         }
 
         return s;
+    }
+
+    /// <summary>
+    /// Sanitizes the route details to ensure it follows the current UI language.
+    /// </summary>
+    public static string SanitizeDetails(string details, bool isChinese)
+    {
+        if (string.IsNullOrWhiteSpace(details))
+        {
+            return string.Empty;
+        }
+
+        string s = SelectLanguageSegment(details, isChinese);
+        return s.Trim();
     }
 }

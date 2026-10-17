@@ -4,6 +4,15 @@
 
 ## English
 
+### 2.6.1
+
+- **NetMap proxy resilience and MTR route preservation**:
+  - Fixed proxy state machine to tolerate transient egress probe failures (`failures < 3`): candidate egress IP, active MTR trace, and AI Check route classification results are now fully preserved during temporary network fluctuations.
+  - Aligned node disconnection with NetMap's 3-consecutive-failure standard: only 3 consecutive probe failures (~15s) clear candidate IP, cancel MTR diagnostic, and increment snapshot generation.
+  - Smooth recovery on the same proxy IP without restarting MTR or wiping AI Check badges; switching to a new proxy node immediately triggers new stabilization and fresh traceroute diagnostics.
+  - Added `NetMapAiService.DeleteLatestMtrSnapshot()` to automatically purge stale MTR trace snapshots when generation genuinely increments (node change or 3-failure disconnection).
+  - Added unit tests in `NetMap.UnitTests` (`TransientProxyFailurePreservesGenerationAndCandidateUntilThreeFailures`) and `Settings.UI.UnitTests` (`DeleteLatestMtrSnapshot_DeletesExistingSnapshotFile`), with 98/98 NetMap and 222/222 Settings.UI tests passing.
+
 ### 2.6.0
 
 - **NetMap AI route check on the shared AI Hub engine**:
@@ -690,6 +699,15 @@
 ## 中文
 
 ## 更新日志
+
+### 2.6.1
+
+- **NetMap 代理探测容错与 MTR 路由/AI 结果保留**：
+  - 修复代理探测瞬时失败导致 MTR 路由重跑与 AI Check 结果丢失的问题：对短暂网络波动（连续失败次数 `< 3`）实施容错，保留候选代理 IP，不递增 Generation，不清除已有跳数与 AI 链路判定结果。
+  - 统一断开判定标准：对齐 NetMap 连续 3 次失败判定（约 15 秒完全超时），才判定代理真正断开并清空候选 IP、取消 MTR 并重置界面状态。
+  - 同 IP 恢复探测时无感衔接，不重复发起 MTR；真实切换代理节点时自动感知并重新采样诊断。
+  - 新增 `NetMapAiService.DeleteLatestMtrSnapshot()`，在节点真正切换或连续 3 次断连导致 Generation 变更时自动清除过期 MTR 记录，防止分析陈旧数据。
+  - 补充 `TransientProxyFailurePreservesGenerationAndCandidateUntilThreeFailures` 与 `DeleteLatestMtrSnapshot_DeletesExistingSnapshotFile` 单元测试，98 项 NetMap 测试与 222 项 Settings.UI 测试全部通过。
 
 ### 2.6.0
 

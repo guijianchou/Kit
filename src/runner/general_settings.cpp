@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "general_settings.h"
+#include "general_settings_reader.h"
 #include "auto_start_helper.h"
 #include "tray_icon.h"
 #include "quick_access_host.h"
@@ -62,6 +63,11 @@ namespace
 
         return fallback;
     }
+
+    std::optional<json::JsonObject> load_general_settings_checked()
+    {
+        return general_settings::load_from_file_checked(PTSettingsHelper::get_powertoys_general_save_file_location());
+    }
 }
 
 // TODO: would be nice to get rid of these globals, since they're basically cached json settings
@@ -123,7 +129,13 @@ json::JsonObject GeneralSettings::to_json()
 
 json::JsonObject load_general_settings()
 {
-    auto loaded = PTSettingsHelper::load_general_settings();
+    auto loaded_opt = load_general_settings_checked();
+    if (!loaded_opt.has_value())
+    {
+        Logger::warn(L"load_general_settings: Skipping global state update due to transient read error on settings.json.");
+        return json::JsonObject{};
+    }
+    auto loaded = std::move(loaded_opt).value();
     settings_theme = loaded.GetNamedString(L"theme", L"system");
     if (settings_theme != L"dark" && settings_theme != L"light")
     {

@@ -31,9 +31,15 @@
 #include <common/utils/winapi_error.h>
 #include <common/themes/windows_colors.h>
 #include "settings_window.h"
+#include "settings_window_startup.h"
 #include "ai_hub_ipc.h"
 
 #define BUFSIZE 1024
+
+namespace
+{
+    SettingsWindowStartup settings_window_startup;
+}
 
 TwoWayPipeMessageIPC* current_settings_ipc = NULL;
 std::mutex ipc_mutex;
@@ -769,6 +775,11 @@ void bring_settings_to_front()
 
 void open_settings_window(std::optional<std::wstring> settings_window)
 {
+    if (settings_window_startup.DeferOrCancel(settings_window))
+    {
+        return;
+    }
+
     Logger::info(L"open_settings_window: called with target={}", settings_window.value_or(L"<none>"));
     std::unique_lock launch_lock{ settings_launch_mutex };
     if (g_settings_shutdown_requested)
@@ -858,8 +869,19 @@ void open_settings_window(std::optional<std::wstring> settings_window)
     }
 }
 
+SettingsWindowStartup::Completion complete_settings_window_startup(bool openSettings, std::optional<std::wstring> settings_window)
+{
+    return settings_window_startup.CompleteStartup(openSettings, std::move(settings_window));
+}
+
+void cancel_settings_window_startup()
+{
+    settings_window_startup.Stop();
+}
+
 bool close_settings_window()
 {
+    cancel_settings_window_startup();
     {
         std::unique_lock launch_lock{ settings_launch_mutex };
         g_settings_shutdown_requested = true;

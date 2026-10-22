@@ -20,5 +20,6 @@ namespace PTSettingsHelper
     json::JsonObject load_general_settings();
     std::wstring get_log_settings_file_location();
 
+
     void save_data_diagnostics(bool enabled);
 }

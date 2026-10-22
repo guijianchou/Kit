@@ -11,6 +11,8 @@ void set_tray_icon_visible(bool shouldIconBeVisible);
 void set_tray_icon_theme_adaptive(bool theme_adaptive);
 // Show or hide the update-available badge on the tray icon
 void set_tray_icon_update_available(bool available);
+// Returns true when Windows has confirmed the full user session is terminating
+bool is_system_session_ending();
 // Stop the Tray Icon
 void stop_tray_icon();
 // Open the Settings Window

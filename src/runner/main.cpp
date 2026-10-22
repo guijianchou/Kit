@@ -238,24 +238,28 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - start_time).count());
 
-        if (openSettings)
+        std::optional<std::wstring> window;
+        if (!settingsWindow.empty())
         {
-            std::optional<std::wstring> window;
-            if (!settingsWindow.empty())
-            {
-                window = winrt::to_hstring(settingsWindow);
-            }
-            open_settings_window(window);
+            window = winrt::to_hstring(settingsWindow);
+        }
+
+        const auto settings_startup = complete_settings_window_startup(openSettings, std::move(window));
+        if (!settings_startup.canceled && settings_startup.request)
+        {
+            open_settings_window(settings_startup.request->page);
         }
 
         result = run_message_loop();
     }
     catch (std::runtime_error& err)
     {
+        cancel_settings_window_startup();
         std::string err_what = err.what();
         MessageBoxW(nullptr, std::wstring(err_what.begin(), err_what.end()).c_str(), GET_RESOURCE_STRING(IDS_ERROR).c_str(), MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
         result = -1;
     }
+    cancel_settings_window_startup();
     Trace::UnregisterProvider();
     QuickAccessHost::stop();
     return result;

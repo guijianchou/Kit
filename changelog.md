@@ -4,6 +4,26 @@
 
 ## English
 
+### 3.0.0
+
+- **Upstream PowerToys v0.102.2933.0 Core Framework Synchronization**:
+  - **Interop Security Hardening**: Integrated `pipe_caller_auth` verifying process executable path and package identity of pipe clients; added `ClientOpenFlags` and safe pipe thread reaper in `two_way_pipe_message_ipc`.
+  - **Runner Security & Session Resilience**: Added SDDL access control defense for the auto-start scheduled task; integrated stateless session termination handling (`handle_stateless_session_end_message`) in window and tray icon subsystems; upgraded centralized hotkeys with `MOD_NOREPEAT` and iterator-safe map lookups; added `SettingsWindowStartup` startup queueing with retry-enabled settings loader (`load_from_file_checked`).
+  - **Preserved Kit Core Architecture**: Retained `%LOCALAPPDATA%\Kit` data storage, `KitKnownModules` whitelist, dual ABI `kit_create` fallback, and 1500ms force termination timeout.
+- **Awake Module Upgrade**:
+  - Synchronized `AwakeStateCalculator` state logic with upstream v0.102.
+  - Zero-hotkey policy strictly enforced (keyboard shortcut registration and parsing removed).
+  - Maintained 1500ms force termination timeout and zero telemetry footprint.
+  - Updated `AwakeProperties` with thread-safe tray times accessors.
+- **LightSwitch Module Upgrade & CLI Introduction**:
+  - Modernized `ThemeHelper` with safe registry boundaries (25B–64KB NightLight buffer protection) and `LSTATUS` return codes.
+  - Introduced `Kit.LightSwitch.Cli` utility with full command-line control (`status`, `light`, `dark`, `toggle`, `schedule enable/disable`) and structured JSON envelopes over secure named pipes (`Kit_LightSwitch_Cli_{sessionId}`).
+  - Decoupled completely from deprecated `PowerDisplay.Models`.
+  - Zero-hotkey policy strictly enforced.
+  - Synchronized `LightSwitchService` with `KIT_LIGHTSWITCH_SERVICE_STOP` and `KIT_LIGHTSWITCH_MANUAL_OVERRIDE` IPC synchronization.
+- **SettingsAPI & Architecture Optimization**:
+  - Removed obsolete OOBE/SCOOBE and last_version_run disk read helpers to eliminate redundant disk I/O during startup.
+
 ### 2.6.1
 
 - **NetMap proxy resilience and MTR route preservation**:
@@ -705,6 +725,26 @@
 ## 中文
 
 ## 更新日志
+
+### 3.0.0
+
+- **上游 PowerToys v0.102.2933.0 主框架同步与安全加固**：
+  - **跨进程通信 (Interop) 安全加固**：引入 `pipe_caller_auth`，严密校验命名管道客户端进程路径与包标识；在 `two_way_pipe_message_ipc` 中增加 `ClientOpenFlags` 与安全线程回收保障机制。
+  - **Runner 主框架与会话防御**：为自启动计划任务添加 SDDL 访问控制防御；在窗口与托盘子系统集成无状态会话结束响应（`handle_stateless_session_end_message`）；集中快捷键模块升级 `MOD_NOREPEAT` 并修正迭代器查找安全；引入 `SettingsWindowStartup` 启动排队机制与具备重试容错的配置加载器（`load_from_file_checked`）。
+  - **完整保留 Kit 核心定制**：保留 `%LOCALAPPDATA%\Kit` 隔离存储路径、`KitKnownModules` 白名单、双 ABI `kit_create` 兼容回退以及 1500ms 进程超时强杀机制。
+- **Awake 插件升级**：
+  - 核心状态计算逻辑（`AwakeStateCalculator`）对齐上游 v0.102。
+  - 严格落实零快捷键策略（剔除 Awake 模块全部热键注册与解析代码）。
+  - 保持 1500ms 超时强制退出生命周期控制与零遥测。
+  - `AwakeProperties` 更新线程安全的托盘时间配置访问器。
+- **LightSwitch 插件升级与 CLI 引入**：
+  - 现代化 `ThemeHelper`，严格限定夜间模式注册表缓冲区边界（25B–64KB）并统一采用 `LSTATUS` 返回码。
+  - 引入全新 `Kit.LightSwitch.Cli` 命令行工具，提供完整 CLI 控制（`status`、`light`、`dark`、`toggle`、`schedule enable/disable`），并通过高安全性命名管道（`Kit_LightSwitch_Cli_{sessionId}`）传输标准 JSON 响应信封。
+  - 彻底解耦已废弃的 `PowerDisplay.Models`。
+  - 严格落实零快捷键策略（剔除全部热键相关代码）。
+  - 增强 `LightSwitchService` 进程间同步，支持 `KIT_LIGHTSWITCH_SERVICE_STOP` 与 `KIT_LIGHTSWITCH_MANUAL_OVERRIDE` 事件感知。
+- **SettingsAPI 与架构瘦身优化**：
+  - 剔除冗余的 OOBE/SCOOBE 以及 last_version_run 磁盘读取辅助函数，消除启动阶段不必要的磁盘 I/O。
 
 ### 2.6.1
 

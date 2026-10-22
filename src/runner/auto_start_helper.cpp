@@ -5,6 +5,7 @@
 
 #include <comdef.h>
 #include <taskschd.h>
+#include <sddl.h>
 #include <common/logger/logger.h>
 
 // Helper macros from wix.
@@ -33,6 +34,41 @@
 const DWORD USERNAME_DOMAIN_LEN = DNLEN + UNLEN + 2; // Domain Name + '\' + User Name + '\0'
 const DWORD USERNAME_LEN = UNLEN + 1; // User Name + '\0'
 const wchar_t KIT_TASK_SCHEDULER_FOLDER[] = L"\\Kit";
+
+// Builds the security descriptor (SDDL) used when registering the autorun task.
+// The task runs the Kit executable at logon, potentially elevated, so its
+// definition must not be writable by arbitrary local users. We grant full access
+// only to Local System, the Administrators group and the task's own user (so the
+// non-elevated runner can still enable/disable/delete its own task). We must never
+// grant write access to "Everyone", which would let any local user overwrite the
+// task's action and achieve local privilege escalation.
+static std::wstring get_auto_start_task_sddl()
+{
+    // Local System and Administrators always get full control.
+    std::wstring sddl = L"D:(A;;FA;;;SY)(A;;FA;;;BA)";
+
+    HANDLE hToken = NULL;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+    {
+        BYTE tokenInfo[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
+        DWORD tokenInfoLength = 0;
+        if (GetTokenInformation(hToken, TokenUser, tokenInfo, sizeof(tokenInfo), &tokenInfoLength))
+        {
+            auto pTokenUser = reinterpret_cast<TOKEN_USER*>(tokenInfo);
+            LPWSTR stringSid = NULL;
+            if (ConvertSidToStringSidW(pTokenUser->User.Sid, &stringSid))
+            {
+                sddl += L"(A;;FA;;;";
+                sddl += stringSid;
+                sddl += L")";
+                LocalFree(stringSid);
+            }
+        }
+        CloseHandle(hToken);
+    }
+
+    return sddl;
+}
 
 std::wstring get_auto_start_task_name_for_this_user()
 {
@@ -413,7 +449,8 @@ bool create_auto_start_task_for_this_user(bool runElevated)
     // ------------------------------------------------------
     //  Save the task in the Kit folder.
     {
-        _variant_t SDDL_FULL_ACCESS_FOR_EVERYONE = L"D:(A;;FA;;;WD)";
+        std::wstring sddl = get_auto_start_task_sddl();
+        _variant_t taskSecurityDescriptor = sddl.c_str();
         hr = pTaskFolder->RegisterTaskDefinition(
             _bstr_t(wstrTaskName.c_str()),
             pTask,
@@ -421,7 +458,7 @@ bool create_auto_start_task_for_this_user(bool runElevated)
             _variant_t(username_domain),
             _variant_t(),
             TASK_LOGON_INTERACTIVE_TOKEN,
-            SDDL_FULL_ACCESS_FOR_EVERYONE,
+            taskSecurityDescriptor,
             &pRegisteredTask);
         ExitOnFailure(hr, "Error saving the Task : {:x}", hr);
     }

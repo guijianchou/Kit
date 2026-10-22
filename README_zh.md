@@ -2,9 +2,9 @@
 
 **Language / 语言:** [English](README.md) | 中文
 
-Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 Windows 11 本地工具集。它复用 Runner、原生模块接口和 WinUI 3 设置框架，整合系统工具、本地服务管理、网络诊断与 AI 辅助维护。
+Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 Windows 11 本地工具集（同步对齐上游 PowerToys **v0.102.2933.0** 代码）。它复用 Runner、原生模块接口和 WinUI 3 设置框架，整合系统工具、本地服务管理、网络诊断与 AI 辅助维护。
 
-当前源码版本：**2.6.1**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
+当前源码版本：**3.0.0**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
 
 [功能概览](#1-功能概览) · [主框架](#2-主框架) · [插件](#3-插件) · [构建与发布](#4-构建与发布) · [数据与日志](#5-数据与日志) · [开发与扩展](#6-开发与扩展)
 
@@ -77,6 +77,7 @@ Settings 通过现有 IPC 提交设置和模块开关；Runner 调用模块接�
 ├── Kit.exe
 ├── Kit.*ModuleInterface.dll
 ├── Kit.Awake.exe
+├── Kit.LightSwitch.Cli.exe
 ├── LightSwitchService/Kit.LightSwitchService.exe
 ├── LocalserverWorker/Kit.LocalserverWorker.exe
 ├── AIHubWorker/Kit.AIHubWorker.exe
@@ -106,20 +107,37 @@ flowchart LR
 - **运行方式**：独立 Awake 进程执行唤醒策略；禁用模块或 Runner 退出后结束。
 - **配置与说明**：`Awake/`；[模块文档](src/modules/awake/README.md)。
 
-### 3.2 Light Switch：主题切换
+### 3.2 Light Switch：主题计划与 CLI 工具
 
-按时间或日出日落计划切换 Windows 明暗主题，也支持手动动作和快捷键。
+按固定时间、日出日落或夜间模式计划自动切换 Windows 明暗主题，并提供完整的命令行交互控制（`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`）。Awake 与 LightSwitch 严格落实零快捷键轻量化设计。
 
 ```mermaid
 flowchart LR
     R["Runner"] -->|"加载 / 启用"| MI["Kit.LightSwitchModuleInterface.dll"]
     MI -->|"启动 / 停止"| S["Kit.LightSwitchService.exe"]
     S -->|"计划切换"| LIB["LightSwitchLib"]
-    MI -->|"手动动作 / 快捷键"| LIB
+    CLI["Kit.LightSwitch.Cli.exe"] -->|"安全命名管道"| S
     LIB --> OS["Windows 明暗主题"]
 ```
 
 - **运行方式**：Service 执行计划，关闭 Settings 不影响计划；禁用模块会停止 Service。
+- **CLI 命令行**：`Kit.LightSwitch.Cli.exe` 支持状态查询、主题即时反转与计划控制，支持标准 JSON 响应结构（通过安全命名管道 `Kit_LightSwitch_Cli_{sessionId}`）：
+  ```powershell
+  # 查询当前主题与计划状态（文本或标准 JSON 信封）
+  Kit.LightSwitch.Cli.exe status
+  Kit.LightSwitch.Cli.exe status --json
+
+  # 即时切换或反转主题
+  Kit.LightSwitch.Cli.exe light
+  Kit.LightSwitch.Cli.exe dark
+  Kit.LightSwitch.Cli.exe toggle
+
+  # 计划任务启停与模式配置
+  Kit.LightSwitch.Cli.exe schedule enable --mode fixed-hours
+  Kit.LightSwitch.Cli.exe schedule enable --mode sunset-to-sunrise
+  Kit.LightSwitch.Cli.exe schedule enable --mode follow-night-light
+  Kit.LightSwitch.Cli.exe schedule disable
+  ```
 - **配置与源码**：`LightSwitch/`；[模块目录](src/modules/LightSwitch)。
 
 ### 3.3 Localserver：本地服务管理

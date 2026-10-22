@@ -62,6 +62,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\common\interop\two_way_pipe_message_ipc.cpp" />
+    <ClCompile Include="..\common\interop\pipe_caller_auth.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\common\updating\updateState.cpp" />
     <ClCompile Include="auto_start_helper.cpp" />
     <ClCompile Include="centralized_hotkeys.cpp" />
@@ -72,7 +75,7 @@
     </ClCompile>
     <ClCompile Include="kit_module.cpp" />
     <ClCompile Include="main.cpp" />
-  <ClCompile Include="quick_access_host.cpp" />
+    <ClCompile Include="quick_access_host.cpp" />
     <ClCompile Include="restart_elevated.cpp" />
     <ClCompile Include="centralized_kb_hook.cpp" />
     <ClCompile Include="settings_window.cpp" />
@@ -86,8 +89,9 @@
     <ClInclude Include="ActionRunnerUtils.h" />
     <ClInclude Include="auto_start_helper.h" />
     <ClInclude Include="centralized_hotkeys.h" />
-  <ClInclude Include="quick_access_host.h" />
+    <ClInclude Include="quick_access_host.h" />
     <ClInclude Include="general_settings.h" />
+    <ClInclude Include="general_settings_reader.h" />
     <ClInclude Include="hotkey_conflict_detector.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="centralized_kb_hook.h" />
@@ -95,6 +99,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="restart_elevated.h" />
     <ClInclude Include="settings_window.h" />
+    <ClInclude Include="settings_window_startup.h" />
     <ClInclude Include="ai_hub_ipc.h" />
     <ClInclude Include="trace.h" />
     <ClInclude Include="tray_icon.h" />

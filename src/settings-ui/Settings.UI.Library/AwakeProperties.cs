@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -12,6 +12,8 @@ namespace Kit.Settings.UI.Library
 {
     public class AwakeProperties
     {
+        private readonly Dictionary<string, uint> _customTrayTimes = [];
+
         public AwakeProperties()
         {
             KeepDisplayOn = false;
@@ -19,7 +21,6 @@ namespace Kit.Settings.UI.Library
             IntervalHours = 0;
             IntervalMinutes = 1;
             ExpirationDateTime = DateTimeOffset.Now;
-            CustomTrayTimes = [];
         }
 
         [JsonPropertyName("keepDisplayOn")]
@@ -39,6 +40,10 @@ namespace Kit.Settings.UI.Library
 
         [JsonPropertyName("customTrayTimes")]
         [CmdConfigureIgnore]
-        public Dictionary<string, uint> CustomTrayTimes { get; set; }
+        public Dictionary<string, uint> CustomTrayTimes
+        {
+            get => _customTrayTimes;
+            init => _customTrayTimes = value ?? [];
+        }
     }
 }

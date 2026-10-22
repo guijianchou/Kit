@@ -2,9 +2,9 @@
 
 **Language / 语言:** English | [中文](README_zh.md)
 
-Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). It reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
+Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys) (synchronized with PowerToys upstream **v0.102.2933.0**). It reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-Current source version: **2.6.1**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
+Current source version: **3.0.0**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
 [Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
@@ -77,6 +77,7 @@ Only the main components are shown. Keep the complete build or staged directory 
 ├── Kit.exe
 ├── Kit.*ModuleInterface.dll
 ├── Kit.Awake.exe
+├── Kit.LightSwitch.Cli.exe
 ├── LightSwitchService/Kit.LightSwitchService.exe
 ├── LocalserverWorker/Kit.LocalserverWorker.exe
 ├── AIHubWorker/Kit.AIHubWorker.exe
@@ -106,20 +107,37 @@ flowchart LR
 - **Runtime**: a separate Awake process applies the policy; disabling the module or exiting Runner ends it.
 - **Configuration and details**: `Awake/`; [module documentation](src/modules/awake/README.md).
 
-### 3.2 Light Switch: theme scheduling
+### 3.2 Light Switch: theme scheduling and CLI
 
-Switch Windows light/dark themes by time or sunrise/sunset, with manual actions and shortcuts.
+Switch Windows light/dark themes by schedule, sunset/sunrise, or night light, with complete command-line control (`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`). Awake and LightSwitch adhere to Kit's zero-hotkey policy.
 
 ```mermaid
 flowchart LR
     R["Runner"] -->|"load / enable"| MI["Kit.LightSwitchModuleInterface.dll"]
     MI -->|"start / stop"| S["Kit.LightSwitchService.exe"]
     S -->|"scheduled changes"| LIB["LightSwitchLib"]
-    MI -->|"manual action / shortcut"| LIB
+    CLI["Kit.LightSwitch.Cli.exe"] -->|"secure IPC pipe"| S
     LIB --> OS["Windows light/dark theme"]
 ```
 
 - **Runtime**: the Service runs the schedule independently of the Settings window. Disabling the module stops the Service.
+- **CLI tool**: `Kit.LightSwitch.Cli.exe` allows scripted querying and switching with structured JSON output over local IPC (`Kit_LightSwitch_Cli_{sessionId}`):
+  ```powershell
+  # Query current theme and scheduling state (human-readable or JSON)
+  Kit.LightSwitch.Cli.exe status
+  Kit.LightSwitch.Cli.exe status --json
+
+  # Apply theme or toggle immediately
+  Kit.LightSwitch.Cli.exe light
+  Kit.LightSwitch.Cli.exe dark
+  Kit.LightSwitch.Cli.exe toggle
+
+  # Manage scheduling
+  Kit.LightSwitch.Cli.exe schedule enable --mode fixed-hours
+  Kit.LightSwitch.Cli.exe schedule enable --mode sunset-to-sunrise
+  Kit.LightSwitch.Cli.exe schedule enable --mode follow-night-light
+  Kit.LightSwitch.Cli.exe schedule disable
+  ```
 - **Configuration and source**: `LightSwitch/`; [module directory](src/modules/LightSwitch).
 
 ### 3.3 Localserver: local service management

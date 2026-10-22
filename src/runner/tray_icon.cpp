@@ -16,10 +16,57 @@
 #include <common/utils/elevation.h>
 #include <common/Themes/theme_listener.h>
 #include <common/Themes/theme_helpers.h>
+#include <common/utils/window.h>
 
 namespace
 {
     HWND tray_icon_hwnd = NULL;
+
+    // Set when Windows confirms that the full session is ending so WM_DESTROY
+    // can skip cross-process cleanup the OS is already performing in parallel.
+    bool g_system_session_ending = false;
+
+    void log_session_end_message(UINT message, WPARAM wparam, LPARAM lparam)
+    {
+        if (message != WM_QUERYENDSESSION && message != WM_ENDSESSION)
+        {
+            return;
+        }
+
+        const auto flags = static_cast<DWORD>(lparam);
+        const bool close_app = (flags & ENDSESSION_CLOSEAPP) != 0;
+        const bool critical = (flags & ENDSESSION_CRITICAL) != 0;
+        const bool logoff = (flags & ENDSESSION_LOGOFF) != 0;
+        const wchar_t* reason = L"shutdown_or_restart";
+        if (close_app)
+        {
+            reason = L"restart_manager_close_app";
+        }
+        else if (logoff)
+        {
+            reason = L"logoff";
+        }
+
+        if (message == WM_QUERYENDSESSION)
+        {
+            Logger::info(L"Runner received WM_QUERYENDSESSION: reason={}, flags={:#010x}, close_app={}, critical={}, logoff={}",
+                         reason,
+                         flags,
+                         close_app,
+                         critical,
+                         logoff);
+        }
+        else
+        {
+            Logger::info(L"Runner received WM_ENDSESSION: session_ending={}, reason={}, flags={:#010x}, close_app={}, critical={}, logoff={}",
+                         wparam != FALSE,
+                         reason,
+                         flags,
+                         close_app,
+                         critical,
+                         logoff);
+        }
+    }
 
     enum
     {
@@ -137,6 +184,14 @@ void click_timer_elapsed()
 
 LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
+    log_session_end_message(message, wparam, lparam);
+
+    LRESULT session_end_result = 0;
+    if (handle_stateless_session_end_message(window, message, wparam, lparam, session_end_result, &g_system_session_ending))
+    {
+        return session_end_result;
+    }
+
     switch (message)
     {
     case WM_HOTKEY:
@@ -156,12 +211,17 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         }
         break;
     case WM_DESTROY:
-        if (tray_icon_created)
+        cancel_settings_window_startup();
+        Logger::info(L"Runner WM_DESTROY, system_session_ending={}", g_system_session_ending);
+        if (!g_system_session_ending)
         {
-            Shell_NotifyIcon(NIM_DELETE, &tray_icon_data);
-            tray_icon_created = false;
+            if (tray_icon_created)
+            {
+                Shell_NotifyIcon(NIM_DELETE, &tray_icon_data);
+                tray_icon_created = false;
+            }
+            close_settings_window();
         }
-        close_settings_window();
         PostQuitMessage(0);
         break;
     case WM_CLOSE:
@@ -494,6 +554,11 @@ void stop_tray_icon()
     {
         SendMessage(tray_icon_hwnd, WM_CLOSE, 0, 0);
     }
+}
+
+bool is_system_session_ending()
+{
+    return g_system_session_ending;
 }
 void update_quick_access_hotkey(bool enabled, PowerToysSettings::HotkeyObject hotkey)
 {

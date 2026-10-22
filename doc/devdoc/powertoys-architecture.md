@@ -2014,7 +2014,6 @@ ipc->start(pipe_name_runner, pipe_name_settings, policy);
 - doc/devdoc/kit-framework-structure.md：Kit 主框架源码结构详解
 - doc/devdoc/architecture-comparison.md：Kit vs PowerToys 架构对比
 - doc/devdoc/startup-optimization-analysis.md：启动性能优化专项分析
-- doc/devdoc/kit-sync-status.md：上游同步状态追踪
 
 ---
 

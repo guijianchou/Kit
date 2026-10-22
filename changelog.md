@@ -4,6 +4,14 @@
 
 ## English
 
+### 3.0.1
+
+- **Awake System.CommandLine 2.0.1 Alignment**:
+  - Migrated `Kit.Awake` (`Program.cs`) command-line parameter parsing to the official `System.CommandLine 2.0.1` API.
+  - Aligned option constructors, `Option.Validators.Add`, `parseResult.GetValue(...)` action bindings, and `parseResult.Invoke[Async]()` execution model with upstream PowerToys v0.102.
+  - Unified `System.CommandLine` package dependency across the entire solution, eliminating assembly version fragmentation and compilation errors in VS Code and Visual Studio.
+  - Retained Kit custom `--use-kit-config` alias and zero-telemetry policy.
+
 ### 3.0.0
 
 - **Upstream PowerToys v0.102.2933.0 Core Framework Synchronization**:
@@ -725,6 +733,14 @@
 ## 中文
 
 ## 更新日志
+
+### 3.0.1
+
+- **Awake 命令行解析对齐 System.CommandLine 2.0.1 正式版规范**：
+  - 将 `Kit.Awake`（`Program.cs`）的命令行参数解析语法全面迁移至 `System.CommandLine 2.0.1` 官方 API。
+  - 对齐 `Option` 构造器、`Option.Validators.Add` 验证器、`parseResult.GetValue(...)` 动作委托绑定及 `parseResult.Invoke[Async]()` 调用模型。
+  - 全仓库统一依赖 `System.CommandLine 2.0.1`，彻底根除 VS Code 与 Visual Studio 2026 全量编译时的破坏性 API 报错与输出目录 DLL 版本覆盖冲突。
+  - 完整保留 Kit 特有的 `--use-kit-config` 命令行别名与零遥测策略。
 
 ### 3.0.0
 

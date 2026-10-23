@@ -13,7 +13,7 @@
         <x:Double x:Key="PageMaxWidth">1000</x:Double>
         <converters:UriToImageSourceConverter x:Key="UriToImageSourceConverter" />
     </UserControl.Resources>
-    <Grid Padding="24,0,0,0" RowSpacing="20">
+    <Grid Padding="24,0,0,0" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -31,7 +31,7 @@
         <ScrollViewer Grid.Row="1" AutomationProperties.AutomationId="PageScrollViewer">
             <Grid
                 Padding="0,0,24,32"
-                RowSpacing="24">
+                RowSpacing="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -39,7 +39,7 @@
                 </Grid.RowDefinitions>
 
                 <!--  Top panel  -->
-                <Grid MaxWidth="{StaticResource PageMaxWidth}" RowSpacing="16">
+                <Grid MaxWidth="{StaticResource PageMaxWidth}" Margin="0,0,0,18" RowSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -52,9 +52,13 @@
                         Width="64"
                         Height="64"
                         Margin="0,0,16,0"
+                        Padding="10"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
-                        CornerRadius="{StaticResource OverlayCornerRadius}"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
                         Visibility="{x:Bind ModuleImageSource, Converter={StaticResource EmptyObjectToObjectConverter}}">
                         <Image AutomationProperties.AccessibilityView="Raw" Source="{x:Bind ModuleImageSource, Converter={StaticResource UriToImageSourceConverter}, Mode=OneWay}" />
                     </Border>
@@ -100,6 +104,7 @@
                     x:Name="SecondaryLinksPanel"
                     Grid.Row="2"
                     MaxWidth="{StaticResource PageMaxWidth}"
+                    Margin="0,24,0,0"
                     AutomationProperties.Name="{x:Bind SecondaryLinksHeader}"
                     Orientation="Vertical"
                     Visibility="{x:Bind SecondaryLinks.Count, Converter={StaticResource DoubleToVisibilityConverter}}">

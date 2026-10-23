@@ -42,6 +42,13 @@
             <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#254DD0E1" />
             <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FFFF77A9" />
             <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#25FF77A9" />
+
+            <!-- Mica 强调色微染：图标徽章底色 / 主页 Hero 渐变洗色（跟随系统强调色） -->
+            <SolidColorBrush x:Key="KitAccentTintBrush" Opacity="0.16" Color="{ThemeResource SystemAccentColorLight2}" />
+            <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.20" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="{ThemeResource SystemAccentColorLight1}" />
+                <GradientStop Offset="0.65" Color="Transparent" />
+            </LinearGradientBrush>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
@@ -74,6 +81,12 @@
             <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#15006E7A" />
             <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FFA8226A" />
             <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#15A8226A" />
+
+            <SolidColorBrush x:Key="KitAccentTintBrush" Opacity="0.12" Color="{ThemeResource SystemAccentColorDark1}" />
+            <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.28" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="{ThemeResource SystemAccentColorLight2}" />
+                <GradientStop Offset="0.65" Color="Transparent" />
+            </LinearGradientBrush>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="HighContrast">
@@ -103,6 +116,9 @@
             <SolidColorBrush x:Key="SectionBackupTintBrush" Color="{StaticResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+
+            <SolidColorBrush x:Key="KitAccentTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="KitHeroGradientBrush" Color="{StaticResource SystemColorWindowColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

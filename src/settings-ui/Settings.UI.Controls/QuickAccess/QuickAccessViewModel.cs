@@ -26,6 +26,7 @@ namespace Kit.Settings.UI.Controls
         private readonly IEnumerable<ModuleType> _moduleTypes;
         private readonly Func<ModuleType, bool>? _fallbackLauncher;
         private readonly DispatcherQueue _dispatcherQueue;
+        private readonly List<QuickAccessItem> _allItems = new();
         private GeneralSettings _generalSettings;
 
         public ObservableCollection<QuickAccessItem> Items { get; } = new();
@@ -83,6 +84,7 @@ namespace Kit.Settings.UI.Controls
                 AddFlyoutMenuItem(moduleType);
             }
 
+            SyncVisibleItems();
             RefreshVisibleItemCount();
         }
 
@@ -93,7 +95,7 @@ namespace Kit.Settings.UI.Controls
                 return;
             }
 
-            Items.Add(new QuickAccessItem
+            var item = new QuickAccessItem
             {
                 Title = _resourceLoader.GetString(Kit.Settings.UI.Library.Helpers.ModuleHelper.GetModuleLabelResourceName(moduleType)),
                 Tag = moduleType,
@@ -107,7 +109,9 @@ namespace Kit.Settings.UI.Controls
                         _fallbackLauncher?.Invoke(moduleType);
                     }
                 }),
-            });
+            };
+
+            _allItems.Add(item);
         }
 
         private void ModuleEnabledChanged()
@@ -121,11 +125,17 @@ namespace Kit.Settings.UI.Controls
                     RefreshItemsVisibility();
                 });
             }
+            else
+            {
+                _generalSettings = _settingsRepository.SettingsConfig;
+                _generalSettings.AddEnabledModuleChangeNotification(ModuleEnabledChanged);
+                RefreshItemsVisibility();
+            }
         }
 
         private void RefreshItemsVisibility()
         {
-            foreach (var item in Items)
+            foreach (var item in _allItems)
             {
                 if (item.Tag is ModuleType moduleType)
                 {
@@ -135,12 +145,39 @@ namespace Kit.Settings.UI.Controls
                 }
             }
 
+            SyncVisibleItems();
             RefreshVisibleItemCount();
+        }
+
+        private void SyncVisibleItems()
+        {
+            int targetIndex = 0;
+            foreach (var item in _allItems)
+            {
+                if (item.Visible)
+                {
+                    int existingIndex = Items.IndexOf(item);
+                    if (existingIndex < 0)
+                    {
+                        Items.Insert(targetIndex, item);
+                    }
+                    else if (existingIndex != targetIndex)
+                    {
+                        Items.Move(existingIndex, targetIndex);
+                    }
+
+                    targetIndex++;
+                }
+                else
+                {
+                    Items.Remove(item);
+                }
+            }
         }
 
         private void RefreshVisibleItemCount()
         {
-            VisibleItemCount = Items.Count(item => item.Visible);
+            VisibleItemCount = _allItems.Count(item => item.Visible);
         }
 
         private bool GetItemVisibility(ModuleType moduleType)

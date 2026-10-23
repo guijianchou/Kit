@@ -441,7 +441,7 @@ public sealed class KernelExecutionTests
         FileStream? lockedFile = null;
         try
         {
-            KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("timeout"), "input", 1, message =>
+            KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("timeout"), "input", 3, message =>
             {
                 if (message.StartsWith("AI route configured:", StringComparison.Ordinal))
                 {

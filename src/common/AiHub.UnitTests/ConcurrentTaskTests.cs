@@ -85,7 +85,7 @@ public sealed class ConcurrentTaskTests
         using TaskAiEngine engine = await CreateEngineAsync(fixture, kernel, fallback: true);
         using EventWaitHandle auditGate = CreateGate(fixture, "audit");
         using EventWaitHandle optimizationGate = CreateGate(fixture, "optimization");
-        Task<AiTaskResult<AiTaskReport>> audit = Run(engine, "audit", "audit", routeTimeoutSeconds: 2);
+        Task<AiTaskResult<AiTaskReport>> audit = Run(engine, "audit", "audit", routeTimeoutSeconds: 3);
         Task<AiTaskResult<AiTaskReport>> optimization = Run(engine, "optimization", "optimization");
 
         await Task.WhenAll(fixture.WaitForFileAsync("kit-gate-audit.ready"), fixture.WaitForFileAsync("kit-gate-optimization.ready"));

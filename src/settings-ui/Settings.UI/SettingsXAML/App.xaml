@@ -14,12 +14,12 @@
                 <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/KeyVisual/KeyVisual.xaml" />
                 <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/KeyVisual/KeyCharPresenter.xaml" />
                 <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/IsEnabledTextBlock/IsEnabledTextBlock.xaml" />
+                <ResourceDictionary Source="/SettingsXAML/Themes/Colors.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Controls/TitleBar/TitleBar.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Styles/TextBlock.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Styles/Button.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Styles/InfoBadge.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Styles/Surface.xaml" />
-                <ResourceDictionary Source="/SettingsXAML/Themes/Colors.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Themes/Generic.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Controls/Timeline/TimelineStyles.xaml" />
                 <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/ShortcutWithTextLabelControl/ShortcutWithTextLabelControl.xaml" />

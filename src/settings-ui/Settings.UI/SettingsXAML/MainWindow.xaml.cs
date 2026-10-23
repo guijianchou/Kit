@@ -177,6 +177,21 @@ namespace Kit.Settings.UI
             shellPage.TitleBar.Window = this;
             this.ExtendsContentIntoTitleBar = true;
             WindowHelpers.ForceTopBorder1PixelInsetOnWindows10(WindowNative.GetWindowHandle(this));
+            EnsureSupportedBackdrop();
+        }
+
+        // Mica requires Windows 11. On older systems fall back to desktop acrylic so the
+        // shell keeps a translucent material instead of a flat solid fill.
+        private void EnsureSupportedBackdrop()
+        {
+            if (Microsoft.UI.Composition.SystemBackdrops.MicaController.IsSupported())
+            {
+                return;
+            }
+
+            SystemBackdrop = Microsoft.UI.Composition.SystemBackdrops.DesktopAcrylicController.IsSupported()
+                ? new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop()
+                : null;
         }
 
         public void NavigateToSection(Type type)

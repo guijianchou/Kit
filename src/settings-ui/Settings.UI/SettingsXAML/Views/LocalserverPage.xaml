@@ -16,37 +16,26 @@
     NavigationCacheMode="Required"
     mc:Ignorable="d">
 
-    <local:NavigablePage.Resources>
-
-
-        <Style x:Key="MetricCompactStyle" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="{StaticResource KitMonoFontFamily}" />
-            <Setter Property="FontSize" Value="18" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-        </Style>
-
-
-    </local:NavigablePage.Resources>
-
     <Grid>
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup>
                 <VisualState>
                     <VisualState.StateTriggers>
-                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=StatusCardsGrid}" MinWidth="820" />
+                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=EnvironmentCard}" MinWidth="760" />
                     </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="EnvironmentCard.(Grid.ColumnSpan)" Value="1" />
-                        <Setter Target="SystemSessionColumn.(Grid.Row)" Value="0" />
-                        <Setter Target="SystemSessionColumn.(Grid.Column)" Value="1" />
-                        <Setter Target="SystemSessionColumn.(Grid.ColumnSpan)" Value="1" />
-                    </VisualState.Setters>
                 </VisualState>
                 <VisualState>
                     <VisualState.StateTriggers>
-                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=StatusCardsGrid}" MaxWidth="820" />
+                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=EnvironmentCard}" MaxWidth="760" />
                     </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="EnvDetailsStack.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="EnvTrendDivider.Visibility" Value="Collapsed" />
+                        <Setter Target="EnvTrendPanel.(Grid.Row)" Value="1" />
+                        <Setter Target="EnvTrendPanel.(Grid.Column)" Value="2" />
+                        <Setter Target="EnvTrendPanel.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="EnvTrendPanel.Margin" Value="0,12,0,0" />
+                    </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
@@ -258,11 +247,11 @@
                                                         <!-- Row 0: NAME + Tag + Lock -->
                                                         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                             <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center" />
-                                                            <Border Padding="4,1" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind TagVisibility, Mode=OneWay}" VerticalAlignment="Center">
+                                                            <Border Padding="6,2" CornerRadius="4" Background="{x:Bind TagBackgroundBrush, Mode=OneWay}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Visibility="{x:Bind TagVisibility, Mode=OneWay}" VerticalAlignment="Center">
                                                                 <TextBlock Text="{x:Bind TagLabel, Mode=OneWay}" FontSize="10" FontWeight="SemiBold" Foreground="{x:Bind TagBrush, Mode=OneWay}" />
                                                             </Border>
-                                                            <Border Padding="4,1" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" Visibility="{x:Bind AdoptedVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind AdoptedTooltip, Mode=OneWay}" VerticalAlignment="Center">
-                                                                <TextBlock x:Uid="Localserver_AdoptedBadge" Text="ADOPTED" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                                            <Border Padding="6,2" CornerRadius="4" Background="{ThemeResource BadgeWarningBackgroundBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Visibility="{x:Bind AdoptedVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind AdoptedTooltip, Mode=OneWay}" VerticalAlignment="Center">
+                                                                <TextBlock x:Uid="Localserver_AdoptedBadge" Text="ADOPTED" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource BadgeWarningForegroundBrush}" />
                                                             </Border>
                                                             <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind LockVisibility, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind LockTooltip, Mode=OneWay}" VerticalAlignment="Center" />
                                                         </StackPanel>
@@ -280,10 +269,10 @@
                                                         <TextBlock Grid.Row="0" Grid.Column="3" Text="{x:Bind UptimeText, Mode=OneWay}" Foreground="{x:Bind UptimeBrush, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" VerticalAlignment="Center" />
 
                                                         <!-- Row 0: CPU -->
-                                                        <TextBlock Grid.Row="0" Grid.Column="4" Text="{x:Bind CpuText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Row="0" Grid.Column="4" Text="{x:Bind CpuText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
 
                                                         <!-- Row 0: MEM -->
-                                                        <TextBlock Grid.Row="0" Grid.Column="5" Text="{x:Bind MemoryText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Row="0" Grid.Column="5" Text="{x:Bind MemoryText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
 
                                                         <!-- Row 0: PID -->
                                                         <TextBlock Grid.Row="0" Grid.Column="6" Text="{x:Bind PidText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontFamily="{StaticResource KitMonoFontFamily}" />
@@ -477,263 +466,209 @@
                             </Border>
 
                             <!-- ============================================================== -->
-                            <!-- 3. DIAGNOSTICS & SYSTEM TELEMETRY (Deep Inspection Deck)       -->
+                            <!-- 3. ENVIRONMENT DIAGNOSTICS (Full-Width Horizontal Deck)        -->
                             <!-- ============================================================== -->
-                            <Grid x:Name="StatusCardsGrid" ColumnSpacing="12" RowSpacing="12" Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.3*" />
-                                    <ColumnDefinition Width="1*" />
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                            <Border
+                                x:Name="EnvironmentCard"
+                                Margin="0,4,0,0"
+                                Padding="18,16"
+                                HorizontalAlignment="Stretch"
+                                Style="{StaticResource KitCardSurfaceStyle}">
+                                <StackPanel Spacing="12">
+                                    <!-- Top Header & Service Selector Bar -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource KitIconBadgeStyle}">
+                                                <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock x:Uid="Localserver_SectionEnvironment" Style="{StaticResource KitCardTitleTextStyle}" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <Border
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource KitStatusPillStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                <Ellipse Width="7" Height="7" Fill="{x:Bind ViewModel.EnvSummaryBrush, Mode=OneWay}" VerticalAlignment="Center" />
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{x:Bind ViewModel.EnvSummaryBrush, Mode=OneWay}"
+                                                    Text="{x:Bind ViewModel.EnvSummaryText, Mode=OneWay}"
+                                                    FontWeight="SemiBold"
+                                                    FontSize="12"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Border>
+                                        <ComboBox
+                                            x:Uid="Localserver_SelectedLineComboBox"
+                                            Grid.Column="2"
+                                            MinWidth="0"
+                                            Width="200"
+                                            Height="32"
+                                            Padding="10,0"
+                                            CornerRadius="6"
+                                            DisplayMemberPath="Name"
+                                            FontSize="12"
+                                            ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}"
+                                            SelectedItem="{x:Bind ViewModel.SelectedLine, Mode=TwoWay}"
+                                            ToolTipService.ToolTip="Select service to inspect" />
+                                    </Grid>
 
-                                <!-- Left: ENVIRONMENT Card -->
-                                <Border
-                                    x:Name="EnvironmentCard"
-                                    Grid.ColumnSpan="2"
-                                    Padding="18,16"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="{StaticResource OverlayCornerRadius}">
-                                    <Grid ColumnDefinitions="112,*" ColumnSpacing="18">
-                                        <!-- Health Ring -->
-                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                                    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                                    <!-- Horizontal Tiled Body: Health Ring | Metrics + Paths + Checks | Unified Resource Bars -->
+                                    <Grid ColumnDefinitions="104,Auto,*,Auto,248" RowDefinitions="Auto,Auto" ColumnSpacing="16">
+                                        <!-- Left: Health Ring -->
+                                        <StackPanel Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                                             <Grid Width="88" Height="88">
+                                                <Ellipse Width="68" Height="68" Fill="{ThemeResource SubtleFillColorSecondaryBrush}" />
                                                 <Ellipse Width="84" Height="84" Stroke="{ThemeResource CardStrokeColorDefaultBrush}" StrokeThickness="6" />
                                                 <Ellipse Width="84" Height="84" Stroke="{x:Bind ViewModel.HealthRingBrush, Mode=OneWay}" StrokeThickness="6" />
-                                                <TextBlock Width="76" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.HealthStateText, Mode=OneWay}" />
+                                                <TextBlock Width="72" Style="{StaticResource BodyStrongTextBlockStyle}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextTrimming="CharacterEllipsis" Text="{x:Bind ViewModel.HealthStateText, Mode=OneWay}" />
                                             </Grid>
                                         </StackPanel>
 
-                                        <Border Width="1" Margin="0,4" HorizontalAlignment="Right" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                        <Border Grid.Column="1" Grid.RowSpan="2" Width="1" Margin="0,2" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-                                        <!-- Diagnostics details -->
-                                        <StackPanel Grid.Column="1" Spacing="10">
-                                            <!-- Header and Service Selector -->
-                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                    <Ellipse Width="8" Height="8" Fill="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
-                                                    <TextBlock x:Uid="Localserver_SectionEnvironment" Style="{StaticResource BodyStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
-                                                </StackPanel>
-                                                <ComboBox
-                                                    x:Uid="Localserver_SelectedLineComboBox"
-                                                    Grid.Column="2"
-                                                    MinWidth="0"
-                                                    Width="180"
-                                                    Height="32"
-                                                    Padding="10,0"
-                                                    CornerRadius="4"
-                                                    DisplayMemberPath="Name"
-                                                    FontSize="12"
-                                                    ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}"
-                                                    SelectedItem="{x:Bind ViewModel.SelectedLine, Mode=TwoWay}"
-                                                    ToolTipService.ToolTip="Select service to inspect" />
-                                            </Grid>
-
-                                            <!-- Verdict Summary -->
-                                            <TextBlock Foreground="{x:Bind ViewModel.EnvSummaryBrush, Mode=OneWay}" Text="{x:Bind ViewModel.EnvSummaryText, Mode=OneWay}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis" />
-
-                                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-                                            <!-- 4 Baseline Metrics: PORT, PID, STATE, RUNTIMES -->
-                                            <Grid ColumnDefinitions="76,76,110,*" ColumnSpacing="12">
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_ColPort" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.EnvPortText, Mode=OneWay}" Style="{StaticResource KitMetricTextStyle}" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_ColPid" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.EnvPidText, Mode=OneWay}" Style="{StaticResource KitMetricTextStyle}" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2" Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_ColState" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,4,0,0">
-                                                        <Ellipse Width="7" Height="7" Fill="{x:Bind ViewModel.EnvStateBrush, Mode=OneWay}" VerticalAlignment="Center" />
-                                                        <TextBlock Text="{x:Bind ViewModel.EnvStateText, Mode=OneWay}" FontWeight="SemiBold" Foreground="{x:Bind ViewModel.EnvStateBrush, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                        <!-- Center: Metrics + Command/WorkingDir + Checks Chips -->
+                                        <StackPanel x:Name="EnvDetailsStack" Grid.Column="2" Spacing="10">
+                                            <!-- 4 Unified Metadata Tag Tiles: PORT, PID, STATE, RUNTIMES -->
+                                            <Grid ColumnDefinitions="1*,1*,1.2*,1.6*" ColumnSpacing="10">
+                                                <Border Padding="10,7" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock x:Uid="Localserver_ColPort" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.EnvPortText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" />
                                                     </StackPanel>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="3" Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_RuntimesLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.EnvRuntimesText, Mode=OneWay}" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
-                                                </StackPanel>
-                                            </Grid>
-
-                                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-                                            <!-- CHECKS Chips -->
-                                            <StackPanel Spacing="4">
-                                                <TextBlock x:Uid="Localserver_ChecksLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                <ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto" VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
-                                                    <ItemsControl ItemsSource="{x:Bind ViewModel.EnvironmentCheckChips, Mode=OneWay}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate>
-                                                                <StackPanel Orientation="Horizontal" Spacing="8" />
-                                                            </ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="viewModels:EnvironmentCheckChipModel">
-                                                                <Border Padding="8,4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{x:Bind Brush}" BorderThickness="1" CornerRadius="4" ToolTipService.ToolTip="{x:Bind Tooltip}">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <Ellipse Width="6" Height="6" Fill="{x:Bind Brush}" VerticalAlignment="Center" />
-                                                                        <TextBlock VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Label}" />
-                                                                        <Button AutomationProperties.Name="Fix" Width="22" Height="22" CornerRadius="4" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Visibility="{x:Bind FixVisibility}">
-                                                                            <FontIcon FontSize="10" Glyph="&#xE712;" />
-                                                                            <Button.Flyout>
-                                                                                <MenuFlyout>
-                                                                                    <MenuFlyoutItem x:Uid="Localserver_CopyFixCommandMenu" Click="CopyFixCommand_Click" DataContext="{x:Bind}" Visibility="{x:Bind FixCommandVisibility}" />
-                                                                                    <MenuFlyoutItem x:Uid="Localserver_ReleasePortMenu" Click="ReleasePort_Click" DataContext="{x:Bind}" Visibility="{x:Bind ReleasePortVisibility}" />
-                                                                                </MenuFlyout>
-                                                                            </Button.Flyout>
-                                                                        </Button>
-                                                                    </StackPanel>
-                                                                </Border>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </ScrollViewer>
-                                            </StackPanel>
-
-                                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-                                            <!-- Secondary details: COMMAND & ARGS and WORKING DIR -->
-                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_CommandAndArgsLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.EnvCommandText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTipService.ToolTip="{x:Bind ViewModel.EnvCommandText, Mode=OneWay}" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_WorkingDirLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.EnvCwdText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTipService.ToolTip="{x:Bind ViewModel.EnvCwdText, Mode=OneWay}" />
-                                                </StackPanel>
-                                            </Grid>
-
-                                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-                                            <!-- CPU Trend Canvas -->
-                                            <Grid RowDefinitions="Auto,*" RowSpacing="4">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <TextBlock x:Uid="Localserver_CpuTrendLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.StatusChartRangeText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                                </Grid>
-                                                <Border Grid.Row="1" Height="50" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="4" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" SizeChanged="OnStatusChartSizeChanged">
-                                                    <Grid>
-                                                        <Path Data="{x:Bind ViewModel.StatusCurveFillGeometry, Mode=OneWay}"
-                                                              Fill="{ThemeResource AccentFillColorDefaultBrush}"
-                                                              Opacity="0.14" />
-                                                        <Path Data="{x:Bind ViewModel.StatusCurveGeometry, Mode=OneWay}"
-                                                              Stroke="{ThemeResource AccentFillColorDefaultBrush}"
-                                                              StrokeThickness="1.75"
-                                                              StrokeLineJoin="Round"
-                                                              StrokeStartLineCap="Round"
-                                                              StrokeEndLineCap="Round" />
-                                                    </Grid>
+                                                </Border>
+                                                <Border Grid.Column="1" Padding="10,7" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock x:Uid="Localserver_ColPid" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.EnvPidText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Grid.Column="2" Padding="10,7" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock x:Uid="Localserver_ColState" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <Ellipse Width="7" Height="7" Fill="{x:Bind ViewModel.EnvStateBrush, Mode=OneWay}" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{x:Bind ViewModel.EnvStateText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{x:Bind ViewModel.EnvStateBrush, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Grid.Column="3" Padding="10,7" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock x:Uid="Localserver_RuntimesLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.EnvRuntimesText, Mode=OneWay}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
                                                 </Border>
                                             </Grid>
+
+                                            <!-- Secondary details: COMMAND & ARGS and WORKING DIR -->
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock x:Uid="Localserver_CommandAndArgsLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                    <Border Padding="10,6" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                        <TextBlock Text="{x:Bind ViewModel.EnvCommandText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" Style="{StaticResource CaptionTextBlockStyle}" IsTextSelectionEnabled="True" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTipService.ToolTip="{x:Bind ViewModel.EnvCommandText, Mode=OneWay}" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="4">
+                                                    <TextBlock x:Uid="Localserver_WorkingDirLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                    <Border Padding="10,6" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                        <TextBlock Text="{x:Bind ViewModel.EnvCwdText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" Style="{StaticResource CaptionTextBlockStyle}" IsTextSelectionEnabled="True" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTipService.ToolTip="{x:Bind ViewModel.EnvCwdText, Mode=OneWay}" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- CHECKS Chips (Horizontally Tiled WrapPanel with Unified Semantic Badges) -->
+                                            <StackPanel Spacing="6">
+                                                <TextBlock x:Uid="Localserver_ChecksLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <ItemsControl ItemsSource="{x:Bind ViewModel.EnvironmentCheckChips, Mode=OneWay}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <tkcontrols:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="6" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="viewModels:EnvironmentCheckChipModel">
+                                                            <Border Padding="10,5" Background="{x:Bind BackgroundBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" ToolTipService.ToolTip="{x:Bind Tooltip}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <FontIcon Glyph="{x:Bind StatusGlyph}" FontSize="11" Foreground="{x:Bind ForegroundBrush}" VerticalAlignment="Center" />
+                                                                    <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{x:Bind ForegroundBrush}" Text="{x:Bind Label}" />
+                                                                    <Button AutomationProperties.Name="Fix" Width="22" Height="22" CornerRadius="4" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Visibility="{x:Bind FixVisibility}">
+                                                                        <FontIcon FontSize="10" Glyph="&#xE712;" />
+                                                                        <Button.Flyout>
+                                                                            <MenuFlyout>
+                                                                                <MenuFlyoutItem x:Uid="Localserver_CopyFixCommandMenu" Click="CopyFixCommand_Click" DataContext="{x:Bind}" Visibility="{x:Bind FixCommandVisibility}" />
+                                                                                <MenuFlyoutItem x:Uid="Localserver_ReleasePortMenu" Click="ReleasePort_Click" DataContext="{x:Bind}" Visibility="{x:Bind ReleasePortVisibility}" />
+                                                                            </MenuFlyout>
+                                                                        </Button.Flyout>
+                                                                    </Button>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
                                         </StackPanel>
+
+                                        <Border x:Name="EnvTrendDivider" Grid.Column="3" Width="1" Margin="0,2" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                                        <!-- Right: Unified Process Resource Telemetry (CPU & Memory Dynamic Bars) -->
+                                        <Border x:Name="EnvTrendPanel" Grid.Column="4" Padding="14,12" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Stretch" SizeChanged="OnStatusChartSizeChanged">
+                                            <StackPanel Spacing="12" VerticalAlignment="Center">
+                                                <!-- CPU Usage Bar -->
+                                                <StackPanel Spacing="5">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <FontIcon Glyph="&#xE950;" FontSize="11" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                                            <TextBlock x:Uid="Localserver_CpuTrendLabel" Style="{StaticResource KitMicroLabelTextStyle}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.EnvCpuText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontWeight="SemiBold" FontSize="12.5" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
+                                                    </Grid>
+                                                    <local:UsageProgressBar
+                                                        Height="6"
+                                                        CornerRadius="3"
+                                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                                        Maximum="100"
+                                                        TargetValue="{x:Bind ViewModel.EnvCpuPercent, Mode=OneWay}"
+                                                        AutomationProperties.Name="CPU"
+                                                        AutomationProperties.HelpText="{x:Bind ViewModel.EnvCpuText, Mode=OneWay}" />
+                                                </StackPanel>
+
+                                                <!-- Memory Usage Bar -->
+                                                <StackPanel Spacing="5">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <FontIcon Glyph="&#xE964;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                            <TextBlock x:Uid="Localserver_ColMem" Style="{StaticResource KitMicroLabelTextStyle}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.EnvMemoryText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontWeight="SemiBold" FontSize="12.5" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
+                                                    </Grid>
+                                                    <local:UsageProgressBar
+                                                        Height="6"
+                                                        CornerRadius="3"
+                                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                                        Maximum="100"
+                                                        TargetValue="{x:Bind ViewModel.EnvMemoryPercent, Mode=OneWay}"
+                                                        AutomationProperties.Name="Memory"
+                                                        AutomationProperties.HelpText="{x:Bind ViewModel.EnvMemoryText, Mode=OneWay}" />
+                                                </StackPanel>
+
+                                                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                                                <!-- Peak CPU & Uptime Footer -->
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Text="{x:Bind ViewModel.StatusChartRangeText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" Style="{StaticResource CaptionTextBlockStyle}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE823;" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{x:Bind ViewModel.EnvUptimeText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
                                     </Grid>
-                                </Border>
-
-                                <!-- Right: SYSTEM and SESSION Column -->
-                                <StackPanel x:Name="SystemSessionColumn" Grid.Row="1" Grid.ColumnSpan="2" Spacing="12">
-                                    <!-- SYSTEM Card -->
-                                    <Border
-                                        Padding="16,14"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="{StaticResource OverlayCornerRadius}">
-                                        <StackPanel Spacing="10">
-                                            <TextBlock x:Uid="Localserver_SectionSystem" Style="{StaticResource BodyStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
-
-                                            <!-- GPU info -->
-                                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="2">
-                                                <TextBlock Text="{x:Bind ViewModel.GpuNameText, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                    <Ellipse Width="7" Height="7" Fill="{x:Bind ViewModel.GpuStatusDotBrush, Mode=OneWay}" VerticalAlignment="Center" />
-                                                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.GpuStatusText, Mode=OneWay}" />
-                                                </StackPanel>
-                                                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.GpuDriverText, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-
-                                            <!-- GPU 3-meter row -->
-                                            <Grid ColumnDefinitions="1*,1.3*,1*" ColumnSpacing="12">
-                                                <StackPanel Spacing="3">
-                                                    <TextBlock x:Uid="Localserver_GpuLoadLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.GpuUtilizationText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" />
-                                                    <ProgressBar Maximum="100" Value="{x:Bind ViewModel.GpuUtilizationValue, Mode=OneWay}" CornerRadius="2" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Spacing="3">
-                                                    <TextBlock x:Uid="Localserver_GpuVramLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.GpuMemoryText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" />
-                                                    <ProgressBar Maximum="100" Value="{x:Bind ViewModel.GpuMemoryValue, Mode=OneWay}" CornerRadius="2" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2" Spacing="3">
-                                                    <TextBlock x:Uid="Localserver_GpuTempLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.GpuTemperatureText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" />
-                                                    <ProgressBar Maximum="100" Value="{x:Bind ViewModel.GpuTemperatureValue, Mode=OneWay}" CornerRadius="2" />
-                                                </StackPanel>
-                                            </Grid>
-
-                                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-                                            <!-- Host CPU & RAM -->
-                                            <Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
-                                                <TextBlock Grid.ColumnSpan="3" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.SystemProcessorText, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Row="1" x:Uid="Localserver_HostCpuLabel" Style="{StaticResource KitMicroLabelTextStyle}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.SystemCpuText, Mode=OneWay}" FontWeight="SemiBold" MinWidth="48" VerticalAlignment="Center" />
-                                                <ProgressBar Grid.Row="1" Grid.Column="2" Maximum="100" Value="{x:Bind ViewModel.SystemCpuValue, Mode=OneWay}" VerticalAlignment="Center" CornerRadius="2" />
-
-                                                <TextBlock Grid.Row="2" x:Uid="Localserver_HostRamLabel" Style="{StaticResource KitMicroLabelTextStyle}" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.SystemRamText, Mode=OneWay}" FontWeight="SemiBold" MinWidth="48" VerticalAlignment="Center" />
-                                                <ProgressBar Grid.Row="2" Grid.Column="2" Maximum="100" Value="{x:Bind ViewModel.SystemRamValue, Mode=OneWay}" VerticalAlignment="Center" CornerRadius="2" />
-                                            </Grid>
-
-                                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-                                            <!-- Host OS info -->
-                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                <TextBlock x:Uid="Localserver_HostLabel" Style="{StaticResource KitMicroLabelTextStyle}" VerticalAlignment="Top" Margin="0,2,0,0" />
-                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.SystemEditionText, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" />
-                                                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.SystemBuildText, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- SESSION Card -->
-                                    <Border
-                                        Padding="16,14"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="{StaticResource OverlayCornerRadius}">
-                                        <StackPanel Spacing="10">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock x:Uid="Localserver_SectionSession" Style="{StaticResource BodyStrongTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" />
-                                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.SessionUptimeText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            </Grid>
-                                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                                                <StackPanel Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_RegisteredLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.SessionRegisteredText, Mode=OneWay}" Style="{StaticResource MetricCompactStyle}" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_RunningLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.SessionRunningText, Mode=OneWay}" Style="{StaticResource MetricCompactStyle}" Foreground="{x:Bind ViewModel.SessionRunningBrush, Mode=OneWay}" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2" Spacing="2">
-                                                    <TextBlock x:Uid="Localserver_FaultedLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.SessionFaultedText, Mode=OneWay}" Style="{StaticResource MetricCompactStyle}" Foreground="{x:Bind ViewModel.SessionFaultedBrush, Mode=OneWay}" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
                                 </StackPanel>
-                            </Grid>
+                            </Border>
 
                             <!-- ============================================================== -->
                             <!-- 4. BOTTOM OUTPUT DRAWER (Diagnostic Console)                  -->

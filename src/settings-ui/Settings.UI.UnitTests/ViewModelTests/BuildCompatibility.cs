@@ -1225,7 +1225,7 @@ namespace ViewModelTests
             var closeSettingsWindow = settingsWindow.IndexOf("bool close_settings_window()", openSettingsWindow, StringComparison.Ordinal);
             var runSettingsWindow = settingsWindow.IndexOf("void run_settings_window(std::optional<std::wstring> settings_window)", StringComparison.Ordinal);
             var openToken = settingsWindow.IndexOf("if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))", StringComparison.Ordinal);
-            var ipcStart = settingsWindow.IndexOf("current_settings_ipc->start(hToken);", StringComparison.Ordinal);
+            var ipcStart = settingsWindow.IndexOf("current_settings_ipc->start(hToken", StringComparison.Ordinal);
             var processIdAssignment = settingsWindow.IndexOf("g_settings_process_id = process_info.dwProcessId;", StringComparison.Ordinal);
             var processIdAfterCreateProcess = settingsWindow.IndexOf("g_settings_process_id = process_info.dwProcessId;", createProcessSuccess, StringComparison.Ordinal);
             var launchGuardRelease = settingsWindow.IndexOf("g_isLaunchInProgress = false;", processIdAfterCreateProcess, StringComparison.Ordinal);
@@ -1279,7 +1279,7 @@ namespace ViewModelTests
         {
             var settingsWindow = NormalizeLineEndings(File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp")));
 
-            var ipcStart = settingsWindow.IndexOf("current_settings_ipc->start(hToken);", StringComparison.Ordinal);
+            var ipcStart = settingsWindow.IndexOf("current_settings_ipc->start(hToken", StringComparison.Ordinal);
             var processIdAssignment = settingsWindow.IndexOf("g_settings_process_id = process_info.dwProcessId;", ipcStart, StringComparison.Ordinal);
             Assert.AreNotEqual(-1, ipcStart, "Settings launch should still start runner/settings IPC.");
             Assert.AreNotEqual(-1, processIdAssignment, "Settings launch should register the Settings process id after IPC setup.");
@@ -2811,7 +2811,7 @@ namespace ViewModelTests
         public void KitRunnerShouldFinishModuleShutdownBeforeReleasingSingleton()
         {
             var source = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
-            int settingsClosed = source.IndexOf("const bool settings_closed = close_settings_window();", StringComparison.Ordinal);
+            int settingsClosed = source.IndexOf("const bool settings_closed =", StringComparison.Ordinal);
             int hookStopped = source.IndexOf("CentralizedKeyboardHook::Stop();", settingsClosed, StringComparison.Ordinal);
             int modulesDestroyed = source.IndexOf("modules().clear();", settingsClosed, StringComparison.Ordinal);
             int mutexReleased = source.IndexOf("msi_mutex.reset(nullptr);", settingsClosed, StringComparison.Ordinal);
@@ -2935,24 +2935,21 @@ namespace ViewModelTests
         public void KitBundledRuntimeEventsShouldUseKitNames()
         {
             var sharedConstants = File.ReadAllText(FindSourceFile("src", "common", "interop", "shared_constants.h"));
+            var themeHelper = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchLib", "ThemeHelper.h"));
             var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
             var lightSwitchService = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchService", "LightSwitchService.cpp"));
 
             StringAssert.Contains(sharedConstants, "KitRunnerTerminateSettingsEvent");
             StringAssert.Contains(sharedConstants, "KitAwakeExitEvent");
             StringAssert.Contains(sharedConstants, "Kit-LightSwitch-ToggleEvent");
+            StringAssert.Contains(themeHelper, "Local\\\\Kit-LightSwitch-ToggleRequest-49904");
             StringAssert.Contains(lightSwitchInterface, "CommonSharedConstants::LIGHTSWITCH_TOGGLE_EVENT");
-            StringAssert.Contains(lightSwitchInterface, "KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
+            StringAssert.Contains(lightSwitchInterface, "LIGHT_SWITCH_TOGGLE_REQUEST_SEMAPHORE");
             StringAssert.Contains(lightSwitchInterface, "KIT_LIGHTSWITCH_SERVICE_STOP");
             StringAssert.Contains(lightSwitchInterface, "SetEvent(m_service_stop_event_handle)");
             StringAssert.Contains(lightSwitchInterface, "ResetEvent(m_service_stop_event_handle)");
-            StringAssert.Contains(lightSwitchInterface, "CloseEventHandles();");
-            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_manual_override_event_handle);");
-            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_service_stop_event_handle);");
-            StringAssert.Contains(lightSwitchInterface, "CloseHandleIfSet(m_toggle_event_handle);");
             StringAssert.Contains(lightSwitchService, "KIT_LIGHTSWITCH_SERVICE_STOP");
-            StringAssert.Contains(lightSwitchService, "KIT_LIGHTSWITCH_MANUAL_OVERRIDE");
-            Assert.IsFalse(lightSwitchInterface.Contains("CloseHandle(m_manual_override_event_handle);\n            m_manual_override_event_handle = nullptr;", StringComparison.Ordinal), "LightSwitch disable should not close one event handle conditionally while leaking the other module event handles.");
+            StringAssert.Contains(lightSwitchService, "LIGHT_SWITCH_TOGGLE_REQUEST_SEMAPHORE");
             Assert.IsFalse(sharedConstants.Contains("PowerToysRunnerTerminateSettingsEvent", StringComparison.Ordinal), "Kit Settings IPC must not share the PowerToys terminate event.");
             Assert.IsFalse(sharedConstants.Contains("PowerToysAwakeExitEvent", StringComparison.Ordinal), "Kit Awake must not share the PowerToys exit event.");
             Assert.IsFalse(sharedConstants.Contains("PowerToys-LightSwitch-ToggleEvent", StringComparison.Ordinal), "Kit LightSwitch must not share the PowerToys toggle event.");
@@ -2972,7 +2969,7 @@ namespace ViewModelTests
             var lightSwitchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml"));
 
             StringAssert.Contains(lightSwitchInterface, "void ToggleTheme()");
-            StringAssert.Contains(lightSwitchInterface, "SetEvent(m_manual_override_event_handle)");
+            StringAssert.Contains(lightSwitchInterface, "ReleaseSemaphore(m_toggle_request_semaphore, 1, nullptr)");
             Assert.IsFalse(lightSwitchInterface.Contains("KIT_LIGHTSWITCH_FORCE_LIGHT", StringComparison.Ordinal), "LightSwitch should not create a named force-light event that no code waits on.");
             Assert.IsFalse(lightSwitchInterface.Contains("KIT_LIGHTSWITCH_FORCE_DARK", StringComparison.Ordinal), "LightSwitch should not create a named force-dark event that no code waits on.");
             Assert.IsFalse(lightSwitchInterface.Contains("m_force_light_event_handle", StringComparison.Ordinal), "LightSwitch should not keep unused force-light event handles.");
@@ -2994,16 +2991,15 @@ namespace ViewModelTests
         {
             var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
 
-            StringAssert.Contains(lightSwitchInterface, "void stop_service_if_running()");
-            StringAssert.Contains(lightSwitchInterface, "if (g_settings.m_scheduleMode == ScheduleMode::Off)");
-            StringAssert.Contains(lightSwitchInterface, "stop_service_if_running();");
+            StringAssert.Contains(lightSwitchInterface, "bool EnsureServiceRunningLocked()");
             StringAssert.Contains(lightSwitchInterface, "start_service_if_needed();");
-            var startService = lightSwitchInterface[lightSwitchInterface.IndexOf("void start_service_if_needed()", StringComparison.Ordinal)..lightSwitchInterface.IndexOf("void stop_service_if_running()", StringComparison.Ordinal)];
-            StringAssert.Contains(startService, "g_settings.m_scheduleMode == ScheduleMode::Off");
+            StringAssert.Contains(lightSwitchInterface, "EnsureServiceRunningLocked();");
+            var ensureService = lightSwitchInterface[lightSwitchInterface.IndexOf("bool LightSwitchInterface::EnsureServiceRunningLocked()", StringComparison.Ordinal)..lightSwitchInterface.IndexOf("void LightSwitchInterface::ToggleTheme()", StringComparison.Ordinal)];
+            StringAssert.Contains(ensureService, "if (!m_enabled || gpo_policy_enabled_configuration() == kit_gpo::gpo_rule_configured_disabled)");
             Assert.IsTrue(
-                startService.IndexOf("g_settings.m_scheduleMode == ScheduleMode::Off", StringComparison.Ordinal) <
-                startService.IndexOf("CreateProcessW", StringComparison.Ordinal),
-                "Every worker start must return early when the schedule is Off.");
+                ensureService.IndexOf("if (!m_enabled || gpo_policy_enabled_configuration() == kit_gpo::gpo_rule_configured_disabled)", StringComparison.Ordinal) <
+                ensureService.IndexOf("CreateProcessW", StringComparison.Ordinal),
+                "Every worker start must return early when the module is disabled or blocked by GPO.");
         }
 
         [TestMethod]
@@ -3015,17 +3011,12 @@ namespace ViewModelTests
             Assert.AreNotEqual(-1, enableStart, "LightSwitch module interface should expose enable().");
             var enableBody = lightSwitchInterface[enableStart..lightSwitchInterface.IndexOf("// Disable the powertoy", enableStart, StringComparison.Ordinal)];
 
-            StringAssert.Contains(enableBody, "if (m_enabled)");
-            StringAssert.Contains(enableBody, "if (!EnsureEventHandles())");
-            StringAssert.Contains(enableBody, "if (!StartToggleListener())");
+            StringAssert.Contains(enableBody, "std::lock_guard lifecycle_lock(m_lifecycle_mutex);");
+            StringAssert.Contains(enableBody, "std::lock_guard service_lock(m_service_mutex);");
             StringAssert.Contains(enableBody, "m_enabled = true;");
-            StringAssert.Contains(enableBody, "m_enabled = false;");
             StringAssert.Contains(enableBody, "Trace::Enable(true);");
-            Assert.IsFalse(enableBody.Contains("CreateProcessW", StringComparison.Ordinal), "Enabling LightSwitch should keep process creation on its listener, including when the schedule is Off.");
-            Assert.IsTrue(
-                enableBody.IndexOf("if (!StartToggleListener())", StringComparison.Ordinal) <
-                enableBody.IndexOf("Trace::Enable(true);", StringComparison.Ordinal),
-                "LightSwitch should finish starting its manual-toggle listener before reporting successful enablement.");
+            StringAssert.Contains(enableBody, "EnsureServiceRunningLocked();");
+            StringAssert.Contains(enableBody, "StartToggleListener();");
         }
 
         [TestMethod]

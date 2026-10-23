@@ -103,6 +103,11 @@ public sealed partial class UsageProgressBar : ProgressBar
             "Memory" => isDark ? Color.FromArgb(0xFF, 0xB1, 0x46, 0xC2) : Color.FromArgb(0xFF, 0x74, 0x4D, 0xA9),
             "Disk" => isDark ? Color.FromArgb(0xFF, 0x38, 0xAD, 0x62) : Color.FromArgb(0xFF, 0x0E, 0x7A, 0x0D),
             "Gpu" => isDark ? Color.FromArgb(0xFF, 0xFF, 0x8C, 0x00) : Color.FromArgb(0xFF, 0xD8, 0x3B, 0x01),
+            "Temperature" => value >= 80d
+                ? (isDark ? Color.FromArgb(0xFF, 0xFF, 0x52, 0x52) : Color.FromArgb(0xFF, 0xC4, 0x2B, 0x1C))
+                : value >= 65d
+                    ? (isDark ? Color.FromArgb(0xFF, 0xFF, 0x8C, 0x00) : Color.FromArgb(0xFF, 0xD8, 0x3B, 0x01))
+                    : (isDark ? Color.FromArgb(0xFF, 0xFB, 0xB0, 0x3B) : Color.FromArgb(0xFF, 0xCA, 0x50, 0x10)),
             _ => isDark ? Color.FromArgb(0xFF, 0x4C, 0xC2, 0xFF) : Color.FromArgb(0xFF, 0x00, 0x78, 0xD4),
         };
 
@@ -132,6 +137,12 @@ public sealed partial class UsageProgressBar : ProgressBar
             name.Contains("Storage", StringComparison.OrdinalIgnoreCase))
         {
             return "Disk";
+        }
+
+        if (name.Contains("Temp", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("温度", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Temperature";
         }
 
         if (name.Contains("GPU", StringComparison.OrdinalIgnoreCase) ||

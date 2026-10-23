@@ -11,7 +11,8 @@
     Closed="Window_Closed"
     mc:Ignorable="d">
     <Window.SystemBackdrop>
-        <MicaBackdrop Kind="BaseAlt" />
+        <!--  Mica (Base) is the Windows 11 material for NavigationView shells; the content layer on top supplies the tint.  -->
+        <MicaBackdrop Kind="Base" />
     </Window.SystemBackdrop>
     <local:ShellPage x:Name="shellPage" />
 </winuiex:WindowEx>

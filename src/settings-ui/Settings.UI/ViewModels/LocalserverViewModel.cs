@@ -38,6 +38,9 @@ namespace Kit.Settings.UI.ViewModels
     {
         public string Label { get; }
         public Brush Brush { get; }
+        public Brush BackgroundBrush { get; }
+        public Brush ForegroundBrush { get; }
+        public string StatusGlyph { get; }
         public string Tooltip { get; }
         public EnvironmentCheckFix? Fix { get; }
         public bool HasCommand => !string.IsNullOrWhiteSpace(Fix?.Command);
@@ -66,6 +69,27 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             Brush = brush;
+            BackgroundBrush = (Brush)Application.Current.Resources[item.Status switch
+            {
+                EnvironmentCheckStatus.Success => "BadgeSuccessBackgroundBrush",
+                EnvironmentCheckStatus.Warning => "BadgeWarningBackgroundBrush",
+                EnvironmentCheckStatus.Error => "BadgeWarningBackgroundBrush",
+                _ => "SubtleFillColorSecondaryBrush",
+            }];
+            ForegroundBrush = (Brush)Application.Current.Resources[item.Status switch
+            {
+                EnvironmentCheckStatus.Success => "BadgeSuccessForegroundBrush",
+                EnvironmentCheckStatus.Warning => "BadgeWarningForegroundBrush",
+                EnvironmentCheckStatus.Error => "SystemFillColorCriticalBrush",
+                _ => "TextFillColorSecondaryBrush",
+            }];
+            StatusGlyph = item.Status switch
+            {
+                EnvironmentCheckStatus.Success => "\uE73E",
+                EnvironmentCheckStatus.Warning => "\uE7BA",
+                EnvironmentCheckStatus.Error => "\uEA39",
+                _ => "\uE946",
+            };
             Fix = item.Fix;
 
             string tip = string.IsNullOrWhiteSpace(item.Summary) ? title : $"{title}\n{item.Summary}";
@@ -279,12 +303,22 @@ namespace Kit.Settings.UI.ViewModels
         public Brush TagBrush => (Brush)Application.Current.Resources[Definition.Tags.Count > 0
             ? Definition.Tags[0].ToLowerInvariant() switch
             {
-                "web" => "AccentFillColorDefaultBrush",
-                "ai" or "gpu" => "SystemFillColorCautionBrush",
-                "db" or "database" => "SystemFillColorSuccessBrush",
+                "web" => "BadgeInfoForegroundBrush",
+                "ai" or "gpu" => "BadgeWarningForegroundBrush",
+                "db" or "database" => "BadgeSuccessForegroundBrush",
                 _ => "TextFillColorSecondaryBrush",
             }
             : "TextFillColorSecondaryBrush"];
+
+        public Brush TagBackgroundBrush => (Brush)Application.Current.Resources[Definition.Tags.Count > 0
+            ? Definition.Tags[0].ToLowerInvariant() switch
+            {
+                "web" => "BadgeInfoBackgroundBrush",
+                "ai" or "gpu" => "BadgeWarningBackgroundBrush",
+                "db" or "database" => "BadgeSuccessBackgroundBrush",
+                _ => "SubtleFillColorSecondaryBrush",
+            }
+            : "SubtleFillColorSecondaryBrush"];
 
         public string PortText => (_runner.Port ?? Definition.DefaultPort)?.ToString(CultureInfo.InvariantCulture) ?? "—";
 
@@ -313,8 +347,10 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public string CpuText { get; private set; } = "—";
-        public string MemoryText { get; private set; } = "—";
+        public string CpuText { get; private set; } = "0.0%";
+        public double CpuPercent { get; private set; }
+        public string MemoryText { get; private set; } = "0 MB";
+        public double MemoryPercent { get; private set; }
         public string PidText => _runner.ProcessId?.ToString(CultureInfo.InvariantCulture) ?? "—";
 
         public bool IsRunning => State.IsActive();
@@ -420,20 +456,25 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RecordCpuSample(double? cpuPercent)
         {
-            _cpuHistory.Add(cpuPercent ?? 0d);
+            double clamped = Math.Clamp(cpuPercent ?? 0d, 0d, 100d);
+            _cpuHistory.Add(clamped);
             while (_cpuHistory.Count > 60)
             {
                 _cpuHistory.RemoveAt(0);
             }
 
-            CpuText = cpuPercent.HasValue ? $"{cpuPercent.Value:F1}%" : "—";
+            CpuPercent = clamped;
+            CpuText = cpuPercent.HasValue ? $"{clamped:F1}%" : "—";
+            OnPropertyChanged(nameof(CpuPercent));
             OnPropertyChanged(nameof(CpuText));
         }
 
-        public void SetMemoryText(string mem)
+        public void SetMemoryText(string mem, double memoryPercent = 0d)
         {
             MemoryText = mem;
+            MemoryPercent = Math.Clamp(memoryPercent, 0d, 100d);
             OnPropertyChanged(nameof(MemoryText));
+            OnPropertyChanged(nameof(MemoryPercent));
         }
 
         public async Task RefreshResourceSampleAsync(CancellationToken cancellationToken = default)
@@ -447,8 +488,12 @@ namespace Kit.Settings.UI.ViewModels
             long processGeneration = _runner.ProcessGeneration;
             if (processId is null || !State.IsActive())
             {
-                RecordCpuSample(0);
-                SetMemoryText("0 MB");
+                _cpuHistory.Clear();
+                CpuPercent = 0d;
+                CpuText = "0.0%";
+                OnPropertyChanged(nameof(CpuPercent));
+                OnPropertyChanged(nameof(CpuText));
+                SetMemoryText("0 MB", 0d);
                 return;
             }
 
@@ -491,7 +536,12 @@ namespace Kit.Settings.UI.ViewModels
 
                     RecordCpuSample(cpuPercent ?? 0);
                     double memMb = sample.WorkingSetBytes / 1024d / 1024d;
-                    SetMemoryText($"{memMb:F0} MB");
+                    long totalRamBytes = Math.Max(1L, GC.GetGCMemoryInfo().TotalAvailableMemoryBytes);
+                    double memPercent = Math.Clamp(
+                        Math.Max(sample.WorkingSetBytes * 100d / totalRamBytes, memMb > 0 ? Math.Min(100d, memMb / 2048d * 100d) : 0d),
+                        0d,
+                        100d);
+                    SetMemoryText($"{memMb:F0} MB", memPercent);
                 }
             }
             catch
@@ -499,7 +549,7 @@ namespace Kit.Settings.UI.ViewModels
                 if (!_disposed)
                 {
                     RecordCpuSample(null);
-                    SetMemoryText("—");
+                    SetMemoryText("—", 0d);
                 }
             }
         }
@@ -822,38 +872,11 @@ namespace Kit.Settings.UI.ViewModels
 
                 _ = StopAllLinesAsync();
 
-                GpuStatusText = "Localserver_HealthDisabled".GetLocalized();
-                GpuStatusDotBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-                GpuUtilizationValue = 0;
-                GpuUtilizationText = "—";
-                GpuMemoryValue = 0;
-                GpuMemoryText = "—";
-                GpuTemperatureValue = 0;
-                GpuTemperatureText = "—";
-
-                SystemCpuValue = 0;
-                SystemCpuText = "—";
-                SystemRamValue = 0;
-                SystemRamText = "—";
-
                 EnvHealthText = "Localserver_HealthDisabled".GetLocalized();
                 EnvHealthBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
                 EnvSummaryText = "Localserver_ServiceDisabled".GetLocalized();
                 EnvSummaryBrush = (Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
                 EnvironmentCheckChips.Clear();
-
-                OnPropertyChanged(nameof(GpuStatusText));
-                OnPropertyChanged(nameof(GpuStatusDotBrush));
-                OnPropertyChanged(nameof(GpuUtilizationValue));
-                OnPropertyChanged(nameof(GpuUtilizationText));
-                OnPropertyChanged(nameof(GpuMemoryValue));
-                OnPropertyChanged(nameof(GpuMemoryText));
-                OnPropertyChanged(nameof(GpuTemperatureValue));
-                OnPropertyChanged(nameof(GpuTemperatureText));
-                OnPropertyChanged(nameof(SystemCpuValue));
-                OnPropertyChanged(nameof(SystemCpuText));
-                OnPropertyChanged(nameof(SystemRamValue));
-                OnPropertyChanged(nameof(SystemRamText));
 
                 OnPropertyChanged(nameof(EnvHealthText));
                 OnPropertyChanged(nameof(EnvHealthBrush));
@@ -916,7 +939,6 @@ namespace Kit.Settings.UI.ViewModels
         private readonly ServiceCatalogStore _catalogStore;
         private readonly HubSettingsStore _hubSettingsStore;
         private readonly SecretStore _secretStore;
-        private readonly SystemResourceInspector _systemResourceInspector = new();
         private readonly DispatcherTimer _telemetryTimer = new();
         private readonly LocalserverLogSink _logSink;
         private CancellationTokenSource? _autoSaveCts;
@@ -1204,30 +1226,11 @@ namespace Kit.Settings.UI.ViewModels
         public Brush EnvSummaryBrush { get; private set; } = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
         public string EnvCommandText => SelectedLine?.ResolvedCommandText ?? "—";
         public string EnvCwdText => SelectedLine?.Cwd ?? "—";
-
-        // Zone 1: System card bindings
-        public string GpuNameText { get; private set; } = "Localserver_DetectingGpu".GetLocalized();
-        public string GpuStatusText { get; private set; } = "Localserver_HealthChecking".GetLocalized();
-        public Brush GpuStatusDotBrush { get; private set; } = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-        public string GpuDriverText { get; private set; } = "Localserver_DriverUnavailable".GetLocalized();
-        public double GpuUtilizationValue { get; private set; } = 0;
-        public string GpuUtilizationText { get; private set; } = "—";
-        public double GpuMemoryValue { get; private set; } = 0;
-        public string GpuMemoryText { get; private set; } = "—";
-        public double GpuTemperatureValue { get; private set; } = 0;
-        public string GpuTemperatureText { get; private set; } = "—";
-
-        public string SystemProcessorText { get; private set; } = "Localserver_DetectingProcessor".GetLocalized();
-        public double SystemCpuValue { get; private set; } = 0;
-        public string SystemCpuText { get; private set; } = "—";
-        public double SystemRamValue { get; private set; } = 0;
-        public string SystemRamText { get; private set; } = "—";
-        public string SystemEditionText { get; private set; } = "Localserver_DetectingWindows".GetLocalized();
-        public string SystemBuildText { get; private set; } = "—";
-
-        private string? _cachedCpuName;
-        private string? _cachedEdition;
-        private string? _cachedBuild;
+        public string EnvCpuText => (!_isEnabled || SelectedLine == null) ? "—" : SelectedLine.CpuText;
+        public double EnvCpuPercent => (!_isEnabled || SelectedLine == null) ? 0d : SelectedLine.CpuPercent;
+        public string EnvMemoryText => (!_isEnabled || SelectedLine == null) ? "—" : SelectedLine.MemoryText;
+        public double EnvMemoryPercent => (!_isEnabled || SelectedLine == null) ? 0d : SelectedLine.MemoryPercent;
+        public string EnvUptimeText => (!_isEnabled || SelectedLine == null) ? "—" : SelectedLine.UptimeText;
 
         // Canvas CPU trend curve geometry
         public Geometry? StatusCurveGeometry { get; private set; }
@@ -1697,98 +1700,6 @@ namespace Kit.Settings.UI.ViewModels
 
             try
             {
-                // Refresh Host load
-                var sysSample = _systemResourceInspector.Sample();
-                SystemCpuValue = sysSample.CpuPercent ?? 0;
-                SystemCpuText = sysSample.CpuPercent.HasValue ? $"{sysSample.CpuPercent.Value:F0}%" : "—";
-                double totalGb = sysSample.TotalMemoryBytes / 1024d / 1024d / 1024d;
-                double usedGb = sysSample.UsedMemoryBytes / 1024d / 1024d / 1024d;
-                SystemRamValue = totalGb > 0 ? (usedGb / totalGb) * 100 : 0;
-                SystemRamText = $"{usedGb:F1} / {totalGb:F1} GB";
-
-                if (string.IsNullOrEmpty(_cachedCpuName))
-                {
-                    _cachedCpuName = DetectCpu();
-                    _cachedEdition = DetectWindowsEdition();
-                    _cachedBuild = DetectWindowsBuild();
-                }
-
-                string compactCpu = ShortenCpuName(_cachedCpuName);
-                SystemProcessorText = FormatMessage("Localserver_ProcessorFormat", "{0} · {1} logical cores", compactCpu, sysSample.LogicalProcessorCount);
-                SystemEditionText = ShortenWindowsEdition(_cachedEdition ?? "Windows", _cachedBuild ?? string.Empty);
-                SystemBuildText = ShortenWindowsBuild(_cachedBuild ?? string.Empty);
-
-                OnPropertyChanged(nameof(SystemCpuValue));
-                OnPropertyChanged(nameof(SystemCpuText));
-                OnPropertyChanged(nameof(SystemRamValue));
-                OnPropertyChanged(nameof(SystemRamText));
-                OnPropertyChanged(nameof(SystemProcessorText));
-                OnPropertyChanged(nameof(SystemEditionText));
-                OnPropertyChanged(nameof(SystemBuildText));
-
-                // Refresh GPU
-                var gpuSnapshot = await GpuInspector.SampleAsync();
-                if (_disposed || !_isPageActive || IsCatalogBusy)
-                {
-                    return;
-                }
-
-                if (gpuSnapshot?.Primary is { } primary)
-                {
-                    GpuNameText = ShortenGpuName(primary.Name);
-                    bool gpuActive = (primary.UtilizationPercent ?? 0) > 0;
-                    GpuStatusText = (gpuActive ? "Localserver_GpuActive" : "Localserver_HealthIdle").GetLocalized();
-                    GpuStatusDotBrush = gpuActive
-                        ? (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"]
-                        : (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-                    GpuDriverText = string.IsNullOrWhiteSpace(primary.DriverVersion)
-                        ? "Localserver_DriverUnavailable".GetLocalized()
-                        : FormatMessage("Localserver_DriverFormat", "Driver {0}", primary.DriverVersion);
-
-                    GpuUtilizationValue = primary.UtilizationPercent ?? 0;
-                    GpuUtilizationText = primary.UtilizationPercent.HasValue ? $"{primary.UtilizationPercent.Value}%" : "—";
-
-                    if (primary.UsedMemoryMiB.HasValue && primary.TotalMemoryMiB.HasValue && primary.TotalMemoryMiB > 0)
-                    {
-                        double vramUsed = primary.UsedMemoryMiB.Value / 1024d;
-                        double vramTotal = primary.TotalMemoryMiB.Value / 1024d;
-                        GpuMemoryValue = (vramUsed / vramTotal) * 100;
-                        GpuMemoryText = $"{vramUsed:F1} / {vramTotal:F1} GB";
-                    }
-                    else
-                    {
-                        GpuMemoryValue = 0;
-                        GpuMemoryText = "—";
-                    }
-
-                    GpuTemperatureValue = primary.TemperatureCelsius ?? 0;
-                    GpuTemperatureText = primary.TemperatureCelsius.HasValue ? $"{primary.TemperatureCelsius.Value} °C" : "—";
-                }
-                else
-                {
-                    GpuNameText = "Localserver_GpuNotDetected".GetLocalized();
-                    GpuStatusText = "Localserver_GpuUnavailable".GetLocalized();
-                    GpuStatusDotBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-                    GpuDriverText = "Localserver_DriverUnavailable".GetLocalized();
-                    GpuUtilizationValue = 0;
-                    GpuUtilizationText = "—";
-                    GpuMemoryValue = 0;
-                    GpuMemoryText = "—";
-                    GpuTemperatureValue = 0;
-                    GpuTemperatureText = "—";
-                }
-
-                OnPropertyChanged(nameof(GpuNameText));
-                OnPropertyChanged(nameof(GpuStatusText));
-                OnPropertyChanged(nameof(GpuStatusDotBrush));
-                OnPropertyChanged(nameof(GpuDriverText));
-                OnPropertyChanged(nameof(GpuUtilizationValue));
-                OnPropertyChanged(nameof(GpuUtilizationText));
-                OnPropertyChanged(nameof(GpuMemoryValue));
-                OnPropertyChanged(nameof(GpuMemoryText));
-                OnPropertyChanged(nameof(GpuTemperatureValue));
-                OnPropertyChanged(nameof(GpuTemperatureText));
-
                 // Sample lines
                 foreach (var line in Lines.ToArray())
                 {
@@ -1847,6 +1758,11 @@ namespace Kit.Settings.UI.ViewModels
                 OnPropertyChanged(nameof(EnvSummaryBrush));
                 OnPropertyChanged(nameof(EnvCommandText));
                 OnPropertyChanged(nameof(EnvCwdText));
+                OnPropertyChanged(nameof(EnvCpuText));
+                OnPropertyChanged(nameof(EnvCpuPercent));
+                OnPropertyChanged(nameof(EnvMemoryText));
+                OnPropertyChanged(nameof(EnvMemoryPercent));
+                OnPropertyChanged(nameof(EnvUptimeText));
                 UpdateChartGeometry();
                 return;
             }
@@ -1895,6 +1811,11 @@ namespace Kit.Settings.UI.ViewModels
             OnPropertyChanged(nameof(EnvSummaryBrush));
             OnPropertyChanged(nameof(EnvCommandText));
             OnPropertyChanged(nameof(EnvCwdText));
+            OnPropertyChanged(nameof(EnvCpuText));
+            OnPropertyChanged(nameof(EnvCpuPercent));
+            OnPropertyChanged(nameof(EnvMemoryText));
+            OnPropertyChanged(nameof(EnvMemoryPercent));
+            OnPropertyChanged(nameof(EnvUptimeText));
             UpdateChartGeometry();
         }
 
@@ -1995,7 +1916,7 @@ namespace Kit.Settings.UI.ViewModels
             {
                 StatusCurveGeometry = CreateStatusBaseline(width, plotBottom);
                 StatusCurveFillGeometry = null;
-                StatusChartRangeText = "LAST 60S";
+                StatusChartRangeText = "PEAK 0.0%";
                 OnPropertyChanged(nameof(StatusCurveGeometry));
                 OnPropertyChanged(nameof(StatusCurveFillGeometry));
                 OnPropertyChanged(nameof(StatusChartRangeText));
@@ -2004,8 +1925,8 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             var samples = SelectedLine.CpuHistory;
-            double peak = Math.Max(1d, samples.Max());
-            double scaleMaximum = peak;
+            double peak = samples.Max();
+            double scaleMaximum = Math.Max(100d, peak);
 
             List<Point> points = new(samples.Count);
             for (int i = 0; i < samples.Count; i++)
@@ -2018,7 +1939,7 @@ namespace Kit.Settings.UI.ViewModels
                 points.Add(new Point(x, y));
             }
 
-            StatusChartRangeText = $"LAST 60S · PEAK {peak:F0}%";
+            StatusChartRangeText = $"PEAK {peak:F1}%";
 
             StatusCurveGeometry = CreateSmoothHealthPath(points);
             StatusCurveFillGeometry = CreateHealthFillPath(points, plotBottom);
@@ -2155,212 +2076,6 @@ namespace Kit.Settings.UI.ViewModels
                 Logger.LogError($"[LocalserverViewModel] ReleasePort failed: {ex.GetType().Name}");
                 ShowError("Localserver_ReleasePortFailed");
             }
-        }
-
-        private static string DetectGpu()
-        {
-            try
-            {
-                var gpus = new List<string>();
-                for (int i = 0; i < 10; i++)
-                {
-                    string key = $@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{{4d36e968-e325-11ce-bfc1-08002be10318}}\{i:D4}";
-                    var desc = Microsoft.Win32.Registry.GetValue(key, "DriverDesc", null) as string;
-                    if (!string.IsNullOrWhiteSpace(desc))
-                    {
-                        gpus.Add(desc.Trim());
-                    }
-                }
-
-                var dedicated = gpus.FirstOrDefault(g =>
-                    g.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) ||
-                    g.Contains("GeForce", StringComparison.OrdinalIgnoreCase) ||
-                    g.Contains("Radeon RX", StringComparison.OrdinalIgnoreCase));
-
-                if (dedicated != null)
-                {
-                    return dedicated;
-                }
-
-                if (gpus.Count > 0)
-                {
-                    return gpus[0];
-                }
-            }
-            catch
-            {
-            }
-
-            return "Integrated Graphics";
-        }
-
-        private static string DetectCpu()
-        {
-            try
-            {
-                var cpu = Microsoft.Win32.Registry.GetValue(@"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0", "ProcessorNameString", null) as string;
-                if (!string.IsNullOrWhiteSpace(cpu))
-                {
-                    return cpu.Trim();
-                }
-            }
-            catch
-            {
-            }
-
-            return $"{Environment.ProcessorCount} Cores";
-        }
-
-        private static string ShortenGpuName(string name)
-        {
-            string compact = CollapseWhitespace(name)
-                .Replace("(R)", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace("(TM)", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Trim();
-
-            foreach (string marker in new[] { "RTX ", "GTX ", "RX ", "Arc ", "UHD ", "Iris " })
-            {
-                int markerIndex = compact.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-                if (markerIndex >= 0)
-                {
-                    compact = compact[markerIndex..];
-                    break;
-                }
-            }
-
-            compact = TrimDisplaySuffix(compact, " Laptop GPU", " Mobile GPU", " Graphics", " GPU");
-            return compact.Length == 0 ? "GPU unavailable" : compact;
-        }
-
-        private static string ShortenCpuName(string name)
-        {
-            string compact = CollapseWhitespace(name)
-                .Replace("(R)", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace("(TM)", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Trim();
-
-            int markerIndex = compact.IndexOf("Ryzen ", StringComparison.OrdinalIgnoreCase);
-            if (markerIndex < 0)
-            {
-                markerIndex = compact.IndexOf("Core ", StringComparison.OrdinalIgnoreCase);
-            }
-
-            if (markerIndex >= 0)
-            {
-                compact = compact[markerIndex..];
-            }
-
-            int suffixIndex = compact.IndexOf(" with ", StringComparison.OrdinalIgnoreCase);
-            if (suffixIndex > 0)
-            {
-                compact = compact[..suffixIndex];
-            }
-
-            suffixIndex = compact.IndexOf(" w/ ", StringComparison.OrdinalIgnoreCase);
-            if (suffixIndex > 0)
-            {
-                compact = compact[..suffixIndex];
-            }
-
-            compact = TrimDisplaySuffix(compact, " Processor", " CPU");
-            return compact.Length == 0 ? $"{Environment.ProcessorCount} Cores" : compact;
-        }
-
-        private static string ShortenWindowsEdition(string edition, string build)
-        {
-            int? buildNumber = ExtractFirstNumber(build);
-            bool isWindows11 = buildNumber is >= 22000
-                || edition.Contains("Windows 11", StringComparison.OrdinalIgnoreCase);
-            bool isWindows10 = buildNumber is >= 10240 and < 22000
-                || edition.Contains("Windows 10", StringComparison.OrdinalIgnoreCase);
-            string windows = isWindows11 ? "Windows 11" : isWindows10 ? "Windows 10" : "Windows";
-            string suffix = edition.Contains("LTSC", StringComparison.OrdinalIgnoreCase)
-                ? "LTSC"
-                : edition.Contains("Enterprise", StringComparison.OrdinalIgnoreCase)
-                    ? "Enterprise"
-                    : edition.Contains("Professional", StringComparison.OrdinalIgnoreCase)
-                        || edition.Contains(" Pro", StringComparison.OrdinalIgnoreCase)
-                        ? "Pro"
-                        : edition.Contains("Home", StringComparison.OrdinalIgnoreCase)
-                            ? "Home"
-                            : string.Empty;
-
-            return string.IsNullOrEmpty(suffix) ? windows : $"{windows} {suffix}";
-        }
-
-        private static string ShortenWindowsBuild(string build) =>
-            build.StartsWith("OS ", StringComparison.OrdinalIgnoreCase)
-                ? build[3..]
-                : build;
-
-        private static string CollapseWhitespace(string value) =>
-            Regex.Replace(value ?? string.Empty, @"\s+", " ").Trim();
-
-        private static string TrimDisplaySuffix(string value, params string[] suffixes)
-        {
-            foreach (string suffix in suffixes)
-            {
-                if (value.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
-                {
-                    return value[..^suffix.Length].Trim();
-                }
-            }
-
-            return value.Trim();
-        }
-
-        private static int? ExtractFirstNumber(string value)
-        {
-            Match match = Regex.Match(value ?? string.Empty, @"\d+");
-            return match.Success && int.TryParse(match.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result)
-                ? result
-                : null;
-        }
-
-        private static string DetectWindowsEdition()
-        {
-            const string key = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion";
-            try
-            {
-                string productName = Microsoft.Win32.Registry.GetValue(key, "ProductName", null) as string ?? "Windows";
-                string displayVersion = Microsoft.Win32.Registry.GetValue(key, "DisplayVersion", null) as string ?? string.Empty;
-                string? currentBuild = Microsoft.Win32.Registry.GetValue(key, "CurrentBuild", null)?.ToString();
-                if (int.TryParse(currentBuild, NumberStyles.Integer, CultureInfo.InvariantCulture, out int build)
-                    && build >= 22000
-                    && productName.StartsWith("Windows 10", StringComparison.OrdinalIgnoreCase))
-                {
-                    productName = $"Windows 11{productName["Windows 10".Length..]}";
-                }
-
-                return string.IsNullOrWhiteSpace(displayVersion)
-                    ? productName.Trim()
-                    : $"{productName.Trim()} {displayVersion.Trim()}";
-            }
-            catch
-            {
-                return "Windows";
-            }
-        }
-
-        private static string DetectWindowsBuild()
-        {
-            const string key = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion";
-            try
-            {
-                string? currentBuild = Microsoft.Win32.Registry.GetValue(key, "CurrentBuild", null)?.ToString();
-                string? updateBuild = Microsoft.Win32.Registry.GetValue(key, "UBR", null)?.ToString();
-                if (!string.IsNullOrWhiteSpace(currentBuild))
-                {
-                    return string.IsNullOrWhiteSpace(updateBuild)
-                        ? $"OS Build {currentBuild}"
-                        : $"OS Build {currentBuild}.{updateBuild}";
-                }
-            }
-            catch
-            {
-            }
-
-            return "OS Build —";
         }
 
         protected override void Dispose(bool disposing)

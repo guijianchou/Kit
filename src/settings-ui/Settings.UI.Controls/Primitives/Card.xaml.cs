@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -23,6 +23,14 @@ namespace Kit.Settings.UI.Controls
         {
             get => (string)GetValue(TitleProperty);
             set => SetValue(TitleProperty, value);
+        }
+
+        public static readonly DependencyProperty HeaderGlyphProperty = DependencyProperty.Register(nameof(HeaderGlyph), typeof(string), typeof(Card), new PropertyMetadata(defaultValue: null, OnVisualPropertyChanged));
+
+        public string? HeaderGlyph
+        {
+            get => (string?)GetValue(HeaderGlyphProperty);
+            set => SetValue(HeaderGlyphProperty, value);
         }
 
         public static new readonly DependencyProperty ContentProperty = DependencyProperty.Register(nameof(Content), typeof(object), typeof(Card), new PropertyMetadata(defaultValue: null));
@@ -58,7 +66,7 @@ namespace Kit.Settings.UI.Controls
 
         private void SetVisualStates()
         {
-            if (string.IsNullOrEmpty(Title) && TitleContent == null)
+            if (string.IsNullOrEmpty(Title) && TitleContent == null && string.IsNullOrEmpty(HeaderGlyph))
             {
                 VisualStateManager.GoToState(this, "TitleGridCollapsed", true);
                 DividerVisibility = Visibility.Collapsed;

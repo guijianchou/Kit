@@ -8,14 +8,14 @@
 
 ## 1. 模块基本信息与架构定位
 
-`Localserver` 是 Kit 内部面向 Windows 11 的本地开发服务、微服务与环境监控中心。它负责注册、启动、监控和停止本地开发服务，并提供实时硬件状态（CPU/RAM/GPU）、环境自检、服务会话指标与端口管理能力。
+`Localserver` 是 Kit 内部面向 Windows 11 的本地开发服务、微服务与环境监控中心。它负责注册、启动、监控和停止本地开发服务，并提供服务进程树资源采样（CPU/RAM）、环境自检、服务会话指标与端口管理能力。
 
 | 属性 | 配置 / 路径 | 说明 |
 | --- | --- | --- |
 | **模块名称** | `Localserver` | 统一标识符，大小写固定 |
 | **模块键名 (Key)** | `Localserver` | 不可包含空格、路径分隔符或版本后缀 |
 | **原生接口 DLL** | `Kit.LocalserverModuleInterface.dll` | 导出 `kit_create()`，实现 `KitModuleIface` |
-| **核心业务库** | `LocalserverLib.dll` | 包含服务运行引擎、Windows 进程/Job、硬件检测与配置存储 |
+| **核心业务库** | `LocalserverLib.dll` | 包含服务运行引擎、Windows 进程/Job、环境与端口检测及配置存储 |
 | **设置与管理界面** | `LocalserverPage.xaml` / `LocalserverViewModel.cs` | 运行在 Kit Settings 进程中（WinUI 3 + Mica Alt 体系） |
 | **设置与 DTO** | `LocalserverSettings.cs` / `LocalserverProperties.cs` | 注册至 `KitModuleCatalog` 与 `SettingsSerializationContext` |
 | **持久化数据目录** | `%LOCALAPPDATA%\Kit\Localserver` | 独立于原版 LocalServerHub 的私有配置与运行时状态目录 |

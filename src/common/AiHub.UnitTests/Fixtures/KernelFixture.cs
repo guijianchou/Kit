@@ -1,4 +1,4 @@
-namespace Kit.AiHub.UnitTests.Fixtures;
+﻿namespace Kit.AiHub.UnitTests.Fixtures;
 
 using System;
 using System.Diagnostics;
@@ -13,6 +13,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 internal sealed class KernelFixture : IDisposable
 {
+    private static readonly SemaphoreSlim TemplateGate = new(1, 1);
+    private static string? _cachedTemplateExecutable;
+
     internal string Root { get; } = Path.Combine(Path.GetTempPath(), "KitAiHubTests", Guid.NewGuid().ToString("N"));
     internal string Executable => Path.Combine(Root, "synthetic.exe");
     internal string RequestRoot => Path.Combine(Root, "requests");
@@ -21,23 +24,49 @@ internal sealed class KernelFixture : IDisposable
 
     internal Task SetResponseAsync(string jsonTemplate) => File.WriteAllTextAsync(Path.Combine(Root, "response.json"), jsonTemplate);
 
+    private static async Task EnsureCompiledAsync(KernelFixture fixture)
+    {
+        await TemplateGate.WaitAsync();
+        try
+        {
+            if (_cachedTemplateExecutable is null || !File.Exists(_cachedTemplateExecutable))
+            {
+                string templateRoot = Path.Combine(Path.GetTempPath(), "KitAiHubTests", $".template-{Environment.ProcessId}");
+                Directory.CreateDirectory(templateRoot);
+                string source = Path.Combine(templateRoot, "synthetic.cs");
+                string executable = Path.Combine(templateRoot, "synthetic.exe");
+                await File.WriteAllTextAsync(source, SyntheticSource, new UTF8Encoding(false));
+                string compiler = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework64", "v4.0.30319", "csc.exe");
+                Assert.IsTrue(File.Exists(compiler), "The Windows .NET Framework C# compiler is required for synthetic process fixtures.");
+                var start = new ProcessStartInfo { FileName = compiler, WorkingDirectory = templateRoot };
+                foreach (string argument in new[] { "/nologo", "/target:exe", "/reference:System.Web.Extensions.dll", "/out:" + executable, source })
+                {
+                    start.ArgumentList.Add(argument);
+                }
+
+                KernelProcessResult compilation = await KernelProcessRunner.RunAsync(start, null, TimeSpan.FromSeconds(20), CancellationToken.None, 64 * 1024, 64 * 1024);
+                Assert.AreEqual(KernelProcessFailure.None, compilation.Failure, "Synthetic fixture compiler did not complete.");
+                Assert.AreEqual(0, compilation.ExitCode, "Synthetic fixture source did not compile: " + compilation.StandardOutput);
+
+                var warmup = new ProcessStartInfo { FileName = executable, WorkingDirectory = templateRoot };
+                warmup.ArgumentList.Add("--version");
+                await KernelProcessRunner.RunAsync(warmup, null, TimeSpan.FromSeconds(20), CancellationToken.None, 4096, 4096);
+                _cachedTemplateExecutable = executable;
+            }
+
+            File.Copy(_cachedTemplateExecutable, fixture.Executable, overwrite: true);
+        }
+        finally
+        {
+            TemplateGate.Release();
+        }
+    }
+
     internal static async Task<KernelFixture> CreateAsync()
     {
         var fixture = new KernelFixture();
         Directory.CreateDirectory(fixture.Root);
-        string source = Path.Combine(fixture.Root, "synthetic.cs");
-        await File.WriteAllTextAsync(source, SyntheticSource, new UTF8Encoding(false));
-        string compiler = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework64", "v4.0.30319", "csc.exe");
-        Assert.IsTrue(File.Exists(compiler), "The Windows .NET Framework C# compiler is required for synthetic process fixtures.");
-        var start = new ProcessStartInfo { FileName = compiler, WorkingDirectory = fixture.Root };
-        foreach (string argument in new[] { "/nologo", "/target:exe", "/reference:System.Web.Extensions.dll", "/out:" + fixture.Executable, source })
-        {
-            start.ArgumentList.Add(argument);
-        }
-
-        KernelProcessResult compilation = await KernelProcessRunner.RunAsync(start, null, TimeSpan.FromSeconds(20), CancellationToken.None, 64 * 1024, 64 * 1024);
-        Assert.AreEqual(KernelProcessFailure.None, compilation.Failure, "Synthetic fixture compiler did not complete.");
-        Assert.AreEqual(0, compilation.ExitCode, "Synthetic fixture source did not compile: " + compilation.StandardOutput);
+        await EnsureCompiledAsync(fixture);
         foreach (string kernel in new[] { "codex", "pi" })
         {
             string directory = Path.Combine(fixture.Root, "kernels", kernel);

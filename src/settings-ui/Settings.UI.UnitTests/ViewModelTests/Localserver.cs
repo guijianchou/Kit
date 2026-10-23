@@ -89,10 +89,36 @@ namespace ViewModelTests
             Assert.IsFalse(viewModel.Contains("ShowOnMainWindow", StringComparison.OrdinalIgnoreCase), "Localserver ViewModel should not have ShowOnMainWindow property.");
             Assert.IsFalse(viewModel.Contains("AutoStartOnBoot", StringComparison.OrdinalIgnoreCase), "Localserver ViewModel should not have AutoStartOnBoot property.");
 
+            // 1b. Strictly verify System status card and underlying telemetry removal from Localserver
+            Assert.IsFalse(pageXaml.Contains("Localserver_SectionSystem", StringComparison.Ordinal), "Localserver UI should not contain the System status card.");
+            Assert.IsFalse(pageXaml.Contains("SystemSessionColumn", StringComparison.Ordinal), "Localserver UI should not contain SystemSessionColumn.");
+            Assert.IsFalse(pageXaml.Contains("GpuNameText", StringComparison.Ordinal), "Localserver UI should not bind to GpuNameText.");
+            Assert.IsFalse(viewModel.Contains("SystemResourceInspector", StringComparison.Ordinal), "Localserver ViewModel should not reference SystemResourceInspector.");
+            Assert.IsFalse(viewModel.Contains("GpuInspector", StringComparison.Ordinal), "Localserver ViewModel should not reference GpuInspector.");
+            Assert.IsFalse(viewModel.Contains("GpuNameText", StringComparison.Ordinal), "Localserver ViewModel should not expose GpuNameText.");
+            Assert.IsFalse(viewModel.Contains("SystemCpuValue", StringComparison.Ordinal), "Localserver ViewModel should not expose SystemCpuValue.");
+
+            string libPathHelperFile = FindSourceFile("src", "modules", "Localserver", "LocalserverLib", "Common", "LocalserverPathHelper.cs");
+            string monitorsDir = Path.Combine(Directory.GetParent(Path.GetDirectoryName(libPathHelperFile)!)!.FullName, "Monitors");
+            Assert.IsFalse(File.Exists(Path.Combine(monitorsDir, "GpuInspector.cs")), "GpuInspector.cs should be removed from LocalserverLib.");
+            Assert.IsFalse(File.Exists(Path.Combine(monitorsDir, "SystemResourceInspector.cs")), "SystemResourceInspector.cs should be removed from LocalserverLib.");
+
             // 2. Verify Zone 3 runtime freezing & action buttons placement
             StringAssert.Contains(pageXaml, "IsEnabled=\"{x:Bind IsEditable, Mode=OneWay}\"");
             StringAssert.Contains(pageXaml, "x:Uid=\"Localserver_DeleteLineButtonText\"");
             StringAssert.Contains(pageXaml, "x:Uid=\"Localserver_SaveLineButtonText\"");
+
+            // 2b. Verify unified Environment card tags & UsageProgressBar telemetry (replacing Path sparkline)
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitStatusPillStyle}\"");
+            StringAssert.Contains(pageXaml, "<local:UsageProgressBar");
+            StringAssert.Contains(pageXaml, "ViewModel.EnvCpuPercent");
+            StringAssert.Contains(pageXaml, "ViewModel.EnvMemoryPercent");
+            Assert.IsFalse(pageXaml.Contains("EnvTrendLinePath", StringComparison.Ordinal), "Localserver Environment card should use unified UsageProgressBar instead of Path sparkline.");
+            Assert.IsFalse(pageXaml.Contains("EnvTrendAreaPath", StringComparison.Ordinal), "Localserver Environment card should not contain legacy area path sparkline.");
+            StringAssert.Contains(viewModel, "public double EnvCpuPercent");
+            StringAssert.Contains(viewModel, "public double EnvMemoryPercent");
+            StringAssert.Contains(viewModel, "public Brush TagBackgroundBrush");
 
             // 3. Verify data isolation paths
             StringAssert.Contains(libPathHelper, "Kit");

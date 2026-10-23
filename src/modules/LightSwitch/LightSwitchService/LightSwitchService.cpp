@@ -31,7 +31,6 @@ HANDLE g_ServiceStopEvent = nullptr;
 namespace
 {
     const wchar_t KIT_LIGHTSWITCH_SERVICE_STOP[] = L"Local\\KitLightSwitchServiceStopEvent-09b983c3-01df-4490-9f84-9f6e5c52c7d5";
-    const wchar_t KIT_LIGHTSWITCH_MANUAL_OVERRIDE[] = L"Local\\KitLightSwitchManualOverrideEvent-55af6d42-c0e1-4f09-9a2c-b7cb8fdfb5a2";
 }
 
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
@@ -189,7 +188,6 @@ static DWORD RunServiceWorker(LPVOID lpParam)
     const DWORD parentPid = static_cast<DWORD>(reinterpret_cast<ULONG_PTR>(lpParam));
     wil::unique_handle parent(parentPid ? OpenProcess(SYNCHRONIZE, FALSE, parentPid) : nullptr);
     wil::unique_handle toggleRequests(OpenSemaphoreW(SYNCHRONIZE, FALSE, LIGHT_SWITCH_TOGGLE_REQUEST_SEMAPHORE));
-    wil::unique_handle manualOverride(CreateEventW(nullptr, TRUE, FALSE, KIT_LIGHTSWITCH_MANUAL_OVERRIDE));
     LightSwitchStateManager stateManager;
     auto& settingsStore = LightSwitchSettings::instance();
     ScheduleCommandQueue scheduleCommands;
@@ -303,13 +301,12 @@ static DWORD RunServiceWorker(LPVOID lpParam)
         Logger::error(L"[LightSwitchService] Could not start the CLI pipe (error: {}).", GetLastError());
     }
 
-    std::array<HANDLE, 6> waits{};
+    std::array<HANDLE, 5> waits{};
     DWORD count = 0;
     const DWORD stopIndex = count;
     waits[count++] = g_ServiceStopEvent;
     DWORD parentIndex = MAXDWORD;
     DWORD toggleIndex = MAXDWORD;
-    DWORD manualOverrideIndex = MAXDWORD;
     if (parent)
     {
         parentIndex = count;
@@ -319,11 +316,6 @@ static DWORD RunServiceWorker(LPVOID lpParam)
     {
         toggleIndex = count;
         waits[count++] = toggleRequests.get();
-    }
-    if (manualOverride)
-    {
-        manualOverrideIndex = count;
-        waits[count++] = manualOverride.get();
     }
     const DWORD settingsIndex = count;
     waits[count++] = settingsChanged;
@@ -359,11 +351,6 @@ static DWORD RunServiceWorker(LPVOID lpParam)
                 {
                     Logger::warn(L"[LightSwitchService] Toggle failed: {}", result.message);
                 }
-            }
-            else if (index == manualOverrideIndex)
-            {
-                stateManager.ToggleTheme();
-                ResetEvent(manualOverride.get());
             }
             else if (index == settingsIndex)
             {

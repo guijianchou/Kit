@@ -14,6 +14,7 @@ using Kit.GPOWrapper;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
@@ -49,28 +50,21 @@ namespace Kit.Settings.UI.Views
             this.generalSettingsRepository = SettingsRepository<GeneralSettings>.GetInstance(this.settingsUtils);
             this.moduleSettingsRepository = SettingsRepository<LightSwitchSettings>.GetInstance(this.settingsUtils);
 
-            // Get settings from JSON (or defaults if JSON missing)
-            var darkSettings = this.moduleSettingsRepository.SettingsConfig;
+            var settingsPath = this.settingsUtils.GetSettingsFilePath(this.appName);
+            this.dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+            this.fileSystem = new FileSystem();
+
+            var initialization = InitializeSettings(
+                this.fileSystem, settingsPath, this.moduleSettingsRepository, OnSettingsChanged);
+            this.fileSystemWatcher = initialization.Watcher;
 
             // Pass them into the ViewModel
-            this.ViewModel = new LightSwitchViewModel(this.generalSettingsRepository, darkSettings, ShellPage.SendDefaultIPCMessage);
+            this.ViewModel = new LightSwitchViewModel(this.generalSettingsRepository, initialization.Settings, ShellPage.SendDefaultIPCMessage);
             this.ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             this.LoadSettings(this.generalSettingsRepository, this.moduleSettingsRepository);
 
             DataContext = this.ViewModel;
-
-            var settingsPath = this.settingsUtils.GetSettingsFilePath(this.appName);
-
-            this.dispatcherQueue = DispatcherQueue.GetForCurrentThread();
-            this.fileSystem = new FileSystem();
-
-            this.fileSystemWatcher = this.fileSystem.FileSystemWatcher.New();
-            this.fileSystemWatcher.Path = this.fileSystem.Path.GetDirectoryName(settingsPath);
-            this.fileSystemWatcher.Filter = this.fileSystem.Path.GetFileName(settingsPath);
-            this.fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime;
-            this.fileSystemWatcher.Changed += Settings_Changed;
-            this.fileSystemWatcher.EnableRaisingEvents = true;
 
             this.InitializeComponent();
             Loaded += LightSwitchPage_Loaded;
@@ -80,6 +74,46 @@ namespace Kit.Settings.UI.Views
         public void RefreshEnabledState()
         {
             this.ViewModel.RefreshEnabledState();
+        }
+
+        internal static (IFileSystemWatcher Watcher, LightSwitchSettings Settings) InitializeSettings(
+            IFileSystem fileSystem,
+            string settingsPath,
+            ISettingsRepository<LightSwitchSettings> settingsRepository,
+            Action onChanged)
+        {
+            // Dashboard can have cached this repository before a CLI file replacement.
+            // Subscribe first so an edit during the initial read also triggers a reload.
+            var watcher = CreateSettingsWatcher(fileSystem, settingsPath, onChanged);
+            try
+            {
+                settingsRepository.ReloadSettings();
+
+                // Preserve the repository's cached/default fallback if reading fails.
+                return (watcher, settingsRepository.SettingsConfig);
+            }
+            catch
+            {
+                watcher.Dispose();
+                throw;
+            }
+        }
+
+        internal static IFileSystemWatcher CreateSettingsWatcher(IFileSystem fileSystem, string settingsPath, Action onChanged)
+        {
+            var watcher = fileSystem.FileSystemWatcher.New();
+            watcher.Path = fileSystem.Path.GetDirectoryName(settingsPath);
+            watcher.Filter = fileSystem.Path.GetFileName(settingsPath);
+
+            // CLI saves replace the file. FileName enables the rename/create notifications.
+            watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime | NotifyFilters.FileName;
+            watcher.Changed += SettingsChanged;
+            watcher.Created += SettingsChanged;
+            watcher.Renamed += SettingsChanged;
+            watcher.EnableRaisingEvents = true;
+            return watcher;
+
+            void SettingsChanged(object sender, FileSystemEventArgs e) => onChanged();
         }
 
         private void LightSwitchPage_Loaded(object sender, RoutedEventArgs e)
@@ -198,22 +232,14 @@ namespace Kit.Settings.UI.Views
             double latitude = this.LatitudeBox.Value;
             double longitude = this.LongitudeBox.Value;
 
-            // need to save the values
-            this.ViewModel.Latitude = latitude.ToString(CultureInfo.InvariantCulture);
-            this.ViewModel.Longitude = longitude.ToString(CultureInfo.InvariantCulture);
-            this.ViewModel.SyncButtonInformation = $"{this.ViewModel.Latitude}°, {this.ViewModel.Longitude}°";
-
-            var result = SunCalc.CalculateSunriseSunset(latitude, longitude, DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
-
-            this.ViewModel.LightTime = (result.SunriseHour * 60) + result.SunriseMinute;
-            this.ViewModel.DarkTime = (result.SunsetHour * 60) + result.SunsetMinute;
+            this.ViewModel.UpdateSunTimes(latitude, longitude);
 
             this.SunriseModeChartState();
         }
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (this.suppressViewModelUpdates)
+            if (this.suppressViewModelUpdates || this.ViewModel.IsRefreshingModuleSettings)
             {
                 return;
             }
@@ -294,16 +320,20 @@ namespace Kit.Settings.UI.Views
             }
         }
 
-        private void Settings_Changed(object sender, FileSystemEventArgs e)
+        private void OnSettingsChanged()
         {
             this.dispatcherQueue.TryEnqueue(() =>
             {
                 this.suppressViewModelUpdates = true;
-
-                this.moduleSettingsRepository.ReloadSettings();
-                this.LoadSettings(this.generalSettingsRepository, this.moduleSettingsRepository);
-
-                this.suppressViewModelUpdates = false;
+                try
+                {
+                    this.moduleSettingsRepository.ReloadSettings();
+                    this.LoadSettings(this.generalSettingsRepository, this.moduleSettingsRepository);
+                }
+                finally
+                {
+                    this.suppressViewModelUpdates = false;
+                }
             });
         }
 

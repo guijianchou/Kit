@@ -29,9 +29,9 @@
         </ResourceDictionary>
         <viewmodels:NetMapHealthStyleConverter x:Key="DashboardEgressStyleConverter" Styles="{StaticResource DashboardEgressStyles}" />
         <DataTemplate x:Key="DashboardDetailTemplate" x:DataType="viewmodels:DashboardDetail">
-            <Grid Margin="0,1" ColumnSpacing="12" MinHeight="26">
+            <Grid Margin="0,1" ColumnSpacing="12" MinHeight="21">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="96" />
+                    <ColumnDefinition Width="104" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="DetailLabel" Text="{x:Bind Label, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -43,10 +43,10 @@
                 <Grid x:Name="UsageRow" Grid.Column="1" ColumnSpacing="12" VerticalAlignment="Center"
                     Visibility="{x:Bind HasUsage, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="112" />
+                        <ColumnDefinition Width="120" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{x:Bind Value, Mode=OneWay}" FontWeight="SemiBold" FontSize="13"
+                    <TextBlock Text="{x:Bind Value, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontWeight="SemiBold" FontSize="12.5"
                         TextWrapping="Wrap" Typography.NumeralAlignment="Tabular"
                         Foreground="{ThemeResource TextFillColorPrimaryBrush}" IsTextSelectionEnabled="True"
                         VerticalAlignment="Center" />
@@ -60,32 +60,25 @@
         </DataTemplate>
     </local:NavigablePage.Resources>
 
-    <Grid MaxWidth="{StaticResource PageMaxWidth}" Margin="24,0,0,0" RowSpacing="12">
+    <Grid Padding="24,0,0,0" RowSpacing="12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <TextBlock
             x:Uid="DashboardTitle"
+            MaxWidth="{StaticResource PageMaxWidth}"
             Margin="0,0,24,0"
+            HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
             AutomationProperties.HeadingLevel="1"
             Style="{StaticResource TitleTextBlockStyle}" />
 
-        <TextBlock
-            Grid.Row="1"
-            x:Uid="DashboardIntro"
-            Margin="0,0,24,12"
-            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-            TextWrapping="WrapWholeWords"
-            Style="{StaticResource BodyTextBlockStyle}" />
-
-        <ScrollViewer x:Name="MainScrollViewer" Grid.Row="2">
-            <Grid>
+        <ScrollViewer x:Name="MainScrollViewer" Grid.Row="1">
+            <Grid Padding="0,0,24,32">
                 <Grid
-                    Padding="0,0,24,24"
+                    MaxWidth="{StaticResource PageMaxWidth}"
                     ColumnSpacing="16"
                     RowSpacing="16">
                     <Grid.ColumnDefinitions>
@@ -94,54 +87,85 @@
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Orientation="Vertical" Spacing="16" ChildrenTransitions="{StaticResource SettingsCardsAnimations}">
-                        <controls:Card x:Name="QuickAccessCard" x:Uid="QuickAccessTitle" VerticalAlignment="Top">
+                    <!-- Mica Hero Overview Banner -->
+                    <Border Grid.ColumnSpan="2" Style="{StaticResource KitHeroSurfaceStyle}">
+                        <Grid>
+                            <Border
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
+                                Background="{ThemeResource KitHeroGradientBrush}"
+                                IsHitTestVisible="False" />
+                            <Grid Padding="16,12" ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource KitIconBadgeStyle}" Width="36" Height="36" CornerRadius="10">
+                                    <FontIcon
+                                        Glyph="&#xE80F;"
+                                        FontSize="16"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock
+                                    Grid.Column="1"
+                                    x:Uid="DashboardIntro"
+                                    VerticalAlignment="Center"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="WrapWholeWords"
+                                    Style="{StaticResource BodyTextBlockStyle}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Orientation="Vertical" Spacing="16" ChildrenTransitions="{StaticResource SettingsCardsAnimations}">
+                        <controls:Card
+                            x:Name="QuickAccessCard"
+                            x:Uid="QuickAccessTitle"
+                            Padding="16,14,16,16"
+                            HeaderGlyph="&#xE91C;"
+                            VerticalAlignment="Top"
+                            DividerVisibility="Visible">
                             <Grid>
                                 <controls:QuickAccessList
                                     x:Name="QuickAccessItemsControl"
-                                    Margin="8,0,12,12"
+                                    Margin="0"
                                     ItemsSource="{x:Bind ViewModel.QuickAccessItems, Mode=OneWay}"
                                     Visibility="{x:Bind ViewModel.VisibleQuickAccessItemsCount, Mode=OneWay, Converter={StaticResource DoubleToVisibilityConverter}}" />
                                 <TextBlock
                                     x:Uid="NoActionsToShow"
-                                    Margin="12"
+                                    Margin="0,4"
                                     HorizontalAlignment="Left"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     Visibility="{x:Bind ViewModel.VisibleQuickAccessItemsCount, Mode=OneWay, Converter={StaticResource DoubleToInvertedVisibilityConverter}}" />
                             </Grid>
                         </controls:Card>
                         <Border x:Name="SystemOverviewCard" Style="{StaticResource KitCardSurfaceStyle}">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnSpacing="10" Margin="0,0,0,4">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Border Width="32" Height="32" CornerRadius="8"
-                                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                            BorderThickness="1"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border Style="{StaticResource KitIconBadgeStyle}">
                                         <FontIcon Glyph="&#xE7F4;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <TextBlock Grid.Column="1" x:Uid="Dashboard_SystemCard" FontSize="16" FontWeight="SemiBold" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" x:Uid="Dashboard_SystemCard" Style="{StaticResource KitCardTitleTextStyle}" AutomationProperties.HeadingLevel="Level2" />
                                 </Grid>
+                                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                 <ItemsControl x:Name="SystemDetailsList" ItemsSource="{x:Bind ViewModel.SystemDetails, Mode=OneWay}"
                                     ItemTemplate="{StaticResource DashboardDetailTemplate}" />
 
                                 <!-- Storage Section -->
-                                <Border Padding="0,12,0,0"
+                                <Border Padding="0,8,0,0"
                                     BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-                                    <StackPanel Spacing="6">
+                                    <StackPanel Spacing="4">
                                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <Border Width="24" Height="24" CornerRadius="6"
-                                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                    BorderThickness="1"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource KitIconBadgeSmallStyle}">
                                                 <FontIcon Glyph="&#xEDA2;" FontSize="12" Foreground="{ThemeResource SystemFillColorSuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <TextBlock x:Uid="Dashboard_StorageHeading" Style="{StaticResource BodyStrongTextBlockStyle}"
@@ -154,21 +178,22 @@
 
                                 <!-- Graphics Cards Section -->
                                 <ItemsControl x:Name="GraphicsCardsList" ItemsSource="{x:Bind ViewModel.GraphicsCards, Mode=OneWay}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="8" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="viewmodels:DashboardGpuCard">
-                                            <Border Margin="0,0,0,8" Padding="0,12,0,0"
+                                            <Border Padding="0,8,0,0"
                                                 BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-                                                <StackPanel Spacing="6">
+                                                <StackPanel Spacing="4">
                                                     <Grid ColumnSpacing="8">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto" />
                                                             <ColumnDefinition Width="*" />
                                                         </Grid.ColumnDefinitions>
-                                                        <Border Width="24" Height="24" CornerRadius="6"
-                                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                                BorderThickness="1"
-                                                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Border Style="{StaticResource KitIconBadgeSmallStyle}">
                                                             <FontIcon Glyph="&#xE7F8;" FontSize="12" Foreground="{ThemeResource SystemFillColorCautionBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                         </Border>
                                                         <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" TextWrapping="Wrap" Style="{StaticResource BodyStrongTextBlockStyle}"
@@ -188,17 +213,17 @@
                         </Border>
                     </StackPanel>
 
-                    <StackPanel x:Name="SecondaryColumn" Grid.Column="1" Spacing="16" ChildrenTransitions="{StaticResource SettingsCardsAnimations}">
+                    <StackPanel x:Name="SecondaryColumn" Grid.Row="1" Grid.Column="1" Spacing="16" ChildrenTransitions="{StaticResource SettingsCardsAnimations}">
                         <controls:Card
                             x:Name="UtilitiesCard"
                             x:Uid="UtilitiesHeader"
+                            HeaderGlyph="&#xE71D;"
                             Padding="0"
                             VerticalAlignment="Top"
-                            DividerVisibility="Collapsed">
+                            DividerVisibility="Visible">
                             <controls:Card.TitleContent>
                                 <Button
                                     x:Uid="Dashboard_SortBy"
-                                    Margin="0,0,4,0"
                                     VerticalAlignment="Center"
                                     Style="{StaticResource KitSubtleIconButtonStyle}">
                                     <ToolTipService.ToolTip>
@@ -228,12 +253,19 @@
                         </controls:Card>
                         <Border x:Name="NetworkOverviewCard" Style="{StaticResource KitCardSurfaceStyle}">
                             <StackPanel Spacing="12">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                    <FontIcon Glyph="&#xE774;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    <TextBlock x:Uid="Dashboard_NetworkCard" FontSize="16" FontWeight="SemiBold" AutomationProperties.HeadingLevel="Level2" />
-                                </StackPanel>
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource KitIconBadgeStyle}">
+                                        <FontIcon Glyph="&#xE774;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1" x:Uid="Dashboard_NetworkCard" Style="{StaticResource KitCardTitleTextStyle}" AutomationProperties.HeadingLevel="Level2" />
+                                </Grid>
                                 <TextBlock x:Uid="Dashboard_NetworkNote" Style="{StaticResource CaptionTextBlockStyle}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                 <Grid ColumnSpacing="16">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -255,30 +287,30 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
-                                    <TextBlock x:Name="DirectRouteTitle" Margin="0,0,0,8" x:Uid="Dashboard_DirectRouteTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                    <TextBlock x:Name="DirectIpLabel" Margin="0,0,0,8" x:Uid="Dashboard_PublicIpLabel" Grid.Row="1" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock x:Name="DirectIpText" Margin="0,0,0,8" Grid.Row="2"
+                                    <TextBlock x:Name="DirectRouteTitle" Margin="0,0,0,4" x:Uid="Dashboard_DirectRouteTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <TextBlock x:Name="DirectIpLabel" Margin="0,0,0,2" x:Uid="Dashboard_PublicIpLabel" Grid.Row="1" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                    <TextBlock x:Name="DirectIpText" Margin="0,0,0,6" Grid.Row="2"
                                         Text="{x:Bind viewmodels:DashboardViewModel.EgressIp(ViewModel.DirectEgress), Mode=OneWay}"
                                         Style="{x:Bind ViewModel.DirectEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
-                                        FontSize="20" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
-                                    <TextBlock x:Name="DirectLocationText" Margin="0,0,0,8" Grid.Row="3" TextWrapping="Wrap" FontSize="13">
-                                        <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.DirectEgress.Location, Mode=OneWay}" />
+                                        FontFamily="{StaticResource KitMonoFontFamily}" FontSize="19" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="DirectLocationText" Margin="0,0,0,4" Grid.Row="3" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                        <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.DirectEgress.Location, Mode=OneWay}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </TextBlock>
-                                    <TextBlock x:Name="DirectEgressStatusText" Margin="0,0,0,8" Grid.Row="5" Text="{x:Bind viewmodels:DashboardViewModel.EgressStatus(ViewModel.DirectEgress), Mode=OneWay}"
+                                    <TextBlock x:Name="DirectEgressStatusText" Margin="0,2,0,0" Grid.Row="5" Text="{x:Bind viewmodels:DashboardViewModel.EgressStatus(ViewModel.DirectEgress), Mode=OneWay}"
                                         Visibility="{Binding Text, ElementName=DirectEgressStatusText, Converter={StaticResource StringVisibilityConverter}}"
                                         Style="{x:Bind ViewModel.DirectEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
                                         TextWrapping="Wrap" FontSize="12" />
                                     <Rectangle x:Name="EgressDivider" Grid.Column="1" Grid.RowSpan="6" Width="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                    <TextBlock x:Name="ProxyRouteTitle" Margin="0,0,0,8" x:Uid="Dashboard_ProxyRouteTitle" Grid.Column="2" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                    <TextBlock x:Name="ProxyIpLabel" Margin="0,0,0,8" x:Uid="Dashboard_PublicIpLabel" Grid.Row="1" Grid.Column="2" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock x:Name="ProxyIpText" Margin="0,0,0,8" Grid.Row="2" Grid.Column="2"
+                                    <TextBlock x:Name="ProxyRouteTitle" Margin="0,0,0,4" x:Uid="Dashboard_ProxyRouteTitle" Grid.Column="2" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <TextBlock x:Name="ProxyIpLabel" Margin="0,0,0,2" x:Uid="Dashboard_PublicIpLabel" Grid.Row="1" Grid.Column="2" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                    <TextBlock x:Name="ProxyIpText" Margin="0,0,0,6" Grid.Row="2" Grid.Column="2"
                                         Text="{x:Bind viewmodels:DashboardViewModel.EgressIp(ViewModel.ProxyEgress), Mode=OneWay}"
                                         Style="{x:Bind ViewModel.ProxyEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
-                                        FontSize="20" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
-                                    <TextBlock x:Name="ProxyLocationText" Margin="0,0,0,8" Grid.Row="3" Grid.Column="2" TextWrapping="Wrap" FontSize="13">
-                                        <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.ProxyEgress.Location, Mode=OneWay}" />
+                                        FontFamily="{StaticResource KitMonoFontFamily}" FontSize="19" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="ProxyLocationText" Margin="0,0,0,4" Grid.Row="3" Grid.Column="2" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                        <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.ProxyEgress.Location, Mode=OneWay}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </TextBlock>
-                                    <TextBlock x:Name="ProxyEgressStatusText" Margin="0,0,0,8" Grid.Row="5" Grid.Column="2" Text="{x:Bind viewmodels:DashboardViewModel.EgressStatus(ViewModel.ProxyEgress), Mode=OneWay}"
+                                    <TextBlock x:Name="ProxyEgressStatusText" Margin="0,2,0,0" Grid.Row="5" Grid.Column="2" Text="{x:Bind viewmodels:DashboardViewModel.EgressStatus(ViewModel.ProxyEgress), Mode=OneWay}"
                                         Visibility="{Binding Text, ElementName=ProxyEgressStatusText, Converter={StaticResource StringVisibilityConverter}}"
                                         Style="{x:Bind ViewModel.ProxyEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
                                         TextWrapping="Wrap" FontSize="12" />
@@ -344,7 +376,7 @@
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
                         <Setter Target="SecondaryColumn.(Grid.Column)" Value="0" />
-                        <Setter Target="SecondaryColumn.(Grid.Row)" Value="1" />
+                        <Setter Target="SecondaryColumn.(Grid.Row)" Value="2" />
                         <Setter Target="DashboardSecondaryWidth.Width" Value="Auto" />
                     </VisualState.Setters>
                 </VisualState>

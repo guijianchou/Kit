@@ -14,10 +14,10 @@
         <tkconverters:StringVisibilityConverter x:Key="StringVisibilityConverter" />
     </UserControl.Resources>
 
-    <ItemsControl ItemsSource="{x:Bind ItemsSource, Mode=OneWay}">
+    <ItemsControl HorizontalAlignment="Stretch" ItemsSource="{x:Bind ItemsSource, Mode=OneWay}">
         <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-                <tkcontrols:WrapPanel HorizontalAlignment="Stretch" HorizontalSpacing="10" VerticalSpacing="10" />
+                <local:QuickAccessGridPanel Columns="3" ColumnSpacing="12" RowSpacing="12" HorizontalAlignment="Stretch" />
             </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>

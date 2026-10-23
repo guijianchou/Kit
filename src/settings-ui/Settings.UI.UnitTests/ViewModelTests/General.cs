@@ -665,11 +665,29 @@ namespace ViewModelTests
             var dashboard = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
             var dashboardViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.cs"));
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
+            var quickAccessListXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessList.xaml"));
+            var quickAccessGridPanelCs = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessGridPanel.cs"));
 
             StringAssert.Contains(quickAccessViewModel, "public int VisibleItemCount");
+            StringAssert.Contains(quickAccessViewModel, "SyncVisibleItems()");
             StringAssert.Contains(dashboardViewModel, "public int VisibleQuickAccessItemsCount");
             StringAssert.Contains(dashboard, "ViewModel.VisibleQuickAccessItemsCount");
             Assert.IsFalse(dashboard.Contains("ViewModel.QuickAccessItems.Count", StringComparison.Ordinal));
+            StringAssert.Contains(quickAccessListXaml, "<local:QuickAccessGridPanel");
+            StringAssert.Contains(quickAccessGridPanelCs, "public sealed partial class QuickAccessGridPanel : Panel");
+            StringAssert.Contains(quickAccessGridPanelCs, "public int Columns { get; set; } = 3;");
+        }
+
+        [TestMethod]
+        public void KitDashboardSystemOverviewShouldUseCompactSpacingAndGpuTemperatureBar()
+        {
+            var dashboard = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
+            var overviewVm = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.Overview.cs"));
+            var usageBar = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "UsageProgressBar.cs"));
+
+            StringAssert.Contains(dashboard, "<Grid Margin=\"0,1\" ColumnSpacing=\"12\" MinHeight=\"21\">");
+            StringAssert.Contains(overviewVm, "sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null");
+            StringAssert.Contains(usageBar, "\"Temperature\"");
         }
 
         [TestMethod]

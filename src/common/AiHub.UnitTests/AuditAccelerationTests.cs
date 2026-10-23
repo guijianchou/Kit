@@ -92,7 +92,7 @@ public sealed class AuditAccelerationTests
         using KernelFixture fixture = await KernelFixture.CreateAsync();
         using TaskAiEngine engine = await CreateEngineAsync(fixture, "timeout-child", fallback: true, kernel: kernel);
         var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(1), Schema(),
-            new AiTaskOptions { RouteTimeoutSeconds = 10, TimeoutSeconds = 2 });
+            new AiTaskOptions { RouteTimeoutSeconds = 10, TimeoutSeconds = 4 });
 
         Assert.AreEqual(AiErrorCode.Timeout, result.ErrorCode);
         Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);

@@ -198,6 +198,38 @@ GeneralSettings get_general_settings()
 
     settings.isStartupEnabled = is_auto_start_task_active_for_this_user();
 
+    // Initialize module enabled map from durable settings.json so all modules, including
+    // those which are missing or which failed to load, are represented.
+    try
+    {
+        auto loaded_opt = load_general_settings_checked();
+        if (!loaded_opt.has_value())
+        {
+            settings.isDataLoadedSuccessfully = false;
+        }
+        else
+        {
+            const json::JsonObject& loaded = *loaded_opt;
+
+            if (json::has(loaded, L"enabled", json::JsonValueType::Object))
+            {
+                auto enabled_obj = loaded.GetNamedObject(L"enabled");
+                for (const auto& elem : enabled_obj)
+                {
+                    if (elem.Value().ValueType() == json::JsonValueType::Boolean)
+                    {
+                        settings.isModulesEnabledMap[std::wstring{ elem.Key() }] = elem.Value().GetBoolean();
+                    }
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        settings.isDataLoadedSuccessfully = false;
+    }
+
+    // Overlay the active runtime states from loaded modules.
     for (auto& [name, powertoy] : modules())
     {
         settings.isModulesEnabledMap[name] = powertoy->is_enabled();
@@ -227,61 +259,78 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
     }
 
     const std::wstring name{ element.Key().c_str() };
-    if (modules().find(name) == modules().end())
-    {
-        Logger::warn(L"apply_module_status_update: Module {} not found", name);
-        return;
-    }
-
-    PowertoyModule& powertoy = modules().at(name);
-    const bool module_inst_enabled = powertoy->is_enabled();
     bool target_enabled = value.GetBoolean();
 
-    if (module_inst_enabled == target_enabled)
+    auto module_it = modules().find(name);
+    if (module_it != modules().end())
     {
-        Logger::info(L"apply_module_status_update: Module {} already in target state {}", name, target_enabled);
-    }
+        PowertoyModule& powertoy = module_it->second;
+        const bool module_inst_enabled = powertoy->is_enabled();
 
-    if (target_enabled && !module_inst_enabled)
-    {
-        Logger::info(L"apply_module_status_update: Enabling powertoy {}", name);
-        powertoy->enable();
-        auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-        hkmng.EnableHotkeyByModule(name);
+        auto gpo_rule = powertoy->gpo_policy_enabled_configuration();
+        if (gpo_rule == powertoys_gpo::gpo_rule_configured_enabled || gpo_rule == powertoys_gpo::gpo_rule_configured_disabled)
+        {
+            // Apply the GPO Rule.
+            target_enabled = gpo_rule == powertoys_gpo::gpo_rule_configured_enabled;
+        }
 
+        if (module_inst_enabled != target_enabled)
+        {
+            if (target_enabled)
+            {
+                Logger::info(L"apply_module_status_update: Enabling powertoy {}", name);
+                powertoy->enable();
+                auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
+                hkmng.EnableHotkeyByModule(name);
+            }
+            else
+            {
+                Logger::info(L"apply_module_status_update: Disabling powertoy {}", name);
+                powertoy->disable();
+                auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
+                hkmng.DisableHotkeyByModule(name);
+            }
+            // Sync the hotkey state with the module state, so it can be removed for disabled modules.
+            powertoy.UpdateHotkeyEx();
+        }
+        target_enabled = powertoy->is_enabled();
     }
-    else if (!target_enabled && module_inst_enabled)
+    else
     {
-        Logger::info(L"apply_module_status_update: Disabling powertoy {}", name);
-        powertoy->disable();
-        auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-        hkmng.DisableHotkeyByModule(name);
+        Logger::info(L"apply_module_status_update: Module {} not loaded in memory; updating configuration only", name);
     }
-    // Sync the hotkey state with the module state, so it can be removed for disabled modules.
-    powertoy.UpdateHotkeyEx();
 
     if (save)
     {
-        // Load existing settings and only update the specific module's enabled state
-        json::JsonObject current_settings = PTSettingsHelper::load_general_settings();
-        
+        // Load existing settings and only update the specific module's enabled state.
+        auto loaded_opt = load_general_settings_checked();
+        if (!loaded_opt.has_value())
+        {
+            Logger::warn(L"apply_module_status_update: Skipping save due to transient read error on settings.json.");
+            return;
+        }
+
+        // Use the successful read as the base for the update, or create a new settings
+        // object if the file doesn't exist.
+        json::JsonObject current_settings = std::move(loaded_opt).value();
+
         json::JsonObject enabled;
         if (json::has(current_settings, L"enabled", json::JsonValueType::Object))
         {
             enabled = current_settings.GetNamedObject(L"enabled");
         }
-        
-        // Persist the module's accepted state even when no lifecycle call was
-        // needed. A missing key is not equivalent to a saved true value.
-        const bool actual_enabled = powertoy->is_enabled();
-        if (!json::has(enabled, name, json::JsonValueType::Boolean) || enabled.GetNamedBoolean(name) != actual_enabled)
+
+        const bool has_current_saved = json::has(enabled, name, json::JsonValueType::Boolean);
+        const bool current_saved = has_current_saved && enabled.GetNamedBoolean(name);
+
+        if (!has_current_saved || current_saved != target_enabled)
         {
-            // Update only this module's enabled state
-            enabled.SetNamedValue(name, json::value(actual_enabled));
+            // Update only this module's enabled state.
+            enabled.SetNamedValue(name, json::value(target_enabled));
             current_settings.SetNamedValue(L"enabled", enabled);
-            
+
             PTSettingsHelper::save_general_settings(current_settings);
-            
+
             GeneralSettings settings_for_trace = get_general_settings();
             Trace::SettingsChanged(settings_for_trace);
         }
@@ -290,10 +339,16 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
 
 void apply_general_settings(const json::JsonObject& general_configs, bool save)
 {
+    if (general_configs.Size() == 0)
+    {
+        Logger::warn(L"apply_general_settings: Empty configuration provided; skipping application.");
+        return;
+    }
+
     std::wstring old_settings_json_string;
     if (save)
     {
-        old_settings_json_string = PTSettingsHelper::load_general_settings().Stringify().c_str();
+        old_settings_json_string = get_general_settings().to_json().Stringify().c_str();
     }
 
     Logger::info(L"apply_general_settings: {}", std::wstring{ general_configs.ToString() });
@@ -429,6 +484,39 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     if (save)
     {
         GeneralSettings save_settings = get_general_settings();
+
+        if (!save_settings.isDataLoadedSuccessfully)
+        {
+            Logger::warn(L"apply_general_settings: Skipping save due to transient read error on settings.json.");
+            return;
+        }
+
+        // Ensure any unloaded module enabled states are preserved in the saved settings.
+        if (json::has(general_configs, L"enabled", json::JsonValueType::Object))
+        {
+            for (const auto& enabled_element : general_configs.GetNamedObject(L"enabled"))
+            {
+                const auto value = enabled_element.Value();
+                if (value.ValueType() != json::JsonValueType::Boolean)
+                {
+                    continue; // Skip malformed entries
+                }
+
+                const std::wstring name{ enabled_element.Key().c_str() };
+
+                if (modules().find(name) == modules().end())
+                {
+                    const bool target_enabled = value.GetBoolean();
+                    const auto saved_state = save_settings.isModulesEnabledMap.find(name);
+                    if (saved_state == save_settings.isModulesEnabledMap.end() || saved_state->second != target_enabled)
+                    {
+                        Logger::info(L"apply_general_settings: Module {} not loaded; updating saved configuration to {}", name, target_enabled);
+                        save_settings.isModulesEnabledMap[name] = target_enabled;
+                    }
+                }
+            }
+        }
+
         std::wstring new_settings_json_string = save_settings.to_json().Stringify().c_str();
         if (old_settings_json_string != new_settings_json_string)
         {

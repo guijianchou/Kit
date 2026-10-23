@@ -461,7 +461,7 @@ public partial class DashboardViewModel
 
                     // Details[3]: Temperature
                     string tempText = sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—";
-                    card.Details[3].Update(tempText, null);
+                    card.Details[3].Update(tempText, sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null);
 
                     card.Status = sample != null
                         ? string.Empty
@@ -482,7 +482,7 @@ public partial class DashboardViewModel
                     sample?.TotalMemoryMiB > 0 && sample.UsedMemoryMiB.HasValue ? $"{sample.UsedMemoryMiB / 1024d:F1} / {sample.TotalMemoryMiB / 1024d:F1} GB" : "—",
                     sample?.TotalMemoryMiB > 0 ? sample.UsedMemoryMiB * 100d / sample.TotalMemoryMiB : null),
                 new DashboardDetail(resourceLoader.GetString("Dashboard_GpuLoad"), sample?.UtilizationPercent is { } load ? $"{load}%" : "—", sample?.UtilizationPercent),
-                new DashboardDetail(resourceLoader.GetString("Dashboard_Temperature"), sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—"),
+                new DashboardDetail(resourceLoader.GetString("Dashboard_Temperature"), sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—", sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null),
             }, sample != null ? string.Empty : resourceLoader.GetString(value.Adapter.Vendor == "NVIDIA" ? "Dashboard_GpuUnavailable" : "Dashboard_GpuUnsupported"));
         }).ToArray();
 

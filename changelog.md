@@ -4,6 +4,20 @@
 
 ## English
 
+### 3.1.0
+
+- **WinUI 3 + Mica Alt Design System & Dashboard UI/UX Overhaul**:
+  - **Mica Alt Window & Surface Hierarchy**: Upgraded `MainWindow` to `MicaKind.BaseAlt` backdrop with translucent layer tokens, unified `KitHeroSurfaceStyle`, `KitCardSurfaceStyle`, `KitIconBadgeStyle`, `KitStatusPillStyle`, and tabular monospace typography (`KitMonoFontFamily`) across `ShellPage`, `DashboardPage`, `GeneralPage`, `Card`, `ModuleList`, `SettingsGroup`, and `SettingsPageControl`.
+  - **Quick Access 3-Column Equal-Width Grid**: Introduced `QuickAccessGridPanel` (`Columns="3" ColumnSpacing="12" RowSpacing="12"`) and `SyncVisibleItems()` in `QuickAccessViewModel` so `Items` only binds visible modules without hidden `0x0` `ContentPresenter` placeholders, aligning Row 1 and Row 2 tiles pixel-for-pixel with symmetric `16px` horizontal padding.
+  - **System Overview Compact Density & GPU Thermal Dynamic Bar**: Tightened `DashboardDetailTemplate` vertical row spacing (`Margin="0,1" MinHeight="21"`) and section padding so hardware telemetry fits cleanly without vertical overflow; added `UsageProgressBar` support to GPU `Temperature` with thresholded thermal indicator colors (warm amber `<65°C`, orange `65–79°C`, critical red `>=80°C`).
+- **Localserver Architecture Slimming & Environment Card Redesign**:
+  - **Eliminated Duplicate Host Telemetry**: Removed the redundant `System` status card from `LocalserverPage.xaml` and deleted duplicate `GpuInspector.cs` and `SystemResourceInspector.cs` from `LocalserverLib`, centralizing host hardware telemetry on the Home Dashboard.
+  - **Full-Width Environment Card & Unified Telemetry Bars**: Expanded the `Environment` card horizontally across the full page width using `KitCardSurfaceStyle`, `KitIconBadgeStyle`, `KitStatusPillStyle`, 4 metadata tag tiles (`PORT`, `PID`, `STATE`, `RUNTIMES`), monospace `COMMAND & ARGS` and `WORKING DIR` pills, and semantic icon+text `CHECKS` badges (`EnvironmentCheckChipModel`).
+  - **Unified CPU & Memory Dynamic Bars**: Replaced the jittery `Path` CPU sparkline curve with unified `UsageProgressBar` smooth progress bars for per-service `CPU` and `Memory` alongside peak CPU and uptime readings.
+- **Core Framework & Official Module Alignment**:
+  - Synchronized `Runner` startup ordering (`start_enabled_kit_modules` before `run_message_loop`), `apply_general_settings` / `apply_module_status_update` live state snapshots, `FileWatcher` debounce/re-arming, `elevation.h`, `IdRecoveryHelper`, and `LightSwitch` service/module lifecycle with upstream PowerToys.
+  - Updated `AiHub.UnitTests` and `Settings.UI.UnitTests` to cover all new UI/UX, layout, and architecture invariants.
+
 ### 3.0.1
 
 - **Awake System.CommandLine 2.0.1 Alignment**:
@@ -733,6 +747,20 @@
 ## 中文
 
 ## 更新日志
+
+### 3.1.0
+
+- **WinUI 3 + Mica Alt 视觉体系升级与主界面 UI/UX 全面重构**：
+  - **Mica Alt 材质与层级卡片体系**：`MainWindow` 启用 `MicaKind.BaseAlt` 云母背景与半透明层级令牌，统一 `KitHeroSurfaceStyle`、`KitCardSurfaceStyle`、`KitIconBadgeStyle`、`KitStatusPillStyle` 与等宽数字排版（`KitMonoFontFamily`），覆盖 `ShellPage`、`DashboardPage`、`GeneralPage`、`Card`、`ModuleList`、`SettingsGroup` 与 `SettingsPageControl`。
+  - **Quick Access 三列等宽对齐网格**：新增 `QuickAccessGridPanel`（`Columns="3" ColumnSpacing="12" RowSpacing="12"`）并在 `QuickAccessViewModel` 中引入 `SyncVisibleItems()` 过滤隐藏项，彻底根除 `ItemsControl` 隐藏 `0x0` 容器导致的跨行错位，实现一行三列严格像素级对齐与左右对称 `16px` 边距。
+  - **System Overview 紧凑间距与 GPU 温度动态变动条**：收紧 `DashboardDetailTemplate` 行距（`Margin="0,1" MinHeight="21"`）与分区内边距，消除垂直溢出；为 GPU `Temperature` 新增 `UsageProgressBar` 动态变动条及热力分级着色（`<65°C` 暖琥珀色、`65–79°C` 橙色、`>=80°C` 警示红）。
+- **Localserver 架构精简与 Environment 卡片统一重设计**：
+  - **移除重复主机监控**：从 `LocalserverPage.xaml` 移除冗余的 `System` 状态框，并从 `LocalserverLib` 删除重复的 `GpuInspector.cs` 与 `SystemResourceInspector.cs`，将整机硬件监控收敛至主界面首页。
+  - **Environment 横向平铺与语义标签**：将 `Environment` 卡片横向平铺占满整行，统一采用 `KitCardSurfaceStyle`、`KitIconBadgeStyle`、`KitStatusPillStyle`、4 宫格指标标签卡（`PORT`、`PID`、`STATE`、`RUNTIMES`）、等宽胶囊框（`COMMAND & ARGS`、`WORKING DIR`）以及带状态图标与语义色彩的 `CHECKS` 诊断徽章（`EnvironmentCheckChipModel`）。
+  - **统一 CPU 与内存动态变动条**：移除右侧生硬跳动的 `Path` 折线图，替换为与首页一致的双行 `UsageProgressBar` 缓动进度条（实时显示所选服务的 `CPU` 与 `Memory` 占用、峰值 `PEAK` 及运行时间 `Uptime`）。
+- **主框架与官方模块同步加固**：
+  - 对齐上游 PowerToys 的 `Runner` 启动时序（在消息循环前完成 `start_enabled_kit_modules`）、`apply_general_settings` / `apply_module_status_update` 实时状态快照回传、`FileWatcher` 防抖重挂、`elevation.h`、`IdRecoveryHelper` 以及 `LightSwitch` 服务生命周期。
+  - 同步更新 `AiHub.UnitTests` 与 `Settings.UI.UnitTests` 回归测试覆盖。
 
 ### 3.0.1
 

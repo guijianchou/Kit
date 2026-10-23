@@ -261,7 +261,14 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
     }
     cancel_settings_window_startup();
     Trace::UnregisterProvider();
-    QuickAccessHost::stop();
+    // When the full Windows session is ending, the OS reaps the Quick Access
+    // host process in parallel, so its stop timeout is pure dead time against
+    // the quiesce budget. User exits and Restart Manager ENDSESSION_CLOSEAPP
+    // requests retain the full graceful cleanup.
+    if (!is_system_session_ending())
+    {
+        QuickAccessHost::stop();
+    }
     return result;
 }
 
@@ -447,10 +454,14 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
 
             result = runner(elevated, open_settings, settings_window, general_settings, startupStartTime);
 
-            if (result == 0)
+            if (result == 0 && !is_system_session_ending())
             {
                 // Save settings on closing, if closed 'normal'
-                PTSettingsHelper::save_general_settings(get_general_settings().to_json());
+                auto save_settings = get_general_settings();
+                if (save_settings.isDataLoadedSuccessfully)
+                {
+                    PTSettingsHelper::save_general_settings(save_settings.to_json());
+                }
             }
         }
         else
@@ -470,7 +481,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     // Finish the old UI before a restarted runner can create a new one using
     // the same Settings exit event. This also covers a failed tray-icon setup.
     stop_tray_icon();
-    const bool settings_closed = close_settings_window();
+    const bool settings_closed = is_system_session_ending() ? true : close_settings_window();
 
     // Finish module teardown while this instance still owns the singleton lock.
     // A new runner must not start workers while the old modules signal their stop events.

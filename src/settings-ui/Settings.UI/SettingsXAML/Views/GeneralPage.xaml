@@ -28,86 +28,94 @@
     <controls:SettingsPageControl x:Uid="General">
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical" Spacing="24">
-                <tkcontrols:WrapPanel x:Name="SettingsSectionNavigation" HorizontalSpacing="8" VerticalSpacing="8">
-                    <Button
-                        AutomationProperties.Name="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
-                        Click="SettingsSection_Click"
-                        Tag="AppearanceAndBehaviorGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
-                        Style="{StaticResource KitSectionChipButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionAppearanceTintBrush}" VerticalAlignment="Center">
-                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE790;" Foreground="{ThemeResource SectionAppearanceForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <TextBlock x:Uid="General_SectionAppearance" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button
-                        AutomationProperties.Name="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
-                        Click="SettingsSection_Click"
-                        Tag="StartupAndPermissionsGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
-                        Style="{StaticResource KitSectionChipButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionStartupTintBrush}" VerticalAlignment="Center">
-                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xF71C;" Foreground="{ThemeResource SectionStartupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <TextBlock x:Uid="General_SectionStartup" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button
-                        AutomationProperties.Name="{Binding ElementName=AiServicesGroup, Path=Header}"
-                        Click="SettingsSection_Click"
-                        Tag="AiServicesGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=AiServicesGroup, Path=Header}"
-                        Style="{StaticResource KitSectionChipButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionAiTintBrush}" VerticalAlignment="Center">
-                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xEA80;" Foreground="{ThemeResource SectionAiForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <TextBlock x:Uid="General_SectionAi" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button
-                        AutomationProperties.Name="{Binding ElementName=DiagnosticsGroup, Path=Header}"
-                        Click="SettingsSection_Click"
-                        Tag="DiagnosticsGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=DiagnosticsGroup, Path=Header}"
-                        Style="{StaticResource KitSectionChipButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionDiagnosticsTintBrush}" VerticalAlignment="Center">
-                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xEC19;" Foreground="{ThemeResource SectionDiagnosticsForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <TextBlock x:Uid="General_SectionDiagnostics" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button
-                        AutomationProperties.Name="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
-                        Click="SettingsSection_Click"
-                        Tag="BackupAndRestoreGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
-                        Style="{StaticResource KitSectionChipButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionBackupTintBrush}" VerticalAlignment="Center">
-                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE777;" Foreground="{ThemeResource SectionBackupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <TextBlock x:Uid="General_SectionBackup" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button
-                        AutomationProperties.Name="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
-                        Click="SettingsSection_Click"
-                        Tag="VersionAndUpdateGroup"
-                        ToolTipService.ToolTip="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
-                        Style="{StaticResource KitSectionChipButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionUpdatesTintBrush}" VerticalAlignment="Center">
-                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE895;" Foreground="{ThemeResource SectionUpdatesForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <TextBlock x:Uid="General_SectionUpdates" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </tkcontrols:WrapPanel>
+                <Border Style="{StaticResource KitHeroSurfaceStyle}">
+                    <Grid>
+                        <Border
+                            CornerRadius="{StaticResource OverlayCornerRadius}"
+                            Background="{ThemeResource KitHeroGradientBrush}"
+                            IsHitTestVisible="False" />
+                        <tkcontrols:WrapPanel x:Name="SettingsSectionNavigation" Margin="12,10" HorizontalSpacing="8" VerticalSpacing="8">
+                        <Button
+                            AutomationProperties.Name="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Tag="AppearanceAndBehaviorGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
+                            Style="{StaticResource KitSectionChipButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionAppearanceTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE790;" Foreground="{ThemeResource SectionAppearanceForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock x:Uid="General_SectionAppearance" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            AutomationProperties.Name="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Tag="StartupAndPermissionsGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
+                            Style="{StaticResource KitSectionChipButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionStartupTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xF71C;" Foreground="{ThemeResource SectionStartupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock x:Uid="General_SectionStartup" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            AutomationProperties.Name="{Binding ElementName=AiServicesGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Tag="AiServicesGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=AiServicesGroup, Path=Header}"
+                            Style="{StaticResource KitSectionChipButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionAiTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xEA80;" Foreground="{ThemeResource SectionAiForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock x:Uid="General_SectionAi" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            AutomationProperties.Name="{Binding ElementName=DiagnosticsGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Tag="DiagnosticsGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=DiagnosticsGroup, Path=Header}"
+                            Style="{StaticResource KitSectionChipButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionDiagnosticsTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xEC19;" Foreground="{ThemeResource SectionDiagnosticsForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock x:Uid="General_SectionDiagnostics" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            AutomationProperties.Name="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Tag="BackupAndRestoreGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
+                            Style="{StaticResource KitSectionChipButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionBackupTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE777;" Foreground="{ThemeResource SectionBackupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock x:Uid="General_SectionBackup" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            AutomationProperties.Name="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Tag="VersionAndUpdateGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
+                            Style="{StaticResource KitSectionChipButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="24" Height="24" CornerRadius="5" Background="{ThemeResource SectionUpdatesTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="13" Glyph="&#xE895;" Foreground="{ThemeResource SectionUpdatesForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock x:Uid="General_SectionUpdates" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </tkcontrols:WrapPanel>
+                    </Grid>
+                </Border>
 
                 <controls:SettingsGroup x:Name="AppearanceAndBehaviorGroup" x:Uid="Appearance_Behavior" IsEnabled="True">
                     <tkcontrols:SettingsCard
@@ -144,7 +152,8 @@
                         IsClosable="False"
                         IsOpen="{x:Bind Mode=OneWay, Path=ViewModel.LanguageChanged}"
                         IsTabStop="True"
-                        Severity="Informational">
+                        Severity="Informational"
+                        Visibility="{x:Bind Mode=OneWay, Path=ViewModel.LanguageChanged, Converter={StaticResource BoolToVisibilityConverter}}">
                         <InfoBar.ActionButton>
                             <Button
                                 x:Uid="LanguageRestartInfoButton"
@@ -255,7 +264,8 @@
                             IsClosable="True"
                             IsOpen="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=TwoWay}"
                             Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
-                            Severity="{x:Bind ViewModel.AiServices.StatusSeverity, Mode=OneWay}" />
+                            Severity="{x:Bind ViewModel.AiServices.StatusSeverity, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
                         <!-- Cached service readiness; each endpoint has its own connection test. -->
                         <tkcontrols:SettingsCard
@@ -645,9 +655,9 @@
                                 HorizontalContentAlignment="Left"
                                 ContentAlignment="Vertical">
                                 <Grid
-                                    Margin="0,0,0,6"
-                                    ColumnSpacing="36"
-                                    RowSpacing="4">
+                                    Margin="0,2,0,4"
+                                    ColumnSpacing="24"
+                                    RowSpacing="6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
@@ -658,10 +668,14 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
-                                    <TextBlock x:Uid="General_SettingsBackupInfo_StatusHeader" />
+                                    <TextBlock
+                                        x:Uid="General_SettingsBackupInfo_StatusHeader"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     <TextBlock
                                         Grid.Column="1"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         TextWrapping="WrapWholeWords">
                                         <Run Text="{x:Bind ViewModel.CurrentSettingMatchText, Mode=OneWay}" />
                                         <Hyperlink Click="UpdateBackupAndRestoreStatusText" TextDecorations="Underline">
@@ -669,26 +683,44 @@
                                         </Hyperlink>
                                     </TextBlock>
 
-                                    <TextBlock x:Uid="General_SettingsBackupInfo_FileNameHeader" Grid.Row="1" />
+                                    <TextBlock
+                                        x:Uid="General_SettingsBackupInfo_FileNameHeader"
+                                        Grid.Row="1"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     <TextBlock
                                         Grid.Row="1"
                                         Grid.Column="1"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind ViewModel.LastSettingsBackupFileName, Mode=OneWay}"
                                         TextWrapping="WrapWholeWords" />
 
-                                    <TextBlock x:Uid="General_SettingsBackupInfo_SourceHeader" Grid.Row="2" />
+                                    <TextBlock
+                                        x:Uid="General_SettingsBackupInfo_SourceHeader"
+                                        Grid.Row="2"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     <TextBlock
                                         Grid.Row="2"
                                         Grid.Column="1"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind ViewModel.LastSettingsBackupSource, Mode=OneWay}"
                                         TextWrapping="WrapWholeWords" />
-                                    <TextBlock x:Uid="General_SettingsBackupInfo_DateHeader" Grid.Row="3" />
+                                    <TextBlock
+                                        x:Uid="General_SettingsBackupInfo_DateHeader"
+                                        Grid.Row="3"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     <TextBlock
                                         Grid.Row="3"
                                         Grid.Column="1"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind ViewModel.LastSettingsBackupDate, Mode=OneWay}"
                                         TextWrapping="WrapWholeWords" />
                                 </Grid>
@@ -700,7 +732,8 @@
                         IsClosable="False"
                         IsOpen="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
                         IsTabStop="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay}"
-                        Severity="{x:Bind ViewModel.BackupRestoreMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}}" />
+                        Severity="{x:Bind ViewModel.BackupRestoreMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}}"
+                        Visibility="{x:Bind ViewModel.SettingsBackupRestoreMessageVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </controls:SettingsGroup>
 
                 <controls:SettingsGroup x:Name="VersionAndUpdateGroup" x:Uid="General_VersionAndUpdate">
@@ -741,21 +774,20 @@
                         </Grid>
                     </tkcontrols:SettingsCard>
 
-                    <StackPanel Orientation="Vertical" Margin="0,8,0,0">
-                        <InfoBar
-                            Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
-                            IsClosable="False"
-                            IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
-                            IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
-                            Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}">
-                            <InfoBar.ActionButton>
-                                <HyperlinkButton
-                                    x:Uid="GeneralPage_ViewRelease"
-                                    NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
-                                    Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
-                            </InfoBar.ActionButton>
-                        </InfoBar>
-                    </StackPanel>
+                    <InfoBar
+                        Title="{x:Bind ViewModel.UpdateCheckMessage, Mode=OneWay}"
+                        IsClosable="False"
+                        IsOpen="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                        IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
+                        Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <InfoBar.ActionButton>
+                            <HyperlinkButton
+                                x:Uid="GeneralPage_ViewRelease"
+                                NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
+                                Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
                 </controls:SettingsGroup>
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>

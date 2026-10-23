@@ -563,7 +563,14 @@ void run_settings_window(std::optional<std::wstring> settings_window)
 
         // create general settings file to initialize the settings file with installation configurations like :
         // 1. Run on start up.
-        PTSettingsHelper::save_general_settings(save_settings.to_json());
+        if (save_settings.isDataLoadedSuccessfully)
+        {
+            PTSettingsHelper::save_general_settings(save_settings.to_json());
+        }
+        else
+        {
+            Logger::warn(L"run_settings_window: Skipping save due to transient read error on settings.json.");
+        }
 
         std::wstring executable_args = fmt::format(L"\"{}\" {} {} {} {} {} {} {}",
                                                    executable_path,
@@ -606,19 +613,25 @@ void run_settings_window(std::optional<std::wstring> settings_window)
             // attribute list from Windows Explorer (this happens when PowerToys is executed
             // as Administrator from a non-Administrator user or an error occur trying).
             // In the second case the Settings process will run elevated.
-            STARTUPINFO startup_info = { sizeof(startup_info) };
-            if (!CreateProcessW(executable_path.c_str(),
-                                executable_args.data(),
-                                nullptr,
-                                nullptr,
-                                FALSE,
-                                0,
-                                nullptr,
-                                nullptr,
-                                &startup_info,
-                                &process_info))
+            if (!settings_window_startup.TryLaunch([&]() {
+                    STARTUPINFO startup_info = { sizeof(startup_info) };
+                    if (!CreateProcessW(executable_path.c_str(),
+                                        executable_args.data(),
+                                        nullptr,
+                                        nullptr,
+                                        FALSE,
+                                        0,
+                                        nullptr,
+                                        nullptr,
+                                        &startup_info,
+                                        &process_info))
+                    {
+                        Logger::error(L"Failed to start Settings. {}", get_last_error_or_default(GetLastError()));
+                        return false;
+                    }
+                    return true;
+                }))
             {
-                Logger::error(L"Failed to start Settings. {}", get_last_error_or_default(GetLastError()));
                 goto LExit;
             }
         }
@@ -634,7 +647,20 @@ void run_settings_window(std::optional<std::wstring> settings_window)
         {
             std::unique_lock lock{ ipc_mutex };
             current_settings_ipc = new TwoWayPipeMessageIPC(runner_pipe_name, settings_pipe_name, receive_json_send_to_main_thread);
-            current_settings_ipc->start(hToken);
+
+            interop_auth::CallerPolicy settings_caller_policy;
+            settings_caller_policy.enabled = true;
+            settings_caller_policy.expectedDirectory = get_module_folderpath() + L"\\WinUI3Apps";
+            settings_caller_policy.allowedBasenames = { L"Kit.Settings.exe" };
+            settings_caller_policy.expectedVersion = interop_auth::GetOwnModuleVersion();
+            settings_caller_policy.requireMicrosoftSignature = false;
+            settings_caller_policy.logReject = [](const interop_auth::AuthResult& r) {
+                Logger::warn(L"Rejected unauthenticated Settings pipe client: pid={} image='{}' reason={}",
+                             r.pid,
+                             r.imagePath,
+                             r.reasonCode);
+            };
+            current_settings_ipc->start(hToken, settings_caller_policy);
             g_settings_process_id = process_info.dwProcessId;
             g_isLaunchInProgress = false;
         }

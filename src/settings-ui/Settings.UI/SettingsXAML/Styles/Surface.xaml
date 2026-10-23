@@ -60,4 +60,41 @@
         <Setter Property="CornerRadius" Value="2" />
         <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefaultBrush}" />
     </Style>
+
+    <!-- 卡片标题图标徽章（32 方形 / 强调色微染底 / 强调色图标） -->
+    <Style x:Key="KitIconBadgeStyle" TargetType="Border">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Background" Value="{ThemeResource KitAccentTintBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- 卡片内分节小徽章（24 方形 / 中性底 + 描边） -->
+    <Style x:Key="KitIconBadgeSmallStyle" TargetType="Border">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- 卡片标题文本（16 / SemiBold / 二级标题） -->
+    <Style x:Key="KitCardTitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- 主页 Hero 表面（卡片底 + 强调色渐变洗色叠层由页面内 Border 提供） -->
+    <Style x:Key="KitHeroSurfaceStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+    </Style>
 </ResourceDictionary>

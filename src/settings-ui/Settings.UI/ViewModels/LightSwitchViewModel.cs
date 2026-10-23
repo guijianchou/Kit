@@ -73,6 +73,16 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
+        private void SaveSettings()
+        {
+            SendConfigMSG(
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{{ \"powertoys\": {{ \"{0}\": {1} }} }}",
+                    LightSwitchSettings.ModuleName,
+                    JsonSerializer.Serialize(_moduleSettings, SourceGenerationContextContext.Default.LightSwitchSettings)));
+        }
+
         public LightSwitchSettings ModuleSettings
         {
             get => _moduleSettings;
@@ -82,12 +92,12 @@ namespace Kit.Settings.UI.ViewModels
                 {
                     _moduleSettings = value;
 
-                    OnPropertyChanged(nameof(ModuleSettings));
                     RefreshModuleSettings();
-                    RefreshEnabledState();
                 }
             }
         }
+
+        internal bool IsRefreshingModuleSettings => _refreshingModuleSettings;
 
         public bool IsEnabled
         {
@@ -138,14 +148,15 @@ namespace Kit.Settings.UI.ViewModels
             get => ModuleSettings.Properties.ScheduleMode.Value;
             set
             {
-                var oldMode = ModuleSettings.Properties.ScheduleMode.Value;
-                if (ModuleSettings.Properties.ScheduleMode.Value != value)
+                if (_refreshingModuleSettings || ModuleSettings.Properties.ScheduleMode.Value == value)
                 {
-                    ModuleSettings.Properties.ScheduleMode.Value = value;
-                    OnPropertyChanged(nameof(ScheduleMode));
+                    return;
                 }
 
-                if (ModuleSettings.Properties.ScheduleMode.Value == "FixedHours" && oldMode != "FixedHours")
+                ModuleSettings.Properties.ScheduleMode.Value = value;
+                OnPropertyChanged(nameof(ScheduleMode));
+
+                if (ModuleSettings.Properties.ScheduleMode.Value == "FixedHours")
                 {
                     LightTime = 360;
                     DarkTime = 1080;
@@ -175,7 +186,7 @@ namespace Kit.Settings.UI.ViewModels
             get => ModuleSettings.Properties.ChangeSystem.Value;
             set
             {
-                if (ModuleSettings.Properties.ChangeSystem.Value != value)
+                if (!_refreshingModuleSettings && ModuleSettings.Properties.ChangeSystem.Value != value)
                 {
                     ModuleSettings.Properties.ChangeSystem.Value = value;
                     NotifyPropertyChanged();
@@ -188,7 +199,7 @@ namespace Kit.Settings.UI.ViewModels
             get => ModuleSettings.Properties.ChangeApps.Value;
             set
             {
-                if (ModuleSettings.Properties.ChangeApps.Value != value)
+                if (!_refreshingModuleSettings && ModuleSettings.Properties.ChangeApps.Value != value)
                 {
                     ModuleSettings.Properties.ChangeApps.Value = value;
                     NotifyPropertyChanged();
@@ -201,7 +212,7 @@ namespace Kit.Settings.UI.ViewModels
             get => ModuleSettings.Properties.LightTime.Value;
             set
             {
-                if (ModuleSettings.Properties.LightTime.Value != value)
+                if (!_refreshingModuleSettings && ModuleSettings.Properties.LightTime.Value != value)
                 {
                     ModuleSettings.Properties.LightTime.Value = value;
                     NotifyPropertyChanged();
@@ -223,7 +234,7 @@ namespace Kit.Settings.UI.ViewModels
             get => ModuleSettings.Properties.DarkTime.Value;
             set
             {
-                if (ModuleSettings.Properties.DarkTime.Value != value)
+                if (!_refreshingModuleSettings && ModuleSettings.Properties.DarkTime.Value != value)
                 {
                     ModuleSettings.Properties.DarkTime.Value = value;
                     NotifyPropertyChanged();
@@ -245,10 +256,12 @@ namespace Kit.Settings.UI.ViewModels
             get => ModuleSettings.Properties.SunriseOffset.Value;
             set
             {
-                if (ModuleSettings.Properties.SunriseOffset.Value != value)
+                if (!_refreshingModuleSettings && ModuleSettings.Properties.SunriseOffset.Value != value)
                 {
                     ModuleSettings.Properties.SunriseOffset.Value = value;
                     OnPropertyChanged(nameof(LightTimeTimeSpan));
+                    OnPropertyChanged(nameof(SunriseOffsetMin));
+                    OnPropertyChanged(nameof(SunriseOffsetMax));
                     OnPropertyChanged(nameof(SunsetOffsetMin));
                 }
             }
@@ -259,21 +272,26 @@ namespace Kit.Settings.UI.ViewModels
             get => ModuleSettings.Properties.SunsetOffset.Value;
             set
             {
-                if (ModuleSettings.Properties.SunsetOffset.Value != value)
+                if (!_refreshingModuleSettings && ModuleSettings.Properties.SunsetOffset.Value != value)
                 {
                     ModuleSettings.Properties.SunsetOffset.Value = value;
                     OnPropertyChanged(nameof(DarkTimeTimeSpan));
                     OnPropertyChanged(nameof(SunriseOffsetMax));
+                    OnPropertyChanged(nameof(SunsetOffsetMin));
+                    OnPropertyChanged(nameof(SunsetOffsetMax));
                 }
             }
         }
 
+        // A saved offset can fall outside today's range as solar times change.
+        // Keep it visible without rewriting settings during a refresh. User edits
+        // toward the normal range tighten these bounds again.
         public int SunriseOffsetMin
         {
             get
             {
-                // Minimum: don't let adjusted sunrise go before 00:00
-                return -LightTime;
+                // Normal minimum: adjusted sunrise stays at or after 00:00.
+                return Math.Min(-DisplayLightMinutes, SunriseOffset);
             }
         }
 
@@ -281,9 +299,9 @@ namespace Kit.Settings.UI.ViewModels
         {
             get
             {
-                // Maximum: adjusted sunrise must stay before adjusted sunset
-                int adjustedSunset = DarkTime + SunsetOffset;
-                return Math.Max(0, adjustedSunset - LightTime - 1);
+                // Normal maximum: adjusted sunrise stays before adjusted sunset.
+                int adjustedSunset = DisplayDarkMinutes + SunsetOffset;
+                return Math.Max(SunriseOffset, Math.Max(0, adjustedSunset - DisplayLightMinutes - 1));
             }
         }
 
@@ -291,9 +309,9 @@ namespace Kit.Settings.UI.ViewModels
         {
             get
             {
-                // Minimum: adjusted sunset must stay after adjusted sunrise
-                int adjustedSunrise = LightTime + SunriseOffset;
-                return Math.Min(0, adjustedSunrise - DarkTime + 1);
+                // Normal minimum: adjusted sunset stays after adjusted sunrise.
+                int adjustedSunrise = DisplayLightMinutes + SunriseOffset;
+                return Math.Min(SunsetOffset, Math.Min(0, adjustedSunrise - DisplayDarkMinutes + 1));
             }
         }
 
@@ -301,19 +319,37 @@ namespace Kit.Settings.UI.ViewModels
         {
             get
             {
-                // Maximum: don't let adjusted sunset go past 23:59 (1439 minutes)
-                return 1439 - DarkTime;
+                // Normal maximum: adjusted sunset stays at or before 23:59.
+                return Math.Max(1439 - DisplayDarkMinutes, SunsetOffset);
             }
         }
 
         // === Computed projections (OneWay bindings only) ===
+        private int DisplayLightMinutes => ScheduleMode == "SunsetToSunrise" && SunriseTimeSpan.HasValue
+            ? (int)SunriseTimeSpan.Value.TotalMinutes
+            : LightTime;
+
+        private int DisplayDarkMinutes => ScheduleMode == "SunsetToSunrise" && SunsetTimeSpan.HasValue
+            ? (int)SunsetTimeSpan.Value.TotalMinutes
+            : DarkTime;
+
+        private static TimeSpan ToSolarDisplayTime(int minutes, int offset)
+        {
+            const int MinutesPerDay = 24 * 60;
+            long adjustedMinutes = (long)minutes + offset;
+
+            // Retained offsets can cross midnight as sun times change. Match the
+            // service's daily boundaries without changing offsets or sun markers.
+            return TimeSpan.FromMinutes(((adjustedMinutes % MinutesPerDay) + MinutesPerDay) % MinutesPerDay);
+        }
+
         public TimeSpan LightTimeTimeSpan
         {
             get
             {
                 if (ScheduleMode == "SunsetToSunrise")
                 {
-                    return TimeSpan.FromMinutes(LightTime + SunriseOffset);
+                    return ToSolarDisplayTime(DisplayLightMinutes, SunriseOffset);
                 }
                 else
                 {
@@ -328,7 +364,7 @@ namespace Kit.Settings.UI.ViewModels
             {
                 if (ScheduleMode == "SunsetToSunrise")
                 {
-                    return TimeSpan.FromMinutes(DarkTime + SunsetOffset);
+                    return ToSolarDisplayTime(DisplayDarkMinutes, SunsetOffset);
                 }
                 else
                 {
@@ -347,6 +383,10 @@ namespace Kit.Settings.UI.ViewModels
                 {
                     _sunriseTimeSpan = value;
                     NotifyPropertyChanged();
+                    OnPropertyChanged(nameof(LightTimeTimeSpan));
+                    OnPropertyChanged(nameof(SunriseOffsetMin));
+                    OnPropertyChanged(nameof(SunriseOffsetMax));
+                    OnPropertyChanged(nameof(SunsetOffsetMin));
                 }
             }
         }
@@ -360,48 +400,47 @@ namespace Kit.Settings.UI.ViewModels
                 {
                     _sunsetTimeSpan = value;
                     NotifyPropertyChanged();
+                    OnPropertyChanged(nameof(DarkTimeTimeSpan));
+                    OnPropertyChanged(nameof(SunriseOffsetMax));
+                    OnPropertyChanged(nameof(SunsetOffsetMin));
+                    OnPropertyChanged(nameof(SunsetOffsetMax));
                 }
             }
         }
 
         // === Picker values (TwoWay binding targets for TimePickers) ===
+        private static TimeSpan ToPickerTime(int minutes) =>
+            minutes is >= 0 and < 1440 ? TimeSpan.FromMinutes(minutes) : TimeSpan.FromTicks(-1);
+
         public TimeSpan LightTimePickerValue
         {
-            get => TimeSpan.FromMinutes(LightTime);
-            set => LightTime = (int)value.TotalMinutes;
+            // TimePicker only accepts -1 tick for an unset value. Keep missing sun
+            // times in settings without passing other negative durations to XAML.
+            get => ToPickerTime(LightTime);
+            set
+            {
+                if (value.Ticks >= 0 && value.Ticks < TimeSpan.TicksPerDay)
+                {
+                    LightTime = (int)value.TotalMinutes;
+                }
+            }
         }
 
         public TimeSpan DarkTimePickerValue
         {
-            get => TimeSpan.FromMinutes(DarkTime);
-            set => DarkTime = (int)value.TotalMinutes;
-        }
-
-        public string Latitude
-        {
-            get => ModuleSettings.Properties.Latitude.Value;
+            get => ToPickerTime(DarkTime);
             set
             {
-                if (ModuleSettings.Properties.Latitude.Value != value)
+                if (value.Ticks >= 0 && value.Ticks < TimeSpan.TicksPerDay)
                 {
-                    ModuleSettings.Properties.Latitude.Value = value;
-                    NotifyPropertyChanged();
+                    DarkTime = (int)value.TotalMinutes;
                 }
             }
         }
 
-        public string Longitude
-        {
-            get => ModuleSettings.Properties.Longitude.Value;
-            set
-            {
-                if (ModuleSettings.Properties.Longitude.Value != value)
-                {
-                    ModuleSettings.Properties.Longitude.Value = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
+        public string Latitude => ModuleSettings.Properties.Latitude.Value;
+
+        public string Longitude => ModuleSettings.Properties.Longitude.Value;
 
         private SearchLocation? _selectedSearchLocation;
 
@@ -410,14 +449,17 @@ namespace Kit.Settings.UI.ViewModels
             get => _selectedSearchLocation;
             set
             {
-                if (_selectedSearchLocation != value)
+                if (!_refreshingModuleSettings && _selectedSearchLocation != value)
                 {
                     _selectedSearchLocation = value;
-                    NotifyPropertyChanged();
 
                     if (_selectedSearchLocation != null)
                     {
                         UpdateSunTimes(_selectedSearchLocation.Latitude, _selectedSearchLocation.Longitude, _selectedSearchLocation.City);
+                    }
+                    else
+                    {
+                        NotifyPropertyChanged();
                     }
                 }
             }
@@ -425,18 +467,7 @@ namespace Kit.Settings.UI.ViewModels
 
         private string _syncButtonInformation = "Please sync your location";
 
-        public string SyncButtonInformation
-        {
-            get => _syncButtonInformation;
-            set
-            {
-                if (_syncButtonInformation != value)
-                {
-                    _syncButtonInformation = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
+        public string SyncButtonInformation => _syncButtonInformation;
 
         private double _locationPanelLatitude;
         private double _locationPanelLongitude;
@@ -517,68 +548,151 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RefreshModuleSettings()
         {
-            OnPropertyChanged(nameof(ChangeSystem));
-            OnPropertyChanged(nameof(ChangeApps));
-            OnPropertyChanged(nameof(LightTime));
-            OnPropertyChanged(nameof(DarkTime));
-            OnPropertyChanged(nameof(SunriseOffset));
-            OnPropertyChanged(nameof(SunsetOffset));
-            OnPropertyChanged(nameof(Latitude));
-            OnPropertyChanged(nameof(Longitude));
-            OnPropertyChanged(nameof(ScheduleMode));
+            RefreshModuleSettings(calculateSunTimes: false);
         }
 
-        private void UpdateSunTimes(double latitude, double longitude, string city = "n/a")
+        private void RefreshModuleSettings(bool calculateSunTimes, string? locationName = null)
         {
+            var wasRefreshing = _refreshingModuleSettings;
+            _refreshingModuleSettings = true;
+            try
+            {
+                // Reloaded values are authoritative. Updating TwoWay controls (in
+                // particular NumberBox bounds) must not write their old values back.
+                RefreshScheduleDisplay(calculateSunTimes);
+                if (locationName != null)
+                {
+                    _syncButtonInformation = locationName;
+                }
+
+                OnPropertyChanged(nameof(ModuleSettings));
+                OnPropertyChanged(nameof(ChangeSystem));
+                OnPropertyChanged(nameof(ChangeApps));
+                OnPropertyChanged(nameof(LightTime));
+                OnPropertyChanged(nameof(DarkTime));
+                OnPropertyChanged(nameof(LightTimePickerValue));
+                OnPropertyChanged(nameof(DarkTimePickerValue));
+                OnPropertyChanged(nameof(LightTimeTimeSpan));
+                OnPropertyChanged(nameof(DarkTimeTimeSpan));
+                OnPropertyChanged(nameof(SunriseTimeSpan));
+                OnPropertyChanged(nameof(SunsetTimeSpan));
+                OnPropertyChanged(nameof(SunriseOffsetMin));
+                OnPropertyChanged(nameof(SunriseOffsetMax));
+                OnPropertyChanged(nameof(SunsetOffsetMin));
+                OnPropertyChanged(nameof(SunsetOffsetMax));
+                OnPropertyChanged(nameof(SunriseOffset));
+                OnPropertyChanged(nameof(SunsetOffset));
+                OnPropertyChanged(nameof(Latitude));
+                OnPropertyChanged(nameof(Longitude));
+                OnPropertyChanged(nameof(SelectedCity));
+                OnPropertyChanged(nameof(SyncButtonInformation));
+                OnPropertyChanged(nameof(ScheduleMode));
+                RefreshEnabledState();
+            }
+            finally
+            {
+                _refreshingModuleSettings = wasRefreshing;
+            }
+        }
+
+        private void RefreshScheduleDisplay(bool calculateSunTimes)
+        {
+            bool sunSchedule = ScheduleMode == "SunsetToSunrise";
+            _sunriseTimeSpan = sunSchedule ? TimeSpan.FromMinutes(LightTime) : null;
+            _sunsetTimeSpan = sunSchedule ? TimeSpan.FromMinutes(DarkTime) : null;
+
+            _selectedSearchLocation = null;
+            if (double.TryParse(Latitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double savedLat) &&
+                double.TryParse(Longitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double savedLng))
+            {
+                _selectedSearchLocation = SearchLocations.FirstOrDefault(c =>
+                    Math.Abs(c.Latitude - savedLat) < 0.0001 &&
+                    Math.Abs(c.Longitude - savedLng) < 0.0001);
+
+                if (sunSchedule && calculateSunTimes)
+                {
+                    // Keep the initial preview current even when the module is off.
+                    // These display values must not replace the saved schedule times.
+                    var today = DateTime.Now;
+                    var sunTimes = SunCalc.CalculateSunriseSunset(savedLat, savedLng, today.Year, today.Month, today.Day);
+                    _sunriseTimeSpan = TimeSpan.FromMinutes((sunTimes.SunriseHour * 60) + sunTimes.SunriseMinute);
+                    _sunsetTimeSpan = TimeSpan.FromMinutes((sunTimes.SunsetHour * 60) + sunTimes.SunsetMinute);
+                }
+            }
+
+            _syncButtonInformation = _selectedSearchLocation != null
+                ? _selectedSearchLocation.City
+                : $"{Latitude}°,{Longitude}°";
+        }
+
+        public void UpdateSunTimes(double latitude, double longitude, string city = "n/a")
+        {
+            var today = DateTime.Now;
             SunTimes result = SunCalc.CalculateSunriseSunset(
                 latitude,
                 longitude,
-                DateTime.Now.Year,
-                DateTime.Now.Month,
-                DateTime.Now.Day);
+                today.Year,
+                today.Month,
+                today.Day);
 
-            LightTime = (result.SunriseHour * 60) + result.SunriseMinute;
-            DarkTime = (result.SunsetHour * 60) + result.SunsetMinute;
-            Latitude = latitude.ToString(CultureInfo.InvariantCulture);
-            Longitude = longitude.ToString(CultureInfo.InvariantCulture);
+            ApplyLocation(latitude, longitude, (result.SunriseHour * 60) + result.SunriseMinute, (result.SunsetHour * 60) + result.SunsetMinute, city);
+        }
 
-            if (city != "n/a")
+        internal void ApplyLocation(double latitude, double longitude, int lightMinutes, int darkMinutes, string city = "n/a")
+        {
+            if (_refreshingModuleSettings)
             {
-                SyncButtonInformation = city;
+                return;
             }
+
+            var properties = ModuleSettings.Properties;
+            string latitudeText = latitude.ToString(CultureInfo.InvariantCulture);
+            string longitudeText = longitude.ToString(CultureInfo.InvariantCulture);
+            int sunriseOffset = properties.SunriseOffset.Value;
+            int sunsetOffset = properties.SunsetOffset.Value;
+
+            if (lightMinutes is >= 0 and < 1440 && darkMinutes is >= 0 and < 1440)
+            {
+                // Clamp against the complete new schedule, in the same order as the
+                // offset controls. Recheck sunset after a sunrise adjustment. Missing
+                // polar sun times retain the existing offsets rather than invent bounds.
+                sunsetOffset = ClampSunsetOffset(sunsetOffset, sunriseOffset);
+                sunriseOffset = (int)Math.Clamp((long)sunriseOffset, -lightMinutes, Math.Max(0L, (long)darkMinutes + sunsetOffset - lightMinutes - 1));
+                sunsetOffset = ClampSunsetOffset(sunsetOffset, sunriseOffset);
+            }
+
+            bool changed = properties.Latitude.Value != latitudeText || properties.Longitude.Value != longitudeText ||
+                properties.LightTime.Value != lightMinutes || properties.DarkTime.Value != darkMinutes ||
+                properties.SunriseOffset.Value != sunriseOffset || properties.SunsetOffset.Value != sunsetOffset;
+
+            // Publish all source values before any binding or persistence callback
+            // can observe the new location. A partial pair can clamp a valid offset.
+            properties.Latitude.Value = latitudeText;
+            properties.Longitude.Value = longitudeText;
+            properties.LightTime.Value = lightMinutes;
+            properties.DarkTime.Value = darkMinutes;
+            properties.SunriseOffset.Value = sunriseOffset;
+            properties.SunsetOffset.Value = sunsetOffset;
+            RefreshModuleSettings(calculateSunTimes: false, locationName: city == "n/a" ? null : city);
+
+            if (changed)
+            {
+                SaveSettings();
+            }
+
+            int ClampSunsetOffset(int value, int lightOffset) =>
+                (int)Math.Clamp((long)value, Math.Min(0L, (long)lightMinutes + lightOffset - darkMinutes + 1), 1439 - darkMinutes);
         }
 
         public void InitializeScheduleMode()
         {
-            if (ScheduleMode == "SunsetToSunrise" &&
-                double.TryParse(Latitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double savedLat) &&
-                double.TryParse(Longitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double savedLng))
-            {
-                var match = SearchLocations.FirstOrDefault(c =>
-                    Math.Abs(c.Latitude - savedLat) < 0.0001 &&
-                    Math.Abs(c.Longitude - savedLng) < 0.0001);
-
-                if (match != null)
-                {
-                    SelectedCity = match;
-                }
-
-                SyncButtonInformation = SelectedCity != null
-                    ? SelectedCity.City
-                    : $"{Latitude}°,{Longitude}°";
-
-                double lat = double.Parse(ModuleSettings.Properties.Latitude.Value, CultureInfo.InvariantCulture);
-                double lon = double.Parse(ModuleSettings.Properties.Longitude.Value, CultureInfo.InvariantCulture);
-                UpdateSunTimes(lat, lon);
-
-                SunriseTimeSpan = TimeSpan.FromMinutes(LightTime);
-                SunsetTimeSpan = TimeSpan.FromMinutes(DarkTime);
-            }
+            RefreshModuleSettings(calculateSunTimes: true);
         }
 
         private bool _enabledStateIsGPOConfigured;
         private GpoRuleConfigured _enabledGpoRuleConfiguration;
         private LightSwitchSettings _moduleSettings;
+        private bool _refreshingModuleSettings;
         private bool _isEnabled;
         private TimeSpan? _sunriseTimeSpan;
         private TimeSpan? _sunsetTimeSpan;

@@ -23,27 +23,34 @@
             NoResultsSuggestionTemplate="{StaticResource NoResultSearchResultTemplate}"
             ShowAllSuggestionTemplate="{StaticResource ShowAllSearchResultTemplate}" />
         <DataTemplate x:Key="DefaultSearchResultTemplate" x:DataType="models:SuggestionItem">
-            <Grid Padding="12,6" CornerRadius="4">
+            <Grid Padding="10,6" CornerRadius="6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Viewbox
-                    Width="16"
-                    Height="16"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Stretch="Uniform">
-                    <ContentPresenter
+                <Border
+                    Width="28"
+                    Height="28"
+                    CornerRadius="6"
+                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                    VerticalAlignment="Center">
+                    <Viewbox
+                        Width="16"
+                        Height="16"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Content="{x:Bind Icon, Converter={StaticResource IconConverter}, ConverterParameter=&#xE713;}" />
-                </Viewbox>
+                        Stretch="Uniform">
+                        <ContentPresenter
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{x:Bind Icon, Converter={StaticResource IconConverter}, ConverterParameter=&#xE713;}" />
+                    </Viewbox>
+                </Border>
                 <StackPanel
                     Grid.Column="1"
-                    Margin="10,0,0,0"
+                    Margin="12,0,0,0"
                     VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Header}" FontWeight="SemiBold" FontSize="14" />
+                    <TextBlock Text="{x:Bind Header}" FontWeight="SemiBold" FontSize="13.5" />
                     <TextBlock
                         FontSize="12"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -139,7 +146,7 @@
             IsPaneToggleButtonVisible="False"
             IsSettingsVisible="False"
             IsTitleBarAutoPaddingEnabled="False"
-            OpenPaneLength="208"
+            OpenPaneLength="216"
             CompactPaneLength="48"
             CompactModeThresholdWidth="640"
             ExpandedModeThresholdWidth="1008"
@@ -147,10 +154,12 @@
             PaneDisplayMode="Auto"
             PaneOpened="NavigationView_PaneOpened"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}">
-            <NavigationView.Resources>
-                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
-            </NavigationView.Resources>
+            <!--
+                The NavigationView renders the native Windows 11 content layer itself:
+                LayerFillColorDefaultBrush over Mica, a CardStroke hairline and an 8px top-left corner
+                in Left/Compact mode, switching to an edge-to-edge layer in Minimal mode.
+                The pane stays transparent so Mica shows through it.
+            -->
 
             <NavigationView.MenuItems>
                 <NavigationViewItem
@@ -238,21 +247,19 @@
                     <ic:InvokeCommandAction Command="{x:Bind ViewModel.ItemInvokedCommand}" />
                 </ic:EventTriggerBehavior>
             </i:Interaction.Behaviors>
-            <Border
-                Margin="0,0,8,8"
-                Padding="0,24,0,0"
-                Background="{ThemeResource LayerFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
+            <Grid x:Name="ShellContentHost" Padding="0,20,0,0">
                 <Frame x:Name="shellFrame">
                     <Frame.ContentTransitions>
                         <TransitionCollection>
-                            <NavigationThemeTransition />
+                            <NavigationThemeTransition>
+                                <NavigationThemeTransition.DefaultNavigationTransitionInfo>
+                                    <EntranceNavigationTransitionInfo />
+                                </NavigationThemeTransition.DefaultNavigationTransitionInfo>
+                            </NavigationThemeTransition>
                         </TransitionCollection>
                     </Frame.ContentTransitions>
                 </Frame>
-            </Border>
+            </Grid>
         </NavigationView>
     </Grid>
 </UserControl>

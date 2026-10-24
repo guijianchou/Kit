@@ -39,13 +39,17 @@ using UDPtestLib.Storage;
 
 namespace Kit.Settings.UI.ViewModels
 {
-    public sealed class UDPtestViewModel : Observable, IDisposable
+    public sealed partial class UDPtestViewModel : PageViewModelBase, IDisposable
     {
+        protected override string ModuleName => UDPtestSettings.ModuleName;
+
         private static readonly Uri NetworkTraceUri = new("https://www.cloudflare.com/cdn-cgi/trace");
         private static readonly TimeSpan NetworkIdentityRefreshInterval = TimeSpan.FromSeconds(15);
 
         private readonly SettingsUtils _settingsUtils;
         private readonly ISettingsRepository<GeneralSettings> _generalSettingsRepository;
+        private readonly ISettingsRepository<UDPtestSettings> _moduleSettingsRepository;
+        private readonly Func<string, int> _sendConfigMsg;
         private readonly TargetSettingsStore _targetStore = new();
         private readonly ProbeCoordinator _coordinator = new();
         private readonly HttpClient _identityClient = CreateIdentityClient();
@@ -101,13 +105,18 @@ namespace Kit.Settings.UI.ViewModels
 
         public event Action? HealthChartNeedsRedraw;
 
-        public UDPtestViewModel(SettingsUtils? settingsUtils = null)
+        public UDPtestViewModel(
+            ISettingsRepository<GeneralSettings>? generalSettingsRepository = null,
+            ISettingsRepository<UDPtestSettings>? moduleSettingsRepository = null,
+            Func<string, int>? ipcMsgCallback = null)
         {
-            _settingsUtils = settingsUtils ?? SettingsUtils.Default;
-            _generalSettingsRepository = SettingsRepository<GeneralSettings>.GetInstance(_settingsUtils);
+            _settingsUtils = SettingsUtils.Default;
+            _generalSettingsRepository = generalSettingsRepository ?? SettingsRepository<GeneralSettings>.GetInstance(_settingsUtils);
+            _moduleSettingsRepository = moduleSettingsRepository ?? SettingsRepository<UDPtestSettings>.GetInstance(_settingsUtils);
+            _sendConfigMsg = ipcMsgCallback ?? (_ => 0);
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread() ?? DispatcherQueue.GetForCurrentThread();
 
-            _settings = _settingsUtils.GetSettingsOrDefault<UDPtestSettings>(UDPtestSettings.ModuleName);
+            _settings = _moduleSettingsRepository.SettingsConfig ?? _settingsUtils.GetSettingsOrDefault<UDPtestSettings>(UDPtestSettings.ModuleName);
             _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.UDPtest);
             _isEnabled = _generalSettingsRepository.SettingsConfig.Enabled.UDPtest;
 
@@ -158,7 +167,7 @@ namespace Kit.Settings.UI.ViewModels
                     RefreshEnabledState();
 
                     var outgoing = new OutGoingGeneralSettings(generalSettings);
-                    Kit.Settings.UI.Views.ShellPage.SendDefaultIPCMessage(outgoing.ToString());
+                    _sendConfigMsg(outgoing.ToString());
                 }
             }
         }
@@ -263,6 +272,7 @@ namespace Kit.Settings.UI.ViewModels
                 {
                     _settings.Properties.ProbeIntervalMilliseconds.Value = value;
                     _settingsUtils.SaveSettings(_settings.ToJsonString(), UDPtestSettings.ModuleName);
+                    _sendConfigMsg(new SndModuleSettings<SndUDPtestSettings>(new SndUDPtestSettings(_settings)).ToJsonString());
                 }
             }
         }
@@ -1153,14 +1163,18 @@ namespace Kit.Settings.UI.ViewModels
             });
         }
 
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            _generalSettingsRepository.SettingsChanged -= OnGeneralSettingsChanged;
-            _lifecycleCancellation.Cancel();
-            _sessionTimer.Stop();
-            _coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            _identityClient.Dispose();
-            _lifecycleCancellation.Dispose();
+            if (disposing)
+            {
+                _generalSettingsRepository.SettingsChanged -= OnGeneralSettingsChanged;
+                _lifecycleCancellation.Cancel();
+                _sessionTimer.Stop();
+                _coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                _identityClient.Dispose();
+                _lifecycleCancellation.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }

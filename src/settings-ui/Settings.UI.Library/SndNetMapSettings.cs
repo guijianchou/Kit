@@ -10,5 +10,14 @@ namespace Kit.Settings.UI.Library
     {
         [JsonPropertyName("NetMap")]
         public NetMapSettings Settings { get; set; }
+
+        public SndNetMapSettings()
+        {
+        }
+
+        public SndNetMapSettings(NetMapSettings settings)
+        {
+            Settings = settings;
+        }
     }
 }

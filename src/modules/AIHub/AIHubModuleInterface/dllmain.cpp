@@ -65,6 +65,9 @@ public:
     {
         app_name = GET_RESOURCE_STRING_FALLBACK(IDS_AIHUB_NAME, L"AI Hub");
         app_key = AIHubConstants::ModuleKey;
+        std::filesystem::path logFilePath(PTSettingsHelper::get_module_save_folder_location(this->app_key));
+        logFilePath.append(LogSettings::aiHubLogPath);
+        Logger::init(LogSettings::aiHubLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
         Logger::info("AIHub module is constructing");
     }
 
@@ -82,7 +85,7 @@ public:
 
     virtual const wchar_t* get_name() override
     {
-        return MODULE_NAME;
+        return app_name.c_str();
     }
 
     virtual bool get_config(wchar_t* buffer, int* buffer_size) override
@@ -107,6 +110,13 @@ public:
             KitSettings::PowerToyValues values =
                 KitSettings::PowerToyValues::from_json_string(config, get_key());
             values.save_to_settings_file();
+
+            auto refreshEvent = CreateEventW(nullptr, false, false, CommonSharedConstants::AIHUB_REFRESH_SETTINGS_EVENT);
+            if (refreshEvent)
+            {
+                SetEvent(refreshEvent);
+                CloseHandle(refreshEvent);
+            }
         }
         catch (std::exception&)
         {
@@ -187,7 +197,7 @@ void AIHubModule::start_worker_if_needed()
         return;
     }
 
-    const std::wstring args = L"--pid " + std::to_wstring(GetCurrentProcessId());
+    const std::wstring args = L"--use-kit-config --pid " + std::to_wstring(GetCurrentProcessId());
     std::wstring command_line = L"\"" + resolved_path + L"\" " + args;
 
     STARTUPINFO si = { sizeof(si) };
@@ -230,7 +240,7 @@ void AIHubModule::stop_worker_if_running()
 
         // Ask the worker to drain and exit first, then terminate as a fallback so a stuck
         // worker cannot outlive the module.
-        HANDLE stopEvent = OpenEventW(EVENT_MODIFY_STATE, FALSE, AIHUB_WORKER_STOP_EVENT);
+        HANDLE stopEvent = OpenEventW(EVENT_MODIFY_STATE, FALSE, CommonSharedConstants::AIHUB_EXIT_EVENT);
         if (stopEvent)
         {
             SetEvent(stopEvent);

@@ -239,7 +239,7 @@ public:
             L"Your longitude in decimal degrees (e.g. -75.16).",
             g_settings.m_longitude);
 
-        // Serialize to buffer for the PowerToys runner
+        // Serialize to buffer for the Kit runner
         return settings.serialize_to_buffer(buffer, buffer_size);
     }
 

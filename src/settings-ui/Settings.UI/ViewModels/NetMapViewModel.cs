@@ -178,8 +178,12 @@ public sealed class NetMapHopRow(int ttl) : Observable
     private static string Format(double? value) => value?.ToString("F1", CultureInfo.CurrentCulture) ?? "—";
 }
 
-public sealed class NetMapViewModel : Observable, IDisposable
+public sealed partial class NetMapViewModel : PageViewModelBase
 {
+    protected override string ModuleName => NetMapSettings.ModuleName;
+
+    private readonly ISettingsRepository<NetMapSettings> _moduleSettingsRepository;
+    private readonly Func<string, int> _sendConfigMsg;
     private static readonly string[] ServiceNames = ["Claude", "ChatGPT", "Gemini", "Google"];
     private readonly ISettingsRepository<GeneralSettings> general;
     private readonly DispatcherQueue dispatcher;
@@ -201,11 +205,17 @@ public sealed class NetMapViewModel : Observable, IDisposable
     private string? aiRouteSummary;
     private string? aiRouteDetails;
 
-    public NetMapViewModel()
+    public NetMapViewModel(
+        ISettingsRepository<GeneralSettings>? generalSettingsRepository = null,
+        ISettingsRepository<NetMapSettings>? moduleSettingsRepository = null,
+        Func<string, int>? ipcMsgCallback = null)
     {
         dispatcher = DispatcherQueue.GetForCurrentThread();
-        general = SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default);
-        var settings = SettingsUtils.Default.GetSettingsOrDefault<NetMapSettings>(NetMapSettings.ModuleName).Properties ?? new NetMapProperties();
+        var settingsUtils = SettingsUtils.Default;
+        general = generalSettingsRepository ?? SettingsRepository<GeneralSettings>.GetInstance(settingsUtils);
+        _moduleSettingsRepository = moduleSettingsRepository ?? SettingsRepository<NetMapSettings>.GetInstance(settingsUtils);
+        _sendConfigMsg = ipcMsgCallback ?? (_ => 0);
+        var settings = (_moduleSettingsRepository.SettingsConfig ?? settingsUtils.GetSettingsOrDefault<NetMapSettings>(NetMapSettings.ModuleName)).Properties ?? new NetMapProperties();
         asnDatabase = settings.AsnDatabase?.Value ?? string.Empty;
         cityDatabase = settings.CityDatabase?.Value ?? string.Empty;
         onlineLookup = settings.OnlineLookup?.Value ?? true;
@@ -241,7 +251,7 @@ public sealed class NetMapViewModel : Observable, IDisposable
             {
                 general.SettingsConfig.Enabled.NetMap = value;
                 RefreshEnabledState();
-                ShellPage.SendDefaultIPCMessage(new OutGoingGeneralSettings(general.SettingsConfig).ToString());
+                _sendConfigMsg(new OutGoingGeneralSettings(general.SettingsConfig).ToString());
             }
         }
     }
@@ -565,8 +575,9 @@ public sealed class NetMapViewModel : Observable, IDisposable
                 OnlineLookup = new BoolProperty(options.OnlineLookup),
             },
         };
+        _moduleSettingsRepository.SettingsConfig = settings;
         var outgoing = new SndModuleSettings<SndNetMapSettings>(new SndNetMapSettings { Settings = settings });
-        ShellPage.SendDefaultIPCMessage(JsonSerializer.Serialize(outgoing, SettingsSerializationContext.Default.SndModuleSettingsSndNetMapSettings));
+        _sendConfigMsg(JsonSerializer.Serialize(outgoing, SettingsSerializationContext.Default.SndModuleSettingsSndNetMapSettings));
         Message = Text("SettingsApplied");
     }
 
@@ -597,13 +608,18 @@ public sealed class NetMapViewModel : Observable, IDisposable
         }
     }
 
-    public void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        CancelDataUpdate();
-        disposed = true;
-        general.SettingsChanged -= OnGeneralChanged;
-        session.Changed -= OnSnapshot;
-        session.Dispose();
+        if (disposing)
+        {
+            CancelDataUpdate();
+            disposed = true;
+            general.SettingsChanged -= OnGeneralChanged;
+            session.Changed -= OnSnapshot;
+            session.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 
     internal static string ServiceText(ServiceResult? result)

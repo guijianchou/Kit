@@ -66,6 +66,9 @@ public:
     {
         app_name = GET_RESOURCE_STRING(IDS_LOCALSERVER_NAME);
         app_key = LocalserverConstants::ModuleKey;
+        std::filesystem::path logFilePath(PTSettingsHelper::get_module_save_folder_location(this->app_key));
+        logFilePath.append(LogSettings::localserverLogPath);
+        Logger::init(LogSettings::localserverLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
         Logger::info("Localserver module is constructing");
     }
 
@@ -83,7 +86,7 @@ public:
 
     virtual const wchar_t* get_name() override
     {
-        return MODULE_NAME;
+        return app_name.c_str();
     }
 
     virtual bool get_config(wchar_t* buffer, int* buffer_size) override
@@ -108,6 +111,13 @@ public:
             KitSettings::PowerToyValues values =
                 KitSettings::PowerToyValues::from_json_string(config, get_key());
             values.save_to_settings_file();
+
+            auto refreshEvent = CreateEventW(nullptr, false, false, CommonSharedConstants::LOCALSERVER_REFRESH_SETTINGS_EVENT);
+            if (refreshEvent)
+            {
+                SetEvent(refreshEvent);
+                CloseHandle(refreshEvent);
+            }
         }
         catch (std::exception&)
         {
@@ -238,7 +248,7 @@ void LocalserverModule::start_worker_if_needed()
         return;
     }
 
-    const std::wstring args = L"--pid " + std::to_wstring(GetCurrentProcessId());
+    const std::wstring args = L"--use-kit-config --pid " + std::to_wstring(GetCurrentProcessId());
     std::wstring command_line = L"\"" + resolved_path + L"\" " + args;
 
     STARTUPINFO si = { sizeof(si) };
@@ -270,6 +280,13 @@ void LocalserverModule::stop_worker_if_running()
     if (!m_worker_process)
     {
         return;
+    }
+
+    auto exitEvent = CreateEventW(nullptr, false, false, CommonSharedConstants::LOCALSERVER_EXIT_EVENT);
+    if (exitEvent)
+    {
+        SetEvent(exitEvent);
+        CloseHandle(exitEvent);
     }
 
     // The worker polls for the module-disable flag, stops its supervised services and

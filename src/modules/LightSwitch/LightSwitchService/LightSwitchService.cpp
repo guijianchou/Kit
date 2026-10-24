@@ -399,7 +399,7 @@ int APIENTRY wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
     Trace::LightSwitch::RegisterProvider();
 
-    if (powertoys_gpo::getConfiguredLightSwitchEnabledValue() == powertoys_gpo::gpo_rule_configured_disabled)
+    if (kit_gpo::getConfiguredLightSwitchEnabledValue() == kit_gpo::gpo_rule_configured_disabled)
     {
         wchar_t msg[160];
         swprintf_s(

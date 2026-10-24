@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
+  <Import Project="$(RepoRoot)src\Common.Dotnet.AotCompatibility.props" />
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <AssemblyName>Kit.UDPtestService</AssemblyName>
+    <RootNamespace>Kit.UDPtestService</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <UseWinUI>false</UseWinUI>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <OutDir>$(RepoRoot)$(Platform)\$(Configuration)\UDPtestService\</OutDir>
+    <NoWarn>$(NoWarn);SA0001;SA1200;SA1201;SA1202;SA1309;SA1402;SA1516;SA1600;SA1633;SA1649;CA1861;CA1305;CA1303</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\common\ManagedCommon\ManagedCommon.csproj" />
+    <ProjectReference Include="..\UDPtestLib\UDPtestLib.csproj" />
+  </ItemGroup>
+</Project>

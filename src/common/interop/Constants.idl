@@ -8,6 +8,14 @@ namespace Kit
             static String LightSwitchToggleEvent();
             static String AwakeExitEvent();
             static String KitRunnerTerminateSettingsEvent();
+            static String LocalserverExitEvent();
+            static String LocalserverRefreshSettingsEvent();
+            static String AIHubExitEvent();
+            static String AIHubRefreshSettingsEvent();
+            static String UDPtestExitEvent();
+            static String UDPtestRefreshSettingsEvent();
+            static String NetMapExitEvent();
+            static String NetMapRefreshSettingsEvent();
         }
     }
 }

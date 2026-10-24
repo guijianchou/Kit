@@ -31,4 +31,36 @@ namespace winrt::Kit::Interop::implementation
     {
         return CommonSharedConstants::TERMINATE_SETTINGS_SHARED_EVENT;
     }
+    hstring Constants::LocalserverExitEvent()
+    {
+        return CommonSharedConstants::LOCALSERVER_EXIT_EVENT;
+    }
+    hstring Constants::LocalserverRefreshSettingsEvent()
+    {
+        return CommonSharedConstants::LOCALSERVER_REFRESH_SETTINGS_EVENT;
+    }
+    hstring Constants::AIHubExitEvent()
+    {
+        return CommonSharedConstants::AIHUB_EXIT_EVENT;
+    }
+    hstring Constants::AIHubRefreshSettingsEvent()
+    {
+        return CommonSharedConstants::AIHUB_REFRESH_SETTINGS_EVENT;
+    }
+    hstring Constants::UDPtestExitEvent()
+    {
+        return CommonSharedConstants::UDPTEST_EXIT_EVENT;
+    }
+    hstring Constants::UDPtestRefreshSettingsEvent()
+    {
+        return CommonSharedConstants::UDPTEST_REFRESH_SETTINGS_EVENT;
+    }
+    hstring Constants::NetMapExitEvent()
+    {
+        return CommonSharedConstants::NETMAP_EXIT_EVENT;
+    }
+    hstring Constants::NetMapRefreshSettingsEvent()
+    {
+        return CommonSharedConstants::NETMAP_REFRESH_SETTINGS_EVENT;
+    }
 }

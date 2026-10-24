@@ -155,14 +155,14 @@ public:
 
     virtual const wchar_t* get_name() override
     {
-        return MODULE_NAME;
+        return app_name.c_str();
     }
 
     virtual bool get_config(wchar_t* buffer, int* buffer_size) override
     {
         HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
 
-        PowerToysSettings::Settings settings(hinstance, get_name());
+        KitSettings::Settings settings(hinstance, get_name());
         settings.set_description(MODULE_DESC);
 
         return settings.serialize_to_buffer(buffer, buffer_size);
@@ -177,8 +177,8 @@ public:
     {
         try
         {
-            PowerToysSettings::PowerToyValues values =
-                PowerToysSettings::PowerToyValues::from_json_string(config, get_key());
+            KitSettings::PowerToyValues values =
+                KitSettings::PowerToyValues::from_json_string(config, get_key());
             values.save_to_settings_file();
         }
         catch (std::exception&)

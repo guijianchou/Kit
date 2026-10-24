@@ -10,5 +10,14 @@ namespace Kit.Settings.UI.Library
     {
         [JsonPropertyName("UDPtest")]
         public UDPtestSettings Settings { get; set; }
+
+        public SndUDPtestSettings()
+        {
+        }
+
+        public SndUDPtestSettings(UDPtestSettings settings)
+        {
+            Settings = settings;
+        }
     }
 }

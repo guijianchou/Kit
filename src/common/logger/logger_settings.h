@@ -16,6 +16,14 @@ struct LogSettings
     inline const static std::string awakeLoggerName = "awake";
     inline const static std::wstring awakeLogPath = L"Logs\\awake-log.log";
     inline const static std::string lightSwitchLoggerName = "light-switch";
+    inline const static std::string localserverLoggerName = "localserver";
+    inline const static std::wstring localserverLogPath = L"Logs\\localserver-log.log";
+    inline const static std::string aiHubLoggerName = "ai-hub";
+    inline const static std::wstring aiHubLogPath = L"Logs\\ai-hub-log.log";
+    inline const static std::string udptestLoggerName = "udptest";
+    inline const static std::wstring udptestLogPath = L"Logs\\udptest-log.log";
+    inline const static std::string netMapLoggerName = "netmap";
+    inline const static std::wstring netMapLogPath = L"Logs\\netmap-log.log";
     inline const static int retention = 30;
     std::wstring logLevel;
     LogSettings();

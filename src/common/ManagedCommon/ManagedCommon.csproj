@@ -6,6 +6,7 @@
   <PropertyGroup>
     <Description>Kit ManagedCommon</Description>
     <AssemblyName>Kit.ManagedCommon</AssemblyName>
+    <NoWarn>$(NoWarn);SA1402;SA1516;SA1649;SA1600;SA1601</NoWarn>
   </PropertyGroup>
 
   <!-- See https://learn.microsoft.com/windows/apps/develop/platform/csharp-winrt/net-projection-from-cppwinrt-component for more info -->

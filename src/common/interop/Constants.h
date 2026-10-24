@@ -11,6 +11,14 @@ namespace winrt::Kit::Interop::implementation
         static hstring LightSwitchToggleEvent();
         static hstring AwakeExitEvent();
         static hstring KitRunnerTerminateSettingsEvent();
+        static hstring LocalserverExitEvent();
+        static hstring LocalserverRefreshSettingsEvent();
+        static hstring AIHubExitEvent();
+        static hstring AIHubRefreshSettingsEvent();
+        static hstring UDPtestExitEvent();
+        static hstring UDPtestRefreshSettingsEvent();
+        static hstring NetMapExitEvent();
+        static hstring NetMapRefreshSettingsEvent();
     };
 }
 

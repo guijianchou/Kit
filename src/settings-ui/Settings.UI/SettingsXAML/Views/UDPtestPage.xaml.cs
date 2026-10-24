@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -22,7 +23,14 @@ namespace Kit.Settings.UI.Views
 
         public UDPtestPage()
         {
-            ViewModel = new UDPtestViewModel();
+            var settingsUtils = SettingsUtils.Default;
+            var generalSettingsRepository = SettingsRepository<GeneralSettings>.GetInstance(settingsUtils);
+            var moduleSettingsRepository = SettingsRepository<UDPtestSettings>.GetInstance(settingsUtils);
+
+            ViewModel = new UDPtestViewModel(
+                generalSettingsRepository,
+                moduleSettingsRepository,
+                ShellPage.SendDefaultIPCMessage);
             DataContext = ViewModel;
             InitializeComponent();
             Loaded += (_, _) => RefreshEnabledState();

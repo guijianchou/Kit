@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -35,7 +36,11 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     public NetMapPage()
     {
-        ViewModel = new NetMapViewModel();
+        var settingsUtils = SettingsUtils.Default;
+        ViewModel = new NetMapViewModel(
+            SettingsRepository<GeneralSettings>.GetInstance(settingsUtils),
+            SettingsRepository<NetMapSettings>.GetInstance(settingsUtils),
+            ShellPage.SendDefaultIPCMessage);
         InitializeComponent();
         DataContext = ViewModel;
         settingsWindow = App.GetSettingsWindow();

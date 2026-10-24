@@ -4,6 +4,15 @@
 
 ## English
 
+### 3.1.1
+
+- **Win32 Standard DIB ICO Generation for Services**:
+  - Replaced PNG-compressed ICO assets for `Kit.LocalserverWorker`, `Kit.UDPtestService`, `Kit.NetMapService`, and `Kit.AIHubWorker` with standard Win32 uncompressed 32bpp DIB ICO formats (matching `Awake.ico` with 128x128, 64x64, 48x48, 32x32, 24x24, 20x20, 16x16 frames, 40-byte `BITMAPINFOHEADER` and 1-bit monochrome AND mask), ensuring Windows Task Manager and Shell icon cache display native service icons reliably without falling back to generic placeholders.
+- **Localserver Environment CPU Telemetry & Dynamic Trend Curve**:
+  - Captured startup CPU delta in `LineRowViewModel.RefreshResourceSampleAsync` using process start timestamp so service initialization spikes are captured instead of discarded on the initial tick.
+  - Added sub-tenth precision text display (`<0.1%`) and dynamic peak scaling (`Math.Max(5d, peak * 1.15d)`) in `UpdateChartGeometry` to ensure CPU curves and peak readings reflect active loads dynamically rather than remaining flat at 0%.
+  - Isolated process processor time and working set queries with dedicated try-catch blocks in `ProcessResourceInspector` to protect telemetry against individual handle access errors.
+
 ### 3.1.0
 
 - **WinUI 3 + Mica Alt Design System & Dashboard UI/UX Overhaul**:
@@ -747,6 +756,15 @@
 ## 中文
 
 ## 更新日志
+
+### 3.1.1
+
+- **独立后台服务图标全面适配 Win32 标准 DIB ICO 规范**：
+  - 将 `Kit.LocalserverWorker`、`Kit.UDPtestService`、`Kit.NetMapService` 与 `Kit.AIHubWorker` 的应用图标重构为标准 Win32 32bpp 无压缩 DIB 格式（完全对齐 `Awake.ico` 的 7 档位帧结构：128x128、64x64、48x48、32x32、24x24、20x20、16x16，配备 40 字节 `BITMAPINFOHEADER` 与 1 字节位图 AND 掩码），彻底解决 Windows 任务管理器（Task Manager）及 Shell 图标缓存无法提取 PNG 压缩帧导致服务显示通用空白图标的问题。
+- **Localserver 环境卡片 CPU 实时遥测与动态趋势折线修复**：
+  - 在 `LineRowViewModel.RefreshResourceSampleAsync` 中补充首次采样时基于进程启动时间戳的 CPU 差值计算，确保服务启动峰值能够被准确捕获并记录入遥测历史，消除启动后首帧将 CPU 强制置零的问题。
+  - 在 `RecordCpuSample` 与 `UpdateChartGeometry` 中新增微量负载精度提示（`<0.1%`）与自适应峰值缩放（`Math.Max(5d, peak * 1.15d)`），彻底消除峰值被 100% 静态缩放压平至 0 像素基线的问题，使服务 CPU 曲线与峰值动态跟随实际负载变动。
+  - 在 `ProcessResourceInspector` 中将进程处理器时间与工作集内存查询拆分为独立异常隔离保护，防止单个进程句柄查询异常影响整树遥测。
 
 ### 3.1.0
 

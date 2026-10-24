@@ -131,12 +131,33 @@ public static class ProcessResourceInspector
             try
             {
                 using Process process = Process.GetProcessById(processId);
-                processorTime += process.TotalProcessorTime;
-                long workingSet = process.WorkingSet64;
-                readableProcessCount++;
-                if (workingSet > 0 && workingSetBytes <= long.MaxValue - workingSet)
+                bool readAny = false;
+                try
                 {
-                    workingSetBytes += workingSet;
+                    processorTime += process.TotalProcessorTime;
+                    readAny = true;
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    long workingSet = process.WorkingSet64;
+                    if (workingSet > 0 && workingSetBytes <= long.MaxValue - workingSet)
+                    {
+                        workingSetBytes += workingSet;
+                    }
+
+                    readAny = true;
+                }
+                catch
+                {
+                }
+
+                if (readAny)
+                {
+                    readableProcessCount++;
                 }
             }
             catch (ArgumentException)

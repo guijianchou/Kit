@@ -464,7 +464,7 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             CpuPercent = clamped;
-            CpuText = cpuPercent.HasValue ? $"{clamped:F1}%" : "—";
+            CpuText = !cpuPercent.HasValue ? "—" : (clamped > 0d && clamped < 0.1d) ? "<0.1%" : $"{clamped:F1}%";
             OnPropertyChanged(nameof(CpuPercent));
             OnPropertyChanged(nameof(CpuText));
 
@@ -532,6 +532,19 @@ namespace Kit.Settings.UI.ViewModels
                         double elapsedMilliseconds = (now - previousAt).TotalMilliseconds;
                         double cpuMilliseconds = (sample.TotalProcessorTime - previous.TotalProcessorTime).TotalMilliseconds;
                         if (elapsedMilliseconds > 0 && cpuMilliseconds >= 0)
+                        {
+                            cpuPercent = Math.Clamp(
+                                cpuMilliseconds / (elapsedMilliseconds * Environment.ProcessorCount) * 100d,
+                                0d,
+                                100d);
+                        }
+                    }
+                    else if (_runner.StartedAtUtc is { } startedAt && now > startedAt && _lastResourceGeneration != processGeneration)
+                    {
+                        // First sample for the newly started process: capture startup CPU activity
+                        double elapsedMilliseconds = (now - startedAt).TotalMilliseconds;
+                        double cpuMilliseconds = sample.TotalProcessorTime.TotalMilliseconds;
+                        if (elapsedMilliseconds > 50 && cpuMilliseconds >= 0)
                         {
                             cpuPercent = Math.Clamp(
                                 cpuMilliseconds / (elapsedMilliseconds * Environment.ProcessorCount) * 100d,
@@ -1989,8 +2002,8 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             var samples = SelectedLine.CpuHistory;
-            double peak = samples.Max();
-            double scaleMaximum = Math.Max(100d, peak);
+            double peak = samples.Count > 0 ? samples.Max() : 0d;
+            double scaleMaximum = Math.Max(5d, peak * 1.15d);
 
             List<Point> points = new(samples.Count);
             for (int i = 0; i < samples.Count; i++)
@@ -2003,7 +2016,7 @@ namespace Kit.Settings.UI.ViewModels
                 points.Add(new Point(x, y));
             }
 
-            StatusChartRangeText = $"PEAK {peak:F1}%";
+            StatusChartRangeText = peak > 0d && peak < 0.1d ? "PEAK <0.1%" : $"PEAK {peak:F1}%";
 
             StatusCurveGeometry = CreateSmoothHealthPath(points);
             StatusCurveFillGeometry = CreateHealthFillPath(points, plotBottom);

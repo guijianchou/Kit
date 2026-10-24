@@ -80,6 +80,8 @@ Only the main components are shown. Keep the complete build or staged directory 
 ├── Kit.LightSwitch.Cli.exe
 ├── LightSwitchService/Kit.LightSwitchService.exe
 ├── LocalserverWorker/Kit.LocalserverWorker.exe
+├── UDPtestService/Kit.UDPtestService.exe
+├── NetMapService/Kit.NetMapService.exe
 ├── AIHubWorker/Kit.AIHubWorker.exe
 └── WinUI3Apps/
     ├── Kit.Settings.exe

@@ -6,6 +6,15 @@
 
 ### 3.1.1
 
+- **Module Architecture Standardization & Headless Background Services**:
+  - **Decoupled Module Lifecycle via `KitModuleServiceBase` & `KitServicePipe`**: Introduced managed hosting infrastructure in `ManagedCommon` to standardize headless background services with automatic parent process monitoring (`--pid`), safe named-pipe IPC commands, and graceful termination events.
+  - **Dedicated Headless Services for UDPtest & NetMap**:
+    - Created `Kit.UDPtestService.exe` (`UDPtestService.csproj`) and migrated socket thread pools, latency/jitter probes, and WFP driver integration out of the UI process, ensuring network diagnostics persist seamlessly after closing the Settings window.
+    - Created `Kit.NetMapService.exe` (`NetMapService.csproj`) and migrated subnet ARP/ICMP scanning and topology polling into an independent background host.
+    - Updated `UDPtestViewModel` and `NetMapViewModel` to inherit from `PageViewModelBase` and communicate with backend services via non-blocking IPC commands.
+  - **Unified Native Module Interface Lifecycles**:
+    - Standardized `dllmain.cpp` across `Localserver`, `UDPtest`, `NetMap`, `AIHub`, `Awake`, and `LightSwitch` with dedicated logging channels (`Kit.<Module>.log`), dual export symbols (`kit_create` with legacy `powertoy_create` fallback), and graceful event signaling (`ExitEvent` / `StopEvent`) to eliminate orphan process trees upon module disable or Runner shutdown.
+  - **PowerToys Rebranding Cleanup**: Cleared legacy PowerToys branding strings and assembly identities across Awake and LightSwitch resources.
 - **Win32 Standard DIB ICO Generation for Services**:
   - Replaced PNG-compressed ICO assets for `Kit.LocalserverWorker`, `Kit.UDPtestService`, `Kit.NetMapService`, and `Kit.AIHubWorker` with standard Win32 uncompressed 32bpp DIB ICO formats (matching `Awake.ico` with 128x128, 64x64, 48x48, 32x32, 24x24, 20x20, 16x16 frames, 40-byte `BITMAPINFOHEADER` and 1-bit monochrome AND mask), ensuring Windows Task Manager and Shell icon cache display native service icons reliably without falling back to generic placeholders.
 - **Localserver Environment CPU Telemetry & Dynamic Trend Curve**:
@@ -759,6 +768,15 @@
 
 ### 3.1.1
 
+- **插件架构标准化与独立后台服务解耦**：
+  - **基于 `KitModuleServiceBase` 与 `KitServicePipe` 统一服务生命周期**：在 `ManagedCommon` 中沉淀托管后台服务脚手架，标准化父进程守护（`--pid` 看门狗）、命名管道安全通信协议与优雅终止事件机制。
+  - **UDPtest 与 NetMap 独立后台服务化**：
+    - 新增 `Kit.UDPtestService.exe`（`UDPtestService.csproj`），将 Socket 探测线程池、弱网模拟与 WFP 驱动交互逻辑从 UI 进程彻底解耦剥离，关闭设置窗口后后台探测依然持续平稳运行。
+    - 新增 `Kit.NetMapService.exe`（`NetMapService.csproj`），将子网并发扫描、设备指纹识别与拓扑巡检引擎迁入独立后台服务。
+    - 升级 `UDPtestViewModel` 与 `NetMapViewModel` 继承自 `PageViewModelBase`，界面操作无缝切换为异步非阻塞 IPC 管道交互。
+  - **六大模块原生接口（ModuleInterface）规范化**：
+    - 重构 `Localserver`、`UDPtest`、`NetMap`、`AIHub`、`Awake`、`LightSwitch` 的 `dllmain.cpp`，统一日志通道隔离（`Kit.<Module>.log`）、导出双符号兼容（`kit_create` 优先并保留 `powertoy_create` 回退）、严格绑定 Runner PID，并在模块禁用或主程序退出时通过命名 Event 精准下发退出信号，彻底根绝孤儿进程残留。
+  - **PowerToys 遗留标识清理**：全量清理 Awake 与 LightSwitch 模块中的 PowerToys 历史硬编码命名与程序集标识。
 - **独立后台服务图标全面适配 Win32 标准 DIB ICO 规范**：
   - 将 `Kit.LocalserverWorker`、`Kit.UDPtestService`、`Kit.NetMapService` 与 `Kit.AIHubWorker` 的应用图标重构为标准 Win32 32bpp 无压缩 DIB 格式（完全对齐 `Awake.ico` 的 7 档位帧结构：128x128、64x64、48x48、32x32、24x24、20x20、16x16，配备 40 字节 `BITMAPINFOHEADER` 与 1 字节位图 AND 掩码），彻底解决 Windows 任务管理器（Task Manager）及 Shell 图标缓存无法提取 PNG 压缩帧导致服务显示通用空白图标的问题。
 - **Localserver 环境卡片 CPU 实时遥测与动态趋势折线修复**：

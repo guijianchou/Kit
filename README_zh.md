@@ -80,6 +80,8 @@ Settings 通过现有 IPC 提交设置和模块开关；Runner 调用模块接�
 ├── Kit.LightSwitch.Cli.exe
 ├── LightSwitchService/Kit.LightSwitchService.exe
 ├── LocalserverWorker/Kit.LocalserverWorker.exe
+├── UDPtestService/Kit.UDPtestService.exe
+├── NetMapService/Kit.NetMapService.exe
 ├── AIHubWorker/Kit.AIHubWorker.exe
 └── WinUI3Apps/
     ├── Kit.Settings.exe

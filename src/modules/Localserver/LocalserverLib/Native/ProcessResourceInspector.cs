@@ -94,9 +94,34 @@ public static class ProcessResourceInspector
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rootProcessId);
 
-        IReadOnlyList<int> processIds = managedProcessIds is not null
-            ? [.. managedProcessIds.Distinct()]
-            : GetProcessTreeIds(rootProcessId);
+        HashSet<int> allIds = [rootProcessId];
+        if (managedProcessIds is not null)
+        {
+            foreach (int id in managedProcessIds)
+            {
+                if (id > 0)
+                {
+                    allIds.Add(id);
+                }
+            }
+        }
+
+        try
+        {
+            foreach (int id in GetProcessTreeIds(rootProcessId))
+            {
+                if (id > 0)
+                {
+                    allIds.Add(id);
+                }
+            }
+        }
+        catch
+        {
+            // Fall back to the managed list if tree snapshot fails.
+        }
+
+        IReadOnlyList<int> processIds = [.. allIds];
         TimeSpan processorTime = TimeSpan.Zero;
         long workingSetBytes = 0;
         int readableProcessCount = 0;

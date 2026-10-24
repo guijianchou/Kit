@@ -7,6 +7,7 @@
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <AssemblyName>Kit.UDPtestService</AssemblyName>
     <RootNamespace>Kit.UDPtestService</RootNamespace>
+    <ApplicationIcon>UDPtest.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <SelfContained>true</SelfContained>

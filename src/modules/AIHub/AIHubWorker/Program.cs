@@ -80,18 +80,9 @@ public static class Program
 
             Logger.LogInfo($"[AIHub.Worker] Interval {scheduler.IntervalHours} h; mode {(config.AuditModeIndex == 1 ? "full" : "extended")}.");
 
-            if (!AuditSchedule.IsSchedulingEnabled(scheduler.IntervalHours))
-            {
-                // Plugin guidance: do not keep a process alive purely for health checks.
-                // With no cadence configured there is no scheduled work, so exit instead of
-                // idling in the tray for the whole session.
-                Logger.LogInfo("[AIHub.Worker] Scheduling is off; exiting without staying resident.");
-                return 0;
-            }
-
             scheduler.Start();
 
-            await WaitForShutdownAsync(parentPid, stopEvent, shutdown.Token).ConfigureAwait(false);
+            await WaitForShutdownAsync(parentPid, stopEvent, scheduler, store, shutdown.Token).ConfigureAwait(false);
 
             Logger.LogInfo("[AIHub.Worker] Stopped watching; ending the schedule.");
             return 0;
@@ -133,7 +124,7 @@ public static class Program
         }
     }
 
-    private static async Task WaitForShutdownAsync(int? parentPid, EventWaitHandle stopEvent, CancellationToken cancellationToken)
+    private static async Task WaitForShutdownAsync(int? parentPid, EventWaitHandle stopEvent, AuditScheduler scheduler, AiHubSettingsStore store, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -148,6 +139,20 @@ public static class Program
             {
                 Logger.LogInfo($"[AIHub.Worker] Parent process {pid} exited.");
                 return;
+            }
+
+            try
+            {
+                AiHubConfig config = store.Load();
+                if (scheduler.IntervalHours != config.ScanIntervalHours)
+                {
+                    Logger.LogInfo($"[AIHub.Worker] Interval updated from {scheduler.IntervalHours} to {config.ScanIntervalHours} h.");
+                    scheduler.UpdateInterval(config.ScanIntervalHours);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"[AIHub.Worker] Failed to refresh settings: {ex.Message}");
             }
         }
     }

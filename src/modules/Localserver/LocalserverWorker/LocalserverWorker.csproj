@@ -10,6 +10,7 @@
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <AssemblyName>Kit.LocalserverWorker</AssemblyName>
     <RootNamespace>Kit.LocalserverWorker</RootNamespace>
+    <ApplicationIcon>Localserver.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <!-- Self-contained so the test project (also self-contained) can reference it and the

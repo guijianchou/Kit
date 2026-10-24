@@ -467,6 +467,11 @@ namespace Kit.Settings.UI.ViewModels
             CpuText = cpuPercent.HasValue ? $"{clamped:F1}%" : "—";
             OnPropertyChanged(nameof(CpuPercent));
             OnPropertyChanged(nameof(CpuText));
+
+            if (_parent.SelectedLine == this)
+            {
+                _parent.Dispatcher.TryEnqueue(_parent.NotifySelectedLineCpuUpdated);
+            }
         }
 
         public void SetMemoryText(string mem, double memoryPercent = 0d)
@@ -475,6 +480,11 @@ namespace Kit.Settings.UI.ViewModels
             MemoryPercent = Math.Clamp(memoryPercent, 0d, 100d);
             OnPropertyChanged(nameof(MemoryText));
             OnPropertyChanged(nameof(MemoryPercent));
+
+            if (_parent.SelectedLine == this)
+            {
+                _parent.Dispatcher.TryEnqueue(_parent.NotifySelectedLineMemoryUpdated);
+            }
         }
 
         public async Task RefreshResourceSampleAsync(CancellationToken cancellationToken = default)
@@ -1512,6 +1522,8 @@ namespace Kit.Settings.UI.ViewModels
                 IsEnabled = true;
             }
 
+            SelectedLine = row;
+
             try
             {
                 await row.Runner.StartAsync();
@@ -1738,6 +1750,12 @@ namespace Kit.Settings.UI.ViewModels
                 return;
             }
 
+            if (!Dispatcher.HasThreadAccess)
+            {
+                Dispatcher.TryEnqueue(RefreshEnvironmentCard);
+                return;
+            }
+
             if (!_isEnabled)
             {
                 EnvHealthText = "Localserver_HealthDisabled".GetLocalized();
@@ -1890,8 +1908,54 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
+        public void NotifySelectedLineCpuUpdated()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!Dispatcher.HasThreadAccess)
+            {
+                Dispatcher.TryEnqueue(NotifySelectedLineCpuUpdated);
+                return;
+            }
+
+            OnPropertyChanged(nameof(EnvCpuText));
+            OnPropertyChanged(nameof(EnvCpuPercent));
+            UpdateChartGeometry();
+        }
+
+        public void NotifySelectedLineMemoryUpdated()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!Dispatcher.HasThreadAccess)
+            {
+                Dispatcher.TryEnqueue(NotifySelectedLineMemoryUpdated);
+                return;
+            }
+
+            OnPropertyChanged(nameof(EnvMemoryText));
+            OnPropertyChanged(nameof(EnvMemoryPercent));
+        }
+
         public void UpdateChartGeometry(double width = double.NaN, double height = double.NaN)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (!Dispatcher.HasThreadAccess)
+            {
+                Dispatcher.TryEnqueue(() => UpdateChartGeometry(width, height));
+                return;
+            }
+
             if (double.IsFinite(width) && width > 0)
             {
                 _chartWidth = width;

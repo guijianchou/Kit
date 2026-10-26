@@ -6,6 +6,12 @@
 
 ### 3.1.1
 
+- **Settings Backup & Restore Hardening & Resilient N=2 Retention**:
+  - **Fixed `Invalid backup location` Resolution Bug**: Corrected directory path evaluation in `SettingsUtils.BackupSettings()` and `RestoreSettings()` by replacing `Path.GetDirectoryName(_settingsPath.GetSettingsPath(string.Empty, string.Empty))` with `Path.GetDirectoryName(GetSettingsFilePath())`, ensuring `appBasePath` resolves correctly to `%LOCALAPPDATA%\Kit` and eliminating false-positive path validation rejections.
+  - **Human-Readable Backup Naming Rule**: Upgraded backup file naming convention from Windows 64-bit UTC FileTime integers (`settings_<filetime>.ptb`) to human-readable timestamp format `Kit_settings_yyyyMMdd_HHmmss.ptb`, while preserving dual regex compatibility for legacy snapshots.
+  - **Resilient Fallback on Damaged Backups (N=2)**: Introduced automated fallback logic in `GetLatestSettingsFolder` that validates zip extraction and manifest integrity; if the newest backup is corrupted or truncated, it gracefully falls back to the secondary latest backup snapshot.
+  - **Rolling Pruning (N=2)**: Replaced stale age-only cleanup with strict rolling retention of the newest 2 backups, automatically pruning older files to conserve disk space while guaranteeing instant fallback recovery.
+  - **Settings Parity**: Added `kit_version` to `backup_restore_settings.json` ignore list to avoid version regression upon restore, and synchronized Sparse Package manifest version to 3.1.1.0.
 - **Module Architecture Standardization & Headless Background Services**:
   - **Decoupled Module Lifecycle via `KitModuleServiceBase` & `KitServicePipe`**: Introduced managed hosting infrastructure in `ManagedCommon` to standardize headless background services with automatic parent process monitoring (`--pid`), safe named-pipe IPC commands, and graceful termination events.
   - **Dedicated Headless Services for UDPtest & NetMap**:
@@ -768,6 +774,12 @@
 
 ### 3.1.1
 
+- **主框架配置备份与还原（Backup & Restore）加固与 N=2 容灾回退**：
+  - **修复 `Invalid backup location` 路径解析缺陷**：在 `SettingsUtils.BackupSettings()` 与 `RestoreSettings()` 中将 `Path.GetDirectoryName(_settingsPath.GetSettingsPath(string.Empty, string.Empty))` 修复为 `Path.GetDirectoryName(GetSettingsFilePath())`，消除将 `Kit` 目录误作文件名剥离导致基路径缩退为 `AppData\Local` 的 Bug，彻底解决默认备份目录被拦截报错的问题。
+  - **人性化日期时间命名规则**：备份文件命名全面由晦涩的 100ns FileTime 整数串（`settings_<filetime>.ptb`）升级为直观可读的 `Kit_settings_yyyyMMdd_HHmmss.ptb`（如 `Kit_settings_20261026_153022.ptb`），并保持对历史时间戳备份的无缝向后兼容解析。
+  - **损坏容灾回退机制（Fallback N=2）**：在 `GetLatestSettingsFolder` 中引入自动解压与 Manifest 完整性校验；当最新的快照文件出现残缺或损坏时，自动平滑回退至上一份有效备份，确保配置始终可读可恢复。
+  - **滚动清理策略（保留最新 2 份）**：升级 `RemoveOldBackups` 清理机制，每次成功生成新备份后自动截断并保留最新的 2 份全量快照，清理超出数量的旧快照，杜绝磁盘占用堆积并兼顾误操作回退。
+  - **配置对齐与版本同步**：在 `backup_restore_settings.json` 的忽略名单中补全 `kit_version`，防止还原时回退版本号；同步更新 Sparse Package 清单程序集版本至 3.1.1.0。
 - **插件架构标准化与独立后台服务解耦**：
   - **基于 `KitModuleServiceBase` 与 `KitServicePipe` 统一服务生命周期**：在 `ManagedCommon` 中沉淀托管后台服务脚手架，标准化父进程守护（`--pid` 看门狗）、命名管道安全通信协议与优雅终止事件机制。
   - **UDPtest 与 NetMap 独立后台服务化**：

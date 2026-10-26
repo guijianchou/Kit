@@ -11,7 +11,8 @@
       "RestartAfterRestore"
     ],
     "settings.json": [
-      "powertoys_version"
+      "powertoys_version",
+      "kit_version"
     ]
   }
 }

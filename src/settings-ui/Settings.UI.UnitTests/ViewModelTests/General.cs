@@ -514,6 +514,11 @@ namespace ViewModelTests
             Assert.IsFalse(backupUtils.Contains("GetPTRunIgnoredSettings", StringComparison.Ordinal), "Kit backup code should not keep inactive PowerToys Run plugin fix-up helpers.");
 
             StringAssert.Contains(backupManifest, "*Kit\\\\log_settings.json");
+            StringAssert.Contains(backupManifest, "\"kit_version\"");
+            StringAssert.Contains(backupUtils, "RemoveOldBackups(settingsBackupAndRestoreDir, 2,");
+            var settingsUtilsCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "SettingsUtils.cs"));
+            StringAssert.Contains(settingsUtilsCode, "GetSettingsFilePath()");
+            Assert.IsFalse(settingsUtilsCode.Contains("GetSettingsPath(string.Empty, string.Empty)"));
             Assert.IsFalse(backupManifest.Contains("*Kit\\\\oobe_settings.json", StringComparison.Ordinal), "Kit should not keep an OOBE state backup rule after OOBE launch state is deleted.");
             Assert.IsFalse(backupManifest.Contains("*PowerToys\\\\log_settings.json", StringComparison.Ordinal));
             Assert.IsFalse(backupManifest.Contains("*PowerToys\\\\oobe_settings.json", StringComparison.Ordinal));
@@ -523,6 +528,59 @@ namespace ViewModelTests
             Assert.IsFalse(backupManifest.Contains("PowerToys Run", StringComparison.Ordinal), "Kit backup defaults should not include inactive PowerToys Run rules.");
             Assert.IsFalse(backupManifest.Contains("IgnoredPTRunSettings", StringComparison.Ordinal), "Kit backup defaults should not keep PowerToys Run plugin fix-up rules.");
             Assert.IsFalse(backupManifest.Contains("CustomRestoreSettings", StringComparison.Ordinal), "Kit backup defaults should not keep inactive module custom restore rules.");
+        }
+
+        [TestMethod]
+        public void KitBackupAndRestoreShouldSupportTimestampNamingAndFallbackN2()
+        {
+            string tempDir = Path.Combine(Path.GetTempPath(), "Kit_Backup_UnitTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            try
+            {
+                // Create a valid backup zip for 20261026_120000
+                string validDir = Path.Combine(tempDir, "source_valid");
+                Directory.CreateDirectory(validDir);
+                File.WriteAllText(Path.Combine(validDir, "manifest.json"), "{\"CreateDateTime\":\"2026-10-26T12:00:00Z\",\"BackupSource\":\"TestHost\"}");
+                string validZip = Path.Combine(tempDir, "Kit_settings_20261026_120000.ptb");
+                System.IO.Compression.ZipFile.CreateFromDirectory(validDir, validZip);
+                Directory.Delete(validDir, true);
+
+                // Create a corrupted backup zip for 20261026_130000 (newer timestamp, but broken/corrupted)
+                string corruptZip = Path.Combine(tempDir, "Kit_settings_20261026_130000.ptb");
+                File.WriteAllText(corruptZip, "corrupted-zip-data-not-a-valid-zip");
+
+                // Create an older backup 20261025_100000
+                string olderDir = Path.Combine(tempDir, "source_older");
+                Directory.CreateDirectory(olderDir);
+                File.WriteAllText(Path.Combine(olderDir, "manifest.json"), "{\"CreateDateTime\":\"2026-10-25T10:00:00Z\",\"BackupSource\":\"TestHost\"}");
+                string olderZip = Path.Combine(tempDir, "Kit_settings_20261025_100000.ptb");
+                System.IO.Compression.ZipFile.CreateFromDirectory(olderDir, olderZip);
+                Directory.Delete(olderDir, true);
+
+                var utils = SettingsBackupAndRestoreUtils.Instance;
+
+                // 1. Verification of fallback: since the newest (13:00) is corrupted, GetLatestBackupFileName should fall back to valid (12:00)
+                string latestFileName = utils.GetLatestBackupFileName(tempDir);
+                Assert.AreEqual("Kit_settings_20261026_120000.ptb", latestFileName);
+
+                // 2. Verification of manifest fallback
+                var manifest = utils.GetLatestSettingsBackupManifest(tempDir);
+                Assert.IsNotNull(manifest);
+                Assert.AreEqual("TestHost", manifest["BackupSource"]?.ToString());
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    try
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
         }
 
         [TestMethod]

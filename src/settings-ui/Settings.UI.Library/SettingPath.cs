@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -51,6 +51,11 @@ namespace Kit.Settings.UI.Library
         /// <returns>string path.</returns>
         public string GetSettingsPath(string powertoy, string fileName = DefaultFileName)
         {
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = DefaultFileName;
+            }
+
             if (string.IsNullOrWhiteSpace(powertoy))
             {
                 return _path.Combine(
@@ -64,6 +69,21 @@ namespace Kit.Settings.UI.Library
                 KitAppDataFolder,
                 powertoy,
                 fileName);
+        }
+
+        public string GetSettingsFolder(string powertoy = "")
+        {
+            if (string.IsNullOrWhiteSpace(powertoy))
+            {
+                return _path.Combine(
+                    Helper.LocalApplicationDataFolder(),
+                    KitAppDataFolder);
+            }
+
+            return _path.Combine(
+                Helper.LocalApplicationDataFolder(),
+                KitAppDataFolder,
+                powertoy);
         }
     }
 }

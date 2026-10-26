@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -243,7 +243,7 @@ namespace Kit.Settings.UI.Library
         {
             var settingsBackupAndRestoreUtilsX = SettingsBackupAndRestoreUtils.Instance;
             var settingsUtils = Default;
-            var appBasePath = Path.GetDirectoryName(settingsUtils._settingsPath.GetSettingsPath(string.Empty, string.Empty));
+            var appBasePath = Path.GetDirectoryName(settingsUtils.GetSettingsFilePath());
             string settingsBackupAndRestoreDir = settingsBackupAndRestoreUtilsX.GetSettingsBackupAndRestoreDir();
 
             return settingsBackupAndRestoreUtilsX.BackupSettings(appBasePath, settingsBackupAndRestoreDir, false);
@@ -256,7 +256,7 @@ namespace Kit.Settings.UI.Library
         {
             var settingsBackupAndRestoreUtilsX = SettingsBackupAndRestoreUtils.Instance;
             var settingsUtils = Default;
-            var appBasePath = Path.GetDirectoryName(settingsUtils._settingsPath.GetSettingsPath(string.Empty, string.Empty));
+            var appBasePath = Path.GetDirectoryName(settingsUtils.GetSettingsFilePath());
             string settingsBackupAndRestoreDir = settingsBackupAndRestoreUtilsX.GetSettingsBackupAndRestoreDir();
             return settingsBackupAndRestoreUtilsX.RestoreSettings(appBasePath, settingsBackupAndRestoreDir);
         }

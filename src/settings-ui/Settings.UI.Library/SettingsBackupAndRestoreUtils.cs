@@ -285,11 +285,10 @@ namespace Kit.Settings.UI.Library
 
                 if (!Directory.Exists(settingsBackupAndRestoreDir))
                 {
-                    Logger.LogError($"Invalid settingsBackupAndRestoreDir {settingsBackupAndRestoreDir}");
-                    return (false, "General_SettingsBackupAndRestore_InvalidBackupLocation", "Error");
+                    return (false, "General_SettingsBackupAndRestore_NoBackupsFound", "Warning");
                 }
 
-                var latestSettingsFolder = GetLatestSettingsFolder();
+                var latestSettingsFolder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
 
                 if (latestSettingsFolder == null)
                 {
@@ -399,13 +398,104 @@ namespace Kit.Settings.UI.Library
             return settingsBackupAndRestoreDir;
         }
 
+        private static readonly Regex BackupFileRegex = new Regex(
+            @"^(?:Kit_)?settings_(?:(?<date>\d{8})_(?<time>\d{6}(?:_\d{3})?)|(?<filetime>\d{14,19}))\.ptb$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private sealed class BackupFileInfo
+        {
+            public string FilePath { get; set; } = string.Empty;
+
+            public string FileName { get; set; } = string.Empty;
+
+            public DateTime TimestampUtc { get; set; }
+
+            public string SortableKey { get; set; } = string.Empty;
+        }
+
+        private static bool TryParseBackupFileInfo(string filePath, out BackupFileInfo info)
+        {
+            info = null!;
+            var fileName = Path.GetFileName(filePath);
+            var match = BackupFileRegex.Match(fileName);
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            DateTime timestampUtc;
+            string sortableKey;
+
+            if (match.Groups["date"].Success && match.Groups["time"].Success)
+            {
+                string rawTime = match.Groups["time"].Value;
+                string dtStr = match.Groups["date"].Value + rawTime;
+                string format = rawTime.Contains('_') ? "yyyyMMddHHmmss_fff" : "yyyyMMddHHmmss";
+                if (DateTime.TryParseExact(dtStr, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var localDt))
+                {
+                    timestampUtc = localDt.ToUniversalTime();
+                    sortableKey = dtStr;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else if (match.Groups["filetime"].Success && long.TryParse(match.Groups["filetime"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ft))
+            {
+                try
+                {
+                    timestampUtc = DateTime.FromFileTimeUtc(ft);
+                    sortableKey = ft.ToString(CultureInfo.InvariantCulture);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+
+            info = new BackupFileInfo
+            {
+                FilePath = filePath,
+                FileName = fileName,
+                TimestampUtc = timestampUtc,
+                SortableKey = sortableKey,
+            };
+            return true;
+        }
+
+        private static List<BackupFileInfo> GetSortedBackupFiles(string settingsBackupAndRestoreDir)
+        {
+            if (string.IsNullOrEmpty(settingsBackupAndRestoreDir) || !Directory.Exists(settingsBackupAndRestoreDir))
+            {
+                return new List<BackupFileInfo>();
+            }
+
+            var list = new List<BackupFileInfo>();
+            var files = Directory.GetFiles(settingsBackupAndRestoreDir, "*.ptb", SearchOption.TopDirectoryOnly);
+            foreach (var file in files)
+            {
+                if (TryParseBackupFileInfo(file, out var info))
+                {
+                    list.Add(info);
+                }
+            }
+
+            return list.OrderByDescending(x => x.TimestampUtc).ThenByDescending(x => x.SortableKey).ToList();
+        }
+
         private List<string> GetBackupSettingsFiles(string settingsBackupAndRestoreDir)
         {
-            return Directory.GetFiles(settingsBackupAndRestoreDir, "settings_*.ptb", SearchOption.TopDirectoryOnly).ToList().Where(f => Regex.IsMatch(f, "settings_(\\d{1,19}).ptb")).ToList();
+            return GetSortedBackupFiles(settingsBackupAndRestoreDir).Select(x => x.FilePath).ToList();
         }
 
         /// <summary>
         /// Method <c>GetLatestSettingsFolder</c> returns a folder that has the latest backup in it.
+        /// If the newest backup file is damaged, falls back to the previous backup (N=2 fallback).
         /// </summary>
         /// <remarks>
         /// The backup will usually be a backup file that has to be extracted to a temp folder. This will do that for us.
@@ -414,108 +504,118 @@ namespace Kit.Settings.UI.Library
         {
             settingsBackupAndRestoreDir ??= GetSettingsBackupAndRestoreDir();
 
-            if (settingsBackupAndRestoreDir == null)
+            if (string.IsNullOrEmpty(settingsBackupAndRestoreDir) || !Directory.Exists(settingsBackupAndRestoreDir))
             {
                 return null;
             }
 
-            if (!Directory.Exists(settingsBackupAndRestoreDir))
+            var sortedBackups = GetSortedBackupFiles(settingsBackupAndRestoreDir);
+            if (sortedBackups.Count == 0)
             {
                 return null;
             }
 
-            var settingsBackupFolders = new Dictionary<long, string>();
+            var tempPath = Path.GetTempPath();
 
-            var settingsBackupFiles = GetBackupSettingsFiles(settingsBackupAndRestoreDir).ToDictionary(x => long.Parse(Path.GetFileName(x).Replace("settings_", string.Empty).Replace(".ptb", string.Empty), CultureInfo.InvariantCulture));
-
-            var latestFolder = 0L;
-            var latestFile = 0L;
-
-            if (settingsBackupFolders.Count > 0)
+            // Try each available backup starting with the newest. If the newest is damaged, fall back to the next one!
+            foreach (var backup in sortedBackups)
             {
-                latestFolder = settingsBackupFolders.OrderByDescending(x => x.Key).FirstOrDefault().Key;
-            }
+                var fullBackupDir = Path.Combine(tempPath, "Kit_settings_" + backup.SortableKey);
 
-            if (settingsBackupFiles.Count > 0)
-            {
-                latestFile = settingsBackupFiles.OrderByDescending(x => x.Key).FirstOrDefault().Key;
-            }
-
-            if (latestFile == 0 && latestFolder == 0)
-            {
-                return null;
-            }
-            else if (latestFolder >= latestFile)
-            {
-                return settingsBackupFolders[latestFolder];
-            }
-            else
-            {
-                var tempPath = Path.GetTempPath();
-
-                var fullBackupDir = Path.Combine(tempPath, "Kit_settings_" + latestFile.ToString(CultureInfo.InvariantCulture));
-
-                lock (backupSettingsInternalLock)
+                try
                 {
-                    if (!Directory.Exists(fullBackupDir) || !File.Exists(Path.Combine(fullBackupDir, "manifest.json")))
+                    lock (backupSettingsInternalLock)
                     {
-                        TryDeleteDirectory(fullBackupDir);
-                        ZipFile.ExtractToDirectory(settingsBackupFiles[latestFile], fullBackupDir);
+                        if (!Directory.Exists(fullBackupDir) || !File.Exists(Path.Combine(fullBackupDir, "manifest.json")))
+                        {
+                            TryDeleteDirectory(fullBackupDir);
+                            ZipFile.ExtractToDirectory(backup.FilePath, fullBackupDir);
+                        }
+
+                        string manifestFile = Path.Combine(fullBackupDir, "manifest.json");
+                        if (File.Exists(manifestFile))
+                        {
+                            var manifestNode = JsonNode.Parse(File.ReadAllText(manifestFile));
+                            if (manifestNode != null)
+                            {
+                                ThreadPool.QueueUserWorkItem((x) =>
+                                {
+                                    try
+                                    {
+                                        RemoveOldBackups(tempPath, 1, TimeSpan.FromDays(7));
+                                    }
+                                    catch
+                                    {
+                                        // hmm, ok
+                                    }
+                                });
+
+                                return fullBackupDir;
+                            }
+                        }
                     }
                 }
-
-                ThreadPool.QueueUserWorkItem((x) =>
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        RemoveOldBackups(tempPath, 1, TimeSpan.FromDays(7));
-                    }
-                    catch
-                    {
-                        // hmm, ok
-                    }
-                });
-
-                return fullBackupDir;
+                    Logger.LogWarning($"GetLatestSettingsFolder: backup {backup.FileName} appears damaged ({ex.Message}), falling back to earlier backup.");
+                    TryDeleteDirectory(fullBackupDir);
+                }
             }
+
+            return null;
         }
 
         /// <summary>
         /// Method <c>GetLatestBackupFileName</c> returns the name of the newest backup file.
         /// </summary>
-        public string GetLatestBackupFileName()
+        public string GetLatestBackupFileName(string settingsBackupAndRestoreDir = null)
         {
-            string settingsBackupAndRestoreDir = GetSettingsBackupAndRestoreDir();
+            settingsBackupAndRestoreDir ??= GetSettingsBackupAndRestoreDir();
 
             if (string.IsNullOrEmpty(settingsBackupAndRestoreDir) || !Directory.Exists(settingsBackupAndRestoreDir))
             {
                 return string.Empty;
             }
 
-            var settingsBackupFiles = GetBackupSettingsFiles(settingsBackupAndRestoreDir);
-
-            if (settingsBackupFiles.Count > 0)
-            {
-                return Path.GetFileName(settingsBackupFiles.OrderByDescending(x => x).First());
-            }
-            else
+            var sortedBackups = GetSortedBackupFiles(settingsBackupAndRestoreDir);
+            if (sortedBackups.Count == 0)
             {
                 return string.Empty;
             }
+
+            var folder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
+            if (!string.IsNullOrEmpty(folder))
+            {
+                string dirName = Path.GetFileName(folder);
+                string sortableKey = dirName.Replace("Kit_settings_", string.Empty);
+                var matched = sortedBackups.FirstOrDefault(b => b.SortableKey == sortableKey);
+                if (matched != null)
+                {
+                    return matched.FileName;
+                }
+            }
+
+            return sortedBackups[0].FileName;
         }
 
         /// <summary>
-        /// Method <c>GetLatestSettingsBackupManifest</c> get's the meta data from a backup file.
+        /// Method <c>GetLatestSettingsBackupManifest</c> gets the metadata from the latest valid backup file.
         /// </summary>
-        public JsonNode GetLatestSettingsBackupManifest()
+        public JsonNode GetLatestSettingsBackupManifest(string settingsBackupAndRestoreDir = null)
         {
-            var folder = GetLatestSettingsFolder();
+            var folder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
             if (folder == null)
             {
                 return null;
             }
 
-            return JsonNode.Parse(File.ReadAllText(Path.Combine(folder, "manifest.json")));
+            string manifestFile = Path.Combine(folder, "manifest.json");
+            if (!File.Exists(manifestFile))
+            {
+                return null;
+            }
+
+            return JsonNode.Parse(File.ReadAllText(manifestFile));
         }
 
         /// <summary>
@@ -700,7 +800,9 @@ namespace Kit.Settings.UI.Library
                     }
 
                     var currentSettingsFiles = GetSettingsFiles(backupRestoreSettings, appBasePath).ToList().ToDictionary(x => x.Substring(appBasePath.Length));
-                    var fullBackupDir = Path.Combine(Path.GetTempPath(), $"settings_{DateTime.UtcNow.ToFileTimeUtc().ToString(CultureInfo.InvariantCulture)}");
+                    var now = DateTime.Now;
+                    string timestampStr = now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
+                    var fullBackupDir = Path.Combine(Path.GetTempPath(), $"Kit_settings_{timestampStr}");
                     var latestSettingsFolder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
                     var lastBackupSettingsFiles = GetSettingsFiles(backupRestoreSettings, latestSettingsFolder).ToList().ToDictionary(x => x.Substring(latestSettingsFolder.Length));
 
@@ -809,13 +911,19 @@ namespace Kit.Settings.UI.Library
                     {
                         File.WriteAllText(Path.Combine(fullBackupDir, "manifest.json"), manifest);
 
-                        // clean up, to prevent runaway disk usage.
-                        RemoveOldBackups(settingsBackupAndRestoreDir, 10, TimeSpan.FromDays(60));
-
                         // compress the backup
-                        var zipName = Path.Combine(settingsBackupAndRestoreDir, Path.GetFileName(fullBackupDir) + ".ptb");
+                        var zipName = Path.Combine(settingsBackupAndRestoreDir, $"Kit_settings_{timestampStr}.ptb");
+                        if (File.Exists(zipName))
+                        {
+                            timestampStr = now.ToString("yyyyMMdd_HHmmss_fff", CultureInfo.InvariantCulture);
+                            zipName = Path.Combine(settingsBackupAndRestoreDir, $"Kit_settings_{timestampStr}.ptb");
+                        }
+
                         ZipFile.CreateFromDirectory(fullBackupDir, zipName);
                         TryDeleteDirectory(fullBackupDir);
+
+                        // clean up: retain newest N=2 backups for corruption fallback
+                        RemoveOldBackups(settingsBackupAndRestoreDir, 2, TimeSpan.FromDays(60));
                     }
 
                     return (true, $"General_SettingsBackupAndRestore_BackupComplete", "Success", lastBackupExists, string.Empty);
@@ -931,7 +1039,8 @@ namespace Kit.Settings.UI.Library
         }
 
         /// <summary>
-        /// Method <c>RemoveOldBackups</c> is a helper that prevents is from having some runaway disk usages.
+        /// Method <c>RemoveOldBackups</c> cleans up excess backups and temporary directories.
+        /// Retains the newest minNumberToKeep backups (default N=2 for corruption fallback) and prunes older ones.
         /// </summary>
         private static void RemoveOldBackups(string location, int minNumberToKeep, TimeSpan deleteIfOlderThanTs)
         {
@@ -942,62 +1051,49 @@ namespace Kit.Settings.UI.Library
 
             try
             {
-                DateTime deleteIfOlder = DateTime.UtcNow.Subtract(deleteIfOlderThanTs);
-
-                var settingsBackupFolders = Directory.GetDirectories(location, "settings_*", SearchOption.TopDirectoryOnly).ToList().Where(f => Regex.IsMatch(f, "settings_(\\d{1,19})")).ToDictionary(x => long.Parse(Path.GetFileName(x).Replace("settings_", string.Empty), CultureInfo.InvariantCulture)).ToList();
-
-                settingsBackupFolders.AddRange(Directory.GetDirectories(location, "Kit_settings_*", SearchOption.TopDirectoryOnly).ToList().Where(f => Regex.IsMatch(f, "Kit_settings_(\\d{1,19})")).ToDictionary(x => long.Parse(Path.GetFileName(x).Replace("Kit_settings_", string.Empty), CultureInfo.InvariantCulture)));
-
-                var settingsBackupFiles = Directory.GetFiles(location, "settings_*.ptb", SearchOption.TopDirectoryOnly).ToList().Where(f => Regex.IsMatch(f, "settings_(\\d{1,19}).ptb")).ToDictionary(x => long.Parse(Path.GetFileName(x).Replace("settings_", string.Empty).Replace(".ptb", string.Empty), CultureInfo.InvariantCulture));
-
-                if (settingsBackupFolders.Count + settingsBackupFiles.Count <= minNumberToKeep)
+                if (string.IsNullOrEmpty(location) || !Directory.Exists(location))
                 {
                     return;
                 }
 
-                foreach (var item in settingsBackupFolders)
+                DateTime deleteIfOlder = DateTime.UtcNow.Subtract(deleteIfOlderThanTs);
+
+                var tempDirs = Directory.GetDirectories(location, "*settings_*", SearchOption.TopDirectoryOnly)
+                    .Where(d => Path.GetFileName(d).StartsWith("Kit_settings_", StringComparison.OrdinalIgnoreCase)
+                             || Path.GetFileName(d).StartsWith("settings_", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                foreach (var dir in tempDirs)
                 {
-                    var backupTime = DateTime.FromFileTimeUtc(item.Key);
-
-                    if (item.Value.Contains("Kit_settings_", StringComparison.OrdinalIgnoreCase))
+                    try
                     {
-                        // this is a temp backup and we want to clean based on the time it was created in the temp place, not the time that the backup was made.
-                        var folderCreatedTime = new DirectoryInfo(item.Value).CreationTimeUtc;
-
-                        if (folderCreatedTime > backupTime)
+                        var dirInfo = new DirectoryInfo(dir);
+                        if (dirInfo.LastWriteTimeUtc < deleteIfOlder || dirInfo.CreationTimeUtc < deleteIfOlder)
                         {
-                            backupTime = folderCreatedTime;
+                            Logger.LogInfo($"RemoveOldBackups deleting temp dir {dir}");
+                            Directory.Delete(dir, true);
                         }
                     }
-
-                    if (backupTime < deleteIfOlder)
+                    catch (Exception ex2)
                     {
-                        try
-                        {
-                            Logger.LogInfo($"RemoveOldBackups killing {item.Value}");
-                            Directory.Delete(item.Value, true);
-                        }
-                        catch (Exception ex2)
-                        {
-                            Logger.LogError($"Failed to remove a setting backup folder ({item.Value}), because: ({ex2.Message})");
-                        }
+                        Logger.LogError($"Failed to remove setting backup temp folder ({dir}), because: ({ex2.Message})");
                     }
                 }
 
-                foreach (var item in settingsBackupFiles)
+                var backupFiles = GetSortedBackupFiles(location);
+                if (backupFiles.Count > minNumberToKeep)
                 {
-                    var backupTime = DateTime.FromFileTimeUtc(item.Key);
-
-                    if (backupTime < deleteIfOlder)
+                    var toDelete = backupFiles.Skip(minNumberToKeep).ToList();
+                    foreach (var item in toDelete)
                     {
                         try
                         {
-                            Logger.LogInfo($"RemoveOldBackups killing {item.Value}");
-                            File.Delete(item.Value);
+                            Logger.LogInfo($"RemoveOldBackups deleting excess backup {item.FilePath}");
+                            File.Delete(item.FilePath);
                         }
                         catch (Exception ex2)
                         {
-                            Logger.LogError($"Failed to remove a setting backup folder ({item.Value}), because: ({ex2.Message})");
+                            Logger.LogError($"Failed to remove old backup file ({item.FilePath}): {ex2.Message}");
                         }
                     }
                 }

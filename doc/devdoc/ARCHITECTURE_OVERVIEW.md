@@ -148,9 +148,9 @@
 ## 相关资源
 
 ### 主项目文档
-- `../../fix.md` - 上游差异与修正清单（主目录）
-- `../../fix.plan` - 分阶段任务与验收标准（主目录）
 - `../../README.md` - Kit 项目主 README
+- `../../PLUGIN_DEVELOPMENT.md` - 插件规范与开发要求
+- `../../changelog.md` - 项目更新日志
 
 ### 外部参考
 - [PowerToys 官方文档](https://github.com/microsoft/PowerToys/tree/main/doc)

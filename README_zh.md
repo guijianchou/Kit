@@ -321,6 +321,6 @@ Windows 不区分目录大小写，因此 AI Hub 插件与共享 AI 服务使用
 
 - [插件开发规范](PLUGIN_DEVELOPMENT.md)：接口、注册、数据隔离、WinUI、本地化与生命周期。
 - [AI 服务说明](doc/ai-service-review.md)：配置归属、执行机制、已知限制与历史验证。
-- [NetMap 验证记录](src/modules/NetMap/plan.md)：数据来源、设计决策与测试范围。
+- [NetMap 模块说明](src/modules/NetMap/README.md)：数据来源、设计决策与测试范围。
 - [架构资料索引](doc/devdoc/README.md)：PowerToys 架构、Kit 设计和开发经验；设计方向不代表已实现能力。
 - [变更记录](changelog.md) · [许可证](LICENSE)。

@@ -321,6 +321,6 @@ See [src/README.md](src/README.md) for source organization and [PLUGIN_DEVELOPME
 
 - [Plugin development requirements](PLUGIN_DEVELOPMENT.md): contracts, registration, data isolation, WinUI, localization and lifetime.
 - [AI service notes](doc/ai-service-review.md): configuration ownership, execution, known limitations and historical validation.
-- [NetMap validation record](src/modules/NetMap/plan.md): data sources, design decisions and test scope.
+- [NetMap documentation](src/modules/NetMap/README.md): data sources, design decisions and test scope.
 - [Architecture documentation index](doc/devdoc/README.md): PowerToys architecture, Kit design and development notes; proposed directions are not implemented capabilities.
 - [Changelog](changelog.md) · [License](LICENSE).

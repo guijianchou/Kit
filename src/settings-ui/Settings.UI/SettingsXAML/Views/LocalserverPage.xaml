@@ -207,7 +207,7 @@
                                             <ColumnDefinition Width="0.7*" MinWidth="70" />
                                             <ColumnDefinition Width="0.5*" MinWidth="48" />
                                             <ColumnDefinition Width="0.6*" MinWidth="56" />
-                                            <ColumnDefinition Width="60" />
+                                            <ColumnDefinition Width="0.7*" MinWidth="60" />
                                             <ColumnDefinition Width="128" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock x:Uid="Localserver_ColName" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -240,7 +240,7 @@
                                                             <ColumnDefinition Width="0.7*" MinWidth="70" />
                                                             <ColumnDefinition Width="0.5*" MinWidth="48" />
                                                             <ColumnDefinition Width="0.6*" MinWidth="56" />
-                                                            <ColumnDefinition Width="60" />
+                                                            <ColumnDefinition Width="0.7*" MinWidth="60" />
                                                             <ColumnDefinition Width="128" />
                                                         </Grid.ColumnDefinitions>
 
@@ -275,7 +275,7 @@
                                                         <TextBlock Grid.Row="0" Grid.Column="5" Text="{x:Bind MemoryText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
 
                                                         <!-- Row 0: PID -->
-                                                        <TextBlock Grid.Row="0" Grid.Column="6" Text="{x:Bind PidText, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontFamily="{StaticResource KitMonoFontFamily}" />
+                                                        <TextBlock Grid.Row="0" Grid.Column="6" Text="{x:Bind PidText, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind PidTooltip, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontFamily="{StaticResource KitMonoFontFamily}" />
 
                                                         <!-- Row 0: Actions Column -->
                                                         <StackPanel Grid.Row="0" Grid.Column="7" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -540,10 +540,10 @@
                                                         <TextBlock Text="{x:Bind ViewModel.EnvPortText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" />
                                                     </StackPanel>
                                                 </Border>
-                                                <Border Grid.Column="1" Padding="10,7" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                <Border Grid.Column="1" Padding="10,7" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" ToolTipService.ToolTip="{x:Bind ViewModel.EnvPidTooltip, Mode=OneWay}">
                                                     <StackPanel Spacing="2">
                                                         <TextBlock x:Uid="Localserver_ColPid" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                        <TextBlock Text="{x:Bind ViewModel.EnvPidText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.EnvPidText, Mode=OneWay}" Style="{StaticResource KitMetricCompactTextStyle}" TextTrimming="CharacterEllipsis" />
                                                     </StackPanel>
                                                 </Border>
                                                 <Border Grid.Column="2" Padding="10,7" CornerRadius="6" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
@@ -613,10 +613,10 @@
 
                                         <Border x:Name="EnvTrendDivider" Grid.Column="3" Width="1" Margin="0,2" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-                                        <!-- Right: Unified Process Resource Telemetry (CPU & Memory Dynamic Bars) -->
-                                        <Border x:Name="EnvTrendPanel" Grid.Column="4" Padding="14,12" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Stretch" SizeChanged="OnStatusChartSizeChanged">
-                                            <StackPanel Spacing="12" VerticalAlignment="Center">
-                                                <!-- CPU Usage Bar -->
+                                        <!-- Right: Unified Process Resource Telemetry (CPU Trend Curve & Memory Bar) -->
+                                        <Border x:Name="EnvTrendPanel" Grid.Column="4" Padding="14,12" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Stretch">
+                                            <StackPanel Spacing="10" VerticalAlignment="Center">
+                                                <!-- CPU Usage & Trend Curve -->
                                                 <StackPanel Spacing="5">
                                                     <Grid ColumnDefinitions="*,Auto">
                                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -625,9 +625,23 @@
                                                         </StackPanel>
                                                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.EnvCpuText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontWeight="SemiBold" FontSize="12.5" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
                                                     </Grid>
+                                                    <!-- CPU Trend Wave Sparkline -->
+                                                    <Border Height="36" Margin="0,1,0,0" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="4" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" SizeChanged="OnStatusChartSizeChanged">
+                                                        <Grid>
+                                                            <Path Data="{x:Bind ViewModel.StatusCurveFillGeometry, Mode=OneWay}"
+                                                                  Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                                                  Opacity="0.14" />
+                                                            <Path Data="{x:Bind ViewModel.StatusCurveGeometry, Mode=OneWay}"
+                                                                  Stroke="{ThemeResource AccentFillColorDefaultBrush}"
+                                                                  StrokeThickness="1.75"
+                                                                  StrokeLineJoin="Round"
+                                                                  StrokeStartLineCap="Round"
+                                                                  StrokeEndLineCap="Round" />
+                                                        </Grid>
+                                                    </Border>
                                                     <local:UsageProgressBar
-                                                        Height="6"
-                                                        CornerRadius="3"
+                                                        Height="4"
+                                                        CornerRadius="2"
                                                         Background="{ThemeResource ControlFillColorDefaultBrush}"
                                                         Maximum="100"
                                                         TargetValue="{x:Bind ViewModel.EnvCpuPercent, Mode=OneWay}"

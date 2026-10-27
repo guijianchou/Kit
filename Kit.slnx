@@ -223,6 +223,7 @@
     <BuildDependency Project="src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchModuleInterface/LightSwitchModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/LightSwitch/LightSwitchService/LightSwitchService.vcxproj" />
+    <BuildDependency Project="src/modules/LightSwitch/LightSwitch.Cli/LightSwitch.Cli.csproj" />
     <BuildDependency Project="src/modules/Localserver/LocalserverModuleInterface/LocalserverModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/Localserver/LocalserverWorker/LocalserverWorker.csproj" />
     <BuildDependency Project="src/modules/UDPtest/UDPtestModuleInterface/UDPtestModuleInterface.vcxproj" />

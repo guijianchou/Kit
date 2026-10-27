@@ -23,15 +23,18 @@ public static class PortInspector
     private const int TcpTableOwnerPidListener = 3;
     private const int ErrorInsufficientBuffer = 122;
 
+    private readonly record struct RawListener(int Port, int ProcessId);
+
     public static bool IsPortFree(int port) => FindOwner(port) is null;
 
     public static PortOwner? FindOwner(int port)
     {
-        foreach (PortOwner owner in EnumerateListeners())
+        foreach (RawListener raw in EnumerateRawListeners())
         {
-            if (owner.Port == port)
+            if (raw.Port == port)
             {
-                return owner;
+                (string name, long? startTime) = DescribeProcess(raw.ProcessId);
+                return new PortOwner(raw.Port, raw.ProcessId, name, startTime);
             }
         }
 
@@ -48,8 +51,7 @@ public static class PortInspector
         // cannot redirect Kill to a different process after the confirmation.
         _ = process.SafeHandle;
         if (process.HasExited || process.StartTime.ToUniversalTime().ToFileTimeUtc() != startTime
-            || !EnumerateListeners().Any(owner => owner.Port == expected.Port
-                && owner.ProcessId == expected.ProcessId && owner.StartTimeUtcFileTime == startTime))
+            || !EnumerateRawListeners().Any(raw => raw.Port == expected.Port && raw.ProcessId == expected.ProcessId))
         {
             throw new InvalidOperationException("The port owner changed. Refresh the environment check before terminating it.");
         }
@@ -80,9 +82,9 @@ public static class PortInspector
         }
 
         HashSet<int> taken = [];
-        foreach (PortOwner owner in EnumerateListeners())
+        foreach (RawListener raw in EnumerateRawListeners())
         {
-            taken.Add(owner.Port);
+            taken.Add(raw.Port);
         }
 
         int last = Math.Min(65535, startPort + searchWindow);
@@ -97,10 +99,23 @@ public static class PortInspector
         return null;
     }
 
-    public static IReadOnlyList<PortOwner> EnumerateListeners() =>
-        [.. EnumerateListeners(AfInet), .. EnumerateListeners(AfInet6)];
+    public static IReadOnlyList<PortOwner> EnumerateListeners()
+    {
+        var rawList = EnumerateRawListeners();
+        List<PortOwner> owners = new(rawList.Count);
+        foreach (var raw in rawList)
+        {
+            (string name, long? startTime) = DescribeProcess(raw.ProcessId);
+            owners.Add(new PortOwner(raw.Port, raw.ProcessId, name, startTime));
+        }
 
-    private static IReadOnlyList<PortOwner> EnumerateListeners(int family)
+        return owners;
+    }
+
+    private static IReadOnlyList<RawListener> EnumerateRawListeners() =>
+        [.. EnumerateRawListeners(AfInet), .. EnumerateRawListeners(AfInet6)];
+
+    private static IReadOnlyList<RawListener> EnumerateRawListeners(int family)
     {
         uint size = 0;
         uint result = GetExtendedTcpTable(nint.Zero, ref size, false, family, TcpTableOwnerPidListener, 0);
@@ -126,7 +141,7 @@ public static class PortInspector
             }
 
             int count = Marshal.ReadInt32(buffer);
-            List<PortOwner> owners = new(count);
+            List<RawListener> listeners = new(count);
             nint rowPointer = buffer + sizeof(int);
             int rowSize = family == AfInet ? Marshal.SizeOf<TcpRowOwnerPid>() : 56;
 
@@ -139,11 +154,10 @@ public static class PortInspector
 
                 // The port arrives as two big-endian bytes in the low word.
                 int port = (int)IPAddress.NetworkToHostOrder((short)(localPort & 0xFFFF)) & 0xFFFF;
-                (string name, long? startTime) = DescribeProcess(processId);
-                owners.Add(new PortOwner(port, processId, name, startTime));
+                listeners.Add(new RawListener(port, processId));
             }
 
-            return owners;
+            return listeners;
         }
         finally
         {
@@ -153,6 +167,11 @@ public static class PortInspector
 
     private static (string Name, long? StartTime) DescribeProcess(int processId)
     {
+        if (processId <= 4)
+        {
+            return (processId == 4 ? "System" : "(idle)", null);
+        }
+
         try
         {
             using Process process = Process.GetProcessById(processId);

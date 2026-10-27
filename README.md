@@ -4,7 +4,7 @@
 
 Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). Synchronized with PowerToys upstream **v0.102.2933.0**, it reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-Current source version: **3.1.1**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
+Current source version: **3.1.3**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
 [Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
@@ -17,9 +17,9 @@ Kit currently includes six modules. “Plugin” here means a module built and e
 | [Awake](#31-awake-keep-the-system-awake) | Keep Windows awake under selected conditions | Separate Awake process | PowerToys |
 | [Light Switch](#32-light-switch-theme-scheduling) | Switch light/dark themes on a schedule or manually | Separate Service process | PowerToys |
 | [Localserver](#33-localserver-local-service-management) | Configure, start, monitor and stop local services | Settings + supervision Worker | Kit |
-| [UDPtest](#34-udptest-configured-line-quality) | Measure configured targets: latency, jitter, success rate and NAT | Settings process | Kit |
+| [UDPtest](#34-udptest-configured-line-quality) | Measure configured targets: latency, jitter, success rate and NAT | Settings + diagnosis Service | Kit |
 | [AI Hub](#35-ai-hub-auditing-and-system-optimization) | Audit system events, organize downloads and clean caches | Settings + scheduled-audit Worker | Kit |
-| [NetMap](#36-netmap-current-egress-and-route-observation) | Observe Direct / Proxy egress, service reachability and ICMP routes | Settings process | Kit |
+| [NetMap](#36-netmap-current-egress-and-route-observation) | Observe Direct / Proxy egress, service reachability and ICMP routes | Settings + observation Service | Kit |
 
 Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
 
@@ -78,11 +78,11 @@ Only the main components are shown. Keep the complete build or staged directory 
 ├── Kit.*ModuleInterface.dll
 ├── Kit.Awake.exe
 ├── Kit.LightSwitch.Cli.exe
+├── Kit.LocalserverWorker.exe
+├── Kit.UDPtestService.exe
+├── Kit.NetMapService.exe
+├── Kit.AIHubWorker.exe
 ├── LightSwitchService/Kit.LightSwitchService.exe
-├── LocalserverWorker/Kit.LocalserverWorker.exe
-├── UDPtestService/Kit.UDPtestService.exe
-├── NetMapService/Kit.NetMapService.exe
-├── AIHubWorker/Kit.AIHubWorker.exe
 └── WinUI3Apps/
     ├── Kit.Settings.exe
     ├── Kit.QuickAccess.exe
@@ -158,7 +158,7 @@ flowchart TB
     W -->|"supervise; stop on module disable or shutdown"| P
 ```
 
-- **Startup and supervision**: enabling the module does not start the service catalog automatically. Users start services from the page; the Worker adopts them through ownership records without starting duplicates.
+- **Startup and supervision**: enabling the module does not start the service catalog automatically. Users start services from the page; the Worker adopts them through ownership records without starting duplicates. Full process tree tracking identifies child payload executables (`launcherPid ➔ childPid`) with per-process resource telemetry and a 60-second historical CPU wave sparkline.
 - **Lifetime**: navigation pauses UI sampling. Established services can survive Settings closing. Disabling the module or exiting Runner makes the Worker stop its managed services.
 - **Scope**: only process trees with verified ownership are managed. Catalog, state and logs live under `Localserver/`. See the [module documentation](src/modules/Localserver/README.md).
 
@@ -168,14 +168,14 @@ Run TCP/HTTPS, UDP Echo, STUN and NAT probes against configured targets, with la
 
 ```mermaid
 flowchart LR
+    MI["Runner / Kit.UDPtestModuleInterface.dll"] -->|"manage service"| SVC["Kit.UDPtestService.exe"]
     subgraph S["Settings process"]
-        PG["UDPtest page"] -->|"Start / Stop"| ENG["UDPtestLib / ProbeCoordinator"]
-        ENG --> METRICS["MetricsEngine / live charts"]
+        PG["UDPtest page / ViewModel"] -->|"IPC commands & metrics"| SVC
     end
-    ENG -->|"parallel probes"| TARGET["Configured TCP/HTTPS, UDP and STUN targets"]
+    SVC -->|"parallel probes"| TARGET["Configured TCP/HTTPS, UDP Echo and STUN targets"]
 ```
 
-- **Runtime**: users control Start / Stop. The engine runs in Settings without a separate Worker.
+- **Runtime**: users control Start / Stop. Probes run in a dedicated headless background service (`Kit.UDPtestService.exe`) over local IPC, allowing diagnostics to persist cleanly across Settings window closures.
 - **Interpretation**: HTTPS timing measures response-header arrival. NAT behavior, UDP echo and TCP/HTTPS use distinct probes and represent different network measurements.
 - **Data**: target configuration is saved under `UDPtest/`; sample history stays in memory. See the [module documentation](src/modules/UDPtest/README.md).
 
@@ -207,30 +207,31 @@ Observe the current egress as an external proxy client changes nodes, without im
 
 ```mermaid
 flowchart TB
+    MI["Runner / Kit.NetMapModuleInterface.dll"] -->|"manage service"| SVC["Kit.NetMapService.exe"]
     subgraph S["Settings process"]
-        PG["NetMap page"] -->|"Start / Stop"| ENG["Kit.NetMapLib / NetMapSession"]
-        ENG -->|"locate egress and hops"| GEO["Local GeoLite2-ASN / City"]
-        ENG -->|"two matching successful Proxy observations"| DIAG["Service and route diagnostics"]
+        PG["NetMap page / ViewModel"] -->|"IPC commands & observation"| SVC
         PG -->|"AI Check (manual)"| AISVC["NetMapAiService / route analysis"]
         AISVC -->|"one inline instruction, no AGENTS.md"| HUB["Kit.AiHub engine / route-analysis task"]
     end
-    ENG -->|"Direct: bypass application proxy"| D["Bilibili zone"]
-    ENG -->|"Proxy: selected connection mode"| P["Cloudflare trace"]
+    SVC -->|"Direct: bypass application proxy"| D["Bilibili zone"]
+    SVC -->|"Proxy: selected connection mode"| P["Cloudflare trace"]
+    SVC -->|"locate egress and hops"| GEO["Local GeoLite2-ASN / City"]
+    SVC -->|"two matching successful Proxy observations"| DIAG["Service and route diagnostics"]
     GEO -->|"optional enrichment of missing fields"| ONLINE["ipwho.is"]
     DIAG -->|"Proxy: every 10 seconds"| WEB["Claude / ChatGPT trace, Gemini / Google websites"]
     DIAG -->|"local system routing: ICMP hop sampling"| MTR["Proxy egress IPv4"]
     MTR -->|"latest snapshot: mtr-latest.json"| AISVC
     HUB -->|"security policy, sanitization, output audit"| K["Installed AI kernel CLI"]
     HUB -.->|"line type / one-line summary / route evidence"| PG
-    ENG -.->|"egress cards / offline map / MTR / service status"| PG
+    SVC -.->|"egress cards / offline map / MTR / service status via IPC"| PG
 ```
 
-- **Start and stop**: enable the module, apply connection settings, then click Start. Navigation and taskbar minimization preserve detection; returning shows the latest results from the same session. Stop, module disablement and hiding/closing Settings stop detection; restarting is manual.
+- **Start and stop**: enable the module, apply connection settings, then click Start. Detection runs inside the dedicated headless background service (`Kit.NetMapService.exe`), so observation continues when Settings is closed or minimized. Disabling the module or stopping Runner stops the background service.
 - **Connection modes**: Proxy supports the system proxy, explicit HTTP/HTTPS/SOCKS5, or system routing/TUN. Direct bypasses application proxies only and cannot bypass a system TUN.
 - **Map and data**: bundled Natural Earth offline map, with local ASN/City databases taking priority. Optional online enrichment queries public IPs and can be disabled. ASN databases support manual download with hash verification.
 - **Diagnostic limits**: service checks establish checkpoint or website reachability, not account or model availability. ICMP follows local system routing and does not reveal the inside of a proxy tunnel.
 - **AI route check**: a manual **AI Check** on the page classifies the latest MTR snapshot into a cross-border line type (such as CMI, CN2 or 163, covering China Mobile, Unicom and Telecom lines) and shows the result on the Proxy card with a one-line summary and route evidence in its details. The check runs through the shared Kit.AiHub engine as the lightweight `route-analysis` task with a single inline instruction, so no `Chains/route-analysis/AGENTS.md` is deployed; host and plugin security policies, sanitization, output auditing and failover all apply. An installed and verified AI kernel in AI Hub is required; missing MTR data, a disabled hub or a missing kernel report specific messages. The result follows the same in-memory lifetime as detection.
-- **Runtime**: the native `Kit.NetMapModuleInterface.dll` manages enablement and configuration; detection runs in Settings and results remain in memory. See the [module documentation](src/modules/NetMap/README.md) for setup, sources and validation scope.
+- **Runtime**: the native `Kit.NetMapModuleInterface.dll` manages enablement and the `Kit.NetMapService.exe` headless service; results stream to Settings over local IPC. See the [module documentation](src/modules/NetMap/README.md) for setup, sources and validation scope.
 
 ## 4. Build and Release
 

@@ -262,17 +262,33 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
     bool target_enabled = value.GetBoolean();
 
     auto module_it = modules().find(name);
+    if (module_it == modules().end() && target_enabled)
+    {
+        auto filename = get_module_filename_for_key(name);
+        if (!filename.empty())
+        {
+            try
+            {
+                Logger::info(L"apply_module_status_update: Lazy loading module {} from {}", name, filename);
+                auto pt_module = load_kit_module(filename);
+                auto res = modules().emplace(name, std::move(pt_module));
+                module_it = res.first;
+            }
+            catch (const std::exception& ex)
+            {
+                Logger::error(L"apply_module_status_update: Failed to lazy load module {}: {}", name, winrt::to_hstring(ex.what()).c_str());
+            }
+            catch (...)
+            {
+                Logger::error(L"apply_module_status_update: Failed to lazy load module {}: unknown exception", name);
+            }
+        }
+    }
+
     if (module_it != modules().end())
     {
         PowertoyModule& powertoy = module_it->second;
         const bool module_inst_enabled = powertoy->is_enabled();
-
-        auto gpo_rule = powertoy->gpo_policy_enabled_configuration();
-        if (gpo_rule == powertoys_gpo::gpo_rule_configured_enabled || gpo_rule == powertoys_gpo::gpo_rule_configured_disabled)
-        {
-            // Apply the GPO Rule.
-            target_enabled = gpo_rule == powertoys_gpo::gpo_rule_configured_enabled;
-        }
 
         if (module_inst_enabled != target_enabled)
         {
@@ -290,7 +306,8 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
                 auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
                 hkmng.DisableHotkeyByModule(name);
             }
-            // Sync the hotkey state with the module state, so it can be removed for disabled modules.
+            // Sync the hotkey state with the module state, so it can be registered/removed accordingly.
+            powertoy.update_hotkeys();
             powertoy.UpdateHotkeyEx();
         }
         target_enabled = powertoy->is_enabled();
@@ -411,14 +428,36 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
                 continue;
             }
             const std::wstring name{ enabled_element.Key().c_str() };
-            const bool found = modules().find(name) != modules().end();
-            if (!found)
+            bool target_enabled = value.GetBoolean();
+            auto module_it = modules().find(name);
+            if (module_it == modules().end() && target_enabled)
+            {
+                auto filename = get_module_filename_for_key(name);
+                if (!filename.empty())
+                {
+                    try
+                    {
+                        Logger::info(L"apply_general_settings: Lazy loading module {} from {}", name, filename);
+                        auto pt_module = load_kit_module(filename);
+                        auto res = modules().emplace(name, std::move(pt_module));
+                        module_it = res.first;
+                    }
+                    catch (const std::exception& ex)
+                    {
+                        Logger::error(L"apply_general_settings: Failed to lazy load module {}: {}", name, winrt::to_hstring(ex.what()).c_str());
+                    }
+                    catch (...)
+                    {
+                        Logger::error(L"apply_general_settings: Failed to lazy load module {}: unknown exception", name);
+                    }
+                }
+            }
+            if (module_it == modules().end())
             {
                 continue;
             }
-            PowertoyModule& powertoy = modules().at(name);
+            PowertoyModule& powertoy = module_it->second;
             const bool module_inst_enabled = powertoy->is_enabled();
-            bool target_enabled = value.GetBoolean();
 
             if (module_inst_enabled == target_enabled)
             {
@@ -430,7 +469,6 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
                 powertoy->enable();
                 auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
                 hkmng.EnableHotkeyByModule(name);
-
             }
             else
             {
@@ -439,7 +477,8 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
                 auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
                 hkmng.DisableHotkeyByModule(name);
             }
-            // Sync the hotkey state with the module state, so it can be removed for disabled modules.
+            // Sync the hotkey state with the module state, so it can be registered/removed accordingly.
+            powertoy.update_hotkeys();
             powertoy.UpdateHotkeyEx();
         }
     }
@@ -579,6 +618,7 @@ void start_enabled_kit_modules(const json::JsonObject& general_settings)
             kit_module->enable();
             auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
             hkmng.EnableHotkeyByModule(name);
+            kit_module.update_hotkeys();
             kit_module.UpdateHotkeyEx();
         }
     }

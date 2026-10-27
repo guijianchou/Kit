@@ -16,6 +16,7 @@
 
 #include <filesystem>
 #include <mutex>
+#include <thread>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -133,7 +134,13 @@ public:
         {
             std::lock_guard lifecycleLock(m_lifecycle_mutex);
             m_enabled = true;
-            start_worker_if_needed();
+            std::thread([this]() {
+                std::lock_guard threadLock(m_lifecycle_mutex);
+                if (m_enabled)
+                {
+                    start_worker_if_needed();
+                }
+            }).detach();
         }
 
         Trace::EnableAIHub(true);
@@ -189,12 +196,20 @@ void AIHubModule::start_worker_if_needed()
         return;
     }
 
-    // Deployed next to the module output, following the LightSwitchService convention.
-    const auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"AIHubWorker" / L"Kit.AIHubWorker.exe").wstring();
+    // Deployed next to the module output in root, following upstream PowerToys convention.
+    auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"Kit.AIHubWorker.exe").wstring();
     if (!std::filesystem::exists(resolved_path))
     {
-        Logger::warn(L"[AIHub] Audit worker not found at {}; scheduled audits run only while Settings is open.", resolved_path);
-        return;
+        const auto subfolder_path = (std::filesystem::path(module_path).parent_path() / L"AIHubWorker" / L"Kit.AIHubWorker.exe").wstring();
+        if (std::filesystem::exists(subfolder_path))
+        {
+            resolved_path = subfolder_path;
+        }
+        else
+        {
+            Logger::warn(L"[AIHub] Audit worker not found at {} or {}; scheduled audits run only while Settings is open.", resolved_path, subfolder_path);
+            return;
+        }
     }
 
     const std::wstring args = L"--use-kit-config --pid " + std::to_wstring(GetCurrentProcessId());

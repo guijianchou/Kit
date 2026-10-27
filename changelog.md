@@ -4,6 +4,41 @@
 
 ## English
 
+### 3.1.3
+
+- **Localserver CPU Trend & Real Wave Sparkline Visualization**:
+  - **Restored Historical CPU Trend Sparkline**: Fixed an issue where the Localserver Environment card only rendered an instantaneous progress bar for CPU usage without the historical wave curve. Re-integrated the 60-sample historical Bezier curve and smooth gradient fill (`StatusCurveGeometry` and `StatusCurveFillGeometry`) in `LocalserverPage.xaml`, directly binding `SizeChanged` to the sparkline canvas so the 60-second telemetry trend animates accurately in real time.
+  - **Process Tree Telemetry & Child Payload Identity**: Upgraded `ProcessResourceInspector` to capture `ProcessTreeMember` records (process name, processor time, and working set). Enhanced `LineRowViewModel.PidText` and `PidTooltip` to identify payload executables spawned by script launchers (e.g. Hongguo launching `cmd.exe` ➔ `%TEMP%\juku.exe`). Displays `launcherPid ➔ childPid` with detailed per-process memory tooltips, providing full transparency that child processes are monitored.
+- **PowerToys Alignment & System Process Port Inspection Hardening**:
+  - **Aligned with Upstream PowerToys Process Inspection**: In accordance with PowerToys upstream architecture (`WindowProcess.cs` and `FileLocksmithLib`), prevented `PortInspector` from triggering system-level access violations when querying kernel/system listeners.
+  - **Decoupled Raw Listener Enumeration from Process Description**: Refactored `PortInspector` to extract lightweight `(Port, ProcessId)` tuples in memory, resolving process identity only for the specific target port being inspected rather than eagerly describing 50~100+ machine-wide listeners.
+  - **Zero-Exception Guard for System PIDs**: Guarded PIDs `<= 4` to immediately return `System` or `(idle)` without invoking .NET `Process.GetProcessById`, completely eliminating over 4,500 recurring first-chance `Win32Exception (0x80004005 Access Denied)` observations in `crash.log`.
+- **Package Size Optimization & Upstream Runtime Deduplication**:
+  - **Shared CoreCLR/BCL Runtime Layout**: Aligned the 4 custom worker/service projects (`Kit.LocalserverWorker`, `Kit.AIHubWorker`, `Kit.NetMapService`, and `Kit.UDPtestService`) with upstream PowerToys patterns (`Awake.csproj` and `LightSwitch.Cli.csproj`). Redirected their build output to the root output folder `$(RepoRoot)$(Platform)\$(Configuration)\` and imported `Common.SelfContained.props`, allowing them to share the root .NET runtime files rather than generating 4 redundant runtime directories. This deduplicated over 500 MB of duplicate .NET 10 CoreCLR/BCL assemblies.
+  - **Bidirectional Launcher & Packaging Resilience**: Updated `KitWorkerProcessManager.h`, `AIHubModuleInterface`, and `LocalserverModuleInterface` to resolve flat executables directly in the root directory while retaining fallback to legacy subfolders. Updated `Stage-Release.ps1` and `Stage-Debug.ps1` to package and validate all worker binaries seamlessly.
+
+### 3.1.2
+
+- **Core Framework Alignment & Cold-Boot Lazy Loading**:
+  - **Cold-Boot Module Deferral**: Added startup check in `runner/main.cpp` against `startupGeneralSettings`; disabled modules (e.g. Awake, Localserver, UDPtest) skip `LoadLibraryExW` during boot, eliminating cold disk I/O and shaving startup latency. Modules are dynamically loaded on-demand when enabled via `apply_module_status_update()` or `apply_general_settings()`.
+  - **Hotkey Registration Deferral**: Moved hotkey hook attachment from `KitModule` construction to `enable()`, unhooking keyboard listeners upon `disable()`. This guarantees inactive modules do not occupy low-level keyboard hooks or virtual tables.
+  - **GPO Policy Stub Cleanup**: Fully removed residual GPO checks from Runner's `apply_module_status_update()`. Modernized `ModuleGpoHelper.cs` to return `GpoRuleConfigured.NotConfigured` directly, eliminating redundant cross-language COM/WinRT interop calls on UI boot.
+  - **ActionRunner Unified Rebranding**: Renamed `PowerToys.ActionRunner` to `Kit.ActionRunner.exe` in `actionRunner.vcxproj`, updating `elevation.h` failsafe execution with legacy fallback and streamlining packaging pipelines.
+  - **Brand Asset Harmonization**: Updated `GeneralSettings` Fluent icon mapping in `ModuleHelper.cs` to Kit's native icon (`Assets/Settings/Icons/Kit.png`), cleaning upstream PowerToys icon artifacts.
+- **Third-Party Plugins Standardization & Performance Hardening**:
+  - **AIHub Non-Blocking Launch & Signal-Driven Updates**:
+    - Dispatched `start_worker_if_needed()` asynchronously inside `AIHubModule::enable()`, removing the 2-second main message loop block during startup.
+    - Replaced the 5-second polling disk loop in `Kit.AIHubWorker` with event-driven `WaitHandle.WaitAny` on named events `AIHUB_EXIT_EVENT` and `AIHUB_REFRESH_SETTINGS_EVENT`, eliminating redundant disk reads while idling and achieving instant configuration updates.
+  - **Localserver Instant Shutdown Signaling**:
+    - Introduced active listening for `LOCALSERVER_EXIT_EVENT` in `Kit.LocalserverWorker` (`Program.cs`), enabling sub-millisecond response to module disable requests and eliminating 5~8 second shutdown freezes.
+  - **LightSwitch.Cli & Shared Process Management Consolidation**:
+    - Removed duplicate `PipeServerIdentity.cs` from `LightSwitch.Cli`, standardizing on `ManagedCommon.PipeServerIdentity`.
+    - Introduced `KitWorkerProcessManager.h` native process supervisor abstraction, eliminating ~160 lines of repetitive worker lifecycle management in `UDPtestModuleInterface` and `NetMapModuleInterface`.
+- **Engineering Watchdog & Release Automation**:
+  - Added build dependency for `LightSwitch.Cli` to `Kit.slnx`.
+  - Expanded `BuildCompatibility.cs` watchdogs across all 6 active modules (`Awake`, `LightSwitch`, `Localserver`, `UDPtest`, `NetMap`, `AIHub`) and updated asset assertions for `Kit.png`.
+  - Enhanced `Stage-Release.ps1` with strict validation for all core binaries and worker executables.
+
 ### 3.1.1
 
 - **Settings Backup & Restore Hardening & Resilient N=2 Retention**:
@@ -771,6 +806,41 @@
 ## 中文
 
 ## 更新日志
+
+### 3.1.3
+
+- **Localserver CPU 真实趋势波形图与进程树透明化**：
+  - **恢复 60 秒历史波形折线图（Sparkline）**：修复了 Localserver 环境卡片中 CPU 区域因先前 UI 重构缺失折线图、仅保留单条瞬时进度条导致空闲时只在启动瞬间跳动一下的视觉误导问题。在 `LocalserverPage.xaml` 中重新装配并尺寸自适应了 60 秒平滑贝塞尔波形与微光渐变充填（`StatusCurveGeometry` 与 `StatusCurveFillGeometry`），使真实 CPU 历史趋势得以完整动态呈现。
+  - **多级进程树与有效载荷进程识别**：扩展 `ProcessResourceInspector` 采集 `ProcessTreeMember` 明细（进程名、CPU 时间与工作集内存），并在 `LineRowViewModel.PidText` 与 Tooltip 中展示由脚本拉起的底层核心业务进程（如 Hongguo `cmd.exe` ➔ `%TEMP%\juku.exe`），以 `launcherPid ➔ childPid` 形式呈现，并在悬浮提示中列出各进程内存分布，彻底消除“未监控到编译可执行文件”的疑虑。
+- **比对 PowerToys 源码优化系统进程探测与端口检查**：
+  - **对齐 upstream PowerToys 进程访问规范**：参考 PowerToys 源码中 `WindowProcess.cs` 与 `FileLocksmithLib` 访问受保护进程的处理准则，重构 `PortInspector`。
+  - **解耦端口监听提取与进程属性描述**：引入 `RawListener` 结构，将全局 TCP 端口枚举与进程描述完全分离。仅针对待检测或冲突的具体目标端口按需解析进程信息，避免每次遍历无谓扫描全系统 50~100 多个不相关监听。
+  - **系统内核 PID 零异常保护**：对 PID `<= 4`（内核 System 及 Idle 伪进程）进行直接安全映射，严禁调用 .NET `Process.GetProcessById` 产生访问拒绝异常，彻底消除 `crash.log` 中记录的 4,500 余次 `Win32Exception (0x80004005)` FirstChance 异常。
+- **安装包体积深度优化与上游运行时去重**：
+  - **对齐 upstream PowerToys 共享运行时目录架构**：将四大插件服务/Worker 工程（`Kit.LocalserverWorker`、`Kit.AIHubWorker`、`Kit.NetMapService` 与 `Kit.UDPtestService`）由原先向独立子目录输出改为向根输出目录 `$(RepoRoot)$(Platform)\$(Configuration)\` 输出，并统一引入 `Common.SelfContained.props`。四大后台进程直接与 `Kit.Awake.exe` 及 `Kit.LightSwitch.Cli.exe` 共享根目录同一份 CoreCLR 与 BCL 依赖，彻底消除每个 Worker 独立携带 125 MB 运行时的冗余问题，单项瘦身近 **500 MB**。
+  - **双向弹性加载与打包校验加固**：更新 `KitWorkerProcessManager.h`、`AIHubModuleInterface` 与 `LocalserverModuleInterface`，优先就地拉起根目录下 Worker 可执行文件，并完好保留对历史子目录布局的回退探测。同步升级 `Stage-Release.ps1` 与 `Stage-Debug.ps1` 发布打包脚本，支持双向路径校验与全量 Worker 产物完整性校验。
+
+### 3.1.2
+
+- **主框架对齐与开机冷启动按需加载**：
+  - **冷启动模块延迟加载（按需加载）**：在 `runner/main.cpp` 中引入针对 `startupGeneralSettings` 显式禁用状态的过滤判断，开机时对未启用的模块（如 Awake、Localserver、UDPtest）跳过同步 `LoadLibraryExW`，避免磁盘冷读 I/O 开销；当用户在设置中开启某模块时，在 `apply_module_status_update()` 与 `apply_general_settings()` 中按需动态补全 DLL 加载与热键装载。
+  - **热键注册时机延迟（按需挂钩）**：将 `KitModule` 构造阶段的键盘全局挂钩延迟至模块显式调用 `enable()` 时执行，并在 `disable()` 时即刻卸载热键钩子，杜绝未激活模块常驻键盘钩子和虚表遍历。
+  - **清理 GPO 残留死代码与空壳互操作**：依据 Kit 架构规范彻底移除 `apply_module_status_update()` 中遗留的 GPO 分支；在 `ModuleGpoHelper.cs` 中直接返回 `GpoRuleConfigured.NotConfigured`，消除 UI 启动时向空壳 C++/WinRT DLL 的无效跨语言查询。
+  - **ActionRunner 降权执行器品牌与命名归一**：将 `actionRunner.vcxproj` 输出目标统一命名为 `Kit.ActionRunner.exe`，同步加固 `elevation.h` 中的降权回退调用逻辑，并更新自动化打包脚本。
+  - **品牌资产归一**：将 `GeneralSettings` 的 Fluent 图标映射更新为 Kit 专属原生图标（`Assets/Settings/Icons/Kit.png`），清理残存的 PowerToys 历史插图。
+- **四大第三方插件规范化加固（遵循 PLUGIN_DEVELOPMENT.md）**：
+  - **AIHub 启动解耦与信号驱动刷新**：
+    - 在 `AIHubModule::enable()` 中将 Supervisor 进程启动改为异步后台拉起，消除 Runner 主消息循环在模块拉起时的 2 秒卡顿。
+    - 移除 `Kit.AIHubWorker` 中每 5 秒盲目读取磁盘的轮询逻辑，全面采用 `WaitHandle.WaitAny` 监听 `AIHUB_EXIT_EVENT` 与 `AIHUB_REFRESH_SETTINGS_EVENT` 命名事件，实现空闲时完全零磁盘 I/O，设置变动毫秒级响应。
+  - **Localserver 停用信号即时响应**：
+    - 在 `Kit.LocalserverWorker` 中引入对 `LOCALSERVER_EXIT_EVENT`（`Local\Kit_Localserver_Exit_Event_3d8a1b21`）的主动监听，收到模块禁用信号后毫秒级优雅释放服务并退出，彻底消除了停用模块时依赖 5 秒文件轮询导致 Runner 陷入 5~8 秒超时的严重风险。
+  - **LightSwitch.Cli 重复去重与通用 Worker 管理基类抽离**：
+    - 删除 `LightSwitch.Cli` 中冗余的 `PipeServerIdentity.cs`，统一收敛引用 `ManagedCommon` 中的标准实现。
+    - 新增 `KitWorkerProcessManager.h` 通用 Native 进程管理基类，重构 `UDPtestModuleInterface` 与 `NetMapModuleInterface`，大幅精简重复样板代码并保障句柄安全释放。
+- **看门狗回归测试套件与自动化发布加固**：
+  - 在 `Kit.slnx` 的 `Kit.vcxproj` 构建依赖中补齐 `LightSwitch.Cli.csproj`。
+  - 扩充 `BuildCompatibility.cs` 架构看门狗测试，覆盖全部 6 个活动模块（`Awake`、`LightSwitch`、`Localserver`、`UDPtest`、`NetMap`、`AIHub`）及 `Kit.png` 原生图标断言。
+  - 升级 `Stage-Release.ps1` 校验清单，覆盖全部核心服务/Worker 二进制产物。
 
 ### 3.1.1
 

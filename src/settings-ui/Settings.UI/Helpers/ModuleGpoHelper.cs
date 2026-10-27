@@ -16,9 +16,9 @@ namespace Kit.Settings.UI.Helpers
         {
             return moduleType switch
             {
-                ModuleType.Awake => GPOWrapper.GetConfiguredAwakeEnabledValue(),
-                ModuleType.LightSwitch => GPOWrapper.GetConfiguredLightSwitchEnabledValue(),
-                _ => GpoRuleConfigured.Unavailable,
+                ModuleType.Awake => GpoRuleConfigured.NotConfigured,
+                ModuleType.LightSwitch => GpoRuleConfigured.NotConfigured,
+                _ => GpoRuleConfigured.NotConfigured,
             };
         }
 

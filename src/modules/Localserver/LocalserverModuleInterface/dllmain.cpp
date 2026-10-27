@@ -239,13 +239,21 @@ void LocalserverModule::start_worker_if_needed()
         return;
     }
 
-    // The worker is deployed next to the module output, following the LightSwitchService
+    // The worker is deployed next to the module output in root, following upstream PowerToys
     // convention. It also accepts a data-directory override for a non-default catalog.
-    const auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"LocalserverWorker" / L"Kit.LocalserverWorker.exe").wstring();
+    auto resolved_path = (std::filesystem::path(module_path).parent_path() / L"Kit.LocalserverWorker.exe").wstring();
     if (!std::filesystem::exists(resolved_path))
     {
-        Logger::warn(L"[Localserver] Supervisor executable not found at {}; services will only be supervised while Settings is open.", resolved_path);
-        return;
+        const auto subfolder_path = (std::filesystem::path(module_path).parent_path() / L"LocalserverWorker" / L"Kit.LocalserverWorker.exe").wstring();
+        if (std::filesystem::exists(subfolder_path))
+        {
+            resolved_path = subfolder_path;
+        }
+        else
+        {
+            Logger::warn(L"[Localserver] Supervisor executable not found at {} or {}; services will only be supervised while Settings is open.", resolved_path, subfolder_path);
+            return;
+        }
     }
 
     const std::wstring args = L"--use-kit-config --pid " + std::to_wstring(GetCurrentProcessId());

@@ -1598,6 +1598,10 @@ namespace ViewModelTests
             {
                 "ModuleType.Awake",
                 "ModuleType.LightSwitch",
+                "ModuleType.Localserver",
+                "ModuleType.UDPtest",
+                "ModuleType.NetMap",
+                "ModuleType.AIHub",
                 "ModuleType.GeneralSettings",
             })
             {
@@ -1803,7 +1807,12 @@ namespace ViewModelTests
             {
                 "Awake.png",
                 "LightSwitch.png",
+                "Localserver.png",
+                "UDPtest.png",
+                "NetMap.png",
+                "AiHub.png",
                 "PT.png",
+                "Kit.png",
             };
 
             foreach (var activeAsset in activeModuleAssets)
@@ -1942,7 +1951,12 @@ namespace ViewModelTests
             {
                 "Awake.png",
                 "LightSwitch.png",
+                "Localserver.png",
+                "UDPtest.png",
+                "NetMap.png",
+                "AiHub.png",
                 "PowerToys.png",
+                "Kit.png",
             };
 
             foreach (var activeIcon in activeIconAssets)
@@ -2606,6 +2620,9 @@ namespace ViewModelTests
             StringAssert.Contains(runnerMain, "L\"Kit.AwakeModuleInterface.dll\"");
             StringAssert.Contains(runnerMain, "L\"Kit.LightSwitchModuleInterface.dll\"");
             StringAssert.Contains(runnerMain, "L\"Kit.LocalserverModuleInterface.dll\"");
+            StringAssert.Contains(runnerMain, "L\"Kit.UDPtestModuleInterface.dll\"");
+            StringAssert.Contains(runnerMain, "L\"Kit.NetMapModuleInterface.dll\"");
+            StringAssert.Contains(runnerMain, "L\"Kit.AIHubModuleInterface.dll\"");
             Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed PowerDisplay.");
             Assert.IsFalse(runnerMain.Contains("PowerToys.MonitorModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed Monitor.");
         }

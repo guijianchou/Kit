@@ -351,7 +351,51 @@ namespace Kit.Settings.UI.ViewModels
         public double CpuPercent { get; private set; }
         public string MemoryText { get; private set; } = "0 MB";
         public double MemoryPercent { get; private set; }
-        public string PidText => _runner.ProcessId?.ToString(CultureInfo.InvariantCulture) ?? "—";
+        public string PidText
+        {
+            get
+            {
+                if (_runner.ProcessId is not { } rootPid)
+                {
+                    return "—";
+                }
+
+                if (_lastResourceSample?.Members is { Count: > 1 } members)
+                {
+                    var payload = members.FirstOrDefault(m => m.ProcessId != rootPid
+                        && !m.Name.Equals("cmd", StringComparison.OrdinalIgnoreCase)
+                        && !m.Name.Equals("powershell", StringComparison.OrdinalIgnoreCase)
+                        && !m.Name.Equals("pwsh", StringComparison.OrdinalIgnoreCase)
+                        && !m.Name.Equals("conhost", StringComparison.OrdinalIgnoreCase));
+
+                    if (payload is not null)
+                    {
+                        return $"{rootPid} ➔ {payload.ProcessId}";
+                    }
+                }
+
+                return rootPid.ToString(CultureInfo.InvariantCulture);
+            }
+        }
+
+        public string PidTooltip
+        {
+            get
+            {
+                if (_runner.ProcessId is not { } rootPid)
+                {
+                    return string.Empty;
+                }
+
+                if (_lastResourceSample?.Members is { Count: > 0 } members)
+                {
+                    var lines = members.Select(m => $"{m.Name} (PID {m.ProcessId}): {m.WorkingSetBytes / (1024 * 1024)} MB");
+                    return string.Join(Environment.NewLine, lines);
+                }
+
+                return $"PID {rootPid}";
+            }
+        }
 
         public bool IsRunning => State.IsActive();
         public bool IsEditable => _parent.IsEnabled && !_parent.IsCatalogBusy && State.AllowsEditing();
@@ -590,6 +634,7 @@ namespace Kit.Settings.UI.ViewModels
             OnPropertyChanged(nameof(PortText));
             OnPropertyChanged(nameof(UptimeText));
             OnPropertyChanged(nameof(PidText));
+            OnPropertyChanged(nameof(PidTooltip));
             OnPropertyChanged(nameof(IsRunning));
             OnPropertyChanged(nameof(IsEditable));
             OnPropertyChanged(nameof(LockVisibility));
@@ -1242,6 +1287,7 @@ namespace Kit.Settings.UI.ViewModels
         public Brush EnvHealthBrush { get; private set; } = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
         public string EnvPortText => SelectedLine?.PortText ?? "—";
         public string EnvPidText => SelectedLine?.PidText ?? "—";
+        public string EnvPidTooltip => SelectedLine?.PidTooltip ?? string.Empty;
         public string EnvStateText => SelectedLine?.StateLabel ?? "—";
         public Brush EnvStateBrush => SelectedLine?.StateBrush ?? (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
         public string EnvRuntimesText { get; private set; } = "—";
@@ -1782,6 +1828,7 @@ namespace Kit.Settings.UI.ViewModels
                 OnPropertyChanged(nameof(EnvHealthBrush));
                 OnPropertyChanged(nameof(EnvPortText));
                 OnPropertyChanged(nameof(EnvPidText));
+                OnPropertyChanged(nameof(EnvPidTooltip));
                 OnPropertyChanged(nameof(EnvStateText));
                 OnPropertyChanged(nameof(EnvStateBrush));
                 OnPropertyChanged(nameof(EnvRuntimesText));
@@ -1835,6 +1882,7 @@ namespace Kit.Settings.UI.ViewModels
             OnPropertyChanged(nameof(EnvHealthBrush));
             OnPropertyChanged(nameof(EnvPortText));
             OnPropertyChanged(nameof(EnvPidText));
+            OnPropertyChanged(nameof(EnvPidTooltip));
             OnPropertyChanged(nameof(EnvStateText));
             OnPropertyChanged(nameof(EnvStateBrush));
             OnPropertyChanged(nameof(EnvRuntimesText));

@@ -60,6 +60,24 @@ private:
 std::map<std::wstring, KitModule>& modules();
 KitModule load_kit_module(const std::wstring_view filename);
 
+struct KitModuleCatalogEntry
+{
+    std::wstring_view key;
+    std::wstring_view filename;
+};
+
+constexpr KitModuleCatalogEntry KitModuleCatalog[] = {
+    { L"Awake", L"Kit.AwakeModuleInterface.dll" },
+    { L"LightSwitch", L"Kit.LightSwitchModuleInterface.dll" },
+    { L"Localserver", L"Kit.LocalserverModuleInterface.dll" },
+    { L"UDPtest", L"Kit.UDPtestModuleInterface.dll" },
+    { L"NetMap", L"Kit.NetMapModuleInterface.dll" },
+    { L"AIHub", L"Kit.AIHubModuleInterface.dll" },
+};
+
+std::wstring_view get_module_filename_for_key(std::wstring_view key);
+std::wstring_view get_module_key_for_filename(std::wstring_view filename);
+
 // Transitional compatibility aliases
 using PowertoyModule = KitModule;
 using PowertoyModuleDeleter = KitModuleDeleter;

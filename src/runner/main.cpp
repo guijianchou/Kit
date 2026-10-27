@@ -180,6 +180,17 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 
         for (auto moduleSubdir : KitKnownModules)
         {
+            auto moduleKey = get_module_key_for_filename(moduleSubdir);
+            if (!moduleKey.empty())
+            {
+                auto it = settings.isModulesEnabledMap.find(std::wstring(moduleKey));
+                if (it != settings.isModulesEnabledMap.end() && !it->second)
+                {
+                    Logger::info(L"STARTUP_TIMING: Module {} is disabled in settings; deferring DLL load", moduleKey);
+                    continue;
+                }
+            }
+
             const auto moduleLoadStart = std::chrono::steady_clock::now();
             std::wstring failureReason;
             try

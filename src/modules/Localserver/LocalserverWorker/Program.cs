@@ -29,6 +29,9 @@ public static class Program
     /// <summary>How often the parent process is checked for liveness.</summary>
     private static readonly TimeSpan ParentCheckInterval = TimeSpan.FromSeconds(5);
 
+    /// <summary>Named event signaled on module disable.</summary>
+    private const string ExitEventName = @"Local\Kit_Localserver_Exit_Event_3d8a1b21";
+
     /// <summary>
     /// Marker file the module writes when it is disabled. Its presence tells the worker to
     /// stop the supervised services and exit, so a disabled module leaves nothing running.
@@ -44,6 +47,7 @@ public static class Program
         string dataDirectory = ResolveDataDirectory(args);
 
         using var shutdown = new CancellationTokenSource();
+        using var exitEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ExitEventName);
         Console.CancelKeyPress += (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
@@ -61,7 +65,7 @@ public static class Program
 
                 Logger.LogInfo($"[Localserver.Worker] Supervising {supervisor.SupervisedCount} service(s).");
 
-                _ = await WaitForShutdownAsync(parentPid, dataDirectory, supervisor, shutdown.Token).ConfigureAwait(false);
+                _ = await WaitForShutdownAsync(parentPid, dataDirectory, supervisor, exitEvent, shutdown.Token).ConfigureAwait(false);
             }
             finally
             {
@@ -99,16 +103,22 @@ public static class Program
         int? parentPid,
         string dataDirectory,
         ServiceSupervisor supervisor,
+        EventWaitHandle exitEvent,
         CancellationToken cancellationToken)
     {
         string moduleDisabledFlagPath = ModuleDisabledFlagPath(dataDirectory);
+        WaitHandle[] handles = { exitEvent, cancellationToken.WaitHandle };
+
         while (!cancellationToken.IsCancellationRequested)
         {
-            try
+            int index = WaitHandle.WaitAny(handles, 1000);
+            if (index == 0)
             {
-                await Task.Delay(ParentCheckInterval, cancellationToken).ConfigureAwait(false);
+                Logger.LogInfo("[Localserver.Worker] Exit event signaled.");
+                return true;
             }
-            catch (OperationCanceledException)
+
+            if (index == 1 || cancellationToken.IsCancellationRequested)
             {
                 return false;
             }

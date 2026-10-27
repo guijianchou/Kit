@@ -30,6 +30,18 @@ foreach ($path in @($sourceRoot, (Split-Path -Parent $destinationRoot))) {
     }
 }
 
+function Get-RelativePathCompat([string]$relativeTo, [string]$path) {
+    if ([type]::GetType('System.IO.Path').GetMethod('GetRelativePath', [type[]]@([string], [string]))) {
+        return [System.IO.Path]::GetRelativePath($relativeTo, $path)
+    }
+    $root = [IO.Path]::GetFullPath($relativeTo).TrimEnd('\') + '\'
+    $full = [IO.Path]::GetFullPath($path)
+    if ($full.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) {
+        return $full.Substring($root.Length)
+    }
+    return $full
+}
+
 $excludedNames = @(
     'e_sqlite3.dll', 'Microsoft.Data.Sqlite.dll', 'SQLitePCLRaw.batteries_v2.dll',
     'SQLitePCLRaw.core.dll', 'SQLitePCLRaw.provider.e_sqlite3.dll'
@@ -40,9 +52,9 @@ $excludedRootFiles = @(
 )
 $excludedExtensions = @('.lib', '.exp', '.idb', '.ilk', '.obj', '.pch', '.tlog', '.lastcodeanalysissucceeded')
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Where-Object {
-    $relative = [IO.Path]::GetRelativePath($sourceRoot, $_.FullName)
+    $relative = Get-RelativePathCompat $sourceRoot $_.FullName
     $include = $relative -notmatch '^(tests|LightSwitchLib)[\\/]'
-    $include = $include -and ($_.Name -notlike 'PowerToys.*' -or $_.Name -in @('PowerToys.ActionRunner.exe', 'PowerToys.ActionRunner.pdb'))
+    $include = $include -and ($_.Name -notlike 'PowerToys.*' -or $_.Name -in @('PowerToys.ActionRunner.exe', 'PowerToys.ActionRunner.pdb', 'Kit.ActionRunner.exe', 'Kit.ActionRunner.pdb'))
     $include = $include -and $_.Extension -notin $excludedExtensions
     $include = $include -and $_.Name -notin $excludedNames
     $include = $include -and $relative -notin $excludedRootFiles
@@ -57,17 +69,46 @@ if ($sourceFiles.Count -eq 0) { throw 'No runtime files were selected.' }
 $versionedFiles = @(
     'Kit.exe', 'Kit.Awake.exe', 'Kit.Awake.dll',
     'Kit.ManagedCommon.dll', 'Kit.Interop.dll', 'Kit.GPOWrapper.dll', 'Kit.Settings.UI.Lib.dll',
-    'Kit.BackgroundActivatorDLL.dll', 'PowerToys.ActionRunner.exe',
+    'Kit.BackgroundActivatorDLL.dll', 'PowerToys.ActionRunner.exe', 'Kit.ActionRunner.exe',
     'Kit.AwakeModuleInterface.dll', 'Kit.LightSwitchModuleInterface.dll',
-    'Kit.LocalserverModuleInterface.dll',
+    'Kit.LocalserverModuleInterface.dll', 'Kit.UDPtestModuleInterface.dll',
+    'Kit.NetMapModuleInterface.dll', 'Kit.AIHubModuleInterface.dll',
     'LightSwitchService\Kit.LightSwitchService.exe',
+    'Kit.AIHubWorker.exe',
+    'Kit.LocalserverWorker.exe',
+    'Kit.NetMapService.exe',
+    'Kit.UDPtestService.exe',
     'WinUI3Apps\Kit.Settings.exe', 'WinUI3Apps\Kit.Settings.dll',
     'WinUI3Apps\Kit.QuickAccess.exe', 'WinUI3Apps\Kit.QuickAccess.dll',
-    'WinUI3Apps\Kit.AiHub.dll', 'WinUI3Apps\LocalserverLib.dll'
+    'WinUI3Apps\Kit.AiHub.dll', 'WinUI3Apps\LocalserverLib.dll', 'WinUI3Apps\UDPtestLib.dll',
+    'WinUI3Apps\Kit.NetMapLib.dll'
 )
 $expectedQuadVersion = "${Version}.0"
 foreach ($relative in $versionedFiles) {
-    $info = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $sourceRoot $relative))
+    $fullPath = Join-Path $sourceRoot $relative
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        if ($relative -in @('PowerToys.ActionRunner.exe', 'Kit.ActionRunner.exe')) {
+            continue
+        }
+        # Fallback between flat and worker subfolder layouts
+        $altRelative = switch ($relative) {
+            'Kit.AIHubWorker.exe'                         { 'AIHubWorker\Kit.AIHubWorker.exe' }
+            'Kit.LocalserverWorker.exe'                   { 'LocalserverWorker\Kit.LocalserverWorker.exe' }
+            'Kit.NetMapService.exe'                       { 'NetMapService\Kit.NetMapService.exe' }
+            'Kit.UDPtestService.exe'                      { 'UDPtestService\Kit.UDPtestService.exe' }
+            'AIHubWorker\Kit.AIHubWorker.exe'             { 'Kit.AIHubWorker.exe' }
+            'LocalserverWorker\Kit.LocalserverWorker.exe' { 'Kit.LocalserverWorker.exe' }
+            'NetMapService\Kit.NetMapService.exe'         { 'Kit.NetMapService.exe' }
+            'UDPtestService\Kit.UDPtestService.exe'       { 'Kit.UDPtestService.exe' }
+            default { $null }
+        }
+        if ($altRelative -and (Test-Path -LiteralPath (Join-Path $sourceRoot $altRelative))) {
+            $fullPath = Join-Path $sourceRoot $altRelative
+        } else {
+            throw "Versioned file not found: $relative"
+        }
+    }
+    $info = [Diagnostics.FileVersionInfo]::GetVersionInfo($fullPath)
     $binaryVersion = '{0}.{1}.{2}.{3}' -f $info.FileMajorPart, $info.FileMinorPart, $info.FileBuildPart, $info.FilePrivatePart
     if ($binaryVersion -ne $expectedQuadVersion) { throw "Unexpected binary version for ${relative}: $binaryVersion (expected $expectedQuadVersion)" }
 }
@@ -78,7 +119,7 @@ foreach ($file in $sourceFiles) {
     if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) {
         throw 'Refusing to copy a redirected runtime file.'
     }
-    $relative = [IO.Path]::GetRelativePath($sourceRoot, $file.FullName)
+    $relative = Get-RelativePathCompat $sourceRoot $file.FullName
     $targetPath = Join-Path $destinationRoot $relative
     [IO.Directory]::CreateDirectory((Split-Path -Parent $targetPath)) | Out-Null
     [IO.File]::Copy($file.FullName, $targetPath, $false)
@@ -95,6 +136,7 @@ foreach ($relative in @(
     'WinUI3Apps\Kit.QuickAccess.deps.json'
 )) {
     $depsPath = Join-Path $destinationRoot $relative
+    if (-not (Test-Path -LiteralPath $depsPath)) { continue }
     $depsText = [IO.File]::ReadAllText($depsPath)
     if ($depsText -match '(?i)sqlite') { throw "Unexpected SQLite dependency: $relative" }
     $deps = $depsText | ConvertFrom-Json -AsHashtable
@@ -124,7 +166,7 @@ foreach ($relative in @(
 }
 
 foreach ($relative in @(
-    'Kit.pri', 'PowerToys.ActionRunner.exe', 'Kit.Interop.dll', 'Kit.GPOWrapper.dll',
+    'Kit.pri', 'Kit.Interop.dll', 'Kit.GPOWrapper.dll',
     'Kit.BackgroundActivatorDLL.dll', 'hostfxr.dll', 'hostpolicy.dll', 'coreclr.dll',
     'Kit.Awake.runtimeconfig.json', 'Assets\Awake\Awake.ico',
     'WinUI3Apps\Kit.Settings.pri', 'WinUI3Apps\Kit.QuickAccess.pri',
@@ -133,6 +175,10 @@ foreach ($relative in @(
     if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot $relative) -PathType Leaf)) {
         throw "Required runtime asset is missing: $relative"
     }
+}
+if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot 'Kit.ActionRunner.exe') -PathType Leaf) -and
+    -not (Test-Path -LiteralPath (Join-Path $destinationRoot 'PowerToys.ActionRunner.exe') -PathType Leaf)) {
+    throw "Required runtime asset is missing: Kit.ActionRunner.exe"
 }
 foreach ($relative in @('svgs', 'WinUI3Apps\SettingsXAML', 'WinUI3Apps\QuickAccessXaml', 'WinUI3Apps\Assets', 'WinUI3Apps\zh-CN')) {
     if (@(Get-ChildItem -LiteralPath (Join-Path $destinationRoot $relative) -Recurse -File).Count -eq 0) {

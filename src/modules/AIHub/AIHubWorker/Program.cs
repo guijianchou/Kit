@@ -31,11 +31,16 @@ public static class Program
     /// <summary>Named event the module interface signals to request a clean stop.</summary>
     private const string ExitEventName = "Local\\KitAIHubWorkerStopEvent-3f8c1a52-6d47-4b9e-8a11-2c7d5e9f4b60";
 
+    /// <summary>Named event the module interface signals when settings change.</summary>
+    private const string RefreshSettingsEventName = "Local\\Kit_AIHub_RefreshSettings_Event_a1b2c3d6";
+
     /// <summary>How often the parent process is checked for liveness.</summary>
     private static readonly TimeSpan ParentCheckInterval = TimeSpan.FromSeconds(5);
 
     /// <summary>How often the schedule is re-evaluated.</summary>
     private static readonly TimeSpan SchedulePollInterval = TimeSpan.FromMinutes(1);
+
+    private static volatile bool _isEnabled = true;
 
     public static async Task<int> Main(string[] args)
     {
@@ -50,6 +55,7 @@ public static class Program
         // The module interface signals this event on disable so the worker can drain and exit
         // promptly instead of waiting to be terminated.
         using var stopEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ExitEventName);
+        using var refreshEvent = new EventWaitHandle(false, EventResetMode.AutoReset, RefreshSettingsEventName);
         Console.CancelKeyPress += (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
@@ -62,6 +68,7 @@ public static class Program
         {
             var store = dataDirectory is null ? new AiHubSettingsStore() : new AiHubSettingsStore(dataDirectory);
             AiHubConfig config = store.Load();
+            _isEnabled = config.IsEnabled;
 
             var pipeline = new AuditPipeline(
                 historyStorage: new Kit.AIHubLib.Storage.AuditHistoryStorage(store.DataDirectory));
@@ -82,7 +89,7 @@ public static class Program
 
             scheduler.Start();
 
-            await WaitForShutdownAsync(parentPid, stopEvent, scheduler, store, shutdown.Token).ConfigureAwait(false);
+            await WaitForShutdownAsync(parentPid, stopEvent, refreshEvent, scheduler, store, shutdown.Token).ConfigureAwait(false);
 
             Logger.LogInfo("[AIHub.Worker] Stopped watching; ending the schedule.");
             return 0;
@@ -114,7 +121,7 @@ public static class Program
     {
         try
         {
-            return store.Load().IsEnabled;
+            return _isEnabled;
         }
         catch (Exception ex)
         {
@@ -124,14 +131,42 @@ public static class Program
         }
     }
 
-    private static async Task WaitForShutdownAsync(int? parentPid, EventWaitHandle stopEvent, AuditScheduler scheduler, AiHubSettingsStore store, CancellationToken cancellationToken)
+    private static async Task WaitForShutdownAsync(int? parentPid, EventWaitHandle stopEvent, EventWaitHandle refreshEvent, AuditScheduler scheduler, AiHubSettingsStore store, CancellationToken cancellationToken)
     {
+        WaitHandle[] handles = { stopEvent, refreshEvent, cancellationToken.WaitHandle };
+
         while (!cancellationToken.IsCancellationRequested)
         {
-            // Wait on either the cooperative stop event or the parent-liveness poll.
-            if (stopEvent.WaitOne(ParentCheckInterval))
+            int index = WaitHandle.WaitAny(handles, ParentCheckInterval);
+            if (index == 0)
             {
                 Logger.LogInfo("[AIHub.Worker] Stop event signalled.");
+                return;
+            }
+
+            if (index == 1)
+            {
+                Logger.LogInfo("[AIHub.Worker] Settings refresh signaled; reloading configuration.");
+                try
+                {
+                    AiHubConfig config = store.Load();
+                    _isEnabled = config.IsEnabled;
+                    if (scheduler.IntervalHours != config.ScanIntervalHours)
+                    {
+                        Logger.LogInfo($"[AIHub.Worker] Interval updated from {scheduler.IntervalHours} to {config.ScanIntervalHours} h.");
+                        scheduler.UpdateInterval(config.ScanIntervalHours);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"[AIHub.Worker] Failed to refresh settings: {ex.Message}");
+                }
+
+                continue;
+            }
+
+            if (index == 2 || cancellationToken.IsCancellationRequested)
+            {
                 return;
             }
 
@@ -139,20 +174,6 @@ public static class Program
             {
                 Logger.LogInfo($"[AIHub.Worker] Parent process {pid} exited.");
                 return;
-            }
-
-            try
-            {
-                AiHubConfig config = store.Load();
-                if (scheduler.IntervalHours != config.ScanIntervalHours)
-                {
-                    Logger.LogInfo($"[AIHub.Worker] Interval updated from {scheduler.IntervalHours} to {config.ScanIntervalHours} h.");
-                    scheduler.UpdateInterval(config.ScanIntervalHours);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"[AIHub.Worker] Failed to refresh settings: {ex.Message}");
             }
         }
     }

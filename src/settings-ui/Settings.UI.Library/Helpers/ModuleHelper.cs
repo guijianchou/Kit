@@ -34,7 +34,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.UDPtest => "ms-appx:///Assets/Settings/Icons/UDPtest.png",
                 ModuleType.NetMap => "ms-appx:///Assets/Settings/Icons/NetMap.png",
                 ModuleType.AIHub => "ms-appx:///Assets/Settings/Icons/AiHub.png",
-                ModuleType.GeneralSettings => "ms-appx:///Assets/Settings/Icons/PowerToys.png",
+                ModuleType.GeneralSettings => "ms-appx:///Assets/Settings/Icons/Kit.png",
                 _ => string.Empty,
             };
         }

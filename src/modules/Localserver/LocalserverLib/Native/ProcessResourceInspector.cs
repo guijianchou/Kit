@@ -4,13 +4,21 @@ using System.Runtime.InteropServices;
 
 namespace LocalServerHub.Windows.Native;
 
+/// <summary>Detailed information for an individual process in the monitored tree.</summary>
+public sealed record ProcessTreeMember(
+    int ProcessId,
+    string Name,
+    TimeSpan TotalProcessorTime,
+    long WorkingSetBytes);
+
 /// <summary>One sample of the complete process tree rooted at a service PID.</summary>
 public sealed record ProcessResourceSample(
     int RootProcessId,
     IReadOnlyList<int> ProcessIds,
     TimeSpan TotalProcessorTime,
     long WorkingSetBytes,
-    int ReadableProcessCount);
+    int ReadableProcessCount,
+    IReadOnlyList<ProcessTreeMember>? Members = null);
 
 /// <summary>
 /// One machine-wide parent/child snapshot, reusable for many tree walks.
@@ -125,16 +133,29 @@ public static class ProcessResourceInspector
         TimeSpan processorTime = TimeSpan.Zero;
         long workingSetBytes = 0;
         int readableProcessCount = 0;
+        List<ProcessTreeMember> members = new(processIds.Count);
 
         foreach (int processId in processIds)
         {
             try
             {
                 using Process process = Process.GetProcessById(processId);
+                string procName = string.Empty;
+                try
+                {
+                    procName = process.ProcessName;
+                }
+                catch
+                {
+                }
+
+                TimeSpan procTime = TimeSpan.Zero;
+                long procWs = 0;
                 bool readAny = false;
                 try
                 {
-                    processorTime += process.TotalProcessorTime;
+                    procTime = process.TotalProcessorTime;
+                    processorTime += procTime;
                     readAny = true;
                 }
                 catch
@@ -144,6 +165,7 @@ public static class ProcessResourceInspector
                 try
                 {
                     long workingSet = process.WorkingSet64;
+                    procWs = workingSet;
                     if (workingSet > 0 && workingSetBytes <= long.MaxValue - workingSet)
                     {
                         workingSetBytes += workingSet;
@@ -158,6 +180,7 @@ public static class ProcessResourceInspector
                 if (readAny)
                 {
                     readableProcessCount++;
+                    members.Add(new ProcessTreeMember(processId, procName, procTime, procWs));
                 }
             }
             catch (ArgumentException)
@@ -180,7 +203,8 @@ public static class ProcessResourceInspector
             processIds,
             processorTime,
             workingSetBytes,
-            readableProcessCount);
+            readableProcessCount,
+            members);
     }
 
     public static IReadOnlyList<int> GetProcessTreeIds(int rootProcessId)

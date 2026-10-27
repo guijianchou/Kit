@@ -91,6 +91,30 @@ json::JsonObject KitModule::json_config() const
     winrt::throw_hresult(E_FAIL);
 }
 
+std::wstring_view get_module_filename_for_key(std::wstring_view key)
+{
+    for (const auto& entry : KitModuleCatalog)
+    {
+        if (entry.key == key)
+        {
+            return entry.filename;
+        }
+    }
+    return {};
+}
+
+std::wstring_view get_module_key_for_filename(std::wstring_view filename)
+{
+    for (const auto& entry : KitModuleCatalog)
+    {
+        if (entry.filename == filename)
+        {
+            return entry.key;
+        }
+    }
+    return {};
+}
+
 KitModule::KitModule(KitModuleIface* pt_module, HMODULE handle) :
     handle(handle), pt_module(pt_module), hkmng(HotkeyConflictDetector::HotkeyConflictManager::GetInstance())
 {
@@ -100,13 +124,21 @@ KitModule::KitModule(KitModuleIface* pt_module, HMODULE handle) :
     }
 
     remove_hotkey_records();
-    update_hotkeys();
-    UpdateHotkeyEx();
+    if (pt_module->is_enabled())
+    {
+        update_hotkeys();
+        UpdateHotkeyEx();
+    }
 }
 
 void KitModule::update_hotkeys()
 {
     CentralizedKeyboardHook::ClearModuleHotkeys(pt_module->get_key());
+
+    if (!pt_module->is_enabled())
+    {
+        return;
+    }
 
     size_t hotkeyCount = pt_module->get_hotkeys(nullptr, 0);
     std::vector<KitModuleIface::Hotkey> hotkeys(hotkeyCount);

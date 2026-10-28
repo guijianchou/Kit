@@ -52,7 +52,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The no-window fake worker build failed.' }
 
     $abiSource = Join-Path $PSScriptRoot 'ModuleAbiSmoke.cpp'
-    & cl.exe /nologo /std:c++20 /EHsc /W4 /MTd /Zi /DUNICODE /D_UNICODE /LD /DKIT_UPSTREAM_ABI_FIXTURE "/I$(Join-Path $repoRoot 'source\PowerToys\src')" $abiSource /FoUpstreamFixture.obj /FdUpstreamFixture.pdb /FeUpstreamFixture.dll /link Advapi32.lib
+    $upstreamSrc = if (Test-Path (Join-Path $repoRoot 'Source\PowerToys-main\src')) {
+        Join-Path $repoRoot 'Source\PowerToys-main\src'
+    } else {
+        Join-Path $repoRoot 'source\PowerToys\src'
+    }
+    & cl.exe /nologo /std:c++20 /EHsc /W4 /MTd /Zi /DUNICODE /D_UNICODE /LD /DKIT_UPSTREAM_ABI_FIXTURE "/I$upstreamSrc" $abiSource /FoUpstreamFixture.obj /FdUpstreamFixture.pdb /FeUpstreamFixture.dll /link Advapi32.lib
     if ($LASTEXITCODE -ne 0) { throw 'The upstream ABI fixture build failed.' }
     & cl.exe @commonArguments $abiSource /FoModuleAbiSmoke.obj /FdModuleAbiSmoke.pdb /FeModuleAbiSmoke.exe /link Advapi32.lib
     if ($LASTEXITCODE -ne 0) { throw 'The Kit ABI host build failed.' }

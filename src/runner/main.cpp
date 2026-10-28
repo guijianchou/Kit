@@ -440,6 +440,22 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         // then modules to guarantee the reverse destruction order.
         modules();
 
+        // Join module workers before CRT exit holds the shared UCRT exit lock.
+        // This guard runs before the settings CLI lock and instance mutex are released.
+        auto shutdown_modules = wil::scope_exit([] {
+            cancel_settings_window_startup();
+            CentralizedKeyboardHook::Stop();
+            for (const auto& module : modules())
+            {
+                CentralizedKeyboardHook::ClearModuleHotkeys(module.first);
+                CentralizedHotkeys::UnregisterHotkeysForModule(module.first);
+            }
+
+            Logger::info("Unloading {} modules before CRT exit", modules().size());
+            modules().clear();
+            Logger::info("Runner module shutdown completed");
+        });
+
         auto general_settings = load_general_settings();
 
         // Apply the general settings but don't save it as the modules() variable has not been loaded yet
@@ -495,9 +511,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     const bool settings_closed = is_system_session_ending() ? true : close_settings_window();
 
     // Finish module teardown while this instance still owns the singleton lock.
-    // A new runner must not start workers while the old modules signal their stop events.
-    CentralizedKeyboardHook::Stop();
-    modules().clear();
+    // Module workers, hotkeys and hooks were unloaded via shutdown_modules scope exit.
 
     // We need to release the mutexes to be able to restart the application
     if (msi_mutex)

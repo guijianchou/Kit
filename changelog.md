@@ -4,6 +4,16 @@
 
 ## English
 
+### 3.2.0
+
+- **PowerToys Upstream Alignment & Architecture Hardening**:
+  - **CRT Teardown Deadlock Elimination**: Added RAII-based `wil::scope_exit shutdown_modules` guard in `src/runner/main.cpp` before entering CRT exit locks. Cancels pending settings window startups, stops keyboard hooks, cleans up all module shortcuts via `ClearModuleHotkeys` and `UnregisterHotkeysForModule`, and flushes active modules safely before CRT static locks can deadlock worker threads.
+  - **Centralized Hotkey Unregistration Hardening**: Modernized `UnregisterHotkeysForModule` in `src/runner/centralized_hotkeys.cpp` to use `std::erase_if` across action maps, eliminating leaked duplicate shortcuts. Guarded `UnregisterHotKey` calls with `IsWindow(runnerWindow)` to prevent invalid window handle Win32 exceptions during desktop shutdown or process exit.
+  - **Named Pipe IPC & Handle RAII Modernization**: Upgraded `TwoWayPipeMessageIPC` in `src/common/interop/two_way_pipe_message_ipc.h` and `.cpp` to manage `impl` via `std::unique_ptr` and wrapped `write_complete_event` inside `wil::unique_handle`, eliminating manual `CloseHandle` tracking and handle leaks during concurrent pipe disconnection.
+  - **UI Thread Dispatch Memory Leak Protection**: Upgraded cross-thread messaging in `src/runner/tray_icon.cpp` (`dispatch_run_on_main_ui_thread` and window proc) to manage payload objects with `std::make_unique` and `std::unique_ptr`, guaranteeing that messages are freed even if `PostMessage` fails or the tray window is torn down.
+  - **Process, Thread, and Security Descriptor RAII**: Hardened thread handle lifetimes in `src/runner/quick_access_host.cpp` via `const wil::unique_handle quick_access_thread`, and upgraded token handles and SID strings in `src/runner/auto_start_helper.cpp` to `wil::unique_handle` and `wil::unique_hlocal_string`.
+  - **Slimmed Release Packaging & Binary Validation**: Packaged the 3.2.0 Release build into a 568.8 MB slimmed distribution via `Stage-Release.ps1` (1,030 files, 0 PDBs, achieving a ~410 MB / 41.9% size reduction compared to Debug). Verified SHA-256 integrity, runtime dependency maps (Awake, Settings, QuickAccess), and sparse package identity manifests.
+
 ### 3.1.3
 
 - **Localserver CPU Trend & Real Wave Sparkline Visualization**:
@@ -806,6 +816,16 @@
 ## 中文
 
 ## 更新日志
+
+### 3.2.0
+
+- **对齐 PowerToys 上游核心框架加固与资源安全（RAII）**：
+  - **消除 CRT 静态析构死锁**：在 `src/runner/main.cpp` 的 `WinMain` 中引入 `wil::scope_exit shutdown_modules` 退出守卫。在进入 CRT 静态退出锁前，统一取消设置窗口启动挂起、停止全局键盘钩子，并按模块调用 `ClearModuleHotkeys` 与 `UnregisterHotkeysForModule` 彻底注销全局热键后释放模块实例，彻底规避模块后台工作线程与 CRT 退出锁竞争引发的进程假死。
+  - **热键注销全量清理与窗口安全防御**：重构 `src/runner/centralized_hotkeys.cpp` 中的 `UnregisterHotkeysForModule`，使用 C++20 `std::erase_if` 批量彻底清除模块绑定的所有关联动作，避免旧实现仅擦除单项遗留残留热键；同时在注销热键前加入 `IsWindow(runnerWindow)` 保护，杜绝系统注销或托盘退出时因顶层窗口已销毁抛出的 Win32 无效句柄异常。
+  - **双向命名管道 IPC 智能指针化与句柄防泄露**：在 `src/common/interop/two_way_pipe_message_ipc.h` 及 `.cpp` 中将内部实现对象 `impl` 升级为 `std::unique_ptr`，并将异步写入完成事件 `write_complete_event` 改造为 `wil::unique_handle` RAII 自动管理，消灭所有散落的手动 `CloseHandle`，根除并发断开时的事件句柄泄露隐患。
+  - **托盘跨线程调度内存泄漏防护**：重构 `src/runner/tray_icon.cpp` 中的 `dispatch_run_on_main_ui_thread`，采用 `std::make_unique<run_on_main_ui_thread_msg>` 分配并在 `PostMessage` 成功后才放弃所有权，在窗口消息回调中用 `std::unique_ptr` 安全接管；当消息投递因队列满或窗口关闭失败时自动释放堆内存，杜绝内存微泄露。
+  - **子线程与安全描述符系统句柄 RAII 化**：在 `src/runner/quick_access_host.cpp` 中使用 `const wil::unique_handle quick_access_thread` 托管悬挂线程句柄，杜绝作业对象绑定异常时的句柄泄露；在 `src/runner/auto_start_helper.cpp` 中将访问令牌及 SID 字符串改用 `wil::unique_handle` 与 `wil::unique_hlocal_string` 自动释放。
+  - **3.2.0 瘦身版 Release 打包与依赖校验**：通过 `Stage-Release.ps1` 输出 568.8 MB 瘦身版 Release 交付包（共 1,030 个文件，完全剔除 PDB 调试符号，相比 Debug 版本体积瘦身 41.9% / ~410 MB）。完成全部 6 大模块、独立 Worker、Windows App SDK 运行时资产依赖及 SHA-256 清单 100% 校验。
 
 ### 3.1.3
 

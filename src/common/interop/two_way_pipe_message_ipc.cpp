@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iterator>
 #include <system_error>
+#include <wil/resource.h>
 
 constexpr DWORD BUFSIZE = 1024;
 constexpr DWORD PipeClientAccess = FILE_READ_DATA |
@@ -171,7 +172,7 @@ TwoWayPipeMessageIPC::TwoWayPipeMessageIPC(
     std::wstring _input_pipe_name,
     std::wstring _output_pipe_name,
     callback_function p_func) :
-    impl(new TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl(
+    impl(std::make_unique<TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl>(
         _input_pipe_name,
         _output_pipe_name,
         p_func))
@@ -181,7 +182,6 @@ TwoWayPipeMessageIPC::TwoWayPipeMessageIPC(
 TwoWayPipeMessageIPC::~TwoWayPipeMessageIPC()
 {
     impl->end();
-    delete impl;
 }
 
 void TwoWayPipeMessageIPC::send(std::wstring msg)
@@ -428,14 +428,14 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
         return;
     }
 
-    HANDLE write_complete_event = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    wil::unique_handle write_complete_event{ CreateEventW(nullptr, TRUE, FALSE, nullptr) };
     if (!write_complete_event)
     {
         return;
     }
 
     OVERLAPPED write_overlapped{};
-    write_overlapped.hEvent = write_complete_event;
+    write_overlapped.hEvent = write_complete_event.get();
     DWORD bytes_written = 0;
     const DWORD bytes_to_write = (lstrlen(message_send)) * sizeof(WCHAR);
     BOOL write_succeeded = FALSE;
@@ -446,7 +446,6 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
         std::scoped_lock lock(output_pipe_mutex);
         if (closed.load())
         {
-            CloseHandle(write_complete_event);
             return;
         }
         active_output_pipe_handle = output_pipe_handle;
@@ -460,7 +459,6 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
     {
         if (GetLastError() != ERROR_IO_PENDING)
         {
-            CloseHandle(write_complete_event);
             clear_active_output_pipe();
             return;
         }
@@ -473,7 +471,6 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
         GetOverlappedResult(output_pipe_handle, &write_overlapped, &bytes_written, TRUE);
     }
 
-    CloseHandle(write_complete_event);
     clear_active_output_pipe();
 }
 

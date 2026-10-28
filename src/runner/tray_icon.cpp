@@ -9,6 +9,7 @@
 #include "hotkey_conflict_detector.h"
 #include "trace.h"
 #include <Windows.h>
+#include <memory>
 
 #include <common/utils/resources.h>
 #include <common/version/version.h>
@@ -105,12 +106,16 @@ bool dispatch_run_on_main_ui_thread(main_loop_callback_function _callback, PVOID
     {
         return false;
     }
-    struct run_on_main_ui_thread_msg* wnd_msg = new struct run_on_main_ui_thread_msg();
+    auto wnd_msg = std::make_unique<run_on_main_ui_thread_msg>();
     wnd_msg->_callback = _callback;
     wnd_msg->data = data;
 
-    PostMessage(tray_icon_hwnd, wm_run_on_main_ui_thread, 0, reinterpret_cast<LPARAM>(wnd_msg));
+    if (!PostMessage(tray_icon_hwnd, wm_run_on_main_ui_thread, 0, reinterpret_cast<LPARAM>(wnd_msg.get())))
+    {
+        return false;
+    }
 
+    wnd_msg.release();
     return true;
 }
 
@@ -360,9 +365,8 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         {
             if (lparam != NULL)
             {
-                struct run_on_main_ui_thread_msg* msg = reinterpret_cast<struct run_on_main_ui_thread_msg*>(lparam);
+                const std::unique_ptr<run_on_main_ui_thread_msg> msg{ reinterpret_cast<run_on_main_ui_thread_msg*>(lparam) };
                 msg->_callback(msg->data);
-                delete msg;
                 lparam = NULL;
             }
             break;

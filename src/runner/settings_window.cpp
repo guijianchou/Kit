@@ -615,6 +615,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
             // In the second case the Settings process will run elevated.
             if (!settings_window_startup.TryLaunch([&]() {
                     STARTUPINFO startup_info = { sizeof(startup_info) };
+                    const auto working_dir = std::filesystem::path(executable_path).parent_path().wstring();
                     if (!CreateProcessW(executable_path.c_str(),
                                         executable_args.data(),
                                         nullptr,
@@ -622,7 +623,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
                                         FALSE,
                                         0,
                                         nullptr,
-                                        nullptr,
+                                        working_dir.c_str(),
                                         &startup_info,
                                         &process_info))
                     {

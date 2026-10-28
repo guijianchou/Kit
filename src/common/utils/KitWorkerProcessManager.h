@@ -73,6 +73,7 @@ public:
 
         STARTUPINFO si = { sizeof(si) };
         PROCESS_INFORMATION pi{};
+        const auto working_dir = std::filesystem::path(resolved_path).parent_path().wstring();
 
         if (!CreateProcessW(
                 resolved_path.c_str(),
@@ -82,7 +83,7 @@ public:
                 FALSE,
                 CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
                 nullptr,
-                nullptr,
+                working_dir.c_str(),
                 &si,
                 &pi))
         {

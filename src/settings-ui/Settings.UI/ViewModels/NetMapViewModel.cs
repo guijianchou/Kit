@@ -197,6 +197,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private string cityDatabase = string.Empty;
     private bool onlineLookup;
     private CancellationTokenSource? updateCancellation;
+    private CancellationTokenSource? aiCheckCancellation;
     private bool isUpdating;
     private double updateProgress;
     private string updateStatus = string.Empty;
@@ -269,6 +270,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             else
             {
                 session.Stop();
+                CancelAiCheck();
             }
 
             ApplySnapshot(session.Current);
@@ -492,6 +494,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     public void CancelDataUpdate() => updateCancellation?.Cancel();
 
+    public void CancelAiCheck() => aiCheckCancellation?.Cancel();
+
     public async Task CheckRouteWithAiAsync()
     {
         if (!CanAiCheck)
@@ -510,6 +514,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             return;
         }
 
+        using var source = new CancellationTokenSource();
+        aiCheckCancellation = source;
         isAiChecking = true;
         OnPropertyChanged(nameof(IsAiChecking));
         OnPropertyChanged(nameof(CanAiCheck));
@@ -517,7 +523,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
         try
         {
-            var response = await NetMapAiService.AnalyzeRouteAsync().ConfigureAwait(false);
+            var response = await NetMapAiService.AnalyzeRouteAsync(source.Token).ConfigureAwait(false);
             dispatcher.TryEnqueue(() =>
             {
                 if (response.Success)
@@ -533,6 +539,11 @@ public sealed partial class NetMapViewModel : PageViewModelBase
                 }
             });
         }
+        catch (OperationCanceledException)
+        {
+            // Stopping detection cancels the route analysis silently; the finally block
+            // below restores the idle state without an error message.
+        }
         catch (Exception ex)
         {
             dispatcher.TryEnqueue(() =>
@@ -542,6 +553,11 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         }
         finally
         {
+            if (ReferenceEquals(aiCheckCancellation, source))
+            {
+                aiCheckCancellation = null;
+            }
+
             dispatcher.TryEnqueue(() =>
             {
                 isAiChecking = false;
@@ -613,6 +629,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         if (disposing)
         {
             CancelDataUpdate();
+            CancelAiCheck();
             disposed = true;
             general.SettingsChanged -= OnGeneralChanged;
             session.Changed -= OnSnapshot;

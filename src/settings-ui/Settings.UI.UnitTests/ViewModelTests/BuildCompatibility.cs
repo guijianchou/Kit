@@ -2855,6 +2855,32 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void NetMapStopMustAlsoCancelRunningAiRouteCheck()
+        {
+            var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "NetMapViewModel.cs"));
+            int detectionProperty = viewModel.IndexOf("public bool IsDetectionOn", StringComparison.Ordinal);
+            int detectionStopped = viewModel.IndexOf("session.Stop();", detectionProperty, StringComparison.Ordinal);
+            int stopCancelsAi = viewModel.IndexOf("CancelAiCheck();", detectionStopped, StringComparison.Ordinal);
+            Assert.IsTrue(
+                detectionProperty >= 0 && detectionStopped > detectionProperty && stopCancelsAi > detectionStopped,
+                "Stopping NetMap detection must cancel a running AI route check.");
+
+            int dispose = viewModel.IndexOf("protected override void Dispose(bool disposing)", StringComparison.Ordinal);
+            int disposeCancelsAi = viewModel.IndexOf("CancelAiCheck();", dispose, StringComparison.Ordinal);
+            Assert.IsTrue(
+                dispose >= 0 && disposeCancelsAi > dispose,
+                "Disposing the NetMap view model must cancel a running AI route check.");
+
+            StringAssert.Contains(viewModel, "AnalyzeRouteAsync(source.Token)");
+            StringAssert.Contains(viewModel, "catch (OperationCanceledException)");
+
+            var aiService = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "NetMapAiService.cs"));
+            Assert.IsTrue(
+                aiService.Contains("cancellationToken.ThrowIfCancellationRequested();", StringComparison.Ordinal),
+                "The route analysis must observe the caller's cancellation token so a stop ends the check.");
+        }
+
+        [TestMethod]
         public void LocalserverWorkerShouldFinishCleanupAfterCancellationOrFailure()
         {
             var source = File.ReadAllText(FindSourceFile("src", "modules", "Localserver", "LocalserverWorker", "Program.cs"));

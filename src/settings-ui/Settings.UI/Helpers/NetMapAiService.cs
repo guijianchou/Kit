@@ -186,6 +186,8 @@ public static class NetMapAiService
     /// </summary>
     public static async Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!File.Exists(MtrTempFilePath))
         {
             return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiNoMtrData"));
@@ -196,6 +198,10 @@ public static class NetMapAiService
         {
             byte[] bytes = await File.ReadAllBytesAsync(MtrTempFilePath, cancellationToken).ConfigureAwait(false);
             traceData = JsonSerializer.Deserialize(bytes, NetMapAiJsonContext.Default.NetMapMtrTraceData);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -225,10 +231,18 @@ public static class NetMapAiService
                 },
                 cancellationToken).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiCheckFailed") + ": " + ex.Message);
         }
+
+        // The engine converts a caller stop into a cancelled failure result; re-throw it so
+        // the view model can cancel silently instead of reporting an AI check error.
+        cancellationToken.ThrowIfCancellationRequested();
 
         NetMapAiRouteResult? payload = result.Payload;
         if (!result.IsSuccess || payload is null)

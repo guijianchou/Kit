@@ -5,6 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -174,5 +176,15 @@ public class NetMapAiServiceTests
 
         // Calling it when file doesn't exist must not throw
         NetMapAiService.DeleteLatestMtrSnapshot();
+    }
+
+    [TestMethod]
+    public async Task AnalyzeRouteAsync_PreCancelledTokenPropagatesCancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(
+            () => NetMapAiService.AnalyzeRouteAsync(cts.Token));
     }
 }

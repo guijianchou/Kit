@@ -92,12 +92,10 @@
                             Orientation="Horizontal">
                             <Button
                                 x:Name="PART_BackButton"
-                                Style="{ThemeResource TitleBarBackButtonStyle}"
-                                ToolTipService.ToolTip="Back" />
+                                Style="{ThemeResource TitleBarBackButtonStyle}" />
                             <Button
                                 x:Name="PART_PaneButton"
-                                Style="{StaticResource TitleBarPaneToggleButtonStyle}"
-                                ToolTipService.ToolTip="Toggle menu" />
+                                Style="{StaticResource TitleBarPaneToggleButtonStyle}" />
                         </StackPanel>
 
                         <ContentPresenter

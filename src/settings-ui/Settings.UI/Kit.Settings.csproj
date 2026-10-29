@@ -21,8 +21,6 @@
 		<ProjectPriFileName>Kit.Settings.pri</ProjectPriFileName>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Remove="SettingsXAML\Controls\Dashboard\CheckUpdateControl.xaml" />
-		<None Remove="SettingsXAML\Controls\Dashboard\ShortcutConflictControl.xaml" />
 		<None Remove="SettingsXAML\Controls\TitleBar\TitleBar.xaml" />
 	</ItemGroup>
 	<ItemGroup>
@@ -143,12 +141,6 @@
 			<Generator>MSBuild:Compile</Generator>
 		</Page>
 		<Page Update="SettingsXAML\Controls\GPOInfoControl.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Page>
-		<Page Update="SettingsXAML\Controls\Dashboard\ShortcutConflictControl.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Page>
-		<Page Update="SettingsXAML\Controls\Dashboard\CheckUpdateControl.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</Page>
 		    <Page Update="SettingsXAML\Controls\Timeline\TimelineStyles.xaml">

@@ -19,6 +19,12 @@ if ((Get-Item -LiteralPath $runtimeRoot).Attributes -band [IO.FileAttributes]::R
     throw 'Refusing to use a redirected runtime directory.'
 }
 [IO.Directory]::CreateDirectory($reportRoot) | Out-Null
+$testTemp = Join-Path $reportRoot "tmp"
+[IO.Directory]::CreateDirectory($testTemp) | Out-Null
+$previousTemp = $env:TEMP
+$previousTmp = $env:TMP
+$env:TEMP = $testTemp
+$env:TMP = $testTemp
 $dotnetRoot = Split-Path (Get-Command dotnet.exe).Source
 $sdkVersion = (& dotnet --version).Trim()
 $sdkRoot = Join-Path $dotnetRoot "sdk\$sdkVersion"
@@ -68,6 +74,8 @@ try {
 } finally {
     if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit() }
     $env:KIT_MODULE_PAGE_TEST_OUTPUT = $previousOutput
+            $env:TEMP = $previousTemp
+            $env:TMP = $previousTmp
     foreach ($path in $backups.Keys) {
         if ($null -ne $backups[$path]) { [IO.File]::WriteAllBytes($path, $backups[$path]) }
         elseif (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }

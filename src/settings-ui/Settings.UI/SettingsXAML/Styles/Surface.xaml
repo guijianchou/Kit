@@ -97,4 +97,42 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
     </Style>
+
+    <!-- Hero 共享表面：卡片底 + 渐变叠层 + 内容槽（Dashboard / General 共用，消除双份拷贝） -->
+    <Style x:Key="KitHeroPanelStyle" TargetType="ContentControl">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Border Style="{StaticResource KitHeroSurfaceStyle}">
+                        <Grid>
+                            <Border
+                                CornerRadius="{StaticResource OverlayCornerRadius}"
+                                Background="{ThemeResource KitHeroGradientBrush}"
+                                IsHitTestVisible="False" />
+                            <ContentPresenter
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 出口状态着色（Unknown / Good / Error；NetMapHealthStyleConverter 按 "…Text" 键取用；Dashboard·NetMap 共用） -->
+    <ResourceDictionary x:Key="KitEgressStatusStyles">
+        <Style x:Key="UnknownText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style x:Key="GoodText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style x:Key="ErrorText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        </Style>
+    </ResourceDictionary>
 </ResourceDictionary>

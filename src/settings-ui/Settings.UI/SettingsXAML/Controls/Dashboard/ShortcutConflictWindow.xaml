@@ -135,24 +135,5 @@
                 </ItemsControl>
             </Grid>
         </ScrollViewer>
-        <!--  Empty State (when no conflicts)  -->
-        <StackPanel
-            x:Name="EmptyStatePanel"
-            Grid.Row="2"
-            Margin="24"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Visibility="Collapsed">
-            <FontIcon
-                HorizontalAlignment="Center"
-                AutomationProperties.AccessibilityView="Raw"
-                FontSize="48"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Glyph="&#xE73E;" />
-            <TextBlock Margin="0,16,0,4" HorizontalAlignment="Center">
-                <Run x:Uid="ShortcutConflictWindow_NoConflictsTitle" />
-                <Run x:Uid="ShortcutConflictWindow_NoConflictsDescription" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </TextBlock>
-        </StackPanel>
     </Grid>
 </winuiex:WindowEx>

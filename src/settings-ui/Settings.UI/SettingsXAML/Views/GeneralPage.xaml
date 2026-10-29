@@ -28,12 +28,8 @@
     <controls:SettingsPageControl x:Uid="General">
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical" Spacing="24">
-                <Border Style="{StaticResource KitHeroSurfaceStyle}">
+                <ContentControl Style="{StaticResource KitHeroPanelStyle}">
                     <Grid>
-                        <Border
-                            CornerRadius="{StaticResource OverlayCornerRadius}"
-                            Background="{ThemeResource KitHeroGradientBrush}"
-                            IsHitTestVisible="False" />
                         <tkcontrols:WrapPanel x:Name="SettingsSectionNavigation" Margin="12,10" HorizontalSpacing="8" VerticalSpacing="8">
                         <Button
                             AutomationProperties.Name="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
@@ -115,7 +111,7 @@
                         </Button>
                     </tkcontrols:WrapPanel>
                     </Grid>
-                </Border>
+                </ContentControl>
 
                 <controls:SettingsGroup x:Name="AppearanceAndBehaviorGroup" x:Uid="Appearance_Behavior" IsEnabled="True">
                     <tkcontrols:SettingsCard
@@ -368,6 +364,7 @@
                             <tkcontrols:SettingsExpander.Items>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
                                     <TextBox
+                                        x:Uid="AiHub_EndpointUrlBox"
                                         Width="320"
                                         PlaceholderText="https://api.example.com"
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.BaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -386,12 +383,13 @@
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Mode, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
-                                        <ComboBoxItem Content="responses (/v1/responses)" Tag="responses" />
-                                        <ComboBoxItem Content="chat (/v1/chat/completions)" Tag="chat" />
+                                        <ComboBoxItem x:Uid="AiHub_ApiModeResponses" Content="responses (/v1/responses)" Tag="responses" />
+                                        <ComboBoxItem x:Uid="AiHub_ApiModeChat" Content="chat (/v1/chat/completions)" Tag="chat" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox
+                                        x:Uid="AiHub_ModelBox"
                                         Width="200"
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -401,9 +399,9 @@
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
-                                        <ComboBoxItem Content="low" Tag="low" />
-                                        <ComboBoxItem Content="high" Tag="high" />
-                                        <ComboBoxItem Content="max" Tag="max" />
+                                        <ComboBoxItem x:Uid="AiHub_EffortLow" Content="low" Tag="low" />
+                                        <ComboBoxItem x:Uid="AiHub_EffortHigh" Content="high" Tag="high" />
+                                        <ComboBoxItem x:Uid="AiHub_EffortMax" Content="max" Tag="max" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
                             </tkcontrols:SettingsExpander.Items>
@@ -435,6 +433,7 @@
                             <tkcontrols:SettingsExpander.Items>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
                                     <TextBox
+                                        x:Uid="AiHub_EndpointUrlBox"
                                         Width="320"
                                         PlaceholderText="https://api.example.com"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.BaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -453,12 +452,13 @@
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Mode, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
-                                        <ComboBoxItem Content="responses (/v1/responses)" Tag="responses" />
-                                        <ComboBoxItem Content="chat (/v1/chat/completions)" Tag="chat" />
+                                        <ComboBoxItem x:Uid="AiHub_ApiModeResponses" Content="responses (/v1/responses)" Tag="responses" />
+                                        <ComboBoxItem x:Uid="AiHub_ApiModeChat" Content="chat (/v1/chat/completions)" Tag="chat" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox
+                                        x:Uid="AiHub_ModelBox"
                                         Width="200"
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -468,9 +468,9 @@
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
-                                        <ComboBoxItem Content="low" Tag="low" />
-                                        <ComboBoxItem Content="high" Tag="high" />
-                                        <ComboBoxItem Content="max" Tag="max" />
+                                        <ComboBoxItem x:Uid="AiHub_EffortLow" Content="low" Tag="low" />
+                                        <ComboBoxItem x:Uid="AiHub_EffortHigh" Content="high" Tag="high" />
+                                        <ComboBoxItem x:Uid="AiHub_EffortMax" Content="max" Tag="max" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_ClearFallbackCard" Header="Clear fallback endpoint">

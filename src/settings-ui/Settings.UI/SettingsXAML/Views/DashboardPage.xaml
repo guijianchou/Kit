@@ -16,18 +16,7 @@
     <local:NavigablePage.Resources>
         <controlConverters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
         <converters:EnumToModuleListSortOptionConverter x:Key="EnumToModuleListSortOptionConverter" />
-        <ResourceDictionary x:Key="DashboardEgressStyles">
-            <Style x:Key="UnknownText" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
-            </Style>
-            <Style x:Key="GoodText" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
-            </Style>
-            <Style x:Key="ErrorText" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
-            </Style>
-        </ResourceDictionary>
-        <viewmodels:NetMapHealthStyleConverter x:Key="DashboardEgressStyleConverter" Styles="{StaticResource DashboardEgressStyles}" />
+        <viewmodels:NetMapHealthStyleConverter x:Key="DashboardEgressStyleConverter" Styles="{StaticResource KitEgressStatusStyles}" />
         <DataTemplate x:Key="DashboardDetailTemplate" x:DataType="viewmodels:DashboardDetail">
             <Grid Margin="0,1" ColumnSpacing="12" MinHeight="21">
                 <Grid.ColumnDefinitions>
@@ -46,7 +35,7 @@
                         <ColumnDefinition Width="120" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{x:Bind Value, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontWeight="SemiBold" FontSize="12.5"
+                    <TextBlock Text="{x:Bind Value, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontWeight="SemiBold" FontSize="13"
                         TextWrapping="Wrap" Typography.NumeralAlignment="Tabular"
                         Foreground="{ThemeResource TextFillColorPrimaryBrush}" IsTextSelectionEnabled="True"
                         VerticalAlignment="Center" />
@@ -91,13 +80,9 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Mica Hero Overview Banner -->
-                    <Border Grid.ColumnSpan="2" Style="{StaticResource KitHeroSurfaceStyle}">
+                    <!-- Mica Hero Overview Banner（共享 KitHeroPanelStyle） -->
+                    <ContentControl Grid.ColumnSpan="2" Style="{StaticResource KitHeroPanelStyle}">
                         <Grid>
-                            <Border
-                                CornerRadius="{StaticResource OverlayCornerRadius}"
-                                Background="{ThemeResource KitHeroGradientBrush}"
-                                IsHitTestVisible="False" />
                             <Grid Padding="16,12" ColumnSpacing="14">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -120,7 +105,7 @@
                                     Style="{StaticResource BodyTextBlockStyle}" />
                             </Grid>
                         </Grid>
-                    </Border>
+                    </ContentControl>
 
                     <StackPanel Grid.Row="1" Orientation="Vertical" Spacing="16" ChildrenTransitions="{StaticResource SettingsCardsAnimations}">
                         <controls:Card
@@ -224,6 +209,7 @@
                             <controls:Card.TitleContent>
                                 <Button
                                     x:Uid="Dashboard_SortBy"
+                                    AutomationProperties.AutomationId="DashboardSortByButton"
                                     VerticalAlignment="Center"
                                     Style="{StaticResource KitSubtleIconButtonStyle}">
                                     <ToolTipService.ToolTip>
@@ -292,7 +278,7 @@
                                     <TextBlock x:Name="DirectIpText" Margin="0,0,0,6" Grid.Row="2"
                                         Text="{x:Bind viewmodels:DashboardViewModel.EgressIp(ViewModel.DirectEgress), Mode=OneWay}"
                                         Style="{x:Bind ViewModel.DirectEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
-                                        FontFamily="{StaticResource KitMonoFontFamily}" FontSize="19" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                                        FontFamily="{StaticResource KitMonoFontFamily}" FontSize="20" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
                                     <TextBlock x:Name="DirectLocationText" Margin="0,0,0,4" Grid.Row="3" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
                                         <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.DirectEgress.Location, Mode=OneWay}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </TextBlock>
@@ -306,7 +292,7 @@
                                     <TextBlock x:Name="ProxyIpText" Margin="0,0,0,6" Grid.Row="2" Grid.Column="2"
                                         Text="{x:Bind viewmodels:DashboardViewModel.EgressIp(ViewModel.ProxyEgress), Mode=OneWay}"
                                         Style="{x:Bind ViewModel.ProxyEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
-                                        FontFamily="{StaticResource KitMonoFontFamily}" FontSize="19" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                                        FontFamily="{StaticResource KitMonoFontFamily}" FontSize="20" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
                                     <TextBlock x:Name="ProxyLocationText" Margin="0,0,0,4" Grid.Row="3" Grid.Column="2" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
                                         <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.ProxyEgress.Location, Mode=OneWay}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </TextBlock>

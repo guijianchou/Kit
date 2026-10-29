@@ -528,7 +528,12 @@ internal static class DashboardPageSmoke
         adapters.SetValue(Activator.CreateInstance(adapterType, "two", "AMD Radeon Graphics", "amd-driver", "AMD"), 1);
         adapters.SetValue(Activator.CreateInstance(adapterType, "three", "Intel UHD Graphics", "intel-driver", "Intel"), 2);
         var matching = info.GetMethod("MatchGraphics", staticFlags);
-        var telemetry = new GpuSnapshot(new[] { new GpuTelemetry("NVIDIA Test", "nv-driver", 17, 128, 8192, 45) }, null);
+        var telemetryType = assembly.GetType("Kit.Settings.UI.Helpers.GpuTelemetry");
+        var snapshotType = assembly.GetType("Kit.Settings.UI.Helpers.GpuSnapshot");
+        var telemetryDevice = Activator.CreateInstance(telemetryType, "NVIDIA Test", "nv-driver", null, null, null, null);
+        var telemetryDevices = Array.CreateInstance(telemetryType, 1);
+        telemetryDevices.SetValue(telemetryDevice, 0);
+        var telemetry = Activator.CreateInstance(snapshotType, telemetryDevices, null);
         var readings = ((System.Collections.IEnumerable)matching.Invoke(null, new object[] { adapters, telemetry })).Cast<object>().ToArray();
         object Sample(object value) => value.GetType().GetProperty("Telemetry").GetValue(value);
         Require(Sample(readings[0]) != null && Sample(readings[1]) == null && Sample(readings[2]) == null, "NVIDIA telemetry does not leak onto AMD or Intel adapters.");
@@ -581,7 +586,8 @@ internal static class DashboardPageSmoke
                 foreach (var module in modules)
                 {
                     var item = (NavigationViewItem)root.FindName(module + "NavigationItem");
-                    await VerifyIconPixels(item.Icon, root, frame, $"Sidebar {module} ({theme}, transition {transition})", module == ModuleType.NetMap);
+                    Require(item.Icon is FontIcon, $"Sidebar {module} uses a theme-aware FontIcon instead of a fixed bitmap.");
+                    await VerifyIconPixels(item.Icon, root, frame, $"Sidebar {module} ({theme}, transition {transition})", verifyContrast: false);
                 }
 
                 var quickImages = Descendants(quick).OfType<Image>().Where(image => image.Source is BitmapImage).ToArray();
@@ -683,14 +689,26 @@ internal static class DashboardPageSmoke
             else surface.Background = background;
         }
         var pixels = await bitmap.GetPixelsAsync();
-        var folder = await StorageFolder.GetFolderFromPathAsync(Output);
-        var file = await folder.CreateFileAsync(name, CreationCollisionOption.ReplaceExisting);
-        using var stream = await file.OpenAsync(FileAccessMode.ReadWrite);
-        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
         var bytes = new byte[pixels.Length];
-        using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(pixels)) reader.ReadBytes(bytes);
+        using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(pixels))
+        {
+            reader.ReadBytes(bytes);
+        }
+
+        // Encode in memory and save through System.IO: WinRT StorageFolder/CreateFileAsync
+        // can fail with access-denied in host environments that restrict freshly built exes.
+        var encoded = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, encoded);
         encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied, (uint)bitmap.PixelWidth, (uint)bitmap.PixelHeight, 96, 96, bytes);
         await encoder.FlushAsync();
+        var png = new byte[encoded.Size];
+        using (var reader = new Windows.Storage.Streams.DataReader(encoded.GetInputStreamAt(0)))
+        {
+            await reader.LoadAsync((uint)encoded.Size);
+            reader.ReadBytes(png);
+        }
+
+        File.WriteAllBytes(Path.Combine(Output, name), png);
         return (bytes, bitmap.PixelWidth, bitmap.PixelHeight);
     }
 }

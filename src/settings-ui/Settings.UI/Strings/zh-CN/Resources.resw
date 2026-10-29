@@ -1898,4 +1898,25 @@
   <data name="TitleBar_PaneButton_ToolTip" xml:space="preserve">
     <value>切换菜单</value>
   </data>
+  <data name="AiHub_EndpointUrlBox.PlaceholderText" xml:space="preserve">
+    <value>https://api.example.com</value>
+  </data>
+  <data name="AiHub_ModelBox.PlaceholderText" xml:space="preserve">
+    <value>gpt-6-luna</value>
+  </data>
+  <data name="AiHub_ApiModeResponses.Content" xml:space="preserve">
+    <value>responses (/v1/responses)</value>
+  </data>
+  <data name="AiHub_ApiModeChat.Content" xml:space="preserve">
+    <value>chat (/v1/chat/completions)</value>
+  </data>
+  <data name="AiHub_EffortLow.Content" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="AiHub_EffortHigh.Content" xml:space="preserve">
+    <value>高</value>
+  </data>
+  <data name="AiHub_EffortMax.Content" xml:space="preserve">
+    <value>最高</value>
+  </data>
 </root>

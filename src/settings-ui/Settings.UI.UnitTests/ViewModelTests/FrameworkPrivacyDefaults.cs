@@ -148,7 +148,6 @@ namespace ViewModelTests
                 new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs" },
                 new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "MainWindow.xaml.cs" },
                 new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "ShortcutControl", "ShortcutControl.xaml.cs" },
-                new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "Dashboard", "ShortcutConflictControl.xaml.cs" },
                 new[] { "src", "settings-ui", "QuickAccess.UI", "Services", "QuickAccessLauncher.cs" },
             };
 

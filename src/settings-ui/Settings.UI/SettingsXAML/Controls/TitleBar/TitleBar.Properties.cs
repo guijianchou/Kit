@@ -54,7 +54,7 @@ public partial class TitleBar : Control
     /// The backing <see cref="DependencyProperty"/> for the <see cref="CompactStateBreakpoint
     /// "/> property.
     /// </summary>
-    public static readonly DependencyProperty CompactStateBreakpointProperty = DependencyProperty.Register(nameof(CompactStateBreakpoint), typeof(int), typeof(TitleBar), new PropertyMetadata(850));
+    public static readonly DependencyProperty CompactStateBreakpointProperty = DependencyProperty.Register(nameof(CompactStateBreakpoint), typeof(int), typeof(TitleBar), new PropertyMetadata(900));
 
     /// <summary>
     /// The backing <see cref="DependencyProperty"/> for the <see cref="AutoConfigureCustomTitleBar"/> property.

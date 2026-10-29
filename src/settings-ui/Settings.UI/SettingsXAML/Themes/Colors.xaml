@@ -122,9 +122,4 @@
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 
-    <!-- 品牌/装饰渐变（主题无关；CheckUpdateControl 更新状态图标使用） -->
-    <Color x:Key="KitUpdateGoldStart">#FFC328</Color>
-    <Color x:Key="KitUpdateGoldEnd">#FC9A03</Color>
-    <Color x:Key="KitUpToDateGreenStart">#6FB538</Color>
-    <Color x:Key="KitUpToDateGreenEnd">#397A24</Color>
 </ResourceDictionary>

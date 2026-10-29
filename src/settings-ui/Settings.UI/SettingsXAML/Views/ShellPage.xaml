@@ -98,7 +98,7 @@
         <controls:TitleBar
             x:Name="AppTitleBar"
             AutoConfigureCustomTitleBar="True"
-            CompactStateBreakpoint="900"
+            DisplayMode="Tall"
             IsPaneButtonVisible="True"
             IsTabStop="False"
             Background="Transparent"
@@ -173,56 +173,38 @@
                 <NavigationViewItem
                     x:Name="AIHubNavigationItem"
                     x:Uid="Shell_AIHub"
-                    AutomationProperties.AutomationId="AIHubNavItem">
-                    <NavigationViewItem.Icon>
-                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/AiHub.png" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    AutomationProperties.AutomationId="AIHubNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xEA80;}" />
 
                 <NavigationViewItem
                     x:Name="AwakeNavigationItem"
                     x:Uid="Shell_Awake"
-                    AutomationProperties.AutomationId="AwakeNavItem">
-                    <NavigationViewItem.Icon>
-                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/Awake.png" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    AutomationProperties.AutomationId="AwakeNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xE706;}" />
 
                 <NavigationViewItem
                     x:Name="LightSwitchNavigationItem"
                     x:Uid="Shell_LightSwitch"
-                    AutomationProperties.AutomationId="LightSwitchNavItem">
-                    <NavigationViewItem.Icon>
-                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/LightSwitch.png" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    AutomationProperties.AutomationId="LightSwitchNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xE790;}" />
 
                 <NavigationViewItem
                     x:Name="LocalserverNavigationItem"
                     x:Uid="Shell_Localserver"
-                    AutomationProperties.AutomationId="LocalserverNavItem">
-                    <NavigationViewItem.Icon>
-                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/Localserver.png" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    AutomationProperties.AutomationId="LocalserverNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xE968;}" />
 
                 <NavigationViewItem
                     x:Name="NetMapNavigationItem"
                     x:Uid="Shell_NetMap"
-                    AutomationProperties.AutomationId="NetMapNavItem">
-                    <NavigationViewItem.Icon>
-                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/NetMap.png" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    AutomationProperties.AutomationId="NetMapNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xE774;}" />
 
                 <NavigationViewItem
                     x:Name="UDPtestNavigationItem"
                     x:Uid="Shell_UDPtest"
-                    AutomationProperties.AutomationId="UDPtestNavItem">
-                    <NavigationViewItem.Icon>
-                        <ImageIcon Source="ms-appx:///Assets/Settings/Icons/UDPtest.png" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
+                    AutomationProperties.AutomationId="UDPtestNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xE945;}" />
 
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>

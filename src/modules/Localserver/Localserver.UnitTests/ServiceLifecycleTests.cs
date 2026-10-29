@@ -231,6 +231,26 @@ public sealed class ServiceLifecycleTests
         Assert.AreEqual("Stopped", supervisor.Describe().Single().State);
         Assert.IsFalse(File.Exists(fixture.OwnershipPath), "Ownership must be cleared after stop.");
     }
+
+    [TestMethod]
+    public async Task StaleOwnershipRecordIsArchivedOnceItsTreeIsGone()
+    {
+        using var fixture = await ServiceFixture.CreateAsync();
+        var runner = new ServiceRunner(fixture.Definition);
+        await runner.StartAsync();
+        Process process = fixture.Track(runner.ProcessId!.Value);
+        runner.Dispose();
+        Assert.IsFalse(process.HasExited);
+        process.Kill();
+        await process.WaitForExitAsync();
+
+        using var recovered = new ServiceRunner(fixture.Definition);
+        Assert.IsFalse(recovered.TryRecover(new Lazy<ProcessTreeSnapshot>(ProcessTreeSnapshot.Capture)));
+        Assert.IsFalse(File.Exists(fixture.OwnershipPath), "A stale ownership record must be archived once no recorded process is alive.");
+        Assert.IsFalse(
+            recovered.TryRecover(new Lazy<ProcessTreeSnapshot>(() => throw new InvalidOperationException("An archived record must not be rescanned."))),
+            "An archived record must not trigger another scan.");
+    }
 }
 
 internal sealed class ServiceFixture : IDisposable

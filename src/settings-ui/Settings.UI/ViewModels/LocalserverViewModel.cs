@@ -531,7 +531,7 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public async Task RefreshResourceSampleAsync(CancellationToken cancellationToken = default)
+        public async Task RefreshResourceSampleAsync(ProcessTreeSnapshot? treeSnapshot = null, CancellationToken cancellationToken = default)
         {
             if (_disposed)
             {
@@ -556,7 +556,7 @@ namespace Kit.Settings.UI.ViewModels
                 var sample = await Task.Run(() =>
                 {
                     _runner.RefreshOwnershipSnapshot();
-                    return ProcessResourceInspector.Sample(processId.Value, _runner.GetManagedProcessIds());
+                    return ProcessResourceInspector.Sample(processId.Value, _runner.GetManagedProcessIds(), treeSnapshot);
                 }, cancellationToken);
 
                 if (_disposed)
@@ -773,6 +773,11 @@ namespace Kit.Settings.UI.ViewModels
         protected override string ModuleName => LocalserverSettings.ModuleName;
 
         public DispatcherQueue Dispatcher { get; }
+
+        // The environment check spawns probe processes and enumerates the port table, so
+        // the per-tick card refresh only re-runs it after a selection/state change or
+        // once this much time has passed.
+        private static readonly TimeSpan EnvironmentCheckMinimumInterval = TimeSpan.FromSeconds(30);
         private readonly ISettingsRepository<GeneralSettings> _generalSettingsRepository;
         private readonly ISettingsRepository<LocalserverSettings> _moduleSettingsRepository;
         private readonly Func<string, int> _sendConfigMsg;
@@ -792,6 +797,10 @@ namespace Kit.Settings.UI.ViewModels
         private bool _disposed;
         private int _telemetryRefreshInFlight;
         private int _environmentCheckInFlight;
+        private LineRowViewModel? _environmentCheckLine;
+        private ServiceState _environmentCheckState;
+        private bool? _environmentCheckHealthProbePassed;
+        private DateTimeOffset _environmentCheckAtUtc;
         private double _chartWidth = 300;
         private double _chartHeight = 44;
 
@@ -1771,10 +1780,22 @@ namespace Kit.Settings.UI.ViewModels
 
             try
             {
+                // One machine-wide process snapshot per tick; every line reuses it instead
+                // of capturing (and walking) the process table once per service.
+                ProcessTreeSnapshot? treeSnapshot = null;
+                try
+                {
+                    treeSnapshot = await Task.Run(ProcessTreeSnapshot.Capture);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"[LocalserverViewModel] Process tree snapshot failed: {ex.GetType().Name}");
+                }
+
                 // Sample lines
                 foreach (var line in Lines.ToArray())
                 {
-                    await line.RefreshResourceSampleAsync();
+                    await line.RefreshResourceSampleAsync(treeSnapshot);
                     if (_disposed || !_isPageActive || IsCatalogBusy)
                     {
                         return;
@@ -1854,6 +1875,7 @@ namespace Kit.Settings.UI.ViewModels
                 EnvSummaryText = "Localserver_NoLineSelected".GetLocalized();
                 EnvSummaryBrush = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
                 EnvironmentCheckChips.Clear();
+                _environmentCheckLine = null;
             }
             else
             {
@@ -1872,8 +1894,13 @@ namespace Kit.Settings.UI.ViewModels
                     ? "Localserver_NoRuntimes".GetLocalized()
                     : string.Join(", ", line.Definition.Runtimes.Select(runtime => runtime.Kind));
 
-                if (_isPageActive && !IsCatalogBusy && Interlocked.CompareExchange(ref _environmentCheckInFlight, 1, 0) == 0)
+                if (_isPageActive && !IsCatalogBusy && IsEnvironmentCheckDue(line)
+                    && Interlocked.CompareExchange(ref _environmentCheckInFlight, 1, 0) == 0)
                 {
+                    _environmentCheckLine = line;
+                    _environmentCheckState = line.State;
+                    _environmentCheckHealthProbePassed = line.Runner.HealthProbePassed;
+                    _environmentCheckAtUtc = DateTimeOffset.UtcNow;
                     _ = RefreshEnvironmentAsync(line);
                 }
             }
@@ -1896,6 +1923,18 @@ namespace Kit.Settings.UI.ViewModels
             OnPropertyChanged(nameof(EnvMemoryPercent));
             OnPropertyChanged(nameof(EnvUptimeText));
             UpdateChartGeometry();
+        }
+
+        private bool IsEnvironmentCheckDue(LineRowViewModel line)
+        {
+            if (!ReferenceEquals(_environmentCheckLine, line)
+                || _environmentCheckState != line.State
+                || _environmentCheckHealthProbePassed != line.Runner.HealthProbePassed)
+            {
+                return true;
+            }
+
+            return DateTimeOffset.UtcNow - _environmentCheckAtUtc >= EnvironmentCheckMinimumInterval;
         }
 
         private async Task RefreshEnvironmentAsync(LineRowViewModel line)

@@ -99,6 +99,17 @@ public static class ProcessResourceInspector
     public static ProcessResourceSample Sample(
         int rootProcessId,
         IReadOnlyCollection<int>? managedProcessIds = null)
+        => Sample(rootProcessId, managedProcessIds, treeSnapshot: null);
+
+    /// <summary>
+    /// Samples with a caller-supplied process tree snapshot so one sampling pass can
+    /// share a single machine-wide scan across every service instead of capturing one
+    /// per service.
+    /// </summary>
+    public static ProcessResourceSample Sample(
+        int rootProcessId,
+        IReadOnlyCollection<int>? managedProcessIds,
+        ProcessTreeSnapshot? treeSnapshot)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rootProcessId);
 
@@ -116,7 +127,10 @@ public static class ProcessResourceInspector
 
         try
         {
-            foreach (int id in GetProcessTreeIds(rootProcessId))
+            IReadOnlyList<int> treeIds = treeSnapshot is null
+                ? GetProcessTreeIds(rootProcessId)
+                : treeSnapshot.GetTreeIds(rootProcessId);
+            foreach (int id in treeIds)
             {
                 if (id > 0)
                 {

@@ -120,6 +120,12 @@ namespace ViewModelTests
             StringAssert.Contains(viewModel, "public double EnvMemoryPercent");
             StringAssert.Contains(viewModel, "public Brush TagBackgroundBrush");
 
+            // 2c. Verify the per-tick environment check is throttled and the telemetry
+            // loop shares one process tree snapshot across all service lines.
+            StringAssert.Contains(viewModel, "IsEnvironmentCheckDue");
+            StringAssert.Contains(viewModel, "EnvironmentCheckMinimumInterval");
+            StringAssert.Contains(viewModel, "ProcessTreeSnapshot.Capture");
+
             // 3. Verify data isolation paths
             StringAssert.Contains(libPathHelper, "Kit");
             StringAssert.Contains(libPathHelper, "Localserver");

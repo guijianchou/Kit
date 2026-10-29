@@ -8,8 +8,10 @@ using System.Linq;
 using System.Text.Json;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using UDPtestLib.Core;
 
 namespace ViewModelTests
 {
@@ -119,6 +121,33 @@ namespace ViewModelTests
             // Must only treat Enabled or Disabled as GPO configured, not Unavailable or NotConfigured
             StringAssert.Contains(viewModelSource, "_gpoConfiguration is GpoRuleConfigured.Enabled or GpoRuleConfigured.Disabled");
             Assert.IsFalse(viewModelSource.Contains("_gpoConfiguration != GpoRuleConfigured.NotConfigured", StringComparison.Ordinal), "Must not treat Unavailable as GPO configured.");
+        }
+
+        [TestMethod]
+        public void UDPtestLineToggleMustWriteThroughToDefinition()
+        {
+            var definition = new ProbeLineDefinition(
+                "udp_test",
+                "Test",
+                ProbeProtocol.Udp,
+                ProbeKind.StunBinding,
+                "stun.cloudflare.com",
+                3478,
+                IsEnabled: true,
+                TargetLabel: "Test");
+
+            var row = new UDPtestLineRowViewModel(definition);
+
+            row.IsEnabled = false;
+            Assert.IsFalse(row.IsEnabled);
+            Assert.IsFalse(row.Definition.IsEnabled, "Toggling a line off must update the definition StartAsync consumes.");
+
+            row.SetEnabledSilently(true);
+            Assert.IsTrue(row.Definition.IsEnabled, "A silent revert must also restore the definition state.");
+
+            row.IsEnabled = false;
+            row.SaveConfig();
+            Assert.IsFalse(row.Definition.IsEnabled, "Saving the endpoint editor must preserve the current toggle state.");
         }
     }
 }

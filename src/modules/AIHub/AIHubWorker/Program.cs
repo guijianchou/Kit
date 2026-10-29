@@ -8,12 +8,13 @@ namespace Kit.AIHubWorker;
 
 using System;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Kit.AiHub.Models;
 using Kit.AiHub.Storage;
 using Kit.AIHubLib.Models;
 using Kit.AIHubLib.Services;
+using Kit.AIHubLib.Storage;
 using ManagedCommon;
 
 /// <summary>
@@ -40,8 +41,6 @@ public static class Program
     /// <summary>How often the schedule is re-evaluated.</summary>
     private static readonly TimeSpan SchedulePollInterval = TimeSpan.FromMinutes(1);
 
-    private static volatile bool _isEnabled = true;
-
     public static async Task<int> Main(string[] args)
     {
         Logger.InitializeLogger(@"\AIHub\Logs");
@@ -67,25 +66,28 @@ public static class Program
         try
         {
             var store = dataDirectory is null ? new AiHubSettingsStore() : new AiHubSettingsStore(dataDirectory);
-            AiHubConfig config = store.Load();
-            _isEnabled = config.IsEnabled;
 
-            var pipeline = new AuditPipeline(
-                historyStorage: new Kit.AIHubLib.Storage.AuditHistoryStorage(store.DataDirectory));
+            // The plugin settings file owns the audit schedule; the page writes it and signals
+            // the refresh event, so no service-level configuration gates background audits.
+            PluginScheduleSettings schedule = PluginScheduleSettings.Read(store.DataDirectory);
 
-            EventLogService.AuditMode mode = config.AuditModeIndex == 1
-                ? EventLogService.AuditMode.Full
-                : EventLogService.AuditMode.Extended;
+            // History lives in the same State directory the page reads, so scheduled runs
+            // show up in the dashboard and the watermark below resumes the cadence.
+            var historyStorage = new AuditHistoryStorage(Path.Combine(store.DataDirectory, "State"));
+            DateTime? lastCompletedUtc = (await historyStorage.LoadLatestHistoryAsync().ConfigureAwait(false))?.Timestamp;
+            var pipeline = new AuditPipeline(historyStorage: historyStorage);
+
+            EventLogService.AuditMode mode = ToAuditMode(schedule.AuditModeIndex);
 
             scheduler = new AuditScheduler(
                 pipeline,
-                config.ScanIntervalHours,
-                isEnabled: () => ReadIsEnabled(store),
+                schedule.ScanIntervalHours,
                 pollInterval: SchedulePollInterval,
                 fullRange: TimeSpan.FromDays(1),
-                mode: mode);
+                mode: mode,
+                lastCompletedUtc: lastCompletedUtc);
 
-            Logger.LogInfo($"[AIHub.Worker] Interval {scheduler.IntervalHours} h; mode {(config.AuditModeIndex == 1 ? "full" : "extended")}.");
+            Logger.LogInfo($"[AIHub.Worker] Interval {scheduler.IntervalHours} h; mode {mode}; last completed {lastCompletedUtc?.ToString("u", CultureInfo.InvariantCulture) ?? "never"}.");
 
             scheduler.Start();
 
@@ -113,23 +115,9 @@ public static class Program
         }
     }
 
-    /// <summary>
-    /// Re-reads the enabled flag from disk so toggling AI Hub off in Settings stops the
-    /// scheduled audit without restarting the worker.
-    /// </summary>
-    private static bool ReadIsEnabled(AiHubSettingsStore store)
-    {
-        try
-        {
-            return _isEnabled;
-        }
-        catch (Exception ex)
-        {
-            // Fail closed: without a readable configuration the worker must not audit.
-            Logger.LogError("[AIHub.Worker] Could not read AI Hub settings; skipping this tick.", ex);
-            return false;
-        }
-    }
+    /// <summary>Maps the plugin audit-mode index to the event-log audit mode.</summary>
+    private static EventLogService.AuditMode ToAuditMode(int auditModeIndex)
+        => auditModeIndex == 1 ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
 
     private static async Task WaitForShutdownAsync(int? parentPid, EventWaitHandle stopEvent, EventWaitHandle refreshEvent, AuditScheduler scheduler, AiHubSettingsStore store, CancellationToken cancellationToken)
     {
@@ -146,15 +134,21 @@ public static class Program
 
             if (index == 1)
             {
-                Logger.LogInfo("[AIHub.Worker] Settings refresh signaled; reloading configuration.");
+                Logger.LogInfo("[AIHub.Worker] Settings refresh signaled; reloading the plugin schedule.");
                 try
                 {
-                    AiHubConfig config = store.Load();
-                    _isEnabled = config.IsEnabled;
-                    if (scheduler.IntervalHours != config.ScanIntervalHours)
+                    PluginScheduleSettings schedule = PluginScheduleSettings.Read(store.DataDirectory);
+                    if (scheduler.IntervalHours != schedule.ScanIntervalHours)
                     {
-                        Logger.LogInfo($"[AIHub.Worker] Interval updated from {scheduler.IntervalHours} to {config.ScanIntervalHours} h.");
-                        scheduler.UpdateInterval(config.ScanIntervalHours);
+                        Logger.LogInfo($"[AIHub.Worker] Interval updated from {scheduler.IntervalHours} to {schedule.ScanIntervalHours} h.");
+                        scheduler.UpdateInterval(schedule.ScanIntervalHours);
+                    }
+
+                    EventLogService.AuditMode updatedMode = ToAuditMode(schedule.AuditModeIndex);
+                    if (scheduler.Mode != updatedMode)
+                    {
+                        Logger.LogInfo($"[AIHub.Worker] Audit mode updated from {scheduler.Mode} to {updatedMode}.");
+                        scheduler.UpdateMode(updatedMode);
                     }
                 }
                 catch (Exception ex)

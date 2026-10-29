@@ -2881,6 +2881,20 @@ namespace ViewModelTests
         }
 
         [TestMethod]
+        public void NetMapMtrSnapshotMustOnlyBeSavedOnDemand()
+        {
+            var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "NetMapViewModel.cs"));
+            int first = viewModel.IndexOf("SaveLatestMtrSnapshot(", StringComparison.Ordinal);
+            int second = first < 0 ? -1 : viewModel.IndexOf("SaveLatestMtrSnapshot(", first + 1, StringComparison.Ordinal);
+            Assert.IsTrue(
+                first >= 0 && second < 0,
+                "Only the on-demand AI check may save the MTR snapshot; per-hop snapshot updates must not rewrite the file.");
+            StringAssert.Contains(viewModel, "snapshot.Hops.Count > 0 || mtrSnapshotFileExists");
+            StringAssert.Contains(viewModel, "mtrSnapshotFileExists = true;");
+            StringAssert.Contains(viewModel, "mtrSnapshotFileExists = false;");
+        }
+
+        [TestMethod]
         public void LocalserverWorkerShouldFinishCleanupAfterCancellationOrFailure()
         {
             var source = File.ReadAllText(FindSourceFile("src", "modules", "Localserver", "LocalserverWorker", "Program.cs"));

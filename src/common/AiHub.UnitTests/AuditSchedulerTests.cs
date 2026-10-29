@@ -214,4 +214,33 @@ public sealed class AuditSchedulerTests
         Assert.AreEqual(0, scheduler.IntervalHours);
         Assert.IsFalse(scheduler.IsDue(), "Turning the schedule off stops due checks immediately.");
     }
+
+    [TestMethod]
+    public void InitialWatermarkDefersTheFirstRun()
+    {
+        using var fresh = new AuditScheduler(CreatePipeline(), intervalHours: 24);
+        Assert.IsTrue(fresh.IsDue(), "Without a watermark the first check is due.");
+
+        using var resumed = new AuditScheduler(
+            CreatePipeline(),
+            intervalHours: 24,
+            lastCompletedUtc: DateTime.UtcNow.AddMinutes(-30));
+        Assert.IsFalse(resumed.IsDue(), "A recent watermark must defer the next run by the full interval.");
+
+        using var overdue = new AuditScheduler(
+            CreatePipeline(),
+            intervalHours: 1,
+            lastCompletedUtc: DateTime.UtcNow.AddHours(-2));
+        Assert.IsTrue(overdue.IsDue(), "An overdue watermark makes the run due immediately.");
+    }
+
+    [TestMethod]
+    public void UpdateModeTakesEffectForSubsequentRuns()
+    {
+        using var scheduler = new AuditScheduler(CreatePipeline(), intervalHours: 24);
+
+        Assert.AreEqual(EventLogService.AuditMode.Extended, scheduler.Mode);
+        scheduler.UpdateMode(EventLogService.AuditMode.Full);
+        Assert.AreEqual(EventLogService.AuditMode.Full, scheduler.Mode);
+    }
 }

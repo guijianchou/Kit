@@ -202,6 +202,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private double updateProgress;
     private string updateStatus = string.Empty;
     private bool isAiChecking;
+    private bool mtrSnapshotFileExists;
     private string? aiRoute;
     private string? aiRouteSummary;
     private string? aiRouteDetails;
@@ -221,6 +222,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         cityDatabase = settings.CityDatabase?.Value ?? string.Empty;
         onlineLookup = settings.OnlineLookup?.Value ?? true;
         options = DraftOptions();
+        mtrSnapshotFileExists = File.Exists(NetMapAiService.MtrTempFilePath);
         general.SettingsChanged += OnGeneralChanged;
         session.Changed += OnSnapshot;
     }
@@ -235,7 +237,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     public bool IsAiChecking => isAiChecking;
 
-    public bool CanAiCheck => IsEnabled && !isAiChecking && (snapshot.Hops.Count > 0 || File.Exists(NetMapAiService.MtrTempFilePath));
+    public bool CanAiCheck => IsEnabled && !isAiChecking && (snapshot.Hops.Count > 0 || mtrSnapshotFileExists);
 
     public string? AiRoute => aiRoute;
 
@@ -506,6 +508,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         if (snapshot.Hops.Count > 0)
         {
             NetMapAiService.SaveLatestMtrSnapshot(snapshot);
+            mtrSnapshotFileExists = true;
         }
 
         if (!File.Exists(NetMapAiService.MtrTempFilePath))
@@ -714,14 +717,10 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             aiRouteSummary = null;
             aiRouteDetails = null;
             NetMapAiService.DeleteLatestMtrSnapshot();
+            mtrSnapshotFileExists = false;
             OnPropertyChanged(nameof(AiRoute));
             OnPropertyChanged(nameof(AiRouteSummary));
             OnPropertyChanged(nameof(AiRouteDetails));
-        }
-
-        if (value.Hops.Count > 0)
-        {
-            NetMapAiService.SaveLatestMtrSnapshot(value);
         }
 
         for (int i = 0; i < value.Hops.Count; i++)

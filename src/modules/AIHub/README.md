@@ -15,7 +15,7 @@
 | **模块名称** | `AIHub` | 统一规范标识符，保持与模块接口大小写一致 |
 | **模块键名 (Key)** | `AIHub` | 用于设置序列化、GPO 策略匹配及路由注册 |
 | **原生接口 DLL** | `Kit.AIHubModuleInterface.dll` | C++ 原生 DLL，导出 `kit_create()`，实现 `KitModuleIface` |
-| **托管业务库** | `Kit.AIHubLib.dll` | 基于 **.NET 10** (`net10.0-windows10.0.26100.0`)，提供日志审计、空间扫描与回收站操作 |
+| **托管业务库** | `Kit.AIHubLib.dll` | 基于 **.NET 10** (`net10.0-windows10.0.26100.0`)，提供日志审计、空间扫描与受控缓存清理 |
 | **设置与交互界面** | `AIHubPage.xaml` / `AIHubPageViewModel.cs` | WinUI 3 + Mica Alt 界面体系，内嵌于 Kit Settings 进程中 |
 | **设置与 DTO** | `AIHubSettings.cs` / `AIHubProperties.cs` | 注册至 `KitModuleCatalog`、`EnabledModules` 与 `SettingsSerializationContext` |
 | **持久化数据目录** | `%LOCALAPPDATA%\Kit\AiHub\` | `State\audit_history.json`（审计历史存档，最多保留 200 条 + 30 天轮转）与 `chains\`（任务策略与 Agent 上下文） |
@@ -41,7 +41,7 @@
 │  - HealthScoreCalculator: 0-100 加权健康评分算法与风险严重等级归纳         │
 │  - CacheCleanupService: 安全白名单临时缓存扫描与生命周期分析               │
 │  - DownloadOrganizerService: Downloads 根目录分类扫描与单层归档整理      │
-│  - RecycleBinHelper: Windows COM IFileOperation 撤销保障封装           │
+│  - RecycleBinHelper: Windows COM IFileOperation 回收站封装（未接线）   │
 │  - AuditHistoryStorage: 历史审计 JSON 结构化存储与版本轮转管理           │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │ IPC / Lifecycle Sync
@@ -82,13 +82,13 @@ $$\text{Codex / Pi CLI} \longrightarrow \text{Essential Policy} + \text{对应 A
 2. **三组核心度量磁贴 (Metric Tiles)**：
    - `Candidates`：扫描发现的可优化文件总数与总体积。
    - `Selected items`：当前勾选待处理的文件项数与体积（支持全部全选/按分类多选）。
-   - `Safety boundary`：醒目标注 `Read-only` / `Recycle Bin` 安全保护边界。
+   - `Safety boundary`：标注 `Read-only` / `Reviewed snapshot` 安全保护边界（文案定义于 ViewModel，当前视图尚未绑定）。
 3. **两大受控扫描区域 (Scan Areas)**：
    - **Downloads 根目录归档**：严格仅针对 Windows Downloads 根目录下的孤立文件按扩展名进行单层分类（`Documents`, `Archives`, `Images`, `Installers`, `Videos`, `Audio`, `Code`），**绝不递归扫描或移动子文件夹**。
    - **临时文件白名单清理**：仅针对系统用户 `AppData\Local\Temp`、浏览器安全缓存目录进行白名单匹配。
 4. **绝对安全三边界 (Triple Safety Boundaries)**：
    - **严格排除系统敏感路径**：绝对禁止扫描或触碰 `C:\Windows`、`Program Files`、`Program Files (x86)`、`System32` 等关键目录。
-   - **COM `IFileOperation` 撤销保障**：所有清理删除操作通过底层 Windows Shell 接口执行，设置 `FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT` 标志。**所有文件一律送入 Windows 回收站，绝不调用永久物理删除，支持用户在资源管理器中随时 Ctrl+Z 还原**。
+   - **复核式清理，永久删除**：清理仅针对扫描时固定的已审核快照逐文件执行；执行前重新复核范围、白名单、时效、链接、占用与修改时间，新文件、变更、锁定或不可访问的文件一律跳过。删除为**永久删除**，不经过回收站、无法 Ctrl+Z 还原；错误不会扩大范围或提升权限，取消仅停止后续文件。
    - **只读建议模式**：扫描结果默认仅供查看，必须经用户主动勾选与二次确认才能触发整理或入站操作。
 
 ### 3.2 安全审计 (Security Audit)
@@ -150,11 +150,11 @@ src/modules/AIHub/
 │   │   ├── AuditResult.cs                      # 完整审计报告快照
 │   │   └── TempFileInfo.cs                     # 待优化临时文件与下载文件实体
 │   ├── Services/
-│   │   ├── CacheCleanupService.cs              # 临时缓存白名单扫描与受控回收
+│   │   ├── CacheCleanupService.cs              # 临时缓存白名单扫描与受控清理
 │   │   ├── DownloadOrganizerService.cs         # 下载目录单层扩展名智能分类
 │   │   ├── EventLogService.cs                  # Windows 4大事件通道日志聚合检索
 │   │   ├── HealthScoreCalculator.cs            # 0-100 健康评分扣分加权算法
-│   │   └── RecycleBinHelper.cs                 # COM IFileOperation 撤销式安全删除
+│   │   └── RecycleBinHelper.cs                 # COM IFileOperation 回收站封装（未接线）
 │   └── Storage/
 │       └── AuditHistoryStorage.cs              # 历史审计持久化与轮转存储
 │

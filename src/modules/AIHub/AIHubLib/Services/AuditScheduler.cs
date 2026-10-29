@@ -26,10 +26,10 @@ public sealed class AuditScheduler : IDisposable
     private readonly TimeSpan _pollInterval;
     private readonly TimeSpan _fullRange;
     private readonly int _fullRangeDays;
-    private readonly EventLogService.AuditMode _mode;
     private readonly Func<bool> _isEnabled;
     private readonly object _gate = new();
 
+    private EventLogService.AuditMode _mode;
     private CancellationTokenSource? _runCts;
     private Task? _loop;
     private DateTime? _lastCompletedUtc;
@@ -41,7 +41,8 @@ public sealed class AuditScheduler : IDisposable
         Func<bool>? isEnabled = null,
         TimeSpan? pollInterval = null,
         TimeSpan? fullRange = null,
-        EventLogService.AuditMode mode = EventLogService.AuditMode.Extended)
+        EventLogService.AuditMode mode = EventLogService.AuditMode.Extended,
+        DateTime? lastCompletedUtc = null)
     {
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         IntervalHours = AuditSchedule.NormalizeIntervalHours(intervalHours);
@@ -50,6 +51,7 @@ public sealed class AuditScheduler : IDisposable
         _fullRange = fullRange ?? TimeSpan.FromDays(1);
         _fullRangeDays = Math.Max(1, (int)Math.Round(_fullRange.TotalDays));
         _mode = mode;
+        _lastCompletedUtc = lastCompletedUtc;
     }
 
     /// <summary>Configured cadence in hours (0 disables scheduling).</summary>
@@ -63,10 +65,19 @@ public sealed class AuditScheduler : IDisposable
 
     public bool IsRunning => _loop is { IsCompleted: false };
 
+    /// <summary>Audit mode applied to subsequent runs.</summary>
+    public EventLogService.AuditMode Mode => _mode;
+
     /// <summary>Applies a new cadence; 0 stops scheduling at the next tick.</summary>
     public void UpdateInterval(int intervalHours)
     {
         IntervalHours = AuditSchedule.NormalizeIntervalHours(intervalHours);
+    }
+
+    /// <summary>Applies a new audit mode for subsequent runs.</summary>
+    public void UpdateMode(EventLogService.AuditMode mode)
+    {
+        _mode = mode;
     }
 
     /// <summary>True when a run is due right now.</summary>

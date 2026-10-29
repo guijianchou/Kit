@@ -156,7 +156,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly SecurityPolicyService _securityService = new();
     private readonly ObservableCollection<AiReportFinding> _aiReportFindings = new();
     private readonly List<SecurityEvent> _lastAuditEvents = new();
-    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _scheduleTimer;
     private readonly ScanProgressModel _scanProgress = new();
 
     // Audit stages differ from the optimization scan stages.
@@ -281,11 +280,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         CleanAllCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "delete").ToList()), () => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "delete"));
         OrganizeDownloadsCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "move").ToList()), () => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "move"));
         CancelOptimizationCommand = new RelayCommand(() => _optimizationCts?.Cancel(), () => IsOptimizing);
-
-        // Scheduled audits: check every few minutes whether the configured cadence is due.
-        _scheduleTimer = _dispatcherQueue.CreateTimer();
-        _scheduleTimer.Interval = TimeSpan.FromMinutes(5);
-        _scheduleTimer.Tick += (_, _) => RunScheduledAuditIfDue();
 
         // Load cached audit history
         LoadRecentAudit();
@@ -724,7 +718,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string DownloadsDescription => IsChinese ? "仅整理至少 10 分钟未修改的散文件至 Documents、Compressed、Programs、Music、Video；图片、未知类型和未完成下载留在原处。" : "Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music or Video. Leave images, unknown types and incomplete downloads in place.";
     public string TemporaryFilesLabel => IsChinese ? "缓存与临时文件" : "Caches & temporary files";
     public string WhitelistOnlyLabel => IsChinese ? "仅白名单" : "Whitelist only";
-    public string CacheDescription => IsChinese ? "仅扫描白名单中至少 7 天未修改的缓存文件及 Temp 内 .tmp/.temp 文件；跳过占用文件和目录链接，确认后逐文件移入回收站。" : "Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; recycle confirmed files individually.";
+    public string CacheDescription => IsChinese ? "仅扫描白名单中至少 7 天未修改的缓存文件及 Temp 内 .tmp/.temp 文件；跳过占用文件和目录链接，确认后逐文件删除。" : "Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; delete confirmed files individually.";
     public string ScanButtonLabel => IsChinese ? "扫描" : "Scan";
     public string SelectAllLabel => IsChinese ? "全选" : "Select all";
     public string DeselectAllLabel => IsChinese ? "取消全选" : "Deselect all";
@@ -733,8 +727,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string ReadOnlyScanDescription => IsChinese ? "确认前仅读取文件元数据。" : "Only file metadata is read before confirmation.";
     public string PathBoundariesTitle => IsChinese ? "路径边界" : "Path boundaries";
     public string PathBoundariesDescription => IsChinese ? "下载目录及缓存白名单均通过二次校验。" : "Downloads and cache whitelists are validated again.";
-    public string RecoverableCleanupTitle => IsChinese ? "可逆清理" : "Recoverable cleanup";
-    public string RecoverableCleanupDescription => IsChinese ? "清理操作移入回收站，杜绝不可逆彻底删除。" : "Cleanup uses recycle bin and never permanently deletes.";
+    public string RecoverableCleanupTitle => IsChinese ? "仅限审核快照" : "Reviewed snapshot only";
+    public string RecoverableCleanupDescription => IsChinese ? "执行前逐文件复核范围、时效与变化；新文件、变更、占用或不可访问的文件一律跳过。" : "Scope, age and changes are rechecked per file before deletion; new, changed, locked or inaccessible files are skipped.";
 
     public AuditIssueEnhanced AuditPriorityFinding => AllIssues.OrderByDescending(issue => issue.IsHigh)
         .ThenByDescending(issue => issue.IsMedium).ThenByDescending(issue => issue.Occurrences).FirstOrDefault();
@@ -1650,8 +1644,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             {
                 Logger.LogError("Failed to persist the AI Hub scan interval", ex);
             }
-
-            UpdateScheduleTimerState();
         }
     }
 
@@ -1677,45 +1669,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     ? $"{cadence} · 下次约 {next.Value.ToLocalTime():MM-dd HH:mm}"
                     : $"{cadence} · next around {next.Value.ToLocalTime():MM-dd HH:mm}");
         }
-    }
-
-    /// <summary>Starts or stops the scheduler timer to match the configured cadence.</summary>
-    private void UpdateScheduleTimerState()
-    {
-        EnqueueOnUI(() =>
-        {
-            if (IsEnabled && IsSchedulingEnabled)
-            {
-                _scheduleTimer.Start();
-            }
-            else
-            {
-                _scheduleTimer.Stop();
-            }
-
-            OnPropertyChanged(nameof(ScheduleSummaryText));
-        });
-    }
-
-    /// <summary>
-    /// Runs an audit when the configured cadence is due. Skips when a scan is already
-    /// running, when the module is disabled, or when AI Hub scheduling is off.
-    /// </summary>
-    private void RunScheduledAuditIfDue()
-    {
-        if (!IsEnabled || !IsSchedulingEnabled || IsAuditing || _disposed)
-        {
-            return;
-        }
-
-        if (!AuditSchedule.IsDue(_lastCompletedAuditUtc, DateTime.UtcNow, ScanIntervalHours))
-        {
-            OnPropertyChanged(nameof(ScheduleSummaryText));
-            return;
-        }
-
-        Logger.LogInfo("AI Hub scheduled audit is due; starting an incremental run.");
-        RunAudit(fast: false);
     }
 
     /// <summary>
@@ -3208,7 +3161,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         if (!_disposed)
         {
             _disposed = true;
-            _scheduleTimer.Stop();
             _readinessCts?.Cancel();
             AiHub?.Dispose();
             AiHubEngine.Current.StateChanged -= OnEngineStateChanged;

@@ -34,7 +34,7 @@ namespace Kit.Settings.UI.ViewModels
         private string _lastError = "--";
         private string _lastErrorDisplay = IsChinese ? "最近错误: --" : "Last error: --";
         private string _status = "Idle";
-        private Brush _statusBrush;
+        private Brush? _statusBrush;
         private Visibility _statusVisibility = Visibility.Collapsed;
 
         // Folded config fields
@@ -56,7 +56,6 @@ namespace Kit.Settings.UI.ViewModels
         {
             _definition = definition;
             _isEnabled = definition.IsEnabled;
-            _statusBrush = ThemeBrushHelper.SecondaryTextBrush;
 
             ResetEditFields();
         }
@@ -101,6 +100,7 @@ namespace Kit.Settings.UI.ViewModels
                 if (_isEnabled != value)
                 {
                     _isEnabled = value;
+                    _definition = _definition with { IsEnabled = value };
                     OnPropertyChanged();
                     ToggleRequested?.Invoke(this, value);
                 }
@@ -112,6 +112,7 @@ namespace Kit.Settings.UI.ViewModels
             if (_isEnabled != isEnabled)
             {
                 _isEnabled = isEnabled;
+                _definition = _definition with { IsEnabled = isEnabled };
                 OnPropertyChanged(nameof(IsEnabled));
             }
         }
@@ -236,7 +237,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public Brush StatusBrush
         {
-            get => _statusBrush;
+            get => _statusBrush ??= ThemeBrushHelper.SecondaryTextBrush;
             private set
             {
                 _statusBrush = value;

@@ -27,6 +27,22 @@ public sealed record ServiceStateChangedEventArgs(
 /// </remarks>
 public sealed class ServiceRunner : IDisposable
 {
+    // One shared retry schedule for failed ownership recovery. The first retries stay
+    // quick because adoption is latency-sensitive; later ones back off so a stale
+    // record cannot keep forcing machine-wide process scans on every pass.
+    private static readonly TimeSpan[] RecoveryRetryDelays =
+    [
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+        TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(16),
+        TimeSpan.FromSeconds(30),
+    ];
+
+    /// <summary>Minimum gap between identical "resume skipped" log lines.</summary>
+    private static readonly TimeSpan RecoveryLogRepeatInterval = TimeSpan.FromMinutes(10);
+
     private readonly Lock _gate = new();
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly SemaphoreSlim _inputGate = new(1, 1);
@@ -59,6 +75,11 @@ public sealed class ServiceRunner : IDisposable
     private IReadOnlyList<int> _lastPersistedProcessIds = [];
     private DateTimeOffset _lastOwnershipSnapshotUtc = DateTimeOffset.MinValue;
     private SecretStore? _secretStore;
+    private string? _recoverRecordTag;
+    private int _recoverFailureCount;
+    private DateTimeOffset _nextRecoverAttemptUtc;
+    private string? _lastResumeSkipReason;
+    private DateTimeOffset _lastResumeSkipAtUtc;
 
     public ServiceRunner(
         ServiceDefinition definition,
@@ -212,12 +233,26 @@ public sealed class ServiceRunner : IDisposable
             return false;
         }
 
+        if (!string.Equals(record.OwnerTag, _recoverRecordTag, StringComparison.Ordinal))
+        {
+            // A record written by a newer start is a fresh claim: retry it immediately.
+            _recoverRecordTag = record.OwnerTag;
+            _recoverFailureCount = 0;
+        }
+        else if (DateTimeOffset.UtcNow < _nextRecoverAttemptUtc)
+        {
+            // The same record already failed recently and its retry is backed off;
+            // skip silently so it cannot force a scan or a log line on every pass.
+            return false;
+        }
+
         // Every refusal below is reported. A service that silently stays Stopped
         // while its port is still held is the one failure mode of this path that
         // used to leave no trace at all.
         List<string> diagnostics = [];
         if (!IsValidOwnershipRecord(record, definition))
         {
+            ScheduleRecoveryRetry();
             AppendResumeSkipped(FormatMessage("Localserver_LogResumeMismatch",
                 "the ownership record no longer matches this target's command, working directory or owner tag."));
             return false;
@@ -235,6 +270,17 @@ public sealed class ServiceRunner : IDisposable
                     out prepared)
                 || prepared is null)
             {
+                if (diagnostics.Count == 0)
+                {
+                    // No recorded process is alive, so the record is a stale claim.
+                    // Archive it so every later pass stops rescanning and re-logging it.
+                    ServiceOwnershipStore.Delete(definition.Id, record.OwnerTag);
+                    AppendHub(FormatMessage("Localserver_LogResumeStaleRemoved",
+                        "Removed the stale ownership record of '{0}'; no recorded process is still alive.", definition.Name));
+                    return false;
+                }
+
+                ScheduleRecoveryRetry();
                 AppendResumeSkipped(DescribeDiagnostics(diagnostics));
                 return false;
             }
@@ -251,6 +297,7 @@ public sealed class ServiceRunner : IDisposable
             };
             if (!TryAttachRecoveredProcess(definition, recoveredRecord, prepared, process))
             {
+                ScheduleRecoveryRetry();
                 AppendResumeSkipped(FormatMessage("Localserver_LogResumeExited", "PID {0} exited while it was being adopted.", processId));
                 return false;
             }
@@ -260,12 +307,16 @@ public sealed class ServiceRunner : IDisposable
                 AppendHub(FormatMessage("Localserver_LogResumeNote", "Resume note: {0}", diagnostic));
             }
 
+            _recoverFailureCount = 0;
+            _nextRecoverAttemptUtc = default;
+            _lastResumeSkipReason = null;
             prepared = null;
             process = null;
             return true;
         }
         catch (Exception ex)
         {
+            ScheduleRecoveryRetry();
             AppendResumeSkipped(FormatMessage("Localserver_LogResumeFailed", "adopting the recorded process tree failed: {0}",
                 string.IsNullOrWhiteSpace(ex.Message) ? ex.GetType().Name : ex.Message));
             return false;
@@ -277,8 +328,27 @@ public sealed class ServiceRunner : IDisposable
         }
     }
 
-    private void AppendResumeSkipped(string reason) =>
+    private void AppendResumeSkipped(string reason)
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (string.Equals(reason, _lastResumeSkipReason, StringComparison.Ordinal)
+            && now - _lastResumeSkipAtUtc < RecoveryLogRepeatInterval)
+        {
+            // The same refusal logged again inside the repeat window stays quiet; the
+            // retry itself is also backed off, so only the ramp-up phase could repeat.
+            return;
+        }
+
+        _lastResumeSkipReason = reason;
+        _lastResumeSkipAtUtc = now;
         AppendHub(FormatMessage("Localserver_LogResumeSkipped", "Resume skipped: {0}", reason));
+    }
+
+    private void ScheduleRecoveryRetry()
+    {
+        _recoverFailureCount = Math.Min(_recoverFailureCount + 1, RecoveryRetryDelays.Length);
+        _nextRecoverAttemptUtc = DateTimeOffset.UtcNow + RecoveryRetryDelays[_recoverFailureCount - 1];
+    }
 
     private string DescribeDiagnostics(IReadOnlyList<string> diagnostics) =>
         diagnostics.Count == 0

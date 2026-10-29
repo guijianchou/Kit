@@ -196,9 +196,9 @@ flowchart TB
 ```
 
 - **Security Audit**: collect Windows events and run local rules, with AI enrichment when available. Existing results can also receive deep analysis. AI failures preserve rule-based findings and report the analysis status.
-- **Optimization**: local scan of downloads and allowlisted caches → AI review of candidate metadata → user review and confirmation → local execution. Unapproved items cannot enter the executable set. Items are revalidated before execution, and cleanup uses the Recycle Bin.
+- **Optimization**: local scan of downloads and allowlisted caches → AI review of candidate metadata → user review and confirmation → local execution. Unapproved items cannot enter the executable set. Items are revalidated before execution; cache cleanup permanently deletes only files from the reviewed snapshot and skips new, changed, locked or inaccessible files.
 - **Task lifetime**: audit and optimization can run concurrently and be cancelled separately. Switching tabs preserves work; disabling the module cancels both tasks. Cancellation does not undo completed file operations.
-- **Background audits**: the Worker performs scheduled rule-based scans only and exits when scheduling is off. It currently reads its schedule from shared service settings; see the [AI service notes](doc/ai-service-review.md) for differences from page-owned plugin settings.
+- **Background audits**: the Worker performs scheduled rule-based scans using the same plugin settings the page edits for cadence and audit mode, so saved schedule changes apply without a restart. The Worker stays resident with the module and only runs while a cadence is configured.
 - **Details**: the [module documentation](src/modules/AIHub/README.md) covers architecture and maintenance; historical validation is recorded in the [changelog](changelog.md).
 
 ### 3.6 NetMap: current egress and route observation

@@ -2828,17 +2828,30 @@ namespace ViewModelTests
         public void KitRunnerShouldFinishModuleShutdownBeforeReleasingSingleton()
         {
             var source = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            int modulesInitialized = source.IndexOf("modules();", StringComparison.Ordinal);
+            int shutdownDeclared = source.IndexOf("auto shutdown_modules = wil::scope_exit([] {", StringComparison.Ordinal);
+            int shutdownCompleted = source.IndexOf("});", shutdownDeclared, StringComparison.Ordinal);
             int settingsClosed = source.IndexOf("const bool settings_closed =", StringComparison.Ordinal);
-            int hookStopped = source.IndexOf("CentralizedKeyboardHook::Stop();", settingsClosed, StringComparison.Ordinal);
-            int modulesDestroyed = source.IndexOf("modules().clear();", settingsClosed, StringComparison.Ordinal);
-            int mutexReleased = source.IndexOf("msi_mutex.reset(nullptr);", settingsClosed, StringComparison.Ordinal);
-            int restart = source.IndexOf("if (is_restart_scheduled())", settingsClosed, StringComparison.Ordinal);
+            int mutexReleased = source.IndexOf("msi_mutex.reset(nullptr);", StringComparison.Ordinal);
+            int restart = source.IndexOf("if (is_restart_scheduled())", StringComparison.Ordinal);
 
-            Assert.IsTrue(settingsClosed >= 0 && hookStopped > settingsClosed);
             Assert.IsTrue(
-                modulesDestroyed > hookStopped && modulesDestroyed < mutexReleased,
+                modulesInitialized >= 0 && shutdownDeclared > modulesInitialized,
+                "The module teardown guard must be registered after module initialization so it owns the module lifetime.");
+            Assert.IsTrue(
+                shutdownCompleted > shutdownDeclared && shutdownCompleted < settingsClosed,
+                "The teardown scope exit must run before the singleton release path.");
+            int hookStopped = source.IndexOf("CentralizedKeyboardHook::Stop();", shutdownDeclared, StringComparison.Ordinal);
+            int modulesDestroyed = source.IndexOf("modules().clear();", shutdownDeclared, StringComparison.Ordinal);
+            Assert.IsTrue(
+                hookStopped > shutdownDeclared && hookStopped < shutdownCompleted,
+                "The teardown guard must stop keyboard hooks while this instance still owns the singleton lock.");
+            Assert.IsTrue(
+                modulesDestroyed > hookStopped && modulesDestroyed < shutdownCompleted && modulesDestroyed < mutexReleased,
                 "Module stop events must be finished before a new runner can acquire the singleton lock.");
-            Assert.IsTrue(mutexReleased < restart, "Normal exit and restart must use the same teardown order.");
+            Assert.IsTrue(
+                mutexReleased > settingsClosed && mutexReleased < restart,
+                "Normal exit and restart must use the same teardown order.");
         }
 
         [TestMethod]

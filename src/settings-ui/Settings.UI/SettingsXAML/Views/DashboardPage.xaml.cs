@@ -8,6 +8,7 @@ using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using NetMapLib;
 
 namespace Kit.Settings.UI.Views
 {
@@ -80,6 +81,14 @@ namespace Kit.Settings.UI.Views
                 !(settingsWindow.AppWindow.Presenter is OverlappedPresenter presenter && presenter.State == OverlappedPresenterState.Minimized);
             ViewModel.SetOverviewActive(visible);
         }
+
+        /// <summary>Maps an egress health state to the shared text style (app-level KitEgressStatusStyles).</summary>
+        public Style EgressTextStyle(ProbeHealth health) => (Style)((ResourceDictionary)Application.Current.Resources["KitEgressStatusStyles"])[health switch
+        {
+            ProbeHealth.Good => "GoodText",
+            ProbeHealth.Error => "ErrorText",
+            _ => "UnknownText",
+        }];
 
         private void Window_Closed(object sender, WindowEventArgs args)
         {

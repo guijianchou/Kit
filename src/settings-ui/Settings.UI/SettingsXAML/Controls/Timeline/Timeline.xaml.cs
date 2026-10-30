@@ -166,7 +166,7 @@ namespace Kit.Settings.UI.Controls
 
                 var line = new Line
                 {
-                    Style = (Style)Application.Current.Resources[isMajor ? "MajorHourTickStyle" : "HourTickStyle"],
+                    Style = (Style)this.Resources[isMajor ? "MajorHourTickStyle" : "HourTickStyle"],
                 };
 
                 Canvas.SetZIndex(line, 0); // above bands (adjust if needed)
@@ -227,16 +227,17 @@ namespace Kit.Settings.UI.Controls
             var r = new Border();
             if (isDark)
             {
-                r.Style = (Style)Application.Current.Resources["DarkBandStyle"];
+                r.Style = (Style)this.Resources["DarkBandStyle"];
                 FontIcon icon = new FontIcon();
-                icon.Style = (Style)Application.Current.Resources["DarkBandIconStyle"];
+                icon.Style = (Style)this.Resources["DarkBandIconStyle"];
                 r.Child = icon;
             }
             else
             {
-                r.Style = (Style)Application.Current.Resources["LightBandStyle"];
+                r.Style = (Style)this.Resources["LightBandStyle"];
             }
 
+            ToolTipService.SetToolTip(r, ResourceLoaderInstance.ResourceLoader.GetString(isDark ? "LightSwitch_Timeline_DarkBandToolTip" : "LightSwitch_Timeline_LightBandToolTip"));
             Canvas.SetZIndex(r, 5); // below ticks/labels
             TimelineCanvas.Children.Add(r);
             return r;
@@ -352,14 +353,14 @@ namespace Kit.Settings.UI.Controls
         {
             if (_startEdgeLabel == null)
             {
-                _startEdgeLabel = new TextBlock { Style = (Style)Application.Current.Resources["EdgeLabelStyle"] };
+                _startEdgeLabel = new TextBlock { Style = (Style)this.Resources["EdgeLabelStyle"] };
                 HeaderCanvas.Children.Add(_startEdgeLabel);
                 Canvas.SetZIndex(_startEdgeLabel, 25);
             }
 
             if (_endEdgeLabel == null)
             {
-                _endEdgeLabel = new TextBlock { Style = (Style)Application.Current.Resources["EdgeLabelStyle"] };
+                _endEdgeLabel = new TextBlock { Style = (Style)this.Resources["EdgeLabelStyle"] };
                 HeaderCanvas.Children.Add(_endEdgeLabel);
                 Canvas.SetZIndex(_endEdgeLabel, 25);
             }
@@ -396,14 +397,14 @@ namespace Kit.Settings.UI.Controls
         {
             if (_sunriseTick == null)
             {
-                _sunriseTick = new Line { Style = (Style)Application.Current.Resources["SunRiseMarkerTickStyle"] };
+                _sunriseTick = new Line { Style = (Style)this.Resources["SunRiseMarkerTickStyle"] };
                 TimelineCanvas.Children.Add(_sunriseTick);
                 Canvas.SetZIndex(_sunriseTick, 12);
             }
 
             if (_sunsetTick == null)
             {
-                _sunsetTick = new Line { Style = (Style)Application.Current.Resources["SunSetMarkerTickStyle"] };
+                _sunsetTick = new Line { Style = (Style)this.Resources["SunSetMarkerTickStyle"] };
                 TimelineCanvas.Children.Add(_sunsetTick);
                 Canvas.SetZIndex(_sunsetTick, 12);
             }
@@ -472,7 +473,7 @@ namespace Kit.Settings.UI.Controls
 
         private StackPanel MakeSunPanel(string iconEmoji)
         {
-            var icon = new FontIcon { Glyph = iconEmoji, Style = (Style)Application.Current.Resources["SunIconStyle"] };
+            var icon = new FontIcon { Glyph = iconEmoji, Style = (Style)this.Resources["SunIconStyle"] };
             var sp = new StackPanel { Orientation = Orientation.Vertical, Spacing = 2 };
             sp.Children.Add(icon);
             return sp;
@@ -505,7 +506,7 @@ namespace Kit.Settings.UI.Controls
             {
                 if (Sunrise.HasValue)
                 {
-                    ToolTipService.SetToolTip(_sunrisePanel, $"Sunrise: {TimeSpanHelper.Convert(Sunrise.Value)}");
+                    ToolTipService.SetToolTip(_sunrisePanel, string.Format(CultureInfo.CurrentCulture, ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_Timeline_SunriseToolTip"), TimeSpanHelper.Convert(Sunrise.Value)));
                     _sunrisePanel.Visibility = Visibility.Visible;
                     Place(_sunrisePanel, Sunrise.Value);
                 }
@@ -520,7 +521,7 @@ namespace Kit.Settings.UI.Controls
             {
                 if (Sunset.HasValue)
                 {
-                    ToolTipService.SetToolTip(_sunsetPanel, $"Sunset: {TimeSpanHelper.Convert(Sunset.Value)}");
+                    ToolTipService.SetToolTip(_sunsetPanel, string.Format(CultureInfo.CurrentCulture, ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_Timeline_SunsetToolTip"), TimeSpanHelper.Convert(Sunset.Value)));
                     _sunsetPanel.Visibility = Visibility.Visible;
                     Place(_sunsetPanel, Sunset.Value);
                 }
@@ -543,7 +544,7 @@ namespace Kit.Settings.UI.Controls
             // Includes 24:00 at end
             for (int i = 0; i < 5; i++)
             {
-                var tb = new TextBlock { Style = (Style)Application.Current.Resources["MajorTickLabelStyle"] };
+                var tb = new TextBlock { Style = (Style)this.Resources["MajorTickLabelStyle"] };
                 Canvas.SetZIndex(tb, 5); // on annotation canvas
                 _majorTickBottomLabels.Add(tb);
                 AnnotationCanvas.Children.Add(tb);

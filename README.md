@@ -4,7 +4,7 @@
 
 Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). Synchronized with PowerToys upstream **v0.102.3001.0**, it reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-Current source version: **3.2.0**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
+Current source version: **3.3.0**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
 [Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
@@ -23,7 +23,7 @@ Kit currently includes six modules. “Plugin” here means a module built and e
 
 Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
 
-Home provides real-time system resource telemetry (CPU, memory, storage, dual-GPU / iGPU & dGPU hardware details, driver version, and temperatures) and dual-egress network observation. General contains appearance, startup behavior and shared AI service settings; Quick Access provides shortcuts and module actions. The entire UI is built on native WinUI 3 Fluent Design styling with semantic surface tokens, responsive cards, Cascadia Code monospace typography, and complete bilingual localization (en-US / zh-CN). With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
+Home provides real-time system resource telemetry (CPU, memory, storage, dual-GPU / iGPU & dGPU hardware details, driver version, and temperatures) and dual-egress network observation. General contains appearance, startup behavior and shared AI service settings; Quick Access provides shortcuts and module actions. The entire UI is built on native WinUI 3 Fluent Design styling with semantic surface tokens, responsive cards, Cascadia Code monospace typography, accessibility metadata (keyboard-reachable controls, screen-reader names, high-contrast palettes), and complete bilingual localization (en-US / zh-CN). With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
 
 ## 2. Framework
 

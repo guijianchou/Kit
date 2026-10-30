@@ -1145,12 +1145,6 @@
   <data name="AiHub_PolicyRulesExpander.Description" xml:space="preserve">
     <value>全局安全策略与专有任务指令 (security.md 与 AGENTS.md)</value>
   </data>
-          <data name="AiHub_Segment_SecurityAudit.Content" xml:space="preserve">
-    <value>安全审计</value>
-  </data>
-  <data name="AiHub_Segment_Optimization.Content" xml:space="preserve">
-    <value>系统优化</value>
-  </data>
   <data name="Admin_Mode_Running_As.Description" xml:space="preserve">
     <value>Kit 以当前用户身份运行；仅在需要时请求提权。</value>
   </data>
@@ -1918,5 +1912,566 @@
   </data>
   <data name="AiHub_EffortMax.Content" xml:space="preserve">
     <value>最高</value>
+  </data>
+  <data name="General_NewVersionAvailable.Title" xml:space="preserve">
+    <value>有可用更新：</value>
+  </data>
+  <data name="General_UpToDate.Title" xml:space="preserve">
+    <value>Kit 已是最新版本</value>
+  </data>
+  <data name="General_CantCheck.Title" xml:space="preserve">
+    <value>网络错误，请稍后重试</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_NothingToBackup" xml:space="preserve">
+    <value>自上次备份以来设置未变化，因此未创建新备份。</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_NoBackupFound" xml:space="preserve">
+    <value>未找到备份</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_FailedToParseTime" xml:space="preserve">
+    <value>时间解析失败</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_UnknownBackupTime" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_UnknownBackupSource" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_ThisMachine" xml:space="preserve">
+    <value>本机</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_CurrentSettingsMatch" xml:space="preserve">
+    <value>当前设置一致</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_CurrentSettingsStatusAt" xml:space="preserve">
+    <value>于</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_CurrentSettingsDiffer" xml:space="preserve">
+    <value>当前设置不一致</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_CurrentSettingsNoChecked" xml:space="preserve">
+    <value>正在检查...</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_CurrentSettingsUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_NothingToRestore" xml:space="preserve">
+    <value>无需还原。</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_NoSettingsFilesFound" xml:space="preserve">
+    <value>未找到设置文件。</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_BackupError" xml:space="preserve">
+    <value>出现错误。请尝试其他备份位置。</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_SettingsFormatError" xml:space="preserve">
+    <value>设置格式有误，请检查设置文件：</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_BackupComplete" xml:space="preserve">
+    <value>备份完成。</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_NoBackupSyncPath" xml:space="preserve">
+    <value>未选择备份位置。</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_NoBackupsFound" xml:space="preserve">
+    <value>未找到可还原的备份。</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_InvalidBackupLocation" xml:space="preserve">
+    <value>备份位置无效。</value>
+  </data>
+  <data name="LightSwitch_SyncLoader.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>正在同步位置</value>
+  </data>
+  <data name="LightSwitch_LocationErrorText.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>位置同步错误</value>
+  </data>
+  <data name="LightSwitch_LocationResultPanel.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>日出与日落</value>
+  </data>
+  <data name="LightSwitch_Timeline_DarkBandToolTip" xml:space="preserve">
+    <value>深色模式</value>
+  </data>
+  <data name="LightSwitch_Timeline_LightBandToolTip" xml:space="preserve">
+    <value>浅色模式</value>
+  </data>
+  <data name="LightSwitch_Timeline_SunriseToolTip" xml:space="preserve">
+    <value>日出：{0}</value>
+  </data>
+  <data name="LightSwitch_Timeline_SunsetToolTip" xml:space="preserve">
+    <value>日落：{0}</value>
+  </data>
+  <data name="LightSwitch_Timeline_AutomationName" xml:space="preserve">
+    <value>时间轴：{0} 至 {1}</value>
+  </data>
+  <data name="Localserver_AddServiceButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>添加服务</value>
+  </data>
+  <data name="Localserver_AddServiceButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>添加新的本地服务</value>
+  </data>
+  <data name="Localserver_StartAllServicesButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>全部启动</value>
+  </data>
+  <data name="Localserver_StartAllServicesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>启动所有已注册的服务</value>
+  </data>
+  <data name="Localserver_StopAllServicesButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>全部停止</value>
+  </data>
+  <data name="Localserver_StopAllServicesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>停止所有正在运行的服务</value>
+  </data>
+  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>刷新状态</value>
+  </data>
+  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>刷新状态与资源占用</value>
+  </data>
+  <data name="Localserver_ConfigureButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>配置服务</value>
+  </data>
+  <data name="Localserver_ConfigureButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>配置服务</value>
+  </data>
+  <data name="Localserver_MoreOptionsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>更多选项</value>
+  </data>
+  <data name="Localserver_MoreOptionsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>更多选项</value>
+  </data>
+  <data name="Localserver_FixButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>修复</value>
+  </data>
+  <data name="Localserver_SelectedLineComboBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择要查看的服务</value>
+  </data>
+  <data name="Localserver_CpuUsageBar.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>CPU 使用率</value>
+  </data>
+  <data name="Localserver_MemoryUsageBar.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>内存使用率</value>
+  </data>
+  <data name="Localserver_LogToggleButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>切换输出控制台</value>
+  </data>
+  <data name="Localserver_LogToggleButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>切换输出控制台</value>
+  </data>
+  <data name="Localserver_LogFollowToggle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>自动滚动到最新日志</value>
+  </data>
+  <data name="Localserver_OpenLogFolderButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>打开日志目录</value>
+  </data>
+  <data name="Localserver_OpenLogFolderButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>打开日志目录</value>
+  </data>
+  <data name="Localserver_ClearLogsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>清除当前日志</value>
+  </data>
+  <data name="Localserver_ClearLogsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>清除当前日志</value>
+  </data>
+  <data name="UDPtest_StartMonitoringButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>开始监控</value>
+  </data>
+  <data name="UDPtest_StartMonitoringButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>开始监控</value>
+  </data>
+  <data name="UDPtest_StopMonitoringButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>停止监控</value>
+  </data>
+  <data name="UDPtest_StopMonitoringButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>停止监控</value>
+  </data>
+  <data name="UDPtest_AddUdpLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>添加 UDP 线路</value>
+  </data>
+  <data name="UDPtest_AddUdpLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>添加新的 UDP 线路</value>
+  </data>
+  <data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>清除历史</value>
+  </data>
+  <data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>配置 UDP 目标</value>
+  </data>
+  <data name="UDPtest_SessionDurationText.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>已监控时长</value>
+  </data>
+  <data name="UDPtest_NatTypeValue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>基于 STUN 的 NAT 诊断</value>
+  </data>
+  <data name="UDPtest_LocalRouteInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>当前活动的网络适配器与 IPv4 默认网关</value>
+  </data>
+  <data name="UDPtest_ConditionInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>所选线路的当前状态</value>
+  </data>
+  <data name="UDPtest_RealtimeInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>所选线路的实时指标</value>
+  </data>
+  <data name="UDPtest_SelectedLineCombo.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>所选线路</value>
+  </data>
+  <data name="UDPtest_SelectedLineCombo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择要查看的线路</value>
+  </data>
+  <data name="UDPtest_PathInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>当前 Windows 出站路径的 TCP 与 UDP 综合评估</value>
+  </data>
+  <data name="UDPtest_Period1mButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>1 分钟</value>
+  </data>
+  <data name="UDPtest_Period1mButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>显示最近一分钟</value>
+  </data>
+  <data name="UDPtest_Period5mButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>5 分钟</value>
+  </data>
+  <data name="UDPtest_Period5mButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>显示最近五分钟</value>
+  </data>
+  <data name="UDPtest_Period30mButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>30 分钟</value>
+  </data>
+  <data name="UDPtest_Period30mButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>显示最近三十分钟</value>
+  </data>
+  <data name="UDPtest_Period1hButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>1 小时</value>
+  </data>
+  <data name="UDPtest_Period1hButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>显示最近一小时</value>
+  </data>
+  <data name="UDPtest_ConfigEndpointInput.PlaceholderText" xml:space="preserve">
+    <value>例如 stun.cloudflare.com:3478 或 150.242.146.124:7</value>
+  </data>
+  <data name="UDPtest_RunStateStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="UDPtest_RunStateRunning" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="UDPtest_RunStateStarting" xml:space="preserve">
+    <value>正在启动</value>
+  </data>
+  <data name="UDPtest_RunStateStopping" xml:space="preserve">
+    <value>正在停止</value>
+  </data>
+  <data name="UDPtest_HealthIdleState" xml:space="preserve">
+    <value>空闲</value>
+  </data>
+  <data name="UDPtest_HealthIdleCondition" xml:space="preserve">
+    <value>空闲</value>
+  </data>
+  <data name="UDPtest_HealthSelectLine" xml:space="preserve">
+    <value>请选择线路</value>
+  </data>
+  <data name="UDPtest_HealthDetailFormat" xml:space="preserve">
+    <value>{0} | {1}:{2} | {3} 次探测</value>
+  </data>
+  <data name="UDPtest_StateIdle" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="UDPtest_StateWarming" xml:space="preserve">
+    <value>预热中</value>
+  </data>
+  <data name="UDPtest_StateError" xml:space="preserve">
+    <value>异常</value>
+  </data>
+  <data name="UDPtest_StateOk" xml:space="preserve">
+    <value>正常</value>
+  </data>
+  <data name="UDPtest_StateDegraded" xml:space="preserve">
+    <value>劣化</value>
+  </data>
+  <data name="UDPtest_StateOffline" xml:space="preserve">
+    <value>离线</value>
+  </data>
+  <data name="UDPtest_ConditionIdle" xml:space="preserve">
+    <value>空闲</value>
+  </data>
+  <data name="UDPtest_ConditionWarming" xml:space="preserve">
+    <value>预热中</value>
+  </data>
+  <data name="UDPtest_ConditionError" xml:space="preserve">
+    <value>异常</value>
+  </data>
+  <data name="UDPtest_ConditionNormal" xml:space="preserve">
+    <value>正常</value>
+  </data>
+  <data name="UDPtest_ConditionDegraded" xml:space="preserve">
+    <value>劣化</value>
+  </data>
+  <data name="UDPtest_ConditionOffline" xml:space="preserve">
+    <value>离线</value>
+  </data>
+  <data name="UDPtest_AssessmentNotStarted" xml:space="preserve">
+    <value>未启动</value>
+  </data>
+  <data name="UDPtest_EnabledCountFormat" xml:space="preserve">
+    <value>{0}/{1} 已启用</value>
+  </data>
+  <data name="UDPtest_LinksSummaryFormat" xml:space="preserve">
+    <value>{0} 条链路</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentSupportedStable" xml:space="preserve">
+    <value>支持且稳定</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentSupportedUnstable" xml:space="preserve">
+    <value>支持但偶发丢包</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentSupportedDegraded" xml:space="preserve">
+    <value>支持但严重劣化</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentUnsupported" xml:space="preserve">
+    <value>不支持 UDP 出站</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentAssessing" xml:space="preserve">
+    <value>评估中</value>
+  </data>
+  <data name="UDPtest_NatEim" xml:space="preserve">
+    <value>完全圆锥型 (EIM)</value>
+  </data>
+  <data name="UDPtest_NatAdm" xml:space="preserve">
+    <value>受限圆锥型 (ADM)</value>
+  </data>
+  <data name="UDPtest_NatApdm" xml:space="preserve">
+    <value>端口受限圆锥型 (APDM)</value>
+  </data>
+  <data name="UDPtest_NatSymmetric" xml:space="preserve">
+    <value>对称型 NAT</value>
+  </data>
+  <data name="UDPtest_NatOpen" xml:space="preserve">
+    <value>公网开放</value>
+  </data>
+  <data name="UDPtest_NatBlocked" xml:space="preserve">
+    <value>受阻断</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentNotMonitored" xml:space="preserve">
+    <value>未监控</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentStable" xml:space="preserve">
+    <value>可用且稳定</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentSingleStable" xml:space="preserve">
+    <value>单目标稳定</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentPartial" xml:space="preserve">
+    <value>部分不稳定</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentUnavailable" xml:space="preserve">
+    <value>不可用</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentInternalError" xml:space="preserve">
+    <value>内部错误</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentWarming" xml:space="preserve">
+    <value>预热中</value>
+  </data>
+  <data name="UDPtest_PathStable" xml:space="preserve">
+    <value>TCP 与 UDP 稳定</value>
+  </data>
+  <data name="UDPtest_PathAvailable" xml:space="preserve">
+    <value>TCP 与 UDP 可用</value>
+  </data>
+  <data name="UDPtest_PathUdpUnsupported" xml:space="preserve">
+    <value>TCP 可用，UDP 不受支持</value>
+  </data>
+  <data name="UDPtest_PathUdpAssessing" xml:space="preserve">
+    <value>TCP 可用，UDP 评估中</value>
+  </data>
+  <data name="UDPtest_PathTcpUnavailable" xml:space="preserve">
+    <value>UDP 可用，TCP 不可用</value>
+  </data>
+  <data name="UDPtest_PathUnknown" xml:space="preserve">
+    <value>链路未知</value>
+  </data>
+  <data name="UDPtest_PathAssessing" xml:space="preserve">
+    <value>评估中</value>
+  </data>
+  <data name="UDPtest_NodeVerified" xml:space="preserve">
+    <value>节点已验证</value>
+  </data>
+  <data name="UDPtest_NodeUnverified" xml:space="preserve">
+    <value>节点未验证</value>
+  </data>
+  <data name="UDPtest_MonitoringErrorFormat" xml:space="preserve">
+    <value>监控错误：{0}</value>
+  </data>
+  <data name="UDPtest_EnableProbeLineRequired" xml:space="preserve">
+    <value>请先启用至少一条探测线路再开始。</value>
+  </data>
+  <data name="UDPtest_TargetUpdatedRestartRequired" xml:space="preserve">
+    <value>目标已更新。停止并重新开始监控以应用新的目标端点。</value>
+  </data>
+  <data name="UDPtest_KeepOneLineRequired" xml:space="preserve">
+    <value>至少需要保留一条 UDP 线路。</value>
+  </data>
+  <data name="UDPtest_StartFailedFormat" xml:space="preserve">
+    <value>启动失败：{0}</value>
+  </data>
+  <data name="UDPtest_StopFailedFormat" xml:space="preserve">
+    <value>停止失败：{0}</value>
+  </data>
+  <data name="UDPtest_ClearFailedFormat" xml:space="preserve">
+    <value>清除失败：{0}</value>
+  </data>
+  <data name="UDPtest_InitFailedFormat" xml:space="preserve">
+    <value>初始化错误：{0}</value>
+  </data>
+  <data name="UDPtest_ToggleLineFailedFormat" xml:space="preserve">
+    <value>切换线路失败：{0}</value>
+  </data>
+  <data name="UDPtest_SaveTargetsFailedFormat" xml:space="preserve">
+    <value>保存目标失败：{0}</value>
+  </data>
+  <data name="UDPtest_LastErrorEmpty" xml:space="preserve">
+    <value>最近错误: --</value>
+  </data>
+  <data name="UDPtest_ToggleLabelFormat" xml:space="preserve">
+    <value>切换 {0}</value>
+  </data>
+  <data name="UDPtest_RowStatusOk" xml:space="preserve">
+    <value>正常</value>
+  </data>
+  <data name="UDPtest_RowStatusDegraded" xml:space="preserve">
+    <value>劣化</value>
+  </data>
+  <data name="UDPtest_RowStatusDown" xml:space="preserve">
+    <value>离线</value>
+  </data>
+  <data name="UDPtest_RowStatusWarming" xml:space="preserve">
+    <value>预热中</value>
+  </data>
+  <data name="UDPtest_RowStatusIdle" xml:space="preserve">
+    <value>空闲</value>
+  </data>
+  <data name="UDPtest_RowStatusStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="UDPtest_RowStatusInternalError" xml:space="preserve">
+    <value>内部错误</value>
+  </data>
+  <data name="UDPtest_CapabilityEcho" xml:space="preserve">
+    <value>出站回显反射</value>
+  </data>
+  <data name="UDPtest_CapabilityStun" xml:space="preserve">
+    <value>NAT 评估与公网 IP 检测</value>
+  </data>
+  <data name="UDPtest_ValidationNameRequired" xml:space="preserve">
+    <value>目标名称不能为空。</value>
+  </data>
+  <data name="UDPtest_ValidationInvalidPort" xml:space="preserve">
+    <value>端口无效</value>
+  </data>
+  <data name="UDPtest_RemoteEndpointFormat" xml:space="preserve">
+    <value>远端节点: {0}</value>
+  </data>
+  <data name="UDPtest_NotResolved" xml:space="preserve">
+    <value>未解析</value>
+  </data>
+  <data name="UDPtest_LastErrorFormat" xml:space="preserve">
+    <value>最近错误: {0}</value>
+  </data>
+  <data name="UDPtest_ErrorTimeout" xml:space="preserve">
+    <value>超时</value>
+  </data>
+  <data name="UDPtest_ErrorDns" xml:space="preserve">
+    <value>DNS 解析失败</value>
+  </data>
+  <data name="UDPtest_ErrorConnect" xml:space="preserve">
+    <value>连接失败</value>
+  </data>
+  <data name="UDPtest_ErrorTls" xml:space="preserve">
+    <value>TLS 失败</value>
+  </data>
+  <data name="UDPtest_ErrorStun" xml:space="preserve">
+    <value>STUN 错误</value>
+  </data>
+  <data name="UDPtest_ErrorInvalidStun" xml:space="preserve">
+    <value>无效 STUN 响应</value>
+  </data>
+  <data name="UDPtest_ErrorCancelled" xml:space="preserve">
+    <value>已取消</value>
+  </data>
+  <data name="AIHub_Segment_SecurityAudit.Content" xml:space="preserve">
+    <value>安全审计</value>
+  </data>
+  <data name="AIHub_Segment_Optimization.Content" xml:space="preserve">
+    <value>系统优化</value>
+  </data>
+  <data name="AIHub_EnableToggleSwitch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>启用 AI Hub</value>
+  </data>
+  <data name="AIHub_AuditDatePicker.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>审计日期</value>
+  </data>
+  <data name="AIHub_TaskPolicyContentBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>任务策略内容</value>
+  </data>
+  <data name="AIHub_FastScanLabel" xml:space="preserve">
+    <value>快速扫描</value>
+  </data>
+  <data name="AIHub_FullScanLabel" xml:space="preserve">
+    <value>全量审计</value>
+  </data>
+  <data name="FindingDetails_EventIdFormat" xml:space="preserve">
+    <value>事件 {0}</value>
+  </data>
+  <data name="FindingDetails_AffectedNotAvailable" xml:space="preserve">
+    <value>无</value>
+  </data>
+  <data name="FindingDetails_CopyHeader" xml:space="preserve">
+    <value>[安全发现] {0}</value>
+  </data>
+  <data name="FindingDetails_CopySeverity" xml:space="preserve">
+    <value>严重度: {0} | 分类: {1} | 事件 ID: {2}</value>
+  </data>
+  <data name="FindingDetails_CopyTimestamp" xml:space="preserve">
+    <value>时间戳: {0}</value>
+  </data>
+  <data name="FindingDetails_CopyDetection" xml:space="preserve">
+    <value>检测内容: {0}</value>
+  </data>
+  <data name="FindingDetails_CopyRootCause" xml:space="preserve">
+    <value>触发原因: {0}</value>
+  </data>
+  <data name="FindingDetails_CopyAction" xml:space="preserve">
+    <value>建议操作: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportTitle" xml:space="preserve">
+    <value># {0} - AI 诊断报告</value>
+  </data>
+  <data name="AIHub_CopyReportGeneratedAt" xml:space="preserve">
+    <value>生成时间: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportEnvironment" xml:space="preserve">
+    <value>执行环境: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportSummaryHeading" xml:space="preserve">
+    <value>## 摘要</value>
+  </data>
+  <data name="AIHub_CopyReportFindingsHeading" xml:space="preserve">
+    <value>## 详细诊断发现与处置建议 ({0} 项)</value>
+  </data>
+  <data name="AIHub_CopyReportEventId" xml:space="preserve">
+    <value>- 标识: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportDetails" xml:space="preserve">
+    <value>- 详情: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportRecommendation" xml:space="preserve">
+    <value>- 处置建议: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportSuccess" xml:space="preserve">
+    <value>AI 诊断报告已成功复制到剪贴板。</value>
+  </data>
+  <data name="AIHub_CopyReportFailed" xml:space="preserve">
+    <value>复制失败: {0}</value>
+  </data>
+  <data name="NetMap_HopList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>路由跳点</value>
   </data>
 </root>

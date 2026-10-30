@@ -36,7 +36,7 @@ namespace Kit.Settings.UI.Views
             Loaded += (_, _) => RefreshEnabledState();
 
             ViewModel.HealthChartNeedsRedraw += OnHealthChartNeedsRedraw;
-            UpdateHealthPeriodButtons();
+            SyncHealthPeriodChecks();
         }
 
         public void RefreshEnabledState()
@@ -90,37 +90,20 @@ namespace Kit.Settings.UI.Views
 
         private void OnPeriodClicked(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is string tagStr && int.TryParse(tagStr, out int seconds))
+            if (sender is FrameworkElement element && element.Tag is string tagStr && int.TryParse(tagStr, out int seconds))
             {
                 ViewModel.SelectedPeriodSeconds = seconds;
-                UpdateHealthPeriodButtons();
             }
+
+            SyncHealthPeriodChecks();
         }
 
-        private void UpdateHealthPeriodButtons()
+        private void SyncHealthPeriodChecks()
         {
-            Button[] buttons =
-            [
-                HealthPeriod1mButton,
-                HealthPeriod5mButton,
-                HealthPeriod30mButton,
-                HealthPeriod1hButton,
-            ];
-            int selectedSeconds = ViewModel.SelectedPeriodSeconds;
-            var accentStyle = Resources.TryGetValue("AccentHealthButtonStyle", out object s) ? s as Style : null;
-            var defaultStyle = App.Current.Resources.TryGetValue("KitPeriodButtonStyle", out object d) ? d as Style : null;
-
-            foreach (Button button in buttons)
-            {
-                if (button == null)
-                {
-                    continue;
-                }
-
-                bool selected = int.TryParse(button.Tag?.ToString(), out int seconds)
-                    && seconds == selectedSeconds;
-                button.Style = selected ? accentStyle : defaultStyle;
-            }
+            HealthPeriod1mButton.IsChecked = ViewModel.SelectedPeriodSeconds == 60;
+            HealthPeriod5mButton.IsChecked = ViewModel.SelectedPeriodSeconds == 300;
+            HealthPeriod30mButton.IsChecked = ViewModel.SelectedPeriodSeconds == 1800;
+            HealthPeriod1hButton.IsChecked = ViewModel.SelectedPeriodSeconds == 3600;
         }
 
         private void ToggleConfigExpanded_Click(object sender, RoutedEventArgs e)

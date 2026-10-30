@@ -3230,5 +3230,462 @@ namespace ViewModelTests
             var matches = Directory.GetFiles(searchRoot, searchPattern, SearchOption.TopDirectoryOnly);
             Assert.AreEqual(0, matches.Length, $"Inactive source pattern should have no files: {pattern}");
         }
+
+        [TestMethod]
+        public void KitSettingsResourcesShouldKeepChineseKeysInSyncWithEnglish()
+        {
+            var englishNames = ReadResourceNames(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+            var chineseNames = ReadResourceNames(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "zh-CN", "Resources.resw"));
+
+            CollectionAssert.IsSubsetOf(chineseNames, englishNames, "Every zh-CN resource name must also exist in en-us.");
+
+            // Audited 2026-10-29 (UI/UX batch B3): these English-only names are intentional.
+            // They cover upstream modules the fork does not ship (AdvancedPaste, Command Not
+            // Found, QuickAccent, TextExtractor), retired General sections that other tests
+            // pin by name for negative assertions, and shared control vocabulary.
+            var englishOnlyAllowlist = new string[]
+            {
+                "Activation_Shortcut.Description",
+                "Activation_Shortcut.Header",
+                "CmdNotFound.ModuleDescription",
+                "CmdNotFound.ModuleTitle",
+                "Default.Content",
+                "File.Header",
+                "GeneralPage_ShowNewUpdatesToast.Header",
+                "General_DiagnosticsAndFeedback.Header",
+                "General_Repository.Text",
+                "ImageToText.Header",
+                "LearnWhatsNew.Text",
+                "Off.Content",
+                "On.Content",
+                "PasteAsHtmlFile.Header",
+                "PasteAsJson_Shortcut.Header",
+                "PasteAsMarkdown_Shortcut.Header",
+                "PasteAsPlainText_Shortcut.Header",
+                "PasteAsPngFile.Header",
+                "PasteAsTxtFile.Header",
+                "QuickAccent.ModuleDescription",
+                "QuickAccent.ModuleTitle",
+                "QuickAccent.SecondaryLinksHeader",
+                "Shortcut.Header",
+                "TextExtractor.ModuleDescription",
+                "TextExtractor.ModuleTitle",
+                "TextExtractor.SecondaryLinksHeader",
+                "TranscodeToMp3.Header",
+                "TranscodeToMp4.Header",
+            };
+
+            CollectionAssert.AreEquivalent(
+                englishOnlyAllowlist,
+                englishNames.Except(chineseNames).ToArray(),
+                "en-us resources outside the audited allowlist must be mirrored in zh-CN.");
+        }
+
+        private static string[] ReadResourceNames(string resourceFile)
+        {
+            return System.Text.RegularExpressions.Regex
+                .Matches(File.ReadAllText(resourceFile), "<data name=\"([^\"]+)\"")
+                .Cast<System.Text.RegularExpressions.Match>()
+                .Select(match => match.Groups[1].Value)
+                .ToArray();
+        }
+
+        [TestMethod]
+        public void KitAwakePageShouldExposeAutomationIdsForCoreControls()
+        {
+            var awakePage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AwakePage.xaml"));
+
+            foreach (var controlId in new[]
+            {
+                "Toggle_Awake",
+                "ModeSelection_Awake",
+                "ExpirationDate_Awake",
+                "ExpirationTime_Awake",
+                "IntervalHours_Awake",
+                "IntervalMinutes_Awake",
+                "KeepDisplayOn_Awake",
+            })
+            {
+                StringAssert.Contains(awakePage, $"AutomationProperties.AutomationId=\"{controlId}\"", $"AwakePage.xaml should expose the {controlId} automation id.");
+            }
+        }
+
+        [TestMethod]
+        public void KitLightSwitchPageShouldExposeDialogA11yAndScopedTimelineStyles()
+        {
+            var lightSwitchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml"));
+            var lightSwitchCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml.cs"));
+            var appXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml"));
+            var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+            var timelineXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "Timeline", "Timeline.xaml"));
+            var timelineStyles = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "Timeline", "TimelineStyles.xaml"));
+            var timelineCodeBehind = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "Timeline", "Timeline.xaml.cs"));
+            var timelinePeer = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "Timeline", "TimelineAutomationPeer.cs"));
+
+            // Card entrance animation matches the other module pages.
+            StringAssert.Contains(lightSwitchPage, "ChildrenTransitions=\"{StaticResource SettingsCardsAnimations}\"");
+
+            // Location dialog live regions and automation names.
+            StringAssert.Contains(lightSwitchPage, "x:Uid=\"LightSwitch_SyncLoader\"");
+            StringAssert.Contains(lightSwitchPage, "x:Uid=\"LightSwitch_LocationErrorText\"");
+            StringAssert.Contains(lightSwitchPage, "AutomationProperties.LiveSetting=\"Assertive\"");
+            StringAssert.Contains(lightSwitchPage, "x:Uid=\"LightSwitch_LocationResultPanel\"");
+            StringAssert.Contains(lightSwitchPage, "AutomationProperties.LiveSetting=\"Polite\"");
+            StringAssert.Contains(settingsResources, "LightSwitch_SyncLoader.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name");
+            StringAssert.Contains(settingsResources, "LightSwitch_LocationErrorText.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name");
+            StringAssert.Contains(settingsResources, "LightSwitch_LocationResultPanel.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name");
+
+            // Night light shortcut uses the shared text-button style instead of an ad-hoc hyperlink look.
+            StringAssert.Contains(lightSwitchPage, "Style=\"{StaticResource TextButtonStyle}\"");
+
+            // Dead AutoSuggestBox handling stays removed (no consumer exists in the page).
+            Assert.IsFalse(lightSwitchPage.Contains("AutoSuggestBox", StringComparison.Ordinal), "LightSwitchPage.xaml should not keep an AutoSuggestBox without a consumer.");
+            Assert.IsFalse(lightSwitchCodeBehind.Contains("CityAutoSuggestBox", StringComparison.Ordinal), "LightSwitch code-behind should not keep unconsumed AutoSuggestBox handlers.");
+
+            // Timeline styles are scoped to the control instead of the app-wide dictionary.
+            Assert.IsFalse(appXaml.Contains("TimelineStyles", StringComparison.Ordinal), "App.xaml should not merge TimelineStyles globally.");
+            StringAssert.Contains(timelineXaml, "TimelineStyles.xaml");
+            Assert.IsFalse(timelineCodeBehind.Contains("Application.Current.Resources[", StringComparison.Ordinal), "Timeline should resolve its styles from its own resources.");
+            StringAssert.Contains(timelineCodeBehind, "this.Resources[");
+
+            // Band tooltips are localized through resw instead of hardcoded style setters.
+            Assert.IsFalse(timelineStyles.Contains("ToolTipService.ToolTip", StringComparison.Ordinal), "Timeline band tooltips should not stay hardcoded in styles.");
+            StringAssert.Contains(timelineCodeBehind, "ToolTipService.SetToolTip");
+            StringAssert.Contains(timelineCodeBehind, "LightSwitch_Timeline_DarkBandToolTip");
+            StringAssert.Contains(timelineCodeBehind, "LightSwitch_Timeline_LightBandToolTip");
+            StringAssert.Contains(settingsResources, "LightSwitch_Timeline_DarkBandToolTip");
+            StringAssert.Contains(settingsResources, "LightSwitch_Timeline_LightBandToolTip");
+            StringAssert.Contains(timelineCodeBehind, "LightSwitch_Timeline_SunriseToolTip");
+            StringAssert.Contains(timelineCodeBehind, "LightSwitch_Timeline_SunsetToolTip");
+            StringAssert.Contains(settingsResources, "LightSwitch_Timeline_SunriseToolTip");
+            StringAssert.Contains(settingsResources, "LightSwitch_Timeline_SunsetToolTip");
+            StringAssert.Contains(timelinePeer, "LightSwitch_Timeline_AutomationName");
+            Assert.IsFalse(timelinePeer.Contains("Timeline from {", StringComparison.Ordinal), "Timeline automation peer name should be localized.");
+            StringAssert.Contains(settingsResources, "LightSwitch_Timeline_AutomationName");
+        }
+
+        [TestMethod]
+        public void KitLocalserverPageShouldConvergeSurfacesSizingA11yAndSharedUsageTelemetry()
+        {
+            var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LocalserverPage.xaml"));
+            var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "LocalserverViewModel.cs"));
+            var usageBar = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "UsageProgressBar.cs"));
+            var dashboardPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
+            var dashboardOverview = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.Overview.cs"));
+            var statusBar = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "StatusBarViewModel.cs"));
+            var udpRow = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "UDPtestLineRowViewModel.cs"));
+            var udpPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "UDPtestPage.xaml"));
+            var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            // 1. Shared surfaces, converged sizing and the row toggle style on the Localserver page.
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"0\"");
+            Assert.IsFalse(pageXaml.Contains("Width=\"30\"", StringComparison.Ordinal), "Log toggle should inherit the 28px compact style instead of a 30px override.");
+            Assert.IsFalse(pageXaml.Contains("Height=\"22\"", StringComparison.Ordinal), "Fix chip button should converge to the 28px compact tier.");
+            StringAssert.Contains(pageXaml, "RightAlignedCompactToggleSwitchStyle");
+
+            int comboIndex = pageXaml.IndexOf("Localserver_SelectedLineComboBox", StringComparison.Ordinal);
+            int comboEnd = pageXaml.IndexOf("/>", comboIndex, StringComparison.Ordinal);
+            StringAssert.Contains(pageXaml.Substring(comboIndex, comboEnd - comboIndex), "CornerRadius=\"4\"");
+
+            // 2. Hardcoded English tooltips / names moved into resw keys.
+            foreach (string literal in new[]
+            {
+                "ToolTipService.ToolTip=\"Add a new local service\"",
+                "ToolTipService.ToolTip=\"Start all registered services\"",
+                "ToolTipService.ToolTip=\"Stop all running services\"",
+                "ToolTipService.ToolTip=\"Refresh status and resource usage\"",
+                "ToolTipService.ToolTip=\"Configure service\"",
+                "ToolTipService.ToolTip=\"More options\"",
+                "ToolTipService.ToolTip=\"Select service to inspect\"",
+                "ToolTipService.ToolTip=\"Toggle output console\"",
+                "ToolTipService.ToolTip=\"Auto scroll to latest log\"",
+                "ToolTipService.ToolTip=\"Open log directory\"",
+                "ToolTipService.ToolTip=\"Clear current logs\"",
+                "AutomationProperties.Name=\"Add service\"",
+                "AutomationProperties.Name=\"Start all\"",
+                "AutomationProperties.Name=\"Stop all\"",
+                "AutomationProperties.Name=\"Refresh status\"",
+                "AutomationProperties.Name=\"Fix\"",
+                "AutomationProperties.Name=\"CPU\"",
+                "AutomationProperties.Name=\"Memory\"",
+            })
+            {
+                Assert.IsFalse(pageXaml.Contains(literal, StringComparison.Ordinal), $"Localserver page should localize: {literal}");
+            }
+
+            StringAssert.Contains(settingsResources, "Localserver_AddServiceButton");
+            StringAssert.Contains(settingsResources, "Localserver_ClearLogsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip");
+
+            // 3. Usage palettes are theme tokens and categories are explicit.
+            StringAssert.Contains(usageBar, "UsageCategoryProperty");
+            StringAssert.Contains(usageBar, "KitUsageCpuBrush");
+            Assert.IsFalse(usageBar.Contains("Color.FromArgb", StringComparison.Ordinal), "UsageProgressBar colours should come from theme tokens.");
+            Assert.IsFalse(usageBar.Contains("DetectCategory", StringComparison.Ordinal), "UsageProgressBar should not infer categories from AutomationProperties.Name text.");
+            StringAssert.Contains(pageXaml, "local:UsageProgressBar.UsageCategory=\"Cpu\"");
+            StringAssert.Contains(pageXaml, "local:UsageProgressBar.UsageCategory=\"Memory\"");
+            StringAssert.Contains(dashboardPage, "local:UsageProgressBar.UsageCategory=\"{x:Bind UsageCategory");
+            StringAssert.Contains(dashboardOverview, "GetSystemDetailCategory");
+
+            // 4. One shared micro-bar implementation for Localserver and UDPtest.
+            Assert.IsFalse(viewModel.Contains("class RecentBarViewModel", StringComparison.Ordinal), "Localserver micro-bars should use the shared StatusBarViewModel.");
+            StringAssert.Contains(viewModel, "ObservableCollection<StatusBarViewModel>");
+            StringAssert.Contains(statusBar, "FromServiceState");
+            StringAssert.Contains(statusBar, "FromProbeResult");
+            StringAssert.Contains(udpRow, "StatusBarViewModel.FromProbeResult");
+            Assert.IsFalse(udpRow.Contains("RecentProbeBarViewModel", StringComparison.Ordinal), "UDPtest micro-bars should use the shared StatusBarViewModel.");
+            Assert.IsFalse(udpPage.Contains("RecentProbeBarViewModel", StringComparison.Ordinal), "UDPtest page templates should bind the shared StatusBarViewModel.");
+        }
+
+        [TestMethod]
+        public void KitUdpTestPageShouldFullyLocalizeAndConvergeSurfacesSizingAndInteraction()
+        {
+            var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "UDPtestPage.xaml"));
+            var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "UDPtestPage.xaml.cs"));
+            var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "UDPtestViewModel.cs"));
+            var rowViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "UDPtestLineRowViewModel.cs"));
+            var resourceExtensions = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "ResourceExtensions.cs"));
+            var appStyles = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Styles", "Button.xaml"));
+            var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            // 1. Surfaces, sizing and responsive fallback.
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"0\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,16\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,12\"");
+            Assert.AreEqual(4, pageXaml.Split("KitFilterPillToggleStyle").Length - 1, "Period selector should use four filter pill toggles.");
+            Assert.AreEqual(2, pageXaml.Split("RightAlignedCompactToggleSwitchStyle").Length - 1, "Both row toggles should use the shared compact toggle style.");
+            Assert.IsFalse(pageXaml.Contains("AccentHealthButtonStyle", StringComparison.Ordinal), "The code-swapped accent period styles should be removed.");
+            Assert.IsFalse(pageXaml.Contains("KitPeriodButtonStyle", StringComparison.Ordinal), "The UDP-only period button style should be retired.");
+            Assert.IsFalse(appStyles.Contains("KitPeriodButtonStyle", StringComparison.Ordinal), "The retired period button style should be deleted from the shared style dictionary.");
+            StringAssert.Contains(pageXaml, "ControlSizeTrigger");
+            StringAssert.Contains(pageXaml, "UdpAssessmentCard");
+            StringAssert.Contains(pageXaml, "Stroke=\"{ThemeResource SystemFillColorCriticalBrush}\"");
+            StringAssert.Contains(pageCode, "SyncHealthPeriodChecks");
+            Assert.IsFalse(pageCode.Contains("UpdateHealthPeriodButtons", StringComparison.Ordinal), "Period pill state should sync via IsChecked, not style swapping.");
+
+            int comboIndex = pageXaml.IndexOf("UDPtest_SelectedLineCombo", StringComparison.Ordinal);
+            int comboEnd = pageXaml.IndexOf("/>", comboIndex, StringComparison.Ordinal);
+            string comboBlock = pageXaml.Substring(comboIndex, comboEnd - comboIndex);
+            StringAssert.Contains(comboBlock, "Width=\"200\"");
+            StringAssert.Contains(comboBlock, "CornerRadius=\"4\"");
+
+            // 2. Hardcoded English tooltips / names moved into resw keys.
+            foreach (string literal in new[]
+            {
+                "ToolTipService.ToolTip=\"Configure UDP Target\"",
+                "ToolTipService.ToolTip=\"Elapsed monitoring time\"",
+                "ToolTipService.ToolTip=\"Start monitoring\"",
+                "ToolTipService.ToolTip=\"Stop monitoring\"",
+                "ToolTipService.ToolTip=\"Clear history\"",
+                "ToolTipService.ToolTip=\"Sampling interval\"",
+                "ToolTipService.ToolTip=\"Add a new UDP line\"",
+                "ToolTipService.ToolTip=\"STUN-based NAT diagnostic\"",
+                "ToolTipService.ToolTip=\"Active network adapter and IPv4 default gateway\"",
+                "ToolTipService.ToolTip=\"Current condition of the selected line\"",
+                "ToolTipService.ToolTip=\"Live metrics for the selected line\"",
+                "ToolTipService.ToolTip=\"Choose link to inspect\"",
+                "ToolTipService.ToolTip=\"Show the last minute\"",
+                "ToolTipService.ToolTip=\"Show the last five minutes\"",
+                "ToolTipService.ToolTip=\"Show the last thirty minutes\"",
+                "ToolTipService.ToolTip=\"Show the last hour\"",
+                "ToolTipService.ToolTip=\"Combined TCP and UDP summary for the current Windows outbound path\"",
+                "AutomationProperties.Name=\"Start monitoring\"",
+                "AutomationProperties.Name=\"Stop monitoring\"",
+                "AutomationProperties.Name=\"Clear history\"",
+                "AutomationProperties.Name=\"Sampling interval\"",
+                "AutomationProperties.Name=\"Add UDP line\"",
+                "AutomationProperties.Name=\"Selected link\"",
+                "AutomationProperties.Name=\"1 minute\"",
+                "AutomationProperties.Name=\"5 minutes\"",
+                "AutomationProperties.Name=\"30 minutes\"",
+                "AutomationProperties.Name=\"1 hour\"",
+            })
+            {
+                Assert.IsFalse(pageXaml.Contains(literal, StringComparison.Ordinal), $"UDPtest page should localize: {literal}");
+            }
+
+            StringAssert.Contains(pageXaml, "x:Uid=\"UDPtest_SelectedLineCombo\"");
+            StringAssert.Contains(settingsResources, "UDPtest_StartMonitoringButton");
+            StringAssert.Contains(settingsResources, "UDPtest_ConfigEndpointInput.PlaceholderText");
+
+            // 3. View models resolve every string through resw.
+            Assert.IsFalse(viewModel.Contains("IsChinese", StringComparison.Ordinal), "UDPtest view model should resolve its strings from resw.");
+            Assert.IsFalse(rowViewModel.Contains("IsChinese", StringComparison.Ordinal), "UDPtest row view model should resolve its strings from resw.");
+            StringAssert.Contains(viewModel, "UDPtest_HealthDetailFormat");
+            StringAssert.Contains(viewModel, "UDPtest_PathStable");
+            StringAssert.Contains(rowViewModel, "UDPtest_ToggleLabelFormat");
+            StringAssert.Contains(rowViewModel, "UDPtest_ErrorTimeout");
+            StringAssert.Contains(resourceExtensions, "GetLocalizedOrFallback");
+            StringAssert.Contains(resourceExtensions, "FormatLocalized");
+            StringAssert.Contains(settingsResources, "UDPtest_NatApdm");
+            StringAssert.Contains(settingsResources, "UDPtest_MonitoringErrorFormat");
+            StringAssert.Contains(settingsResources, "UDPtest_RowStatusInternalError");
+        }
+
+        [TestMethod]
+        public void KitAiHubPageShouldConvergeSurfacesLocalizationA11yAndResponsiveLayout()
+        {
+            var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml"));
+            var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml.cs"));
+            var dialogCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "FindingDetailsDialog.xaml.cs"));
+            var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "AIHubPageViewModel.cs"));
+            var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            // 1. Surfaces, badges, metric tiles and filter sizing converge on shared Kit styles.
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"20,18\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,16\"");
+            Assert.AreEqual(8, pageXaml.Split("KitIconBadgeStyle").Length - 1, "All 40/36/34 icon badges should use the shared badge style.");
+            Assert.AreEqual(2, pageXaml.Split("KitIconBadgeSmallStyle").Length - 1, "The readiness and AI report badges should use the shared small badge style.");
+            Assert.AreEqual(10, pageXaml.Split("KitMetricTileValueStyle").Length - 1, "Metric numbers (audit tiles, activity stats, optimization tiles) should use the shared value style.");
+            Assert.AreEqual(12, pageXaml.Split("KitFilterPillToggleStyle").Length - 1, "Severity, source and view filters should share the filter pill style.");
+            Assert.IsFalse(pageXaml.Contains("CornerRadius=\"10\"", StringComparison.Ordinal), "The orphan 10px capsule radius should be normalized.");
+            Assert.IsFalse(pageXaml.Contains("Opacity=\"0.25\"", StringComparison.Ordinal), "The fake-track ProgressRing hack should be gone.");
+            Assert.AreEqual(2, pageXaml.Split("<ProgressRing").Length - 1, "The health gauge should render a single value ring beside the optimization spinner.");
+
+            // 2. Responsive behavior is declarative and mirrors the element-width thresholds.
+            Assert.AreEqual(8, pageXaml.Split("ui:ControlSizeTrigger").Length - 1, "Four responsive groups (readiness 640, overview 760, both command headers 960) should be trigger-driven.");
+            Assert.IsFalse(pageXaml.Contains("SizeChanged=\"On", StringComparison.Ordinal), "Page markup should not wire imperative SizeChanged handlers.");
+            Assert.IsFalse(pageCode.Contains("SizeChanged", StringComparison.Ordinal), "Code-behind should not keep responsive SizeChanged handlers.");
+            StringAssert.Contains(pageXaml, "Target=\"AiReadinessActions.(Grid.Row)\"");
+            StringAssert.Contains(pageXaml, "Target=\"AuditFindingsSummary.(Grid.Row)\"");
+            StringAssert.Contains(pageXaml, "Target=\"OptimizationCommandActions.(Grid.Row)\"");
+
+            // 3. Touched controls resolve strings and accessibility names from resw.
+            StringAssert.Contains(pageXaml, "x:Uid=\"AIHub_Segment_SecurityAudit\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"AIHub_EnableToggleSwitch\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"AIHub_AuditDatePicker\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"AIHub_TaskPolicyContentBox\"");
+            StringAssert.Contains(pageXaml, "AutomationProperties.AutomationId=\"AIHub_FastScanButton\"");
+            StringAssert.Contains(pageXaml, "AutomationProperties.AutomationId=\"AIHub_FullScanButton\"");
+            StringAssert.Contains(pageXaml, "AutomationProperties.Name=\"{x:Bind ViewModel.FastScanLabel, Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "AutomationProperties.Name=\"{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}\"");
+            Assert.AreEqual(2, pageXaml.Split("AutomationProperties.LiveSetting=\"Assertive\"").Length - 1, "Both InfoBars should announce updates.");
+            StringAssert.Contains(settingsResources, "AIHub_Segment_Optimization.Content");
+            StringAssert.Contains(settingsResources, "AIHub_FastScanLabel");
+            StringAssert.Contains(settingsResources, "AIHub_EnableToggleSwitch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name");
+            StringAssert.Contains(settingsResources, "AIHub_CopyReportFindingsHeading");
+            StringAssert.Contains(settingsResources, "FindingDetails_EventIdFormat");
+            StringAssert.Contains(settingsResources, "FindingDetails_CopySeverity");
+
+            // 4. Both code-behinds and the touched view-model labels resolve through resw.
+            Assert.IsFalse(pageCode.Contains("IsChinese", StringComparison.Ordinal), "AIHub code-behind should not branch on culture.");
+            Assert.IsFalse(dialogCode.Contains("IsChinese", StringComparison.Ordinal), "Finding details dialog should not branch on culture.");
+            StringAssert.Contains(pageCode, "AIHub_CopyReportTitle");
+            StringAssert.Contains(dialogCode, "FindingDetails_CopyHeader");
+            StringAssert.Contains(viewModel, "AIHub_FastScanLabel");
+            StringAssert.Contains(viewModel, "AIHub_FullScanLabel");
+        }
+
+        [TestMethod]
+        public void KitNetMapPageShouldConvergeHealthStylesAccessibilityAndMapTokens()
+        {
+            var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "NetMapPage.xaml"));
+            var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "NetMapPage.xaml.cs"));
+            var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "NetMapViewModel.cs"));
+            var dashboardXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
+            var dashboardCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml.cs"));
+            var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
+
+            // 1. Health colouring is typed: no converter, no resource keys built from enum names.
+            Assert.IsFalse(pageXaml.Contains("NetMapHealthStyleConverter", StringComparison.Ordinal), "The page should use typed style mappings instead of the converter.");
+            Assert.IsFalse(pageXaml.Contains("ConverterParameter=", StringComparison.Ordinal), "No converter parameters should remain in the page.");
+            StringAssert.Contains(pageXaml, "Style=\"{x:Bind DotStyle, Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{x:Bind TextStyle, Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{x:Bind HealthDotStyle(ViewModel.TargetHealth), Mode=OneWay}\"");
+            StringAssert.Contains(pageXaml, "NetMapHealthStyles");
+            StringAssert.Contains(pageXaml, "GoodDot");
+            Assert.IsFalse(viewModel.Contains("NetMapHealthStyleConverter", StringComparison.Ordinal), "The string-key converter should be gone.");
+            Assert.IsFalse(viewModel.Contains("IValueConverter", StringComparison.Ordinal), "The view model should not host a value converter.");
+            StringAssert.Contains(viewModel, "public static class NetMapHealthStylesStore");
+            StringAssert.Contains(viewModel, "ProbeHealth.Warning => \"Warning\"");
+            StringAssert.Contains(viewModel, "public Style? DotStyle => NetMapHealthStylesStore.Dot(Health);");
+            StringAssert.Contains(viewModel, "OnPropertyChanged(nameof(DotStyle));");
+            Assert.IsFalse(dashboardXaml.Contains("DashboardEgressStyleConverter", StringComparison.Ordinal), "Dashboard should share the typed mapping as well.");
+            StringAssert.Contains(dashboardXaml, "EgressTextStyle(ViewModel.DirectEgress.Health)");
+            StringAssert.Contains(dashboardXaml, "EgressTextStyle(ViewModel.ProxyEgress.Health)");
+            StringAssert.Contains(dashboardCode, "public Style EgressTextStyle(ProbeHealth health)");
+            StringAssert.Contains(dashboardCode, "KitEgressStatusStyles");
+
+            // 2. Map drawing uses named tokens and the shared style values.
+            StringAssert.Contains(pageCode, "private const double MapBodyTableWidth = 440;");
+            StringAssert.Contains(pageCode, "private const double MapFitMaxWidth = 800;");
+            StringAssert.Contains(pageCode, "MapBody.ColumnDefinitions[1].Width = new GridLength(narrow ? 0 : MapBodyTableWidth);");
+            StringAssert.Contains(pageCode, "MapFitMaxWidth / Math.Max(width, 40)");
+            Assert.IsFalse(pageCode.Contains("StrokeThickness = 3", StringComparison.Ordinal), "Route lines should take their width from NetMapRouteLineStyle.");
+            Assert.IsFalse(pageCode.Contains("FontSize = 28", StringComparison.Ordinal), "The selected-label size should live in NetMapMapLabelStyle.");
+            StringAssert.Contains(pageCode, "NetMapHealthStylesStore.Key");
+            StringAssert.Contains(pageCode, "HealthDotStyle(ViewModel.Hops[marker.Key].Health)");
+            Assert.IsFalse(pageCode.Contains("+ \"Dot\"", StringComparison.Ordinal), "Health keys are mapped explicitly, not concatenated from enum names.");
+
+            // 3. Buttons and labels resolve their strings from resw only.
+            StringAssert.Contains(pageXaml, "x:Uid=\"NetMap_StartButton\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"NetMap_StopButton\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"NetMap_AiCheckButton\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"NetMap_CardDetailsButton\"");
+            StringAssert.Contains(pageXaml, "x:Uid=\"NetMap_HopList\"");
+            StringAssert.Contains(settingsResources, "NetMap_HopList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name");
+            foreach (string literal in new[]
+            {
+                "AutomationProperties.Name=\"Start detection\"",
+                "AutomationProperties.Name=\"Stop detection\"",
+                "AutomationProperties.Name=\"Card details\"",
+                "ToolTipService.ToolTip=\"Start detection\"",
+                "ToolTipService.ToolTip=\"Stop detection\"",
+                "ToolTipService.ToolTip=\"AI check route\"",
+                "ToolTipService.ToolTip=\"View egress details\"",
+                "ToolTipService.ToolTip=\"Choose ASN database\"",
+                "ToolTipService.ToolTip=\"Choose City database\"",
+                "ToolTipService.ToolTip=\"Download / update ASN\"",
+                "ToolTipService.ToolTip=\"Cancel download\"",
+                "ToolTipService.ToolTip=\"Apply settings\"",
+                "Text=\"Start\"",
+                "Text=\"Stop\"",
+                "Text=\"AI check\"",
+                "Text=\"Details\"",
+                "Text=\"Browse\"",
+                "Text=\"Detection\"",
+                "Text=\"#\"",
+                "Text=\"Router\"",
+                "Text=\"Loc\"",
+                "Text=\"Loss\"",
+                "Text=\"Last ms\"",
+                "Text=\"Avg ms\"",
+                "Text=\"MTR route and map\"",
+                "Text=\"Endpoint\"",
+                "Text=\"Proxy\"",
+                "Text=\"Apply settings\"",
+                "Text=\"Cancel download\"",
+                "Text=\"Download / update ASN\"",
+                "Text=\"Local Geolocation Databases\"",
+                "Text=\"Proxy service connectivity\"",
+                "Header=\"Map settings\"",
+                "Header=\"Look up missing ASN and locations online\"",
+                "Header=\"GeoLite2-ASN database (optional)\"",
+                "Header=\"GeoLite2-City database (optional)\"",
+                "Header=\"ASN database update\"",
+                "Header=\"NetMap\"",
+                "ModuleTitle=\"NetMap\"",
+                "ModuleDescription=\"Observe direct and proxy egress as nodes change.\"",
+                "Description=\"Observe direct and proxy egress as nodes change.\"",
+                "Source Endpoint:",
+                "Route Mode:",
+                "Autonomous System (ASN):",
+                "Geo Provider:",
+                "AI Route Analysis:",
+                "country points are regional illustrations",
+                "missing replies are not application packet loss",
+                "Responses do not verify accounts or models",
+                "Databases stay local and are loaded only when detection starts",
+            })
+            {
+                Assert.IsFalse(pageXaml.Contains(literal, StringComparison.Ordinal), $"NetMap page should localize: {literal}");
+            }
+
+            // 4. The hero master card resolves its surface from the shared style rather than inline attributes.
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
+            Assert.IsFalse(pageXaml.Contains("Background=\"{ThemeResource CardBackgroundFillColorDefaultBrush}\"", StringComparison.Ordinal), "The hero card should take its surface from KitHeroSurfaceStyle.");
+        }
     }
 }

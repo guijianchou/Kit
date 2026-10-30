@@ -29,6 +29,16 @@
             <!-- 更新可用徽章点（原 InfoBadge UpdateInfoBadgeStyle） -->
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="#F09A2A" />
 
+            <!-- 使用率进度条调色（UsageProgressBar 类别令牌；数值与旧内联 ARGB 逐位一致） -->
+            <SolidColorBrush x:Key="KitUsageCpuBrush" Color="#FF38B6FF" />
+            <SolidColorBrush x:Key="KitUsageMemoryBrush" Color="#FFB146C2" />
+            <SolidColorBrush x:Key="KitUsageDiskBrush" Color="#FF38AD62" />
+            <SolidColorBrush x:Key="KitUsageGpuBrush" Color="#FFFF8C00" />
+            <SolidColorBrush x:Key="KitUsageTempNormalBrush" Color="#FFFBB03B" />
+            <SolidColorBrush x:Key="KitUsageTempWarmBrush" Color="#FFFF8C00" />
+            <SolidColorBrush x:Key="KitUsageTempHotBrush" Color="#FFFF5252" />
+            <SolidColorBrush x:Key="KitUsageDefaultBrush" Color="#FF38B6FF" />
+
             <!-- 设置导航标签色彩体系（外观/启动/AI/诊断/备份/更新） -->
             <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FFCE93D8" />
             <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#25CE93D8" />
@@ -69,6 +79,16 @@
 
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="#F09A2A" />
 
+            <!-- 使用率进度条调色（UsageProgressBar 类别令牌；数值与旧内联 ARGB 逐位一致） -->
+            <SolidColorBrush x:Key="KitUsageCpuBrush" Color="#FF0078D4" />
+            <SolidColorBrush x:Key="KitUsageMemoryBrush" Color="#FF744DA9" />
+            <SolidColorBrush x:Key="KitUsageDiskBrush" Color="#FF0E7A0D" />
+            <SolidColorBrush x:Key="KitUsageGpuBrush" Color="#FFD83B01" />
+            <SolidColorBrush x:Key="KitUsageTempNormalBrush" Color="#FFCA5010" />
+            <SolidColorBrush x:Key="KitUsageTempWarmBrush" Color="#FFD83B01" />
+            <SolidColorBrush x:Key="KitUsageTempHotBrush" Color="#FFC42B1C" />
+            <SolidColorBrush x:Key="KitUsageDefaultBrush" Color="#FF0078D4" />
+
             <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FF6A1B9A" />
             <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#156A1B9A" />
             <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="#FF0066B4" />
@@ -103,6 +123,16 @@
             <SolidColorBrush x:Key="KitWindowsLogoGradientBrush" Color="{StaticResource SystemColorHighlightTextColor}" />
 
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+
+            <!-- 使用率进度条调色（高对比：全部随窗口文本色，保证可达性） -->
+            <SolidColorBrush x:Key="KitUsageCpuBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUsageMemoryBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUsageDiskBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUsageGpuBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUsageTempNormalBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUsageTempWarmBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUsageTempHotBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUsageDefaultBrush" Color="{StaticResource SystemColorWindowTextColor}" />
 
             <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="{StaticResource SystemColorWindowColor}" />

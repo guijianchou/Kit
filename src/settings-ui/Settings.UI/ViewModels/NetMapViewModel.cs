@@ -21,18 +21,31 @@ using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.Views;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Data;
 using NetMapLib;
 
 namespace Kit.Settings.UI.ViewModels;
 
-public sealed partial class NetMapHealthStyleConverter : IValueConverter
+/// <summary>Maps a probe health state to the page's NetMapHealthStyles keys through an explicit
+/// switch (no enum-name string building); the page attaches its dictionary at construction.</summary>
+public static class NetMapHealthStylesStore
 {
-    public ResourceDictionary Styles { get; set; } = new();
+    private static ResourceDictionary? styles;
 
-    public object Convert(object value, Type targetType, object parameter, string language) => Styles[(value is ProbeHealth health ? health : ProbeHealth.Unknown).ToString() + parameter];
+    public static void Attach(ResourceDictionary value) => styles = value;
 
-    public object ConvertBack(object value, Type targetType, object parameter, string language) => throw new NotSupportedException();
+    public static string Key(ProbeHealth health, string suffix) => health switch
+    {
+        ProbeHealth.Good => "Good",
+        ProbeHealth.Warning => "Warning",
+        ProbeHealth.Error => "Error",
+        _ => "Unknown",
+    } + suffix;
+
+    public static Style? Text(ProbeHealth health) => styles?[Key(health, "Text")] as Style;
+
+    public static Style? Dot(ProbeHealth health) => styles?[Key(health, "Dot")] as Style;
+
+    public static Style? Box(ProbeHealth health) => styles?[Key(health, "Box")] as Style;
 }
 
 public sealed class NetMapCard
@@ -65,6 +78,10 @@ public sealed class NetMapCard
     public string Title { get; }
 
     public ProbeHealth Health { get; }
+
+    public Style? DotStyle => NetMapHealthStylesStore.Dot(Health);
+
+    public Style? TextStyle => NetMapHealthStylesStore.Text(Health);
 
     public string Ip { get; }
 
@@ -107,6 +124,10 @@ public sealed class NetMapServiceRow(string name) : Observable
 
     public ProbeHealth Health => !running ? ProbeHealth.Unknown : result?.Health ?? (upstreamFailures > 0 ? ProbeHealth.Error : ProbeHealth.Unknown);
 
+    public Style? DotStyle => NetMapHealthStylesStore.Dot(Health);
+
+    public Style? TextStyle => NetMapHealthStylesStore.Text(Health);
+
     public string Status => NetMapViewModel.Text(!running ? "Stopped" : result == null ? (upstreamFailures > 0 ? "ProxyUnavailable" : "Waiting") : Health == ProbeHealth.Error ? "Disconnected" :
         Health == ProbeHealth.Good ? "Connected" : result.Outcome is "TraceResponded" or "PageResponded" && !result.BodyIncomplete ? "Slow" : "NeedsAttention");
 
@@ -125,6 +146,8 @@ public sealed class NetMapServiceRow(string name) : Observable
         upstreamFailures = failures;
         OnPropertyChanged(nameof(Proxy));
         OnPropertyChanged(nameof(Health));
+        OnPropertyChanged(nameof(DotStyle));
+        OnPropertyChanged(nameof(TextStyle));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(Latency));
     }
@@ -146,6 +169,10 @@ public sealed class NetMapHopRow(int ttl) : Observable
     public string Last => result?.ConsecutiveFailures >= 3 ? "N/A" : Format(result?.LastMs ?? result?.LastKnownMs);
 
     public ProbeHealth Health => running ? result?.Health ?? ProbeHealth.Unknown : ProbeHealth.Unknown;
+
+    public Style? DotStyle => NetMapHealthStylesStore.Dot(Health);
+
+    public Style? TextStyle => NetMapHealthStylesStore.Text(Health);
 
     public string Rtt => Format(result?.AverageMs);
 
@@ -173,6 +200,8 @@ public sealed class NetMapHopRow(int ttl) : Observable
         OnPropertyChanged(nameof(Detail));
         OnPropertyChanged(nameof(MapLabel));
         OnPropertyChanged(nameof(Health));
+        OnPropertyChanged(nameof(DotStyle));
+        OnPropertyChanged(nameof(TextStyle));
     }
 
     private static string Format(double? value) => value?.ToString("F1", CultureInfo.CurrentCulture) ?? "—";

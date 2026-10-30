@@ -18,8 +18,6 @@ namespace Kit.Settings.UI.ViewModels
 {
     public sealed class UDPtestLineRowViewModel : INotifyPropertyChanged
     {
-        private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-
         private int _recentBarCapacity = 240;
 
         private ProbeLineDefinition _definition;
@@ -32,7 +30,7 @@ namespace Kit.Settings.UI.ViewModels
         private string _ipAddress = "--";
         private string _ipAddressDescription = string.Empty;
         private string _lastError = "--";
-        private string _lastErrorDisplay = IsChinese ? "最近错误: --" : "Last error: --";
+        private string _lastErrorDisplay = "UDPtest_LastErrorEmpty".GetLocalizedOrFallback("Last error: --");
         private string _status = "Idle";
         private Brush? _statusBrush;
         private Visibility _statusVisibility = Visibility.Collapsed;
@@ -130,7 +128,7 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public string ToggleLabel => IsChinese ? $"切换 {Name}" : $"Toggle {Name}";
+        public string ToggleLabel => "UDPtest_ToggleLabelFormat".FormatLocalized("Toggle {0}", Name);
 
         public string AverageRtt
         {
@@ -223,17 +221,17 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public string DisplayStatus => IsChinese ? _status switch
+        public string DisplayStatus => _status switch
         {
-            "OK" => "正常",
-            "DEGRADED" => "劣化",
-            "DOWN" => "离线",
-            "Warming" => "预热中",
-            "Idle" => "空闲",
-            "Stopped" => "已停止",
-            "Internal Error" => "内部错误",
+            "OK" => "UDPtest_RowStatusOk".GetLocalizedOrFallback("OK"),
+            "DEGRADED" => "UDPtest_RowStatusDegraded".GetLocalizedOrFallback("DEGRADED"),
+            "DOWN" => "UDPtest_RowStatusDown".GetLocalizedOrFallback("DOWN"),
+            "Warming" => "UDPtest_RowStatusWarming".GetLocalizedOrFallback("Warming"),
+            "Idle" => "UDPtest_RowStatusIdle".GetLocalizedOrFallback("Idle"),
+            "Stopped" => "UDPtest_RowStatusStopped".GetLocalizedOrFallback("Stopped"),
+            "Internal Error" => "UDPtest_RowStatusInternalError".GetLocalizedOrFallback("Internal Error"),
             _ => _status,
-        } : _status;
+        };
 
         public Brush StatusBrush
         {
@@ -255,7 +253,7 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public ObservableCollection<RecentProbeBarViewModel> RecentBars { get; } = [];
+        public ObservableCollection<StatusBarViewModel> RecentBars { get; } = [];
 
         // Folded Configuration Properties
         public bool IsConfigExpanded
@@ -397,18 +395,9 @@ namespace Kit.Settings.UI.ViewModels
 
         private void UpdateEditCapability()
         {
-            if (IsChinese)
-            {
-                EditCapabilityText = _editKindIndex == 1
-                    ? "出站回显反射"
-                    : "NAT 评估与公网 IP 检测";
-            }
-            else
-            {
-                EditCapabilityText = _editKindIndex == 1
-                    ? "Outbound echo reflection"
-                    : "NAT evaluation + Public IP detection";
-            }
+            EditCapabilityText = _editKindIndex == 1
+                ? "UDPtest_CapabilityEcho".GetLocalizedOrFallback("Outbound echo reflection")
+                : "UDPtest_CapabilityStun".GetLocalizedOrFallback("NAT evaluation + Public IP detection");
         }
 
         private void ValidateEdit()
@@ -416,7 +405,7 @@ namespace Kit.Settings.UI.ViewModels
             ProbeKind kind = _editKindIndex == 1 ? ProbeKind.UdpEcho : ProbeKind.StunBinding;
             if (string.IsNullOrWhiteSpace(_editName))
             {
-                ValidationErrorMessage = IsChinese ? "目标名称不能为空。" : "Target name cannot be empty.";
+                ValidationErrorMessage = "UDPtest_ValidationNameRequired".GetLocalizedOrFallback("Target name cannot be empty.");
                 CanSave = false;
                 EditPortText = "--";
                 return;
@@ -426,7 +415,7 @@ namespace Kit.Settings.UI.ViewModels
             {
                 ValidationErrorMessage = error;
                 CanSave = false;
-                EditPortText = IsChinese ? "端口无效" : "Invalid port";
+                EditPortText = "UDPtest_ValidationInvalidPort".GetLocalizedOrFallback("Invalid port");
                 return;
             }
 
@@ -490,14 +479,14 @@ namespace Kit.Settings.UI.ViewModels
             string? ip = snapshot.RemoteIpv4;
             IpAddress = !string.IsNullOrEmpty(ip) ? ip : "--";
             IpAddressDescription = !string.IsNullOrEmpty(ip)
-                ? (IsChinese ? $"远端节点: {ip}" : $"Remote endpoint: {ip}")
-                : (IsChinese ? "未解析" : "Not resolved");
+                ? "UDPtest_RemoteEndpointFormat".FormatLocalized("Remote endpoint: {0}", ip)
+                : "UDPtest_NotResolved".GetLocalizedOrFallback("Not resolved");
 
             string? error = snapshot.LastError;
             LastError = !string.IsNullOrEmpty(error) ? error : "--";
             LastErrorDisplay = string.IsNullOrEmpty(error) || error == "--"
-                ? (IsChinese ? "最近错误: --" : "Last error: --")
-                : (IsChinese ? $"最近错误: {FormatErrorDisplay(error)}" : $"Last error: {FormatErrorDisplay(error)}");
+                ? "UDPtest_LastErrorEmpty".GetLocalizedOrFallback("Last error: --")
+                : "UDPtest_LastErrorFormat".FormatLocalized("Last error: {0}", FormatErrorDisplay(error));
 
             Status = snapshot.State;
 
@@ -523,7 +512,7 @@ namespace Kit.Settings.UI.ViewModels
                 ? $"{durationMilliseconds:F1} ms"
                 : $"Failed: {error ?? "timeout"}";
 
-            RecentBars.Add(new RecentProbeBarViewModel(success, durationMilliseconds, description));
+            RecentBars.Add(StatusBarViewModel.FromProbeResult(success, durationMilliseconds, description));
             while (RecentBars.Count > _recentBarCapacity)
             {
                 RecentBars.RemoveAt(0);
@@ -553,7 +542,7 @@ namespace Kit.Settings.UI.ViewModels
             IpAddress = "--";
             IpAddressDescription = string.Empty;
             LastError = "--";
-            LastErrorDisplay = "Last error: --";
+            LastErrorDisplay = "UDPtest_LastErrorEmpty".GetLocalizedOrFallback("Last error: --");
             Status = "Idle";
             StatusBrush = ThemeBrushHelper.SecondaryTextBrush;
             RecentBars.Clear();
@@ -568,13 +557,13 @@ namespace Kit.Settings.UI.ViewModels
 
             return error switch
             {
-                "tcp_timeout" or "stun_timeout" or "udp_echo_timeout" => "Timeout",
-                "tcp_dns" or "udp_dns" => "DNS Fail",
-                "tcp_connect" => "Connect Fail",
-                "tcp_tls" => "TLS Fail",
-                "stun_error_response" => "STUN Error",
-                "stun_invalid_response" => "Invalid STUN",
-                "cancelled" => "Cancelled",
+                "tcp_timeout" or "stun_timeout" or "udp_echo_timeout" => "UDPtest_ErrorTimeout".GetLocalizedOrFallback("Timeout"),
+                "tcp_dns" or "udp_dns" => "UDPtest_ErrorDns".GetLocalizedOrFallback("DNS Fail"),
+                "tcp_connect" => "UDPtest_ErrorConnect".GetLocalizedOrFallback("Connect Fail"),
+                "tcp_tls" => "UDPtest_ErrorTls".GetLocalizedOrFallback("TLS Fail"),
+                "stun_error_response" => "UDPtest_ErrorStun".GetLocalizedOrFallback("STUN Error"),
+                "stun_invalid_response" => "UDPtest_ErrorInvalidStun".GetLocalizedOrFallback("Invalid STUN"),
+                "cancelled" => "UDPtest_ErrorCancelled".GetLocalizedOrFallback("Cancelled"),
                 _ => error.Length > 12 ? error[..10] + "…" : error,
             };
         }

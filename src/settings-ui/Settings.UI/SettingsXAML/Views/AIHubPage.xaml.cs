@@ -70,36 +70,6 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         ViewModel.RefreshEnabledState();
     }
 
-    private void OnReadinessSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        bool narrow = e.NewSize.Width < 640;
-        Grid.SetRow(AiReadinessActions, narrow ? 1 : 0);
-        Grid.SetColumn(AiReadinessActions, narrow ? 1 : 2);
-        Grid.SetColumnSpan(AiReadinessActions, narrow ? 2 : 1);
-    }
-
-    private void OnAuditOverviewSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        bool narrow = e.NewSize.Width < 760;
-        Grid.SetColumnSpan(AuditScoreCard, narrow ? 2 : 1);
-        Grid.SetRow(AuditFindingsSummary, narrow ? 1 : 0);
-        Grid.SetColumn(AuditFindingsSummary, narrow ? 0 : 1);
-        Grid.SetColumnSpan(AuditFindingsSummary, narrow ? 2 : 1);
-    }
-
-    private void OnCommandHeaderSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        var grid = (Grid)sender;
-        var title = (FrameworkElement)grid.Children[0];
-        var actions = (FrameworkElement)grid.Children[1];
-        bool narrow = e.NewSize.Width < 960;
-        Grid.SetColumnSpan(title, narrow ? 2 : 1);
-        Grid.SetRow(actions, narrow ? 1 : 0);
-        Grid.SetColumn(actions, narrow ? 0 : 1);
-        Grid.SetColumnSpan(actions, narrow ? 2 : 1);
-        actions.HorizontalAlignment = narrow ? HorizontalAlignment.Left : HorizontalAlignment.Right;
-    }
-
     private void OnAiServiceSettingsClick(object sender, RoutedEventArgs e)
     {
         NavigationService.Navigate(typeof(GeneralPage), new NavigationParams("GeneralPageAiHubMasterCard"));
@@ -219,24 +189,24 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         try
         {
             var sb = new StringBuilder();
-            sb.AppendLine(CultureInfo.InvariantCulture, $"# {ViewModel.SecurityAuditTitle} - AI 诊断报告");
-            sb.AppendLine(CultureInfo.InvariantCulture, $"生成时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine("AIHub_CopyReportTitle".FormatLocalized("# {0} - AI Diagnostic Report", ViewModel.SecurityAuditTitle));
+            sb.AppendLine("AIHub_CopyReportGeneratedAt".FormatLocalized("Generated: {0}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture)));
             if (!string.IsNullOrWhiteSpace(ViewModel.AiReportMetaText))
             {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"执行环境: {ViewModel.AiReportMetaText}");
+                sb.AppendLine("AIHub_CopyReportEnvironment".FormatLocalized("Environment: {0}", ViewModel.AiReportMetaText));
             }
 
             if (!string.IsNullOrWhiteSpace(ViewModel.AiReportSummaryText))
             {
                 sb.AppendLine();
-                sb.AppendLine("## 摘要");
+                sb.AppendLine("AIHub_CopyReportSummaryHeading".GetLocalizedOrFallback("## Summary"));
                 sb.AppendLine(ViewModel.AiReportSummaryText);
             }
 
             if (ViewModel.AiReportFindings.Count > 0)
             {
                 sb.AppendLine();
-                sb.AppendLine(CultureInfo.InvariantCulture, $"## 详细诊断发现与处置建议 ({ViewModel.AiReportFindings.Count} 项)");
+                sb.AppendLine("AIHub_CopyReportFindingsHeading".FormatLocalized("## Diagnostic Findings and Recommendations ({0} items)", ViewModel.AiReportFindings.Count));
                 int index = 1;
                 foreach (var finding in ViewModel.AiReportFindings)
                 {
@@ -244,17 +214,17 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
                     sb.AppendLine(CultureInfo.InvariantCulture, $"### {index}. {finding.Title} [{finding.SeverityLabel}]");
                     if (!string.IsNullOrWhiteSpace(finding.EventId))
                     {
-                        sb.AppendLine(CultureInfo.InvariantCulture, $"- 标识: {finding.EventId}");
+                        sb.AppendLine("AIHub_CopyReportEventId".FormatLocalized("- Event ID: {0}", finding.EventId));
                     }
 
                     if (!string.IsNullOrWhiteSpace(finding.Description))
                     {
-                        sb.AppendLine(CultureInfo.InvariantCulture, $"- 详情: {finding.Description}");
+                        sb.AppendLine("AIHub_CopyReportDetails".FormatLocalized("- Details: {0}", finding.Description));
                     }
 
                     if (!string.IsNullOrWhiteSpace(finding.Recommendation))
                     {
-                        sb.AppendLine(CultureInfo.InvariantCulture, $"- 处置建议: {finding.Recommendation}");
+                        sb.AppendLine("AIHub_CopyReportRecommendation".FormatLocalized("- Recommendation: {0}", finding.Recommendation));
                     }
 
                     index++;
@@ -265,11 +235,11 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             dataPackage.SetText(sb.ToString());
             Clipboard.SetContent(dataPackage);
 
-            ViewModel.PostStatusNotification(AIHubPageViewModel.IsChinese ? "AI 诊断报告已成功复制到剪贴板。" : "AI diagnostic report copied to clipboard.", InfoBarSeverity.Success);
+            ViewModel.PostStatusNotification("AIHub_CopyReportSuccess".GetLocalizedOrFallback("AI diagnostic report copied to clipboard."), InfoBarSeverity.Success);
         }
         catch (Exception ex)
         {
-            ViewModel.PostStatusNotification((AIHubPageViewModel.IsChinese ? "复制失败: " : "Copy failed: ") + ex.Message, InfoBarSeverity.Error);
+            ViewModel.PostStatusNotification("AIHub_CopyReportFailed".FormatLocalized("Copy failed: {0}", ex.Message), InfoBarSeverity.Error);
         }
     }
 }

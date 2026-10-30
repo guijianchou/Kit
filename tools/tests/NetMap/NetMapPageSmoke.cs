@@ -443,13 +443,22 @@ internal static class NetMapPageSmoke
         var bitmap = new RenderTargetBitmap();
         await bitmap.RenderAsync(element);
         var pixels = await bitmap.GetPixelsAsync();
-        var folder = await StorageFolder.GetFolderFromPathAsync(Output);
-        var file = await folder.CreateFileAsync(name, CreationCollisionOption.ReplaceExisting);
-        using var stream = await file.OpenAsync(FileAccessMode.ReadWrite);
-        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
+        var encoded = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, encoded);
         var bytes = new byte[pixels.Length];
         using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(pixels)) reader.ReadBytes(bytes);
         encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied, (uint)bitmap.PixelWidth, (uint)bitmap.PixelHeight, 96, 96, bytes);
         await encoder.FlushAsync();
+
+        // Encode in memory and save through System.IO: WinRT StorageFolder/CreateFileAsync
+        // can fail with access-denied in host environments that restrict freshly built exes.
+        var png = new byte[encoded.Size];
+        using (var pngReader = new Windows.Storage.Streams.DataReader(encoded.GetInputStreamAt(0)))
+        {
+            await pngReader.LoadAsync((uint)encoded.Size);
+            pngReader.ReadBytes(png);
+        }
+
+        File.WriteAllBytes(Path.Combine(Output, name), png);
     }
 }

@@ -22,7 +22,7 @@
 
     <controls:SettingsPageControl x:Name="PageControl" x:Uid="SearchResults_Title">
         <controls:SettingsPageControl.ModuleContent>
-            <StackPanel Margin="0,-40,0,0" Orientation="Vertical">
+            <StackPanel Margin="0,-40,0,0" Orientation="Vertical" AutomationProperties.LiveSetting="Polite">
                 <controls:SettingsGroup
                     x:Uid="SearchResults_ModulesTitle"
                     Margin="0,-10,0,0"

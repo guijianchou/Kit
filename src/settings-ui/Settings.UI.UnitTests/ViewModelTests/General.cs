@@ -745,7 +745,7 @@ namespace ViewModelTests
 
             StringAssert.Contains(dashboard, "<Grid Margin=\"0,1\" ColumnSpacing=\"12\" MinHeight=\"21\">");
             StringAssert.Contains(overviewVm, "sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null");
-            StringAssert.Contains(usageBar, "\"Temperature\"");
+            StringAssert.Contains(usageBar, "UsageCategory.Temperature");
         }
 
         [TestMethod]

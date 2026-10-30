@@ -63,10 +63,8 @@ namespace Kit.Settings.UI.ViewModels
         private bool _isEnabled;
         private long _sessionStartedTimestamp;
 
-        private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-
         private MonitorRunState _state = MonitorRunState.Stopped;
-        private string _runStateText = IsChinese ? "已停止" : "Stopped";
+        private string _runStateText = "UDPtest_RunStateStopped".GetLocalizedOrFallback("Stopped");
         private Brush _runStateBrush;
         private string _sessionDurationText = "00:00:00";
         private bool _canStart = true;
@@ -75,22 +73,22 @@ namespace Kit.Settings.UI.ViewModels
         private int _refreshInterval = 1000;
 
         private UDPtestLineRowViewModel? _selectedLine;
-        private string _healthStateText = "IDLE";
+        private string _healthStateText = "UDPtest_HealthIdleState".GetLocalizedOrFallback("IDLE");
         private Brush _healthRingBrush;
-        private string _healthConditionText = IsChinese ? "空闲" : "Idle";
+        private string _healthConditionText = "UDPtest_HealthIdleCondition".GetLocalizedOrFallback("Idle");
         private string _qualityText = "--";
         private string _avgRttText = "--";
         private string _peakRttText = "--";
         private string _periodAvgText = "--";
-        private string _healthDetailText = IsChinese ? "请选择线路" : "Select a line";
+        private string _healthDetailText = "UDPtest_HealthSelectLine".GetLocalizedOrFallback("Select a line");
         private int _selectedPeriodSeconds = 60;
 
-        private string _udpAssessmentText = IsChinese ? "未启动" : "Not started";
-        private string _udpDetailText = IsChinese ? "4/4 已启用" : "4/4 enabled";
-        private string _tcpAssessmentText = IsChinese ? "未启动" : "Not started";
-        private string _tcpDetailText = IsChinese ? "2/2 已启用" : "2/2 enabled";
-        private string _pathSummaryText = IsChinese ? "未启动" : "Not started";
-        private string _nodeVerificationText = IsChinese ? "节点未验证" : "Node Unverified";
+        private string _udpAssessmentText = "UDPtest_AssessmentNotStarted".GetLocalizedOrFallback("Not started");
+        private string _udpDetailText = "UDPtest_EnabledCountFormat".FormatLocalized("4/4 enabled", 4, 4);
+        private string _tcpAssessmentText = "UDPtest_AssessmentNotStarted".GetLocalizedOrFallback("Not started");
+        private string _tcpDetailText = "UDPtest_EnabledCountFormat".FormatLocalized("2/2 enabled", 2, 2);
+        private string _pathSummaryText = "UDPtest_AssessmentNotStarted".GetLocalizedOrFallback("Not started");
+        private string _nodeVerificationText = "UDPtest_NodeUnverified".GetLocalizedOrFallback("Node Unverified");
         private string _nodeVerificationIcon = "\uE946";
         private Brush _nodeVerificationBrush;
 
@@ -198,7 +196,7 @@ namespace Kit.Settings.UI.ViewModels
                 CanStart = false;
                 CanStop = false;
                 CanClear = false;
-                RunStateText = IsChinese ? "已停止" : "Stopped";
+                RunStateText = "UDPtest_RunStateStopped".GetLocalizedOrFallback("Stopped");
                 RunStateBrush = ThemeBrushHelper.SecondaryTextBrush;
             }
             else
@@ -477,7 +475,7 @@ namespace Kit.Settings.UI.ViewModels
                 var definitions = Lines.Select(l => l.Definition).ToList();
                 if (!definitions.Any(d => d.IsEnabled))
                 {
-                    ShowError("Please enable at least one probe line before starting.", InfoBarSeverity.Warning);
+                    ShowError("UDPtest_EnableProbeLineRequired".GetLocalizedOrFallback("Please enable at least one probe line before starting."), InfoBarSeverity.Warning);
                     return;
                 }
 
@@ -490,7 +488,7 @@ namespace Kit.Settings.UI.ViewModels
             }
             catch (Exception ex)
             {
-                ShowError($"Failed to start: {ex.Message}", InfoBarSeverity.Error);
+                ShowError("UDPtest_StartFailedFormat".FormatLocalized("Failed to start: {0}", ex.Message), InfoBarSeverity.Error);
                 CanStart = true;
             }
         }
@@ -507,7 +505,7 @@ namespace Kit.Settings.UI.ViewModels
             }
             catch (Exception ex)
             {
-                ShowError($"Failed to stop: {ex.Message}", InfoBarSeverity.Error);
+                ShowError("UDPtest_StopFailedFormat".FormatLocalized("Failed to stop: {0}", ex.Message), InfoBarSeverity.Error);
             }
         }
 
@@ -533,7 +531,7 @@ namespace Kit.Settings.UI.ViewModels
             }
             catch (Exception ex)
             {
-                ShowError($"Failed to clear: {ex.Message}", InfoBarSeverity.Error);
+                ShowError("UDPtest_ClearFailedFormat".FormatLocalized("Failed to clear: {0}", ex.Message), InfoBarSeverity.Error);
             }
         }
 
@@ -574,7 +572,7 @@ namespace Kit.Settings.UI.ViewModels
             }
             catch (Exception ex)
             {
-                ShowError($"Initialization error: {ex.Message}", InfoBarSeverity.Error);
+                ShowError("UDPtest_InitFailedFormat".FormatLocalized("Initialization error: {0}", ex.Message), InfoBarSeverity.Error);
             }
         }
 
@@ -641,7 +639,7 @@ namespace Kit.Settings.UI.ViewModels
             UpdateAssessmentPresentation();
             if (_coordinator.State == MonitorRunState.Running)
             {
-                ShowError("Target updated. Stop and restart monitoring to apply target endpoint changes.", InfoBarSeverity.Informational);
+                ShowError("UDPtest_TargetUpdatedRestartRequired".GetLocalizedOrFallback("Target updated. Stop and restart monitoring to apply target endpoint changes."), InfoBarSeverity.Informational);
             }
         }
 
@@ -649,7 +647,7 @@ namespace Kit.Settings.UI.ViewModels
         {
             if (UdpLines.Count <= 1)
             {
-                ShowError("At least one UDP line must be kept.", InfoBarSeverity.Warning);
+                ShowError("UDPtest_KeepOneLineRequired".GetLocalizedOrFallback("At least one UDP line must be kept."), InfoBarSeverity.Warning);
                 return;
             }
 
@@ -676,7 +674,7 @@ namespace Kit.Settings.UI.ViewModels
                 catch (Exception ex)
                 {
                     row.SetEnabledSilently(!isEnabled);
-                    ShowError($"Failed to toggle line: {ex.Message}", InfoBarSeverity.Warning);
+                    ShowError("UDPtest_ToggleLineFailedFormat".FormatLocalized("Failed to toggle line: {0}", ex.Message), InfoBarSeverity.Warning);
                 }
             }
 
@@ -698,7 +696,7 @@ namespace Kit.Settings.UI.ViewModels
             }
             catch (Exception ex)
             {
-                ShowError($"Failed to save targets: {ex.Message}", InfoBarSeverity.Error);
+                ShowError("UDPtest_SaveTargetsFailedFormat".FormatLocalized("Failed to save targets: {0}", ex.Message), InfoBarSeverity.Error);
             }
         }
 
@@ -706,10 +704,10 @@ namespace Kit.Settings.UI.ViewModels
         {
             int tcpEnabled = TcpLines.Count(l => l.IsEnabled);
             int udpEnabled = UdpLines.Count(l => l.IsEnabled);
-            TcpDetailText = IsChinese ? $"{tcpEnabled}/{TcpLines.Count} 已启用" : $"{tcpEnabled}/{TcpLines.Count} enabled";
-            UdpDetailText = IsChinese ? $"{udpEnabled}/{UdpLines.Count} 已启用" : $"{udpEnabled}/{UdpLines.Count} enabled";
-            TcpLinksSummaryText = IsChinese ? $"{TcpLines.Count} 条链路" : $"{TcpLines.Count} LINKS";
-            UdpLinksSummaryText = IsChinese ? $"{UdpLines.Count} 条链路" : $"{UdpLines.Count} LINKS";
+            TcpDetailText = "UDPtest_EnabledCountFormat".FormatLocalized("{0}/{1} enabled", tcpEnabled, TcpLines.Count);
+            UdpDetailText = "UDPtest_EnabledCountFormat".FormatLocalized("{0}/{1} enabled", udpEnabled, UdpLines.Count);
+            TcpLinksSummaryText = "UDPtest_LinksSummaryFormat".FormatLocalized("{0} LINKS", TcpLines.Count);
+            UdpLinksSummaryText = "UDPtest_LinksSummaryFormat".FormatLocalized("{0} LINKS", UdpLines.Count);
         }
 
         private void OnSessionTimerTick(object? sender, object e)
@@ -726,10 +724,10 @@ namespace Kit.Settings.UI.ViewModels
                 _state = state;
                 RunStateText = state switch
                 {
-                    MonitorRunState.Running => IsChinese ? "运行中" : "Running",
-                    MonitorRunState.Starting => IsChinese ? "正在启动" : "Starting",
-                    MonitorRunState.Stopping => IsChinese ? "正在停止" : "Stopping",
-                    _ => IsChinese ? "已停止" : "Stopped",
+                    MonitorRunState.Running => "UDPtest_RunStateRunning".GetLocalizedOrFallback("Running"),
+                    MonitorRunState.Starting => "UDPtest_RunStateStarting".GetLocalizedOrFallback("Starting"),
+                    MonitorRunState.Stopping => "UDPtest_RunStateStopping".GetLocalizedOrFallback("Stopping"),
+                    _ => "UDPtest_RunStateStopped".GetLocalizedOrFallback("Stopped"),
                 };
 
                 RunStateBrush = state switch
@@ -784,47 +782,42 @@ namespace Kit.Settings.UI.ViewModels
             });
         }
 
+        private static string LocalizedUdpAssessment(string state) => state switch
+        {
+            "Supported / Stable" => "UDPtest_UdpAssessmentSupportedStable".GetLocalizedOrFallback(state),
+            "Supported / Unstable" => "UDPtest_UdpAssessmentSupportedUnstable".GetLocalizedOrFallback(state),
+            "Supported / Degraded" => "UDPtest_UdpAssessmentSupportedDegraded".GetLocalizedOrFallback(state),
+            "Unsupported" => "UDPtest_UdpAssessmentUnsupported".GetLocalizedOrFallback(state),
+            "Assessing" => "UDPtest_UdpAssessmentAssessing".GetLocalizedOrFallback(state),
+            _ => state,
+        };
+
         private void OnCoordinatorUdpAssessmentCommitted(UdpAssessment assessment)
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                if (IsChinese)
-                {
-                    UdpAssessmentText = assessment.State switch
-                    {
-                        "Supported / Stable" => "支持且稳定",
-                        "Supported / Unstable" => "支持但偶发丢包",
-                        "Supported / Degraded" => "支持但严重劣化",
-                        "Unsupported" => "不支持 UDP 出站",
-                        "Assessing" => "评估中",
-                        _ => assessment.State,
-                    };
-                    UdpDetailText = assessment.Detail;
-                }
-                else
-                {
-                    UdpAssessmentText = assessment.State;
-                    UdpDetailText = assessment.Detail;
-                }
-
+                UdpAssessmentText = LocalizedUdpAssessment(assessment.State);
+                UdpDetailText = assessment.Detail;
                 UpdateAssessmentPresentation();
             });
         }
+
+        private static string LocalizedNatType(string type) => type switch
+        {
+            "Endpoint-Independent Mapping" => "UDPtest_NatEim".GetLocalizedOrFallback(type),
+            "Address-Dependent Mapping" => "UDPtest_NatAdm".GetLocalizedOrFallback(type),
+            "Address and Port-Dependent Mapping" => "UDPtest_NatApdm".GetLocalizedOrFallback(type),
+            "Symmetric" => "UDPtest_NatSymmetric".GetLocalizedOrFallback(type),
+            "Open Internet" => "UDPtest_NatOpen".GetLocalizedOrFallback(type),
+            "Blocked" => "UDPtest_NatBlocked".GetLocalizedOrFallback(type),
+            _ => type,
+        };
 
         private void OnCoordinatorNatAssessmentCommitted(NatAssessment assessment)
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                NatTypeText = IsChinese ? assessment.Type switch
-                {
-                    "Endpoint-Independent Mapping" => "完全圆锥型 (EIM)",
-                    "Address-Dependent Mapping" => "受限圆锥型 (ADM)",
-                    "Address and Port-Dependent Mapping" => "端口受限圆锥型 (APDM)",
-                    "Symmetric" => "对称型 NAT",
-                    "Open Internet" => "公网开放",
-                    "Blocked" => "受阻断",
-                    _ => assessment.Type,
-                } : assessment.Type;
+                NatTypeText = LocalizedNatType(assessment.Type);
             });
         }
 
@@ -832,7 +825,7 @@ namespace Kit.Settings.UI.ViewModels
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
-                ShowError($"Monitoring error: {exception.Message}", InfoBarSeverity.Error);
+                ShowError("UDPtest_MonitoringErrorFormat".FormatLocalized("Monitoring error: {0}", exception.Message), InfoBarSeverity.Error);
             });
         }
 
@@ -848,21 +841,24 @@ namespace Kit.Settings.UI.ViewModels
         {
             if (SelectedLine is null)
             {
-                HealthStateText = IsChinese ? "空闲" : "IDLE";
+                HealthStateText = "UDPtest_HealthIdleState".GetLocalizedOrFallback("IDLE");
                 HealthStateFontSize = 15;
                 HealthRingBrush = ThemeBrushHelper.StrokeDefaultBrush;
-                HealthConditionText = IsChinese ? "空闲" : "Idle";
+                HealthConditionText = "UDPtest_HealthIdleCondition".GetLocalizedOrFallback("Idle");
                 QualityText = "--";
                 AvgRttText = "--";
                 PeakRttText = "--";
                 PeriodAvgText = "--";
-                HealthDetailText = IsChinese ? "请选择线路" : "Select a line";
+                HealthDetailText = "UDPtest_HealthSelectLine".GetLocalizedOrFallback("Select a line");
                 return;
             }
 
-            HealthDetailText = IsChinese
-                ? $"{SelectedLine.Name} | {SelectedLine.Target}:{SelectedLine.Port} | {SelectedLine.Counts} 次探测"
-                : $"{SelectedLine.Name} | {SelectedLine.Target}:{SelectedLine.Port} | {SelectedLine.Counts} probes";
+            HealthDetailText = "UDPtest_HealthDetailFormat".FormatLocalized(
+                "{0} | {1}:{2} | {3} probes",
+                SelectedLine.Name,
+                SelectedLine.Target,
+                SelectedLine.Port,
+                SelectedLine.Counts);
             QualityText = SelectedLine.Quality;
             AvgRttText = SelectedLine.AverageRtt;
 
@@ -891,12 +887,12 @@ namespace Kit.Settings.UI.ViewModels
 
             string displayState = SelectedLine.Status switch
             {
-                "Stopped" or "Disabled" => IsChinese ? "已停止" : "IDLE",
-                "Warming" => IsChinese ? "预热中" : "WARMING",
-                "Internal Error" => IsChinese ? "异常" : "ERROR",
-                "OK" => IsChinese ? "正常" : "OK",
-                "Degraded" => IsChinese ? "劣化" : "DEGRADED",
-                "Offline" => IsChinese ? "离线" : "OFFLINE",
+                "Stopped" or "Disabled" => "UDPtest_StateIdle".GetLocalizedOrFallback("IDLE"),
+                "Warming" => "UDPtest_StateWarming".GetLocalizedOrFallback("WARMING"),
+                "Internal Error" => "UDPtest_StateError".GetLocalizedOrFallback("ERROR"),
+                "OK" => "UDPtest_StateOk".GetLocalizedOrFallback("OK"),
+                "Degraded" => "UDPtest_StateDegraded".GetLocalizedOrFallback("DEGRADED"),
+                "Offline" => "UDPtest_StateOffline".GetLocalizedOrFallback("OFFLINE"),
                 _ => SelectedLine.Status,
             };
             HealthStateText = displayState;
@@ -904,12 +900,12 @@ namespace Kit.Settings.UI.ViewModels
             HealthRingBrush = SelectedLine.StatusBrush;
             HealthConditionText = SelectedLine.Status switch
             {
-                "Stopped" or "Disabled" => IsChinese ? "空闲" : "Idle",
-                "Warming" => IsChinese ? "预热中" : "Warming",
-                "Internal Error" => IsChinese ? "异常" : "Error",
-                "OK" => IsChinese ? "正常" : "Normal",
-                "Degraded" => IsChinese ? "劣化" : "Degraded",
-                "Offline" => IsChinese ? "离线" : "Offline",
+                "Stopped" or "Disabled" => "UDPtest_ConditionIdle".GetLocalizedOrFallback("Idle"),
+                "Warming" => "UDPtest_ConditionWarming".GetLocalizedOrFallback("Warming"),
+                "Internal Error" => "UDPtest_ConditionError".GetLocalizedOrFallback("Error"),
+                "OK" => "UDPtest_ConditionNormal".GetLocalizedOrFallback("Normal"),
+                "Degraded" => "UDPtest_ConditionDegraded".GetLocalizedOrFallback("Degraded"),
+                "Offline" => "UDPtest_ConditionOffline".GetLocalizedOrFallback("Offline"),
                 _ => displayState,
             };
         }
@@ -917,17 +913,17 @@ namespace Kit.Settings.UI.ViewModels
         private void UpdateAssessmentPresentation()
         {
             var enabledTcp = TcpLines.Where(l => l.IsEnabled).ToList();
-            TcpDetailText = IsChinese ? $"{enabledTcp.Count}/{TcpLines.Count} 已启用" : $"{enabledTcp.Count}/{TcpLines.Count} enabled";
+            TcpDetailText = "UDPtest_EnabledCountFormat".FormatLocalized("{0}/{1} enabled", enabledTcp.Count, TcpLines.Count);
 
             var enabledUdp = UdpLines.Where(l => l.IsEnabled).ToList();
-            UdpDetailText = IsChinese ? $"{enabledUdp.Count}/{UdpLines.Count} 已启用" : $"{enabledUdp.Count}/{UdpLines.Count} enabled";
+            UdpDetailText = "UDPtest_EnabledCountFormat".FormatLocalized("{0}/{1} enabled", enabledUdp.Count, UdpLines.Count);
 
             if (_coordinator.State != MonitorRunState.Running)
             {
                 if (UdpAssessmentText is "Not started" or "未启动")
                 {
-                    TcpAssessmentText = IsChinese ? "未启动" : "Not started";
-                    PathSummaryText = IsChinese ? "未启动" : "Not started";
+                    TcpAssessmentText = "UDPtest_AssessmentNotStarted".GetLocalizedOrFallback("Not started");
+                    PathSummaryText = "UDPtest_AssessmentNotStarted".GetLocalizedOrFallback("Not started");
                 }
 
                 return;
@@ -936,29 +932,29 @@ namespace Kit.Settings.UI.ViewModels
             string tcpAssessment;
             if (enabledTcp.Count == 0)
             {
-                tcpAssessment = IsChinese ? "未监控" : "Not Monitored";
+                tcpAssessment = "UDPtest_TcpAssessmentNotMonitored".GetLocalizedOrFallback("Not Monitored");
             }
             else if (enabledTcp.All(l => l.Status == "OK"))
             {
                 tcpAssessment = enabledTcp.Count > 1
-                    ? (IsChinese ? "可用且稳定" : "Available / Stable")
-                    : (IsChinese ? "单目标稳定" : "Available / Single-Target Stable");
+                    ? "UDPtest_TcpAssessmentStable".GetLocalizedOrFallback("Available / Stable")
+                    : "UDPtest_TcpAssessmentSingleStable".GetLocalizedOrFallback("Available / Single-Target Stable");
             }
             else if (enabledTcp.Any(l => l.Status is "OK" or "DEGRADED"))
             {
-                tcpAssessment = IsChinese ? "部分不稳定" : "Available / Partial or Unstable";
+                tcpAssessment = "UDPtest_TcpAssessmentPartial".GetLocalizedOrFallback("Available / Partial or Unstable");
             }
             else if (enabledTcp.All(l => l.Status == "DOWN"))
             {
-                tcpAssessment = IsChinese ? "不可用" : "Unavailable";
+                tcpAssessment = "UDPtest_TcpAssessmentUnavailable".GetLocalizedOrFallback("Unavailable");
             }
             else if (enabledTcp.Any(l => l.Status == "Internal Error"))
             {
-                tcpAssessment = IsChinese ? "内部错误" : "Unknown / Internal Error";
+                tcpAssessment = "UDPtest_TcpAssessmentInternalError".GetLocalizedOrFallback("Unknown / Internal Error");
             }
             else
             {
-                tcpAssessment = IsChinese ? "预热中" : "Warming";
+                tcpAssessment = "UDPtest_TcpAssessmentWarming".GetLocalizedOrFallback("Warming");
             }
 
             TcpAssessmentText = tcpAssessment;
@@ -968,14 +964,14 @@ namespace Kit.Settings.UI.ViewModels
             PathSummaryText = (tcpAvailable, udpAvailable) switch
             {
                 (true, true) when (tcpAssessment == "Available / Stable" || tcpAssessment == "可用且稳定")
-                    && (udpAssessment == "Supported / Stable" || udpAssessment == "支持且稳定") => IsChinese ? "TCP 与 UDP 稳定" : "TCP + UDP Stable",
-                (true, true) => IsChinese ? "TCP 与 UDP 可用" : "TCP + UDP Available",
-                (true, false) when udpAssessment.Contains("Unsupported") || udpAssessment.Contains("不支持") => IsChinese ? "TCP 可用，UDP 不受支持" : "TCP Available / UDP Unsupported",
-                (true, false) => IsChinese ? "TCP 可用，UDP 评估中" : "TCP Available / UDP Assessing",
-                (false, true) when tcpAssessment.Contains("Unavailable") || tcpAssessment.Contains("不可用") => IsChinese ? "UDP 可用，TCP 不可用" : "UDP Available / TCP Unavailable",
+                    && (udpAssessment == "Supported / Stable" || udpAssessment == "支持且稳定") => "UDPtest_PathStable".GetLocalizedOrFallback("TCP + UDP Stable"),
+                (true, true) => "UDPtest_PathAvailable".GetLocalizedOrFallback("TCP + UDP Available"),
+                (true, false) when udpAssessment.Contains("Unsupported") || udpAssessment.Contains("不支持") => "UDPtest_PathUdpUnsupported".GetLocalizedOrFallback("TCP Available / UDP Unsupported"),
+                (true, false) => "UDPtest_PathUdpAssessing".GetLocalizedOrFallback("TCP Available / UDP Assessing"),
+                (false, true) when tcpAssessment.Contains("Unavailable") || tcpAssessment.Contains("不可用") => "UDPtest_PathTcpUnavailable".GetLocalizedOrFallback("UDP Available / TCP Unavailable"),
                 _ when tcpAssessment.Contains("Unknown") || tcpAssessment.Contains("内部错误")
-                    || udpAssessment.Contains("Unknown") => IsChinese ? "链路未知" : "Path Unknown",
-                _ => IsChinese ? "评估中" : "Assessing",
+                    || udpAssessment.Contains("Unknown") => "UDPtest_PathUnknown".GetLocalizedOrFallback("Path Unknown"),
+                _ => "UDPtest_PathAssessing".GetLocalizedOrFallback("Assessing"),
             };
         }
 
@@ -990,8 +986,8 @@ namespace Kit.Settings.UI.ViewModels
                         .Select(l => new StunEgressEvidence(l.IsEnabled, l.IpAddress)));
 
             NodeVerificationText = verified
-                ? (IsChinese ? "节点已验证" : "Node Verified")
-                : (IsChinese ? "节点未验证" : "Node Unverified");
+                ? "UDPtest_NodeVerified".GetLocalizedOrFallback("Node Verified")
+                : "UDPtest_NodeUnverified".GetLocalizedOrFallback("Node Unverified");
             NodeVerificationIcon = verified ? "\uE73E" : "\uE946";
             NodeVerificationBrush = verified
                 ? ThemeBrushHelper.SuccessBrush

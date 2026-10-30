@@ -50,10 +50,7 @@
                     <!-- ============================================================== -->
                     <!-- 1. HERO MASTER GLASS CARD: Server Toggle & Live Telemetry Bar  -->
                     <!-- ============================================================== -->
-                    <Border CornerRadius="8"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1">
+                    <Border Style="{StaticResource KitHeroSurfaceStyle}">
                         <StackPanel Spacing="0">
                             <!-- Master Enable Toggle with GPO -->
                             <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
@@ -112,7 +109,7 @@
                                     </StackPanel>
 
                                     <!-- Quick Refresh Action on Right -->
-                                    <Button Grid.Column="2" x:Uid="Localserver_RefreshButton" AutomationProperties.Name="Refresh telemetry" ToolTipService.ToolTip="Refresh status and resource usage"
+                                    <Button Grid.Column="2" x:Uid="Localserver_RefreshButton"
                                             Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}"
                                             Style="{StaticResource KitCompactToolbarButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -153,26 +150,26 @@
                                     </Border>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Button AutomationProperties.Name="Add service" Click="AddLine_Click" IsEnabled="{x:Bind ViewModel.CanAddLine, Mode=OneWay}" Style="{StaticResource KitPrimaryActionButtonStyle}" ToolTipService.ToolTip="Add a new local service">
+                                    <Button x:Uid="Localserver_AddServiceButton" Click="AddLine_Click" IsEnabled="{x:Bind ViewModel.CanAddLine, Mode=OneWay}" Style="{StaticResource KitPrimaryActionButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE710;" FontSize="12" />
                                             <TextBlock x:Uid="Localserver_AddLineButtonText" FontSize="13" Text="Add service" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button AutomationProperties.Name="Start all" Click="StartAll_Click" IsEnabled="{x:Bind ViewModel.CanStartAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}" ToolTipService.ToolTip="Start all registered services">
+                                    <Button x:Uid="Localserver_StartAllServicesButton" Click="StartAll_Click" IsEnabled="{x:Bind ViewModel.CanStartAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE768;" FontSize="12" Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
                                             <TextBlock x:Uid="Localserver_StartAllButtonText" FontSize="13" Text="Start all" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button AutomationProperties.Name="Stop all" Click="StopAll_Click" IsEnabled="{x:Bind ViewModel.CanStopAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}" ToolTipService.ToolTip="Stop all running services">
+                                    <Button x:Uid="Localserver_StopAllServicesButton" Click="StopAll_Click" IsEnabled="{x:Bind ViewModel.CanStopAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE71A;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                             <TextBlock x:Uid="Localserver_StopAllButtonText" FontSize="13" Text="Stop all" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                     <Border Width="1" Height="20" Margin="2,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                    <Button AutomationProperties.Name="Refresh status" ToolTipService.ToolTip="Refresh status and resource usage" Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}" Style="{StaticResource KitIconButtonStyle}">
+                                    <Button x:Uid="Localserver_RefreshStatusButton" Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}" Style="{StaticResource KitIconButtonStyle}">
                                         <FontIcon FontSize="13" Glyph="&#xE72C;" />
                                     </Button>
                                 </StackPanel>
@@ -180,11 +177,8 @@
 
                             <!-- Empty State Card -->
                             <Border
+                                Style="{StaticResource KitCardSurfaceStyle}"
                                 Padding="24"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource OverlayCornerRadius}"
                                 Visibility="{x:Bind views:LocalserverPage.GetEmptyVisibility(ViewModel.Lines.Count), Mode=OneWay}">
                                 <StackPanel Spacing="8">
                                     <TextBlock x:Uid="Localserver_EmptyLinesTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
@@ -193,13 +187,10 @@
                             </Border>
 
                             <!-- Services Table Container -->
-                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="{StaticResource OverlayCornerRadius}">
+                            <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="0">
                                 <StackPanel Spacing="0">
                                     <!-- Table Header -->
-                                    <Grid Padding="16,10" ColumnSpacing="10" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                    <Grid Padding="16,11,16,7" ColumnSpacing="10" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="1.1*" MinWidth="96" />
                                             <ColumnDefinition Width="0.5*" MinWidth="48" />
@@ -280,9 +271,8 @@
                                                         <!-- Row 0: Actions Column -->
                                                         <StackPanel Grid.Row="0" Grid.Column="7" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                             <ToggleSwitch
-                                                                MinWidth="0"
+                                                                Style="{StaticResource RightAlignedCompactToggleSwitchStyle}"
                                                                 Width="40"
-                                                                Height="36"
                                                                 Margin="0,0,4,0"
                                                                 VerticalAlignment="Center"
                                                                 OnContent=""
@@ -291,15 +281,15 @@
                                                                 IsEnabled="{x:Bind CanToggle, Mode=OneWay}"
                                                                 AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
                                                             <Button
+                                                                x:Uid="Localserver_ConfigureButton"
                                                                 Style="{StaticResource KitSubtleIconButtonStyle}"
                                                                 Click="ToggleConfigExpanded_Click"
-                                                                DataContext="{x:Bind}"
-                                                                ToolTipService.ToolTip="Configure service">
+                                                                DataContext="{x:Bind}">
                                                                 <FontIcon FontSize="12" Glyph="{x:Bind ExpandGlyph, Mode=OneWay}" />
                                                             </Button>
                                                             <Button
-                                                                Style="{StaticResource KitSubtleIconButtonStyle}"
-                                                                ToolTipService.ToolTip="More options">
+                                                                x:Uid="Localserver_MoreOptionsButton"
+                                                                Style="{StaticResource KitSubtleIconButtonStyle}">
                                                                 <FontIcon FontSize="14" Glyph="&#xE712;" />
                                                                 <Button.Flyout>
                                                                     <MenuFlyout>
@@ -342,7 +332,7 @@
                                                                 </ItemsPanelTemplate>
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
-                                                                <DataTemplate x:DataType="viewModels:RecentBarViewModel">
+                                                                <DataTemplate x:DataType="viewModels:StatusBarViewModel">
                                                                     <Border Height="{x:Bind BarHeight}" Width="5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="2" ToolTipService.ToolTip="{x:Bind Description}" />
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
@@ -506,12 +496,11 @@
                                             Width="200"
                                             Height="32"
                                             Padding="10,0"
-                                            CornerRadius="6"
+                                            CornerRadius="4"
                                             DisplayMemberPath="Name"
                                             FontSize="12"
                                             ItemsSource="{x:Bind ViewModel.Lines, Mode=OneWay}"
-                                            SelectedItem="{x:Bind ViewModel.SelectedLine, Mode=TwoWay}"
-                                            ToolTipService.ToolTip="Select service to inspect" />
+                                            SelectedItem="{x:Bind ViewModel.SelectedLine, Mode=TwoWay}" />
                                     </Grid>
 
                                     <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -594,7 +583,7 @@
                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                                     <FontIcon Glyph="{x:Bind StatusGlyph}" FontSize="11" Foreground="{x:Bind ForegroundBrush}" VerticalAlignment="Center" />
                                                                     <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{x:Bind ForegroundBrush}" Text="{x:Bind Label}" />
-                                                                    <Button AutomationProperties.Name="Fix" Width="22" Height="22" CornerRadius="4" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Visibility="{x:Bind FixVisibility}">
+                                                                    <Button x:Uid="Localserver_FixButton" Width="28" Height="28" CornerRadius="4" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Visibility="{x:Bind FixVisibility}">
                                                                         <FontIcon FontSize="10" Glyph="&#xE712;" />
                                                                         <Button.Flyout>
                                                                             <MenuFlyout>
@@ -640,12 +629,13 @@
                                                         </Grid>
                                                     </Border>
                                                     <local:UsageProgressBar
+                                                        x:Uid="Localserver_CpuUsageBar"
                                                         Height="4"
                                                         CornerRadius="2"
                                                         Background="{ThemeResource ControlFillColorDefaultBrush}"
                                                         Maximum="100"
                                                         TargetValue="{x:Bind ViewModel.EnvCpuPercent, Mode=OneWay}"
-                                                        AutomationProperties.Name="CPU"
+                                                        local:UsageProgressBar.UsageCategory="Cpu"
                                                         AutomationProperties.HelpText="{x:Bind ViewModel.EnvCpuText, Mode=OneWay}" />
                                                 </StackPanel>
 
@@ -659,12 +649,13 @@
                                                         <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.EnvMemoryText, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontWeight="SemiBold" FontSize="12.5" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
                                                     </Grid>
                                                     <local:UsageProgressBar
+                                                        x:Uid="Localserver_MemoryUsageBar"
                                                         Height="6"
                                                         CornerRadius="3"
                                                         Background="{ThemeResource ControlFillColorDefaultBrush}"
                                                         Maximum="100"
                                                         TargetValue="{x:Bind ViewModel.EnvMemoryPercent, Mode=OneWay}"
-                                                        AutomationProperties.Name="Memory"
+                                                        local:UsageProgressBar.UsageCategory="Memory"
                                                         AutomationProperties.HelpText="{x:Bind ViewModel.EnvMemoryText, Mode=OneWay}" />
                                                 </StackPanel>
 
@@ -689,19 +680,15 @@
                             <!-- ============================================================== -->
                             <Border
                                 Margin="0,4,0,0"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource OverlayCornerRadius}">
+                                Style="{StaticResource KitCardSurfaceStyle}"
+                                Padding="0">
                                 <Grid RowDefinitions="Auto,Auto">
                                     <!-- Header -->
                                     <Grid Height="44" Padding="14,0" ColumnDefinitions="Auto,Auto,*,Auto">
                                         <Button
-                                            Width="30"
-                                            Height="30"
+                                            x:Uid="Localserver_LogToggleButton"
                                             Style="{StaticResource KitCompactIconButtonStyle}"
-                                            Click="ToggleLogPanel_Click"
-                                            ToolTipService.ToolTip="Toggle output console">
+                                            Click="ToggleLogPanel_Click">
                                             <FontIcon Glyph="{x:Bind ViewModel.LogToggleGlyph, Mode=OneWay}" FontSize="12" />
                                         </Button>
                                         <TextBlock Grid.Column="1" x:Uid="Localserver_OutputHeader" Margin="8,0,0,0" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
@@ -713,18 +700,17 @@
                                                 Padding="10,0"
                                                 FontSize="12"
                                                 x:Uid="Localserver_LogFollowToggle"
-                                                IsChecked="{x:Bind ViewModel.IsLogFollowEnabled, Mode=TwoWay}"
-                                                ToolTipService.ToolTip="Auto scroll to latest log" />
+                                                IsChecked="{x:Bind ViewModel.IsLogFollowEnabled, Mode=TwoWay}" />
                                             <Button
+                                                x:Uid="Localserver_OpenLogFolderButton"
                                                 Style="{StaticResource KitCompactIconButtonStyle}"
-                                                Click="OpenLogFolder_Click"
-                                                ToolTipService.ToolTip="Open log directory">
+                                                Click="OpenLogFolder_Click">
                                                 <FontIcon Glyph="&#xE8B7;" FontSize="13" />
                                             </Button>
                                             <Button
+                                                x:Uid="Localserver_ClearLogsButton"
                                                 Style="{StaticResource KitCompactIconButtonStyle}"
-                                                Click="ClearLogs_Click"
-                                                ToolTipService.ToolTip="Clear current logs">
+                                                Click="ClearLogs_Click">
                                                 <FontIcon Glyph="&#xE74D;" FontSize="13" />
                                             </Button>
                                         </StackPanel>

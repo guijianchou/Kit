@@ -719,14 +719,4 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
     </Style>
-
-    <!-- UDPtest 图表周期按钮（1m / 5m / 30m / 1h，统一宽度） -->
-    <Style x:Key="KitPeriodButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
-        <Setter Property="Width" Value="42" />
-        <Setter Property="Height" Value="26" />
-        <Setter Property="MinHeight" Value="26" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="CornerRadius" Value="4" />
-        <Setter Property="FontSize" Value="11" />
-    </Style>
 </ResourceDictionary>

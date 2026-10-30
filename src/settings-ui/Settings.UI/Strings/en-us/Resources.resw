@@ -58,10 +58,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Attribution_Rooler.Text" xml:space="preserve">
-    <value>Inspired by Rooler</value>
-    <comment>Rooler is a name of the tool.</comment>
-  </data>
   <data name="Shell_SearchBox.PlaceholderText" xml:space="preserve">
     <value>Search for settings</value>
     <comment>Placeholder in settings search box</comment>
@@ -93,12 +89,6 @@
   <data name="Shortcut.Header" xml:space="preserve">
     <value>Shortcut</value>
   </data>
-  <data name="RemapKeysList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Current key remappings</value>
-  </data>
-  <data name="RemapShortcutsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Current shortcut remappings</value>
-  </data>
   <data name="General.ModuleTitle" xml:space="preserve">
     <value>Settings</value>
   </data>
@@ -129,17 +119,6 @@
   <data name="General_SettingsBackupAndRestore_ButtonSelectLocation.Text" xml:space="preserve">
     <value>Select folder</value>
   </data>
-  <data name="GeneralPage_PrivacyStatement_URL.Text" xml:space="preserve">
-    <value>Privacy statement</value>
-  </data>
-  <data name="GeneralPage_ReportAbug.Text" xml:space="preserve">
-    <value>Report a bug</value>
-    <comment>Report an issue inside powertoys</comment>
-  </data>
-  <data name="GeneralPage_RequestAFeature_URL.Text" xml:space="preserve">
-    <value>Request a feature</value>
-    <comment>Tell our team what we should build</comment>
-  </data>
   <data name="GeneralPage_RestartAsAdmin_Button.Content" xml:space="preserve">
     <value>Restart Kit as administrator</value>
     <comment>running Kit as a higher level user, account is typically referred to as an admin / administrator</comment>
@@ -153,20 +132,11 @@
   <data name="GeneralPage_WarningsElevatedApps.Content" xml:space="preserve">
     <value>Show a warning for functionality issues when running alongside elevated applications</value>
   </data>
-  <data name="ExtendedContextMenuInfo.Title" xml:space="preserve">
-    <value>Press Shift + right-click on files to open the extended context menu</value>
-  </data>
-  <data name="OpenSource_Notice.Text" xml:space="preserve">
-    <value>Open-source notice</value>
-  </data>
   <data name="Appearance_Behavior.Header" xml:space="preserve">
     <value>Appearance &amp; behavior</value>
   </data>
   <data name="StartupAndPermissions.Header" xml:space="preserve">
     <value>Startup &amp; permissions</value>
-  </data>
-  <data name="Admin_Mode.Header" xml:space="preserve">
-    <value>Administrator mode</value>
   </data>
   <data name="General_SettingsBackupAndRestoreTitle.Header" xml:space="preserve">
     <value>Back up &amp; restore</value>
@@ -176,12 +146,6 @@
   </data>
   <data name="General_SettingsBackupAndRestore.Description" xml:space="preserve">
     <value>Kit will restart automatically if needed</value>
-  </data>
-  <data name="ImagesSizesListView.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Image Size</value>
-  </data>
-  <data name="RemoveItem.Text" xml:space="preserve">
-    <value>Delete</value>
   </data>
   <data name="File.Header" xml:space="preserve">
     <value>File</value>
@@ -243,9 +207,6 @@
   <data name="General_VersionAndUpdate.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Version and updates</value>
   </data>
-  <data name="Encoding.Header" xml:space="preserve">
-    <value>Encoding</value>
-  </data>
   <data name="General.ModuleDescription" xml:space="preserve">
     <value>Personalize Kit, manage startup and appearance, and configure shared services.</value>
     <comment>Kit is the local project name. PowerToys is the upstream project name.</comment>
@@ -269,163 +230,6 @@
     <value>Windows color settings</value>
     <comment>Windows refers to the Operating system</comment>
   </data>
-  <data name="ColorFormats.Header" xml:space="preserve">
-    <value>Picker behavior</value>
-  </data>
-  <data name="KBM_KeysCannotBeRemapped.Text" xml:space="preserve">
-    <value>Learn more about remapping limitations</value>
-    <comment>This is a link that will discuss what is and is not possible for Keyboard manager to remap</comment>
-  </data>
-  <data name="MoveUp.Text" xml:space="preserve">
-    <value>Move up</value>
-  </data>
-  <data name="MoveDown.Text" xml:space="preserve">
-    <value>Move down</value>
-  </data>
-  <data name="NewColorFormat.Header" xml:space="preserve">
-    <value>Format</value>
-  </data>
-  <data name="NewColorName.Header" xml:space="preserve">
-    <value>Name</value>
-  </data>
-  <data name="AddCustomColorFormat" xml:space="preserve">
-    <value>Add custom color format</value>
-  </data>
-  <data name="ColorFormatSave" xml:space="preserve">
-    <value>Save</value>
-  </data>
-  <data name="EditCustomColorFormat" xml:space="preserve">
-    <value>Edit custom color format</value>
-  </data>
-  <data name="ColorFormatUpdate" xml:space="preserve">
-    <value>Update</value>
-  </data>
-  <data name="CustomColorFormatDefaultName" xml:space="preserve">
-    <value>My Format</value>
-  </data>
-  <data name="ColorFormatDialog.SecondaryButtonText" xml:space="preserve">
-    <value>Cancel</value>
-  </data>
-  <data name="ColorFormatEditorHelpline1.Text" xml:space="preserve">
-    <value>The following parameters can be used:</value>
-  </data>
-  <data name="Help_red" xml:space="preserve">
-    <value>red</value>
-  </data>
-  <data name="Help_green" xml:space="preserve">
-    <value>green</value>
-  </data>
-  <data name="Help_blue" xml:space="preserve">
-    <value>blue</value>
-  </data>
-  <data name="Help_alpha" xml:space="preserve">
-    <value>alpha</value>
-  </data>
-  <data name="Help_cyan" xml:space="preserve">
-    <value>cyan</value>
-  </data>
-  <data name="Help_magenta" xml:space="preserve">
-    <value>magenta</value>
-  </data>
-  <data name="Help_yellow" xml:space="preserve">
-    <value>yellow</value>
-  </data>
-  <data name="Help_black_key" xml:space="preserve">
-    <value>black key</value>
-  </data>
-  <data name="Help_hue" xml:space="preserve">
-    <value>hue</value>
-  </data>
-  <data name="Help_hueNat" xml:space="preserve">
-    <value>hue (natural)</value>
-  </data>
-  <data name="Help_saturationI" xml:space="preserve">
-    <value>saturation (HSI)</value>
-  </data>
-  <data name="Help_saturationL" xml:space="preserve">
-    <value>saturation (HSL)</value>
-  </data>
-  <data name="Help_saturationB" xml:space="preserve">
-    <value>saturation (HSB)</value>
-  </data>
-  <data name="Help_brightness" xml:space="preserve">
-    <value>brightness</value>
-  </data>
-  <data name="Help_intensity" xml:space="preserve">
-    <value>intensity</value>
-  </data>
-  <data name="Help_lightnessNat" xml:space="preserve">
-    <value>lightness (nat)</value>
-  </data>
-  <data name="Help_lightnessCIE" xml:space="preserve">
-    <value>lightness (CIE)</value>
-  </data>
-  <data name="Help_value" xml:space="preserve">
-    <value>value</value>
-  </data>
-  <data name="Help_whiteness" xml:space="preserve">
-    <value>whiteness</value>
-  </data>
-  <data name="Help_blackness" xml:space="preserve">
-    <value>blackness</value>
-  </data>
-  <data name="Help_chromaticityACIE" xml:space="preserve">
-    <value>chromaticity A (CIE Lab)</value>
-  </data>
-  <data name="Help_chromaticityBCIE" xml:space="preserve">
-    <value>chromaticity B (CIE Lab)</value>
-  </data>
-  <data name="Help_X_value" xml:space="preserve">
-    <value>X value</value>
-  </data>
-  <data name="Help_Y_value" xml:space="preserve">
-    <value>Y value</value>
-  </data>
-  <data name="Help_Z_value" xml:space="preserve">
-    <value>Z value</value>
-  </data>
-  <data name="Help_decimal_value_RGB" xml:space="preserve">
-    <value>decimal value (RGB)</value>
-  </data>
-  <data name="Help_decimal_value_BGR" xml:space="preserve">
-    <value>decimal value (BGR)</value>
-  </data>
-  <data name="Help_color_name" xml:space="preserve">
-    <value>color name</value>
-  </data>
-  <data name="ColorFormatEditorHelpline2.Text" xml:space="preserve">
-    <value>The red, green, blue and alpha values can be formatted to the following formats:</value>
-  </data>
-  <data name="Help_byte" xml:space="preserve">
-    <value>byte value (default)</value>
-  </data>
-  <data name="Help_hexL1" xml:space="preserve">
-    <value>hex lowercase one digit</value>
-  </data>
-  <data name="Help_hexU1" xml:space="preserve">
-    <value>hex uppercase one digit</value>
-  </data>
-  <data name="Help_hexL2" xml:space="preserve">
-    <value>hex lowercase two digits</value>
-  </data>
-  <data name="Help_hexU2" xml:space="preserve">
-    <value>hex uppercase two digits</value>
-  </data>
-  <data name="Help_floatWith" xml:space="preserve">
-    <value>float with leading zero</value>
-  </data>
-  <data name="Help_floatWithout" xml:space="preserve">
-    <value>float without leading zero</value>
-  </data>
-  <data name="ColorFormatEditorHelpline3.Text" xml:space="preserve">
-    <value>The lightness (CIE), chromaticity A (CIE Lab) and chromaticity B (CIE Lab) values can be formatted to the following formats:</value>
-  </data>
-  <data name="Help_integer" xml:space="preserve">
-    <value>rounded to the nearest integer</value>
-  </data>
-  <data name="ColorFormatEditorHelpline4.Text" xml:space="preserve">
-    <value>Example:  %ReX means red value in hex uppercase two digits format.</value>
-  </data>
   <data name="Activation_Shortcut.Header" xml:space="preserve">
     <value>Activation shortcut</value>
   </data>
@@ -434,21 +238,6 @@
   </data>
   <data name="PasteAsPlainText_Shortcut.Header" xml:space="preserve">
     <value>Paste as plain text directly</value>
-  </data>
-  <data name="CustomActionDialog.SecondaryButtonText" xml:space="preserve">
-    <value>Cancel</value>
-  </data>
-  <data name="AddCustomAction" xml:space="preserve">
-    <value>Add custom action</value>
-  </data>
-  <data name="CustomActionSave" xml:space="preserve">
-    <value>Save</value>
-  </data>
-  <data name="EditCustomAction" xml:space="preserve">
-    <value>Edit custom action</value>
-  </data>
-  <data name="CustomActionUpdate" xml:space="preserve">
-    <value>Update</value>
   </data>
   <data name="PasteAsMarkdown_Shortcut.Header" xml:space="preserve">
     <value>Paste as Markdown directly</value>
@@ -459,9 +248,6 @@
   <data name="ImageToText.Header" xml:space="preserve">
     <value>Image to text</value>
   </data>
-  <data name="PasteAsFile.Header" xml:space="preserve">
-    <value>Paste as file</value>
-  </data>
   <data name="PasteAsTxtFile.Header" xml:space="preserve">
     <value>Paste as .txt file</value>
   </data>
@@ -471,9 +257,6 @@
   <data name="PasteAsHtmlFile.Header" xml:space="preserve">
     <value>Paste as .html file</value>
   </data>
-  <data name="Transcode.Header" xml:space="preserve">
-    <value>Transcode audio / video</value>
-  </data>
   <data name="TranscodeToMp3.Header" xml:space="preserve">
     <value>Transcode to .mp3</value>
   </data>
@@ -482,12 +265,6 @@
   </data>
   <data name="ReleaseNotes.Content" xml:space="preserve">
     <value>Release notes</value>
-  </data>
-  <data name="WhatIsNew_NavViewItem.Content" xml:space="preserve">
-    <value>What's new</value>
-  </data>
-  <data name="Feedback_NavViewItem.Content" xml:space="preserve">
-    <value>Give feedback</value>
   </data>
   <data name="SettingsWindow_Title" xml:space="preserve">
     <value>Kit</value>
@@ -543,20 +320,11 @@
   <data name="Awake_ExpirationSettingsExpander_Time.Header" xml:space="preserve">
     <value>End time</value>
   </data>
-  <data name="General_FailedToDownloadTheNewVersion.Title" xml:space="preserve">
-    <value>An error occurred trying to install this update:</value>
-  </data>
   <data name="General_NewVersionAvailable.Title" xml:space="preserve">
     <value>An update is available:</value>
   </data>
-  <data name="General_Downloading.Text" xml:space="preserve">
-    <value>Downloading...</value>
-  </data>
   <data name="General_CheckingForUpdates.Text" xml:space="preserve">
     <value>Checking for updates...</value>
-  </data>
-  <data name="General_NewVersionReadyToInstall.Title" xml:space="preserve">
-    <value>An update is ready to install:</value>
   </data>
   <data name="General_UpToDate.Title" xml:space="preserve">
     <value>Kit is up to date</value>
@@ -564,62 +332,17 @@
   <data name="General_CantCheck.Title" xml:space="preserve">
     <value>Network error. Please try again later</value>
   </data>
-  <data name="No" xml:space="preserve">
-    <value>No</value>
-    <comment>Label of a cancel button</comment>
-  </data>
-  <data name="Delete_Dialog_Description" xml:space="preserve">
-    <value>Are you sure you want to delete this item?</value>
-  </data>
-  <data name="Yes" xml:space="preserve">
-    <value>Yes</value>
-    <comment>Label of a confirmation button</comment>
-  </data>
-  <data name="SeeWhatsNew.Content" xml:space="preserve">
-    <value>See what's new</value>
-  </data>
   <data name="Awake_ModeSettingsCard.Description" xml:space="preserve">
     <value>Manage the state of your device when Awake is active</value>
     <comment>Awake is a product name, do not localize</comment>
-  </data>
-  <data name="ExcludedApps.Header" xml:space="preserve">
-    <value>Excluded apps</value>
-  </data>
-  <data name="Enable_ColorFormat.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Enable colorformat</value>
-  </data>
-  <data name="More_Options_Button.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>More options</value>
-  </data>
-  <data name="More_Options_ButtonTooltip.Text" xml:space="preserve">
-    <value>More options</value>
-  </data>
-  <data name="To.Text" xml:space="preserve">
-    <value>to</value>
-    <comment>as in: from x to y</comment>
-  </data>
-  <data name="Starts.Text" xml:space="preserve">
-    <value>starts</value>
-    <comment>as in: doing x will start y</comment>
   </data>
   <data name="LearnMore_Awake.Text" xml:space="preserve">
     <value>Learn more about Awake</value>
     <comment>Awake is a product name, do not loc</comment>
   </data>
-  <data name="LearnMore_CmdNotFound.Text" xml:space="preserve">
-    <value>Learn more about Command Not Found</value>
-    <comment> Command Not Found is the name of the module. </comment>
-  </data>
   <data name="SecondaryLink_Awake.Text" xml:space="preserve">
     <value>Den Delimarsky's work on creating Awake</value>
     <comment>Awake is a product name, do not loc</comment>
-  </data>
-  <data name="LearnMore_KBM.Text" xml:space="preserve">
-    <value>Learn more about Keyboard Manager</value>
-    <comment>Keyboard Manager is a product name, do not loc</comment>
-  </data>
-  <data name="GeneralPage_Documentation.Text" xml:space="preserve">
-    <value>Documentation</value>
   </data>
   <data name="Awake.SecondaryLinksHeader" xml:space="preserve">
     <value>Attribution</value>
@@ -627,12 +350,6 @@
   </data>
   <data name="General.SecondaryLinksHeader" xml:space="preserve">
     <value>Related information</value>
-  </data>
-  <data name="EditTooltip.Text" xml:space="preserve">
-    <value>Edit</value>
-  </data>
-  <data name="RemoveTooltip.Text" xml:space="preserve">
-    <value>Remove</value>
   </data>
   <data name="Activation_Shortcut_Cancel" xml:space="preserve">
     <value>Cancel</value>
@@ -685,19 +402,6 @@ Right-click to remove the key combination, thereby deactivating the shortcut.</v
     <value>On</value>
     <comment>The state of a ToggleSwitch when it's on</comment>
   </data>
-  <data name="Shell_WhatsNew.Content" xml:space="preserve">
-    <value>What's new</value>
-  </data>
-  <data name="LearnMore_QuickAccent.Text" xml:space="preserve">
-    <value>Learn more about Quick Accent</value>
-    <comment>Quick Accent is a product name, do not loc</comment>
-  </data>
-  <data name="QuickAccent_EnableQuickAccent.Header" xml:space="preserve">
-    <value>Quick Accent</value>
-  </data>
-  <data name="Shell_QuickAccent.Content" xml:space="preserve">
-    <value>Quick Accent</value>
-  </data>
   <data name="QuickAccent.ModuleDescription" xml:space="preserve">
     <value>Quick Accent is an alternative way to type accented characters, useful for when a keyboard doesn't support that specific accent.
 
@@ -715,97 +419,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="LightSwitch_ThemeToggle_Shortcut.Description" xml:space="preserve">
     <value>Switch between light and dark mode</value>
-  </data>
-  <data name="LightSwitch_ForceDarkMode" xml:space="preserve">
-    <value>Toggle theme</value>
-  </data>
-  <data name="PowerOcr_ShortDescription" xml:space="preserve">
-    <value>Start text extraction</value>
-  </data>
-  <data name="Dashboard_Activation" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="Activate_Zones" xml:space="preserve">
-    <value>Activate zones</value>
-  </data>
-  <data name="QuickAccent_Activation_GroupSettings.Header" xml:space="preserve">
-    <value>Activation</value>
-  </data>
-  <data name="QuickAccent_Activation_Shortcut.Header" xml:space="preserve">
-    <value>Activation key</value>
-    <comment>key refers to a physical key on a keyboard</comment>
-  </data>
-  <data name="QuickAccent_Activation_Shortcut.Description" xml:space="preserve">
-    <value>Press this key after holding down the target letter</value>
-    <comment>key refers to a physical key on a keyboard</comment>
-  </data>
-  <data name="QuickAccent_Activation_Key_Arrows.Content" xml:space="preserve">
-    <value>Left/Right Arrow</value>
-    <comment>Left/Right arrow keyboard keys</comment>
-  </data>
-  <data name="QuickAccent_Activation_Key_Space.Content" xml:space="preserve">
-    <value>Space</value>
-    <comment>Space is the space keyboard key</comment>
-  </data>
-  <data name="QuickAccent_Activation_Key_Either.Content" xml:space="preserve">
-    <value>Left, Right or Space</value>
-    <comment>All are keys on a keyboard</comment>
-  </data>
-  <data name="QuickAccent_Toolbar.Header" xml:space="preserve">
-    <value>Toolbar</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition.Header" xml:space="preserve">
-    <value>Toolbar position</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_TopCenter.Content" xml:space="preserve">
-    <value>Top center</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_TopLeftCorner.Content" xml:space="preserve">
-    <value>Top left corner</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_TopRightCorner.Content" xml:space="preserve">
-    <value>Top right corner</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_BottomLeftCorner.Content" xml:space="preserve">
-    <value>Bottom left corner</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_BottomCenter.Content" xml:space="preserve">
-    <value>Bottom center</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_BottomRightCorner.Content" xml:space="preserve">
-    <value>Bottom right corner</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_Center.Content" xml:space="preserve">
-    <value>Center</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_Left.Content" xml:space="preserve">
-    <value>Left</value>
-  </data>
-  <data name="QuickAccent_ToolbarPosition_Right.Content" xml:space="preserve">
-    <value>Right</value>
-  </data>
-  <data name="QuickAccent_Behavior.Header" xml:space="preserve">
-    <value>Behavior</value>
-  </data>
-  <data name="QuickAccent_InputTimeMs.Header" xml:space="preserve">
-    <value>Input delay (ms)</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="QuickAccent_InputTimeMs.Description" xml:space="preserve">
-    <value>How long a key must be held before the accent menu appears</value>
-    <comment>ms = milliseconds</comment>
-  </data>
-  <data name="QuickAccent_ExcludedApps.Description" xml:space="preserve">
-    <value>Prevents module activation if a foreground application is excluded. Add one application name per line.</value>
-  </data>
-  <data name="QuickAccent_ExcludedApps.Header" xml:space="preserve">
-    <value>Excluded apps</value>
-  </data>
-  <data name="QuickAccent_ExcludedApps_TextBoxControl.PlaceholderText" xml:space="preserve">
-    <value>Example: Teams.exe</value>
-  </data>
-  <data name="LearnMore_TextExtractor.Text" xml:space="preserve">
-    <value>Learn more about Text Extractor</value>
   </data>
   <data name="General_SettingsBackupAndRestore_NothingToBackup" xml:space="preserve">
     <value>A new backup was not created because no settings have been changed since last backup.</value>
@@ -871,210 +484,14 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="TextExtractor.ModuleTitle" xml:space="preserve">
     <value>Text Extractor</value>
   </data>
-  <data name="TextExtractor_EnableToggleControl_HeaderText.Header" xml:space="preserve">
-    <value>Text Extractor</value>
-  </data>
-  <data name="TextExtractor_SupportedLanguages.Title" xml:space="preserve">
-    <value>Text Extractor can only recognize languages that have the OCR pack installed.</value>
-  </data>
-  <data name="TextExtractor_UseSnippingToolWarning.Title" xml:space="preserve">
-    <value>It is recommended to use the Snipping Tool instead of the TextExtractor module.</value>
-  </data>
-  <data name="TextExtractor_SupportedLanguages_Link.Content" xml:space="preserve">
-    <value>Learn more about supported languages</value>
-  </data>
-  <data name="Shell_TextExtractor.Content" xml:space="preserve">
-    <value>Text Extractor</value>
-  </data>
   <data name="TextExtractor.SecondaryLinksHeader" xml:space="preserve">
     <value>Attribution</value>
-  </data>
-  <data name="QuickAccent_Description_Indicator.Header" xml:space="preserve">
-    <value>Show the Unicode code and name of the currently selected character</value>
-  </data>
-  <data name="QuickAccent_SortByUsageFrequency_Indicator.Header" xml:space="preserve">
-    <value>Sort characters by usage frequency</value>
-  </data>
-  <data name="QuickAccent_SortByUsageFrequency_Indicator.Description" xml:space="preserve">
-    <value>Track characters usage frequency and sort them accordingly</value>
-  </data>
-  <data name="QuickAccent_StartSelectionFromTheLeft_Indicator.Header" xml:space="preserve">
-    <value>Start selection from the left</value>
-  </data>
-  <data name="QuickAccent_StartSelectionFromTheLeft_Indicator.Description" xml:space="preserve">
-    <value>Start selection from the leftmost character for all activation keys, including left and right arrows</value>
-  </data>
-  <data name="QuickAccent_Language.Header" xml:space="preserve">
-    <value>Characters</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage.Header" xml:space="preserve">
-    <value>Choose character sets</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage.Description" xml:space="preserve">
-    <value>Show only accented characters common to the selected sets</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_All.Content" xml:space="preserve">
-    <value>All available</value>
-  </data>
-  <data name="QuickAccent_Group_Special" xml:space="preserve">
-    <value>Special sets</value>
-  </data>
-  <data name="QuickAccent_Group_Language" xml:space="preserve">
-    <value>Language sets</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Special" xml:space="preserve">
-    <value>Special Characters</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Bulgarian" xml:space="preserve">
-    <value>Bulgarian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Catalan" xml:space="preserve">
-    <value>Catalan</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Crimean" xml:space="preserve">
-    <value>Crimean Tatar</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Currency" xml:space="preserve">
-    <value>Currency</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Croatian" xml:space="preserve">
-    <value>Croatian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Czech" xml:space="preserve">
-    <value>Czech</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Danish" xml:space="preserve">
-    <value>Danish</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Gaeilge" xml:space="preserve">
-    <value>Gaeilge</value>
-    <comment>Gaelic language spoken in Ireland</comment>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Gaidhlig" xml:space="preserve">
-    <value>Gàidhlig</value>
-    <comment>Scottish Gaelic</comment>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_German" xml:space="preserve">
-    <value>German</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Greek" xml:space="preserve">
-    <value>Greek</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Hebrew" xml:space="preserve">
-    <value>Hebrew</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_French" xml:space="preserve">
-    <value>French</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Finnish" xml:space="preserve">
-    <value>Finnish</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Estonian" xml:space="preserve">
-    <value>Estonian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Esperanto" xml:space="preserve">
-    <value>Esperanto</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_IPA" xml:space="preserve">
-    <value>IPA</value>
-    <comment>International Phonetic Alphabet</comment>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Lithuanian" xml:space="preserve">
-    <value>Lithuanian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Macedonian" xml:space="preserve">
-    <value>Macedonian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Maltese" xml:space="preserve">
-    <value>Maltese</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Maori" xml:space="preserve">
-    <value>Maori</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Romanization" xml:space="preserve">
-    <value>Middle Eastern Romanization</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Dutch" xml:space="preserve">
-    <value>Dutch</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Norwegian" xml:space="preserve">
-    <value>Norwegian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Pinyin" xml:space="preserve">
-    <value>Pinyin</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Proto_Indo_European" xml:space="preserve">
-    <value>Proto Indo European</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Polish" xml:space="preserve">
-    <value>Polish</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Portuguese" xml:space="preserve">
-    <value>Portuguese</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Slovak" xml:space="preserve">
-    <value>Slovak</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Slovenian" xml:space="preserve">
-    <value>Slovenian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Spanish" xml:space="preserve">
-    <value>Spanish</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Swedish" xml:space="preserve">
-    <value>Swedish</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Turkish" xml:space="preserve">
-    <value>Turkish</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Vietnamese" xml:space="preserve">
-    <value>Vietnamese</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Icelandic" xml:space="preserve">
-    <value>Icelandic</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Romanian" xml:space="preserve">
-    <value>Romanian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Serbian" xml:space="preserve">
-    <value>Serbian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Serbian_Cyrillic" xml:space="preserve">
-    <value>Serbian Cyrillic</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Hungarian" xml:space="preserve">
-    <value>Hungarian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Italian" xml:space="preserve">
-    <value>Italian</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Kurdish" xml:space="preserve">
-    <value>Kurdish</value>
-  </data>
-  <data name="QuickAccent_SelectedLanguage_Welsh" xml:space="preserve">
-    <value>Welsh</value>
   </data>
   <data name="GPO_SettingIsManaged.Title" xml:space="preserve">
     <value>This setting is managed by your organization.</value>
   </data>
-  <data name="TextExtractor_Languages.Header" xml:space="preserve">
-    <value>Preferred language</value>
-  </data>
   <data name="General_DiagnosticsAndFeedback.Header" xml:space="preserve">
     <value>Diagnostics &amp; feedback</value>
-  </data>
-  <data name="GeneralPage_DiagnosticsAndFeedback_Link.Content" xml:space="preserve">
-    <value>Learn more about the logged information and how it's used</value>
-  </data>
-  <data name="GeneralPage_EnableDataDiagnostics.Header" xml:space="preserve">
-    <value>Diagnostic data</value>
-  </data>
-  <data name="GeneralPage_EnableViewDiagnosticData.Header" xml:space="preserve">
-    <value>Save logs to this device</value>
-  </data>
-  <data name="Shell_CmdNotFound.Content" xml:space="preserve">
-    <value>Command Not Found</value>
-    <comment>Product name: Navigation view item name for Command Not Found</comment>
   </data>
   <data name="CmdNotFound.ModuleDescription" xml:space="preserve">
     <value>A PowerShell module that detects an error thrown by a command and suggests a relevant WinGet package to install, if available.</value>
@@ -1083,46 +500,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="CmdNotFound.ModuleTitle" xml:space="preserve">
     <value>Command Not Found</value>
     <comment>"Command Not Found" is a product name</comment>
-  </data>
-  <data name="InstalledLabel.Text" xml:space="preserve">
-    <value>Installed</value>
-  </data>
-  <data name="DetectedLabel.Text" xml:space="preserve">
-    <value>Detected</value>
-  </data>
-  <data name="NotDetectedLabel.Text" xml:space="preserve">
-    <value>Not detected</value>
-  </data>
-  <data name="CmdNotFound_RequirementsBar.Title" xml:space="preserve">
-    <value>The following components are required</value>
-  </data>
-  <data name="CmdNotFound_PowerShellDetection.Header" xml:space="preserve">
-    <value>PowerShell 7.4 or greater</value>
-  </data>
-  <data name="CmdNotFound_WinGetClientDetection.Header" xml:space="preserve">
-    <value>WinGet Client PowerShell module</value>
-  </data>
-  <data name="CmdNotFound_Enable.Header" xml:space="preserve">
-    <value>Command Not Found</value>
-    <comment>"Command Not Found" is a product name</comment>
-  </data>
-  <data name="CmdNotFound_Enable.Description" xml:space="preserve">
-    <value>Add this module to the PowerShell 7 profile script so that it is enabled with every new session</value>
-  </data>
-  <data name="CmdNotFound_ModuleInstallationLogs.Text" xml:space="preserve">
-    <value>Installation logs</value>
-  </data>
-  <data name="CmdNotFound_CheckCompatibility.Content" xml:space="preserve">
-    <value>Refresh</value>
-  </data>
-  <data name="CmdNotFound_CheckCompatibilityTooltip.Text" xml:space="preserve">
-    <value>Check if your PowerShell configuration is compatible and configured correctly</value>
-  </data>
-  <data name="CmdNotFound_InstallButton.Content" xml:space="preserve">
-    <value>Install</value>
-  </data>
-  <data name="CmdNotFound_UninstallButton.Content" xml:space="preserve">
-    <value>Uninstall</value>
   </data>
   <data name="AllAppsTxt.Text" xml:space="preserve">
     <value>All apps</value>
@@ -1154,9 +531,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="QuickAccessTxt.Text" xml:space="preserve">
     <value>Quick access</value>
   </data>
-  <data name="GPO_SomeRunPluginsAreManaged.Title" xml:space="preserve">
-    <value>The enabled state of some plugins is managed by your organization.</value>
-  </data>
   <data name="SettingsWindow_AdminTitle" xml:space="preserve">
     <value>Administrator: Kit</value>
     <comment>Title of the settings window when running as administrator</comment>
@@ -1182,53 +556,14 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Dashboard_SortBy.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Sort utilities</value>
   </data>
-  <data name="ShowPluginsOverview_All.Content" xml:space="preserve">
-    <value>All</value>
-  </data>
-  <data name="ShowPluginsOverview_None.Content" xml:space="preserve">
-    <value>None</value>
-  </data>
-  <data name="ShowPluginsOverview_NonGlobal.Content" xml:space="preserve">
-    <value>Not included in global results</value>
-  </data>
-  <data name="GeneralPage_ShowWhatsNewAfterUpdates.Content" xml:space="preserve">
-    <value>Show the release notes after an update</value>
-  </data>
   <data name="ShowSystemTrayIcon.Description" xml:space="preserve">
     <value>To access settings, run the Kit executable again</value>
   </data>
   <data name="ShowSystemTrayIcon.Header" xml:space="preserve">
     <value>Show system tray icon</value>
   </data>
-  <data name="QuickAccent_Prevent_Activation_On_Game_Mode.Content" xml:space="preserve">
-    <value>Do not activate when Game Mode is on</value>
-    <comment>"Game mode" is the Windows feature to prevent notification when playing a game.</comment>
-  </data>
   <data name="GeneralPage_ShowNewUpdatesToast.Header" xml:space="preserve">
     <value>Show notifications for new updates</value>
-  </data>
-  <data name="GPO_SomeSettingsAreManaged.Title" xml:space="preserve">
-    <value>Some settings are managed by your organization.</value>
-  </data>
-  <data name="GPO_SomePreviewPanesAreManaged.Title" xml:space="preserve">
-    <value>The enabled state of some preview handlers is managed by your organization.</value>
-  </data>
-  <data name="GPO_SomeThumbnailProvidersAreManaged.Title" xml:space="preserve">
-    <value>The enabled state of some thumbnail handlers is managed by your organization.</value>
-  </data>
-  <data name="GPO_CommandNotFound_ForceDisabled.Title" xml:space="preserve">
-    <value>The Command Not Found module is disabled by your organization.</value>
-    <comment>"Command Not Found" is a product name</comment>
-  </data>
-  <data name="GPO_CommandNotFound_ForceEnabled.Title" xml:space="preserve">
-    <value>The Command Not Found module is enabled by your organization.</value>
-    <comment>"Command Not Found" is a product name</comment>
-  </data>
-  <data name="FilePicker_AllFilesFilter" xml:space="preserve">
-    <value>All Files</value>
-  </data>
-  <data name="OpenAnimationsSettings.Content" xml:space="preserve">
-    <value>Open animation settings</value>
   </data>
   <data name="LanguageHeader.Header" xml:space="preserve">
     <value>Language</value>
@@ -1251,48 +586,9 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Chinese_Simplified_Language" xml:space="preserve">
     <value>Chinese (Simplified)</value>
   </data>
-  <data name="GeneralPage_ViewDiagnosticDataViewerInfo.Title" xml:space="preserve">
-    <value>Restart Kit for enable viewing change to take effect.</value>
-  </data>
-  <data name="GeneralPage_ViewDiagnosticDataViewerInfoButton.Content" xml:space="preserve">
-    <value>Restart</value>
-  </data>
-  <data name="Shell_TopLevelAdvanced.Content" xml:space="preserve">
-    <value>Advanced</value>
-  </data>
-  <data name="Shell_TopLevelFileManagement.Content" xml:space="preserve">
-    <value>File Management</value>
-  </data>
-  <data name="Shell_TopLevelInputOutput.Content" xml:space="preserve">
-    <value>Input &amp; Output</value>
-  </data>
-  <data name="Shell_TopLevelSystemTools.Content" xml:space="preserve">
-    <value>System Tools</value>
-  </data>
   <data name="SettingsPage_NewInfoBadge.Text" xml:space="preserve">
     <value>NEW</value>
     <comment>Must be all caps</comment>
-  </data>
-  <data name="RetryBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Retry</value>
-  </data>
-  <data name="RetryLabel.Text" xml:space="preserve">
-    <value>Retry</value>
-  </data>
-  <data name="Help_lightnessOklab" xml:space="preserve">
-    <value>lightness (Oklab/Oklch)</value>
-  </data>
-  <data name="Help_chromaticityAOklab" xml:space="preserve">
-    <value>chromaticity A (Oklab)</value>
-  </data>
-  <data name="Help_chromaticityBOklab" xml:space="preserve">
-    <value>chromaticity B (Oklab)</value>
-  </data>
-  <data name="Help_chromaOklch" xml:space="preserve">
-    <value>chroma (Oklch)</value>
-  </data>
-  <data name="Help_hueOklch" xml:space="preserve">
-    <value>hue (Oklch)</value>
   </data>
   <data name="YoureUpToDate.Text" xml:space="preserve">
     <value>You're up to date</value>
@@ -1326,24 +622,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="NoShortcutsToShow.Text" xml:space="preserve">
     <value>No shortcuts to show..</value>
-  </data>
-  <data name="HighlightMode.Description" xml:space="preserve">
-    <value>Highlight the cursor or dim the screen to spotlight it</value>
-  </data>
-  <data name="HighlightMode.Header" xml:space="preserve">
-    <value>Highlight mode</value>
-  </data>
-  <data name="HighlightMode_Circle_Highlight_Mode.Content" xml:space="preserve">
-    <value>Circle highlight</value>
-  </data>
-  <data name="HighlightMode_Spotlight_Mode.Content" xml:space="preserve">
-    <value>Spotlight</value>
-  </data>
-  <data name="GeneralPage_EnableDataDiagnosticsText.Text" xml:space="preserve">
-    <value>Helps make Kit faster, more stable, and better over time</value>
-  </data>
-  <data name="GeneralPage_EnableViewDiagnosticDataText.Text" xml:space="preserve">
-    <value>Stores diagnostic data locally in .xml format; folder may include .etl files as well. May use up 1 GB or more of disk space.</value>
   </data>
   <data name="Shell_LightSwitch.Content" xml:space="preserve">
     <value>Light Switch</value>
@@ -1471,15 +749,8 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="LightSwitch_LocationError_Unavailable" xml:space="preserve">
     <value>Location services unavailable. Please enter your coordinates manually.</value>
   </data>
-  <data name="TogglePane_NavViewItem.Content" xml:space="preserve">
-    <value>Toggle sidebar</value>
-  </data>
   <data name="Close_NavViewItem.Content" xml:space="preserve">
     <value>Close Kit</value>
-    <comment>Don't loc "Kit"</comment>
-  </data>
-  <data name="CloseDialog.Content" xml:space="preserve">
-    <value>Closing Kit will stop all active utilities.</value>
     <comment>Don't loc "Kit"</comment>
   </data>
   <data name="CloseDialog.Title" xml:space="preserve">
@@ -1535,9 +806,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="ShortcutConflictWindow_NoConflictsDescription.Text" xml:space="preserve">
     <value>All shortcuts function correctly</value>
-  </data>
-  <data name="ResolveConflicts_Button.Content" xml:space="preserve">
-    <value>Resolve conflicts</value>
   </data>
   <data name="ShortcutConflictControl_Title.Text" xml:space="preserve">
     <value>Shortcut conflicts</value>
@@ -1607,14 +875,8 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="LightSwitch_FollowNightLightCardMessage.Text" xml:space="preserve">
     <value>Following Night Light settings.</value>
   </data>
-  <data name="Shell_TopLevelWindowsAndLayouts.Content" xml:space="preserve">
-    <value>Windowing &amp; Layouts</value>
-  </data>
   <data name="ShortcutConflictWindow_IgnoreShortcut.Content" xml:space="preserve">
     <value>Ignore conflict</value>
-  </data>
-  <data name="GeneralPage_ViewDiagnosticDataButton.Content" xml:space="preserve">
-    <value>View diagnostic data</value>
   </data>
   <data name="Shell_Search_ShowAll.Text" xml:space="preserve">
     <value>Show all results</value>
@@ -2447,12 +1709,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AiHub_PolicyRulesExpander.Description" xml:space="preserve">
     <value>Global security policy and task instructions (security.md and AGENTS.md)</value>
   </data>
-          <data name="AiHub_Segment_SecurityAudit.Content" xml:space="preserve">
-    <value>Security audit</value>
-  </data>
-  <data name="AiHub_Segment_Optimization.Content" xml:space="preserve">
-    <value>Optimization</value>
-  </data>
   <data name="Admin_Mode_Running_As.Description" xml:space="preserve">
     <value>Kit runs tasks as the current user. Elevation is only requested for actions that need it.</value>
   </data>
@@ -3220,5 +2476,500 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="AiHub_EffortMax.Content" xml:space="preserve">
     <value>max</value>
+  </data>
+  <data name="LightSwitch_SyncLoader.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Syncing location</value>
+  </data>
+  <data name="LightSwitch_LocationErrorText.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Location sync error</value>
+  </data>
+  <data name="LightSwitch_LocationResultPanel.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Sunrise and sunset</value>
+  </data>
+  <data name="LightSwitch_Timeline_DarkBandToolTip" xml:space="preserve">
+    <value>Dark mode</value>
+  </data>
+  <data name="LightSwitch_Timeline_LightBandToolTip" xml:space="preserve">
+    <value>Light mode</value>
+  </data>
+  <data name="LightSwitch_Timeline_SunriseToolTip" xml:space="preserve">
+    <value>Sunrise: {0}</value>
+  </data>
+  <data name="LightSwitch_Timeline_SunsetToolTip" xml:space="preserve">
+    <value>Sunset: {0}</value>
+  </data>
+  <data name="LightSwitch_Timeline_AutomationName" xml:space="preserve">
+    <value>Timeline from {0} to {1}</value>
+  </data>
+  <data name="Localserver_AddServiceButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Add service</value>
+  </data>
+  <data name="Localserver_AddServiceButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Add a new local service</value>
+  </data>
+  <data name="Localserver_StartAllServicesButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Start all</value>
+  </data>
+  <data name="Localserver_StartAllServicesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Start all registered services</value>
+  </data>
+  <data name="Localserver_StopAllServicesButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Stop all</value>
+  </data>
+  <data name="Localserver_StopAllServicesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Stop all running services</value>
+  </data>
+  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh status</value>
+  </data>
+  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Refresh status and resource usage</value>
+  </data>
+  <data name="Localserver_ConfigureButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Configure service</value>
+  </data>
+  <data name="Localserver_ConfigureButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Configure service</value>
+  </data>
+  <data name="Localserver_MoreOptionsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>More options</value>
+  </data>
+  <data name="Localserver_MoreOptionsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>More options</value>
+  </data>
+  <data name="Localserver_FixButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Fix</value>
+  </data>
+  <data name="Localserver_SelectedLineComboBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Select service to inspect</value>
+  </data>
+  <data name="Localserver_CpuUsageBar.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>CPU usage</value>
+  </data>
+  <data name="Localserver_MemoryUsageBar.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Memory usage</value>
+  </data>
+  <data name="Localserver_LogToggleButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Toggle output console</value>
+  </data>
+  <data name="Localserver_LogToggleButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Toggle output console</value>
+  </data>
+  <data name="Localserver_LogFollowToggle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Auto scroll to latest log</value>
+  </data>
+  <data name="Localserver_OpenLogFolderButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Open log directory</value>
+  </data>
+  <data name="Localserver_OpenLogFolderButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Open log directory</value>
+  </data>
+  <data name="Localserver_ClearLogsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Clear current logs</value>
+  </data>
+  <data name="Localserver_ClearLogsButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Clear current logs</value>
+  </data>
+  <data name="UDPtest_StartMonitoringButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Start monitoring</value>
+  </data>
+  <data name="UDPtest_StartMonitoringButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Start monitoring</value>
+  </data>
+  <data name="UDPtest_StopMonitoringButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Stop monitoring</value>
+  </data>
+  <data name="UDPtest_StopMonitoringButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Stop monitoring</value>
+  </data>
+  <data name="UDPtest_AddUdpLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Add UDP line</value>
+  </data>
+  <data name="UDPtest_AddUdpLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Add a new UDP line</value>
+  </data>
+  <data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Clear history</value>
+  </data>
+  <data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Configure UDP target</value>
+  </data>
+  <data name="UDPtest_SessionDurationText.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Elapsed monitoring time</value>
+  </data>
+  <data name="UDPtest_NatTypeValue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>STUN-based NAT diagnostic</value>
+  </data>
+  <data name="UDPtest_LocalRouteInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Active network adapter and IPv4 default gateway</value>
+  </data>
+  <data name="UDPtest_ConditionInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Current condition of the selected line</value>
+  </data>
+  <data name="UDPtest_RealtimeInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Live metrics for the selected line</value>
+  </data>
+  <data name="UDPtest_SelectedLineCombo.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Selected link</value>
+  </data>
+  <data name="UDPtest_SelectedLineCombo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Choose link to inspect</value>
+  </data>
+  <data name="UDPtest_PathInfo.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Combined TCP and UDP summary for the current Windows outbound path</value>
+  </data>
+  <data name="UDPtest_Period1mButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>1 minute</value>
+  </data>
+  <data name="UDPtest_Period1mButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show the last minute</value>
+  </data>
+  <data name="UDPtest_Period5mButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>5 minutes</value>
+  </data>
+  <data name="UDPtest_Period5mButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show the last five minutes</value>
+  </data>
+  <data name="UDPtest_Period30mButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>30 minutes</value>
+  </data>
+  <data name="UDPtest_Period30mButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show the last thirty minutes</value>
+  </data>
+  <data name="UDPtest_Period1hButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>1 hour</value>
+  </data>
+  <data name="UDPtest_Period1hButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show the last hour</value>
+  </data>
+  <data name="UDPtest_ConfigEndpointInput.PlaceholderText" xml:space="preserve">
+    <value>e.g. stun.cloudflare.com:3478 or 150.242.146.124:7</value>
+  </data>
+  <data name="UDPtest_RunStateStopped" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="UDPtest_RunStateRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="UDPtest_RunStateStarting" xml:space="preserve">
+    <value>Starting</value>
+  </data>
+  <data name="UDPtest_RunStateStopping" xml:space="preserve">
+    <value>Stopping</value>
+  </data>
+  <data name="UDPtest_HealthIdleState" xml:space="preserve">
+    <value>IDLE</value>
+  </data>
+  <data name="UDPtest_HealthIdleCondition" xml:space="preserve">
+    <value>Idle</value>
+  </data>
+  <data name="UDPtest_HealthSelectLine" xml:space="preserve">
+    <value>Select a line</value>
+  </data>
+  <data name="UDPtest_HealthDetailFormat" xml:space="preserve">
+    <value>{0} | {1}:{2} | {3} probes</value>
+  </data>
+  <data name="UDPtest_StateIdle" xml:space="preserve">
+    <value>IDLE</value>
+  </data>
+  <data name="UDPtest_StateWarming" xml:space="preserve">
+    <value>WARMING</value>
+  </data>
+  <data name="UDPtest_StateError" xml:space="preserve">
+    <value>ERROR</value>
+  </data>
+  <data name="UDPtest_StateOk" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="UDPtest_StateDegraded" xml:space="preserve">
+    <value>DEGRADED</value>
+  </data>
+  <data name="UDPtest_StateOffline" xml:space="preserve">
+    <value>OFFLINE</value>
+  </data>
+  <data name="UDPtest_ConditionIdle" xml:space="preserve">
+    <value>Idle</value>
+  </data>
+  <data name="UDPtest_ConditionWarming" xml:space="preserve">
+    <value>Warming</value>
+  </data>
+  <data name="UDPtest_ConditionError" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="UDPtest_ConditionNormal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="UDPtest_ConditionDegraded" xml:space="preserve">
+    <value>Degraded</value>
+  </data>
+  <data name="UDPtest_ConditionOffline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="UDPtest_AssessmentNotStarted" xml:space="preserve">
+    <value>Not started</value>
+  </data>
+  <data name="UDPtest_EnabledCountFormat" xml:space="preserve">
+    <value>{0}/{1} enabled</value>
+  </data>
+  <data name="UDPtest_LinksSummaryFormat" xml:space="preserve">
+    <value>{0} LINKS</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentSupportedStable" xml:space="preserve">
+    <value>Supported / Stable</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentSupportedUnstable" xml:space="preserve">
+    <value>Supported / Unstable</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentSupportedDegraded" xml:space="preserve">
+    <value>Supported / Degraded</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentUnsupported" xml:space="preserve">
+    <value>Unsupported</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentAssessing" xml:space="preserve">
+    <value>Assessing</value>
+  </data>
+  <data name="UDPtest_NatEim" xml:space="preserve">
+    <value>Endpoint-Independent Mapping</value>
+  </data>
+  <data name="UDPtest_NatAdm" xml:space="preserve">
+    <value>Address-Dependent Mapping</value>
+  </data>
+  <data name="UDPtest_NatApdm" xml:space="preserve">
+    <value>Address and Port-Dependent Mapping</value>
+  </data>
+  <data name="UDPtest_NatSymmetric" xml:space="preserve">
+    <value>Symmetric</value>
+  </data>
+  <data name="UDPtest_NatOpen" xml:space="preserve">
+    <value>Open Internet</value>
+  </data>
+  <data name="UDPtest_NatBlocked" xml:space="preserve">
+    <value>Blocked</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentNotMonitored" xml:space="preserve">
+    <value>Not Monitored</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentStable" xml:space="preserve">
+    <value>Available / Stable</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentSingleStable" xml:space="preserve">
+    <value>Available / Single-Target Stable</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentPartial" xml:space="preserve">
+    <value>Available / Partial or Unstable</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentUnavailable" xml:space="preserve">
+    <value>Unavailable</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentInternalError" xml:space="preserve">
+    <value>Unknown / Internal Error</value>
+  </data>
+  <data name="UDPtest_TcpAssessmentWarming" xml:space="preserve">
+    <value>Warming</value>
+  </data>
+  <data name="UDPtest_PathStable" xml:space="preserve">
+    <value>TCP + UDP Stable</value>
+  </data>
+  <data name="UDPtest_PathAvailable" xml:space="preserve">
+    <value>TCP + UDP Available</value>
+  </data>
+  <data name="UDPtest_PathUdpUnsupported" xml:space="preserve">
+    <value>TCP Available / UDP Unsupported</value>
+  </data>
+  <data name="UDPtest_PathUdpAssessing" xml:space="preserve">
+    <value>TCP Available / UDP Assessing</value>
+  </data>
+  <data name="UDPtest_PathTcpUnavailable" xml:space="preserve">
+    <value>UDP Available / TCP Unavailable</value>
+  </data>
+  <data name="UDPtest_PathUnknown" xml:space="preserve">
+    <value>Path Unknown</value>
+  </data>
+  <data name="UDPtest_PathAssessing" xml:space="preserve">
+    <value>Assessing</value>
+  </data>
+  <data name="UDPtest_NodeVerified" xml:space="preserve">
+    <value>Node Verified</value>
+  </data>
+  <data name="UDPtest_NodeUnverified" xml:space="preserve">
+    <value>Node Unverified</value>
+  </data>
+  <data name="UDPtest_MonitoringErrorFormat" xml:space="preserve">
+    <value>Monitoring error: {0}</value>
+  </data>
+  <data name="UDPtest_EnableProbeLineRequired" xml:space="preserve">
+    <value>Please enable at least one probe line before starting.</value>
+  </data>
+  <data name="UDPtest_TargetUpdatedRestartRequired" xml:space="preserve">
+    <value>Target updated. Stop and restart monitoring to apply target endpoint changes.</value>
+  </data>
+  <data name="UDPtest_KeepOneLineRequired" xml:space="preserve">
+    <value>At least one UDP line must be kept.</value>
+  </data>
+  <data name="UDPtest_StartFailedFormat" xml:space="preserve">
+    <value>Failed to start: {0}</value>
+  </data>
+  <data name="UDPtest_StopFailedFormat" xml:space="preserve">
+    <value>Failed to stop: {0}</value>
+  </data>
+  <data name="UDPtest_ClearFailedFormat" xml:space="preserve">
+    <value>Failed to clear: {0}</value>
+  </data>
+  <data name="UDPtest_InitFailedFormat" xml:space="preserve">
+    <value>Initialization error: {0}</value>
+  </data>
+  <data name="UDPtest_ToggleLineFailedFormat" xml:space="preserve">
+    <value>Failed to toggle line: {0}</value>
+  </data>
+  <data name="UDPtest_SaveTargetsFailedFormat" xml:space="preserve">
+    <value>Failed to save targets: {0}</value>
+  </data>
+  <data name="UDPtest_LastErrorEmpty" xml:space="preserve">
+    <value>Last error: --</value>
+  </data>
+  <data name="UDPtest_ToggleLabelFormat" xml:space="preserve">
+    <value>Toggle {0}</value>
+  </data>
+  <data name="UDPtest_RowStatusOk" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="UDPtest_RowStatusDegraded" xml:space="preserve">
+    <value>DEGRADED</value>
+  </data>
+  <data name="UDPtest_RowStatusDown" xml:space="preserve">
+    <value>DOWN</value>
+  </data>
+  <data name="UDPtest_RowStatusWarming" xml:space="preserve">
+    <value>Warming</value>
+  </data>
+  <data name="UDPtest_RowStatusIdle" xml:space="preserve">
+    <value>Idle</value>
+  </data>
+  <data name="UDPtest_RowStatusStopped" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="UDPtest_RowStatusInternalError" xml:space="preserve">
+    <value>Internal Error</value>
+  </data>
+  <data name="UDPtest_CapabilityEcho" xml:space="preserve">
+    <value>Outbound echo reflection</value>
+  </data>
+  <data name="UDPtest_CapabilityStun" xml:space="preserve">
+    <value>NAT evaluation + Public IP detection</value>
+  </data>
+  <data name="UDPtest_ValidationNameRequired" xml:space="preserve">
+    <value>Target name cannot be empty.</value>
+  </data>
+  <data name="UDPtest_ValidationInvalidPort" xml:space="preserve">
+    <value>Invalid port</value>
+  </data>
+  <data name="UDPtest_RemoteEndpointFormat" xml:space="preserve">
+    <value>Remote endpoint: {0}</value>
+  </data>
+  <data name="UDPtest_NotResolved" xml:space="preserve">
+    <value>Not resolved</value>
+  </data>
+  <data name="UDPtest_LastErrorFormat" xml:space="preserve">
+    <value>Last error: {0}</value>
+  </data>
+  <data name="UDPtest_ErrorTimeout" xml:space="preserve">
+    <value>Timeout</value>
+  </data>
+  <data name="UDPtest_ErrorDns" xml:space="preserve">
+    <value>DNS Fail</value>
+  </data>
+  <data name="UDPtest_ErrorConnect" xml:space="preserve">
+    <value>Connect Fail</value>
+  </data>
+  <data name="UDPtest_ErrorTls" xml:space="preserve">
+    <value>TLS Fail</value>
+  </data>
+  <data name="UDPtest_ErrorStun" xml:space="preserve">
+    <value>STUN Error</value>
+  </data>
+  <data name="UDPtest_ErrorInvalidStun" xml:space="preserve">
+    <value>Invalid STUN</value>
+  </data>
+  <data name="UDPtest_ErrorCancelled" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="AIHub_Segment_SecurityAudit.Content" xml:space="preserve">
+    <value>Security Audit</value>
+  </data>
+  <data name="AIHub_Segment_Optimization.Content" xml:space="preserve">
+    <value>Optimization</value>
+  </data>
+  <data name="AIHub_EnableToggleSwitch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Enable AI Hub</value>
+  </data>
+  <data name="AIHub_AuditDatePicker.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Audit date</value>
+  </data>
+  <data name="AIHub_TaskPolicyContentBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Task policy content</value>
+  </data>
+  <data name="AIHub_FastScanLabel" xml:space="preserve">
+    <value>Fast scan</value>
+  </data>
+  <data name="AIHub_FullScanLabel" xml:space="preserve">
+    <value>Full scan</value>
+  </data>
+  <data name="FindingDetails_EventIdFormat" xml:space="preserve">
+    <value>Event {0}</value>
+  </data>
+  <data name="FindingDetails_AffectedNotAvailable" xml:space="preserve">
+    <value>N/A</value>
+  </data>
+  <data name="FindingDetails_CopyHeader" xml:space="preserve">
+    <value>[Security Finding] {0}</value>
+  </data>
+  <data name="FindingDetails_CopySeverity" xml:space="preserve">
+    <value>Severity: {0} | Category: {1} | Event ID: {2}</value>
+  </data>
+  <data name="FindingDetails_CopyTimestamp" xml:space="preserve">
+    <value>Timestamp: {0}</value>
+  </data>
+  <data name="FindingDetails_CopyDetection" xml:space="preserve">
+    <value>Detection: {0}</value>
+  </data>
+  <data name="FindingDetails_CopyRootCause" xml:space="preserve">
+    <value>Root Cause: {0}</value>
+  </data>
+  <data name="FindingDetails_CopyAction" xml:space="preserve">
+    <value>Recommended Action: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportTitle" xml:space="preserve">
+    <value># {0} - AI Diagnostic Report</value>
+  </data>
+  <data name="AIHub_CopyReportGeneratedAt" xml:space="preserve">
+    <value>Generated: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportEnvironment" xml:space="preserve">
+    <value>Environment: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportSummaryHeading" xml:space="preserve">
+    <value>## Summary</value>
+  </data>
+  <data name="AIHub_CopyReportFindingsHeading" xml:space="preserve">
+    <value>## Diagnostic Findings and Recommendations ({0} items)</value>
+  </data>
+  <data name="AIHub_CopyReportEventId" xml:space="preserve">
+    <value>- Event ID: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportDetails" xml:space="preserve">
+    <value>- Details: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportRecommendation" xml:space="preserve">
+    <value>- Recommendation: {0}</value>
+  </data>
+  <data name="AIHub_CopyReportSuccess" xml:space="preserve">
+    <value>AI diagnostic report copied to clipboard.</value>
+  </data>
+  <data name="AIHub_CopyReportFailed" xml:space="preserve">
+    <value>Copy failed: {0}</value>
+  </data>
+  <data name="NetMap_HopList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Route hops</value>
   </data>
 </root>

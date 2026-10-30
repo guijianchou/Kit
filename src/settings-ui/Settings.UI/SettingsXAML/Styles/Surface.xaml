@@ -123,7 +123,7 @@
         </Setter>
     </Style>
 
-    <!-- 出口状态着色（Unknown / Good / Error；NetMapHealthStyleConverter 按 "…Text" 键取用；Dashboard·NetMap 共用） -->
+    <!-- 出口状态着色（Unknown / Good / Error；Dashboard 经 EgressTextStyle 类型化映射取用；NetMap 页内自持 NetMapHealthStyles 字典） -->
     <ResourceDictionary x:Key="KitEgressStatusStyles">
         <Style x:Key="UnknownText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />

@@ -4,19 +4,30 @@
 
 using System;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
-using Windows.UI;
 using Windows.UI.ViewManagement;
 
 namespace Kit.Settings.UI.Helpers;
+
+public enum UsageCategory
+{
+    Default,
+    Cpu,
+    Memory,
+    Disk,
+    Gpu,
+    Temperature,
+}
 
 public sealed partial class UsageProgressBar : ProgressBar
 {
     public static readonly DependencyProperty TargetValueProperty = DependencyProperty.Register(
         nameof(TargetValue), typeof(double), typeof(UsageProgressBar), new PropertyMetadata(0d, OnTargetValueChanged));
+
+    public static readonly DependencyProperty UsageCategoryProperty = DependencyProperty.RegisterAttached(
+        "UsageCategory", typeof(UsageCategory), typeof(UsageProgressBar), new PropertyMetadata(UsageCategory.Default, OnUsageCategoryChanged));
 
     private readonly UISettings uiSettings = new();
     private Storyboard transition;
@@ -33,6 +44,10 @@ public sealed partial class UsageProgressBar : ProgressBar
         get => (double)GetValue(TargetValueProperty);
         set => SetValue(TargetValueProperty, value);
     }
+
+    public static UsageCategory GetUsageCategory(DependencyObject element) => (UsageCategory)element.GetValue(UsageCategoryProperty);
+
+    public static void SetUsageCategory(DependencyObject element, UsageCategory value) => element.SetValue(UsageCategoryProperty, value);
 
     protected override void OnApplyTemplate()
     {
@@ -61,6 +76,14 @@ public sealed partial class UsageProgressBar : ProgressBar
     {
         var bar = (UsageProgressBar)sender;
         bar.SetUsage(bar.IsLoaded && bar.uiSettings.AnimationsEnabled);
+    }
+
+    private static void OnUsageCategoryChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        if (sender is UsageProgressBar bar)
+        {
+            bar.UpdateIndicatorColor(bar.TargetValue);
+        }
     }
 
     private void SetUsage(bool animate)
@@ -95,66 +118,27 @@ public sealed partial class UsageProgressBar : ProgressBar
 
     private void UpdateIndicatorColor(double value)
     {
-        bool isDark = ActualTheme == ElementTheme.Dark;
-        string category = DetectCategory();
-        Color color = category switch
+        // Category palette lives in Themes/Colors.xaml (light / dark / high-contrast);
+        // re-resolving on every theme change keeps the captured brush instance current.
+        if (Application.Current?.Resources is { } resources &&
+            resources.TryGetValue(GetPaletteBrushKey(value), out object resource) &&
+            resource is Brush brush)
         {
-            "Cpu" => isDark ? Color.FromArgb(0xFF, 0x38, 0xB6, 0xFF) : Color.FromArgb(0xFF, 0x00, 0x78, 0xD4),
-            "Memory" => isDark ? Color.FromArgb(0xFF, 0xB1, 0x46, 0xC2) : Color.FromArgb(0xFF, 0x74, 0x4D, 0xA9),
-            "Disk" => isDark ? Color.FromArgb(0xFF, 0x38, 0xAD, 0x62) : Color.FromArgb(0xFF, 0x0E, 0x7A, 0x0D),
-            "Gpu" => isDark ? Color.FromArgb(0xFF, 0xFF, 0x8C, 0x00) : Color.FromArgb(0xFF, 0xD8, 0x3B, 0x01),
-            "Temperature" => value >= 80d
-                ? (isDark ? Color.FromArgb(0xFF, 0xFF, 0x52, 0x52) : Color.FromArgb(0xFF, 0xC4, 0x2B, 0x1C))
-                : value >= 65d
-                    ? (isDark ? Color.FromArgb(0xFF, 0xFF, 0x8C, 0x00) : Color.FromArgb(0xFF, 0xD8, 0x3B, 0x01))
-                    : (isDark ? Color.FromArgb(0xFF, 0xFB, 0xB0, 0x3B) : Color.FromArgb(0xFF, 0xCA, 0x50, 0x10)),
-            _ => isDark ? Color.FromArgb(0xFF, 0x4C, 0xC2, 0xFF) : Color.FromArgb(0xFF, 0x00, 0x78, 0xD4),
-        };
-
-        Foreground = new SolidColorBrush(color);
+            Foreground = brush;
+        }
     }
 
-    private string DetectCategory()
+    private string GetPaletteBrushKey(double value) => GetUsageCategory(this) switch
     {
-        string name = AutomationProperties.GetName(this) ?? string.Empty;
-        if (name.Contains("CPU", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("处理器", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Cpu";
-        }
-
-        if (name.Contains("内存", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Memory", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("RAM", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Memory";
-        }
-
-        if (name.Contains(":\\", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("磁盘", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Disk", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("存储", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Storage", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Disk";
-        }
-
-        if (name.Contains("Temp", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("温度", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Temperature";
-        }
-
-        if (name.Contains("GPU", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("显存", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("VRAM", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("显卡", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Usage", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("使用率", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Gpu";
-        }
-
-        return "Default";
-    }
+        UsageCategory.Cpu => "KitUsageCpuBrush",
+        UsageCategory.Memory => "KitUsageMemoryBrush",
+        UsageCategory.Disk => "KitUsageDiskBrush",
+        UsageCategory.Gpu => "KitUsageGpuBrush",
+        UsageCategory.Temperature => value >= 80d
+            ? "KitUsageTempHotBrush"
+            : value >= 65d
+                ? "KitUsageTempWarmBrush"
+                : "KitUsageTempNormalBrush",
+        _ => "KitUsageDefaultBrush",
+    };
 }

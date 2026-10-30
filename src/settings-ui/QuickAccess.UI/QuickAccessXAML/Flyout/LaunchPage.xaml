@@ -11,21 +11,10 @@
     xmlns:ui="using:CommunityToolkit.WinUI"
     xmlns:viewModels="using:Kit.QuickAccess.ViewModels"
     mc:Ignorable="d">
-    <Page.Resources>
-        <Style
-            x:Key="FlyoutButtonStyle"
-            BasedOn="{StaticResource SubtleButtonStyle}"
-            TargetType="Button">
-            <Setter Property="Padding" Value="6" />
-            <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="32" />
-            <Setter Property="FontFamily" Value="{ThemeResource SymbolThemeFontFamily}" />
-        </Style>
-    </Page.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
-            <RowDefinition Height="48" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid
             Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}"
@@ -72,7 +61,11 @@
                 </ScrollViewer>
             </Grid>
         </Grid>
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <InfoBar
                 x:Uid="UpdateAvailableInfoBar"
                 IsClosable="False"
@@ -82,7 +75,7 @@
 
             <StackPanel
                 Grid.Row="1"
-                Margin="0,0,12,0"
+                Margin="0,4,12,8"
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
                 Spacing="8">

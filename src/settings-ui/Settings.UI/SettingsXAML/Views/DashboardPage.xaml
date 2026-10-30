@@ -16,7 +16,6 @@
     <local:NavigablePage.Resources>
         <controlConverters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
         <converters:EnumToModuleListSortOptionConverter x:Key="EnumToModuleListSortOptionConverter" />
-        <viewmodels:NetMapHealthStyleConverter x:Key="DashboardEgressStyleConverter" Styles="{StaticResource KitEgressStatusStyles}" />
         <DataTemplate x:Key="DashboardDetailTemplate" x:DataType="viewmodels:DashboardDetail">
             <Grid Margin="0,1" ColumnSpacing="12" MinHeight="21">
                 <Grid.ColumnDefinitions>
@@ -42,6 +41,7 @@
                     <local:UsageProgressBar Grid.Column="1" Height="6" CornerRadius="3"
                         Background="{ThemeResource ControlFillColorDefaultBrush}"
                         VerticalAlignment="Center" Maximum="100" TargetValue="{x:Bind UsageValue, Mode=OneWay}"
+                        local:UsageProgressBar.UsageCategory="{x:Bind UsageCategory, Mode=OneWay}"
                         AutomationProperties.Name="{x:Bind Label, Mode=OneWay}" AutomationProperties.HelpText="{x:Bind Value, Mode=OneWay}"
                         Visibility="{x:Bind HasUsage, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
                 </Grid>
@@ -277,28 +277,28 @@
                                     <TextBlock x:Name="DirectIpLabel" Margin="0,0,0,2" x:Uid="Dashboard_PublicIpLabel" Grid.Row="1" Style="{StaticResource KitMicroLabelTextStyle}" />
                                     <TextBlock x:Name="DirectIpText" Margin="0,0,0,6" Grid.Row="2"
                                         Text="{x:Bind viewmodels:DashboardViewModel.EgressIp(ViewModel.DirectEgress), Mode=OneWay}"
-                                        Style="{x:Bind ViewModel.DirectEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
+                                        Style="{x:Bind EgressTextStyle(ViewModel.DirectEgress.Health), Mode=OneWay}"
                                         FontFamily="{StaticResource KitMonoFontFamily}" FontSize="20" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
                                     <TextBlock x:Name="DirectLocationText" Margin="0,0,0,4" Grid.Row="3" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
                                         <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.DirectEgress.Location, Mode=OneWay}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </TextBlock>
                                     <TextBlock x:Name="DirectEgressStatusText" Margin="0,2,0,0" Grid.Row="5" Text="{x:Bind viewmodels:DashboardViewModel.EgressStatus(ViewModel.DirectEgress), Mode=OneWay}"
                                         Visibility="{Binding Text, ElementName=DirectEgressStatusText, Converter={StaticResource StringVisibilityConverter}}"
-                                        Style="{x:Bind ViewModel.DirectEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
+                                        Style="{x:Bind EgressTextStyle(ViewModel.DirectEgress.Health), Mode=OneWay}"
                                         TextWrapping="Wrap" FontSize="12" />
                                     <Rectangle x:Name="EgressDivider" Grid.Column="1" Grid.RowSpan="6" Width="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                     <TextBlock x:Name="ProxyRouteTitle" Margin="0,0,0,4" x:Uid="Dashboard_ProxyRouteTitle" Grid.Column="2" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                     <TextBlock x:Name="ProxyIpLabel" Margin="0,0,0,2" x:Uid="Dashboard_PublicIpLabel" Grid.Row="1" Grid.Column="2" Style="{StaticResource KitMicroLabelTextStyle}" />
                                     <TextBlock x:Name="ProxyIpText" Margin="0,0,0,6" Grid.Row="2" Grid.Column="2"
                                         Text="{x:Bind viewmodels:DashboardViewModel.EgressIp(ViewModel.ProxyEgress), Mode=OneWay}"
-                                        Style="{x:Bind ViewModel.ProxyEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
+                                        Style="{x:Bind EgressTextStyle(ViewModel.ProxyEgress.Health), Mode=OneWay}"
                                         FontFamily="{StaticResource KitMonoFontFamily}" FontSize="20" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
                                     <TextBlock x:Name="ProxyLocationText" Margin="0,0,0,4" Grid.Row="3" Grid.Column="2" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
                                         <Run x:Uid="Dashboard_LocationLabel" /><Run Text="{x:Bind ViewModel.ProxyEgress.Location, Mode=OneWay}" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </TextBlock>
                                     <TextBlock x:Name="ProxyEgressStatusText" Margin="0,2,0,0" Grid.Row="5" Grid.Column="2" Text="{x:Bind viewmodels:DashboardViewModel.EgressStatus(ViewModel.ProxyEgress), Mode=OneWay}"
                                         Visibility="{Binding Text, ElementName=ProxyEgressStatusText, Converter={StaticResource StringVisibilityConverter}}"
-                                        Style="{x:Bind ViewModel.ProxyEgress.Health, Mode=OneWay, Converter={StaticResource DashboardEgressStyleConverter}, ConverterParameter=Text}"
+                                        Style="{x:Bind EgressTextStyle(ViewModel.ProxyEgress.Health), Mode=OneWay}"
                                         TextWrapping="Wrap" FontSize="12" />
                                 </Grid>
                             </StackPanel>

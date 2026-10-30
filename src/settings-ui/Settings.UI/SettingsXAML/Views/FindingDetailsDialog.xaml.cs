@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Globalization;
 using System.Text;
 using Kit.AIHubLib.Models;
+using Kit.Settings.UI.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
@@ -15,8 +15,6 @@ namespace Kit.Settings.UI.Views;
 public sealed partial class FindingDetailsDialog : ContentDialog
 {
     private AuditIssueEnhanced _currentIssue;
-
-    private static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     public FindingDetailsDialog()
     {
@@ -37,7 +35,7 @@ public sealed partial class FindingDetailsDialog : ContentDialog
         SeverityBadge.Style = (Style)Resources[issue.IsHigh ? "HighSeverityBadgeStyle" : issue.IsMedium ? "MediumSeverityBadgeStyle" : "LowSeverityBadgeStyle"];
 
         CategoryTextBlock.Text = issue.CategoryLabel;
-        EventIdTextBlock.Text = IsChinese ? $"事件 {issue.EventId}" : $"Event {issue.EventId}";
+        EventIdTextBlock.Text = "FindingDetails_EventIdFormat".FormatLocalized("Event {0}", issue.EventId);
 
         if (issue.HasOccurrences)
         {
@@ -54,7 +52,7 @@ public sealed partial class FindingDetailsDialog : ContentDialog
         RecommendationTextBlock.Text = issue.PriorityActionText;
 
         TimestampTextBlock.Text = issue.EventTimestampText;
-        AffectedTextBlock.Text = string.IsNullOrWhiteSpace(issue.Affected) ? (IsChinese ? "无" : "N/A") : issue.Affected;
+        AffectedTextBlock.Text = string.IsNullOrWhiteSpace(issue.Affected) ? "FindingDetails_AffectedNotAvailable".GetLocalizedOrFallback("N/A") : issue.Affected;
         KeyTextBlock.Text = issue.Key;
     }
 
@@ -65,16 +63,13 @@ public sealed partial class FindingDetailsDialog : ContentDialog
             return;
         }
 
-        bool isZh = IsChinese;
         var sb = new StringBuilder();
-        sb.AppendLine(isZh ? $"[安全发现] {_currentIssue.DisplayTitle}" : $"[Security Finding] {_currentIssue.DisplayTitle}");
-        sb.AppendLine(isZh
-            ? $"严重度: {_currentIssue.SeverityText} | 分类: {_currentIssue.CategoryLabel} | 事件 ID: {_currentIssue.EventId}"
-            : $"Severity: {_currentIssue.SeverityText} | Category: {_currentIssue.CategoryLabel} | Event ID: {_currentIssue.EventId}");
-        sb.AppendLine(isZh ? $"时间戳: {_currentIssue.EventTimestampText}" : $"Timestamp: {_currentIssue.EventTimestampText}");
-        sb.AppendLine(isZh ? $"检测内容: {_currentIssue.EvidenceSummaryText}" : $"Detection: {_currentIssue.EvidenceSummaryText}");
-        sb.AppendLine(isZh ? $"触发原因: {_currentIssue.PriorityReasonText}" : $"Root Cause: {_currentIssue.PriorityReasonText}");
-        sb.AppendLine(isZh ? $"建议操作: {_currentIssue.PriorityActionText}" : $"Recommended Action: {_currentIssue.PriorityActionText}");
+        sb.AppendLine("FindingDetails_CopyHeader".FormatLocalized("[Security Finding] {0}", _currentIssue.DisplayTitle));
+        sb.AppendLine("FindingDetails_CopySeverity".FormatLocalized("Severity: {0} | Category: {1} | Event ID: {2}", _currentIssue.SeverityText, _currentIssue.CategoryLabel, _currentIssue.EventId));
+        sb.AppendLine("FindingDetails_CopyTimestamp".FormatLocalized("Timestamp: {0}", _currentIssue.EventTimestampText));
+        sb.AppendLine("FindingDetails_CopyDetection".FormatLocalized("Detection: {0}", _currentIssue.EvidenceSummaryText));
+        sb.AppendLine("FindingDetails_CopyRootCause".FormatLocalized("Root Cause: {0}", _currentIssue.PriorityReasonText));
+        sb.AppendLine("FindingDetails_CopyAction".FormatLocalized("Recommended Action: {0}", _currentIssue.PriorityActionText));
 
         var dataPackage = new DataPackage();
         dataPackage.SetText(sb.ToString());

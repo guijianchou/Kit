@@ -109,33 +109,6 @@ namespace Kit.Settings.UI.ViewModels
         }
     }
 
-    public sealed class RecentBarViewModel
-    {
-        public Brush Brush { get; }
-        public double BarHeight { get; }
-        public string Description { get; }
-
-        public RecentBarViewModel(ServiceState state, bool? healthProbePassed = null)
-        {
-            var severity = state.ToSeverity(healthProbePassed);
-            Brush = (Brush)Application.Current.Resources[severity switch
-            {
-                ServiceSeverity.Success => "SystemFillColorSuccessBrush",
-                ServiceSeverity.Caution => "SystemFillColorCautionBrush",
-                ServiceSeverity.Critical => "SystemFillColorCriticalBrush",
-                _ => "ControlStrongStrokeColorDefaultBrush",
-            }];
-            BarHeight = severity switch
-            {
-                ServiceSeverity.Success => 16d,
-                ServiceSeverity.Caution => 16d,
-                ServiceSeverity.Critical => 8d,
-                _ => 6d,
-            };
-            Description = LocalserverViewModel.GetStateLabel(state, healthProbePassed);
-        }
-    }
-
     public sealed class LineRowViewModel : INotifyPropertyChanged, IDisposable
     {
         private readonly ServiceRunner _runner;
@@ -152,7 +125,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public ObservableCollection<RecentBarViewModel> RecentBars { get; } = new();
+        public ObservableCollection<StatusBarViewModel> RecentBars { get; } = new();
 
         public bool IsConfigExpanded
         {
@@ -660,12 +633,12 @@ namespace Kit.Settings.UI.ViewModels
                     int initialCount = Math.Min(uptimeSeconds, _recentBarCapacity);
                     for (int k = 0; k < initialCount; k++)
                     {
-                        RecentBars.Add(new RecentBarViewModel(State, _runner.HealthProbePassed));
+                        RecentBars.Add(StatusBarViewModel.FromServiceState(State, _runner.HealthProbePassed, LocalserverViewModel.GetStateLabel(State, _runner.HealthProbePassed)));
                     }
                 }
                 else
                 {
-                    RecentBars.Add(new RecentBarViewModel(State, _runner.HealthProbePassed));
+                    RecentBars.Add(StatusBarViewModel.FromServiceState(State, _runner.HealthProbePassed, LocalserverViewModel.GetStateLabel(State, _runner.HealthProbePassed)));
                     while (RecentBars.Count > _recentBarCapacity)
                     {
                         RecentBars.RemoveAt(0);

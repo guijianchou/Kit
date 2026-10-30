@@ -69,7 +69,12 @@ try {
     $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $launchDirectory -WindowStyle Hidden -PassThru
     $testDeadline = [Diagnostics.Stopwatch]::StartNew()
     while (-not $testProcess.WaitForExit(1000)) {
-        if ($testDeadline.Elapsed.TotalSeconds -ge 120) { throw 'Page smoke test timed out.' }
+        if ($testDeadline.Elapsed.TotalSeconds -ge 120) {
+            Write-Host 'Page smoke test timed out after 120s; harness log tail:'
+            $harnessLog = Join-Path $reportRoot 'page-smoke.log'
+            if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 5 }
+            throw 'Page smoke test timed out.'
+        }
     }
     $proxySettingsPath = Join-Path $env:LOCALAPPDATA 'Kit\NetMap\settings.json'
     $currentProxySettings = if (Test-Path -LiteralPath $proxySettingsPath) { [IO.File]::ReadAllBytes($proxySettingsPath) } else { $null }
@@ -82,7 +87,7 @@ try {
         throw 'Page smoke test exited before completing its assertions.'
     }
 } finally {
-    if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit() }
+    if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
     $env:KIT_DASHBOARD_TEST_OUTPUT = $previousOutput
     $env:KIT_DASHBOARD_LAYOUT_ONLY = $previousLayoutMode
     foreach ($path in $backups.Keys) {

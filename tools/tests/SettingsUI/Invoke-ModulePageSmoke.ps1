@@ -65,14 +65,19 @@ try {
     $pipeSuffix = [guid]::NewGuid().ToString('N')
     $launchArguments = @("KitPageSmokeRunner-$pipeSuffix", "KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
     $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $runtimeRoot -WindowStyle Hidden -PassThru
-    if (-not $testProcess.WaitForExit(60000)) { throw 'Page smoke test timed out.' }
+    if (-not $testProcess.WaitForExit(60000)) {
+        Write-Host 'Page smoke test timed out after 60s; harness log tail:'
+        $harnessLog = Join-Path $reportRoot 'module-pages-smoke.log'
+        if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 5 }
+        throw 'Page smoke test timed out.'
+    }
     Get-Content -LiteralPath (Join-Path $reportRoot 'module-pages-smoke.log')
     if ($testProcess.ExitCode -ne 0) { throw "Page smoke test failed: $($testProcess.ExitCode)" }
     if ((Get-Content -LiteralPath (Join-Path $reportRoot 'module-pages-smoke.log') -Tail 1) -ne 'PASS') {
         throw 'Page smoke test exited before completing its assertions.'
     }
 } finally {
-    if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit() }
+    if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
     $env:KIT_MODULE_PAGE_TEST_OUTPUT = $previousOutput
             $env:TEMP = $previousTemp
             $env:TMP = $previousTmp

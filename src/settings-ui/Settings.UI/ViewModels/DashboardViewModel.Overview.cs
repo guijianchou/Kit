@@ -25,11 +25,12 @@ public sealed class DashboardDetail : INotifyPropertyChanged
     private string value = string.Empty;
     private double? percent;
 
-    public DashboardDetail(string label, string value, double? percent = null)
+    public DashboardDetail(string label, string value, double? percent = null, UsageCategory usageCategory = UsageCategory.Default)
     {
         this.label = label;
         this.value = value;
         this.percent = percent;
+        UsageCategory = usageCategory;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -78,6 +79,8 @@ public sealed class DashboardDetail : INotifyPropertyChanged
     public bool HasUsage => Percent.HasValue && double.IsFinite(Percent.Value);
 
     public double UsageValue => HasUsage ? Math.Clamp(Percent!.Value, 0, 100) : 0;
+
+    public UsageCategory UsageCategory { get; }
 
     public void Update(string newValue, double? newPercent = null)
     {
@@ -408,7 +411,7 @@ public partial class DashboardViewModel
             return;
         }
 
-        StorageDetails = values.Select(value => new DashboardDetail(value.Key, value.Value.Text, value.Value.Percent)).ToArray();
+        StorageDetails = values.Select(value => new DashboardDetail(value.Key, value.Value.Text, value.Value.Percent, UsageCategory.Disk)).ToArray();
         OnPropertyChanged(nameof(StorageDetails));
     }
 
@@ -480,9 +483,9 @@ public partial class DashboardViewModel
                 new DashboardDetail(resourceLoader.GetString("Dashboard_Driver"), value.Adapter.Driver),
                 new DashboardDetail(resourceLoader.GetString("Dashboard_VideoMemory"),
                     sample?.TotalMemoryMiB > 0 && sample.UsedMemoryMiB.HasValue ? $"{sample.UsedMemoryMiB / 1024d:F1} / {sample.TotalMemoryMiB / 1024d:F1} GB" : "—",
-                    sample?.TotalMemoryMiB > 0 ? sample.UsedMemoryMiB * 100d / sample.TotalMemoryMiB : null),
-                new DashboardDetail(resourceLoader.GetString("Dashboard_GpuLoad"), sample?.UtilizationPercent is { } load ? $"{load}%" : "—", sample?.UtilizationPercent),
-                new DashboardDetail(resourceLoader.GetString("Dashboard_Temperature"), sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—", sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null),
+                    sample?.TotalMemoryMiB > 0 ? sample.UsedMemoryMiB * 100d / sample.TotalMemoryMiB : null, UsageCategory.Gpu),
+                new DashboardDetail(resourceLoader.GetString("Dashboard_GpuLoad"), sample?.UtilizationPercent is { } load ? $"{load}%" : "—", sample?.UtilizationPercent, UsageCategory.Gpu),
+                new DashboardDetail(resourceLoader.GetString("Dashboard_Temperature"), sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—", sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null, UsageCategory.Temperature),
             }, sample != null ? string.Empty : resourceLoader.GetString(value.Adapter.Vendor == "NVIDIA" ? "Dashboard_GpuUnavailable" : "Dashboard_GpuUnsupported"));
         }).ToArray();
 
@@ -572,6 +575,13 @@ public partial class DashboardViewModel
         });
     }
 
+    private static UsageCategory GetSystemDetailCategory(string key) => key switch
+    {
+        "CpuLoad" => UsageCategory.Cpu,
+        "Memory" => UsageCategory.Memory,
+        _ => UsageCategory.Default,
+    };
+
     private void UpdateSystemDetails()
     {
         // If items are already populated, update existing items in-place!
@@ -595,7 +605,7 @@ public partial class DashboardViewModel
         {
             if (systemValues.TryGetValue(key, out var val))
             {
-                var detail = new DashboardDetail(resourceLoader.GetString("Dashboard_" + key), val.Text, val.Percent);
+                var detail = new DashboardDetail(resourceLoader.GetString("Dashboard_" + key), val.Text, val.Percent, GetSystemDetailCategory(key));
                 list.Add(detail);
                 systemDetailMap[key] = detail;
             }

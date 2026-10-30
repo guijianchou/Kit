@@ -21,7 +21,6 @@
                 <ResourceDictionary Source="/SettingsXAML/Styles/InfoBadge.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Styles/Surface.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Themes/Generic.xaml" />
-                <ResourceDictionary Source="/SettingsXAML/Controls/Timeline/TimelineStyles.xaml" />
                 <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/ShortcutWithTextLabelControl/ShortcutWithTextLabelControl.xaml" />
                 <!--  Other merged dictionaries here  -->
             </ResourceDictionary.MergedDictionaries>

@@ -4,7 +4,7 @@
 
 Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 Windows 11 本地工具集（同步对齐上游 PowerToys **v0.102.3001.0** 代码）。它复用 Runner、原生模块接口和 WinUI 3 设置框架，整合系统工具、本地服务管理、网络诊断与 AI 辅助维护。
 
-当前源码版本：**3.2.0**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
+当前源码版本：**3.3.0**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
 
 [功能概览](#1-功能概览) · [主框架](#2-主框架) · [插件](#3-插件) · [构建与发布](#4-构建与发布) · [数据与日志](#5-数据与日志) · [开发与扩展](#6-开发与扩展)
 
@@ -23,7 +23,7 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 
 启动运行目录中的 `Kit.exe` 后，在 Settings 中启用需要的模块并配置。**模块开关与任务开始是两层操作**：例如 Localserver 启用后仍需单独启动服务，NetMap 启用后仍需点击 Start。
 
-首页提供实时系统资源监控（CPU、内存、磁盘空间、双显卡/核显与独显硬件信息、驱动版本及温度）与网络双出口（Direct / Proxy）对比；常规页管理外观、启动行为和共享 AI 服务；Quick Access 提供快捷入口与模块动作。全界面基于原生 WinUI 3 Fluent Design 规范设计，采用层级设计令牌、响应式卡片布局、Cascadia Code 规范等宽字体排版以及 100% 完整中英双语本地化（零硬编码字符串）。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
+首页提供实时系统资源监控（CPU、内存、磁盘空间、双显卡/核显与独显硬件信息、驱动版本及温度）与网络双出口（Direct / Proxy）对比；常规页管理外观、启动行为和共享 AI 服务；Quick Access 提供快捷入口与模块动作。全界面基于原生 WinUI 3 Fluent Design 规范设计，采用层级设计令牌、响应式卡片布局、Cascadia Code 规范等宽字体排版、无障碍元数据（键盘可达控件、屏幕阅读器名称、高对比度配色）以及 100% 完整中英双语本地化（零硬编码字符串）。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
 
 ## 2. 主框架
 

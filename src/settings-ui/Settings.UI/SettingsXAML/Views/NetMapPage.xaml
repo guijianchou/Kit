@@ -31,7 +31,6 @@
                 <Style x:Key="ErrorDot" TargetType="Ellipse"><Setter Property="Fill" Value="{ThemeResource SystemFillColorCriticalBrush}" /></Style>
                 <Style x:Key="ErrorBox" TargetType="Rectangle"><Setter Property="Fill" Value="{ThemeResource SystemFillColorCriticalBrush}" /></Style>
             </ResourceDictionary>
-            <vm:NetMapHealthStyleConverter x:Key="NetMapHealthStyleConverter" Styles="{StaticResource NetMapHealthStyles}" />
 
             <!-- Core Fonts & Typography Styles -->
 
@@ -69,6 +68,7 @@
             <Style x:Key="NetMapMapLabelStyle" TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontSize" Value="28" />
             </Style>
             <Style x:Key="NetMapMapLabelBackgroundStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
@@ -96,8 +96,8 @@
                             <!-- Health Status Pill Badge -->
                             <Border Grid.Column="1" Style="{StaticResource KitStatusPillStyle}" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                    <Ellipse Width="8" Height="8" Style="{x:Bind Health, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Dot}" VerticalAlignment="Center" />
-                                    <TextBlock Text="{x:Bind Status}" FontSize="12" FontWeight="SemiBold" Style="{x:Bind Health, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" VerticalAlignment="Center" />
+                                    <Ellipse Width="8" Height="8" Style="{x:Bind DotStyle, Mode=OneWay}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Bind Status}" FontSize="12" FontWeight="SemiBold" Style="{x:Bind TextStyle, Mode=OneWay}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -115,7 +115,7 @@
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap"
                                            IsTextSelectionEnabled="True"
-                                           Style="{x:Bind Health, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}"
+                                           Style="{x:Bind TextStyle, Mode=OneWay}"
                                            VerticalAlignment="Center" />
                                 <FontIcon Grid.Column="1" Glyph="&#xE756;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Opacity="0.7" />
                             </Grid>
@@ -158,12 +158,10 @@
                             <!-- Details Button: Beautiful Fluent 2 styling -->
                             <Button Grid.Column="1"
                                     x:Uid="NetMap_CardDetailsButton"
-                                    AutomationProperties.Name="Card details"
-                                    ToolTipService.ToolTip="View egress details"
                                     Style="{StaticResource KitActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE946;" FontSize="11" />
-                                    <TextBlock x:Uid="NetMap_CardDetailsButtonText" Text="Details" FontSize="12" />
+                                    <TextBlock x:Uid="NetMap_CardDetailsButtonText" FontSize="12" />
                                 </StackPanel>
                                 <Button.Flyout>
                                     <Flyout>
@@ -174,23 +172,23 @@
                                             </StackPanel>
                                             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_SourceEndpointLabel" Text="Source Endpoint:" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <TextBlock x:Uid="NetMap_SourceEndpointLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind Source}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" />
                                             </StackPanel>
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_RouteModeLabel" Text="Route Mode:" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <TextBlock x:Uid="NetMap_RouteModeLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind Route}" TextWrapping="Wrap" FontSize="12" />
                                             </StackPanel>
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_AsnLabel" Text="Autonomous System (ASN):" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <TextBlock x:Uid="NetMap_AsnLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind Asn}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="12" />
                                             </StackPanel>
                                             <StackPanel Spacing="3">
-                                                <TextBlock x:Uid="NetMap_GeoProviderLabel" Text="Geo Provider:" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <TextBlock x:Uid="NetMap_GeoProviderLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind GeographySource}" Style="{StaticResource NetMapSecondary}" />
                                             </StackPanel>
                                             <StackPanel Spacing="3" Visibility="{x:Bind AiRoute, Converter={StaticResource StringVisibilityConverter}}">
-                                                <TextBlock x:Uid="NetMap_AiRouteLabel" Text="AI Route Analysis:" Style="{StaticResource KitMicroLabelTextStyle}" />
+                                                <TextBlock x:Uid="NetMap_AiRouteLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind AiRoute}" FontWeight="SemiBold" FontSize="12" />
                                                 <TextBlock Text="{x:Bind AiRouteDetails}" TextWrapping="Wrap" FontSize="12" Style="{StaticResource NetMapSecondary}" IsTextSelectionEnabled="True" />
                                             </StackPanel>
@@ -213,8 +211,6 @@
 
     <controls:SettingsPageControl
         x:Uid="NetMap"
-        ModuleTitle="NetMap"
-        ModuleDescription="Observe direct and proxy egress as nodes change."
         ModuleImageSource="ms-appx:///Assets/Settings/Modules/NetMap.png"
         IsTabStop="False">
         <controls:SettingsPageControl.ModuleContent>
@@ -223,16 +219,11 @@
                     <!-- ============================================================== -->
                     <!-- 1. HERO MASTER GLASS CARD: Enable Switch & Live Telemetry Bar  -->
                     <!-- ============================================================== -->
-                    <Border CornerRadius="{StaticResource OverlayCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1">
+                    <Border Style="{StaticResource KitHeroSurfaceStyle}">
                         <StackPanel Spacing="0">
                             <!-- Master Enable Card -->
                             <tk:SettingsCard
                                 x:Uid="NetMap_EnableCard"
-                                Header="NetMap"
-                                Description="Observe direct and proxy egress as nodes change."
                                 AutomationProperties.AutomationId="NetMapEnableCard"
                                 BorderThickness="0"
                                 Background="Transparent">
@@ -271,8 +262,8 @@
                                         <!-- Live Detection State Badge -->
                                         <Border Style="{StaticResource KitStatusPillStyle}" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                                                <TextBlock x:Uid="NetMap_DetectionBadge" Text="Detection" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock x:Uid="NetMap_Colon" Text=":" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock x:Uid="NetMap_DetectionBadge" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock x:Uid="NetMap_Colon" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                 <TextBlock Text="{x:Bind ViewModel.RunStatus, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite" />
                                             </StackPanel>
                                         </Border>
@@ -293,42 +284,36 @@
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                         <Button x:Name="StartButton"
                                                 x:Uid="NetMap_StartButton"
-                                                AutomationProperties.Name="Start detection"
                                                 Click="Start_Click"
                                                 IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}"
                                                 Style="{StaticResource KitPrimaryActionButtonStyle}"
-                                                ToolTipService.ToolTip="Start detection"
                                                 AutomationProperties.AutomationId="NetMapStart">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE768;" FontSize="12" />
-                                                <TextBlock x:Uid="NetMap_StartButtonText" FontSize="13" Text="Start" />
+                                                <TextBlock x:Uid="NetMap_StartButtonText" FontSize="13" />
                                             </StackPanel>
                                         </Button>
                                         <Button x:Name="StopButton"
                                                 x:Uid="NetMap_StopButton"
-                                                AutomationProperties.Name="Stop detection"
                                                 Click="Stop_Click"
                                                 IsEnabled="{x:Bind ViewModel.IsDetectionOn, Mode=OneWay}"
                                                 Style="{StaticResource KitActionButtonStyle}"
-                                                ToolTipService.ToolTip="Stop detection"
                                                 AutomationProperties.AutomationId="NetMapStop">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE71A;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                                                <TextBlock x:Uid="NetMap_StopButtonText" FontSize="13" Text="Stop" />
+                                                <TextBlock x:Uid="NetMap_StopButtonText" FontSize="13" />
                                             </StackPanel>
                                         </Button>
                                         <Button x:Name="AiCheckButton"
                                                 x:Uid="NetMap_AiCheckButton"
-                                                AutomationProperties.Name="AI Route Analysis"
                                                 Click="AiCheck_Click"
                                                 IsEnabled="{x:Bind ViewModel.CanAiCheck, Mode=OneWay}"
                                                 Style="{StaticResource KitActionButtonStyle}"
-                                                ToolTipService.ToolTip="AI check route"
                                                 AutomationProperties.AutomationId="NetMapAiCheck">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <ProgressRing Width="14" Height="14" IsActive="{x:Bind ViewModel.IsAiChecking, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                 <FontIcon Glyph="&#xE9D9;" FontSize="12" Foreground="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}" />
-                                                <TextBlock x:Uid="NetMap_AiCheckButtonText" FontSize="13" Text="AI check" />
+                                                <TextBlock x:Uid="NetMap_AiCheckButtonText" FontSize="13" />
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -376,7 +361,7 @@
                                                     HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <FontIcon Glyph="&#xE909;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
-                                            <TextBlock x:Uid="NetMap_MapTitle" Text="MTR route and map" Style="{StaticResource SubtitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
+                                            <TextBlock x:Uid="NetMap_MapTitle" Style="{StaticResource SubtitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
                                         </StackPanel>
 
                                         <!-- Route Target Pill Badge -->
@@ -390,8 +375,8 @@
                                         <!-- Target Latency & Health Indicator Pill -->
                                         <Border Grid.Column="2" Style="{StaticResource KitStatusPillStyle}" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                <Ellipse x:Name="TargetStatusLight" Width="8" Height="8" Style="{x:Bind ViewModel.TargetHealth, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Dot}" VerticalAlignment="Center" />
-                                                <TextBlock x:Name="TargetLatencyText" Text="{x:Bind ViewModel.TargetLatency, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Style="{x:Bind ViewModel.TargetHealth, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" VerticalAlignment="Center" />
+                                                <Ellipse x:Name="TargetStatusLight" Width="8" Height="8" Style="{x:Bind HealthDotStyle(ViewModel.TargetHealth), Mode=OneWay}" VerticalAlignment="Center" />
+                                                <TextBlock x:Name="TargetLatencyText" Text="{x:Bind ViewModel.TargetLatency, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Style="{x:Bind HealthTextStyle(ViewModel.TargetHealth), Mode=OneWay}" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Border>
                                     </Grid>
@@ -428,17 +413,18 @@
                                                             Padding="10,6"
                                                             CornerRadius="6,6,0,0">
                                                         <Grid ColumnDefinitions="28,124,*,46,52,52" ColumnSpacing="6">
-                                                            <TextBlock x:Uid="NetMap_HopHeader" Text="#" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Center" />
-                                                            <TextBlock Grid.Column="1" x:Uid="NetMap_RouterHeader" Text="Router" Style="{StaticResource TableHeaderTextStyle}" />
-                                                            <TextBlock Grid.Column="2" x:Uid="NetMap_LocHeader" Text="Loc" Style="{StaticResource TableHeaderTextStyle}" />
-                                                            <TextBlock Grid.Column="3" x:Uid="NetMap_LossHeader" Text="Loss" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Right" />
-                                                            <TextBlock Grid.Column="4" x:Uid="NetMap_LastRttHeader" Text="Last ms" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Right" />
-                                                            <TextBlock Grid.Column="5" x:Uid="NetMap_RttHeader" Text="Avg ms" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Right" />
+                                                            <TextBlock x:Uid="NetMap_HopHeader" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" x:Uid="NetMap_RouterHeader" Style="{StaticResource TableHeaderTextStyle}" />
+                                                            <TextBlock Grid.Column="2" x:Uid="NetMap_LocHeader" Style="{StaticResource TableHeaderTextStyle}" />
+                                                            <TextBlock Grid.Column="3" x:Uid="NetMap_LossHeader" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Right" />
+                                                            <TextBlock Grid.Column="4" x:Uid="NetMap_LastRttHeader" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Right" />
+                                                            <TextBlock Grid.Column="5" x:Uid="NetMap_RttHeader" Style="{StaticResource TableHeaderTextStyle}" HorizontalAlignment="Right" />
                                                         </Grid>
                                                     </Border>
 
                                                     <!-- Hop List -->
                                                     <ListView x:Name="HopList"
+                                                              x:Uid="NetMap_HopList"
                                                               ItemsSource="{x:Bind ViewModel.Hops, Mode=OneWay}"
                                                               SelectionChanged="HopList_SelectionChanged"
                                                               HorizontalContentAlignment="Stretch"
@@ -458,14 +444,14 @@
                                                                     <!-- TTL Pill -->
                                                                     <Border Width="22" Height="22" CornerRadius="11" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                                         <Grid>
-                                                                            <Ellipse Width="18" Height="18" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Dot}" Opacity="0.3" />
+                                                                            <Ellipse Width="18" Height="18" Style="{x:Bind DotStyle, Mode=OneWay}" Opacity="0.3" />
                                                                             <TextBlock Text="{x:Bind Ttl}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                                                         </Grid>
                                                                     </Border>
                                                                     <TextBlock Grid.Column="1" Text="{x:Bind Ip, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                                     <TextBlock Grid.Column="2" Text="{x:Bind Location, Mode=OneWay}" Style="{StaticResource NetMapSecondary}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Location, Mode=OneWay}" />
                                                                     <TextBlock Grid.Column="3" Text="{x:Bind Loss, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                                                                    <TextBlock Grid.Column="4" Text="{x:Bind Last, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" />
+                                                                    <TextBlock Grid.Column="4" Text="{x:Bind Last, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" Style="{x:Bind TextStyle, Mode=OneWay}" />
                                                                     <TextBlock Grid.Column="5" Text="{x:Bind Rtt, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                 </Grid>
                                                             </DataTemplate>
@@ -487,11 +473,11 @@
                                     <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE774;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                            <TextBlock x:Uid="NetMap_MapNotice" Style="{StaticResource NetMapSecondary}" Text="Natural Earth · country points are regional illustrations, not precise device locations." />
+                                            <TextBlock x:Uid="NetMap_MapNotice" Style="{StaticResource NetMapSecondary}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE7BA;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                            <TextBlock x:Uid="NetMap_RouteNotice" Style="{StaticResource NetMapSecondary}" Text="System ICMP route; missing replies are not application packet loss." />
+                                            <TextBlock x:Uid="NetMap_RouteNotice" Style="{StaticResource NetMapSecondary}" />
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
@@ -514,8 +500,8 @@
                                                 <FontIcon Glyph="&#xE753;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                             <StackPanel Spacing="2" VerticalAlignment="Center">
-                                                <TextBlock x:Uid="NetMap_ServicesTitle" Text="Proxy service connectivity" Style="{StaticResource SubtitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
-                                                <TextBlock x:Uid="NetMap_ServicesSubtitle" Text="Live proxy endpoints, response latencies, and egress trace checkpoints" Style="{StaticResource NetMapSecondary}" FontSize="12" />
+                                                <TextBlock x:Uid="NetMap_ServicesTitle" Style="{StaticResource SubtitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
+                                                <TextBlock x:Uid="NetMap_ServicesSubtitle" Style="{StaticResource NetMapSecondary}" FontSize="12" />
                                             </StackPanel>
                                         </StackPanel>
 
@@ -535,8 +521,8 @@
                                             Padding="14,9"
                                             CornerRadius="6,6,0,0">
                                         <Grid ColumnDefinitions="2*,3*" ColumnSpacing="16">
-                                            <TextBlock x:Uid="NetMap_Endpoint" Text="Endpoint" Style="{StaticResource TableHeaderTextStyle}" />
-                                            <TextBlock Grid.Column="1" x:Uid="NetMap_ProxyHeader" Text="Proxy" Style="{StaticResource TableHeaderTextStyle}" />
+                                            <TextBlock x:Uid="NetMap_Endpoint" Style="{StaticResource TableHeaderTextStyle}" />
+                                            <TextBlock Grid.Column="1" x:Uid="NetMap_ProxyHeader" Style="{StaticResource TableHeaderTextStyle}" />
                                         </Grid>
                                     </Border>
 
@@ -573,13 +559,13 @@
                                                             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
                                                                 <!-- Health Dot & Status -->
                                                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                    <Ellipse Width="8" Height="8" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Dot}" VerticalAlignment="Center" />
-                                                                    <TextBlock Text="{x:Bind Status, Mode=OneWay}" FontWeight="SemiBold" FontSize="13" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" VerticalAlignment="Center" />
+                                                                    <Ellipse Width="8" Height="8" Style="{x:Bind DotStyle, Mode=OneWay}" VerticalAlignment="Center" />
+                                                                    <TextBlock Text="{x:Bind Status, Mode=OneWay}" FontWeight="SemiBold" FontSize="13" Style="{x:Bind TextStyle, Mode=OneWay}" VerticalAlignment="Center" />
                                                                 </StackPanel>
 
                                                                 <!-- Monospace Latency Pill -->
                                                                 <Border Grid.Column="2" Style="{StaticResource KitStatusPillStyle}" Padding="8,2" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{x:Bind Latency, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="13" FontWeight="SemiBold" Style="{x:Bind Health, Mode=OneWay, Converter={StaticResource NetMapHealthStyleConverter}, ConverterParameter=Text}" VerticalAlignment="Center" />
+                                                                    <TextBlock Text="{x:Bind Latency, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="13" FontWeight="SemiBold" Style="{x:Bind TextStyle, Mode=OneWay}" VerticalAlignment="Center" />
                                                                 </Border>
                                                             </Grid>
                                                             <TextBlock Grid.Row="1" Text="{x:Bind Proxy, Mode=OneWay}" Style="{StaticResource NetMapSecondary}" FontSize="11" />
@@ -590,51 +576,51 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
 
-                                    <TextBlock x:Uid="NetMap_ServiceNotice" Text="Responses do not verify accounts or models. Domain routing may differ." Style="{StaticResource NetMapSecondary}" />
+                                    <TextBlock x:Uid="NetMap_ServiceNotice" Style="{StaticResource NetMapSecondary}" />
                                 </StackPanel>
                             </Border>
 
                             <!-- ============================================================== -->
                             <!-- 5. MAP SETTINGS EXPANDER                                       -->
                             <!-- ============================================================== -->
-                            <Expander x:Name="SettingsExpander" x:Uid="NetMap_Settings" Header="Map settings" AutomationProperties.HeadingLevel="Level2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander x:Name="SettingsExpander" x:Uid="NetMap_Settings" AutomationProperties.HeadingLevel="Level2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                 <StackPanel Spacing="16">
-                                    <ToggleSwitch x:Uid="NetMap_OnlineLookup" Header="Look up missing ASN and locations online" IsOn="{x:Bind ViewModel.OnlineLookup, Mode=TwoWay}" />
+                                    <ToggleSwitch x:Uid="NetMap_OnlineLookup" IsOn="{x:Bind ViewModel.OnlineLookup, Mode=TwoWay}" />
 
                                     <!-- Local MMDB Databases Group -->
                                     <Border Padding="14,12" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="{StaticResource OverlayCornerRadius}">
                                         <StackPanel Spacing="12">
-                                            <TextBlock x:Uid="NetMap_LocalGeoDatabases" Text="Local Geolocation Databases" FontWeight="SemiBold" FontSize="13" AutomationProperties.HeadingLevel="Level3" />
+                                            <TextBlock x:Uid="NetMap_LocalGeoDatabases" FontWeight="SemiBold" FontSize="13" AutomationProperties.HeadingLevel="Level3" />
 
                                             <!-- ASN Database Row with inline Browse Button -->
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalAlignment="Bottom">
-                                                <TextBox x:Uid="NetMap_AsnPath" Header="GeoLite2-ASN database (optional)" Text="{x:Bind ViewModel.AsnDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
-                                                <Button x:Uid="NetMap_BrowseAsnButton" ToolTipService.ToolTip="Choose ASN database" Click="BrowseDatabase_Click" Tag="ASN" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
+                                                <TextBox x:Uid="NetMap_AsnPath" Text="{x:Bind ViewModel.AsnDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
+                                                <Button x:Uid="NetMap_BrowseAsnButton" Click="BrowseDatabase_Click" Tag="ASN" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE838;" FontSize="12" />
-                                                        <TextBlock x:Uid="NetMap_BrowseAsnButtonText" Text="Browse" FontSize="12" />
+                                                        <TextBlock x:Uid="NetMap_BrowseAsnButtonText" FontSize="12" />
                                                     </StackPanel>
                                                 </Button>
                                             </Grid>
 
                                             <!-- City Database Row with inline Browse Button -->
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalAlignment="Bottom">
-                                                <TextBox x:Uid="NetMap_CityPath" Header="GeoLite2-City database (optional)" Text="{x:Bind ViewModel.CityDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
-                                                <Button x:Uid="NetMap_BrowseCityButton" ToolTipService.ToolTip="Choose City database" Click="BrowseDatabase_Click" Tag="City" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
+                                                <TextBox x:Uid="NetMap_CityPath" Text="{x:Bind ViewModel.CityDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
+                                                <Button x:Uid="NetMap_BrowseCityButton" Click="BrowseDatabase_Click" Tag="City" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE838;" FontSize="12" />
-                                                        <TextBlock x:Uid="NetMap_BrowseCityButtonText" Text="Browse" FontSize="12" />
+                                                        <TextBlock x:Uid="NetMap_BrowseCityButtonText" FontSize="12" />
                                                     </StackPanel>
                                                 </Button>
                                             </Grid>
 
                                             <TextBlock Text="{x:Bind ViewModel.DatabaseStatus, Mode=OneWay}" Style="{StaticResource NetMapSecondary}" />
-                                            <TextBlock x:Uid="NetMap_DatabaseNotice" Style="{StaticResource NetMapSecondary}" Text="Databases stay local and are loaded only when detection starts. Leave paths empty to use country-only observations." />
+                                            <TextBlock x:Uid="NetMap_DatabaseNotice" Style="{StaticResource NetMapSecondary}" />
                                         </StackPanel>
                                     </Border>
 
                                     <!-- Nested Expander: ASN database update -->
-                                    <Expander x:Name="DataUpdateExpander" x:Uid="NetMap_DataUpdates" Header="ASN database update" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                    <Expander x:Name="DataUpdateExpander" x:Uid="NetMap_DataUpdates" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                         <StackPanel Spacing="12">
                                             <TextBlock x:Uid="NetMap_UpdateNotice" Style="{StaticResource NetMapSecondary}" />
                                             <HyperlinkButton Content="GeoLite2 · P3TERX/GeoLite.mmdb" NavigateUri="https://github.com/P3TERX/GeoLite.mmdb" />
@@ -643,23 +629,21 @@
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <Button x:Name="UpdateAsnButton"
                                                         x:Uid="NetMap_UpdateAsnButton"
-                                                        ToolTipService.ToolTip="Download / update ASN"
                                                         Click="UpdateAsn_Click"
                                                         IsEnabled="{x:Bind ViewModel.CanUpdate, Mode=OneWay}"
                                                         Style="{StaticResource KitPrimaryActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="7">
                                                         <FontIcon Glyph="&#xE896;" FontSize="12" />
-                                                        <TextBlock x:Uid="NetMap_UpdateAsnButtonText" Text="Download / update ASN" FontSize="12" />
+                                                        <TextBlock x:Uid="NetMap_UpdateAsnButtonText" FontSize="12" />
                                                     </StackPanel>
                                                 </Button>
                                                 <Button x:Uid="NetMap_CancelUpdateButton"
-                                                        ToolTipService.ToolTip="Cancel download"
                                                         Click="CancelUpdate_Click"
                                                         IsEnabled="{x:Bind ViewModel.IsUpdating, Mode=OneWay}"
                                                         Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                                                        <TextBlock x:Uid="NetMap_CancelUpdateButtonText" Text="Cancel download" FontSize="12" />
+                                                        <TextBlock x:Uid="NetMap_CancelUpdateButtonText" FontSize="12" />
                                                     </StackPanel>
                                                 </Button>
                                             </StackPanel>
@@ -671,14 +655,13 @@
 
                                     <!-- Apply Settings Button -->
                                     <Button x:Uid="NetMap_ApplyButton"
-                                            ToolTipService.ToolTip="Apply settings"
                                             Style="{StaticResource KitPrimaryActionButtonStyle}"
                                             Click="Apply_Click"
                                             IsEnabled="{x:Bind ViewModel.CanUpdate, Mode=OneWay}"
                                             HorizontalAlignment="Left">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <FontIcon Glyph="&#xE74E;" FontSize="13" />
-                                            <TextBlock x:Uid="NetMap_ApplyButtonText" Text="Apply settings" FontSize="13" FontWeight="SemiBold" />
+                                            <TextBlock x:Uid="NetMap_ApplyButtonText" FontSize="13" FontWeight="SemiBold" />
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>

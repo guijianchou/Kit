@@ -29,6 +29,11 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     private bool mapLoaded;
     private NetMapSnapshot renderedSnapshot;
     private int renderedSelection = -1;
+    private const double MapBodyTableWidth = 440;
+    private const double MapFitMaxWidth = 800;
+    private const double MapFitMaxHeight = 340;
+    private const double MapFitMinScale = 1;
+    private const double MapFitMaxScale = 4;
     private double mapScale = 1;
     private double mapCenterX = 480;
     private double mapOffsetX;
@@ -42,6 +47,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             SettingsRepository<NetMapSettings>.GetInstance(settingsUtils),
             ShellPage.SendDefaultIPCMessage);
         InitializeComponent();
+        NetMapHealthStylesStore.Attach((ResourceDictionary)Resources["NetMapHealthStyles"]);
         DataContext = ViewModel;
         settingsWindow = App.GetSettingsWindow();
         Loaded += Page_Loaded;
@@ -53,6 +59,14 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     public NetMapViewModel ViewModel { get; }
 
     public void RefreshEnabledState() => ViewModel.RefreshEnabledState();
+
+    public Style HealthDotStyle(ProbeHealth health) => (Style)HealthStyles[NetMapHealthStylesStore.Key(health, "Dot")];
+
+    public Style HealthTextStyle(ProbeHealth health) => (Style)HealthStyles[NetMapHealthStylesStore.Key(health, "Text")];
+
+    public Style HealthBoxStyle(ProbeHealth health) => (Style)HealthStyles[NetMapHealthStylesStore.Key(health, "Box")];
+
+    private ResourceDictionary HealthStyles => (ResourceDictionary)Resources["NetMapHealthStyles"];
 
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
@@ -220,7 +234,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         Grid.SetRow(RoutePanel, narrow ? 1 : 0);
         MapBody.ColumnSpacing = narrow ? 0 : 12;
         MapBody.RowSpacing = narrow ? 12 : 0;
-        MapBody.ColumnDefinitions[1].Width = new GridLength(narrow ? 0 : 440);
+        MapBody.ColumnDefinitions[1].Width = new GridLength(narrow ? 0 : MapBodyTableWidth);
     }
 
     private void HopList_SelectionChanged(object sender, SelectionChangedEventArgs e) => DispatcherQueue.TryEnqueue(DrawPoints);
@@ -248,7 +262,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
                     ToolTipService.SetToolTip(marker.Value, ViewModel.Hops[marker.Key].Detail);
                     if (marker.Value is Grid grid && grid.Children[0] is Shape shape)
                     {
-                        shape.Style = (Style)((ResourceDictionary)Resources["NetMapHealthStyles"])[ViewModel.Hops[marker.Key].Health + "Dot"];
+                        shape.Style = HealthDotStyle(ViewModel.Hops[marker.Key].Health);
                     }
                 }
             }
@@ -328,7 +342,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         if (labelIndex >= 0 && labelIndex < snapshot.Hops.Count && labelIndex < ViewModel.Hops.Count && snapshot.Hops[labelIndex].Geography is { Latitude: not null, Longitude: not null } labelGeo)
         {
             var position = Position(WorldMap.Locate(string.Empty, labelGeo));
-            var text = new TextBlock { FontSize = 28, Style = (Style)Resources["NetMapMapLabelStyle"] };
+            var text = new TextBlock { Style = (Style)Resources["NetMapMapLabelStyle"] };
             text.SetBinding(TextBlock.TextProperty, new Binding { Source = ViewModel.Hops[labelIndex], Path = new PropertyPath(nameof(NetMapHopRow.MapLabel)), Mode = BindingMode.OneWay });
             var label = new Border { Child = text, Padding = new Thickness(8, 4, 8, 4), CornerRadius = new CornerRadius(4), Style = (Style)Resources["NetMapMapLabelBackgroundStyle"] };
             Canvas.SetLeft(label, Math.Clamp(position.X - 100, 8, 620));
@@ -369,7 +383,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             mapCenterX = (left + (width / 2)) % 960;
             double top = points.Min(point => point.Y);
             double height = points.Max(point => point.Y) - top;
-            mapScale = Math.Clamp(Math.Min(800 / Math.Max(width, 40), 340 / Math.Max(height, 30)), 1, 4);
+            mapScale = Math.Clamp(Math.Min(MapFitMaxWidth / Math.Max(width, 40), MapFitMaxHeight / Math.Max(height, 30)), MapFitMinScale, MapFitMaxScale);
             mapOffsetX = 480 - (mapCenterX * mapScale);
             mapOffsetY = Math.Clamp(240 - ((top + (height / 2)) * mapScale), 480 - (480 * mapScale), 0);
         }
@@ -395,7 +409,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
         void AddSegment(Point first, Point second)
         {
-            var line = new Polyline { Style = (Style)Resources["NetMapRouteLineStyle"], StrokeThickness = 3, Opacity = ViewModel.IsDetectionOn ? 0.95 : 0.4, Tag = approximate ? "Approximate" : "Observed" };
+            var line = new Polyline { Style = (Style)Resources["NetMapRouteLineStyle"], Opacity = ViewModel.IsDetectionOn ? 0.95 : 0.4, Tag = approximate ? "Approximate" : "Observed" };
             if (approximate)
             {
                 line.StrokeDashArray = new DoubleCollection { 4, 3 };
@@ -438,7 +452,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     {
         var position = Position(coordinate);
         Shape mark = proxy ? new Ellipse() : new Rectangle { RadiusX = 3, RadiusY = 3 };
-        mark.Style = health.HasValue ? (Style)((ResourceDictionary)Resources["NetMapHealthStyles"])[health + (proxy ? "Dot" : "Box")] : (Style)Resources[proxy ? "NetMapProxyMarkerStyle" : "NetMapDirectMarkerStyle"];
+        mark.Style = health.HasValue ? (proxy ? HealthDotStyle(health.Value) : HealthBoxStyle(health.Value)) : (Style)Resources[proxy ? "NetMapProxyMarkerStyle" : "NetMapDirectMarkerStyle"];
         mark.Width = size;
         mark.Height = size;
         mark.Opacity = stale ? 0.45 : 0.9;

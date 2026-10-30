@@ -660,8 +660,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     // Audit Header & Action Labels
     public string SecurityAuditTitle => IsChinese ? "Windows 事件安全审计" : "Windows Event Security Audit";
-    public string FastScanLabel => IsChinese ? "快速扫描" : "Fast scan";
-    public string FullScanLabel => IsChinese ? "全量审计" : "Full scan";
+    public string FastScanLabel => "AIHub_FastScanLabel".GetLocalizedOrFallback("Fast scan");
+    public string FullScanLabel => "AIHub_FullScanLabel".GetLocalizedOrFallback("Full scan");
     public string ReanalyzeLabel => IsChinese ? "重新分析选定时段" : "Reanalyze selected range";
 
     /// <summary>Label for the AI deep-analysis action (runs the configured kernel).</summary>

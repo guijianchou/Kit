@@ -4,6 +4,17 @@
 
 ## English
 
+### 3.3.0
+
+- **WinUI 3 Settings UX Modernization**:
+  - **Shared Fluent Surface System**: Added reusable card, hero-surface and hero-panel styles plus named surface tokens in `Styles/Surface.xaml` (`KitCardSurfaceStyle`, `KitHeroSurfaceStyle`, `KitHeroPanelStyle`, `KitIconBadgeStyle`, `KitMetricTileValueStyle`, `KitFilterPillToggleStyle`) and converged Home, General and all six module pages onto them, so every card renders from one style source; NetMap was the last page still holding an inline hero surface.
+  - **Layered Typography and Semantic Tokens**: Introduced the layered type scale and monospace telemetry styling, replaced ad-hoc inline colours with semantic brushes, and completed the light / dark / high-contrast brush dictionaries so all three themes resolve from the same named tokens.
+  - **Responsive Layouts**: Gave the AIHub and NetMap pages window-width visual states (`ui:ControlSizeTrigger` at 640 / 760 / 960) so heroes, command bars and metric grids reflow at narrow widths instead of clipping.
+  - **Accessibility**: Every interactive control across the shell and the module pages now carries a stable `AutomationId`, screen-reader names, live regions for streaming status and keyboard-reachable card headers.
+  - **Localization Completion**: Removed the remaining hard-coded UI strings from Awake, LightSwitch, Localserver, UDPtest, AIHub and NetMap plus the quick-access flyout; `en-US` / `zh-CN` resource parity is now a unit-test invariant.
+  - **Typed Status Colouring**: Replaced the string-key style converters with typed mappings shared by NetMap and Dashboard (`NetMapHealthStylesStore`, `KitEgressStatusStyles`).
+  - **Version Identity**: Source version and sparse-package identity bumped to 3.3.0 (`src/Version.props` synced with `src/PackageIdentity/AppxManifest.xml`).
+
 ### 3.2.0
 
 - **PowerToys Upstream Alignment & Architecture Hardening**:
@@ -816,6 +827,17 @@
 ## 中文
 
 ## 更新日志
+
+### 3.3.0
+
+- **WinUI 3 设置界面 UI/UX 现代化**：
+  - **共享 Fluent 表面体系**：在 `Styles/Surface.xaml` 引入可复用的卡片、Hero 表面与面板样式及命名表面令牌（`KitCardSurfaceStyle`、`KitHeroSurfaceStyle`、`KitHeroPanelStyle`、`KitIconBadgeStyle`、`KitMetricTileValueStyle`、`KitFilterPillToggleStyle`），并让首页、常规页与全部六个模块页收敛到统一样式源，消除逐页手写表面；NetMap 是最后一个仍内联 Hero 表面的页面。
+  - **层级排版与语义令牌**：建立层级化字号阶梯与等宽遥测排版，将内联硬编码色值替换为语义画刷，并补齐浅色 / 深色 / 高对比度三套画刷字典，使三种主题均由同一套命名令牌解析。
+  - **响应式布局**：为 AIHub 与 NetMap 页引入窗口宽度可视化状态（`ui:ControlSizeTrigger`，640 / 760 / 960），窄窗下 Hero、命令区与指标网格按状态重排，不再被裁切。
+  - **无障碍**：设置外壳与各模块页的交互控件现均具稳定 `AutomationId`、屏幕阅读器名称、面向流式状态的实时区域，以及键盘可达的卡片表头。
+  - **本地化收尾**：清零 Awake、LightSwitch、Localserver、UDPtest、AIHub、NetMap 及 Quick Access 弹窗中残留的硬编码界面字符串；en-US / zh-CN 键集奇偶现由单测锁定。
+  - **状态着色强类型化**：以 NetMap 与仪表盘共用的类型化样式映射（`NetMapHealthStylesStore`、`KitEgressStatusStyles`）替换字符串拼键转换器。
+  - **版本标识**：源码版本与稀疏包标识升至 3.3.0（`src/Version.props` 与 `src/PackageIdentity/AppxManifest.xml` 同步一致）。
 
 ### 3.2.0
 

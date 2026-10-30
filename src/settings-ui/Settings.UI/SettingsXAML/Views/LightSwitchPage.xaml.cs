@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Globalization;
 using System.IO;
 using System.IO.Abstractions;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.UI;
@@ -363,35 +361,6 @@ namespace Kit.Settings.UI.Views
 
             await this.LocationDialog.ShowAsync();
         }
-
-        private void CityAutoSuggestBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
-        {
-            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && !string.IsNullOrWhiteSpace(sender.Text))
-            {
-                string query = sender.Text.ToLower(CultureInfo.CurrentCulture);
-
-                // Filter your cities (assuming ViewModel.Cities is a List<City>)
-                var filtered = this.ViewModel.SearchLocations
-                    .Where(c =>
-                        (c.City?.Contains(query, StringComparison.CurrentCultureIgnoreCase) ?? false) ||
-                        (c.Country?.Contains(query, StringComparison.CurrentCultureIgnoreCase) ?? false))
-                    .ToList();
-
-                sender.ItemsSource = filtered;
-            }
-        }
-
-        /* private void CityAutoSuggestBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
-        {
-            if (args.SelectedItem is SearchLocation location)
-            {
-                ViewModel.SelectedCity = location;
-
-                // CityAutoSuggestBox.Text = $"{location.City}, {location.Country}";
-                LocationDialog.IsPrimaryButtonEnabled = true;
-                LocationResultPanel.Visibility = Visibility.Visible;
-            }
-        } */
 
         private void ModeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Globalization;
+using Kit.Settings.UI.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
@@ -33,7 +35,7 @@ namespace Kit.Settings.UI.Controls
             var name = AutomationProperties.GetName(owner);
             return !string.IsNullOrEmpty(name)
                 ? name
-                : $"Timeline from {owner.StartTime} to {owner.EndTime}";
+                : string.Format(CultureInfo.CurrentCulture, ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_Timeline_AutomationName"), owner.StartTime, owner.EndTime);
         }
     }
 }

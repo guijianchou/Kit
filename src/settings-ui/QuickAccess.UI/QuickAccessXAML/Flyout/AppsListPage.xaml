@@ -28,6 +28,7 @@
                 Spacing="8">
                 <Button
                     x:Uid="Dashboard_SortBy"
+                    AutomationProperties.AutomationId="QuickAccess_SortButton"
                     VerticalAlignment="Center"
                     Style="{StaticResource KitSubtleIconButtonStyle}">
                     <ToolTipService.ToolTip>
@@ -51,6 +52,7 @@
                 </Button>
                 <Button
                     x:Uid="BackBtn"
+                    AutomationProperties.AutomationId="QuickAccess_BackButton"
                     VerticalAlignment="Center"
                     Style="{StaticResource KitActionButtonStyle}"
                     Click="BackButton_Click">
@@ -58,9 +60,8 @@
                         <StackPanel
                             VerticalAlignment="Center"
                             Orientation="Horizontal"
-                            Spacing="12">
+                            Spacing="8">
                             <FontIcon
-                                Margin="0,2,0,0"
                                 FontSize="12"
                                 Glyph="&#xe76b;" />
                             <TextBlock x:Uid="BackLabel" Style="{StaticResource CaptionTextBlockStyle}" />
@@ -74,7 +75,7 @@
                 <controls:ModuleList
                     Margin="8,12,12,12"
                     DividerThickness="0,0,0,0"
-                    IsItemClickable="False"
+                    IsItemClickable="True"
                     ItemsSource="{x:Bind ViewModel.FlyoutMenuItems, Mode=OneWay}" />
             </ScrollViewer>
         </Grid>

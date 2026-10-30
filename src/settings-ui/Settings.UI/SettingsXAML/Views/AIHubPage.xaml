@@ -175,10 +175,9 @@
 
         <!-- Modern Finding Item Preview Template with Mica Glass styling -->
         <DataTemplate x:Key="FindingPreviewTemplate" x:DataType="models:AuditIssueEnhanced">
-            <Button Tag="{x:Bind}" Click="OnFindingClick" Margin="0,0,0,8" Padding="14,12" CornerRadius="{StaticResource OverlayCornerRadius}"
-                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+            <Button Tag="{x:Bind}" Click="OnFindingClick" Margin="0,0,0,8"
+                    Style="{StaticResource KitInteractiveCardButtonStyle}"
+                    ToolTipService.ToolTip="{x:Bind DisplayTitle}"
                     AutomationProperties.Name="{x:Bind DisplayTitle}">
                 <Grid ColumnDefinitions="4,*,Auto" ColumnSpacing="14">
                     <!-- Left Severity Indicator Accent Bar -->
@@ -387,10 +386,13 @@
                                     </tkcontrols:WrapPanel>
                                     <tkcontrols:WrapPanel x:Name="AiReadinessActions" Grid.Column="2" HorizontalSpacing="10" VerticalSpacing="6" VerticalAlignment="Center">
                                         <HyperlinkButton Content="{x:Bind ViewModel.AiServiceSettingsLabel}"
+                                                         ToolTipService.ToolTip="{x:Bind ViewModel.AiServiceSettingsLabel}"
                                                          AutomationProperties.AutomationId="AIHub_OpenServiceSettingsButton"
                                                          Click="OnAiServiceSettingsClick" FontSize="12" />
                                         <Button IsEnabled="{x:Bind ViewModel.CanRecheckAiReadiness, Mode=OneWay}"
                                                 AutomationProperties.AutomationId="AIHub_RecheckAiButton"
+                                                AutomationProperties.Name="{x:Bind ViewModel.RecheckAiLabel, Mode=OneWay}"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.RecheckAiLabel, Mode=OneWay}"
                                                 Click="OnRecheckAiReadinessClick"
                                                 Style="{StaticResource KitActionButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -519,13 +521,16 @@
                                             </StackPanel>
                                         </Button>
                                         <Button Style="{StaticResource KitActionButtonStyle}" Command="{x:Bind ViewModel.CancelAuditCommand}"
-                                                AutomationProperties.AutomationId="AIHub_CancelAuditButton">
+                                                AutomationProperties.AutomationId="AIHub_CancelAuditButton"
+                                                AutomationProperties.Name="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon Glyph="&#xE711;" FontSize="11" />
-                                                <TextBlock Text="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}" FontSize="12" />
+                                                <TextBlock Text="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}" FontSize="13" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Style="{StaticResource KitActionButtonStyle}" ToolTipService.ToolTip="{x:Bind ViewModel.ScanOptionsLabel, Mode=OneWay}"
+                                        <Button Style="{StaticResource KitIconButtonStyle}" ToolTipService.ToolTip="{x:Bind ViewModel.ScanOptionsLabel, Mode=OneWay}"
+                                                AutomationProperties.AutomationId="AIHub_ScanOptionsButton"
                                                 AutomationProperties.Name="{x:Bind ViewModel.ScanOptionsLabel, Mode=OneWay}">
                                             <FontIcon Glyph="&#xE712;" FontSize="14" />
                                             <Button.Flyout>
@@ -564,6 +569,8 @@
                                                     Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                                     Click="OnJumpToAiReportClick"
                                                     Padding="8,4" CornerRadius="{StaticResource ControlCornerRadius}"
+                                                    AutomationProperties.AutomationId="AIHub_ViewAiReportButton"
+                                                    AutomationProperties.Name="{x:Bind ViewModel.ViewAiReportLabel}"
                                                     ToolTipService.ToolTip="{x:Bind ViewModel.JumpToAiReportHint}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <FontIcon Glyph="&#xE9D9;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
@@ -574,8 +581,12 @@
                                                                 Date="{x:Bind ViewModel.SelectedAuditDate, Mode=OneWay}"
                                                                 MaxDate="{x:Bind ViewModel.LatestSelectableAuditDate}"
                                                                 DateChanged="OnAuditDateChanged" />
-                                            <Button Grid.Column="4" Command="{x:Bind ViewModel.SelectLatestCommand}"
-                                                    Padding="12,0" MinHeight="32" CornerRadius="{StaticResource ControlCornerRadius}">
+                                            <Button Grid.Column="4"
+                                                    Style="{StaticResource KitCompactToolbarButtonStyle}"
+                                                    Command="{x:Bind ViewModel.SelectLatestCommand}"
+                                                    AutomationProperties.AutomationId="AIHub_SelectLatestButton"
+                                                    AutomationProperties.Name="{x:Bind ViewModel.LatestAuditLabel, Mode=OneWay}"
+                                                    ToolTipService.ToolTip="{x:Bind ViewModel.SelectedAuditLabel, Mode=OneWay}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <FontIcon Glyph="&#xE823;" FontSize="11" />
                                                     <TextBlock Text="{x:Bind ViewModel.LatestAuditLabel, Mode=OneWay}" FontSize="12" />
@@ -631,6 +642,8 @@
                                                                     Command="{x:Bind ViewModel.FilterHighSeverityCommand}"
                                                                     Style="{StaticResource SubtleButtonStyle}" Padding="6,2" CornerRadius="4"
                                                                     HorizontalAlignment="Left"
+                                                                    AutomationProperties.AutomationId="AIHub_FilterHighQuickActionButton"
+                                                                    AutomationProperties.Name="{x:Bind ViewModel.FilterHighQuickActionLabel}"
                                                                     ToolTipService.ToolTip="{x:Bind ViewModel.FilterHighQuickActionHint}">
                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                                     <FontIcon Glyph="&#xE7BA;" FontSize="11" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
@@ -683,9 +696,11 @@
 
                                                 <!-- Priority Callout Card ("优先处理") with Accent Border -->
                                                 <Button Tag="{x:Bind ViewModel.AuditPriorityFinding, Mode=OneWay}" Click="OnPriorityFindingClick"
+                                                        Style="{StaticResource KitInteractiveCardButtonStyle}"
+                                                        Padding="14,10" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                                                        AutomationProperties.AutomationId="AIHub_PriorityFindingButton"
                                                         AutomationProperties.Name="{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}"
-                                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="14,10" CornerRadius="{StaticResource OverlayCornerRadius}"
-                                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1"
+                                                        ToolTipService.ToolTip="{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}"
                                                         Visibility="{x:Bind ViewModel.HasAuditPriority, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
                                                     <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="5" ColumnSpacing="8">
                                                         <Border CornerRadius="4" Padding="6,2" Background="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Left">
@@ -823,12 +838,16 @@
                                                 <!-- Row 2: Severity Filter Pills -->
                                                 <tkcontrols:WrapPanel HorizontalSpacing="6" VerticalSpacing="6">
                                                     <ToggleButton Tag="All" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                                  AutomationProperties.Name="{x:Bind ViewModel.FilterAllLabel, Mode=OneWay}"
+                                                                  AutomationProperties.AutomationId="AIHub_FilterAllButton"
+                                                                  AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.FilterAllLabel, ViewModel.TotalFindings), Mode=OneWay}"
+                                                                  ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.FilterAllLabel, ViewModel.TotalFindings), Mode=OneWay}"
                                                                   Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterAll, Mode=OneWay}">
                                                         <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.FilterAllLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.TotalFindings, Mode=OneWay}" /></TextBlock>
                                                     </ToggleButton>
                                                     <ToggleButton Tag="High" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                                  AutomationProperties.Name="{x:Bind ViewModel.HighLabel, Mode=OneWay}"
+                                                                  AutomationProperties.AutomationId="AIHub_FilterHighButton"
+                                                                  AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.HighLabel, ViewModel.HighCount), Mode=OneWay}"
+                                                                  ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.HighLabel, ViewModel.HighCount), Mode=OneWay}"
                                                                   Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterHigh, Mode=OneWay}">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center" />
@@ -836,7 +855,9 @@
                                                         </StackPanel>
                                                     </ToggleButton>
                                                     <ToggleButton Tag="Medium" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                                  AutomationProperties.Name="{x:Bind ViewModel.MediumLabel, Mode=OneWay}"
+                                                                  AutomationProperties.AutomationId="AIHub_FilterMediumButton"
+                                                                  AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.MediumLabel, ViewModel.MediumCount), Mode=OneWay}"
+                                                                  ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.MediumLabel, ViewModel.MediumCount), Mode=OneWay}"
                                                                   Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterMedium, Mode=OneWay}">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Center" />
@@ -844,7 +865,9 @@
                                                         </StackPanel>
                                                     </ToggleButton>
                                                     <ToggleButton Tag="Low" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                                  AutomationProperties.Name="{x:Bind ViewModel.LowLabel, Mode=OneWay}"
+                                                                  AutomationProperties.AutomationId="AIHub_FilterLowButton"
+                                                                  AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.LowLabel, ViewModel.LowCount), Mode=OneWay}"
+                                                                  ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.LowLabel, ViewModel.LowCount), Mode=OneWay}"
                                                                   Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterLow, Mode=OneWay}">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <Ellipse Width="7" Height="7" Fill="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
@@ -989,6 +1012,8 @@
                                                        Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center" />
                                             <Button Grid.Column="2" Style="{StaticResource SubtleButtonStyle}" Padding="8,4" CornerRadius="4"
                                                     Click="OnCopyAiReportClick"
+                                                    AutomationProperties.AutomationId="AIHub_CopyAiReportButton"
+                                                    AutomationProperties.Name="{x:Bind ViewModel.CopyReportLabel}"
                                                     ToolTipService.ToolTip="{x:Bind ViewModel.CopyAiReportHint}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <FontIcon Glyph="&#xE8C8;" FontSize="12" />
@@ -1085,20 +1110,40 @@
                                                 <TextBlock Text="{x:Bind ViewModel.ScanAllLabel, Mode=OneWay}" FontSize="12" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Command="{x:Bind ViewModel.CleanAllCommand}"
+                                        <Button IsEnabled="{x:Bind ViewModel.CanCleanAll, Mode=OneWay}"
                                                 Style="{StaticResource KitPrimaryActionButtonStyle}"
                                                 AutomationProperties.AutomationId="AIHub_CleanAll">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon Glyph="&#xE9F5;" FontSize="12" />
                                                 <TextBlock Text="{x:Bind ViewModel.CleanAllLabel, Mode=OneWay}" FontSize="13" />
                                             </StackPanel>
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <StackPanel MaxWidth="300" Spacing="10">
+                                                        <TextBlock x:Uid="AIHub_ConfirmCleanAllTitle" FontWeight="SemiBold" />
+                                                        <TextBlock x:Uid="AIHub_ConfirmCleanAllDescription" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                                            <Button x:Uid="AIHub_ConfirmCleanCancelButton" Style="{StaticResource KitActionButtonStyle}" Click="OnCancelCleanFlyoutClick" />
+                                                            <Button x:Uid="AIHub_ConfirmCleanConfirmButton" Command="{x:Bind ViewModel.CleanAllCommand}" Style="{StaticResource KitDangerActionButtonStyle}" Click="OnCancelCleanFlyoutClick" AutomationProperties.AutomationId="AIHub_ConfirmCleanAllButton">
+                                                                <Button.Resources>
+                                                                    <StaticResource x:Key="ButtonForeground" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                    <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                    <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                </Button.Resources>
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Flyout>
+                                            </Button.Flyout>
                                         </Button>
                                         <Button Command="{x:Bind ViewModel.CancelOptimizationCommand}"
                                                 Style="{StaticResource KitActionButtonStyle}"
-                                                AutomationProperties.AutomationId="AIHub_CancelOptimizationButton">
+                                                AutomationProperties.AutomationId="AIHub_CancelOptimizationButton"
+                                                AutomationProperties.Name="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon Glyph="&#xE711;" FontSize="11" />
-                                                <TextBlock Text="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}" FontSize="12" />
+                                                <TextBlock Text="{x:Bind ViewModel.CancelTaskLabel, Mode=OneWay}" FontSize="13" />
                                             </StackPanel>
                                         </Button>
                                     </tkcontrols:WrapPanel>
@@ -1266,9 +1311,28 @@
                                                                         <TextBlock Text="{x:Bind Summary}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Summary}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                     </StackPanel>
                                                                     <TextBlock Grid.Column="2" Text="{x:Bind Size}" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" Margin="12,0" FontFamily="{StaticResource KitMonoFontFamily}" />
-                                                                    <Button Grid.Column="3" Content="{x:Bind CleanLabel}" Command="{x:Bind ExecuteCommand}"
+                                                                    <Button Grid.Column="3" Content="{x:Bind CleanLabel}"
                                                                             Style="{StaticResource KitActionButtonStyle}"
-                                                                            IsEnabled="{x:Bind IsEnabled, Mode=OneWay}" VerticalAlignment="Center" />
+                                                                            IsEnabled="{x:Bind IsEnabled, Mode=OneWay}" VerticalAlignment="Center">
+                                                                        <Button.Flyout>
+                                                                            <Flyout>
+                                                                                <StackPanel MaxWidth="300" Spacing="10">
+                                                                                    <TextBlock x:Uid="AIHub_ConfirmCleanGroupTitle" FontWeight="SemiBold" />
+                                                                                    <TextBlock x:Uid="AIHub_ConfirmCleanAllDescription" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                                                                        <Button x:Uid="AIHub_ConfirmCleanCancelButton" Style="{StaticResource KitActionButtonStyle}" Click="OnCancelCleanFlyoutClick" />
+                                                                                        <Button x:Uid="AIHub_ConfirmCleanConfirmButton" Command="{x:Bind ExecuteCommand}" Style="{StaticResource KitDangerActionButtonStyle}" Click="OnCancelCleanFlyoutClick">
+                                                                                            <Button.Resources>
+                                                                                                <StaticResource x:Key="ButtonForeground" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                                                <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                                                <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                                            </Button.Resources>
+                                                                                        </Button>
+                                                                                    </StackPanel>
+                                                                                </StackPanel>
+                                                                            </Flyout>
+                                                                        </Button.Flyout>
+                                                                    </Button>
                                                                 </Grid>
                                                             </Expander.Header>
                                                             <Border x:Name="OptimizationGroupDetails" x:Load="{x:Bind HasBeenExpanded, Mode=OneWay}"
@@ -1354,12 +1418,24 @@
                                                                    FontFamily="{StaticResource KitMonoFontFamily}"
                                                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                     </Border>
-                                                    <Button Grid.Column="1" x:Uid="AiHub_ResetPolicyButton" Content="Reset to default"
+                                                    <Button Grid.Column="1" x:Uid="AiHub_ResetPolicyButton"
+                                                            AutomationProperties.AutomationId="AIHub_ResetTaskPolicyButton"
                                                             Command="{x:Bind ViewModel.AiHub.ResetActivePolicyCommand}"
-                                                            Style="{StaticResource KitActionButtonStyle}" />
-                                                    <Button Grid.Column="2" x:Uid="AiHub_SavePolicyButton" Content="Save"
+                                                            Style="{StaticResource KitActionButtonStyle}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE777;" FontSize="12" />
+                                                            <TextBlock x:Uid="AiHub_ResetPolicyButtonText" Text="Reset to default" FontSize="12" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Grid.Column="2" x:Uid="AiHub_SavePolicyButton"
+                                                            AutomationProperties.AutomationId="AIHub_SaveTaskPolicyButton"
                                                             Style="{StaticResource KitPrimaryActionButtonStyle}"
-                                                            Command="{x:Bind ViewModel.AiHub.SaveActivePolicyCommand}" />
+                                                            Command="{x:Bind ViewModel.AiHub.SaveActivePolicyCommand}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE74E;" FontSize="12" />
+                                                            <TextBlock x:Uid="AiHub_SavePolicyButtonText" Text="Save" FontSize="12" />
+                                                        </StackPanel>
+                                                    </Button>
                                                 </Grid>
                                             </StackPanel>
                                         </Border>

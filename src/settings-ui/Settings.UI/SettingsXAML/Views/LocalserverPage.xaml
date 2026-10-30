@@ -168,10 +168,6 @@
                                             <TextBlock x:Uid="Localserver_StopAllButtonText" FontSize="13" Text="Stop all" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Border Width="1" Height="20" Margin="2,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                    <Button x:Uid="Localserver_RefreshStatusButton" Click="RefreshTelemetry_Click" IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}" Style="{StaticResource KitIconButtonStyle}">
-                                        <FontIcon FontSize="13" Glyph="&#xE72C;" />
-                                    </Button>
                                 </StackPanel>
                             </Grid>
 
@@ -340,6 +336,7 @@
 
                                                         <!-- Open hyperlink button directly under Actions -->
                                                         <HyperlinkButton
+                                                            AutomationProperties.AutomationId="Localserver_OpenServiceUrlButton"
                                                             Grid.Row="1"
                                                             Grid.Column="7"
                                                             Margin="0,8,0,0"
@@ -374,7 +371,7 @@
                                                                     <TextBlock Grid.Row="1" x:Uid="Localserver_ConfigCommand" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                                                     <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                                         <TextBox Text="{x:Bind Executable, Mode=TwoWay}" FontFamily="{StaticResource KitMonoFontFamily}" CornerRadius="4" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
-                                                                        <Button Grid.Column="1" Click="BrowseExecutable_Click" DataContext="{x:Bind}" Style="{StaticResource KitActionButtonStyle}" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                                                        <Button Grid.Column="1" x:Uid="Localserver_BrowseFileButton" AutomationProperties.AutomationId="Localserver_BrowseFileButton" Click="BrowseExecutable_Click" DataContext="{x:Bind}" Style="{StaticResource KitActionButtonStyle}" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
                                                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                                                 <FontIcon Glyph="&#xE8B7;" FontSize="12" />
                                                                                 <TextBlock x:Uid="Localserver_BrowseFileButtonText" FontSize="12" Text="Browse..." VerticalAlignment="Center" />
@@ -390,7 +387,7 @@
                                                                     <TextBlock Grid.Row="3" x:Uid="Localserver_ConfigWorkingDir" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                                                     <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                                         <TextBox Text="{x:Bind Cwd, Mode=TwoWay}" FontFamily="{StaticResource KitMonoFontFamily}" CornerRadius="4" IsEnabled="{x:Bind IsEditable, Mode=OneWay}" />
-                                                                        <Button Grid.Column="1" Click="BrowseCwd_Click" DataContext="{x:Bind}" Style="{StaticResource KitActionButtonStyle}" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                                                        <Button Grid.Column="1" x:Uid="Localserver_BrowseFolderButton" AutomationProperties.AutomationId="Localserver_BrowseFolderButton" Click="BrowseCwd_Click" DataContext="{x:Bind}" Style="{StaticResource KitActionButtonStyle}" IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
                                                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                                                 <FontIcon Glyph="&#xE838;" FontSize="12" />
                                                                                 <TextBlock x:Uid="Localserver_BrowseFolderButtonText" FontSize="12" Text="Browse..." VerticalAlignment="Center" />
@@ -415,10 +412,16 @@
 
                                                                 <Grid Margin="0,4,0,0">
                                                                     <Button
+                                                                        x:Uid="Localserver_DeleteLineButton"
+                                                                        AutomationProperties.AutomationId="Localserver_DeleteLineButton"
                                                                         HorizontalAlignment="Left"
-                                                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                                                        Style="{StaticResource KitActionButtonStyle}"
+                                                                        Style="{StaticResource KitDangerActionButtonStyle}"
                                                                         IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                                                        <Button.Resources>
+                                                                            <StaticResource x:Key="ButtonForeground" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                            <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                            <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                        </Button.Resources>
                                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                                             <FontIcon Glyph="&#xE74D;" FontSize="13" />
                                                                             <TextBlock x:Uid="Localserver_DeleteLineButtonText" />
@@ -428,22 +431,42 @@
                                                                                 <StackPanel MaxWidth="300" Spacing="10">
                                                                                     <TextBlock x:Uid="Localserver_ConfirmDeleteTitle" FontWeight="SemiBold" />
                                                                                     <TextBlock x:Uid="Localserver_ConfirmDeleteDescription" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                                                                    <Button x:Uid="Localserver_ConfirmDeleteConfirmButton" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Style="{StaticResource KitActionButtonStyle}" Click="DeleteLine_Click" DataContext="{x:Bind}" />
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                                                                        <Button x:Uid="Localserver_ConfirmDeleteCancelButton" Style="{StaticResource KitActionButtonStyle}" Click="CancelDeleteLine_Click" />
+                                                                                        <Button x:Uid="Localserver_ConfirmDeleteConfirmButton" Style="{StaticResource KitDangerActionButtonStyle}" Click="DeleteLine_Click" DataContext="{x:Bind}">
+                                                                                            <Button.Resources>
+                                                                                                <StaticResource x:Key="ButtonForeground" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                                                <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                                                <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="SystemFillColorCriticalBrush" />
+                                                                                            </Button.Resources>
+                                                                                        </Button>
+                                                                                    </StackPanel>
                                                                                 </StackPanel>
                                                                             </Flyout>
                                                                         </Button.Flyout>
                                                                     </Button>
 
-                                                                    <Button
-                                                                        HorizontalAlignment="Right"
-                                                                        Style="{StaticResource KitPrimaryActionButtonStyle}"
-                                                                        Click="SaveCatalog_Click"
-                                                                        IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
-                                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                            <FontIcon Glyph="&#xE74E;" FontSize="13" />
-                                                                            <TextBlock x:Uid="Localserver_SaveLineButtonText" />
-                                                                        </StackPanel>
-                                                                    </Button>
+                                                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                                                        <Button
+                                                                            x:Uid="Localserver_CollapseLineButton"
+                                                                            AutomationProperties.AutomationId="Localserver_CollapseLineButton"
+                                                                            Style="{StaticResource KitActionButtonStyle}"
+                                                                            Click="ToggleConfigExpanded_Click"
+                                                                            DataContext="{x:Bind}">
+                                                                            <TextBlock x:Uid="Localserver_CollapseLineButtonText" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            x:Uid="Localserver_SaveLineButton"
+                                                                            AutomationProperties.AutomationId="Localserver_SaveLineButton"
+                                                                            Style="{StaticResource KitPrimaryActionButtonStyle}"
+                                                                            Click="SaveCatalog_Click"
+                                                                            IsEnabled="{x:Bind IsEditable, Mode=OneWay}">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                                <FontIcon Glyph="&#xE74E;" FontSize="13" />
+                                                                                <TextBlock x:Uid="Localserver_SaveLineButtonText" />
+                                                                            </StackPanel>
+                                                                        </Button>
+                                                                    </StackPanel>
                                                                 </Grid>
                                                             </StackPanel>
                                                         </Border>
@@ -583,8 +606,8 @@
                                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                                     <FontIcon Glyph="{x:Bind StatusGlyph}" FontSize="11" Foreground="{x:Bind ForegroundBrush}" VerticalAlignment="Center" />
                                                                     <TextBlock VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{x:Bind ForegroundBrush}" Text="{x:Bind Label}" />
-                                                                    <Button x:Uid="Localserver_FixButton" Width="28" Height="28" CornerRadius="4" Padding="0" Style="{ThemeResource SubtleButtonStyle}" Visibility="{x:Bind FixVisibility}">
-                                                                        <FontIcon FontSize="10" Glyph="&#xE712;" />
+                                                                    <Button x:Uid="Localserver_FixButton" AutomationProperties.AutomationId="Localserver_FixButton" Style="{StaticResource KitCompactIconButtonStyle}" Visibility="{x:Bind FixVisibility}">
+                                                                        <FontIcon FontSize="12" Glyph="&#xE90F;" />
                                                                         <Button.Flyout>
                                                                             <MenuFlyout>
                                                                                 <MenuFlyoutItem x:Uid="Localserver_CopyFixCommandMenu" Click="CopyFixCommand_Click" DataContext="{x:Bind}" Visibility="{x:Bind FixCommandVisibility}" />
@@ -695,11 +718,9 @@
                                         <TextBlock Grid.Column="2" Margin="12,0,0,0" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.LogSubtitleText, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="{x:Bind ViewModel.LogActionsVisibility, Mode=OneWay}">
                                             <ToggleButton
-                                                Height="28"
-                                                CornerRadius="4"
-                                                Padding="10,0"
-                                                FontSize="12"
                                                 x:Uid="Localserver_LogFollowToggle"
+                                                AutomationProperties.AutomationId="Localserver_LogAutoScrollToggle"
+                                                Style="{StaticResource KitCompactToggleButtonStyle}"
                                                 IsChecked="{x:Bind ViewModel.IsLogFollowEnabled, Mode=TwoWay}" />
                                             <Button
                                                 x:Uid="Localserver_OpenLogFolderButton"

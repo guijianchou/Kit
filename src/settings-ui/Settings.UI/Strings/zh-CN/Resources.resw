@@ -424,12 +424,6 @@
   <data name="Localserver_ConfirmDeleteConfirmButton.Content" xml:space="preserve">
     <value>删除</value>
   </data>
-  <data name="Localserver_BrowseFileButton.Content" xml:space="preserve">
-    <value>浏览文件...</value>
-  </data>
-  <data name="Localserver_BrowseFolderButton.Content" xml:space="preserve">
-    <value>浏览文件夹...</value>
-  </data>
       <data name="Localserver_ChecksLabel.Text" xml:space="preserve">
     <value>环境检查</value>
   </data>
@@ -1032,12 +1026,6 @@
   <data name="AiHub_ApplyKernelButton.Content" xml:space="preserve">
     <value>应用</value>
   </data>
-                <data name="AiHub_SavePolicyButton.Content" xml:space="preserve">
-    <value>保存策略</value>
-  </data>
-  <data name="AiHub_ResetPolicyButton.Content" xml:space="preserve">
-    <value>恢复默认值</value>
-  </data>
   <data name="AIHub.ModuleTitle" xml:space="preserve">
     <value>AI 智能中心</value>
   </data>
@@ -1161,10 +1149,10 @@
     <value>发现详情</value>
   </data>
   <data name="FindingDetailsDialog.PrimaryButtonText" xml:space="preserve">
-    <value>关闭</value>
-  </data>
-  <data name="FindingDetailsDialog.SecondaryButtonText" xml:space="preserve">
     <value>复制摘要</value>
+  </data>
+  <data name="FindingDetailsDialog.CloseButtonText" xml:space="preserve">
+    <value>关闭</value>
   </data>
   <data name="FindingDetails_Facts.Text" xml:space="preserve">
     <value>检测事实</value>
@@ -2021,12 +2009,6 @@
   <data name="Localserver_StopAllServicesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>停止所有正在运行的服务</value>
   </data>
-  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>刷新状态</value>
-  </data>
-  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>刷新状态与资源占用</value>
-  </data>
   <data name="Localserver_ConfigureButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>配置服务</value>
   </data>
@@ -2473,5 +2455,884 @@
   </data>
   <data name="NetMap_HopList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>路由跳点</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteCancelButton.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="UDPtest_DeleteDialogCancel.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AIHub_ConfirmCleanAllTitle.Text" xml:space="preserve">
+    <value>清理所有已审核通过的缓存文件？</value>
+  </data>
+  <data name="AIHub_ConfirmCleanGroupTitle.Text" xml:space="preserve">
+    <value>清理该分组中已审核通过的缓存文件？</value>
+  </data>
+  <data name="AIHub_ConfirmCleanAllDescription.Text" xml:space="preserve">
+    <value>已审核通过的缓存文件将被永久删除，无法恢复。</value>
+  </data>
+  <data name="AIHub_ConfirmCleanCancelButton.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AIHub_ConfirmCleanConfirmButton.Content" xml:space="preserve">
+    <value>确认清理</value>
+  </data>
+  <data name="AIHub_AuditNoSnapshotForDateFormat" xml:space="preserve">
+    <value>未找到 {0:yyyy-MM-dd} 的审计快照。</value>
+  </data>
+  <data name="Shell_SearchBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>搜索设置 (Ctrl+F)</value>
+  </data>
+  <data name="ShortcutControl_EditButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>编辑快捷键</value>
+  </data>
+  <data name="ShortcutControl_EditButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>编辑快捷键</value>
+  </data>
+  <data name="AiHub_KernelComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>AI 执行内核</value>
+  </data>
+  <data name="AiHub_CheckUpdatesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>检查内核更新</value>
+  </data>
+  <data name="AiHub_DownloadKernelButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>下载或更新内核</value>
+  </data>
+  <data name="AiHub_MainEndpoint_ApiModeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>主端点 API 模式</value>
+  </data>
+  <data name="AiHub_MainEndpoint_EffortComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>主端点推理强度</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_UrlCard.Header" xml:space="preserve">
+    <value>端点地址</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiKeyCard.Header" xml:space="preserve">
+    <value>API 密钥</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve">
+    <value>输入 API 密钥</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiModeCard.Header" xml:space="preserve">
+    <value>API 模式</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiModeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>备用端点 API 模式</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ModelCard.Header" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ReasoningCard.Header" xml:space="preserve">
+    <value>推理强度</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_EffortComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>备用端点推理强度</value>
+  </data>
+  <data name="AiHub_PolicyContentBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>全局安全策略规则</value>
+  </data>
+  <data name="AiHub_ResetPolicyButtonText.Text" xml:space="preserve">
+    <value>恢复默认值</value>
+  </data>
+  <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>恢复默认策略</value>
+  </data>
+  <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>恢复默认策略</value>
+  </data>
+  <data name="AiHub_SavePolicyButtonText.Text" xml:space="preserve">
+    <value>保存策略</value>
+  </data>
+  <data name="AiHub_SavePolicyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>保存策略</value>
+  </data>
+  <data name="AiHub_SavePolicyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>保存策略</value>
+  </data>
+  <data name="General_LogLevelComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>日志级别</value>
+  </data>
+  <data name="General_RefreshBackupStatusButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>刷新备份状态</value>
+  </data>
+  <data name="General_RefreshBackupStatusButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>刷新备份状态</value>
+  </data>
+  <data name="Localserver_OpenUrlButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>打开服务链接</value>
+  </data>
+  <data name="Localserver_BrowseFileButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>浏览可执行文件</value>
+  </data>
+  <data name="Localserver_BrowseFileButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>浏览可执行文件</value>
+  </data>
+  <data name="Localserver_BrowseFolderButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>浏览工作目录</value>
+  </data>
+  <data name="Localserver_BrowseFolderButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>浏览工作目录</value>
+  </data>
+  <data name="Localserver_DeleteLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>删除此服务行</value>
+  </data>
+  <data name="Localserver_DeleteLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>删除此服务行</value>
+  </data>
+  <data name="Localserver_CollapseLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>收起配置</value>
+  </data>
+  <data name="Localserver_CollapseLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>收起配置</value>
+  </data>
+  <data name="Localserver_CollapseLineButtonText.Text" xml:space="preserve">
+    <value>收起</value>
+  </data>
+  <data name="Localserver_SaveLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>保存服务配置</value>
+  </data>
+  <data name="Localserver_SaveLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>保存服务配置</value>
+  </data>
+  <data name="UDPtest_DeleteLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>删除此 UDP 链路</value>
+  </data>
+  <data name="UDPtest_DeleteLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>删除此 UDP 链路</value>
+  </data>
+  <data name="UDPtest_CancelEditButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>放弃未保存修改并收起</value>
+  </data>
+  <data name="UDPtest_CancelEditButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>取消修改</value>
+  </data>
+  <data name="UDPtest_CancelButtonText.Text" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="UDPtest_SaveLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>保存 UDP 链路配置</value>
+  </data>
+  <data name="UDPtest_SaveLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>保存 UDP 链路配置</value>
+  </data>
+  <data name="NetMap_GeoLiteRepoLink.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>在 GitHub 打开 GeoLite2 数据库仓库</value>
+  </data>
+  <data name="NetMap_GeoLiteRepoLink.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>GeoLite2 数据库仓库</value>
+  </data>
+  <data name="Awake_ModeSelector.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择唤醒工具保持电脑活跃的模式</value>
+  </data>
+  <data name="Awake_ExpirationDatePicker.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择到期日期</value>
+  </data>
+  <data name="Awake_ExpirationTimePicker.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>选择到期时间</value>
+  </data>
+  <data name="AiHub_ModelNotSet" xml:space="preserve">
+    <value>未设置模型</value>
+  </data>
+  <data name="AiHub_EndpointNotConfigured" xml:space="preserve">
+    <value>未配置</value>
+  </data>
+  <data name="AiHub_EndpointLabel_Fallback" xml:space="preserve">
+    <value>备用</value>
+  </data>
+  <data name="AiHub_EndpointLabel_Main" xml:space="preserve">
+    <value>主端点</value>
+  </data>
+  <data name="AiHub_EndpointDesc_Fallback" xml:space="preserve">
+    <value>可选备用端点，在符合条件的网络或端点故障时自动故障转移。</value>
+  </data>
+  <data name="AiHub_EndpointDesc_Main" xml:space="preserve">
+    <value>新 AI 任务的主端点。</value>
+  </data>
+  <data name="AiHub_ServiceUnavailable" xml:space="preserve">
+    <value>AI 服务不可用</value>
+  </data>
+  <data name="AiHub_ServiceStatus_ReadyFormat" xml:space="preserve">
+    <value>就绪 · {0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_DegradedFormat" xml:space="preserve">
+    <value>主链路不可用，正在使用备用端点 · {0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_UnverifiedFormat" xml:space="preserve">
+    <value>已配置（未验证）· {0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_NotConfiguredFormat" xml:space="preserve">
+    <value>未配置：{0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_Off" xml:space="preserve">
+    <value>已关闭；插件仅使用基于规则的检测</value>
+  </data>
+  <data name="AiHub_EndpointsSaved" xml:space="preserve">
+    <value>端点设置已保存。</value>
+  </data>
+  <data name="AiHub_SaveEndpointsFailedFormat" xml:space="preserve">
+    <value>保存端点设置失败：{0}</value>
+  </data>
+  <data name="AiHub_RestoreEndpointsFailedFormat" xml:space="preserve">
+    <value>恢复端点设置失败：{0}</value>
+  </data>
+  <data name="AiHub_FallbackCleared" xml:space="preserve">
+    <value>已清除备用端点。请保存以生效。</value>
+  </data>
+  <data name="AIHub_SeveritySummary_HighFormat" xml:space="preserve">
+    <value>{0} 项高</value>
+  </data>
+  <data name="AIHub_SeveritySummary_MediumFormat" xml:space="preserve">
+    <value>{0} 项中</value>
+  </data>
+  <data name="AIHub_SeveritySummary_LowFormat" xml:space="preserve">
+    <value>{0} 项低</value>
+  </data>
+  <data name="AIHub_FindingCount_Single" xml:space="preserve">
+    <value>1 项发现</value>
+  </data>
+  <data name="AIHub_FindingCount_PluralFormat" xml:space="preserve">
+    <value>{0} 项发现</value>
+  </data>
+  <data name="AIHub_HealthScoreGrade_Good" xml:space="preserve">
+    <value>良好</value>
+  </data>
+  <data name="AIHub_HealthScoreGrade_Warning" xml:space="preserve">
+    <value>警告</value>
+  </data>
+  <data name="AIHub_HealthScoreGrade_Critical" xml:space="preserve">
+    <value>严重</value>
+  </data>
+  <data name="AIHub_AuditTimestamp_NotScanned" xml:space="preserve">
+    <value>尚未扫描</value>
+  </data>
+  <data name="AIHub_AuditStatus_Ready" xml:space="preserve">
+    <value>就绪</value>
+  </data>
+  <data name="AIHub_HealthVerdict_NotScanned" xml:space="preserve">
+    <value>尚未扫描</value>
+  </data>
+  <data name="AIHub_HealthSummary_NotScanned" xml:space="preserve">
+    <value>尚未进行全面事件扫描，点击上方扫描按钮以开始。</value>
+  </data>
+  <data name="AIHub_SelectedAudit_Latest" xml:space="preserve">
+    <value>最新审计</value>
+  </data>
+  <data name="AIHub_EventCount_Zero" xml:space="preserve">
+    <value>0 事件</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Ready" xml:space="preserve">
+    <value>就绪，等待扫描</value>
+  </data>
+  <data name="AIHub_HealthScoreLabel" xml:space="preserve">
+    <value>系统健康评分</value>
+  </data>
+  <data name="AIHub_FilterHighQuickActionLabel" xml:space="preserve">
+    <value>仅看高危发现</value>
+  </data>
+  <data name="AIHub_FilterHighQuickActionHint" xml:space="preserve">
+    <value>快速筛选当前健康评分中的高危安全与稳定性事件</value>
+  </data>
+  <data name="AIHub_ViewAiReportLabel" xml:space="preserve">
+    <value>查看 AI 诊断报告</value>
+  </data>
+  <data name="AIHub_JumpToAiReportHint" xml:space="preserve">
+    <value>直接跳转到下方的 AI 诊断与处置建议报告</value>
+  </data>
+  <data name="AIHub_CopyReportLabel" xml:space="preserve">
+    <value>复制报告</value>
+  </data>
+  <data name="AIHub_CopyAiReportHint" xml:space="preserve">
+    <value>将 AI 诊断结果与处置建议复制到剪贴板</value>
+  </data>
+  <data name="AIHub_ScanType_LocalFindings" xml:space="preserve">
+    <value>本地发现</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Updating" xml:space="preserve">
+    <value>正在更新</value>
+  </data>
+  <data name="AIHub_HealthSummary_Updating" xml:space="preserve">
+    <value>正在读取所选时段的事件并更新发现。</value>
+  </data>
+  <data name="AIHub_ScanRange_2d" xml:space="preserve">
+    <value>最近 2 天</value>
+  </data>
+  <data name="AIHub_ScanRange_1w" xml:space="preserve">
+    <value>最近 1 周</value>
+  </data>
+  <data name="AIHub_ScanRange_1mo" xml:space="preserve">
+    <value>最近 1 个月</value>
+  </data>
+  <data name="AIHub_AuditModeLabel" xml:space="preserve">
+    <value>审计模式</value>
+  </data>
+  <data name="AIHub_AuditModeHint_Extended" xml:space="preserve">
+    <value>拓展模式：标准权限，读取 System/Application/Setup/ForwardedEvents</value>
+  </data>
+  <data name="AIHub_AuditModeHint_FullElevated" xml:space="preserve">
+    <value>完整模式：额外读取 Security 与防火墙通道</value>
+  </data>
+  <data name="AIHub_AuditModeHint_FullNotElevated" xml:space="preserve">
+    <value>完整模式需要管理员权限；当前未提权，Security 通道将不可读</value>
+  </data>
+  <data name="AIHub_FullScanRangeHint" xml:space="preserve">
+    <value>选择时间范围并更新本地发现</value>
+  </data>
+  <data name="AIHub_RangeOption1DayLabel" xml:space="preserve">
+    <value>2 天</value>
+  </data>
+  <data name="AIHub_RangeOption2DaysLabel" xml:space="preserve">
+    <value>1 周</value>
+  </data>
+  <data name="AIHub_RangeOption1WeekLabel" xml:space="preserve">
+    <value>1 个月</value>
+  </data>
+  <data name="AIHub_ScanOptionsLabel" xml:space="preserve">
+    <value>扫描选项</value>
+  </data>
+  <data name="AIHub_ReanalyzeRangeHint" xml:space="preserve">
+    <value>重新分析选定时段内的日志</value>
+  </data>
+  <data name="AIHub_ScopeHint_Full" xml:space="preserve">
+    <value>完整模式 · 需提权 · 含 Security 与防火墙</value>
+  </data>
+  <data name="AIHub_ScopeHint_Extended" xml:space="preserve">
+    <value>拓展模式 · 无需提权 · 跳过 Security</value>
+  </data>
+  <data name="AIHub_FindingsHeading" xml:space="preserve">
+    <value>发现列表</value>
+  </data>
+  <data name="AIHub_FindingsSummaryFormat" xml:space="preserve">
+    <value>当前筛选下记录了 {0} 项发现</value>
+  </data>
+  <data name="AIHub_AllFindingsLabelFormat" xml:space="preserve">
+    <value>全部发现 ({0})</value>
+  </data>
+  <data name="AIHub_PriorityPreviewLabelFormat" xml:space="preserve">
+    <value>前 {0} 项优先处理建议</value>
+  </data>
+  <data name="AIHub_OverviewLabelFormat" xml:space="preserve">
+    <value>全部 ({0})</value>
+  </data>
+  <data name="AIHub_SourceFilter_Application" xml:space="preserve">
+    <value>应用日志</value>
+  </data>
+  <data name="AIHub_SourceFilter_Security" xml:space="preserve">
+    <value>安全</value>
+  </data>
+  <data name="AIHub_SourceFilter_System" xml:space="preserve">
+    <value>系统</value>
+  </data>
+  <data name="AIHub_SourceFilter_Setup" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="AIHub_SourceFilter_Forwarded" xml:space="preserve">
+    <value>转发事件</value>
+  </data>
+  <data name="AIHub_EmptyFindingsTitle" xml:space="preserve">
+    <value>未检测到安全或稳定性异常</value>
+  </data>
+  <data name="AIHub_EmptyFindingsDescription" xml:space="preserve">
+    <value>所选时段及已读取的日志中未发现异常。可更换时段后再次扫描。</value>
+  </data>
+  <data name="AIHub_PipelineTitle" xml:space="preserve">
+    <value>AI Hub 执行链路</value>
+  </data>
+  <data name="AIHub_PipelinePolicyText" xml:space="preserve">
+    <value>安全策略 + 专有 agents.md</value>
+  </data>
+  <data name="AIHub_PipelineSummaryText" xml:space="preserve">
+    <value>分析摘要</value>
+  </data>
+  <data name="AIHub_PipelineActionText" xml:space="preserve">
+    <value>建议操作</value>
+  </data>
+  <data name="AIHub_SecurityAuditTabLabel" xml:space="preserve">
+    <value>安全审计</value>
+  </data>
+  <data name="AIHub_OptimizationTabLabel" xml:space="preserve">
+    <value>系统优化</value>
+  </data>
+  <data name="AIHub_SecurityAuditTitle" xml:space="preserve">
+    <value>Windows 事件安全审计</value>
+  </data>
+  <data name="AIHub_ReanalyzeLabel" xml:space="preserve">
+    <value>重新分析选定时段</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeLabel" xml:space="preserve">
+    <value>AI 深度分析</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint" xml:space="preserve">
+    <value>将当前发现（高危优先，最多 12 项）提交给已配置的 AI 内核，按 security-audit 策略生成补充诊断与建议。不会自动执行任何操作。</value>
+  </data>
+  <data name="AIHub_HealthOverviewLabel" xml:space="preserve">
+    <value>健康总览</value>
+  </data>
+  <data name="AIHub_LatestAuditLabel" xml:space="preserve">
+    <value>最新审计</value>
+  </data>
+  <data name="AIHub_FindingsInAuditLabel" xml:space="preserve">
+    <value>本次审计发现</value>
+  </data>
+  <data name="AIHub_HighLabel" xml:space="preserve">
+    <value>高</value>
+  </data>
+  <data name="AIHub_MediumLabel" xml:space="preserve">
+    <value>中</value>
+  </data>
+  <data name="AIHub_LowLabel" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="AIHub_AuditActivityLabel" xml:space="preserve">
+    <value>审计动态</value>
+  </data>
+  <data name="AIHub_AuditsLabel" xml:space="preserve">
+    <value>审计次数</value>
+  </data>
+  <data name="AIHub_RecordedFindingsLabel" xml:space="preserve">
+    <value>已记录发现</value>
+  </data>
+  <data name="AIHub_ActiveDaysLabel" xml:space="preserve">
+    <value>活跃天数</value>
+  </data>
+  <data name="AIHub_HealthAverageLabel" xml:space="preserve">
+    <value>平均健康分</value>
+  </data>
+  <data name="AIHub_ScanLabel" xml:space="preserve">
+    <value>扫描</value>
+  </data>
+  <data name="AIHub_FinishedLabel" xml:space="preserve">
+    <value>完成时间</value>
+  </data>
+  <data name="AIHub_WindowLabel" xml:space="preserve">
+    <value>时间窗口</value>
+  </data>
+  <data name="AIHub_EventsReadLabel" xml:space="preserve">
+    <value>读取事件</value>
+  </data>
+  <data name="AIHub_FilterAllLabel" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="AIHub_PriorityViewLabel" xml:space="preserve">
+    <value>优先处理视图</value>
+  </data>
+  <data name="AIHub_SearchPlaceholder" xml:space="preserve">
+    <value>搜索事件 ID、提供者或标题...</value>
+  </data>
+  <data name="AIHub_NoMatchingFindingsTitle" xml:space="preserve">
+    <value>未匹配到发现项</value>
+  </data>
+  <data name="AIHub_NoMatchingFindingsDescription" xml:space="preserve">
+    <value>尝试更换搜索关键词、日志通道或严重度筛选。</value>
+  </data>
+  <data name="AIHub_ResetFindingFiltersLabel" xml:space="preserve">
+    <value>清除筛选</value>
+  </data>
+  <data name="AIHub_OptimizationDescription" xml:space="preserve">
+    <value>按五类整理下载散文件，审查并清理过期临时文件和缓存。</value>
+  </data>
+  <data name="AIHub_ScanAllLabel" xml:space="preserve">
+    <value>重新扫描</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflowTitle" xml:space="preserve">
+    <value>优化工作流</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflowDescription" xml:space="preserve">
+    <value>在执行任何写入操作前，先扫描、审查并确认。</value>
+  </data>
+  <data name="AIHub_CandidatesLabel" xml:space="preserve">
+    <value>候选项目</value>
+  </data>
+  <data name="AIHub_DetectedObjectsLabel" xml:space="preserve">
+    <value>检测到的对象</value>
+  </data>
+  <data name="AIHub_SelectedItemsLabel" xml:space="preserve">
+    <value>选定项目</value>
+  </data>
+  <data name="AIHub_StagedForExecutionLabel" xml:space="preserve">
+    <value>待执行状态</value>
+  </data>
+  <data name="AIHub_SafetyBoundaryLabel" xml:space="preserve">
+    <value>安全边界</value>
+  </data>
+  <data name="AIHub_DownloadsLabel" xml:space="preserve">
+    <value>下载目录</value>
+  </data>
+  <data name="AIHub_DownloadsRootOnlyLabel" xml:space="preserve">
+    <value>仅根目录</value>
+  </data>
+  <data name="AIHub_DownloadsDescription" xml:space="preserve">
+    <value>仅整理至少 10 分钟未修改的散文件至 Documents、Compressed、Programs、Music、Video；图片、未知类型和未完成下载留在原处。</value>
+  </data>
+  <data name="AIHub_TemporaryFilesLabel" xml:space="preserve">
+    <value>缓存与临时文件</value>
+  </data>
+  <data name="AIHub_WhitelistOnlyLabel" xml:space="preserve">
+    <value>仅白名单</value>
+  </data>
+  <data name="AIHub_CacheDescription" xml:space="preserve">
+    <value>仅扫描白名单中至少 7 天未修改的缓存文件及 Temp 内 .tmp/.temp 文件；跳过占用文件和目录链接，确认后逐文件删除。</value>
+  </data>
+  <data name="AIHub_ScanButtonLabel" xml:space="preserve">
+    <value>扫描</value>
+  </data>
+  <data name="AIHub_SelectAllLabel" xml:space="preserve">
+    <value>全选</value>
+  </data>
+  <data name="AIHub_DeselectAllLabel" xml:space="preserve">
+    <value>取消全选</value>
+  </data>
+  <data name="AIHub_ConfirmAndExecuteLabel" xml:space="preserve">
+    <value>确认并执行</value>
+  </data>
+  <data name="AIHub_ReadOnlyScanTitle" xml:space="preserve">
+    <value>只读扫描</value>
+  </data>
+  <data name="AIHub_ReadOnlyScanDescription" xml:space="preserve">
+    <value>确认前仅读取文件元数据。</value>
+  </data>
+  <data name="AIHub_PathBoundariesTitle" xml:space="preserve">
+    <value>路径边界</value>
+  </data>
+  <data name="AIHub_PathBoundariesDescription" xml:space="preserve">
+    <value>下载目录及缓存白名单均通过二次校验。</value>
+  </data>
+  <data name="AIHub_RecoverableCleanupTitle" xml:space="preserve">
+    <value>仅限审核快照</value>
+  </data>
+  <data name="AIHub_RecoverableCleanupDescription" xml:space="preserve">
+    <value>执行前逐文件复核范围、时效与变化；新文件、变更、占用或不可访问的文件一律跳过。</value>
+  </data>
+  <data name="AIHub_PriorityCalloutBadgeText" xml:space="preserve">
+    <value>优先处理</value>
+  </data>
+  <data name="AIHub_AuditSummaryEmptyTitle_Ready" xml:space="preserve">
+    <value>等待首次扫描</value>
+  </data>
+  <data name="AIHub_AuditSummaryEmptyText_Ready" xml:space="preserve">
+    <value>扫描后会在这里显示发现与处理建议。</value>
+  </data>
+  <data name="AIHub_CancelTaskLabel" xml:space="preserve">
+    <value>取消任务</value>
+  </data>
+  <data name="AIHub_ScanPhase_Scanning" xml:space="preserve">
+    <value>正在扫描</value>
+  </data>
+  <data name="AIHub_ScanPhase_ReviewResults" xml:space="preserve">
+    <value>请查看扫描结果</value>
+  </data>
+  <data name="AIHub_ScanPhase_Applying" xml:space="preserve">
+    <value>正在应用更改</value>
+  </data>
+  <data name="AIHub_ScanPhase_Failed" xml:space="preserve">
+    <value>扫描失败</value>
+  </data>
+  <data name="AIHub_TaskPoliciesTabLabel" xml:space="preserve">
+    <value>任务策略</value>
+  </data>
+  <data name="AIHub_TaskPolicyTitle" xml:space="preserve">
+    <value>任务指令</value>
+  </data>
+  <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
+    <value>分别设置安全审计和系统优化的 AI 指令。全局安全规则可在 AI 服务设置中修改。</value>
+  </data>
+  <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
+    <value>正在检测…</value>
+  </data>
+  <data name="AIHub_RecheckAi_Action" xml:space="preserve">
+    <value>重新检测</value>
+  </data>
+  <data name="AIHub_AiServiceSettingsLabel" xml:space="preserve">
+    <value>AI 服务设置</value>
+  </data>
+  <data name="AIHub_RecheckFailed" xml:space="preserve">
+    <value>检测失败，请重试或检查 AI 服务设置。</value>
+  </data>
+  <data name="AIHub_Readiness_ReadyFormat" xml:space="preserve">
+    <value>AI 服务已启用 · 就绪 · {0}</value>
+  </data>
+  <data name="AIHub_Readiness_DegradedFormat" xml:space="preserve">
+    <value>AI 服务已启用 · 主链路不可用，将使用备用端点 · {0}</value>
+  </data>
+  <data name="AIHub_Readiness_UnverifiedFormat" xml:space="preserve">
+    <value>AI 服务已启用 · 已配置（未验证）· {0}</value>
+  </data>
+  <data name="AIHub_Readiness_NotConfiguredFormat" xml:space="preserve">
+    <value>AI 服务未配置：{0}</value>
+  </data>
+  <data name="AIHub_Readiness_Disabled" xml:space="preserve">
+    <value>AI 服务未启用 · 扫描时仅执行规则检测</value>
+  </data>
+  <data name="AIHub_CurrentStage_CollectLogs" xml:space="preserve">
+    <value>收集事件日志</value>
+  </data>
+  <data name="AIHub_CurrentStage_AnalyzeFindings" xml:space="preserve">
+    <value>分析发现</value>
+  </data>
+  <data name="AIHub_CurrentStage_FinalizeResults" xml:space="preserve">
+    <value>整理结果</value>
+  </data>
+  <data name="AIHub_CollectionProgress_Unavailable" xml:space="preserve">
+    <value>无法读取</value>
+  </data>
+  <data name="AIHub_CollectionProgress_Read" xml:space="preserve">
+    <value>已读取</value>
+  </data>
+  <data name="AIHub_CollectionProgress_Reading" xml:space="preserve">
+    <value>正在读取</value>
+  </data>
+  <data name="AIHub_CollectionProgress_StatusFormat" xml:space="preserve">
+    <value>{0} {1} · {2}/{3} 个日志通道 · 当前通道 {4} 条事件 · 共 {5} 条事件</value>
+  </data>
+  <data name="AIHub_Sidebar_Analyzing" xml:space="preserve">
+    <value>分析中</value>
+  </data>
+  <data name="AIHub_Sidebar_DeepAnalysis" xml:space="preserve">
+    <value>AI 深度分析</value>
+  </data>
+  <data name="AIHub_Sidebar_Scanning" xml:space="preserve">
+    <value>正在扫描</value>
+  </data>
+  <data name="AIHub_Sidebar_PartiallyCompleted" xml:space="preserve">
+    <value>部分完成</value>
+  </data>
+  <data name="AIHub_Sidebar_DeepAnalysisComplete" xml:space="preserve">
+    <value>AI 分析完成</value>
+  </data>
+  <data name="AIHub_Sidebar_ScanComplete" xml:space="preserve">
+    <value>扫描完成</value>
+  </data>
+  <data name="AIHub_Sidebar_DeepAnalysisIncomplete" xml:space="preserve">
+    <value>AI 分析未完成</value>
+  </data>
+  <data name="AIHub_Sidebar_ScanFailed" xml:space="preserve">
+    <value>扫描失败</value>
+  </data>
+  <data name="AIHub_Sidebar_AuditWorkflow" xml:space="preserve">
+    <value>审计工作流</value>
+  </data>
+  <data name="AIHub_ScannedCandidatesLabel" xml:space="preserve">
+    <value>已扫描文件</value>
+  </data>
+  <data name="AIHub_ApprovedCandidatesLabel" xml:space="preserve">
+    <value>AI 已通过</value>
+  </data>
+  <data name="AIHub_CleanableCapacityLabel" xml:space="preserve">
+    <value>可清理容量</value>
+  </data>
+  <data name="AIHub_UserDirectoryLabel" xml:space="preserve">
+    <value>用户目录空间分析</value>
+  </data>
+  <data name="AIHub_OrganizeDownloadsLabel" xml:space="preserve">
+    <value>整理下载</value>
+  </data>
+  <data name="AIHub_DownloadsUnavailable" xml:space="preserve">
+    <value>下载目录不存在</value>
+  </data>
+  <data name="AIHub_OptimizationResultsSummaryFormat" xml:space="preserve">
+    <value>已扫描 {0:N0} 个候选文件 · AI 通过 {1:N0} 个 · 可清理 {2}</value>
+  </data>
+  <data name="AIHub_CleanAllLabel" xml:space="preserve">
+    <value>一键清理</value>
+  </data>
+  <data name="AIHub_ScheduleSummary_Off" xml:space="preserve">
+    <value>已关闭：仅在手动触发时审计</value>
+  </data>
+  <data name="AIHub_ScheduleSummary_CadenceFormat" xml:space="preserve">
+    <value>每 {0} 小时</value>
+  </data>
+  <data name="AIHub_ScheduleSummary_NextFormat" xml:space="preserve">
+    <value>{0} · 下次约 {1:MM-dd HH:mm}</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_Requesting" xml:space="preserve">
+    <value>正在请求 AI 深度分析...</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_IncompleteFormat" xml:space="preserve">
+    <value>AI 分析未完成：{0}</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_SummaryPartialFormat" xml:space="preserve">
+    <value>AI 部分完成：已保留 {0} 项增强发现（{1}）。</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_SummaryCompleteFormat" xml:space="preserve">
+    <value>AI 深度分析完成：{0} 项增强发现。</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_MetaFormat" xml:space="preserve">
+    <value>内核 {0} · {1:HH:mm:ss}</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_Cancelled" xml:space="preserve">
+    <value>AI 分析已取消</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_FailedFormat" xml:space="preserve">
+    <value>AI 分析失败：{0}</value>
+  </data>
+  <data name="AIHub_RunAudit_FastInProgress" xml:space="preserve">
+    <value>正在执行快速安全扫描...</value>
+  </data>
+  <data name="AIHub_RunAudit_FullInProgress" xml:space="preserve">
+    <value>正在全量检索系统事件日志...</value>
+  </data>
+  <data name="AIHub_RunAudit_CheckingLocalRulesFormat" xml:space="preserve">
+    <value>正在分析 {0} 条事件的本地规则...</value>
+  </data>
+  <data name="AIHub_RunAudit_AiPartialFormat" xml:space="preserve">
+    <value>AI 部分完成，保留 {0} 项增强发现（{1}）</value>
+  </data>
+  <data name="AIHub_RunAudit_AiReturnedFindingsFormat" xml:space="preserve">
+    <value>已调用 {0}，返回 {1} 项增强发现</value>
+  </data>
+  <data name="AIHub_RunAudit_AiPartialNoExtraFormat" xml:space="preserve">
+    <value>AI 部分完成，已验证批次未发现额外问题（{0}）</value>
+  </data>
+  <data name="AIHub_RunAudit_AiNoExtraFormat" xml:space="preserve">
+    <value>{0} 未返回额外发现</value>
+  </data>
+  <data name="AIHub_RunAudit_AiCallFailedFormat" xml:space="preserve">
+    <value>AI 调用失败：{0}</value>
+  </data>
+  <data name="AIHub_RunAudit_AiDidNotSucceedFormat" xml:space="preserve">
+    <value>AI 分析未成功：{0}</value>
+  </data>
+  <data name="AIHub_RunAudit_AiAnalysisFailedFormat" xml:space="preserve">
+    <value>AI 分析失败：{0}</value>
+  </data>
+  <data name="AIHub_RunAudit_RangeRefreshed" xml:space="preserve">
+    <value>已更新本地发现；可按需运行 AI 深度分析</value>
+  </data>
+  <data name="AIHub_RunAudit_NoEventsAiNotCalled" xml:space="preserve">
+    <value>无事件，未调用 AI</value>
+  </data>
+  <data name="AIHub_RunAudit_AiHubDisabledSkipped" xml:space="preserve">
+    <value>AI Hub 未启用，跳过 AI 分析</value>
+  </data>
+  <data name="AIHub_AuditTimestamp_LastScannedFormat" xml:space="preserve">
+    <value>上次扫描: {0:yyyy-MM-dd HH:mm:ss} ({1} 项发现)</value>
+  </data>
+  <data name="AIHub_ScanType_Incremental" xml:space="preserve">
+    <value>增量审计</value>
+  </data>
+  <data name="AIHub_ScanType_Full" xml:space="preserve">
+    <value>全量审计</value>
+  </data>
+  <data name="AIHub_Window_Today" xml:space="preserve">
+    <value>当天</value>
+  </data>
+  <data name="AIHub_EventCountFormat" xml:space="preserve">
+    <value>{0} 事件</value>
+  </data>
+  <data name="AIHub_FinishAudit_Partial" xml:space="preserve">
+    <value>审计部分完成，已保留验证通过的 AI 结果。</value>
+  </data>
+  <data name="AIHub_FinishAudit_Failed" xml:space="preserve">
+    <value>本地审计完成，AI 分析失败；结果仅包含规则发现。</value>
+  </data>
+  <data name="AIHub_FinishAudit_Completed" xml:space="preserve">
+    <value>审计完成。</value>
+  </data>
+  <data name="AIHub_FinishAudit_ScoreAndFindingsFormat" xml:space="preserve">
+    <value> 健康评分 {0}/100，发现 {1} 项。</value>
+  </data>
+  <data name="AIHub_FinishAudit_SkippedChannelsFormat" xml:space="preserve">
+    <value> 未能读取：{0}。</value>
+  </data>
+  <data name="AIHub_StopAudit_Cancelled" xml:space="preserve">
+    <value>扫描已取消</value>
+  </data>
+  <data name="AIHub_StopAudit_Failed" xml:space="preserve">
+    <value>扫描失败</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Critical" xml:space="preserve">
+    <value>需要关注 · 存在高危异常</value>
+  </data>
+  <data name="AIHub_HealthSummary_CriticalFormat" xml:space="preserve">
+    <value>检测到 {0} 项高危故障及 {1} 项警告。建议优先执行推荐的操作建议进行修复。</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Good" xml:space="preserve">
+    <value>良好 · 多数指标平稳</value>
+  </data>
+  <data name="AIHub_HealthSummary_GoodFormat" xml:space="preserve">
+    <value>未检测到严重故障，记录了 {0} 项常规警告与 {1} 项系统信息日志。已生成相应操作建议。</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Excellent" xml:space="preserve">
+    <value>优秀 · 系统健康稳定</value>
+  </data>
+  <data name="AIHub_HealthSummary_Excellent" xml:space="preserve">
+    <value>最近扫描时段内未发现任何安全违规或稳定性异常，所有日志指标正常。</value>
+  </data>
+  <data name="AIHub_ScanType_Historical" xml:space="preserve">
+    <value>历史审计快照</value>
+  </data>
+  <data name="AIHub_Window_AllTimes" xml:space="preserve">
+    <value>全时段</value>
+  </data>
+  <data name="AIHub_EventCount_HistoricalFormat" xml:space="preserve">
+    <value>{0} 发现项</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_LocalCompleteReviewing" xml:space="preserve">
+    <value>本地扫描完成，正在进行 AI 审核…</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Failover" xml:space="preserve">
+    <value>主节点未完成，正在使用 Fallback 节点审核…</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_BatchesFormat" xml:space="preserve">
+    <value>AI 分析中（{0}/{1} 批）</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Analyzing" xml:space="preserve">
+    <value>正在进行 AI 分析...</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Scanning" xml:space="preserve">
+    <value>正在扫描...</value>
+  </data>
+  <data name="AIHub_DownloadsStatus_FoundFormat" xml:space="preserve">
+    <value>发现 {0} 项 ({1})</value>
+  </data>
+  <data name="AIHub_TemporaryFilesStatus_FoundFormat" xml:space="preserve">
+    <value>发现 {0} 项 ({1})</value>
+  </data>
+  <data name="AIHub_Optimization_ScanLimitReached" xml:space="preserve">
+    <value> · 扫描达到上限，仅展示已分析部分</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanningDownloads" xml:space="preserve">
+    <value>正在扫描下载目录...</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanningTempFiles" xml:space="preserve">
+    <value>正在扫描临时文件...</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanCancelled" xml:space="preserve">
+    <value>扫描已取消</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanFailed" xml:space="preserve">
+    <value>扫描失败</value>
+  </data>
+  <data name="AIHub_DescribeScope_NoEligible" xml:space="preserve">
+    <value>没有符合条件的文件</value>
+  </data>
+  <data name="AIHub_DescribeScope_NotScanned" xml:space="preserve">
+    <value>尚未扫描</value>
+  </data>
+  <data name="AIHub_DescribeScope_FoundFormat" xml:space="preserve">
+    <value>发现 {0:N0} 个文件 · {1} · {2:N0} 个可执行</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutingConfirmed" xml:space="preserve">
+    <value>正在执行已确认的操作...</value>
+  </data>
+  <data name="AIHub_Optimization_DownloadIneligible" xml:space="preserve">
+    <value>文件不符合分类规则、正在使用或已变化，请重新扫描</value>
+  </data>
+  <data name="AIHub_Optimization_ActionFailed" xml:space="preserve">
+    <value>操作失败，请重新扫描</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutingProgressFormat" xml:space="preserve">
+    <value>正在执行已确认的操作... ({0}/{1})</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutionCancelledFormat" xml:space="preserve">
+    <value>执行已取消（已处理 {0}/{1} 项）</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutionCompletedWithFailuresFormat" xml:space="preserve">
+    <value>执行完成（{0} 个失败）</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutionCompleted" xml:space="preserve">
+    <value>执行完成</value>
+  </data>
+  <data name="AIHub_ReportCopied" xml:space="preserve">
+    <value>审计报告已复制到剪贴板。</value>
   </data>
 </root>

@@ -71,7 +71,7 @@ namespace Kit.NetMapService
 
         protected override string SerializeSettings(NetMapServiceConfig settings)
         {
-            return "{}";
+            return settings.IsEnabled ? "{\"isEnabled\":true}" : "{\"isEnabled\":false}";
         }
     }
 

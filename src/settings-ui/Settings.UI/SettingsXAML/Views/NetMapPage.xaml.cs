@@ -239,6 +239,18 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void HopList_SelectionChanged(object sender, SelectionChangedEventArgs e) => DispatcherQueue.TryEnqueue(DrawPoints);
 
+    private void HopList_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is NetMapHopRow row)
+        {
+            int clickedIndex = ViewModel.Hops.IndexOf(row);
+            if (clickedIndex >= 0 && HopList.SelectedIndex == clickedIndex)
+            {
+                DispatcherQueue.TryEnqueue(() => HopList.SelectedIndex = -1);
+            }
+        }
+    }
+
     private void DrawPoints()
     {
         if (!isCurrentPage || !IsLoaded || MapPoints == null || MapDescription == null)
@@ -329,7 +341,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             {
                 int index = i;
                 var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 44 : 34, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health);
-                marker.Tapped += (_, _) => HopList.SelectedIndex = index;
+                marker.Tapped += (_, _) => HopList.SelectedIndex = HopList.SelectedIndex == index ? -1 : index;
                 hopMarkers[i] = marker;
             }
         }

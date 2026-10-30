@@ -1,9 +1,12 @@
 namespace Kit.AiHub.Storage;
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using Kit.AiHub.Models;
 using Kit.AiHub.Serialization;
 
@@ -12,8 +15,23 @@ using Kit.AiHub.Serialization;
 /// </summary>
 public sealed class AiHubSettingsStore
 {
+    private static readonly ConcurrentDictionary<string, CachedSnapshot> Snapshots = new(StringComparer.OrdinalIgnoreCase);
+    private static long _writeVersion;
+
     private readonly AiHubStorageFiles _files;
     private readonly SecureKeyStore _keyStore;
+
+    private readonly record struct FileStamp(bool Exists, long Length, long LastWriteUtcTicks);
+
+    private readonly record struct DirectoryStamp(
+        long WriteVersion,
+        FileStamp ServiceSettings,
+        FileStamp LegacySettings,
+        FileStamp Secrets);
+
+    private sealed record CachedSnapshot(DirectoryStamp Stamp, AiHubConfig Config);
+
+    internal static void BumpWriteVersion() => Interlocked.Increment(ref _writeVersion);
 
     public string DataDirectory => _files.DataDirectory;
     public string SettingsDirectory => DataDirectory;
@@ -35,7 +53,70 @@ public sealed class AiHubSettingsStore
     /// Loads current settings and credentials under the same cross-process lock.
     /// Missing settings return defaults; malformed or inaccessible files fail closed.
     /// </summary>
-    public AiHubConfig Load() => _files.Run(LoadUnlocked);
+    public AiHubConfig Load()
+    {
+        if (TryCaptureStamp(out DirectoryStamp stamp) &&
+            Snapshots.TryGetValue(DataDirectory, out CachedSnapshot? cached) &&
+            cached.Stamp == stamp)
+        {
+            return CloneConfig(cached.Config);
+        }
+
+        AiHubConfig loaded = _files.Run(LoadUnlocked);
+        if (TryCaptureStamp(out DirectoryStamp postStamp))
+        {
+            Snapshots[DataDirectory] = new CachedSnapshot(postStamp, CloneConfig(loaded));
+        }
+
+        return loaded;
+    }
+
+    private bool TryCaptureStamp(out DirectoryStamp stamp)
+    {
+        stamp = default;
+        try
+        {
+            var journal = new FileInfo(_files.GetPath(".settings-transaction.dat"));
+            if (journal.Exists)
+            {
+                return false;
+            }
+
+            long version = Interlocked.Read(ref _writeVersion);
+            stamp = new DirectoryStamp(
+                version,
+                GetFileStamp(SettingsFilePath),
+                GetFileStamp(_files.GetPath("settings.json")),
+                GetFileStamp(_files.GetPath("secrets.dat")));
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static FileStamp GetFileStamp(string path)
+    {
+        var info = new FileInfo(path);
+        return info.Exists
+            ? new FileStamp(true, info.Length, info.LastWriteTimeUtc.Ticks)
+            : new FileStamp(false, 0, 0);
+    }
+
+    private static AiHubConfig CloneConfig(AiHubConfig source)
+    {
+        return new AiHubConfig
+        {
+            IsEnabled = source.IsEnabled,
+            SelectedKernel = source.SelectedKernel,
+            MaxConcurrentAnalysis = source.MaxConcurrentAnalysis,
+            ScanIntervalHours = source.ScanIntervalHours,
+            AuditModeIndex = source.AuditModeIndex,
+            RetentionDays = source.RetentionDays,
+            Targets = new ObservableCollection<AiTargetSettings>(source.Targets.Select(t => t.Clone())),
+        };
+    }
 
     /// <summary>
     /// Saves the complete configuration, committing settings and encrypted keys together.
@@ -147,6 +228,14 @@ public sealed class AiHubSettingsStore
 
         byte[] settings = JsonSerializer.SerializeToUtf8Bytes(clone, AiHubJsonContext.Default.AiHubConfig);
         _files.CommitSettingsAndSecrets(settings, SecureKeyStore.Encrypt(secrets));
+        if (TryCaptureStamp(out DirectoryStamp postStamp))
+        {
+            Snapshots[DataDirectory] = new CachedSnapshot(postStamp, CloneConfig(config));
+        }
+        else
+        {
+            Snapshots.TryRemove(DataDirectory, out _);
+        }
     }
 
     private static void ValidateTargets(AiHubConfig config, bool allowLegacyEfforts = false)

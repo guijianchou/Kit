@@ -52,21 +52,20 @@ public sealed class FindingSection : Observable
         MediumBarWidth = SegmentWidth(MediumCount, total);
         LowBarWidth = SegmentWidth(LowCount, total);
 
-        bool isZh = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
         var parts = new List<string>();
         if (HighCount > 0)
         {
-            parts.Add(isZh ? $"{HighCount} 项高" : $"{HighCount} high");
+            parts.Add("AIHub_SeveritySummary_HighFormat".FormatLocalized("{0} high", HighCount));
         }
 
         if (MediumCount > 0)
         {
-            parts.Add(isZh ? $"{MediumCount} 项中" : $"{MediumCount} medium");
+            parts.Add("AIHub_SeveritySummary_MediumFormat".FormatLocalized("{0} medium", MediumCount));
         }
 
         if (LowCount > 0)
         {
-            parts.Add(isZh ? $"{LowCount} 项低" : $"{LowCount} low");
+            parts.Add("AIHub_SeveritySummary_LowFormat".FormatLocalized("{0} low", LowCount));
         }
 
         SeveritySummary = string.Join(", ", parts);
@@ -90,8 +89,9 @@ public sealed class FindingSection : Observable
     {
         get
         {
-            bool isZh = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-            return isZh ? $"{Count} 项发现" : (Count == 1 ? "1 finding" : $"{Count} findings");
+            return Count == 1
+                ? "AIHub_FindingCount_Single".GetLocalizedOrFallback("1 finding")
+                : "AIHub_FindingCount_PluralFormat".FormatLocalized("{0} findings", Count);
         }
     }
 
@@ -181,11 +181,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     // Security Audit state
     private int _healthScore = 100;
-    private string _healthScoreGrade = IsChinese ? "良好" : "Good";
+    private string _healthScoreGrade = "AIHub_HealthScoreGrade_Good".GetLocalizedOrFallback("Good");
     private int _highCount;
     private int _mediumCount;
     private int _lowCount;
-    private string _auditTimestampText = IsChinese ? "尚未扫描" : "Not scanned yet";
+    private string _auditTimestampText = "AIHub_AuditTimestamp_NotScanned".GetLocalizedOrFallback("Not scanned yet");
     private int _selectedScopeIndex; // 0 = 2d, 1 = 1w, 2 = 1mo
     private string _severityFilter = "All"; // "All", "High", "Medium", "Low"
     private string _sourceFilter = "All"; // "All", "Application", "Security", "System", "Setup", "ForwardedEvents"
@@ -193,29 +193,30 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private bool _showAllFindings = true;
     private string _findingSearchText = string.Empty;
     private bool _isAuditing;
-    private string _auditStatusText = IsChinese ? "就绪" : "Ready";
+    private string _auditStatusText = "AIHub_AuditStatus_Ready".GetLocalizedOrFallback("Ready");
     private bool _isAiAnalyzing;
     private string _aiStatusText = string.Empty;
     private bool _hasAiReport;
     private string _aiReportSummaryText = string.Empty;
     private string _aiReportMetaText = string.Empty;
 
-    private string _healthVerdict = IsChinese ? "尚未扫描" : "Not scanned yet";
-    private string _healthSummaryText = IsChinese ? "尚未进行全面事件扫描，点击上方扫描按钮以开始。" : "Comprehensive event scan has not been performed yet. Click scan above to begin.";
-    private string _selectedAuditLabel = IsChinese ? "最新审计" : "Latest audit";
+    private string _healthVerdict = "AIHub_HealthVerdict_NotScanned".GetLocalizedOrFallback("Not scanned yet");
+    private string _healthSummaryText = "AIHub_HealthSummary_NotScanned".GetLocalizedOrFallback("Comprehensive event scan has not been performed yet. Click scan above to begin.");
+    private string _selectedAuditLabel = "AIHub_SelectedAudit_Latest".GetLocalizedOrFallback("Latest audit");
     private DateTimeOffset? _selectedAuditDate = DateTimeOffset.Now;
+    private bool _suppressAuditDateLoad;
     private string _activityScansText = "0";
     private string _activityFindingsText = "0";
     private string _activeDaysText = "0";
     private string _healthAverageText = "—";
-    private string _scanTypeText = IsChinese ? "快速扫描" : "Fast scan";
+    private string _scanTypeText = "AIHub_FastScanLabel".GetLocalizedOrFallback("Fast scan");
     private string _finishedText = "—";
     private string _windowText = "—";
-    private string _eventCountText = IsChinese ? "0 事件" : "0 events";
+    private string _eventCountText = "AIHub_EventCount_Zero".GetLocalizedOrFallback("0 events");
 
     // Optimization state
     private bool _isOptimizing;
-    private string _optimizationWorkflowStatus = IsChinese ? "就绪，等待扫描" : "Ready to scan";
+    private string _optimizationWorkflowStatus = "AIHub_OptimizationWorkflow_Ready".GetLocalizedOrFallback("Ready to scan");
     private int _candidatesCount;
     private long _candidatesBytes;
     private int _selectedCandidatesCount;
@@ -294,7 +295,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         AiHubEngine.Current.StateChanged += OnEngineStateChanged;
     }
 
-    public static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+    private static bool PreferChinese() => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// AI service configuration (kernel, endpoints, policy) hosted by this page.
@@ -399,17 +400,17 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         private set => Set(ref _healthScoreGrade, value);
     }
 
-    public string HealthScoreLabel => IsChinese ? "系统健康评分" : "Health score";
+    public string HealthScoreLabel => "AIHub_HealthScoreLabel".GetLocalizedOrFallback("Health score");
     public string HealthScoreText => HasAuditData ? HealthScore.ToString(CultureInfo.CurrentCulture) : "—";
 
     public bool IsCriticalScore => HasAuditData && HealthScore < 60 && HighCount > 0;
-    public string FilterHighQuickActionLabel => IsChinese ? "仅看高危发现" : "Filter High findings";
-    public string FilterHighQuickActionHint => IsChinese ? "快速筛选当前健康评分中的高危安全与稳定性事件" : "Filter high-severity security and reliability events";
+    public string FilterHighQuickActionLabel => "AIHub_FilterHighQuickActionLabel".GetLocalizedOrFallback("Filter High findings");
+    public string FilterHighQuickActionHint => "AIHub_FilterHighQuickActionHint".GetLocalizedOrFallback("Filter high-severity security and reliability events");
 
-    public string ViewAiReportLabel => IsChinese ? "查看 AI 诊断报告" : "View AI report";
-    public string JumpToAiReportHint => IsChinese ? "直接跳转到下方的 AI 诊断与处置建议报告" : "Jump directly to the AI diagnostic report below";
-    public string CopyReportLabel => IsChinese ? "复制报告" : "Copy report";
-    public string CopyAiReportHint => IsChinese ? "将 AI 诊断结果与处置建议复制到剪贴板" : "Copy AI diagnostic findings and recommendations to clipboard";
+    public string ViewAiReportLabel => "AIHub_ViewAiReportLabel".GetLocalizedOrFallback("View AI report");
+    public string JumpToAiReportHint => "AIHub_JumpToAiReportHint".GetLocalizedOrFallback("Jump directly to the AI diagnostic report below");
+    public string CopyReportLabel => "AIHub_CopyReportLabel".GetLocalizedOrFallback("Copy report");
+    public string CopyAiReportHint => "AIHub_CopyAiReportHint".GetLocalizedOrFallback("Copy AI diagnostic findings and recommendations to clipboard");
 
     public event EventHandler RequestJumpToAiReport;
     public ICommand FilterHighSeverityCommand { get; }
@@ -436,7 +437,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public DateTimeOffset? SelectedAuditDate
     {
         get => _selectedAuditDate;
-        set => Set(ref _selectedAuditDate, value);
+        set
+        {
+            if (Set(ref _selectedAuditDate, value) && !_suppressAuditDateLoad && value.HasValue)
+            {
+                _ = LoadAuditForDateAsync(value.Value.LocalDateTime.Date);
+            }
+        }
     }
 
     public DateTimeOffset LatestSelectableAuditDate => DateTimeOffset.Now;
@@ -514,9 +521,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         ActivityFindingsText = "0";
         EventCountText = FinishedText = "—";
         WindowText = ScanRangeDescription;
-        ScanTypeText = IsChinese ? "本地发现" : "Local findings";
-        HealthVerdict = IsChinese ? "正在更新" : "Updating";
-        HealthSummaryText = IsChinese ? "正在读取所选时段的事件并更新发现。" : "Reading events and updating findings for the selected range.";
+        ScanTypeText = "AIHub_ScanType_LocalFindings".GetLocalizedOrFallback("Local findings");
+        HealthVerdict = "AIHub_HealthVerdict_Updating".GetLocalizedOrFallback("Updating");
+        HealthSummaryText = "AIHub_HealthSummary_Updating".GetLocalizedOrFallback("Reading events and updating findings for the selected range.");
         AuditTimestampText = HealthSummaryText;
         RebuildSections();
         RunAudit(fast: false, rangeRefresh: true);
@@ -525,9 +532,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// <summary>Selected range as a bilingual label for the status text.</summary>
     public string ScanRangeDescription => _selectedScopeIndex switch
     {
-        1 => IsChinese ? "最近 1 周" : "Past 1 week",
-        2 => IsChinese ? "最近 1 个月" : "Past 1 month",
-        _ => IsChinese ? "最近 2 天" : "Past 2 days",
+        1 => "AIHub_ScanRange_1w".GetLocalizedOrFallback("Past 1 week"),
+        2 => "AIHub_ScanRange_1mo".GetLocalizedOrFallback("Past 1 month"),
+        _ => "AIHub_ScanRange_2d".GetLocalizedOrFallback("Past 2 days"),
     };
 
     /// <summary>
@@ -575,7 +582,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// </summary>
     public bool CanUseFullAuditMode => App.IsElevated;
 
-    public string AuditModeLabel => IsChinese ? "审计模式" : "Audit mode";
+    public string AuditModeLabel => "AIHub_AuditModeLabel".GetLocalizedOrFallback("Audit mode");
 
     public string AuditModeHint
     {
@@ -583,48 +590,46 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             if (!IsFullAuditMode)
             {
-                return IsChinese ? "拓展模式：标准权限，读取 System/Application/Setup/ForwardedEvents" : "Extended: standard privileges, reads System/Application/Setup/ForwardedEvents";
+                return "AIHub_AuditModeHint_Extended".GetLocalizedOrFallback("Extended: standard privileges, reads System/Application/Setup/ForwardedEvents");
             }
 
             return App.IsElevated
-                ? (IsChinese ? "完整模式：额外读取 Security 与防火墙通道" : "Full: additionally reads the Security and Firewall channels")
-                : (IsChinese ? "完整模式需要管理员权限；当前未提权，Security 通道将不可读" : "Full mode needs elevation; the Security channel is unreadable without it");
+                ? "AIHub_AuditModeHint_FullElevated".GetLocalizedOrFallback("Full: additionally reads the Security and Firewall channels")
+                : "AIHub_AuditModeHint_FullNotElevated".GetLocalizedOrFallback("Full mode needs elevation; the Security channel is unreadable without it");
         }
     }
 
-    public string FullScanRangeHint => IsChinese ? "选择时间范围并更新本地发现" : "Select a time range and refresh local findings";
+    public string FullScanRangeHint => "AIHub_FullScanRangeHint".GetLocalizedOrFallback("Select a time range and refresh local findings");
 
-    public string RangeOption1DayLabel => IsChinese ? "2 天" : "2d";
+    public string RangeOption1DayLabel => "AIHub_RangeOption1DayLabel".GetLocalizedOrFallback("2d");
 
-    public string RangeOption2DaysLabel => IsChinese ? "1 周" : "1w";
+    public string RangeOption2DaysLabel => "AIHub_RangeOption2DaysLabel".GetLocalizedOrFallback("1w");
 
-    public string RangeOption1WeekLabel => IsChinese ? "1 个月" : "1mo";
+    public string RangeOption1WeekLabel => "AIHub_RangeOption1WeekLabel".GetLocalizedOrFallback("1mo");
 
-    public string ScanOptionsLabel => IsChinese ? "扫描选项" : "Scan options";
+    public string ScanOptionsLabel => "AIHub_ScanOptionsLabel".GetLocalizedOrFallback("Scan options");
 
-    public string ReanalyzeRangeHint => IsChinese ? "重新分析选定时段内的日志" : "Reanalyze events in selected range";
+    public string ReanalyzeRangeHint => "AIHub_ReanalyzeRangeHint".GetLocalizedOrFallback("Reanalyze events in selected range");
 
     /// <summary>Summarizes the active scan mode; reflects the real setting, not a fixed claim.</summary>
     public string ScopeHint => IsFullAuditMode
-        ? (IsChinese ? "完整模式 · 需提权 · 含 Security 与防火墙" : "Full mode · Elevation required · Includes Security and Firewall")
-        : (IsChinese ? "拓展模式 · 无需提权 · 跳过 Security" : "Extended mode · No elevation · Skips Security");
+        ? "AIHub_ScopeHint_Full".GetLocalizedOrFallback("Full mode · Elevation required · Includes Security and Firewall")
+        : "AIHub_ScopeHint_Extended".GetLocalizedOrFallback("Extended mode · No elevation · Skips Security");
 
-    public string FindingsHeading => IsChinese ? "发现列表" : "Findings";
+    public string FindingsHeading => "AIHub_FindingsHeading".GetLocalizedOrFallback("Findings");
 
-    public string FindingsSummaryText => IsChinese
-        ? $"当前筛选下记录了 {FindingSections.Sum(s => s.Count)} 项发现"
-        : $"{FindingSections.Sum(s => s.Count)} findings recorded under current filter";
+    public string FindingsSummaryText => "AIHub_FindingsSummaryFormat".FormatLocalized("{0} findings recorded under current filter", FindingSections.Sum(s => s.Count));
 
-    public string AllFindingsLabel => IsChinese ? $"全部发现 ({AllIssues.Count})" : $"All findings ({AllIssues.Count})";
+    public string AllFindingsLabel => "AIHub_AllFindingsLabelFormat".FormatLocalized("All findings ({0})", AllIssues.Count);
 
-    public string PriorityPreviewLabel => IsChinese ? $"前 {PriorityFindings.Count} 项优先处理建议" : $"Top {PriorityFindings.Count} priority action items";
+    public string PriorityPreviewLabel => "AIHub_PriorityPreviewLabelFormat".FormatLocalized("Top {0} priority action items", PriorityFindings.Count);
 
-    public string OverviewLabel => IsChinese ? $"全部 ({AllIssues.Count})" : $"All ({AllIssues.Count})";
-    public string ApplicationLabel => GetSourceFilterLabel("Application", IsChinese ? "应用日志" : "Application");
-    public string SecurityLabel => GetSourceFilterLabel("Security", IsChinese ? "安全" : "Security");
-    public string SystemLabel => GetSourceFilterLabel("System", IsChinese ? "系统" : "System");
-    public string SetupLabel => GetSourceFilterLabel("Setup", IsChinese ? "设置" : "Setup");
-    public string ForwardedLabel => GetSourceFilterLabel("ForwardedEvents", IsChinese ? "转发事件" : "Forwarded");
+    public string OverviewLabel => "AIHub_OverviewLabelFormat".FormatLocalized("All ({0})", AllIssues.Count);
+    public string ApplicationLabel => GetSourceFilterLabel("Application", "AIHub_SourceFilter_Application".GetLocalizedOrFallback("Application"));
+    public string SecurityLabel => GetSourceFilterLabel("Security", "AIHub_SourceFilter_Security".GetLocalizedOrFallback("Security"));
+    public string SystemLabel => GetSourceFilterLabel("System", "AIHub_SourceFilter_System".GetLocalizedOrFallback("System"));
+    public string SetupLabel => GetSourceFilterLabel("Setup", "AIHub_SourceFilter_Setup".GetLocalizedOrFallback("Setup"));
+    public string ForwardedLabel => GetSourceFilterLabel("ForwardedEvents", "AIHub_SourceFilter_Forwarded".GetLocalizedOrFallback("Forwarded"));
 
     private string GetSourceFilterLabel(string channel, string displayName)
     {
@@ -645,99 +650,97 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public bool ShowNoAudit => !HasAuditData && !IsAuditing;
     public bool ShowEmptyIssues => HasAuditData && TotalFindings == 0 && !IsAuditing;
     public bool ShowNoFilterMatches => HasAuditData && FindingSections.Count == 0 && TotalFindings > 0;
-    public string EmptyFindingsTitle => IsChinese ? "未检测到安全或稳定性异常" : "No security or reliability anomalies detected";
-    public string EmptyFindingsDescription => IsChinese ? "所选时段及已读取的日志中未发现异常。可更换时段后再次扫描。" : "No anomalies were found in the selected period and the logs read. You can scan a different period.";
+    public string EmptyFindingsTitle => "AIHub_EmptyFindingsTitle".GetLocalizedOrFallback("No security or reliability anomalies detected");
+    public string EmptyFindingsDescription => "AIHub_EmptyFindingsDescription".GetLocalizedOrFallback("No anomalies were found in the selected period and the logs read. You can scan a different period.");
 
     // Pipeline Labels
-    public string PipelineTitle => IsChinese ? "AI Hub 执行链路" : "AI Hub Pipeline";
-    public string PipelinePolicyText => IsChinese ? "安全策略 + 专有 agents.md" : "Security policy + AGENTS.md";
-    public string PipelineSummaryText => IsChinese ? "分析摘要" : "Analysis summary";
-    public string PipelineActionText => IsChinese ? "建议操作" : "Suggested action";
+    public string PipelineTitle => "AIHub_PipelineTitle".GetLocalizedOrFallback("AI Hub Pipeline");
+    public string PipelinePolicyText => "AIHub_PipelinePolicyText".GetLocalizedOrFallback("Security policy + AGENTS.md");
+    public string PipelineSummaryText => "AIHub_PipelineSummaryText".GetLocalizedOrFallback("Analysis summary");
+    public string PipelineActionText => "AIHub_PipelineActionText".GetLocalizedOrFallback("Suggested action");
 
     // Tab Labels
-    public string SecurityAuditTabLabel => IsChinese ? "安全审计" : "Security Audit";
-    public string OptimizationTabLabel => IsChinese ? "系统优化" : "Optimization";
+    public string SecurityAuditTabLabel => "AIHub_SecurityAuditTabLabel".GetLocalizedOrFallback("Security Audit");
+    public string OptimizationTabLabel => "AIHub_OptimizationTabLabel".GetLocalizedOrFallback("Optimization");
 
     // Audit Header & Action Labels
-    public string SecurityAuditTitle => IsChinese ? "Windows 事件安全审计" : "Windows Event Security Audit";
+    public string SecurityAuditTitle => "AIHub_SecurityAuditTitle".GetLocalizedOrFallback("Windows Event Security Audit");
     public string FastScanLabel => "AIHub_FastScanLabel".GetLocalizedOrFallback("Fast scan");
     public string FullScanLabel => "AIHub_FullScanLabel".GetLocalizedOrFallback("Full scan");
-    public string ReanalyzeLabel => IsChinese ? "重新分析选定时段" : "Reanalyze selected range";
+    public string ReanalyzeLabel => "AIHub_ReanalyzeLabel".GetLocalizedOrFallback("Reanalyze selected range");
 
     /// <summary>Label for the AI deep-analysis action (runs the configured kernel).</summary>
-    public string DeepAnalyzeLabel => IsChinese ? "AI 深度分析" : "AI deep analysis";
+    public string DeepAnalyzeLabel => "AIHub_DeepAnalyzeLabel".GetLocalizedOrFallback("AI deep analysis");
 
     /// <summary>Explains what the deep-analysis action does and when it is unavailable.</summary>
-    public string DeepAnalyzeHint => IsChinese
-        ? "将当前发现（高危优先，最多 12 项）提交给已配置的 AI 内核，按 security-audit 策略生成补充诊断与建议。不会自动执行任何操作。"
-        : "Sends the current findings (highest severity first, up to 12) to the configured AI kernel for supplementary diagnostics under the security-audit policy. No action is executed automatically.";
+    public string DeepAnalyzeHint => "AIHub_DeepAnalyzeHint".GetLocalizedOrFallback("Sends the current findings (highest severity first, up to 12) to the configured AI kernel for supplementary diagnostics under the security-audit policy. No action is executed automatically.");
 
     // Overview Card
-    public string HealthOverviewLabel => IsChinese ? "健康总览" : "Health overview";
-    public string LatestAuditLabel => IsChinese ? "最新审计" : "Latest audit";
-    public string FindingsInAuditLabel => IsChinese ? "本次审计发现" : "Findings in this audit";
-    public string HighLabel => IsChinese ? "高" : "High";
-    public string MediumLabel => IsChinese ? "中" : "Medium";
-    public string LowLabel => IsChinese ? "低" : "Low";
+    public string HealthOverviewLabel => "AIHub_HealthOverviewLabel".GetLocalizedOrFallback("Health overview");
+    public string LatestAuditLabel => "AIHub_LatestAuditLabel".GetLocalizedOrFallback("Latest audit");
+    public string FindingsInAuditLabel => "AIHub_FindingsInAuditLabel".GetLocalizedOrFallback("Findings in this audit");
+    public string HighLabel => "AIHub_HighLabel".GetLocalizedOrFallback("High");
+    public string MediumLabel => "AIHub_MediumLabel".GetLocalizedOrFallback("Medium");
+    public string LowLabel => "AIHub_LowLabel".GetLocalizedOrFallback("Low");
 
     // Activity Stats
-    public string AuditActivityLabel => IsChinese ? "审计动态" : "Audit activity";
-    public string AuditsLabel => IsChinese ? "审计次数" : "Audits";
-    public string RecordedFindingsLabel => IsChinese ? "已记录发现" : "Recorded findings";
-    public string ActiveDaysLabel => IsChinese ? "活跃天数" : "Active days";
-    public string HealthAverageLabel => IsChinese ? "平均健康分" : "Health average";
+    public string AuditActivityLabel => "AIHub_AuditActivityLabel".GetLocalizedOrFallback("Audit activity");
+    public string AuditsLabel => "AIHub_AuditsLabel".GetLocalizedOrFallback("Audits");
+    public string RecordedFindingsLabel => "AIHub_RecordedFindingsLabel".GetLocalizedOrFallback("Recorded findings");
+    public string ActiveDaysLabel => "AIHub_ActiveDaysLabel".GetLocalizedOrFallback("Active days");
+    public string HealthAverageLabel => "AIHub_HealthAverageLabel".GetLocalizedOrFallback("Health average");
 
     // Details Grid
-    public string ScanLabel => IsChinese ? "扫描" : "Scan";
-    public string FinishedLabel => IsChinese ? "完成时间" : "Finished";
-    public string WindowLabel => IsChinese ? "时间窗口" : "Window";
-    public string EventsReadLabel => IsChinese ? "读取事件" : "Events read";
+    public string ScanLabel => "AIHub_ScanLabel".GetLocalizedOrFallback("Scan");
+    public string FinishedLabel => "AIHub_FinishedLabel".GetLocalizedOrFallback("Finished");
+    public string WindowLabel => "AIHub_WindowLabel".GetLocalizedOrFallback("Window");
+    public string EventsReadLabel => "AIHub_EventsReadLabel".GetLocalizedOrFallback("Events read");
 
     // Filters & Search
-    public string FilterAllLabel => IsChinese ? "全部" : "All";
-    public string PriorityViewLabel => IsChinese ? "优先处理视图" : "Priority view";
-    public string SearchPlaceholder => IsChinese ? "搜索事件 ID、提供者或标题..." : "Search event ID, provider or title...";
-    public string NoMatchingFindingsTitle => IsChinese ? "未匹配到发现项" : "No matching findings";
-    public string NoMatchingFindingsDescription => IsChinese ? "尝试更换搜索关键词、日志通道或严重度筛选。" : "Try a different search keyword, channel, or severity filter.";
-    public string ResetFindingFiltersLabel => IsChinese ? "清除筛选" : "Clear filters";
+    public string FilterAllLabel => "AIHub_FilterAllLabel".GetLocalizedOrFallback("All");
+    public string PriorityViewLabel => "AIHub_PriorityViewLabel".GetLocalizedOrFallback("Priority view");
+    public string SearchPlaceholder => "AIHub_SearchPlaceholder".GetLocalizedOrFallback("Search event ID, provider or title...");
+    public string NoMatchingFindingsTitle => "AIHub_NoMatchingFindingsTitle".GetLocalizedOrFallback("No matching findings");
+    public string NoMatchingFindingsDescription => "AIHub_NoMatchingFindingsDescription".GetLocalizedOrFallback("Try a different search keyword, channel, or severity filter.");
+    public string ResetFindingFiltersLabel => "AIHub_ResetFindingFiltersLabel".GetLocalizedOrFallback("Clear filters");
     public bool HasFindingFilters => _severityFilter != "All" || _sourceFilter != "All" || !string.IsNullOrWhiteSpace(_findingSearchText);
     public ICommand ResetFindingFiltersCommand { get; }
 
     // Optimization Tab Labels
-    public string OptimizationDescription => IsChinese ? "按五类整理下载散文件，审查并清理过期临时文件和缓存。" : "Organize loose downloads into five categories and review old temporary/cache files.";
-    public string ScanAllLabel => IsChinese ? "重新扫描" : "Rescan";
-    public string OptimizationWorkflowTitle => IsChinese ? "优化工作流" : "Optimization workflow";
-    public string OptimizationWorkflowDescription => IsChinese ? "在执行任何写入操作前，先扫描、审查并确认。" : "Scan, review and confirm before any write action.";
-    public string CandidatesLabel => IsChinese ? "候选项目" : "Candidates";
-    public string DetectedObjectsLabel => IsChinese ? "检测到的对象" : "Detected objects";
-    public string SelectedItemsLabel => IsChinese ? "选定项目" : "Selected items";
-    public string StagedForExecutionLabel => IsChinese ? "待执行状态" : "Staged for execution";
-    public string SafetyBoundaryLabel => IsChinese ? "安全边界" : "Safety boundary";
-    public string DownloadsLabel => IsChinese ? "下载目录" : "Downloads";
-    public string DownloadsRootOnlyLabel => IsChinese ? "仅根目录" : "Downloads root only";
-    public string DownloadsDescription => IsChinese ? "仅整理至少 10 分钟未修改的散文件至 Documents、Compressed、Programs、Music、Video；图片、未知类型和未完成下载留在原处。" : "Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music or Video. Leave images, unknown types and incomplete downloads in place.";
-    public string TemporaryFilesLabel => IsChinese ? "缓存与临时文件" : "Caches & temporary files";
-    public string WhitelistOnlyLabel => IsChinese ? "仅白名单" : "Whitelist only";
-    public string CacheDescription => IsChinese ? "仅扫描白名单中至少 7 天未修改的缓存文件及 Temp 内 .tmp/.temp 文件；跳过占用文件和目录链接，确认后逐文件删除。" : "Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; delete confirmed files individually.";
-    public string ScanButtonLabel => IsChinese ? "扫描" : "Scan";
-    public string SelectAllLabel => IsChinese ? "全选" : "Select all";
-    public string DeselectAllLabel => IsChinese ? "取消全选" : "Deselect all";
-    public string ConfirmAndExecuteLabel => IsChinese ? "确认并执行" : "Confirm and execute";
-    public string ReadOnlyScanTitle => IsChinese ? "只读扫描" : "Read-only scan";
-    public string ReadOnlyScanDescription => IsChinese ? "确认前仅读取文件元数据。" : "Only file metadata is read before confirmation.";
-    public string PathBoundariesTitle => IsChinese ? "路径边界" : "Path boundaries";
-    public string PathBoundariesDescription => IsChinese ? "下载目录及缓存白名单均通过二次校验。" : "Downloads and cache whitelists are validated again.";
-    public string RecoverableCleanupTitle => IsChinese ? "仅限审核快照" : "Reviewed snapshot only";
-    public string RecoverableCleanupDescription => IsChinese ? "执行前逐文件复核范围、时效与变化；新文件、变更、占用或不可访问的文件一律跳过。" : "Scope, age and changes are rechecked per file before deletion; new, changed, locked or inaccessible files are skipped.";
+    public string OptimizationDescription => "AIHub_OptimizationDescription".GetLocalizedOrFallback("Organize loose downloads into five categories and review old temporary/cache files.");
+    public string ScanAllLabel => "AIHub_ScanAllLabel".GetLocalizedOrFallback("Rescan");
+    public string OptimizationWorkflowTitle => "AIHub_OptimizationWorkflowTitle".GetLocalizedOrFallback("Optimization workflow");
+    public string OptimizationWorkflowDescription => "AIHub_OptimizationWorkflowDescription".GetLocalizedOrFallback("Scan, review and confirm before any write action.");
+    public string CandidatesLabel => "AIHub_CandidatesLabel".GetLocalizedOrFallback("Candidates");
+    public string DetectedObjectsLabel => "AIHub_DetectedObjectsLabel".GetLocalizedOrFallback("Detected objects");
+    public string SelectedItemsLabel => "AIHub_SelectedItemsLabel".GetLocalizedOrFallback("Selected items");
+    public string StagedForExecutionLabel => "AIHub_StagedForExecutionLabel".GetLocalizedOrFallback("Staged for execution");
+    public string SafetyBoundaryLabel => "AIHub_SafetyBoundaryLabel".GetLocalizedOrFallback("Safety boundary");
+    public string DownloadsLabel => "AIHub_DownloadsLabel".GetLocalizedOrFallback("Downloads");
+    public string DownloadsRootOnlyLabel => "AIHub_DownloadsRootOnlyLabel".GetLocalizedOrFallback("Downloads root only");
+    public string DownloadsDescription => "AIHub_DownloadsDescription".GetLocalizedOrFallback("Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music or Video. Leave images, unknown types and incomplete downloads in place.");
+    public string TemporaryFilesLabel => "AIHub_TemporaryFilesLabel".GetLocalizedOrFallback("Caches & temporary files");
+    public string WhitelistOnlyLabel => "AIHub_WhitelistOnlyLabel".GetLocalizedOrFallback("Whitelist only");
+    public string CacheDescription => "AIHub_CacheDescription".GetLocalizedOrFallback("Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; delete confirmed files individually.");
+    public string ScanButtonLabel => "AIHub_ScanButtonLabel".GetLocalizedOrFallback("Scan");
+    public string SelectAllLabel => "AIHub_SelectAllLabel".GetLocalizedOrFallback("Select all");
+    public string DeselectAllLabel => "AIHub_DeselectAllLabel".GetLocalizedOrFallback("Deselect all");
+    public string ConfirmAndExecuteLabel => "AIHub_ConfirmAndExecuteLabel".GetLocalizedOrFallback("Confirm and execute");
+    public string ReadOnlyScanTitle => "AIHub_ReadOnlyScanTitle".GetLocalizedOrFallback("Read-only scan");
+    public string ReadOnlyScanDescription => "AIHub_ReadOnlyScanDescription".GetLocalizedOrFallback("Only file metadata is read before confirmation.");
+    public string PathBoundariesTitle => "AIHub_PathBoundariesTitle".GetLocalizedOrFallback("Path boundaries");
+    public string PathBoundariesDescription => "AIHub_PathBoundariesDescription".GetLocalizedOrFallback("Downloads and cache whitelists are validated again.");
+    public string RecoverableCleanupTitle => "AIHub_RecoverableCleanupTitle".GetLocalizedOrFallback("Reviewed snapshot only");
+    public string RecoverableCleanupDescription => "AIHub_RecoverableCleanupDescription".GetLocalizedOrFallback("Scope, age and changes are rechecked per file before deletion; new, changed, locked or inaccessible files are skipped.");
 
     public AuditIssueEnhanced AuditPriorityFinding => AllIssues.OrderByDescending(issue => issue.IsHigh)
         .ThenByDescending(issue => issue.IsMedium).ThenByDescending(issue => issue.Occurrences).FirstOrDefault();
     public bool HasAuditPriority => AuditPriorityFinding != null;
-    public string PriorityCalloutBadgeText => IsChinese ? "优先处理" : "Review first";
+    public string PriorityCalloutBadgeText => "AIHub_PriorityCalloutBadgeText".GetLocalizedOrFallback("Review first");
     public string AuditPriorityTitle => AuditPriorityFinding?.DisplayTitle ?? string.Empty;
     public string AuditPriorityAction => AuditPriorityFinding?.PriorityActionText ?? string.Empty;
-    public string AuditSummaryEmptyTitle => HasAuditData ? EmptyFindingsTitle : (IsChinese ? "等待首次扫描" : "Ready for your first scan");
-    public string AuditSummaryEmptyText => HasAuditData ? EmptyFindingsDescription : (IsChinese ? "扫描后会在这里显示发现与处理建议。" : "Scan to see findings and suggested actions here.");
+    public string AuditSummaryEmptyTitle => HasAuditData ? EmptyFindingsTitle : "AIHub_AuditSummaryEmptyTitle_Ready".GetLocalizedOrFallback("Ready for your first scan");
+    public string AuditSummaryEmptyText => HasAuditData ? EmptyFindingsDescription : "AIHub_AuditSummaryEmptyText_Ready".GetLocalizedOrFallback("Scan to see findings and suggested actions here.");
     public bool ShowPriorityFindings => IsPriorityView && PriorityFindings.Count > 0;
 
     // Filters
@@ -904,7 +907,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public ICommand CancelAuditCommand { get; }
 
-    public string CancelTaskLabel => IsChinese ? "取消任务" : "Cancel task";
+    public string CancelTaskLabel => "AIHub_CancelTaskLabel".GetLocalizedOrFallback("Cancel task");
 
     // Optimization Properties (1:1 with Screenshot)
     public bool IsOptimizing
@@ -960,11 +963,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// <summary>Bilingual phase label shown beside the progress bar.</summary>
     public string ScanPhaseText => ScanPhase switch
     {
-        ScanPhase.Scanning => IsChinese ? "正在扫描" : "Scanning",
-        ScanPhase.SelectingTargets => IsChinese ? "请查看扫描结果" : "Review scan results",
-        ScanPhase.ExecutionPending => IsChinese ? "正在应用更改" : "Applying changes",
-        ScanPhase.Failed => IsChinese ? "扫描失败" : "Scan failed",
-        _ => IsChinese ? "就绪，等待扫描" : "Ready to scan",
+        ScanPhase.Scanning => "AIHub_ScanPhase_Scanning".GetLocalizedOrFallback("Scanning"),
+        ScanPhase.SelectingTargets => "AIHub_ScanPhase_ReviewResults".GetLocalizedOrFallback("Review scan results"),
+        ScanPhase.ExecutionPending => "AIHub_ScanPhase_Applying".GetLocalizedOrFallback("Applying changes"),
+        ScanPhase.Failed => "AIHub_ScanPhase_Failed".GetLocalizedOrFallback("Scan failed"),
+        _ => "AIHub_OptimizationWorkflow_Ready".GetLocalizedOrFallback("Ready to scan"),
     };
 
     /// <summary>Weighted 0-100 scan completion.</summary>
@@ -1004,24 +1007,20 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     }
 
     /// <summary>Tab label for the per-chain policy editor.</summary>
-    public string TaskPoliciesTabLabel => IsChinese ? "任务策略" : "Task policies";
+    public string TaskPoliciesTabLabel => "AIHub_TaskPoliciesTabLabel".GetLocalizedOrFallback("Task policies");
 
     /// <summary>Heading for the per-chain policy editor.</summary>
-    public string TaskPolicyTitle => IsChinese
-        ? "任务指令"
-        : "Task instructions";
+    public string TaskPolicyTitle => "AIHub_TaskPolicyTitle".GetLocalizedOrFallback("Task instructions");
 
     /// <summary>Explains what the per-chain policies govern and where the global one lives.</summary>
-    public string TaskPolicyDescription => IsChinese
-        ? "分别设置安全审计和系统优化的 AI 指令。全局安全规则可在 AI 服务设置中修改。"
-        : "Customize AI instructions for security audits and optimization. Global safety rules are in AI service settings.";
+    public string TaskPolicyDescription => "AIHub_TaskPolicyDescription".GetLocalizedOrFallback("Customize AI instructions for security audits and optimization. Global safety rules are in AI service settings.");
 
     /// <summary>Label for the manual readiness re-check action.</summary>
     public string RecheckAiLabel => IsCheckingAiReadiness
-        ? (IsChinese ? "正在检测…" : "Checking…")
-        : (IsChinese ? "重新检测" : "Re-check");
+        ? "AIHub_RecheckAi_Checking".GetLocalizedOrFallback("Checking…")
+        : "AIHub_RecheckAi_Action".GetLocalizedOrFallback("Re-check");
 
-    public string AiServiceSettingsLabel => IsChinese ? "AI 服务设置" : "AI service settings";
+    public string AiServiceSettingsLabel => "AIHub_AiServiceSettingsLabel".GetLocalizedOrFallback("AI service settings");
 
     public bool IsCheckingAiReadiness
     {
@@ -1088,7 +1087,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         catch (Exception ex)
         {
             Logger.LogError("AI readiness probe failed", ex);
-            ShowStatus(IsChinese ? "检测失败，请重试或检查 AI 服务设置。" : "Check failed. Retry or review AI service settings.", InfoBarSeverity.Error);
+            ShowStatus("AIHub_RecheckFailed".GetLocalizedOrFallback("Check failed. Retry or review AI service settings."), InfoBarSeverity.Error);
         }
         finally
         {
@@ -1168,21 +1167,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         return readiness.Level switch
         {
-            AiReadinessLevel.Ready => IsChinese
-                ? $"AI 服务已启用 · 就绪 · {kernelModel}"
-                : $"AI service enabled · ready · {kernelModel}",
-            AiReadinessLevel.Degraded => IsChinese
-                ? $"AI 服务已启用 · 主链路不可用，将使用备用端点 · {readiness.Detail}"
-                : $"AI service enabled · main route unavailable; fallback will be used · {readiness.Detail}",
-            AiReadinessLevel.Unverified => IsChinese
-                ? $"AI 服务已启用 · 已配置（未验证）· {kernelModel}"
-                : $"AI service enabled · configured (unverified) · {kernelModel}",
-            AiReadinessLevel.NotConfigured => IsChinese
-                ? $"AI 服务未配置：{readiness.Detail}"
-                : $"AI service not configured: {readiness.Detail}",
-            _ => IsChinese
-                ? "AI 服务未启用 · 扫描时仅执行规则检测"
-                : "AI service disabled · rule-based detection only",
+            AiReadinessLevel.Ready => "AIHub_Readiness_ReadyFormat".FormatLocalized("AI service enabled · ready · {0}", kernelModel),
+            AiReadinessLevel.Degraded => "AIHub_Readiness_DegradedFormat".FormatLocalized("AI service enabled · main route unavailable; fallback will be used · {0}", readiness.Detail),
+            AiReadinessLevel.Unverified => "AIHub_Readiness_UnverifiedFormat".FormatLocalized("AI service enabled · configured (unverified) · {0}", kernelModel),
+            AiReadinessLevel.NotConfigured => "AIHub_Readiness_NotConfiguredFormat".FormatLocalized("AI service not configured: {0}", readiness.Detail),
+            _ => "AIHub_Readiness_Disabled".GetLocalizedOrFallback("AI service disabled · rule-based detection only"),
         };
     }
 
@@ -1214,9 +1203,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public string CurrentStageText => _auditProgress.CurrentStage switch
     {
-        "Collect event logs" => IsChinese ? "收集事件日志" : "Collect event logs",
-        "Analyze findings" => IsChinese ? "分析发现" : "Analyze findings",
-        "Finish" => IsChinese ? "整理结果" : "Finalize results",
+        "Collect event logs" => "AIHub_CurrentStage_CollectLogs".GetLocalizedOrFallback("Collect event logs"),
+        "Analyze findings" => "AIHub_CurrentStage_AnalyzeFindings".GetLocalizedOrFallback("Analyze findings"),
+        "Finish" => "AIHub_CurrentStage_FinalizeResults".GetLocalizedOrFallback("Finalize results"),
         _ => string.Empty,
     };
 
@@ -1249,11 +1238,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             _auditDetailedPercent = Math.Max(_auditDetailedPercent ?? 0, 30.0 * progress.CompletedChannels / progress.TotalChannels);
         }
-        string state = progress.Skipped ? (IsChinese ? "无法读取" : "Unavailable")
-            : progress.IsComplete ? (IsChinese ? "已读取" : "Read") : (IsChinese ? "正在读取" : "Reading");
-        AuditStatusText = IsChinese
-            ? $"{state} {progress.Channel} · {progress.CompletedChannels}/{progress.TotalChannels} 个日志通道 · 当前通道 {progress.ChannelEvents} 条事件 · 共 {progress.TotalEvents} 条事件"
-            : $"{state} {progress.Channel} · {progress.CompletedChannels}/{progress.TotalChannels} log channels · {progress.ChannelEvents} events in channel · {progress.TotalEvents} events collected";
+        string state = progress.Skipped ? "AIHub_CollectionProgress_Unavailable".GetLocalizedOrFallback("Unavailable")
+            : progress.IsComplete ? "AIHub_CollectionProgress_Read".GetLocalizedOrFallback("Read") : "AIHub_CollectionProgress_Reading".GetLocalizedOrFallback("Reading");
+        AuditStatusText = "AIHub_CollectionProgress_StatusFormat".FormatLocalized(
+            "{0} {1} · {2}/{3} log channels · {4} events in channel · {5} events collected",
+            state, progress.Channel, progress.CompletedChannels, progress.TotalChannels, progress.ChannelEvents, progress.TotalEvents);
         PublishScanProgress();
     }
 
@@ -1323,18 +1312,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public bool IsAuditProgressIndeterminate => (IsAuditing || IsAiAnalyzing) && !_auditDetailedPercent.HasValue;
 
     public string SidebarWorkflowPercentText => IsAuditProgressIndeterminate
-        ? (IsChinese ? "分析中" : "Analyzing")
+        ? "AIHub_Sidebar_Analyzing".GetLocalizedOrFallback("Analyzing")
         : SidebarWorkflowPercent.ToString("0'%'", CultureInfo.InvariantCulture);
 
     public string SidebarWorkflowCountText => _auditProgress.StageCountText;
 
     public string SidebarWorkflowTitle => AuditPhase switch
     {
-        ScanPhase.Scanning => _auditWasDeepAnalysis ? (IsChinese ? "AI 深度分析" : "AI deep analysis") : (IsChinese ? "正在扫描" : "Scanning"),
-        ScanPhase.SelectingTargets when _auditIncomplete => IsChinese ? "部分完成" : "Partially completed",
-        ScanPhase.SelectingTargets => _auditWasDeepAnalysis ? (IsChinese ? "AI 分析完成" : "AI analysis complete") : (IsChinese ? "扫描完成" : "Scan complete"),
-        ScanPhase.Failed => _auditWasDeepAnalysis ? (IsChinese ? "AI 分析未完成" : "AI analysis incomplete") : (IsChinese ? "扫描失败" : "Scan failed"),
-        _ => IsChinese ? "审计工作流" : "Audit workflow",
+        ScanPhase.Scanning => _auditWasDeepAnalysis ? "AIHub_Sidebar_DeepAnalysis".GetLocalizedOrFallback("AI deep analysis") : "AIHub_Sidebar_Scanning".GetLocalizedOrFallback("Scanning"),
+        ScanPhase.SelectingTargets when _auditIncomplete => "AIHub_Sidebar_PartiallyCompleted".GetLocalizedOrFallback("Partially completed"),
+        ScanPhase.SelectingTargets => _auditWasDeepAnalysis ? "AIHub_Sidebar_DeepAnalysisComplete".GetLocalizedOrFallback("AI analysis complete") : "AIHub_Sidebar_ScanComplete".GetLocalizedOrFallback("Scan complete"),
+        ScanPhase.Failed => _auditWasDeepAnalysis ? "AIHub_Sidebar_DeepAnalysisIncomplete".GetLocalizedOrFallback("AI analysis incomplete") : "AIHub_Sidebar_ScanFailed".GetLocalizedOrFallback("Scan failed"),
+        _ => "AIHub_Sidebar_AuditWorkflow".GetLocalizedOrFallback("Audit workflow"),
     };
 
     /// <summary>Segoe Fluent icon matching the current workflow state.</summary>
@@ -1376,9 +1365,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public string SelectedCandidatesSummary => $"{SelectedCandidatesCount} / {FormatBytes(SelectedCandidatesBytes)}";
 
-    public string ScannedCandidatesLabel => IsChinese ? "已扫描文件" : "Files scanned";
-    public string ApprovedCandidatesLabel => IsChinese ? "AI 已通过" : "AI approved";
-    public string CleanableCapacityLabel => IsChinese ? "可清理容量" : "Cleanable space";
+    public string ScannedCandidatesLabel => "AIHub_ScannedCandidatesLabel".GetLocalizedOrFallback("Files scanned");
+    public string ApprovedCandidatesLabel => "AIHub_ApprovedCandidatesLabel".GetLocalizedOrFallback("AI approved");
+    public string CleanableCapacityLabel => "AIHub_CleanableCapacityLabel".GetLocalizedOrFallback("Cleanable space");
     public string ScannedCandidatesText => _observedOptimizationItems.Count.ToString("N0", CultureInfo.CurrentCulture);
     public string ApprovedCandidatesText => OptimizationCandidates.Count.ToString("N0", CultureInfo.CurrentCulture);
     public string CleanableCapacityText => FormatBytes(OptimizationCandidates.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes));
@@ -1423,7 +1412,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public ObservableCollection<OptimizationCategoryViewModel> OptimizationCategories { get; } = new();
     public ObservableCollection<OptimizationCategoryViewModel> DownloadCategories { get; } = new();
     public ObservableCollection<OptimizationCategoryViewModel> CacheCategories { get; } = new();
-    public string UserDirectoryLabel => IsChinese ? "用户目录空间分析" : "User directory space analysis";
+    public string UserDirectoryLabel => "AIHub_UserDirectoryLabel".GetLocalizedOrFallback("User directory space analysis");
     public bool HasUserDirectorySummaries => UserDirectorySummaries.Count > 0;
 
     public ObservableCollection<string> UserDirectorySummaries { get; } = new();
@@ -1433,17 +1422,17 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private bool _downloadsScanned;
     private bool _cachesScanned;
     public ICommand OrganizeDownloadsCommand { get; }
-    public string OrganizeDownloadsLabel => IsChinese ? "整理下载" : "Organize downloads";
-    public string DownloadsPath => _downloadOrganizerService.GetDownloadsPath() ?? (IsChinese ? "下载目录不存在" : "Downloads folder unavailable");
+    public string OrganizeDownloadsLabel => "AIHub_OrganizeDownloadsLabel".GetLocalizedOrFallback("Organize downloads");
+    public string DownloadsPath => _downloadOrganizerService.GetDownloadsPath() ?? "AIHub_DownloadsUnavailable".GetLocalizedOrFallback("Downloads folder unavailable");
     public bool HasDownloadResults => DownloadCategories.Count > 0;
     public bool HasCacheResults => CacheCategories.Count > 0;
     public string DownloadsResultSummary => DescribeOptimizationScope("move", _downloadsScanned);
     public string CacheResultSummary => DescribeOptimizationScope("delete", _cachesScanned);
-    public string OptimizationResultsSummary => IsChinese
-        ? $"已扫描 {_observedOptimizationItems.Count:N0} 个候选文件 · AI 通过 {OptimizationCandidates.Count:N0} 个 · 可清理 {FormatBytes(OptimizationCandidates.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes))}"
-        : $"{_observedOptimizationItems.Count:N0} candidates scanned · {OptimizationCandidates.Count:N0} AI approved · {FormatBytes(OptimizationCandidates.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes))} cleanable";
+    public string OptimizationResultsSummary => "AIHub_OptimizationResultsSummaryFormat".FormatLocalized(
+        "{0:N0} candidates scanned · {1:N0} AI approved · {2} cleanable",
+        _observedOptimizationItems.Count, OptimizationCandidates.Count, FormatBytes(OptimizationCandidates.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes)));
     public ICommand CleanAllCommand { get; }
-    public string CleanAllLabel => IsChinese ? "一键清理" : "Clean all";
+    public string CleanAllLabel => "AIHub_CleanAllLabel".GetLocalizedOrFallback("Clean all");
     private double _optimizationProgress;
     private bool _isExecutingOptimization;
     public double OptimizationProgress
@@ -1463,6 +1452,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public bool HasCandidates => OptimizationCandidates.Count > 0;
 
     public bool CanExecuteOptimization => IsEnabled && !IsOptimizing && SelectedCandidatesCount > 0;
+
+    public bool CanCleanAll => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "delete");
 
     public ICommand ScanAllCommand { get; }
 
@@ -1530,6 +1521,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         ((RelayCommand)DeselectAllCandidatesCommand).OnCanExecuteChanged();
         ((RelayCommand)ExecuteOptimizationCommand).OnCanExecuteChanged();
         ((RelayCommand)CleanAllCommand).OnCanExecuteChanged();
+        OnPropertyChanged(nameof(CanCleanAll));
         ((RelayCommand)OrganizeDownloadsCommand).OnCanExecuteChanged();
         foreach (var group in OptimizationCategories)
         {
@@ -1656,18 +1648,16 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             if (!IsSchedulingEnabled)
             {
-                return IsChinese ? "已关闭：仅在手动触发时审计" : "Off: audits run only when triggered manually";
+                return "AIHub_ScheduleSummary_Off".GetLocalizedOrFallback("Off: audits run only when triggered manually");
             }
 
             DateTime now = DateTime.UtcNow;
             DateTime? next = AuditSchedule.NextRunUtc(_lastCompletedAuditUtc, now, ScanIntervalHours);
-            string cadence = IsChinese ? $"每 {ScanIntervalHours} 小时" : $"Every {ScanIntervalHours} h";
+            string cadence = "AIHub_ScheduleSummary_CadenceFormat".FormatLocalized("Every {0} h", ScanIntervalHours);
 
             return next is null
                 ? cadence
-                : (IsChinese
-                    ? $"{cadence} · 下次约 {next.Value.ToLocalTime():MM-dd HH:mm}"
-                    : $"{cadence} · next around {next.Value.ToLocalTime():MM-dd HH:mm}");
+                : "AIHub_ScheduleSummary_NextFormat".FormatLocalized("{0} · next around {1:MM-dd HH:mm}", cadence, next.Value.ToLocalTime());
         }
     }
 
@@ -1724,7 +1714,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         AuditPhase = ScanPhase.Scanning;
         EndStage("Collect event logs", audit: true);
         BeginStage("Analyze findings", audit: true);
-        AiStatusText = IsChinese ? "正在请求 AI 深度分析..." : "Requesting AI deep analysis...";
+        AiStatusText = "AIHub_DeepAnalysis_Requesting".GetLocalizedOrFallback("Requesting AI deep analysis...");
         AuditStatusText = AiStatusText;
 
         _auditCts?.Cancel();
@@ -1760,9 +1750,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     if (issues is null)
                     {
-                        AiStatusText = IsChinese
-                            ? $"AI 分析未完成：{failure}"
-                            : $"AI analysis did not complete: {failure}";
+                        AiStatusText = "AIHub_DeepAnalysis_IncompleteFormat".FormatLocalized("AI analysis did not complete: {0}", failure);
                         AuditStatusText = AiStatusText;
                         _auditIncomplete = true;
                         AuditPhase = ScanPhase.Failed;
@@ -1773,19 +1761,17 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     foreach (AuditIssue issue in issues.OrderByDescending(item => item.Severity == "High").ThenByDescending(item => item.Occurrences))
                     {
                         _aiReportFindings.Add(new AiReportFinding(
-                            IsChinese && !string.IsNullOrWhiteSpace(issue.TitleZh) ? issue.TitleZh : issue.Title,
-                            IsChinese && !string.IsNullOrWhiteSpace(issue.RootCauseZh) ? issue.RootCauseZh : issue.RootCause,
-                            IsChinese && !string.IsNullOrWhiteSpace(issue.DescriptionZh) ? issue.DescriptionZh : issue.Description,
-                            IsChinese && !string.IsNullOrWhiteSpace(issue.RecommendationZh) ? issue.RecommendationZh : issue.Recommendation,
+                            PreferChinese() && !string.IsNullOrWhiteSpace(issue.TitleZh) ? issue.TitleZh : issue.Title,
+                            PreferChinese() && !string.IsNullOrWhiteSpace(issue.RootCauseZh) ? issue.RootCauseZh : issue.RootCause,
+                            PreferChinese() && !string.IsNullOrWhiteSpace(issue.DescriptionZh) ? issue.DescriptionZh : issue.Description,
+                            PreferChinese() && !string.IsNullOrWhiteSpace(issue.RecommendationZh) ? issue.RecommendationZh : issue.Recommendation,
                             $"{issue.Severity} · Event {issue.EventId} · {issue.Occurrences}x"));
                     }
 
                     AiReportSummaryText = partial
-                        ? (IsChinese ? $"AI 部分完成：已保留 {issues.Count} 项增强发现（{failure}）。" : $"AI partially completed: retained {issues.Count} enhanced finding(s) ({failure}).")
-                        : (IsChinese ? $"AI 深度分析完成：{issues.Count} 项增强发现。" : $"AI deep analysis completed: {issues.Count} enhanced finding(s).");
-                    AiReportMetaText = IsChinese
-                        ? $"内核 {AiHubEngine.Current.ActiveKernel} · {DateTime.Now:HH:mm:ss}"
-                        : $"Kernel {AiHubEngine.Current.ActiveKernel} · {DateTime.Now:HH:mm:ss}";
+                        ? "AIHub_DeepAnalysis_SummaryPartialFormat".FormatLocalized("AI partially completed: retained {0} enhanced finding(s) ({1}).", issues.Count, failure)
+                        : "AIHub_DeepAnalysis_SummaryCompleteFormat".FormatLocalized("AI deep analysis completed: {0} enhanced finding(s).", issues.Count);
+                    AiReportMetaText = "AIHub_DeepAnalysis_MetaFormat".FormatLocalized("Kernel {0} · {1:HH:mm:ss}", AiHubEngine.Current.ActiveKernel, DateTime.Now);
                     HasAiReport = true;
                     AiStatusText = AiReportSummaryText;
                     AuditStatusText = AiStatusText;
@@ -1811,7 +1797,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 {
                     if (_auditCts?.Token == token)
                     {
-                        AiStatusText = IsChinese ? "AI 分析已取消" : "AI analysis cancelled";
+                        AiStatusText = "AIHub_DeepAnalysis_Cancelled".GetLocalizedOrFallback("AI analysis cancelled");
                         AuditStatusText = AiStatusText;
                         _auditIncomplete = true;
                         AuditPhase = ScanPhase.Failed;
@@ -1824,7 +1810,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 {
                     if (_auditCts?.Token == token)
                     {
-                        AiStatusText = IsChinese ? $"AI 分析失败：{ex.Message}" : $"AI analysis failed: {ex.Message}";
+                        AiStatusText = "AIHub_DeepAnalysis_FailedFormat".FormatLocalized("AI analysis failed: {0}", ex.Message);
                         AuditStatusText = AiStatusText;
                         _auditIncomplete = true;
                         AuditPhase = ScanPhase.Failed;
@@ -1842,7 +1828,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     if (token.IsCancellationRequested && AuditPhase == ScanPhase.Scanning)
                     {
-                        AiStatusText = IsChinese ? "AI 分析已取消" : "AI analysis cancelled";
+                        AiStatusText = "AIHub_DeepAnalysis_Cancelled".GetLocalizedOrFallback("AI analysis cancelled");
                         AuditStatusText = AiStatusText;
                         _auditIncomplete = true;
                         AuditPhase = ScanPhase.Failed;
@@ -1881,7 +1867,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         _auditCts?.Dispose();
         _auditCts = new CancellationTokenSource();
         CancellationToken token = _auditCts.Token;
-        AuditStatusText = fast ? (IsChinese ? "正在执行快速安全扫描..." : "Fast scan in progress...") : (IsChinese ? "正在全量检索系统事件日志..." : "Full event audit in progress...");
+        AuditStatusText = fast ? "AIHub_RunAudit_FastInProgress".GetLocalizedOrFallback("Fast scan in progress...") : "AIHub_RunAudit_FullInProgress".GetLocalizedOrFallback("Full event audit in progress...");
 
         // Snapshot the user's selection before dispatching. Later selections cancel this run.
         int rangeDays = _selectedScopeIndex switch { 1 => 7, 2 => 30, _ => 2 };
@@ -1919,7 +1905,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     EndStage("Collect event logs", audit: true);
                     BeginStage("Analyze findings", audit: true);
-                    AuditStatusText = IsChinese ? $"正在分析 {events.Count} 条事件的本地规则..." : $"Checking local rules for {events.Count} events...";
+                    AuditStatusText = "AIHub_RunAudit_CheckingLocalRulesFormat".FormatLocalized("Checking local rules for {0} events...", events.Count);
                 }, token);
 
                 // Decide up front whether the AI pass can run, and say so before spending
@@ -1981,8 +1967,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         {
                             issues = MergeIssues(ruleIssues, aiIssues, events);
                             string summary = partial
-                                ? (IsChinese ? $"AI 部分完成，保留 {aiIssues.Count} 项增强发现（{result.Failure}）" : $"AI partially completed; retained {aiIssues.Count} enhanced finding(s) ({result.Failure})")
-                                : (IsChinese ? $"已调用 {AiHubEngine.Current.ActiveKernel}，返回 {aiIssues.Count} 项增强发现" : $"{AiHubEngine.Current.ActiveKernel} returned {aiIssues.Count} enhanced finding(s)");
+                                ? "AIHub_RunAudit_AiPartialFormat".FormatLocalized("AI partially completed; retained {0} enhanced finding(s) ({1})", aiIssues.Count, result.Failure)
+                                : "AIHub_RunAudit_AiReturnedFindingsFormat".FormatLocalized("{0} returned {1} enhanced finding(s)", AiHubEngine.Current.ActiveKernel, aiIssues.Count);
                             EnqueueOnUI(() => AiAnalysisRanText = summary, token);
                         }
                         else
@@ -1991,14 +1977,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                             // succeeded"; the engine's failure reason explains which.
                             var failure = result.Failure;
                             string summary = partial
-                                ? (IsChinese ? $"AI 部分完成，已验证批次未发现额外问题（{failure}）" : $"AI partially completed; validated batches had no extra findings ({failure})")
+                                ? "AIHub_RunAudit_AiPartialNoExtraFormat".FormatLocalized("AI partially completed; validated batches had no extra findings ({0})", failure)
                                 : failure is null
-                                ? (IsChinese
-                                    ? $"{AiHubEngine.Current.ActiveKernel} 未返回额外发现"
-                                    : $"{AiHubEngine.Current.ActiveKernel} returned no extra findings")
-                                : (IsChinese
-                                    ? $"AI 调用失败：{failure}"
-                                    : $"AI call failed: {failure}");
+                                ? "AIHub_RunAudit_AiNoExtraFormat".FormatLocalized("{0} returned no extra findings", AiHubEngine.Current.ActiveKernel)
+                                : "AIHub_RunAudit_AiCallFailedFormat".FormatLocalized("AI call failed: {0}", failure);
 
                             EnqueueOnUI(() =>
                             {
@@ -2006,7 +1988,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                                 if (failure is not null)
                                 {
                                     ShowStatus(
-                                        IsChinese ? $"AI 分析未成功：{failure}" : $"AI analysis did not succeed: {failure}",
+                                        "AIHub_RunAudit_AiDidNotSucceedFormat".FormatLocalized("AI analysis did not succeed: {0}", failure),
                                         InfoBarSeverity.Warning);
                                 }
                             }, token);
@@ -2021,23 +2003,21 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         // An AI failure must not discard the rule-based result.
                         aiOutcome = "failed";
                         Logger.LogError($"AI analysis during audit failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
-                        string summary = IsChinese
-                            ? $"AI 分析失败：{ex.Message}"
-                            : $"AI analysis failed: {ex.Message}";
+                        string summary = "AIHub_RunAudit_AiAnalysisFailedFormat".FormatLocalized("AI analysis failed: {0}", ex.Message);
                         EnqueueOnUI(() => AiAnalysisRanText = summary, token);
                     }
                 }
                 else if (rangeRefresh)
                 {
-                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "已更新本地发现；可按需运行 AI 深度分析" : "Local findings refreshed; AI deep analysis is available on request", token);
+                    EnqueueOnUI(() => AiAnalysisRanText = "AIHub_RunAudit_RangeRefreshed".GetLocalizedOrFallback("Local findings refreshed; AI deep analysis is available on request"), token);
                 }
                 else if (events.Count == 0)
                 {
-                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "无事件，未调用 AI" : "No events; AI not called", token);
+                    EnqueueOnUI(() => AiAnalysisRanText = "AIHub_RunAudit_NoEventsAiNotCalled".GetLocalizedOrFallback("No events; AI not called"), token);
                 }
                 else
                 {
-                    EnqueueOnUI(() => AiAnalysisRanText = IsChinese ? "AI Hub 未启用，跳过 AI 分析" : "AI Hub disabled; AI analysis skipped", token);
+                    EnqueueOnUI(() => AiAnalysisRanText = "AIHub_RunAudit_AiHubDisabledSkipped".GetLocalizedOrFallback("AI Hub disabled; AI analysis skipped"), token);
                 }
 
                 // Calculate health score
@@ -2082,16 +2062,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     _hasAuditResult = true;
                     HealthScore = score;
-                    HealthScoreGrade = score >= 80 ? (IsChinese ? "良好" : "Good") : score >= 60 ? (IsChinese ? "警告" : "Warning") : (IsChinese ? "严重" : "Critical");
+                    HealthScoreGrade = score >= 80 ? "AIHub_HealthScoreGrade_Good".GetLocalizedOrFallback("Good") : score >= 60 ? "AIHub_HealthScoreGrade_Warning".GetLocalizedOrFallback("Warning") : "AIHub_HealthScoreGrade_Critical".GetLocalizedOrFallback("Critical");
                     HighCount = issues.Count(i => i.IsHigh);
                     MediumCount = issues.Count(i => i.IsMedium);
                     LowCount = issues.Count(i => i.IsLow);
 
-                    AuditTimestampText = string.Format(
-                        CultureInfo.InvariantCulture,
-                        IsChinese ? "上次扫描: {0:yyyy-MM-dd HH:mm:ss} ({1} 项发现)" : "Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)",
-                        DateTime.Now,
-                        issues.Count);
+                    AuditTimestampText = "AIHub_AuditTimestamp_LastScannedFormat".FormatLocalized("Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)", DateTime.Now, issues.Count);
 
                     // Update Verdict & Health Summary
                     UpdateHealthSummary(score, HighCount, MediumCount, LowCount);
@@ -2103,22 +2079,30 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                         _lastCompletedAuditUtc = DateTime.UtcNow;
                     }
 
-                    ScanTypeText = rangeRefresh ? (IsChinese ? "本地发现" : "Local findings") : fast
-                        ? (IsChinese ? "快速扫描" : "Fast scan")
+                    ScanTypeText = rangeRefresh ? "AIHub_ScanType_LocalFindings".GetLocalizedOrFallback("Local findings") : fast
+                        ? "AIHub_FastScanLabel".GetLocalizedOrFallback("Fast scan")
                         : incremental
-                            ? (IsChinese ? "增量审计" : "Incremental audit")
-                            : (IsChinese ? "全量审计" : "Full scan");
+                            ? "AIHub_ScanType_Incremental".GetLocalizedOrFallback("Incremental audit")
+                            : "AIHub_ScanType_Full".GetLocalizedOrFallback("Full scan");
                     FinishedText = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 
                     // Report the window actually scanned instead of a hard-coded label; the
                     // old text disagreed with the range the user had selected.
                     WindowText = fast
-                        ? (IsChinese ? "当天" : "Today")
+                        ? "AIHub_Window_Today".GetLocalizedOrFallback("Today")
                         : rangeDescription;
-                    EventCountText = IsChinese ? $"{events.Count} 事件" : $"{events.Count} events";
+                    EventCountText = "AIHub_EventCountFormat".FormatLocalized("{0} events", events.Count);
                     ActivityFindingsText = issues.Count.ToString(CultureInfo.InvariantCulture);
                     SelectedAuditLabel = DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                    SelectedAuditDate = DateTimeOffset.Now;
+                    _suppressAuditDateLoad = true;
+                    try
+                    {
+                        SelectedAuditDate = DateTimeOffset.Now;
+                    }
+                    finally
+                    {
+                        _suppressAuditDateLoad = false;
+                    }
 
                     RebuildSections();
 
@@ -2186,14 +2170,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     {
         string message = aiOutcome switch
         {
-            "partial" => IsChinese ? "审计部分完成，已保留验证通过的 AI 结果。" : "Audit partially completed; validated AI results were retained.",
-            "failed" => IsChinese ? "本地审计完成，AI 分析失败；结果仅包含规则发现。" : "Local audit completed; AI analysis failed. Results contain rule-based findings only.",
-            _ => IsChinese ? "审计完成。" : "Audit completed.",
+            "partial" => "AIHub_FinishAudit_Partial".GetLocalizedOrFallback("Audit partially completed; validated AI results were retained."),
+            "failed" => "AIHub_FinishAudit_Failed".GetLocalizedOrFallback("Local audit completed; AI analysis failed. Results contain rule-based findings only."),
+            _ => "AIHub_FinishAudit_Completed".GetLocalizedOrFallback("Audit completed."),
         };
-        message += IsChinese ? $" 健康评分 {score}/100，发现 {findingCount} 项。" : $" Health score {score}/100; {findingCount} finding(s).";
+        message += "AIHub_FinishAudit_ScoreAndFindingsFormat".FormatLocalized(" Health score {0}/100; {1} finding(s).", score, findingCount);
         if (skippedChannels.Count > 0)
         {
-            message += IsChinese ? $" 未能读取：{string.Join(", ", skippedChannels)}。" : $" Could not read: {string.Join(", ", skippedChannels)}.";
+            message += "AIHub_FinishAudit_SkippedChannelsFormat".FormatLocalized(" Could not read: {0}.", string.Join(", ", skippedChannels));
         }
 
         AuditStatusText = message;
@@ -2204,7 +2188,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     {
         _auditProgress.Reset();
         _auditDetailedPercent = 0;
-        AuditStatusText = cancelled ? (IsChinese ? "扫描已取消" : "Audit cancelled") : (IsChinese ? "扫描失败" : "Audit failed");
+        AuditStatusText = cancelled ? "AIHub_StopAudit_Cancelled".GetLocalizedOrFallback("Audit cancelled") : "AIHub_StopAudit_Failed".GetLocalizedOrFallback("Audit failed");
         AuditPhase = cancelled ? ScanPhase.Idle : ScanPhase.Failed;
         IsAuditing = false;
         PublishScanProgress();
@@ -2215,24 +2199,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     {
         if (high > 0)
         {
-            HealthVerdict = IsChinese ? "需要关注 · 存在高危异常" : "Attention needed · Critical issues detected";
-            HealthSummaryText = IsChinese
-                ? $"检测到 {high} 项高危故障及 {medium} 项警告。建议优先执行推荐的操作建议进行修复。"
-                : $"{high} high-priority issue(s) and {medium} warning(s) detected. Action recommended.";
+            HealthVerdict = "AIHub_HealthVerdict_Critical".GetLocalizedOrFallback("Attention needed · Critical issues detected");
+            HealthSummaryText = "AIHub_HealthSummary_CriticalFormat".FormatLocalized("{0} high-priority issue(s) and {1} warning(s) detected. Action recommended.", high, medium);
         }
         else if (medium > 0)
         {
-            HealthVerdict = IsChinese ? "良好 · 多数指标平稳" : "Good · Most indicators stable";
-            HealthSummaryText = IsChinese
-                ? $"未检测到严重故障，记录了 {medium} 项常规警告与 {low} 项系统信息日志。已生成相应操作建议。"
-                : $"No critical failures found. Recorded {medium} warning(s) and {low} info event(s).";
+            HealthVerdict = "AIHub_HealthVerdict_Good".GetLocalizedOrFallback("Good · Most indicators stable");
+            HealthSummaryText = "AIHub_HealthSummary_GoodFormat".FormatLocalized("No critical failures found. Recorded {0} warning(s) and {1} info event(s).", medium, low);
         }
         else
         {
-            HealthVerdict = IsChinese ? "优秀 · 系统健康稳定" : "Excellent · System fully healthy";
-            HealthSummaryText = IsChinese
-                ? "最近扫描时段内未发现任何安全违规或稳定性异常，所有日志指标正常。"
-                : "No security violations or stability anomalies detected in the scanned period.";
+            HealthVerdict = "AIHub_HealthVerdict_Excellent".GetLocalizedOrFallback("Excellent · System fully healthy");
+            HealthSummaryText = "AIHub_HealthSummary_Excellent".GetLocalizedOrFallback("No security violations or stability anomalies detected in the scanned period.");
         }
 
         OnPropertyChanged(nameof(HealthVerdict));
@@ -2451,36 +2429,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                             return;
                         }
 
-                        AllIssues.Clear();
-                        foreach (var issue in history.Findings)
-                        {
-                            AllIssues.Add(issue);
-                        }
-
-                        _hasAuditResult = true;
-                        HealthScore = history.HealthScore;
-                        HealthScoreGrade = HealthScore >= 80 ? (IsChinese ? "良好" : "Good") : HealthScore >= 60 ? (IsChinese ? "警告" : "Warning") : (IsChinese ? "严重" : "Critical");
-                        HighCount = history.HighCount;
-                        MediumCount = history.MediumCount;
-                        LowCount = history.LowCount;
-
-                        AuditTimestampText = string.Format(
-                            CultureInfo.InvariantCulture,
-                            IsChinese ? "上次扫描: {0:yyyy-MM-dd HH:mm:ss} ({1} 项发现)" : "Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)",
-                            history.Timestamp.ToLocalTime(),
-                            history.Findings.Count);
-
-                        UpdateHealthSummary(HealthScore, HighCount, MediumCount, LowCount);
-
-                        ScanTypeText = IsChinese ? "历史审计快照" : "Historical snapshot";
-                        FinishedText = history.Timestamp.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-                        WindowText = IsChinese ? "全时段" : "All times";
-                        EventCountText = IsChinese ? $"{history.Findings.Count} 发现项" : $"{history.Findings.Count} findings";
-                        ActivityFindingsText = history.Findings.Count.ToString(CultureInfo.InvariantCulture);
-                        SelectedAuditLabel = history.Timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                        SelectedAuditDate = history.Timestamp.ToLocalTime();
-
-                        RebuildSections();
+                        ApplyHistoricalAudit(history);
                     });
                 }
             }
@@ -2489,6 +2438,84 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 Logger.LogError("Failed to load the most recent AI Hub audit snapshot", ex);
             }
         });
+    }
+
+    private void ApplyHistoricalAudit(AuditResult history)
+    {
+        AllIssues.Clear();
+        foreach (var issue in history.Findings)
+        {
+            AllIssues.Add(issue);
+        }
+
+        _hasAuditResult = true;
+        HealthScore = history.HealthScore;
+        HealthScoreGrade = HealthScore >= 80 ? "AIHub_HealthScoreGrade_Good".GetLocalizedOrFallback("Good") : HealthScore >= 60 ? "AIHub_HealthScoreGrade_Warning".GetLocalizedOrFallback("Warning") : "AIHub_HealthScoreGrade_Critical".GetLocalizedOrFallback("Critical");
+        HighCount = history.HighCount;
+        MediumCount = history.MediumCount;
+        LowCount = history.LowCount;
+
+        AuditTimestampText = "AIHub_AuditTimestamp_LastScannedFormat".FormatLocalized("Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)", history.Timestamp.ToLocalTime(), history.Findings.Count);
+
+        UpdateHealthSummary(HealthScore, HighCount, MediumCount, LowCount);
+
+        ScanTypeText = "AIHub_ScanType_Historical".GetLocalizedOrFallback("Historical snapshot");
+        FinishedText = history.Timestamp.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+        WindowText = "AIHub_Window_AllTimes".GetLocalizedOrFallback("All times");
+        EventCountText = "AIHub_EventCount_HistoricalFormat".FormatLocalized("{0} findings", history.Findings.Count);
+        ActivityFindingsText = history.Findings.Count.ToString(CultureInfo.InvariantCulture);
+        SelectedAuditLabel = history.Timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        _suppressAuditDateLoad = true;
+        try
+        {
+            SelectedAuditDate = history.Timestamp.ToLocalTime();
+        }
+        finally
+        {
+            _suppressAuditDateLoad = false;
+        }
+
+        RebuildSections();
+    }
+
+    private async Task LoadAuditForDateAsync(DateTime localDate)
+    {
+        try
+        {
+            var historyList = await _auditHistoryStorage.LoadHistoryAsync().ConfigureAwait(false);
+            var match = historyList
+                .Where(h => h.Timestamp.ToLocalTime().Date == localDate)
+                .OrderByDescending(h => h.Timestamp)
+                .FirstOrDefault();
+
+            EnqueueOnUI(() =>
+            {
+                if (IsAuditing || IsAiAnalyzing)
+                {
+                    return;
+                }
+
+                if (match != null)
+                {
+                    ApplyHistoricalAudit(match);
+                }
+                else
+                {
+                    SelectedAuditLabel = localDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    ShowStatus(
+                        ResourceExtensions.FormatLocalized(
+                            "AIHub_AuditNoSnapshotForDateFormat",
+                            "No audit snapshot found for {0:yyyy-MM-dd}.",
+                            localDate),
+                        InfoBarSeverity.Informational);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Failed to load AI Hub audit snapshot for selected date", ex);
+        }
     }
 
     // Optimization Execution (1:1 with Screenshot)
@@ -2527,7 +2554,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
             _observedOptimizationItems.AddRange(items);
             RecalculateCandidateMetrics();
-            OptimizationWorkflowStatus = IsChinese ? "本地扫描完成，正在进行 AI 审核…" : "Local scan complete. Reviewing with AI…";
+            OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_LocalCompleteReviewing".GetLocalizedOrFallback("Local scan complete. Reviewing with AI…");
         }, token);
         int finished = 0;
         var progress = new Progress<AiTaskProgress>(update =>
@@ -2545,15 +2572,15 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     return;
                 }
                 OptimizationWorkflowStatus = update.Stage == "Failover"
-                    ? (IsChinese ? "主节点未完成，正在使用 Fallback 节点审核…" : "Main route did not complete. Reviewing with Fallback…")
+                    ? "AIHub_OptimizationWorkflow_Failover".GetLocalizedOrFallback("Main route did not complete. Reviewing with Fallback…")
                     : update.TotalBatches > 0
-                    ? (IsChinese ? $"AI 分析中（{update.CompletedBatches}/{update.TotalBatches} 批）" : $"AI analysis ({update.CompletedBatches}/{update.TotalBatches} batches)")
-                    : (IsChinese ? "正在进行 AI 分析..." : "Analyzing with AI...");
+                    ? "AIHub_OptimizationWorkflow_BatchesFormat".FormatLocalized("AI analysis ({0}/{1} batches)", update.CompletedBatches, update.TotalBatches)
+                    : "AIHub_OptimizationWorkflow_Analyzing".GetLocalizedOrFallback("Analyzing with AI...");
             }, token);
         });
         try
         {
-            var result = await _optimizationAnalysisService.AnalyzeAsync(items, IsChinese ? "zh-CN" : "en-US", progress, token);
+            var result = await _optimizationAnalysisService.AnalyzeAsync(items, PreferChinese() ? "zh-CN" : "en-US", progress, token);
             Logger.LogInfo($"Optimization review finished: code={result.ErrorCode}, approved={result.Items.Count}, unreviewed={result.UnreviewedCount}, skipped={result.SkippedCount}");
             token.ThrowIfCancellationRequested();
             return result;
@@ -2590,7 +2617,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         IsOptimizing = true;
         ResetScanProgress();
         ScanPhase = ScanPhase.Scanning;
-        OptimizationWorkflowStatus = IsChinese ? "正在扫描..." : "Scanning...";
+        OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_Scanning".GetLocalizedOrFallback("Scanning...");
         BeginStage("Preparing scan");
 
         Task.Run(async () =>
@@ -2631,11 +2658,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     DownloadsItemCount = downloads.Count;
                     DownloadsBytes = dlBytes;
-                    DownloadsStatusText = IsChinese ? $"发现 {downloads.Count} 项 ({FormatBytes(dlBytes)})" : $"{downloads.Count} item(s) found ({FormatBytes(dlBytes)})";
+                    DownloadsStatusText = "AIHub_DownloadsStatus_FoundFormat".FormatLocalized("{0} item(s) found ({1})", downloads.Count, FormatBytes(dlBytes));
 
                     TemporaryFilesItemCount = caches.Count;
                     TemporaryFilesBytes = cacheBytes;
-                    TemporaryFilesStatusText = IsChinese ? $"发现 {caches.Count} 项 ({FormatBytes(cacheBytes)})" : $"{caches.Count} item(s) found ({FormatBytes(cacheBytes)})";
+                    TemporaryFilesStatusText = "AIHub_TemporaryFilesStatus_FoundFormat".FormatLocalized("{0} item(s) found ({1})", caches.Count, FormatBytes(cacheBytes));
 
                     OptimizationCandidates.Clear();
                     foreach (var item in allCandidates)
@@ -2645,13 +2672,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     }
 
                     RecalculateCandidateMetrics();
-                    OptimizationWorkflowStatus = analysis.Describe(IsChinese);
+                    OptimizationWorkflowStatus = analysis.Describe(PreferChinese());
                     if (_cacheCleanupService.ScanTruncated)
                     {
-                        OptimizationWorkflowStatus += IsChinese ? " · 扫描达到上限，仅展示已分析部分" : " · Scan limit reached; showing reviewed subset";
+                        OptimizationWorkflowStatus += "AIHub_Optimization_ScanLimitReached".GetLocalizedOrFallback(" · Scan limit reached; showing reviewed subset");
                     }
 
-                    ShowStatus(analysis.Describe(IsChinese), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
+                    ShowStatus(analysis.Describe(PreferChinese()), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
                 }, token);
             }
             catch (OperationCanceledException)
@@ -2694,7 +2721,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         IsOptimizing = true;
         ResetScanProgress();
         ScanPhase = ScanPhase.Scanning;
-        OptimizationWorkflowStatus = IsChinese ? "正在扫描下载目录..." : "Scanning Downloads root...";
+        OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ScanningDownloads".GetLocalizedOrFallback("Scanning Downloads root...");
         BeginStage("Scan Downloads");
 
         Task.Run(async () =>
@@ -2714,7 +2741,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     DownloadsItemCount = downloads.Count;
                     DownloadsBytes = dlBytes;
-                    DownloadsStatusText = IsChinese ? $"发现 {downloads.Count} 项 ({FormatBytes(dlBytes)})" : $"{downloads.Count} item(s) found ({FormatBytes(dlBytes)})";
+                    DownloadsStatusText = "AIHub_DownloadsStatus_FoundFormat".FormatLocalized("{0} item(s) found ({1})", downloads.Count, FormatBytes(dlBytes));
 
                     // Remove previous download items
                     var toRemove = OptimizationCandidates.Where(c => c.Action == "move").ToList();
@@ -2730,13 +2757,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     }
 
                     RecalculateCandidateMetrics();
-                    OptimizationWorkflowStatus = analysis.Describe(IsChinese);
+                    OptimizationWorkflowStatus = analysis.Describe(PreferChinese());
                     if (_cacheCleanupService.ScanTruncated)
                     {
-                        OptimizationWorkflowStatus += IsChinese ? " · 扫描达到上限，仅展示已分析部分" : " · Scan limit reached; showing reviewed subset";
+                        OptimizationWorkflowStatus += "AIHub_Optimization_ScanLimitReached".GetLocalizedOrFallback(" · Scan limit reached; showing reviewed subset");
                     }
 
-                    ShowStatus(analysis.Describe(IsChinese), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
+                    ShowStatus(analysis.Describe(PreferChinese()), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
                 }, token);
             }
             catch (OperationCanceledException)
@@ -2779,7 +2806,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         IsOptimizing = true;
         ResetScanProgress();
         ScanPhase = ScanPhase.Scanning;
-        OptimizationWorkflowStatus = IsChinese ? "正在扫描临时文件..." : "Scanning Temporary files...";
+        OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ScanningTempFiles".GetLocalizedOrFallback("Scanning Temporary files...");
         BeginStage("Scan cache locations");
 
         Task.Run(async () =>
@@ -2799,7 +2826,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     TemporaryFilesItemCount = caches.Count;
                     TemporaryFilesBytes = cacheBytes;
-                    TemporaryFilesStatusText = IsChinese ? $"发现 {caches.Count} 项 ({FormatBytes(cacheBytes)})" : $"{caches.Count} item(s) found ({FormatBytes(cacheBytes)})";
+                    TemporaryFilesStatusText = "AIHub_TemporaryFilesStatus_FoundFormat".FormatLocalized("{0} item(s) found ({1})", caches.Count, FormatBytes(cacheBytes));
 
                     // Remove previous cache items
                     var toRemove = OptimizationCandidates.Where(c => c.Action == "delete").ToList();
@@ -2815,13 +2842,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     }
 
                     RecalculateCandidateMetrics();
-                    OptimizationWorkflowStatus = analysis.Describe(IsChinese);
+                    OptimizationWorkflowStatus = analysis.Describe(PreferChinese());
                     if (_cacheCleanupService.ScanTruncated)
                     {
-                        OptimizationWorkflowStatus += IsChinese ? " · 扫描达到上限，仅展示已分析部分" : " · Scan limit reached; showing reviewed subset";
+                        OptimizationWorkflowStatus += "AIHub_Optimization_ScanLimitReached".GetLocalizedOrFallback(" · Scan limit reached; showing reviewed subset");
                     }
 
-                    ShowStatus(analysis.Describe(IsChinese), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
+                    ShowStatus(analysis.Describe(PreferChinese()), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
                 }, token);
             }
             catch (OperationCanceledException)
@@ -2861,7 +2888,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     {
         _scanProgress.Reset();
         ScanPhase = cancelled ? ScanPhase.Idle : ScanPhase.Failed;
-        OptimizationWorkflowStatus = cancelled ? (IsChinese ? "扫描已取消" : "Scan cancelled") : (IsChinese ? "扫描失败" : "Scan failed");
+        OptimizationWorkflowStatus = cancelled ? "AIHub_OptimizationWorkflow_ScanCancelled".GetLocalizedOrFallback("Scan cancelled") : "AIHub_OptimizationWorkflow_ScanFailed".GetLocalizedOrFallback("Scan failed");
         PublishScanProgress();
         ShowStatus(OptimizationWorkflowStatus, cancelled ? InfoBarSeverity.Informational : InfoBarSeverity.Error, optimization: true);
     }
@@ -2888,13 +2915,13 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         var items = _observedOptimizationItems.Concat(OptimizationCandidates).Distinct().Where(item => item.Action == action).ToList();
         if (items.Count == 0)
         {
-            return IsChinese ? (scanned ? "没有符合条件的文件" : "尚未扫描") : (scanned ? "No eligible files found" : "Not scanned yet");
+            return scanned ? "AIHub_DescribeScope_NoEligible".GetLocalizedOrFallback("No eligible files found") : "AIHub_DescribeScope_NotScanned".GetLocalizedOrFallback("Not scanned yet");
         }
 
         int approved = OptimizationCandidates.Count(item => item.Action == action);
-        return IsChinese
-            ? $"发现 {items.Count:N0} 个文件 · {FormatBytes(items.Sum(item => item.SizeInBytes))} · {approved:N0} 个可执行"
-            : $"{items.Count:N0} files found · {FormatBytes(items.Sum(item => item.SizeInBytes))} · {approved:N0} actionable";
+        return "AIHub_DescribeScope_FoundFormat".FormatLocalized(
+            "{0:N0} files found · {1} · {2:N0} actionable",
+            items.Count, FormatBytes(items.Sum(item => item.SizeInBytes)), approved);
     }
 
     private void RecalculateCandidateMetrics()
@@ -2993,7 +3020,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         var categoryByItem = OptimizationCategories.SelectMany(group => group.Items.Select(item => (item, group))).ToDictionary(pair => pair.item, pair => pair.group);
         ScanPhase = ScanPhase.ExecutionPending;
-        OptimizationWorkflowStatus = IsChinese ? "正在执行已确认的操作..." : "Executing confirmed actions...";
+        OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ExecutingConfirmed".GetLocalizedOrFallback("Executing confirmed actions...");
 
         Task.Run(() =>
         {
@@ -3026,7 +3053,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                             bool ok = _downloadOrganizerService.OrganizeItem(item);
                             outcome.Add(ok
                                 ? OptimizationItemResult.Success(item.FileName, "move")
-                                : OptimizationItemResult.Failure(item.FileName, "move", IsChinese ? "文件不符合分类规则、正在使用或已变化，请重新扫描" : "File is ineligible, in use or changed; scan again"));
+                                : OptimizationItemResult.Failure(item.FileName, "move", "AIHub_Optimization_DownloadIneligible".GetLocalizedOrFallback("File is ineligible, in use or changed; scan again")));
                         }
                     }
                     catch (Exception ex)
@@ -3041,7 +3068,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     }
                     else if (outcome.Results.Count > 0)
                     {
-                        item.ExecutionError = outcome.Results[^1].Reason ?? (IsChinese ? "操作失败，请重新扫描" : "Action failed; scan again");
+                        item.ExecutionError = outcome.Results[^1].Reason ?? "AIHub_Optimization_ActionFailed".GetLocalizedOrFallback("Action failed; scan again");
                     }
 
                     processed++;
@@ -3054,9 +3081,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                             group.Processed++;
                         }
 
-                        OptimizationWorkflowStatus = IsChinese
-                        ? $"正在执行已确认的操作... ({done}/{selectedItems.Count})"
-                        : $"Executing confirmed actions... ({done}/{selectedItems.Count})";
+                        OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ExecutingProgressFormat".FormatLocalized(
+                            "Executing confirmed actions... ({0}/{1})", done, selectedItems.Count);
                     });
                 }
 
@@ -3078,18 +3104,18 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     RecalculateCandidateMetrics();
 
                     // Surface the actual failure reasons instead of an opaque count.
-                    var failureDetail = outcome.DescribeFailures(IsChinese);
+                    var failureDetail = outcome.DescribeFailures(PreferChinese());
                     ScanPhase = token.IsCancellationRequested ? ScanPhase.Idle : ScanPhase.SelectingTargets;
                     OptimizationWorkflowStatus = token.IsCancellationRequested
-                        ? (IsChinese ? $"执行已取消（已处理 {processed}/{selectedItems.Count} 项）" : $"Execution cancelled ({processed}/{selectedItems.Count} processed)")
+                        ? "AIHub_OptimizationWorkflow_ExecutionCancelledFormat".FormatLocalized("Execution cancelled ({0}/{1} processed)", processed, selectedItems.Count)
                         : outcome.HasFailures
-                        ? (IsChinese ? $"执行完成（{outcome.FailedCount} 个失败）" : $"Execution completed ({outcome.FailedCount} failed)")
-                        : (IsChinese ? "执行完成" : "Execution completed");
+                        ? "AIHub_OptimizationWorkflow_ExecutionCompletedWithFailuresFormat".FormatLocalized("Execution completed ({0} failed)", outcome.FailedCount)
+                        : "AIHub_OptimizationWorkflow_ExecutionCompleted".GetLocalizedOrFallback("Execution completed");
 
                     ShowStatus(
                         token.IsCancellationRequested ? OptimizationWorkflowStatus : failureDetail is null
-                            ? outcome.Describe(IsChinese)
-                            : $"{outcome.Describe(IsChinese)} — {failureDetail}",
+                            ? outcome.Describe(PreferChinese())
+                            : $"{outcome.Describe(PreferChinese())} — {failureDetail}",
                         token.IsCancellationRequested || outcome.HasFailures ? InfoBarSeverity.Warning : InfoBarSeverity.Success, optimization: true);
                 });
             }

@@ -242,4 +242,21 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             ViewModel.PostStatusNotification("AIHub_CopyReportFailed".FormatLocalized("Copy failed: {0}", ex.Message), InfoBarSeverity.Error);
         }
     }
+
+    private void OnCancelCleanFlyoutClick(object sender, RoutedEventArgs e)
+    {
+        DependencyObject current = sender as DependencyObject;
+        while (current != null)
+        {
+            if (current is FlyoutPresenter && Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current) is Microsoft.UI.Xaml.Controls.Primitives.Popup popup)
+            {
+                popup.IsOpen = false;
+                return;
+            }
+
+            current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
+        }
+    }
+
+    public string FormatFilterCount(string label, int count) => $"{label} ({count})";
 }

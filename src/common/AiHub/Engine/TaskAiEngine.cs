@@ -60,6 +60,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
     private readonly object _readinessLock = new();
     private AiReadiness? _cachedReadiness;
     private DateTimeOffset _readinessCachedAtUtc;
+    private long _stateVersion;
 
     public bool IsEnabled => !_disposed && ReadState().IsEnabled;
 
@@ -89,17 +90,18 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     public async Task<AiReadiness> ProbeReadinessAsync(CancellationToken cancellationToken = default)
     {
+        long version = Interlocked.Read(ref _stateVersion);
         AiHubConfig config = ReadState();
         if (!config.IsEnabled)
         {
             // Do not start a kernel for a service nobody enabled.
-            return Remember(Describe(AiReadinessLevel.Disabled, config, "The AI service is switched off in Kit settings."));
+            return Remember(Describe(AiReadinessLevel.Disabled, config, "The AI service is switched off in Kit settings."), version);
         }
 
         AiReadiness validation = ValidateConfiguration(config);
         if (validation.Level == AiReadinessLevel.NotConfigured)
         {
-            return Remember(validation);
+            return Remember(validation, version);
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -122,13 +124,19 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     VerifiedAtUtc = DateTimeOffset.UtcNow,
                     ProbeLatency = stopwatch.Elapsed,
                     FromCache = false,
-                });
+                }, version);
             }
 
-            // The main route failed; a usable fallback still lets a caller proceed.
+            // The main route failed; probe a configured fallback before reporting Degraded.
             AiTargetSettings? fallback = config.GetFallbackTarget();
-            bool fallbackUsable = fallback is { IsActive: true } &&
-                RouteDispatcher.IsTargetCompatible(kernel, fallback);
+            bool fallbackUsable = false;
+            if (fallback is { IsActive: true } && RouteDispatcher.IsTargetCompatible(kernel, fallback))
+            {
+                (bool fallbackSuccess, _) = await _dispatcher
+                    .TestConnectionAsync(fallback, kernel, cancellationToken)
+                    .ConfigureAwait(false);
+                fallbackUsable = fallbackSuccess;
+            }
 
             ReportReadinessProbe($"failed: kernel={kernel}, route={(fallbackUsable ? "degraded-to-fallback" : "unavailable")}, detail={message}");
 
@@ -139,7 +147,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 VerifiedAtUtc = DateTimeOffset.UtcNow,
                 ProbeLatency = null,
                 FromCache = false,
-            });
+            }, version);
         }
         catch (OperationCanceledException)
         {
@@ -154,7 +162,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 VerifiedAtUtc = DateTimeOffset.UtcNow,
                 ProbeLatency = null,
                 FromCache = false,
-            });
+            }, version);
         }
     }
 
@@ -207,12 +215,15 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         }
     }
 
-    private AiReadiness Remember(AiReadiness readiness)
+    private AiReadiness Remember(AiReadiness readiness, long version)
     {
         lock (_readinessLock)
         {
-            _cachedReadiness = readiness;
-            _readinessCachedAtUtc = DateTimeOffset.UtcNow;
+            if (Interlocked.Read(ref _stateVersion) == version)
+            {
+                _cachedReadiness = readiness;
+                _readinessCachedAtUtc = DateTimeOffset.UtcNow;
+            }
         }
 
         return readiness;
@@ -243,6 +254,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             return;
         }
 
+        Interlocked.Increment(ref _stateVersion);
         var config = ReadState();
         lock (_schedulerLock)
         {

@@ -92,9 +92,11 @@
                             Orientation="Horizontal">
                             <Button
                                 x:Name="PART_BackButton"
+                                AutomationProperties.AutomationId="TitleBar_BackButton"
                                 Style="{ThemeResource TitleBarBackButtonStyle}" />
                             <Button
                                 x:Name="PART_PaneButton"
+                                AutomationProperties.AutomationId="TitleBar_PaneToggleButton"
                                 Style="{StaticResource TitleBarPaneToggleButtonStyle}" />
                         </StackPanel>
 

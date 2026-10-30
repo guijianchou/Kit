@@ -158,6 +158,7 @@
                             <!-- Details Button: Beautiful Fluent 2 styling -->
                             <Button Grid.Column="1"
                                     x:Uid="NetMap_CardDetailsButton"
+                                    AutomationProperties.AutomationId="NetMap_CardDetailsButton"
                                     Style="{StaticResource KitActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE946;" FontSize="11" />
@@ -209,6 +210,29 @@
         </ResourceDictionary>
     </local:NavigablePage.Resources>
 
+    <Grid>
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState>
+                    <VisualState.StateTriggers>
+                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=HeroTelemetryBar}" MinWidth="680" />
+                    </VisualState.StateTriggers>
+                </VisualState>
+                <VisualState>
+                    <VisualState.StateTriggers>
+                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=HeroTelemetryBar}" MaxWidth="680" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeroTelemetryActions.(Grid.Row)" Value="1" />
+                        <Setter Target="HeroTelemetryActions.(Grid.Column)" Value="0" />
+                        <Setter Target="HeroTelemetryActions.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="HeroTelemetryActions.Margin" Value="0,8,0,0" />
+                        <Setter Target="HeroTelemetryActions.HorizontalAlignment" Value="Left" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
     <controls:SettingsPageControl
         x:Uid="NetMap"
         ModuleImageSource="ms-appx:///Assets/Settings/Modules/NetMap.png"
@@ -245,7 +269,7 @@
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     Padding="16,10"
                                     CornerRadius="0,0,8,8">
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="14">
                                     <!-- Status Indicator and Badges -->
                                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                         <Border Width="26" Height="26" CornerRadius="13"
@@ -281,7 +305,7 @@
                                     <Border Grid.Column="1" />
 
                                     <!-- Master Action Buttons -->
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <StackPanel x:Name="HeroTelemetryActions" Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                         <Button x:Name="StartButton"
                                                 x:Uid="NetMap_StartButton"
                                                 Click="Start_Click"
@@ -426,12 +450,15 @@
                                                     <ListView x:Name="HopList"
                                                               x:Uid="NetMap_HopList"
                                                               ItemsSource="{x:Bind ViewModel.Hops, Mode=OneWay}"
+                                                              IsItemClickEnabled="True"
+                                                              ItemClick="HopList_ItemClick"
                                                               SelectionChanged="HopList_SelectionChanged"
                                                               HorizontalContentAlignment="Stretch"
                                                               MaxHeight="224"
                                                               AutomationProperties.AutomationId="NetMapHopList">
                                                         <ListView.ItemContainerStyle>
                                                             <Style TargetType="ListViewItem">
+                                                                <Setter Property="IsTabStop" Value="True" />
                                                                 <Setter Property="MinHeight" Value="30" />
                                                                 <Setter Property="Padding" Value="10,2" />
                                                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -595,7 +622,13 @@
                                             <!-- ASN Database Row with inline Browse Button -->
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalAlignment="Bottom">
                                                 <TextBox x:Uid="NetMap_AsnPath" Text="{x:Bind ViewModel.AsnDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
-                                                <Button x:Uid="NetMap_BrowseAsnButton" Click="BrowseDatabase_Click" Tag="ASN" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
+                                                <Button x:Uid="NetMap_BrowseAsnButton"
+                                                        AutomationProperties.AutomationId="NetMap_BrowseAsnButton"
+                                                        Click="BrowseDatabase_Click"
+                                                        IsEnabled="{x:Bind ViewModel.CanUpdate, Mode=OneWay}"
+                                                        Tag="ASN"
+                                                        VerticalAlignment="Bottom"
+                                                        Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE838;" FontSize="12" />
                                                         <TextBlock x:Uid="NetMap_BrowseAsnButtonText" FontSize="12" />
@@ -606,7 +639,13 @@
                                             <!-- City Database Row with inline Browse Button -->
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" VerticalAlignment="Bottom">
                                                 <TextBox x:Uid="NetMap_CityPath" Text="{x:Bind ViewModel.CityDatabase, Mode=TwoWay}" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" />
-                                                <Button x:Uid="NetMap_BrowseCityButton" Click="BrowseDatabase_Click" Tag="City" VerticalAlignment="Bottom" Style="{StaticResource KitActionButtonStyle}">
+                                                <Button x:Uid="NetMap_BrowseCityButton"
+                                                        AutomationProperties.AutomationId="NetMap_BrowseCityButton"
+                                                        Click="BrowseDatabase_Click"
+                                                        IsEnabled="{x:Bind ViewModel.CanUpdate, Mode=OneWay}"
+                                                        Tag="City"
+                                                        VerticalAlignment="Bottom"
+                                                        Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                                         <FontIcon Glyph="&#xE838;" FontSize="12" />
                                                         <TextBlock x:Uid="NetMap_BrowseCityButtonText" FontSize="12" />
@@ -623,27 +662,32 @@
                                     <Expander x:Name="DataUpdateExpander" x:Uid="NetMap_DataUpdates" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                         <StackPanel Spacing="12">
                                             <TextBlock x:Uid="NetMap_UpdateNotice" Style="{StaticResource NetMapSecondary}" />
-                                            <HyperlinkButton Content="GeoLite2 · P3TERX/GeoLite.mmdb" NavigateUri="https://github.com/P3TERX/GeoLite.mmdb" />
+                                            <HyperlinkButton x:Uid="NetMap_GeoLiteRepoLink"
+                                                             AutomationProperties.AutomationId="NetMap_GeoLiteRepoLink"
+                                                             Content="GeoLite2 · P3TERX/GeoLite.mmdb"
+                                                             NavigateUri="https://github.com/P3TERX/GeoLite.mmdb" />
 
                                             <!-- Actions Row -->
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <Button x:Name="UpdateAsnButton"
                                                         x:Uid="NetMap_UpdateAsnButton"
+                                                        AutomationProperties.AutomationId="NetMap_UpdateAsnButton"
                                                         Click="UpdateAsn_Click"
                                                         IsEnabled="{x:Bind ViewModel.CanUpdate, Mode=OneWay}"
-                                                        Style="{StaticResource KitPrimaryActionButtonStyle}">
+                                                        Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="7">
-                                                        <FontIcon Glyph="&#xE896;" FontSize="12" />
-                                                        <TextBlock x:Uid="NetMap_UpdateAsnButtonText" FontSize="12" />
+                                                        <FontIcon Glyph="&#xE896;" FontSize="13" />
+                                                        <TextBlock x:Uid="NetMap_UpdateAsnButtonText" FontSize="13" />
                                                     </StackPanel>
                                                 </Button>
                                                 <Button x:Uid="NetMap_CancelUpdateButton"
+                                                        AutomationProperties.AutomationId="NetMap_CancelUpdateButton"
                                                         Click="CancelUpdate_Click"
                                                         IsEnabled="{x:Bind ViewModel.IsUpdating, Mode=OneWay}"
                                                         Style="{StaticResource KitActionButtonStyle}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <FontIcon Glyph="&#xE711;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                                                        <TextBlock x:Uid="NetMap_CancelUpdateButtonText" FontSize="12" />
+                                                        <FontIcon Glyph="&#xE711;" FontSize="13" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                        <TextBlock x:Uid="NetMap_CancelUpdateButtonText" FontSize="13" />
                                                     </StackPanel>
                                                 </Button>
                                             </StackPanel>
@@ -655,6 +699,7 @@
 
                                     <!-- Apply Settings Button -->
                                     <Button x:Uid="NetMap_ApplyButton"
+                                            AutomationProperties.AutomationId="NetMap_ApplyButton"
                                             Style="{StaticResource KitPrimaryActionButtonStyle}"
                                             Click="Apply_Click"
                                             IsEnabled="{x:Bind ViewModel.CanUpdate, Mode=OneWay}"
@@ -672,4 +717,5 @@
                 </StackPanel>
             </controls:SettingsPageControl.ModuleContent>
         </controls:SettingsPageControl>
+    </Grid>
 </local:NavigablePage>

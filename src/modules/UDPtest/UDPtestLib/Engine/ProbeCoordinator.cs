@@ -106,11 +106,13 @@ namespace UDPtestLib.Engine
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     _runCancellation?.Cancel();
+                    SetState(MonitorRunState.Stopped);
                     throw;
                 }
                 catch (Exception exception)
                 {
                     _runCancellation?.Cancel();
+                    SetState(MonitorRunState.Stopped);
                     ErrorOccurred?.Invoke(exception);
                     throw;
                 }
@@ -596,6 +598,7 @@ namespace UDPtestLib.Engine
             catch (Exception exception)
             {
                 _runCancellation?.Cancel();
+                SetState(MonitorRunState.Stopped);
                 ErrorOccurred?.Invoke(exception);
                 throw;
             }

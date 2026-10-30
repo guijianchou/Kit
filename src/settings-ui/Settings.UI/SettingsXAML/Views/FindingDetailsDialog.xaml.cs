@@ -7,6 +7,7 @@ using System.Text;
 using Kit.AIHubLib.Models;
 using Kit.Settings.UI.Helpers;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
 
@@ -74,5 +75,15 @@ public sealed partial class FindingDetailsDialog : ContentDialog
         var dataPackage = new DataPackage();
         dataPackage.SetText(sb.ToString());
         Clipboard.SetContent(dataPackage);
+
+        if (sender is FrameworkElement fe)
+        {
+            var peer = FrameworkElementAutomationPeer.FromElement(fe) ?? FrameworkElementAutomationPeer.CreatePeerForElement(fe);
+            peer?.RaiseNotificationEvent(
+                AutomationNotificationKind.ActionCompleted,
+                AutomationNotificationProcessing.ImportantMostRecent,
+                "AIHub_ReportCopied".GetLocalizedOrFallback("Audit report copied to clipboard."),
+                "FindingDetailsCopySummaryNotificationId");
+        }
     }
 }

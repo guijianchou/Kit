@@ -194,6 +194,7 @@ internal sealed class AiHubStorageFiles
             EnsureNoReparsePoints(destination);
             File.Move(temporaryPath, destination, overwrite: true);
             temporaryCreated = false;
+            AiHubSettingsStore.BumpWriteVersion();
         }
         finally
         {
@@ -366,5 +367,6 @@ internal sealed class AiHubStorageFiles
         string path = GetPath(JournalFileName);
         EnsureNoReparsePoints(path);
         File.Delete(path);
+        AiHubSettingsStore.BumpWriteVersion();
     }
 }

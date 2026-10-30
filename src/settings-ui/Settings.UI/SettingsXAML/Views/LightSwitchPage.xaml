@@ -26,14 +26,18 @@
             ModuleImageSource="ms-appx:///Assets/Settings/Modules/LightSwitch.png">
             <controls:SettingsPageControl.ModuleContent>
                 <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
-                    <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                        <tkcontrols:SettingsCard
-                            x:Uid="LightSwitch_EnableSettingsCard"
-                            HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/LightSwitch.png}"
-                            IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
-                            <ToggleSwitch AutomationProperties.AutomationId="Toggle_LightSwitch" IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
-                        </tkcontrols:SettingsCard>
-                    </controls:GPOInfoControl>
+                    <Border Style="{StaticResource KitHeroSurfaceStyle}">
+                        <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                            <tkcontrols:SettingsCard
+                                x:Uid="LightSwitch_EnableSettingsCard"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/LightSwitch.png}"
+                                IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                                <ToggleSwitch AutomationProperties.AutomationId="Toggle_LightSwitch" IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                        </controls:GPOInfoControl>
+                    </Border>
 
                     <controls:SettingsGroup x:Uid="LightSwitch_ScheduleSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
                         <tkcontrols:SettingsExpander

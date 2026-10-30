@@ -13,10 +13,10 @@
     mc:Ignorable="d"
     x:Uid="FindingDetailsDialog"
     Title="Finding Details"
-    PrimaryButtonText="Close"
-    SecondaryButtonText="Copy Summary"
+    PrimaryButtonText="Copy Summary"
+    CloseButtonText="Close"
     DefaultButton="Primary"
-    SecondaryButtonClick="OnCopySummaryClick">
+    PrimaryButtonClick="OnCopySummaryClick">
 
     <ContentDialog.Resources>
         <Style x:Key="HighSeverityBadgeStyle" TargetType="Border">

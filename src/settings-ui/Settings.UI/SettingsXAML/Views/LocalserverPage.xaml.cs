@@ -287,9 +287,30 @@ namespace Kit.Settings.UI.Views
 
         private void DeleteLine_Click(object sender, RoutedEventArgs e)
         {
+            DismissParentFlyout(sender);
             if (sender is FrameworkElement fe && fe.DataContext is LineRowViewModel row)
             {
                 _ = ViewModel.DeleteLineAsync(row);
+            }
+        }
+
+        private void CancelDeleteLine_Click(object sender, RoutedEventArgs e)
+        {
+            DismissParentFlyout(sender);
+        }
+
+        private static void DismissParentFlyout(object sender)
+        {
+            DependencyObject current = sender as DependencyObject;
+            while (current != null)
+            {
+                if (current is FlyoutPresenter && Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current) is Microsoft.UI.Xaml.Controls.Primitives.Popup popup)
+                {
+                    popup.IsOpen = false;
+                    return;
+                }
+
+                current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
             }
         }
 

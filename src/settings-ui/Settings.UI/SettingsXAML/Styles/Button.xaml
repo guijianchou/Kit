@@ -666,6 +666,30 @@
         <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
     </Style>
 
+    <!-- 危险操作按钮（用于删除/清理二次确认） -->
+    <Style x:Key="KitDangerActionButtonStyle" TargetType="Button" BasedOn="{StaticResource KitActionButtonStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+    </Style>
+
+    <!-- 紧凑切换按钮 28 高（日志自动滚动等） -->
+    <Style x:Key="KitCompactToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource DefaultToggleButtonStyle}">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!-- 可点击卡片按钮（保留卡片填充与边框） -->
+    <Style x:Key="KitInteractiveCardButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
     <!-- 图标按钮 32×32（必须配 ToolTip + AutomationProperties.Name） -->
     <Style x:Key="KitIconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
         <Setter Property="Width" Value="32" />

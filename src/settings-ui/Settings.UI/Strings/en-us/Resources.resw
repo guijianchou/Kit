@@ -926,9 +926,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AIHub_EnableSettingsCard.Description" xml:space="preserve">
     <value>Analyze Windows event logs for security health and optimize disk hygiene with strict safety policies.</value>
   </data>
-          <data name="AiHub_ResetPolicyButton.Content" xml:space="preserve">
-    <value>Reset to Default</value>
-  </data>
     <data name="Localserver_StartAllButton.Content" xml:space="preserve">
     <value>Start all</value>
   </data>
@@ -1006,12 +1003,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="Localserver_ConfirmDeleteConfirmButton.Content" xml:space="preserve">
     <value>Delete</value>
-  </data>
-  <data name="Localserver_BrowseFileButton.Content" xml:space="preserve">
-    <value>Browse...</value>
-  </data>
-  <data name="Localserver_BrowseFolderButton.Content" xml:space="preserve">
-    <value>Browse...</value>
   </data>
       <data name="Localserver_ChecksLabel.Text" xml:space="preserve">
     <value>CHECKS</value>
@@ -1612,9 +1603,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AiHub_ApplyKernelButton.Content" xml:space="preserve">
     <value>Apply</value>
   </data>
-                <data name="AiHub_SavePolicyButton.Content" xml:space="preserve">
-    <value>Save</value>
-  </data>
   <data name="AiHub_PipelineCard.Header" xml:space="preserve">
     <value>AI Hub Pipeline</value>
   </data>
@@ -1725,10 +1713,10 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Finding Details</value>
   </data>
   <data name="FindingDetailsDialog.PrimaryButtonText" xml:space="preserve">
-    <value>Close</value>
-  </data>
-  <data name="FindingDetailsDialog.SecondaryButtonText" xml:space="preserve">
     <value>Copy Summary</value>
+  </data>
+  <data name="FindingDetailsDialog.CloseButtonText" xml:space="preserve">
+    <value>Close</value>
   </data>
   <data name="FindingDetails_Facts.Text" xml:space="preserve">
     <value>Detection Facts</value>
@@ -2519,12 +2507,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Localserver_StopAllServicesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Stop all running services</value>
   </data>
-  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Refresh status</value>
-  </data>
-  <data name="Localserver_RefreshStatusButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Refresh status and resource usage</value>
-  </data>
   <data name="Localserver_ConfigureButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Configure service</value>
   </data>
@@ -2971,5 +2953,884 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="NetMap_HopList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Route hops</value>
+  </data>
+  <data name="Localserver_ConfirmDeleteCancelButton.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="UDPtest_DeleteDialogCancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AIHub_ConfirmCleanAllTitle.Text" xml:space="preserve">
+    <value>Clean all approved cache files?</value>
+  </data>
+  <data name="AIHub_ConfirmCleanGroupTitle.Text" xml:space="preserve">
+    <value>Clean approved cache files in this group?</value>
+  </data>
+  <data name="AIHub_ConfirmCleanAllDescription.Text" xml:space="preserve">
+    <value>Approved cache files will be permanently deleted and cannot be recovered.</value>
+  </data>
+  <data name="AIHub_ConfirmCleanCancelButton.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AIHub_ConfirmCleanConfirmButton.Content" xml:space="preserve">
+    <value>Confirm Clean</value>
+  </data>
+  <data name="AIHub_AuditNoSnapshotForDateFormat" xml:space="preserve">
+    <value>No audit snapshot found for {0:yyyy-MM-dd}.</value>
+  </data>
+  <data name="Shell_SearchBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Search settings (Ctrl+F)</value>
+  </data>
+  <data name="ShortcutControl_EditButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Edit shortcut</value>
+  </data>
+  <data name="ShortcutControl_EditButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Edit shortcut</value>
+  </data>
+  <data name="AiHub_KernelComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>AI execution kernel</value>
+  </data>
+  <data name="AiHub_CheckUpdatesButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Check for kernel updates</value>
+  </data>
+  <data name="AiHub_DownloadKernelButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Download or update kernel</value>
+  </data>
+  <data name="AiHub_MainEndpoint_ApiModeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Main endpoint API mode</value>
+  </data>
+  <data name="AiHub_MainEndpoint_EffortComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Main endpoint reasoning effort</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_UrlCard.Header" xml:space="preserve">
+    <value>Endpoint URL</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiKeyCard.Header" xml:space="preserve">
+    <value>API key</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve">
+    <value>Enter API key</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiModeCard.Header" xml:space="preserve">
+    <value>API mode</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ApiModeComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Fallback endpoint API mode</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ModelCard.Header" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_ReasoningCard.Header" xml:space="preserve">
+    <value>Reasoning effort</value>
+  </data>
+  <data name="AiHub_FallbackEndpoint_EffortComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Fallback endpoint reasoning effort</value>
+  </data>
+  <data name="AiHub_PolicyContentBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Global security policy rules</value>
+  </data>
+  <data name="AiHub_ResetPolicyButtonText.Text" xml:space="preserve">
+    <value>Reset to default</value>
+  </data>
+  <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reset policy to default</value>
+  </data>
+  <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Reset policy to default</value>
+  </data>
+  <data name="AiHub_SavePolicyButtonText.Text" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="AiHub_SavePolicyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Save policy</value>
+  </data>
+  <data name="AiHub_SavePolicyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Save policy</value>
+  </data>
+  <data name="General_LogLevelComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Log level</value>
+  </data>
+  <data name="General_RefreshBackupStatusButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Refresh backup status</value>
+  </data>
+  <data name="General_RefreshBackupStatusButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh backup status</value>
+  </data>
+  <data name="Localserver_OpenUrlButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Open service URL</value>
+  </data>
+  <data name="Localserver_BrowseFileButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Browse executable file</value>
+  </data>
+  <data name="Localserver_BrowseFileButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Browse executable file</value>
+  </data>
+  <data name="Localserver_BrowseFolderButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Browse working directory</value>
+  </data>
+  <data name="Localserver_BrowseFolderButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Browse working directory</value>
+  </data>
+  <data name="Localserver_DeleteLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Delete service line</value>
+  </data>
+  <data name="Localserver_DeleteLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Delete service line</value>
+  </data>
+  <data name="Localserver_CollapseLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Collapse configuration</value>
+  </data>
+  <data name="Localserver_CollapseLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Collapse configuration</value>
+  </data>
+  <data name="Localserver_CollapseLineButtonText.Text" xml:space="preserve">
+    <value>Collapse</value>
+  </data>
+  <data name="Localserver_SaveLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Save service configuration</value>
+  </data>
+  <data name="Localserver_SaveLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Save service configuration</value>
+  </data>
+  <data name="UDPtest_DeleteLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Delete UDP line</value>
+  </data>
+  <data name="UDPtest_DeleteLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Delete UDP line</value>
+  </data>
+  <data name="UDPtest_CancelEditButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Cancel changes and collapse</value>
+  </data>
+  <data name="UDPtest_CancelEditButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Cancel changes</value>
+  </data>
+  <data name="UDPtest_CancelButtonText.Text" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="UDPtest_SaveLineButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Save UDP line configuration</value>
+  </data>
+  <data name="UDPtest_SaveLineButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Save UDP line configuration</value>
+  </data>
+  <data name="NetMap_GeoLiteRepoLink.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Open GeoLite2 database repository on GitHub</value>
+  </data>
+  <data name="NetMap_GeoLiteRepoLink.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>GeoLite2 database repository</value>
+  </data>
+  <data name="Awake_ModeSelector.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Choose how Awake keeps your PC active</value>
+  </data>
+  <data name="Awake_ExpirationDatePicker.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Select expiration date</value>
+  </data>
+  <data name="Awake_ExpirationTimePicker.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Select expiration time</value>
+  </data>
+  <data name="AiHub_ModelNotSet" xml:space="preserve">
+    <value>No model set</value>
+  </data>
+  <data name="AiHub_EndpointNotConfigured" xml:space="preserve">
+    <value>Not configured</value>
+  </data>
+  <data name="AiHub_EndpointLabel_Fallback" xml:space="preserve">
+    <value>Fallback</value>
+  </data>
+  <data name="AiHub_EndpointLabel_Main" xml:space="preserve">
+    <value>Main</value>
+  </data>
+  <data name="AiHub_EndpointDesc_Fallback" xml:space="preserve">
+    <value>Optional backup for eligible network and endpoint failures.</value>
+  </data>
+  <data name="AiHub_EndpointDesc_Main" xml:space="preserve">
+    <value>Primary endpoint for new AI tasks.</value>
+  </data>
+  <data name="AiHub_ServiceUnavailable" xml:space="preserve">
+    <value>AI service unavailable</value>
+  </data>
+  <data name="AiHub_ServiceStatus_ReadyFormat" xml:space="preserve">
+    <value>Ready · {0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_DegradedFormat" xml:space="preserve">
+    <value>Main route unavailable, using fallback · {0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_UnverifiedFormat" xml:space="preserve">
+    <value>Configured, not verified yet · {0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_NotConfiguredFormat" xml:space="preserve">
+    <value>Not configured: {0}</value>
+  </data>
+  <data name="AiHub_ServiceStatus_Off" xml:space="preserve">
+    <value>Off; plugins use rule-based checks only</value>
+  </data>
+  <data name="AiHub_EndpointsSaved" xml:space="preserve">
+    <value>Endpoint settings saved.</value>
+  </data>
+  <data name="AiHub_SaveEndpointsFailedFormat" xml:space="preserve">
+    <value>Failed to save endpoints: {0}</value>
+  </data>
+  <data name="AiHub_RestoreEndpointsFailedFormat" xml:space="preserve">
+    <value>Could not restore endpoints: {0}</value>
+  </data>
+  <data name="AiHub_FallbackCleared" xml:space="preserve">
+    <value>Fallback endpoint cleared. Save to apply.</value>
+  </data>
+  <data name="AIHub_SeveritySummary_HighFormat" xml:space="preserve">
+    <value>{0} high</value>
+  </data>
+  <data name="AIHub_SeveritySummary_MediumFormat" xml:space="preserve">
+    <value>{0} medium</value>
+  </data>
+  <data name="AIHub_SeveritySummary_LowFormat" xml:space="preserve">
+    <value>{0} low</value>
+  </data>
+  <data name="AIHub_FindingCount_Single" xml:space="preserve">
+    <value>1 finding</value>
+  </data>
+  <data name="AIHub_FindingCount_PluralFormat" xml:space="preserve">
+    <value>{0} findings</value>
+  </data>
+  <data name="AIHub_HealthScoreGrade_Good" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="AIHub_HealthScoreGrade_Warning" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="AIHub_HealthScoreGrade_Critical" xml:space="preserve">
+    <value>Critical</value>
+  </data>
+  <data name="AIHub_AuditTimestamp_NotScanned" xml:space="preserve">
+    <value>Not scanned yet</value>
+  </data>
+  <data name="AIHub_AuditStatus_Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="AIHub_HealthVerdict_NotScanned" xml:space="preserve">
+    <value>Not scanned yet</value>
+  </data>
+  <data name="AIHub_HealthSummary_NotScanned" xml:space="preserve">
+    <value>Comprehensive event scan has not been performed yet. Click scan above to begin.</value>
+  </data>
+  <data name="AIHub_SelectedAudit_Latest" xml:space="preserve">
+    <value>Latest audit</value>
+  </data>
+  <data name="AIHub_EventCount_Zero" xml:space="preserve">
+    <value>0 events</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Ready" xml:space="preserve">
+    <value>Ready to scan</value>
+  </data>
+  <data name="AIHub_HealthScoreLabel" xml:space="preserve">
+    <value>Health score</value>
+  </data>
+  <data name="AIHub_FilterHighQuickActionLabel" xml:space="preserve">
+    <value>Filter High findings</value>
+  </data>
+  <data name="AIHub_FilterHighQuickActionHint" xml:space="preserve">
+    <value>Filter high-severity security and reliability events</value>
+  </data>
+  <data name="AIHub_ViewAiReportLabel" xml:space="preserve">
+    <value>View AI report</value>
+  </data>
+  <data name="AIHub_JumpToAiReportHint" xml:space="preserve">
+    <value>Jump directly to the AI diagnostic report below</value>
+  </data>
+  <data name="AIHub_CopyReportLabel" xml:space="preserve">
+    <value>Copy report</value>
+  </data>
+  <data name="AIHub_CopyAiReportHint" xml:space="preserve">
+    <value>Copy AI diagnostic findings and recommendations to clipboard</value>
+  </data>
+  <data name="AIHub_ScanType_LocalFindings" xml:space="preserve">
+    <value>Local findings</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Updating" xml:space="preserve">
+    <value>Updating</value>
+  </data>
+  <data name="AIHub_HealthSummary_Updating" xml:space="preserve">
+    <value>Reading events and updating findings for the selected range.</value>
+  </data>
+  <data name="AIHub_ScanRange_2d" xml:space="preserve">
+    <value>Past 2 days</value>
+  </data>
+  <data name="AIHub_ScanRange_1w" xml:space="preserve">
+    <value>Past 1 week</value>
+  </data>
+  <data name="AIHub_ScanRange_1mo" xml:space="preserve">
+    <value>Past 1 month</value>
+  </data>
+  <data name="AIHub_AuditModeLabel" xml:space="preserve">
+    <value>Audit mode</value>
+  </data>
+  <data name="AIHub_AuditModeHint_Extended" xml:space="preserve">
+    <value>Extended: standard privileges, reads System/Application/Setup/ForwardedEvents</value>
+  </data>
+  <data name="AIHub_AuditModeHint_FullElevated" xml:space="preserve">
+    <value>Full: additionally reads the Security and Firewall channels</value>
+  </data>
+  <data name="AIHub_AuditModeHint_FullNotElevated" xml:space="preserve">
+    <value>Full mode needs elevation; the Security channel is unreadable without it</value>
+  </data>
+  <data name="AIHub_FullScanRangeHint" xml:space="preserve">
+    <value>Select a time range and refresh local findings</value>
+  </data>
+  <data name="AIHub_RangeOption1DayLabel" xml:space="preserve">
+    <value>2d</value>
+  </data>
+  <data name="AIHub_RangeOption2DaysLabel" xml:space="preserve">
+    <value>1w</value>
+  </data>
+  <data name="AIHub_RangeOption1WeekLabel" xml:space="preserve">
+    <value>1mo</value>
+  </data>
+  <data name="AIHub_ScanOptionsLabel" xml:space="preserve">
+    <value>Scan options</value>
+  </data>
+  <data name="AIHub_ReanalyzeRangeHint" xml:space="preserve">
+    <value>Reanalyze events in selected range</value>
+  </data>
+  <data name="AIHub_ScopeHint_Full" xml:space="preserve">
+    <value>Full mode · Elevation required · Includes Security and Firewall</value>
+  </data>
+  <data name="AIHub_ScopeHint_Extended" xml:space="preserve">
+    <value>Extended mode · No elevation · Skips Security</value>
+  </data>
+  <data name="AIHub_FindingsHeading" xml:space="preserve">
+    <value>Findings</value>
+  </data>
+  <data name="AIHub_FindingsSummaryFormat" xml:space="preserve">
+    <value>{0} findings recorded under current filter</value>
+  </data>
+  <data name="AIHub_AllFindingsLabelFormat" xml:space="preserve">
+    <value>All findings ({0})</value>
+  </data>
+  <data name="AIHub_PriorityPreviewLabelFormat" xml:space="preserve">
+    <value>Top {0} priority action items</value>
+  </data>
+  <data name="AIHub_OverviewLabelFormat" xml:space="preserve">
+    <value>All ({0})</value>
+  </data>
+  <data name="AIHub_SourceFilter_Application" xml:space="preserve">
+    <value>Application</value>
+  </data>
+  <data name="AIHub_SourceFilter_Security" xml:space="preserve">
+    <value>Security</value>
+  </data>
+  <data name="AIHub_SourceFilter_System" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="AIHub_SourceFilter_Setup" xml:space="preserve">
+    <value>Setup</value>
+  </data>
+  <data name="AIHub_SourceFilter_Forwarded" xml:space="preserve">
+    <value>Forwarded</value>
+  </data>
+  <data name="AIHub_EmptyFindingsTitle" xml:space="preserve">
+    <value>No security or reliability anomalies detected</value>
+  </data>
+  <data name="AIHub_EmptyFindingsDescription" xml:space="preserve">
+    <value>No anomalies were found in the selected period and the logs read. You can scan a different period.</value>
+  </data>
+  <data name="AIHub_PipelineTitle" xml:space="preserve">
+    <value>AI Hub Pipeline</value>
+  </data>
+  <data name="AIHub_PipelinePolicyText" xml:space="preserve">
+    <value>Security policy + AGENTS.md</value>
+  </data>
+  <data name="AIHub_PipelineSummaryText" xml:space="preserve">
+    <value>Analysis summary</value>
+  </data>
+  <data name="AIHub_PipelineActionText" xml:space="preserve">
+    <value>Suggested action</value>
+  </data>
+  <data name="AIHub_SecurityAuditTabLabel" xml:space="preserve">
+    <value>Security Audit</value>
+  </data>
+  <data name="AIHub_OptimizationTabLabel" xml:space="preserve">
+    <value>Optimization</value>
+  </data>
+  <data name="AIHub_SecurityAuditTitle" xml:space="preserve">
+    <value>Windows Event Security Audit</value>
+  </data>
+  <data name="AIHub_ReanalyzeLabel" xml:space="preserve">
+    <value>Reanalyze selected range</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeLabel" xml:space="preserve">
+    <value>AI deep analysis</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint" xml:space="preserve">
+    <value>Sends the current findings (highest severity first, up to 12) to the configured AI kernel for supplementary diagnostics under the security-audit policy. No action is executed automatically.</value>
+  </data>
+  <data name="AIHub_HealthOverviewLabel" xml:space="preserve">
+    <value>Health overview</value>
+  </data>
+  <data name="AIHub_LatestAuditLabel" xml:space="preserve">
+    <value>Latest audit</value>
+  </data>
+  <data name="AIHub_FindingsInAuditLabel" xml:space="preserve">
+    <value>Findings in this audit</value>
+  </data>
+  <data name="AIHub_HighLabel" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="AIHub_MediumLabel" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="AIHub_LowLabel" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="AIHub_AuditActivityLabel" xml:space="preserve">
+    <value>Audit activity</value>
+  </data>
+  <data name="AIHub_AuditsLabel" xml:space="preserve">
+    <value>Audits</value>
+  </data>
+  <data name="AIHub_RecordedFindingsLabel" xml:space="preserve">
+    <value>Recorded findings</value>
+  </data>
+  <data name="AIHub_ActiveDaysLabel" xml:space="preserve">
+    <value>Active days</value>
+  </data>
+  <data name="AIHub_HealthAverageLabel" xml:space="preserve">
+    <value>Health average</value>
+  </data>
+  <data name="AIHub_ScanLabel" xml:space="preserve">
+    <value>Scan</value>
+  </data>
+  <data name="AIHub_FinishedLabel" xml:space="preserve">
+    <value>Finished</value>
+  </data>
+  <data name="AIHub_WindowLabel" xml:space="preserve">
+    <value>Window</value>
+  </data>
+  <data name="AIHub_EventsReadLabel" xml:space="preserve">
+    <value>Events read</value>
+  </data>
+  <data name="AIHub_FilterAllLabel" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="AIHub_PriorityViewLabel" xml:space="preserve">
+    <value>Priority view</value>
+  </data>
+  <data name="AIHub_SearchPlaceholder" xml:space="preserve">
+    <value>Search event ID, provider or title...</value>
+  </data>
+  <data name="AIHub_NoMatchingFindingsTitle" xml:space="preserve">
+    <value>No matching findings</value>
+  </data>
+  <data name="AIHub_NoMatchingFindingsDescription" xml:space="preserve">
+    <value>Try a different search keyword, channel, or severity filter.</value>
+  </data>
+  <data name="AIHub_ResetFindingFiltersLabel" xml:space="preserve">
+    <value>Clear filters</value>
+  </data>
+  <data name="AIHub_OptimizationDescription" xml:space="preserve">
+    <value>Organize loose downloads into five categories and review old temporary/cache files.</value>
+  </data>
+  <data name="AIHub_ScanAllLabel" xml:space="preserve">
+    <value>Rescan</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflowTitle" xml:space="preserve">
+    <value>Optimization workflow</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflowDescription" xml:space="preserve">
+    <value>Scan, review and confirm before any write action.</value>
+  </data>
+  <data name="AIHub_CandidatesLabel" xml:space="preserve">
+    <value>Candidates</value>
+  </data>
+  <data name="AIHub_DetectedObjectsLabel" xml:space="preserve">
+    <value>Detected objects</value>
+  </data>
+  <data name="AIHub_SelectedItemsLabel" xml:space="preserve">
+    <value>Selected items</value>
+  </data>
+  <data name="AIHub_StagedForExecutionLabel" xml:space="preserve">
+    <value>Staged for execution</value>
+  </data>
+  <data name="AIHub_SafetyBoundaryLabel" xml:space="preserve">
+    <value>Safety boundary</value>
+  </data>
+  <data name="AIHub_DownloadsLabel" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="AIHub_DownloadsRootOnlyLabel" xml:space="preserve">
+    <value>Downloads root only</value>
+  </data>
+  <data name="AIHub_DownloadsDescription" xml:space="preserve">
+    <value>Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music or Video. Leave images, unknown types and incomplete downloads in place.</value>
+  </data>
+  <data name="AIHub_TemporaryFilesLabel" xml:space="preserve">
+    <value>Caches &amp; temporary files</value>
+  </data>
+  <data name="AIHub_WhitelistOnlyLabel" xml:space="preserve">
+    <value>Whitelist only</value>
+  </data>
+  <data name="AIHub_CacheDescription" xml:space="preserve">
+    <value>Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; delete confirmed files individually.</value>
+  </data>
+  <data name="AIHub_ScanButtonLabel" xml:space="preserve">
+    <value>Scan</value>
+  </data>
+  <data name="AIHub_SelectAllLabel" xml:space="preserve">
+    <value>Select all</value>
+  </data>
+  <data name="AIHub_DeselectAllLabel" xml:space="preserve">
+    <value>Deselect all</value>
+  </data>
+  <data name="AIHub_ConfirmAndExecuteLabel" xml:space="preserve">
+    <value>Confirm and execute</value>
+  </data>
+  <data name="AIHub_ReadOnlyScanTitle" xml:space="preserve">
+    <value>Read-only scan</value>
+  </data>
+  <data name="AIHub_ReadOnlyScanDescription" xml:space="preserve">
+    <value>Only file metadata is read before confirmation.</value>
+  </data>
+  <data name="AIHub_PathBoundariesTitle" xml:space="preserve">
+    <value>Path boundaries</value>
+  </data>
+  <data name="AIHub_PathBoundariesDescription" xml:space="preserve">
+    <value>Downloads and cache whitelists are validated again.</value>
+  </data>
+  <data name="AIHub_RecoverableCleanupTitle" xml:space="preserve">
+    <value>Reviewed snapshot only</value>
+  </data>
+  <data name="AIHub_RecoverableCleanupDescription" xml:space="preserve">
+    <value>Scope, age and changes are rechecked per file before deletion; new, changed, locked or inaccessible files are skipped.</value>
+  </data>
+  <data name="AIHub_PriorityCalloutBadgeText" xml:space="preserve">
+    <value>Review first</value>
+  </data>
+  <data name="AIHub_AuditSummaryEmptyTitle_Ready" xml:space="preserve">
+    <value>Ready for your first scan</value>
+  </data>
+  <data name="AIHub_AuditSummaryEmptyText_Ready" xml:space="preserve">
+    <value>Scan to see findings and suggested actions here.</value>
+  </data>
+  <data name="AIHub_CancelTaskLabel" xml:space="preserve">
+    <value>Cancel task</value>
+  </data>
+  <data name="AIHub_ScanPhase_Scanning" xml:space="preserve">
+    <value>Scanning</value>
+  </data>
+  <data name="AIHub_ScanPhase_ReviewResults" xml:space="preserve">
+    <value>Review scan results</value>
+  </data>
+  <data name="AIHub_ScanPhase_Applying" xml:space="preserve">
+    <value>Applying changes</value>
+  </data>
+  <data name="AIHub_ScanPhase_Failed" xml:space="preserve">
+    <value>Scan failed</value>
+  </data>
+  <data name="AIHub_TaskPoliciesTabLabel" xml:space="preserve">
+    <value>Task policies</value>
+  </data>
+  <data name="AIHub_TaskPolicyTitle" xml:space="preserve">
+    <value>Task instructions</value>
+  </data>
+  <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
+    <value>Customize AI instructions for security audits and optimization. Global safety rules are in AI service settings.</value>
+  </data>
+  <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
+    <value>Checking…</value>
+  </data>
+  <data name="AIHub_RecheckAi_Action" xml:space="preserve">
+    <value>Re-check</value>
+  </data>
+  <data name="AIHub_AiServiceSettingsLabel" xml:space="preserve">
+    <value>AI service settings</value>
+  </data>
+  <data name="AIHub_RecheckFailed" xml:space="preserve">
+    <value>Check failed. Retry or review AI service settings.</value>
+  </data>
+  <data name="AIHub_Readiness_ReadyFormat" xml:space="preserve">
+    <value>AI service enabled · ready · {0}</value>
+  </data>
+  <data name="AIHub_Readiness_DegradedFormat" xml:space="preserve">
+    <value>AI service enabled · main route unavailable; fallback will be used · {0}</value>
+  </data>
+  <data name="AIHub_Readiness_UnverifiedFormat" xml:space="preserve">
+    <value>AI service enabled · configured (unverified) · {0}</value>
+  </data>
+  <data name="AIHub_Readiness_NotConfiguredFormat" xml:space="preserve">
+    <value>AI service not configured: {0}</value>
+  </data>
+  <data name="AIHub_Readiness_Disabled" xml:space="preserve">
+    <value>AI service disabled · rule-based detection only</value>
+  </data>
+  <data name="AIHub_CurrentStage_CollectLogs" xml:space="preserve">
+    <value>Collect event logs</value>
+  </data>
+  <data name="AIHub_CurrentStage_AnalyzeFindings" xml:space="preserve">
+    <value>Analyze findings</value>
+  </data>
+  <data name="AIHub_CurrentStage_FinalizeResults" xml:space="preserve">
+    <value>Finalize results</value>
+  </data>
+  <data name="AIHub_CollectionProgress_Unavailable" xml:space="preserve">
+    <value>Unavailable</value>
+  </data>
+  <data name="AIHub_CollectionProgress_Read" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="AIHub_CollectionProgress_Reading" xml:space="preserve">
+    <value>Reading</value>
+  </data>
+  <data name="AIHub_CollectionProgress_StatusFormat" xml:space="preserve">
+    <value>{0} {1} · {2}/{3} log channels · {4} events in channel · {5} events collected</value>
+  </data>
+  <data name="AIHub_Sidebar_Analyzing" xml:space="preserve">
+    <value>Analyzing</value>
+  </data>
+  <data name="AIHub_Sidebar_DeepAnalysis" xml:space="preserve">
+    <value>AI deep analysis</value>
+  </data>
+  <data name="AIHub_Sidebar_Scanning" xml:space="preserve">
+    <value>Scanning</value>
+  </data>
+  <data name="AIHub_Sidebar_PartiallyCompleted" xml:space="preserve">
+    <value>Partially completed</value>
+  </data>
+  <data name="AIHub_Sidebar_DeepAnalysisComplete" xml:space="preserve">
+    <value>AI analysis complete</value>
+  </data>
+  <data name="AIHub_Sidebar_ScanComplete" xml:space="preserve">
+    <value>Scan complete</value>
+  </data>
+  <data name="AIHub_Sidebar_DeepAnalysisIncomplete" xml:space="preserve">
+    <value>AI analysis incomplete</value>
+  </data>
+  <data name="AIHub_Sidebar_ScanFailed" xml:space="preserve">
+    <value>Scan failed</value>
+  </data>
+  <data name="AIHub_Sidebar_AuditWorkflow" xml:space="preserve">
+    <value>Audit workflow</value>
+  </data>
+  <data name="AIHub_ScannedCandidatesLabel" xml:space="preserve">
+    <value>Files scanned</value>
+  </data>
+  <data name="AIHub_ApprovedCandidatesLabel" xml:space="preserve">
+    <value>AI approved</value>
+  </data>
+  <data name="AIHub_CleanableCapacityLabel" xml:space="preserve">
+    <value>Cleanable space</value>
+  </data>
+  <data name="AIHub_UserDirectoryLabel" xml:space="preserve">
+    <value>User directory space analysis</value>
+  </data>
+  <data name="AIHub_OrganizeDownloadsLabel" xml:space="preserve">
+    <value>Organize downloads</value>
+  </data>
+  <data name="AIHub_DownloadsUnavailable" xml:space="preserve">
+    <value>Downloads folder unavailable</value>
+  </data>
+  <data name="AIHub_OptimizationResultsSummaryFormat" xml:space="preserve">
+    <value>{0:N0} candidates scanned · {1:N0} AI approved · {2} cleanable</value>
+  </data>
+  <data name="AIHub_CleanAllLabel" xml:space="preserve">
+    <value>Clean all</value>
+  </data>
+  <data name="AIHub_ScheduleSummary_Off" xml:space="preserve">
+    <value>Off: audits run only when triggered manually</value>
+  </data>
+  <data name="AIHub_ScheduleSummary_CadenceFormat" xml:space="preserve">
+    <value>Every {0} h</value>
+  </data>
+  <data name="AIHub_ScheduleSummary_NextFormat" xml:space="preserve">
+    <value>{0} · next around {1:MM-dd HH:mm}</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_Requesting" xml:space="preserve">
+    <value>Requesting AI deep analysis...</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_IncompleteFormat" xml:space="preserve">
+    <value>AI analysis did not complete: {0}</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_SummaryPartialFormat" xml:space="preserve">
+    <value>AI partially completed: retained {0} enhanced finding(s) ({1}).</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_SummaryCompleteFormat" xml:space="preserve">
+    <value>AI deep analysis completed: {0} enhanced finding(s).</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_MetaFormat" xml:space="preserve">
+    <value>Kernel {0} · {1:HH:mm:ss}</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_Cancelled" xml:space="preserve">
+    <value>AI analysis cancelled</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_FailedFormat" xml:space="preserve">
+    <value>AI analysis failed: {0}</value>
+  </data>
+  <data name="AIHub_RunAudit_FastInProgress" xml:space="preserve">
+    <value>Fast scan in progress...</value>
+  </data>
+  <data name="AIHub_RunAudit_FullInProgress" xml:space="preserve">
+    <value>Full event audit in progress...</value>
+  </data>
+  <data name="AIHub_RunAudit_CheckingLocalRulesFormat" xml:space="preserve">
+    <value>Checking local rules for {0} events...</value>
+  </data>
+  <data name="AIHub_RunAudit_AiPartialFormat" xml:space="preserve">
+    <value>AI partially completed; retained {0} enhanced finding(s) ({1})</value>
+  </data>
+  <data name="AIHub_RunAudit_AiReturnedFindingsFormat" xml:space="preserve">
+    <value>{0} returned {1} enhanced finding(s)</value>
+  </data>
+  <data name="AIHub_RunAudit_AiPartialNoExtraFormat" xml:space="preserve">
+    <value>AI partially completed; validated batches had no extra findings ({0})</value>
+  </data>
+  <data name="AIHub_RunAudit_AiNoExtraFormat" xml:space="preserve">
+    <value>{0} returned no extra findings</value>
+  </data>
+  <data name="AIHub_RunAudit_AiCallFailedFormat" xml:space="preserve">
+    <value>AI call failed: {0}</value>
+  </data>
+  <data name="AIHub_RunAudit_AiDidNotSucceedFormat" xml:space="preserve">
+    <value>AI analysis did not succeed: {0}</value>
+  </data>
+  <data name="AIHub_RunAudit_AiAnalysisFailedFormat" xml:space="preserve">
+    <value>AI analysis failed: {0}</value>
+  </data>
+  <data name="AIHub_RunAudit_RangeRefreshed" xml:space="preserve">
+    <value>Local findings refreshed; AI deep analysis is available on request</value>
+  </data>
+  <data name="AIHub_RunAudit_NoEventsAiNotCalled" xml:space="preserve">
+    <value>No events; AI not called</value>
+  </data>
+  <data name="AIHub_RunAudit_AiHubDisabledSkipped" xml:space="preserve">
+    <value>AI Hub disabled; AI analysis skipped</value>
+  </data>
+  <data name="AIHub_AuditTimestamp_LastScannedFormat" xml:space="preserve">
+    <value>Last scanned: {0:yyyy-MM-dd HH:mm:ss} ({1} findings)</value>
+  </data>
+  <data name="AIHub_ScanType_Incremental" xml:space="preserve">
+    <value>Incremental audit</value>
+  </data>
+  <data name="AIHub_ScanType_Full" xml:space="preserve">
+    <value>Full scan</value>
+  </data>
+  <data name="AIHub_Window_Today" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="AIHub_EventCountFormat" xml:space="preserve">
+    <value>{0} events</value>
+  </data>
+  <data name="AIHub_FinishAudit_Partial" xml:space="preserve">
+    <value>Audit partially completed; validated AI results were retained.</value>
+  </data>
+  <data name="AIHub_FinishAudit_Failed" xml:space="preserve">
+    <value>Local audit completed; AI analysis failed. Results contain rule-based findings only.</value>
+  </data>
+  <data name="AIHub_FinishAudit_Completed" xml:space="preserve">
+    <value>Audit completed.</value>
+  </data>
+  <data name="AIHub_FinishAudit_ScoreAndFindingsFormat" xml:space="preserve">
+    <value> Health score {0}/100; {1} finding(s).</value>
+  </data>
+  <data name="AIHub_FinishAudit_SkippedChannelsFormat" xml:space="preserve">
+    <value> Could not read: {0}.</value>
+  </data>
+  <data name="AIHub_StopAudit_Cancelled" xml:space="preserve">
+    <value>Audit cancelled</value>
+  </data>
+  <data name="AIHub_StopAudit_Failed" xml:space="preserve">
+    <value>Audit failed</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Critical" xml:space="preserve">
+    <value>Attention needed · Critical issues detected</value>
+  </data>
+  <data name="AIHub_HealthSummary_CriticalFormat" xml:space="preserve">
+    <value>{0} high-priority issue(s) and {1} warning(s) detected. Action recommended.</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Good" xml:space="preserve">
+    <value>Good · Most indicators stable</value>
+  </data>
+  <data name="AIHub_HealthSummary_GoodFormat" xml:space="preserve">
+    <value>No critical failures found. Recorded {0} warning(s) and {1} info event(s).</value>
+  </data>
+  <data name="AIHub_HealthVerdict_Excellent" xml:space="preserve">
+    <value>Excellent · System fully healthy</value>
+  </data>
+  <data name="AIHub_HealthSummary_Excellent" xml:space="preserve">
+    <value>No security violations or stability anomalies detected in the scanned period.</value>
+  </data>
+  <data name="AIHub_ScanType_Historical" xml:space="preserve">
+    <value>Historical snapshot</value>
+  </data>
+  <data name="AIHub_Window_AllTimes" xml:space="preserve">
+    <value>All times</value>
+  </data>
+  <data name="AIHub_EventCount_HistoricalFormat" xml:space="preserve">
+    <value>{0} findings</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_LocalCompleteReviewing" xml:space="preserve">
+    <value>Local scan complete. Reviewing with AI…</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Failover" xml:space="preserve">
+    <value>Main route did not complete. Reviewing with Fallback…</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_BatchesFormat" xml:space="preserve">
+    <value>AI analysis ({0}/{1} batches)</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Analyzing" xml:space="preserve">
+    <value>Analyzing with AI...</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_Scanning" xml:space="preserve">
+    <value>Scanning...</value>
+  </data>
+  <data name="AIHub_DownloadsStatus_FoundFormat" xml:space="preserve">
+    <value>{0} item(s) found ({1})</value>
+  </data>
+  <data name="AIHub_TemporaryFilesStatus_FoundFormat" xml:space="preserve">
+    <value>{0} item(s) found ({1})</value>
+  </data>
+  <data name="AIHub_Optimization_ScanLimitReached" xml:space="preserve">
+    <value> · Scan limit reached; showing reviewed subset</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanningDownloads" xml:space="preserve">
+    <value>Scanning Downloads root...</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanningTempFiles" xml:space="preserve">
+    <value>Scanning Temporary files...</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanCancelled" xml:space="preserve">
+    <value>Scan cancelled</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ScanFailed" xml:space="preserve">
+    <value>Scan failed</value>
+  </data>
+  <data name="AIHub_DescribeScope_NoEligible" xml:space="preserve">
+    <value>No eligible files found</value>
+  </data>
+  <data name="AIHub_DescribeScope_NotScanned" xml:space="preserve">
+    <value>Not scanned yet</value>
+  </data>
+  <data name="AIHub_DescribeScope_FoundFormat" xml:space="preserve">
+    <value>{0:N0} files found · {1} · {2:N0} actionable</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutingConfirmed" xml:space="preserve">
+    <value>Executing confirmed actions...</value>
+  </data>
+  <data name="AIHub_Optimization_DownloadIneligible" xml:space="preserve">
+    <value>File is ineligible, in use or changed; scan again</value>
+  </data>
+  <data name="AIHub_Optimization_ActionFailed" xml:space="preserve">
+    <value>Action failed; scan again</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutingProgressFormat" xml:space="preserve">
+    <value>Executing confirmed actions... ({0}/{1})</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutionCancelledFormat" xml:space="preserve">
+    <value>Execution cancelled ({0}/{1} processed)</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutionCompletedWithFailuresFormat" xml:space="preserve">
+    <value>Execution completed ({0} failed)</value>
+  </data>
+  <data name="AIHub_OptimizationWorkflow_ExecutionCompleted" xml:space="preserve">
+    <value>Execution completed</value>
+  </data>
+  <data name="AIHub_ReportCopied" xml:space="preserve">
+    <value>Audit report copied to clipboard.</value>
   </data>
 </root>

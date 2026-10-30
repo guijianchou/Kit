@@ -97,6 +97,11 @@ public:
         return app_key.c_str();
     }
 
+    virtual bool is_enabled_by_default() const override
+    {
+        return false;
+    }
+
     virtual void set_config(const wchar_t* config) override
     {
         try

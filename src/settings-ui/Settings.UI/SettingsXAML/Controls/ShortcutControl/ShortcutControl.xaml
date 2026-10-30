@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="Kit.Settings.UI.Controls.ShortcutControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -19,6 +19,8 @@
     <Grid HorizontalAlignment="Right">
         <Button
             x:Name="EditButton"
+            x:Uid="ShortcutControl_EditButton"
+            AutomationProperties.AutomationId="ShortcutControl_EditButton"
             Padding="0"
             HorizontalAlignment="Right"
             Click="OpenDialogButton_Click"

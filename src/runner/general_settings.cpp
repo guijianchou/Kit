@@ -68,6 +68,27 @@ namespace
     {
         return general_settings::load_from_file_checked(PTSettingsHelper::get_powertoys_general_save_file_location());
     }
+
+    std::optional<bool> cached_startup_enabled;
+    ULONGLONG cached_startup_enabled_tick = 0;
+    constexpr ULONGLONG startup_status_cache_ttl_ms = 30000;
+
+    bool get_cached_auto_start_task_active()
+    {
+        const ULONGLONG now = GetTickCount64();
+        if (!cached_startup_enabled.has_value() || (now - cached_startup_enabled_tick) >= startup_status_cache_ttl_ms)
+        {
+            cached_startup_enabled = is_auto_start_task_active_for_this_user();
+            cached_startup_enabled_tick = now;
+        }
+
+        return *cached_startup_enabled;
+    }
+
+    void invalidate_auto_start_task_cache()
+    {
+        cached_startup_enabled.reset();
+    }
 }
 
 // TODO: would be nice to get rid of these globals, since they're basically cached json settings
@@ -196,7 +217,7 @@ GeneralSettings get_general_settings()
 
     ensure_ignored_conflict_properties_shape(settings.ignoredConflictProperties);
 
-    settings.isStartupEnabled = is_auto_start_task_active_for_this_user();
+    settings.isStartupEnabled = get_cached_auto_start_task_active();
 
     // Initialize module enabled map from durable settings.json so all modules, including
     // those which are missing or which failed to load, are represented.
@@ -417,6 +438,7 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     {
         delete_auto_start_task_for_this_user();
     }
+    invalidate_auto_start_task_cache();
 
     if (json::has(general_configs, L"enabled"))
     {

@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="Kit.Settings.UI.Controls.ShortcutDialogContentControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -258,6 +258,7 @@
             <HyperlinkButton
                 x:Name="ResetBtn"
                 x:Uid="Shortcut_ResetBtn"
+                AutomationProperties.AutomationId="ShortcutDialog_ResetButton"
                 Click="ResetBtn_Click">
                 <ToolTipService.ToolTip>
                     <TextBlock x:Uid="Shortcut_ResetToolTip" TextWrapping="Wrap" />
@@ -274,6 +275,7 @@
             <HyperlinkButton
                 x:Name="ClearBtn"
                 x:Uid="Shortcut_ClearBtn"
+                AutomationProperties.AutomationId="ShortcutDialog_ClearButton"
                 Click="ClearBtn_Click"
                 Visibility="{x:Bind Keys.Count, Mode=OneWay, Converter={StaticResource DoubleToVisibilityConverter}}">
                 <ToolTipService.ToolTip>

@@ -83,9 +83,28 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
         {
             // Reports the cached verdict by default. Pass refresh=true to force a real
             // probe; a status query must not spawn a kernel process on every call.
-            AiReadiness readiness = request.RefreshStatus
-                ? await _engine.ProbeReadinessAsync(cancellationToken).ConfigureAwait(false)
-                : _engine.GetReadiness();
+            AiReadiness readiness;
+            if (request.RefreshStatus)
+            {
+                if (!TryRegisterRequest(request.RequestId, cancellationToken, out var statusLinked, out string? errorResponse))
+                {
+                    return errorResponse;
+                }
+
+                using var statusLifetime = statusLinked!;
+                try
+                {
+                    readiness = await _engine.ProbeReadinessAsync(statusLinked!.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _requests.TryRemove(request.RequestId, out _);
+                }
+            }
+            else
+            {
+                readiness = _engine.GetReadiness();
+            }
 
             string response = JsonSerializer.Serialize(new AiHubIpcResponse
             {
@@ -100,11 +119,25 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
 
         if (request.Action == "self_test")
         {
-            // Runs the same probe an operator would use to attribute a failure. Exposed over
-            // IPC so any plugin can confirm the shared service before depending on it.
-            SelfTestResult outcome = await AiServiceSelfTest
-                .RunAsync(_engine, cancellationToken)
-                .ConfigureAwait(false);
+            if (!TryRegisterRequest(request.RequestId, cancellationToken, out var testLinked, out string? errorResponse))
+            {
+                return errorResponse;
+            }
+
+            using var testLifetime = testLinked!;
+            SelfTestResult outcome;
+            try
+            {
+                // Runs the same probe an operator would use to attribute a failure. Exposed over
+                // IPC so any plugin can confirm the shared service before depending on it.
+                outcome = await AiServiceSelfTest
+                    .RunAsync(_engine, testLinked!.Token)
+                    .ConfigureAwait(false);
+            }
+            finally
+            {
+                _requests.TryRemove(request.RequestId, out _);
+            }
 
             string diagnostic = JsonSerializer.Serialize(new AiHubIpcResponse
             {
@@ -144,24 +177,12 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
             return SerializeFailure(request.RequestId, AiErrorCode.InvalidPayload);
         }
 
-        CancellationTokenSource linked;
-        lock (_lifecycleLock)
+        if (!TryRegisterRequest(request.RequestId, cancellationToken, out var linked, out string? registrationFailure))
         {
-            if (_disposed)
-            {
-                return SerializeFailure(request.RequestId, AiErrorCode.HostUnavailable);
-            }
-
-            if (_requests.Count >= 16 || _requests.ContainsKey(request.RequestId))
-            {
-                return SerializeFailure(request.RequestId, AiErrorCode.InvalidPayload);
-            }
-
-            linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
-            _requests.TryAdd(request.RequestId, linked);
+            return registrationFailure;
         }
 
-        using var requestLifetime = linked;
+        using var requestLifetime = linked!;
         try
         {
             AiTaskResult<AiTaskReport> result = await _engine.ExecuteTaskAsync(
@@ -170,7 +191,7 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
                 request.Items,
                 AiTaskReport.CreateSchema(AiHubJsonContext.Default.JsonElement),
                 new AiTaskOptions { Language = request.Language, TimeoutSeconds = request.TimeoutSeconds },
-                linked.Token).ConfigureAwait(false);
+                linked!.Token).ConfigureAwait(false);
             string response = JsonSerializer.Serialize(new AiHubIpcResponse
             {
                 RequestId = request.RequestId,
@@ -227,6 +248,34 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
         var message when message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase) => AiErrorCode.Cancelled,
         _ => AiErrorCode.ExecutionFailed,
     };
+
+    private bool TryRegisterRequest(
+        Guid requestId,
+        CancellationToken cancellationToken,
+        out CancellationTokenSource? linked,
+        out string? errorResponse)
+    {
+        linked = null;
+        errorResponse = null;
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+            {
+                errorResponse = SerializeFailure(requestId, AiErrorCode.HostUnavailable);
+                return false;
+            }
+
+            if (_requests.Count >= 16 || _requests.ContainsKey(requestId))
+            {
+                errorResponse = SerializeFailure(requestId, AiErrorCode.InvalidPayload);
+                return false;
+            }
+
+            linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
+            _requests.TryAdd(requestId, linked);
+            return true;
+        }
+    }
 
     private static string SerializeFailure(Guid requestId, AiErrorCode code) => JsonSerializer.Serialize(
         new AiHubIpcResponse { RequestId = requestId, ErrorCode = code }, AiHubJsonContext.Default.AiHubIpcResponse);

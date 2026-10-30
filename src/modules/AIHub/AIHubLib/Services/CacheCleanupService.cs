@@ -23,7 +23,7 @@ public sealed class CacheCleanupService
 
     public CacheCleanupService()
         : this(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Path.GetTempPath(), DeleteFile,
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"C:\Users\Zen\Repos\Codings")
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Environment.GetEnvironmentVariable("KIT_DEV_ROOT"))
     {
     }
 

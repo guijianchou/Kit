@@ -203,7 +203,12 @@
                             <!-- Panel Bottom Actions: Delete on Left, Save on Right -->
                             <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4" />
                             <Grid Margin="0,4,0,0">
-                                <Button HorizontalAlignment="Left" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Style="{StaticResource KitActionButtonStyle}">
+                                <Button x:Uid="UDPtest_DeleteLineButton" AutomationProperties.AutomationId="UDPtest_DeleteLineButton" HorizontalAlignment="Left" Style="{StaticResource KitDangerActionButtonStyle}">
+                                    <Button.Resources>
+                                        <StaticResource x:Key="ButtonForeground" ResourceKey="SystemFillColorCriticalBrush" />
+                                        <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+                                        <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="SystemFillColorCriticalBrush" />
+                                    </Button.Resources>
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE74D;" FontSize="13" />
                                         <TextBlock x:Uid="UDPtest_DeleteButtonText" Text="Delete" />
@@ -213,18 +218,32 @@
                                             <StackPanel MaxWidth="280" Spacing="10">
                                                 <TextBlock x:Uid="UDPtest_DeleteDialogTitle" Text="Delete this UDP line?" FontWeight="SemiBold" />
                                                 <TextBlock x:Uid="UDPtest_DeleteDialogMessage" Text="This link will be permanently removed from your target list." Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                                <Button x:Uid="UDPtest_DeleteDialogConfirm" Content="Confirm Delete" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Style="{StaticResource KitActionButtonStyle}" Click="DeleteLine_Click" DataContext="{x:Bind}" />
+                                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                                    <Button x:Uid="UDPtest_DeleteDialogCancel" Content="Cancel" Style="{StaticResource KitActionButtonStyle}" Click="CancelDeleteLine_Click" />
+                                                    <Button x:Uid="UDPtest_DeleteDialogConfirm" Content="Confirm Delete" Style="{StaticResource KitDangerActionButtonStyle}" Click="DeleteLine_Click" DataContext="{x:Bind}">
+                                                        <Button.Resources>
+                                                            <StaticResource x:Key="ButtonForeground" ResourceKey="SystemFillColorCriticalBrush" />
+                                                            <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+                                                            <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="SystemFillColorCriticalBrush" />
+                                                        </Button.Resources>
+                                                    </Button>
+                                                </StackPanel>
                                             </StackPanel>
                                         </Flyout>
                                     </Button.Flyout>
                                 </Button>
 
-                                <Button HorizontalAlignment="Right" Style="{StaticResource KitPrimaryActionButtonStyle}" Click="SaveLine_Click" DataContext="{x:Bind}" IsEnabled="{x:Bind CanSave, Mode=OneWay}">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon Glyph="&#xE74E;" FontSize="13" />
-                                        <TextBlock x:Uid="UDPtest_SaveButtonText" Text="Save" />
-                                    </StackPanel>
-                                </Button>
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button x:Uid="UDPtest_CancelEditButton" AutomationProperties.AutomationId="UDPtest_CancelEditButton" Style="{StaticResource KitActionButtonStyle}" Click="CancelEditLine_Click" DataContext="{x:Bind}">
+                                        <TextBlock x:Uid="UDPtest_CancelButtonText" Text="Cancel" />
+                                    </Button>
+                                    <Button x:Uid="UDPtest_SaveLineButton" AutomationProperties.AutomationId="UDPtest_SaveLineButton" Style="{StaticResource KitPrimaryActionButtonStyle}" Click="SaveLine_Click" DataContext="{x:Bind}" IsEnabled="{x:Bind CanSave, Mode=OneWay}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE74E;" FontSize="13" />
+                                            <TextBlock x:Uid="UDPtest_SaveButtonText" Text="Save" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -301,23 +320,23 @@
 
                                     <!-- Master Actions Toolbar aligned on right -->
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <Button x:Uid="UDPtest_StartMonitoringButton" Style="{StaticResource KitPrimaryActionButtonStyle}" Click="OnStartClicked" IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}">
+                                        <Button x:Uid="UDPtest_StartMonitoringButton" AutomationProperties.AutomationId="UDPtest_StartMonitoringButton" Style="{StaticResource KitPrimaryActionButtonStyle}" Click="OnStartClicked" IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE768;" FontSize="12" />
                                                 <TextBlock x:Uid="UDPtest_StartButtonText" FontSize="13" Text="Start" />
                                             </StackPanel>
                                         </Button>
-                                        <Button x:Uid="UDPtest_StopMonitoringButton" Style="{StaticResource KitActionButtonStyle}" Click="OnStopClicked" IsEnabled="{x:Bind ViewModel.CanStop, Mode=OneWay}">
+                                        <Button x:Uid="UDPtest_StopMonitoringButton" AutomationProperties.AutomationId="UDPtest_StopMonitoringButton" Style="{StaticResource KitActionButtonStyle}" Click="OnStopClicked" IsEnabled="{x:Bind ViewModel.CanStop, Mode=OneWay}">
                                             <StackPanel Orientation="Horizontal" Spacing="7">
                                                 <FontIcon Glyph="&#xE71A;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                                 <TextBlock x:Uid="UDPtest_StopButtonText" FontSize="13" Text="Stop" />
                                             </StackPanel>
                                         </Button>
                                         <Border Width="1" Height="20" Margin="2,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                        <Button x:Uid="UDPtest_ClearHistoryButton" Style="{StaticResource KitIconButtonStyle}" Click="OnClearClicked" IsEnabled="{x:Bind ViewModel.CanClear, Mode=OneWay}">
+                                        <Button x:Uid="UDPtest_ClearHistoryButton" AutomationProperties.AutomationId="UDPtest_ClearHistoryButton" Style="{StaticResource KitIconButtonStyle}" Click="OnClearClicked" IsEnabled="{x:Bind ViewModel.CanClear, Mode=OneWay}">
                                             <FontIcon Glyph="&#xE74D;" FontSize="13" />
                                         </Button>
-                                        <Button x:Uid="UDPtest_IntervalButton" Style="{StaticResource KitIconButtonStyle}">
+                                        <Button x:Uid="UDPtest_IntervalButton" AutomationProperties.AutomationId="UDPtest_IntervalButton" Style="{StaticResource KitIconButtonStyle}">
                                             <FontIcon Glyph="&#xE713;" FontSize="13" />
                                             <Button.Flyout>
                                                 <Flyout>
@@ -333,7 +352,7 @@
                                                 </Flyout>
                                             </Button.Flyout>
                                         </Button>
-                                        <Button x:Uid="UDPtest_AddUdpLineButton" Style="{StaticResource KitActionButtonStyle}" Click="OnAddUdpLineClicked">
+                                        <Button x:Uid="UDPtest_AddUdpLineButton" AutomationProperties.AutomationId="UDPtest_AddUdpLineButton" Style="{StaticResource KitActionButtonStyle}" Click="OnAddUdpLineClicked">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <FontIcon Glyph="&#xE710;" FontSize="12" />
                                                 <TextBlock x:Uid="UDPtest_AddLinkButtonText" FontSize="13" Text="Add UDP Link" />
@@ -594,7 +613,7 @@
                                         <TextBlock x:Uid="UDPtest_ColOkFail" Grid.Column="5" Style="{StaticResource ColumnHeaderStyle}" Text="OK / FAIL" />
                                         <TextBlock x:Uid="UDPtest_ColUdpIp" Grid.Column="6" Style="{StaticResource ColumnHeaderStyle}" Text="UDP IP" />
                                         <TextBlock x:Uid="UDPtest_ColLastError" Grid.Column="7" Style="{StaticResource ColumnHeaderStyle}" Text="LAST ERROR" />
-                                        <TextBlock x:Uid="UDPtest_ColActions" Grid.Column="8" Style="{StaticResource ColumnHeaderStyle}" HorizontalAlignment="Center" Text="ACTIONS" />
+                                        <TextBlock x:Uid="UDPtest_ColActions" Grid.Column="8" Style="{StaticResource ColumnHeaderStyle}" HorizontalAlignment="Right" Text="ACTIONS" />
                                     </Grid>
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.UdpLines, Mode=OneWay}" ItemTemplate="{StaticResource UdpLineTemplate}">
                                         <ItemsControl.ItemsPanel>

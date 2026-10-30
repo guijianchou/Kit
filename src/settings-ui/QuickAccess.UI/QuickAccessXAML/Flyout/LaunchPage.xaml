@@ -32,6 +32,7 @@
                     Style="{StaticResource BodyStrongTextBlockStyle}" />
                 <Button
                     x:Uid="MoreBtn"
+                    AutomationProperties.AutomationId="QuickAccess_MoreButton"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Style="{StaticResource KitActionButtonStyle}"
@@ -40,10 +41,9 @@
                         <StackPanel
                             VerticalAlignment="Center"
                             Orientation="Horizontal"
-                            Spacing="12">
+                            Spacing="8">
                             <TextBlock x:Uid="MoreLabel" Style="{StaticResource CaptionTextBlockStyle}" />
                             <FontIcon
-                                Margin="0,2,0,0"
                                 FontSize="12"
                                 Glyph="&#xe76c;" />
                         </StackPanel>
@@ -82,6 +82,7 @@
                 <Button
                     x:Name="DocsBtn"
                     x:Uid="DocsBtn"
+                    AutomationProperties.AutomationId="QuickAccess_DocsButton"
                     Click="DocsBtn_Click"
                     Content="{ui:FontIcon Glyph=&#xE8A5;,
                                           FontSize=16}"
@@ -93,6 +94,7 @@
                 <Button
                     x:Name="SettingsBtn"
                     x:Uid="SettingsBtn"
+                    AutomationProperties.AutomationId="QuickAccess_SettingsButton"
                     Click="SettingsBtn_Click"
                     Style="{StaticResource KitSubtleIconButtonStyle}">
                     <ToolTipService.ToolTip>

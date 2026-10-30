@@ -33,10 +33,54 @@ namespace Kit.Settings.UI.Views
                 ShellPage.SendDefaultIPCMessage);
             DataContext = ViewModel;
             InitializeComponent();
-            Loaded += (_, _) => RefreshEnabledState();
+
+            _settingsWindow = App.GetSettingsWindow();
+            _settingsWindow.Closed += OnSettingsWindowClosed;
+            _settingsWindow.Activated += OnSettingsWindowActivated;
+            Loaded += OnUDPtestLoaded;
+            Unloaded += OnUDPtestUnloaded;
 
             ViewModel.HealthChartNeedsRedraw += OnHealthChartNeedsRedraw;
             SyncHealthPeriodChecks();
+        }
+
+        private readonly MainWindow _settingsWindow;
+
+        private void OnUDPtestLoaded(object sender, RoutedEventArgs e)
+        {
+            RefreshEnabledState();
+            ViewModel.SetPageActive(true);
+        }
+
+        private void OnUDPtestUnloaded(object sender, RoutedEventArgs e)
+        {
+            ViewModel.SetPageActive(false);
+        }
+
+        private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
+        {
+            if (args.Handled)
+            {
+                if (!_settingsWindow.AppWindow.IsVisible)
+                {
+                    ViewModel.SetPageActive(false);
+                }
+
+                return;
+            }
+
+            _settingsWindow.Closed -= OnSettingsWindowClosed;
+            _settingsWindow.Activated -= OnSettingsWindowActivated;
+            ViewModel.HealthChartNeedsRedraw -= OnHealthChartNeedsRedraw;
+            ViewModel.Dispose();
+        }
+
+        private void OnSettingsWindowActivated(object sender, WindowActivatedEventArgs args)
+        {
+            if (args.WindowActivationState != WindowActivationState.Deactivated && IsLoaded)
+            {
+                ViewModel.SetPageActive(true);
+            }
         }
 
         public void RefreshEnabledState()
@@ -122,11 +166,41 @@ namespace Kit.Settings.UI.Views
             }
         }
 
-        private void DeleteLine_Click(object sender, RoutedEventArgs e)
+        private void CancelEditLine_Click(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement element && element.DataContext is UDPtestLineRowViewModel row)
             {
+                row.ResetEditFields();
+                row.IsConfigExpanded = false;
+            }
+        }
+
+        private void DeleteLine_Click(object sender, RoutedEventArgs e)
+        {
+            DismissParentFlyout(sender);
+            if (sender is FrameworkElement element && element.DataContext is UDPtestLineRowViewModel row)
+            {
                 row.DeleteConfig();
+            }
+        }
+
+        private void CancelDeleteLine_Click(object sender, RoutedEventArgs e)
+        {
+            DismissParentFlyout(sender);
+        }
+
+        private static void DismissParentFlyout(object sender)
+        {
+            DependencyObject? current = sender as DependencyObject;
+            while (current != null)
+            {
+                if (current is FlyoutPresenter && Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current) is Microsoft.UI.Xaml.Controls.Primitives.Popup popup)
+                {
+                    popup.IsOpen = false;
+                    return;
+                }
+
+                current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
             }
         }
 

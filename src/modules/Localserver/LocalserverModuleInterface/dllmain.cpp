@@ -164,6 +164,11 @@ public:
     {
         return m_enabled;
     }
+
+    virtual bool is_enabled_by_default() const override
+    {
+        return false;
+    }
 };
 
 void LocalserverModule::close_worker_handle()

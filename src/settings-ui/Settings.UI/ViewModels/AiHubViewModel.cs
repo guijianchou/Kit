@@ -115,7 +115,7 @@ public sealed class AiHubEndpointViewModel : Observable
     }
 
     public string ModelSummary => string.IsNullOrWhiteSpace(Settings.Model)
-        ? (AiHubViewModel.IsChinese ? "未设置模型" : "No model set")
+        ? "AiHub_ModelNotSet".GetLocalizedOrFallback("No model set")
         : $"{Settings.Model} · {Settings.Effort}";
 
     /// <summary>Host of the configured URL, so a collapsed card still shows where it points.</summary>
@@ -125,7 +125,7 @@ public sealed class AiHubEndpointViewModel : Observable
         {
             if (string.IsNullOrWhiteSpace(Settings.BaseUrl))
             {
-                return AiHubViewModel.IsChinese ? "未配置" : "Not configured";
+                return "AiHub_EndpointNotConfigured".GetLocalizedOrFallback("Not configured");
             }
 
             return Uri.TryCreate(Settings.BaseUrl.Trim(), UriKind.Absolute, out Uri? uri) ? uri.Host : Settings.BaseUrl.Trim();
@@ -151,8 +151,12 @@ public sealed class AiHubEndpointViewModel : Observable
     {
         Settings = settings;
         _owner = owner;
-        Label = fallback ? "Fallback" : "Main";
-        Description = fallback ? "Optional backup for eligible network and endpoint failures." : "Primary endpoint for new AI tasks.";
+        Label = fallback
+            ? "AiHub_EndpointLabel_Fallback".GetLocalizedOrFallback("Fallback")
+            : "AiHub_EndpointLabel_Main".GetLocalizedOrFallback("Main");
+        Description = fallback
+            ? "AiHub_EndpointDesc_Fallback".GetLocalizedOrFallback("Optional backup for eligible network and endpoint failures.")
+            : "AiHub_EndpointDesc_Main".GetLocalizedOrFallback("Primary endpoint for new AI tasks.");
         FallbackVisibility = fallback ? Visibility.Visible : Visibility.Collapsed;
         TestCommand = new RelayCommand(() => owner.TestTarget(settings), () => owner.CanEdit);
     }
@@ -275,7 +279,31 @@ public sealed class AiHubViewModel : Observable, IDisposable
             _engine.StateChanged += OnHubStateChanged;
         }
 
-        RefreshLocalKernelStatus();
+        if (_dispatcherQueue is not null)
+        {
+            string initialKernel = PendingKernel;
+            _ = Task.Run(() =>
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                var status = _kernelManager.GetStatus(initialKernel);
+                _dispatcherQueue.TryEnqueue(() =>
+                {
+                    if (!_disposed && PendingKernel == initialKernel)
+                    {
+                        ApplyLocalKernelStatus(initialKernel, status);
+                    }
+                });
+            });
+        }
+        else
+        {
+            RefreshLocalKernelStatus();
+        }
+
         RefreshServiceStatus();
     }
 
@@ -379,9 +407,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
     public bool ShowDownloadProgress { get => _showDownloadProgress; private set => Set(ref _showDownloadProgress, value); }
 
     public string SecurityPolicyPath => _securityService?.GlobalSecurityPolicyPath ?? string.Empty;
-
-    /// <summary>Matches the UI language used across this view model.</summary>
-    internal static bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     private int _activePolicyIndex;
 
@@ -619,7 +644,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
     {
         if (_engine is null)
         {
-            ServiceStatusText = IsChinese ? "AI 服务不可用" : "AI service unavailable";
+            ServiceStatusText = "AiHub_ServiceUnavailable".GetLocalizedOrFallback("AI service unavailable");
             ServiceStatusGlyph = "\uEA39";
             return;
         }
@@ -632,11 +657,11 @@ public sealed class AiHubViewModel : Observable, IDisposable
                 : $"{readiness.ActiveKernel} · {readiness.ActiveModel}";
             (ServiceStatusGlyph, ServiceStatusText) = readiness.Level switch
             {
-                AiReadinessLevel.Ready => ("\uE73E", IsChinese ? $"就绪 · {kernelModel}" : $"Ready · {kernelModel}"),
-                AiReadinessLevel.Degraded => ("\uE7BA", IsChinese ? $"主端点不可用，使用备用端点 · {readiness.Detail}" : $"Main route unavailable, using fallback · {readiness.Detail}"),
-                AiReadinessLevel.Unverified => ("\uE9CE", IsChinese ? $"已配置，尚未验证 · {kernelModel}" : $"Configured, not verified yet · {kernelModel}"),
-                AiReadinessLevel.NotConfigured => ("\uEA39", IsChinese ? $"未配置：{readiness.Detail}" : $"Not configured: {readiness.Detail}"),
-                _ => ("\uE711", IsChinese ? "已关闭，插件只执行规则检测" : "Off; plugins use rule-based checks only"),
+                AiReadinessLevel.Ready => ("\uE73E", "AiHub_ServiceStatus_ReadyFormat".FormatLocalized("Ready · {0}", kernelModel)),
+                AiReadinessLevel.Degraded => ("\uE7BA", "AiHub_ServiceStatus_DegradedFormat".FormatLocalized("Main route unavailable, using fallback · {0}", readiness.Detail)),
+                AiReadinessLevel.Unverified => ("\uE9CE", "AiHub_ServiceStatus_UnverifiedFormat".FormatLocalized("Configured, not verified yet · {0}", kernelModel)),
+                AiReadinessLevel.NotConfigured => ("\uEA39", "AiHub_ServiceStatus_NotConfiguredFormat".FormatLocalized("Not configured: {0}", readiness.Detail)),
+                _ => ("\uE711", "AiHub_ServiceStatus_Off".GetLocalizedOrFallback("Off; plugins use rule-based checks only")),
             };
         }
         catch (Exception ex)
@@ -793,11 +818,11 @@ public sealed class AiHubViewModel : Observable, IDisposable
             _settingsStore.Update(config => config.Targets = new ObservableCollection<AiTargetSettings>(_config.Targets.Select(target => target.Clone())));
             HasUnsavedEndpointChanges = false;
             AiHubEngine.RaiseStateChanged();
-            ShowStatus(IsChinese ? "端点设置已保存。" : "Endpoint settings saved.", InfoBarSeverity.Success);
+            ShowStatus("AiHub_EndpointsSaved".GetLocalizedOrFallback("Endpoint settings saved."), InfoBarSeverity.Success);
         }
         catch (Exception ex)
         {
-            ShowStatus((IsChinese ? "保存端点失败：" : "Failed to save endpoints: ") + ex.Message, InfoBarSeverity.Error);
+            ShowStatus("AiHub_SaveEndpointsFailedFormat".FormatLocalized("Failed to save endpoints: {0}", ex.Message), InfoBarSeverity.Error);
         }
     }
 
@@ -841,7 +866,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
         catch (Exception ex)
         {
-            ShowStatus((IsChinese ? "无法还原端点：" : "Could not restore endpoints: ") + ex.Message, InfoBarSeverity.Error);
+            ShowStatus("AiHub_RestoreEndpointsFailedFormat".FormatLocalized("Could not restore endpoints: {0}", ex.Message), InfoBarSeverity.Error);
         }
     }
 
@@ -886,7 +911,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             target.ApiKey = string.Empty;
             FallbackEndpoint?.NotifyUpdated();
             HasUnsavedEndpointChanges = true;
-            ShowStatus(IsChinese ? "备用端点已清空，保存后生效。" : "Fallback endpoint cleared. Save to apply.", InfoBarSeverity.Informational);
+            ShowStatus("AiHub_FallbackCleared".GetLocalizedOrFallback("Fallback endpoint cleared. Save to apply."), InfoBarSeverity.Informational);
         }
     }
 
@@ -954,10 +979,15 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     private void RefreshLocalKernelStatus()
     {
-        var status = _kernelManager.GetStatus(PendingKernel);
+        string kernel = PendingKernel;
+        ApplyLocalKernelStatus(kernel, _kernelManager.GetStatus(kernel));
+    }
+
+    private void ApplyLocalKernelStatus(string kernel, AiKernelStatus status)
+    {
         KernelStatusText = status.Installed
-            ? $"{AiKernelCatalog.GetDisplayName(PendingKernel)}: Installed ({(string.IsNullOrEmpty(status.Version) ? "unknown version" : status.Version)})"
-            : $"{AiKernelCatalog.GetDisplayName(PendingKernel)}: Not installed";
+            ? $"{AiKernelCatalog.GetDisplayName(kernel)}: Installed ({(string.IsNullOrEmpty(status.Version) ? "unknown version" : status.Version)})"
+            : $"{AiKernelCatalog.GetDisplayName(kernel)}: Not installed";
         KernelPathText = status.Path;
     }
 

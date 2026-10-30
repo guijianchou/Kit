@@ -12,6 +12,7 @@ public sealed class DownloadOrganizerService
 {
     private static readonly TimeSpan MinimumAge = TimeSpan.FromMinutes(10);
     private readonly string? _downloadsRoot;
+    public bool ScanTruncated { get; private set; }
 
     private static readonly Dictionary<string, string> ExtensionToCategory = new(StringComparer.OrdinalIgnoreCase);
 
@@ -72,6 +73,7 @@ public sealed class DownloadOrganizerService
 
     public Task<List<TempFileInfo>> ScanDownloadsAsync(CancellationToken cancellationToken = default) => Task.Run(() =>
     {
+        ScanTruncated = false;
         var results = new List<TempFileInfo>();
         string? root = GetDownloadsPath();
         if (root == null || !OptimizationFileSafety.HasNoReparsePoints(root)) return results;
@@ -102,7 +104,11 @@ public sealed class DownloadOrganizerService
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
 
-            if (results.Count >= 500) break;
+            if (results.Count >= 500)
+            {
+                ScanTruncated = true;
+                break;
+            }
         }
 
         return results;

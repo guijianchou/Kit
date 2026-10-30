@@ -149,7 +149,7 @@ namespace Kit.Settings.UI.Views
             });
         }
 
-        private void UpdateBackupAndRestoreStatusText(Microsoft.UI.Xaml.Documents.Hyperlink sender, Microsoft.UI.Xaml.Documents.HyperlinkClickEventArgs args)
+        private void UpdateBackupAndRestoreStatusText(object sender, RoutedEventArgs e)
         {
             RefreshBackupRestoreStatus();
         }
@@ -173,10 +173,6 @@ namespace Kit.Settings.UI.Views
         {
             ViewModel.RefreshSettingsOnExternalChange();
         }
-
-        public Visibility IsSecurityAuditPolicyTab(int tabIndex) => tabIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
-
-        public Visibility IsOptimizationPolicyTab(int tabIndex) => tabIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
 
         /// <summary>
         /// Pushes the stored API keys into the password boxes.

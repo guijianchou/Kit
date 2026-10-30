@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -16,13 +16,40 @@ namespace Kit.Settings.UI.Helpers
         private static readonly SolidColorBrush CriticalRedBrush = new(ColorHelper.FromArgb(255, 232, 17, 35));
         private static readonly SolidColorBrush AttentionBlueBrush = new(ColorHelper.FromArgb(255, 0, 120, 212));
 
-        public static Brush GetBrush(string resourceKey, Brush fallbackBrush)
+        public static Brush GetBrush(string resourceKey, Brush fallbackBrush, ElementTheme? theme = null)
         {
-            if (Application.Current?.Resources != null &&
-                Application.Current.Resources.TryGetValue(resourceKey, out object obj) &&
-                obj is Brush brush)
+            try
             {
-                return brush;
+                ElementTheme effectiveTheme = theme
+                    ?? (App.GetSettingsWindow()?.Content as FrameworkElement)?.ActualTheme
+                    ?? ElementTheme.Default;
+                if (Application.Current?.Resources is { } resources)
+                {
+                    string themeKey = effectiveTheme switch
+                    {
+                        ElementTheme.Light => "Light",
+                        ElementTheme.Dark => "Dark",
+                        _ => "Default",
+                    };
+
+                    if (resources.ThemeDictionaries != null &&
+                        (resources.ThemeDictionaries.TryGetValue(themeKey, out object dictObj) ||
+                         resources.ThemeDictionaries.TryGetValue("Default", out dictObj)) &&
+                        dictObj is ResourceDictionary themeDict &&
+                        themeDict.TryGetValue(resourceKey, out object themedObj) &&
+                        themedObj is Brush themedBrush)
+                    {
+                        return themedBrush;
+                    }
+
+                    if (resources.TryGetValue(resourceKey, out object obj) && obj is Brush brush)
+                    {
+                        return brush;
+                    }
+                }
+            }
+            catch
+            {
             }
 
             return fallbackBrush;

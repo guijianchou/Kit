@@ -120,9 +120,7 @@ public sealed partial class UsageProgressBar : ProgressBar
     {
         // Category palette lives in Themes/Colors.xaml (light / dark / high-contrast);
         // re-resolving on every theme change keeps the captured brush instance current.
-        if (Application.Current?.Resources is { } resources &&
-            resources.TryGetValue(GetPaletteBrushKey(value), out object resource) &&
-            resource is Brush brush)
+        if (ThemeBrushHelper.GetBrush(GetPaletteBrushKey(value), null, ActualTheme) is { } brush)
         {
             Foreground = brush;
         }

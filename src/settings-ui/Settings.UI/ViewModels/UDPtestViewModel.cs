@@ -56,11 +56,14 @@ namespace Kit.Settings.UI.ViewModels
         private readonly DispatcherQueue _dispatcherQueue;
         private readonly DispatcherTimer _sessionTimer;
         private readonly CancellationTokenSource _lifecycleCancellation = new();
+        private readonly SemaphoreSlim _pollSignal = new(0, 1);
         private readonly List<(string LineId, DateTimeOffset Timestamp, double Rtt, bool IsSuccess)> _chartSamples = [];
 
         private UDPtestSettings _settings;
         private GpoRuleConfigured _gpoConfiguration;
         private bool _isEnabled;
+        private volatile bool _isPageActive;
+        private bool _disposed;
         private long _sessionStartedTimestamp;
 
         private MonitorRunState _state = MonitorRunState.Stopped;
@@ -115,6 +118,12 @@ namespace Kit.Settings.UI.ViewModels
             _dispatcherQueue = DispatcherQueue.GetForCurrentThread() ?? DispatcherQueue.GetForCurrentThread();
 
             _settings = _moduleSettingsRepository.SettingsConfig ?? _settingsUtils.GetSettingsOrDefault<UDPtestSettings>(UDPtestSettings.ModuleName);
+            int configuredInterval = _settings.Properties.ProbeIntervalMilliseconds.Value;
+            if (configuredInterval is 500 or 1000 or 2000 or 5000)
+            {
+                _refreshInterval = configuredInterval;
+            }
+
             _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.UDPtest);
             _isEnabled = _generalSettingsRepository.SettingsConfig.Enabled.UDPtest;
 
@@ -204,6 +213,46 @@ namespace Kit.Settings.UI.ViewModels
                 CanStart = _state == MonitorRunState.Stopped;
                 CanStop = _state == MonitorRunState.Running;
                 CanClear = _state == MonitorRunState.Stopped;
+                if (_isPageActive)
+                {
+                    SignalPoll();
+                }
+            }
+        }
+
+        public void SetPageActive(bool active)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _isPageActive = active;
+            if (active && IsEnabled)
+            {
+                SignalPoll();
+            }
+        }
+
+        private void SignalPoll()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            try
+            {
+                if (_pollSignal.CurrentCount == 0)
+                {
+                    _pollSignal.Release();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (SemaphoreFullException)
+            {
             }
         }
 
@@ -271,6 +320,10 @@ namespace Kit.Settings.UI.ViewModels
                     _settings.Properties.ProbeIntervalMilliseconds.Value = value;
                     _settingsUtils.SaveSettings(_settings.ToJsonString(), UDPtestSettings.ModuleName);
                     _sendConfigMsg(new SndModuleSettings<SndUDPtestSettings>(new SndUDPtestSettings(_settings)).ToJsonString());
+                    if (_coordinator.State == MonitorRunState.Running)
+                    {
+                        ShowError("UDPtest_TargetUpdatedRestartRequired".GetLocalizedOrFallback("Target updated. Stop and restart monitoring to apply target endpoint changes."), InfoBarSeverity.Informational);
+                    }
                 }
             }
         }
@@ -485,6 +538,7 @@ namespace Kit.Settings.UI.ViewModels
                 _sessionTimer.Start();
                 CanStop = true;
                 CanClear = false;
+                SignalPoll();
             }
             catch (Exception ex)
             {
@@ -649,6 +703,11 @@ namespace Kit.Settings.UI.ViewModels
             {
                 ShowError("UDPtest_KeepOneLineRequired".GetLocalizedOrFallback("At least one UDP line must be kept."), InfoBarSeverity.Warning);
                 return;
+            }
+
+            if (_coordinator.State == MonitorRunState.Running)
+            {
+                _ = _coordinator.SetLineEnabledAsync(row.Id, false, _lifecycleCancellation.Token);
             }
 
             UdpLines.Remove(row);
@@ -825,6 +884,10 @@ namespace Kit.Settings.UI.ViewModels
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
+                _sessionTimer.Stop();
+                CanStart = IsEnabled && _coordinator.State == MonitorRunState.Stopped;
+                CanStop = false;
+                CanClear = IsEnabled && _coordinator.State == MonitorRunState.Stopped;
                 ShowError("UDPtest_MonitoringErrorFormat".FormatLocalized("Monitoring error: {0}", exception.Message), InfoBarSeverity.Error);
             });
         }
@@ -887,12 +950,12 @@ namespace Kit.Settings.UI.ViewModels
 
             string displayState = SelectedLine.Status switch
             {
-                "Stopped" or "Disabled" => "UDPtest_StateIdle".GetLocalizedOrFallback("IDLE"),
+                "Stopped" or "Disabled" or "Idle" => "UDPtest_StateIdle".GetLocalizedOrFallback("IDLE"),
                 "Warming" => "UDPtest_StateWarming".GetLocalizedOrFallback("WARMING"),
                 "Internal Error" => "UDPtest_StateError".GetLocalizedOrFallback("ERROR"),
                 "OK" => "UDPtest_StateOk".GetLocalizedOrFallback("OK"),
-                "Degraded" => "UDPtest_StateDegraded".GetLocalizedOrFallback("DEGRADED"),
-                "Offline" => "UDPtest_StateOffline".GetLocalizedOrFallback("OFFLINE"),
+                "DEGRADED" or "Degraded" => "UDPtest_StateDegraded".GetLocalizedOrFallback("DEGRADED"),
+                "DOWN" or "Offline" => "UDPtest_StateOffline".GetLocalizedOrFallback("OFFLINE"),
                 _ => SelectedLine.Status,
             };
             HealthStateText = displayState;
@@ -900,12 +963,12 @@ namespace Kit.Settings.UI.ViewModels
             HealthRingBrush = SelectedLine.StatusBrush;
             HealthConditionText = SelectedLine.Status switch
             {
-                "Stopped" or "Disabled" => "UDPtest_ConditionIdle".GetLocalizedOrFallback("Idle"),
+                "Stopped" or "Disabled" or "Idle" => "UDPtest_ConditionIdle".GetLocalizedOrFallback("Idle"),
                 "Warming" => "UDPtest_ConditionWarming".GetLocalizedOrFallback("Warming"),
                 "Internal Error" => "UDPtest_ConditionError".GetLocalizedOrFallback("Error"),
                 "OK" => "UDPtest_ConditionNormal".GetLocalizedOrFallback("Normal"),
-                "Degraded" => "UDPtest_ConditionDegraded".GetLocalizedOrFallback("Degraded"),
-                "Offline" => "UDPtest_ConditionOffline".GetLocalizedOrFallback("Offline"),
+                "DEGRADED" or "Degraded" => "UDPtest_ConditionDegraded".GetLocalizedOrFallback("Degraded"),
+                "DOWN" or "Offline" => "UDPtest_ConditionOffline".GetLocalizedOrFallback("Offline"),
                 _ => displayState,
             };
         }
@@ -998,13 +1061,17 @@ namespace Kit.Settings.UI.ViewModels
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (!IsEnabled)
+                if (!IsEnabled || (!_isPageActive && _coordinator.State != MonitorRunState.Running))
                 {
                     try
                     {
-                        await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                        await _pollSignal.WaitAsync(cancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (ObjectDisposedException)
                     {
                         break;
                     }
@@ -1161,13 +1228,16 @@ namespace Kit.Settings.UI.ViewModels
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            if (disposing && !_disposed)
             {
+                _disposed = true;
+                _isPageActive = false;
                 _generalSettingsRepository.SettingsChanged -= OnGeneralSettingsChanged;
                 _lifecycleCancellation.Cancel();
                 _sessionTimer.Stop();
-                _coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                _ = _coordinator.DisposeAsync().AsTask();
                 _identityClient.Dispose();
+                _pollSignal.Dispose();
                 _lifecycleCancellation.Dispose();
             }
             base.Dispose(disposing);

@@ -271,6 +271,11 @@
                             <tkcontrols:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="{x:Bind ViewModel.AiServices.ServiceStatusGlyph, Mode=OneWay}" />
                             </tkcontrols:SettingsCard.HeaderIcon>
+                            <ProgressRing
+                                Width="16"
+                                Height="16"
+                                IsActive="{x:Bind ViewModel.AiServices.IsBusy, Mode=OneWay}"
+                                Visibility="{x:Bind ViewModel.AiServices.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                         </tkcontrols:SettingsCard>
 
                         <!-- AI execution kernel -->
@@ -282,6 +287,8 @@
                             IsExpanded="False">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <ComboBox
+                                    x:Uid="AiHub_KernelComboBox"
+                                    AutomationProperties.AutomationId="AiHub_KernelComboBox"
                                     MinWidth="160"
                                     IsEnabled="{x:Bind ViewModel.AiServices.CanEdit, Mode=OneWay}"
                                     SelectedIndex="{x:Bind ViewModel.AiServices.PendingKernelIndex, Mode=TwoWay}">
@@ -290,6 +297,7 @@
                                 </ComboBox>
                                 <Button
                                     x:Uid="AiHub_ApplyKernelButton"
+                                    AutomationProperties.AutomationId="AiHub_ApplyKernelButton"
                                     MinWidth="80"
                                     Command="{x:Bind ViewModel.AiServices.ApplyKernelSwitchCommand}"
                                     Content="Apply"
@@ -303,6 +311,8 @@
                                     Header="Kernel updates">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Button
+                                            x:Uid="AiHub_CheckUpdatesButton"
+                                            AutomationProperties.AutomationId="AiHub_CheckUpdatesButton"
                                             Style="{StaticResource KitActionButtonStyle}"
                                             Command="{x:Bind ViewModel.AiServices.CheckKernelUpdatesCommand}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -311,6 +321,8 @@
                                             </StackPanel>
                                         </Button>
                                         <Button
+                                            x:Uid="AiHub_DownloadKernelButton"
+                                            AutomationProperties.AutomationId="AiHub_DownloadKernelButton"
                                             Style="{StaticResource KitActionButtonStyle}"
                                             Command="{x:Bind ViewModel.AiServices.DownloadKernelCommand}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -357,6 +369,7 @@
                                     Text="{x:Bind ViewModel.AiServices.MainEndpoint.ModelSummary, Mode=OneWay}" />
                                 <Button
                                     x:Uid="AiHub_TestConnectionButton"
+                                    AutomationProperties.AutomationId="AiHub_MainEndpoint_TestConnectionButton"
                                     Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.AiServices.MainEndpoint.TestCommand}"
                                     Content="Test connection" />
@@ -365,6 +378,7 @@
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
                                     <TextBox
                                         x:Uid="AiHub_EndpointUrlBox"
+                                        AutomationProperties.AutomationId="AiHub_MainEndpoint_UrlBox"
                                         Width="320"
                                         PlaceholderText="https://api.example.com"
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.BaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -373,6 +387,7 @@
                                     <PasswordBox
                                         x:Name="AiMainApiKeyBox"
                                         x:Uid="AiHub_MainEndpoint_ApiKeyBox"
+                                        AutomationProperties.AutomationId="AiHub_MainEndpoint_ApiKeyBox"
                                         Width="320"
                                         Password="{x:Bind ViewModel.AiServices.MainEndpoint.ApiKey, Mode=OneWay}"
                                         PasswordChanged="AiMainApiKeyBox_PasswordChanged"
@@ -380,6 +395,8 @@
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode">
                                     <ComboBox
+                                        x:Uid="AiHub_MainEndpoint_ApiModeComboBox"
+                                        AutomationProperties.AutomationId="AiHub_MainEndpoint_ApiModeComboBox"
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Mode, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
@@ -390,12 +407,15 @@
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox
                                         x:Uid="AiHub_ModelBox"
+                                        AutomationProperties.AutomationId="AiHub_MainEndpoint_ModelBox"
                                         Width="200"
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
                                     <ComboBox
+                                        x:Uid="AiHub_MainEndpoint_EffortComboBox"
+                                        AutomationProperties.AutomationId="AiHub_MainEndpoint_EffortComboBox"
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
@@ -426,29 +446,34 @@
                                     Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.ModelSummary, Mode=OneWay}" />
                                 <Button
                                     x:Uid="AiHub_TestConnectionButton"
+                                    AutomationProperties.AutomationId="AiHub_FallbackEndpoint_TestConnectionButton"
                                     Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.AiServices.FallbackEndpoint.TestCommand}"
                                     Content="Test connection" />
                             </StackPanel>
                             <tkcontrols:SettingsExpander.Items>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_UrlCard" Header="Endpoint URL">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_UrlCard" Header="Endpoint URL">
                                     <TextBox
                                         x:Uid="AiHub_EndpointUrlBox"
+                                        AutomationProperties.AutomationId="AiHub_FallbackEndpoint_UrlBox"
                                         Width="320"
                                         PlaceholderText="https://api.example.com"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.BaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiKeyCard" Header="API key">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ApiKeyCard" Header="API key">
                                     <PasswordBox
                                         x:Name="AiFallbackApiKeyBox"
-                                        x:Uid="AiHub_MainEndpoint_ApiKeyBox"
+                                        x:Uid="AiHub_FallbackEndpoint_ApiKeyBox"
+                                        AutomationProperties.AutomationId="AiHub_FallbackEndpoint_ApiKeyBox"
                                         Width="320"
                                         Password="{x:Bind ViewModel.AiServices.FallbackEndpoint.ApiKey, Mode=OneWay}"
                                         PasswordChanged="AiFallbackApiKeyBox_PasswordChanged"
                                         PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ApiModeCard" Header="API mode">
                                     <ComboBox
+                                        x:Uid="AiHub_FallbackEndpoint_ApiModeComboBox"
+                                        AutomationProperties.AutomationId="AiHub_FallbackEndpoint_ApiModeComboBox"
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Mode, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
@@ -456,15 +481,18 @@
                                         <ComboBoxItem x:Uid="AiHub_ApiModeChat" Content="chat (/v1/chat/completions)" Tag="chat" />
                                     </ComboBox>
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ModelCard" Header="Model">
                                     <TextBox
                                         x:Uid="AiHub_ModelBox"
+                                        AutomationProperties.AutomationId="AiHub_FallbackEndpoint_ModelBox"
                                         Width="200"
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ReasoningCard" Header="Reasoning effort">
                                     <ComboBox
+                                        x:Uid="AiHub_FallbackEndpoint_EffortComboBox"
+                                        AutomationProperties.AutomationId="AiHub_FallbackEndpoint_EffortComboBox"
                                         MinWidth="200"
                                         SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay}"
                                         SelectedValuePath="Tag">
@@ -476,6 +504,7 @@
                                 <tkcontrols:SettingsCard x:Uid="AiHub_ClearFallbackCard" Header="Clear fallback endpoint">
                                     <Button
                                         x:Uid="AiHub_ClearFallbackButton"
+                                        AutomationProperties.AutomationId="AiHub_ClearFallbackButton"
                                         Style="{StaticResource KitActionButtonStyle}"
                                         Command="{x:Bind ViewModel.AiServices.ClearFallbackCommand}"
                                         Content="Clear" />
@@ -493,6 +522,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button
                                     x:Uid="AiHub_DiscardEndpointsButton"
+                                    AutomationProperties.AutomationId="AiHub_DiscardEndpointsButton"
                                     Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.AiServices.DiscardEndpointChangesCommand}" />
                                 <Button
@@ -514,6 +544,8 @@
                                     <StackPanel Margin="0,4,0,4" Spacing="12">
                                         <TextBox
                                             x:Name="AiPolicyContentBox"
+                                            x:Uid="AiHub_PolicyContentBox"
+                                            AutomationProperties.AutomationId="AiHub_PolicyContentBox"
                                             MinHeight="160"
                                             MaxHeight="320"
                                             AcceptsReturn="True"
@@ -538,16 +570,26 @@
                                                 TextTrimming="CharacterEllipsis" />
                                             <Button
                                                 x:Uid="AiHub_ResetPolicyButton"
+                                                AutomationProperties.AutomationId="AiHub_ResetPolicyButton"
                                                 Grid.Column="1"
                                                 Style="{StaticResource KitActionButtonStyle}"
-                                                Command="{x:Bind ViewModel.AiServices.ResetActivePolicyCommand}"
-                                                Content="Reset to default" />
+                                                Command="{x:Bind ViewModel.AiServices.ResetActivePolicyCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE777;" FontSize="12" />
+                                                    <TextBlock x:Uid="AiHub_ResetPolicyButtonText" Text="Reset to default" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
                                             <Button
                                                 x:Uid="AiHub_SavePolicyButton"
+                                                AutomationProperties.AutomationId="AiHub_SavePolicyButton"
                                                 Grid.Column="2"
                                                 Command="{x:Bind ViewModel.AiServices.SaveActivePolicyCommand}"
-                                                Content="Save"
-                                                Style="{StaticResource KitPrimaryActionButtonStyle}" />
+                                                Style="{StaticResource KitPrimaryActionButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE74E;" FontSize="12" />
+                                                    <TextBlock x:Uid="AiHub_SavePolicyButtonText" Text="Save" FontSize="12" />
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
                                     </StackPanel>
                                 </tkcontrols:SettingsCard>
@@ -571,6 +613,8 @@
                                 x:Uid="General_LogLevelCard"
                                 IsEnabled="{x:Bind ViewModel.EnableLogging, Mode=OneWay}">
                                 <ComboBox
+                                    x:Uid="General_LogLevelComboBox"
+                                    AutomationProperties.AutomationId="General_LogLevelComboBox"
                                     MinWidth="{StaticResource SettingActionControlMinWidth}"
                                     SelectedIndex="{x:Bind ViewModel.LogLevelIndex, Mode=TwoWay}">
                                     <ComboBoxItem x:Uid="General_LogLevelTrace" Content="Trace (Verbose)" Tag="trace" />
@@ -585,6 +629,7 @@
                                 Description="{x:Bind ViewModel.LogsFolderPath, Mode=OneWay}">
                                 <Button
                                     x:Uid="General_OpenLogsFolderButton"
+                                    AutomationProperties.AutomationId="General_OpenLogsFolderButton"
                                     Style="{StaticResource KitActionButtonStyle}"
                                     Command="{x:Bind ViewModel.OpenLogsFolderCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -605,10 +650,12 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button
                                 x:Uid="General_SettingsBackupAndRestore_ButtonBackup"
+                                AutomationProperties.AutomationId="General_BackupConfigsButton"
                                 Style="{StaticResource KitActionButtonStyle}"
                                 Command="{Binding BackupConfigsEventHandler}" />
                             <Button
                                 x:Uid="General_SettingsBackupAndRestore_ButtonRestore"
+                                AutomationProperties.AutomationId="General_RestoreConfigsButton"
                                 Style="{StaticResource KitActionButtonStyle}"
                                 Command="{Binding RestoreConfigsEventHandler}" />
                         </StackPanel>
@@ -636,11 +683,11 @@
                                     </TextBlock>
                                     <Button
                                         x:Uid="General_SettingsBackupAndRestore_ButtonSelectFolder"
+                                        AutomationProperties.AutomationId="General_SelectBackupFolderButton"
                                         Style="{StaticResource KitIconButtonStyle}"
                                         Grid.Column="1"
-                                        Command="{Binding SelectSettingBackupDirEventHandler}"
-                                        Content="&#xe8da;"
-                                        FontFamily="{ThemeResource SymbolThemeFontFamily}">
+                                        Command="{Binding SelectSettingBackupDirEventHandler}">
+                                        <FontIcon Glyph="&#xE8DA;" FontSize="14" />
                                         <ToolTipService.ToolTip>
                                             <ToolTip>
                                                 <TextBlock x:Uid="General_SettingsBackupAndRestore_ButtonSelectLocation" />
@@ -670,18 +717,32 @@
                                     </Grid.RowDefinitions>
                                     <TextBlock
                                         x:Uid="General_SettingsBackupInfo_StatusHeader"
+                                        VerticalAlignment="Center"
                                         FontSize="12"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock
+                                    <StackPanel
                                         Grid.Column="1"
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                                        TextWrapping="WrapWholeWords">
-                                        <Run Text="{x:Bind ViewModel.CurrentSettingMatchText, Mode=OneWay}" />
-                                        <Hyperlink Click="UpdateBackupAndRestoreStatusText" TextDecorations="Underline">
-                                            <Run x:Uid="General_SettingsBackupAndRestore_LinkRefresh" />
-                                        </Hyperlink>
-                                    </TextBlock>
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                            Text="{x:Bind ViewModel.CurrentSettingMatchText, Mode=OneWay}"
+                                            TextWrapping="WrapWholeWords" />
+                                        <Button
+                                            x:Uid="General_RefreshBackupStatusButton"
+                                            AutomationProperties.AutomationId="General_RefreshBackupStatusButton"
+                                            Click="UpdateBackupAndRestoreStatusText"
+                                            Style="{StaticResource KitCompactToolbarButtonStyle}"
+                                            VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <FontIcon Glyph="&#xE72C;" FontSize="11" />
+                                                <TextBlock x:Uid="General_SettingsBackupAndRestore_LinkRefresh" FontSize="12" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
 
                                     <TextBlock
                                         x:Uid="General_SettingsBackupInfo_FileNameHeader"
@@ -784,6 +845,7 @@
                         <InfoBar.ActionButton>
                             <HyperlinkButton
                                 x:Uid="GeneralPage_ViewRelease"
+                                AutomationProperties.AutomationId="GeneralPage_ViewReleaseButton"
                                 NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
                                 Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
                         </InfoBar.ActionButton>

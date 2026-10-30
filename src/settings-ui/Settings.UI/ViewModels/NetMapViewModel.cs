@@ -160,13 +160,13 @@ public sealed class NetMapHopRow(int ttl) : Observable
 
     public string Ttl { get; } = ttl.ToString(CultureInfo.CurrentCulture);
 
-    public string Ip => result?.ConsecutiveFailures >= 3 ? "N/A" : string.IsNullOrEmpty(result?.Ip) ? "*" : result.Ip;
+    public string Ip => !string.IsNullOrEmpty(result?.Ip) ? result.Ip : result?.ConsecutiveFailures >= 3 ? "N/A" : "*";
 
     public string Location => Ip is "*" or "N/A" ? "—" : NetMapViewModel.LocationText(null, result?.Geography);
 
     public string Loss => result?.Sent > 0 ? result.NoResponsePercent.ToString("F1", CultureInfo.CurrentCulture) + "%" : "—";
 
-    public string Last => result?.ConsecutiveFailures >= 3 ? "N/A" : Format(result?.LastMs ?? result?.LastKnownMs);
+    public string Last => result?.LastMs != null ? Format(result.LastMs) : result?.LastKnownMs != null ? Format(result.LastKnownMs) : result?.ConsecutiveFailures >= 3 ? "N/A" : "—";
 
     public ProbeHealth Health => running ? result?.Health ?? ProbeHealth.Unknown : ProbeHealth.Unknown;
 

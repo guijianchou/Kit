@@ -80,6 +80,7 @@ namespace
 
     NOTIFYICONDATAW tray_icon_data;
     bool tray_icon_created = false;
+    bool s_tray_icon_visible = true;
 
     HMENU h_menu = nullptr;
     HMENU h_sub_menu = nullptr;
@@ -240,8 +241,9 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
     // WM_WINDOWPOSCHANGING which is always received on explorer startup sequence.
     case WM_WINDOWPOSCHANGING:
     {
-        if (!tray_icon_created)
+        if (!tray_icon_created && s_tray_icon_visible && tray_icon_data.hWnd != nullptr)
         {
+            tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
             tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
         }
         break;
@@ -373,7 +375,11 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         }
         else if (message == wm_taskbar_restart)
         {
-            tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+            if (s_tray_icon_visible && tray_icon_data.hWnd != nullptr)
+            {
+                tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+                tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+            }
             break;
         }
     }
@@ -471,7 +477,10 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
         tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
         ChangeWindowMessageFilterEx(hwnd, WM_COMMAND, MSGFLT_ALLOW, nullptr);
 
-        tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+        if (s_tray_icon_visible)
+        {
+            tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+        }
         theme_listener.AddSystemThemeChangedHandler(&handle_theme_change);
 
     }
@@ -479,10 +488,23 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
 
 void set_tray_icon_visible(bool shouldIconBeVisible)
 {
-    tray_icon_data.uFlags |= NIF_STATE;
-    tray_icon_data.dwStateMask = NIS_HIDDEN;
-    tray_icon_data.dwState = shouldIconBeVisible ? 0 : NIS_HIDDEN;
-    Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
+    s_tray_icon_visible = shouldIconBeVisible;
+    if (shouldIconBeVisible)
+    {
+        if (!tray_icon_created && tray_icon_data.hWnd != nullptr)
+        {
+            tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+            tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+        }
+    }
+    else
+    {
+        if (tray_icon_created)
+        {
+            Shell_NotifyIcon(NIM_DELETE, &tray_icon_data);
+            tray_icon_created = false;
+        }
+    }
 }
 
 void set_tray_icon_update_available(bool available)
@@ -505,7 +527,11 @@ void set_tray_icon_update_available(bool available)
         tray_icon_data.hIcon = LoadIcon(h_instance, MAKEINTRESOURCE(available ? APPICON_UPDATE : APPICON));
     }
 
-    Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
+    tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+    if (tray_icon_created)
+    {
+        Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
+    }
 }
 
 void set_tray_icon_theme_adaptive(bool theme_adaptive)
@@ -542,7 +568,12 @@ void set_tray_icon_theme_adaptive(bool theme_adaptive)
     if (icon)
     {
         tray_icon_data.hIcon = icon;
-        BOOL result = Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
+        tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+        BOOL result = FALSE;
+        if (tray_icon_created)
+        {
+            result = Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
+        }
         Logger::info(L"set_tray_icon_theme_adaptive: Icon updated, theme_adaptive_enabled={}, Shell_NotifyIcon result={}",
                      theme_adaptive_enabled, result);
     }

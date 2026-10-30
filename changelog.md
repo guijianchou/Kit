@@ -4,6 +4,14 @@
 
 ## English
 
+### 3.3.1
+
+- **Bug Fixes & Diagnostic Hardening**:
+  - **System Tray & Window Restore**: Fixed notification icon visibility in `src/runner/tray_icon.cpp` by replacing unsupported `NIF_STATE` / `NIS_HIDDEN` flags with standard `NIM_ADD` and `NIM_DELETE` life-cycle management, resolving missing tray icon when minimized. Repaired `bring_settings_to_front` in `src/runner/settings_window.cpp` to match windows by PID and `WS_CAPTION` style across all language titles, ensuring reliable window restore from tray and duplicate launches.
+  - **AI Hub Codex Diagnostics & Key Resolution**: Added synthesis of custom model definitions into Codex `models.json` in `RouteDispatcher.ConfigureCodexCatalogAsync`, preventing unknown-model rejection. Expanded `ConfigurationFailures` classification to capture HTTP 401, `API_KEY_REQUIRED`, `unauthorized`, and `forbidden` errors, eliminating the generic `"The kernel could not complete this request."` fallback. In `AiHubViewModel.TestTarget`, ensured the persisted API key from `_settingsStore` is attached when testing connection if not entered directly in UI.
+  - **NetMap MTR Route Probing Stability**: Hardened ICMP probing in `src/modules/NetMap/NetMapLib/RouteProbe.cs` by using individual `Ping` instances per probe, eliminating `dontFragment` packet drops on VPN/TUN adapters, and increasing probe timeout from 400ms to 1500ms for WAN and high-latency hops. Corrected `NetMapHopRow` so previously discovered router IPs are retained on intermittent packet drops rather than displaying `N/A`.
+  - **Version Bump**: Bumped version to 3.3.1 across `src/Version.props`, `src/PackageIdentity/AppxManifest.xml`, READMEs, and changelog.
+
 ### 3.3.0
 
 - **WinUI 3 Settings UX Modernization**:
@@ -827,6 +835,14 @@
 ## 中文
 
 ## 更新日志
+
+### 3.3.1
+
+- **问题修复与诊断加固**：
+  - **系统托盘与最小化恢复**：修复 `src/runner/tray_icon.cpp` 中因错误使用低版本未支持的 `NIF_STATE` / `NIS_HIDDEN` 标志导致托盘图标无法显示或状态损坏的问题，全面改用标准 Win32 `NIM_ADD` 与 `NIM_DELETE` 生命周期管理；修复 `src/runner/settings_window.cpp` 中 `bring_settings_to_front` 因硬编码窗口标题 "Kit" 导致非英文界面下最小化无法恢复的问题，改按 PID 与 `WS_CAPTION` 样式精确定位并恢复激活窗口；确保设置主窗口 `AppWindow.IsShownInSwitchers = true`。
+  - **AI 服务 Codex 测试与鉴权错误分类**：在 `RouteDispatcher.ConfigureCodexCatalogAsync` 中支持自定义模型（如 `gpt-6-luna`）自动注入 Codex `models.json` 目录；扩充 `ConfigurationFailures` 诊断关键字覆盖 `401 Unauthorized`、`API_KEY_REQUIRED`、`forbidden` 等状态码与描述，根除 `"The kernel could not complete this request."` 模糊报错；在 `AiHubViewModel.TestTarget` 中补齐自动装配安全存储中已持久化 API 密钥的逻辑。
+  - **NetMap MTR 路由探测稳定性**：重构 `src/modules/NetMap/NetMapLib/RouteProbe.cs`，探测请求改用独立 `Ping` 实例避免句柄状态污染与并发冲突，移除 `dontFragment` 标志以规避 VPN/TUN（Clash/Sing-box 等）虚拟网卡下的 `IP_GENERAL_FAILURE` 丢包，并将探测超时由 400ms 提高至 1500ms 适应跨国高延迟路由；修复 `NetMapHopRow` 在路由丢包时错误清除已探测到 Router IP 覆盖为 `N/A` 的显示逻辑。
+  - **版本升级**：源码版本与稀疏包标识由 3.3.0 升至 3.3.1（`src/Version.props` 与 `src/PackageIdentity/AppxManifest.xml` 同步一致）。
 
 ### 3.3.0
 

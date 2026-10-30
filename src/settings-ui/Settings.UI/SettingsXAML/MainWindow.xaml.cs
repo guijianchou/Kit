@@ -58,6 +58,7 @@ namespace Kit.Settings.UI
             NativeMethods.SetWindowPlacement(hWnd, ref placement);
             App.LogStartupTiming("MainWindow: placement set");
             this.AppWindow.Changed += OnAppWindowChanged;
+            this.AppWindow.IsShownInSwitchers = true;
             App.LogStartupTiming("MainWindow: placement restored");
 
             var loader = ResourceLoaderInstance.ResourceLoader;

@@ -768,25 +768,20 @@ void bring_settings_to_front()
         DWORD processId;
         if (GetWindowThreadProcessId(hwnd, &processId) && processId == static_cast<DWORD>(data))
         {
-            std::wstring windowTitle = L"Kit";
-
-            WCHAR title[MAX_TITLE_LENGTH];
-            int len = GetWindowTextW(hwnd, title, MAX_TITLE_LENGTH);
-            if (len <= 0)
+            auto lStyles = GetWindowLong(hwnd, GWL_STYLE);
+            if (lStyles & WS_CAPTION)
             {
-                return TRUE;
-            }
-            if (wcsncmp(title, windowTitle.c_str(), len) == 0)
-            {
-                auto lStyles = GetWindowLong(hwnd, GWL_STYLE);
-
-                if (lStyles & WS_MAXIMIZE)
+                if (IsIconic(hwnd))
+                {
+                    ShowWindow(hwnd, SW_RESTORE);
+                }
+                else if (lStyles & WS_MAXIMIZE)
                 {
                     ShowWindow(hwnd, SW_MAXIMIZE);
                 }
                 else
                 {
-                    ShowWindow(hwnd, SW_RESTORE);
+                    ShowWindow(hwnd, SW_SHOW);
                 }
 
                 SetForegroundWindow(hwnd);
@@ -832,6 +827,7 @@ void open_settings_window(std::optional<std::wstring> settings_window)
                     current_settings_ipc->send(L"{\"ShowYourself\":\"Dashboard\"}");
                 }
             }
+            bring_settings_to_front();
             return;
         }
         if (g_isLaunchInProgress)

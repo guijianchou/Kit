@@ -18,20 +18,26 @@ public static class RouteProbe
             return;
         }
 
-        using var ping = new Ping();
         byte[] payload = new byte[24];
         async Task<(string Ip, double? Elapsed, bool Reached)> SendAsync(int ttl, CancellationToken token)
         {
             try
             {
+                using var ping = new Ping();
                 long started = Stopwatch.GetTimestamp();
-                var reply = await ping.SendPingAsync(address, TimeSpan.FromMilliseconds(400), payload, new PingOptions(ttl, true), token).ConfigureAwait(false);
+                var reply = await ping.SendPingAsync(address, TimeSpan.FromMilliseconds(1500), payload, new PingOptions(ttl, false), token).ConfigureAwait(false);
                 if (reply.Status is IPStatus.Success or IPStatus.TtlExpired)
                 {
-                    return (reply.Address.ToString(), Stopwatch.GetElapsedTime(started).TotalMilliseconds, reply.Status == IPStatus.Success);
+                    string ipStr = reply.Address?.ToString() ?? string.Empty;
+                    if (ipStr == "0.0.0.0")
+                    {
+                        ipStr = string.Empty;
+                    }
+
+                    return (ipStr, Stopwatch.GetElapsedTime(started).TotalMilliseconds, reply.Status == IPStatus.Success);
                 }
             }
-            catch (PingException)
+            catch (Exception)
             {
                 // An ICMP send failure is not evidence of application packet loss.
             }

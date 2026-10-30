@@ -36,7 +36,10 @@ public sealed class RouteDispatcher
 
     private static readonly string[] ConfigurationFailures =
     {
-        "invalid_api_key", "invalid api key", "authentication", "permission denied", "model_not_found", "invalid_request_error", "invalid configuration",
+        "invalid_api_key", "invalid api key", "api_key_required", "api key is required",
+        "unauthorized", "unauthenticated", "authentication", "permission denied", "forbidden",
+        "access denied", "model_not_found", "model not found", "unknown model", "not found",
+        "invalid_request_error", "invalid configuration", "bad request",
     };
 
     private static readonly string[] TransportTimeouts = { "ETIMEDOUT", "connection timed out", "request timed out" };
@@ -187,7 +190,7 @@ public sealed class RouteDispatcher
             await ConfigureProcessAsync(startInfo, normalized, target, prompt, outputPath, lifetime.Token).ConfigureAwait(false);
 
             KernelExecutionResult? preparationFailure = normalized == AiKernelCatalog.Codex
-                ? await ConfigureCodexCatalogAsync(startInfo, lifetime.Token).ConfigureAwait(false)
+                ? await ConfigureCodexCatalogAsync(startInfo, target, lifetime.Token).ConfigureAwait(false)
                 : null;
             if (preparationFailure is not null)
             {
@@ -219,7 +222,10 @@ public sealed class RouteDispatcher
                     }
                     else if (process.ExitCode != 0)
                     {
-                        result = response.TransientFailure ?? ClassifyEndpointFailure(process.StandardError);
+                        var stderrFailure = ClassifyEndpointFailure(process.StandardError);
+                        result = response.TransientFailure
+                            ?? (stderrFailure.ErrorCode != AiErrorCode.ExecutionFailed ? stderrFailure : null)
+                            ?? ClassifyEndpointFailure(process.StandardOutput);
                     }
                     else if (!response.Completed)
                     {
@@ -487,7 +493,7 @@ public sealed class RouteDispatcher
         }
     }
 
-    private static async Task<KernelExecutionResult?> ConfigureCodexCatalogAsync(ProcessStartInfo requestInfo, CancellationToken cancellationToken)
+    private static async Task<KernelExecutionResult?> ConfigureCodexCatalogAsync(ProcessStartInfo requestInfo, AiTargetSettings target, CancellationToken cancellationToken)
     {
         var startInfo = new ProcessStartInfo { FileName = requestInfo.FileName, WorkingDirectory = requestInfo.WorkingDirectory };
         startInfo.Environment.Clear();
@@ -519,6 +525,35 @@ public sealed class RouteDispatcher
 
             // Preserve bundled capabilities while disabling the private Lite transport.
             model["use_responses_lite"] = false;
+        }
+
+        string targetModel = target.Model.Trim();
+        bool hasTargetModel = models.Any(entry =>
+            entry is JsonObject obj &&
+            (string.Equals(obj["slug"]?.GetValue<string>(), targetModel, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(obj["id"]?.GetValue<string>(), targetModel, StringComparison.OrdinalIgnoreCase)));
+
+        if (!hasTargetModel && !string.IsNullOrWhiteSpace(targetModel))
+        {
+            var customModel = new JsonObject
+            {
+                ["slug"] = targetModel,
+                ["display_name"] = targetModel,
+                ["description"] = "Custom configured model",
+                ["default_reasoning_level"] = target.Effort,
+                ["supported_reasoning_levels"] = new JsonArray(
+                    new JsonObject { ["effort"] = "low", ["description"] = "Fast responses with lighter reasoning" },
+                    new JsonObject { ["effort"] = "medium", ["description"] = "Balances speed and reasoning depth for everyday tasks" },
+                    new JsonObject { ["effort"] = "high", ["description"] = "Greater reasoning depth for complex problems" },
+                    new JsonObject { ["effort"] = "xhigh", ["description"] = "Extra high reasoning depth for complex problems" },
+                    new JsonObject { ["effort"] = "max", ["description"] = "Maximum reasoning depth for the hardest problems" }),
+                ["shell_type"] = "unified_exec",
+                ["visibility"] = "list",
+                ["supported_in_api"] = true,
+                ["priority"] = 1,
+                ["use_responses_lite"] = false,
+            };
+            models.Add((JsonNode)customModel);
         }
 
         string home = requestInfo.Environment["CODEX_HOME"]!;

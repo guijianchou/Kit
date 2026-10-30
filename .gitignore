@@ -242,3 +242,8 @@ src/common/Telemetry/*.etl
 
 # Misexpanded Windows runtime cache path
 /%SystemDrive%/
+
+# Build logs and diagnostics
+/build.*.log
+/build.*.binlog
+/fix.md

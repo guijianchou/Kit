@@ -741,7 +741,24 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
 
         ShowStatus($"Testing connection to {target.Name}...", InfoBarSeverity.Informational);
-        var result = await _routeDispatcher.TestConnectionAsync(target.Clone(), _config.SelectedKernel, token);
+        var testTarget = target.Clone();
+        if (string.IsNullOrEmpty(testTarget.ApiKey))
+        {
+            try
+            {
+                var saved = _settingsStore.Load();
+                var matching = saved.Targets.FirstOrDefault(t => string.Equals(t.Name, testTarget.Name, StringComparison.OrdinalIgnoreCase));
+                if (matching != null && !string.IsNullOrEmpty(matching.ApiKey))
+                {
+                    testTarget.ApiKey = matching.ApiKey;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        var result = await _routeDispatcher.TestConnectionAsync(testTarget, _config.SelectedKernel, token);
         ShowStatus(result.Message, result.Success ? InfoBarSeverity.Success : InfoBarSeverity.Error);
     });
 

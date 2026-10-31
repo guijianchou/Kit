@@ -28,6 +28,8 @@ public sealed class AllAppsViewModel : Observable
     private readonly ResourceLoader _resourceLoader;
     private readonly DispatcherQueue _dispatcherQueue;
     private readonly List<FlyoutMenuItem> _allFlyoutMenuItems = new();
+    private readonly Dictionary<ModuleType, (bool TargetState, long Timestamp)> _pendingTransitions = new();
+    private static readonly long TransitionLockTicks = System.Diagnostics.Stopwatch.Frequency * 2; // 2.0s cold-start grace window
     private GeneralSettings _generalSettings;
 
     // Flag to prevent toggle operations during sorting to avoid race conditions.
@@ -86,6 +88,28 @@ public sealed class AllAppsViewModel : Observable
         _dispatcherQueue.TryEnqueue(() =>
         {
             _generalSettings = newSettings;
+
+            // Clear pending transition lock if incoming settings match target state
+            lock (_pendingTransitions)
+            {
+                if (_pendingTransitions.Count > 0)
+                {
+                    var resolved = new List<ModuleType>();
+                    foreach (var (mod, (target, _)) in _pendingTransitions)
+                    {
+                        if (Kit.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(newSettings, mod) == target)
+                        {
+                            resolved.Add(mod);
+                        }
+                    }
+
+                    foreach (var mod in resolved)
+                    {
+                        _pendingTransitions.Remove(mod);
+                    }
+                }
+            }
+
             OnPropertyChanged(nameof(DashboardSortOrder));
             RefreshFlyoutMenuItems();
         });
@@ -106,7 +130,29 @@ public sealed class AllAppsViewModel : Observable
             var moduleType = item.Tag;
             var gpo = Helpers.ModuleGpoHelper.GetModuleGpoConfiguration(moduleType);
             var isLocked = gpo is GpoRuleConfigured.Enabled or GpoRuleConfigured.Disabled;
-            var isEnabled = gpo == GpoRuleConfigured.Enabled || (!isLocked && Kit.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType));
+
+            bool isPending = false;
+            bool pendingTargetState = false;
+            lock (_pendingTransitions)
+            {
+                if (_pendingTransitions.TryGetValue(moduleType, out var transition))
+                {
+                    long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - transition.Timestamp;
+                    if (elapsed < TransitionLockTicks)
+                    {
+                        isPending = true;
+                        pendingTargetState = transition.TargetState;
+                    }
+                    else
+                    {
+                        _pendingTransitions.Remove(moduleType);
+                    }
+                }
+            }
+
+            var isEnabled = isPending
+                ? pendingTargetState
+                : (gpo == GpoRuleConfigured.Enabled || (!isLocked && Kit.Settings.UI.Library.Helpers.ModuleHelper.GetIsModuleEnabled(_generalSettings, moduleType)));
 
             item.Label = _resourceLoader.GetString(Kit.Settings.UI.Library.Helpers.ModuleHelper.GetModuleLabelResourceName(moduleType));
             item.IsLocked = isLocked;
@@ -163,7 +209,7 @@ public sealed class AllAppsViewModel : Observable
             finally
             {
                 // Use dispatcher to reset flag after UI updates complete
-                _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                _dispatcherQueue.TryEnqueue(() =>
                 {
                     _isSorting = false;
                 });
@@ -184,11 +230,25 @@ public sealed class AllAppsViewModel : Observable
             return;
         }
 
+        // Scheme A: Set transition lock to protect target state during cold start
+        lock (_pendingTransitions)
+        {
+            _pendingTransitions[flyoutItem.Tag] = (isEnabled, System.Diagnostics.Stopwatch.GetTimestamp());
+        }
+
         if (!_coordinator.UpdateModuleEnabled(flyoutItem.Tag, flyoutItem.IsEnabled))
         {
+            lock (_pendingTransitions)
+            {
+                _pendingTransitions.Remove(flyoutItem.Tag);
+            }
+
             flyoutItem.UpdateStatus(!isEnabled);
             return;
         }
+
+        // Scheme B: Optimistically commit in-memory settings to align with DashboardViewModel
+        Kit.Settings.UI.Library.Helpers.ModuleHelper.SetIsModuleEnabled(_generalSettings, flyoutItem.Tag, isEnabled);
 
         SortFlyoutMenuItems();
     }

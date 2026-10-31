@@ -4,6 +4,14 @@
 
 ## English
 
+### 3.3.2
+
+- **Quick Access & Dashboard Cold-Boot Concurrency Hardening**:
+  - **Cold-Start State Transition Protection (Dual-Line Scheme B+A)**: Fixed a visual state bouncing issue in `QuickAccess.UI` where rapidly toggling modules (such as UDPtest) during cold boot temporarily flipped the switch to gray before turning bright.
+  - **In-Memory Optimistic State Commit**: In `AllAppsViewModel.cs`, aligned with `DashboardViewModel` by immediately committing module state updates to `_generalSettings` in memory, eliminating configuration state divergence while background workers initialize.
+  - **Cold-Boot Transition Guard**: Added a 2.0-second transient transition guard (`_pendingTransitions`) across both `AllAppsViewModel` and `DashboardViewModel`. Prevents asynchronous `FileSystemWatcher` / `SettingsChanged` notifications from prematurely overwriting user-intended toggle states during initial DLL lazy loading and CLR worker process creation. Early release occurs once disk settings match the target state.
+  - **Version Bump**: Bumped version to 3.3.2 across `src/Version.props`, `src/PackageIdentity/AppxManifest.xml`, READMEs, and changelog.
+
 ### 3.3.1
 
 - **Bug Fixes & Diagnostic Hardening**:
@@ -835,6 +843,14 @@
 ## 中文
 
 ## 更新日志
+
+### 3.3.2
+
+- **快捷访问与仪表盘冷启动状态防抖加固**:
+  - **双线机制消除冷启动状态回弹 (B+A 方案)**: 修复在快捷访问 (Quick Access) 中启动自研模块 (如 UDPtest) 时开关“先退回灰色、再跳为亮色”的视觉抖动问题。
+  - **前端内存先行预置 (方案 B)**: 在 `AllAppsViewModel.cs` 中对齐 `DashboardViewModel` 架构，在发送 IPC 启动通知的同时立即同步更新内存中的 `_generalSettings` 快照，消除异步写盘期间的前端状态断层。
+  - **冷启动过渡状态锁定 (方案 A)**: 在 `AllAppsViewModel` 与 `DashboardViewModel` 中引入 2.0 秒冷启动瞬态保护锁 (`_pendingTransitions`)，彻底隔离子进程初次拉起 (DLL 懒加载 + CLR 引导 + 磁盘历史日志清理) 期间外部 `FileSystemWatcher` 读到旧配置引发的短暂状态回滚；并在磁盘配置写就后自动提前解除锁定。
+  - **版本更新**: 同步升级项目版本号至 3.3.2。
 
 ### 3.3.1
 

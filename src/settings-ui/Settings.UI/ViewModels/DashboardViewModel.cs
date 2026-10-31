@@ -33,6 +33,8 @@ namespace Kit.Settings.UI.ViewModels
         private readonly QuickAccessViewModel quickAccessViewModel;
         private readonly List<DashboardListItem> moduleItems = new List<DashboardListItem>();
         private readonly Microsoft.Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = ResourceLoaderInstance.ResourceLoader;
+        private readonly Dictionary<ModuleType, (bool TargetState, long Timestamp)> _pendingTransitions = new();
+        private static readonly long TransitionLockTicks = System.Diagnostics.Stopwatch.Frequency * 2; // 2.0s cold-start grace window
 
         private GeneralSettings generalSettingsConfig;
         private DashboardSortOrder dashboardSortOrder;
@@ -120,6 +122,27 @@ namespace Kit.Settings.UI.ViewModels
 
                 generalSettingsConfig = newSettings;
 
+                // Clear transition lock early if incoming settings have caught up
+                lock (_pendingTransitions)
+                {
+                    if (_pendingTransitions.Count > 0)
+                    {
+                        var resolved = new List<ModuleType>();
+                        foreach (var (mod, (target, _)) in _pendingTransitions)
+                        {
+                            if (ModuleHelper.GetIsModuleEnabled(newSettings, mod) == target)
+                            {
+                                resolved.Add(mod);
+                            }
+                        }
+
+                        foreach (var mod in resolved)
+                        {
+                            _pendingTransitions.Remove(mod);
+                        }
+                    }
+                }
+
                 if (dashboardSortOrder != generalSettingsConfig.DashboardSortOrder)
                 {
                     dashboardSortOrder = generalSettingsConfig.DashboardSortOrder;
@@ -203,7 +226,28 @@ namespace Kit.Settings.UI.ViewModels
             foreach (var item in moduleItems)
             {
                 GpoRuleConfigured gpo = ModuleGpoHelper.GetModuleGpoConfiguration(item.Tag);
-                bool newEnabledState = gpo == GpoRuleConfigured.Enabled || (gpo != GpoRuleConfigured.Disabled && ModuleHelper.GetIsModuleEnabled(generalSettingsConfig, item.Tag));
+                bool isPending = false;
+                bool pendingTargetState = false;
+                lock (_pendingTransitions)
+                {
+                    if (_pendingTransitions.TryGetValue(item.Tag, out var transition))
+                    {
+                        long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - transition.Timestamp;
+                        if (elapsed < TransitionLockTicks)
+                        {
+                            isPending = true;
+                            pendingTargetState = transition.TargetState;
+                        }
+                        else
+                        {
+                            _pendingTransitions.Remove(item.Tag);
+                        }
+                    }
+                }
+
+                bool newEnabledState = isPending
+                    ? pendingTargetState
+                    : (gpo == GpoRuleConfigured.Enabled || (gpo != GpoRuleConfigured.Disabled && ModuleHelper.GetIsModuleEnabled(generalSettingsConfig, item.Tag)));
                 bool newLockedState = gpo == GpoRuleConfigured.Enabled || gpo == GpoRuleConfigured.Disabled;
 
                 if (item.IsEnabled != newEnabledState)
@@ -234,6 +278,11 @@ namespace Kit.Settings.UI.ViewModels
             isUpdatingFromUI = true;
             try
             {
+                lock (_pendingTransitions)
+                {
+                    _pendingTransitions[dashboardListItem.Tag] = (isEnabled, System.Diagnostics.Stopwatch.GetTimestamp());
+                }
+
                 string moduleKey = ModuleHelper.GetModuleKey(dashboardListItem.Tag);
                 string moduleStatusJson = $"{{\"module_status\": {{\"{moduleKey}\": {isEnabled.ToString().ToLowerInvariant()}}}}}";
                 SendConfigMSG(moduleStatusJson);

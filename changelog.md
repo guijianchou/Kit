@@ -4,6 +4,14 @@
 
 ## English
 
+### 3.3.3
+
+- **System Tray, Codex Model Schema, and NetMap Diagnostic Resilience**:
+  - **System Tray Icon Lifecycle & Portable Directory Fallback**: Implemented `add_tray_icon_with_retry` in `src/runner/tray_icon.cpp` that executes pre-emptive `Shell_NotifyIcon(NIM_DELETE)` prior to `NIM_ADD`, automatically clearing zombie tray icon handles left behind by forcefully terminated processes; added exponential backoff retries and Win32 error diagnostics. In `src/common/ManagedCommon/PowerToysPathResolver.cs`, added portable executable directory fallback (`GetPathFromCurrentProcess(kitOnly: true)`) in Release mode when registry installation keys are missing in uninstalled/compact distributions.
+  - **Codex CLI Model Schema Cloning**: In `src/common/AiHub/Engine/RouteDispatcher.cs` (`ConfigureCodexCatalogAsync`), replaced bare synthetic model objects with deep clones of bundled Codex models as schema templates. Preserves strict required schema fields (`support_verbosity`, `default_verbosity`, `truncation_policy`) demanded by Codex CLI v0.164.0, preventing configuration rejection and eliminating the generic `"The kernel could not complete this request."` test connection failure.
+  - **NetMap ICMP Status Code Coverage & Latency Fallback**: In `src/modules/NetMap/NetMapLib/RouteProbe.cs`, expanded valid ICMP transit reply codes to include `IPStatus.TimeExceeded` (11041) and `IPStatus.TtlReassemblyTimeExceeded` (11014), capturing intermediate routers that return non-standard TTL expiry. In `src/settings-ui/Settings.UI/ViewModels/NetMapViewModel.cs`, updated target health and latency fallback so that if target or transit hops filter ICMP on WAN routes while the proxy connection is active, health status remains `ProbeHealth.Good` (or `Warning` when 24 hops expire) and displays informative proxy reachability rather than flipping to `Target ICMP RTT · N/A`.
+  - **Version Bump**: Bumped version to 3.3.3 across `src/Version.props`, `src/PackageIdentity/AppxManifest.xml`, READMEs, and changelog.
+
 ### 3.3.2
 
 - **Quick Access & Dashboard Cold-Boot Concurrency Hardening**:
@@ -843,6 +851,14 @@
 ## 中文
 
 ## 更新日志
+
+### 3.3.3
+
+- **系统托盘容错、Codex 模型架构克隆与 NetMap 探测加固**:
+  - **系统托盘重试清理与便携路径回退**: 在 `src/runner/tray_icon.cpp` 中引入 `add_tray_icon_with_retry`，在执行 `NIM_ADD` 前主动调用 `NIM_DELETE` 彻底清除此前异常退出进程遗留的僵尸托盘图标句柄，并增加 3 次指数退避重试与详细 Win32 错误码记录；在 `src/common/ManagedCommon/PowerToysPathResolver.cs` 中为 Release 模式添加当前进程所在目录回退机制（`GetPathFromCurrentProcess(kitOnly: true)`），确保绿色精简版免安装运行时未注册注册表仍能准确定位安装路径与图标资源。
+  - **Codex CLI 模型 Schema 完整克隆**: 在 `src/common/AiHub/Engine/RouteDispatcher.cs` 的 `ConfigureCodexCatalogAsync` 中，将合成简版模型对象改为深度克隆内置官方模型作为模板。完整保留 Codex CLI v0.164.0 强制要求的非空字段（`support_verbosity: bool`、`default_verbosity: string`、`truncation_policy` 等），根除因模型 Schema 缺失被 Codex 内核校验拦截并抛出 `"The kernel could not complete this request."` 的模糊报错。
+  - **NetMap ICMP 响应码扩充与延迟兜底**: 在 `src/modules/NetMap/NetMapLib/RouteProbe.cs` 中将有效中继响应状态码扩充纳入 `IPStatus.TimeExceeded` (11041) 与 `IPStatus.TtlReassemblyTimeExceeded` (11014)，适配各类特殊公网路由器的 TTL 耗尽应答；在 `src/settings-ui/Settings.UI/ViewModels/NetMapViewModel.cs` 中优化目标健康与延迟兜底逻辑，当跨国长路由终点服务器禁用 ICMP 回显但代理连接正常时，目标健康度维持 `Good`（24 跳探尽且终点禁 Ping 时给出 `Warning` 提示），并显示目标等待/代理可达提示，避免误判全局为红色 `Target ICMP RTT · N/A`。
+  - **版本更新**: 同步升级项目版本号至 3.3.3（`src/Version.props`、`src/PackageIdentity/AppxManifest.xml`、中英文文档与更新日志）。
 
 ### 3.3.2
 

@@ -26,7 +26,7 @@ public static class RouteProbe
                 using var ping = new Ping();
                 long started = Stopwatch.GetTimestamp();
                 var reply = await ping.SendPingAsync(address, TimeSpan.FromMilliseconds(1500), payload, new PingOptions(ttl, false), token).ConfigureAwait(false);
-                if (reply.Status is IPStatus.Success or IPStatus.TtlExpired)
+                if (reply.Status is IPStatus.Success or IPStatus.TtlExpired or IPStatus.TimeExceeded or IPStatus.TtlReassemblyTimeExceeded)
                 {
                     string ipStr = reply.Address?.ToString() ?? string.Empty;
                     if (ipStr == "0.0.0.0")

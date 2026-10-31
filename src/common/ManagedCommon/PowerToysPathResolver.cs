@@ -51,7 +51,8 @@ namespace ManagedCommon
                 return path;
             }
 
-            return null;
+            // Fallback for portable / standalone staged releases without registry registration
+            return GetPathFromCurrentProcess(kitOnly: true);
 #endif
         }
 
@@ -79,7 +80,8 @@ namespace ManagedCommon
                 return path;
             }
 
-            return null;
+            // Fallback for portable / standalone staged releases without registry registration
+            return GetPathFromCurrentProcess(kitOnly: false);
 #endif
         }
 

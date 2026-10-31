@@ -82,6 +82,44 @@ namespace
     bool tray_icon_created = false;
     bool s_tray_icon_visible = true;
 
+    bool add_tray_icon_with_retry()
+    {
+        if (tray_icon_data.hWnd == nullptr)
+        {
+            return false;
+        }
+
+        tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+
+        // Clean up any stale or zombie icon left in Explorer by a previously terminated instance
+        Shell_NotifyIcon(NIM_DELETE, &tray_icon_data);
+
+        BOOL res = Shell_NotifyIcon(NIM_ADD, &tray_icon_data);
+        if (res)
+        {
+            Logger::info(L"Shell_NotifyIcon(NIM_ADD) succeeded.");
+            return true;
+        }
+
+        DWORD err = GetLastError();
+        Logger::warn(L"Shell_NotifyIcon(NIM_ADD) failed with error {:#010x}, retrying...", err);
+
+        for (int retry = 1; retry <= 3; ++retry)
+        {
+            Sleep(retry * 150);
+            Shell_NotifyIcon(NIM_DELETE, &tray_icon_data);
+            res = Shell_NotifyIcon(NIM_ADD, &tray_icon_data);
+            if (res)
+            {
+                Logger::info(L"Shell_NotifyIcon(NIM_ADD) succeeded on retry {}.", retry);
+                return true;
+            }
+        }
+
+        Logger::error(L"Shell_NotifyIcon(NIM_ADD) failed after retries, last error={:#010x}", GetLastError());
+        return false;
+    }
+
     HMENU h_menu = nullptr;
     HMENU h_sub_menu = nullptr;
     bool double_click_timer_running = false;
@@ -243,8 +281,7 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
     {
         if (!tray_icon_created && s_tray_icon_visible && tray_icon_data.hWnd != nullptr)
         {
-            tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-            tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+            tray_icon_created = add_tray_icon_with_retry();
         }
         break;
     }
@@ -377,8 +414,7 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         {
             if (s_tray_icon_visible && tray_icon_data.hWnd != nullptr)
             {
-                tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-                tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+                tray_icon_created = add_tray_icon_with_retry();
             }
             break;
         }
@@ -457,6 +493,7 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
                                   nullptr);
         Logger::info(L"start_tray_icon: CreateWindowW(class={}, name={}) returned hwnd={}", wc.lpszClassName, pt_tray_icon_window_class, (void*)hwnd);
         WINRT_VERIFY(hwnd);
+        tray_icon_hwnd = hwnd;
         CentralizedHotkeys::RegisterWindow(hwnd);
         memset(&tray_icon_data, 0, sizeof(tray_icon_data));
         tray_icon_data.cbSize = sizeof(tray_icon_data);
@@ -479,7 +516,7 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
 
         if (s_tray_icon_visible)
         {
-            tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+            tray_icon_created = add_tray_icon_with_retry();
         }
         theme_listener.AddSystemThemeChangedHandler(&handle_theme_change);
 
@@ -493,8 +530,7 @@ void set_tray_icon_visible(bool shouldIconBeVisible)
     {
         if (!tray_icon_created && tray_icon_data.hWnd != nullptr)
         {
-            tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-            tray_icon_created = Shell_NotifyIcon(NIM_ADD, &tray_icon_data) == TRUE;
+            tray_icon_created = add_tray_icon_with_retry();
         }
     }
     else

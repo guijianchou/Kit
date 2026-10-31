@@ -535,24 +535,16 @@ public sealed class RouteDispatcher
 
         if (!hasTargetModel && !string.IsNullOrWhiteSpace(targetModel))
         {
-            var customModel = new JsonObject
-            {
-                ["slug"] = targetModel,
-                ["display_name"] = targetModel,
-                ["description"] = "Custom configured model",
-                ["default_reasoning_level"] = target.Effort,
-                ["supported_reasoning_levels"] = new JsonArray(
-                    new JsonObject { ["effort"] = "low", ["description"] = "Fast responses with lighter reasoning" },
-                    new JsonObject { ["effort"] = "medium", ["description"] = "Balances speed and reasoning depth for everyday tasks" },
-                    new JsonObject { ["effort"] = "high", ["description"] = "Greater reasoning depth for complex problems" },
-                    new JsonObject { ["effort"] = "xhigh", ["description"] = "Extra high reasoning depth for complex problems" },
-                    new JsonObject { ["effort"] = "max", ["description"] = "Maximum reasoning depth for the hardest problems" }),
-                ["shell_type"] = "unified_exec",
-                ["visibility"] = "list",
-                ["supported_in_api"] = true,
-                ["priority"] = 1,
-                ["use_responses_lite"] = false,
-            };
+            var template = models.FirstOrDefault(entry => entry is JsonObject) as JsonObject;
+            JsonObject customModel = template != null
+                ? JsonNode.Parse(template.ToJsonString())!.AsObject()
+                : new JsonObject();
+
+            customModel["slug"] = targetModel;
+            customModel["display_name"] = targetModel;
+            customModel["description"] = "Custom configured model";
+            customModel["default_reasoning_level"] = target.Effort;
+            customModel["use_responses_lite"] = false;
             models.Add((JsonNode)customModel);
         }
 

@@ -340,8 +340,9 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     public ObservableCollection<NetMapHopRow> Hops { get; } = new();
 
-    public ProbeHealth TargetHealth => !snapshot.Running ? ProbeHealth.Unknown : snapshot.DiagnosticFailed || snapshot.Proxy.ConsecutiveFailures > 0 ? ProbeHealth.Error :
-        snapshot.Hops.LastOrDefault(hop => hop.Ip == snapshot.Proxy.LastSuccess?.Identity?.Ip)?.Health ?? (snapshot.Hops.Count >= 24 ? ProbeHealth.Error : ProbeHealth.Unknown);
+    public ProbeHealth TargetHealth => !snapshot.Running ? ProbeHealth.Unknown : snapshot.DiagnosticFailed || snapshot.Proxy.ConsecutiveFailures >= 3 ? ProbeHealth.Error :
+        snapshot.Hops.LastOrDefault(hop => hop.Ip == snapshot.Proxy.LastSuccess?.Identity?.Ip)?.Health ??
+        (snapshot.Proxy.LastSuccess != null && snapshot.Proxy.ConsecutiveFailures == 0 ? ProbeHealth.Good : (snapshot.Hops.Count >= 24 ? ProbeHealth.Warning : ProbeHealth.Unknown));
 
     public string TargetLatency
     {
@@ -350,7 +351,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             var target = snapshot.Hops.LastOrDefault(hop => hop.Ip == snapshot.Proxy.LastSuccess?.Identity?.Ip);
             if (target == null)
             {
-                return snapshot.Proxy.ConsecutiveFailures >= 3 || (snapshot.Hops.Count >= 24 && snapshot.Hops[^1].Sent >= 3) ? Text("TargetLatency") + " · N/A" : Text("TargetPending");
+                return snapshot.Proxy.ConsecutiveFailures >= 3 ? Text("TargetLatency") + " · N/A" : Text("TargetPending");
             }
 
             string last = target.ConsecutiveFailures >= 3 ? "N/A" : (target.LastMs ?? target.LastKnownMs)?.ToString("F1", CultureInfo.CurrentCulture) ?? "—";

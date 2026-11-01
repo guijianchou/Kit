@@ -524,9 +524,27 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         }
     }
 
-    public void CancelDataUpdate() => updateCancellation?.Cancel();
+    public void CancelDataUpdate()
+    {
+        try
+        {
+            updateCancellation?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
 
-    public void CancelAiCheck() => aiCheckCancellation?.Cancel();
+    public void CancelAiCheck()
+    {
+        try
+        {
+            aiCheckCancellation?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
 
     public async Task CheckRouteWithAiAsync()
     {

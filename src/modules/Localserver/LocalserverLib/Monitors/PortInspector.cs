@@ -172,6 +172,11 @@ public static class PortInspector
             return (processId == 4 ? "System" : "(idle)", null);
         }
 
+        if (!ProcessIdentityInspector.IsProcessAlive(processId))
+        {
+            return ("(exited)", null);
+        }
+
         try
         {
             using Process process = Process.GetProcessById(processId);

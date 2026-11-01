@@ -26,6 +26,24 @@ public sealed class EventLogService
 {
     private const string FailureLevels = "(Level=1 or Level=2 or Level=3)";
 
+    private static readonly Lazy<HashSet<string>> RegisteredLogs = new(() =>
+    {
+        try
+        {
+            return new HashSet<string>(EventLogSession.GlobalSession.GetLogNames(), StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    });
+
+    private static bool IsChannelRegistered(string channelName)
+    {
+        var logs = RegisteredLogs.Value;
+        return logs.Count == 0 || logs.Contains(channelName);
+    }
+
     public async IAsyncEnumerable<SecurityEvent> ReadSystemEventsAsync(
         DateTime from,
         DateTime to,
@@ -135,6 +153,16 @@ public sealed class EventLogService
             int count = 0;
             bool skipped = false;
             Report(channelName, count, complete: false, skipped: false);
+
+            string underlyingLog = string.Equals(channelName, "Firewall", StringComparison.OrdinalIgnoreCase) ? "Security" : channelName;
+            if (!IsChannelRegistered(underlyingLog))
+            {
+                skippedChannels.Add(channelName);
+                completedChannels++;
+                Report(channelName, count, complete: true, skipped: true);
+                return;
+            }
+
             try
             {
                 await foreach (var evt in stream.WithCancellation(cancellationToken))

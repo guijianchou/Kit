@@ -22,7 +22,7 @@ using Kit.AiHub.Models;
 /// </summary>
 public sealed partial class KernelManagerService : IDisposable
 {
-    private const long MaximumArchiveBytes = 512L * 1024 * 1024;
+    private const long MaximumArchiveBytes = 2048L * 1024 * 1024;
     private const int MaximumArchiveEntries = 10000;
     private static readonly HttpClient DefaultClient = CreateHttpClient();
     private static readonly ConcurrentDictionary<string, (long Length, long Modified, string Version)> VersionCache = new(StringComparer.OrdinalIgnoreCase);
@@ -92,8 +92,8 @@ public sealed partial class KernelManagerService : IDisposable
             return status;
         }
 
-        using IDisposable lease = await AcquireExecutionLeaseAsync(status.Kernel, cancellationToken);
-        return await InspectInstalledVersionAsync(status.Kernel, cancellationToken);
+        using IDisposable lease = await AcquireExecutionLeaseAsync(status.Kernel, cancellationToken).ConfigureAwait(false);
+        return await InspectInstalledVersionAsync(status.Kernel, cancellationToken).ConfigureAwait(false);
     }
 
     public string RequireExecutable(string? kernel)
@@ -110,7 +110,7 @@ public sealed partial class KernelManagerService : IDisposable
     public async Task<string> CheckLatestVersionAsync(string? kernel, CancellationToken cancellationToken = default)
     {
         using JsonDocument document = JsonDocument.Parse(await ReadHttpBytesAsync(
-            LatestReleaseUrl(AiKernelCatalog.Normalize(kernel)), 4 * 1024 * 1024, cancellationToken));
+            LatestReleaseUrl(AiKernelCatalog.Normalize(kernel)), 4 * 1024 * 1024, cancellationToken).ConfigureAwait(false));
         return ReleaseVersion(document.RootElement);
     }
 
@@ -119,10 +119,10 @@ public sealed partial class KernelManagerService : IDisposable
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        await _installGate.WaitAsync(cancellationToken);
+        await _installGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await InstallIfNewerAsync(AiKernelCatalog.Normalize(kernel), progress, cancellationToken);
+            return await InstallIfNewerAsync(AiKernelCatalog.Normalize(kernel), progress, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -152,7 +152,7 @@ public sealed partial class KernelManagerService : IDisposable
             }
             catch (IOException exception) when (IsSharingViolation(exception) && elapsed.Elapsed < TimeSpan.FromSeconds(5))
             {
-                await Task.Delay(100, cancellationToken);
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -160,11 +160,14 @@ public sealed partial class KernelManagerService : IDisposable
     private async Task<AiKernelUpdateResult> InstallIfNewerAsync(
         string kernel, IProgress<double>? progress, CancellationToken cancellationToken)
     {
-        AiKernelStatus installed = await GetStatusAsync(kernel, cancellationToken);
+        AiKernelStatus installed = await GetStatusAsync(kernel, cancellationToken).ConfigureAwait(false);
         EnsureNoReparsePoints(_kernelRoot);
         Directory.CreateDirectory(_kernelRoot);
-        string temporaryZip = Path.Combine(_kernelRoot, "." + kernel + "-" + Guid.NewGuid().ToString("N") + ".zip");
-        string staging = Path.Combine(_kernelRoot, "." + kernel + "-" + Guid.NewGuid().ToString("N"));
+
+        string tempRoot = Path.Combine(Path.GetTempPath(), "Kit-AiHub-Kernel-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        string temporaryZip = Path.Combine(tempRoot, kernel + ".zip");
+        string staging = Path.Combine(tempRoot, "staging");
         string target = Path.Combine(_kernelRoot, kernel);
         string backup = Path.Combine(_kernelRoot, "." + kernel + "-backup-" + Guid.NewGuid().ToString("N"));
         string releaseVersion = string.Empty;
@@ -174,7 +177,7 @@ public sealed partial class KernelManagerService : IDisposable
         {
             try
             {
-                var release = await GetReleaseAssetAsync(kernel, cancellationToken);
+                var release = await GetReleaseAssetAsync(kernel, cancellationToken).ConfigureAwait(false);
                 releaseVersion = release.Version;
                 if (installed.Installed && CompareVersions(installed.Version, releaseVersion) >= 0)
                 {
@@ -182,10 +185,10 @@ public sealed partial class KernelManagerService : IDisposable
                 }
 
                 expectedDigests = new[] { release.Digest };
-                EnsureManagedPath(temporaryZip);
+                EnsurePathWithin(temporaryZip, tempRoot);
                 await using var destination = new FileStream(temporaryZip, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, true);
                 progress?.Report(0);
-                await CopyHttpContentAsync(release.DownloadUrl, destination, MaximumArchiveBytes, TimeSpan.FromMinutes(5), progress, cancellationToken);
+                await CopyHttpContentAsync(release.DownloadUrl, destination, MaximumArchiveBytes, TimeSpan.FromMinutes(5), progress, cancellationToken).ConfigureAwait(false);
             }
             catch (HttpRequestException) when (!installed.Installed && File.Exists(Path.Combine(_bundledRoot, ArchiveName(kernel))))
             {
@@ -194,7 +197,7 @@ public sealed partial class KernelManagerService : IDisposable
                 expectedDigests = BundledDigests(kernel);
                 string bundledPath = Path.Combine(_bundledRoot, ArchiveName(kernel));
                 EnsureNoReparsePoints(bundledPath);
-                EnsureManagedPath(temporaryZip);
+                EnsurePathWithin(temporaryZip, tempRoot);
                 TryDeleteFile(temporaryZip);
                 await using var source = new FileStream(bundledPath, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, true);
                 if (source.Length > MaximumArchiveBytes)
@@ -203,26 +206,26 @@ public sealed partial class KernelManagerService : IDisposable
                 }
 
                 await using var destination = new FileStream(temporaryZip, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, true);
-                await source.CopyToAsync(destination, cancellationToken);
+                await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
             }
 
-            string digest = await ComputeSha256Async(temporaryZip, cancellationToken);
+            string digest = await ComputeSha256Async(temporaryZip, cancellationToken).ConfigureAwait(false);
             if (!expectedDigests.Contains(digest, StringComparer.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException("The AI kernel archive does not match its trusted SHA-256 digest.");
             }
 
-            string stagedExecutable = await ExtractArchiveAsync(kernel, temporaryZip, staging, cancellationToken);
-            string version = await VerifyExecutableVersionAsync(stagedExecutable, cancellationToken);
+            string stagedExecutable = await ExtractArchiveAsync(kernel, temporaryZip, staging, cancellationToken).ConfigureAwait(false);
+            string version = await VerifyExecutableVersionAsync(stagedExecutable, cancellationToken).ConfigureAwait(false);
             if (!bundled && CompareVersions(version, releaseVersion) != 0)
             {
                 throw new InvalidDataException("The AI kernel executable version does not match its release.");
             }
 
-            await WriteVersionManifestAsync(stagedExecutable, version, cancellationToken);
-            using IDisposable lease = await AcquireLeaseAsync(kernel, true, cancellationToken);
+            await WriteVersionManifestAsync(stagedExecutable, version, cancellationToken).ConfigureAwait(false);
+            using IDisposable lease = await AcquireLeaseAsync(kernel, true, cancellationToken).ConfigureAwait(false);
             // Another installer may have committed while this archive was being downloaded.
-            AiKernelStatus current = await InspectInstalledVersionAsync(kernel, cancellationToken);
+            AiKernelStatus current = await InspectInstalledVersionAsync(kernel, cancellationToken).ConfigureAwait(false);
             if (current.Installed && CompareVersions(current.Version, version) >= 0)
             {
                 return new AiKernelUpdateResult(current, releaseVersion, Changed: false, UsedBundledArchive: bundled);
@@ -234,12 +237,12 @@ public sealed partial class KernelManagerService : IDisposable
             if (hadInstallation)
             {
                 EnsureSafeTree(target);
-                await MoveDirectoryAsync(target, backup, cancellationToken);
+                await MoveOrCopyDirectoryAsync(target, backup, cancellationToken).ConfigureAwait(false);
             }
 
             try
             {
-                await MoveDirectoryAsync(staging, target, cancellationToken);
+                await MoveOrCopyDirectoryAsync(staging, target, cancellationToken).ConfigureAwait(false);
             }
             catch
             {
@@ -252,7 +255,7 @@ public sealed partial class KernelManagerService : IDisposable
 
                     try
                     {
-                        await MoveDirectoryAsync(backup, target, CancellationToken.None);
+                        await MoveOrCopyDirectoryAsync(backup, target, CancellationToken.None).ConfigureAwait(false);
                     }
                     catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
                     {
@@ -271,8 +274,8 @@ public sealed partial class KernelManagerService : IDisposable
         }
         finally
         {
-            TryDeleteFile(temporaryZip);
-            TryDeleteDirectory(staging);
+            TryDeleteDirectory(tempRoot);
+            TryDeleteDirectory(backup);
         }
     }
 
@@ -286,7 +289,7 @@ public sealed partial class KernelManagerService : IDisposable
 
         try
         {
-            string version = await VerifyExecutableVersionAsync(status.Path, cancellationToken);
+            string version = await VerifyExecutableVersionAsync(status.Path, cancellationToken).ConfigureAwait(false);
             CacheVersion(status.Path, version);
             return status with { Version = version };
         }
@@ -299,7 +302,7 @@ public sealed partial class KernelManagerService : IDisposable
     private async Task<(string Version, string DownloadUrl, string Digest)> GetReleaseAssetAsync(
         string kernel, CancellationToken cancellationToken)
     {
-        using JsonDocument document = JsonDocument.Parse(await ReadHttpBytesAsync(LatestReleaseUrl(kernel), 4 * 1024 * 1024, cancellationToken));
+        using JsonDocument document = JsonDocument.Parse(await ReadHttpBytesAsync(LatestReleaseUrl(kernel), 4 * 1024 * 1024, cancellationToken).ConfigureAwait(false));
         string version = ReleaseVersion(document.RootElement);
         if (!document.RootElement.TryGetProperty("assets", out JsonElement assets) || assets.ValueKind != JsonValueKind.Array)
         {
@@ -332,7 +335,7 @@ public sealed partial class KernelManagerService : IDisposable
             }
 
             string checksumText = Encoding.UTF8.GetString(await ReadHttpBytesAsync(
-                ValidateDownloadUrl(StringProperty(checksums[0], "browser_download_url")), 1024 * 1024, cancellationToken));
+                ValidateDownloadUrl(StringProperty(checksums[0], "browser_download_url")), 1024 * 1024, cancellationToken).ConfigureAwait(false));
             bool dedicated = checksumName.StartsWith(archiveName + ".", StringComparison.OrdinalIgnoreCase);
             foreach (string record in checksumText.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
             {
@@ -361,7 +364,7 @@ public sealed partial class KernelManagerService : IDisposable
     private async Task<byte[]> ReadHttpBytesAsync(string url, int limit, CancellationToken cancellationToken)
     {
         using var destination = new MemoryStream();
-        await CopyHttpContentAsync(url, destination, limit, TimeSpan.FromSeconds(30), null, cancellationToken);
+        await CopyHttpContentAsync(url, destination, limit, TimeSpan.FromSeconds(30), null, cancellationToken).ConfigureAwait(false);
         return destination.ToArray();
     }
 
@@ -374,7 +377,7 @@ public sealed partial class KernelManagerService : IDisposable
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, ValidateDownloadUrl(url));
             request.Headers.UserAgent.ParseAdd("Kit-AiHub/1.0");
-            using HttpResponseMessage response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token);
+            using HttpResponseMessage response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutSource.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             long? contentLength = response.Content.Headers.ContentLength;
             if (contentLength > limit)
@@ -382,15 +385,17 @@ public sealed partial class KernelManagerService : IDisposable
                 throw new InvalidDataException("The kernel download exceeds the supported size.");
             }
 
-            await using Stream source = await response.Content.ReadAsStreamAsync(timeoutSource.Token);
+            await using Stream source = await response.Content.ReadAsStreamAsync(timeoutSource.Token).ConfigureAwait(false);
             byte[] buffer = new byte[64 * 1024];
             long total = 0;
+            double lastReportedProgress = -1;
+            long lastReportedTicks = Stopwatch.GetTimestamp();
             while (true)
             {
                 int read;
                 try
                 {
-                    read = await source.ReadAsync(buffer.AsMemory(), timeoutSource.Token);
+                    read = await source.ReadAsync(buffer.AsMemory(), timeoutSource.Token).ConfigureAwait(false);
                 }
                 catch (IOException exception)
                 {
@@ -408,10 +413,18 @@ public sealed partial class KernelManagerService : IDisposable
                     throw new InvalidDataException("The kernel download exceeds the supported size.");
                 }
 
-                await destination.WriteAsync(buffer.AsMemory(0, read), timeoutSource.Token);
-                if (contentLength is > 0)
+                await destination.WriteAsync(buffer.AsMemory(0, read), timeoutSource.Token).ConfigureAwait(false);
+                if (contentLength is > 0 && progress != null)
                 {
-                    progress?.Report(Math.Clamp(total / (double)contentLength.Value, 0, 1));
+                    double currentProgress = Math.Clamp(total / (double)contentLength.Value, 0, 1);
+                    long currentTicks = Stopwatch.GetTimestamp();
+                    double elapsedMs = (currentTicks - lastReportedTicks) * 1000.0 / Stopwatch.Frequency;
+                    if (elapsedMs >= 100 || Math.Abs(currentProgress - lastReportedProgress) >= 0.01 || currentProgress >= 1)
+                    {
+                        lastReportedProgress = currentProgress;
+                        lastReportedTicks = currentTicks;
+                        progress.Report(currentProgress);
+                    }
                 }
             }
 
@@ -420,7 +433,7 @@ public sealed partial class KernelManagerService : IDisposable
                 throw new HttpRequestException("The kernel download was incomplete.");
             }
 
-            await destination.FlushAsync(timeoutSource.Token);
+            await destination.FlushAsync(timeoutSource.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -430,7 +443,7 @@ public sealed partial class KernelManagerService : IDisposable
 
     private async Task<string> ExtractArchiveAsync(string kernel, string zipPath, string staging, CancellationToken cancellationToken)
     {
-        EnsureManagedPath(staging);
+        EnsureNoReparsePoints(staging);
         Directory.CreateDirectory(staging);
         using ZipArchive archive = ZipFile.OpenRead(zipPath);
         if (archive.Entries.Count > MaximumArchiveEntries)
@@ -481,8 +494,8 @@ public sealed partial class KernelManagerService : IDisposable
 
             string relative = item.Entry == executable.Entry ? ExecutableName(kernel) : item.Name[prefix.Length..];
             string path = Path.GetFullPath(Path.Combine(staging, relative));
-            EnsureManagedPath(path);
-            if (!path.StartsWith(staging + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !destinations.Add(path))
+            EnsurePathWithin(path, staging);
+            if (!destinations.Add(path))
             {
                 throw new InvalidDataException("The kernel archive contains an unsafe destination.");
             }
@@ -492,7 +505,7 @@ public sealed partial class KernelManagerService : IDisposable
             await using var destination = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, true);
             long entryBytes = 0;
             int read;
-            while ((read = await source.ReadAsync(buffer.AsMemory(), cancellationToken)) != 0)
+            while ((read = await source.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) != 0)
             {
                 extractedBytes += read;
                 entryBytes += read;
@@ -501,7 +514,7 @@ public sealed partial class KernelManagerService : IDisposable
                     throw new InvalidDataException("The extracted kernel exceeds the supported size.");
                 }
 
-                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             }
 
             if (entryBytes != item.Entry.Length)
@@ -553,8 +566,7 @@ public sealed partial class KernelManagerService : IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureNoReparsePoints(executable);
-        string probeDirectory = Path.Combine(_kernelRoot, ".probe-" + Guid.NewGuid().ToString("N"));
-        EnsureManagedPath(probeDirectory);
+        string probeDirectory = Path.Combine(Path.GetTempPath(), "Kit-AiHub-Probe-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(probeDirectory);
         try
         {
@@ -581,11 +593,11 @@ public sealed partial class KernelManagerService : IDisposable
             string output;
             if (_versionProbe != null)
             {
-                output = await _versionProbe(startInfo, cancellationToken);
+                output = await _versionProbe(startInfo, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                KernelProcessResult result = await KernelProcessRunner.RunAsync(startInfo, null, TimeSpan.FromSeconds(20), cancellationToken, 64 * 1024, 64 * 1024);
+                KernelProcessResult result = await KernelProcessRunner.RunAsync(startInfo, null, TimeSpan.FromSeconds(20), cancellationToken, 64 * 1024, 64 * 1024).ConfigureAwait(false);
                 if (result.Failure == KernelProcessFailure.Cancelled)
                 {
                     throw new OperationCanceledException(cancellationToken);
@@ -657,7 +669,7 @@ public sealed partial class KernelManagerService : IDisposable
         writer.WriteNumber("Length", file.Length);
         writer.WriteNumber("Modified", file.LastWriteTimeUtc.Ticks);
         writer.WriteEndObject();
-        await writer.FlushAsync(cancellationToken);
+        await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static void CacheVersion(string executable, string version)
@@ -692,9 +704,11 @@ public sealed partial class KernelManagerService : IDisposable
         return true;
     }
 
-    private void EnsureManagedPath(string path)
+    private static void EnsurePathWithin(string path, string allowedRoot)
     {
-        string relative = Path.GetRelativePath(_kernelRoot, Path.GetFullPath(path));
+        string fullRoot = Path.GetFullPath(allowedRoot);
+        string fullPath = Path.GetFullPath(path);
+        string relative = Path.GetRelativePath(fullRoot, fullPath);
         if (relative == "." || Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
         {
             throw new InvalidDataException("The kernel operation would leave its installation directory.");
@@ -702,6 +716,8 @@ public sealed partial class KernelManagerService : IDisposable
 
         EnsureNoReparsePoints(path);
     }
+
+    private void EnsureManagedPath(string path) => EnsurePathWithin(path, _kernelRoot);
 
     private static void EnsureNoReparsePoints(string path)
     {
@@ -725,7 +741,7 @@ public sealed partial class KernelManagerService : IDisposable
 
     private void EnsureSafeTree(string path)
     {
-        EnsureManagedPath(path);
+        EnsureNoReparsePoints(path);
         var pending = new Stack<string>();
         pending.Push(path);
         int count = 0;
@@ -752,23 +768,51 @@ public sealed partial class KernelManagerService : IDisposable
         }
     }
 
-    private async Task MoveDirectoryAsync(string source, string destination, CancellationToken cancellationToken)
+    private static async Task MoveOrCopyDirectoryAsync(string source, string destination, CancellationToken cancellationToken)
     {
-        EnsureManagedPath(source);
-        EnsureManagedPath(destination);
+        EnsureNoReparsePoints(source);
+        EnsureNoReparsePoints(destination);
         Stopwatch elapsed = Stopwatch.StartNew();
-        while (true)
+        bool sameVolume = string.Equals(Path.GetPathRoot(source), Path.GetPathRoot(destination), StringComparison.OrdinalIgnoreCase);
+
+        if (sameVolume)
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    Directory.Move(source, destination);
+                    return;
+                }
+                catch (Exception exception) when (IsTransientMoveException(exception) && elapsed.Elapsed < TimeSpan.FromSeconds(10))
+                {
+                    await Task.Delay(150, cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        await CopyDirectoryAsync(source, destination, cancellationToken).ConfigureAwait(false);
+        TryDeleteDirectory(source);
+    }
+
+    private static async Task CopyDirectoryAsync(string source, string destination, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (string dirPath in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                Directory.Move(source, destination);
-                return;
-            }
-            catch (Exception exception) when (IsTransientMoveException(exception) && elapsed.Elapsed < TimeSpan.FromSeconds(10))
-            {
-                await Task.Delay(150, cancellationToken);
-            }
+            string subDir = Path.Combine(destination, Path.GetRelativePath(source, dirPath));
+            Directory.CreateDirectory(subDir);
+        }
+
+        foreach (string filePath in Directory.GetFiles(source, "*.*", SearchOption.AllDirectories))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string destFile = Path.Combine(destination, Path.GetRelativePath(source, filePath));
+            await using FileStream sourceStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, true);
+            await using FileStream destStream = new(destFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, true);
+            await sourceStream.CopyToAsync(destStream, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -782,12 +826,15 @@ public sealed partial class KernelManagerService : IDisposable
 
     private static bool IsSharingViolation(IOException exception) => (exception.HResult & 0xffff) is 32 or 33;
 
-    private void TryDeleteFile(string path)
+    private static void TryDeleteFile(string path)
     {
         try
         {
-            EnsureManagedPath(path);
-            File.Delete(path);
+            EnsureNoReparsePoints(path);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
@@ -795,15 +842,29 @@ public sealed partial class KernelManagerService : IDisposable
         }
     }
 
-    private void TryDeleteDirectory(string path)
+    private static void TryDeleteDirectory(string path)
     {
         try
         {
-            EnsureManagedPath(path);
+            EnsureNoReparsePoints(path);
             if (Directory.Exists(path))
             {
-                EnsureSafeTree(path);
-                Directory.Delete(path, true);
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    try
+                    {
+                        Directory.Delete(path, true);
+                        return;
+                    }
+                    catch (IOException) when (attempt < 2)
+                    {
+                        Thread.Sleep(50);
+                    }
+                    catch (UnauthorizedAccessException) when (attempt < 2)
+                    {
+                        Thread.Sleep(50);
+                    }
+                }
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)

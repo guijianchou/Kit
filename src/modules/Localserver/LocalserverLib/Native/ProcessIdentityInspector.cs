@@ -17,6 +17,7 @@ public sealed record ProcessIdentity(
 public static class ProcessIdentityInspector
 {
     private const uint ProcessQueryInformation = 0x0400;
+    private const uint ProcessQueryLimitedInformation = 0x1000;
     private const uint ProcessVmRead = 0x0010;
     private const int ProcessBasicInformation = 0;
     private const int ProcessWow64Information = 26;
@@ -26,6 +27,23 @@ public static class ProcessIdentityInspector
     private const int Parameters64EnvironmentOffset = 0x80;
     private const int EnvironmentChunkBytes = 4096;
     private const int MaximumEnvironmentBytes = 1024 * 1024;
+
+    public static bool IsProcessAlive(int processId)
+    {
+        if (processId <= 0)
+        {
+            return false;
+        }
+
+        nint process = OpenProcess(ProcessQueryLimitedInformation, false, processId);
+        if (process == nint.Zero)
+        {
+            return false;
+        }
+
+        CloseHandle(process);
+        return true;
+    }
 
     public static ProcessIdentity? Read(int processId, string environmentVariableName)
         => Read(

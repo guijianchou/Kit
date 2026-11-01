@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -70,7 +70,7 @@ namespace Awake.Core.Native
         [DllImport("user32.dll", SetLastError = true)]
         internal static extern void PostQuitMessage(int nExitCode);
 
-        [DllImport("shell32.dll", SetLastError = true)]
+        [DllImport("shell32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern bool Shell_NotifyIcon(int dwMessage, ref NotifyIconData pnid);
 
         [DllImport("user32.dll", SetLastError = true)]

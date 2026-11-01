@@ -317,6 +317,7 @@ namespace Awake
             Manager.StartMonitor();
 
             _exitEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset, Kit.Interop.Constants.AwakeExitEvent());
+            _exitEventHandle.Reset();
             _registeredWaitHandle = ThreadPool.RegisterWaitForSingleObject(
                 _exitEventHandle,
                 (state, timedOut) => Exit(Resources.AWAKE_EXIT_SIGNAL_MESSAGE, 0),

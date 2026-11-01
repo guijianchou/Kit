@@ -151,6 +151,11 @@ public static class ProcessResourceInspector
 
         foreach (int processId in processIds)
         {
+            if (!ProcessIdentityInspector.IsProcessAlive(processId))
+            {
+                continue;
+            }
+
             try
             {
                 using Process process = Process.GetProcessById(processId);

@@ -26,7 +26,7 @@ public static class HealthProbe
                         await socket.ConnectAsync(address, tcpPort, timeout.Token).ConfigureAwait(false);
                         return true;
                     }
-                    catch (SocketException) { }
+                    catch (Exception ex) when (ex is SocketException or IOException) { }
                 }
                 return false;
             }
@@ -39,7 +39,7 @@ public static class HealthProbe
             return definition.Health.ExpectStatus.Contains((int)response.StatusCode);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { return false; }
-        catch (Exception ex) when (ex is HttpRequestException or SocketException or InvalidOperationException or ArgumentException)
+        catch (Exception ex) when (ex is HttpRequestException or SocketException or InvalidOperationException or ArgumentException or IOException)
         {
             // URLs may contain secrets; transport exception messages must not escape to logs.
             return false;

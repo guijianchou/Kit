@@ -242,6 +242,7 @@ namespace Kit.Settings.UI
                 App.IPCMessageReceivedCallback = null;
                 shellPage.Dispose();
                 App.ClearSettingsWindow();
+                Application.Current.Exit();
             }
             else
             {

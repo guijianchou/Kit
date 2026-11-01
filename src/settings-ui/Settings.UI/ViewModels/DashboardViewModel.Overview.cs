@@ -340,9 +340,15 @@ public partial class DashboardViewModel
             var result = await read().ConfigureAwait(false);
             dispatcher.TryEnqueue(() =>
             {
-                if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested)
+                try
                 {
-                    apply(result.Value);
+                    if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested)
+                    {
+                        apply(result.Value);
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
                 }
             });
         }
@@ -366,9 +372,15 @@ public partial class DashboardViewModel
             var sample = await DashboardSystemInfo.ReadStorageAsync(force, cancellation.Token).ConfigureAwait(false);
             dispatcher.TryEnqueue(() =>
             {
-                if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested)
+                try
                 {
-                    ApplyStorageDetails(sample.Value);
+                    if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested)
+                    {
+                        ApplyStorageDetails(sample.Value);
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
                 }
             });
         }
@@ -568,10 +580,16 @@ public partial class DashboardViewModel
 
         void Publish(Action update) => dispatcher.TryEnqueue(() =>
         {
-            if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested && systemCancellation == cancellation)
+            try
             {
-                update();
+                if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested && systemCancellation == cancellation)
+                {
+                    update();
+                }
             }
+            catch (ObjectDisposedException)
+                {
+                }
         });
     }
 
@@ -723,10 +741,16 @@ public partial class DashboardViewModel
 
         void Publish(Action update) => dispatcher.TryEnqueue(() =>
         {
-            if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested && overviewCancellation == cancellation)
+            try
             {
-                update();
+                if (!isDisposed && overviewActive && !cancellation.IsCancellationRequested && overviewCancellation == cancellation)
+                {
+                    update();
+                }
             }
+            catch (ObjectDisposedException)
+                {
+                }
         });
     }
 }

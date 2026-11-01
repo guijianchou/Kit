@@ -1120,6 +1120,10 @@ namespace Kit.Settings.UI.ViewModels
                 {
                     break;
                 }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
                 catch
                 {
                     // Transient trace failure; keep last valid values
@@ -1233,12 +1237,15 @@ namespace Kit.Settings.UI.ViewModels
                 _disposed = true;
                 _isPageActive = false;
                 _generalSettingsRepository.SettingsChanged -= OnGeneralSettingsChanged;
-                _lifecycleCancellation.Cancel();
+                try
+                {
+                    _lifecycleCancellation.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
                 _sessionTimer.Stop();
                 _ = _coordinator.DisposeAsync().AsTask();
-                _identityClient.Dispose();
-                _pollSignal.Dispose();
-                _lifecycleCancellation.Dispose();
             }
             base.Dispose(disposing);
         }

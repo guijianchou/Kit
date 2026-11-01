@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -238,13 +238,16 @@ namespace Awake.Core
 
                 if (action == TrayIconAction.Add)
                 {
-                    maxRetryAttempts = 10;
-                    baseDelayMs = 500;  // 500, 1000, 2000, 2000, 2000... (capped)
+                    // Windows Shell Tray Icon API quirk: if a previous instance didn't clean up,
+                    // NIM_ADD will fail with 0x80004005 (E_FAIL). Pre-emptively delete any stale icon.
+                    Bridge.Shell_NotifyIcon(Native.Constants.NIM_DELETE, ref _notifyIconData);
+                    maxRetryAttempts = 5;
+                    baseDelayMs = 150;
                 }
                 else
                 {
                     maxRetryAttempts = 3;
-                    baseDelayMs = 100;  // 100, 200, 400 (existing behavior)
+                    baseDelayMs = 100;
                 }
 
                 const int maxDelayMs = 2000;  // Cap delay at 2 seconds

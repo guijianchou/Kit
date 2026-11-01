@@ -813,7 +813,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
                 DownloadProgress = value;
             }
         });
-        var result = await _kernelManager.DownloadOrUpdateAsync(PendingKernel, progress, token);
+        var result = await Task.Run(() => _kernelManager.DownloadOrUpdateAsync(PendingKernel, progress, token), token);
         RefreshLocalKernelStatus();
         KernelLatestText = $"Latest: {result.LatestVersion}";
         ShowStatus(result.Changed ? $"{AiKernelCatalog.GetDisplayName(PendingKernel)} installed successfully." : $"{AiKernelCatalog.GetDisplayName(PendingKernel)} is already up to date.", InfoBarSeverity.Success);

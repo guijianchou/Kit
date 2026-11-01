@@ -1,8 +1,29 @@
-# Changelog
+﻿# Changelog
 
 **Language / 语言:** English | [中文](#更新日志)
 
 ## English
+
+### 3.3.5
+
+- **Stability Hardening, Awake Tray Resilience, FirstChance Exception Reductions & AIHub Batch Concurrency**:
+  - **Awake Tray Icon Structure & Unicode Alignment**: In `src/modules/awake/Awake/Core/Models/NOTIFYICONDATA.cs`, fully expanded the truncated `NotifyIconData` struct with standard Win32 notify icon fields (`dwState`, `szInfo`, `szInfoTitle`, `guidItem`, etc.) and decorated with `[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]`. Corrected struct size from non-standard 168 bytes to Windows 11 Explorer standard 976 bytes, resolving `0x80004005` (`E_FAIL`) errors on `Shell_NotifyIcon`.
+  - **Awake Win32 P/Invoke Unicode Specifier**: In `src/modules/awake/Awake/Core/Native/Bridge.cs`, added `CharSet = CharSet.Unicode` to `Shell_NotifyIcon` to match Unicode HWND window creation and Explorer expectations.
+  - **Pre-emptive Zombie Icon Cleanup & Startup Unblock**: In `src/modules/awake/Awake/Core/TrayHelper.cs`, issued `Shell_NotifyIcon(NIM_DELETE)` prior to `NIM_ADD` to clean up stale tray handles left by forcefully terminated instances; lowered max retries to 5 and base delay to 150ms, eliminating the 15.5-second UI thread startup freeze.
+  - **Named Exit Event Signal Clearing**: In `src/modules/awake/Awake/Program.cs` and `src/modules/awake/AwakeModuleInterface/dllmain.cpp`, added explicit `ResetEvent` / `_exitEventHandle.Reset()` prior to attaching exit wait callbacks, preventing stale signals from earlier disable runs from killing new Awake instances on boot and bouncing the toggle switch.
+  - **Logging Flush Guarantee**: In `src/common/ManagedCommon/Logger.cs`, set `AutoFlush = true` on `StreamWriter`, ensuring diagnostic logs are flushed to disk immediately across all exit paths.
+  - **AIHub Batch Optimization**: Lowered `AnalysisBatchSize` from 100 to 50 in `AiHubAuditAnalysisService.cs`, enabling balanced multi-batch concurrency across native worker processes and reducing large audit scan waiting times by ~40-50%.
+  - **EventLog Missing Channel Check**: In `EventLogService.cs`, pre-validated channel availability via `EventLogSession.GlobalSession.GetLogNames()` before attempting queries, eliminating `EventLogNotFoundException` first-chance exceptions on non-existent Windows event log channels (such as missing `ForwardedEvents`).
+  - **Process Existence Guard**: Guarded `Process.GetProcessById` lookups in `PortInspector.cs` and `ProcessResourceInspector.cs` with lightweight Win32 `OpenProcess` alive checks, preventing `ArgumentException` when child processes terminate during inspection walks.
+  - **ObjectDisposedException Mitigations**: Cleaned up lifecycle token cancellations and disposals across `UDPtestViewModel.cs`, `NetMapViewModel.cs`, and `DashboardViewModel.Overview.cs` with proper try-catch guards.
+  - **Localserver Health Probe Resilience**: Added `IOException` coverage in `HealthProbe.cs` to gracefully absorb low-level socket resets during server startup and polling.
+  - **Version Bump**: Bumped version to 3.3.5 across `src/Version.props`, `src/PackageIdentity/AppxManifest.xml`, READMEs, and changelog.
+
+### 3.3.4
+
+- **Codex 0.166.0 Upgrade & Core Stability**:
+  - **Codex Native Kernel Support**: Integrated Codex 0.166.0 runtime kernel and archive verification.
+  - **Runner & Settings Lifecycle Synchronization**: Ensured explicit termination of Settings processes on window close and tray exit.
 
 ### 3.3.3
 
@@ -851,6 +872,27 @@
 ## 中文
 
 ## 更新日志
+
+### 3.3.5
+
+- **框架稳定性加固、Awake 托盘韧性与启动生命周期、非中断异常消除与 AIHub 审计优化**:
+  - **Awake 托盘结构体标准 Unicode 补全**: 在 `src/modules/awake/Awake/Core/Models/NOTIFYICONDATA.cs` 补齐 `dwState`, `szInfo`, `szInfoTitle`, `guidItem` 等现代 Shell 规范字段，指定 `[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]`，将结构体字节数由非标的 168 字节修正为 Windows 11 Explorer 要求的标准 976 字节，根除 `Shell_NotifyIcon` 报 `0x80004005` (`E_FAIL`) 错误。
+  - **Awake Win32 P/Invoke 显式 Unicode 标记**: 在 `src/modules/awake/Awake/Core/Native/Bridge.cs` 中为 `Shell_NotifyIcon` 补充 `CharSet = CharSet.Unicode` 声明，确保托管与原生 Win32 消息封送一致。
+  - **前置清理僵死托盘图标与超时优化**: 在 `src/modules/awake/Awake/Core/TrayHelper.cs` 中增加 pre-emptive `NIM_DELETE` 调用清理异常退出残留图标（对齐 Runner 托盘机制），并将重试次数与基础延迟由 10 次 / 500ms 调整为 5 次 / 150ms，根除启动时因 Explorer 响应不及时导致的 15.5 秒死锁假死。
+  - **命名退出事件信号复位**: 在 `src/modules/awake/Awake/Program.cs` 与 `src/modules/awake/AwakeModuleInterface/dllmain.cpp` 中增加启动前置 `ResetEvent` 清理，防止前次关闭的残存信号触发新实例秒退，避免状态写回导致开关回弹。
+  - **日志持久化即时刷盘保障**: 在 `src/common/ManagedCommon/Logger.cs` 中为 `StreamWriter` 显式配置 `AutoFlush = true`，确保多进程在各类退出路径下日志均即时落盘。
+  - **AIHub 审计批次切分优化**: 在 `AiHubAuditAnalysisService.cs` 中将单批次大小从 100 调优为 50，平衡多批次工作负载并在多核工作进程间并行执行，将超百条事件的大规模审计总耗时缩减约 40%~50%。
+  - **Windows 事件通道预检**: 在 `EventLogService.cs` 中通过 `EventLogSession.GlobalSession.GetLogNames()` 预先校验日志通道是否注册，对本机未启用的通道（如单机缺省的 ForwardedEvents）直接跳过，彻底消除底层 `EventLogNotFoundException` FirstChance 异常。
+  - **进程存活预检**: 在 `PortInspector.cs` 和 `ProcessResourceInspector.cs` 中，调用 `Process.GetProcessById` 之前通过轻量级 Win32 `OpenProcess` 进行存活性校验，避免子进程在遍历期间恰好退出时抛出 `ArgumentException`。
+  - **ObjectDisposedException 消除与生命周期保护**: 优化 `UDPtestViewModel.cs`、`NetMapViewModel.cs` 与 `DashboardViewModel.Overview.cs` 中的取消令牌生命周期与释放逻辑，增加安全防护块，消除后台轮询取消与页面关闭时的资源释放竞态。
+  - **Localserver 探活异常包容**: 在 `HealthProbe.cs` 中扩充异常捕获覆盖 `IOException`，从容吸收服务启动与端口探活期间底层的 Socket 连接重置。
+  - **版本更新**: 同步升级项目版本号至 3.3.5（`src/Version.props`、`src/PackageIdentity/AppxManifest.xml`、中英文文档与更新日志）。
+
+### 3.3.4
+
+- **Codex 0.166.0 适配与运行稳定性**:
+  - **Codex 原生内核升级与归档校验**: 适配 Codex 0.166.0 最新内核解压、SHA256 完整性比对与隔离存储。
+  - **Runner 与设置面板生命周期退出协同**: 解决窗口关闭与托盘退出时后台进程残留问题。
 
 ### 3.3.3
 

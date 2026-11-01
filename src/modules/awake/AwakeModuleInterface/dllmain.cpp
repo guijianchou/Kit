@@ -119,6 +119,14 @@ private:
         std::wstring full_command_path = L"\"" + application_path + L"\" " + executable_args;
         Logger::trace(L"Kit Awake launching with parameters: " + executable_args);
 
+        // Ensure any pre-existing exit event is not left signaled from a prior session
+        HANDLE exitEvent = OpenEventW(EVENT_MODIFY_STATE, FALSE, CommonSharedConstants::AWAKE_EXIT_EVENT);
+        if (exitEvent)
+        {
+            ResetEvent(exitEvent);
+            CloseHandle(exitEvent);
+        }
+
         STARTUPINFO info = { sizeof(info) };
 
         if (!CreateProcessW(application_path.c_str(), full_command_path.data(), nullptr, nullptr, FALSE, 0, nullptr, application_directory.c_str(), &info, &p_info))
@@ -208,7 +216,7 @@ public:
             Trace::EnableAwake(false);
             Logger::trace(L"Disabling Awake...");
 
-            auto exitEvent = CreateEvent(nullptr, false, false, CommonSharedConstants::AWAKE_EXIT_EVENT);
+            auto exitEvent = CreateEvent(nullptr, true, false, CommonSharedConstants::AWAKE_EXIT_EVENT);
             if (!exitEvent)
             {
                 Logger::warn(L"Failed to create exit event for Kit Awake. {}", get_last_error_or_default(GetLastError()));

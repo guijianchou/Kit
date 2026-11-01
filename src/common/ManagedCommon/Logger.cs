@@ -172,7 +172,8 @@ namespace ManagedCommon
                 {
                     Directory.CreateDirectory(versionedPath);
                     var logFilePath = Path.Combine(versionedPath, logFile);
-                    var listener = new TextWriterTraceListener(new StreamWriter(new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete)));
+                    var streamWriter = new StreamWriter(new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete)) { AutoFlush = true };
+                    var listener = new TextWriterTraceListener(streamWriter);
 
                     string basePath = Path.GetDirectoryName(versionedPath);
                     AppLogDirectoryPath = basePath;

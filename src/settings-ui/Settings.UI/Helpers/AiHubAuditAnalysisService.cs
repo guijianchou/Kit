@@ -58,8 +58,9 @@ public static class AiHubAuditAnalysisService
     public const int AnalysisTimeoutSeconds = 1_800;
 
     // Keep related evidence together and avoid repeating the full policy for every 15 events.
-    // The engine still splits at its 96 KB encoded input limit.
-    public const int AnalysisBatchSize = 100;
+    // The engine still splits at its 96 KB encoded input limit. 50 items per batch allows
+    // balanced multi-core concurrency across LLM routes and cuts total audit latency.
+    public const int AnalysisBatchSize = 50;
 
     // Each native route owns its retries within this budget; a slow Main can then use Fallback.
     public const int AnalysisRouteTimeoutSeconds = 300;

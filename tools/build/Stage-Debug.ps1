@@ -72,16 +72,17 @@ $versionedFiles = @(
     'Kit.BackgroundActivatorDLL.dll', 'Kit.ActionRunner.exe',
     'Kit.AwakeModuleInterface.dll', 'Kit.LightSwitchModuleInterface.dll',
     'Kit.LocalserverModuleInterface.dll', 'Kit.UDPtestModuleInterface.dll',
-    'Kit.NetMapModuleInterface.dll', 'Kit.AIHubModuleInterface.dll',
+    'Kit.NetMapModuleInterface.dll', 'Kit.AIHubModuleInterface.dll', 'Kit.WingetModuleInterface.dll',
     'LightSwitchService\Kit.LightSwitchService.exe',
     'Kit.AIHubWorker.exe',
     'Kit.LocalserverWorker.exe',
     'Kit.NetMapService.exe',
     'Kit.UDPtestService.exe',
+    'Kit.WingetService.exe',
     'WinUI3Apps\Kit.Settings.exe', 'WinUI3Apps\Kit.Settings.dll',
     'WinUI3Apps\Kit.QuickAccess.exe', 'WinUI3Apps\Kit.QuickAccess.dll',
     'WinUI3Apps\Kit.AiHub.dll', 'WinUI3Apps\LocalserverLib.dll', 'WinUI3Apps\UDPtestLib.dll',
-    'WinUI3Apps\Kit.NetMapLib.dll'
+    'WinUI3Apps\Kit.NetMapLib.dll', 'WinUI3Apps\Kit.WingetLib.dll'
 )
 $expectedQuadVersion = "${Version}.0"
 foreach ($relative in $versionedFiles) {
@@ -97,6 +98,8 @@ foreach ($relative in $versionedFiles) {
             'LocalserverWorker\Kit.LocalserverWorker.exe' { 'Kit.LocalserverWorker.exe' }
             'NetMapService\Kit.NetMapService.exe'         { 'Kit.NetMapService.exe' }
             'UDPtestService\Kit.UDPtestService.exe'       { 'Kit.UDPtestService.exe' }
+            'Kit.WingetService.exe'                       { 'WingetService\Kit.WingetService.exe' }
+            'WingetService\Kit.WingetService.exe'         { 'Kit.WingetService.exe' }
             default { $null }
         }
         if ($altRelative -and (Test-Path -LiteralPath (Join-Path $sourceRoot $altRelative))) {
@@ -120,6 +123,11 @@ foreach ($file in $sourceFiles) {
     $targetPath = Join-Path $destinationRoot $relative
     [IO.Directory]::CreateDirectory((Split-Path -Parent $targetPath)) | Out-Null
     [IO.File]::Copy($file.FullName, $targetPath, $false)
+    # Copied apphosts inherit the destination label; preserve normal-user integrity.
+    if ($file.Extension -ieq '.exe') {
+        & icacls.exe $targetPath /setintegritylevel M /L | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Cannot set executable integrity: $relative" }
+    }
     $sourceHash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
     $targetHash = (Get-FileHash -LiteralPath $targetPath -Algorithm SHA256).Hash
     if ($sourceHash -ne $targetHash) { throw "Runtime file hash mismatch: $relative" }
@@ -129,6 +137,7 @@ foreach ($file in $sourceFiles) {
 $dependencyResults = [Collections.Generic.List[object]]::new()
 foreach ($relative in @(
     'Kit.Awake.deps.json',
+    'Kit.WingetService.deps.json',
     'WinUI3Apps\Kit.Settings.deps.json',
     'WinUI3Apps\Kit.QuickAccess.deps.json'
 )) {
@@ -165,7 +174,10 @@ foreach ($relative in @(
 foreach ($relative in @(
     'Kit.pri', 'Kit.Interop.dll', 'Kit.GPOWrapper.dll',
     'Kit.BackgroundActivatorDLL.dll', 'hostfxr.dll', 'hostpolicy.dll', 'coreclr.dll',
-    'Kit.Awake.runtimeconfig.json', 'Assets\Awake\Awake.ico',
+    'Kit.Awake.runtimeconfig.json', 'Assets\Awake\Awake.ico', 'Assets\Winget.png',
+    'Microsoft.Management.Deployment.dll', 'Microsoft.Management.Deployment.winmd', 'Winget.ComInterop.NOTICE.txt',
+    'WinUI3Apps\Microsoft.Management.Deployment.dll', 'WinUI3Apps\Microsoft.Management.Deployment.winmd', 'WinUI3Apps\Winget.ComInterop.NOTICE.txt',
+    'WinUI3Apps\Assets\Settings\Icons\Winget.png', 'WinUI3Apps\Assets\Settings\Modules\Winget.png',
     'WinUI3Apps\Kit.Settings.pri', 'WinUI3Apps\Kit.QuickAccess.pri',
     'WinUI3Apps\Kit.Settings.runtimeconfig.json', 'WinUI3Apps\Kit.QuickAccess.runtimeconfig.json'
 )) {

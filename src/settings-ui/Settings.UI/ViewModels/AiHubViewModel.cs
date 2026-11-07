@@ -171,10 +171,12 @@ public sealed class AiHubViewModel : Observable, IDisposable
     private readonly RouteDispatcher _routeDispatcher;
     private readonly DispatcherQueue? _dispatcherQueue;
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly PolicyDraft[] _policyDrafts = [new(), new(), new(), new()];
     private AiHubSettingsStore _settingsStore = null!;
     private SecurityPolicyService _securityService = null!;
     private IAiTaskEngine? _engine;
     private CancellationTokenSource? _operation;
+    private bool _policyOperation;
     private AiHubConfig _config = AiHubConfig.CreateDefault();
     private int _activeKernelIndex;
     private int _pendingKernelIndex;
@@ -187,10 +189,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
     private string _kernelPathText = string.Empty;
     private double _downloadProgress;
     private bool _showDownloadProgress;
-    private string _securityPolicyContent = string.Empty;
-    private string _securityPolicyStatusText = string.Empty;
-    private string _securityAuditPolicyContent = string.Empty;
-    private string _optimizationPolicyContent = string.Empty;
     private string _statusMessage = string.Empty;
     private InfoBarSeverity _statusSeverity;
     private bool _isStatusOpen;
@@ -219,47 +217,17 @@ public sealed class AiHubViewModel : Observable, IDisposable
         DiscardEndpointChangesCommand = new RelayCommand(DiscardEndpointChanges, () => CanEdit && HasUnsavedEndpointChanges);
         SaveCommand = new RelayCommand(() => StartOperation(SaveAllAsync), () => CanEdit);
         ClearFallbackCommand = new RelayCommand(ClearFallback, () => CanEdit);
-        SavePolicyCommand = new RelayCommand(() => StartOperation(SavePolicyAsync), () => CanEdit && !string.IsNullOrWhiteSpace(SecurityPolicyContent));
-        ResetPolicyCommand = new RelayCommand(() => StartOperation(ResetPolicyAsync), () => CanEdit);
-        SaveSecurityAuditPolicyCommand = new RelayCommand(() => StartOperation(SaveSecurityAuditPolicyAsync), () => CanEdit && !string.IsNullOrWhiteSpace(SecurityAuditPolicyContent));
-        ResetSecurityAuditPolicyCommand = new RelayCommand(() => StartOperation(ResetSecurityAuditPolicyAsync), () => CanEdit);
-        SaveOptimizationPolicyCommand = new RelayCommand(() => StartOperation(SaveOptimizationPolicyAsync), () => CanEdit && !string.IsNullOrWhiteSpace(OptimizationPolicyContent));
-        ResetOptimizationPolicyCommand = new RelayCommand(() => StartOperation(ResetOptimizationPolicyAsync), () => CanEdit);
-
-        SaveActivePolicyCommand = new RelayCommand(
-            () =>
-            {
-                switch (ActivePolicyIndex)
-                {
-                    case 1:
-                        StartOperation(SaveSecurityAuditPolicyAsync);
-                        break;
-                    case 2:
-                        StartOperation(SaveOptimizationPolicyAsync);
-                        break;
-                    default:
-                        StartOperation(SavePolicyAsync);
-                        break;
-                }
-            },
-            () => CanEdit && !string.IsNullOrWhiteSpace(CurrentPolicyContent));
-        ResetActivePolicyCommand = new RelayCommand(
-            () =>
-            {
-                switch (ActivePolicyIndex)
-                {
-                    case 1:
-                        StartOperation(ResetSecurityAuditPolicyAsync);
-                        break;
-                    case 2:
-                        StartOperation(ResetOptimizationPolicyAsync);
-                        break;
-                    default:
-                        StartOperation(ResetPolicyAsync);
-                        break;
-                }
-            },
-            () => CanEdit);
+        SavePolicyCommand = new RelayCommand(() => StartPolicySave(0), () => CanSavePolicy(0));
+        ResetPolicyCommand = new RelayCommand(() => StageDefaultPolicy(0), () => CanEditPolicies);
+        SaveSecurityAuditPolicyCommand = new RelayCommand(() => StartPolicySave(1), () => CanSavePolicy(1));
+        ResetSecurityAuditPolicyCommand = new RelayCommand(() => StageDefaultPolicy(1), () => CanEditPolicies);
+        SaveOptimizationPolicyCommand = new RelayCommand(() => StartPolicySave(2), () => CanSavePolicy(2));
+        ResetOptimizationPolicyCommand = new RelayCommand(() => StageDefaultPolicy(2), () => CanEditPolicies);
+        SaveSelfTestPolicyCommand = new RelayCommand(() => StartPolicySave(3), () => CanSavePolicy(3));
+        ResetSelfTestPolicyCommand = new RelayCommand(() => StageDefaultPolicy(3), () => CanEditPolicies);
+        SaveActivePolicyCommand = new RelayCommand(() => StartPolicySave(ActivePolicyIndex), () => CanSavePolicy(ActivePolicyIndex));
+        ResetActivePolicyCommand = new RelayCommand(() => StageDefaultPolicy(ActivePolicyIndex), () => CanEditPolicies);
+        DiscardActivePolicyCommand = new RelayCommand(DiscardActivePolicy, () => CanEditPolicies && IsCurrentPolicyDirty);
         CancelOperationCommand = new RelayCommand(
             () =>
             {
@@ -308,6 +276,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             OnPropertyChanged(nameof(SecurityPolicyPath));
             OnPropertyChanged(nameof(SecurityAuditPolicyPath));
             OnPropertyChanged(nameof(OptimizationPolicyPath));
+            OnPropertyChanged(nameof(SelfTestPolicyPath));
             OnPropertyChanged(nameof(CurrentPolicyFilePath));
             NotifyEnabledChanged();
             ApplyLocalKernelStatus(_config.SelectedKernel, loaded.status);
@@ -328,6 +297,8 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     public bool CanEdit => IsEnabled && !IsBusy && CanToggle;
 
+    public bool CanEditPolicies => PoliciesLoaded && !IsBusy && CanToggle;
+
     public bool IsEnabled
     {
         get => _config.IsEnabled;
@@ -344,7 +315,10 @@ public sealed class AiHubViewModel : Observable, IDisposable
                 _config.IsEnabled = value;
                 if (!value)
                 {
-                    _operation?.Cancel();
+                    if (!_policyOperation)
+                    {
+                        _operation?.Cancel();
+                    }
                     IsStatusOpen = false;
                 }
 
@@ -432,15 +406,18 @@ public sealed class AiHubViewModel : Observable, IDisposable
         get => _activePolicyIndex;
         set
         {
-            if (Set(ref _activePolicyIndex, value))
+            if (value is >= 0 and <= 3 && Set(ref _activePolicyIndex, value))
             {
                 OnPropertyChanged(nameof(ActivePolicyTabIndex));
                 NotifyTaskPolicyIndexChanged();
                 OnPropertyChanged(nameof(CurrentPolicyContent));
                 OnPropertyChanged(nameof(CurrentPolicyFilePath));
                 OnPropertyChanged(nameof(CurrentPolicyDescription));
+                OnPropertyChanged(nameof(IsCurrentPolicyDirty));
+                OnPropertyChanged(nameof(CurrentPolicyStatusText));
                 ((RelayCommand)SaveActivePolicyCommand)?.OnCanExecuteChanged();
                 ((RelayCommand)ResetActivePolicyCommand)?.OnCanExecuteChanged();
+                ((RelayCommand)DiscardActivePolicyCommand)?.OnCanExecuteChanged();
             }
         }
     }
@@ -453,7 +430,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     /// <summary>
     /// Policy selected on the AI Hub page, which now offers only the task-specific chains:
-    /// 0 = security audit, 1 = optimization.
+    /// 0 = security audit, 1 = optimization, 2 = service self-test.
     /// </summary>
     /// <remarks>
     /// The global security policy moved to General because it governs every plugin, so this
@@ -463,7 +440,13 @@ public sealed class AiHubViewModel : Observable, IDisposable
     public int TaskPolicyIndex
     {
         get => Math.Max(0, ActivePolicyIndex - 1);
-        set => ActivePolicyIndex = Math.Max(0, value) + 1;
+        set
+        {
+            if (value is >= 0 and <= 2)
+            {
+                ActivePolicyIndex = value + 1;
+            }
+        }
     }
 
     /// <summary>Raises change notifications for the task-scoped policy selector.</summary>
@@ -472,6 +455,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(TaskPolicyIndex));
         OnPropertyChanged(nameof(IsSecurityAuditPolicyTab));
         OnPropertyChanged(nameof(IsOptimizationPolicyTab));
+        OnPropertyChanged(nameof(IsSelfTestPolicyTab));
     }
 
     /// <summary>True when the security-audit chain policy is selected.</summary>
@@ -480,11 +464,21 @@ public sealed class AiHubViewModel : Observable, IDisposable
     /// <summary>True when the optimization chain policy is selected.</summary>
     public bool IsOptimizationPolicyTab => TaskPolicyIndex == 1;
 
-    private bool _policiesLoaded;
+    public bool IsSelfTestPolicyTab => TaskPolicyIndex == 2;
+
+    private bool _policiesLoading;
+
+    public bool PoliciesLoaded => _policyDrafts.All(draft => draft.IsLoaded);
+
+    public bool IsCurrentPolicyDirty => _policyDrafts[ActivePolicyIndex].IsDirty;
+
+    public bool HasUnsavedPolicyChanges => _policyDrafts.Any(draft => draft.IsDirty);
+
+    public string CurrentPolicyStatusText => GetPolicyStatusText(ActivePolicyIndex);
 
     public void EnsurePoliciesLoaded()
     {
-        if (_policiesLoaded || _disposed || _loadFailed)
+        if (PoliciesLoaded || _policiesLoading || _disposed || _loadFailed)
         {
             return;
         }
@@ -497,103 +491,98 @@ public sealed class AiHubViewModel : Observable, IDisposable
         get
         {
             EnsurePoliciesLoaded();
-            return ActivePolicyIndex switch
-            {
-                1 => SecurityAuditPolicyContent,
-                2 => OptimizationPolicyContent,
-                _ => SecurityPolicyContent,
-            };
+            return _policyDrafts[ActivePolicyIndex].Content;
         }
         set
         {
-            switch (ActivePolicyIndex)
-            {
-                case 1:
-                    SecurityAuditPolicyContent = value;
-                    break;
-                case 2:
-                    OptimizationPolicyContent = value;
-                    break;
-                default:
-                    SecurityPolicyContent = value;
-                    break;
-            }
-
-            OnPropertyChanged();
-            ((RelayCommand)SaveActivePolicyCommand)?.OnCanExecuteChanged();
+            UpdatePolicyDraft(ActivePolicyIndex, value);
         }
     }
 
-    public string SecurityPolicyStatusText { get => _securityPolicyStatusText; private set => Set(ref _securityPolicyStatusText, value); }
+    public string SecurityPolicyStatusText => GetPolicyStatusText(0);
 
     public string SecurityAuditPolicyPath => _securityService?.GetTaskPolicyPath("security-audit") ?? string.Empty;
 
     public string OptimizationPolicyPath => _securityService?.GetTaskPolicyPath("system-optimization") ?? string.Empty;
 
+    public string SelfTestPolicyPath => _securityService?.GetTaskPolicyPath(SelfTestPolicy.TaskId) ?? string.Empty;
+
     public string CurrentPolicyFilePath => ActivePolicyIndex switch
     {
         1 => SecurityAuditPolicyPath,
         2 => OptimizationPolicyPath,
+        3 => SelfTestPolicyPath,
         _ => SecurityPolicyPath,
     };
 
     public string CurrentPolicyDescription => ActivePolicyIndex switch
     {
-        1 => "Task-specific policy and security constraints for security scanning agents.",
-        2 => "Task-specific guidelines and safety rules for system optimization agents.",
-        _ => "Global safety rules and constraints applied to all AI executions and agents.",
+        1 => "AiHub_PolicyDescriptionAudit".GetLocalizedOrFallback("Review the supplied Windows events and distinguish evidence from possible explanations."),
+        2 => "AiHub_PolicyDescriptionOptimization".GetLocalizedOrFallback("Review locally verified candidates without expanding their paths, actions or scope."),
+        3 => "AiHub_PolicyDescriptionSelfTest".GetLocalizedOrFallback("A fixed ping probe checks the AI response contract without inspecting the workstation."),
+        _ => "AiHub_PolicyDescriptionGlobal".GetLocalizedOrFallback("Shared safety and privacy rules apply to every AI task."),
     };
 
     public string SecurityAuditPolicyContent
     {
-        get => _securityAuditPolicyContent;
-        set
-        {
-            if (Set(ref _securityAuditPolicyContent, value))
-            {
-                ((RelayCommand)SaveSecurityAuditPolicyCommand)?.OnCanExecuteChanged();
-                if (ActivePolicyIndex == 1)
-                {
-                    OnPropertyChanged(nameof(CurrentPolicyContent));
-                    ((RelayCommand)SaveActivePolicyCommand)?.OnCanExecuteChanged();
-                }
-            }
-        }
+        get => _policyDrafts[1].Content;
+        set => UpdatePolicyDraft(1, value);
     }
 
     public string OptimizationPolicyContent
     {
-        get => _optimizationPolicyContent;
-        set
-        {
-            if (Set(ref _optimizationPolicyContent, value))
-            {
-                ((RelayCommand)SaveOptimizationPolicyCommand)?.OnCanExecuteChanged();
-                if (ActivePolicyIndex == 2)
-                {
-                    OnPropertyChanged(nameof(CurrentPolicyContent));
-                    ((RelayCommand)SaveActivePolicyCommand)?.OnCanExecuteChanged();
-                }
-            }
-        }
+        get => _policyDrafts[2].Content;
+        set => UpdatePolicyDraft(2, value);
+    }
+
+    public string SelfTestPolicyContent
+    {
+        get => _policyDrafts[3].Content;
+        set => UpdatePolicyDraft(3, value);
     }
 
     public string SecurityPolicyContent
     {
-        get => _securityPolicyContent;
-        set
+        get => _policyDrafts[0].Content;
+        set => UpdatePolicyDraft(0, value);
+    }
+
+    private void UpdatePolicyDraft(int index, string content)
+    {
+        if (_policyDrafts[index].SetContent(content))
         {
-            if (Set(ref _securityPolicyContent, value))
-            {
-                SecurityPolicyStatusText = "Draft";
-                ((RelayCommand)SavePolicyCommand).OnCanExecuteChanged();
-                if (ActivePolicyIndex == 0)
-                {
-                    OnPropertyChanged(nameof(CurrentPolicyContent));
-                    ((RelayCommand)SaveActivePolicyCommand)?.OnCanExecuteChanged();
-                }
-            }
+            NotifyPolicyDraftChanged(index);
         }
+    }
+
+    private void NotifyPolicyDraftChanged(int index)
+    {
+        OnPropertyChanged(index switch
+        {
+            1 => nameof(SecurityAuditPolicyContent),
+            2 => nameof(OptimizationPolicyContent),
+            3 => nameof(SelfTestPolicyContent),
+            _ => nameof(SecurityPolicyContent),
+        });
+        OnPropertyChanged(nameof(SecurityPolicyStatusText));
+        OnPropertyChanged(nameof(CurrentPolicyContent));
+        OnPropertyChanged(nameof(IsCurrentPolicyDirty));
+        OnPropertyChanged(nameof(HasUnsavedPolicyChanges));
+        OnPropertyChanged(nameof(CurrentPolicyStatusText));
+        OnPropertyChanged(nameof(PoliciesLoaded));
+        OnPropertyChanged(nameof(CanEditPolicies));
+        RefreshCommands();
+    }
+
+    private string GetPolicyStatusText(int index)
+    {
+        PolicyDraft draft = _policyDrafts[index];
+        string state = !draft.IsLoaded
+            ? "AiHub_PolicyStateLoading".GetLocalizedOrFallback("Loading policy")
+            : draft.IsDirty
+                ? "AiHub_PolicyStateDirty".GetLocalizedOrFallback("Unsaved draft")
+                : "AiHub_PolicyStateSaved".GetLocalizedOrFallback("Saved");
+        return $"{state} · {"AiHub_PolicyTemplateVersionFormat".FormatLocalized("Default template v{0}", SecurityPolicyService.CurrentTemplateVersion)}";
     }
 
     public string StatusMessage { get => _statusMessage; private set => Set(ref _statusMessage, value); }
@@ -610,6 +599,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             if (Set(ref _isBusy, value))
             {
                 OnPropertyChanged(nameof(CanEdit));
+                OnPropertyChanged(nameof(CanEditPolicies));
                 RefreshCommands();
             }
         }
@@ -702,9 +692,15 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     public ICommand ResetOptimizationPolicyCommand { get; }
 
+    public ICommand SaveSelfTestPolicyCommand { get; }
+
+    public ICommand ResetSelfTestPolicyCommand { get; }
+
     public ICommand SaveActivePolicyCommand { get; }
 
     public ICommand ResetActivePolicyCommand { get; }
+
+    public ICommand DiscardActivePolicyCommand { get; }
 
     public ICommand CancelOperationCommand { get; }
 
@@ -728,43 +724,47 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     private async Task InitializePoliciesAsync()
     {
-        await Initialization;
-        if (_disposed || IsBusy)
+        if (_policiesLoading || PoliciesLoaded)
         {
             return;
         }
 
-        if (_loadFailed)
+        _policiesLoading = true;
+        try
         {
-            ShowStatus(Text("AiHub_LoadFailed"), InfoBarSeverity.Error);
-            return;
+            await Initialization;
+            if (_disposed || IsBusy)
+            {
+                return;
+            }
+
+            if (_loadFailed)
+            {
+                ShowStatus(Text("AiHub_LoadFailed"), InfoBarSeverity.Error);
+                return;
+            }
+
+            await RunOperationAsync(async token =>
+            {
+                string[] policies =
+                [
+                    await _securityService.LoadGlobalPolicyAsync(token),
+                    await _securityService.LoadTaskAgentsPolicyAsync("aihub", "security-audit", token),
+                    await _securityService.LoadTaskAgentsPolicyAsync("aihub", "system-optimization", token),
+                    await _securityService.LoadTaskAgentsPolicyAsync("aihub", SelfTestPolicy.TaskId, token),
+                ];
+                token.ThrowIfCancellationRequested();
+                for (int index = 0; index < policies.Length; index++)
+                {
+                    _policyDrafts[index].Load(policies[index]);
+                    NotifyPolicyDraftChanged(index);
+                }
+            }, policyOperation: true);
         }
-
-        _policiesLoaded = true;
-
-        await RunOperationAsync(async token =>
+        finally
         {
-            RefreshLocalKernelStatus();
-            SecurityPolicyContent = await _securityService.LoadGlobalPolicyAsync(token);
-            if (string.IsNullOrWhiteSpace(SecurityPolicyContent))
-            {
-                SecurityPolicyContent = SecurityPolicyService.GetDefaultPolicyContent();
-            }
-
-            SecurityAuditPolicyContent = await _securityService.LoadTaskAgentsPolicyAsync("aihub", "security-audit", token);
-            if (string.IsNullOrWhiteSpace(SecurityAuditPolicyContent))
-            {
-                SecurityAuditPolicyContent = TaskPolicyDefaults.DefaultSecurityAuditInstructions;
-            }
-
-            OptimizationPolicyContent = await _securityService.LoadTaskAgentsPolicyAsync("aihub", "system-optimization", token);
-            if (string.IsNullOrWhiteSpace(OptimizationPolicyContent))
-            {
-                OptimizationPolicyContent = TaskPolicyDefaults.DefaultSystemOptimizationInstructions;
-            }
-
-            SecurityPolicyStatusText = "Active";
-        });
+            _policiesLoading = false;
+        }
     }
 
     internal void TestTarget(AiTargetSettings target) => StartOperation(async token =>
@@ -935,20 +935,12 @@ public sealed class AiHubViewModel : Observable, IDisposable
         _settingsStore.Update(config => config.Targets = new ObservableCollection<AiTargetSettings>(_config.Targets.Select(target => target.Clone())));
         AiHubEngine.RaiseStateChanged();
 
-        if (!string.IsNullOrWhiteSpace(SecurityPolicyContent))
+        for (int index = 0; index < _policyDrafts.Length; index++)
         {
-            await _securityService.SaveGlobalPolicyAsync(SecurityPolicyContent, token);
-            SecurityPolicyStatusText = "Saved";
-        }
-
-        if (!string.IsNullOrWhiteSpace(SecurityAuditPolicyContent))
-        {
-            await _securityService.SaveTaskPolicyAsync("security-audit", SecurityAuditPolicyContent, token);
-        }
-
-        if (!string.IsNullOrWhiteSpace(OptimizationPolicyContent))
-        {
-            await _securityService.SaveTaskPolicyAsync("system-optimization", OptimizationPolicyContent, token);
+            if (_policyDrafts[index].IsLoaded && _policyDrafts[index].IsDirty && !string.IsNullOrWhiteSpace(_policyDrafts[index].Content))
+            {
+                await SavePolicyDraftAsync(index, token);
+            }
         }
 
         ShowStatus(Text("AIHub_SettingsSaved"), InfoBarSeverity.Success);
@@ -967,67 +959,62 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
     }
 
-    private async Task SavePolicyAsync(CancellationToken token)
+    private bool CanSavePolicy(int index) => CanEditPolicies && _policyDrafts[index].IsDirty && !string.IsNullOrWhiteSpace(_policyDrafts[index].Content);
+
+    private void StartPolicySave(int index)
     {
-        await _securityService.SaveGlobalPolicyAsync(SecurityPolicyContent, token);
-        if (!string.IsNullOrWhiteSpace(SecurityAuditPolicyContent))
+        if (CanSavePolicy(index))
         {
-            await _securityService.SaveTaskPolicyAsync("security-audit", SecurityAuditPolicyContent, token);
-        }
-
-        if (!string.IsNullOrWhiteSpace(OptimizationPolicyContent))
-        {
-            await _securityService.SaveTaskPolicyAsync("system-optimization", OptimizationPolicyContent, token);
-        }
-
-        SecurityPolicyStatusText = "Saved";
-        ShowStatus(Text("AiHub_PolicySaved"), InfoBarSeverity.Success);
-    }
-
-    private async Task ResetPolicyAsync(CancellationToken token)
-    {
-        token.ThrowIfCancellationRequested();
-        _securityService.ResetGlobalPolicy();
-        SecurityPolicyContent = await _securityService.LoadGlobalPolicyAsync(token);
-        SecurityPolicyStatusText = "Default";
-        ShowStatus(Text("AiHub_PolicyReset"), InfoBarSeverity.Success);
-    }
-
-    private async Task ResetSecurityAuditPolicyAsync(CancellationToken token)
-    {
-        token.ThrowIfCancellationRequested();
-        _securityService.ResetTaskPolicy("security-audit");
-        SecurityAuditPolicyContent = await _securityService.LoadTaskAgentsPolicyAsync("aihub", "security-audit", token);
-        ShowStatus(Text("AIHub_SecurityAuditPolicyReset"), InfoBarSeverity.Success);
-    }
-
-    private async Task ResetOptimizationPolicyAsync(CancellationToken token)
-    {
-        token.ThrowIfCancellationRequested();
-        _securityService.ResetTaskPolicy("system-optimization");
-        OptimizationPolicyContent = await _securityService.LoadTaskAgentsPolicyAsync("aihub", "system-optimization", token);
-        ShowStatus(Text("AIHub_OptimizationPolicyReset"), InfoBarSeverity.Success);
-    }
-
-    private async Task SaveSecurityAuditPolicyAsync(CancellationToken token)
-    {
-        token.ThrowIfCancellationRequested();
-        if (!string.IsNullOrWhiteSpace(SecurityAuditPolicyContent))
-        {
-            await _securityService.SaveTaskPolicyAsync("security-audit", SecurityAuditPolicyContent, token);
-            ShowStatus(Text("AIHub_SecurityAuditPolicySaved"), InfoBarSeverity.Success);
+            _ = RunOperationAsync(async token =>
+            {
+                await SavePolicyDraftAsync(index, token);
+                ShowStatus(Text("AiHub_PolicySaved"), InfoBarSeverity.Success);
+            }, policyOperation: true);
         }
     }
 
-    private async Task SaveOptimizationPolicyAsync(CancellationToken token)
+    private async Task SavePolicyDraftAsync(int index, CancellationToken token)
     {
-        token.ThrowIfCancellationRequested();
-        if (!string.IsNullOrWhiteSpace(OptimizationPolicyContent))
+        string snapshot = _policyDrafts[index].Content;
+        if (index == 0)
         {
-            await _securityService.SaveTaskPolicyAsync("system-optimization", OptimizationPolicyContent, token);
-            ShowStatus(Text("AIHub_OptimizationPolicySaved"), InfoBarSeverity.Success);
+            await _securityService.SaveGlobalPolicyAsync(snapshot, token);
+        }
+        else
+        {
+            await _securityService.SaveTaskPolicyAsync(GetTaskPolicyId(index), snapshot, token);
+        }
+
+        _policyDrafts[index].AcceptSaved(snapshot);
+        NotifyPolicyDraftChanged(index);
+    }
+
+    private void StageDefaultPolicy(int index)
+    {
+        if (CanEditPolicies)
+        {
+            UpdatePolicyDraft(index, index == 0 ? SecurityPolicyService.GetDefaultPolicyContent() : SecurityPolicyService.GetDefaultTaskPolicy(GetTaskPolicyId(index)));
+            ShowStatus("AiHub_PolicyDefaultStaged".GetLocalizedOrFallback("Default template loaded into the draft. Save to apply."), InfoBarSeverity.Informational);
         }
     }
+
+    private void DiscardActivePolicy()
+    {
+        if (CanEditPolicies && IsCurrentPolicyDirty)
+        {
+            _policyDrafts[ActivePolicyIndex].Discard();
+            NotifyPolicyDraftChanged(ActivePolicyIndex);
+            ShowStatus("AiHub_PolicyDraftDiscarded".GetLocalizedOrFallback("Draft discarded; saved policy restored."), InfoBarSeverity.Informational);
+        }
+    }
+
+    private static string GetTaskPolicyId(int index) => index switch
+    {
+        1 => "security-audit",
+        2 => "system-optimization",
+        3 => SelfTestPolicy.TaskId,
+        _ => throw new ArgumentOutOfRangeException(nameof(index)),
+    };
 
     private void RefreshLocalKernelStatus()
     {
@@ -1063,7 +1050,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
     }
 
-    private Task RunOperationAsync(Func<CancellationToken, Task> operation)
+    private Task RunOperationAsync(Func<CancellationToken, Task> operation, bool policyOperation = false)
     {
         // Native UI callbacks can lack a managed synchronization context. Capture the
         // dispatcher for the entire operation, including policy loads and busy cleanup.
@@ -1075,7 +1062,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
                 SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(_dispatcherQueue));
             }
 
-            return ExecuteOperationAsync(operation);
+            return ExecuteOperationAsync(operation, policyOperation);
         }
         finally
         {
@@ -1083,7 +1070,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
     }
 
-    private async Task ExecuteOperationAsync(Func<CancellationToken, Task> operation)
+    private async Task ExecuteOperationAsync(Func<CancellationToken, Task> operation, bool policyOperation)
     {
         if (_disposed || IsBusy)
         {
@@ -1092,6 +1079,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         _operation = cancellation;
+        _policyOperation = policyOperation;
         IsBusy = true;
         try
         {
@@ -1111,6 +1099,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         finally
         {
             _operation = null;
+            _policyOperation = false;
             ShowDownloadProgress = false;
             IsBusy = false;
         }
@@ -1145,7 +1134,10 @@ public sealed class AiHubViewModel : Observable, IDisposable
             _config.IsEnabled = args.IsEnabled;
             if (!args.IsEnabled)
             {
-                _operation?.Cancel();
+                if (!_policyOperation)
+                {
+                    _operation?.Cancel();
+                }
                 IsStatusOpen = false;
             }
 
@@ -1172,12 +1164,13 @@ public sealed class AiHubViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(IsEnabled));
         OnPropertyChanged(nameof(HubContentVisibility));
         OnPropertyChanged(nameof(CanEdit));
+        OnPropertyChanged(nameof(CanEditPolicies));
         RefreshCommands();
     }
 
     private void RefreshCommands()
     {
-        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, CancelOperationCommand })
+        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveSelfTestPolicyCommand, ResetSelfTestPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, DiscardActivePolicyCommand, CancelOperationCommand })
         {
             ((RelayCommand)command).OnCanExecuteChanged();
         }

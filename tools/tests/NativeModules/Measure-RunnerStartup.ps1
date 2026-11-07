@@ -4,7 +4,7 @@ param(
     [ValidateRange(1, 10)]
     [int]$Runs = 3,
     [ValidateRange(1, 100)]
-    [int]$ExpectedModuleCount = 6,
+    [int]$ExpectedModuleCount = 7,
     [string]$ReportPath
 )
 
@@ -18,7 +18,7 @@ $runtimeBoundary = $runtimeDirectory + [IO.Path]::DirectorySeparatorChar
 if ([IO.Path]::GetFileName($ExecutablePath) -ne 'Kit.exe' -or -not (Test-Path -LiteralPath $ExecutablePath -PathType Leaf)) {
     throw 'Select an existing Kit.exe build.'
 }
-if (Get-Process -Name Kit,Kit.Settings,Kit.QuickAccess,Kit.Awake,Kit.LightSwitchService,Kit.LocalserverWorker,Kit.AIHubWorker -ErrorAction SilentlyContinue) {
+if (Get-Process -Name Kit,Kit.Settings,Kit.QuickAccess,Kit.Awake,Kit.LightSwitchService,Kit.LocalserverWorker,Kit.AIHubWorker,Kit.WingetService -ErrorAction SilentlyContinue) {
     throw 'Close existing Kit processes before measuring startup.'
 }
 $logDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Kit\RunnerLogs'

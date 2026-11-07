@@ -19,6 +19,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.UDPtest => $"{nameof(ModuleType.UDPtest)}/ModuleTitle",
                 ModuleType.NetMap => $"{nameof(ModuleType.NetMap)}/ModuleTitle",
                 ModuleType.AIHub => $"{nameof(ModuleType.AIHub)}/ModuleTitle",
+                ModuleType.Winget => $"{nameof(ModuleType.Winget)}/ModuleTitle",
                 ModuleType.GeneralSettings => "QuickAccessTitle/Title",
                 _ => string.Empty,
             };
@@ -34,6 +35,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.UDPtest => "ms-appx:///Assets/Settings/Icons/UDPtest.png",
                 ModuleType.NetMap => "ms-appx:///Assets/Settings/Icons/NetMap.png",
                 ModuleType.AIHub => "ms-appx:///Assets/Settings/Icons/AiHub.png",
+                ModuleType.Winget => "ms-appx:///Assets/Settings/Icons/Winget.png",
                 ModuleType.GeneralSettings => "ms-appx:///Assets/Settings/Icons/Kit.png",
                 _ => string.Empty,
             };
@@ -49,6 +51,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.UDPtest => generalSettingsConfig.Enabled.UDPtest,
                 ModuleType.NetMap => generalSettingsConfig.Enabled.NetMap,
                 ModuleType.AIHub => generalSettingsConfig.Enabled.AiHub,
+                ModuleType.Winget => generalSettingsConfig.Enabled.Winget,
                 ModuleType.GeneralSettings => generalSettingsConfig.EnableQuickAccess,
                 _ => false,
             };
@@ -64,6 +67,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 case ModuleType.UDPtest: generalSettingsConfig.Enabled.UDPtest = isEnabled; break;
                 case ModuleType.NetMap: generalSettingsConfig.Enabled.NetMap = isEnabled; break;
                 case ModuleType.AIHub: generalSettingsConfig.Enabled.AiHub = isEnabled; break;
+                case ModuleType.Winget: generalSettingsConfig.Enabled.Winget = isEnabled; break;
                 case ModuleType.GeneralSettings: generalSettingsConfig.EnableQuickAccess = isEnabled; break;
             }
         }
@@ -82,6 +86,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.UDPtest => UDPtestSettings.ModuleName,
                 ModuleType.NetMap => NetMapSettings.ModuleName,
                 ModuleType.AIHub => AIHubSettings.ModuleName,
+                ModuleType.Winget => WingetSettings.ModuleName,
                 ModuleType.GeneralSettings => nameof(ModuleType.GeneralSettings),
                 _ => string.Empty,
             };

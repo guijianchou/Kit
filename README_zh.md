@@ -4,13 +4,13 @@
 
 Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 Windows 11 本地工具集（同步对齐上游 PowerToys **v0.102.3001.0** 代码）。它复用 Runner、原生模块接口和 WinUI 3 设置框架，整合系统工具、本地服务管理、网络诊断与 AI 辅助维护。
 
-当前源码版本：**3.3.5**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
+当前源码版本：**3.4.5**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
 
 [功能概览](#1-功能概览) · [主框架](#2-主框架) · [插件](#3-插件) · [构建与发布](#4-构建与发布) · [数据与日志](#5-数据与日志) · [开发与扩展](#6-开发与扩展)
 
 ## 1. 功能概览
 
-当前有六个内置模块。本文中的“插件”指随 Kit 编译、显式注册的模块，尚不支持通过放入 DLL 或 manifest 动态安装第三方插件。
+当前有七个内置模块。本文中的“插件”指随 Kit 编译、显式注册的模块，尚不支持通过放入 DLL 或 manifest 动态安装第三方插件。
 
 | 模块 | 主要用途 | 业务运行位置 | 来源 |
 | --- | --- | --- | --- |
@@ -20,6 +20,7 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 | [UDPtest](#34-udptest线路质量探测) | 检测已配置线路的延迟、抖动、成功率及 NAT | Settings + 诊断 Service | Kit |
 | [AI Hub](#35-ai-hub审计与系统优化) | 系统事件审计、下载整理与缓存清理 | Settings + 定时审计 Worker | Kit |
 | [NetMap](#36-netmap网络地图与路径观测) | 观察当前 Direct / Proxy 出口、服务连通性和 ICMP 路径 | Settings + 观测 Service | Kit |
+| [WinGet](src/modules/Winget/README.md) | 软件发现、更新与卸载、确认后批量操作、每日检查与通知 | 独立 WingetService 进程 | Kit |
 
 启动运行目录中的 `Kit.exe` 后，在 Settings 中启用需要的模块并配置。**模块开关与任务开始是两层操作**：例如 Localserver 启用后仍需单独启动服务，NetMap 启用后仍需点击 Start。
 
@@ -33,7 +34,7 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 flowchart TB
     subgraph R["Kit.exe / Runner"]
         HOST["托盘、模块注册、进程与 IPC 管理"]
-        MI["六个原生模块接口 DLL"]
+        MI["七个原生模块接口 DLL"]
         HOST -->|"加载 / 启用 / 禁用"| MI
     end
     subgraph S["Kit.Settings.exe / WinUI 3"]
@@ -82,6 +83,7 @@ Settings 通过现有 IPC 提交设置和模块开关；Runner 调用模块接�
 ├── Kit.UDPtestService.exe
 ├── Kit.NetMapService.exe
 ├── Kit.AIHubWorker.exe
+├── Kit.WingetService.exe
 ├── LightSwitchService/Kit.LightSwitchService.exe
 └── WinUI3Apps/
     ├── Kit.Settings.exe
@@ -111,7 +113,7 @@ flowchart LR
 
 ### 3.2 Light Switch：主题计划与 CLI 工具
 
-按固定时间、日出日落或夜间模式计划自动切换 Windows 明暗主题，并提供完整的命令行交互控制（`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`）。六个模块统一采用零快捷键设计。
+按固定时间、日出日落或夜间模式计划自动切换 Windows 明暗主题，并提供完整的命令行交互控制（`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`）。七个模块统一采用零快捷键设计。
 
 ```mermaid
 flowchart LR
@@ -305,7 +307,7 @@ Windows 不区分目录大小写，因此 AI Hub 插件与共享 AI 服务使用
 
 ## 6. 开发与扩展
 
-模块沿用 PowerToys 的 C++ 契约，导出 `kit_create()`。核心接口包括启用/禁用、读取/保存配置、快捷动作和销毁；Runner 从 [KitKnownModules](src/runner/main.cpp) 显式加载六个模块。
+模块沿用 PowerToys 的 C++ 契约，导出 `kit_create()`。核心接口包括启用/禁用、读取/保存配置、快捷动作和销毁；Runner 从 [KitKnownModules](src/runner/main.cpp) 显式加载七个模块。
 
 新增模块需完成：
 

@@ -772,15 +772,27 @@ internal static class ModulePageSmoke
         }
         else
         {
-            vm.ActiveTabIndex = 2;
-            await Task.Delay(150);
+            var sections = (Segmented)page.FindName("AiHubSections");
+            sections.SelectedIndex = 2;
+            for (int attempt = 0; attempt < 50 && (!vm.AiHub.PoliciesLoaded || vm.AiHub.IsBusy); attempt++) await Task.Delay(100);
+            var policyEditor = (TextBox)page.FindName("AiTaskPolicyContentBox");
+            if (vm.ActiveTabIndex != 2 || policyEditor == null || policyEditor.IsReadOnly)
+                throw new InvalidOperationException("Selecting task policies did not load an editable draft.");
+            vm.AiHub.TaskPolicyIndex = 0;
             vm.AiHub.CurrentPolicyContent += "\nSmoke test policy save.";
+            if (!vm.AiHub.IsCurrentPolicyDirty || !vm.AiHub.SaveActivePolicyCommand.CanExecute(null))
+                throw new InvalidOperationException("A changed task policy did not enable saving.");
             vm.AiHub.SaveActivePolicyCommand.Execute(null);
             for (int attempt = 0; attempt < 50 && vm.AiHub.IsBusy; attempt++) await Task.Delay(100);
             var policyStatus = (InfoBar)page.FindName("AiTaskPolicyStatus");
-            if (!policyStatus.IsOpen || policyStatus.Severity != InfoBarSeverity.Success) throw new InvalidOperationException("Task policy save feedback is missing.");
+            if (!policyStatus.IsOpen || policyStatus.Severity != InfoBarSeverity.Success || vm.AiHub.IsCurrentPolicyDirty || vm.AiHub.SaveActivePolicyCommand.CanExecute(null))
+                throw new InvalidOperationException("Task policy save feedback or clean-draft state is missing.");
             vm.AiHub.TaskPolicyIndex = 1;
             if (vm.AiHub.ActivePolicyIndex != 2) throw new InvalidOperationException("Optimization policy selection is incorrect.");
+            vm.AiHub.TaskPolicyIndex = 2;
+            if (vm.AiHub.ActivePolicyIndex != 3 || !vm.AiHub.IsSelfTestPolicyTab)
+                throw new InvalidOperationException("Self-test policy selection is incorrect.");
+            vm.AiHub.TaskPolicyIndex = 0;
 
             if (pluginWrites < 3 || !serviceSettings.SequenceEqual(File.ReadAllBytes(store.SettingsFilePath)) ||
                 !secrets.SequenceEqual(File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat"))))
@@ -813,10 +825,19 @@ internal static class ModulePageSmoke
         var observed = (List<TempFileInfo>)typeof(AIHubPageViewModel).GetField("_observedOptimizationItems", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(vm);
         var organizerField = typeof(AIHubPageViewModel).GetField("_downloadOrganizerService", BindingFlags.Instance | BindingFlags.NonPublic);
         var originalOrganizer = organizerField.GetValue(vm);
+        var executorField = typeof(AIHubPageViewModel).GetField("_optimizationExecutor", BindingFlags.Instance | BindingFlags.NonPublic);
+        var originalExecutor = executorField.GetValue(vm);
+        var historyBefore = vm.OptimizationHistory.ToArray();
+        var selectedHistoryBefore = vm.SelectedOptimizationRun;
+        string fixtureHistory = Path.Combine(fixture, "History");
         try
         {
             vm.ActiveTabIndex = 1;
             organizerField.SetValue(vm, Activator.CreateInstance(typeof(Kit.AIHubLib.Services.DownloadOrganizerService), BindingFlags.Instance | BindingFlags.NonPublic, null, new object[] { fixture }, null));
+            executorField.SetValue(vm, new Kit.AIHubLib.Services.OptimizationExecutionService(
+                (Kit.AIHubLib.Services.CacheCleanupService)typeof(AIHubPageViewModel).GetField("_cacheCleanupService", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(vm),
+                (Kit.AIHubLib.Services.DownloadOrganizerService)organizerField.GetValue(vm),
+                new Kit.AIHubLib.Storage.OptimizationHistoryStorage(fixtureHistory)));
             foreach (string path in new[] { old, locked })
             {
                 File.WriteAllText(path, "fixture");
@@ -903,6 +924,10 @@ internal static class ModulePageSmoke
                 SizeInBytes = 100000,
             }).ToList();
             observed.AddRange(stress);
+            // New snapshots preserve expansion. Start this lazy-construction assertion
+            // from a deliberately collapsed view, as a user would before reopening it.
+            foreach (var category in vm.OptimizationCategories) category.IsExpanded = false;
+            foreach (var group in vm.CacheGroups.Concat(vm.CacheGroups.SelectMany(group => group.Projects))) group.IsExpanded = false;
             refresh.Invoke(vm, null);
             await Task.Delay(150);
             if (Descendants(page).OfType<Expander>().Count(item => item.DataContext is OptimizationCategoryViewModel) > 2)
@@ -940,6 +965,8 @@ internal static class ModulePageSmoke
                     SizeInBytes = 100000,
                 }).ToList();
                 observed.AddRange(files);
+                foreach (var category in vm.OptimizationCategories) category.IsExpanded = false;
+                foreach (var group in vm.CacheGroups.Concat(vm.CacheGroups.SelectMany(group => group.Projects))) group.IsExpanded = false;
                 refresh.Invoke(vm, null);
                 await Task.Delay(100);
                 var cacheGroup = Descendants(page).OfType<Expander>().Single(item => item.DataContext is OptimizationGroupViewModel group && group.Family == entry.Item1);
@@ -969,33 +996,77 @@ internal static class ModulePageSmoke
             await RenderPage(page, "aihub-optimization-editors.png");
             using (var held = File.Open(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
-                vm.CleanAllCommand.Execute(null);
-                if (!vm.IsExecutingOptimization || vm.CleanAllCommand.CanExecute(null)) throw new InvalidOperationException("Cleanup progress or command exclusion failed.");
-                for (int attempt = 0; attempt < 100 && vm.IsOptimizing; attempt++) await Task.Delay(50);
+                await ConfirmFixtureOptimization(page, fixture, () => vm.CleanAllCommand.Execute(null));
                 if (vm.IsOptimizing || vm.OptimizationProgress != 100 || File.Exists(old) || !File.Exists(locked)) throw new InvalidOperationException("Cleanup did not delete only the available snapshot.");
             }
             if (!vm.OptimizationCandidates.Contains(download) || vm.OptimizationCandidates.Count != 2) throw new InvalidOperationException("Clean all touched Downloads or discarded a failed candidate.");
-            vm.CacheGroups.Single(group => group.Family == "system").ExecuteCommand.Execute(null);
-            for (int attempt = 0; attempt < 100 && vm.IsOptimizing; attempt++) await Task.Delay(50);
+            await ConfirmFixtureOptimization(page, fixture, () => vm.CacheGroups.Single(group => group.Family == "system").ExecuteCommand.Execute(null));
             if (vm.IsOptimizing || File.Exists(locked)) throw new InvalidOperationException("Per-category cleanup retry failed.");
-            vm.OrganizeDownloadsCommand.Execute(null);
-            for (int attempt = 0; attempt < 100 && vm.IsOptimizing; attempt++) await Task.Delay(50);
+            await ConfirmFixtureOptimization(page, fixture, () => vm.OrganizeDownloadsCommand.Execute(null));
             if (vm.IsOptimizing || File.Exists(reportPath) || !File.Exists(Path.Combine(fixture, "Documents", "report.pdf"))) throw new InvalidOperationException("Downloads organization failed.");
             if (vm.CacheCategories.Count != 4 || vm.CacheGroups.Any(group => group.IsEnabled) || vm.CleanAllCommand.CanExecute(null)) throw new InvalidOperationException("Unapproved results disappeared or enabled a write.");
-            File.AppendAllText(Report, "Optimization: five broad groups, Debug output location, direct cleanup, clean-all excludes Downloads, progress, failed-item retention and group retry passed.\n");
+            var persisted = await new Kit.AIHubLib.Storage.OptimizationHistoryStorage(fixtureHistory).LoadAsync();
+            if (persisted.Count != 3 || persisted.Sum(record => record.DeletedCount) != 2 || persisted.Sum(record => record.MovedCount) != 1 || persisted.Sum(record => record.FailedCount) != 1)
+                throw new InvalidOperationException("Fixture execution history did not retain accurate per-run results.");
+            File.AppendAllText(Report, "Optimization: five broad groups, Debug output location, real confirmation on fixture-only cleanup/move, clean-all excludes Downloads, progress, failed-item retention/group retry, and isolated history passed.\n");
         }
         finally
         {
+            vm.CancelOptimizationCommand.Execute(null);
+            for (int attempt = 0; attempt < 100 && vm.IsOptimizing; attempt++) await Task.Delay(50);
+            if (vm.IsOptimizing) throw new InvalidOperationException("Fixture optimization did not stop; preserving its directory for diagnosis.");
             vm.UserDirectorySummaries.Clear();
             vm.OptimizationCandidates.Clear();
             observed.Clear();
             organizerField.SetValue(vm, originalOrganizer);
+            executorField.SetValue(vm, originalExecutor);
+            vm.OptimizationHistory.Clear();
+            foreach (var run in historyBefore) vm.OptimizationHistory.Add(run);
+            vm.SelectedOptimizationRun = selectedHistoryBefore;
             refresh.Invoke(vm, null);
             vm.ActiveTabIndex = 0;
             if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(fixture)), parent, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Invalid cleanup fixture boundary.");
             foreach (string path in new[] { old, locked, Path.Combine(fixture, "report.pdf"), Path.Combine(fixture, "Documents", "report.pdf") }) if (File.Exists(path)) File.Delete(path);
+            string historyFile = Path.Combine(fixtureHistory, "optimization_history.json");
+            if (File.Exists(historyFile)) File.Delete(historyFile);
+            if (Directory.Exists(fixtureHistory)) Directory.Delete(fixtureHistory, recursive: false);
             if (Directory.Exists(Path.Combine(fixture, "Documents"))) Directory.Delete(Path.Combine(fixture, "Documents"), recursive: false);
             Directory.Delete(fixture, recursive: false);
+        }
+    }
+
+    private static async Task ConfirmFixtureOptimization(AIHubPage page, string fixture, Action request)
+    {
+        var vm = page.ViewModel;
+        string allowedRoot = Path.GetFullPath(fixture) + Path.DirectorySeparatorChar;
+        if (vm.OptimizationCandidates.Any(item => !Path.GetFullPath(item.FilePath).StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Refusing to confirm an optimization candidate outside the smoke fixture.");
+        var dialogField = typeof(AIHubPage).GetField("_activeDialog", BindingFlags.Instance | BindingFlags.NonPublic);
+        var confirmingField = typeof(AIHubPageViewModel).GetField("_isConfirmingOptimization", BindingFlags.Instance | BindingFlags.NonPublic);
+        bool sawExecution = false;
+        System.ComponentModel.PropertyChangedEventHandler changed = (_, args) =>
+        {
+            if (args.PropertyName == nameof(vm.IsExecutingOptimization) && vm.IsExecutingOptimization) sawExecution = true;
+        };
+        vm.PropertyChanged += changed;
+        try
+        {
+            request();
+            for (int attempt = 0; attempt < 100 && dialogField.GetValue(page) == null; attempt++) await Task.Delay(50);
+            var dialog = (ContentDialog)dialogField.GetValue(page);
+            if (dialog == null || vm.IsOptimizing || vm.CanSelectOptimizationItems)
+                throw new InvalidOperationException("The requested fixture operation did not stop for review.");
+            await Task.Delay(100);
+            var accept = Descendants(dialog).OfType<Button>().Single(button => button.Name == "PrimaryButton");
+            new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(accept).Invoke();
+            for (int attempt = 0; attempt < 200 && ((bool)confirmingField.GetValue(vm) || vm.IsOptimizing); attempt++) await Task.Delay(50);
+            if (!sawExecution || (bool)confirmingField.GetValue(vm) || vm.IsOptimizing)
+                throw new InvalidOperationException("Confirmed fixture operation did not execute and settle.");
+        }
+        finally
+        {
+            vm.PropertyChanged -= changed;
+            ((ContentDialog)dialogField.GetValue(page))?.Hide();
         }
     }
 
@@ -1303,6 +1374,21 @@ internal static class ModulePageSmoke
             await Task.Delay(200);
             if (service.IsEnabled || service.HubContentVisibility != Visibility.Collapsed) throw new InvalidOperationException("AI service did not switch off.");
             if (service.MainEndpoint.TestCommand.CanExecute(null) || service.FallbackEndpoint.TestCommand.CanExecute(null)) throw new InvalidOperationException("AI endpoint tests remain enabled while the service is off.");
+            policy.IsExpanded = true;
+            service.EnsurePoliciesLoaded();
+            for (int attempt = 0; attempt < 50 && (!service.PoliciesLoaded || service.IsBusy); attempt++) await Task.Delay(100);
+            var globalEditor = (TextBox)page.FindName("AiPolicyContentBox");
+            if (!service.CanEditPolicies || globalEditor == null || globalEditor.IsReadOnly ||
+                Ancestors(policy).OfType<UIElement>().Any(element => element.Visibility == Visibility.Collapsed))
+                throw new InvalidOperationException("Global policy must remain visible and editable while AI is off.");
+            service.ActivePolicyIndex = 0;
+            string savedPolicy = service.CurrentPolicyContent;
+            globalEditor.Text = savedPolicy + "\nSmoke draft without enabling AI.";
+            if (!service.IsCurrentPolicyDirty || !service.SavePolicyCommand.CanExecute(null) || !service.DiscardActivePolicyCommand.CanExecute(null))
+                throw new InvalidOperationException("Offline global policy edits did not enable Save and Discard.");
+            service.DiscardActivePolicyCommand.Execute(null);
+            if (service.CurrentPolicyContent != savedPolicy || service.IsCurrentPolicyDirty || service.SavePolicyCommand.CanExecute(null))
+                throw new InvalidOperationException("Discard did not restore the global policy's saved state.");
             var toggled = new TaskCompletionSource();
             page.DispatcherQueue.TryEnqueue(() =>
             {
@@ -1334,7 +1420,7 @@ internal static class ModulePageSmoke
                 await Task.Delay(250);
                 required.AddRange(Descendants(root).OfType<Control>().Where(control =>
                     control is TextBox or PasswordBox or ComboBox ||
-                    control is Button button && button.Command != null && button.Visibility == Visibility.Visible));
+                    control is Button button && button.Command != null && button.Command.CanExecute(button.CommandParameter) && button.Visibility == Visibility.Visible));
             }
 
             foreach (var control in required)
@@ -1342,7 +1428,7 @@ internal static class ModulePageSmoke
                 File.AppendAllText(Report, $"  {control.GetType().Name} {control.Name} enabled={control.IsEnabled}\n");
             }
 
-            if (!service.CanEdit || required.Count < 15 || required.Any(control => !control.IsEnabled)) throw new InvalidOperationException("AI service settings contain disabled controls after enabling.");
+            if (!service.CanEdit || required.Count == 0 || required.Any(control => !control.IsEnabled)) throw new InvalidOperationException("AI service settings contain disabled editable controls or executable actions after enabling.");
             if (!Descendants(policy).OfType<TextBox>().Any()) throw new InvalidOperationException("Policy editor was not checked.");
 
             foreach (var entry in new[] { (Expander: main, Endpoint: service.MainEndpoint), (Expander: fallback, Endpoint: service.FallbackEndpoint) })
@@ -1376,7 +1462,7 @@ internal static class ModulePageSmoke
             {
                 SynchronizationContext.SetSynchronizationContext(null);
                 operation = (Task)typeof(AiHubViewModel).GetMethod("RunOperationAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                    .Invoke(service, new object[] { new Func<CancellationToken, Task>(_ => completion.Task) });
+                    .Invoke(service, new object[] { new Func<CancellationToken, Task>(_ => completion.Task), false });
             }
             finally
             {
@@ -1392,7 +1478,12 @@ internal static class ModulePageSmoke
             NavigationService.Navigate(typeof(GeneralPage));
             await Task.Delay(150);
         }
-        File.AppendAllText(Report, "AI service controls: off/on twice, expanded editors, endpoint editing/saving, busy recovery, and cached navigation passed.\n");
+        File.AppendAllText(Report, "AI service controls: off/on twice, offline global policy draft/discard, expanded editors, endpoint editing/saving, busy recovery, and cached navigation passed.\n");
+    }
+
+    private static IEnumerable<DependencyObject> Ancestors(DependencyObject element)
+    {
+        for (var current = element; current != null; current = VisualTreeHelper.GetParent(current)) yield return current;
     }
 
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)

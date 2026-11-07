@@ -4,13 +4,13 @@
 
 Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). Synchronized with PowerToys upstream **v0.102.3001.0**, it reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-Current source version: **3.3.5**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
+Current source version: **3.4.5**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
 [Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
 ## 1. Overview
 
-Kit currently includes six modules. “Plugin” here means a module built and explicitly registered with Kit. Installing third-party plugins by dropping in a DLL or manifest is not supported yet.
+Kit currently includes seven modules. “Plugin” here means a module built and explicitly registered with Kit. Installing third-party plugins by dropping in a DLL or manifest is not supported yet.
 
 | Module | Purpose | Business logic runs in | Origin |
 | --- | --- | --- | --- |
@@ -20,6 +20,7 @@ Kit currently includes six modules. “Plugin” here means a module built and e
 | [UDPtest](#34-udptest-configured-line-quality) | Measure configured targets: latency, jitter, success rate and NAT | Settings + diagnosis Service | Kit |
 | [AI Hub](#35-ai-hub-auditing-and-system-optimization) | Audit system events, organize downloads and clean caches | Settings + scheduled-audit Worker | Kit |
 | [NetMap](#36-netmap-current-egress-and-route-observation) | Observe Direct / Proxy egress, service reachability and ICMP routes | Settings + observation Service | Kit |
+| [WinGet](src/modules/Winget/README.md) | Discover, update and uninstall software, confirmed batch queues, daily checks and notifications | Separate WingetService process | Kit |
 
 Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
 
@@ -33,7 +34,7 @@ Home provides real-time system resource telemetry (CPU, memory, storage, dual-GP
 flowchart TB
     subgraph R["Kit.exe / Runner"]
         HOST["Tray, module registration, process and IPC management"]
-        MI["Six native module interface DLLs"]
+        MI["Seven native module interface DLLs"]
         HOST -->|"load / enable / disable"| MI
     end
     subgraph S["Kit.Settings.exe / WinUI 3"]
@@ -82,6 +83,7 @@ Only the main components are shown. Keep the complete build or staged directory 
 ├── Kit.UDPtestService.exe
 ├── Kit.NetMapService.exe
 ├── Kit.AIHubWorker.exe
+├── Kit.WingetService.exe
 ├── LightSwitchService/Kit.LightSwitchService.exe
 └── WinUI3Apps/
     ├── Kit.Settings.exe
@@ -111,7 +113,7 @@ flowchart LR
 
 ### 3.2 Light Switch: theme scheduling and CLI
 
-Switch Windows light/dark themes by schedule, sunset/sunrise, or night light, with complete command-line control (`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`). All six modules adhere to Kit's zero-hotkey policy.
+Switch Windows light/dark themes by schedule, sunset/sunrise, or night light, with complete command-line control (`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`). All seven modules adhere to Kit's zero-hotkey policy.
 
 ```mermaid
 flowchart LR
@@ -305,7 +307,7 @@ If configuration writes are denied, check the Windows integrity labels of the bu
 
 ## 6. Development and Extension
 
-Modules retain the PowerToys C++ contract and export `kit_create()`. Core interfaces cover enablement, configuration, actions and destruction. Runner explicitly loads the six modules listed in [KitKnownModules](src/runner/main.cpp).
+Modules retain the PowerToys C++ contract and export `kit_create()`. Core interfaces cover enablement, configuration, actions and destruction. Runner explicitly loads the seven modules listed in [KitKnownModules](src/runner/main.cpp).
 
 Adding a module requires:
 

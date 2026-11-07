@@ -19,6 +19,7 @@ using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
 using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.Views;
+using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using NetMapLib;
@@ -216,6 +217,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private static readonly string[] ServiceNames = ["Claude", "ChatGPT", "Gemini", "Google"];
     private readonly ISettingsRepository<GeneralSettings> general;
     private readonly DispatcherQueue dispatcher;
+    private readonly Func<CancellationToken, Task<NetMapAiAnalysisResponse>> analyzeRoute;
     private readonly NetMapSession session = new();
     private NetMapOptions options;
     private NetMapSnapshot snapshot = NetMapSnapshot.Empty;
@@ -239,9 +241,11 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     public NetMapViewModel(
         ISettingsRepository<GeneralSettings>? generalSettingsRepository = null,
         ISettingsRepository<NetMapSettings>? moduleSettingsRepository = null,
-        Func<string, int>? ipcMsgCallback = null)
+        Func<string, int>? ipcMsgCallback = null,
+        Func<CancellationToken, Task<NetMapAiAnalysisResponse>>? analyzeRoute = null)
     {
         dispatcher = DispatcherQueue.GetForCurrentThread();
+        this.analyzeRoute = analyzeRoute ?? NetMapAiService.AnalyzeRouteAsync;
         var settingsUtils = SettingsUtils.Default;
         general = generalSettingsRepository ?? SettingsRepository<GeneralSettings>.GetInstance(settingsUtils);
         _moduleSettingsRepository = moduleSettingsRepository ?? SettingsRepository<NetMapSettings>.GetInstance(settingsUtils);
@@ -576,6 +580,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         aiCheckCancellation = source;
         var token = source.Token;
         long generation = snapshot.Generation;
+        Message = string.Empty;
         isAiChecking = true;
         OnPropertyChanged(nameof(IsAiChecking));
         OnPropertyChanged(nameof(CanAiCheck));
@@ -583,11 +588,10 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
         try
         {
-            var response = await NetMapAiService.AnalyzeRouteAsync(source.Token).ConfigureAwait(false);
+            var response = await analyzeRoute(source.Token).ConfigureAwait(false);
             dispatcher.TryEnqueue(() =>
             {
-                if (disposed || !IsEnabled || token.IsCancellationRequested || !ReferenceEquals(aiCheckCancellation, source)
-                    || generation != snapshot.Generation || generation != session.Current.Generation)
+                if (!CanPublishAiResult(source, generation, token))
                 {
                     return;
                 }
@@ -614,8 +618,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         {
             dispatcher.TryEnqueue(() =>
             {
-                if (!disposed && IsEnabled && !token.IsCancellationRequested && ReferenceEquals(aiCheckCancellation, source)
-                    && generation == snapshot.Generation && generation == session.Current.Generation)
+                if (CanPublishAiResult(source, generation, token))
                 {
                     Message = Text("AiCheckFailed") + ": " + ex.Message;
                 }
@@ -640,6 +643,28 @@ public sealed partial class NetMapViewModel : PageViewModelBase
                 OnPropertyChanged(nameof(Proxy));
             });
         }
+    }
+
+    private bool CanPublishAiResult(CancellationTokenSource source, long generation, CancellationToken token)
+    {
+        if (disposed || !IsEnabled || token.IsCancellationRequested || !ReferenceEquals(aiCheckCancellation, source))
+        {
+            return false;
+        }
+
+        if (generation != snapshot.Generation || generation != session.Current.Generation)
+        {
+            NotifyAiRouteChanged(generation, session.Current.Generation);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void NotifyAiRouteChanged(long previousGeneration, long currentGeneration)
+    {
+        Message = Text("AiRouteChanged");
+        Logger.LogInfo($"NetMap AI cancelled: reason=route-generation-changed, previousGeneration={previousGeneration}, currentGeneration={currentGeneration}");
     }
 
     public void ApplySettings()
@@ -780,7 +805,13 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
         if (previous.Generation != value.Generation)
         {
+            bool interruptedAiCheck = isAiChecking;
             CancelAiCheck();
+            if (interruptedAiCheck)
+            {
+                NotifyAiRouteChanged(previous.Generation, value.Generation);
+            }
+
             Hops.Clear();
             aiRoute = null;
             aiRouteSummary = null;

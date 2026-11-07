@@ -13,6 +13,7 @@ enum class ESettingsWindowNames
     UDPtest,
     NetMap,
     AiHub,
+    Winget,
 };
 
 std::string ESettingsWindowNames_to_string(ESettingsWindowNames value);

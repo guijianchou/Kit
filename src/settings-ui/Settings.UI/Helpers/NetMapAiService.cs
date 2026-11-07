@@ -8,6 +8,7 @@ namespace Kit.Settings.UI.Helpers;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
@@ -17,6 +18,7 @@ using System.Threading.Tasks;
 using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
 using Kit.Settings.UI.ViewModels;
+using ManagedCommon;
 using NetMapLib;
 
 public sealed record NetMapMtrHopItem(
@@ -69,6 +71,12 @@ public sealed partial class NetMapAiJsonContext : JsonSerializerContext
 
 public static class NetMapAiService
 {
+    // Match the audit's per-route budget: native startup and higher reasoning efforts
+    // share this deadline. Keep room for the configured fallback, while caller stop
+    // and route-generation changes still cancel the request immediately.
+    internal const int AnalysisRouteTimeoutSeconds = 300;
+    internal const int AnalysisTimeoutSeconds = 600;
+
     private static readonly string StorageDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Kit",
@@ -207,19 +215,40 @@ public static class NetMapAiService
         }
         catch (Exception ex)
         {
-            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiNoMtrData") + " (" + ex.Message + ")");
+            Logger.LogWarning($"NetMap AI snapshot unavailable: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiNoMtrData"));
         }
 
-        if (traceData == null || traceData.Hops.Count == 0)
+        if (traceData == null || traceData.Hops is not { Count: > 0 })
         {
             return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiNoMtrData"));
         }
 
         bool isChinese = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-        AiTaskResult<NetMapAiRouteResult> result;
+        return await AnalyzeRouteAsync(traceData, AiHubEngine.Current, isChinese, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(
+        NetMapMtrTraceData traceData,
+        IAiTaskEngine engine,
+        bool isChinese,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(traceData);
+        ArgumentNullException.ThrowIfNull(engine);
+        if (traceData.Hops is not { Count: > 0 })
+        {
+            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiNoMtrData"));
+        }
+
+        string analysisId = Guid.NewGuid().ToString("N")[..8];
+        var stopwatch = Stopwatch.StartNew();
+        AiErrorCode outcome = AiErrorCode.ExecutionFailed;
+        Logger.LogInfo($"NetMap AI started: id={analysisId}, hops={traceData.Hops.Count}, timeoutSeconds={AnalysisTimeoutSeconds}, routeTimeoutSeconds={AnalysisRouteTimeoutSeconds}");
         try
         {
-            result = await AiHubEngine.Current.ExecuteTaskAsync(
+            AiTaskResult<NetMapAiRouteResult> result = await engine.ExecuteTaskAsync(
                 "NetMap",
                 "route-analysis",
                 new[] { traceData },
@@ -227,36 +256,48 @@ public static class NetMapAiService
                 new AiTaskOptions
                 {
                     Language = isChinese ? "zh-CN" : "en-US",
-                    TimeoutSeconds = 120,
-                    RouteTimeoutSeconds = 60,
+                    TimeoutSeconds = AnalysisTimeoutSeconds,
+                    RouteTimeoutSeconds = AnalysisRouteTimeoutSeconds,
                     InlineInstructions = GetRouteInstruction(isChinese),
+                    Progress = new RouteAnalysisProgress(analysisId, stopwatch),
                 },
                 cancellationToken).ConfigureAwait(false);
+
+            // The engine returns cancellation as a result; preserve silent caller stops.
+            cancellationToken.ThrowIfCancellationRequested();
+            NetMapAiRouteResult? payload = result.Payload;
+            if (!result.IsSuccess || payload is null)
+            {
+                outcome = result.ErrorCode == AiErrorCode.None ? AiErrorCode.InvalidPayload : result.ErrorCode;
+                return NetMapAiAnalysisResponse.Failed(MapErrorText(outcome));
+            }
+
+            string cleanLineType = SanitizeLineType(payload.LineType, isChinese);
+            string cleanSummary = SanitizeSummary(payload.Summary, cleanLineType, isChinese);
+            string cleanDetails = SanitizeDetails(payload.Details, isChinese);
+            outcome = AiErrorCode.None;
+            return NetMapAiAnalysisResponse.Successful(cleanLineType, cleanSummary, cleanDetails);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            outcome = AiErrorCode.Cancelled;
             throw;
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = AiErrorCode.Timeout;
+            return NetMapAiAnalysisResponse.Failed(MapErrorText(outcome));
         }
         catch (Exception ex)
         {
-            return NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiCheckFailed") + ": " + ex.Message);
+            outcome = AiErrorCode.ExecutionFailed;
+            Logger.LogWarning($"NetMap AI exception: id={analysisId}, type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+            return NetMapAiAnalysisResponse.Failed(MapErrorText(outcome));
         }
-
-        // The engine converts a caller stop into a cancelled failure result; re-throw it so
-        // the view model can cancel silently instead of reporting an AI check error.
-        cancellationToken.ThrowIfCancellationRequested();
-
-        NetMapAiRouteResult? payload = result.Payload;
-        if (!result.IsSuccess || payload is null)
+        finally
         {
-            return NetMapAiAnalysisResponse.Failed(MapErrorText(result.ErrorCode));
+            Logger.LogInfo($"NetMap AI finished: id={analysisId}, code={outcome}, elapsedMs={stopwatch.ElapsedMilliseconds}");
         }
-
-        string cleanLineType = SanitizeLineType(payload.LineType, isChinese);
-        string cleanSummary = SanitizeSummary(payload.Summary, cleanLineType, isChinese);
-        string cleanDetails = SanitizeDetails(payload.Details, isChinese);
-
-        return NetMapAiAnalysisResponse.Successful(cleanLineType, cleanSummary, cleanDetails);
     }
 
     /// <summary>
@@ -282,8 +323,83 @@ public static class NetMapAiService
         AiErrorCode.HubDisabled => NetMapViewModel.Text("AiServiceDisabled"),
         AiErrorCode.InvalidConfiguration => NetMapViewModel.Text("AiNoEndpoint"),
         AiErrorCode.KernelNotInstalled => NetMapViewModel.Text("AiKernelMissing"),
+        AiErrorCode.Timeout => NetMapViewModel.Text("AiTimeout"),
+        AiErrorCode.EndpointFailed => NetMapViewModel.Text("AiEndpointFailed"),
+        AiErrorCode.PolicyViolation => NetMapViewModel.Text("AiPolicyViolation"),
+        AiErrorCode.InvalidPayload => NetMapViewModel.Text("AiInvalidResponse"),
+        AiErrorCode.HostUnavailable => NetMapViewModel.Text("AiServiceUnavailable"),
+        AiErrorCode.Cancelled => NetMapViewModel.Text("AiCancelled"),
         _ => NetMapViewModel.Text("AiCheckFailed"),
     };
+
+    private sealed class RouteAnalysisProgress(string analysisId, Stopwatch stopwatch) : IProgress<AiTaskProgress>
+    {
+        public void Report(AiTaskProgress value)
+        {
+            // StatusMessage may come from an engine/provider; never persist arbitrary text.
+            string stage = value.Stage switch
+            {
+                "Prepare" or "Queue" or "Execute" or "Route" or "Failover" or "Validate" => value.Stage,
+                _ => "Other",
+            };
+            string diagnostic = stage == "Route" ? FormatRouteDiagnostic(value.StatusMessage) : string.Empty;
+            Logger.LogInfo($"NetMap AI progress: id={analysisId}, stage={stage}, batches={value.CompletedBatches}/{value.TotalBatches}, elapsedMs={stopwatch.ElapsedMilliseconds}{(diagnostic.Length > 0 ? ", " + diagnostic : string.Empty)}");
+        }
+    }
+
+    internal static string FormatRouteDiagnostic(string status)
+    {
+        if (string.IsNullOrEmpty(status) || status.Length > 4096)
+        {
+            return string.Empty;
+        }
+
+        // Keep only known classifications/numbers. Never persist arbitrary engine text,
+        // model names, addresses, prompts, output, credentials, or exception messages.
+        var fields = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string part in status.Split(','))
+        {
+            string field = part.Trim();
+            foreach (string prefix in new[] { "AI batch rejected: ", "AI batch failed: ", "AI batch failover: " })
+            {
+                if (field.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    field = field[prefix.Length..];
+                    break;
+                }
+            }
+
+            int separator = field.IndexOf('=');
+            if (separator <= 0)
+            {
+                continue;
+            }
+
+            string key = field[..separator];
+            string value = field[(separator + 1)..];
+            bool allowed = key switch
+            {
+                "code" => IsKnownError(value),
+                "phase" => value is "started" or "reasoning" or "responding" or "execute" or "response-limit" or "json" or "contract" or "deserialize" or "schema",
+                "reason" => IsKnownError(value) || value is "HttpTimeout" or "RateLimited" or "ServerError" or "RequestRejected" or "TransportTimeout"
+                    or "StreamDisconnected" or "DnsFailure" or "ConnectionReset" or "ConnectionRefused" or "NetworkUnavailable" or "TransportFailure" or "Configuration" or "Unknown",
+                "processFailure" => value is "None" or "Cancelled" or "Timeout" or "OutputLimit" or "StartFailed" or "AccessDenied" or "CleanupFailed",
+                "cancellationSource" => value is "upstream" or "routeDeadline" or "processDeadline" or "none",
+                "event" => value is "activity" or "completed" or "error" or "turn.failed" or "retry" or "tool",
+                "httpStatus" => value.Length <= 3 && int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int httpStatus) && (httpStatus == 0 || httpStatus is >= 100 and <= 599),
+                _ => false,
+            };
+            if (allowed && seen.Add(key))
+            {
+                fields.Add(key + "=" + value);
+            }
+        }
+
+        return string.Join(", ", fields);
+
+        static bool IsKnownError(string value) => Enum.TryParse(value, out AiErrorCode code) && Enum.IsDefined(code) && code.ToString() == value;
+    }
 
     /// <summary>
     /// Selects the language appropriate portion if a model returned dual-language slash-separated text (e.g. "中文 / English").

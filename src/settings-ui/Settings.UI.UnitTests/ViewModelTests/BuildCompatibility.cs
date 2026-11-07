@@ -1556,7 +1556,7 @@ namespace ViewModelTests
             StringAssert.Contains(kitModuleCatalog, "ActiveEnabledModuleKeys");
             StringAssert.Contains(commandLineUtils, "KitModuleCatalog.ActiveSettingsModuleKeys");
             StringAssert.Contains(commandLineUtils, "KitModuleCatalog.ActiveEnabledModuleKeys");
-            foreach (var activeModule in new[] { "AwakeSettings.ModuleName", "LightSwitchSettings.ModuleName" })
+            foreach (var activeModule in new[] { "AwakeSettings.ModuleName", "LightSwitchSettings.ModuleName", "WingetSettings.ModuleName" })
             {
                 StringAssert.Contains(kitModuleCatalog, activeModule);
                 Assert.IsFalse(commandLineUtils.Contains(activeModule, StringComparison.Ordinal), $"Settings command-line allowlist should read active module '{activeModule}' from KitModuleCatalog.");
@@ -1584,6 +1584,7 @@ namespace ViewModelTests
                 "ModuleType.UDPtest",
                 "ModuleType.NetMap",
                 "ModuleType.AIHub",
+                "ModuleType.Winget",
                 "ModuleType.GeneralSettings",
             })
             {
@@ -1792,6 +1793,7 @@ namespace ViewModelTests
                 "Localserver.png",
                 "UDPtest.png",
                 "NetMap.png",
+                "Winget.png",
                 "AiHub.png",
                 "Kit.png",
             };
@@ -1936,6 +1938,7 @@ namespace ViewModelTests
                 "Localserver.png",
                 "UDPtest.png",
                 "NetMap.png",
+                "Winget.png",
                 "AiHub.png",
                 "Kit.png",
             };
@@ -2185,11 +2188,12 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitCentralPackagesShouldNotKeepCommandPaletteWinGetInteropPin()
+        public void KitWinGetInteropShouldOnlyBeUsedByTheWingetCoreLibrary()
         {
             var centralPackages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
+            var wingetLibraryProject = FindSourceFile("src", "modules", "Winget", "WingetLib", "WingetLib.csproj");
 
-            Assert.IsFalse(centralPackages.Contains(@"PackageVersion Include=""Microsoft.WindowsPackageManager.ComInterop""", StringComparison.Ordinal), "Kit should not keep the inactive Command Palette WinGet interop central package pin.");
+            StringAssert.Contains(centralPackages, @"PackageVersion Include=""Microsoft.WindowsPackageManager.ComInterop""");
 
             foreach (var projectFile in Directory.EnumerateFiles(Path.GetDirectoryName(FindSourceFile("Kit.slnx"))!, "*.*proj", SearchOption.AllDirectories))
             {
@@ -2200,8 +2204,16 @@ namespace ViewModelTests
                 }
 
                 var project = File.ReadAllText(projectFile);
-                Assert.IsFalse(project.Contains(@"PackageReference Include=""Microsoft.WindowsPackageManager.ComInterop""", StringComparison.Ordinal), $"Kit project should not reference the inactive Command Palette WinGet interop package: {projectFile}");
-                Assert.IsFalse(project.Contains("PkgMicrosoft_WindowsPackageManager_ComInterop", StringComparison.Ordinal), $"Kit project should not keep generated path-property usage for the inactive Command Palette WinGet interop package: {projectFile}");
+                if (string.Equals(projectFile, wingetLibraryProject, StringComparison.OrdinalIgnoreCase))
+                {
+                    StringAssert.Contains(project, @"PackageReference Include=""Microsoft.WindowsPackageManager.ComInterop""");
+                    StringAssert.Contains(project, "PkgMicrosoft_WindowsPackageManager_ComInterop");
+                }
+                else
+                {
+                    Assert.IsFalse(project.Contains(@"PackageReference Include=""Microsoft.WindowsPackageManager.ComInterop""", StringComparison.Ordinal), $"Only WingetLib should directly reference WinGet interop; inactive Command Palette dependencies must stay removed: {projectFile}");
+                    Assert.IsFalse(project.Contains("PkgMicrosoft_WindowsPackageManager_ComInterop", StringComparison.Ordinal), $"Only WingetLib should use the WinGet interop package path: {projectFile}");
+                }
             }
         }
 
@@ -2605,6 +2617,7 @@ namespace ViewModelTests
             StringAssert.Contains(runnerMain, "L\"Kit.UDPtestModuleInterface.dll\"");
             StringAssert.Contains(runnerMain, "L\"Kit.NetMapModuleInterface.dll\"");
             StringAssert.Contains(runnerMain, "L\"Kit.AIHubModuleInterface.dll\"");
+            StringAssert.Contains(runnerMain, "L\"Kit.WingetModuleInterface.dll\"");
             Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed PowerDisplay.");
             Assert.IsFalse(runnerMain.Contains("PowerToys.MonitorModuleInterface.dll", StringComparison.Ordinal), "Runner should not load removed Monitor.");
         }
@@ -2831,7 +2844,8 @@ namespace ViewModelTests
                 dispose >= 0 && disposeCancelsAi > dispose,
                 "Disposing the NetMap view model must cancel a running AI route check.");
 
-            StringAssert.Contains(viewModel, "AnalyzeRouteAsync(source.Token)");
+            StringAssert.Contains(viewModel, "this.analyzeRoute = analyzeRoute ?? NetMapAiService.AnalyzeRouteAsync;");
+            StringAssert.Contains(viewModel, "analyzeRoute(source.Token)");
             StringAssert.Contains(viewModel, "catch (OperationCanceledException)");
 
             var aiService = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "NetMapAiService.cs"));
@@ -3509,7 +3523,7 @@ namespace ViewModelTests
             Assert.AreEqual(2, pageXaml.Split("<ProgressRing").Length - 1, "The health gauge should render a single value ring beside the optimization spinner.");
 
             // 2. Responsive behavior is declarative and mirrors the element-width thresholds.
-            Assert.AreEqual(8, pageXaml.Split("ui:ControlSizeTrigger").Length - 1, "Four responsive groups (readiness 640, overview 760, both command headers 960) should be trigger-driven.");
+            Assert.AreEqual(12, pageXaml.Split("ui:ControlSizeTrigger").Length - 1, "Readiness, audit overview, action headers, download actions and candidate search should have responsive layout triggers.");
             Assert.IsFalse(pageXaml.Contains("SizeChanged=\"On", StringComparison.Ordinal), "Page markup should not wire imperative SizeChanged handlers.");
             Assert.IsFalse(pageCode.Contains("SizeChanged", StringComparison.Ordinal), "Code-behind should not keep responsive SizeChanged handlers.");
             StringAssert.Contains(pageXaml, "Target=\"AiReadinessActions.(Grid.Row)\"");

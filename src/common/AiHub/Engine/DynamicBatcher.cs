@@ -8,10 +8,11 @@ using System.Collections.Generic;
 /// </summary>
 public static class DynamicBatcher
 {
+    public const int DefaultContextWindowTokens = 256_000;
+
     private const int MinBatchSize = 10;
     private const int NormalBatchSize = 30;
     private const int MaxBatchSize = 50;
-    private const int DefaultContextWindowTokens = 256_000;
     private const int ResponseOutputTokenBudget = 8_000;
     private const int ContextSafetyMarginTokens = 8_000;
 

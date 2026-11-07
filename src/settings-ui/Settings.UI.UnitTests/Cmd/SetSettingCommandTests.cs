@@ -43,12 +43,15 @@ public class SetSettingCommandTests
     [DataRow(typeof(AwakeSettings), nameof(AwakeProperties.Mode), "EXPIRABLE")]
     [DataRow(typeof(AwakeSettings), nameof(AwakeProperties.ExpirationDateTime), "March 31, 2020 15:00 +00:00")]
     [DataRow(typeof(LightSwitchSettings), nameof(LightSwitchProperties.LightTime), "600")]
+    [DataRow(typeof(WingetSettings), nameof(WingetProperties.DailyCheckEnabled), "false")]
+    [DataRow(typeof(WingetSettings), nameof(WingetProperties.NotifyUpdates), "false")]
     public void SetModuleSetting(Type moduleSettingsType, string settingName, string newValueStr)
     {
         SetSetting(moduleSettingsType, settingName, newValueStr);
     }
 
     [DataRow(typeof(GeneralSettings), "Enabled.Awake", "false")]
+    [DataRow(typeof(GeneralSettings), "Enabled.Winget", "true")]
     [DataRow(typeof(GeneralSettings), nameof(GeneralSettings.AutoDownloadUpdates), "true")]
     [TestMethod]
     public void SetGeneralSetting(Type moduleSettingsType, string settingName, string newValueStr)

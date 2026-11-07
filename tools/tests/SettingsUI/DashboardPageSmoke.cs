@@ -632,7 +632,7 @@ internal static class DashboardPageSmoke
         var originalEmptyVisibility = emptyState.Visibility;
         var originalTheme = root.RequestedTheme;
         var originalSize = window.AppWindow.Size;
-        var modules = new[] { ModuleType.AIHub, ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.NetMap, ModuleType.UDPtest };
+        var modules = new[] { ModuleType.AIHub, ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.NetMap, ModuleType.UDPtest, ModuleType.Winget };
         try
         {
             // These display-only items never invoke module launchers or change settings.
@@ -660,7 +660,7 @@ internal static class DashboardPageSmoke
                 }
 
                 var quickImages = Descendants(quick).OfType<Image>().Where(image => image.Source is BitmapImage).ToArray();
-                Require(quickImages.Length == modules.Length, "Synthetic Quick access displays all six module icons.");
+                Require(quickImages.Length == modules.Length, "Synthetic Quick access displays every active module icon.");
                 foreach (var image in quickImages)
                 {
                     string source = ((BitmapImage)image.Source).UriSource.ToString();

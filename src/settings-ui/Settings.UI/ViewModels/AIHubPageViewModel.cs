@@ -152,6 +152,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private readonly CacheCleanupService _cacheCleanupService = new();
     private readonly OptimizationAnalysisService _optimizationAnalysisService = new();
     private readonly DownloadOrganizerService _downloadOrganizerService = new();
+    private OptimizationExecutionService _optimizationExecutor;
+    private OptimizationExecutionService OptimizationExecutor => _optimizationExecutor ??= new(_cacheCleanupService, _downloadOrganizerService);
     private readonly AuditHistoryStorage _auditHistoryStorage = new();
     private readonly SecurityPolicyService _securityService = new();
     private readonly ObservableCollection<AiReportFinding> _aiReportFindings = new();
@@ -206,6 +208,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private string _selectedAuditLabel = "AIHub_SelectedAudit_Latest".GetLocalizedOrFallback("Latest audit");
     private DateTimeOffset? _selectedAuditDate = DateTimeOffset.Now;
     private bool _suppressAuditDateLoad;
+    private long _auditHistoryGeneration;
     private string _activityScansText = "0";
     private string _activityFindingsText = "0";
     private string _activeDaysText = "0";
@@ -273,15 +276,16 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         FilterHighSeverityCommand = new RelayCommand(() => SetSeverityFilter("High"));
         JumpToAiReportCommand = new RelayCommand(() => RequestJumpToAiReport?.Invoke(this, EventArgs.Empty));
 
-        ScanAllCommand = new RelayCommand(RunScanAll, () => IsEnabled && !_isOptimizing);
-        ScanDownloadsCommand = new RelayCommand(RunScanDownloads, () => IsEnabled && !_isOptimizing);
-        ScanTemporaryFilesCommand = new RelayCommand(RunScanTemporaryFiles, () => IsEnabled && !_isOptimizing);
-        SelectAllCandidatesCommand = new RelayCommand(SelectAllCandidates, () => HasCandidates && !_isOptimizing);
-        DeselectAllCandidatesCommand = new RelayCommand(DeselectAllCandidates, () => HasCandidates && !_isOptimizing);
+        ScanAllCommand = new RelayCommand(RunScanAll, () => CanSelectOptimizationItems);
+        ScanDownloadsCommand = new RelayCommand(RunScanDownloads, () => CanSelectOptimizationItems);
+        ScanTemporaryFilesCommand = new RelayCommand(RunScanTemporaryFiles, () => CanSelectOptimizationItems);
+        SelectAllCandidatesCommand = new RelayCommand(SelectAllCandidates, () => HasCandidates && CanSelectOptimizationItems);
+        DeselectAllCandidatesCommand = new RelayCommand(DeselectAllCandidates, () => HasCandidates && CanSelectOptimizationItems);
         ExecuteOptimizationCommand = new RelayCommand(() => RunExecuteOptimization(), () => CanExecuteOptimization);
-        CleanAllCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "delete").ToList()), () => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "delete"));
-        OrganizeDownloadsCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "move").ToList()), () => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "move"));
+        CleanAllCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "delete").ToList()), () => CanCleanAll);
+        OrganizeDownloadsCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "move").ToList()), () => CanSelectOptimizationItems && OptimizationCandidates.Any(item => item.Action == "move" && item.IsSelected));
         CancelOptimizationCommand = new RelayCommand(() => _optimizationCts?.Cancel(), () => IsOptimizing);
+        RefreshOptimizationHistoryCommand = new RelayCommand(() => _ = RefreshOptimizationHistoryAsync());
 
         // Load cached audit history
         LoadRecentAudit();
@@ -290,6 +294,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         // opening the page must not start a kernel process, and the constraint is that the
         // AI service is only exercised while the module is enabled.
         _ = InitializeAiReadinessAsync();
+        if (ActiveTabIndex == 1)
+        {
+            _ = RefreshOptimizationHistoryAsync();
+        }
     }
 
     private async Task InitializeAiReadinessAsync()
@@ -377,6 +385,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         {
             if (Set(ref _activeTabIndex, value))
             {
+                if (value == 1)
+                {
+                    _ = RefreshOptimizationHistoryAsync();
+                }
                 OnPropertyChanged(nameof(StatusMessage));
                 OnPropertyChanged(nameof(StatusSeverity));
                 OnPropertyChanged(nameof(IsStatusOpen));
@@ -687,7 +699,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string DeepAnalyzeLabel => "AIHub_DeepAnalyzeLabel".GetLocalizedOrFallback("AI deep analysis");
 
     /// <summary>Explains what the deep-analysis action does and when it is unavailable.</summary>
-    public string DeepAnalyzeHint => "AIHub_DeepAnalyzeHint".GetLocalizedOrFallback("Sends the current findings (highest severity first, up to 12) to the configured AI kernel for supplementary diagnostics under the security-audit policy. No action is executed automatically.");
+    public string DeepAnalyzeHint => "AIHub_DeepAnalyzeHint".GetLocalizedOrFallback("Reviews up to 400 current events in batches under the security-audit policy. Findings are advisory; no action is executed automatically.");
 
     // Overview Card
     public string HealthOverviewLabel => "AIHub_HealthOverviewLabel".GetLocalizedOrFallback("Health overview");
@@ -737,8 +749,8 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string WhitelistOnlyLabel => "AIHub_WhitelistOnlyLabel".GetLocalizedOrFallback("Whitelist only");
     public string CacheDescription => "AIHub_CacheDescription".GetLocalizedOrFallback("Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; delete confirmed files individually.");
     public string ScanButtonLabel => "AIHub_ScanButtonLabel".GetLocalizedOrFallback("Scan");
-    public string SelectAllLabel => "AIHub_SelectAllLabel".GetLocalizedOrFallback("Select all");
-    public string DeselectAllLabel => "AIHub_DeselectAllLabel".GetLocalizedOrFallback("Deselect all");
+    public string SelectAllLabel => "AIHub_SelectAllLabel".GetLocalizedOrFallback("Select visible");
+    public string DeselectAllLabel => "AIHub_DeselectAllLabel".GetLocalizedOrFallback("Deselect visible");
     public string ConfirmAndExecuteLabel => "AIHub_ConfirmAndExecuteLabel".GetLocalizedOrFallback("Confirm and execute");
     public string ReadOnlyScanTitle => "AIHub_ReadOnlyScanTitle".GetLocalizedOrFallback("Read-only scan");
     public string ReadOnlyScanDescription => "AIHub_ReadOnlyScanDescription".GetLocalizedOrFallback("Only file metadata is read before confirmation.");
@@ -1027,7 +1039,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public string TaskPolicyTitle => "AIHub_TaskPolicyTitle".GetLocalizedOrFallback("Task instructions");
 
     /// <summary>Explains what the per-chain policies govern and where the global one lives.</summary>
-    public string TaskPolicyDescription => "AIHub_TaskPolicyDescription".GetLocalizedOrFallback("Customize AI instructions for security audits and optimization. Global safety rules are in AI service settings.");
+    public string TaskPolicyDescription => "AIHub_TaskPolicyDescription".GetLocalizedOrFallback("Customize instructions for audits, optimization and the service self-test. Global safety rules are in AI service settings.");
 
     /// <summary>Label for the manual readiness re-check action.</summary>
     public string RecheckAiLabel => IsCheckingAiReadiness
@@ -1438,6 +1450,96 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public ObservableCollection<OptimizationGroupViewModel> CacheGroups { get; } = new();
     private readonly List<TempFileInfo> _observedOptimizationItems = new();
+    private bool _updatingSelection;
+    private string _optimizationSearchText = string.Empty;
+    private int _optimizationFilterIndex;
+    private bool _isConfirmingOptimization;
+    public event Func<IReadOnlyList<TempFileInfo>, Task<bool>> RequestOptimizationConfirmation;
+    public ObservableCollection<OptimizationRunViewModel> OptimizationHistory { get; } = new();
+    private OptimizationRunViewModel _selectedOptimizationRun;
+    private bool _loadingOptimizationHistory;
+    private long _optimizationHistoryGeneration;
+    public OptimizationRunViewModel SelectedOptimizationRun
+    {
+        get => _selectedOptimizationRun;
+        set => Set(ref _selectedOptimizationRun, value);
+    }
+    public bool HasOptimizationHistory => OptimizationHistory.Count > 0;
+    public ICommand RefreshOptimizationHistoryCommand { get; }
+
+    private async Task RefreshOptimizationHistoryAsync()
+    {
+        if (_loadingOptimizationHistory || IsOptimizing)
+        {
+            return;
+        }
+        _loadingOptimizationHistory = true;
+        long generation = _optimizationHistoryGeneration;
+        try
+        {
+            var executor = OptimizationExecutor;
+            var history = await Task.Run(() => executor.LoadHistoryAsync()).ConfigureAwait(false);
+            EnqueueOnUI(() =>
+            {
+                if (IsOptimizing || generation != _optimizationHistoryGeneration)
+                {
+                    return;
+                }
+                var selectedId = SelectedOptimizationRun?.Record.RunId;
+                OptimizationHistory.Clear();
+                foreach (var record in history)
+                {
+                    OptimizationHistory.Add(new OptimizationRunViewModel(record));
+                }
+                SelectedOptimizationRun = OptimizationHistory.FirstOrDefault(run => run.Record.RunId == selectedId) ?? OptimizationHistory.FirstOrDefault();
+                OnPropertyChanged(nameof(HasOptimizationHistory));
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Optimization history load failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+            EnqueueOnUI(() => ShowStatus("AIHub_Optimization_HistoryLoadFailed".GetLocalizedOrFallback("Execution history could not be read. Try refreshing."), InfoBarSeverity.Warning, optimization: true));
+        }
+        finally
+        {
+            EnqueueOnUI(() => _loadingOptimizationHistory = false);
+        }
+    }
+    public bool CanSelectOptimizationItems => IsEnabled && !IsOptimizing && !_isConfirmingOptimization;
+    public bool HasOptimizationResults => OptimizationCategories.Count > 0;
+    public bool HasFilteredOptimizationResults => OptimizationCategories.Any(category => category.HasVisibleItems);
+    public string FilteredCandidatesSummary => "AIHub_Optimization_FilteredSummary".FormatLocalized(
+        "{0:N0} shown · {1:N0} selected overall", OptimizationCategories.Sum(category => category.VisibleItems.Count), SelectedCandidatesCount);
+    public IReadOnlyList<string> OptimizationFilterOptions { get; } = new[]
+    {
+        "AIHub_FilterAllLabel".GetLocalizedOrFallback("All"),
+        "AIHub_Status_AiApproved".GetLocalizedOrFallback("AI approved"),
+        "AIHub_Status_AiSkipped".GetLocalizedOrFallback("AI skipped"),
+        "AIHub_Optimization_FilterFailed".GetLocalizedOrFallback("Needs attention"),
+        "AIHub_Optimization_FilterSelected".GetLocalizedOrFallback("Selected"),
+    };
+    public string OptimizationSearchText
+    {
+        get => _optimizationSearchText;
+        set
+        {
+            if (Set(ref _optimizationSearchText, value ?? string.Empty))
+            {
+                ApplyOptimizationFilters();
+            }
+        }
+    }
+    public int OptimizationFilterIndex
+    {
+        get => _optimizationFilterIndex;
+        set
+        {
+            if (Set(ref _optimizationFilterIndex, Math.Clamp(value, 0, 4)))
+            {
+                ApplyOptimizationFilters();
+            }
+        }
+    }
     private bool _downloadsScanned;
     private bool _cachesScanned;
     public ICommand OrganizeDownloadsCommand { get; }
@@ -1470,9 +1572,9 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     public bool HasCandidates => OptimizationCandidates.Count > 0;
 
-    public bool CanExecuteOptimization => IsEnabled && !IsOptimizing && SelectedCandidatesCount > 0;
+    public bool CanExecuteOptimization => CanSelectOptimizationItems && SelectedCandidatesCount > 0;
 
-    public bool CanCleanAll => IsEnabled && !IsOptimizing && OptimizationCandidates.Any(item => item.Action == "delete");
+    public bool CanCleanAll => CanSelectOptimizationItems && OptimizationCandidates.Any(item => item.Action == "delete" && item.IsSelected);
 
     public ICommand ScanAllCommand { get; }
 
@@ -1489,20 +1591,20 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     public ICommand CancelOptimizationCommand { get; }
 
     // Status Bar Properties
-    public string StatusMessage => ActiveTabIndex == 1 ? _optimizationStatusMessage : _statusMessage;
+    public string StatusMessage => ActiveTabIndex == 1 ? _optimizationStatusMessage : ActiveTabIndex == 0 ? _statusMessage : string.Empty;
 
     public InfoBarSeverity StatusSeverity => ActiveTabIndex == 1 ? _optimizationStatusSeverity : _statusSeverity;
 
     public bool IsStatusOpen
     {
-        get => ActiveTabIndex == 1 ? _isOptimizationStatusOpen : _isStatusOpen;
+        get => ActiveTabIndex == 1 ? _isOptimizationStatusOpen : ActiveTabIndex == 0 && _isStatusOpen;
         set
         {
             if (ActiveTabIndex == 1)
             {
                 Set(ref _isOptimizationStatusOpen, value);
             }
-            else
+            else if (ActiveTabIndex == 0)
             {
                 Set(ref _isStatusOpen, value);
             }
@@ -1542,13 +1644,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         ((RelayCommand)CleanAllCommand).OnCanExecuteChanged();
         OnPropertyChanged(nameof(CanCleanAll));
         ((RelayCommand)OrganizeDownloadsCommand).OnCanExecuteChanged();
+        OnPropertyChanged(nameof(CanSelectOptimizationItems));
         foreach (var group in OptimizationCategories)
         {
-            group.IsEnabled = IsEnabled && !IsOptimizing && group.ApprovedCount > 0;
+            group.IsEnabled = CanSelectOptimizationItems && group.SelectedCount > 0;
         }
         foreach (var group in CacheGroups.Concat(CacheGroups.SelectMany(group => group.Projects)))
         {
-            group.IsEnabled = IsEnabled && !IsOptimizing && group.ApprovedCount > 0;
+            group.IsEnabled = CanSelectOptimizationItems && group.SelectedCount > 0;
         }
         ((RelayCommand)CancelOptimizationCommand).OnCanExecuteChanged();
     }
@@ -1781,8 +1884,12 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     {
                         _aiReportFindings.Add(new AiReportFinding(
                             PreferChinese() && !string.IsNullOrWhiteSpace(issue.TitleZh) ? issue.TitleZh : issue.Title,
-                            PreferChinese() && !string.IsNullOrWhiteSpace(issue.RootCauseZh) ? issue.RootCauseZh : issue.RootCause,
-                            PreferChinese() && !string.IsNullOrWhiteSpace(issue.DescriptionZh) ? issue.DescriptionZh : issue.Description,
+                            issue.Severity == "High" ? HighLabel : issue.Severity == "Medium" ? MediumLabel : LowLabel,
+                            string.Join(Environment.NewLine, new[]
+                            {
+                                PreferChinese() && !string.IsNullOrWhiteSpace(issue.DescriptionZh) ? issue.DescriptionZh : issue.Description,
+                                PreferChinese() && !string.IsNullOrWhiteSpace(issue.RootCauseZh) ? issue.RootCauseZh : issue.RootCause,
+                            }.Where(text => !string.IsNullOrWhiteSpace(text))),
                             PreferChinese() && !string.IsNullOrWhiteSpace(issue.RecommendationZh) ? issue.RecommendationZh : issue.Recommendation,
                             $"{issue.Severity} · Event {issue.EventId} · {issue.Occurrences}x"));
                     }
@@ -2424,6 +2531,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void LoadRecentAudit()
     {
+        long generation = Interlocked.Increment(ref _auditHistoryGeneration);
         var auditAtLoad = _auditCts;
         Task.Run(async () =>
         {
@@ -2432,25 +2540,29 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 AuditHistoryStatistics statistics = await _auditHistoryStorage.GetStatisticsAsync().ConfigureAwait(false);
                 EnqueueOnUI(() =>
                 {
-                    if (!IsAuditing && !IsAiAnalyzing && _auditCts == auditAtLoad)
+                    if (generation == _auditHistoryGeneration && !IsAuditing && !IsAiAnalyzing && _auditCts == auditAtLoad)
                     {
                         ApplyStatistics(statistics);
                     }
                 });
 
                 var history = await _auditHistoryStorage.LoadLatestHistoryAsync();
-                if (history != null)
+                EnqueueOnUI(() =>
                 {
-                    EnqueueOnUI(() =>
+                    if (generation != _auditHistoryGeneration || IsAuditing || IsAiAnalyzing || _auditCts != auditAtLoad)
                     {
-                        if (IsAuditing || IsAiAnalyzing || _auditCts != auditAtLoad)
-                        {
-                            return;
-                        }
-
+                        return;
+                    }
+                    if (history != null)
+                    {
                         ApplyHistoricalAudit(history);
-                    });
-                }
+                    }
+                    else
+                    {
+                        ClearAuditSnapshot();
+                        SelectedAuditLabel = LatestAuditLabel;
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -2461,6 +2573,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void ApplyHistoricalAudit(AuditResult history)
     {
+        ClearAuditSnapshot();
         AllIssues.Clear();
         foreach (var issue in history.Findings)
         {
@@ -2480,8 +2593,11 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
         ScanTypeText = "AIHub_ScanType_Historical".GetLocalizedOrFallback("Historical snapshot");
         FinishedText = history.Timestamp.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture);
-        WindowText = "AIHub_Window_AllTimes".GetLocalizedOrFallback("All times");
-        EventCountText = "AIHub_EventCount_HistoricalFormat".FormatLocalized("{0} findings", history.Findings.Count);
+        WindowText = history.ScanStart.HasValue && history.ScanEnd.HasValue
+            ? $"{history.ScanStart.Value.ToLocalTime():g} – {history.ScanEnd.Value.ToLocalTime():g}"
+            : "AIHub_Window_AllTimes".GetLocalizedOrFallback("All times");
+        EventCountText = history.EventsScanned > 0 ? history.EventsScanned.ToString("N0", CultureInfo.CurrentCulture)
+            : "AIHub_EventCount_HistoricalFormat".FormatLocalized("{0} findings", history.Findings.Count);
         ActivityFindingsText = history.Findings.Count.ToString(CultureInfo.InvariantCulture);
         SelectedAuditLabel = history.Timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
@@ -2498,8 +2614,40 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         RebuildSections();
     }
 
+    private void ClearAuditSnapshot()
+    {
+        AllIssues.Clear();
+        _hasAuditResult = false;
+        _auditIncomplete = false;
+        _auditWasDeepAnalysis = false;
+        _aiReportFindings.Clear();
+        HasAiReport = false;
+        AiReportSummaryText = string.Empty;
+        AiReportMetaText = string.Empty;
+        AiStatusText = string.Empty;
+        AiAnalysisRanText = string.Empty;
+        lock (_lastAuditEvents)
+        {
+            _lastAuditEvents.Clear();
+        }
+        HealthScore = 100;
+        HighCount = MediumCount = LowCount = 0;
+        HealthScoreGrade = "AIHub_HealthScoreGrade_Good".GetLocalizedOrFallback("Good");
+        HealthVerdict = "AIHub_HealthVerdict_NotScanned".GetLocalizedOrFallback("Not scanned yet");
+        HealthSummaryText = "AIHub_HealthSummary_NotScanned".GetLocalizedOrFallback("No audit snapshot is available for this date.");
+        AuditTimestampText = "AIHub_AuditTimestamp_NotScanned".GetLocalizedOrFallback("Not scanned yet");
+        AuditStatusText = "AIHub_AuditStatus_Ready".GetLocalizedOrFallback("Ready");
+        ScanTypeText = FinishedText = WindowText = EventCountText = string.Empty;
+        _auditProgress.Reset();
+        AuditPhase = ScanPhase.Idle;
+        RebuildSections();
+        RefreshCommands();
+    }
+
     private async Task LoadAuditForDateAsync(DateTime localDate)
     {
+        long generation = Interlocked.Increment(ref _auditHistoryGeneration);
+        var auditAtLoad = _auditCts;
         try
         {
             var historyList = await _auditHistoryStorage.LoadHistoryAsync().ConfigureAwait(false);
@@ -2510,7 +2658,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
             EnqueueOnUI(() =>
             {
-                if (IsAuditing || IsAiAnalyzing)
+                if (generation != _auditHistoryGeneration || IsAuditing || IsAiAnalyzing || _auditCts != auditAtLoad)
                 {
                     return;
                 }
@@ -2521,6 +2669,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 }
                 else
                 {
+                    ClearAuditSnapshot();
                     SelectedAuditLabel = localDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                     ShowStatus(
                         ResourceExtensions.FormatLocalized(
@@ -2622,7 +2771,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void RunScanAll()
     {
-        if (!IsEnabled || IsOptimizing)
+        if (!CanSelectOptimizationItems)
         {
             return;
         }
@@ -2726,7 +2875,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void RunScanDownloads()
     {
-        if (!IsEnabled || IsOptimizing)
+        if (!CanSelectOptimizationItems)
         {
             return;
         }
@@ -2811,7 +2960,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void RunScanTemporaryFiles()
     {
-        if (!IsEnabled || IsOptimizing)
+        if (!CanSelectOptimizationItems)
         {
             return;
         }
@@ -2896,11 +3045,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void SelectAllCandidates()
     {
-        foreach (var item in OptimizationCandidates)
-        {
-            item.IsSelected = true;
-        }
-        RecalculateCandidateMetrics();
+        SetVisibleSelection(true);
     }
 
     private void StopOptimization(bool cancelled)
@@ -2914,18 +3059,38 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void DeselectAllCandidates()
     {
-        foreach (var item in OptimizationCandidates)
+        SetVisibleSelection(false);
+    }
+
+    private void SetVisibleSelection(bool selected)
+    {
+        if (!CanSelectOptimizationItems)
         {
-            item.IsSelected = false;
+            return;
         }
-        RecalculateCandidateMetrics();
+
+        // Snapshot before editing: the selected-only filter changes as selections change.
+        var visible = OptimizationCategories.SelectMany(category => category.VisibleItems).ToHashSet();
+        _updatingSelection = true;
+        try
+        {
+            foreach (var item in OptimizationCandidates.Where(visible.Contains))
+            {
+                item.IsSelected = selected;
+            }
+        }
+        finally
+        {
+            _updatingSelection = false;
+            UpdateSelectionMetrics();
+        }
     }
 
     private void Candidate_PropertyChanged(object sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(TempFileInfo.IsSelected))
+        if (e.PropertyName == nameof(TempFileInfo.IsSelected) && !_updatingSelection)
         {
-            RecalculateCandidateMetrics();
+            UpdateSelectionMetrics();
         }
     }
 
@@ -2945,6 +3110,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void RecalculateCandidateMetrics()
     {
+        var expandedCategories = OptimizationCategories.Where(category => category.IsExpanded)
+            .Select(category => (category.Items[0].Action, category.Name, category.Path)).ToHashSet();
+        var expandedGroups = CacheGroups.Concat(CacheGroups.SelectMany(group => group.Projects))
+            .Where(group => group.IsExpanded).Select(group => (group.Family, group.Location)).ToHashSet();
         OptimizationCategories.Clear();
         DownloadCategories.Clear();
         CacheCategories.Clear();
@@ -2956,6 +3125,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             var snapshot = items.ToList();
             var actionable = snapshot.Where(approved.Contains).ToList();
             var group = new OptimizationCategoryViewModel(snapshot, actionable.Count, () => RunExecuteOptimization(actionable)) { IsEnabled = IsEnabled && !IsOptimizing && actionable.Count > 0 };
+            group.IsExpanded = expandedCategories.Contains((snapshot[0].Action, group.Name, group.Path));
             OptimizationCategories.Add(group);
             (items.Key.Action == "move" ? DownloadCategories : CacheCategories).Add(group);
         }
@@ -2980,11 +3150,16 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                     {
                         Name = Path.GetFileName(project.Key),
                         Location = project.Key,
+                        IsExpanded = expandedGroups.Contains(("project", project.Key)),
                     });
                 }
             }
 
-            CacheGroups.Add(new OptimizationGroupViewModel(family, categories, () => RunExecuteOptimization(actionable)) { Projects = projects });
+            CacheGroups.Add(new OptimizationGroupViewModel(family, categories, () => RunExecuteOptimization(actionable))
+            {
+                Projects = projects,
+                IsExpanded = expandedGroups.Contains((family, string.Empty)),
+            });
         }
 
         OnPropertyChanged(nameof(DownloadsResultSummary));
@@ -2997,11 +3172,20 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         OnPropertyChanged(nameof(HasCacheResults));
         CandidatesCount = OptimizationCandidates.Count;
         CandidatesBytes = OptimizationCandidates.Sum(c => c.SizeInBytes);
+        OnPropertyChanged(nameof(HasOptimizationResults));
+        UpdateSelectionMetrics();
+    }
 
+    private void UpdateSelectionMetrics()
+    {
         var selected = OptimizationCandidates.Where(c => c.IsSelected).ToList();
         SelectedCandidatesCount = selected.Count;
         SelectedCandidatesBytes = selected.Sum(c => c.SizeInBytes);
-
+        foreach (var category in OptimizationCategories)
+        {
+            category.RefreshSelection();
+        }
+        ApplyOptimizationFilters();
         OnPropertyChanged(nameof(CandidatesSummary));
         OnPropertyChanged(nameof(SelectedCandidatesSummary));
         OnPropertyChanged(nameof(HasCandidates));
@@ -3009,145 +3193,167 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         RefreshCommands();
     }
 
+    private void ApplyOptimizationFilters()
+    {
+        var terms = _optimizationSearchText.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+        bool Matches(TempFileInfo item) => _optimizationFilterIndex switch
+        {
+            1 => item.ReviewState == "approved",
+            2 => item.ReviewState == "skipped",
+            3 => item.ReviewState == "failed" || !string.IsNullOrEmpty(item.ExecutionError),
+            4 => item.ReviewState == "approved" && item.IsSelected,
+            _ => true,
+        } && terms.All(term => item.FileName.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || item.FilePath.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || item.Category.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || item.DisplayReason.Contains(term, StringComparison.OrdinalIgnoreCase));
+        foreach (var category in OptimizationCategories)
+        {
+            category.ApplyFilter(Matches);
+        }
+        foreach (var group in CacheGroups.Concat(CacheGroups.SelectMany(group => group.Projects)))
+        {
+            group.RefreshSelection();
+        }
+        OnPropertyChanged(nameof(FilteredCandidatesSummary));
+        OnPropertyChanged(nameof(HasFilteredOptimizationResults));
+    }
+
     private void RunExecuteOptimization(List<TempFileInfo> requestedItems = null)
     {
-        if (!IsEnabled || IsOptimizing)
+        // Native command callbacks can arrive without a managed synchronization context.
+        var previousContext = SynchronizationContext.Current;
+        try
         {
-            return;
-        }
-
-        _optimizationCts?.Dispose();
-        _optimizationCts = new CancellationTokenSource();
-        var token = _optimizationCts.Token;
-
-        var available = OptimizationCandidates.ToHashSet();
-        var selectedItems = (requestedItems ?? OptimizationCandidates.Where(c => c.IsSelected).ToList())
-            .Where(available.Contains)
-            .OrderBy(item => item.FileName.Equals(".nupkg.metadata", StringComparison.OrdinalIgnoreCase) ? 0 : 1).ToList();
-        if (selectedItems.Count == 0)
-        {
-            return;
-        }
-
-        IsOptimizing = true;
-        IsExecutingOptimization = true;
-        OptimizationProgress = 0;
-        foreach (var group in OptimizationCategories)
-        {
-            group.Processed = 0;
-        }
-
-        var categoryByItem = OptimizationCategories.SelectMany(group => group.Items.Select(item => (item, group))).ToDictionary(pair => pair.item, pair => pair.group);
-        ScanPhase = ScanPhase.ExecutionPending;
-        OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ExecutingConfirmed".GetLocalizedOrFallback("Executing confirmed actions...");
-
-        Task.Run(() =>
-        {
-            var outcome = new OptimizationOutcome();
-            int processed = 0;
-            var processedItems = new List<TempFileInfo>();
-
-            try
+            if (_dispatcherQueue?.HasThreadAccess == true)
             {
-                foreach (var item in selectedItems)
+                SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(_dispatcherQueue));
+            }
+
+            _ = ExecuteOptimizationAsync(requestedItems);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+    }
+
+    private async Task ExecuteOptimizationAsync(List<TempFileInfo> requestedItems)
+    {
+        if (!CanSelectOptimizationItems)
+        {
+            return;
+        }
+        var available = OptimizationCandidates.ToHashSet();
+        var selectedItems = (requestedItems ?? OptimizationCandidates.ToList())
+            .Where(item => available.Contains(item) && item.IsSelected && item.IsActionable).Distinct().ToList();
+        if (selectedItems.Count == 0 || RequestOptimizationConfirmation == null)
+        {
+            return;
+        }
+
+        _isConfirmingOptimization = true;
+        RefreshCommands();
+        try
+        {
+            bool confirmed = await RequestOptimizationConfirmation.Invoke(selectedItems.AsReadOnly());
+            if (!confirmed || _disposed || !IsEnabled || IsOptimizing)
+            {
+                return;
+            }
+            available = OptimizationCandidates.ToHashSet();
+            if (selectedItems.Any(item => !available.Contains(item) || !item.IsSelected || !item.IsActionable))
+            {
+                ShowStatus("AIHub_Optimization_PlanChanged".GetLocalizedOrFallback("The reviewed selection changed. Review it again before executing."), InfoBarSeverity.Warning, optimization: true);
+                return;
+            }
+
+            _optimizationCts?.Dispose();
+            _optimizationCts = new CancellationTokenSource();
+            var token = _optimizationCts.Token;
+            Interlocked.Increment(ref _optimizationHistoryGeneration);
+            IsOptimizing = true;
+            IsExecutingOptimization = true;
+            OptimizationProgress = 0;
+            foreach (var group in OptimizationCategories)
+            {
+                group.Processed = 0;
+            }
+            ScanPhase = ScanPhase.ExecutionPending;
+            OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ExecutingConfirmed".GetLocalizedOrFallback("Executing confirmed actions...");
+            long lastProgressTicks = 0;
+            var progress = new Progress<OptimizationExecutionProgress>(update =>
+            {
+                long now = Environment.TickCount64;
+                if (update.ProcessedCount != update.TotalCount && now - lastProgressTicks < 100)
                 {
-                    if (token.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    try
-                    {
-                        if (item.Action == "delete")
-                        {
-                            // Delete only the reviewed leaf snapshot after local revalidation.
-                            var (ok, error) = _cacheCleanupService.CleanupItem(item);
-                            outcome.Add(ok
-                                ? OptimizationItemResult.Success(item.FileName, "delete")
-                                : OptimizationItemResult.Failure(item.FileName, "delete", error));
-                        }
-                        else if (item.Action == "move")
-                        {
-                            // Organize Downloads within root
-                            bool ok = _downloadOrganizerService.OrganizeItem(item);
-                            outcome.Add(ok
-                                ? OptimizationItemResult.Success(item.FileName, "move")
-                                : OptimizationItemResult.Failure(item.FileName, "move", "AIHub_Optimization_DownloadIneligible".GetLocalizedOrFallback("File is ineligible, in use or changed; scan again")));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Keep the reason: a silent count tells the user nothing actionable.
-                        outcome.Add(OptimizationItemResult.Failure(item.FileName, item.Action, ex.Message));
-                    }
-
-                    if (outcome.Results.Count > 0 && outcome.Results[^1].Succeeded)
-                    {
-                        processedItems.Add(item);
-                    }
-                    else if (outcome.Results.Count > 0)
-                    {
-                        item.ExecutionError = outcome.Results[^1].Reason ?? "AIHub_Optimization_ActionFailed".GetLocalizedOrFallback("Action failed; scan again");
-                    }
-
-                    processed++;
-                    int done = processed;
-                    EnqueueOnUI(() =>
-                    {
-                        OptimizationProgress = 100.0 * done / selectedItems.Count;
-                        if (categoryByItem.TryGetValue(item, out var group))
-                        {
-                            group.Processed++;
-                        }
-
-                        OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ExecutingProgressFormat".FormatLocalized(
-                            "Executing confirmed actions... ({0}/{1})", done, selectedItems.Count);
-                    });
+                    return;
                 }
-
+                lastProgressTicks = now;
                 EnqueueOnUI(() =>
                 {
-                    var removed = processedItems.ToHashSet();
-                    _observedOptimizationItems.RemoveAll(removed.Contains);
-                    var remaining = OptimizationCandidates.Where(item => !removed.Contains(item)).ToList();
-                    foreach (var item in processedItems)
+                    if (!IsExecutingOptimization || _optimizationCts?.Token != token)
                     {
-                        item.PropertyChanged -= Candidate_PropertyChanged;
+                        return;
                     }
-                    OptimizationCandidates.Clear();
-                    foreach (var item in remaining)
-                    {
-                        OptimizationCandidates.Add(item);
-                    }
-
-                    RecalculateCandidateMetrics();
-
-                    // Surface the actual failure reasons instead of an opaque count.
-                    var failureDetail = outcome.DescribeFailures(PreferChinese());
-                    ScanPhase = token.IsCancellationRequested ? ScanPhase.Idle : ScanPhase.SelectingTargets;
-                    OptimizationWorkflowStatus = token.IsCancellationRequested
-                        ? "AIHub_OptimizationWorkflow_ExecutionCancelledFormat".FormatLocalized("Execution cancelled ({0}/{1} processed)", processed, selectedItems.Count)
-                        : outcome.HasFailures
-                        ? "AIHub_OptimizationWorkflow_ExecutionCompletedWithFailuresFormat".FormatLocalized("Execution completed ({0} failed)", outcome.FailedCount)
-                        : "AIHub_OptimizationWorkflow_ExecutionCompleted".GetLocalizedOrFallback("Execution completed");
-
-                    ShowStatus(
-                        token.IsCancellationRequested ? OptimizationWorkflowStatus : failureDetail is null
-                            ? outcome.Describe(PreferChinese())
-                            : $"{outcome.Describe(PreferChinese())} — {failureDetail}",
-                        token.IsCancellationRequested || outcome.HasFailures ? InfoBarSeverity.Warning : InfoBarSeverity.Success, optimization: true);
+                    OptimizationProgress = update.TotalCount == 0 ? 0 : 100.0 * update.ProcessedCount / update.TotalCount;
+                    OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ExecutingProgressFormat".FormatLocalized(
+                        "Executing confirmed actions... ({0}/{1})", update.ProcessedCount, update.TotalCount);
                 });
-            }
-            catch (Exception ex)
+            });
+            var executor = OptimizationExecutor;
+            var result = await executor.ExecuteAsync(selectedItems, progress, token);
+            if (_disposed)
             {
-                Logger.LogError($"Optimization execution failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
-                EnqueueOnUI(() => StopOptimization(cancelled: token.IsCancellationRequested));
+                return;
             }
-            finally
+            var removed = result.SucceededItems.ToHashSet();
+            _observedOptimizationItems.RemoveAll(removed.Contains);
+            var remaining = OptimizationCandidates.Where(item => !removed.Contains(item)).ToList();
+            foreach (var item in result.SucceededItems)
             {
-                EnqueueOnUI(() => IsOptimizing = false);
+                item.PropertyChanged -= Candidate_PropertyChanged;
             }
-        });
+            OptimizationCandidates.Clear();
+            foreach (var item in remaining)
+            {
+                OptimizationCandidates.Add(item);
+            }
+            foreach (var failure in result.FailedItems)
+            {
+                failure.Item.ExecutionError = failure.Reason;
+            }
+            RecalculateCandidateMetrics();
+            var record = result.Record;
+            var run = new OptimizationRunViewModel(record);
+            OptimizationHistory.Insert(0, run);
+            while (OptimizationHistory.Count > 20)
+            {
+                OptimizationHistory.RemoveAt(OptimizationHistory.Count - 1);
+            }
+            SelectedOptimizationRun = run;
+            OnPropertyChanged(nameof(HasOptimizationHistory));
+            ScanPhase = ScanPhase.SelectingTargets;
+            OptimizationProgress = record.TotalCount == 0 ? 0 : 100.0 * record.ProcessedCount / record.TotalCount;
+            OptimizationWorkflowStatus = run.Summary;
+            string detail = record.HistoryError ?? record.FailureReason;
+            ShowStatus(string.IsNullOrWhiteSpace(detail) ? run.Summary : $"{run.Summary} — {detail}",
+                record.State == "completed" && string.IsNullOrEmpty(record.HistoryError) ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Optimization execution failed: type={ex.GetType().Name}, hresult=0x{ex.HResult:X8}");
+            if (!_disposed)
+            {
+                ShowStatus("AIHub_Optimization_ExecutionFailed".GetLocalizedOrFallback("The operation could not finish. Review the execution history before trying again."), InfoBarSeverity.Error, optimization: true);
+            }
+        }
+        finally
+        {
+            _isConfirmingOptimization = false;
+            IsOptimizing = false;
+            RefreshCommands();
+        }
     }
 
     private void EnqueueOnUI(Action action)

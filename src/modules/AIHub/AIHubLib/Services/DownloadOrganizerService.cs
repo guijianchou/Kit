@@ -122,48 +122,55 @@ public sealed class DownloadOrganizerService
         int failed = 0;
         foreach (var item in items)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            cancellationToken.ThrowIfCancellationRequested();
             if (!item.IsSelected) continue;
-            if (OrganizeItem(item)) succeeded++;
+            if (OrganizeItem(item, cancellationToken)) succeeded++;
             else failed++;
         }
 
         return (succeeded, failed);
     }, cancellationToken);
 
-    public bool OrganizeItem(TempFileInfo item)
+    public bool OrganizeItem(TempFileInfo item, CancellationToken cancellationToken = default) =>
+        OrganizeItemDetailed(item, cancellationToken).Success;
+
+    public (bool Success, string? DestinationPath, string? Error) OrganizeItemDetailed(TempFileInfo item, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             string? root = GetDownloadsPath();
-            if (root == null || item.Action != "move") return false;
+            if (root == null || item.Action != "move") return (false, null, "Downloads location or requested action is invalid.");
 
             root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
             var file = new FileInfo(item.FilePath);
             if (!string.Equals(file.DirectoryName, root, StringComparison.OrdinalIgnoreCase) ||
                 !ExtensionToCategory.TryGetValue(file.Extension, out string? category) ||
                 !string.Equals(item.TargetRelativePath, category, StringComparison.Ordinal) ||
-                !OptimizationFileSafety.IsEligible(file, MinimumAge, item)) return false;
+                !OptimizationFileSafety.IsEligible(file, MinimumAge, item)) return (false, null, "File is outside the download rules, in use, or changed since scanning; scan again.");
 
             string targetDir = Path.Combine(root, category);
-            if (!OptimizationFileSafety.HasNoReparsePoints(targetDir)) return false;
+            if (!OptimizationFileSafety.HasNoReparsePoints(targetDir)) return (false, null, "The destination contains a reparse point.");
+            cancellationToken.ThrowIfCancellationRequested();
             Directory.CreateDirectory(targetDir);
-            if (!OptimizationFileSafety.HasNoReparsePoints(targetDir)) return false;
+            if (!OptimizationFileSafety.HasNoReparsePoints(targetDir)) return (false, null, "The destination contains a reparse point.");
 
             // Derive the name from the validated source, never from recommendation metadata.
             string targetFile = Path.Combine(targetDir, file.Name);
             int counter = 1;
             while (File.Exists(targetFile) || Directory.Exists(targetFile))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 targetFile = Path.Combine(targetDir, $"{Path.GetFileNameWithoutExtension(file.Name)}_{counter++}{file.Extension}");
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(file.FullName, targetFile); // Never overwrite an existing download.
-            return true;
+            return (true, targetFile, null);
         }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
-        catch (ArgumentException) { return false; }
+        catch (IOException) { return (false, null, "File unavailable or in use."); }
+        catch (UnauthorizedAccessException) { return (false, null, "File access denied."); }
+        catch (ArgumentException) { return (false, null, "Invalid file path."); }
     }
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]

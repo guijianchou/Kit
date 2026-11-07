@@ -21,6 +21,7 @@ namespace Common.UI
             UDPtest,
             NetMap,
             AIHub,
+            Winget,
         }
 
         private static string SettingsWindowNameToString(SettingsWindow value)
@@ -43,6 +44,8 @@ namespace Common.UI
                     return "NetMap";
                 case SettingsWindow.AIHub:
                     return "AIHub";
+                case SettingsWindow.Winget:
+                    return "Winget";
                 default:
                     {
                         return string.Empty;

@@ -420,6 +420,7 @@ public sealed class RouteDispatcher
             Directory.CreateDirectory(home);
             string config = $"model = {TomlString(target.Model.Trim())}\n" +
                 $"model_reasoning_effort = {TomlString(target.Effort)}\n" +
+                $"model_context_window = {DynamicBatcher.DefaultContextWindowTokens.ToString(CultureInfo.InvariantCulture)}\n" +
                 "model_provider = \"kit\"\napproval_policy = \"never\"\nweb_search = \"disabled\"\n" +
                 "project_doc_max_bytes = 0\ncheck_for_update_on_startup = false\ncli_auth_credentials_store = \"ephemeral\"\n" +
                 $"model_instructions_file = {TomlString(instructionsPath)}\n" +
@@ -473,7 +474,7 @@ public sealed class RouteDispatcher
                         ["name"] = target.Model.Trim(),
                         ["reasoning"] = true,
                         ["input"] = new JsonArray("text"),
-                        ["contextWindow"] = 256000,
+                        ["contextWindow"] = DynamicBatcher.DefaultContextWindowTokens,
                         ["maxTokens"] = 8000,
                     }),
                 },

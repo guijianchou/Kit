@@ -32,6 +32,7 @@ namespace Kit.Settings.UI.Helpers
                 ModuleType.UDPtest => typeof(UDPtestPage),
                 ModuleType.NetMap => typeof(NetMapPage),
                 ModuleType.AIHub => typeof(AIHubPage),
+                ModuleType.Winget => typeof(WingetPage),
                 _ => typeof(GeneralPage),
             };
         }

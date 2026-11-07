@@ -239,18 +239,18 @@
                             IsOn="{x:Bind ViewModel.AiServices.IsEnabled, Mode=TwoWay}" />
                     </tkcontrols:SettingsCard>
 
+                    <InfoBar
+                        IsClosable="True"
+                        IsOpen="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=TwoWay}"
+                        Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
+                        Severity="{x:Bind ViewModel.AiServices.StatusSeverity, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
                     <!-- The service configuration is only shown while the service is on. -->
                     <StackPanel
                         ChildrenTransitions="{StaticResource SettingsCardsAnimations}"
                         Spacing="{StaticResource SettingsCardSpacing}"
                         Visibility="{x:Bind ViewModel.AiServices.HubContentVisibility, Mode=OneWay}">
-                        <InfoBar
-                            IsClosable="True"
-                            IsOpen="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=TwoWay}"
-                            Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
-                            Severity="{x:Bind ViewModel.AiServices.StatusSeverity, Mode=OneWay}"
-                            Visibility="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-
                         <!-- Cached service readiness; each endpoint has its own connection test. -->
                         <tkcontrols:SettingsCard
                             x:Name="AiServiceStatusCard"
@@ -521,69 +521,86 @@
                             </StackPanel>
                         </tkcontrols:SettingsCard>
 
-                        <!-- Global policy. Task-specific chains live on the AI Hub page. -->
-                        <tkcontrols:SettingsExpander
-                            x:Name="AiPolicyRulesExpander"
-                            x:Uid="AiHub_PolicyRulesExpander"
-                            HeaderIcon="{ui:FontIcon Glyph=&#xE72E;}"
-                            IsExpanded="False">
-                            <tkcontrols:SettingsExpander.Items>
-                                <tkcontrols:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
-                                    <StackPanel Margin="0,4,0,4" Spacing="12">
-                                        <TextBox
-                                            x:Name="AiPolicyContentBox"
-                                            x:Uid="AiHub_PolicyContentBox"
-                                            AutomationProperties.AutomationId="AiHub_PolicyContentBox"
-                                            MinHeight="160"
-                                            MaxHeight="320"
-                                            AcceptsReturn="True"
-                                            FontFamily="{StaticResource KitMonoFontFamily}"
-                                            FontSize="12"
-                                            MaxLength="64000"
-                                            ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                            Text="{x:Bind ViewModel.AiServices.CurrentPolicyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            TextWrapping="Wrap" />
-                                        <Grid ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock
-                                                VerticalAlignment="Center"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                IsTextSelectionEnabled="True"
-                                                Style="{StaticResource CaptionTextBlockStyle}"
-                                                Text="{x:Bind ViewModel.AiServices.CurrentPolicyFilePath, Mode=OneWay}"
-                                                TextTrimming="CharacterEllipsis" />
-                                            <Button
-                                                x:Uid="AiHub_ResetPolicyButton"
-                                                AutomationProperties.AutomationId="AiHub_ResetPolicyButton"
-                                                Grid.Column="1"
-                                                Style="{StaticResource KitActionButtonStyle}"
-                                                Command="{x:Bind ViewModel.AiServices.ResetActivePolicyCommand}">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <FontIcon Glyph="&#xE777;" FontSize="12" />
-                                                    <TextBlock x:Uid="AiHub_ResetPolicyButtonText" Text="Reset to default" FontSize="12" />
-                                                </StackPanel>
-                                            </Button>
-                                            <Button
-                                                x:Uid="AiHub_SavePolicyButton"
-                                                AutomationProperties.AutomationId="AiHub_SavePolicyButton"
-                                                Grid.Column="2"
-                                                Command="{x:Bind ViewModel.AiServices.SaveActivePolicyCommand}"
-                                                Style="{StaticResource KitPrimaryActionButtonStyle}">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <FontIcon Glyph="&#xE74E;" FontSize="12" />
-                                                    <TextBlock x:Uid="AiHub_SavePolicyButtonText" Text="Save" FontSize="12" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
-                                    </StackPanel>
-                                </tkcontrols:SettingsCard>
-                            </tkcontrols:SettingsExpander.Items>
-                        </tkcontrols:SettingsExpander>
                     </StackPanel>
+
+                    <!-- Global policy remains editable while AI is off. Task chains live on the AI Hub page. -->
+                    <tkcontrols:SettingsExpander
+                        x:Name="AiPolicyRulesExpander"
+                        x:Uid="AiHub_PolicyRulesExpander"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE72E;}"
+                        IsExpanded="False">
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
+                                <StackPanel Margin="0,4,0,4" Spacing="12">
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        AutomationProperties.LiveSetting="Polite"
+                                        Text="{x:Bind ViewModel.AiServices.SecurityPolicyStatusText, Mode=OneWay}" />
+                                    <TextBlock
+                                        x:Uid="AiHub_GlobalPolicyDraftHint"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap" />
+                                    <TextBox
+                                        x:Name="AiPolicyContentBox"
+                                        x:Uid="AiHub_PolicyContentBox"
+                                        AutomationProperties.AutomationId="AiHub_PolicyContentBox"
+                                        MinHeight="160"
+                                        MaxHeight="320"
+                                        AcceptsReturn="True"
+                                        FontFamily="{StaticResource KitMonoFontFamily}"
+                                        FontSize="12"
+                                        IsReadOnly="{x:Bind ViewModel.AiServices.CanEditPolicies, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
+                                        MaxLength="64000"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                        Text="{x:Bind ViewModel.AiServices.CurrentPolicyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        TextWrapping="Wrap" />
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            IsTextSelectionEnabled="True"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Text="{x:Bind ViewModel.AiServices.SecurityPolicyPath, Mode=OneWay}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <Button
+                                            x:Uid="AIHub_DiscardTaskPolicyButton"
+                                            AutomationProperties.AutomationId="AiHub_DiscardPolicyButton"
+                                            Grid.Column="1"
+                                            Style="{StaticResource KitActionButtonStyle}"
+                                            Command="{x:Bind ViewModel.AiServices.DiscardActivePolicyCommand}" />
+                                        <Button
+                                            x:Uid="AiHub_ResetPolicyButton"
+                                            AutomationProperties.AutomationId="AiHub_ResetPolicyButton"
+                                            Grid.Column="2"
+                                            Style="{StaticResource KitActionButtonStyle}"
+                                            Command="{x:Bind ViewModel.AiServices.ResetPolicyCommand}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE777;" FontSize="12" />
+                                                <TextBlock x:Uid="AiHub_ResetPolicyButtonText" Text="Reset to default" FontSize="12" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button
+                                            x:Uid="AiHub_SavePolicyButton"
+                                            AutomationProperties.AutomationId="AiHub_SavePolicyButton"
+                                            Grid.Column="3"
+                                            Command="{x:Bind ViewModel.AiServices.SavePolicyCommand}"
+                                            Style="{StaticResource KitPrimaryActionButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE74E;" FontSize="12" />
+                                                <TextBlock x:Uid="AiHub_SavePolicyButtonText" Text="Save" FontSize="12" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
                 </controls:SettingsGroup>
 
                 <controls:SettingsGroup x:Name="DiagnosticsGroup" x:Uid="General_DiagnosticsGroup">

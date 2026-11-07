@@ -9,7 +9,7 @@ This is the top-level guidance for AI contributions to Kit. Keep changes atomic,
 
 ## Overview
 
-Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. The active module set is: `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, and `AIHub`.
+Kit is a local, self-use Windows utility workspace derived from Microsoft PowerToys. The active module set is: `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, `AIHub`, `NetMap`, and `Winget`.
 
 | Area | Location | Description |
 |------|----------|-------------|

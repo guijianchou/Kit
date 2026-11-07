@@ -1751,6 +1751,27 @@
   <data name="NetMap_AiCheckFailed" xml:space="preserve">
     <value>AI 链路分析失败。</value>
   </data>
+  <data name="NetMap_AiTimeout" xml:space="preserve">
+    <value>AI 链路分析超时，请重试或在 AI 服务设置中选择响应更快的模型。</value>
+  </data>
+  <data name="NetMap_AiEndpointFailed" xml:space="preserve">
+    <value>AI 端点未能完成请求，请检查连接后重试。</value>
+  </data>
+  <data name="NetMap_AiPolicyViolation" xml:space="preserve">
+    <value>AI 返回结果未通过链路分析校验，请重试或选择其他模型。</value>
+  </data>
+  <data name="NetMap_AiInvalidResponse" xml:space="preserve">
+    <value>AI 返回结果不完整或格式无效，请重试。</value>
+  </data>
+  <data name="NetMap_AiServiceUnavailable" xml:space="preserve">
+    <value>AI 服务暂不可用，请重新打开 Kit 后重试。</value>
+  </data>
+  <data name="NetMap_AiCancelled" xml:space="preserve">
+    <value>AI 链路分析已取消。</value>
+  </data>
+  <data name="NetMap_AiRouteChanged" xml:space="preserve">
+    <value>AI 分析期间代理线路发生变化或暂时不可用。请等待线路稳定后重新执行 AI 检查。</value>
+  </data>
   <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>选择 ASN 数据库</value>
   </data>
@@ -1785,10 +1806,10 @@
     <value>返回</value>
   </data>
   <data name="AIHub_Action_Organize" xml:space="preserve">
-    <value>整理</value>
+    <value>整理已选项</value>
   </data>
   <data name="AIHub_Action_Clean" xml:space="preserve">
-    <value>清理</value>
+    <value>清理已选项</value>
   </data>
   <data name="AIHub_Category_ReviewSummary" xml:space="preserve">
     <value>{0:N0} 个文件 · {1:N0} 个可执行</value>
@@ -1827,10 +1848,10 @@
     <value>{0:N0} 个位置/类型 · {1:N0} 个文件 · {2:N0} 个可执行</value>
   </data>
   <data name="AIHub_Clean_Project" xml:space="preserve">
-    <value>清理项目</value>
+    <value>清理项目中的已选项</value>
   </data>
   <data name="AIHub_Clean_Group" xml:space="preserve">
-    <value>清理本类</value>
+    <value>清理分类中的已选项</value>
   </data>
   <data name="AIHub_SecurityAuditPolicySaved" xml:space="preserve">
     <value>安全审计任务策略 (AGENTS.md) 已保存。</value>
@@ -2496,13 +2517,13 @@
     <value>全局安全策略规则</value>
   </data>
   <data name="AiHub_ResetPolicyButtonText.Text" xml:space="preserve">
-    <value>恢复默认值</value>
+    <value>载入默认模板</value>
   </data>
   <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>恢复默认策略</value>
+    <value>将默认模板载入草稿，保存后生效。</value>
   </data>
   <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>恢复默认策略</value>
+    <value>将默认策略载入草稿</value>
   </data>
   <data name="AiHub_SavePolicyButtonText.Text" xml:space="preserve">
     <value>保存策略</value>
@@ -2826,7 +2847,7 @@
     <value>AI 深度分析</value>
   </data>
   <data name="AIHub_DeepAnalyzeHint" xml:space="preserve">
-    <value>将当前发现（高危优先，最多 12 项）提交给已配置的 AI 内核，按 security-audit 策略生成补充诊断与建议。不会自动执行任何操作。</value>
+    <value>按 security-audit 策略分批分析当前最多 400 条事件。结果仅供参考，不会自动执行操作。</value>
   </data>
   <data name="AIHub_HealthOverviewLabel" xml:space="preserve">
     <value>健康总览</value>
@@ -2940,10 +2961,10 @@
     <value>扫描</value>
   </data>
   <data name="AIHub_SelectAllLabel" xml:space="preserve">
-    <value>全选</value>
+    <value>选择可见项</value>
   </data>
   <data name="AIHub_DeselectAllLabel" xml:space="preserve">
-    <value>取消全选</value>
+    <value>取消选择可见项</value>
   </data>
   <data name="AIHub_ConfirmAndExecuteLabel" xml:space="preserve">
     <value>确认并执行</value>
@@ -2997,7 +3018,7 @@
     <value>任务指令</value>
   </data>
   <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
-    <value>分别设置安全审计和系统优化的 AI 指令。全局安全规则可在 AI 服务设置中修改。</value>
+    <value>分别设置安全审计、系统优化和服务自检的 AI 指令。全局安全规则可在 AI 服务设置中修改。</value>
   </data>
   <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
     <value>正在检测…</value>
@@ -3087,7 +3108,7 @@
     <value>用户目录空间分析</value>
   </data>
   <data name="AIHub_OrganizeDownloadsLabel" xml:space="preserve">
-    <value>整理下载</value>
+    <value>整理已选下载</value>
   </data>
   <data name="AIHub_DownloadsUnavailable" xml:space="preserve">
     <value>下载目录不存在</value>
@@ -3096,7 +3117,7 @@
     <value>已扫描 {0:N0} 个候选文件 · AI 通过 {1:N0} 个 · 可清理 {2}</value>
   </data>
   <data name="AIHub_CleanAllLabel" xml:space="preserve">
-    <value>一键清理</value>
+    <value>清理已选缓存</value>
   </data>
   <data name="AIHub_ScheduleSummary_Off" xml:space="preserve">
     <value>已关闭：仅在手动触发时审计</value>
@@ -3299,4 +3320,635 @@
   <data name="AIHub_ReportCopied" xml:space="preserve">
     <value>审计报告已复制到剪贴板。</value>
   </data>
+  <data name="Winget.ModuleTitle" xml:space="preserve">
+    <value>WinGet</value>
+  </data>
+  <data name="Winget.ModuleDescription" xml:space="preserve">
+    <value>通过 Windows 程序包管理器查找、安装和更新软件。</value>
+  </data>
+  <data name="Shell_Winget.Content" xml:space="preserve">
+    <value>WinGet</value>
+  </data>
+  <data name="Shell_Winget.ToolTipService.ToolTip" xml:space="preserve">
+    <value>通过 WinGet 安装和更新软件</value>
+  </data>
+  <data name="Winget_EnableCard.Header" xml:space="preserve">
+    <value>启用 WinGet</value>
+  </data>
+  <data name="Winget_EnableCard.Description" xml:space="preserve">
+    <value>安装软件并检查软件更新。Kit 在托盘运行期间可每日自动检查。</value>
+  </data>
+  <data name="Winget_EnableToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>启用 WinGet 插件</value>
+  </data>
+  <data name="Winget_Help.Content" xml:space="preserve">
+    <value>WinGet 文档</value>
+  </data>
+  <data name="Winget_Error.Title" xml:space="preserve">
+    <value>WinGet 需要处理</value>
+  </data>
+  <data name="Winget_DailyCard.Header" xml:space="preserve">
+    <value>每日检查</value>
+  </data>
+  <data name="Winget_DailyCard.Description" xml:space="preserve">
+    <value>启用后立即检查，此后 Kit 运行期间每 24 小时检查一次。由你决定何时安装更新。</value>
+  </data>
+  <data name="Winget_DailyToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>每日检查软件更新</value>
+  </data>
+  <data name="Winget_NotifyCard.Header" xml:space="preserve">
+    <value>Windows 通知</value>
+  </data>
+  <data name="Winget_NotifyCard.Description" xml:space="preserve">
+    <value>发现新的可更新软件时发送通知。</value>
+  </data>
+  <data name="Winget_NotifyToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>通知软件更新</value>
+  </data>
+  <data name="Winget_Check.Content" xml:space="preserve">
+    <value>立即检查</value>
+  </data>
+  <data name="Winget_Cancel.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Winget_UpdatesList.AutomationProperties.Name" xml:space="preserve">
+    <value>可更新应用，当前版本到新版本</value>
+  </data>
+  <data name="Winget_Details.Content" xml:space="preserve">
+    <value>刷新详情</value>
+  </data>
+  <data name="Winget_ReleaseNotes.Text" xml:space="preserve">
+    <value>更新说明</value>
+  </data>
+  <data name="Winget_ReleaseLink.Content" xml:space="preserve">
+    <value>查看发布者更新日志</value>
+  </data>
+  <data name="Winget_Download.Content" xml:space="preserve">
+    <value>下载并校验</value>
+  </data>
+  <data name="Winget_Install.Content" xml:space="preserve">
+    <value>安装所选软件</value>
+  </data>
+  <data name="Winget_CopyCommand.Content" xml:space="preserve">
+    <value>复制手动更新命令</value>
+  </data>
+  <data name="Winget_CacheCard.Header" xml:space="preserve">
+    <value>已下载安装包</value>
+  </data>
+  <data name="Winget_CacheCard.Description" xml:space="preserve">
+    <value>已校验下载保存在临时目录。安装时由 WinGet 自行下载和校验。</value>
+  </data>
+  <data name="Winget_OpenDownload.Content" xml:space="preserve">
+    <value>打开最近下载</value>
+  </data>
+  <data name="Winget_Activity.Header" xml:space="preserve">
+    <value>最近操作</value>
+  </data>
+  <data name="Winget_Disabled" xml:space="preserve">
+    <value>插件未启用</value>
+  </data>
+  <data name="Winget_Connecting" xml:space="preserve">
+    <value>正在连接 WinGet 服务…</value>
+  </data>
+  <data name="Winget_Unavailable" xml:space="preserve">
+    <value>WinGet 当前不可用</value>
+  </data>
+  <data name="Winget_Working" xml:space="preserve">
+    <value>正在处理…</value>
+  </data>
+  <data name="Winget_Ready" xml:space="preserve">
+    <value>WinGet 已就绪</value>
+  </data>
+  <data name="Winget_VersionUnknown" xml:space="preserve">
+    <value>等待检测 WinGet</value>
+  </data>
+  <data name="Winget_UpdateCount" xml:space="preserve">
+    <value>{0} 个可用更新</value>
+  </data>
+  <data name="Winget_NotChecked" xml:space="preserve">
+    <value>启用插件后即可检查更新。此页面检查 WinGet 社区源。</value>
+  </data>
+  <data name="Winget_UpToDate" xml:space="preserve">
+    <value>WinGet 社区源暂无可用更新。此结果不含 Microsoft Store 或自定义源。</value>
+  </data>
+  <data name="Winget_LastCheck" xml:space="preserve">
+    <value>上次成功检查：{0}</value>
+  </data>
+  <data name="Winget_NextCheck" xml:space="preserve">
+    <value>下次检查：{0}</value>
+  </data>
+  <data name="Winget_ManualOnly" xml:space="preserve">
+    <value>仅手动检查</value>
+  </data>
+  <data name="Winget_Completed" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="Winget_SelectPackage" xml:space="preserve">
+    <value>选择软件</value>
+  </data>
+  <data name="Winget_NoReleaseNotes" xml:space="preserve">
+    <value>发布者未提供此版本的更新说明。</value>
+  </data>
+  <data name="Winget_LoadDetailsHint" xml:space="preserve">
+    <value>选择软件以查看发布者、安装要求和更新说明。</value>
+  </data>
+  <data name="Winget_UserInstall" xml:space="preserve">
+    <value>WinGet 将下载、校验并安装所选版本，请按照安装程序的提示操作。</value>
+  </data>
+  <data name="Winget_ManualInstall" xml:space="preserve">
+    <value>WinGet 未找到适用于此软件包的安装程序，请查看详情或使用下方 WinGet 命令。</value>
+  </data>
+  <data name="Winget_RequestFailed" xml:space="preserve">
+    <value>操作失败。</value>
+  </data>
+  <data name="Winget_ServiceUnavailable" xml:space="preserve">
+    <value>WinGet 服务无响应，请确认插件已启用且 Kit 正在运行。</value>
+  </data>
+  <data name="Winget_Never" xml:space="preserve">
+    <value>尚未执行</value>
+  </data>
+  <data name="Winget_InstallConfirmation" xml:space="preserve">
+    <value>WinGet 将下载、校验并安装此确切版本及其必需依赖。请按照安装程序的提示操作。</value>
+  </data>
+  <data name="Winget_DownloadConfirmation" xml:space="preserve">
+    <value>将安装包下载到临时目录并校验，此操作不会安装应用。</value>
+  </data>
+  <data name="Winget_InstallTitle" xml:space="preserve">
+    <value>安装此软件？</value>
+  </data>
+  <data name="Winget_DownloadTitle" xml:space="preserve">
+    <value>下载此更新？</value>
+  </data>
+  <data name="Winget_AcceptContinue" xml:space="preserve">
+    <value>接受协议并继续</value>
+  </data>
+  <data name="Winget_Continue" xml:space="preserve">
+    <value>继续</value>
+  </data>
+  <data name="Winget_CancelText" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Winget_Phase_Idle" xml:space="preserve">
+    <value>就绪</value>
+  </data>
+  <data name="Winget_Phase_Detecting" xml:space="preserve">
+    <value>正在检测 WinGet…</value>
+  </data>
+  <data name="Winget_Phase_Checking" xml:space="preserve">
+    <value>正在检查已安装应用…</value>
+  </data>
+  <data name="Winget_Phase_Details" xml:space="preserve">
+    <value>正在读取软件详情…</value>
+  </data>
+  <data name="Winget_Phase_Downloading" xml:space="preserve">
+    <value>正在下载并校验…</value>
+  </data>
+  <data name="Winget_Phase_Installing" xml:space="preserve">
+    <value>正在安装软件…</value>
+  </data>
+  <data name="Winget_Phase_Queued" xml:space="preserve">
+    <value>正在等待 WinGet…</value>
+  </data>
+  <data name="Winget_Phase_Resolving" xml:space="preserve">
+    <value>正在匹配软件包…</value>
+  </data>
+  <data name="Winget_Phase_Completed" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="Winget_Phase_Cancelled" xml:space="preserve">
+    <value>已取消</value>
+  </data>
+  <data name="Winget_Phase_Failed" xml:space="preserve">
+    <value>操作失败</value>
+  </data>
+  <data name="Winget_NotificationError.Title" xml:space="preserve"><value>Windows 通知暂不可用</value></data>
+  <data name="Winget_Phase_Starting" xml:space="preserve"><value>正在开始…</value></data>
+  <data name="Winget_Phase_Cancelling" xml:space="preserve"><value>已请求取消。如安装窗口已打开，请在该窗口取消；正在等待 WinGet 结束。</value></data>
+  <data name="Winget_Phase_Downloaded" xml:space="preserve"><value>下载校验完成</value></data>
+  <data name="Winget_Phase_PostInstall" xml:space="preserve"><value>正在完成安装…</value></data>
+  <data name="Winget_Phase_LoadingDetails" xml:space="preserve"><value>正在加载软件详情…</value></data>
+  <data name="Winget_Phase_Finished" xml:space="preserve"><value>正在完成…</value></data>
+  <data name="Winget_ConfirmationChanged" xml:space="preserve"><value>所选软件、版本或协议发生变化，请重新查看详情后继续。</value></data>
+  <data name="Winget_RestartRequired.Title" xml:space="preserve"><value>需要重启</value></data>
+  <data name="Winget_RestartRequired.Message" xml:space="preserve"><value>更新的软件需要重启 Windows。请保存工作后择时手动重启。</value></data>
+  <data name="Winget_Action_detect" xml:space="preserve"><value>检测 WinGet</value></data>
+  <data name="Winget_Action_check" xml:space="preserve"><value>检查更新</value></data>
+  <data name="Winget_Action_details" xml:space="preserve"><value>加载详情</value></data>
+  <data name="Winget_Action_download" xml:space="preserve"><value>下载并校验</value></data>
+  <data name="Winget_Action_install" xml:space="preserve"><value>安装软件</value></data>
+  <data name="Winget_EnableToggle.OnContent" xml:space="preserve"><value>开启</value></data>
+  <data name="Winget_EnableToggle.OffContent" xml:space="preserve"><value>关闭</value></data>
+  <data name="Winget_DailyToggle.OnContent" xml:space="preserve"><value>开启</value></data>
+  <data name="Winget_DailyToggle.OffContent" xml:space="preserve"><value>关闭</value></data>
+  <data name="Winget_NotifyToggle.OnContent" xml:space="preserve"><value>开启</value></data>
+  <data name="Winget_NotifyToggle.OffContent" xml:space="preserve"><value>关闭</value></data>
+  <data name="AIHub_PageTitle.Text" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="AIHub_OptimizationSearchBox.PlaceholderText" xml:space="preserve">
+    <value>搜索文件名、路径、类别或原因</value>
+  </data>
+  <data name="AIHub_OptimizationSearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>搜索优化候选文件</value>
+  </data>
+  <data name="AIHub_OptimizationReviewFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>按审核状态筛选</value>
+  </data>
+  <data name="AIHub_SelectVisibleButton.Content" xml:space="preserve">
+    <value>选择可见项</value>
+  </data>
+  <data name="AIHub_DeselectVisibleButton.Content" xml:space="preserve">
+    <value>取消选择可见项</value>
+  </data>
+  <data name="AIHub_ExecuteSelectedButton.Content" xml:space="preserve">
+    <value>核对已选操作</value>
+  </data>
+  <data name="AIHub_SelectedCandidatesLabel.Text" xml:space="preserve">
+    <value>全部筛选范围中的已选项</value>
+  </data>
+  <data name="AIHub_OptimizationNoResultsTitle.Text" xml:space="preserve">
+    <value>先扫描，再查看建议</value>
+  </data>
+  <data name="AIHub_OptimizationNoResultsDescription.Text" xml:space="preserve">
+    <value>扫描下载目录或已知缓存，查看建议操作后选择需要处理的文件。</value>
+  </data>
+  <data name="AIHub_OptimizationNoFilterMatchesTitle.Text" xml:space="preserve">
+    <value>没有匹配的文件</value>
+  </data>
+  <data name="AIHub_OptimizationNoFilterMatchesDescription.Text" xml:space="preserve">
+    <value>请更换搜索词或审核筛选条件。隐藏的已选项仍保留选择。</value>
+  </data>
+  <data name="AIHub_OptimizationHistoryTitle.Text" xml:space="preserve">
+    <value>最近执行记录</value>
+  </data>
+  <data name="AIHub_OptimizationHistoryEmpty.Text" xml:space="preserve">
+    <value>执行完成或中断后的记录会显示在这里。本机最多保留 20 次记录。</value>
+  </data>
+  <data name="AIHub_RefreshHistoryButton.Content" xml:space="preserve">
+    <value>刷新记录</value>
+  </data>
+  <data name="AIHub_CopyOptimizationReportButton.Content" xml:space="preserve">
+    <value>复制报告</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmTitle" xml:space="preserve">
+    <value>核对已选操作</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmSummaryFormat" xml:space="preserve">
+    <value>已选 {0:N0} 项 · 删除 {1:N0} 项 · 移动 {2:N0} 项 · {3}</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmDescription" xml:space="preserve">
+    <value>仅处理本次选中的文件。缓存文件会永久删除；下载文件仅在下载目录内移动。执行前会再次检查每个文件是否发生变化。</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmPreviewLimitFormat" xml:space="preserve">
+    <value>预览前 {0:N0} 项，共 {1:N0} 项。确认后将处理全部已选文件。</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmContinue" xml:space="preserve">
+    <value>执行以上操作</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmCancel" xml:space="preserve">
+    <value>返回核对</value>
+  </data>
+  <data name="AIHub_OptimizationReportCopied" xml:space="preserve">
+    <value>执行报告已复制，其中包含本地文件路径。</value>
+  </data>
+  <data name="AIHub_ActionFailedFormat" xml:space="preserve">
+    <value>操作未完成：{0}</value>
+  </data>
+  <data name="AIHub_Segment_SelfTest.Content" xml:space="preserve">
+    <value>自检</value>
+  </data>
+  <data name="AIHub_DiscardTaskPolicyButton.Content" xml:space="preserve">
+    <value>放弃修改</value>
+  </data>
+  <data name="AIHub_TaskPolicyDraftHint.Text" xml:space="preserve">
+    <value>切换策略会保留各自的草稿。保存后，当前策略将用于后续任务。</value>
+  </data>
+  <data name="AIHub_Category_SelectedSummary" xml:space="preserve">
+    <value>已选 {0:N0}/{1:N0} 个审核通过文件</value>
+  </data>
+  <data name="AIHub_Optimization_FilteredSummary" xml:space="preserve">
+    <value>显示 {0:N0} 项 · 全部已选 {1:N0} 项</value>
+  </data>
+  <data name="AIHub_Optimization_FilterFailed" xml:space="preserve">
+    <value>需要关注</value>
+  </data>
+  <data name="AIHub_Optimization_FilterSelected" xml:space="preserve">
+    <value>已选中</value>
+  </data>
+  <data name="AIHub_Optimization_HistoryLoadFailed" xml:space="preserve">
+    <value>无法读取执行记录，请尝试刷新。</value>
+  </data>
+  <data name="AIHub_Optimization_PlanChanged" xml:space="preserve">
+    <value>已核对的选择发生变化，请重新核对后执行。</value>
+  </data>
+  <data name="AIHub_Optimization_ExecutionFailed" xml:space="preserve">
+    <value>操作未能完成，请查看执行记录后再重试。</value>
+  </data>
+  <data name="AIHub_Execution_Completed" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="AIHub_Execution_Cancelled" xml:space="preserve">
+    <value>已取消</value>
+  </data>
+  <data name="AIHub_Execution_Failed" xml:space="preserve">
+    <value>执行结束，存在错误</value>
+  </data>
+  <data name="AIHub_Execution_Interrupted" xml:space="preserve">
+    <value>执行中断，请核对文件后再重试</value>
+  </data>
+  <data name="AIHub_Execution_Summary" xml:space="preserve">
+    <value>{0} · 删除 {1:N0} · 移动 {2:N0} · 失败 {3:N0} · 未处理 {4:N0}</value>
+  </data>
+  <data name="AIHub_Execution_Details" xml:space="preserve">
+    <value>删除文件大小 {0} · 保留 {1:N0}/{2:N0} 项详情。本机保留最近 20 次记录。</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Deleted" xml:space="preserve">
+    <value>已删除</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Moved" xml:space="preserve">
+    <value>已移动</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Failed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Pending" xml:space="preserve">
+    <value>未完成</value>
+  </data>
+  <data name="AiHub_PolicyStateLoading" xml:space="preserve">
+    <value>正在加载策略…</value>
+  </data>
+  <data name="AiHub_PolicyStateDirty" xml:space="preserve">
+    <value>有未保存的修改</value>
+  </data>
+  <data name="AiHub_PolicyStateSaved" xml:space="preserve">
+    <value>已保存</value>
+  </data>
+  <data name="AiHub_PolicyDefaultStaged" xml:space="preserve">
+    <value>默认模板已载入草稿，保存后生效。</value>
+  </data>
+  <data name="AiHub_PolicyDraftDiscarded" xml:space="preserve">
+    <value>已放弃草稿，恢复已保存的策略。</value>
+  </data>
+  <data name="AiHub_PolicyTemplateVersionFormat" xml:space="preserve">
+    <value>默认模板 v{0}</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionGlobal" xml:space="preserve">
+    <value>所有 AI 任务共同遵守的安全与隐私规则。</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionAudit" xml:space="preserve">
+    <value>审查提供的 Windows 事件，区分事实证据与可能原因。</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionOptimization" xml:space="preserve">
+    <value>审查本地已核验的候选项，不扩大路径、操作或范围。</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionSelfTest" xml:space="preserve">
+    <value>使用固定 ping 探测验证 AI 响应契约，不检查工作站。</value>
+  </data>
+  <data name="AiHub_GlobalPolicyDraftHint.Text" xml:space="preserve">
+    <value>编辑和恢复默认的内容均为草稿，保存后才生效。关闭 AI 时也可编辑策略。</value>
+  </data>
+  <data name="Winget_AlreadyInstalled" xml:space="preserve">
+    <value>已安装</value>
+  </data>
+  <data name="Winget_AvailableToInstall" xml:space="preserve">
+    <value>可安装</value>
+  </data>
+  <data name="Winget_UpgradeSelected" xml:space="preserve">
+    <value>更新所选软件</value>
+  </data>
+  <data name="Winget_InstallSelected" xml:space="preserve">
+    <value>安装所选软件</value>
+  </data>
+  <data name="Winget_SearchCatalog" xml:space="preserve">
+    <value>查找 WinGet 软件</value>
+  </data>
+  <data name="Winget_SearchResultsCount" xml:space="preserve">
+    <value>“{1}”的 {0:N0} 个结果</value>
+  </data>
+  <data name="Winget_SearchResultsLimited" xml:space="preserve">
+    <value>“{1}”的前 {0:N0} 个结果 · 可缩小搜索范围</value>
+  </data>
+  <data name="Winget_Searching" xml:space="preserve">
+    <value>正在搜索 WinGet…</value>
+  </data>
+  <data name="Winget_SearchHint" xml:space="preserve">
+    <value>输入至少 2 个字符的软件名称或软件包 ID，然后搜索。</value>
+  </data>
+  <data name="Winget_NoSearchResults" xml:space="preserve">
+    <value>没有找到匹配的软件，请尝试其他名称或软件包 ID。</value>
+  </data>
+  <data name="Winget_NoMatchingUpdates" xml:space="preserve">
+    <value>没有符合筛选条件的更新，请更换软件名称或软件包 ID。</value>
+  </data>
+  <data name="Winget_InstalledHint" xml:space="preserve">
+    <value>该软件已经安装，可到“软件更新”检查新版本。</value>
+  </data>
+  <data name="Winget_ElevationInstall" xml:space="preserve">
+    <value>如安装程序需要管理员权限，WinGet 会发起请求。请按照 Windows UAC 和安装程序的提示操作。</value>
+  </data>
+  <data name="Winget_UpgradeTitle" xml:space="preserve">
+    <value>更新此软件？</value>
+  </data>
+  <data name="Winget_UpgradeConfirmation" xml:space="preserve">
+    <value>WinGet 将下载、校验并将此软件更新到所选版本。请先保存目标软件中的工作。</value>
+  </data>
+  <data name="Winget_ElevationConfirmation" xml:space="preserve">
+    <value>Windows 可能会请求管理员权限，Kit 保持当前权限级别。</value>
+  </data>
+  <data name="Winget_Phase_Searching" xml:space="preserve">
+    <value>正在搜索 WinGet 软件目录…</value>
+  </data>
+  <data name="Winget_Phase_RunningWinGet" xml:space="preserve">
+    <value>WinGet 正在下载、校验并准备安装…</value>
+  </data>
+  <data name="Winget_Phase_WaitingForInstaller" xml:space="preserve">
+    <value>请在安装程序或 Windows 权限提示中继续操作。</value>
+  </data>
+  <data name="Winget_Phase_VerifyingInstall" xml:space="preserve">
+    <value>正在核对安装后的版本…</value>
+  </data>
+  <data name="Winget_Action_upgrade" xml:space="preserve">
+    <value>更新软件</value>
+  </data>
+  <data name="Winget_Action_search" xml:space="preserve">
+    <value>搜索软件</value>
+  </data>
+  <data name="Winget_Settings.Header" xml:space="preserve">
+    <value>自动检查与通知</value>
+  </data>
+  <data name="Winget_Settings.Description" xml:space="preserve">
+    <value>设置 Kit 的更新检查和通知方式。</value>
+  </data>
+  <data name="Winget_UpdatesTab.Content" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Winget_InstallTab.Content" xml:space="preserve">
+    <value>安装软件</value>
+  </data>
+  <data name="Winget_UpdateFilter.PlaceholderText" xml:space="preserve">
+    <value>按名称、ID 或来源筛选</value>
+  </data>
+  <data name="Winget_UpdateFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>筛选可用更新</value>
+  </data>
+  <data name="Winget_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>按软件名称或 ID 搜索</value>
+  </data>
+  <data name="Winget_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>搜索软件</value>
+  </data>
+  <data name="Winget_SearchButton.Content" xml:space="preserve">
+    <value>搜索</value>
+  </data>
+  <data name="Winget_ColumnPackage.Text" xml:space="preserve">
+    <value>软件</value>
+  </data>
+  <data name="Winget_ColumnInstalled.Text" xml:space="preserve">
+    <value>已安装版本</value>
+  </data>
+  <data name="Winget_ColumnAvailable.Text" xml:space="preserve">
+    <value>可用版本</value>
+  </data>
+  <data name="Winget_SearchResultsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>软件搜索结果</value>
+  </data>
+  <data name="Winget_InstallHeading.Text" xml:space="preserve">
+    <value>查找并安装软件</value>
+  </data>
+  <data name="Winget_InstallSearchHint.Text" xml:space="preserve">
+    <value>输入至少 2 个字符，按 Enter 或点击搜索。结果来自 WinGet。</value>
+  </data>
+  <data name="Winget_NoSelectionTitle.Text" xml:space="preserve">
+    <value>选择软件</value>
+  </data>
+  <data name="Winget_NoSelectionHint.Text" xml:space="preserve">
+    <value>选择列表中的软件，查看版本、发布者及安装详情。</value>
+  </data>
+  <data name="Winget_ReleaseNotesExpander.Header" xml:space="preserve">
+    <value>更新说明</value>
+  </data>
+  <data name="Winget_AdvancedExpander.Header" xml:space="preserve">
+    <value>手动执行命令</value>
+  </data>
+  <data name="Winget_VerificationPending" xml:space="preserve"><value>WinGet 已成功完成。系统尚未更新已安装版本记录，Kit 将重新检查后再开放下一次安装。</value></data>
+  <data name="Winget_AutomaticSettings.Text" xml:space="preserve"><value>自动检查与通知</value></data>
+  <data name="Winget_DiscoverTab.Content" xml:space="preserve"><value>发现软件</value></data>
+  <data name="Winget_InstalledTab.Content" xml:space="preserve"><value>已安装</value></data>
+  <data name="Winget_FiltersButton.Content" xml:space="preserve"><value>筛选</value></data>
+  <data name="Winget_FiltersHeading.Text" xml:space="preserve"><value>筛选</value></data>
+  <data name="Winget_LocalFilter.PlaceholderText" xml:space="preserve"><value>筛选当前列表</value></data>
+  <data name="Winget_LocalFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>按名称或 ID 筛选当前软件</value></data>
+  <data name="Winget_SourcesExpander.Header" xml:space="preserve"><value>来源</value></data>
+  <data name="Winget_SearchOptionsExpander.Header" xml:space="preserve"><value>搜索选项</value></data>
+  <data name="Winget_ExactMatch.Content" xml:space="preserve"><value>精确匹配本地名称或 ID 筛选</value></data>
+  <data name="Winget_IncludeUnknown.Content" xml:space="preserve"><value>包含未知版本</value></data>
+  <data name="Winget_ShowIgnored.Content" xml:space="preserve"><value>显示已忽略软件</value></data>
+  <data name="Winget_ReloadAction.Label" xml:space="preserve"><value>刷新</value></data>
+  <data name="Winget_OptionsAction.Label" xml:space="preserve"><value>操作选项</value></data>
+  <data name="Winget_ManualAction.Label" xml:space="preserve"><value>手动命令</value></data>
+  <data name="Winget_DetailsAction.Label" xml:space="preserve"><value>详情</value></data>
+  <data name="Winget_IgnoreAction.Label" xml:space="preserve"><value>忽略所选更新</value></data>
+  <data name="Winget_ManageIgnoredAction.Label" xml:space="preserve"><value>管理已忽略更新</value></data>
+  <data name="Winget_CsvAction.Label" xml:space="preserve"><value>导出 CSV</value></data>
+  <data name="Winget_BundleAction.Label" xml:space="preserve"><value>导出所选清单</value></data>
+  <data name="Winget_ActivityAction.Label" xml:space="preserve"><value>队列与历史</value></data>
+  <data name="Winget_ColumnId.Text" xml:space="preserve"><value>软件 ID</value></data>
+  <data name="Winget_ColumnSource.Text" xml:space="preserve"><value>来源</value></data>
+  <data name="Winget_SelectAllVisible.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>选择当前可见软件</value></data>
+  <data name="Winget_SortBy.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>软件排序方式</value></data>
+  <data name="Winget_SortName.Content" xml:space="preserve"><value>名称</value></data>
+  <data name="Winget_SortId.Content" xml:space="preserve"><value>软件 ID</value></data>
+  <data name="Winget_SortInstalled.Content" xml:space="preserve"><value>已安装版本</value></data>
+  <data name="Winget_SortAvailable.Content" xml:space="preserve"><value>新版本</value></data>
+  <data name="Winget_SortSource.Content" xml:space="preserve"><value>来源</value></data>
+  <data name="Winget_SortDescending.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>降序排列</value></data>
+  <data name="Winget_SortDescending.ToolTipService.ToolTip" xml:space="preserve"><value>降序排列</value></data>
+  <data name="Winget_ViewMode.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>软件显示方式</value></data>
+  <data name="Winget_DetailedView.Content" xml:space="preserve"><value>详细</value></data>
+  <data name="Winget_CompactView.Content" xml:space="preserve"><value>紧凑</value></data>
+  <data name="Winget_GridView.Content" xml:space="preserve"><value>网格</value></data>
+  <data name="Winget_BatchInstallExplanation" xml:space="preserve"><value>请核对下面每个软件及其协议。WinGet 将依次处理所选软件。继续前请保存正在进行的工作。</value></data>
+  <data name="Winget_BatchUninstallExplanation" xml:space="preserve"><value>下面的软件将被依次卸载。请保存工作并核对每个软件后再继续。卸载器和 Windows 权限提示可能会出现。</value></data>
+  <data name="Winget_BatchUpgradeTitle" xml:space="preserve"><value>更新所选软件？</value></data>
+  <data name="Winget_BatchInstallTitle" xml:space="preserve"><value>安装所选软件？</value></data>
+  <data name="Winget_BatchUninstallTitle" xml:space="preserve"><value>卸载所选软件？</value></data>
+  <data name="Winget_LicenseLabel" xml:space="preserve"><value>许可协议</value></data>
+  <data name="Winget_ManualCommandExplanation" xml:space="preserve"><value>核对并复制此命令，可在终端中自行执行。</value></data>
+  <data name="Winget_SilentOption" xml:space="preserve"><value>静默安装器</value></data>
+  <data name="Winget_ScopeOption" xml:space="preserve"><value>安装范围</value></data>
+  <data name="Winget_ArchitectureOption" xml:space="preserve"><value>架构</value></data>
+  <data name="Winget_OptionDefault" xml:space="preserve"><value>软件默认</value></data>
+  <data name="Winget_ScopeUser" xml:space="preserve"><value>当前用户</value></data>
+  <data name="Winget_ScopeMachine" xml:space="preserve"><value>所有用户</value></data>
+  <data name="Winget_OptionsExplanation" xml:space="preserve"><value>选项应用于下一次确认的操作。需要管理员权限时，Windows 仍会显示权限请求。</value></data>
+  <data name="Winget_OptionsTitle" xml:space="preserve"><value>操作选项</value></data>
+  <data name="Winget_ApplyOptions" xml:space="preserve"><value>应用</value></data>
+  <data name="Winget_NoIgnoredPackages" xml:space="preserve"><value>没有已忽略的更新。</value></data>
+  <data name="Winget_ManageIgnoredTitle" xml:space="preserve"><value>已忽略的更新</value></data>
+  <data name="Winget_RestoreSelected" xml:space="preserve"><value>恢复所选更新</value></data>
+  <data name="Winget_QueueTitle" xml:space="preserve"><value>当前队列</value></data>
+  <data name="Winget_HistoryTitle" xml:space="preserve"><value>近期历史</value></data>
+  <data name="Winget_BundleFileType" xml:space="preserve"><value>WinGet 软件清单</value></data>
+  <data name="Winget_CsvFileType" xml:space="preserve"><value>CSV 表格</value></data>
+  <data name="Winget_OptionOn" xml:space="preserve"><value>开启</value></data>
+  <data name="Winget_OptionOff" xml:space="preserve"><value>关闭</value></data>
+  <data name="Winget_IgnoredState" xml:space="preserve"><value>已忽略</value></data>
+  <data name="Winget_UpdateAvailableState" xml:space="preserve"><value>有可用更新</value></data>
+  <data name="Winget_LocalSource" xml:space="preserve"><value>本地软件</value></data>
+  <data name="Winget_SelectedCount" xml:space="preserve"><value>已选 {0:N0} 项</value></data>
+  <data name="Winget_UpdatesWorkspace" xml:space="preserve"><value>软件更新</value></data>
+  <data name="Winget_DiscoverWorkspace" xml:space="preserve"><value>发现软件</value></data>
+  <data name="Winget_InstalledWorkspace" xml:space="preserve"><value>已安装软件</value></data>
+  <data name="Winget_WorkspaceCount" xml:space="preserve"><value>{0:N0} 个软件 · 显示 {1:N0} 个 · 已选 {2:N0} 个</value></data>
+  <data name="Winget_UpdateSelection" xml:space="preserve"><value>更新所选</value></data>
+  <data name="Winget_InstallSelection" xml:space="preserve"><value>安装所选</value></data>
+  <data name="Winget_UninstallSelection" xml:space="preserve"><value>卸载所选</value></data>
+  <data name="Winget_WorkspaceNoMatches" xml:space="preserve"><value>没有符合当前筛选条件的软件。</value></data>
+  <data name="Winget_InstalledEmpty" xml:space="preserve"><value>刷新以读取本机已安装软件列表。</value></data>
+  <data name="Winget_BundleSourceRestriction" xml:space="preserve"><value>请选择 WinGet 来源的软件以导出可导入清单。仅本地记录的软件无法从目录导入。</value></data>
+  <data name="Winget_PrepareTimeout" xml:space="preserve"><value>准备所选软件超时。请查看操作状态后再重试。</value></data>
+  <data name="Winget_Phase_Preparing" xml:space="preserve"><value>正在准备软件详情与协议…</value></data>
+  <data name="Winget_Phase_ListingInstalled" xml:space="preserve"><value>正在读取已安装软件…</value></data>
+  <data name="Winget_Phase_Uninstalling" xml:space="preserve"><value>正在等待原生卸载器…</value></data>
+  <data name="Winget_Phase_VerificationPending" xml:space="preserve"><value>正在等待核对已完成的操作…</value></data>
+  <data name="Winget_Action_uninstall" xml:space="preserve"><value>卸载</value></data>
+  <data name="Winget_Action_prepare" xml:space="preserve"><value>准备所选软件</value></data>
+  <data name="Winget_Action_queue" xml:space="preserve"><value>批量操作</value></data>
+  <data name="Winget_Action_list-installed" xml:space="preserve"><value>已安装软件</value></data>
+  <data name="Winget_Queue_Pending" xml:space="preserve"><value>排队中</value></data>
+  <data name="Winget_Queue_Running" xml:space="preserve"><value>执行中</value></data>
+  <data name="Winget_Queue_Succeeded" xml:space="preserve"><value>已完成</value></data>
+  <data name="Winget_Queue_Failed" xml:space="preserve"><value>失败</value></data>
+  <data name="Winget_Queue_Cancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="Winget_Queue_NeedsVerification" xml:space="preserve"><value>等待核对</value></data>
+  <data name="Winget_RecoveryHint" xml:space="preserve"><value>上次操作需要核对状态。请刷新更新列表后再执行其他操作。</value></data>
+  <data name="Winget_BatchLimitHint" xml:space="preserve"><value>每批最多选择 50 个软件。</value></data>
+  <data name="Winget_UninstallExplanation" xml:space="preserve"><value>WinGet 将运行软件登记的卸载器，需要管理员权限时由 Windows 提示。</value></data>
+  <data name="Winget_OperationHistory.Content" xml:space="preserve"><value>查看历史</value></data>
+  <data name="Winget_OperationDetails.Header" xml:space="preserve"><value>操作详情</value></data>
+  <data name="Winget_QueueEmpty.Text" xml:space="preserve"><value>队列中没有待处理操作。</value></data>
+  <data name="Winget_HistoryEmpty.Text" xml:space="preserve"><value>暂无操作记录。</value></data>
+  <data name="Winget_OperationPending" xml:space="preserve"><value>正在提交请求…</value></data>
+  <data name="Winget_QueueSummary" xml:space="preserve"><value>{0} 已完成 · {1} 失败 · {2} 已取消 · {3} 待核实</value></data>
+  <data name="Winget_QueueRunning" xml:space="preserve"><value>{0}/{1} · {2}</value></data>
+  <data name="Winget_LastOperation" xml:space="preserve"><value>最近操作</value></data>
+  <data name="Winget_InstalledLoading" xml:space="preserve"><value>正在读取已安装的软件…</value></data>
+  <data name="Winget_SearchRefine" xml:space="preserve"><value>仅显示前 100 个结果，请缩小搜索范围。</value></data>
+  <data name="Winget_InstallerOutput" xml:space="preserve"><value>安装器输出</value></data>
+  <data name="Winget_NotCheckedShort" xml:space="preserve"><value>待查询</value></data>
+  <data name="Winget_MetadataPending" xml:space="preserve"><value>尚未查询版本与安装状态。</value></data>
+  <data name="Winget_InstallationUnknown" xml:space="preserve"><value>安装状态待查询</value></data>
+  <data name="Winget_DetailsNotLoaded" xml:space="preserve"><value>打开详情可查询安装状态</value></data>
+  <data name="Winget_ReviewInstallSelection" xml:space="preserve"><value>审核并安装</value></data>
+  <data name="Winget_SearchingQuery" xml:space="preserve"><value>正在搜索“{0}”…</value></data>
+  <data name="Winget_SearchKeepsResults" xml:space="preserve"><value>搜索期间继续显示上次结果。</value></data>
+  <data name="Winget_SearchRetryPrevious" xml:space="preserve"><value>搜索未完成，已保留上次结果，可再次搜索重试。</value></data>
+  <data name="Winget_SearchRetry" xml:space="preserve"><value>搜索未完成，可再次搜索重试。</value></data>
+  <data name="Winget_SearchSourceScope" xml:space="preserve"><value>仅搜索 WinGet 官方 winget 源的社区目录，不包含 Microsoft Store 或自定义源。打开详情或审核安装时，再查询版本与安装状态。</value></data>
+  <data name="Winget_DetailsUnavailable" xml:space="preserve"><value>未能加载软件详情，请在 WinGet 就绪后重试。</value></data>
+  <data name="Winget_RetryDetails" xml:space="preserve"><value>重试加载详情</value></data>
+  <data name="Winget_CloseDetails" xml:space="preserve"><value>关闭</value></data>
+  <data name="Winget_PackageHomepage" xml:space="preserve"><value>软件主页</value></data>
+  <data name="Winget_LicenseLink" xml:space="preserve"><value>查看许可证</value></data>
+  <data name="Winget_SearchElapsed" xml:space="preserve"><value>搜索耗时：{0:N2} 秒</value></data>
 </root>

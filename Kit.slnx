@@ -146,6 +146,18 @@
     </Project>
     <Project Path="src/modules/AIHub/AIHubModuleInterface/AIHubModuleInterface.vcxproj" Id="e47b9f55-263a-4c8d-9015-8f9e67a639cf" />
   </Folder>
+  <Folder Name="/modules/Winget/">
+    <Project Path="src/modules/Winget/Winget.UnitTests/Winget.UnitTests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/Winget/WingetLib/WingetLib.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/Winget/WingetService/WingetService.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
+    <Project Path="src/modules/Winget/WingetModuleInterface/WingetModuleInterface.vcxproj" Id="89d7963c-5a94-473e-8c03-4f9306b512e8" />
+  </Folder>
   <Folder Name="/modules/LightSwitch/">
     <Project Path="src/modules/LightSwitch/LightSwitch.Cli/LightSwitch.Cli.csproj">
       <Platform Solution="*|x64" Project="x64" />
@@ -230,6 +242,8 @@
     <BuildDependency Project="src/modules/UDPtest/UDPtestService/UDPtestService.csproj" />
     <BuildDependency Project="src/modules/NetMap/NetMapModuleInterface/NetMapModuleInterface.vcxproj" />
     <BuildDependency Project="src/modules/NetMap/NetMapService/NetMapService.csproj" />
+    <BuildDependency Project="src/modules/Winget/WingetModuleInterface/WingetModuleInterface.vcxproj" />
+    <BuildDependency Project="src/modules/Winget/WingetService/WingetService.csproj" />
     <BuildDependency Project="src/PackageIdentity/PackageIdentity.vcxproj" />
     <BuildDependency Project="src/settings-ui/QuickAccess.UI/Kit.QuickAccess.csproj" />
     <BuildDependency Project="src/settings-ui/Settings.UI/Kit.Settings.csproj" />

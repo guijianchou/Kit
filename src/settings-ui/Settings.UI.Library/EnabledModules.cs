@@ -53,6 +53,11 @@ namespace Kit.Settings.UI.Library
                 aiHub = modules.AiHub;
             }
 
+            if (modules.SpecifiedModules.Contains("Winget"))
+            {
+                winget = modules.Winget;
+            }
+
             foreach (var module in modules.AdditionalModules)
             {
                 AdditionalModules[module.Key] = module.Value;
@@ -633,6 +638,22 @@ namespace Kit.Settings.UI.Library
                 if (aiHub != value)
                 {
                     aiHub = value;
+                    NotifyChange();
+                }
+            }
+        }
+
+        private bool winget;
+
+        [JsonPropertyName("Winget")]
+        public bool Winget
+        {
+            get => winget;
+            set
+            {
+                if (winget != value)
+                {
+                    winget = value;
                     NotifyChange();
                 }
             }

@@ -3,14 +3,20 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Kit.AiHub.Contract;
 using Kit.AIHubLib.Models;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
@@ -19,6 +25,14 @@ namespace Kit.Settings.UI.Views;
 
 public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 {
+    private readonly MainWindow _settingsWindow;
+    private readonly double[] _tabOffsets = new double[3];
+    private int _visibleTab;
+    private int _scrollRestoreVersion;
+    private bool _disposed;
+    private bool _currentPage;
+    private ContentDialog _activeDialog;
+
     public AIHubPageViewModel ViewModel { get; }
 
     public AIHubPage()
@@ -36,6 +50,11 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
         DataContext = ViewModel;
         InitializeComponent();
+        _visibleTab = Math.Clamp(ViewModel.ActiveTabIndex, 0, 2);
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        ViewModel.RequestOptimizationConfirmation += ConfirmOptimizationAsync;
+        _settingsWindow = App.GetSettingsWindow();
+        _settingsWindow.Closed += OnWindowClosed;
         Loaded += OnLoaded;
     }
 
@@ -44,6 +63,19 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     public Visibility IsOptTab(int index) => index == 1 ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility IsTaskPoliciesTab(int index) => index == 2 ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility ShowOptimizationNoMatches(bool hasResults, bool hasMatches) => hasResults && !hasMatches ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility HasSelectedRun(OptimizationRunViewModel run) => run != null ? Visibility.Visible : Visibility.Collapsed;
+
+    public static string ExecutionItemSummary(string action, string state) => state switch
+    {
+        "deleted" => "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
+        "moved" => "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved"),
+        "succeeded" or "completed" => action == "move" ? "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved") : "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
+        "failed" => "AIHub_ExecutionItem_Failed".GetLocalizedOrFallback("Failed"),
+        _ => "AIHub_ExecutionItem_Pending".GetLocalizedOrFallback("Not completed"),
+    };
 
     public Style AiReadinessStyle(AiReadinessLevel level) => (Style)Resources[level switch
     {
@@ -68,6 +100,76 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ViewModel.RefreshEnabledState();
+        EnsurePolicyPanelLoaded();
+        RestoreTabScroll();
+    }
+
+    private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(AIHubPageViewModel.ActiveTabIndex) || _disposed)
+        {
+            return;
+        }
+
+        _tabOffsets[_visibleTab] = AiHubContentScroll.VerticalOffset;
+        _visibleTab = Math.Clamp(ViewModel.ActiveTabIndex, 0, 2);
+        EnsurePolicyPanelLoaded();
+        RestoreTabScroll();
+    }
+
+    private void EnsurePolicyPanelLoaded()
+    {
+        if (ViewModel.ActiveTabIndex == 2)
+        {
+            FindName(nameof(TaskPolicyPanel));
+            ViewModel.AiHub.EnsurePoliciesLoaded();
+        }
+    }
+
+    private void RestoreTabScroll()
+    {
+        int version = ++_scrollRestoreVersion;
+        DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+        {
+            if (_disposed || !IsLoaded || version != _scrollRestoreVersion)
+            {
+                return;
+            }
+
+            AiHubContentScroll.UpdateLayout();
+            AiHubContentScroll.ChangeView(null, _tabOffsets[_visibleTab], null, disableAnimation: true);
+        });
+    }
+
+    protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        _currentPage = true;
+    }
+
+    protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        _currentPage = false;
+        _tabOffsets[_visibleTab] = AiHubContentScroll.VerticalOffset;
+        _activeDialog?.Hide();
+        base.OnNavigatedFrom(e);
+    }
+
+    private void OnWindowClosed(object sender, WindowEventArgs e)
+    {
+        if (e.Handled || _disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _currentPage = false;
+        _activeDialog?.Hide();
+        _settingsWindow.Closed -= OnWindowClosed;
+        ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        ViewModel.RequestJumpToAiReport -= OnRequestJumpToAiReport;
+        ViewModel.RequestOptimizationConfirmation -= ConfirmOptimizationAsync;
+        ViewModel.Dispose();
     }
 
     private void OnAiServiceSettingsClick(object sender, RoutedEventArgs e)
@@ -85,7 +187,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
                 RequestedTheme = ActualTheme,
             };
             dialog.SetFinding(issue);
-            await dialog.ShowAsync();
+            await ShowDialogAsync(dialog);
         }
     }
 
@@ -99,7 +201,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
                 RequestedTheme = ActualTheme,
             };
             dialog.SetFinding(issue);
-            await dialog.ShowAsync();
+            await ShowDialogAsync(dialog);
         }
         else if (ViewModel.AuditPriorityFinding != null)
         {
@@ -109,7 +211,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
                 RequestedTheme = ActualTheme,
             };
             dialog.SetFinding(ViewModel.AuditPriorityFinding);
-            await dialog.ShowAsync();
+            await ShowDialogAsync(dialog);
         }
     }
 
@@ -243,18 +345,111 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         }
     }
 
-    private void OnCancelCleanFlyoutClick(object sender, RoutedEventArgs e)
+    private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
     {
-        DependencyObject current = sender as DependencyObject;
-        while (current != null)
+        if (_disposed || !_currentPage || !IsLoaded || _activeDialog != null)
         {
-            if (current is FlyoutPresenter && Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current) is Microsoft.UI.Xaml.Controls.Primitives.Popup popup)
+            return ContentDialogResult.None;
+        }
+
+        _activeDialog = dialog;
+        try
+        {
+            dialog.XamlRoot = XamlRoot;
+            dialog.RequestedTheme = ActualTheme;
+            var result = await dialog.ShowAsync();
+            return _disposed || !_currentPage || !IsLoaded ? ContentDialogResult.None : result;
+        }
+        catch (Exception ex)
+        {
+            if (!_disposed)
             {
-                popup.IsOpen = false;
-                return;
+                ViewModel.PostStatusNotification("AIHub_ActionFailedFormat".FormatLocalized("Action failed: {0}", ex.Message), InfoBarSeverity.Error, optimization: ViewModel.ActiveTabIndex == 1);
             }
 
-            current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
+            return ContentDialogResult.None;
+        }
+        finally
+        {
+            _activeDialog = null;
+        }
+    }
+
+    private async Task<bool> ConfirmOptimizationAsync(IReadOnlyList<TempFileInfo> items)
+    {
+        if (items.Count == 0 || _disposed || !_currentPage || !IsLoaded || _activeDialog != null)
+        {
+            return false;
+        }
+
+        const int previewLimit = 100;
+        string size = new TempFileInfo { SizeInBytes = items.Sum(item => item.SizeInBytes) }.SizeFormatted;
+        var content = new StackPanel { Spacing = 12, MaxWidth = 560 };
+        content.Children.Add(new TextBlock
+        {
+            Text = "AIHub_OptimizationConfirmSummaryFormat".FormatLocalized(
+                "{0:N0} selected · {1:N0} delete · {2:N0} move · {3}",
+                items.Count, items.Count(item => item.Action == "delete"), items.Count(item => item.Action == "move"), size),
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = "AIHub_OptimizationConfirmDescription".GetLocalizedOrFallback("Review these file operations before continuing. Deleted cache files cannot be restored from this report."),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        if (items.Count > previewLimit)
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = "AIHub_OptimizationConfirmPreviewLimitFormat".FormatLocalized("Showing the first {0:N0} of {1:N0} items", previewLimit, items.Count),
+                TextWrapping = TextWrapping.Wrap,
+            });
+        }
+
+        string preview = string.Join(Environment.NewLine + Environment.NewLine, items.Take(previewLimit).Select(item =>
+        {
+            string action = item.Action == "move" ? "AIHub_Action_Organize".GetLocalizedOrFallback("Organize") : "AIHub_Action_Clean".GetLocalizedOrFallback("Clean");
+            string destination = item.Action == "move" && !string.IsNullOrWhiteSpace(item.TargetRelativePath)
+                ? Environment.NewLine + "→ " + Path.Combine(Path.GetDirectoryName(item.FilePath) ?? string.Empty, item.TargetRelativePath)
+                : string.Empty;
+            return $"{action} · {item.SizeFormatted}{Environment.NewLine}{item.FilePath}{destination}";
+        }));
+        content.Children.Add(new ScrollViewer
+        {
+            MaxHeight = 300,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = new TextBlock { Text = preview, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, FontSize = 12 },
+        });
+
+        var dialog = new ContentDialog
+        {
+            Title = "AIHub_OptimizationConfirmTitle".GetLocalizedOrFallback("Review selected file operations"),
+            Content = content,
+            PrimaryButtonText = "AIHub_OptimizationConfirmContinue".GetLocalizedOrFallback("Continue"),
+            CloseButtonText = "AIHub_OptimizationConfirmCancel".GetLocalizedOrFallback("Cancel"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await ShowDialogAsync(dialog) == ContentDialogResult.Primary;
+    }
+
+    private void OnCopyOptimizationReportClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedOptimizationRun is not { } run)
+        {
+            return;
+        }
+
+        try
+        {
+            var data = new DataPackage();
+            data.SetText(run.ExportJson);
+            Clipboard.SetContent(data);
+            ViewModel.PostStatusNotification("AIHub_OptimizationReportCopied".GetLocalizedOrFallback("Optimization report copied to clipboard."), InfoBarSeverity.Success, optimization: true);
+        }
+        catch (Exception ex)
+        {
+            ViewModel.PostStatusNotification("AIHub_ActionFailedFormat".FormatLocalized("Action failed: {0}", ex.Message), InfoBarSeverity.Error, optimization: true);
         }
     }
 

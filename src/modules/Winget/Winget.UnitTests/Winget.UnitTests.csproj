@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(RepoRoot)src\Common.Dotnet.CsWinRT.props" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <OutputPath>$(RepoRoot)$(Platform)\$(Configuration)\tests\Winget\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <NoWarn>$(NoWarn);SA0001;SA1200;SA1309;SA1402;SA1516;SA1600;SA1633;SA1649;CA1861;CA1305</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MSTest" />
+    <ProjectReference Include="..\WingetLib\WingetLib.csproj" />
+    <ProjectReference Include="..\WingetService\WingetService.csproj" />
+  </ItemGroup>
+</Project>

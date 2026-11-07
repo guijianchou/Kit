@@ -117,6 +117,7 @@ namespace Kit.Settings.UI.Views
             NavHelper.SetNavigateTo(UDPtestNavigationItem, typeof(UDPtestPage));
             NavHelper.SetNavigateTo(NetMapNavigationItem, typeof(NetMapPage));
             NavHelper.SetNavigateTo(AIHubNavigationItem, typeof(AIHubPage));
+            NavHelper.SetNavigateTo(WingetNavigationItem, typeof(WingetPage));
             SetWindowTitle();
             App.LogStartupTiming("ShellPage: navigation items bound");
             var settingsUtils = SettingsUtils.Default;

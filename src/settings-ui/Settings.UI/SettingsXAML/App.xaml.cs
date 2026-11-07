@@ -334,6 +334,7 @@ namespace Kit.Settings.UI
                 "NetMap" => typeof(NetMapPage),
                 "AIHub" => typeof(AIHubPage),
                 "AiHub" => typeof(AIHubPage),
+                "Winget" => typeof(WingetPage),
                 _ => typeof(DashboardPage),
             };
         }

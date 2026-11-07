@@ -105,6 +105,7 @@ public sealed class KernelExecutionTests
             if (kernel == "codex")
             {
                 Assert.IsTrue(config.Contains("model_reasoning_effort = \"max\"", StringComparison.Ordinal));
+                Assert.IsTrue(config.Contains("\nmodel_context_window = 256000\n", StringComparison.Ordinal));
                 Assert.IsTrue(config.Contains("shell_tool = false", StringComparison.Ordinal));
                 Assert.IsTrue(config.Contains("approval_policy = \"never\"", StringComparison.Ordinal));
                 using JsonDocument catalog = JsonDocument.Parse(capture.RootElement.GetProperty("Catalog").GetString()!);
@@ -115,6 +116,7 @@ public sealed class KernelExecutionTests
             {
                 using JsonDocument models = JsonDocument.Parse(config);
                 Assert.AreEqual("openai-responses", models.RootElement.GetProperty("providers").GetProperty("kit").GetProperty("api").GetString());
+                Assert.AreEqual(256_000, models.RootElement.GetProperty("providers").GetProperty("kit").GetProperty("models")[0].GetProperty("contextWindow").GetInt32());
                 string[] arguments = capture.RootElement.GetProperty("Args").EnumerateArray().Select(value => value.GetString()!).ToArray();
                 Assert.IsTrue(arguments.Contains("--no-tools") && arguments.Contains("--no-extensions") && arguments.Contains("--no-context-files"));
                 Assert.AreEqual("max", arguments[Array.IndexOf(arguments, "--thinking") + 1]);
@@ -125,11 +127,13 @@ public sealed class KernelExecutionTests
 
     [TestMethod]
     [DataRow("codex", "gpt-6-luna", "max")]
+    [DataRow("codex", "gpt-6-astra", "high")]
     [DataRow("codex", "gpt-6.1-sol", "max")]
     [DataRow("codex", "future-provider-model", "low")]
     [DataRow("codex", "future-provider-model", "high")]
     [DataRow("codex", "future-provider-model", "max")]
     [DataRow("pi", "gpt-6-luna", "max")]
+    [DataRow("pi", "gpt-6-astra", "high")]
     [DataRow("pi", "gpt-6.1-sol", "high")]
     [DataRow("pi", "future-provider-model", "low")]
     public async Task ModelAndEffortReachTheNativeKernelUnchanged(string kernel, string model, string effort)
@@ -167,6 +171,7 @@ public sealed class KernelExecutionTests
         if (kernel == "codex")
         {
             Assert.IsTrue(config.Contains($"model_reasoning_effort = \"{effort}\"", StringComparison.Ordinal));
+            Assert.IsTrue(config.Contains("\nmodel_context_window = 256000\n", StringComparison.Ordinal));
             Assert.IsTrue(config.Contains("wire_api = \"responses\"", StringComparison.Ordinal));
             using JsonDocument catalog = JsonDocument.Parse(capture.RootElement.GetProperty("Catalog").GetString()!);
             Assert.IsFalse(catalog.RootElement.GetProperty("models")[0].GetProperty("use_responses_lite").GetBoolean());
@@ -178,6 +183,7 @@ public sealed class KernelExecutionTests
             Assert.AreEqual(effort, arguments[Array.IndexOf(arguments, "--thinking") + 1]);
             using JsonDocument models = JsonDocument.Parse(config);
             Assert.AreEqual("openai-responses", models.RootElement.GetProperty("providers").GetProperty("kit").GetProperty("api").GetString());
+            Assert.AreEqual(256_000, models.RootElement.GetProperty("providers").GetProperty("kit").GetProperty("models")[0].GetProperty("contextWindow").GetInt32());
         }
     }
 

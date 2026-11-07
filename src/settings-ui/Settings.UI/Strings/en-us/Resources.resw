@@ -2194,6 +2194,27 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="NetMap_AiCheckFailed" xml:space="preserve">
     <value>AI route analysis failed.</value>
   </data>
+  <data name="NetMap_AiTimeout" xml:space="preserve">
+    <value>AI route analysis timed out. Try again or choose a faster model in AI service settings.</value>
+  </data>
+  <data name="NetMap_AiEndpointFailed" xml:space="preserve">
+    <value>The AI endpoint could not complete the request. Check the connection and try again.</value>
+  </data>
+  <data name="NetMap_AiPolicyViolation" xml:space="preserve">
+    <value>The AI response did not pass route analysis validation. Try again or choose another model.</value>
+  </data>
+  <data name="NetMap_AiInvalidResponse" xml:space="preserve">
+    <value>The AI response was incomplete or invalid. Please try again.</value>
+  </data>
+  <data name="NetMap_AiServiceUnavailable" xml:space="preserve">
+    <value>The AI service is unavailable. Reopen Kit and try again.</value>
+  </data>
+  <data name="NetMap_AiCancelled" xml:space="preserve">
+    <value>AI route analysis was cancelled.</value>
+  </data>
+  <data name="NetMap_AiRouteChanged" xml:space="preserve">
+    <value>The proxy route changed or became unavailable during AI analysis. Wait for the route to stabilize, then run AI check again.</value>
+  </data>
   <data name="NetMap_BrowseAsnButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Choose ASN database</value>
   </data>
@@ -2228,10 +2249,10 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Back</value>
   </data>
   <data name="AIHub_Action_Organize" xml:space="preserve">
-    <value>Organize</value>
+    <value>Organize selected</value>
   </data>
   <data name="AIHub_Action_Clean" xml:space="preserve">
-    <value>Clean</value>
+    <value>Clean selected</value>
   </data>
   <data name="AIHub_Category_ReviewSummary" xml:space="preserve">
     <value>{0:N0} files · {1:N0} actionable</value>
@@ -2270,10 +2291,10 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>{0:N0} locations/types · {1:N0} files · {2:N0} actionable</value>
   </data>
   <data name="AIHub_Clean_Project" xml:space="preserve">
-    <value>Clean project</value>
+    <value>Clean selected in project</value>
   </data>
   <data name="AIHub_Clean_Group" xml:space="preserve">
-    <value>Clean group</value>
+    <value>Clean selected in group</value>
   </data>
   <data name="AIHub_SecurityAuditPolicySaved" xml:space="preserve">
     <value>Security audit policy (AGENTS.md) saved successfully.</value>
@@ -2873,13 +2894,13 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Global security policy rules</value>
   </data>
   <data name="AiHub_ResetPolicyButtonText.Text" xml:space="preserve">
-    <value>Reset to default</value>
+    <value>Load default template</value>
   </data>
   <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Reset policy to default</value>
+    <value>Load the default template into the draft; save to apply.</value>
   </data>
   <data name="AiHub_ResetPolicyButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Reset policy to default</value>
+    <value>Load default policy into draft</value>
   </data>
   <data name="AiHub_SavePolicyButtonText.Text" xml:space="preserve">
     <value>Save</value>
@@ -3203,7 +3224,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>AI deep analysis</value>
   </data>
   <data name="AIHub_DeepAnalyzeHint" xml:space="preserve">
-    <value>Sends the current findings (highest severity first, up to 12) to the configured AI kernel for supplementary diagnostics under the security-audit policy. No action is executed automatically.</value>
+    <value>Reviews up to 400 current events in batches under the security-audit policy. Findings are advisory; no action is executed automatically.</value>
   </data>
   <data name="AIHub_HealthOverviewLabel" xml:space="preserve">
     <value>Health overview</value>
@@ -3317,10 +3338,10 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Scan</value>
   </data>
   <data name="AIHub_SelectAllLabel" xml:space="preserve">
-    <value>Select all</value>
+    <value>Select visible</value>
   </data>
   <data name="AIHub_DeselectAllLabel" xml:space="preserve">
-    <value>Deselect all</value>
+    <value>Deselect visible</value>
   </data>
   <data name="AIHub_ConfirmAndExecuteLabel" xml:space="preserve">
     <value>Confirm and execute</value>
@@ -3374,7 +3395,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Task instructions</value>
   </data>
   <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
-    <value>Customize AI instructions for security audits and optimization. Global safety rules are in AI service settings.</value>
+    <value>Customize instructions for audits, optimization and the service self-test. Global safety rules are in AI service settings.</value>
   </data>
   <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
     <value>Checking…</value>
@@ -3464,7 +3485,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>User directory space analysis</value>
   </data>
   <data name="AIHub_OrganizeDownloadsLabel" xml:space="preserve">
-    <value>Organize downloads</value>
+    <value>Organize selected downloads</value>
   </data>
   <data name="AIHub_DownloadsUnavailable" xml:space="preserve">
     <value>Downloads folder unavailable</value>
@@ -3473,7 +3494,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>{0:N0} candidates scanned · {1:N0} AI approved · {2} cleanable</value>
   </data>
   <data name="AIHub_CleanAllLabel" xml:space="preserve">
-    <value>Clean all</value>
+    <value>Clean selected caches</value>
   </data>
   <data name="AIHub_ScheduleSummary_Off" xml:space="preserve">
     <value>Off: audits run only when triggered manually</value>
@@ -3676,4 +3697,635 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AIHub_ReportCopied" xml:space="preserve">
     <value>Audit report copied to clipboard.</value>
   </data>
+  <data name="Winget.ModuleTitle" xml:space="preserve">
+    <value>WinGet</value>
+  </data>
+  <data name="Winget.ModuleDescription" xml:space="preserve">
+    <value>Find, install and update apps with Windows Package Manager.</value>
+  </data>
+  <data name="Shell_Winget.Content" xml:space="preserve">
+    <value>WinGet</value>
+  </data>
+  <data name="Shell_Winget.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Install and update apps with WinGet</value>
+  </data>
+  <data name="Winget_EnableCard.Header" xml:space="preserve">
+    <value>Enable WinGet</value>
+  </data>
+  <data name="Winget_EnableCard.Description" xml:space="preserve">
+    <value>Install software and check app updates. Daily checks continue while Kit is in the tray.</value>
+  </data>
+  <data name="Winget_EnableToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>Enable WinGet plugin</value>
+  </data>
+  <data name="Winget_Help.Content" xml:space="preserve">
+    <value>WinGet help</value>
+  </data>
+  <data name="Winget_Error.Title" xml:space="preserve">
+    <value>WinGet needs attention</value>
+  </data>
+  <data name="Winget_DailyCard.Header" xml:space="preserve">
+    <value>Check daily</value>
+  </data>
+  <data name="Winget_DailyCard.Description" xml:space="preserve">
+    <value>Check when first enabled, then every 24 hours while Kit is running. You choose when to install updates.</value>
+  </data>
+  <data name="Winget_DailyToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>Check app updates daily</value>
+  </data>
+  <data name="Winget_NotifyCard.Header" xml:space="preserve">
+    <value>Windows notifications</value>
+  </data>
+  <data name="Winget_NotifyCard.Description" xml:space="preserve">
+    <value>Notify when a new set of app updates is available.</value>
+  </data>
+  <data name="Winget_NotifyToggle.AutomationProperties.Name" xml:space="preserve">
+    <value>Notify about app updates</value>
+  </data>
+  <data name="Winget_Check.Content" xml:space="preserve">
+    <value>Check now</value>
+  </data>
+  <data name="Winget_Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Winget_UpdatesList.AutomationProperties.Name" xml:space="preserve">
+    <value>Available app updates, installed version to new version</value>
+  </data>
+  <data name="Winget_Details.Content" xml:space="preserve">
+    <value>Refresh details</value>
+  </data>
+  <data name="Winget_ReleaseNotes.Text" xml:space="preserve">
+    <value>What changed</value>
+  </data>
+  <data name="Winget_ReleaseLink.Content" xml:space="preserve">
+    <value>Publisher release notes</value>
+  </data>
+  <data name="Winget_Download.Content" xml:space="preserve">
+    <value>Download and verify</value>
+  </data>
+  <data name="Winget_Install.Content" xml:space="preserve">
+    <value>Install selected app</value>
+  </data>
+  <data name="Winget_CopyCommand.Content" xml:space="preserve">
+    <value>Copy manual command</value>
+  </data>
+  <data name="Winget_CacheCard.Header" xml:space="preserve">
+    <value>Downloaded installers</value>
+  </data>
+  <data name="Winget_CacheCard.Description" xml:space="preserve">
+    <value>Verified downloads are kept in your temporary folder. Installation uses WinGet’s own download and verification.</value>
+  </data>
+  <data name="Winget_OpenDownload.Content" xml:space="preserve">
+    <value>Open last download</value>
+  </data>
+  <data name="Winget_Activity.Header" xml:space="preserve">
+    <value>Recent activity</value>
+  </data>
+  <data name="Winget_Disabled" xml:space="preserve">
+    <value>Plugin is off</value>
+  </data>
+  <data name="Winget_Connecting" xml:space="preserve">
+    <value>Connecting to WinGet service…</value>
+  </data>
+  <data name="Winget_Unavailable" xml:space="preserve">
+    <value>WinGet is unavailable</value>
+  </data>
+  <data name="Winget_Working" xml:space="preserve">
+    <value>Working…</value>
+  </data>
+  <data name="Winget_Ready" xml:space="preserve">
+    <value>WinGet is ready</value>
+  </data>
+  <data name="Winget_VersionUnknown" xml:space="preserve">
+    <value>Waiting for WinGet detection</value>
+  </data>
+  <data name="Winget_UpdateCount" xml:space="preserve">
+    <value>Updates available: {0}</value>
+  </data>
+  <data name="Winget_NotChecked" xml:space="preserve">
+    <value>Enable the plugin and check for updates. This page checks the WinGet community source.</value>
+  </data>
+  <data name="Winget_UpToDate" xml:space="preserve">
+    <value>No updates available from the WinGet community source. Microsoft Store and custom sources are not included.</value>
+  </data>
+  <data name="Winget_LastCheck" xml:space="preserve">
+    <value>Last successful check: {0}</value>
+  </data>
+  <data name="Winget_NextCheck" xml:space="preserve">
+    <value>Next check: {0}</value>
+  </data>
+  <data name="Winget_ManualOnly" xml:space="preserve">
+    <value>Manual checks only</value>
+  </data>
+  <data name="Winget_Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Winget_SelectPackage" xml:space="preserve">
+    <value>Select software</value>
+  </data>
+  <data name="Winget_NoReleaseNotes" xml:space="preserve">
+    <value>The publisher did not provide release notes for this version.</value>
+  </data>
+  <data name="Winget_LoadDetailsHint" xml:space="preserve">
+    <value>Select an app to load its publisher, installation requirements and release notes.</value>
+  </data>
+  <data name="Winget_UserInstall" xml:space="preserve">
+    <value>WinGet downloads, verifies and installs the selected version using the installer’s normal prompts.</value>
+  </data>
+  <data name="Winget_ManualInstall" xml:space="preserve">
+    <value>WinGet could not find a compatible installer for this package. Review its details or use the WinGet command below.</value>
+  </data>
+  <data name="Winget_RequestFailed" xml:space="preserve">
+    <value>The operation failed.</value>
+  </data>
+  <data name="Winget_ServiceUnavailable" xml:space="preserve">
+    <value>The WinGet service is not responding. Confirm the plugin is enabled and Kit is running.</value>
+  </data>
+  <data name="Winget_Never" xml:space="preserve">
+    <value>Not yet</value>
+  </data>
+  <data name="Winget_InstallConfirmation" xml:space="preserve">
+    <value>WinGet will download, verify and install this exact version and its required dependencies. Follow any installer prompts.</value>
+  </data>
+  <data name="Winget_DownloadConfirmation" xml:space="preserve">
+    <value>Download and verify the installer in your temporary folder. This does not install the app.</value>
+  </data>
+  <data name="Winget_InstallTitle" xml:space="preserve">
+    <value>Install this software?</value>
+  </data>
+  <data name="Winget_DownloadTitle" xml:space="preserve">
+    <value>Download this update?</value>
+  </data>
+  <data name="Winget_AcceptContinue" xml:space="preserve">
+    <value>Accept agreements and continue</value>
+  </data>
+  <data name="Winget_Continue" xml:space="preserve">
+    <value>Continue</value>
+  </data>
+  <data name="Winget_CancelText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Winget_Phase_Idle" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Winget_Phase_Detecting" xml:space="preserve">
+    <value>Detecting WinGet…</value>
+  </data>
+  <data name="Winget_Phase_Checking" xml:space="preserve">
+    <value>Checking installed apps…</value>
+  </data>
+  <data name="Winget_Phase_Details" xml:space="preserve">
+    <value>Loading package details…</value>
+  </data>
+  <data name="Winget_Phase_Downloading" xml:space="preserve">
+    <value>Downloading and verifying…</value>
+  </data>
+  <data name="Winget_Phase_Installing" xml:space="preserve">
+    <value>Installing software…</value>
+  </data>
+  <data name="Winget_Phase_Queued" xml:space="preserve">
+    <value>Waiting for WinGet…</value>
+  </data>
+  <data name="Winget_Phase_Resolving" xml:space="preserve">
+    <value>Resolving package…</value>
+  </data>
+  <data name="Winget_Phase_Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Winget_Phase_Cancelled" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="Winget_Phase_Failed" xml:space="preserve">
+    <value>Operation failed</value>
+  </data>
+  <data name="Winget_NotificationError.Title" xml:space="preserve"><value>Windows notifications are unavailable</value></data>
+  <data name="Winget_Phase_Starting" xml:space="preserve"><value>Starting…</value></data>
+  <data name="Winget_Phase_Cancelling" xml:space="preserve"><value>Cancellation requested. If an installer is open, cancel there; waiting for WinGet to finish.</value></data>
+  <data name="Winget_Phase_Downloaded" xml:space="preserve"><value>Download verified</value></data>
+  <data name="Winget_Phase_PostInstall" xml:space="preserve"><value>Finishing installation…</value></data>
+  <data name="Winget_Phase_LoadingDetails" xml:space="preserve"><value>Loading package details…</value></data>
+  <data name="Winget_Phase_Finished" xml:space="preserve"><value>Finishing…</value></data>
+  <data name="Winget_ConfirmationChanged" xml:space="preserve"><value>The selected package, version or agreements changed. Review the details and try again.</value></data>
+  <data name="Winget_RestartRequired.Title" xml:space="preserve"><value>Restart required</value></data>
+  <data name="Winget_RestartRequired.Message" xml:space="preserve"><value>An updated application requires a Windows restart. Save your work and restart when convenient.</value></data>
+  <data name="Winget_Action_detect" xml:space="preserve"><value>Detect WinGet</value></data>
+  <data name="Winget_Action_check" xml:space="preserve"><value>Check updates</value></data>
+  <data name="Winget_Action_details" xml:space="preserve"><value>Load details</value></data>
+  <data name="Winget_Action_download" xml:space="preserve"><value>Download and verify</value></data>
+  <data name="Winget_Action_install" xml:space="preserve"><value>Install software</value></data>
+  <data name="Winget_EnableToggle.OnContent" xml:space="preserve"><value>On</value></data>
+  <data name="Winget_EnableToggle.OffContent" xml:space="preserve"><value>Off</value></data>
+  <data name="Winget_DailyToggle.OnContent" xml:space="preserve"><value>On</value></data>
+  <data name="Winget_DailyToggle.OffContent" xml:space="preserve"><value>Off</value></data>
+  <data name="Winget_NotifyToggle.OnContent" xml:space="preserve"><value>On</value></data>
+  <data name="Winget_NotifyToggle.OffContent" xml:space="preserve"><value>Off</value></data>
+  <data name="AIHub_PageTitle.Text" xml:space="preserve">
+    <value>AI Hub</value>
+  </data>
+  <data name="AIHub_OptimizationSearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search file name, path, category or reason</value>
+  </data>
+  <data name="AIHub_OptimizationSearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Search optimization candidates</value>
+  </data>
+  <data name="AIHub_OptimizationReviewFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Filter by review state</value>
+  </data>
+  <data name="AIHub_SelectVisibleButton.Content" xml:space="preserve">
+    <value>Select visible</value>
+  </data>
+  <data name="AIHub_DeselectVisibleButton.Content" xml:space="preserve">
+    <value>Deselect visible</value>
+  </data>
+  <data name="AIHub_ExecuteSelectedButton.Content" xml:space="preserve">
+    <value>Review selected actions</value>
+  </data>
+  <data name="AIHub_SelectedCandidatesLabel.Text" xml:space="preserve">
+    <value>Selected across all filters</value>
+  </data>
+  <data name="AIHub_OptimizationNoResultsTitle.Text" xml:space="preserve">
+    <value>Start with a scan</value>
+  </data>
+  <data name="AIHub_OptimizationNoResultsDescription.Text" xml:space="preserve">
+    <value>Scan downloads or known caches. Review the proposed actions and select the files you want to process.</value>
+  </data>
+  <data name="AIHub_OptimizationNoFilterMatchesTitle.Text" xml:space="preserve">
+    <value>No matching files</value>
+  </data>
+  <data name="AIHub_OptimizationNoFilterMatchesDescription.Text" xml:space="preserve">
+    <value>Try another search or review filter. Hidden selections remain selected.</value>
+  </data>
+  <data name="AIHub_OptimizationHistoryTitle.Text" xml:space="preserve">
+    <value>Recent actions</value>
+  </data>
+  <data name="AIHub_OptimizationHistoryEmpty.Text" xml:space="preserve">
+    <value>Completed and interrupted runs appear here. Up to 20 runs are kept on this device.</value>
+  </data>
+  <data name="AIHub_RefreshHistoryButton.Content" xml:space="preserve">
+    <value>Refresh history</value>
+  </data>
+  <data name="AIHub_CopyOptimizationReportButton.Content" xml:space="preserve">
+    <value>Copy report</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmTitle" xml:space="preserve">
+    <value>Review selected actions</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmSummaryFormat" xml:space="preserve">
+    <value>{0:N0} selected · {1:N0} delete · {2:N0} move · {3}</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmDescription" xml:space="preserve">
+    <value>Only the selected files will be processed. Cache files are permanently deleted; downloads are moved within Downloads. Each file is checked again for changes before execution.</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmPreviewLimitFormat" xml:space="preserve">
+    <value>Showing the first {0:N0} of {1:N0} files. All selected files are included.</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmContinue" xml:space="preserve">
+    <value>Execute these actions</value>
+  </data>
+  <data name="AIHub_OptimizationConfirmCancel" xml:space="preserve">
+    <value>Back to review</value>
+  </data>
+  <data name="AIHub_OptimizationReportCopied" xml:space="preserve">
+    <value>Execution report copied. It includes local file paths.</value>
+  </data>
+  <data name="AIHub_ActionFailedFormat" xml:space="preserve">
+    <value>The action could not complete: {0}</value>
+  </data>
+  <data name="AIHub_Segment_SelfTest.Content" xml:space="preserve">
+    <value>Self-test</value>
+  </data>
+  <data name="AIHub_DiscardTaskPolicyButton.Content" xml:space="preserve">
+    <value>Discard changes</value>
+  </data>
+  <data name="AIHub_TaskPolicyDraftHint.Text" xml:space="preserve">
+    <value>Drafts are kept when switching policies. Save applies the selected policy to future tasks.</value>
+  </data>
+  <data name="AIHub_Category_SelectedSummary" xml:space="preserve">
+    <value>{0:N0}/{1:N0} approved files selected</value>
+  </data>
+  <data name="AIHub_Optimization_FilteredSummary" xml:space="preserve">
+    <value>{0:N0} shown · {1:N0} selected overall</value>
+  </data>
+  <data name="AIHub_Optimization_FilterFailed" xml:space="preserve">
+    <value>Needs attention</value>
+  </data>
+  <data name="AIHub_Optimization_FilterSelected" xml:space="preserve">
+    <value>Selected</value>
+  </data>
+  <data name="AIHub_Optimization_HistoryLoadFailed" xml:space="preserve">
+    <value>Execution history could not be read. Try refreshing.</value>
+  </data>
+  <data name="AIHub_Optimization_PlanChanged" xml:space="preserve">
+    <value>The reviewed selection changed. Review it again before executing.</value>
+  </data>
+  <data name="AIHub_Optimization_ExecutionFailed" xml:space="preserve">
+    <value>The operation could not finish. Review the execution history before trying again.</value>
+  </data>
+  <data name="AIHub_Execution_Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="AIHub_Execution_Cancelled" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="AIHub_Execution_Failed" xml:space="preserve">
+    <value>Stopped with errors</value>
+  </data>
+  <data name="AIHub_Execution_Interrupted" xml:space="preserve">
+    <value>Interrupted — verify files before retrying</value>
+  </data>
+  <data name="AIHub_Execution_Summary" xml:space="preserve">
+    <value>{0} · {1:N0} deleted · {2:N0} moved · {3:N0} failed · {4:N0} remaining</value>
+  </data>
+  <data name="AIHub_Execution_Details" xml:space="preserve">
+    <value>{0} deleted · {1:N0}/{2:N0} item details retained. Latest 20 runs are kept locally.</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Deleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Moved" xml:space="preserve">
+    <value>Moved</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Pending" xml:space="preserve">
+    <value>Not completed</value>
+  </data>
+  <data name="AiHub_PolicyStateLoading" xml:space="preserve">
+    <value>Loading policy…</value>
+  </data>
+  <data name="AiHub_PolicyStateDirty" xml:space="preserve">
+    <value>Unsaved changes</value>
+  </data>
+  <data name="AiHub_PolicyStateSaved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="AiHub_PolicyDefaultStaged" xml:space="preserve">
+    <value>Default template loaded into draft. Save to apply.</value>
+  </data>
+  <data name="AiHub_PolicyDraftDiscarded" xml:space="preserve">
+    <value>Draft discarded. Saved policy restored.</value>
+  </data>
+  <data name="AiHub_PolicyTemplateVersionFormat" xml:space="preserve">
+    <value>Default template v{0}</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionGlobal" xml:space="preserve">
+    <value>Shared safety and privacy rules apply to every AI task.</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionAudit" xml:space="preserve">
+    <value>Review the supplied Windows events and distinguish evidence from possible explanations.</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionOptimization" xml:space="preserve">
+    <value>Review locally verified candidates without expanding their paths, actions or scope.</value>
+  </data>
+  <data name="AiHub_PolicyDescriptionSelfTest" xml:space="preserve">
+    <value>A fixed ping probe checks the AI response contract without inspecting the workstation.</value>
+  </data>
+  <data name="AiHub_GlobalPolicyDraftHint.Text" xml:space="preserve">
+    <value>Edits and restored defaults remain drafts until saved. Policies can be edited while AI is off.</value>
+  </data>
+  <data name="Winget_AlreadyInstalled" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="Winget_AvailableToInstall" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="Winget_UpgradeSelected" xml:space="preserve">
+    <value>Update selected app</value>
+  </data>
+  <data name="Winget_InstallSelected" xml:space="preserve">
+    <value>Install selected app</value>
+  </data>
+  <data name="Winget_SearchCatalog" xml:space="preserve">
+    <value>Find software in WinGet</value>
+  </data>
+  <data name="Winget_SearchResultsCount" xml:space="preserve">
+    <value>{0:N0} results for “{1}”</value>
+  </data>
+  <data name="Winget_SearchResultsLimited" xml:space="preserve">
+    <value>First {0:N0} results for “{1}” · Refine your search</value>
+  </data>
+  <data name="Winget_Searching" xml:space="preserve">
+    <value>Searching WinGet…</value>
+  </data>
+  <data name="Winget_SearchHint" xml:space="preserve">
+    <value>Enter at least 2 characters of an app name or package ID, then search.</value>
+  </data>
+  <data name="Winget_NoSearchResults" xml:space="preserve">
+    <value>No matching software. Try another name or package ID.</value>
+  </data>
+  <data name="Winget_NoMatchingUpdates" xml:space="preserve">
+    <value>No updates match this filter. Try an app name or package ID.</value>
+  </data>
+  <data name="Winget_InstalledHint" xml:space="preserve">
+    <value>This app is already installed. Use Software updates to check for a newer version.</value>
+  </data>
+  <data name="Winget_ElevationInstall" xml:space="preserve">
+    <value>WinGet will request administrator permission if this installer needs it. Follow the Windows UAC and installer prompts.</value>
+  </data>
+  <data name="Winget_UpgradeTitle" xml:space="preserve">
+    <value>Update this software?</value>
+  </data>
+  <data name="Winget_UpgradeConfirmation" xml:space="preserve">
+    <value>WinGet will download, verify and update this app to the selected version. Save your work in the target app first.</value>
+  </data>
+  <data name="Winget_ElevationConfirmation" xml:space="preserve">
+    <value>Windows may ask for administrator permission. Kit stays at its current permission level.</value>
+  </data>
+  <data name="Winget_Phase_Searching" xml:space="preserve">
+    <value>Searching the WinGet catalog…</value>
+  </data>
+  <data name="Winget_Phase_RunningWinGet" xml:space="preserve">
+    <value>WinGet is downloading, verifying and preparing installation…</value>
+  </data>
+  <data name="Winget_Phase_WaitingForInstaller" xml:space="preserve">
+    <value>Follow the installer or Windows permission prompt to continue.</value>
+  </data>
+  <data name="Winget_Phase_VerifyingInstall" xml:space="preserve">
+    <value>Checking the installed version…</value>
+  </data>
+  <data name="Winget_Action_upgrade" xml:space="preserve">
+    <value>Update software</value>
+  </data>
+  <data name="Winget_Action_search" xml:space="preserve">
+    <value>Search software</value>
+  </data>
+  <data name="Winget_Settings.Header" xml:space="preserve">
+    <value>Automatic checks and notifications</value>
+  </data>
+  <data name="Winget_Settings.Description" xml:space="preserve">
+    <value>Choose when Kit checks for updates and alerts you.</value>
+  </data>
+  <data name="Winget_UpdatesTab.Content" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="Winget_InstallTab.Content" xml:space="preserve">
+    <value>Install software</value>
+  </data>
+  <data name="Winget_UpdateFilter.PlaceholderText" xml:space="preserve">
+    <value>Filter by name, ID or source</value>
+  </data>
+  <data name="Winget_UpdateFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Filter available updates</value>
+  </data>
+  <data name="Winget_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search software by name or ID</value>
+  </data>
+  <data name="Winget_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Software search</value>
+  </data>
+  <data name="Winget_SearchButton.Content" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Winget_ColumnPackage.Text" xml:space="preserve">
+    <value>Software</value>
+  </data>
+  <data name="Winget_ColumnInstalled.Text" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="Winget_ColumnAvailable.Text" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="Winget_SearchResultsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Software search results</value>
+  </data>
+  <data name="Winget_InstallHeading.Text" xml:space="preserve">
+    <value>Find software to install</value>
+  </data>
+  <data name="Winget_InstallSearchHint.Text" xml:space="preserve">
+    <value>Enter at least 2 characters, then press Enter or Search. Results come from WinGet.</value>
+  </data>
+  <data name="Winget_NoSelectionTitle.Text" xml:space="preserve">
+    <value>Select software</value>
+  </data>
+  <data name="Winget_NoSelectionHint.Text" xml:space="preserve">
+    <value>Choose a row to review its version, publisher and installation details.</value>
+  </data>
+  <data name="Winget_ReleaseNotesExpander.Header" xml:space="preserve">
+    <value>Release notes</value>
+  </data>
+  <data name="Winget_AdvancedExpander.Header" xml:space="preserve">
+    <value>Manual command</value>
+  </data>
+  <data name="Winget_VerificationPending" xml:space="preserve"><value>WinGet completed successfully. Installed-version registration is pending; Kit will recheck before allowing another installation.</value></data>
+  <data name="Winget_AutomaticSettings.Text" xml:space="preserve"><value>Automatic checks and notifications</value></data>
+  <data name="Winget_DiscoverTab.Content" xml:space="preserve"><value>Discover software</value></data>
+  <data name="Winget_InstalledTab.Content" xml:space="preserve"><value>Installed software</value></data>
+  <data name="Winget_FiltersButton.Content" xml:space="preserve"><value>Filters</value></data>
+  <data name="Winget_FiltersHeading.Text" xml:space="preserve"><value>Filters</value></data>
+  <data name="Winget_LocalFilter.PlaceholderText" xml:space="preserve"><value>Filter this list</value></data>
+  <data name="Winget_LocalFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Filter visible packages by name or ID</value></data>
+  <data name="Winget_SourcesExpander.Header" xml:space="preserve"><value>Sources</value></data>
+  <data name="Winget_SearchOptionsExpander.Header" xml:space="preserve"><value>Search options</value></data>
+  <data name="Winget_ExactMatch.Content" xml:space="preserve"><value>Match the local name or ID filter exactly</value></data>
+  <data name="Winget_IncludeUnknown.Content" xml:space="preserve"><value>Include unknown versions</value></data>
+  <data name="Winget_ShowIgnored.Content" xml:space="preserve"><value>Show ignored packages</value></data>
+  <data name="Winget_ReloadAction.Label" xml:space="preserve"><value>Reload</value></data>
+  <data name="Winget_OptionsAction.Label" xml:space="preserve"><value>Operation options</value></data>
+  <data name="Winget_ManualAction.Label" xml:space="preserve"><value>Manual command</value></data>
+  <data name="Winget_DetailsAction.Label" xml:space="preserve"><value>Details</value></data>
+  <data name="Winget_IgnoreAction.Label" xml:space="preserve"><value>Ignore selection</value></data>
+  <data name="Winget_ManageIgnoredAction.Label" xml:space="preserve"><value>Manage ignored updates</value></data>
+  <data name="Winget_CsvAction.Label" xml:space="preserve"><value>Export to CSV</value></data>
+  <data name="Winget_BundleAction.Label" xml:space="preserve"><value>Export selected bundle</value></data>
+  <data name="Winget_ActivityAction.Label" xml:space="preserve"><value>Queue and history</value></data>
+  <data name="Winget_ColumnId.Text" xml:space="preserve"><value>Package ID</value></data>
+  <data name="Winget_ColumnSource.Text" xml:space="preserve"><value>Source</value></data>
+  <data name="Winget_SelectAllVisible.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Select all visible packages</value></data>
+  <data name="Winget_SortBy.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Order packages by</value></data>
+  <data name="Winget_SortName.Content" xml:space="preserve"><value>Name</value></data>
+  <data name="Winget_SortId.Content" xml:space="preserve"><value>Package ID</value></data>
+  <data name="Winget_SortInstalled.Content" xml:space="preserve"><value>Installed version</value></data>
+  <data name="Winget_SortAvailable.Content" xml:space="preserve"><value>New version</value></data>
+  <data name="Winget_SortSource.Content" xml:space="preserve"><value>Source</value></data>
+  <data name="Winget_SortDescending.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort descending</value></data>
+  <data name="Winget_SortDescending.ToolTipService.ToolTip" xml:space="preserve"><value>Sort descending</value></data>
+  <data name="Winget_ViewMode.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Package view</value></data>
+  <data name="Winget_DetailedView.Content" xml:space="preserve"><value>Details</value></data>
+  <data name="Winget_CompactView.Content" xml:space="preserve"><value>Compact</value></data>
+  <data name="Winget_GridView.Content" xml:space="preserve"><value>Grid</value></data>
+  <data name="Winget_BatchInstallExplanation" xml:space="preserve"><value>Review every package and agreement below. WinGet will process the selected packages in order. Save your work before continuing.</value></data>
+  <data name="Winget_BatchUninstallExplanation" xml:space="preserve"><value>The following software will be uninstalled in order. Save your work and review every package before continuing. Native uninstaller and Windows permission prompts may appear.</value></data>
+  <data name="Winget_BatchUpgradeTitle" xml:space="preserve"><value>Update selected software?</value></data>
+  <data name="Winget_BatchInstallTitle" xml:space="preserve"><value>Install selected software?</value></data>
+  <data name="Winget_BatchUninstallTitle" xml:space="preserve"><value>Uninstall selected software?</value></data>
+  <data name="Winget_LicenseLabel" xml:space="preserve"><value>License</value></data>
+  <data name="Winget_ManualCommandExplanation" xml:space="preserve"><value>Review and copy this command to run it yourself in a terminal.</value></data>
+  <data name="Winget_SilentOption" xml:space="preserve"><value>Silent installer</value></data>
+  <data name="Winget_ScopeOption" xml:space="preserve"><value>Scope</value></data>
+  <data name="Winget_ArchitectureOption" xml:space="preserve"><value>Architecture</value></data>
+  <data name="Winget_OptionDefault" xml:space="preserve"><value>Package default</value></data>
+  <data name="Winget_ScopeUser" xml:space="preserve"><value>Current user</value></data>
+  <data name="Winget_ScopeMachine" xml:space="preserve"><value>All users</value></data>
+  <data name="Winget_OptionsExplanation" xml:space="preserve"><value>Options apply to the next selection you confirm. Administrator permission is still requested by Windows when required.</value></data>
+  <data name="Winget_OptionsTitle" xml:space="preserve"><value>Operation options</value></data>
+  <data name="Winget_ApplyOptions" xml:space="preserve"><value>Apply</value></data>
+  <data name="Winget_NoIgnoredPackages" xml:space="preserve"><value>No updates are ignored.</value></data>
+  <data name="Winget_ManageIgnoredTitle" xml:space="preserve"><value>Ignored updates</value></data>
+  <data name="Winget_RestoreSelected" xml:space="preserve"><value>Restore selection</value></data>
+  <data name="Winget_QueueTitle" xml:space="preserve"><value>Current queue</value></data>
+  <data name="Winget_HistoryTitle" xml:space="preserve"><value>Recent history</value></data>
+  <data name="Winget_BundleFileType" xml:space="preserve"><value>WinGet bundle</value></data>
+  <data name="Winget_CsvFileType" xml:space="preserve"><value>CSV table</value></data>
+  <data name="Winget_OptionOn" xml:space="preserve"><value>On</value></data>
+  <data name="Winget_OptionOff" xml:space="preserve"><value>Off</value></data>
+  <data name="Winget_IgnoredState" xml:space="preserve"><value>Ignored</value></data>
+  <data name="Winget_UpdateAvailableState" xml:space="preserve"><value>Update available</value></data>
+  <data name="Winget_LocalSource" xml:space="preserve"><value>Local PC</value></data>
+  <data name="Winget_SelectedCount" xml:space="preserve"><value>{0:N0} selected</value></data>
+  <data name="Winget_UpdatesWorkspace" xml:space="preserve"><value>Software Updates</value></data>
+  <data name="Winget_DiscoverWorkspace" xml:space="preserve"><value>Discover Packages</value></data>
+  <data name="Winget_InstalledWorkspace" xml:space="preserve"><value>Installed Packages</value></data>
+  <data name="Winget_WorkspaceCount" xml:space="preserve"><value>{0:N0} packages · {1:N0} visible · {2:N0} selected</value></data>
+  <data name="Winget_UpdateSelection" xml:space="preserve"><value>Update selection</value></data>
+  <data name="Winget_InstallSelection" xml:space="preserve"><value>Install selection</value></data>
+  <data name="Winget_UninstallSelection" xml:space="preserve"><value>Uninstall selection</value></data>
+  <data name="Winget_WorkspaceNoMatches" xml:space="preserve"><value>No packages match the current filters.</value></data>
+  <data name="Winget_InstalledEmpty" xml:space="preserve"><value>Reload to read the installed software inventory.</value></data>
+  <data name="Winget_BundleSourceRestriction" xml:space="preserve"><value>Select packages from the WinGet source to export an importable bundle. Local-only packages cannot be imported from a catalog.</value></data>
+  <data name="Winget_PrepareTimeout" xml:space="preserve"><value>Preparing the selection took too long. Check the operation status before trying again.</value></data>
+  <data name="Winget_Phase_Preparing" xml:space="preserve"><value>Preparing package details and agreements…</value></data>
+  <data name="Winget_Phase_ListingInstalled" xml:space="preserve"><value>Reading installed software…</value></data>
+  <data name="Winget_Phase_Uninstalling" xml:space="preserve"><value>Waiting for the native uninstaller…</value></data>
+  <data name="Winget_Phase_VerificationPending" xml:space="preserve"><value>Waiting to verify the completed operation…</value></data>
+  <data name="Winget_Action_uninstall" xml:space="preserve"><value>Uninstall</value></data>
+  <data name="Winget_Action_prepare" xml:space="preserve"><value>Prepare selection</value></data>
+  <data name="Winget_Action_queue" xml:space="preserve"><value>Batch operation</value></data>
+  <data name="Winget_Action_list-installed" xml:space="preserve"><value>Installed software</value></data>
+  <data name="Winget_Queue_Pending" xml:space="preserve"><value>Queued</value></data>
+  <data name="Winget_Queue_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="Winget_Queue_Succeeded" xml:space="preserve"><value>Completed</value></data>
+  <data name="Winget_Queue_Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="Winget_Queue_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Winget_Queue_NeedsVerification" xml:space="preserve"><value>Needs verification</value></data>
+  <data name="Winget_RecoveryHint" xml:space="preserve"><value>A previous operation needs verification. Reload the update list before starting another operation.</value></data>
+  <data name="Winget_BatchLimitHint" xml:space="preserve"><value>Select up to 50 packages per operation.</value></data>
+  <data name="Winget_UninstallExplanation" xml:space="preserve"><value>WinGet will run the registered uninstaller. Windows requests administrator permission when needed.</value></data>
+  <data name="Winget_OperationHistory.Content" xml:space="preserve"><value>View history</value></data>
+  <data name="Winget_OperationDetails.Header" xml:space="preserve"><value>Operation details</value></data>
+  <data name="Winget_QueueEmpty.Text" xml:space="preserve"><value>No operations are queued.</value></data>
+  <data name="Winget_HistoryEmpty.Text" xml:space="preserve"><value>No operation history yet.</value></data>
+  <data name="Winget_OperationPending" xml:space="preserve"><value>Submitting request…</value></data>
+  <data name="Winget_QueueSummary" xml:space="preserve"><value>{0} completed · {1} failed · {2} cancelled · {3} need verification</value></data>
+  <data name="Winget_QueueRunning" xml:space="preserve"><value>{0}/{1} · {2}</value></data>
+  <data name="Winget_LastOperation" xml:space="preserve"><value>Latest operation</value></data>
+  <data name="Winget_InstalledLoading" xml:space="preserve"><value>Loading installed software…</value></data>
+  <data name="Winget_SearchRefine" xml:space="preserve"><value>Showing the first 100 results. Refine your search.</value></data>
+  <data name="Winget_InstallerOutput" xml:space="preserve"><value>Installer output</value></data>
+  <data name="Winget_NotCheckedShort" xml:space="preserve"><value>Not checked</value></data>
+  <data name="Winget_MetadataPending" xml:space="preserve"><value>Version and installation status have not been checked.</value></data>
+  <data name="Winget_InstallationUnknown" xml:space="preserve"><value>Installation status not checked</value></data>
+  <data name="Winget_DetailsNotLoaded" xml:space="preserve"><value>Load details to check installation status</value></data>
+  <data name="Winget_ReviewInstallSelection" xml:space="preserve"><value>Review and install</value></data>
+  <data name="Winget_SearchingQuery" xml:space="preserve"><value>Searching for “{0}”…</value></data>
+  <data name="Winget_SearchKeepsResults" xml:space="preserve"><value>Previous results remain visible while searching.</value></data>
+  <data name="Winget_SearchRetryPrevious" xml:space="preserve"><value>The search did not finish. Previous results are retained; search again to retry.</value></data>
+  <data name="Winget_SearchRetry" xml:space="preserve"><value>The search did not finish. Search again to retry.</value></data>
+  <data name="Winget_SearchSourceScope" xml:space="preserve"><value>WinGet community catalog (winget source) only. Microsoft Store and custom sources are not searched. Versions and installation status are checked when you open details or review an installation.</value></data>
+  <data name="Winget_DetailsUnavailable" xml:space="preserve"><value>Package details could not be loaded. Retry when WinGet is ready.</value></data>
+  <data name="Winget_RetryDetails" xml:space="preserve"><value>Retry details</value></data>
+  <data name="Winget_CloseDetails" xml:space="preserve"><value>Close</value></data>
+  <data name="Winget_PackageHomepage" xml:space="preserve"><value>Package homepage</value></data>
+  <data name="Winget_LicenseLink" xml:space="preserve"><value>View license</value></data>
+  <data name="Winget_SearchElapsed" xml:space="preserve"><value>Search time: {0:N2} s</value></data>
 </root>

@@ -74,6 +74,8 @@ public sealed class OptimizationRecommendationContainer
 [JsonSerializable(typeof(List<OptimizationItemInput>))]
 [JsonSerializable(typeof(OptimizationRecommendation))]
 [JsonSerializable(typeof(OptimizationRecommendationContainer))]
+[JsonSerializable(typeof(OptimizationExecutionRecord))]
+[JsonSerializable(typeof(List<OptimizationExecutionRecord>))]
 public partial class AIHubLibJsonContext : JsonSerializerContext
 {
 }

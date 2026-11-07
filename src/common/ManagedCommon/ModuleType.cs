@@ -42,5 +42,6 @@ namespace ManagedCommon
         NetMap,
         AIHub,
         GeneralSettings,
+        Winget,
     }
 }

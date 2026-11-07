@@ -66,6 +66,7 @@ namespace
         L"Kit.UDPtestModuleInterface.dll",
         L"Kit.NetMapModuleInterface.dll",
         L"Kit.AIHubModuleInterface.dll",
+        L"Kit.WingetModuleInterface.dll",
     };
 
     bool is_known_module_registered(std::wstring_view moduleName)
@@ -315,7 +316,8 @@ int win32_toast_notification_COM_server_mode()
 enum class toast_notification_handler_result
 {
     exit_success,
-    exit_error
+    exit_error,
+    start_winget
 };
 
 toast_notification_handler_result toast_notification_handler(const std::wstring_view param)
@@ -324,6 +326,7 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
     const std::wstring_view couldnt_toggle_powerpreview_modules_disable = L"couldnt_toggle_powerpreview_modules_disable/";
     const std::wstring_view open_settings = L"open_settings/";
     const std::wstring_view open_overview = L"open_overview/";
+    const std::wstring_view open_winget = L"open_winget/";
     const std::wstring_view update_now = L"update_now/";
 
     if (param == cant_drag_elevated_disable)
@@ -346,6 +349,18 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
     else if (param == open_overview)
     {
         open_menu_from_another_instance("Overview");
+        return toast_notification_handler_result::exit_success;
+    }
+    else if (param == open_winget)
+    {
+        if (!FindWindowW(pt_tray_icon_window_class, nullptr))
+        {
+            // This protocol activation already runs the registered Kit.exe. Let it
+            // follow the normal single-instance startup when the tray is gone.
+            return toast_notification_handler_result::start_winget;
+        }
+
+        open_menu_from_another_instance("Winget");
         return toast_notification_handler_result::exit_success;
     }
     else
@@ -378,6 +393,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
 
     int n_cmd_args = 0;
     LPWSTR* cmd_arg_list = CommandLineToArgvW(GetCommandLineW(), &n_cmd_args);
+    bool openWingetFromNotification = false;
     switch (should_run_in_special_mode(n_cmd_args, cmd_arg_list))
     {
     case SpecialMode::Win32ToastNotificationCOMServer:
@@ -391,8 +407,11 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
             return 1;
         case toast_notification_handler_result::exit_success:
             return 0;
+        case toast_notification_handler_result::start_winget:
+            openWingetFromNotification = true;
+            break;
         }
-        return 1;
+        break;
     }
     case SpecialMode::None:
         // continue as usual
@@ -403,7 +422,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     logFilePath.append(LogSettings::runnerLogPath);
     Logger::init(LogSettings::runnerLoggerName, logFilePath.wstring(), PTSettingsHelper::get_log_settings_file_location());
 
-    const std::string cmdLine{ lpCmdLine };
+    const std::string cmdLine = openWingetFromNotification ? "--open-settings=Winget" : lpCmdLine;
     Logger::info("Running Kit with cmd args: {}", cmdLine);
 
     const bool is_autorun = (cmdLine.find("--autorun") != std::string::npos) ||

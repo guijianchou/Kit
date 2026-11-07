@@ -195,6 +195,12 @@
                     AutomationProperties.AutomationId="UDPtestNavItem"
                     Icon="{ui:FontIcon Glyph=&#xE945;}" />
 
+                <NavigationViewItem
+                    x:Name="WingetNavigationItem"
+                    x:Uid="Shell_Winget"
+                    AutomationProperties.AutomationId="WingetNavItem"
+                    Icon="{ui:FontIcon Glyph=&#xE896;}" />
+
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem

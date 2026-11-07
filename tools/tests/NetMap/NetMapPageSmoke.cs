@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.Settings.UI;
+using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
@@ -259,6 +260,7 @@ internal static class NetMapPageSmoke
             new[] { new ServiceResult("Claude", true, ProbeError.None, 200, now, "TraceResponded", 45, Checkpoint: new("198.51.100.66", "SG", "SG")), new ServiceResult("ChatGPT", true, ProbeError.None, 200, now, "TraceResponded", 180, Checkpoint: new("198.51.100.88", "JP", "JP")), new ServiceResult("Gemini", true, ProbeError.None, 403, now, "BrowserCheck", 30), new ServiceResult("Google", true, ProbeError.Timeout, null, now, ConsecutiveFailures: 3) }, hops);
         typeof(NetMapSession).GetField("current", PrivateInstance).SetValue(session, fixture);
         typeof(NetMapViewModel).GetMethod("ApplySnapshot", PrivateInstance).Invoke(vm, new object[] { fixture });
+        await VerifyAiResultLifecycle(page, session, fixture);
         window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 900));
         ((FrameworkElement)window.Content).RequestedTheme = ElementTheme.Light;
         await Task.Delay(250);
@@ -420,6 +422,93 @@ internal static class NetMapPageSmoke
         Require(File.Exists(Path.Combine(AppContext.BaseDirectory, "Assets", "Settings", "Icons", "NetMap.png")), "NetMap navigation icon is deployed.");
         Require(File.Exists(Path.Combine(AppContext.BaseDirectory, "Assets", "Settings", "NetMapLogo.png")), "NetMap colored logo is deployed.");
         vm.Dispose();
+    }
+
+    private static async Task VerifyAiResultLifecycle(NetMapPage page, NetMapSession session, NetMapSnapshot fixture)
+    {
+        var vm = page.ViewModel;
+        var analyzerField = typeof(NetMapViewModel).GetField("analyzeRoute", PrivateInstance);
+        var originalAnalyzer = analyzerField.GetValue(vm);
+        var currentField = typeof(NetMapSession).GetField("current", PrivateInstance);
+        var applySnapshot = typeof(NetMapViewModel).GetMethod("ApplySnapshot", PrivateInstance);
+        var messageProperty = typeof(NetMapViewModel).GetProperty("Message");
+        var button = (Button)page.FindName("AiCheckButton");
+        var notice = FindChild<InfoBar>(page);
+        TaskCompletionSource<NetMapAiAnalysisResponse> pending = null;
+        CancellationToken requestToken = default;
+        int calls = 0;
+        analyzerField.SetValue(vm, new Func<CancellationToken, Task<NetMapAiAnalysisResponse>>(token =>
+        {
+            calls++;
+            requestToken = token;
+            return pending.Task;
+        }));
+
+        void Apply(NetMapSnapshot value)
+        {
+            currentField.SetValue(session, value);
+            applySnapshot.Invoke(vm, new object[] { value });
+        }
+
+        async Task SettleResult(Task request)
+        {
+            await request.WaitAsync(TimeSpan.FromSeconds(2));
+            for (int attempt = 0; attempt < 40 && vm.IsAiChecking; attempt++) await Task.Delay(25);
+            await Task.Delay(50);
+            Require(!vm.IsAiChecking, "Completed AI request restores idle state.");
+        }
+
+        try
+        {
+            pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var successful = vm.CheckRouteWithAiAsync();
+            Require(vm.IsAiChecking && !button.IsEnabled && vm.Proxy.AiRoute == NetMapViewModel.Text("AiAnalyzing"), "AI check exposes its busy state and prevents another request.");
+            await vm.CheckRouteWithAiAsync();
+            Require(calls == 1, "Repeated AI check cannot dispatch a duplicate request.");
+            pending.SetResult(NetMapAiAnalysisResponse.Successful("Fixture route", "Fixture summary", "Fixture details"));
+            await SettleResult(successful);
+            Require(vm.AiRoute == "Fixture route" && vm.Proxy.AiRouteSummary == "Fixture summary" && vm.AiRouteDetails == "Fixture details" && string.IsNullOrEmpty(vm.Message), "Successful AI analysis publishes all route fields and clears its notice.");
+
+            pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var failed = vm.CheckRouteWithAiAsync();
+            pending.SetResult(NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiTimeout")));
+            await SettleResult(failed);
+            Require(notice != null && notice.Visibility == Visibility.Visible && notice.Message == NetMapViewModel.Text("AiTimeout") && button.IsEnabled, "AI failure remains visible in the page notice and restores retry.");
+
+            pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var cancelled = vm.CheckRouteWithAiAsync();
+            Require(string.IsNullOrEmpty(vm.Message), "Retry clears the previous AI failure while analyzing.");
+            var changed = fixture with { Generation = fixture.Generation + 1, Hops = Array.Empty<HopResult>() };
+            Apply(changed);
+            await Task.Delay(50);
+            Require(requestToken.IsCancellationRequested && !vm.IsAiChecking && vm.AiRoute == null && notice.Visibility == Visibility.Visible && notice.Message == NetMapViewModel.Text("AiRouteChanged"), "Changing route cancels active AI analysis with a visible reason and clears stale results.");
+            pending.SetResult(NetMapAiAnalysisResponse.Successful("Stale route", "Stale summary", "Stale details"));
+            await SettleResult(cancelled);
+            Require(vm.AiRoute == null && vm.Message == NetMapViewModel.Text("AiRouteChanged"), "A late cancelled result cannot overwrite the new route or its cancellation notice.");
+
+            messageProperty.SetValue(vm, "Unrelated fixture notice");
+            Apply(changed with { Generation = changed.Generation + 1 });
+            Require(vm.Message == "Unrelated fixture notice", "An idle route change does not create an AI cancellation notice.");
+
+            // The session may advance before its UI snapshot callback runs.
+            Apply(fixture);
+            pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var superseded = vm.CheckRouteWithAiAsync();
+            currentField.SetValue(session, changed);
+            pending.SetResult(NetMapAiAnalysisResponse.Successful("Superseded route", "Superseded summary", "Superseded details"));
+            await SettleResult(superseded);
+            Require(vm.AiRoute == null && vm.Message == NetMapViewModel.Text("AiRouteChanged"), "A result arriving before the changed-route UI snapshot is rejected with a visible reason.");
+            Apply(changed);
+            Require(vm.Message == NetMapViewModel.Text("AiRouteChanged"), "Applying the pending route snapshot preserves the completion cancellation notice.");
+        }
+        finally
+        {
+            vm.CancelAiCheck();
+            pending?.TrySetResult(NetMapAiAnalysisResponse.Failed("Fixture cleanup"));
+            analyzerField.SetValue(vm, originalAnalyzer);
+            Apply(fixture);
+            messageProperty.SetValue(vm, string.Empty);
+        }
     }
 
     private static T FindChild<T>(DependencyObject parent) where T : DependencyObject

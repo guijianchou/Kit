@@ -33,6 +33,7 @@ public sealed class AuditScheduler : IDisposable
     private CancellationTokenSource? _runCts;
     private Task? _loop;
     private DateTime? _lastCompletedUtc;
+    private DateTime? _lastScanEndUtc;
     private bool _disposed;
 
     public AuditScheduler(
@@ -42,7 +43,8 @@ public sealed class AuditScheduler : IDisposable
         TimeSpan? pollInterval = null,
         TimeSpan? fullRange = null,
         EventLogService.AuditMode mode = EventLogService.AuditMode.Extended,
-        DateTime? lastCompletedUtc = null)
+        DateTime? lastCompletedUtc = null,
+        DateTime? lastScanEndUtc = null)
     {
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         IntervalHours = AuditSchedule.NormalizeIntervalHours(intervalHours);
@@ -52,6 +54,7 @@ public sealed class AuditScheduler : IDisposable
         _fullRangeDays = Math.Max(1, (int)Math.Round(_fullRange.TotalDays));
         _mode = mode;
         _lastCompletedUtc = lastCompletedUtc;
+        _lastScanEndUtc = lastScanEndUtc ?? lastCompletedUtc;
     }
 
     /// <summary>Configured cadence in hours (0 disables scheduling).</summary>
@@ -61,6 +64,12 @@ public sealed class AuditScheduler : IDisposable
     public DateTime? LastCompletedUtc
     {
         get { lock (_gate) { return _lastCompletedUtc; } }
+    }
+
+    /// <summary>End of the covered event window, independent of execution duration.</summary>
+    public DateTime? LastScanEndUtc
+    {
+        get { lock (_gate) { return _lastScanEndUtc; } }
     }
 
     public bool IsRunning => _loop is { IsCompleted: false };
@@ -100,7 +109,7 @@ public sealed class AuditScheduler : IDisposable
         DateTime nowUtc = DateTime.UtcNow;
         // Scheduled runs may continue from the previous scan; manual scans never do.
         (DateTime fromUtc, DateTime toUtc) = AuditSchedule.ComputeWindow(
-            ScanIntent.Scheduled, LastCompletedUtc, nowUtc, _fullRangeDays);
+            ScanIntent.Scheduled, LastScanEndUtc, nowUtc, _fullRangeDays);
 
         AuditResult result = await _pipeline
             .RunAsync(fromUtc, toUtc, _mode, persist: true, cancellationToken: cancellationToken)
@@ -109,6 +118,7 @@ public sealed class AuditScheduler : IDisposable
         lock (_gate)
         {
             _lastCompletedUtc = DateTime.UtcNow;
+            _lastScanEndUtc = result.ScanEnd;
         }
 
         return result;

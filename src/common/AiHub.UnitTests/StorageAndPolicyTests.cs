@@ -713,7 +713,7 @@ public sealed class StorageAndPolicyTests
         var service = new SecurityPolicyService(fixture.PathFor("data"), fixture.PathFor("modules"));
         string updated = await service.LoadTaskAgentsPolicyAsync("aihub", "security-audit");
         Assert.AreEqual(TaskPolicyDefaults.DefaultSecurityAuditInstructions, updated);
-        Assert.IsTrue(updated.Contains("`input.itemId`", StringComparison.Ordinal));
+        Assert.IsTrue(updated.Contains("envelope's itemId", StringComparison.Ordinal));
         Assert.IsFalse(updated.Contains("event-4", StringComparison.Ordinal));
         byte[] migrated = File.ReadAllBytes(path);
         service.EnsureDefaultPolicyExists();
@@ -742,7 +742,7 @@ public sealed class StorageAndPolicyTests
     private static string LegacyAuditPolicy()
     {
         // Reconstruct the prior shipped document without duplicating the entire audit policy.
-        string legacy = TaskPolicyDefaults.DefaultSecurityAuditInstructions.ReplaceLineEndings("\n")
+        string legacy = TaskPolicyDefaults.PreviousSecurityAuditInstructions.ReplaceLineEndings("\n")
             .Replace(
                 """
                 - Cite the events you used. Copy `eventRef` exactly from the primary event's

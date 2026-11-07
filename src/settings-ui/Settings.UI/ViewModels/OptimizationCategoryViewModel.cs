@@ -18,10 +18,12 @@ public sealed class OptimizationCategoryViewModel : Observable
     private int _processed;
     private bool _isEnabled;
     private bool _isExpanded;
+    private IReadOnlyList<TempFileInfo> _visibleItems;
 
     public OptimizationCategoryViewModel(IReadOnlyList<TempFileInfo> items, int approvedCount, Action execute)
     {
         Items = items;
+        _visibleItems = items;
         ApprovedCount = approvedCount;
         Name = items[0].Category;
         Path = string.IsNullOrEmpty(items[0].CacheRoot) ? System.IO.Path.GetDirectoryName(items[0].FilePath) : items[0].CacheRoot;
@@ -48,6 +50,27 @@ public sealed class OptimizationCategoryViewModel : Observable
     // Keep lazily loaded details alive so collapsing does not tear down the file list.
     public bool HasBeenExpanded { get; private set; }
     public IReadOnlyList<TempFileInfo> Items { get; }
+    public IReadOnlyList<TempFileInfo> VisibleItems => _visibleItems;
+    public bool HasVisibleItems => _visibleItems.Count > 0;
+    public int SelectedCount => Items.Count(item => item.ReviewState == "approved" && item.IsSelected);
+    public string SelectionSummary => string.Format(CultureInfo.CurrentCulture, Text("AIHub_Category_SelectedSummary"), SelectedCount, ApprovedCount);
+
+    public void ApplyFilter(Func<TempFileInfo, bool> predicate)
+    {
+        var visible = Items.Where(predicate).ToList();
+        if (!_visibleItems.SequenceEqual(visible))
+        {
+            _visibleItems = visible;
+            OnPropertyChanged(nameof(VisibleItems));
+            OnPropertyChanged(nameof(HasVisibleItems));
+        }
+    }
+
+    public void RefreshSelection()
+    {
+        OnPropertyChanged(nameof(SelectedCount));
+        OnPropertyChanged(nameof(SelectionSummary));
+    }
     public string Family => Name.StartsWith("VS Code", StringComparison.Ordinal) || Name == "Visual Studio indexes" ? "editors"
         : !string.IsNullOrEmpty(Items[0].DevelopmentRepository) ? "development"
         : Name.StartsWith(".NET workload", StringComparison.Ordinal) || Name.StartsWith("uv cache", StringComparison.Ordinal) || Name.StartsWith("NuGet", StringComparison.Ordinal) || Name.StartsWith("pip", StringComparison.Ordinal) || Name.StartsWith("npm", StringComparison.Ordinal) || Name.StartsWith("pnpm", StringComparison.Ordinal) ? "packages"

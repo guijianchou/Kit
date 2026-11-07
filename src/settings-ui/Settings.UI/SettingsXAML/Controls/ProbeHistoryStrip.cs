@@ -36,7 +36,6 @@ namespace Kit.Settings.UI.Controls
         private int _firstVisible;
         private int _visibleCount;
         private int _selectedIndex = -1;
-        private double _firstX;
         private double _step;
         private object? _renderedSource;
         private long _renderedRevision = -1;
@@ -174,14 +173,15 @@ namespace Kit.Settings.UI.Controls
             _visibleCount = Math.Min(samples.Count, slots);
             _firstVisible = samples.Count - _visibleCount;
             _step = slots > 1 ? (ActualWidth - BarWidth) / (slots - 1) : 0;
-            _firstX = slots > 1 ? (slots - _visibleCount) * _step : ActualWidth - BarWidth;
 
+            // Fill from the left as samples arrive. Once full, discard the oldest
+            // visible sample and keep the newest sample at the right edge.
             PathGeometry[] geometries = [new(), new(), new()];
             for (int offset = 0; offset < _visibleCount; offset++)
             {
                 var sample = samples[_firstVisible + offset];
                 double height = Math.Min(sample.BarHeight, ActualHeight);
-                double x = _firstX + (offset * _step) + (BarWidth / 2);
+                double x = (offset * _step) + (BarWidth / 2);
                 var figure = new PathFigure
                 {
                     StartPoint = new Point(x, ActualHeight - height + (BarWidth / 2)),
@@ -214,8 +214,8 @@ namespace Kit.Settings.UI.Controls
             }
 
             double x = args.GetCurrentPoint(this).Position.X;
-            int offset = _step > 0 ? (int)Math.Round((x - _firstX - (BarWidth / 2)) / _step) : 0;
-            double left = _firstX + (offset * _step);
+            int offset = _step > 0 ? (int)Math.Round((x - (BarWidth / 2)) / _step) : 0;
+            double left = offset * _step;
             if (offset >= 0 && offset < _visibleCount && x >= left && x <= left + BarWidth)
             {
                 SelectSample(_firstVisible + offset);

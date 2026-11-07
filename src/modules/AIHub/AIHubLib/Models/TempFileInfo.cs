@@ -26,6 +26,7 @@ public sealed partial class TempFileInfo : INotifyPropertyChanged
     public string DevelopmentRepository { get; set; } = string.Empty;
     public string BuildManifestPath { get; set; } = string.Empty;
     public string ReviewState { get; set; } = "pending";
+    public bool IsActionable => ReviewState == "approved" && Action is "delete" or "move";
     public string ExecutionError { get; set; } = string.Empty;
     public string ReviewLabel => System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase)
         ? ReviewState switch { "approved" => "AI 已通过", "skipped" => "AI 已跳过", "failed" => "AI 未完成", _ => "等待 AI 审核" }

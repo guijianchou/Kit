@@ -20,6 +20,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 ModuleType.UDPtest,
                 ModuleType.NetMap,
                 ModuleType.AIHub,
+                ModuleType.Winget,
             };
 
         public static IReadOnlyList<ModuleType> DashboardModules => ActiveModules;
@@ -40,6 +41,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 UDPtestSettings.ModuleName,
                 NetMapSettings.ModuleName,
                 AIHubSettings.ModuleName,
+                WingetSettings.ModuleName,
                 "General",
             };
 
@@ -52,6 +54,7 @@ namespace Kit.Settings.UI.Library.Helpers
                 UDPtestSettings.ModuleName,
                 NetMapSettings.ModuleName,
                 AIHubSettings.ModuleName,
+                WingetSettings.ModuleName,
             };
 
         public static bool IsActiveModule(ModuleType moduleType)

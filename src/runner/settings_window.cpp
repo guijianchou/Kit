@@ -848,6 +848,8 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
         return "NetMap";
     case ESettingsWindowNames::AiHub:
         return "AiHub";
+    case ESettingsWindowNames::Winget:
+        return "Winget";
     default:
     {
         Logger::error(L"Can't convert ESettingsWindowNames value={} to string", static_cast<int>(value));
@@ -890,6 +892,10 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     else if (value == "AiHub" || value == "AIHub")
     {
         return ESettingsWindowNames::AiHub;
+    }
+    else if (value == "Winget")
+    {
+        return ESettingsWindowNames::Winget;
     }
     else
     {

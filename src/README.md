@@ -1,6 +1,6 @@
 # Kit Source Code
 
-This source tree keeps the PowerToys project layout and its runner, module interface, settings and shared-library contracts. See the [project README](../README.md) or [中文说明](../README_zh.md) for the framework, six active modules, their lifetimes and build instructions.
+This source tree keeps the PowerToys project layout and its runner, module interface, settings and shared-library contracts. See the [project README](../README.md) or [中文说明](../README_zh.md) for the framework, seven active modules, their lifetimes and build instructions.
 
 ## Code Organization
 

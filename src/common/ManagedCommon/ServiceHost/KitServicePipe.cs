@@ -126,9 +126,11 @@ namespace ManagedCommon.ServiceHost
 
         private async Task HandleConnectionAsync(NamedPipeServerStream pipe, CancellationToken ct)
         {
+            // AutoFlush writes an encoding preamble during construction. A BOM can
+            // block both pipe peers before either starts reading the first message.
             using (pipe)
             using (var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true))
-            using (var writer = new StreamWriter(pipe, Encoding.UTF8, leaveOpen: true) { AutoFlush = true })
+            using (var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true })
             {
                 try
                 {
@@ -219,7 +221,7 @@ namespace ManagedCommon.ServiceHost
             }
 
             using var reader = new StreamReader(client, Encoding.UTF8, leaveOpen: true);
-            using var writer = new StreamWriter(client, Encoding.UTF8, leaveOpen: true) { AutoFlush = true };
+            using var writer = new StreamWriter(client, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
 
             var request = new KitPipeRequest
             {

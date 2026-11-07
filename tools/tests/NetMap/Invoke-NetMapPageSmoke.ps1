@@ -3,12 +3,14 @@ param(
     [string]$Configuration = 'Debug',
     [ValidateSet('en-US', 'zh-CN')]
     [string]$Language = 'en-US',
-    [switch]$LifecycleOnly
+    [switch]$LifecycleOnly,
+    [string]$RuntimeRoot
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
-$runtimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps"
+if (-not $RuntimeRoot) { $RuntimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
+$runtimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
 $reportRoot = Join-Path $repoRoot "TestResults\NetMap\$Language"
 $testName = 'NetMapPageSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $runtimeRoot ($testName + $_) }
@@ -29,7 +31,7 @@ $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Ho
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
 $backups = @{}
-foreach ($name in @('settings.json', 'settings-placement.json', 'log_settings.json', 'language.json')) {
+foreach ($name in @('settings.json', 'settings-placement.json', 'log_settings.json', 'language.json', 'NetMap\mtr-latest.json')) {
     $path = Join-Path $env:LOCALAPPDATA "Kit\$name"
     $backups[$path] = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllBytes($path) } else { $null }
 }

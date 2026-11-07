@@ -1,14 +1,18 @@
 using System;
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Kit.Settings.UI.Controls;
 using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Kit.Settings.UI.Views;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using ShapePath = Microsoft.UI.Xaml.Shapes.Path;
 using UDPtestLib.Core;
 
@@ -37,6 +41,7 @@ internal static class UDPtestRenderingChecks
         }
 
         Require(page.IsLoaded && canvas.ActualWidth > 0 && canvas.ActualHeight > 0, "The disabled health chart did not complete layout.");
+        await CheckHistoryDirection(canvas);
         var line = viewModel.Lines[0];
         viewModel.SelectedLine = line;
         viewModel.SetPageActive(false);
@@ -112,6 +117,58 @@ internal static class UDPtestRenderingChecks
         Require(!ReferenceEquals(previousGeometry, curve.Data), "New data did not invalidate the chart cache.");
         await DrainLowPriority();
         File.AppendAllText(report, "UDPtest rendering: hidden sampling, deferred activation, one batch, bounded history, window expiry and geometry reuse PASS\n");
+        File.AppendAllText(report, "UDPtest status: left-to-right growth, chronological overflow and narrow-width drawing PASS\n");
+    }
+
+    private static async Task CheckHistoryDirection(Canvas host)
+    {
+        var samples = new ObservableCollection<StatusBarViewModel>();
+        var strip = new ProbeHistoryStrip { Width = 68, Height = 20, ItemsSource = samples };
+        host.Children.Add(strip);
+        try
+        {
+            for (int attempt = 0; attempt < 30 && (!strip.IsLoaded || strip.ActualWidth != 68); attempt++)
+            {
+                await Task.Delay(50);
+            }
+
+            Require(strip.IsLoaded && strip.ActualWidth == 68, "The status strip fixture did not complete layout.");
+            var paths = ((Canvas)strip.Content).Children.OfType<ShapePath>().ToArray();
+            Require(paths.Length == 3, "Status history must retain its fixed three-path renderer.");
+            samples.Add(StatusBarViewModel.FromProbeResult(false, 0, "oldest"));
+            var first = ((PathGeometry)paths[2].Data).Figures.Single();
+            Require(Math.Abs(first.StartPoint.X - 2.5) < 0.01, "A new status history must begin at the left edge.");
+
+            samples.Add(StatusBarViewModel.FromProbeResult(true, 20, "second"));
+            var previous = ((PathGeometry)paths[2].Data).Figures.Single();
+            var next = ((PathGeometry)paths[0].Data).Figures.Single();
+            Require(Math.Abs(previous.StartPoint.X - first.StartPoint.X) < 0.01 && next.StartPoint.X > previous.StartPoint.X,
+                "Appending a sample must grow the status history rightward without moving the first sample.");
+
+            for (int index = 2; index < 11; index++)
+            {
+                samples.Add(StatusBarViewModel.FromProbeResult(true, 20, "sample " + index));
+            }
+
+            samples.Add(StatusBarViewModel.FromProbeResult(true, 300, "newest"));
+            Require(((PathGeometry)paths[2].Data).Figures.Count == 0, "Overflow did not discard the oldest visible failure.");
+            Require(paths.Sum(path => ((PathGeometry)path.Data).Figures.Count) == 10, "Overflow must draw only the ten visible slots.");
+            Require(Math.Abs(((PathGeometry)paths[1].Data).Figures.Single().StartPoint.X + 2.5 - strip.ActualWidth) < 0.01,
+                "A full status history must keep its newest sample at the right edge.");
+
+            strip.Width = 5;
+            host.UpdateLayout();
+            await DrainLowPriority();
+            Require(strip.ActualWidth == 5, "The status strip did not resize to one slot.");
+            Require(paths.Sum(path => ((PathGeometry)path.Data).Figures.Count) == 1,
+                "A one-slot status history must show only its newest sample.");
+            Require(Math.Abs(((PathGeometry)paths[1].Data).Figures.Single().StartPoint.X - 2.5) < 0.01,
+                "The newest sample must remain inside a narrow status history.");
+        }
+        finally
+        {
+            host.Children.Remove(strip);
+        }
     }
 
     private static LineMetricSnapshot Snapshot(string lineId, DateTimeOffset timestamp, double rtt = 20) => new(

@@ -77,6 +77,7 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(UDPtestSettings))]
     [JsonSerializable(typeof(NetMapSettings))]
     [JsonSerializable(typeof(AIHubSettings))]
+    [JsonSerializable(typeof(WingetSettings))]
 
     // Properties Classes
     [JsonSerializable(typeof(AIHubProperties))]
@@ -119,6 +120,7 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(LocalserverProperties))]
     [JsonSerializable(typeof(UDPtestProperties))]
     [JsonSerializable(typeof(NetMapProperties))]
+    [JsonSerializable(typeof(WingetProperties))]
 
     // Base Property Types (used throughout settings)
     [JsonSerializable(typeof(BoolProperty))]
@@ -163,6 +165,7 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(SndUDPtestSettings))]
     [JsonSerializable(typeof(SndNetMapSettings))]
     [JsonSerializable(typeof(SndAIHubSettings))]
+    [JsonSerializable(typeof(SndWingetSettings))]
 
     // IPC Message Generic Wrapper Types (SndModuleSettings<T>)
     [JsonSerializable(typeof(SndModuleSettings<SndAwakeSettings>))]
@@ -171,6 +174,7 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(SndModuleSettings<SndUDPtestSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndNetMapSettings>))]
     [JsonSerializable(typeof(SndModuleSettings<SndAIHubSettings>))]
+    [JsonSerializable(typeof(SndModuleSettings<SndWingetSettings>))]
 
     public partial class SettingsSerializationContext : JsonSerializerContext
     {

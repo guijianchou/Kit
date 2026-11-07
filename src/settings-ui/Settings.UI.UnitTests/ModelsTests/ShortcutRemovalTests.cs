@@ -82,6 +82,7 @@ public class ShortcutRemovalTests
             new UDPtestSettings(),
             new NetMapSettings(),
             new AIHubSettings(),
+            new WingetSettings(),
         };
 
         foreach (var module in settings)

@@ -6,7 +6,7 @@
 
 ## 1. 支持范围与上游兼容边界
 
-Kit 当前活动模块为 **Awake、LightSwitch、Localserver、UDPtest、AIHub**。本文中的“插件”默认指由 Runner 加载的原生模块接口 DLL，以及对应业务实现。Awake、LightSwitch 使用独立业务进程；Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中；UDPtest 采用内置高并发探测 Worker；AI Hub 则包含原生模块接口、专属独立设置界面及底层共享 `Kit.AiHub` 任务引擎。
+Kit 当前活动模块为 **Awake、LightSwitch、Localserver、UDPtest、AIHub、NetMap、Winget**。本文中的“插件”默认指由 Runner 加载的原生模块接口 DLL，以及对应业务实现。Awake、LightSwitch 使用独立业务进程；Localserver 的管理逻辑目前运行在 Settings 页面的 ViewModel 中；UDPtest 采用内置高并发探测 Worker；AI Hub 则包含原生模块接口、专属独立设置界面及底层共享 `Kit.AiHub` 任务引擎。
 
 | 接入方式 | 当前支持程度 |
 | --- | --- |
@@ -19,7 +19,7 @@ Kit 当前活动模块为 **Awake、LightSwitch、Localserver、UDPtest、AIHub*
 
 [Kit 接口头](src/modules/interface/kit_module_interface.h)（保留旧 [powertoy_module_interface.h](src/modules/interface/powertoy_module_interface.h) 重定向头供平滑过渡）已按[上游接口头](source/PowerToys/src/modules/interface/powertoy_module_interface.h) 恢复 `keep_track_of_pressed_win_key()` 和 `milliseconds_win_key_must_be_pressed()` 的原始位置，但不恢复 Win 键长按轮询。`tools/tests/NativeModules/ModuleAbiSmoke.cpp` 分别使用上游头编译 DLL、Kit 头编译宿主，验证全部虚函数槽位、热键结构体及销毁调用。该测试只证明这一契约在当前 x64 工具链下对齐，不代表上游所有插件的运行依赖都已提供。
 
-[Runner](src/runner/main.cpp) 的 `KitKnownModules` 与 [KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 是活动模块入口。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表；Kit 维护 5 个活动模块，未实现快捷动作的模块自动回退至设置页。
+[Runner](src/runner/main.cpp) 的 `KitKnownModules` 与 [KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 是活动模块入口。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表；Kit 维护 7 个活动模块，未实现快捷动作的模块自动回退至设置页。
 
 原生 DLL 与 Runner 共享进程和权限。Worker 隔离能限制业务进程崩溃的影响，**不构成不可信插件沙箱**；DLL 初始化、回调和销毁仍能影响主程序。
 

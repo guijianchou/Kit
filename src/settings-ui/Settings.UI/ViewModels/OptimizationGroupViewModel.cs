@@ -44,6 +44,13 @@ public sealed class OptimizationGroupViewModel : Observable
     public IReadOnlyList<OptimizationGroupViewModel> Projects { get; init; } = Array.Empty<OptimizationGroupViewModel>();
     public bool HasProjects => Projects.Count > 0;
     public bool HasDirectCategories => !HasProjects;
+    public bool HasVisibleItems => Categories.Any(category => category.HasVisibleItems);
+    public int SelectedCount => Categories.Sum(category => category.SelectedCount);
+    public void RefreshSelection()
+    {
+        OnPropertyChanged(nameof(SelectedCount));
+        OnPropertyChanged(nameof(HasVisibleItems));
+    }
     public string Location { get; init; } = string.Empty;
     public bool IsExpanded
     {

@@ -72,7 +72,7 @@ public sealed class OptimizationAnalysisTests
         Assert.IsTrue(result.IsSuccess, result.Describe(false) + " " + string.Join("; ", progress.Messages));
         Assert.AreEqual(1, result.Items.Count);
         string capture = await System.IO.File.ReadAllTextAsync(System.IO.Path.Combine(fixture.RequestRoot, "capture.json"));
-        StringAssert.Contains(capture, "Mandatory AI review contract");
+        StringAssert.Contains(capture, "Review a fixed candidate snapshot");
         Assert.IsFalse(capture.Contains("private-name", StringComparison.Ordinal));
     }
 

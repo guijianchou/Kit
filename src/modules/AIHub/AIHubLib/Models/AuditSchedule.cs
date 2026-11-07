@@ -98,7 +98,8 @@ public static class AuditSchedule
             return null;
         }
 
-        DateTime anchor = lastScanUtc ?? nowUtc;
+        if (lastScanUtc is null) return nowUtc;
+        DateTime anchor = lastScanUtc.Value;
         DateTime due = anchor.AddHours(NormalizeIntervalHours(intervalHours));
 
         // An overdue schedule should run now rather than in the past.

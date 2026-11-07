@@ -1,8 +1,52 @@
-﻿# Changelog
+# Changelog
 
 **Language / 语言:** English | [中文](#更新日志)
 
 ## English
+
+### 3.4.5
+
+- Centered WinGet in the shared 1000-DIP plugin layout with balanced side margins; Check daily and Windows notifications now stay vertically stacked.
+- NetMap AI checks now explain cancellations caused by route changes, reject late results from an old route, and distinguish timeout, endpoint and output-validation failures with sanitized diagnostics.
+- Increased NetMap's per-route analysis budget to 300 seconds and total budget to 600 seconds while preserving immediate caller cancellation.
+
+### 3.4.4
+
+- Fixed slow first-time Discover searches by returning lightweight catalog matches before resolving package versions and installer metadata. Unresolved versions and installed state are explicit; details and batch preparation resolve and validate the selected identities before confirmation.
+- Improved discovery and package details feedback, retaining results and selection while work is in progress. Added bounded search waiting and operation diagnostics without changing native WinGet installation and UAC behavior.
+- Reworked the expanded WinGet preferences with aligned setting cards, responsive spacing and bounded scrolling; replaced the Details question mark with a document icon. Restored left-to-right growth of UDP Test status history while retaining its cached renderer.
+- Set the AI service context window explicitly to 256,000 tokens for both Codex and Pi kernels.
+
+### 3.4.3
+
+- Fixed WinGet result-list flicker by publishing only changed UI values, retaining package/queue rows and applying list templates only when the view changes.
+- Ordered workspaces as Updates, Installed and Discover. Each workspace remembers its own filters, sources, sorting and view; repeated searches retain the previous results until a replacement succeeds.
+- Kept operation summaries and results visible after completion, exposed history directly, and added bounded native installer output with terminal control-sequence filtering and throttled updates.
+
+### 3.4.2
+
+- Rebuilt WinGet as Software Updates, Discover Packages and Installed Packages workspaces with source filters, checkbox selection, sorting, detailed/compact/grid views, command bars and dialogs.
+- Fixed the actual-window content offset and right clipping by constraining the workspace to its viewport; full-shell regression tests cover narrow and wide windows, long metadata, enabled and busy states.
+- Added explicit confirmed batch install/update/uninstall with a bounded serial service queue, native WinGet options/UAC, persistent operation history, cancellation of pending items and restart recovery without replay.
+- Added persistent ignored updates, CSV export and standard WinGet selected-package bundle export. Unknown installed versions require opt-in and are excluded from default notifications.
+
+### 3.4.1
+
+- Reworked WinGet around Updates and Install software, with explicit catalog search, local filtering, version columns and a responsive details panel in the WinUI 3 + Mica shell.
+- Run explicit installs and upgrades through native WinGet with normal installer/UAC prompts, exact package identity/version and package-agreement confirmation. Preserve running-installer state through cancellation and recheck interrupted installations before retrying.
+- Regenerated the complete Winget Assets set from the supplied artwork, including multi-resolution icons embedded in the service executable and native module.
+- Moved AI Hub's module switch above its tabs, aligned page content with other plugins, and stretched optimization groups and headers to the available width.
+
+### 3.4.0
+
+- Refined AI Hub with fixed task navigation, independent scroll positions, searchable and selectable optimization candidates, and one confirmation preview for every execution entry point.
+- Added cancellable optimization execution and bounded local action history (20 runs, up to 500 item details each), plus report copying. Selection changes preserve expanded groups; development-cache Git checks are batched.
+- Updated the global and three task policies with exact-default migration, corrected the self-test output contract, and added independent policy drafts that can be saved while AI is disabled. Fixed audit snapshot/report races and incremental scan watermarks.
+- Added the WinGet module, disabled by default, with a cached WinUI 3 + Mica settings page and matching module/service artwork.
+- Added local WinGet detection, manual and daily update checks, version comparison, publisher release notes and Windows update notifications. This version supports the official winget community source.
+- Added explicit verified downloads under `%TEMP%\Kit\Winget` and conservative user-scope installation. Updates that require elevation or lack reliable installer metadata provide a manual command. Package agreements require explicit confirmation; no updates install automatically.
+- Added an independent Runner-owned service, persisted scheduling and results, cancellable operations, notification deduplication and bounded owned-cache cleanup.
+- Fixed the shared service-pipe UTF-8 preamble handshake deadlock discovered by real WinGet service testing. Staged executables now retain normal-user integrity instead of inheriting a Low directory label.
 
 ### 3.3.5
 
@@ -872,6 +916,50 @@
 ## 中文
 
 ## 更新日志
+
+### 3.4.5
+
+- WinGet 统一为最大 1000 DIP 的居中插件布局，左右对称留白；每日检查与 Windows 通知固定上下排列。
+- NetMap AI 检查在线路变化导致取消时显示原因，拦截旧线路的迟到结果，并区分超时、端点及输出校验错误，补充脱敏诊断日志。
+- NetMap 单路分析时限增至 300 秒、总预算增至 600 秒，保留即时主动取消。
+
+### 3.4.4
+
+- 修复 Discover 首次搜索缓慢：先返回轻量软件目录结果，再按需查询版本和安装元数据。界面明确标注未解析的版本与安装状态，详情和批量准备阶段在确认前解析并校验选中身份。
+- 完善搜索及软件详情的加载反馈，处理期间保留结果与选择；增加有界搜索等待和操作诊断，保持原生 WinGet 安装与 UAC 行为。
+- 整理 WinGet 展开设置区的卡片对齐、响应式留白与有界滚动，Details 改用文档图标；UDP Test 状态历史恢复从左向右增长，保留绘制缓存优化。
+- AI service 的 Codex 与 Pi 内核统一显式使用 256,000 tokens 上下文窗口。
+
+### 3.4.3
+
+- 修复 WinGet 结果列表闪烁：只通知变化的界面值，保留软件和队列行，仅在视图切换时设置列表模板。
+- 页签调整为「更新、已安装、发现软件」，分别记忆筛选、来源、排序和视图；重新搜索成功前保留原结果。
+- 操作完成后保留摘要和结果，提供直接可见的历史入口；补充限长、过滤终端控制序列并节流刷新的原生安装输出。
+
+### 3.4.2
+
+- 将 WinGet 重构为软件更新、发现软件和已安装软件三个工作区，加入来源筛选、多选、排序、详细/紧凑/网格视图、命令栏及详情弹窗。
+- 修复实机窗口内内容左侧偏移和右侧裁切，工作区受视口约束；完整外壳回归覆盖宽窄窗口、长文本及启用/忙碌状态。
+- 加入明确确认后的批量安装、更新、卸载，使用有上限的串行服务队列和原生 WinGet 选项/UAC；支持历史记录、取消待执行项和重启后只读恢复，不自动重放。
+- 加入持久化忽略更新、CSV 导出和标准 WinGet 所选软件清单导出；未知已安装版本默认隐藏且不通知，需主动选择后才参与升级。
+
+### 3.4.1
+
+- WinGet 收敛为“更新 / 安装软件”两个标签，增加显式搜索、本地筛选、版本列与响应式详情面板，沿用 WinUI 3 + Mica。
+- 安装与升级交给原生 WinGet，按需显示安装器和 UAC；确认精确软件版本与协议，并正确处理取消、安装中断和后续状态检查。
+- 根据提供的图片补全 Winget Assets，统一插件入口、原生模块及服务程序的多尺寸图标。
+- AI Hub 总开关移至标签栏上方，页面与其他插件对齐，修复优化分组及标题未铺满的问题。
+
+### 3.4.0
+
+- 优化 AI Hub 的固定任务导航、独立滚动位置、候选文件搜索与勾选；所有执行入口统一先核对操作预览。
+- 新增可取消的优化执行与本地操作历史（最多 20 次、每次最多 500 条详情），支持复制报告。选择文件时保留分组展开状态，开发缓存的 Git 检查改为批处理。
+- 更新全局策略与三份任务策略，仅迁移精确匹配的旧默认模板；修正自检输出契约，支持独立草稿与 AI 关闭时保存策略。修复审计快照/报告竞态及增量扫描水位。
+- 新增默认关闭的 WinGet 插件，沿用缓存的 WinUI 3 + Mica 设置页，模块和后台服务均使用配套图标。
+- 支持本机 WinGet 状态检测、手动与每日更新检查、版本对比、发行说明及 Windows 更新通知。首版支持官方 winget 社区源。
+- 支持手动下载并校验到 `%TEMP%\Kit\Winget`，以及明确无需提权的用户级安装；需要管理员权限或安装元数据不明确时提供手动命令。软件协议需明确确认，不自动安装更新。
+- 新增随 Runner 启停的独立后台服务，持久化调度与检查结果，支持操作取消、通知去重和有界临时缓存清理。
+- 修复真实 WinGet 服务测试发现的共享服务管道 UTF-8 BOM 握手死锁；打包后的可执行文件保持正常用户完整性，避免继承目录的 Low 标记。
 
 ### 3.3.5
 

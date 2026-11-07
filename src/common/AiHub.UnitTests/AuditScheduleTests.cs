@@ -56,7 +56,7 @@ public sealed class AuditScheduleTests
     {
         Assert.AreEqual(Now.AddHours(23), AuditSchedule.NextRunUtc(Now.AddHours(-1), Now, 24));
         Assert.AreEqual(Now, AuditSchedule.NextRunUtc(Now.AddHours(-48), Now, 24));
-        Assert.AreEqual(Now.AddHours(24), AuditSchedule.NextRunUtc(null, Now, 24));
+        Assert.AreEqual(Now, AuditSchedule.NextRunUtc(null, Now, 24));
     }
 
     [TestMethod]

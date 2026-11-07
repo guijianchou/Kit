@@ -15,6 +15,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MSTest" />
+    <EmbeddedResource Include="Fixtures\Policies\global-v1.md" />
 
     <!-- The audit reads the Windows event log, which needs this package's RID-specific
          runtime asset. A self-contained test output does not copy it by default, so the

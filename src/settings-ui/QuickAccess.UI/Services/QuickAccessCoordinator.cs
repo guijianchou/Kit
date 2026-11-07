@@ -51,6 +51,7 @@ internal sealed class QuickAccessCoordinator : IQuickAccessCoordinator, IDisposa
             ModuleType.UDPtest => SettingsDeepLink.SettingsWindow.UDPtest,
             ModuleType.NetMap => SettingsDeepLink.SettingsWindow.NetMap,
             ModuleType.AIHub => SettingsDeepLink.SettingsWindow.AIHub,
+            ModuleType.Winget => SettingsDeepLink.SettingsWindow.Winget,
             _ => SettingsDeepLink.SettingsWindow.Dashboard,
         };
 

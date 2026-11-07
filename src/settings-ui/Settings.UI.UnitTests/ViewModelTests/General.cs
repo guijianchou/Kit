@@ -26,7 +26,7 @@ namespace ViewModelTests
     public class General
     {
         public const string GeneralSettingsFileName = "Test\\GeneralSettings";
-        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AIHub", "UDPtest", "NetMap" };
+        private static readonly string[] KitActiveEnabledModuleKeys = { "Awake", "LightSwitch", "Localserver", "AIHub", "UDPtest", "NetMap", "Winget" };
 
         private Mock<SettingsUtils> mockGeneralSettingsUtils;
 
@@ -590,10 +590,10 @@ namespace ViewModelTests
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
 
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.NetMap, ModuleType.AIHub },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.NetMap, ModuleType.AIHub, ModuleType.Winget },
                 KitModuleCatalog.ActiveModules.ToArray());
             CollectionAssert.AreEqual(
-                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.NetMap, ModuleType.AIHub },
+                new[] { ModuleType.Awake, ModuleType.LightSwitch, ModuleType.Localserver, ModuleType.UDPtest, ModuleType.NetMap, ModuleType.AIHub, ModuleType.Winget },
                 KitModuleCatalog.DashboardModules.ToArray());
             CollectionAssert.AreEqual(
                 new[] { ModuleType.LightSwitch },
@@ -602,6 +602,7 @@ namespace ViewModelTests
             Assert.IsFalse(KitModuleCatalog.IsActiveModule(ModuleType.ImageResizer));
             Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.AIHub));
             Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.NetMap));
+            Assert.IsTrue(KitModuleCatalog.IsActiveModule(ModuleType.Winget));
 
             StringAssert.Contains(dashboardViewModel, "KitModuleCatalog.DashboardModules");
             Assert.IsFalse(dashboardViewModel.Contains("foreach (ModuleType moduleType in Enum.GetValues<ModuleType>())", StringComparison.Ordinal));
@@ -653,6 +654,7 @@ namespace ViewModelTests
             Assert.AreEqual(true, enabled.GetProperty("AIHub").GetBoolean());
             Assert.AreEqual(true, enabled.GetProperty("UDPtest").GetBoolean());
             Assert.AreEqual(false, enabled.GetProperty("NetMap").GetBoolean());
+            Assert.AreEqual(false, enabled.GetProperty("Winget").GetBoolean());
             Assert.IsFalse(enabled.TryGetProperty("PowerDisplay", out _));
         }
 

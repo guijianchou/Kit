@@ -3,8 +3,7 @@ namespace Kit.AiHub.Engine;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Contract;
@@ -49,8 +48,8 @@ public sealed record SelfTestResult(
 /// </summary>
 /// <remarks>
 /// Runs a single trivial probe through the same engine, policy and validation path a plugin
-/// uses. It exists so a failure can be attributed: if the self-test passes, the service is
-/// sound and a plugin problem lies elsewhere; if it fails, the message names the stage.
+/// uses. Success verifies this route and probe contract at this moment; it does not prove
+/// that other plugin inputs, policies or routes will succeed.
 /// </remarks>
 public static class AiServiceSelfTest
 {
@@ -93,8 +92,8 @@ public static class AiServiceSelfTest
                 SelfTestPolicy.PluginId,
                 SelfTestPolicy.TaskId,
                 items,
-                AiTaskReport.CreateSchema(AiHubJsonContext.Default.SelfTestInput),
-                new AiTaskOptions { TimeoutSeconds = 120, Language = "en-US" },
+                CreateSchema(),
+                new AiTaskOptions { TimeoutSeconds = 120, Language = "en-US", BatchSize = 2 },
                 cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
@@ -106,12 +105,11 @@ public static class AiServiceSelfTest
             }
 
             int findings = result.Payload?.Findings?.Count ?? 0;
-            if (findings == 0)
+            if (result.Payload is null || !ValidateProbe(result.Payload))
             {
-                // A valid but empty answer means the model ignored the chain contract. That is
-                // worth reporting distinctly: the transport worked, the instruction did not.
+                // A successful transport still needs the exact diagnostic response contract.
                 return new SelfTestResult(false, readiness, stopwatch.Elapsed, result.UsedRoute, result.UsedModel, 0,
-                    "The service answered but returned no finding; the chain instructions were not followed.");
+                    "The service answered but did not return exactly the ping finding with no actions; the self-test instructions were not followed.");
             }
 
             return new SelfTestResult(true, readiness, stopwatch.Elapsed, result.UsedRoute, result.UsedModel, findings, null);
@@ -127,4 +125,22 @@ public static class AiServiceSelfTest
             return new SelfTestResult(false, readiness, stopwatch.Elapsed, string.Empty, string.Empty, 0, ex.Message);
         }
     }
+
+    private static AiTaskSchema<SelfTestInput, AiTaskReport> CreateSchema()
+    {
+        var shared = AiTaskReport.CreateSchema(AiHubJsonContext.Default.SelfTestInput);
+        return new()
+        {
+            InputTypeInfo = shared.InputTypeInfo,
+            OutputTypeInfo = shared.OutputTypeInfo,
+            AllowedActions = new HashSet<string>(StringComparer.Ordinal),
+            ValidateOutput = (report, ids) => shared.ValidateOutput(report, ids) && ValidateProbe(report),
+        };
+    }
+
+    private static bool ValidateProbe(AiTaskReport report) => report.Findings is { Count: 1 }
+        && report.Actions is { Count: 0 }
+        && report.Findings[0] is { ItemId: "item-000001", Key: "self-test", Severity: "low" } finding
+        && new[] { finding.TitleEn, finding.TitleZh, finding.DescriptionEn, finding.DescriptionZh, finding.RecommendationEn, finding.RecommendationZh }
+            .All(value => !string.IsNullOrWhiteSpace(value) && value.Length <= 512 && !value.Any(char.IsControl));
 }

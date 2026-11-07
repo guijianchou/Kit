@@ -16,6 +16,7 @@ namespace Kit.Settings.UI.Library
         private const string UDPtestKey = "UDPtest";
         private const string NetMapKey = "NetMap";
         private const string AIHubKey = "AIHub";
+        private const string WingetKey = "Winget";
 
         public override EnabledModules Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -72,6 +73,9 @@ namespace Kit.Settings.UI.Library
                     case "AiHub":
                         modules.AiHub = isEnabled;
                         break;
+                    case WingetKey:
+                        modules.Winget = isEnabled;
+                        break;
                     default:
                         modules.AdditionalModules[propertyName] = isEnabled;
                         break;
@@ -93,6 +97,7 @@ namespace Kit.Settings.UI.Library
             writer.WriteBoolean(UDPtestKey, value.UDPtest);
             writer.WriteBoolean(NetMapKey, value.NetMap);
             writer.WriteBoolean(AIHubKey, value.AiHub);
+            writer.WriteBoolean(WingetKey, value.Winget);
             foreach (var module in value.AdditionalModules)
             {
                 writer.WriteBoolean(module.Key, module.Value);

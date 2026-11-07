@@ -246,8 +246,16 @@ public sealed class CacheCleanupService
         }
     }
 
-    public (bool Success, string? Error) CleanupItem(TempFileInfo item)
+    public (bool Success, string? Error) CleanupItem(TempFileInfo item, CancellationToken cancellationToken = default) =>
+        CleanupItem(item, ignoredPaths: null, allowImplicitMarkerDeletion: true, cancellationToken);
+
+    internal IReadOnlySet<string> PrepareDevelopmentBatch(IReadOnlyList<TempFileInfo> items, CancellationToken cancellationToken) =>
+        _developmentRoot == null ? new HashSet<string>(StringComparer.OrdinalIgnoreCase) :
+        DevelopmentCacheScanner.CollectIgnoredPaths(items, _developmentRoot, cancellationToken);
+
+    internal (bool Success, string? Error) CleanupItem(TempFileInfo item, IReadOnlySet<string>? ignoredPaths, bool allowImplicitMarkerDeletion, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             var file = new FileInfo(item.FilePath);
@@ -255,7 +263,7 @@ public sealed class CacheCleanupService
             bool development = false;
             if (!inScope && _developmentRoot != null)
             {
-                development = DevelopmentCacheScanner.IsEligible(file, _developmentRoot, item.DevelopmentRepository, item.BuildManifestPath);
+                development = DevelopmentCacheScanner.IsEligible(file, _developmentRoot, item.DevelopmentRepository, item.BuildManifestPath, ignoredPaths, cancellationToken);
                 inScope = development;
             }
             if (item.Action != "delete" || item.Risk == RiskLevel.High || !inScope ||
@@ -272,12 +280,16 @@ public sealed class CacheCleanupService
                 string markerPath = Path.Combine(package, ".nupkg.metadata");
                 if (!string.Equals(file.FullName, markerPath, StringComparison.OrdinalIgnoreCase) && File.Exists(markerPath))
                 {
+                    if (!allowImplicitMarkerDeletion)
+                        return (false, "Include the package restore marker in the reviewed selection before deleting its payload; scan again.");
                     if (!_packageMarkers.TryGetValue(markerPath, out var marker) || !OptimizationFileSafety.IsEligible(new FileInfo(markerPath), MinimumAge, marker))
                         return (false, "Package changed since scanning; scan again.");
+                    cancellationToken.ThrowIfCancellationRequested();
                     var invalidated = _delete(markerPath);
                     if (!invalidated.Success) return invalidated;
                 }
             }
+            cancellationToken.ThrowIfCancellationRequested();
             var result = _delete(file.FullName);
             if (result.Success)
             {
@@ -342,12 +354,16 @@ public sealed class CacheCleanupService
     {
         int succeeded = 0;
         int failed = 0;
-        foreach (var item in items)
+        foreach (var batch in items.Where(item => item.IsSelected).Chunk(128))
         {
-            if (cancellationToken.IsCancellationRequested) break;
-            if (!item.IsSelected) continue;
-            if (CleanupItem(item).Success) succeeded++;
-            else failed++;
+            cancellationToken.ThrowIfCancellationRequested();
+            var ignoredPaths = PrepareDevelopmentBatch(batch, cancellationToken);
+            foreach (var item in batch)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (CleanupItem(item, ignoredPaths, allowImplicitMarkerDeletion: true, cancellationToken).Success) succeeded++;
+                else failed++;
+            }
         }
 
         return (succeeded, failed);

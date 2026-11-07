@@ -62,6 +62,7 @@ constexpr KitModuleCatalogEntry KitModuleCatalog[] = {
     { L"UDPtest", L"Kit.UDPtestModuleInterface.dll" },
     { L"NetMap", L"Kit.NetMapModuleInterface.dll" },
     { L"AIHub", L"Kit.AIHubModuleInterface.dll" },
+    { L"Winget", L"Kit.WingetModuleInterface.dll" },
 };
 
 std::wstring_view get_module_filename_for_key(std::wstring_view key);

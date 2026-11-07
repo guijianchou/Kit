@@ -15,6 +15,7 @@ using Kit.AiHub.Storage;
 public sealed class SecurityPolicyService
 {
     public const int MaximumPolicyBytes = 64 * 1024;
+    public const string CurrentTemplateVersion = "2";
     private static readonly UTF8Encoding PolicyEncoding = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private readonly AiHubStorageFiles _files;
     private readonly string _pluginPackagesDirectory;
@@ -41,7 +42,7 @@ public sealed class SecurityPolicyService
     }
 
     /// <summary>
-    /// Creates the global policy only when it is missing.
+    /// Creates missing policies and migrates only exact known shipped defaults.
     /// </summary>
     public void EnsureDefaultPolicyExists() => _files.Run(() =>
     {
@@ -62,6 +63,19 @@ public sealed class SecurityPolicyService
             _files.WriteAtomic("security.md", EncodePolicy(GetDefaultPolicyContent()), MaximumPolicyBytes);
         }
 
+        try
+        {
+            byte[]? globalBytes = AiHubStorageFiles.ReadOptionalFile(GlobalSecurityPolicyPath, MaximumPolicyBytes);
+            if (globalBytes is not null && PolicyHash(DecodePolicy(globalBytes)) == "56C817EB2DAEAEC09D5C51000B01C8D2B99D3263EC7D8F34DABEBFDCDC6D8B95")
+            {
+                _files.WriteAtomic("security.md", EncodePolicy(GetDefaultPolicyContent()), MaximumPolicyBytes);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidDataException or DecoderFallbackException)
+        {
+            // Leave malformed custom content intact; explicit loading reports the error.
+        }
+
         EnsureTaskDefaultPolicy("security-audit", TaskPolicyDefaults.DefaultSecurityAuditInstructions);
         EnsureTaskDefaultPolicy("system-optimization", TaskPolicyDefaults.DefaultSystemOptimizationInstructions);
 
@@ -78,7 +92,7 @@ public sealed class SecurityPolicyService
             string relativePath = Path.Combine("chains", taskId, "AGENTS.md");
             _files.WriteAtomic(relativePath, EncodePolicy(defaultContent), MaximumPolicyBytes);
         }
-        else if (taskId is "security-audit" or "system-optimization")
+        else
         {
             byte[]? bytes = AiHubStorageFiles.ReadOptionalFile(path, MaximumPolicyBytes);
             if (bytes == null)
@@ -89,14 +103,19 @@ public sealed class SecurityPolicyService
             string content = PolicyEncoding.GetString(bytes).TrimStart('\uFEFF').ReplaceLineEndings("\n").Trim();
             // Hash only the exact shipped audit policy, normalized for BOM and line endings.
             // Never replace a user-edited policy merely because it contains old example IDs.
-            bool isLegacy = taskId == "security-audit"
-                ? Convert.ToHexString(SHA256.HashData(PolicyEncoding.GetBytes(content))) ==
-                    "25EBA8FF5CA6E01BC5F80D394729D84196469C9E2FE7B2BA41356F98C5C8C099"
-                : content == TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
+            bool isLegacy = taskId switch
+            {
+                "security-audit" => PolicyHash(content) == "25EBA8FF5CA6E01BC5F80D394729D84196469C9E2FE7B2BA41356F98C5C8C099"
+                    || content == NormalizePolicy(TaskPolicyDefaults.PreviousSecurityAuditInstructions),
+                "system-optimization" => content == TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.PreviousSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.AiReviewedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.GroupedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
-                    content == TaskPolicyDefaults.ProjectSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim();
+                    content == TaskPolicyDefaults.ProjectSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
+                    content == NormalizePolicy(TaskPolicyDefaults.SnapshotSystemOptimizationInstructions),
+                SelfTestPolicy.TaskId => content == NormalizePolicy(SelfTestPolicy.PreviousInstructions),
+                _ => false,
+            };
             if (isLegacy)
             {
                 _files.WriteAtomic(Path.Combine("chains", taskId, "AGENTS.md"), EncodePolicy(defaultContent), MaximumPolicyBytes);
@@ -143,11 +162,7 @@ public sealed class SecurityPolicyService
     public void ResetTaskPolicy(string taskId)
     {
         ValidateId(taskId, nameof(taskId));
-        string defaultContent = taskId.Equals("security-audit", StringComparison.OrdinalIgnoreCase)
-            ? TaskPolicyDefaults.DefaultSecurityAuditInstructions
-            : taskId.Equals("system-optimization", StringComparison.OrdinalIgnoreCase)
-                ? TaskPolicyDefaults.DefaultSystemOptimizationInstructions
-                : string.Empty;
+        string defaultContent = GetDefaultTaskPolicy(taskId);
 
         if (!string.IsNullOrEmpty(defaultContent))
         {
@@ -155,6 +170,12 @@ public sealed class SecurityPolicyService
             _files.Run(() => _files.WriteAtomic(relativePath, EncodePolicy(defaultContent), MaximumPolicyBytes));
         }
     }
+
+    public static string GetDefaultTaskPolicy(string taskId) => taskId.Equals("security-audit", StringComparison.OrdinalIgnoreCase)
+            ? TaskPolicyDefaults.DefaultSecurityAuditInstructions
+            : taskId.Equals("system-optimization", StringComparison.OrdinalIgnoreCase)
+                ? TaskPolicyDefaults.DefaultSystemOptimizationInstructions
+                : taskId.Equals(SelfTestPolicy.TaskId, StringComparison.OrdinalIgnoreCase) ? SelfTestPolicy.Instructions : string.Empty;
 
     private Task<string> LoadTaskPolicyAsync(string pluginId, string taskId, string fileName, CancellationToken cancellationToken)
     {
@@ -196,15 +217,7 @@ public sealed class SecurityPolicyService
             {
                 if (fileName.Equals("AGENTS.md", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (taskId.Equals("security-audit", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return TaskPolicyDefaults.DefaultSecurityAuditInstructions;
-                    }
-
-                    if (taskId.Equals("system-optimization", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return TaskPolicyDefaults.DefaultSystemOptimizationInstructions;
-                    }
+                    return GetDefaultTaskPolicy(taskId);
                 }
             }
 
@@ -234,6 +247,10 @@ public sealed class SecurityPolicyService
 
         return PolicyEncoding.GetBytes(content);
     }
+
+    private static string NormalizePolicy(string content) => content.TrimStart('\uFEFF').ReplaceLineEndings("\n").Trim();
+
+    private static string PolicyHash(string content) => Convert.ToHexString(SHA256.HashData(PolicyEncoding.GetBytes(NormalizePolicy(content))));
 
     private static string DecodePolicy(byte[] bytes)
     {

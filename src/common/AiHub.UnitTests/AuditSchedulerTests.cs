@@ -106,6 +106,7 @@ public sealed class AuditSchedulerTests
         Assert.IsTrue(result.HealthScore is >= 0 and <= 100);
         Assert.AreEqual(1, storage.LoadHistory().Count, "A scheduled run persists its result.");
         Assert.IsNotNull(scheduler.LastCompletedUtc, "The completion time drives the next due check.");
+        Assert.AreEqual(result.ScanEnd, scheduler.LastScanEndUtc, "The next event window resumes from coverage, not completion time.");
     }
 
     [TestMethod]
@@ -242,5 +243,19 @@ public sealed class AuditSchedulerTests
         Assert.AreEqual(EventLogService.AuditMode.Extended, scheduler.Mode);
         scheduler.UpdateMode(EventLogService.AuditMode.Full);
         Assert.AreEqual(EventLogService.AuditMode.Full, scheduler.Mode);
+    }
+
+    [TestMethod]
+    public void LongAuditCoverageAndCadenceUseSeparateWatermarks()
+    {
+        DateTime completed = DateTime.UtcNow.AddMinutes(-5);
+        DateTime coveredUntil = completed.AddMinutes(-10);
+        using var scheduler = new AuditScheduler(CreatePipeline(), intervalHours: 1,
+            lastCompletedUtc: completed, lastScanEndUtc: coveredUntil);
+        Assert.IsFalse(scheduler.IsDue(), "Cadence waits from the completion time.");
+        Assert.AreEqual(coveredUntil, scheduler.LastScanEndUtc);
+        DateTime nextStart = AuditSchedule.ComputeScanStart(ScanIntent.Scheduled, scheduler.LastScanEndUtc, DateTime.UtcNow, 2);
+        Assert.AreEqual(coveredUntil - AuditSchedule.IncrementalOverlap, nextStart,
+            "Events written during a long previous audit must remain in the next window.");
     }
 }

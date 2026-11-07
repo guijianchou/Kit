@@ -74,7 +74,9 @@ public static class Program
             // History lives in the same State directory the page reads, so scheduled runs
             // show up in the dashboard and the watermark below resumes the cadence.
             var historyStorage = new AuditHistoryStorage(Path.Combine(store.DataDirectory, "State"));
-            DateTime? lastCompletedUtc = (await historyStorage.LoadLatestHistoryAsync().ConfigureAwait(false))?.Timestamp;
+            AuditResult? latestAudit = await historyStorage.LoadLatestHistoryAsync().ConfigureAwait(false);
+            DateTime? lastCompletedUtc = latestAudit?.Timestamp;
+            DateTime? lastScanEndUtc = latestAudit is { ScanEnd: var scanEnd } && scanEnd != default ? scanEnd : null;
             var pipeline = new AuditPipeline(historyStorage: historyStorage);
 
             EventLogService.AuditMode mode = ToAuditMode(schedule.AuditModeIndex);
@@ -85,7 +87,8 @@ public static class Program
                 pollInterval: SchedulePollInterval,
                 fullRange: TimeSpan.FromDays(1),
                 mode: mode,
-                lastCompletedUtc: lastCompletedUtc);
+                lastCompletedUtc: lastCompletedUtc,
+                lastScanEndUtc: lastScanEndUtc);
 
             Logger.LogInfo($"[AIHub.Worker] Interval {scheduler.IntervalHours} h; mode {mode}; last completed {lastCompletedUtc?.ToString("u", CultureInfo.InvariantCulture) ?? "never"}.");
 

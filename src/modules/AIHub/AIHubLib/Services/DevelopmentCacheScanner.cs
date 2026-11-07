@@ -71,12 +71,56 @@ internal static class DevelopmentCacheScanner
         return items;
     }
 
-    internal static bool IsEligible(FileInfo file, string root, string repository, string manifest = "") =>
+    internal static bool IsEligible(FileInfo file, string root, string repository, string manifest = "", IReadOnlySet<string>? ignoredPaths = null, CancellationToken cancellationToken = default) =>
+        HasArtifactEvidence(file, root, repository, manifest) &&
+        (ignoredPaths != null ? ignoredPaths.Contains(file.FullName) :
+            Git(repository, ["check-ignore", "--", Path.GetRelativePath(repository, file.FullName)], cancellationToken) != null);
+
+    private static bool HasArtifactEvidence(FileInfo file, string root, string repository, string manifest) =>
         !string.IsNullOrEmpty(repository) &&
         string.Equals(Path.GetDirectoryName(Path.GetFullPath(repository)), Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)), StringComparison.OrdinalIgnoreCase) &&
         IsRepository(repository) && (MatchesArtifact(file, repository) ||
-            (!string.IsNullOrEmpty(manifest) && IsBuildOutput(file, repository) && ReadBuildManifest(manifest, repository).Contains(file.FullName, StringComparer.OrdinalIgnoreCase))) &&
-        Git(repository, ["check-ignore", "--", Path.GetRelativePath(repository, file.FullName)], CancellationToken.None) != null;
+            (!string.IsNullOrEmpty(manifest) && IsBuildOutput(file, repository) && ReadBuildManifest(manifest, repository).Contains(file.FullName, StringComparer.OrdinalIgnoreCase)));
+
+    /// <summary>One Git request per repository in a bounded execution batch.</summary>
+    internal static IReadOnlySet<string> CollectIgnoredPaths(
+        IReadOnlyList<TempFileInfo> items, string root, CancellationToken cancellationToken,
+        Func<string, IReadOnlyList<string>, CancellationToken, string?>? query = null)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in items.Where(item => item.Action == "delete" && !string.IsNullOrEmpty(item.DevelopmentRepository))
+            .GroupBy(item => item.DevelopmentRepository, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in group)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    var file = new FileInfo(item.FilePath);
+                    if (HasArtifactEvidence(file, root, item.DevelopmentRepository, item.BuildManifestPath)) paths.Add(file.FullName);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) { }
+            }
+            if (paths.Count == 0) continue;
+            var relativePaths = paths.Select(path => Path.GetRelativePath(group.Key, path)).ToList();
+            string? output = query != null ? query(group.Key, relativePaths, cancellationToken) :
+                Git(group.Key, ["check-ignore", "--stdin", "-z"], cancellationToken, string.Join('\0', relativePaths) + '\0');
+            if (output == null) continue;
+            foreach (string relative in output.Split('\0', StringSplitOptions.RemoveEmptyEntries))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    string path = Path.GetFullPath(relative, group.Key);
+                    if (paths.Contains(path)) allowed.Add(path);
+                }
+                catch (ArgumentException) { }
+            }
+        }
+        return allowed;
+    }
 
     private static bool IsRepository(string path) =>
         OptimizationFileSafety.HasNoReparsePoints(path) && (Directory.Exists(Path.Combine(path, ".git")) || File.Exists(Path.Combine(path, ".git")));
@@ -176,11 +220,12 @@ internal static class DevelopmentCacheScanner
         file.FullName.StartsWith(Path.Combine(repository, ".vs") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
         (file.Name.EndsWith(".VC.db", StringComparison.OrdinalIgnoreCase) || file.Name.EndsWith(".VC.opendb", StringComparison.OrdinalIgnoreCase) || file.Extension.Equals(".ipch", StringComparison.OrdinalIgnoreCase));
 
-    private static string? Git(string repository, IEnumerable<string> arguments, CancellationToken token)
+    private static string? Git(string repository, IEnumerable<string> arguments, CancellationToken token, string? input = null)
     {
         try
         {
-            var start = new ProcessStartInfo("git") { WorkingDirectory = repository, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
+            token.ThrowIfCancellationRequested();
+            var start = new ProcessStartInfo("git") { WorkingDirectory = repository, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = input != null, UseShellExecute = false, CreateNoWindow = true };
             start.ArgumentList.Add("--no-optional-locks");
             start.ArgumentList.Add("-c");
             start.ArgumentList.Add("core.fsmonitor=false");
@@ -188,21 +233,42 @@ internal static class DevelopmentCacheScanner
             start.ArgumentList.Add("core.untrackedCache=false");
             foreach (string argument in arguments) start.ArgumentList.Add(argument);
             using var process = Process.Start(start)!;
-            var output = process.StandardOutput.ReadToEndAsync(token);
-            var errors = process.StandardError.ReadToEndAsync(token);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
+            var errors = process.StandardError.ReadToEndAsync(timeout.Token);
             try
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
-                timeout.CancelAfter(TimeSpan.FromSeconds(30));
+                if (input != null)
+                {
+                    process.StandardInput.WriteAsync(input.AsMemory(), timeout.Token).GetAwaiter().GetResult();
+                    process.StandardInput.Close();
+                }
                 process.WaitForExitAsync(timeout.Token).GetAwaiter().GetResult();
                 errors.GetAwaiter().GetResult();
                 return process.ExitCode == 0 ? output.GetAwaiter().GetResult() : null;
             }
             catch (OperationCanceledException)
             {
-                if (!process.HasExited) process.Kill(entireProcessTree: true);
+                try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+                catch (InvalidOperationException) { }
+                process.WaitForExit(5000);
                 token.ThrowIfCancellationRequested();
                 return null;
+            }
+            finally
+            {
+                // Failed stdin/pipe I/O must not abandon the owned Git child.
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.Kill(entireProcessTree: true);
+                        process.WaitForExit(5000);
+                    }
+                }
+                catch (InvalidOperationException) { }
+                catch (System.ComponentModel.Win32Exception) { }
             }
         }
         catch (System.ComponentModel.Win32Exception) { return null; }

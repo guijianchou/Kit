@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 using Kit.Settings.UI.Helpers;
@@ -16,24 +14,16 @@ using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.Services;
 using Kit.Settings.UI.Views;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
-using Windows.System;
 
 namespace Kit.Settings.UI.ViewModels
 {
     public partial class ShellViewModel : Observable
     {
-        private readonly KeyboardAccelerator altLeftKeyboardAccelerator = BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu);
-
-        private readonly KeyboardAccelerator backKeyboardAccelerator = BuildKeyboardAccelerator(VirtualKey.GoBack);
-
         private bool isBackEnabled;
-        private IList<KeyboardAccelerator> keyboardAccelerators;
         private NavigationView navigationView;
         private NavigationViewItem selected;
         private NavigationViewItem expanding;
-        private ICommand loadedCommand;
         private ICommand itemInvokedCommand;
         private NavigationViewItem[] _fullListOfNavViewItems;
         private NavigationViewItem[] _moduleNavViewItems;
@@ -69,8 +59,6 @@ namespace Kit.Settings.UI.ViewModels
         /// </summary>
         public Helpers.AuditProgressState AuditProgress => Helpers.AuditProgressState.Current;
 
-        public ICommand LoadedCommand => loadedCommand ?? (loadedCommand = new RelayCommand(OnLoaded));
-
         public ICommand ItemInvokedCommand => itemInvokedCommand ?? (itemInvokedCommand = new RelayCommand<NavigationViewItemInvokedEventArgs>(OnItemInvoked));
 
         public ShellViewModel(ISettingsRepository<GeneralSettings> settingsRepository)
@@ -78,10 +66,9 @@ namespace Kit.Settings.UI.ViewModels
             _generalSettingsConfig = settingsRepository.SettingsConfig;
         }
 
-        public void Initialize(Frame frame, NavigationView navigationView, IList<KeyboardAccelerator> keyboardAccelerators)
+        public void Initialize(Frame frame, NavigationView navigationView)
         {
             this.navigationView = navigationView;
-            this.keyboardAccelerators = keyboardAccelerators;
             NavigationService.Frame = frame;
             NavigationService.NavigationFailed += Frame_NavigationFailed;
             NavigationService.Navigated += Frame_Navigated;
@@ -90,33 +77,6 @@ namespace Kit.Settings.UI.ViewModels
             _moduleNavViewItems = topLevelItems.SelectMany(menuItem => menuItem.MenuItems.OfType<NavigationViewItem>()).ToArray();
             var footerItems = navigationView.FooterMenuItems.OfType<NavigationViewItem>();
             _fullListOfNavViewItems = topLevelItems.Union(_moduleNavViewItems).Union(footerItems).ToArray();
-        }
-
-        private static KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)
-        {
-            var keyboardAccelerator = new KeyboardAccelerator() { Key = key };
-            if (modifiers.HasValue)
-            {
-                keyboardAccelerator.Modifiers = modifiers.Value;
-            }
-
-            keyboardAccelerator.Invoked += OnKeyboardAcceleratorInvoked;
-            return keyboardAccelerator;
-        }
-
-        private static void OnKeyboardAcceleratorInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-        {
-            var result = NavigationService.GoBack();
-            args.Handled = result;
-        }
-
-        private async void OnLoaded()
-        {
-            // Keyboard accelerators are added here to avoid showing 'Alt + left' tooltip on the page.
-            // More info on tracking issue https://github.com/Microsoft/microsoft-ui-xaml/issues/8
-            keyboardAccelerators.Add(altLeftKeyboardAccelerator);
-            keyboardAccelerators.Add(backKeyboardAccelerator);
-            await Task.CompletedTask.ConfigureAwait(false);
         }
 
         private void OnItemInvoked(NavigationViewItemInvokedEventArgs args)

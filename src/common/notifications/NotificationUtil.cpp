@@ -10,7 +10,7 @@
 namespace NonLocalizable
 {
     const wchar_t RunAsAdminInfoPage[] = L"https://github.com/guijianchou/Kit";
-    const wchar_t ToastNotificationButtonUrl[] = L"powertoys://cant_drag_elevated_disable/";
+    const wchar_t ToastNotificationButtonUrl[] = L"kit://cant_drag_elevated_disable/";
 }
 
 namespace notifications

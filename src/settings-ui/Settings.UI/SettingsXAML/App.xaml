@@ -11,8 +11,6 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/KeyVisual/KeyVisual.xaml" />
-                <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/KeyVisual/KeyCharPresenter.xaml" />
                 <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/IsEnabledTextBlock/IsEnabledTextBlock.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Themes/Colors.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Controls/TitleBar/TitleBar.xaml" />
@@ -21,7 +19,6 @@
                 <ResourceDictionary Source="/SettingsXAML/Styles/InfoBadge.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Styles/Surface.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Themes/Generic.xaml" />
-                <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/ShortcutWithTextLabelControl/ShortcutWithTextLabelControl.xaml" />
                 <!--  Other merged dictionaries here  -->
             </ResourceDictionary.MergedDictionaries>
 

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Builds the PowerToys Awake module.
+    Builds the Kit Awake module.
 
 .DESCRIPTION
     This script builds the Awake module and its dependencies using MSBuild.

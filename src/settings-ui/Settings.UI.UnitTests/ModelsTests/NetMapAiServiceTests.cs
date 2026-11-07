@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -161,21 +162,25 @@ public class NetMapAiServiceTests
     [TestMethod]
     public void DeleteLatestMtrSnapshot_DeletesExistingSnapshotFile()
     {
-        string path = NetMapAiService.MtrTempFilePath;
-        string dir = System.IO.Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir))
+        string directory = Path.Combine(Path.GetTempPath(), "Kit-NetMapAiServiceTests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
         {
-            System.IO.Directory.CreateDirectory(dir);
+            string path = Path.Combine(directory, "mtr-latest.json");
+            File.WriteAllText(path, "{}");
+            Assert.IsTrue(File.Exists(path));
+
+            NetMapAiService.DeleteLatestMtrSnapshot(path);
+            Assert.IsFalse(File.Exists(path));
+
+            // Calling it when file doesn't exist must not throw.
+            NetMapAiService.DeleteLatestMtrSnapshot(path);
         }
-
-        System.IO.File.WriteAllText(path, "{}");
-        Assert.IsTrue(System.IO.File.Exists(path));
-
-        NetMapAiService.DeleteLatestMtrSnapshot();
-        Assert.IsFalse(System.IO.File.Exists(path));
-
-        // Calling it when file doesn't exist must not throw
-        NetMapAiService.DeleteLatestMtrSnapshot();
+        finally
+        {
+            // Remove only the unique directory owned by this test.
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     [TestMethod]

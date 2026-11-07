@@ -84,11 +84,6 @@
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
-    <i:Interaction.Behaviors>
-        <ic:EventTriggerBehavior EventName="Loaded">
-            <ic:InvokeCommandAction Command="{x:Bind ViewModel.LoadedCommand}" />
-        </ic:EventTriggerBehavior>
-    </i:Interaction.Behaviors>
     <Grid x:Name="RootGrid" Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
@@ -126,12 +121,6 @@
                     TextChanged="SearchBox_TextChanged"
                     TextMemberPath="Header"
                     UpdateTextOnSelect="False">
-                    <AutoSuggestBox.KeyboardAccelerators>
-                        <KeyboardAccelerator
-                            Key="F"
-                            Invoked="CtrlF_Invoked"
-                            Modifiers="Control" />
-                    </AutoSuggestBox.KeyboardAccelerators>
                 </AutoSuggestBox>
             </controls:TitleBar.Content>
         </controls:TitleBar>
@@ -235,7 +224,7 @@
                         <TransitionCollection>
                             <NavigationThemeTransition>
                                 <NavigationThemeTransition.DefaultNavigationTransitionInfo>
-                                    <EntranceNavigationTransitionInfo />
+                                    <SuppressNavigationTransitionInfo />
                                 </NavigationThemeTransition.DefaultNavigationTransitionInfo>
                             </NavigationThemeTransition>
                         </TransitionCollection>

@@ -53,11 +53,6 @@ namespace Kit.Settings.UI.ViewModels
             };
         }
 
-        public override Dictionary<string, HotkeySettings[]> GetAllHotkeySettings()
-        {
-            return new Dictionary<string, HotkeySettings[]>();
-        }
-
         private void InitializeEnabledValue()
         {
             _enabledGpoRuleConfiguration = GPOWrapper.GetConfiguredLightSwitchEnabledValue();

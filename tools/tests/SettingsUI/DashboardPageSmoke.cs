@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.Settings.UI;
@@ -98,13 +99,30 @@ internal static class DashboardPageSmoke
         await refresh;
         await Task.Delay(100);
         Require(!vm.CanRefreshSystem, "Cancelled completion cannot reactivate an inactive page.");
+        vm.SetOverviewActive(true);
+        await WaitUntil(() => vm.CanRefreshOverview && vm.CanRefreshSystem);
+        Require(Timer(vm).IsRunning, "Home is sampling before the navigation pause check.");
+        var cachedPage = page;
+        var cachedViewModel = vm;
+        var cachedSystemDetails = vm.SystemDetails;
         NavigationService.Navigate(typeof(GeneralPage));
         await Task.Delay(250);
         Require(!Timer(vm).IsRunning, "Leaving Home stops its network timer.");
+        foreach (string field in new[] { "uptimeTimer", "telemetryTimer", "storageTimer" })
+        {
+            var timer = (DispatcherQueueTimer)typeof(DashboardViewModel).GetField(field, PrivateInstance).GetValue(vm);
+            Require(!timer.IsRunning, "Leaving Home stops " + field + " while retaining the cached page.");
+        }
+        Require(!vm.CanRefreshSystem && ReferenceEquals(cachedSystemDetails, vm.SystemDetails), "The hidden dashboard retains its last system snapshot with sampling paused.");
+        string hiddenUptime = vm.SystemDetails.Last().Value;
+        await Task.Delay(1200);
+        Require(vm.SystemDetails.Last().Value == hiddenUptime, "The hidden cached dashboard does not publish uptime ticks.");
         NavigationService.Navigate(typeof(DashboardPage));
+        Require(ReferenceEquals(cachedPage, NavigationService.Frame.Content), "Returning Home reuses the cached page instance.");
         await Task.Delay(500);
         page = (DashboardPage)NavigationService.Frame.Content;
         vm = page.ViewModel;
+        Require(ReferenceEquals(cachedViewModel, vm), "Returning Home reuses its view model and cached telemetry.");
         await WaitUntil(() => vm.CanRefreshOverview && vm.CanRefreshSystem);
         Require(vm.SystemDetails.Count == 7, "Returning Home refreshes after the previous page unloaded.");
         if (Environment.GetEnvironmentVariable("KIT_DASHBOARD_LAYOUT_ONLY") != "1")
@@ -438,14 +456,65 @@ internal static class DashboardPageSmoke
         Require(!vm.CanRefreshOverview, "Minimizing pauses and cancels observations.");
         presenter.Restore();
         await WaitUntil(() => Timer(vm).IsRunning && vm.CanRefreshOverview && vm.CanRefreshSystem);
-        window.AppWindow.Hide();
-        await WaitUntil(() => !Timer(vm).IsRunning);
-        original = vm.DirectEgress;
-        await Task.Delay(10500);
-        Require(ReferenceEquals(original, vm.DirectEgress) && !Timer(vm).IsRunning, "Hidden window stays idle past a polling interval.");
-        window.AppWindow.Show();
-        await WaitUntil(() => Timer(vm).IsRunning && vm.CanRefreshOverview && vm.CanRefreshSystem);
-        Require(!ReferenceEquals(original, vm.DirectEgress), "Showing Home resumes observations.");
+        await VerifyCloseAndReopen(vm, window);
+    }
+
+    private static async Task VerifyCloseAndReopen(DashboardViewModel vm, MainWindow window)
+    {
+        var flushProperty = typeof(MainWindow).GetProperty("FlushPendingSettingsAsync", PrivateInstance);
+        var keepAliveProperty = typeof(MainWindow).GetProperty("KeepAliveForBackgroundWork", PrivateInstance);
+        var previousFlush = flushProperty.GetValue(window);
+        var previousKeepAlive = keepAliveProperty.GetValue(window);
+        var previousSize = window.AppWindow.Size;
+        try
+        {
+            // Exercise real Closed handlers while keeping this test window alive.
+            keepAliveProperty.SetValue(window, (Func<bool>)(() => true));
+            flushProperty.SetValue(window, (Func<Task<bool>>)(() => Task.FromResult(false)));
+            window.Close();
+            await Task.Delay(100);
+            Require(window.AppWindow.IsVisible && Timer(vm).IsRunning,
+                "A failed settings flush leaves the visible dashboard sampling.");
+
+            flushProperty.SetValue(window, null);
+            window.Close();
+            await WaitUntil(() => !window.AppWindow.IsVisible && !Timer(vm).IsRunning);
+            var original = vm.DirectEgress;
+            await Task.Delay(10500);
+            Require(ReferenceEquals(original, vm.DirectEgress) && !Timer(vm).IsRunning,
+                "Closing to background work keeps the hidden dashboard idle past a polling interval.");
+            window.AppWindow.Show();
+            await WaitUntil(() => Timer(vm).IsRunning && vm.CanRefreshOverview && vm.CanRefreshSystem);
+            Require(!ReferenceEquals(original, vm.DirectEgress), "Showing Home after a handled close resumes observations.");
+
+            int originalWidth = window.AppWindow.Size.Width;
+            int width = originalWidth > 800 ? originalWidth - 160 : originalWidth + 160;
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(width, window.AppWindow.Size.Height));
+            await Task.Delay(100);
+            int actualWidth = window.AppWindow.Size.Width;
+            Require(actualWidth != originalWidth, "The reopened window accepts a new size.");
+            string placementPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit", "settings-placement.json");
+            bool HasSavedWidth()
+            {
+                try
+                {
+                    using var json = JsonDocument.Parse(File.ReadAllText(placementPath));
+                    var rectangle = json.RootElement.GetProperty("NormalPosition");
+                    return rectangle.GetProperty("Right").GetInt32() - rectangle.GetProperty("Left").GetInt32() == actualWidth;
+                }
+                catch (IOException) { return false; }
+                catch (JsonException) { return false; }
+            }
+            await WaitUntil(HasSavedWidth);
+            Require(HasSavedWidth(), "Resizing after a handled close still persists the new window placement.");
+        }
+        finally
+        {
+            flushProperty.SetValue(window, previousFlush);
+            keepAliveProperty.SetValue(window, previousKeepAlive);
+            if (!window.AppWindow.IsVisible) window.AppWindow.Show();
+            window.AppWindow.Resize(previousSize);
+        }
     }
 
     private static void Set(DashboardViewModel vm, string property, object value)

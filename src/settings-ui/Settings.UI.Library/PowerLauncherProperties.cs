@@ -21,32 +21,6 @@ namespace Kit.Settings.UI.Library
         [JsonPropertyName("maximum_number_of_results")]
         public int MaximumNumberOfResults { get; set; }
 
-        [JsonPropertyName("open_powerlauncher")]
-        public HotkeySettings OpenPowerLauncher { get; set; }
-
-        [JsonPropertyName("open_file_location")]
-        [CmdConfigureIgnoreAttribute]
-        public HotkeySettings OpenFileLocation { get; set; }
-
-        [JsonPropertyName("copy_path_location")]
-        [CmdConfigureIgnoreAttribute]
-        public HotkeySettings CopyPathLocation { get; set; }
-
-        [JsonPropertyName("open_console")]
-        [CmdConfigureIgnoreAttribute]
-        public HotkeySettings OpenConsole { get; set; }
-
-        [JsonPropertyName("override_win_r_key")]
-        [CmdConfigureIgnoreAttribute]
-        public bool OverrideWinkeyR { get; set; }
-
-        [JsonPropertyName("override_win_s_key")]
-        [CmdConfigureIgnoreAttribute]
-        public bool OverrideWinkeyS { get; set; }
-
-        [JsonPropertyName("ignore_hotkeys_in_fullscreen")]
-        public bool IgnoreHotkeysInFullscreen { get; set; }
-
         [JsonPropertyName("clear_input_on_launch")]
         public bool ClearInputOnLaunch { get; set; }
 
@@ -65,9 +39,6 @@ namespace Kit.Settings.UI.Library
 
         [JsonPropertyName("startupPosition")]
         public StartupPosition Position { get; set; }
-
-        [JsonPropertyName("use_centralized_keyboard_hook")]
-        public bool UseCentralizedKeyboardHook { get; set; }
 
         [JsonPropertyName("search_query_results_with_delay")]
         public bool SearchQueryResultsWithDelay { get; set; }
@@ -93,33 +64,15 @@ namespace Kit.Settings.UI.Library
         [JsonPropertyName("generate_thumbnails_from_files")]
         public bool GenerateThumbnailsFromFiles { get; set; }
 
-        [JsonPropertyName("hotkey_changed")]
-        public bool HotkeyChanged { get; set; } = false;
-
-        [CmdConfigureIgnoreAttribute]
-        public HotkeySettings DefaultOpenPowerLauncher => new HotkeySettings(false, false, true, false, 32);
-
-        [CmdConfigureIgnoreAttribute]
-        public HotkeySettings DefaultOpenFileLocation => new HotkeySettings();
-
-        [CmdConfigureIgnoreAttribute]
-        public HotkeySettings DefaultCopyPathLocation => new HotkeySettings();
-
         public PowerLauncherProperties()
         {
-            OpenPowerLauncher = DefaultOpenPowerLauncher;
-            OpenFileLocation = DefaultOpenFileLocation;
-            CopyPathLocation = DefaultCopyPathLocation;
-            OpenConsole = new HotkeySettings();
             SearchResultPreference = "most_recently_used";
             SearchTypePreference = "application_name";
-            IgnoreHotkeysInFullscreen = false;
             ClearInputOnLaunch = false;
             TabSelectsContextButtons = true;
             MaximumNumberOfResults = 4;
             Theme = Theme.System;
             Position = StartupPosition.Cursor;
-            UseCentralizedKeyboardHook = false;
             SearchQueryResultsWithDelay = true;
             SearchInputDelayFast = 50;
             SearchInputDelay = 150;

@@ -2,43 +2,26 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using Kit.UITest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.Win32;
 
 namespace LightSwitch.UITests
 {
     internal sealed class TestHelper
     {
-        private static readonly string[] ShortcutSeparators = { " + ", "+", " " };
-
         [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
         private static extern void LightSwitch_SetSystemTheme(bool isLight);
 
         [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
         private static extern void LightSwitch_SetAppsTheme(bool isLight);
 
-        [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
-        [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool LightSwitch_GetCurrentSystemTheme();
-
-        [DllImport("Kit.LightSwitchModuleInterface.dll", CallingConvention = CallingConvention.Cdecl)]
-        [return: MarshalAs(UnmanagedType.I1)]
-        private static extern bool LightSwitch_GetCurrentAppsTheme();
-
         /// <summary>
-        /// Performs common test initialization: navigate to settings, enable toggle, verify shortcut
+        /// Performs common test initialization: navigate to settings and enable the module
         /// </summary>
         /// <param name="testBase">The test base instance</param>
         /// <param name="testName">Name of the test for assertions</param>
-        /// <returns>The activation keys for the test</returns>
-        public static Key[] InitializeTest(UITestBase testBase, string testName)
+        public static void InitializeTest(UITestBase testBase, string testName)
         {
             LaunchFromSetting(testBase);
 
@@ -46,12 +29,6 @@ namespace LightSwitch.UITests
             Assert.IsTrue(
                 toggleSwitch.IsOn,
                 $"Light Switch toggle switch should be ON for {testName}");
-
-            var activationKeys = ReadActivationShortcut(testBase);
-            Assert.IsNotNull(activationKeys, "Should be able to read activation shortcut");
-            Assert.IsTrue(activationKeys.Length > 0, "Activation shortcut should contain at least one key");
-
-            return activationKeys;
         }
 
         /// <summary>
@@ -87,53 +64,6 @@ namespace LightSwitch.UITests
             }
 
             return toggleSwitch;
-        }
-
-        /// <summary>
-        /// Read the current activation shortcut from the ShortcutControl
-        /// </summary>
-        public static Key[] ReadActivationShortcut(UITestBase testBase)
-        {
-            var shortcutCard = testBase.Session.Find<Element>(By.AccessibilityId("Shortcut_LightSwitch"), 5000);
-            var shortcutButton = shortcutCard.Find<Element>(By.AccessibilityId("EditButton"), 5000);
-            return ParseShortcutText(shortcutButton.HelpText);
-        }
-
-        /// <summary>
-        /// Parse shortcut text like "Win + Ctrl + Shift + M" into Key array
-        /// </summary>
-        private static Key[] ParseShortcutText(string shortcutText)
-        {
-            if (string.IsNullOrEmpty(shortcutText))
-            {
-                return new Key[] { Key.Win, Key.Ctrl, Key.Shift, Key.D };
-            }
-
-            var keys = new List<Key>();
-            var parts = shortcutText.Split(ShortcutSeparators, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var part in parts)
-            {
-                var cleanPart = part.Trim().ToLowerInvariant();
-                var key = cleanPart switch
-                {
-                    "win" or "windows" => Key.Win,
-                    "ctrl" or "control" => Key.Ctrl,
-                    "shift" => Key.Shift,
-                    "alt" => Key.Alt,
-                    _ when cleanPart.Length == 1 && char.IsLetter(cleanPart[0]) &&
-                         cleanPart[0] >= 'a' && cleanPart[0] <= 'z' =>
-                        (Key)Enum.Parse(typeof(Key), cleanPart.ToUpperInvariant()),
-                    _ => (Key?)null,
-                };
-
-                if (key.HasValue)
-                {
-                    keys.Add(key.Value);
-                }
-            }
-
-            return keys.Count > 0 ? keys.ToArray() : new Key[] { Key.Win, Key.Ctrl, Key.Shift, Key.D };
         }
 
         /// <summary>
@@ -387,94 +317,7 @@ namespace LightSwitch.UITests
             Assert.AreNotEqual(originalEndValue, updatedEndValue, "Timeline end time should have been updated.");
         }
 
-        /// <summary>
-        /// Perform a test for shortcut changing themes
-        /// </summary>
-        public static void PerformShortcutTest(UITestBase testBase, Key[] activationKeys)
-        {
-            // Test when both are checked
-            var systemCheckbox = testBase.Session.Find<Element>(By.AccessibilityId("ChangeSystemCheckbox_LightSwitch"), 5000);
-            Assert.IsNotNull(systemCheckbox, "System checkbox not found.");
-
-            var scrollViewer = testBase.Session.Find<Element>(By.AccessibilityId("PageScrollViewer"));
-            systemCheckbox.EnsureVisible(scrollViewer);
-
-            int neededTabs = 10;
-
-            if (!systemCheckbox.Selected)
-            {
-                for (int i = 0; i < neededTabs; i++)
-                {
-                    testBase.Session.SendKeys(Key.Tab);
-                }
-
-                systemCheckbox.Click();
-            }
-
-            Assert.IsTrue(systemCheckbox.Selected, "System checkbox should be checked.");
-
-            var appsCheckbox = testBase.Session.Find<Element>(By.AccessibilityId("ChangeAppsCheckbox_LightSwitch"), 5000);
-            Assert.IsNotNull(appsCheckbox, "Apps checkbox not found.");
-
-            if (!appsCheckbox.Selected)
-            {
-                appsCheckbox.Click();
-            }
-
-            Assert.IsTrue(appsCheckbox.Selected, "Apps checkbox should be checked.");
-
-            var systemBeforeValue = GetSystemTheme();
-            var appsBeforeValue = GetAppsTheme();
-
-            Task.Delay(1000).Wait();
-            testBase.Session.SendKeys(activationKeys);
-            Task.Delay(5000).Wait();
-
-            var systemAfterValue = GetSystemTheme();
-            var appsAfterValue = GetAppsTheme();
-
-            Assert.AreNotEqual(systemBeforeValue, systemAfterValue, "System theme should have changed.");
-            Assert.AreNotEqual(appsBeforeValue, appsAfterValue, "Apps theme should have changed.");
-
-            // Test with nothing checked
-            if (systemCheckbox.Selected)
-            {
-                systemCheckbox.Click();
-            }
-
-            if (appsCheckbox.Selected)
-            {
-                appsCheckbox.Click();
-            }
-
-            Assert.IsFalse(systemCheckbox.Selected, "System checkbox should be unchecked.");
-            Assert.IsFalse(appsCheckbox.Selected, "Apps checkbox should be unchecked.");
-
-            var noneSystemBeforeValue = GetSystemTheme();
-            var noneAppsBeforeValue = GetAppsTheme();
-
-            Task.Delay(1000).Wait();
-            testBase.Session.SendKeys(activationKeys);
-            Task.Delay(5000).Wait();
-
-            var noneSystemAfterValue = GetSystemTheme();
-            var noneAppsAfterValue = GetAppsTheme();
-
-            Assert.AreEqual(noneSystemBeforeValue, noneSystemAfterValue, "System theme should not have changed.");
-            Assert.AreEqual(noneAppsBeforeValue, noneAppsAfterValue, "Apps theme should not have changed.");
-        }
-
         /* Helpers */
-        private static int GetSystemTheme()
-        {
-            return LightSwitch_GetCurrentSystemTheme() ? 1 : 0;
-        }
-
-        private static int GetAppsTheme()
-        {
-            return LightSwitch_GetCurrentAppsTheme() ? 1 : 0;
-        }
-
         private static void SetSystemTheme(bool isLight)
         {
             LightSwitch_SetSystemTheme(isLight);

@@ -5,6 +5,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
@@ -18,6 +19,7 @@ namespace Kit.Settings.UI.ViewModels
 {
     public sealed class UDPtestLineRowViewModel : INotifyPropertyChanged
     {
+        private readonly BoundedObservableCollection<StatusBarViewModel> _recentBars = [];
         private int _recentBarCapacity = 240;
 
         private ProbeLineDefinition _definition;
@@ -253,7 +255,7 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public ObservableCollection<StatusBarViewModel> RecentBars { get; } = [];
+        public ObservableCollection<StatusBarViewModel> RecentBars => _recentBars;
 
         // Folded Configuration Properties
         public bool IsConfigExpanded
@@ -507,16 +509,33 @@ namespace Kit.Settings.UI.ViewModels
 
         public void AddResultBar(ProbeOutcome outcome, double durationMilliseconds, string? error = null)
         {
+            _recentBars.Append(CreateResultBar(outcome, durationMilliseconds, error), _recentBarCapacity);
+        }
+
+        public void AddResultBars(IEnumerable<LineMetricSnapshot> snapshots)
+        {
+            _recentBars.AppendRange(CreateResultBars(snapshots), _recentBarCapacity);
+        }
+
+        private static IEnumerable<StatusBarViewModel> CreateResultBars(IEnumerable<LineMetricSnapshot> snapshots)
+        {
+            foreach (var snapshot in snapshots)
+            {
+                if (snapshot.LastOutcome is ProbeOutcome outcome)
+                {
+                    yield return CreateResultBar(outcome, snapshot.LastDurationMilliseconds ?? 0, snapshot.LastError);
+                }
+            }
+        }
+
+        private static StatusBarViewModel CreateResultBar(ProbeOutcome outcome, double durationMilliseconds, string? error)
+        {
             bool success = outcome == ProbeOutcome.Success;
             string description = success
                 ? $"{durationMilliseconds:F1} ms"
                 : $"Failed: {error ?? "timeout"}";
 
-            RecentBars.Add(StatusBarViewModel.FromProbeResult(success, durationMilliseconds, description));
-            while (RecentBars.Count > _recentBarCapacity)
-            {
-                RecentBars.RemoveAt(0);
-            }
+            return StatusBarViewModel.FromProbeResult(success, durationMilliseconds, description);
         }
 
         public void SetRecentBarCapacity(int capacity)
@@ -527,10 +546,7 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             _recentBarCapacity = capacity;
-            while (RecentBars.Count > _recentBarCapacity)
-            {
-                RecentBars.RemoveAt(0);
-            }
+            _recentBars.Trim(_recentBarCapacity);
         }
 
         public void ResetMetrics()

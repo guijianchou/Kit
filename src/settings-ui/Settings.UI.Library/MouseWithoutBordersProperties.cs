@@ -27,18 +27,6 @@ namespace Kit.Settings.UI.Library
     public class MouseWithoutBordersProperties : ICloneable
     {
         [CmdConfigureIgnore]
-        public static HotkeySettings DefaultHotKeySwitch2AllPC => new HotkeySettings();
-
-        [CmdConfigureIgnore]
-        public static HotkeySettings DefaultHotKeyLockMachine => new HotkeySettings(true, true, true, false, 0x4C);
-
-        [CmdConfigureIgnore]
-        public static HotkeySettings DefaultHotKeyReconnect => new HotkeySettings(true, true, true, false, 0x52);
-
-        [CmdConfigureIgnore]
-        public static HotkeySettings DefaultHotKeyToggleEasyMouse => new HotkeySettings(true, true, true, false, 0x45);
-
-        [CmdConfigureIgnore]
         public StringProperty SecurityKey { get; set; }
 
         [CmdConfigureIgnore]
@@ -117,36 +105,6 @@ namespace Kit.Settings.UI.Library
         [CmdConfigureIgnoreAttribute]
         public bool FirstRun { get; set; }
 
-        public IntProperty HotKeySwitchMachine { get; set; }
-
-        [ObsoleteAttribute("Use ToggleEasyMouseShortcut instead", false)]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [CmdConfigureIgnoreAttribute]
-        public IntProperty HotKeyToggleEasyMouse { get; set; }
-
-        [ObsoleteAttribute("Use LockMachineShortcut instead", false)]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [CmdConfigureIgnoreAttribute]
-        public IntProperty HotKeyLockMachine { get; set; }
-
-        [ObsoleteAttribute("Use ReconnectShortcut instead", false)]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [CmdConfigureIgnoreAttribute]
-        public IntProperty HotKeyReconnect { get; set; }
-
-        [ObsoleteAttribute("Use Switch2AllPCShortcut instead", false)]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [CmdConfigureIgnoreAttribute]
-        public IntProperty HotKeySwitch2AllPC { get; set; }
-
-        public HotkeySettings ToggleEasyMouseShortcut { get; set; }
-
-        public HotkeySettings LockMachineShortcut { get; set; }
-
-        public HotkeySettings ReconnectShortcut { get; set; }
-
-        public HotkeySettings Switch2AllPCShortcut { get; set; }
-
         [CmdConfigureIgnoreAttribute]
         public IntProperty TCPPort { get; set; }
 
@@ -154,10 +112,6 @@ namespace Kit.Settings.UI.Library
         public bool DrawMouseEx { get; set; }
 
         public StringProperty Name2IP { get; set; }
-
-        [JsonConverter(typeof(BoolPropertyJsonConverter))]
-        [CmdConfigureIgnoreAttribute]
-        public bool FirstCtrlShiftS { get; set; }
 
         [CmdConfigureIgnoreAttribute]
         public StringProperty DeviceID { get; set; }
@@ -185,12 +139,6 @@ namespace Kit.Settings.UI.Library
             DisableEasyMouseWhenForegroundWindowIsFullscreen = true;
             EasyMouseFullscreenSwitchBlockExcludedApps = new GenericProperty<HashSet<string>>(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
-            HotKeySwitchMachine = new IntProperty(0x70); // VK.F1
-            ToggleEasyMouseShortcut = DefaultHotKeyToggleEasyMouse;
-            LockMachineShortcut = DefaultHotKeyLockMachine;
-            ReconnectShortcut = DefaultHotKeyReconnect;
-            Switch2AllPCShortcut = DefaultHotKeySwitch2AllPC;
-
             // These are internal, i.e. cannot be edited directly from UI
             MachinePool = ":,:,:,:";
             MatrixOneRow = true;
@@ -202,7 +150,6 @@ namespace Kit.Settings.UI.Library
             TCPPort = new IntProperty(15100);
             DrawMouseEx = true;
             Name2IP = new StringProperty(string.Empty);
-            FirstCtrlShiftS = false;
         }
 
         public object Clone()

@@ -12,11 +12,8 @@ namespace Kit.Settings.UI.Library
 {
     public class ColorPickerPropertiesVersion1
     {
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, false, true, 0x43);
-
         public ColorPickerPropertiesVersion1()
         {
-            ActivationShortcut = DefaultActivationShortcut;
             ChangeCursor = false;
             ColorHistory = new List<string>();
             ColorHistoryLimit = 20;
@@ -27,8 +24,6 @@ namespace Kit.Settings.UI.Library
             ShowColorName = false;
             ActivationAction = ColorPickerActivationAction.OpenColorPicker;
         }
-
-        public HotkeySettings ActivationShortcut { get; set; }
 
         [JsonPropertyName("changecursor")]
         [JsonConverter(typeof(BoolPropertyJsonConverter))]

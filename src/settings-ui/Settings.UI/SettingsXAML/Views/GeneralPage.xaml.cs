@@ -23,6 +23,7 @@ namespace Kit.Settings.UI.Views
         private static DateTime OkToHideBackupAndRestoreMessageTime { get; set; }
 
         private bool _backupStatusRefreshQueued;
+        private bool _apiKeysApplied;
 
         /// <summary>
         /// Gets or sets view model.
@@ -85,19 +86,25 @@ namespace Kit.Settings.UI.Views
             DataContext = ViewModel;
             InitializeComponent();
 
-            this.Loaded += (s, e) =>
+            this.Loaded += async (s, e) =>
             {
                 ViewModel.OnPageLoaded();
-
-                // The password boxes live in this page now, so their stored values are
-                // applied here rather than by the AI Hub page they moved from.
-                ApplyStoredApiKeys();
 
                 if (!_backupStatusRefreshQueued)
                 {
                     _backupStatusRefreshQueued = true;
                     doRefreshBackupRestoreStatus(500);
                 }
+
+                await ViewModel.AiServices.Initialization.ConfigureAwait(false);
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    if (IsLoaded && !_apiKeysApplied && ViewModel.AiServices.CanToggle)
+                    {
+                        ApplyStoredApiKeys();
+                        _apiKeysApplied = true;
+                    }
+                });
             };
         }
 

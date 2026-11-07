@@ -30,22 +30,13 @@
     <ClCompile Include="UpdateUtils.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="centralized_kb_hook.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\interop\two_way_pipe_message_ipc.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\common\interop\pipe_caller_auth.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="centralized_hotkeys.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\updating\updateState.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="hotkey_conflict_detector.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="quick_access_host.cpp">
@@ -91,15 +82,6 @@
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="centralized_kb_hook.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="centralized_hotkeys.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="hotkey_conflict_detector.h">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="quick_access_host.h">

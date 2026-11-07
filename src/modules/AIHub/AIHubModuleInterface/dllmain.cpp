@@ -56,6 +56,7 @@ class AIHubModule : public KitModuleIface
     // running after the Settings window closes.
     HANDLE m_worker_process{ nullptr };
     std::mutex m_lifecycle_mutex;
+    std::thread m_startup_thread;
 
     void start_worker_if_needed();
     void stop_worker_if_running();
@@ -126,22 +127,16 @@ public:
 
     virtual void enable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (m_enabled)
         {
             return;
         }
 
-        {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            m_enabled = true;
-            std::thread([this]() {
-                std::lock_guard threadLock(m_lifecycle_mutex);
-                if (m_enabled)
-                {
-                    start_worker_if_needed();
-                }
-            }).detach();
-        }
+        m_startup_thread = std::thread([this]() {
+            start_worker_if_needed();
+        });
+        m_enabled = true;
 
         Trace::EnableAIHub(true);
         Logger::info(L"AIHub module enabled");
@@ -149,16 +144,20 @@ public:
 
     virtual void disable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (!m_enabled)
         {
             return;
         }
 
+        m_enabled = false;
+        // The startup thread never takes m_lifecycle_mutex, so joining here also
+        // serializes repeated enable/disable calls without blocking its completion.
+        if (m_startup_thread.joinable())
         {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            m_enabled = false;
-            stop_worker_if_running();
+            m_startup_thread.join();
         }
+        stop_worker_if_running();
 
         Trace::EnableAIHub(false);
         Logger::info(L"AIHub module disabled");
@@ -166,6 +165,7 @@ public:
 
     virtual bool is_enabled() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         return m_enabled;
     }
 

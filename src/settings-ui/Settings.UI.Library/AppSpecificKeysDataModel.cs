@@ -13,36 +13,6 @@ namespace Kit.Settings.UI.Library
         [JsonPropertyName("targetApp")]
         public string TargetApp { get; set; }
 
-        public new List<string> GetMappedOriginalKeys()
-        {
-            return base.GetMappedOriginalKeys();
-        }
-
-        public new List<string> GetMappedOriginalKeysWithSplitChord()
-        {
-            return base.GetMappedOriginalKeysWithSplitChord();
-        }
-
-        public List<string> GetMappedOriginalKeys(bool ignoreSecondKeyInChord)
-        {
-            return base.GetMappedOriginalKeys(ignoreSecondKeyInChord);
-        }
-
-        public List<string> GetMappedOriginalKeysWithoutChord()
-        {
-            return base.GetMappedOriginalKeys(true);
-        }
-
-        public new List<string> GetMappedOriginalKeysOnlyChord()
-        {
-            return base.GetMappedOriginalKeysOnlyChord();
-        }
-
-        public new List<string> GetMappedNewRemapKeys(int runProgramMaxLength)
-        {
-            return base.GetMappedNewRemapKeys(runProgramMaxLength);
-        }
-
         public bool Compare(AppSpecificKeysDataModel arg)
         {
             ArgumentNullException.ThrowIfNull(arg);

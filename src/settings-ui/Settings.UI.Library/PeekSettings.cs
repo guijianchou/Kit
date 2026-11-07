@@ -12,7 +12,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class PeekSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class PeekSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "Peek";
         public const string InitialModuleVersion = "0.0.1";
@@ -40,19 +40,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.Peek;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ActivationShortcut,
-                    value => Properties.ActivationShortcut = value ?? Properties.DefaultActivationShortcut,
-                    "Activation_Shortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         public bool UpgradeSettingsConfiguration()
         {

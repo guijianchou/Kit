@@ -7,9 +7,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -45,6 +47,8 @@ namespace Kit.Settings.UI.Views
         }
 
         private readonly MainWindow _settingsWindow;
+        private int _chartRedrawQueued;
+        private (long Version, string? LineId, int Period, double Width, double Height, long WindowSecond)? _lastChartKey;
 
         private void OnUDPtestLoaded(object sender, RoutedEventArgs e)
         {
@@ -206,18 +210,32 @@ namespace Kit.Settings.UI.Views
 
         private void OnHealthChartSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            RedrawHealthChart();
+            OnHealthChartNeedsRedraw();
         }
 
         private void OnHealthChartNeedsRedraw()
         {
-            DispatcherQueue.TryEnqueue(RedrawHealthChart);
+            if (Interlocked.Exchange(ref _chartRedrawQueued, 1) != 0)
+            {
+                return;
+            }
+
+            if (!DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+            {
+                Interlocked.Exchange(ref _chartRedrawQueued, 0);
+                RedrawHealthChart();
+            }))
+            {
+                Interlocked.Exchange(ref _chartRedrawQueued, 0);
+            }
         }
 
         private void RedrawHealthChart()
         {
-            HealthCurvePath.Data = null;
-            HealthFailuresPath.Data = null;
+            if (!IsLoaded || !_settingsWindow.AppWindow.IsVisible)
+            {
+                return;
+            }
 
             double width = HealthChartCanvas.ActualWidth;
             double height = HealthChartCanvas.ActualHeight;
@@ -227,7 +245,21 @@ namespace Kit.Settings.UI.Views
                 return;
             }
 
-            var points = ViewModel.GetCurrentChartPoints();
+            // Layout and a snapshot can request the same chart several times in one frame.
+            // Include the time window so revisiting a stopped session still expires old points.
+            long windowSecond = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var key = (ViewModel.ChartDataVersion, ViewModel.SelectedLine?.Id, ViewModel.SelectedPeriodSeconds, width, height, windowSecond);
+            if (_lastChartKey == key)
+            {
+                return;
+            }
+
+            DateTimeOffset now = DateTimeOffset.FromUnixTimeSeconds(windowSecond);
+            var points = ViewModel.GetCurrentChartPoints(now);
+            _lastChartKey = key;
+            HealthCurvePath.Data = null;
+            HealthFailuresPath.Data = null;
+
             if (points.Count == 0)
             {
                 string emptyText = ResourceLoaderInstance.ResourceLoader.GetString("UDPtest_NoSamplesLabel/Text");
@@ -252,7 +284,6 @@ namespace Kit.Settings.UI.Views
             List<double>?[] successBuckets = new List<double>?[bucketCount];
             bool[] failureBuckets = new bool[bucketCount];
 
-            DateTimeOffset now = DateTimeOffset.UtcNow;
             DateTimeOffset start = now.AddSeconds(-ViewModel.SelectedPeriodSeconds);
             DateTimeOffset end = now;
             double totalSeconds = Math.Max(1, (end - start).TotalSeconds);

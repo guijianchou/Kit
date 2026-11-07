@@ -770,7 +770,9 @@ namespace Kit.Settings.UI.ViewModels
         private bool _disposed;
         private int _telemetryRefreshInFlight;
         private int _environmentCheckInFlight;
+        private CancellationTokenSource? _environmentCheckCancellation;
         private LineRowViewModel? _environmentCheckLine;
+        private long _environmentCheckGeneration;
         private ServiceState _environmentCheckState;
         private bool? _environmentCheckHealthProbePassed;
         private DateTimeOffset _environmentCheckAtUtc;
@@ -919,6 +921,7 @@ namespace Kit.Settings.UI.ViewModels
             if (!_isEnabled)
             {
                 _telemetryTimer.Stop();
+                CancelEnvironmentCheck();
 
                 _ = StopAllLinesAsync();
 
@@ -1059,6 +1062,7 @@ namespace Kit.Settings.UI.ViewModels
             {
                 if (_selectedLine != value)
                 {
+                    CancelEnvironmentCheck();
                     _selectedLine = value;
                     OnPropertyChanged(nameof(SelectedLine));
                     EnvironmentCheckChips.Clear();
@@ -1340,6 +1344,7 @@ namespace Kit.Settings.UI.ViewModels
             else
             {
                 _telemetryTimer.Stop();
+                CancelEnvironmentCheck();
             }
         }
 
@@ -1871,6 +1876,7 @@ namespace Kit.Settings.UI.ViewModels
                     && Interlocked.CompareExchange(ref _environmentCheckInFlight, 1, 0) == 0)
                 {
                     _environmentCheckLine = line;
+                    _environmentCheckGeneration = line.Runner.ProcessGeneration;
                     _environmentCheckState = line.State;
                     _environmentCheckHealthProbePassed = line.Runner.HealthProbePassed;
                     _environmentCheckAtUtc = DateTimeOffset.UtcNow;
@@ -1901,6 +1907,7 @@ namespace Kit.Settings.UI.ViewModels
         private bool IsEnvironmentCheckDue(LineRowViewModel line)
         {
             if (!ReferenceEquals(_environmentCheckLine, line)
+                || _environmentCheckGeneration != line.Runner.ProcessGeneration
                 || _environmentCheckState != line.State
                 || _environmentCheckHealthProbePassed != line.Runner.HealthProbePassed)
             {
@@ -1912,25 +1919,37 @@ namespace Kit.Settings.UI.ViewModels
 
         private async Task RefreshEnvironmentAsync(LineRowViewModel line)
         {
-            if (_disposed || !_isPageActive || !_isEnabled)
-            {
-                return;
-            }
+            using var source = new CancellationTokenSource();
+            _environmentCheckCancellation = source;
+            long generation = line.Runner.ProcessGeneration;
+            ServiceState state = line.State;
+            bool? healthProbePassed = line.Runner.HealthProbePassed;
+
+            bool IsCurrent() => !source.IsCancellationRequested && !_disposed && _isPageActive && _isEnabled
+                && SelectedLine == line && Lines.Contains(line)
+                && generation == line.Runner.ProcessGeneration && state == line.State
+                && healthProbePassed == line.Runner.HealthProbePassed;
+
             try
             {
+                if (!IsCurrent())
+                {
+                    return;
+                }
+
                 var snapshot = await Task.Run(() => EnvironmentInspector.CheckAsync(
                     line.Definition,
                     line.Runner.Port,
                     line.Runner.ProcessId,
                     line.Runner.GetManagedProcessIds(),
-                    line.Runner.State,
+                    state,
                     line.Runner.LastError,
-                    line.Runner.HealthProbePassed,
-                    CancellationToken.None,
+                    healthProbePassed,
+                    source.Token,
                     _secretStore,
-                    FormatMessage));
+                    FormatMessage), source.Token);
 
-                if (_disposed || !_isPageActive || SelectedLine != line || !Lines.Contains(line))
+                if (!IsCurrent())
                 {
                     return;
                 }
@@ -1963,10 +1982,13 @@ namespace Kit.Settings.UI.ViewModels
 
                 OnPropertyChanged(nameof(EnvSummaryText));
             }
+            catch (OperationCanceledException) when (source.IsCancellationRequested)
+            {
+            }
             catch (Exception ex)
             {
                 Logger.LogError($"[LocalserverViewModel] Environment check failed: {ex.GetType().Name}");
-                if (!_disposed && _isPageActive && SelectedLine == line && Lines.Contains(line))
+                if (IsCurrent())
                 {
                     EnvSummaryText = "Localserver_EnvironmentCheckFailed".GetLocalized();
                     EnvSummaryBrush = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
@@ -1977,8 +1999,15 @@ namespace Kit.Settings.UI.ViewModels
             }
             finally
             {
+                _environmentCheckCancellation = null;
                 Interlocked.Exchange(ref _environmentCheckInFlight, 0);
             }
+        }
+
+        private void CancelEnvironmentCheck()
+        {
+            _environmentCheckCancellation?.Cancel();
+            _environmentCheckLine = null;
         }
 
         public void NotifySelectedLineCpuUpdated()
@@ -2226,6 +2255,7 @@ namespace Kit.Settings.UI.ViewModels
             _isPageActive = false;
             if (disposing)
             {
+                CancelEnvironmentCheck();
                 _autoSaveCts?.Cancel();
                 _autoSaveCts?.Dispose();
                 _telemetryTimer.Stop();

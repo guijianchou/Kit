@@ -137,22 +137,6 @@ namespace KitSettings
         m_json.GetNamedObject(L"properties").SetNamedValue(name, picker);
     }
 
-    void Settings::add_hotkey(std::wstring_view name, UINT description_resource_id, const HotkeyObject& hotkey)
-    {
-        add_hotkey(name, get_resource(description_resource_id), hotkey);
-    }
-
-    void Settings::add_hotkey(std::wstring_view name, std::wstring_view description, const HotkeyObject& hotkey_obj)
-    {
-        json::JsonObject hotkey;
-        hotkey.SetNamedValue(L"display_name", json::value(description));
-        hotkey.SetNamedValue(L"editor_type", json::value(L"hotkey"));
-        hotkey.SetNamedValue(L"value", hotkey_obj.get_json());
-        hotkey.SetNamedValue(L"order", json::value(++m_curr_priority));
-
-        m_json.GetNamedObject(L"properties").SetNamedValue(name, hotkey);
-    }
-
     void Settings::add_choice_group(std::wstring_view name, UINT description_resource_id, std::wstring_view value, const std::vector<std::pair<std::wstring, UINT>>& keys_and_text_ids)
     {
         std::vector<std::pair<std::wstring, std::wstring>> keys_and_texts;

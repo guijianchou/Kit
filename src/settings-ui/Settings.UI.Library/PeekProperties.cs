@@ -10,19 +10,13 @@ namespace Kit.Settings.UI.Library
 {
     public class PeekProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(false, true, false, false, 0x20);
-
         public PeekProperties()
         {
-            ActivationShortcut = DefaultActivationShortcut;
             AlwaysRunNotElevated = new BoolProperty(true);
             CloseAfterLosingFocus = new BoolProperty(false);
             ConfirmFileDelete = new BoolProperty(true);
             EnableSpaceToActivate = new BoolProperty(true); // Toggle is ON by default for new users. No impact on existing users.
         }
-
-        public HotkeySettings ActivationShortcut { get; set; }
 
         public BoolProperty AlwaysRunNotElevated { get; set; }
 

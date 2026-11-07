@@ -254,7 +254,7 @@ namespace QuickAccessHost
         std::unique_lock lock(show_request_mutex, std::try_to_lock);
         if (!lock.owns_lock())
         {
-            // A hotkey arriving during shutdown must not wait for process cleanup.
+            // A show request arriving during shutdown must not wait for process cleanup.
             return;
         }
         if (!show_work)
@@ -287,7 +287,7 @@ namespace QuickAccessHost
             }
         }
 
-        // Coalesce repeated hotkeys while a cold launch is already in progress.
+        // Coalesce repeated show requests while a cold launch is already in progress.
         if (!show_pending.exchange(true))
         {
             SubmitThreadpoolWork(show_work.get());

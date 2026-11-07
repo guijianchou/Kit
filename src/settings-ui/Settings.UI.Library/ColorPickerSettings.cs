@@ -14,7 +14,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class ColorPickerSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class ColorPickerSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "ColorPicker";
 
@@ -66,29 +66,14 @@ namespace Kit.Settings.UI.Library
 
         public ModuleType GetModuleType() => ModuleType.ColorPicker;
 
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ActivationShortcut,
-                    value => Properties.ActivationShortcut = value ?? Properties.DefaultActivationShortcut,
-                    "Activation_Shortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
-
         public static object UpgradeSettings(object oldSettingsObject)
         {
             ColorPickerSettingsVersion1 oldSettings = (ColorPickerSettingsVersion1)oldSettingsObject;
             ColorPickerSettings newSettings = new ColorPickerSettings();
-            newSettings.Properties.ActivationShortcut = oldSettings.Properties.ActivationShortcut;
             newSettings.Properties.ChangeCursor = oldSettings.Properties.ChangeCursor;
             newSettings.Properties.ActivationAction = oldSettings.Properties.ActivationAction;
             newSettings.Properties.ColorHistoryLimit = oldSettings.Properties.ColorHistoryLimit;
             newSettings.Properties.ShowColorName = oldSettings.Properties.ShowColorName;
-            newSettings.Properties.ActivationShortcut = oldSettings.Properties.ActivationShortcut;
             newSettings.Properties.VisibleColorFormats = new Dictionary<string, KeyValuePair<bool, string>>();
             foreach (KeyValuePair<string, bool> oldValue in oldSettings.Properties.VisibleColorFormats)
             {

@@ -192,6 +192,10 @@ internal static class ModulePageSmoke
             ModuleHelper.SetIsModuleEnabled(repository.SettingsConfig, entry.Module, false);
         }
 
+        // The startup dashboard is now cached. Publish this fixture replacement just
+        // as the Runner/settings watcher does, so existing subscribers see it too.
+        repository.NotifySettingsChanged();
+
         int toggleMessages = 0;
         ShellPage.SetDefaultSndMessageCallback(message =>
         {
@@ -236,6 +240,7 @@ internal static class ModulePageSmoke
 
         if (toggleMessages != 20) throw new InvalidOperationException("Expected exactly 20 Utilities commands, got " + toggleMessages);
         File.AppendAllText(Report, "20 Utilities commands; 25 real page-state assertions; no commands from page refresh.\n");
+        await UDPtestRenderingChecks.Run(Report);
 
         int generalMessages = 0;
         ShellPage.SetDefaultSndMessageCallback(message =>

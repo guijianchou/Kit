@@ -225,19 +225,12 @@ namespace Kit.Settings.UI
             }
 
             _placementDebounceTimer?.Stop();
-            try
-            {
-                this.AppWindow.Changed -= OnAppWindowChanged;
-            }
-            catch (Exception)
-            {
-            }
-
             var hWnd = WindowNative.GetWindowHandle(this);
             WindowHelper.SerializePlacement(hWnd);
 
-            if (!App.IsSecondaryWindowOpen() && KeepAliveForBackgroundWork?.Invoke() != true)
+            if (KeepAliveForBackgroundWork?.Invoke() != true)
             {
+                this.AppWindow.Changed -= OnAppWindowChanged;
                 App.ThemeService.ThemeChanged -= OnThemeChanged;
                 App.IPCMessageReceivedCallback = null;
                 shellPage.Dispose();

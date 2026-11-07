@@ -10,7 +10,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class AlwaysOnTopSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class AlwaysOnTopSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "AlwaysOnTop";
         public const string ModuleVersion = "0.0.1";
@@ -31,27 +31,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.AlwaysOnTop;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.Hotkey.Value,
-                    value => Properties.Hotkey.Value = value ?? AlwaysOnTopProperties.DefaultHotkeyValue,
-                    "AlwaysOnTop_ActivationShortcut"),
-                new HotkeyAccessor(
-                    () => Properties.IncreaseOpacityHotkey.Value,
-                    value => Properties.IncreaseOpacityHotkey.Value = value ?? AlwaysOnTopProperties.DefaultIncreaseOpacityHotkeyValue,
-                    "AlwaysOnTop_IncreaseOpacityShortcut"),
-                new HotkeyAccessor(
-                    () => Properties.DecreaseOpacityHotkey.Value,
-                    value => Properties.DecreaseOpacityHotkey.Value = value ?? AlwaysOnTopProperties.DefaultDecreaseOpacityHotkeyValue,
-                    "AlwaysOnTop_DecreaseOpacityShortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         public bool UpgradeSettingsConfiguration()
         {

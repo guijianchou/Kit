@@ -380,6 +380,7 @@ public sealed partial class MainWindow : WindowEx, IDisposable
 
         if (disposing)
         {
+            CancelMemoryTrim();
             StopEventListeners();
 
             _showEvent?.Dispose();
@@ -395,6 +396,7 @@ public sealed partial class MainWindow : WindowEx, IDisposable
 
             RemoveGlobalMouseHook();
 
+            _launcherViewModel.Dispose();
             _coordinator.Dispose();
         }
 

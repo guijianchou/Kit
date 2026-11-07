@@ -12,12 +12,8 @@ namespace Kit.Settings.UI.Library
 {
     public class MeasureToolProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, true, false, true, 0x4D);
-
         public MeasureToolProperties()
         {
-            ActivationShortcut = DefaultActivationShortcut;
             UnitsOfMeasure = new IntProperty(0);
             PixelTolerance = new IntProperty(30);
             ContinuousCapture = false;
@@ -26,8 +22,6 @@ namespace Kit.Settings.UI.Library
             MeasureCrossColor = new StringProperty("#FF4500");
             DefaultMeasureStyle = new IntProperty((int)MeasureToolMeasureStyle.None);
         }
-
-        public HotkeySettings ActivationShortcut { get; set; }
 
         [JsonConverter(typeof(BoolPropertyJsonConverter))]
         public bool ContinuousCapture { get; set; }

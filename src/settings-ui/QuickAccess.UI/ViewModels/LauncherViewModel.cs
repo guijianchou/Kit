@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.ObjectModel;
 using global::Kit.GPOWrapper;
 using ManagedCommon;
@@ -15,7 +16,7 @@ using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace Kit.QuickAccess.ViewModels;
 
-public sealed class LauncherViewModel : Observable
+public sealed class LauncherViewModel : Observable, IDisposable
 {
     private readonly IQuickAccessCoordinator _coordinator;
     private readonly ISettingsRepository<GeneralSettings> _settingsRepository;
@@ -51,5 +52,11 @@ public sealed class LauncherViewModel : Observable
     {
         _coordinator.OpenModuleSettings(moduleType);
         return true;
+    }
+
+    public void Dispose()
+    {
+        _quickAccessViewModel.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

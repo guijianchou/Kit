@@ -47,6 +47,10 @@ internal sealed class QuickAccessCoordinator : IQuickAccessCoordinator, IDisposa
         {
             ModuleType.Awake => SettingsDeepLink.SettingsWindow.Awake,
             ModuleType.LightSwitch => SettingsDeepLink.SettingsWindow.LightSwitch,
+            ModuleType.Localserver => SettingsDeepLink.SettingsWindow.Localserver,
+            ModuleType.UDPtest => SettingsDeepLink.SettingsWindow.UDPtest,
+            ModuleType.NetMap => SettingsDeepLink.SettingsWindow.NetMap,
+            ModuleType.AIHub => SettingsDeepLink.SettingsWindow.AIHub,
             _ => SettingsDeepLink.SettingsWindow.Dashboard,
         };
 

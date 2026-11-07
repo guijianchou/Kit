@@ -16,15 +16,9 @@ namespace Kit.Settings.UI.Library
             Name,
         }
 
-        public static readonly HotkeySettings DefaultHotkeyValue = new HotkeySettings(true, true, false, false, 0xC0);
-
         public WorkspacesProperties()
         {
-            Hotkey = new KeyboardKeysProperty(DefaultHotkeyValue);
         }
-
-        [JsonPropertyName("hotkey")]
-        public KeyboardKeysProperty Hotkey { get; set; }
 
         [JsonPropertyName("sortby")]
         public SortByProperty SortBy { get; set; }

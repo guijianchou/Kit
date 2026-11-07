@@ -16,17 +16,18 @@
 
   On the received object, the runner will call:
     - get_key() to get the non-localized ID of the module,
-    - enable() to initialize the module,
-    - get_hotkeys() / GetHotkeyEx() to register the hotkeys that the module uses.
+    - enable() to initialize the module.
 
   While running, the runner might call the following methods between kit_create()
   and destroy():
     - disable() / enable() / is_enabled() to change or query enabled state,
     - get_config() to get the available configuration settings JSON schema,
     - set_config() to update settings values,
-    - call_custom_action() when a UI custom action is triggered,
-    - get_hotkeys() when settings change to update hotkey registration,
-    - on_hotkey() / OnHotkeyEx() when the registered hotkey is triggered.
+    - call_custom_action() when a UI custom action is triggered.
+
+  Keyboard-related types and virtual slots below are retained only for binary
+  compatibility with existing modules. Kit does not register module hotkeys or
+  call their keyboard callbacks.
 
   When terminating, the runner will:
     - call destroy() which must free all resources and delete the module instance,
@@ -36,7 +37,7 @@
 class KitModuleIface
 {
 public:
-    /* Describes a hotkey which can trigger an action in the Kit module */
+    /* Legacy ABI data layout; Kit does not use this to register hotkeys. */
     struct Hotkey
     {
         bool win = false;
@@ -44,9 +45,9 @@ public:
         bool shift = false;
         bool alt = false;
         unsigned char key = 0;
-        // The id is used to identify the hotkey in the module. The order in module interface should be the same as in the settings.
+        // Legacy identity field; retained to preserve the structure layout.
         int id = 0;
-        // Used by modules to hide implementation hotkeys from settings while still registering them with the runner.
+        // Legacy visibility field; retained to preserve the structure layout.
         bool isShown = true;
 
         std::strong_ordering operator<=>(const Hotkey& other) const
@@ -73,6 +74,7 @@ public:
         }
     };
 
+    // Legacy ABI data layout for the optional hotkey slot.
     struct HotkeyEx
     {
         WORD modifiersMask = 0;
@@ -110,28 +112,30 @@ public:
     /* Destroy the module and free all memory */
     virtual void destroy() = 0;
 
-    /* Get the list of traditional hotkeys */
+    /* Inert legacy vtable slot. Kit does not query or register module hotkeys. */
     virtual size_t get_hotkeys(Hotkey* /*buffer*/, size_t /*buffer_size*/)
     {
         return 0;
     }
 
-    /* Modern HotkeyEx interface */
+    /* Inert legacy vtable slot; retain its position for binary compatibility. */
     virtual std::optional<HotkeyEx> GetHotkeyEx()
     {
         return std::nullopt;
     }
 
+    /* Inert legacy callback; the Kit runner never invokes it. */
     virtual void OnHotkeyEx()
     {
     }
 
-    /* Called when one of the registered hotkeys is pressed. Returns true if key is swallowed */
+    /* Inert legacy callback; the Kit runner never invokes it. */
     virtual bool on_hotkey(size_t /*hotkeyId*/)
     {
         return false;
     }
 
+    // Legacy constants retained for module source compatibility.
     static constexpr size_t WIN_KEY_HOLD_HOTKEY_ID = static_cast<size_t>(-1);
 
     // Preserve the upstream vtable slots. Kit does not poll the legacy Win-key hold path.
@@ -150,6 +154,7 @@ public:
         return kit_gpo::gpo_rule_configured_not_configured;
     }
 
+    // Legacy constant; Kit does not install the centralized keyboard hook.
     const static inline ULONG_PTR CENTRALIZED_KEYBOARD_HOOK_DONT_TRIGGER_FLAG = 0x110;
 
 protected:

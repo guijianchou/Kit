@@ -12,6 +12,7 @@
     xmlns:viewModels="using:Kit.Settings.UI.ViewModels"
     d:DataContext="{d:DesignInstance Type=viewModels:AwakeViewModel}"
     AutomationProperties.LandmarkType="Main"
+    NavigationCacheMode="Required"
     mc:Ignorable="d">
 
     <local:NavigablePage.Resources>

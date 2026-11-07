@@ -13,7 +13,6 @@ namespace Kit.Settings.UI.SerializationContext;
 [JsonSerializable(typeof(Dictionary<string, List<string>>))]
 [JsonSerializable(typeof(AwakeSettings))]
 [JsonSerializable(typeof(LightSwitchSettings))]
-[JsonSerializable(typeof(ShortcutConflictProperties))]
 [JsonSerializable(typeof(WINDOWPLACEMENT))]
 public sealed partial class SourceGenerationContextContext : JsonSerializerContext
 {

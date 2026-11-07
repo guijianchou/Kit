@@ -97,10 +97,6 @@ public:
         auto lib = LoadLibraryW(L"Kit.BackgroundActivatorDLL.dll");
         if (!lib)
         {
-            lib = LoadLibraryW(L"PowerToys.BackgroundActivatorDLL.dll");
-        }
-        if (!lib)
-        {
             return 1;
         }
         auto dispatcher = reinterpret_cast<decltype(dispatch_to_background_handler)*>(GetProcAddress(lib, "dispatch_to_background_handler"));

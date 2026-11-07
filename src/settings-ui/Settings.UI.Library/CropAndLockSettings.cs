@@ -10,7 +10,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class CropAndLockSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class CropAndLockSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "CropAndLock";
         public const string ModuleVersion = "0.0.1";
@@ -31,27 +31,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.CropAndLock;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ReparentHotkey.Value,
-                    value => Properties.ReparentHotkey.Value = value ?? CropAndLockProperties.DefaultReparentHotkeyValue,
-                    "CropAndLock_ReparentActivation_Shortcut"),
-                new HotkeyAccessor(
-                    () => Properties.ThumbnailHotkey.Value,
-                    value => Properties.ThumbnailHotkey.Value = value ?? CropAndLockProperties.DefaultThumbnailHotkeyValue,
-                    "CropAndLock_ThumbnailActivation_Shortcut"),
-                new HotkeyAccessor(
-                    () => Properties.ScreenshotHotkey.Value,
-                    value => Properties.ScreenshotHotkey.Value = value ?? CropAndLockProperties.DefaultScreenshotHotkeyValue,
-                    "CropAndLock_ScreenshotActivation_Shortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         public bool UpgradeSettingsConfiguration()
         {

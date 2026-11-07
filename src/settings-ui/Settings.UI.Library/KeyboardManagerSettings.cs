@@ -33,18 +33,5 @@ namespace Kit.Settings.UI.Library
         {
             return false;
         }
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.EditorShortcut,
-                    value => Properties.EditorShortcut = value ?? Properties.DefaultEditorShortcut,
-                    "Editor_Shortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
     }
 }

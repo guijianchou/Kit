@@ -23,7 +23,7 @@ Kit currently includes six modules. “Plugin” here means a module built and e
 
 Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
 
-Home provides real-time system resource telemetry (CPU, memory, storage, dual-GPU / iGPU & dGPU hardware details, driver version, and temperatures) and dual-egress network observation. General contains appearance, startup behavior and shared AI service settings; Quick Access provides shortcuts and module actions. The entire UI is built on native WinUI 3 Fluent Design styling with semantic surface tokens, responsive cards, Cascadia Code monospace typography, accessibility metadata (keyboard-reachable controls, screen-reader names, high-contrast palettes), and complete bilingual localization (en-US / zh-CN). With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
+Home provides real-time system resource telemetry (CPU, memory, storage, dual-GPU / iGPU & dGPU hardware details, driver version, and temperatures) and dual-egress network observation. General contains appearance, startup behavior and shared AI service settings; Quick Access provides module entry points and actions through the tray menu. Kit does not register global keyboard shortcuts. The entire UI is built on native WinUI 3 Fluent Design styling with semantic surface tokens, responsive cards, Cascadia Code monospace typography, accessibility metadata (keyboard-reachable controls, screen-reader names, high-contrast palettes), and complete bilingual localization (en-US / zh-CN). With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
 
 ## 2. Framework
 
@@ -111,7 +111,7 @@ flowchart LR
 
 ### 3.2 Light Switch: theme scheduling and CLI
 
-Switch Windows light/dark themes by schedule, sunset/sunrise, or night light, with complete command-line control (`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`). Awake and LightSwitch adhere to Kit's zero-hotkey policy.
+Switch Windows light/dark themes by schedule, sunset/sunrise, or night light, with complete command-line control (`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`). All six modules adhere to Kit's zero-hotkey policy.
 
 ```mermaid
 flowchart LR
@@ -301,7 +301,7 @@ The default data root is `%LOCALAPPDATA%\Kit`:
 
 Windows ignores directory-name casing, so the AI Hub plugin and shared AI service use different filenames: `settings.json` and `service-settings.json`.
 
-If configuration writes are denied and logs fall back to `AppData/LocalLow/Kit`, check the Windows integrity labels of the build output first. Resetting settings does not repair output permissions. See the [AI service notes](doc/ai-service-review.md) for the known case and remediation.
+If configuration writes are denied, check the Windows integrity labels of the build output first. Logs stay at their configured module path; a failed write no longer redirects them to LocalLow, Temp or the executable directory. Existing LocalLow logs from older versions remain available to diagnostics. Resetting settings does not repair output permissions. See the [AI service notes](doc/ai-service-review.md) for the known case and remediation.
 
 ## 6. Development and Extension
 

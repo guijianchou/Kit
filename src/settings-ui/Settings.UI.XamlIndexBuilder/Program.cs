@@ -18,7 +18,6 @@ namespace Kit.Settings.UI.XamlIndexBuilder
         {
             "ShellPage.xaml",
             "SearchResultsPage.xaml",
-            "ShortcutConflictWindow.xaml",
         };
 
         private static JsonSerializerOptions serializeOption = new()

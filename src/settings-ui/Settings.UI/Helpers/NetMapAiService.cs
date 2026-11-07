@@ -132,13 +132,15 @@ public static class NetMapAiService
     /// <summary>
     /// Deletes the temporary MTR trace record file if it exists.
     /// </summary>
-    public static void DeleteLatestMtrSnapshot()
+    public static void DeleteLatestMtrSnapshot() => DeleteLatestMtrSnapshot(MtrTempFilePath);
+
+    internal static void DeleteLatestMtrSnapshot(string path)
     {
         try
         {
-            if (File.Exists(MtrTempFilePath))
+            if (File.Exists(path))
             {
-                File.Delete(MtrTempFilePath);
+                File.Delete(path);
             }
         }
         catch

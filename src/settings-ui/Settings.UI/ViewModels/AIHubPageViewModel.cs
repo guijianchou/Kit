@@ -177,6 +177,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     private CancellationTokenSource _readinessCts;
     private bool _isCheckingAiReadiness;
     private bool _disposed;
+    private IAiTaskEngine _aiEngine;
     private int _activeTabIndex;
 
     // Security Audit state
@@ -288,11 +289,24 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         // Seed the indicator from the cached verdict. This deliberately does not probe:
         // opening the page must not start a kernel process, and the constraint is that the
         // AI service is only exercised while the module is enabled.
-        RefreshAiReadinessFromCache();
+        _ = InitializeAiReadinessAsync();
+    }
 
-        // Follow the shared service: toggling it on General (or any config change) must be
-        // reflected here immediately, not only on the next scan or re-check.
-        AiHubEngine.Current.StateChanged += OnEngineStateChanged;
+    private async Task InitializeAiReadinessAsync()
+    {
+        await AiHub.Initialization.ConfigureAwait(false);
+        EnqueueOnUI(() =>
+        {
+            if (!AiHub.CanToggle)
+            {
+                return;
+            }
+
+            _aiEngine = AiHubEngine.Current;
+            _aiEngine.StateChanged += OnEngineStateChanged;
+            RefreshAiReadinessFromCache();
+            OnPropertyChanged(nameof(CanRecheckAiReadiness));
+        });
     }
 
     private static bool PreferChinese() => CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
@@ -1035,7 +1049,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         }
     }
 
-    public bool CanRecheckAiReadiness => IsEnabled && !IsCheckingAiReadiness && !_disposed;
+    public bool CanRecheckAiReadiness => IsEnabled && _aiEngine is not null && !IsCheckingAiReadiness && !_disposed;
 
     /// <summary>True only once a probe has confirmed the route.</summary>
     public bool IsAiReady => AiReadinessLevel == AiReadinessLevel.Ready;
@@ -1102,9 +1116,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
     /// </summary>
     private void RefreshAiReadinessFromCache()
     {
+        if (_aiEngine is null)
+        {
+            return;
+        }
+
         try
         {
-            AiReadiness readiness = AiHubEngine.Current.GetReadiness();
+            AiReadiness readiness = _aiEngine.GetReadiness();
             AiReadinessLevel = readiness.Level;
             AiReadinessText = DescribeReadiness(readiness);
             UpdateEngineAndModelInfo(readiness);
@@ -1133,7 +1152,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void UpdateEngineAndModelInfo(AiReadiness readiness)
     {
-        if (!AiHubEngine.Current.IsEnabled || string.IsNullOrWhiteSpace(readiness.ActiveKernel))
+        if (_aiEngine?.IsEnabled != true || string.IsNullOrWhiteSpace(readiness.ActiveKernel))
         {
             CurrentEngineAndModelLabel = string.Empty;
             return;
@@ -3189,7 +3208,10 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             _disposed = true;
             _readinessCts?.Cancel();
             AiHub?.Dispose();
-            AiHubEngine.Current.StateChanged -= OnEngineStateChanged;
+            if (_aiEngine is not null)
+            {
+                _aiEngine.StateChanged -= OnEngineStateChanged;
+            }
             _auditCts?.Cancel();
             _auditCts?.Dispose();
             _optimizationCts?.Cancel();

@@ -13,12 +13,8 @@ namespace Kit.Settings.UI.Library
 {
     public class ColorPickerProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, false, true, 0x43);
-
         public ColorPickerProperties()
         {
-            ActivationShortcut = DefaultActivationShortcut;
             ChangeCursor = false;
             ColorHistoryLimit = 20;
             VisibleColorFormats = new Dictionary<string, KeyValuePair<bool, string>>();
@@ -45,8 +41,6 @@ namespace Kit.Settings.UI.Library
             SecondaryClickAction = ColorPickerClickAction.Close;
             CopiedColorRepresentation = "HEX";
         }
-
-        public HotkeySettings ActivationShortcut { get; set; }
 
         [JsonPropertyName("changecursor")]
         [JsonConverter(typeof(BoolPropertyJsonConverter))]

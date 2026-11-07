@@ -347,6 +347,7 @@ namespace Kit.Settings.UI.ViewModels
             SetOverviewActive(false);
             base.Dispose();
             quickAccessViewModel.PropertyChanged -= OnQuickAccessPropertyChanged;
+            quickAccessViewModel.Dispose();
             settingsRepository.SettingsChanged -= OnSettingsChanged;
             GC.SuppressFinalize(this);
         }

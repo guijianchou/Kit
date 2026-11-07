@@ -71,8 +71,7 @@
                         <TextBlock Text="{x:Bind DisplayStatus, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <ItemsControl
-                        Grid.Row="1"
+                    <controls:ProbeHistoryStrip Grid.Row="1"
                         Grid.Column="1"
                         Grid.ColumnSpan="7"
                         Margin="0,8,10,8"
@@ -80,18 +79,7 @@
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Center"
                         ItemsSource="{x:Bind RecentBars, Mode=OneWay}"
-                        Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <controls:StatusBarsPanel BarWidth="5" Spacing="2" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="viewModels:StatusBarViewModel">
-                                <Border Height="{x:Bind BarHeight}" Width="5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="2" ToolTipService.ToolTip="{x:Bind Description}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        Visibility="{x:Bind StatusVisibility, Mode=OneWay}" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
                 </Grid>
             </Border>
         </DataTemplate>
@@ -141,8 +129,7 @@
                         <TextBlock Text="{x:Bind DisplayStatus, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <ItemsControl
-                        Grid.Row="1"
+                    <controls:ProbeHistoryStrip Grid.Row="1"
                         Grid.Column="1"
                         Grid.ColumnSpan="7"
                         Margin="0,8,10,8"
@@ -150,18 +137,7 @@
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Center"
                         ItemsSource="{x:Bind RecentBars, Mode=OneWay}"
-                        Visibility="{x:Bind StatusVisibility, Mode=OneWay}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <controls:StatusBarsPanel BarWidth="5" Spacing="2" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="viewModels:StatusBarViewModel">
-                                <Border Height="{x:Bind BarHeight}" Width="5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="{x:Bind Brush}" CornerRadius="2" ToolTipService.ToolTip="{x:Bind Description}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        Visibility="{x:Bind StatusVisibility, Mode=OneWay}" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
 
                     <!-- Expanded Configuration Panel (Localserver Style) -->
                     <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="9" Margin="0,8,0,16"

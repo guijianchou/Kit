@@ -6,7 +6,6 @@
 #include <vector>
 #include <functional>
 #include <map>
-#include "hotkey_conflict_detector.h"
 
 #include <common/utils/json.h>
 
@@ -42,17 +41,7 @@ public:
 
     json::JsonObject json_config() const;
 
-    void update_hotkeys();
-
-    void UpdateHotkeyEx();
-
-    inline void remove_hotkey_records()
-    {
-        hkmng.RemoveHotkeyByModule(pt_module->get_key());
-    }
-
 private:
-    HotkeyConflictDetector::HotkeyConflictManager& hkmng;
     std::unique_ptr<HMODULE, KitModuleDLLDeleter> handle;
     std::unique_ptr<KitModuleIface, KitModuleDeleter> pt_module;
 };

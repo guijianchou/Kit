@@ -86,9 +86,6 @@
     <value>Navigation opened</value>
     <comment>Accessibility announcement when the navigation pane opens</comment>
   </data>
-  <data name="Shortcut.Header" xml:space="preserve">
-    <value>Shortcut</value>
-  </data>
   <data name="General.ModuleTitle" xml:space="preserve">
     <value>Settings</value>
   </data>
@@ -230,21 +227,6 @@
     <value>Windows color settings</value>
     <comment>Windows refers to the Operating system</comment>
   </data>
-  <data name="Activation_Shortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="Activation_Shortcut.Description" xml:space="preserve">
-    <value>Customize the shortcut to activate this module</value>
-  </data>
-  <data name="PasteAsPlainText_Shortcut.Header" xml:space="preserve">
-    <value>Paste as plain text directly</value>
-  </data>
-  <data name="PasteAsMarkdown_Shortcut.Header" xml:space="preserve">
-    <value>Paste as Markdown directly</value>
-  </data>
-  <data name="PasteAsJson_Shortcut.Header" xml:space="preserve">
-    <value>Paste as JSON directly</value>
-  </data>
   <data name="ImageToText.Header" xml:space="preserve">
     <value>Image to text</value>
   </data>
@@ -351,40 +333,6 @@
   <data name="General.SecondaryLinksHeader" xml:space="preserve">
     <value>Related information</value>
   </data>
-  <data name="Activation_Shortcut_Cancel" xml:space="preserve">
-    <value>Cancel</value>
-  </data>
-  <data name="Activation_Shortcut_Description" xml:space="preserve">
-    <value>Press a combination of keys to change this shortcut</value>
-  </data>
-  <data name="Activation_Shortcut_With_Disable_Description" xml:space="preserve">
-    <value>Press a combination of keys to change this shortcut.
-Right-click to remove the key combination, thereby deactivating the shortcut.</value>
-  </data>
-  <data name="Activation_Shortcut_Save" xml:space="preserve">
-    <value>Save</value>
-  </data>
-  <data name="Activation_Shortcut_Title" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
-  <data name="InvalidShortcut.Message" xml:space="preserve">
-    <value>Invalid shortcut</value>
-  </data>
-  <data name="InvalidShortcutWarningLabel.Text" xml:space="preserve">
-    <value>A shortcut should start with **Windows key**, **Ctrl**, **Alt** or **Shift**.</value>
-    <comment>The ** sequences are used for text formatting of the key names. Don't remove them on translation.</comment>
-  </data>
-  <data name="WarningShortcutAltGr.Message" xml:space="preserve">
-    <value>Possible shortcut interference with Alt Gr</value>
-    <comment>Alt Gr refers to the right alt key on some international keyboards</comment>
-  </data>
-  <data name="WarningShortcutAltGr.ToolTipService.ToolTip" xml:space="preserve">
-    <value>Shortcuts with **Ctrl** and **Alt** may remove functionality from some international keyboards, because **Ctrl** + **Alt** = **Alt Gr** in those keyboards.</value>
-    <comment>The ** sequences are used for text formatting of the key names. Don't remove them on translation.</comment>
-  </data>
-  <data name="WarningPotentialShortcutConflict.Message" xml:space="preserve">
-    <value>This shortcut has a potential conflict, but the warning is ignored.</value>
-  </data>
   <data name="Awake_IntervalSettingsCard.Header" xml:space="preserve">
     <value>Interval before returning to the previous awake state</value>
   </data>
@@ -413,12 +361,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="QuickAccent.SecondaryLinksHeader" xml:space="preserve">
     <value>Attribution</value>
-  </data>
-  <data name="LightSwitch_ThemeToggle_Shortcut.Header" xml:space="preserve">
-    <value>Theme toggle shortcut</value>
-  </data>
-  <data name="LightSwitch_ThemeToggle_Shortcut.Description" xml:space="preserve">
-    <value>Switch between light and dark mode</value>
   </data>
   <data name="General_SettingsBackupAndRestore_NothingToBackup" xml:space="preserve">
     <value>A new backup was not created because no settings have been changed since last backup.</value>
@@ -605,29 +547,17 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="LearnWhatsNew.Text" xml:space="preserve">
     <value>Learn what's new</value>
   </data>
-  <data name="ConfigureShortcut" xml:space="preserve">
-    <value>Configure shortcut</value>
-  </data>
-  <data name="ConfigureShortcutText.Text" xml:space="preserve">
-    <value>Assign shortcut</value>
-  </data>
   <data name="QuickAccessTitle.Title" xml:space="preserve">
     <value>Quick access</value>
   </data>
-  <data name="ShortcutsOverview.Title" xml:space="preserve">
-    <value>Shortcuts</value>
-  </data>
   <data name="NoActionsToShow.Text" xml:space="preserve">
     <value>No actions to show..</value>
-  </data>
-  <data name="NoShortcutsToShow.Text" xml:space="preserve">
-    <value>No shortcuts to show..</value>
   </data>
   <data name="Shell_LightSwitch.Content" xml:space="preserve">
     <value>Light Switch</value>
   </data>
   <data name="LightSwitch.ModuleDescription" xml:space="preserve">
-    <value>Easily switch between light and dark mode - on a schedule, automatically, or with a shortcut.</value>
+    <value>Easily switch between light and dark mode on a schedule or automatically.</value>
   </data>
   <data name="LightSwitch.ModuleTitle" xml:space="preserve">
     <value>Light Switch</value>
@@ -640,9 +570,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="LightSwitch_EnableSettingsCard.Header" xml:space="preserve">
     <value>Light Switch</value>
-  </data>
-  <data name="LightSwitch_ShortcutsSettingsGroup.Header" xml:space="preserve">
-    <value>Shortcuts</value>
   </data>
   <data name="LightSwitch_ScheduleSettingsGroup.Header" xml:space="preserve">
     <value>Schedule</value>
@@ -774,82 +701,12 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="SearchResults_NoResultsDescription.Text" xml:space="preserve">
     <value>Try a different search term</value>
   </data>
-  <data name="InAppHotkeyConflictTooltipText" xml:space="preserve">
-    <value>This shortcut is already in use by another utility.</value>
-  </data>
-  <data name="SysHotkeyConflictTooltipText" xml:space="preserve">
-    <value>This shortcut is already in use by a default system shortcut.</value>
-  </data>
-  <data name="ShortcutConflictWindow_Title" xml:space="preserve">
-    <value>Kit shortcut conflicts</value>
-  </data>
-  <data name="ShortcutConflictWindow_TitleTxt.Title" xml:space="preserve">
-    <value>Kit shortcut conflicts</value>
-  </data>
-  <data name="ShortcutConflictWindow_Description.Text" xml:space="preserve">
-    <value>If any shortcut conflicts are detected, they’ll appear below. Conflicts can happen between Kit utilities or Windows system shortcuts, and may cause unexpected behavior. If everything works as expected, you can safely ignore the conflict.</value>
-  </data>
-  <data name="ShortcutConflictWindow_ModulesUsingShortcut.Text" xml:space="preserve">
-    <value>conflicts</value>
-  </data>
-  <data name="ShortcutConflictWindow_SystemCard.Header" xml:space="preserve">
-    <value>System shortcut</value>
-  </data>
-  <data name="ShortcutConflictWindow_SystemCard.Description" xml:space="preserve">
-    <value>This shortcut is reserved by Windows and can't be reassigned.</value>
-  </data>
-  <data name="ShortcutConflictWindow_SystemShortcutLink.Content" xml:space="preserve">
-    <value>See all Windows shortcuts</value>
-  </data>
-  <data name="ShortcutConflictWindow_NoConflictsTitle.Text" xml:space="preserve">
-    <value>No conflicts detected</value>
-  </data>
-  <data name="ShortcutConflictWindow_NoConflictsDescription.Text" xml:space="preserve">
-    <value>All shortcuts function correctly</value>
-  </data>
-  <data name="ShortcutConflictControl_Title.Text" xml:space="preserve">
-    <value>Shortcut conflicts</value>
-  </data>
-  <data name="ShortcutConflictControl_Automation.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Shortcut conflicts</value>
-  </data>
-  <data name="ShortcutConflictControl_NoConflictsFound" xml:space="preserve">
-    <value>No conflicts found</value>
-  </data>
-  <data name="ShortcutConflictControl_SingleConflictFound" xml:space="preserve">
-    <value>1 conflict found</value>
-  </data>
-  <data name="ShortcutConflictControl_MultipleConflictsFound" xml:space="preserve">
-    <value>{0} conflicts found</value>
-    <comment>{0} is replaced with the number of conflicts</comment>
-  </data>
   <data name="Search_ResultsFor" xml:space="preserve">
     <value>Results for</value>
     <comment>Prefix for search string. E.g. "Results for 'shortcut'"</comment>
   </data>
   <data name="UtilitiesHeader.Title" xml:space="preserve">
     <value>Utilities</value>
-  </data>
-  <data name="Shortcut_ResetBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Reset shortcut</value>
-  </data>
-  <data name="Shortcut_ResetToolTip.Text" xml:space="preserve">
-    <value>Reset to the default shortcut</value>
-  </data>
-  <data name="Shortcut_Reset.Text" xml:space="preserve">
-    <value>Reset</value>
-  </data>
-  <data name="Shortcut_ClearBtn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Clear shortcut</value>
-  </data>
-  <data name="Shortcut_ClearToolTip.Text" xml:space="preserve">
-    <value>Clear and unassign this shortcut</value>
-  </data>
-  <data name="Shortcut_Clear.Text" xml:space="preserve">
-    <value>Clear</value>
-  </data>
-  <data name="Shortcut_Conflict_LearnMore.Content" xml:space="preserve">
-    <value>Learn more</value>
   </data>
   <data name="LightSwitch_SetLocationButton.Content" xml:space="preserve">
     <value>Set Location</value>
@@ -863,9 +720,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="GeneralPage_EnableQuickAccess.Description" xml:space="preserve">
     <value>Fast access to quick actions and module toggles</value>
   </data>
-  <data name="GeneralPage_QuickAccessShortcut.Header" xml:space="preserve">
-    <value>Activation shortcut</value>
-  </data>
   <data name="LightSwitch_ModeFollowNightLight.Content" xml:space="preserve">
     <value>Follow Night Light</value>
   </data>
@@ -874,9 +728,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="LightSwitch_FollowNightLightCardMessage.Text" xml:space="preserve">
     <value>Following Night Light settings.</value>
-  </data>
-  <data name="ShortcutConflictWindow_IgnoreShortcut.Content" xml:space="preserve">
-    <value>Ignore conflict</value>
   </data>
   <data name="Shell_Search_ShowAll.Text" xml:space="preserve">
     <value>Show all results</value>
@@ -1583,7 +1434,6 @@ Activate by holding the key for the character you want to add an accent to, then
         <data name="Localserver_LogSubtitleFormat" xml:space="preserve">
     <value>{0} · {1} lines shown</value>
   </data>
-  
   <data name="General_AiServices.Header" xml:space="preserve">
     <value>AI services</value>
   </data>
@@ -1593,7 +1443,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="General_AiHubSettings.Description" xml:space="preserve">
     <value>Manage shared AI services, kernels, and connections for Kit and its plugins.</value>
   </data>
-  
     <data name="AiHub_KernelCard.Header" xml:space="preserve">
     <value>AI execution kernel</value>
   </data>
@@ -2979,13 +2828,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>No audit snapshot found for {0:yyyy-MM-dd}.</value>
   </data>
   <data name="Shell_SearchBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Search settings (Ctrl+F)</value>
-  </data>
-  <data name="ShortcutControl_EditButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Edit shortcut</value>
-  </data>
-  <data name="ShortcutControl_EditButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Edit shortcut</value>
+    <value>Search settings</value>
   </data>
   <data name="AiHub_KernelComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>AI execution kernel</value>

@@ -13,25 +13,19 @@ using Kit.Settings.UI.Library.Interfaces;
 namespace Kit.Settings.UI.Library;
 
 /// <summary>
-/// This user flow allows DSC resources to use PowerToys.Settings executable to get settings values by querying them from command line using the following syntax:
-/// PowerToys.Settings.exe get <path to a json file containing a list of modules and their corresponding properties>
-///
-/// Example: PowerToys.Settings.exe get %TEMP%\properties.json
+/// Queries Kit settings from the command line using a JSON file listing modules and properties.
+/// Example: Kit.Settings.exe get %TEMP%\properties.json
 /// `properties.json` file contents:
 /// {
-///   "AlwaysOnTop": ["FrameEnabled", "FrameAccentColor"],
-///   "FancyZones": ["FancyzonesShiftDrag", "FancyzonesShowOnAllMonitors"]
+///   "Awake": ["KeepDisplayOn", "IntervalMinutes"]
 /// }
 ///
-/// Upon PowerToys.Settings.exe completion, it'll update `properties.json` file to contain something like this:
+/// The command replaces `properties.json` with the current values, for example:
 /// {
-///   "AlwaysOnTop": {
-///     "FrameEnabled": true,
-///     "FrameAccentColor": "#0099cc"
-///   },
-///   "FancyZones": {
-///     "FancyzonesShiftDrag": true,
-///     "FancyzonesShowOnAllMonitors": false
+///   "Awake": {
+///     "Enabled": true,
+///     "KeepDisplayOn": "False",
+///     "IntervalMinutes": "1"
 ///   }
 /// }
 /// </summary>

@@ -12,7 +12,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class PowerOcrSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class PowerOcrSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "TextExtractor";
 
@@ -45,19 +45,6 @@ namespace Kit.Settings.UI.Library
             => Name;
 
         public ModuleType GetModuleType() => ModuleType.PowerOCR;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ActivationShortcut,
-                    value => Properties.ActivationShortcut = value ?? Properties.DefaultActivationShortcut,
-                    "Activation_Shortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         // This can be utilized in the future if the settings.json file is to be modified/deleted.
         public bool UpgradeSettingsConfiguration()

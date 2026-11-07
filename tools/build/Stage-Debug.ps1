@@ -54,7 +54,7 @@ $excludedExtensions = @('.lib', '.exp', '.idb', '.ilk', '.obj', '.pch', '.tlog',
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Where-Object {
     $relative = Get-RelativePathCompat $sourceRoot $_.FullName
     $include = $relative -notmatch '^(tests|LightSwitchLib)[\\/]'
-    $include = $include -and ($_.Name -notlike 'PowerToys.*' -or $_.Name -in @('PowerToys.ActionRunner.exe', 'PowerToys.ActionRunner.pdb', 'Kit.ActionRunner.exe', 'Kit.ActionRunner.pdb'))
+    $include = $include -and ($_.Name -notlike 'PowerToys.*')
     $include = $include -and $_.Extension -notin $excludedExtensions
     $include = $include -and $_.Name -notin $excludedNames
     $include = $include -and $relative -notin $excludedRootFiles
@@ -69,7 +69,7 @@ if ($sourceFiles.Count -eq 0) { throw 'No runtime files were selected.' }
 $versionedFiles = @(
     'Kit.exe', 'Kit.Awake.exe', 'Kit.Awake.dll',
     'Kit.ManagedCommon.dll', 'Kit.Interop.dll', 'Kit.GPOWrapper.dll', 'Kit.Settings.UI.Lib.dll',
-    'Kit.BackgroundActivatorDLL.dll', 'PowerToys.ActionRunner.exe', 'Kit.ActionRunner.exe',
+    'Kit.BackgroundActivatorDLL.dll', 'Kit.ActionRunner.exe',
     'Kit.AwakeModuleInterface.dll', 'Kit.LightSwitchModuleInterface.dll',
     'Kit.LocalserverModuleInterface.dll', 'Kit.UDPtestModuleInterface.dll',
     'Kit.NetMapModuleInterface.dll', 'Kit.AIHubModuleInterface.dll',
@@ -87,9 +87,6 @@ $expectedQuadVersion = "${Version}.0"
 foreach ($relative in $versionedFiles) {
     $fullPath = Join-Path $sourceRoot $relative
     if (-not (Test-Path -LiteralPath $fullPath)) {
-        if ($relative -in @('PowerToys.ActionRunner.exe', 'Kit.ActionRunner.exe')) {
-            continue
-        }
         # Fallback between flat and worker subfolder layouts
         $altRelative = switch ($relative) {
             'Kit.AIHubWorker.exe'                         { 'AIHubWorker\Kit.AIHubWorker.exe' }
@@ -176,8 +173,7 @@ foreach ($relative in @(
         throw "Required runtime asset is missing: $relative"
     }
 }
-if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot 'Kit.ActionRunner.exe') -PathType Leaf) -and
-    -not (Test-Path -LiteralPath (Join-Path $destinationRoot 'PowerToys.ActionRunner.exe') -PathType Leaf)) {
+if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot 'Kit.ActionRunner.exe') -PathType Leaf)) {
     throw "Required runtime asset is missing: Kit.ActionRunner.exe"
 }
 foreach ($relative in @('svgs', 'WinUI3Apps\SettingsXAML', 'WinUI3Apps\QuickAccessXaml', 'WinUI3Apps\Assets', 'WinUI3Apps\zh-CN')) {

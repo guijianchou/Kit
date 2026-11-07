@@ -10,18 +10,6 @@ namespace Kit.Settings.UI.Library
 {
     public class MousePointerCrosshairsProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, true, false, 0x50); // Win + Alt + P
-
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultGlidingCursorActivationShortcut => new HotkeySettings(true, false, true, false, 0xBE); // Win + Alt + .
-
-        [JsonPropertyName("activation_shortcut")]
-        public HotkeySettings ActivationShortcut { get; set; }
-
-        [JsonPropertyName("gliding_cursor_activation_shortcut")]
-        public HotkeySettings GlidingCursorActivationShortcut { get; set; }
-
         [JsonPropertyName("crosshairs_color")]
         public StringProperty CrosshairsColor { get; set; }
 
@@ -63,8 +51,6 @@ namespace Kit.Settings.UI.Library
 
         public MousePointerCrosshairsProperties()
         {
-            ActivationShortcut = DefaultActivationShortcut;
-            GlidingCursorActivationShortcut = DefaultGlidingCursorActivationShortcut;
             CrosshairsColor = new StringProperty("#FF0000");
             CrosshairsOpacity = new IntProperty(75);
             CrosshairsRadius = new IntProperty(20);

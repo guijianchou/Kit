@@ -55,14 +55,16 @@ namespace Kit.Settings.UI.Views
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            UnsubscribeWindow();
-            ViewModel.Dispose();
+            // Keep the page, telemetry snapshot, and window lifetime subscription cached.
+            // Only the work that needs a visible dashboard pauses between visits.
+            ViewModel.SetOverviewActive(false);
         }
 
         protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
             isCurrentPage = true;
+            RefreshEnabledState();
             UpdateVisibility();
         }
 
@@ -92,12 +94,16 @@ namespace Kit.Settings.UI.Views
 
         private void Window_Closed(object sender, WindowEventArgs args)
         {
-            ViewModel.SetOverviewActive(false);
-            if (!args.Handled)
+            if (args.Handled)
             {
-                UnsubscribeWindow();
-                ViewModel.Dispose();
+                // A rejected close can leave the window visible; a tray close hides it.
+                UpdateVisibility();
+                return;
             }
+
+            ViewModel.SetOverviewActive(false);
+            UnsubscribeWindow();
+            ViewModel.Dispose();
         }
 
         private void UnsubscribeWindow()

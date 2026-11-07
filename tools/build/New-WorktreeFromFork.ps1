@@ -12,7 +12,7 @@
   Fork spec in the form <ForkUser>:<ForkBranch>.
 
 .PARAMETER ForkRepo
-  Repository name in the fork (default: PowerToys).
+  Repository name in the fork (default: Kit).
 
 .PARAMETER RemoteName
   Desired remote name; if left as 'fork' a unique suffix will be generated.
@@ -39,7 +39,7 @@
 #>
 param(
   [string] $Spec,
-  [string] $ForkRepo = 'PowerToys',
+  [string] $ForkRepo = 'Kit',
   [string] $RemoteName = 'fork',
   [string] $BranchAlias,
   [Alias('Profile')][string] $VSCodeProfile = 'Default',

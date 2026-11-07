@@ -79,7 +79,7 @@
 
   <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <Version>$(Version).0</Version>
-    <RepositoryUrl>https://github.com/microsoft/PowerToys</RepositoryUrl>
+    <RepositoryUrl>https://github.com/guijianchou/Kit</RepositoryUrl>
     <RepositoryType>GitHub</RepositoryType>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
@@ -98,7 +98,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <_PropertySheetDisplayName>PowerToys.Root.Props</_PropertySheetDisplayName>
+    <_PropertySheetDisplayName>Kit.Root.Props</_PropertySheetDisplayName>
     <ForceImportBeforeCppProps>$(RepoRoot)Cpp.Build.props</ForceImportBeforeCppProps>
   </PropertyGroup>
 

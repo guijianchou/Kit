@@ -123,7 +123,7 @@ namespace Kit.Settings.UI.Views
             ViewModel = new ShellViewModel(SettingsRepository<GeneralSettings>.GetInstance(settingsUtils));
             DataContext = ViewModel;
             ShellHandler = this;
-            ViewModel.Initialize(shellFrame, navigationView, KeyboardAccelerators);
+            ViewModel.Initialize(shellFrame, navigationView);
             App.LogStartupTiming("ShellPage: ViewModel initialized");
 
             // Reflect each module's enabled state in the navigation. Disabled modules stay
@@ -133,7 +133,6 @@ namespace Kit.Settings.UI.Views
             // NL moved navigation to Dashboard to the moment when the window is first activated (to not make flyout window disappear)
             // shellFrame.Navigate(typeof(DashboardPage));
             IPCResponseHandleList.Add(ReceiveMessage);
-            IPCResponseService.Instance.RegisterForIPC();
             shellFrame.Navigated += OnFirstNavigated;
         }
 
@@ -470,12 +469,6 @@ namespace Kit.Settings.UI.Views
 
             var assembly = typeof(GeneralPage).Assembly;
             return assembly.GetType($"Kit.Settings.UI.Views.{pageTypeName}");
-        }
-
-        private void CtrlF_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-        {
-            SearchBox.Focus(FocusState.Programmatic);
-            args.Handled = true; // prevent further processing (e.g., unintended navigation)
         }
 
         private void SearchBox_GotFocus(object sender, RoutedEventArgs e)

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <common/utils/json.h>
-#include <common/SettingsAPI/settings_objects.h>
+#include <map>
+#include <string>
 
 enum class DashboardSortOrder
 {
@@ -21,7 +22,6 @@ struct GeneralSettings
     bool isAdmin;
     bool enableWarningsElevatedApps;
     bool enableQuickAccess;
-    PowerToysSettings::HotkeyObject quickAccessShortcut;
     bool showNewUpdatesToastNotification;
     bool downloadUpdatesAutomatically;
     bool showWhatsNewAfterUpdates;
@@ -30,7 +30,6 @@ struct GeneralSettings
     std::wstring theme;
     std::wstring systemTheme;
     std::wstring powerToysVersion;
-    json::JsonObject ignoredConflictProperties;
 
     // Flag to indicate whether durable settings were successfully read from disk.
     bool isDataLoadedSuccessfully = true;

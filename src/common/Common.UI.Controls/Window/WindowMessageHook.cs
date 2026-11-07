@@ -11,14 +11,14 @@ namespace Kit.Common.UI.Controls.Window;
 /// <summary>
 /// Subclasses a window's WndProc and invokes a preprocessor callback for every
 /// message before the default window procedure runs. Useful for routing low-level
-/// Win32 messages (e.g. <c>WM_HOTKEY</c>) into managed handlers without depending
+/// Win32 messages into managed handlers without depending
 /// on the WinUI XAML message loop.
 /// </summary>
 /// <remarks>
 /// Usage:
 /// <code>
 ///   _hook = new WindowMessageHook(window, (uMsg, wParam, lParam) =>
-///       _hotkeyService.HandleMessage(uMsg, wParam));
+///       HandleWindowMessage(uMsg, wParam, lParam));
 /// </code>
 /// Dispose to restore the original WndProc.
 /// </remarks>

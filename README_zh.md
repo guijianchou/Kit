@@ -23,7 +23,7 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 
 启动运行目录中的 `Kit.exe` 后，在 Settings 中启用需要的模块并配置。**模块开关与任务开始是两层操作**：例如 Localserver 启用后仍需单独启动服务，NetMap 启用后仍需点击 Start。
 
-首页提供实时系统资源监控（CPU、内存、磁盘空间、双显卡/核显与独显硬件信息、驱动版本及温度）与网络双出口（Direct / Proxy）对比；常规页管理外观、启动行为和共享 AI 服务；Quick Access 提供快捷入口与模块动作。全界面基于原生 WinUI 3 Fluent Design 规范设计，采用层级设计令牌、响应式卡片布局、Cascadia Code 规范等宽字体排版、无障碍元数据（键盘可达控件、屏幕阅读器名称、高对比度配色）以及 100% 完整中英双语本地化（零硬编码字符串）。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
+首页提供实时系统资源监控（CPU、内存、磁盘空间、双显卡/核显与独显硬件信息、驱动版本及温度）与网络双出口（Direct / Proxy）对比；常规页管理外观、启动行为和共享 AI 服务；Quick Access 通过托盘菜单提供模块入口与动作，Kit 不注册全局快捷键。全界面基于原生 WinUI 3 Fluent Design 规范设计，采用层级设计令牌、响应式卡片布局、Cascadia Code 规范等宽字体排版、无障碍元数据（键盘可达控件、屏幕阅读器名称、高对比度配色）以及 100% 完整中英双语本地化（零硬编码字符串）。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
 
 ## 2. 主框架
 
@@ -111,7 +111,7 @@ flowchart LR
 
 ### 3.2 Light Switch：主题计划与 CLI 工具
 
-按固定时间、日出日落或夜间模式计划自动切换 Windows 明暗主题，并提供完整的命令行交互控制（`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`）。Awake 与 LightSwitch 严格落实零快捷键轻量化设计。
+按固定时间、日出日落或夜间模式计划自动切换 Windows 明暗主题，并提供完整的命令行交互控制（`Kit.LightSwitch.Cli.exe status/light/dark/toggle/schedule`）。六个模块统一采用零快捷键设计。
 
 ```mermaid
 flowchart LR
@@ -301,7 +301,7 @@ pwsh -ExecutionPolicy Bypass -File .\tools\tests\NetMap\Invoke-NetMapPageSmoke.p
 
 Windows 不区分目录大小写，因此 AI Hub 插件与共享 AI 服务使用不同文件名：`settings.json` 与 `service-settings.json`。
 
-若出现配置保存被拒绝、日志回退到 `AppData/LocalLow/Kit`，先检查构建产物的 Windows 完整性标签；清空配置不能修复产物权限。已知情况与处理说明见 [AI 服务说明](doc/ai-service-review.md)。
+若出现配置保存被拒绝，先检查构建产物的 Windows 完整性标签。日志固定写入各模块配置的路径，写入失败不再转存到 LocalLow、临时目录或程序目录；诊断工具仍可读取旧版本留下的 LocalLow 日志。清空配置不能修复产物权限。已知情况与处理说明见 [AI 服务说明](doc/ai-service-review.md)。
 
 ## 6. 开发与扩展
 

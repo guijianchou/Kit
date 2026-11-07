@@ -19,13 +19,46 @@ public sealed class ServiceClientReuseTests
         var created = new List<string>();
         using var probe = new NetworkProbe((name, _) => Create(created, name));
 
-        await probe.CheckServicesAsync(new(), 7, _ => { }, CancellationToken.None);
-        await probe.CheckServicesAsync(new(), 7, _ => { }, CancellationToken.None);
+        var first = await probe.CheckServicesAsync(new(), 7, _ => { }, CancellationToken.None);
+        var second = await probe.CheckServicesAsync(new(), 7, _ => { }, CancellationToken.None);
+
+        Assert.IsTrue(
+            first.Concat(second).All(result => result.Error == ProbeError.None),
+            "Reusing a client must issue a successful second request, not return a disposed-client failure.");
 
         Assert.AreEqual(1, created.Count(name => name == "Claude"), "A trace checkpoint must reuse one handler within a generation.");
         Assert.AreEqual(1, created.Count(name => name == "ChatGPT"), "A trace checkpoint must reuse one handler within a generation.");
         Assert.AreEqual(2, created.Count(name => name == "Gemini"), "A webpage check must keep a fresh handler per request.");
         Assert.AreEqual(2, created.Count(name => name == "Google"), "A webpage check must keep a fresh handler per request.");
+    }
+
+    [TestMethod]
+    public async Task PoolOwnsTraceHandlersAndRequestScopeOwnsWebsiteHandlers()
+    {
+        var created = new List<(string Name, Handler Handler)>();
+        var probe = new NetworkProbe((name, _) =>
+        {
+            var handler = new Handler(name is "Gemini" or "Google" ? "<html>Page</html>" : "ip=198.51.100.8\nloc=JP\n", false);
+            created.Add((name, handler));
+            return new HttpClient(handler);
+        });
+        try
+        {
+            await probe.CheckServicesAsync(new(), 7, _ => { }, CancellationToken.None);
+            await probe.CheckServicesAsync(new(), 7, _ => { }, CancellationToken.None);
+            foreach (var entry in created)
+            {
+                bool pooled = entry.Name is "Claude" or "ChatGPT";
+                Assert.AreEqual(pooled ? 2 : 1, entry.Handler.RequestCount, entry.Name);
+                Assert.AreEqual(!pooled, entry.Handler.Disposed, entry.Name + " ownership");
+            }
+        }
+        finally
+        {
+            probe.Dispose();
+        }
+
+        Assert.IsTrue(created.All(entry => entry.Handler.Disposed), "Disposing the pool must release its remaining handlers.");
     }
 
     [TestMethod]
@@ -126,14 +159,26 @@ public sealed class ServiceClientReuseTests
 
     private sealed class Handler(string body, bool failing) : HttpMessageHandler
     {
+        public int RequestCount { get; private set; }
+
+        public bool Disposed { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            ObjectDisposedException.ThrowIf(Disposed, this);
+            RequestCount++;
             if (failing)
             {
                 throw new HttpRequestException("Synthetic connection failure");
             }
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed |= disposing;
+            base.Dispose(disposing);
         }
     }
 }

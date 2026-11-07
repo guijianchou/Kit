@@ -6,7 +6,6 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Kit.Settings.UI.Library.Attributes;
-using Kit.Settings.UI.Library.Helpers;
 using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.Library.Utilities;
 using ManagedCommon;
@@ -19,7 +18,7 @@ namespace Kit.Settings.UI.Library
         ByStatus,
     }
 
-    public class GeneralSettings : ISettingsConfig, IHotkeyConfig
+    public class GeneralSettings : ISettingsConfig
     {
         // Gets or sets a value indicating whether run powertoys on start-up.
         [JsonPropertyName("startup")]
@@ -55,10 +54,6 @@ namespace Kit.Settings.UI.Library
         // Gets or sets a value indicating whether Quick Access is enabled.
         [JsonPropertyName("enable_quick_access")]
         public bool EnableQuickAccess { get; set; }
-
-        // Gets or sets Quick Access shortcut.
-        [JsonPropertyName("quick_access_shortcut")]
-        public HotkeySettings QuickAccessShortcut { get; set; }
 
         // Gets or sets theme Name.
         [JsonPropertyName("theme")]
@@ -114,9 +109,6 @@ namespace Kit.Settings.UI.Library
         [JsonPropertyName("dashboard_sort_order")]
         public DashboardSortOrder DashboardSortOrder { get; set; }
 
-        [JsonPropertyName("ignored_conflict_properties")]
-        public ShortcutConflictProperties IgnoredConflictProperties { get; set; }
-
         public GeneralSettings()
         {
             Startup = false;
@@ -124,7 +116,6 @@ namespace Kit.Settings.UI.Library
             IsAdmin = false;
             EnableWarningsElevatedApps = true;
             EnableQuickAccess = true;
-            QuickAccessShortcut = new HotkeySettings();
             IsElevated = false;
             ShowNewUpdatesToastNotification = false;
             AutoDownloadUpdates = false;
@@ -140,24 +131,12 @@ namespace Kit.Settings.UI.Library
             }
             catch (Exception e)
             {
-                Logger.LogError("Exception encountered when getting PowerToys version", e);
+                Logger.LogError("Exception encountered when getting Kit version", e);
                 PowertoysVersion = "v0.0.0";
             }
 
             Enabled = new EnabledModules();
             CustomActionName = string.Empty;
-            IgnoredConflictProperties = new ShortcutConflictProperties();
-        }
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            return new HotkeyAccessor[]
-            {
-                new HotkeyAccessor(
-                    () => QuickAccessShortcut,
-                    (hotkey) => { QuickAccessShortcut = hotkey; },
-                    "GeneralPage_QuickAccessShortcut"),
-            };
         }
 
         public ModuleType GetModuleType()
@@ -210,19 +189,17 @@ namespace Kit.Settings.UI.Library
                 settingsUpgraded = true;
             }
 
-            // Ensure IgnoredConflictProperties is initialized (for backward compatibility)
-            if (IgnoredConflictProperties == null)
-            {
-                IgnoredConflictProperties = new ShortcutConflictProperties();
-                settingsUpgraded = true; // Indicate that settings were upgraded
-            }
-
             return settingsUpgraded;
         }
 
         public void AddEnabledModuleChangeNotification(Action callBack)
         {
             Enabled.AddEnabledModuleChangeNotification(callBack);
+        }
+
+        public void RemoveEnabledModuleChangeNotification(Action callBack)
+        {
+            Enabled.RemoveEnabledModuleChangeNotification(callBack);
         }
     }
 }

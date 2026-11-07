@@ -10,12 +10,6 @@ namespace Kit.Settings.UI.Library
 {
     public class CursorWrapProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, true, false, 0x55); // Win + Alt + U
-
-        [JsonPropertyName("activation_shortcut")]
-        public HotkeySettings ActivationShortcut { get; set; }
-
         [JsonPropertyName("auto_activate")]
         public BoolProperty AutoActivate { get; set; }
 
@@ -33,7 +27,6 @@ namespace Kit.Settings.UI.Library
 
         public CursorWrapProperties()
         {
-            ActivationShortcut = DefaultActivationShortcut;
             AutoActivate = new BoolProperty(false);
             DisableWrapDuringDrag = new BoolProperty(true);
             WrapMode = new IntProperty(0); // 0=Both (default), 1=VerticalOnly, 2=HorizontalOnly

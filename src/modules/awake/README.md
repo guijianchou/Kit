@@ -1,14 +1,14 @@
-# PowerToys Awake Module
+# Kit Awake Module
 
-A PowerToys utility that prevents Windows from sleeping and/or turning off the display.
+Kit's Awake module, derived from Microsoft PowerToys, prevents Windows from sleeping and/or turning off the display.
 
-**Author:** [Den Delimarsky](https://den.dev)
+**Upstream author:** [Den Delimarsky](https://den.dev)
 
 ## Resources
 
-- [Awake Website](https://awake.den.dev) - Official documentation and guides
-- [Microsoft Learn Documentation](https://learn.microsoft.com/windows/powertoys/awake) - Usage instructions and feature overview
-- [GitHub Issues](https://github.com/microsoft/PowerToys/issues?q=is%3Aissue+label%3AProduct-Awake) - Report bugs or request features
+- [Upstream Awake Website](https://awake.den.dev) - Background documentation and guides
+- [Microsoft Learn Documentation](https://learn.microsoft.com/windows/powertoys/awake) - Upstream usage instructions and feature overview
+- [Kit GitHub Issues](https://github.com/guijianchou/Kit/issues) - Report Kit bugs or request features
 
 ## Overview
 
@@ -17,7 +17,7 @@ The Awake module consists of three projects:
 | Project | Purpose |
 |---------|---------|
 | `Awake/` | Main WinExe application with CLI support |
-| `Awake.ModuleServices/` | Service layer for PowerToys integration |
+| `Awake.ModuleServices/` | Service layer for Kit integration |
 | `AwakeModuleInterface/` | C++ native module bridge |
 
 ## How It Works
@@ -42,10 +42,10 @@ The module uses the Win32 `SetThreadExecutionState()` API to signal Windows that
 Awake can be run standalone with the following options:
 
 ```
-PowerToys.Awake.exe [options]
+Kit.Awake.exe [options]
 
 Options:
-  -c, --use-pt-config    Use PowerToys configuration file
+  -c, --use-kit-config   Use Kit configuration file
   -d, --display-on       Keep display on (default: false)
   -t, --time-limit       Time limit in seconds
   -p, --pid              Process ID to bind to
@@ -53,26 +53,28 @@ Options:
   -u, --use-parent-pid   Bind to parent process
 ```
 
+`--use-pt-config` remains available as a compatibility alias for `--use-kit-config`; both read Kit settings.
+
 ### Examples
 
 Keep system awake indefinitely:
 ```powershell
-PowerToys.Awake.exe
+Kit.Awake.exe
 ```
 
 Keep awake for 1 hour with display on:
 ```powershell
-PowerToys.Awake.exe --time-limit 3600 --display-on
+Kit.Awake.exe --time-limit 3600 --display-on
 ```
 
 Keep awake until a specific time:
 ```powershell
-PowerToys.Awake.exe --expire-at "2024-12-31 23:59:59"
+Kit.Awake.exe --expire-at "2024-12-31 23:59:59"
 ```
 
 Keep awake while another process is running:
 ```powershell
-PowerToys.Awake.exe --pid 1234
+Kit.Awake.exe --pid 1234
 ```
 
 ## Architecture
@@ -87,9 +89,9 @@ PowerToys.Awake.exe --pid 1234
 
 4. **Dual-Mode Operation**
    - Standalone: Command-line arguments only
-   - Integrated: PowerToys settings file + process binding
+   - Integrated: Kit settings file + process binding
 
-5. **Process Binding** - The `--pid` parameter keeps the system awake only while a target process runs, with auto-exit when the parent PowerToys runner terminates.
+5. **Process Binding** - The `--pid` parameter keeps the system awake only while a target process runs, with auto-exit when the parent Kit runner terminates.
 
 ## Key Files
 
@@ -130,15 +132,15 @@ msbuild Awake\Awake.csproj /p:Configuration=Release /p:Platform=x64
 
 - **System.CommandLine** - Command-line parsing
 - **System.Reactive** - Rx.NET for timer management
-- **PowerToys.ManagedCommon** - Shared PowerToys utilities
-- **PowerToys.Settings.UI.Lib** - Settings integration
-- **PowerToys.Interop** - Native interop layer
+- **Kit.ManagedCommon** - Shared Kit utilities
+- **Kit.Settings.UI.Lib** - Settings integration
+- **Kit.Interop** - Native interop layer
 
 ## Configuration
 
-When running with PowerToys (`--use-pt-config`), settings are stored in:
+When running with Kit (`--use-kit-config`), settings are stored in:
 ```
-%LOCALAPPDATA%\Microsoft\PowerToys\Awake\settings.json
+%LOCALAPPDATA%\Kit\Awake\settings.json
 ```
 
 ## Known Limitations

@@ -43,6 +43,7 @@ try {
     foreach ($arg in @('/nostdlib+', '/target:exe', '/langversion:preview')) { $compilerArgs.Add($arg) }
     $compilerArgs.Add('/out:"' + (Join-Path $runtimeRoot "$testName.dll") + '"')
     $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'ModulePageSmoke.cs') + '"')
+    $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'UDPtestRenderingChecks.cs') + '"')
     foreach ($file in Get-ChildItem -LiteralPath $runtimeRoot -Filter '*.dll' -File) {
         try { $null = [Reflection.AssemblyName]::GetAssemblyName($file.FullName) } catch { continue }
         $compilerArgs.Add('/reference:"' + $file.FullName + '"')
@@ -56,6 +57,9 @@ try {
         (Join-Path $hostPack.FullName 'runtimes\win-x64\native\apphost.exe'),
         (Join-Path $runtimeRoot "$testName.exe"), "$testName.dll", $true,
         (Join-Path $runtimeRoot 'Kit.Settings.exe'), $false, $false, $null)
+    # Match KitSetExecutableIntegrity for this manually generated apphost only.
+    & icacls.exe (Join-Path $runtimeRoot "$testName.exe") /setintegritylevel M /L | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not set the temporary smoke executable to medium integrity.' }
     foreach ($extension in @('.deps.json', '.runtimeconfig.json', '.pri')) {
         Copy-Item -LiteralPath (Join-Path $runtimeRoot ('Kit.Settings' + $extension)) -Destination (Join-Path $runtimeRoot ($testName + $extension))
     }
@@ -64,7 +68,13 @@ try {
     # because the harness supplies its own in-memory replies after startup.
     $pipeSuffix = [guid]::NewGuid().ToString('N')
     $launchArguments = @("KitPageSmokeRunner-$pipeSuffix", "KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
-    $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $runtimeRoot -WindowStyle Hidden -PassThru
+    $startInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $runtimeRoot "$testName.exe"))
+    $startInfo.WorkingDirectory = $runtimeRoot
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    foreach ($argument in $launchArguments) { $startInfo.ArgumentList.Add($argument) }
+    $testProcess = [Diagnostics.Process]::Start($startInfo)
     if (-not $testProcess.WaitForExit(60000)) {
         Write-Host 'Page smoke test timed out after 60s; harness log tail:'
         $harnessLog = Join-Path $reportRoot 'module-pages-smoke.log'

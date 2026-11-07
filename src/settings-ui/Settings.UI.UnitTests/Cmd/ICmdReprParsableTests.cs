@@ -11,31 +11,6 @@ namespace Settings.UI.UnitTests.Settings;
 public class ICmdReprParsableTests
 {
     [TestMethod]
-    public void KeyboardKeysPropertyParsing()
-    {
-        {
-            Assert.IsTrue(KeyboardKeysProperty.TryParseFromCmd("win+ctrl+Alt+sHifT+Q", out var hotkey));
-
-            Assert.AreEqual(new KeyboardKeysProperty { Value = new HotkeySettings(true, true, true, true, 0x51) }, hotkey);
-        }
-
-        {
-            Assert.IsTrue(KeyboardKeysProperty.TryParseFromCmd("CTRL+z", out var hotkey));
-            Assert.AreEqual(new KeyboardKeysProperty { Value = new HotkeySettings(false, true, false, false, 0x5A) }, hotkey);
-        }
-
-        {
-            Assert.IsTrue(KeyboardKeysProperty.TryParseFromCmd("shift+ALT+0x59", out var hotkey));
-            Assert.AreEqual(new KeyboardKeysProperty { Value = new HotkeySettings(false, false, true, true, 0x59) }, hotkey);
-        }
-
-        {
-            Assert.IsTrue(KeyboardKeysProperty.TryParseFromCmd("alt+Space", out var hotkey));
-            Assert.AreEqual(new KeyboardKeysProperty { Value = new HotkeySettings(false, false, true, false, 0x20) }, hotkey);
-        }
-    }
-
-    [TestMethod]
     public void BoolPropertyParsing()
     {
         {

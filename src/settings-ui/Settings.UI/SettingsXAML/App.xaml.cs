@@ -15,7 +15,6 @@ using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.SerializationContext;
 using Kit.Settings.UI.Services;
-using Kit.Settings.UI.SettingsXAML.Controls.Dashboard;
 using Kit.Settings.UI.Views;
 using ManagedCommon;
 using Microsoft.UI.Xaml;
@@ -27,8 +26,6 @@ namespace Kit.Settings.UI
 {
     public partial class App : Application
     {
-        private ShortcutConflictWindow shortcutConflictWindow;
-
         private enum Arguments
         {
             PTPipeName = 1,
@@ -238,12 +235,6 @@ namespace Kit.Settings.UI
             });
             ipcmanager.Start();
 
-            GlobalHotkeyConflictManager.Initialize(message =>
-            {
-                ipcmanager.Send(message);
-                return 0;
-            });
-
             LogStartupTiming("IPC started");
             settingsWindow = new MainWindow();
             LogStartupTiming("Main window created");
@@ -288,13 +279,6 @@ namespace Kit.Settings.UI
                 settingsWindow.Activate();
                 settingsWindow.NavigateToSection(StartupPage);
 
-                // In DEBUG mode, we might not have IPC set up, so provide a dummy implementation
-                GlobalHotkeyConflictManager.Initialize(message =>
-                {
-                    // In debug mode, just log or do nothing
-                    Debug.WriteLine($"IPC Message: {message}");
-                    return 0;
-                });
 #else
                 /* If we try to run Settings as a standalone app, it will start Kit.exe if not running and open Settings again through it in the Dashboard page. */
                 global::Common.UI.SettingsDeepLink.OpenSettings(global::Common.UI.SettingsDeepLink.SettingsWindow.Dashboard);
@@ -333,32 +317,6 @@ namespace Kit.Settings.UI
         public static MainWindow GetSettingsWindow()
         {
             return settingsWindow;
-        }
-
-        public static bool IsSecondaryWindowOpen()
-        {
-            var app = (App)Current;
-            return app.shortcutConflictWindow != null;
-        }
-
-        public void OpenShortcutConflictWindow()
-        {
-            if (shortcutConflictWindow == null)
-            {
-                shortcutConflictWindow = new ShortcutConflictWindow();
-
-                shortcutConflictWindow.Closed += (_, _) =>
-                {
-                    shortcutConflictWindow = null;
-                    settingsWindow?.CloseHiddenWindow();
-                };
-
-                shortcutConflictWindow.Activate();
-            }
-            else
-            {
-                WindowHelpers.BringToForeground(shortcutConflictWindow.GetWindowHandle());
-            }
         }
 
         public static Type GetPage(string settingWindow)

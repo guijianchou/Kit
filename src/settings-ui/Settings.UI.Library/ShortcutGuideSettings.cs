@@ -10,7 +10,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class ShortcutGuideSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class ShortcutGuideSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "Shortcut Guide";
 
@@ -30,19 +30,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.ShortcutGuide;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.OpenShortcutGuide,
-                    value => Properties.OpenShortcutGuide = value ?? Properties.DefaultOpenShortcutGuide,
-                    "Activation_Shortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         // This can be utilized in the future if the settings.json file is to be modified/deleted.
         public bool UpgradeSettingsConfiguration()

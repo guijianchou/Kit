@@ -32,7 +32,7 @@ $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Ho
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
 $backups = @{}
-foreach ($name in @('settings.json', 'settings-placement.json', 'log_settings.json', 'language.json', 'NetMap\settings.json')) {
+foreach ($name in @('settings.json', 'settings-placement.json', 'log_settings.json', 'language.json', 'NetMap\settings.json', 'AiHub\settings.json', 'AiHub\service-settings.json', 'AiHub\secrets.dat', 'AiHub\security.md', 'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md')) {
     $path = Join-Path $env:LOCALAPPDATA "Kit\$name"
     $backups[$path] = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllBytes($path) } else { $null }
 }
@@ -58,6 +58,9 @@ try {
         (Join-Path $hostPack.FullName 'runtimes\win-x64\native\apphost.exe'),
         (Join-Path $runtimeRoot "$testName.exe"), "$testName.dll", $true,
         (Join-Path $runtimeRoot 'Kit.Settings.exe'), $false, $false, $null)
+    # Match KitSetExecutableIntegrity for this manually generated apphost only.
+    & icacls.exe (Join-Path $runtimeRoot "$testName.exe") /setintegritylevel M /L | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not set the temporary smoke executable to medium integrity.' }
     foreach ($extension in @('.deps.json', '.runtimeconfig.json', '.pri')) {
         Copy-Item -LiteralPath (Join-Path $runtimeRoot ('Kit.Settings' + $extension)) -Destination (Join-Path $runtimeRoot ($testName + $extension))
     }
@@ -66,7 +69,13 @@ try {
     # Release Settings requires the Runner launch contract; use private, unused pipes.
     $pipeSuffix = [guid]::NewGuid().ToString('N')
     $launchArguments = @("KitPageSmokeRunner-$pipeSuffix", "KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
-    $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $launchDirectory -WindowStyle Hidden -PassThru
+    $startInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $runtimeRoot "$testName.exe"))
+    $startInfo.WorkingDirectory = $launchDirectory
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    foreach ($argument in $launchArguments) { $startInfo.ArgumentList.Add($argument) }
+    $testProcess = [Diagnostics.Process]::Start($startInfo)
     $testDeadline = [Diagnostics.Stopwatch]::StartNew()
     while (-not $testProcess.WaitForExit(1000)) {
         if ($testDeadline.Elapsed.TotalSeconds -ge 120) {

@@ -167,20 +167,21 @@ public sealed class AiHubEndpointViewModel : Observable
 /// </summary>
 public sealed class AiHubViewModel : Observable, IDisposable
 {
-    private readonly AiHubSettingsStore _settingsStore = null!;
-    private readonly SecurityPolicyService _securityService = null!;
-    private readonly IAiTaskEngine? _engine;
     private readonly KernelManagerService _kernelManager = new();
     private readonly RouteDispatcher _routeDispatcher;
     private readonly DispatcherQueue? _dispatcherQueue;
     private readonly CancellationTokenSource _lifetime = new();
+    private AiHubSettingsStore _settingsStore = null!;
+    private SecurityPolicyService _securityService = null!;
+    private IAiTaskEngine? _engine;
     private CancellationTokenSource? _operation;
-    private AiHubConfig _config;
+    private AiHubConfig _config = AiHubConfig.CreateDefault();
     private int _activeKernelIndex;
     private int _pendingKernelIndex;
     private bool _isBusy;
     private bool _disposed;
     private bool _loadFailed;
+    private bool _settingsLoaded;
     private string _kernelStatusText = string.Empty;
     private string _kernelLatestText = string.Empty;
     private string _kernelPathText = string.Empty;
@@ -209,19 +210,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
 
         _routeDispatcher = new RouteDispatcher(_kernelManager);
-        try
-        {
-            _settingsStore = new AiHubSettingsStore();
-            _securityService = new SecurityPolicyService();
-            _config = _settingsStore.Load();
-            _engine = AiHubEngine.Current;
-        }
-        catch (Exception)
-        {
-            _config = AiHubConfig.CreateDefault();
-            _loadFailed = true;
-        }
-
         _activeKernelIndex = AiKernelCatalog.IsPi(_config.SelectedKernel) ? 1 : 0;
         _pendingKernelIndex = _activeKernelIndex;
         ApplyKernelSwitchCommand = new RelayCommand(() => StartOperation(ApplyKernelSwitchAsync), () => CanEdit && IsKernelSwitchPending);
@@ -272,42 +260,71 @@ public sealed class AiHubViewModel : Observable, IDisposable
                 }
             },
             () => CanEdit);
-        CancelOperationCommand = new RelayCommand(() => _operation?.Cancel(), () => IsBusy);
-        BuildEndpoints();
-        if (_engine is not null)
-        {
-            _engine.StateChanged += OnHubStateChanged;
-        }
-
-        if (_dispatcherQueue is not null)
-        {
-            string initialKernel = PendingKernel;
-            _ = Task.Run(() =>
+        CancelOperationCommand = new RelayCommand(
+            () =>
             {
-                if (_disposed)
+                if (_settingsLoaded)
                 {
-                    return;
+                    _operation?.Cancel();
                 }
-
-                var status = _kernelManager.GetStatus(initialKernel);
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    if (!_disposed && PendingKernel == initialKernel)
-                    {
-                        ApplyLocalKernelStatus(initialKernel, status);
-                    }
-                });
-            });
-        }
-        else
-        {
-            RefreshLocalKernelStatus();
-        }
-
-        RefreshServiceStatus();
+            },
+            () => _settingsLoaded && IsBusy);
+        BuildEndpoints();
+        Initialization = RunOperationAsync(LoadConfigurationAsync);
     }
 
-    public bool CanToggle => !_loadFailed && !_disposed;
+    public Task Initialization { get; }
+
+    private async Task LoadConfigurationAsync(CancellationToken token)
+    {
+        try
+        {
+            var loaded = await Task.Run(() =>
+            {
+                var settingsStore = new AiHubSettingsStore();
+                var securityService = new SecurityPolicyService();
+                var config = settingsStore.Load();
+                var engine = AiHubEngine.Current;
+                var status = _kernelManager.GetStatus(config.SelectedKernel);
+                var readiness = engine.GetReadiness();
+                return (settingsStore, securityService, config, engine, status, readiness);
+            }, token);
+            token.ThrowIfCancellationRequested();
+
+            _settingsStore = loaded.settingsStore;
+            _securityService = loaded.securityService;
+            _config = loaded.config;
+            _engine = loaded.engine;
+            _activeKernelIndex = AiKernelCatalog.IsPi(_config.SelectedKernel) ? 1 : 0;
+            _pendingKernelIndex = _activeKernelIndex;
+            _settingsLoaded = true;
+            _engine.StateChanged += OnHubStateChanged;
+            BuildEndpoints();
+            OnPropertyChanged(nameof(PendingKernelIndex));
+            OnPropertyChanged(nameof(IsKernelSwitchPending));
+            OnPropertyChanged(nameof(ActiveKernelName));
+            OnPropertyChanged(nameof(MaxConcurrentAnalysis));
+            OnPropertyChanged(nameof(CanToggle));
+            OnPropertyChanged(nameof(SecurityPolicyPath));
+            OnPropertyChanged(nameof(SecurityAuditPolicyPath));
+            OnPropertyChanged(nameof(OptimizationPolicyPath));
+            OnPropertyChanged(nameof(CurrentPolicyFilePath));
+            NotifyEnabledChanged();
+            ApplyLocalKernelStatus(_config.SelectedKernel, loaded.status);
+            RefreshServiceStatus(loaded.readiness);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            _loadFailed = true;
+            ShowStatus(Text("AiHub_LoadFailed"), InfoBarSeverity.Error);
+        }
+    }
+
+    public bool CanToggle => _settingsLoaded && !_loadFailed && !_disposed;
 
     public bool CanEdit => IsEnabled && !IsBusy && CanToggle;
 
@@ -472,7 +489,6 @@ public sealed class AiHubViewModel : Observable, IDisposable
             return;
         }
 
-        _policiesLoaded = true;
         _ = InitializeAsync();
     }
 
@@ -640,7 +656,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
     public string ServiceStatusGlyph { get => _serviceStatusGlyph; private set => Set(ref _serviceStatusGlyph, value); }
 
     /// <summary>Reads the cached readiness verdict. No probe or kernel process is started.</summary>
-    private void RefreshServiceStatus()
+    private void RefreshServiceStatus(AiReadiness? cachedReadiness = null)
     {
         if (_engine is null)
         {
@@ -651,7 +667,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
         try
         {
-            AiReadiness readiness = AiHubEngine.Current.GetReadiness();
+            AiReadiness readiness = cachedReadiness ?? _engine.GetReadiness();
             string kernelModel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
                 ? readiness.ActiveKernel
                 : $"{readiness.ActiveKernel} · {readiness.ActiveModel}";
@@ -692,8 +708,27 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     public ICommand CancelOperationCommand { get; }
 
-    public async Task InitializeAsync()
+    public Task InitializeAsync()
     {
+        var previousContext = SynchronizationContext.Current;
+        try
+        {
+            if (_dispatcherQueue?.HasThreadAccess == true)
+            {
+                SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(_dispatcherQueue));
+            }
+
+            return InitializePoliciesAsync();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+    }
+
+    private async Task InitializePoliciesAsync()
+    {
+        await Initialization;
         if (_disposed || IsBusy)
         {
             return;

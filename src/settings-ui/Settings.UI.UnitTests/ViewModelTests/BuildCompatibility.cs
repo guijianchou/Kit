@@ -116,6 +116,19 @@ namespace ViewModelTests
             StringAssert.Contains(directoryBuildProps, "<AssemblyProduct>Kit</AssemblyProduct>");
             StringAssert.Contains(directoryBuildProps, "<Product>Kit</Product>");
             StringAssert.Contains(directoryBuildProps, "<PackageTags>Kit</PackageTags>");
+            StringAssert.Contains(directoryBuildProps, "<RepositoryUrl>https://github.com/guijianchou/Kit</RepositoryUrl>");
+            foreach (var path in new[]
+            {
+                FindSourceFile("src", "ActionRunner", "resource.base.h"),
+                FindSourceFile("src", "ActionRunner", "Resources.resx"),
+                FindSourceFile("src", "common", "GPOWrapper", "resource.h"),
+                FindSourceFile("src", "settings-ui", "Settings.UI", "app.manifest"),
+                FindSourceFile("src", "settings-ui", "QuickAccess.UI", "app.manifest"),
+            })
+            {
+                Assert.IsFalse(File.ReadAllText(path).Contains("PowerToys", StringComparison.Ordinal), $"Kit binary metadata should not retain upstream branding: {path}");
+            }
+
             StringAssert.Contains(versionHeader, "#define PRODUCT_NAME \"Kit\"");
             StringAssert.Contains(updateResources, "<value>Kit installation error</value>");
             StringAssert.Contains(updateResources, "<value>An update to Kit is available.</value>");
@@ -880,72 +893,41 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitShortcutConflictWindowShouldNotSpecialCaseInactiveModuleSettings()
+        public void KitShouldNotShipShortcutInfrastructure()
         {
-            var shortcutConflictViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "ShortcutConflictViewModel.cs"));
-
-            string[] inactiveSettingsTypeNames =
+            string[][] removedFiles =
             {
-                "AdvancedPasteSettings",
-                "MouseWithoutBordersSettings",
-                "PeekSettings",
-                "PowerLauncherSettings",
+                new[] { "src", "runner", "centralized_hotkeys.cpp" },
+                new[] { "src", "runner", "centralized_kb_hook.cpp" },
+                new[] { "src", "runner", "hotkey_conflict_detector.cpp" },
+                new[] { "src", "settings-ui", "Settings.UI.Library", "HotkeySettings.cs" },
+                new[] { "src", "settings-ui", "Settings.UI.Library", "HotkeySettingsControlHook.cs" },
+                new[] { "src", "settings-ui", "Settings.UI.Library", "SettingsFactory.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "Services", "GlobalHotkeyConflictManager.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "Services", "IPCResponseService.cs" },
+                new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "ShortcutControl", "ShortcutControl.xaml" },
+                new[] { "src", "settings-ui", "Settings.UI", "SettingsXAML", "Controls", "Dashboard", "ShortcutConflictWindow.xaml" },
+                new[] { "src", "common", "interop", "KeyboardHook.cpp" },
+                new[] { "src", "common", "interop", "HotkeyManager.cpp" },
             };
 
-            foreach (var inactiveSettingsTypeName in inactiveSettingsTypeNames)
+            foreach (var path in removedFiles)
             {
-                Assert.IsFalse(shortcutConflictViewModel.Contains(inactiveSettingsTypeName, StringComparison.Ordinal), $"Shortcut conflict UI should not special-case inactive settings type {inactiveSettingsTypeName}.");
+                Assert.IsFalse(TryFindSourceFile(out _, path), $"Removed shortcut infrastructure should not remain: {Path.Combine(path)}");
             }
 
-            Assert.IsFalse(shortcutConflictViewModel.Contains("HotkeyChanged", StringComparison.Ordinal), "Shortcut conflict UI should not keep the inactive PowerToys Run HotkeyChanged workaround.");
-            Assert.IsFalse(shortcutConflictViewModel.Contains("AdvancedPaste custom actions", StringComparison.Ordinal), "Shortcut conflict UI should not keep inactive AdvancedPaste custom-action label branches.");
-        }
-
-        [TestMethod]
-        public void KitSettingsFactoryShouldResolveOnlyActiveHotkeySettings()
-        {
-            var settingsFactory = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "SettingsFactory.cs"));
-
-            StringAssert.Contains(settingsFactory, "GeneralSettingsModuleKey");
-            StringAssert.Contains(settingsFactory, "LightSwitchSettings.ModuleName");
-            Assert.IsFalse(settingsFactory.Contains("PowerDisplaySettings.ModuleName", StringComparison.Ordinal), "SettingsFactory should not resolve removed PowerDisplay hotkey settings.");
-
-            string[] inactiveSettingsTypeNames =
-            {
-                "AdvancedPasteSettings",
-                "AlwaysOnTopSettings",
-                "ColorPickerSettings",
-                "MouseWithoutBordersSettings",
-                "PeekSettings",
-                "PowerLauncherSettings",
-                "ShortcutGuideSettings",
-                "WorkspacesSettings",
-            };
-
-            foreach (var inactiveSettingsTypeName in inactiveSettingsTypeNames)
-            {
-                Assert.IsFalse(settingsFactory.Contains(inactiveSettingsTypeName, StringComparison.Ordinal), $"SettingsFactory should not resolve inactive hotkey settings type {inactiveSettingsTypeName}.");
-            }
-
-            Assert.IsFalse(settingsFactory.Contains("Assembly.GetAssembly", StringComparison.Ordinal), "SettingsFactory should not scan the Settings.UI.Library assembly for every historical IHotkeyConfig.");
-            Assert.IsFalse(settingsFactory.Contains(".GetTypes()", StringComparison.Ordinal), "SettingsFactory should not discover inactive settings types with Assembly.GetTypes().");
-            Assert.IsFalse(settingsFactory.Contains("MakeGenericType", StringComparison.Ordinal), "SettingsFactory should not use reflection to instantiate repositories for inactive module settings.");
-            Assert.IsFalse(settingsFactory.Contains("GetFreshSettings", StringComparison.Ordinal), "SettingsFactory should not expose unused fresh-settings loading paths.");
-            Assert.IsFalse(settingsFactory.Contains("GetAvailableModuleNames", StringComparison.Ordinal), "SettingsFactory should not expose inactive module enumeration APIs.");
-            Assert.IsFalse(settingsFactory.Contains("GetAllHotkeySettings", StringComparison.Ordinal), "SettingsFactory should not expose broad hotkey enumeration APIs.");
-            Assert.IsFalse(settingsFactory.Contains("GetRepository<", StringComparison.Ordinal), "SettingsFactory should not expose generic repository access outside its shortcut-conflict responsibility.");
-        }
-
-        [TestMethod]
-        public void KitPageViewModelBaseShouldNotCarryInactiveMouseUtilsConflictBranches()
-        {
-            var pageViewModelBase = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "PageViewModelBase.cs"));
-
-            Assert.IsFalse(pageViewModelBase.Contains("ProcessMouseUtilsConflictGroup", StringComparison.Ordinal), "Active Settings page base should not carry a deleted MouseUtils page conflict helper.");
-            Assert.IsFalse(pageViewModelBase.Contains("\"MouseUtils\"", StringComparison.Ordinal), "Active Settings page base should not branch on the deleted MouseUtils page name.");
-            Assert.IsFalse(pageViewModelBase.Contains("FindMyMouseSettings", StringComparison.Ordinal), "Active Settings page base should not reference inactive MouseUtils settings models.");
-            Assert.IsFalse(pageViewModelBase.Contains("MouseHighlighterSettings", StringComparison.Ordinal), "Active Settings page base should not reference inactive MouseUtils settings models.");
-            Assert.IsFalse(pageViewModelBase.Contains("MousePointerCrosshairsSettings", StringComparison.Ordinal), "Active Settings page base should not reference inactive MouseUtils settings models.");
+            var generalPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+            var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
+            var runnerSettings = File.ReadAllText(FindSourceFile("src", "runner", "general_settings.cpp"));
+            StringAssert.Contains(generalPage, "ViewModel.EnableQuickAccess");
+            Assert.IsFalse(generalPage.Contains("ShortcutControl", StringComparison.Ordinal));
+            var shellPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml"));
+            var shellViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "ShellViewModel.cs"));
+            Assert.IsFalse(shellPage.Contains("KeyboardAccelerator", StringComparison.Ordinal));
+            Assert.IsFalse(shellViewModel.Contains("KeyboardAccelerator", StringComparison.Ordinal));
+            Assert.IsFalse(trayIcon.Contains("CentralizedHotkeys", StringComparison.Ordinal));
+            Assert.IsFalse(runnerSettings.Contains("quick_access_shortcut", StringComparison.Ordinal));
+            Assert.IsFalse(runnerSettings.Contains("ignored_conflict_properties", StringComparison.Ordinal));
         }
 
         [TestMethod]
@@ -968,7 +950,7 @@ namespace ViewModelTests
             StringAssert.Contains(generalSettings, "general_configs.GetNamedBoolean(L\"enable_quick_access\", enable_quick_access)");
             Assert.IsFalse(normalizedGeneralSettings.Contains("\n    enable_quick_access = false;\n", StringComparison.Ordinal), "Runner should not force Quick Access off while Settings exposes the toggle.");
             Assert.IsFalse(generalSettings.Contains("bool new_enable_quick_access = false;", StringComparison.Ordinal), "Runner should apply the Settings-provided Quick Access value.");
-            Assert.IsFalse(generalSettings.Contains("QuickAccessHost::start();", StringComparison.Ordinal), "Enabling Quick Access or changing its hotkey should not start the UI before it is requested.");
+            Assert.IsFalse(generalSettings.Contains("QuickAccessHost::start();", StringComparison.Ordinal), "Enabling Quick Access should not start the UI before it is requested.");
         }
 
         [TestMethod]
@@ -1811,7 +1793,6 @@ namespace ViewModelTests
                 "UDPtest.png",
                 "NetMap.png",
                 "AiHub.png",
-                "PT.png",
                 "Kit.png",
             };
 
@@ -1822,6 +1803,7 @@ namespace ViewModelTests
 
             string[] inactiveModuleAssets =
             {
+                "PT.png",
                 "AdvancedPaste.png",
                 "AlwaysOnTop.png",
                 "CmdNotFound.png",
@@ -1955,7 +1937,6 @@ namespace ViewModelTests
                 "UDPtest.png",
                 "NetMap.png",
                 "AiHub.png",
-                "PowerToys.png",
                 "Kit.png",
             };
 
@@ -1967,6 +1948,7 @@ namespace ViewModelTests
 
             string[] inactiveIconAssets =
             {
+                "PowerToys.png",
                 "Advanced.png",
                 "AdvancedPaste.png",
                 "AlwaysOnTop.png",
@@ -2650,8 +2632,6 @@ namespace ViewModelTests
         public void KitRunnerShouldNotKeepInactiveShortcutGuideWinKeyTrackingPath()
         {
             var powertoyModule = File.ReadAllText(FindSourceFile("src", "runner", "powertoy_module.cpp"));
-            var centralizedKeyboardHook = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.cpp"));
-            var centralizedKeyboardHookHeader = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.h"));
             var moduleInterface = File.ReadAllText(FindSourceFile("src", "modules", "interface", "powertoy_module_interface.h"));
 
             string[] inactiveWinKeyTrackingTokens =
@@ -2668,8 +2648,6 @@ namespace ViewModelTests
             foreach (var inactiveToken in inactiveWinKeyTrackingTokens)
             {
                 Assert.IsFalse(powertoyModule.Contains(inactiveToken, StringComparison.Ordinal), $"Runner module wrapper should not keep inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
-                Assert.IsFalse(centralizedKeyboardHook.Contains(inactiveToken, StringComparison.Ordinal), $"Centralized keyboard hook should not keep inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
-                Assert.IsFalse(centralizedKeyboardHookHeader.Contains(inactiveToken, StringComparison.Ordinal), $"Centralized keyboard hook header should not expose inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
                 Assert.IsFalse(moduleInterface.Contains(inactiveToken, StringComparison.Ordinal), $"Module interface should not expose inactive Shortcut Guide Win-key tracking token '{inactiveToken}'.");
             }
         }
@@ -2714,19 +2692,6 @@ namespace ViewModelTests
             {
                 Assert.IsFalse(notice.Contains(deletedUtilityNoticeToken, StringComparison.Ordinal), $"NOTICE.md should not carry third-party license surface for deleted utility source: {deletedUtilityNoticeToken}");
             }
-        }
-
-        [TestMethod]
-        public void KitRunnerShouldNotKeepNoOpKeyboardHookWindowRegistration()
-        {
-            var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
-            var centralizedKeyboardHook = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.cpp"));
-            var centralizedKeyboardHookHeader = File.ReadAllText(FindSourceFile("src", "runner", "centralized_kb_hook.h"));
-
-            StringAssert.Contains(trayIcon, "CentralizedHotkeys::RegisterWindow(hwnd)");
-            Assert.IsFalse(trayIcon.Contains("CentralizedKeyboardHook::RegisterWindow", StringComparison.Ordinal), "Tray initialization should not call a no-op keyboard hook window registration after pressed-key timers are deleted.");
-            Assert.IsFalse(centralizedKeyboardHook.Contains("RegisterWindow(HWND", StringComparison.Ordinal), "Keyboard hook implementation should not keep a no-op window-registration method.");
-            Assert.IsFalse(centralizedKeyboardHookHeader.Contains("RegisterWindow(HWND", StringComparison.Ordinal), "Keyboard hook header should not expose a no-op window-registration method.");
         }
 
         [TestMethod]
@@ -2803,7 +2768,6 @@ namespace ViewModelTests
             Assert.IsFalse(xamlIndexBuilderProgram.Contains("MouseJumpPanel", StringComparison.Ordinal), "Kit search indexing should not explicitly include deleted Mouse Jump panels.");
             Assert.IsFalse(moduleIconResolver.Contains("FileNameOverrides", StringComparison.Ordinal), "Kit search indexing should derive active page icons from XAML instead of carrying inactive upstream page overrides.");
             StringAssert.Contains(xamlIndexBuilderProgram, "\"SearchResultsPage.xaml\"");
-            StringAssert.Contains(xamlIndexBuilderProgram, "\"ShortcutConflictWindow.xaml\"");
             Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"SearchResultsPage\"", StringComparison.Ordinal), "Generated search index should not include the search results page itself.");
             Assert.IsFalse(searchIndex.Contains("\"pageTypeName\": \"ShortcutConflictWindow\"", StringComparison.Ordinal), "Generated search index should not include non-Views shortcut conflict window entries.");
 
@@ -2841,13 +2805,9 @@ namespace ViewModelTests
             Assert.IsTrue(
                 shutdownCompleted > shutdownDeclared && shutdownCompleted < settingsClosed,
                 "The teardown scope exit must run before the singleton release path.");
-            int hookStopped = source.IndexOf("CentralizedKeyboardHook::Stop();", shutdownDeclared, StringComparison.Ordinal);
             int modulesDestroyed = source.IndexOf("modules().clear();", shutdownDeclared, StringComparison.Ordinal);
             Assert.IsTrue(
-                hookStopped > shutdownDeclared && hookStopped < shutdownCompleted,
-                "The teardown guard must stop keyboard hooks while this instance still owns the singleton lock.");
-            Assert.IsTrue(
-                modulesDestroyed > hookStopped && modulesDestroyed < shutdownCompleted && modulesDestroyed < mutexReleased,
+                modulesDestroyed > shutdownDeclared && modulesDestroyed < shutdownCompleted && modulesDestroyed < mutexReleased,
                 "Module stop events must be finished before a new runner can acquire the singleton lock.");
             Assert.IsTrue(
                 mutexReleased > settingsClosed && mutexReleased < restart,
@@ -2928,6 +2888,17 @@ namespace ViewModelTests
             var runnerHelper = File.ReadAllText(FindSourceFile("src", "common", "ManagedCommon", "RunnerHelper.cs"));
             var pathResolver = File.ReadAllText(FindSourceFile("src", "common", "ManagedCommon", "PowerToysPathResolver.cs"));
             var settingsHelper = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "Utilities", "Helper.cs"));
+
+            var elevation = File.ReadAllText(FindSourceFile("src", "common", "utils", "elevation.h"));
+            var notifications = File.ReadAllText(FindSourceFile("src", "common", "notifications", "notifications.cpp"));
+            Assert.IsFalse(elevation.Contains("PowerToys.ActionRunner.exe", StringComparison.Ordinal), "Kit must not run the upstream ActionRunner when its own helper is missing.");
+            Assert.IsFalse(notifications.Contains("PowerToys.BackgroundActivatorDLL.dll", StringComparison.Ordinal), "Kit must not load the upstream notification activator when its own DLL is missing.");
+            foreach (var script in new[] { "Stage-Debug.ps1", "Stage-Release.ps1" })
+            {
+                var source = File.ReadAllText(FindSourceFile("tools", "build", script));
+                StringAssert.Contains(source, "'Kit.ActionRunner.exe'");
+                Assert.IsFalse(source.Contains("PowerToys.ActionRunner", StringComparison.Ordinal), "Delivery must require the Kit helper, not accept a stale upstream binary.");
+            }
 
             StringAssert.Contains(runnerProject, "<TargetName>Kit</TargetName>");
             StringAssert.Contains(runnerResource, "#define ORIGINAL_FILENAME \"Kit.exe\"");
@@ -3141,7 +3112,6 @@ namespace ViewModelTests
             AssertUsesXName(generalPage, "ColorModeHeader");
             AssertUsesXName(generalPage, "GeneralPageRunAtStartUp");
             AssertUsesXName(generalPage, "GeneralPageEnableQuickAccess");
-            AssertUsesXName(generalPage, "QuickAccessShortcut");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestore");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreLocationText");
             AssertUsesXName(generalPage, "GeneralSettingsBackupAndRestoreStatusInfo");
@@ -3245,8 +3215,6 @@ namespace ViewModelTests
             // pin by name for negative assertions, and shared control vocabulary.
             var englishOnlyAllowlist = new string[]
             {
-                "Activation_Shortcut.Description",
-                "Activation_Shortcut.Header",
                 "CmdNotFound.ModuleDescription",
                 "CmdNotFound.ModuleTitle",
                 "Default.Content",
@@ -3259,15 +3227,11 @@ namespace ViewModelTests
                 "Off.Content",
                 "On.Content",
                 "PasteAsHtmlFile.Header",
-                "PasteAsJson_Shortcut.Header",
-                "PasteAsMarkdown_Shortcut.Header",
-                "PasteAsPlainText_Shortcut.Header",
                 "PasteAsPngFile.Header",
                 "PasteAsTxtFile.Header",
                 "QuickAccent.ModuleDescription",
                 "QuickAccent.ModuleTitle",
                 "QuickAccent.SecondaryLinksHeader",
-                "Shortcut.Header",
                 "TextExtractor.ModuleDescription",
                 "TextExtractor.ModuleTitle",
                 "TextExtractor.SecondaryLinksHeader",

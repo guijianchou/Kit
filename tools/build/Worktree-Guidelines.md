@@ -1,4 +1,4 @@
-# PowerToys Worktree Helper Scripts
+# Kit Worktree Helper Scripts
 
 This folder contains helper scripts to create and manage parallel Git worktree for developing multiple changes (including Copilot suggestions) concurrently without cloning the full repository each time.
 
@@ -51,12 +51,12 @@ Inside the new worktree directory:
 ```
 tools\build\build-essentials.cmd
 ```
-2. Build only the module(s) you need (e.g., open solution filter or run targeted project build) instead of a full PowerToys build. This speeds iteration and reduces noise.
+2. Build only the module(s) you need (e.g., open solution filter or run targeted project build) instead of a full Kit build. This speeds iteration and reduces noise.
 3. Make changes, commit, push.
 4. Finally delete the worktree when done.
 
 ## Naming & Locations
-- Worktree is created as sibling folders of the repo root (e.g., `PowerToys` + `PowerToys-ab12`), using a hash/short pattern to avoid collisions.
+- Worktree is created as sibling folders of the repo root (e.g., `Kit` + `Kit-ab12`), using a hash/short pattern to avoid collisions.
 - Fork-based branches get local names `fork-<user>-<sanitized-branch>`.
 - Issue branches: `issue/<number>` or `issue/<number>-<slug>`.
 

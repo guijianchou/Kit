@@ -159,7 +159,7 @@ namespace
 
     std::string DefaultSettingsJson()
     {
-        // Match LightSwitchProperties in Settings UI and the module's hotkey defaults.
+        // Match LightSwitchProperties in Settings UI.
         const LightSwitchConfig defaults;
         KitSettings::PowerToyValues values(L"LightSwitch", L"LightSwitch");
         values.add_property(L"scheduleMode", L"Off");
@@ -171,7 +171,6 @@ namespace
         values.add_property(L"longitude", defaults.longitude);
         values.add_property(L"sunrise_offset", defaults.sunrise_offset);
         values.add_property(L"sunset_offset", defaults.sunset_offset);
-        values.add_property(L"toggle-theme-hotkey", KitSettings::HotkeyObject::from_settings(true, true, false, true, 'D').get_json());
         values.add_property(L"enableDarkModeProfile", false);
         values.add_property(L"enableLightModeProfile", false);
         values.add_property(L"darkModeProfile", L"");

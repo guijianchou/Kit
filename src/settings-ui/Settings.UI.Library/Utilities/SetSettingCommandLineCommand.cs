@@ -10,10 +10,8 @@ using Kit.Settings.UI.Library.Attributes;
 namespace Kit.Settings.UI.Library;
 
 /// <summary>
-/// This user flow allows DSC resources to use PowerToys.Settings executable to set settings values by suppling them from command line using the following syntax:
-/// PowerToys.Settings.exe set <module struct name>.<field name> <field_value>
-///
-/// Example: PowerToys.Settings.exe set MeasureTool.MeasureCrossColor "#00FF00"
+/// Sets a Kit setting from the command line using its module and property names.
+/// Example: Kit.Settings.exe set Awake.KeepDisplayOn true
 /// </summary>
 public sealed class SetSettingCommandLineCommand
 {

@@ -67,9 +67,7 @@
     </ClCompile>
     <ClCompile Include="..\common\updating\updateState.cpp" />
     <ClCompile Include="auto_start_helper.cpp" />
-    <ClCompile Include="centralized_hotkeys.cpp" />
     <ClCompile Include="general_settings.cpp" />
-    <ClCompile Include="hotkey_conflict_detector.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(UsePrecompiledHeaders)' != 'false'">Create</PrecompiledHeader>
     </ClCompile>
@@ -77,7 +75,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="quick_access_host.cpp" />
     <ClCompile Include="restart_elevated.cpp" />
-    <ClCompile Include="centralized_kb_hook.cpp" />
     <ClCompile Include="settings_window.cpp" />
     <ClCompile Include="ai_hub_ipc.cpp" />
     <ClCompile Include="trace.cpp" />
@@ -88,13 +85,10 @@
   <ItemGroup>
     <ClInclude Include="ActionRunnerUtils.h" />
     <ClInclude Include="auto_start_helper.h" />
-    <ClInclude Include="centralized_hotkeys.h" />
     <ClInclude Include="quick_access_host.h" />
     <ClInclude Include="general_settings.h" />
     <ClInclude Include="general_settings_reader.h" />
-    <ClInclude Include="hotkey_conflict_detector.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="centralized_kb_hook.h" />
     <ClInclude Include="kit_module.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="restart_elevated.h" />

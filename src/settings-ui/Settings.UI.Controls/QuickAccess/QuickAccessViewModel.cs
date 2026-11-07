@@ -16,7 +16,7 @@ using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace Kit.Settings.UI.Controls
 {
-    public partial class QuickAccessViewModel : Observable
+    public partial class QuickAccessViewModel : Observable, IDisposable
     {
         private readonly ISettingsRepository<GeneralSettings> _settingsRepository;
         private readonly IQuickAccessLauncher _launcher;
@@ -28,6 +28,7 @@ namespace Kit.Settings.UI.Controls
         private readonly DispatcherQueue _dispatcherQueue;
         private readonly List<QuickAccessItem> _allItems = new();
         private GeneralSettings _generalSettings;
+        private bool _disposed;
 
         public ObservableCollection<QuickAccessItem> Items { get; } = new();
 
@@ -66,14 +67,36 @@ namespace Kit.Settings.UI.Controls
 
         private void OnSettingsChanged(GeneralSettings newSettings)
         {
+            RefreshSettings(newSettings);
+        }
+
+        private void RefreshSettings(GeneralSettings settings)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            void ApplySettings()
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _generalSettings.RemoveEnabledModuleChangeNotification(ModuleEnabledChanged);
+                _generalSettings = settings;
+                _generalSettings.AddEnabledModuleChangeNotification(ModuleEnabledChanged);
+                RefreshItemsVisibility();
+            }
+
             if (_dispatcherQueue != null)
             {
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    _generalSettings = newSettings;
-                    _generalSettings.AddEnabledModuleChangeNotification(ModuleEnabledChanged);
-                    RefreshItemsVisibility();
-                });
+                _dispatcherQueue.TryEnqueue(ApplySettings);
+            }
+            else
+            {
+                ApplySettings();
             }
         }
 
@@ -116,21 +139,7 @@ namespace Kit.Settings.UI.Controls
 
         private void ModuleEnabledChanged()
         {
-            if (_dispatcherQueue != null)
-            {
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    _generalSettings = _settingsRepository.SettingsConfig;
-                    _generalSettings.AddEnabledModuleChangeNotification(ModuleEnabledChanged);
-                    RefreshItemsVisibility();
-                });
-            }
-            else
-            {
-                _generalSettings = _settingsRepository.SettingsConfig;
-                _generalSettings.AddEnabledModuleChangeNotification(ModuleEnabledChanged);
-                RefreshItemsVisibility();
-            }
+            RefreshSettings(_settingsRepository.SettingsConfig);
         }
 
         private void RefreshItemsVisibility()
@@ -207,6 +216,19 @@ namespace Kit.Settings.UI.Controls
                 AwakeMode.EXPIRABLE => _resourceLoader.GetString("Awake_ExpirableKeepAwakeSelector/Content"),
                 _ => _resourceLoader.GetString("Awake_NoKeepAwakeSelector/Content"),
             };
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _settingsRepository.SettingsChanged -= OnSettingsChanged;
+            _generalSettings.RemoveEnabledModuleChangeNotification(ModuleEnabledChanged);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Kit.Settings.UI.Library;
@@ -17,6 +18,28 @@ namespace ViewModelTests
     [TestClass]
     public class ModuleLifecycleSettings
     {
+        [TestMethod]
+        public void DisposedEnabledListenerDoesNotRemoveItsReplacement()
+        {
+            var settings = new GeneralSettings();
+            int oldNotifications = 0;
+            int currentNotifications = 0;
+            Action oldListener = () => oldNotifications++;
+            Action currentListener = () => currentNotifications++;
+            settings.AddEnabledModuleChangeNotification(oldListener);
+            settings.AddEnabledModuleChangeNotification(currentListener);
+
+            settings.RemoveEnabledModuleChangeNotification(oldListener);
+            settings.Enabled.Awake = !settings.Enabled.Awake;
+
+            Assert.AreEqual(0, oldNotifications);
+            Assert.AreEqual(1, currentNotifications, "Disposing an old page must leave the current page's listener connected.");
+
+            settings.RemoveEnabledModuleChangeNotification(currentListener);
+            settings.Enabled.Awake = !settings.Enabled.Awake;
+            Assert.AreEqual(1, currentNotifications, "A disposed listener must no longer receive module changes.");
+        }
+
         [TestMethod]
         [DataRow(false)]
         [DataRow(true)]

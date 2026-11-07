@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -14,9 +15,10 @@ namespace ViewModelTests
     public class AiHubSettingsTests
     {
         [TestMethod]
-        public void AiHubViewModel_TabNavigationAndCommands_InitializedCorrectly()
+        public async Task AiHubViewModel_TabNavigationAndCommands_InitializedCorrectly()
         {
-            var vm = new AiHubViewModel();
+            using var vm = new AiHubViewModel();
+            await vm.Initialization;
 
             Assert.AreEqual(0, vm.ActivePolicyIndex);
             Assert.AreEqual(0, vm.ActivePolicyTabIndex);
@@ -37,9 +39,10 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void AiHubViewModel_PolicyContent_PropertiesWork()
+        public async Task AiHubViewModel_PolicyContent_PropertiesWork()
         {
-            var vm = new AiHubViewModel();
+            using var vm = new AiHubViewModel();
+            await vm.InitializeAsync();
 
             vm.SecurityPolicyContent = "test global policy";
             vm.SecurityAuditPolicyContent = "test security policy";

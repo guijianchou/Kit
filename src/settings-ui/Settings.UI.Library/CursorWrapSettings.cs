@@ -10,7 +10,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class CursorWrapSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class CursorWrapSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "CursorWrap";
 
@@ -30,19 +30,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.CursorWrap;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ActivationShortcut,
-                    value => Properties.ActivationShortcut = value ?? Properties.DefaultActivationShortcut,
-                    "MouseUtils_CursorWrap_ActivationShortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         // This can be utilized in the future if the settings.json file is to be modified/deleted.
         public bool UpgradeSettingsConfiguration()

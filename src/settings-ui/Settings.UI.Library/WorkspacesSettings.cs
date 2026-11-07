@@ -12,7 +12,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class WorkspacesSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class WorkspacesSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "Workspaces";
         public const string ModuleVersion = "0.0.1";
@@ -42,19 +42,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.Workspaces;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.Hotkey.Value,
-                    value => Properties.Hotkey.Value = value ?? WorkspacesProperties.DefaultHotkeyValue,
-                    "Workspaces_ActivationShortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         public virtual void Save(SettingsUtils settingsUtils)
         {

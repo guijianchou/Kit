@@ -33,14 +33,6 @@ namespace Kit.Settings.UI.ViewModels
 
         protected override string ModuleName => "GeneralSettings";
 
-        public override Dictionary<string, HotkeySettings[]> GetAllHotkeySettings()
-        {
-            return new Dictionary<string, HotkeySettings[]>
-            {
-                { ModuleName, new HotkeySettings[] { QuickAccessShortcut } },
-            };
-        }
-
         private GeneralSettings GeneralSettingsConfig { get; set; }
 
         private UpdatingSettings UpdatingSettingsConfig { get; set; }
@@ -117,11 +109,7 @@ namespace Kit.Settings.UI.ViewModels
             // The AI service configuration (kernel, endpoints, credentials, policy)
             // is initialized lazily via the AiServices property when first accessed.
             GeneralSettingsConfig = settingsRepository.SettingsConfig;
-            UpdatingSettingsConfig = UpdatingSettings.LoadSettings();
-            if (UpdatingSettingsConfig == null)
-            {
-                UpdatingSettingsConfig = new UpdatingSettings();
-            }
+            UpdatingSettingsConfig = new UpdatingSettings();
 
             // set the callback functions value to handle outgoing IPC message.
             SendConfigMSG = ipcMSGCallBackFunc;
@@ -175,11 +163,6 @@ namespace Kit.Settings.UI.ViewModels
             _runElevated = GeneralSettingsConfig.RunElevated;
             _enableWarningsElevatedApps = GeneralSettingsConfig.EnableWarningsElevatedApps;
             _enableQuickAccess = GeneralSettingsConfig.EnableQuickAccess;
-            _quickAccessShortcut = GeneralSettingsConfig.QuickAccessShortcut;
-            if (_quickAccessShortcut != null)
-            {
-                _quickAccessShortcut.PropertyChanged += QuickAccessShortcut_PropertyChanged;
-            }
 
             RunningAsUserDefaultText = runAsUserText;
             RunningAsAdminDefaultText = runAsAdminText;
@@ -227,7 +210,6 @@ namespace Kit.Settings.UI.ViewModels
         private bool _isAdmin;
         private bool _enableWarningsElevatedApps;
         private bool _enableQuickAccess;
-        private HotkeySettings _quickAccessShortcut;
         private int _themeIndex;
 
         private bool _newUpdatesToastIsGpoDisabled;
@@ -434,39 +416,6 @@ namespace Kit.Settings.UI.ViewModels
                     NotifyPropertyChanged();
                 }
             }
-        }
-
-        public HotkeySettings QuickAccessShortcut
-        {
-            get
-            {
-                return _quickAccessShortcut;
-            }
-
-            set
-            {
-                if (_quickAccessShortcut != value)
-                {
-                    if (_quickAccessShortcut != null)
-                    {
-                        _quickAccessShortcut.PropertyChanged -= QuickAccessShortcut_PropertyChanged;
-                    }
-
-                    _quickAccessShortcut = value;
-                    if (_quickAccessShortcut != null)
-                    {
-                        _quickAccessShortcut.PropertyChanged += QuickAccessShortcut_PropertyChanged;
-                    }
-
-                    GeneralSettingsConfig.QuickAccessShortcut = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        private void QuickAccessShortcut_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            NotifyPropertyChanged(nameof(QuickAccessShortcut));
         }
 
         public bool SomeUpdateSettingsAreGpoManaged
@@ -1546,11 +1495,7 @@ namespace Kit.Settings.UI.ViewModels
         {
             base.OnPageLoaded();
 
-            var cached = UpdatingSettings.LoadSettings();
-            if (cached != null)
-            {
-                RefreshUpdatingState(cached);
-            }
+            RefreshUpdatingState();
 
             RunDeferredStartupMaintenance();
         }

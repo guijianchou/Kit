@@ -12,7 +12,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class AdvancedPasteSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class AdvancedPasteSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "AdvancedPaste";
 
@@ -42,62 +42,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.AdvancedPaste;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.PasteAsPlainTextShortcut,
-                    value => Properties.PasteAsPlainTextShortcut = value ?? AdvancedPasteProperties.DefaultPasteAsPlainTextShortcut,
-                    "PasteAsPlainText_Shortcut"),
-                new HotkeyAccessor(
-                    () => Properties.AdvancedPasteUIShortcut,
-                    value => Properties.AdvancedPasteUIShortcut = value ?? AdvancedPasteProperties.DefaultAdvancedPasteUIShortcut,
-                    "AdvancedPasteUI_Shortcut"),
-                new HotkeyAccessor(
-                    () => Properties.PasteAsMarkdownShortcut,
-                    value => Properties.PasteAsMarkdownShortcut = value ?? new HotkeySettings(),
-                    "PasteAsMarkdown_Shortcut"),
-                new HotkeyAccessor(
-                    () => Properties.PasteAsJsonShortcut,
-                    value => Properties.PasteAsJsonShortcut = value ?? new HotkeySettings(),
-                    "PasteAsJson_Shortcut"),
-            };
-
-            string[] additionalActionHeaderKeys =
-            [
-                "ImageToText",
-                "PasteAsTxtFile",
-                "PasteAsPngFile",
-                "PasteAsHtmlFile",
-                "TranscodeToMp3",
-                "TranscodeToMp4",
-            ];
-            int index = 0;
-            foreach (var action in Properties.AdditionalActions.GetAllActions())
-            {
-                if (action is AdvancedPasteAdditionalAction additionalAction)
-                {
-                    hotkeyAccessors.Add(new HotkeyAccessor(
-                        () => additionalAction.Shortcut,
-                        value => additionalAction.Shortcut = value ?? new HotkeySettings(),
-                        additionalActionHeaderKeys[index]));
-                    index++;
-                }
-            }
-
-            // Custom actions do not have localization header, just use the action name.
-            foreach (var customAction in Properties.CustomActions.Value)
-            {
-                hotkeyAccessors.Add(new HotkeyAccessor(
-                    () => customAction.Shortcut,
-                    value => customAction.Shortcut = value ?? new HotkeySettings(),
-                    customAction.Name));
-            }
-
-            return hotkeyAccessors.ToArray();
-        }
 
         public string GetModuleName()
             => Name;

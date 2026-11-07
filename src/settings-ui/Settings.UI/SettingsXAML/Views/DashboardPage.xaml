@@ -12,6 +12,7 @@
     xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
     xmlns:viewmodels="using:Kit.Settings.UI.ViewModels"
     AutomationProperties.LandmarkType="Main"
+    NavigationCacheMode="Required"
     mc:Ignorable="d">
     <local:NavigablePage.Resources>
         <controlConverters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />

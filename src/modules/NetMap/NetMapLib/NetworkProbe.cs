@@ -98,7 +98,8 @@ public sealed class NetworkProbe : IDisposable
         {
             var uri = ServiceEndpoint(name);
             var pooled = AcquirePooledClient(name, uri, generation, options);
-            var result = await CheckServiceAsync(name, uri, true, options, cancellationToken, pooled ?? CreateServiceClient(name, uri, options)).ConfigureAwait(false);
+            using var requestClient = pooled == null ? CreateServiceClient(name, uri, options) : null;
+            var result = await CheckServiceAsync(name, uri, true, options, cancellationToken, pooled ?? requestClient).ConfigureAwait(false);
             if (pooled != null && result.Error is ProbeError.Connection or ProbeError.Timeout or ProbeError.Dns or ProbeError.Tls)
             {
                 // A stale pooled connection must reconnect instead of repeating the failure.
@@ -371,7 +372,10 @@ public sealed class NetworkProbe : IDisposable
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             deadline.CancelAfter(TimeSpan.FromSeconds(10));
             long started = Stopwatch.GetTimestamp();
-            using var http = client ?? CreateClient(uri, isProxy, options, out _, followRedirects: name is "Gemini" or "Google");
+
+            // A supplied client belongs to the caller (including the per-egress pool).
+            using var ownedClient = client == null ? CreateClient(uri, isProxy, options, out _, followRedirects: name is "Gemini" or "Google") : null;
+            var http = client ?? ownedClient!;
             using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
             double responseMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
             var finalUri = response.RequestMessage?.RequestUri ?? uri;

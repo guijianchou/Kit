@@ -266,7 +266,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     public bool IsAiChecking => isAiChecking;
 
-    public bool CanAiCheck => IsEnabled && !isAiChecking && (snapshot.Hops.Count > 0 || mtrSnapshotFileExists);
+    public bool CanAiCheck => !disposed && IsEnabled && !isAiChecking && (snapshot.Hops.Count > 0 || mtrSnapshotFileExists);
 
     public string? AiRoute => aiRoute;
 
@@ -537,13 +537,20 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     public void CancelAiCheck()
     {
+        var source = aiCheckCancellation;
+        aiCheckCancellation = null;
         try
         {
-            aiCheckCancellation?.Cancel();
+            source?.Cancel();
         }
         catch (ObjectDisposedException)
         {
         }
+
+        isAiChecking = false;
+        OnPropertyChanged(nameof(IsAiChecking));
+        OnPropertyChanged(nameof(CanAiCheck));
+        OnPropertyChanged(nameof(Proxy));
     }
 
     public async Task CheckRouteWithAiAsync()
@@ -567,6 +574,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
         using var source = new CancellationTokenSource();
         aiCheckCancellation = source;
+        var token = source.Token;
+        long generation = snapshot.Generation;
         isAiChecking = true;
         OnPropertyChanged(nameof(IsAiChecking));
         OnPropertyChanged(nameof(CanAiCheck));
@@ -577,6 +586,12 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             var response = await NetMapAiService.AnalyzeRouteAsync(source.Token).ConfigureAwait(false);
             dispatcher.TryEnqueue(() =>
             {
+                if (disposed || !IsEnabled || token.IsCancellationRequested || !ReferenceEquals(aiCheckCancellation, source)
+                    || generation != snapshot.Generation || generation != session.Current.Generation)
+                {
+                    return;
+                }
+
                 if (response.Success)
                 {
                     aiRoute = response.LineType;
@@ -599,18 +614,23 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         {
             dispatcher.TryEnqueue(() =>
             {
-                Message = Text("AiCheckFailed") + ": " + ex.Message;
+                if (!disposed && IsEnabled && !token.IsCancellationRequested && ReferenceEquals(aiCheckCancellation, source)
+                    && generation == snapshot.Generation && generation == session.Current.Generation)
+                {
+                    Message = Text("AiCheckFailed") + ": " + ex.Message;
+                }
             });
         }
         finally
         {
-            if (ReferenceEquals(aiCheckCancellation, source))
-            {
-                aiCheckCancellation = null;
-            }
-
             dispatcher.TryEnqueue(() =>
             {
+                if (disposed || !ReferenceEquals(aiCheckCancellation, source))
+                {
+                    return;
+                }
+
+                aiCheckCancellation = null;
                 isAiChecking = false;
                 OnPropertyChanged(nameof(IsAiChecking));
                 OnPropertyChanged(nameof(CanAiCheck));
@@ -760,6 +780,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
         if (previous.Generation != value.Generation)
         {
+            CancelAiCheck();
             Hops.Clear();
             aiRoute = null;
             aiRouteSummary = null;
@@ -769,6 +790,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             OnPropertyChanged(nameof(AiRoute));
             OnPropertyChanged(nameof(AiRouteSummary));
             OnPropertyChanged(nameof(AiRouteDetails));
+            OnPropertyChanged(nameof(Proxy));
         }
 
         for (int i = 0; i < value.Hops.Count; i++)

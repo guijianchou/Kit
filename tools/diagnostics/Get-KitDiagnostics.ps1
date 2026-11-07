@@ -3,8 +3,8 @@
 Summarizes Kit logs so startup cost, errors and crashes can be analyzed in one pass.
 
 .DESCRIPTION
-Read-only by default. Scans %LOCALAPPDATA%\Kit (and the LocalLow fallback used when that
-location is not writable) and reports:
+Read-only by default. Scans %LOCALAPPDATA%\Kit and historical LocalLow logs created by
+older fallback behavior, and reports:
   - the most recent runner and Settings startup timelines (STARTUP_TIMING markers),
   - error / warning counts per log file and the most frequent error messages,
   - crash.log sessions, unhandled exceptions and the most frequent first-chance exceptions,
@@ -65,7 +65,7 @@ foreach ($file in $runnerFiles) {
     foreach ($line in [IO.File]::ReadLines($file.FullName)) {
         $m = $nativeTiming.Match($line)
         if ($m.Success) {
-            $key = "$($file.Name)|$($m.Groups['pid'].Value)"
+            $key = "$($file.FullName)|$($m.Groups['pid'].Value)"
             if (-not $runnerSessions.ContainsKey($key)) { $runnerSessions[$key] = [System.Collections.Generic.List[string]]::new() }
             $runnerSessions[$key].Add("$($m.Groups['ts'].Value)  $($m.Groups['msg'].Value)")
         }
@@ -74,6 +74,7 @@ foreach ($file in $runnerFiles) {
 Out-Report '== Runner startup (latest session) =='
 if ($runnerSessions.Count -gt 0) {
     $latest = $runnerSessions.GetEnumerator() | Sort-Object { $_.Value[0] } | Select-Object -Last 1
+    Out-Report ("  Source: " + ($latest.Key -split '\|')[0])
     $latest.Value | ForEach-Object { Out-Report "  $_" }
     $totals = $runnerSessions.Values | ForEach-Object {
         $end = $_ | Where-Object { $_ -match 'Runner initialization since WinMain: (\d+)ms' } | Select-Object -Last 1
@@ -91,6 +92,7 @@ Out-Report
 $settingsFiles = $logFiles | Where-Object { $_.FullName -match '\\Settings\\Logs\\' }
 Out-Report '== Settings startup (latest session) =='
 $latestSettings = $null
+$latestSettingsPath = $null
 foreach ($file in ($settingsFiles | Sort-Object LastWriteTime -Descending)) {
     $lines = [IO.File]::ReadAllLines($file.FullName)
     $marks = for ($i = 0; $i -lt $lines.Count; $i++) {
@@ -100,10 +102,14 @@ foreach ($file in ($settingsFiles | Sort-Object LastWriteTime -Descending)) {
         # Each launch starts with "App constructed"; keep the last launch in the newest file.
         $start = [Array]::LastIndexOf([string[]]$marks, ($marks | Where-Object { $_ -like 'App constructed*' } | Select-Object -Last 1))
         $latestSettings = $marks[[Math]::Max(0, $start)..($marks.Count - 1)]
+        $latestSettingsPath = $file.FullName
         break
     }
 }
-if ($latestSettings) { $latestSettings | ForEach-Object { Out-Report "  $_" } } else { Out-Report '  (no STARTUP_TIMING markers found)' }
+if ($latestSettings) {
+    Out-Report "  Source: $latestSettingsPath"
+    $latestSettings | ForEach-Object { Out-Report "  $_" }
+} else { Out-Report '  (no STARTUP_TIMING markers found)' }
 Out-Report
 
 # --- Errors and warnings -------------------------------------------------------------------
@@ -117,7 +123,7 @@ foreach ($file in $logFiles) {
         $line = $lines[$i]
         $isError = $line -match '\] \[(error|err|critical)\] ' -or $line -match '^\[[^\]]+\] \[Error\]'
         $isWarning = $line -match '\] \[(warning|warn)\] ' -or $line -match '^\[[^\]]+\] \[Warning\]'
-        if ($line -match 'LOGGER_FALLBACK') { $fallbacks.Add("$($file.Name): $line") }
+        if ($line -match 'LOGGER_FALLBACK') { $fallbacks.Add("$($file.FullName): $line") }
         if (-not ($isError -or $isWarning)) { continue }
         if ($isError) { $errors++ } else { $warnings++ }
         if ($isError) {
@@ -129,9 +135,7 @@ foreach ($file in $logFiles) {
         }
     }
     if ($errors -or $warnings) {
-        $relative = $file.FullName
-        foreach ($root in $roots) { $relative = $relative.Replace($root + '\', '') }
-        Out-Report ("  {0,5} errors {1,5} warnings  {2}" -f $errors, $warnings, $relative)
+        Out-Report ("  {0,5} errors {1,5} warnings  {2}" -f $errors, $warnings, $file.FullName)
     }
 }
 Out-Report
@@ -149,6 +153,7 @@ Out-Report
 $crashFiles = foreach ($root in $roots) { Get-ChildItem -LiteralPath $root -Filter 'crash*.log' -File -ErrorAction SilentlyContinue }
 Out-Report '== crash.log =='
 if ($crashFiles) {
+    foreach ($file in $crashFiles) { Out-Report "  Source: $($file.FullName)" }
     $crashText = ($crashFiles | Sort-Object Name -Descending | ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join "`n"
     $sessions = ([regex]::Matches($crashText, '^\[Session ', 'Multiline')).Count
     $unhandled = [regex]::Matches($crashText, '^\[Unhandled (?<ts>[^\]]+)\] (?<msg>.+)$', 'Multiline')

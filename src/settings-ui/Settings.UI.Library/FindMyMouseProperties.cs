@@ -10,17 +10,11 @@ namespace Kit.Settings.UI.Library
 {
     public class FindMyMouseProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, false, true, 0x46);
-
         [JsonPropertyName("activation_method")]
         public IntProperty ActivationMethod { get; set; }
 
         [JsonPropertyName("include_win_key")]
         public BoolProperty IncludeWinKey { get; set; }
-
-        [JsonPropertyName("activation_shortcut")]
-        public HotkeySettings ActivationShortcut { get; set; }
 
         [JsonPropertyName("do_not_activate_on_game_mode")]
         public BoolProperty DoNotActivateOnGameMode { get; set; }
@@ -56,7 +50,6 @@ namespace Kit.Settings.UI.Library
         {
             ActivationMethod = new IntProperty(0);
             IncludeWinKey = new BoolProperty(false);
-            ActivationShortcut = DefaultActivationShortcut;
             DoNotActivateOnGameMode = new BoolProperty(true);
             BackgroundColor = new StringProperty("#80000000"); // ARGB (#AARRGGBB)
             SpotlightColor = new StringProperty("#80FFFFFF");

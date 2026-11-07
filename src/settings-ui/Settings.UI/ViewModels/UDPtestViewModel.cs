@@ -45,6 +45,10 @@ namespace Kit.Settings.UI.ViewModels
 
         private static readonly Uri NetworkTraceUri = new("https://www.cloudflare.com/cdn-cgi/trace");
         private static readonly TimeSpan NetworkIdentityRefreshInterval = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan ChartHistoryRetention = TimeSpan.FromHours(1.5);
+
+        // Retain 90 minutes for the six default lines even at the fastest 500 ms interval.
+        private const int MaximumChartSamples = 65536;
 
         private readonly SettingsUtils _settingsUtils;
         private readonly ISettingsRepository<GeneralSettings> _generalSettingsRepository;
@@ -57,7 +61,14 @@ namespace Kit.Settings.UI.ViewModels
         private readonly DispatcherTimer _sessionTimer;
         private readonly CancellationTokenSource _lifecycleCancellation = new();
         private readonly SemaphoreSlim _pollSignal = new(0, 1);
-        private readonly List<(string LineId, DateTimeOffset Timestamp, double Rtt, bool IsSuccess)> _chartSamples = [];
+        private readonly Queue<(string LineId, DateTimeOffset Timestamp, double Rtt, bool IsSuccess)> _chartSamples = new();
+        private readonly Dictionary<string, LineMetricSnapshot> _pendingSnapshots = [];
+        private readonly Dictionary<string, Queue<LineMetricSnapshot>> _pendingResultBars = [];
+        private readonly HashSet<string> _activeLineIds = [];
+        private UdpAssessment? _pendingUdpAssessment;
+        private NatAssessment? _pendingNatAssessment;
+        private int _snapshotRefreshQueued;
+        private long _chartDataVersion;
 
         private UDPtestSettings _settings;
         private GpoRuleConfigured _gpoConfiguration;
@@ -228,6 +239,20 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             _isPageActive = active;
+            if (!active)
+            {
+                _sessionTimer.Stop();
+                return;
+            }
+
+            // Let navigation finish before applying the latest background observations.
+            QueueSnapshotRefresh();
+            if (_state == MonitorRunState.Running)
+            {
+                OnSessionTimerTick(this, EventArgs.Empty);
+                _sessionTimer.Start();
+            }
+
             if (active && IsEnabled)
             {
                 SignalPoll();
@@ -499,14 +524,16 @@ namespace Kit.Settings.UI.ViewModels
             set => Set(ref _messageSeverity, value);
         }
 
-        public IReadOnlyList<(DateTimeOffset Timestamp, double Rtt, bool IsSuccess)> GetCurrentChartPoints()
+        public long ChartDataVersion => Interlocked.Read(ref _chartDataVersion);
+
+        public IReadOnlyList<(DateTimeOffset Timestamp, double Rtt, bool IsSuccess)> GetCurrentChartPoints(DateTimeOffset? windowEnd = null)
         {
             if (SelectedLine is null)
             {
                 return Array.Empty<(DateTimeOffset, double, bool)>();
             }
 
-            DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddSeconds(-SelectedPeriodSeconds);
+            DateTimeOffset cutoff = (windowEnd ?? DateTimeOffset.UtcNow).AddSeconds(-SelectedPeriodSeconds);
             lock (_chartSamples)
             {
                 return _chartSamples
@@ -535,7 +562,11 @@ namespace Kit.Settings.UI.ViewModels
                 CanStart = false;
                 await _coordinator.StartAsync(definitions, RefreshInterval, _lifecycleCancellation.Token);
                 _sessionStartedTimestamp = Stopwatch.GetTimestamp();
-                _sessionTimer.Start();
+                if (_isPageActive)
+                {
+                    _sessionTimer.Start();
+                }
+
                 CanStop = true;
                 CanClear = false;
                 SignalPoll();
@@ -571,6 +602,12 @@ namespace Kit.Settings.UI.ViewModels
                 lock (_chartSamples)
                 {
                     _chartSamples.Clear();
+                    _chartSamples.TrimExcess();
+                    Interlocked.Increment(ref _chartDataVersion);
+                    _pendingSnapshots.Clear();
+                    _pendingResultBars.Clear();
+                    _pendingUdpAssessment = null;
+                    _pendingNatAssessment = null;
                 }
 
                 foreach (var line in Lines)
@@ -679,6 +716,11 @@ namespace Kit.Settings.UI.ViewModels
 
         private UDPtestLineRowViewModel CreateLineRow(ProbeLineDefinition definition)
         {
+            lock (_chartSamples)
+            {
+                _activeLineIds.Add(definition.Id);
+            }
+
             var row = new UDPtestLineRowViewModel(definition);
             row.SaveRequested += OnRowSaveRequested;
             row.DeleteRequested += OnRowDeleteRequested;
@@ -712,6 +754,25 @@ namespace Kit.Settings.UI.ViewModels
 
             UdpLines.Remove(row);
             Lines.Remove(row);
+            lock (_chartSamples)
+            {
+                // A final completion from the disabled worker must not resurrect deleted history.
+                _activeLineIds.Remove(row.Id);
+                _pendingSnapshots.Remove(row.Id);
+                _pendingResultBars.Remove(row.Id);
+                int count = _chartSamples.Count;
+                for (int index = 0; index < count; index++)
+                {
+                    var sample = _chartSamples.Dequeue();
+                    if (sample.LineId != row.Id)
+                    {
+                        _chartSamples.Enqueue(sample);
+                    }
+                }
+
+                Interlocked.Increment(ref _chartDataVersion);
+            }
+
             if (SelectedLine == row)
             {
                 SelectedLine = Lines.FirstOrDefault();
@@ -812,33 +873,121 @@ namespace Kit.Settings.UI.ViewModels
 
         private void OnCoordinatorSnapshotCommitted(LineMetricSnapshot snapshot)
         {
-            _dispatcherQueue.TryEnqueue(() =>
+            if (_disposed)
             {
-                var line = Lines.FirstOrDefault(l => l.Id == snapshot.LineId);
-                if (line is not null)
-                {
-                    line.UpdateFromSnapshot(snapshot);
-                    if (snapshot.LastOutcome is { } outcome && snapshot.LastStartedAtUtc is { } started && snapshot.LastDurationMilliseconds is { } duration)
-                    {
-                        line.AddResultBar(outcome, duration, snapshot.LastError);
-                        lock (_chartSamples)
-                        {
-                            _chartSamples.Add((line.Id, started, duration, outcome == ProbeOutcome.Success));
-                            DateTimeOffset prune = DateTimeOffset.UtcNow.AddHours(-1.5);
-                            _chartSamples.RemoveAll(s => s.Timestamp < prune);
-                        }
-                    }
+                return;
+            }
 
-                    if (SelectedLine == line)
-                    {
-                        UpdateHealthCard();
-                        HealthChartNeedsRedraw?.Invoke();
-                    }
+            lock (_chartSamples)
+            {
+                if (!_activeLineIds.Contains(snapshot.LineId))
+                {
+                    return;
                 }
 
-                UpdateNodeVerification();
-                UpdateAssessmentPresentation();
-            });
+                _pendingSnapshots[snapshot.LineId] = snapshot;
+                if (snapshot.LastOutcome is { } outcome && snapshot.LastStartedAtUtc is { } started && snapshot.LastDurationMilliseconds is { } duration)
+                {
+                    DateTimeOffset prune = DateTimeOffset.UtcNow - ChartHistoryRetention;
+
+                    // Evict before enqueueing so Queue never grows an oversized backing array.
+                    while (_chartSamples.Count >= MaximumChartSamples ||
+                        (_chartSamples.TryPeek(out var oldest) && oldest.Timestamp < prune))
+                    {
+                        _chartSamples.Dequeue();
+                    }
+
+                    if (started >= prune)
+                    {
+                        _chartSamples.Enqueue((snapshot.LineId, started, duration, outcome == ProbeOutcome.Success));
+                    }
+
+                    Interlocked.Increment(ref _chartDataVersion);
+                    if (!_pendingResultBars.TryGetValue(snapshot.LineId, out var bars))
+                    {
+                        bars = new Queue<LineMetricSnapshot>();
+                        _pendingResultBars.Add(snapshot.LineId, bars);
+                    }
+
+                    bars.Enqueue(snapshot);
+                    while (bars.Count > 240)
+                    {
+                        bars.Dequeue();
+                    }
+                }
+            }
+
+            QueueSnapshotRefresh();
+        }
+
+        private void QueueSnapshotRefresh()
+        {
+            if (!_disposed && _isPageActive && Interlocked.Exchange(ref _snapshotRefreshQueued, 1) == 0)
+            {
+                if (!_dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+                {
+                    Interlocked.Exchange(ref _snapshotRefreshQueued, 0);
+                    RefreshPendingSnapshots();
+                }))
+                {
+                    Interlocked.Exchange(ref _snapshotRefreshQueued, 0);
+                }
+            }
+        }
+
+        private void RefreshPendingSnapshots()
+        {
+            if (_disposed || !_isPageActive)
+            {
+                return;
+            }
+
+            LineMetricSnapshot[] snapshots;
+            Dictionary<string, LineMetricSnapshot[]> resultBars;
+            UdpAssessment? udpAssessment;
+            NatAssessment? natAssessment;
+            lock (_chartSamples)
+            {
+                snapshots = _pendingSnapshots.Values.ToArray();
+                resultBars = _pendingResultBars.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
+                _pendingSnapshots.Clear();
+                _pendingResultBars.Clear();
+                udpAssessment = _pendingUdpAssessment;
+                natAssessment = _pendingNatAssessment;
+                _pendingUdpAssessment = null;
+                _pendingNatAssessment = null;
+            }
+
+            foreach (var snapshot in snapshots)
+            {
+                var line = Lines.FirstOrDefault(l => l.Id == snapshot.LineId);
+                if (line is null)
+                {
+                    continue;
+                }
+
+                line.UpdateFromSnapshot(snapshot);
+                if (resultBars.TryGetValue(snapshot.LineId, out var bars))
+                {
+                    line.AddResultBars(bars);
+                }
+            }
+
+            if (udpAssessment is not null)
+            {
+                UdpAssessmentText = LocalizedUdpAssessment(udpAssessment.State);
+                UdpDetailText = udpAssessment.Detail;
+            }
+
+            if (natAssessment is not null)
+            {
+                NatTypeText = LocalizedNatType(natAssessment.Type);
+            }
+
+            UpdateHealthCard();
+            UpdateNodeVerification();
+            UpdateAssessmentPresentation();
+            HealthChartNeedsRedraw?.Invoke();
         }
 
         private static string LocalizedUdpAssessment(string state) => state switch
@@ -853,12 +1002,12 @@ namespace Kit.Settings.UI.ViewModels
 
         private void OnCoordinatorUdpAssessmentCommitted(UdpAssessment assessment)
         {
-            _dispatcherQueue.TryEnqueue(() =>
+            lock (_chartSamples)
             {
-                UdpAssessmentText = LocalizedUdpAssessment(assessment.State);
-                UdpDetailText = assessment.Detail;
-                UpdateAssessmentPresentation();
-            });
+                _pendingUdpAssessment = assessment;
+            }
+
+            QueueSnapshotRefresh();
         }
 
         private static string LocalizedNatType(string type) => type switch
@@ -874,10 +1023,12 @@ namespace Kit.Settings.UI.ViewModels
 
         private void OnCoordinatorNatAssessmentCommitted(NatAssessment assessment)
         {
-            _dispatcherQueue.TryEnqueue(() =>
+            lock (_chartSamples)
             {
-                NatTypeText = LocalizedNatType(assessment.Type);
-            });
+                _pendingNatAssessment = assessment;
+            }
+
+            QueueSnapshotRefresh();
         }
 
         private void OnCoordinatorError(Exception exception)

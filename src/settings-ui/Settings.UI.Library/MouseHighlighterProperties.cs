@@ -10,12 +10,6 @@ namespace Kit.Settings.UI.Library
 {
     public class MouseHighlighterProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, false, true, 0x48);
-
-        [JsonPropertyName("activation_shortcut")]
-        public HotkeySettings ActivationShortcut { get; set; }
-
         [JsonPropertyName("left_button_click_color")]
         public StringProperty LeftButtonClickColor { get; set; }
 
@@ -46,7 +40,6 @@ namespace Kit.Settings.UI.Library
 
         public MouseHighlighterProperties()
         {
-            ActivationShortcut = DefaultActivationShortcut;
             LeftButtonClickColor = new StringProperty("#a6FFFF00");
             RightButtonClickColor = new StringProperty("#a60000FF");
             AlwaysColor = new StringProperty("#00FF0000");

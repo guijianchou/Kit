@@ -10,16 +10,10 @@ namespace Kit.Settings.UI.Library
 {
     public class PowerOcrProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultActivationShortcut => new HotkeySettings(true, false, false, true, 0x54); // Win+Shift+T
-
         public PowerOcrProperties()
         {
-            ActivationShortcut = DefaultActivationShortcut;
             PreferredLanguage = string.Empty;
         }
-
-        public HotkeySettings ActivationShortcut { get; set; }
 
         public string PreferredLanguage { get; set; }
 

@@ -116,18 +116,6 @@ namespace Kit.Settings.UI.Library.Utilities
             return Path.Combine(GetPowerToysInstallationFolder(), "WinUI3Apps", "Assets");
         }
 
-        private static readonly global::Kit.Interop.LayoutMapManaged LayoutMap = new global::Kit.Interop.LayoutMapManaged();
-
-        public static string GetKeyName(uint key)
-        {
-            return LayoutMap.GetKeyName(key);
-        }
-
-        public static uint GetKeyValue(string key)
-        {
-            return LayoutMap.GetKeyValue(key);
-        }
-
         public static string GetProductVersion()
         {
             return global::Kit.Interop.CommonManaged.GetProductVersion();

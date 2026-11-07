@@ -1,13 +1,13 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by PowerToys.MeasureToolCore.rc
+// Used by GPOWrapper.rc
 
 //////////////////////////////
 // Non-localizable
 
-#define FILE_DESCRIPTION "PowerToys GPOWrapper"
-#define INTERNAL_NAME "PowerToys.GPOWrapper"
-#define ORIGINAL_FILENAME "PowerToys.GPOWrapper.dll"
+#define FILE_DESCRIPTION "Kit GPOWrapper"
+#define INTERNAL_NAME "Kit.GPOWrapper"
+#define ORIGINAL_FILENAME "Kit.GPOWrapper.dll"
 
 // Non-localizable
 //////////////////////////////

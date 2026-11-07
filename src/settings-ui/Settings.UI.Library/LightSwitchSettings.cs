@@ -13,7 +13,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class LightSwitchSettings : BasePTModuleSettings, ISettingsConfig, ICloneable, IHotkeyConfig
+    public class LightSwitchSettings : BasePTModuleSettings, ISettingsConfig, ICloneable
     {
         public const string ModuleName = "LightSwitch";
 
@@ -26,11 +26,6 @@ namespace Kit.Settings.UI.Library
 
         [JsonPropertyName("properties")]
         public LightSwitchProperties Properties { get; set; }
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            return Array.Empty<HotkeyAccessor>();
-        }
 
         public ModuleType GetModuleType() => ModuleType.LightSwitch;
 

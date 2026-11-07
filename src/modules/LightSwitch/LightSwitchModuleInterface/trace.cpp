@@ -13,7 +13,3 @@ void Trace::Enable(bool enabled) noexcept
 {
     UNREFERENCED_PARAMETER(enabled);
 }
-
-void Trace::ShortcutInvoked() noexcept
-{
-}

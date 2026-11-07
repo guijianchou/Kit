@@ -1,6 +1,6 @@
 # Build scripts – quick guideline
 
-Use these scripts to build PowerToys locally. They auto-detect your platform (x64/arm64), initialize the Visual Studio developer environment, and write helpful logs on failure.
+Use these scripts to build Kit locally for x64. They initialize the Visual Studio developer environment and write helpful logs on failure.
 
 ## Quick start (from cmd.exe)
 - Fast essentials (runner + settings) and NuGet restore first:
@@ -8,7 +8,7 @@ Use these scripts to build PowerToys locally. They auto-detect your platform (x6
 - Build projects in the current folder:
   - `tools\build\build.cmd`
 
-Tip: Add `D:\PowerToys\tools\build` to your PATH to use the wrappers anywhere.
+Tip: Add `D:\Kit\tools\build` to your PATH to use the wrappers anywhere.
 
 ## When to use which
 1) `build-essentials.ps1`
@@ -16,7 +16,7 @@ Tip: Add `D:\PowerToys\tools\build` to your PATH to use the wrappers anywhere.
    - Auto-detects Platform; initializes VS Dev environment automatically.
    - Example (PowerShell):
      - `./tools/build/build-essentials.ps1`
-     - `./tools/build/build-essentials.ps1 -Platform arm64 -Configuration Release`
+     - `./tools/build/build-essentials.ps1 -Platform x64 -Configuration Release`
 
 2) `build.ps1` (from any folder)
    - Builds any `.sln/.csproj/.vcxproj` in the current directory.
@@ -37,5 +37,5 @@ Tip: Add `D:\PowerToys\tools\build` to your PATH to use the wrappers anywhere.
   - If VS isn't found, run from "Developer PowerShell for VS 2022" or "Developer PowerShell for VS", or ensure `vswhere.exe` exists under `Program Files (x86)\Microsoft Visual Studio\Installer`.
 
 ## Notes
-- Override platform explicitly with `-Platform x64|arm64` if needed.
+- Use `-Platform x64` for Kit builds.
 - CMD wrappers: `build.cmd`, `build-essentials.cmd` forward all arguments to the PowerShell scripts.

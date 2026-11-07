@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Kit.Settings.UI.Library.Helpers;
-using Kit.Settings.UI.Library.HotkeyConflicts;
 
 namespace Kit.Settings.UI.Library;
 
@@ -16,13 +15,10 @@ public sealed class AdvancedPasteCustomAction : Observable, IAdvancedPasteAction
     private string _name = string.Empty;
     private string _description = string.Empty;
     private string _prompt = string.Empty;
-    private HotkeySettings _shortcut = new();
     private bool _isShown;
     private bool _canMoveUp;
     private bool _canMoveDown;
     private bool _isValid;
-    private bool _hasConflict;
-    private string _tooltip;
 
     [JsonPropertyName("id")]
     public int Id
@@ -64,22 +60,6 @@ public sealed class AdvancedPasteCustomAction : Observable, IAdvancedPasteAction
         }
     }
 
-    [JsonPropertyName("shortcut")]
-    public HotkeySettings Shortcut
-    {
-        get => _shortcut;
-        set
-        {
-            if (_shortcut != value)
-            {
-                // We null-coalesce here rather than outside this branch as we want to raise PropertyChanged when the setter is called
-                // with null; the ShortcutControl depends on this.
-                _shortcut = value ?? new();
-                OnPropertyChanged();
-            }
-        }
-    }
-
     [JsonPropertyName("isShown")]
     public bool IsShown
     {
@@ -109,20 +89,6 @@ public sealed class AdvancedPasteCustomAction : Observable, IAdvancedPasteAction
     }
 
     [JsonIgnore]
-    public bool HasConflict
-    {
-        get => _hasConflict;
-        set => Set(ref _hasConflict, value);
-    }
-
-    [JsonIgnore]
-    public string Tooltip
-    {
-        get => _tooltip;
-        set => Set(ref _tooltip, value);
-    }
-
-    [JsonIgnore]
     public IEnumerable<IAdvancedPasteAction> SubActions => [];
 
     public object Clone()
@@ -138,23 +104,9 @@ public sealed class AdvancedPasteCustomAction : Observable, IAdvancedPasteAction
         Name = other.Name;
         Description = other.Description;
         Prompt = other.Prompt;
-        Shortcut = other.GetShortcutClone();
         IsShown = other.IsShown;
         CanMoveUp = other.CanMoveUp;
         CanMoveDown = other.CanMoveDown;
-        HasConflict = other.HasConflict;
-        Tooltip = other.Tooltip;
-    }
-
-    private HotkeySettings GetShortcutClone()
-    {
-        object shortcut = null;
-        if (Shortcut.TryToCmdRepresentable(out string shortcutString))
-        {
-            _ = HotkeySettings.TryParseFromCmd(shortcutString, out shortcut);
-        }
-
-        return (shortcut as HotkeySettings) ?? new HotkeySettings();
     }
 
     private void UpdateIsValid()

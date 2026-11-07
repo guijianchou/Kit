@@ -10,7 +10,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class FindMyMouseSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class FindMyMouseSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "FindMyMouse";
 
@@ -30,19 +30,6 @@ namespace Kit.Settings.UI.Library
         }
 
         public ModuleType GetModuleType() => ModuleType.FindMyMouse;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ActivationShortcut,
-                    value => Properties.ActivationShortcut = value ?? Properties.DefaultActivationShortcut,
-                    "MouseUtils_FindMyMouse_ActivationShortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         // This can be utilized in the future if the settings.json file is to be modified/deleted.
         public bool UpgradeSettingsConfiguration()

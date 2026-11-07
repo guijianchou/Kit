@@ -3,10 +3,7 @@
 #include "settings_window.h"
 #include "tray_icon.h"
 #include "general_settings.h"
-#include "centralized_hotkeys.h"
-#include "centralized_kb_hook.h"
 #include "quick_access_host.h"
-#include "hotkey_conflict_detector.h"
 #include "trace.h"
 #include <Windows.h>
 #include <memory>
@@ -238,15 +235,6 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
 
     switch (message)
     {
-    case WM_HOTKEY:
-    {
-        // We use the tray icon WndProc to avoid creating a dedicated window just for this message.
-        const auto modifiersMask = LOWORD(lparam);
-        const auto vkCode = HIWORD(lparam);
-        Logger::trace(L"On {} hotkey", CentralizedHotkeys::ToWstring({ modifiersMask, vkCode }));
-        CentralizedHotkeys::PopulateHotkey({ modifiersMask, vkCode });
-        break;
-    }
     case WM_CREATE:
         if (wm_taskbar_restart == 0)
         {
@@ -494,7 +482,6 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
         Logger::info(L"start_tray_icon: CreateWindowW(class={}, name={}) returned hwnd={}", wc.lpszClassName, pt_tray_icon_window_class, (void*)hwnd);
         WINRT_VERIFY(hwnd);
         tray_icon_hwnd = hwnd;
-        CentralizedHotkeys::RegisterWindow(hwnd);
         memset(&tray_icon_data, 0, sizeof(tray_icon_data));
         tray_icon_data.cbSize = sizeof(tray_icon_data);
         tray_icon_data.hIcon = icon;
@@ -631,37 +618,3 @@ bool is_system_session_ending()
 {
     return g_system_session_ending;
 }
-void update_quick_access_hotkey(bool enabled, PowerToysSettings::HotkeyObject hotkey)
-{
-    static PowerToysSettings::HotkeyObject current_hotkey;
-    static bool is_registered = false;
-    auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-
-    if (is_registered)
-    {
-        CentralizedKeyboardHook::ClearModuleHotkeys(L"QuickAccess");
-        hkmng.RemoveHotkeyByModule(L"GeneralSettings");
-        is_registered = false;
-    }
-
-    if (enabled && hotkey.get_code() != 0)
-    {
-        HotkeyConflictDetector::Hotkey hk = {
-            hotkey.win_pressed(),
-            hotkey.ctrl_pressed(),
-            hotkey.shift_pressed(),
-            hotkey.alt_pressed(),
-            static_cast<unsigned char>(hotkey.get_code())
-        };
-
-        hkmng.AddHotkey(hk, L"GeneralSettings", 0, true);
-        CentralizedKeyboardHook::SetHotkeyAction(L"QuickAccess", hk, []() {
-            open_quick_access_flyout_window();
-            return true;
-        });
-
-        current_hotkey = hotkey;
-        is_registered = true;
-    }
-}
-

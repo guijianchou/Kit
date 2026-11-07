@@ -10,9 +10,6 @@ namespace Kit.Settings.UI.Library
 {
     public class ShortcutGuideProperties
     {
-        [CmdConfigureIgnore]
-        public HotkeySettings DefaultOpenShortcutGuide => new HotkeySettings(true, false, false, true, 0xBF);
-
         public ShortcutGuideProperties()
         {
             OverlayOpacity = new IntProperty(90);
@@ -21,11 +18,7 @@ namespace Kit.Settings.UI.Library
             PressTimeForTaskbarIconShortcuts = new IntProperty(900);
             Theme = new StringProperty("system");
             DisabledApps = new StringProperty();
-            OpenShortcutGuide = DefaultOpenShortcutGuide;
         }
-
-        [JsonPropertyName("open_shortcutguide")]
-        public HotkeySettings OpenShortcutGuide { get; set; }
 
         [JsonPropertyName("overlay_opacity")]
         public IntProperty OverlayOpacity { get; set; }

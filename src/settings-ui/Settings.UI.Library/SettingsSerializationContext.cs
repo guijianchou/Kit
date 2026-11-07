@@ -112,7 +112,6 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(PowerRenameProperties))]
     [JsonSerializable(typeof(PowerRenameLocalProperties))]
     [JsonSerializable(typeof(RegistryPreviewProperties))]
-    [JsonSerializable(typeof(ShortcutConflictProperties))]
     [JsonSerializable(typeof(ShortcutGuideProperties))]
     [JsonSerializable(typeof(WorkspacesProperties))]
     [JsonSerializable(typeof(GrabAndMoveProperties))]
@@ -128,7 +127,6 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(DoubleProperty))]
 
     // Helper and Utility Types
-    [JsonSerializable(typeof(HotkeySettings))]
     [JsonSerializable(typeof(ColorFormatModel))]
     [JsonSerializable(typeof(ImageSize))]
     [JsonSerializable(typeof(KeysDataModel))]
@@ -144,7 +142,6 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(AdvancedPasteTranscodeAction))]
     [JsonSerializable(typeof(ImageResizerSizes))]
     [JsonSerializable(typeof(ImageResizerCustomSizeProperty))]
-    [JsonSerializable(typeof(KeyboardKeysProperty))]
     [JsonSerializable(typeof(ColorPresetItem))]
     [JsonSerializable(typeof(VcpCodeDisplayInfo))]
     [JsonSerializable(typeof(VcpValueInfo))]

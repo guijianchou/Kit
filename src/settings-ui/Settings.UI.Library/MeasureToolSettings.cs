@@ -10,7 +10,7 @@ using ManagedCommon;
 
 namespace Kit.Settings.UI.Library
 {
-    public class MeasureToolSettings : BasePTModuleSettings, ISettingsConfig, IHotkeyConfig
+    public class MeasureToolSettings : BasePTModuleSettings, ISettingsConfig
     {
         public const string ModuleName = "Measure Tool";
 
@@ -28,19 +28,6 @@ namespace Kit.Settings.UI.Library
             => Name;
 
         public ModuleType GetModuleType() => ModuleType.MeasureTool;
-
-        public HotkeyAccessor[] GetAllHotkeyAccessors()
-        {
-            var hotkeyAccessors = new List<HotkeyAccessor>
-            {
-                new HotkeyAccessor(
-                    () => Properties.ActivationShortcut,
-                    value => Properties.ActivationShortcut = value ?? Properties.DefaultActivationShortcut,
-                    "MeasureTool_ActivationShortcut"),
-            };
-
-            return hotkeyAccessors.ToArray();
-        }
 
         // This can be utilized in the future if the settings.json file is to be modified/deleted.
         public bool UpgradeSettingsConfiguration()

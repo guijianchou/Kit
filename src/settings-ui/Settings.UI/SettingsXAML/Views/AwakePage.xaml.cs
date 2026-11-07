@@ -12,6 +12,7 @@ using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
 
 namespace Kit.Settings.UI.Views
 {
@@ -31,6 +32,8 @@ namespace Kit.Settings.UI.Views
         private readonly DispatcherQueue _dispatcherQueue;
 
         private readonly Func<string, int> _sendConfigMsg;
+        private readonly MainWindow _settingsWindow;
+        private bool _disposed;
 
         private AwakeViewModel ViewModel { get; set; }
 
@@ -62,6 +65,29 @@ namespace Kit.Settings.UI.Views
             _fileSystemWatcher.EnableRaisingEvents = true;
 
             InitializeComponent();
+            _settingsWindow = App.GetSettingsWindow();
+            _settingsWindow.Closed += OnSettingsWindowClosed;
+        }
+
+        protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            RefreshEnabledState();
+        }
+
+        private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
+        {
+            if (args.Handled || _disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _settingsWindow.Closed -= OnSettingsWindowClosed;
+            _fileSystemWatcher.EnableRaisingEvents = false;
+            _fileSystemWatcher.Changed -= Settings_Changed;
+            _fileSystemWatcher.Dispose();
+            ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
 
         /// <summary>
@@ -74,7 +100,7 @@ namespace Kit.Settings.UI.Views
         /// <param name="e">Property parameter.</param>
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (_sendConfigMsg != null)
+            if (!_disposed && _sendConfigMsg != null)
             {
                 if (e.PropertyName == "IsEnabled")
                 {
@@ -174,8 +200,18 @@ namespace Kit.Settings.UI.Views
 
         private void Settings_Changed(object sender, FileSystemEventArgs e)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             bool taskAdded = _dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
             {
+                if (_disposed)
+                {
+                    return;
+                }
+
                 _moduleSettingsRepository.ReloadSettings();
                 LoadSettings(_generalSettingsRepository, _moduleSettingsRepository);
             });

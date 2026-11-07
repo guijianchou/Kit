@@ -36,7 +36,9 @@ namespace Kit.Settings.UI.Views
         private readonly IFileSystem fileSystem;
         private readonly IFileSystemWatcher fileSystemWatcher;
         private readonly DispatcherQueue dispatcherQueue;
+        private readonly MainWindow settingsWindow;
         private bool suppressViewModelUpdates;
+        private bool disposed;
 
         private LightSwitchViewModel ViewModel { get; set; }
 
@@ -67,6 +69,29 @@ namespace Kit.Settings.UI.Views
             this.InitializeComponent();
             Loaded += LightSwitchPage_Loaded;
             Loaded += (s, e) => this.ViewModel.OnPageLoaded();
+            this.settingsWindow = App.GetSettingsWindow();
+            this.settingsWindow.Closed += OnSettingsWindowClosed;
+        }
+
+        protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            RefreshEnabledState();
+        }
+
+        private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
+        {
+            if (args.Handled || this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+            this.settingsWindow.Closed -= OnSettingsWindowClosed;
+            this.fileSystemWatcher.EnableRaisingEvents = false;
+            this.fileSystemWatcher.Dispose();
+            this.ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            this.ViewModel.Dispose();
         }
 
         public void RefreshEnabledState()
@@ -237,7 +262,7 @@ namespace Kit.Settings.UI.Views
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (this.suppressViewModelUpdates || this.ViewModel.IsRefreshingModuleSettings)
+            if (this.disposed || this.suppressViewModelUpdates || this.ViewModel.IsRefreshingModuleSettings)
             {
                 return;
             }
@@ -320,8 +345,18 @@ namespace Kit.Settings.UI.Views
 
         private void OnSettingsChanged()
         {
+            if (this.disposed)
+            {
+                return;
+            }
+
             this.dispatcherQueue.TryEnqueue(() =>
             {
+                if (this.disposed)
+                {
+                    return;
+                }
+
                 this.suppressViewModelUpdates = true;
                 try
                 {

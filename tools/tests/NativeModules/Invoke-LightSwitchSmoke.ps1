@@ -182,7 +182,6 @@ try {
                 sunset_offset = @{ value = 0 }
                 latitude = @{ value = '0.0' }
                 longitude = @{ value = '0.0' }
-                'toggle-theme-hotkey' = @{ value = @{ win = $true; ctrl = $true; shift = $true; alt = $false; code = 68 } }
             }
         }
         [IO.Directory]::CreateDirectory($moduleSettingsDirectory) | Out-Null

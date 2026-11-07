@@ -12,23 +12,14 @@ namespace Kit.Settings.UI.Library
 {
     public class AdvancedPasteProperties
     {
-        public static readonly HotkeySettings DefaultAdvancedPasteUIShortcut = new HotkeySettings(true, false, false, true, 0x56); // Win+Shift+V
-
-        public static readonly HotkeySettings DefaultPasteAsPlainTextShortcut = new HotkeySettings(true, true, true, false, 0x56); // Ctrl+Win+Alt+V
-
         public AdvancedPasteProperties()
         {
-            AdvancedPasteUIShortcut = DefaultAdvancedPasteUIShortcut;
-            PasteAsPlainTextShortcut = DefaultPasteAsPlainTextShortcut;
-            PasteAsMarkdownShortcut = new();
-            PasteAsJsonShortcut = new();
             CustomActions = new();
             AdditionalActions = new();
             IsAIEnabled = false;
             ShowCustomPreview = true;
             CloseAfterLosingFocus = false;
             EnableClipboardPreview = true;
-            AutoCopySelectionForCustomActionHotkey = false;
             PasteAIConfiguration = new();
         }
 
@@ -79,21 +70,6 @@ namespace Kit.Settings.UI.Library
 
         [JsonConverter(typeof(BoolPropertyJsonConverter))]
         public bool EnableClipboardPreview { get; set; }
-
-        [JsonConverter(typeof(BoolPropertyJsonConverter))]
-        public bool AutoCopySelectionForCustomActionHotkey { get; set; }
-
-        [JsonPropertyName("advanced-paste-ui-hotkey")]
-        public HotkeySettings AdvancedPasteUIShortcut { get; set; }
-
-        [JsonPropertyName("paste-as-plain-hotkey")]
-        public HotkeySettings PasteAsPlainTextShortcut { get; set; }
-
-        [JsonPropertyName("paste-as-markdown-hotkey")]
-        public HotkeySettings PasteAsMarkdownShortcut { get; set; }
-
-        [JsonPropertyName("paste-as-json-hotkey")]
-        public HotkeySettings PasteAsJsonShortcut { get; set; }
 
         [JsonPropertyName("custom-actions")]
         [CmdConfigureIgnoreAttribute]

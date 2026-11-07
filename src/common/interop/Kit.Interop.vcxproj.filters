@@ -27,15 +27,6 @@
     <ClInclude Include="Constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="keyboard_layout.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="keyboard_layout_impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LayoutMapManaged.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CommonManaged.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -51,22 +42,13 @@
     <ClInclude Include="async_message_queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HotkeyManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="keyboard_layout.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Constants.cpp">
       <Filter>Header Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LayoutMapManaged.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CommonManaged.cpp">
       <Filter>Source Files</Filter>
@@ -78,9 +60,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HotkeyManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -97,19 +76,10 @@
     <None Include="PropertySheet.props" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="HotkeyManager.idl">
-      <Filter>Source Files</Filter>
-    </Midl>
     <Midl Include="Constants.idl">
       <Filter>Source Files</Filter>
     </Midl>
-    <Midl Include="LayoutMapManaged.idl">
-      <Filter>Source Files</Filter>
-    </Midl>
     <Midl Include="CommonManaged.idl">
-      <Filter>Source Files</Filter>
-    </Midl>
-    <Midl Include="KeyboardHook.idl">
       <Filter>Source Files</Filter>
     </Midl>
     <Midl Include="TwoWayPipeMessageIPCManaged.idl">

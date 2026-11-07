@@ -161,55 +161,33 @@ namespace ManagedCommon
         {
             LoadLogSettings();
             var logFile = "Log_" + DateTime.Now.ToString(@"yyyy-MM-dd", CultureInfo.InvariantCulture) + ".log";
-            string requestedPath = LogDirectoryPath(applicationLogPath, isLocalLow);
-            string failure = null;
+            string versionedPath = LogDirectoryPath(applicationLogPath, isLocalLow);
 
-            // A process that cannot write %LOCALAPPDATA% (low integrity, redirected profile) must
-            // still start and still leave a log, so the location falls back instead of throwing.
-            foreach (string versionedPath in LogDirectoryCandidates(applicationLogPath, isLocalLow))
+            // Keep logs at the caller's configured module location. Access denied does not
+            // imply a low-integrity process and must not scatter logs across user folders.
+            try
             {
-                try
-                {
-                    Directory.CreateDirectory(versionedPath);
-                    var logFilePath = Path.Combine(versionedPath, logFile);
-                    var streamWriter = new StreamWriter(new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete)) { AutoFlush = true };
-                    var listener = new TextWriterTraceListener(streamWriter);
+                Directory.CreateDirectory(versionedPath);
+                var logFilePath = Path.Combine(versionedPath, logFile);
+                var streamWriter = new StreamWriter(new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete)) { AutoFlush = true };
+                var listener = new TextWriterTraceListener(streamWriter);
 
-                    string basePath = Path.GetDirectoryName(versionedPath);
-                    AppLogDirectoryPath = basePath;
-                    CurrentVersionLogDirectoryPath = versionedPath;
-                    CurrentLogFile = logFilePath;
+                string basePath = Path.GetDirectoryName(versionedPath);
+                AppLogDirectoryPath = basePath;
+                CurrentVersionLogDirectoryPath = versionedPath;
+                CurrentLogFile = logFilePath;
 
-                    Trace.Listeners.Add(listener);
-                    Trace.AutoFlush = true;
+                Trace.Listeners.Add(listener);
+                Trace.AutoFlush = true;
 
-                    if (failure != null)
-                    {
-                        LogWarning($"LOGGER_FALLBACK: '{requestedPath}' is not writable ({failure}); logging to '{versionedPath}' instead.");
-                    }
-
-                    // Clean up old version log folders
-                    Task.Run(() => DeleteOldVersionLogFolders(basePath, versionedPath));
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    failure ??= ex.GetType().Name + ": " + ex.Message;
-                }
+                // Clean up old version log folders
+                Task.Run(() => DeleteOldVersionLogFolders(basePath, versionedPath));
             }
-
-            _isLoggingEnabled = false;
-            System.Diagnostics.Debug.WriteLine($"[Kit] Logger cannot be initialized for '{requestedPath}': {failure}");
-        }
-
-        private static string[] LogDirectoryCandidates(string applicationLogPath, bool isLocalLow)
-        {
-            return new[]
+            catch (Exception ex)
             {
-                LogDirectoryPath(applicationLogPath, isLocalLow),
-                LogDirectoryPath(applicationLogPath, isLocalLow: true),
-                Path.Combine(Path.GetTempPath(), "Kit" + applicationLogPath, Version),
-            }.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                _isLoggingEnabled = false;
+                Trace.WriteLine($"[Kit] Logger cannot be initialized for '{versionedPath}'; file logging is disabled: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         public static string LogDirectoryPath(string applicationLogPath, bool isLocalLow = false)

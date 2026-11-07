@@ -179,27 +179,15 @@
                         </tkcontrols:SettingsExpander>
                     </controls:GPOInfoControl>
 
-                    <tkcontrols:SettingsExpander
+                    <tkcontrols:SettingsCard
                         x:Name="GeneralPageEnableQuickAccess"
                         x:Uid="GeneralPage_EnableQuickAccess"
-                        HeaderIcon="{ui:FontIcon Glyph=&#xE91C;}"
-                        IsExpanded="True">
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE91C;}">
                         <ToggleSwitch
                             x:Uid="ToggleSwitch"
                             AutomationProperties.Name="{Binding ElementName=GeneralPageEnableQuickAccess, Path=Header}"
                             IsOn="{x:Bind ViewModel.EnableQuickAccess, Mode=TwoWay}" />
-                        <tkcontrols:SettingsExpander.Items>
-                            <!--  HACK: For some weird reason, a ShortcutControl does not work correctly if it's the first or last item in the expander, so we add an invisible card.  -->
-                            <tkcontrols:SettingsCard Visibility="Collapsed" />
-                            <tkcontrols:SettingsCard
-                                x:Name="QuickAccessShortcut"
-                                x:Uid="GeneralPage_QuickAccessShortcut"
-                                IsEnabled="{x:Bind ViewModel.EnableQuickAccess, Mode=OneWay}">
-                                <controls:ShortcutControl HotkeySettings="{x:Bind ViewModel.QuickAccessShortcut, Mode=TwoWay}" />
-                            </tkcontrols:SettingsCard>
-                            <tkcontrols:SettingsCard Visibility="Collapsed" />
-                        </tkcontrols:SettingsExpander.Items>
-                    </tkcontrols:SettingsExpander>
+                    </tkcontrols:SettingsCard>
                 </controls:SettingsGroup>
 
                 <controls:SettingsGroup x:Name="StartupAndPermissionsGroup" x:Uid="StartupAndPermissions">
@@ -371,7 +359,7 @@
                                     x:Uid="AiHub_TestConnectionButton"
                                     AutomationProperties.AutomationId="AiHub_MainEndpoint_TestConnectionButton"
                                     Style="{StaticResource KitActionButtonStyle}"
-                                    Command="{x:Bind ViewModel.AiServices.MainEndpoint.TestCommand}"
+                                        Command="{x:Bind ViewModel.AiServices.MainEndpoint.TestCommand, Mode=OneWay}"
                                     Content="Test connection" />
                             </StackPanel>
                             <tkcontrols:SettingsExpander.Items>
@@ -448,7 +436,7 @@
                                     x:Uid="AiHub_TestConnectionButton"
                                     AutomationProperties.AutomationId="AiHub_FallbackEndpoint_TestConnectionButton"
                                     Style="{StaticResource KitActionButtonStyle}"
-                                    Command="{x:Bind ViewModel.AiServices.FallbackEndpoint.TestCommand}"
+                                        Command="{x:Bind ViewModel.AiServices.FallbackEndpoint.TestCommand, Mode=OneWay}"
                                     Content="Test connection" />
                             </StackPanel>
                             <tkcontrols:SettingsExpander.Items>

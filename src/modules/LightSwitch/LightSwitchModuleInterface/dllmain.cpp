@@ -535,7 +535,6 @@ void LightSwitchInterface::StartToggleListener()
 
             if (wait_result == WAIT_OBJECT_0)
             {
-                Trace::ShortcutInvoked();
                 ToggleTheme();
             }
         }

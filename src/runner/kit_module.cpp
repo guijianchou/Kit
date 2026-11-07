@@ -1,7 +1,5 @@
 #include "pch.h"
 #include "kit_module.h"
-#include "centralized_kb_hook.h"
-#include "centralized_hotkeys.h"
 #include <common/logger/logger.h>
 #include <common/utils/process_path.h>
 #include <common/utils/winapi_error.h>
@@ -47,13 +45,11 @@ KitModule load_kit_module(const std::wstring_view filename)
     }
     const auto createMs = elapsed_ms(stageStart);
 
-    stageStart = clock::now();
     KitModule module(pt_module, handle.release());
-    Logger::debug(L"Module {}: LoadLibrary {}ms, kit_create {}ms, hotkey registration {}ms",
+    Logger::debug(L"Module {}: LoadLibrary {}ms, kit_create {}ms",
                   filename,
                   loadMs,
-                  createMs,
-                  elapsed_ms(stageStart));
+                  createMs);
     return module;
 }
 
@@ -116,70 +112,10 @@ std::wstring_view get_module_key_for_filename(std::wstring_view filename)
 }
 
 KitModule::KitModule(KitModuleIface* pt_module, HMODULE handle) :
-    handle(handle), pt_module(pt_module), hkmng(HotkeyConflictDetector::HotkeyConflictManager::GetInstance())
+    handle(handle), pt_module(pt_module)
 {
     if (!pt_module)
     {
         throw std::runtime_error("Kit module not initialized");
-    }
-
-    remove_hotkey_records();
-    if (pt_module->is_enabled())
-    {
-        update_hotkeys();
-        UpdateHotkeyEx();
-    }
-}
-
-void KitModule::update_hotkeys()
-{
-    CentralizedKeyboardHook::ClearModuleHotkeys(pt_module->get_key());
-
-    if (!pt_module->is_enabled())
-    {
-        return;
-    }
-
-    size_t hotkeyCount = pt_module->get_hotkeys(nullptr, 0);
-    std::vector<KitModuleIface::Hotkey> hotkeys(hotkeyCount);
-    pt_module->get_hotkeys(hotkeys.data(), hotkeyCount);
-
-    auto modulePtr = pt_module.get();
-
-    for (size_t i = 0; i < hotkeyCount; i++)
-    {
-        if (hotkeys[i].isShown)
-        {
-            hkmng.AddHotkey(hotkeys[i], pt_module->get_key(), static_cast<int>(i), pt_module->is_enabled());
-
-        }
-
-        CentralizedKeyboardHook::SetHotkeyAction(pt_module->get_key(), hotkeys[i], [modulePtr, i] {
-            Logger::trace(L"{} hotkey is invoked from Centralized keyboard hook", modulePtr->get_key());
-            return modulePtr->on_hotkey(i);
-        });
-    }
-}
-
-void KitModule::UpdateHotkeyEx()
-{
-    CentralizedHotkeys::UnregisterHotkeysForModule(pt_module->get_key());
-
-    auto container = pt_module->GetHotkeyEx();
-    if (container.has_value() && pt_module->is_enabled())
-    {
-        hkmng.RemoveHotkeyByModule(pt_module->get_key());
-
-        auto hotkey = container.value();
-        auto modulePtr = pt_module.get();
-        auto action = [modulePtr](WORD /*modifiersMask*/, WORD /*vkCode*/) {
-            Logger::trace(L"{} hotkey Ex is invoked from Centralized keyboard hook", modulePtr->get_key());
-            modulePtr->OnHotkeyEx();
-        };
-
-        HotkeyConflictDetector::Hotkey _hotkey = HotkeyConflictDetector::ShortcutToHotkey({ hotkey.modifiersMask, hotkey.vkCode });
-        hkmng.AddHotkey(_hotkey, pt_module->get_key(), 0, pt_module->is_enabled());
-
-        CentralizedHotkeys::AddHotkeyAction({ hotkey.modifiersMask, hotkey.vkCode }, { pt_module->get_key(), action });
     }
 }

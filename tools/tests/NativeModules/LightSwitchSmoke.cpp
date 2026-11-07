@@ -195,7 +195,7 @@ void SetMode(KitModuleIface* module, std::wstring_view mode)
     // Both theme targets stay false in every test configuration.
     std::wstring config = LR"({"name":"LightSwitch","version":"1.0","properties":{"changeSystem":{"value":false},"changeApps":{"value":false},"scheduleMode":{"value":")";
     config += mode;
-    config += LR"("},"lightTime":{"value":480},"darkTime":{"value":1200},"sunrise_offset":{"value":0},"sunset_offset":{"value":0},"latitude":{"value":"0.0"},"longitude":{"value":"0.0"},"toggle-theme-hotkey":{"value":{"win":true,"ctrl":true,"shift":true,"alt":false,"code":68}}}})";
+    config += LR"("},"lightTime":{"value":480},"darkTime":{"value":1200},"sunrise_offset":{"value":0},"sunset_offset":{"value":0},"latitude":{"value":"0.0"},"longitude":{"value":"0.0"}}})";
     module->set_config(config.c_str());
 }
 

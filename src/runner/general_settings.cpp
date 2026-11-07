@@ -5,7 +5,6 @@
 #include "tray_icon.h"
 #include "quick_access_host.h"
 #include "Generated files/resource.h"
-#include "hotkey_conflict_detector.h"
 
 #include <common/SettingsAPI/settings_helpers.h>
 #include "kit_module.h"
@@ -19,26 +18,6 @@
 
 namespace
 {
-    json::JsonValue create_empty_shortcut_array_value()
-    {
-        return json::JsonValue::Parse(L"[]");
-    }
-
-    void ensure_ignored_conflict_properties_shape(json::JsonObject& obj)
-    {
-        if (!json::has(obj, L"ignored_shortcuts", json::JsonValueType::Array))
-        {
-            obj.SetNamedValue(L"ignored_shortcuts", create_empty_shortcut_array_value());
-        }
-    }
-
-    json::JsonObject create_default_ignored_conflict_properties()
-    {
-        json::JsonObject obj;
-        ensure_ignored_conflict_properties_shape(obj);
-        return obj;
-    }
-
     DashboardSortOrder parse_dashboard_sort_order(const json::JsonObject& obj, DashboardSortOrder fallback)
     {
         if (json::has(obj, L"dashboard_sort_order", json::JsonValueType::Number))
@@ -102,16 +81,11 @@ static bool show_whats_new_after_updates = false;
 static bool enable_experimentation = false;
 static bool enable_warnings_elevated_apps = true;
 static bool enable_quick_access = false;
-static PowerToysSettings::HotkeyObject quick_access_shortcut;
 static DashboardSortOrder dashboard_sort_order = DashboardSortOrder::Alphabetical;
-static json::JsonObject ignored_conflict_properties = create_default_ignored_conflict_properties();
 
 json::JsonObject GeneralSettings::to_json()
 {
     json::JsonObject result;
-
-    auto ignoredProps = ignoredConflictProperties;
-    ensure_ignored_conflict_properties_shape(ignoredProps);
 
     result.SetNamedValue(L"startup", json::value(isStartupEnabled));
     if (!startupDisabledReason.empty())
@@ -138,12 +112,10 @@ json::JsonObject GeneralSettings::to_json()
     result.SetNamedValue(L"is_admin", json::value(isAdmin));
     result.SetNamedValue(L"enable_warnings_elevated_apps", json::value(enableWarningsElevatedApps));
     result.SetNamedValue(L"enable_quick_access", json::value(enableQuickAccess));
-    result.SetNamedValue(L"quick_access_shortcut", quickAccessShortcut.get_json());
     result.SetNamedValue(L"theme", json::value(theme));
     result.SetNamedValue(L"system_theme", json::value(systemTheme));
     result.SetNamedValue(L"kit_version", json::value(powerToysVersion));
     result.SetNamedValue(L"powertoys_version", json::value(powerToysVersion));
-    result.SetNamedValue(L"ignored_conflict_properties", json::value(ignoredProps));
 
     return result;
 }
@@ -171,22 +143,7 @@ json::JsonObject load_general_settings()
     enable_experimentation = loaded.GetNamedBoolean(L"enable_experimentation", false);
     enable_warnings_elevated_apps = loaded.GetNamedBoolean(L"enable_warnings_elevated_apps", true);
     enable_quick_access = loaded.GetNamedBoolean(L"enable_quick_access", false);
-    if (json::has(loaded, L"quick_access_shortcut", json::JsonValueType::Object))
-    {
-        quick_access_shortcut = PowerToysSettings::HotkeyObject::from_json(loaded.GetNamedObject(L"quick_access_shortcut"));
-    }
     dashboard_sort_order = parse_dashboard_sort_order(loaded, dashboard_sort_order);
-
-    if (json::has(loaded, L"ignored_conflict_properties", json::JsonValueType::Object))
-    {
-        ignored_conflict_properties = loaded.GetNamedObject(L"ignored_conflict_properties");
-    }
-    else
-    {
-        ignored_conflict_properties = create_default_ignored_conflict_properties();
-    }
-
-    ensure_ignored_conflict_properties_shape(ignored_conflict_properties);
 
     return loaded;
 }
@@ -203,7 +160,6 @@ GeneralSettings get_general_settings()
         .isAdmin = is_user_admin,
         .enableWarningsElevatedApps = enable_warnings_elevated_apps,
         .enableQuickAccess = enable_quick_access,
-        .quickAccessShortcut = quick_access_shortcut,
         .showNewUpdatesToastNotification = show_new_updates_toast_notification,
         .downloadUpdatesAutomatically = download_updates_automatically && is_user_admin,
         .showWhatsNewAfterUpdates = show_whats_new_after_updates,
@@ -211,11 +167,8 @@ GeneralSettings get_general_settings()
     .dashboardSortOrder = dashboard_sort_order,
         .theme = settings_theme,
         .systemTheme = WindowsColors::is_dark_mode() ? L"dark" : L"light",
-        .powerToysVersion = get_product_version(),
-        .ignoredConflictProperties = ignored_conflict_properties
+        .powerToysVersion = get_product_version()
     };
-
-    ensure_ignored_conflict_properties_shape(settings.ignoredConflictProperties);
 
     settings.isStartupEnabled = get_cached_auto_start_task_active();
 
@@ -317,19 +270,12 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
             {
                 Logger::info(L"apply_module_status_update: Enabling powertoy {}", name);
                 powertoy->enable();
-                auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-                hkmng.EnableHotkeyByModule(name);
             }
             else
             {
                 Logger::info(L"apply_module_status_update: Disabling powertoy {}", name);
                 powertoy->disable();
-                auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-                hkmng.DisableHotkeyByModule(name);
             }
-            // Sync the hotkey state with the module state, so it can be registered/removed accordingly.
-            powertoy.update_hotkeys();
-            powertoy.UpdateHotkeyEx();
         }
         target_enabled = powertoy->is_enabled();
     }
@@ -397,23 +343,9 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     bool new_enable_quick_access = general_configs.GetNamedBoolean(L"enable_quick_access", enable_quick_access);
     Logger::info(L"apply_general_settings: enable_quick_access={}, new_enable_quick_access={}", enable_quick_access, new_enable_quick_access);
 
-    PowerToysSettings::HotkeyObject new_quick_access_shortcut;
-    if (json::has(general_configs, L"quick_access_shortcut", json::JsonValueType::Object))
-    {
-        new_quick_access_shortcut = PowerToysSettings::HotkeyObject::from_json(general_configs.GetNamedObject(L"quick_access_shortcut"));
-    }
-
-    auto hotkey_equals = [](const PowerToysSettings::HotkeyObject& a, const PowerToysSettings::HotkeyObject& b) {
-        return a.get_code() == b.get_code() &&
-               a.get_modifiers() == b.get_modifiers();
-    };
-
-    if (enable_quick_access != new_enable_quick_access || !hotkey_equals(quick_access_shortcut, new_quick_access_shortcut))
+    if (enable_quick_access != new_enable_quick_access)
     {
         enable_quick_access = new_enable_quick_access;
-        quick_access_shortcut = new_quick_access_shortcut;
-
-        update_quick_access_hotkey(enable_quick_access, quick_access_shortcut);
         if (!enable_quick_access)
         {
             QuickAccessHost::stop();
@@ -489,19 +421,12 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
             {
                 Logger::info(L"apply_general_settings: Enabling powertoy {}", name);
                 powertoy->enable();
-                auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-                hkmng.EnableHotkeyByModule(name);
             }
             else
             {
                 Logger::info(L"apply_general_settings: Disabling powertoy {}", name);
                 powertoy->disable();
-                auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-                hkmng.DisableHotkeyByModule(name);
             }
-            // Sync the hotkey state with the module state, so it can be registered/removed accordingly.
-            powertoy.update_hotkeys();
-            powertoy.UpdateHotkeyEx();
         }
     }
 
@@ -534,12 +459,6 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     else
     {
         Logger::warn(L"apply_general_settings: show_theme_adaptive_tray_icon not found in config");
-    }
-
-    if (json::has(general_configs, L"ignored_conflict_properties", json::JsonValueType::Object))
-    {
-        ignored_conflict_properties = general_configs.GetNamedObject(L"ignored_conflict_properties");
-        ensure_ignored_conflict_properties_shape(ignored_conflict_properties);
     }
 
     if (save)
@@ -638,10 +557,6 @@ void start_enabled_kit_modules(const json::JsonObject& general_settings)
         {
             Logger::info(L"start_enabled_kit_modules: Enabling module {}", name);
             kit_module->enable();
-            auto& hkmng = HotkeyConflictDetector::HotkeyConflictManager::GetInstance();
-            hkmng.EnableHotkeyByModule(name);
-            kit_module.update_hotkeys();
-            kit_module.UpdateHotkeyEx();
         }
     }
 }

@@ -29,8 +29,6 @@
 #include <Psapi.h>
 #include <RestartManager.h>
 #include <shellapi.h>
-#include "centralized_kb_hook.h"
-#include "centralized_hotkeys.h"
 #include "quick_access_host.h"
 
 #if _DEBUG && _WIN64
@@ -160,15 +158,8 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
     start_tray_icon(isProcessElevated, settings.showThemeAdaptiveTrayIcon);
     log_timing("Tray Icon");
 
-    // Register the shortcut without launching Quick Access until it is requested.
-    update_quick_access_hotkey(settings.enableQuickAccess, settings.quickAccessShortcut);
-    log_timing("Quick Access Hotkey");
-
     set_tray_icon_visible(settings.showSystemTrayIcon);
     log_timing("Tray Icon Visible");
-
-    CentralizedKeyboardHook::Start();
-    log_timing("Keyboard Hook");
 
     int result = -1;
     try
@@ -187,6 +178,12 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
                 if (it != settings.isModulesEnabledMap.end() && !it->second)
                 {
                     Logger::info(L"STARTUP_TIMING: Module {} is disabled in settings; deferring DLL load", moduleKey);
+                    continue;
+                }
+
+                if (modules().contains(std::wstring(moduleKey)))
+                {
+                    Logger::info(L"Module {} was already loaded while applying settings; reusing its instance", moduleKey);
                     continue;
                 }
             }
@@ -444,13 +441,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         // This guard runs before the settings CLI lock and instance mutex are released.
         auto shutdown_modules = wil::scope_exit([] {
             cancel_settings_window_startup();
-            CentralizedKeyboardHook::Stop();
-            for (const auto& module : modules())
-            {
-                CentralizedKeyboardHook::ClearModuleHotkeys(module.first);
-                CentralizedHotkeys::UnregisterHotkeysForModule(module.first);
-            }
-
             Logger::info("Unloading {} modules before CRT exit", modules().size());
             modules().clear();
             Logger::info("Runner module shutdown completed");
@@ -458,7 +448,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
 
         auto general_settings = load_general_settings();
 
-        // Apply the general settings but don't save it as the modules() variable has not been loaded yet
+        // Apply persisted settings without saving; enabled modules may be loaded here.
         apply_general_settings(general_settings, false);
         const bool elevated = is_process_elevated();
         const bool with_dont_elevate_arg = cmdLine.find("--dont-elevate") != std::string::npos;
@@ -511,7 +501,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
     const bool settings_closed = is_system_session_ending() ? true : close_settings_window();
 
     // Finish module teardown while this instance still owns the singleton lock.
-    // Module workers, hotkeys and hooks were unloaded via shutdown_modules scope exit.
+    // Module workers were unloaded via shutdown_modules scope exit.
 
     // We need to release the mutexes to be able to restart the application
     if (msi_mutex)

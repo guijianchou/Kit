@@ -3018,7 +3018,7 @@
     <value>任务指令</value>
   </data>
   <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
-    <value>分别设置安全审计、系统优化和服务自检的 AI 指令。全局安全规则可在 AI 服务设置中修改。</value>
+    <value>分别设置安全审计和系统优化的 AI 指令。全局安全规则可在 AI 服务设置中修改。</value>
   </data>
   <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
     <value>正在检测…</value>
@@ -3614,9 +3614,6 @@
   <data name="AIHub_ActionFailedFormat" xml:space="preserve">
     <value>操作未完成：{0}</value>
   </data>
-  <data name="AIHub_Segment_SelfTest.Content" xml:space="preserve">
-    <value>自检</value>
-  </data>
   <data name="AIHub_DiscardTaskPolicyButton.Content" xml:space="preserve">
     <value>放弃修改</value>
   </data>
@@ -3700,9 +3697,6 @@
   </data>
   <data name="AiHub_PolicyDescriptionOptimization" xml:space="preserve">
     <value>审查本地已核验的候选项，不扩大路径、操作或范围。</value>
-  </data>
-  <data name="AiHub_PolicyDescriptionSelfTest" xml:space="preserve">
-    <value>使用固定 ping 探测验证 AI 响应契约，不检查工作站。</value>
   </data>
   <data name="AiHub_GlobalPolicyDraftHint.Text" xml:space="preserve">
     <value>编辑和恢复默认的内容均为草稿，保存后才生效。关闭 AI 时也可编辑策略。</value>

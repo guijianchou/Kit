@@ -1650,7 +1650,7 @@
                             <!-- ============================================================== -->
                             <!-- TAB 3: TASK POLICIES (per-chain AGENTS.md)                     -->
                             <!-- ============================================================== -->
-                            <StackPanel x:Name="TaskPolicyPanel" x:Load="False" Spacing="16" Visibility="{x:Bind IsTaskPoliciesTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
+                            <StackPanel x:Name="TaskPolicyPanel" x:Load="False" Spacing="16" Visibility="Collapsed">
                                 <InfoBar x:Name="AiTaskPolicyStatus"
                                          AutomationProperties.LiveSetting="Assertive"
                                          IsClosable="True"
@@ -1679,7 +1679,6 @@
                                             HorizontalAlignment="Left">
                                             <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_SecurityAudit" Content="Security audit" Icon="{ui:FontIcon Glyph=&#xE72E;}" />
                                             <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_Optimization" Content="Optimization" Icon="{ui:FontIcon Glyph=&#xE9F5;}" />
-                                            <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_SelfTest" Icon="{ui:FontIcon Glyph=&#xE9D9;}" />
                                         </tkcontrols:Segmented>
 
                                         <StackPanel Spacing="4">
@@ -1696,6 +1695,7 @@
                                                 <TextBox
                                                     x:Name="AiTaskPolicyContentBox"
                                                     x:Uid="AIHub_TaskPolicyContentBox"
+                                                    Loaded="OnTaskPolicyContentLoaded"
                                                     Text="{x:Bind ViewModel.AiHub.CurrentPolicyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                     IsReadOnly="{x:Bind ViewModel.AiHub.CanEditPolicies, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
                                                     AcceptsReturn="True"

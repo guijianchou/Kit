@@ -62,8 +62,6 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility IsOptTab(int index) => index == 1 ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility IsTaskPoliciesTab(int index) => index == 2 ? Visibility.Visible : Visibility.Collapsed;
-
     public Visibility ShowOptimizationNoMatches(bool hasResults, bool hasMatches) => hasResults && !hasMatches ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility HasSelectedRun(OptimizationRunViewModel run) => run != null ? Visibility.Visible : Visibility.Collapsed;
@@ -100,7 +98,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ViewModel.RefreshEnabledState();
-        EnsurePolicyPanelLoaded();
+        UpdateTaskPolicyPanel();
         RestoreTabScroll();
     }
 
@@ -113,16 +111,36 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
         _tabOffsets[_visibleTab] = AiHubContentScroll.VerticalOffset;
         _visibleTab = Math.Clamp(ViewModel.ActiveTabIndex, 0, 2);
-        EnsurePolicyPanelLoaded();
+        UpdateTaskPolicyPanel();
         RestoreTabScroll();
     }
 
-    private void EnsurePolicyPanelLoaded()
+    private void UpdateTaskPolicyPanel()
     {
         if (ViewModel.ActiveTabIndex == 2)
         {
-            FindName(nameof(TaskPolicyPanel));
+            // Materialize the deferred editor before making it visible. Keep these two
+            // steps together instead of relying on a function binding's cached value
+            // while ActiveTabIndex notifications are still being dispatched.
+            var panel = (FrameworkElement)FindName(nameof(TaskPolicyPanel));
+            panel.Visibility = Visibility.Visible;
             ViewModel.AiHub.EnsurePoliciesLoaded();
+        }
+        else if (TaskPolicyPanel != null)
+        {
+            TaskPolicyPanel.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void OnTaskPolicyContentLoaded(object sender, RoutedEventArgs e)
+    {
+        // Deferred x:Bind assigns its cached Text during Connect, before the XAML
+        // AcceptsReturn value is applied. Reapply the current draft after the editor
+        // is initialized so a policy loaded before the first visit keeps every line.
+        // PolicyDraft treats the TextBox's normalized line endings as the same content.
+        if (sender is TextBox editor)
+        {
+            editor.Text = ViewModel.AiHub.CurrentPolicyContent;
         }
     }
 

@@ -382,13 +382,13 @@
                                         PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode" Description="Choose a suggestion or enter a native API identifier. The selected kernel validates support.">
-                                    <ComboBox
+                                    <controls:EditableValueComboBox
                                         x:Uid="AiHub_MainEndpoint_ApiModeComboBox"
                                         AutomationProperties.AutomationId="AiHub_MainEndpoint_ApiModeComboBox"
                                         Width="240"
                                         IsEditable="True"
                                         ItemsSource="{x:Bind ViewModel.AiServices.MainEndpoint.ModeSuggestions, Mode=OneWay}"
-                                        Text="{x:Bind ViewModel.AiServices.MainEndpoint.Mode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        Value="{x:Bind ViewModel.AiServices.MainEndpoint.Mode, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox
@@ -399,13 +399,13 @@
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort" Description="Passed unchanged to the selected kernel; support depends on the kernel and model.">
-                                    <ComboBox
+                                    <controls:EditableValueComboBox
                                         x:Uid="AiHub_MainEndpoint_EffortComboBox"
                                         AutomationProperties.AutomationId="AiHub_MainEndpoint_EffortComboBox"
                                         Width="240"
                                         IsEditable="True"
                                         ItemsSource="{x:Bind ViewModel.AiServices.MainEndpoint.EffortSuggestions, Mode=OneWay}"
-                                        Text="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        Value="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.">
                                     <StackPanel Width="240" Spacing="6">
@@ -473,13 +473,13 @@
                                         PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ApiModeCard" Header="API mode" Description="Choose a suggestion or enter a native API identifier. The selected kernel validates support.">
-                                    <ComboBox
+                                    <controls:EditableValueComboBox
                                         x:Uid="AiHub_FallbackEndpoint_ApiModeComboBox"
                                         AutomationProperties.AutomationId="AiHub_FallbackEndpoint_ApiModeComboBox"
                                         Width="240"
                                         IsEditable="True"
                                         ItemsSource="{x:Bind ViewModel.AiServices.FallbackEndpoint.ModeSuggestions, Mode=OneWay}"
-                                        Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Mode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        Value="{x:Bind ViewModel.AiServices.FallbackEndpoint.Mode, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ModelCard" Header="Model">
                                     <TextBox
@@ -490,13 +490,13 @@
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ReasoningCard" Header="Reasoning effort" Description="Passed unchanged to the selected kernel; support depends on the kernel and model.">
-                                    <ComboBox
+                                    <controls:EditableValueComboBox
                                         x:Uid="AiHub_FallbackEndpoint_EffortComboBox"
                                         AutomationProperties.AutomationId="AiHub_FallbackEndpoint_EffortComboBox"
                                         Width="240"
                                         IsEditable="True"
                                         ItemsSource="{x:Bind ViewModel.AiServices.FallbackEndpoint.EffortSuggestions, Mode=OneWay}"
-                                        Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        Value="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.">
                                     <StackPanel Width="240" Spacing="6">

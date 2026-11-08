@@ -29,8 +29,6 @@ namespace ViewModelTests
             Assert.IsNotNull(vm.SaveOptimizationPolicyCommand);
             Assert.IsNotNull(vm.ResetSecurityAuditPolicyCommand);
             Assert.IsNotNull(vm.ResetOptimizationPolicyCommand);
-            Assert.IsNotNull(vm.SaveSelfTestPolicyCommand);
-            Assert.IsNotNull(vm.ResetSelfTestPolicyCommand);
             Assert.IsNotNull(vm.DiscardActivePolicyCommand);
 
             vm.ActivePolicyIndex = 1;
@@ -41,12 +39,17 @@ namespace ViewModelTests
             Assert.AreEqual(2, vm.ActivePolicyIndex);
             Assert.AreEqual(2, vm.ActivePolicyTabIndex);
 
-            vm.TaskPolicyIndex = 2;
-            Assert.AreEqual(3, vm.ActivePolicyIndex);
-            Assert.IsTrue(vm.IsSelfTestPolicyTab);
+            vm.TaskPolicyIndex = 0;
+            Assert.AreEqual(1, vm.ActivePolicyIndex);
+            Assert.IsTrue(vm.IsSecurityAuditPolicyTab);
+            vm.TaskPolicyIndex = 1;
+            Assert.AreEqual(2, vm.ActivePolicyIndex);
+            Assert.IsTrue(vm.IsOptimizationPolicyTab);
             vm.ActivePolicyIndex = -1;
+            vm.ActivePolicyIndex = 3;
+            vm.TaskPolicyIndex = 2;
             vm.TaskPolicyIndex = 3;
-            Assert.AreEqual(3, vm.ActivePolicyIndex, "Invalid selections must not address a different policy.");
+            Assert.AreEqual(2, vm.ActivePolicyIndex, "Removed or invalid selections must not address a different policy.");
         }
 
         [TestMethod]
@@ -58,7 +61,6 @@ namespace ViewModelTests
             vm.SecurityPolicyContent = "test global policy";
             vm.SecurityAuditPolicyContent = "test security policy";
             vm.OptimizationPolicyContent = "test opt policy";
-            vm.SelfTestPolicyContent = "test self-test policy";
 
             vm.ActivePolicyIndex = 0;
             Assert.AreEqual("test global policy", vm.CurrentPolicyContent);
@@ -72,12 +74,10 @@ namespace ViewModelTests
             vm.CurrentPolicyContent = "updated opt policy";
             Assert.AreEqual("updated opt policy", vm.OptimizationPolicyContent);
 
-            vm.TaskPolicyIndex = 2;
-            Assert.AreEqual("test self-test policy", vm.CurrentPolicyContent);
             Assert.IsTrue(vm.IsCurrentPolicyDirty);
             Assert.IsTrue(vm.HasUnsavedPolicyChanges);
             await vm.InitializeAsync();
-            Assert.AreEqual("test self-test policy", vm.CurrentPolicyContent, "Repeated initialization must preserve an unsaved draft.");
+            Assert.AreEqual("updated opt policy", vm.CurrentPolicyContent, "Repeated initialization must preserve an unsaved draft.");
             vm.TaskPolicyIndex = 0;
             Assert.AreEqual("test security policy", vm.CurrentPolicyContent);
             Assert.AreEqual("updated opt policy", vm.OptimizationPolicyContent);
@@ -193,6 +193,7 @@ namespace ViewModelTests
             Assert.IsTrue(content.Contains("x:Name=\"AiTaskPolicySegmented\""), "AIHubPage.xaml should contain AiTaskPolicySegmented");
             Assert.IsTrue(content.Contains("AIHub_Segment_SecurityAudit"), "AIHubPage.xaml should contain AIHub_Segment_SecurityAudit");
             Assert.IsTrue(content.Contains("AIHub_Segment_Optimization"), "AIHubPage.xaml should contain AIHub_Segment_Optimization");
+            Assert.IsFalse(content.Contains("AIHub_Segment_SelfTest"), "The self-test policy entry must be removed from AI Hub.");
             Assert.IsTrue(content.Contains("x:Name=\"AiTaskPolicyContentBox\""), "AIHubPage.xaml should contain AiTaskPolicyContentBox");
             Assert.IsTrue(content.Contains("x:Uid=\"AiHub_SavePolicyButton\""), "AIHubPage.xaml should contain the policy save button");
             Assert.IsTrue(content.Contains("x:Uid=\"AiHub_ResetPolicyButton\""), "AIHubPage.xaml should contain the policy reset button");

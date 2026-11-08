@@ -1041,7 +1041,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     public string TaskPolicyTitle => "AIHub_TaskPolicyTitle".GetLocalizedOrFallback("Task instructions");
 
     /// <summary>Explains what the per-chain policies govern and where the global one lives.</summary>
-    public string TaskPolicyDescription => "AIHub_TaskPolicyDescription".GetLocalizedOrFallback("Customize instructions for audits, optimization and the service self-test. Global safety rules are in AI service settings.");
+    public string TaskPolicyDescription => "AIHub_TaskPolicyDescription".GetLocalizedOrFallback("Customize instructions for audits and optimization. Global safety rules are in AI service settings.");
 
     /// <summary>Label for the manual readiness re-check action.</summary>
     public string RecheckAiLabel => IsCheckingAiReadiness

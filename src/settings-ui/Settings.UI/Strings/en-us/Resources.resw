@@ -3395,7 +3395,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Task instructions</value>
   </data>
   <data name="AIHub_TaskPolicyDescription" xml:space="preserve">
-    <value>Customize instructions for audits, optimization and the service self-test. Global safety rules are in AI service settings.</value>
+    <value>Customize instructions for security audits and system optimization. Global safety rules are in AI service settings.</value>
   </data>
   <data name="AIHub_RecheckAi_Checking" xml:space="preserve">
     <value>Checking…</value>
@@ -3991,9 +3991,6 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="AIHub_ActionFailedFormat" xml:space="preserve">
     <value>The action could not complete: {0}</value>
   </data>
-  <data name="AIHub_Segment_SelfTest.Content" xml:space="preserve">
-    <value>Self-test</value>
-  </data>
   <data name="AIHub_DiscardTaskPolicyButton.Content" xml:space="preserve">
     <value>Discard changes</value>
   </data>
@@ -4077,9 +4074,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="AiHub_PolicyDescriptionOptimization" xml:space="preserve">
     <value>Review locally verified candidates without expanding their paths, actions or scope.</value>
-  </data>
-  <data name="AiHub_PolicyDescriptionSelfTest" xml:space="preserve">
-    <value>A fixed ping probe checks the AI response contract without inspecting the workstation.</value>
   </data>
   <data name="AiHub_GlobalPolicyDraftHint.Text" xml:space="preserve">
     <value>Edits and restored defaults remain drafts until saved. Policies can be edited while AI is off.</value>

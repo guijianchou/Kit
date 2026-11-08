@@ -73,6 +73,7 @@ internal static class AiHubUxSmoke
         ShellPage.SetDefaultSndMessageCallback(_ => { });
         var window = App.GetSettingsWindow();
         window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1000));
+        await CheckPoliciesRequestedDuringInitialization();
         await Navigate(typeof(AIHubPage));
         var page = (AIHubPage)NavigationService.Frame.Content;
         var vm = page.ViewModel;
@@ -83,6 +84,7 @@ internal static class AiHubUxSmoke
         Require(!vm.CanAnalyzeStorage && !vm.AnalyzeStorageCommand.CanExecute(null), "Disabled module must block local space analysis.");
         Require(!Descendants(page).OfType<TextBox>().Any(box => box.Name == "AiTaskPolicyContentBox"), "Task editor must remain unloaded before its first visit.");
         await CheckPolicyDrafts(page);
+        await CheckPoliciesRequestedDuringBusyOperation();
 
         // This changes only the stopped in-memory repository. Never toggle the page's
         // persisted module switch, and never invoke a scan or accept an operation dialog.
@@ -101,28 +103,94 @@ internal static class AiHubUxSmoke
         Require(!vm.IsOptimizing && !vm.IsInventoryScanning && !vm.IsAuditing && !vm.IsAiAnalyzing, "The smoke must finish with no work running.");
     }
 
+    private static async Task CheckPoliciesRequestedDuringInitialization()
+    {
+        using var pending = new AiHubViewModel(DispatcherQueue.GetForCurrentThread());
+        Require(!pending.Initialization.IsCompleted, "The early policy request must exercise pending service initialization.");
+        pending.EnsurePoliciesLoaded();
+        pending.EnsurePoliciesLoaded();
+        await pending.Initialization;
+        await WaitUntil(() => pending.PoliciesLoaded && !pending.IsBusy);
+        Require(pending.CanEditPolicies && !string.IsNullOrWhiteSpace(pending.SecurityAuditPolicyContent)
+            && !string.IsNullOrWhiteSpace(pending.OptimizationPolicyContent),
+            "Policy requests made during initialization must finish without another visit or request.");
+        Require(!pending.HasUnsavedPolicyChanges, "Loading policies must not create draft changes.");
+        Log("Policy request during pending initialization PASS");
+    }
+
+    private static async Task CheckPoliciesRequestedDuringBusyOperation()
+    {
+        using var pending = new AiHubViewModel(DispatcherQueue.GetForCurrentThread());
+        await pending.Initialization;
+        Require(!pending.PoliciesLoaded, "The busy-operation regression must begin with unloaded policies.");
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Func<CancellationToken, Task> holdOperation = token => release.Task.WaitAsync(token);
+        var operation = (Task)Invoke(pending, "RunOperationAsync", holdOperation, false);
+        try
+        {
+            Require(pending.IsBusy, "The in-memory operation must hold the service busy before requesting policies.");
+            pending.EnsurePoliciesLoaded();
+        }
+        finally
+        {
+            release.TrySetResult(true);
+        }
+
+        await operation;
+        await WaitUntil(() => pending.PoliciesLoaded && !pending.IsBusy);
+        Require(pending.CanEditPolicies && !string.IsNullOrWhiteSpace(pending.SecurityAuditPolicyContent)
+            && !string.IsNullOrWhiteSpace(pending.OptimizationPolicyContent) && !pending.HasUnsavedPolicyChanges,
+            "A policy request during another operation must finish after it becomes idle without a second request.");
+        Log("Policy request during another service operation PASS");
+    }
+
     private static async Task CheckPolicyDrafts(AIHubPage page)
     {
         var vm = page.ViewModel;
-        vm.ActiveTabIndex = 2;
-        await WaitUntil(() => vm.AiHub.PoliciesLoaded && !vm.AiHub.IsBusy);
+        var sections = (Selector)page.FindName("AiHubSections");
+        sections.SelectedIndex = 2;
+        await WaitUntil(() => vm.ActiveTabIndex == 2 && vm.AiHub.PoliciesLoaded && !vm.AiHub.IsBusy);
         await NextRendering();
+        page.UpdateLayout();
+        var panel = (FrameworkElement)page.FindName("TaskPolicyPanel");
         var editor = (TextBox)page.FindName("AiTaskPolicyContentBox");
+        var policies = (Selector)page.FindName("AiTaskPolicySegmented");
+        Log($"First policy visit: activeTab={vm.ActiveTabIndex}, panel={panel?.Visibility}, size={panel?.ActualWidth:F0}x{panel?.ActualHeight:F0}, editorLength={editor?.Text.Length}, currentLength={vm.AiHub.CurrentPolicyContent.Length}, canEdit={vm.AiHub.CanEditPolicies}");
+        Require(panel != null && panel.Visibility == Visibility.Visible && panel.ActualWidth > 0 && panel.ActualHeight > 0,
+            "The first Task policies selection must render its panel without switching away and back.");
         Require(editor != null && !editor.IsReadOnly && vm.AiHub.CanEditPolicies, "Disabled AI service must still permit local policy editing.");
-        vm.AiHub.TaskPolicyIndex = 0;
+        Require(vm.AiHub.TaskPolicyIndex == 0 && !string.IsNullOrWhiteSpace(editor.Text)
+            && NormalizeNewlines(editor.Text) == NormalizeNewlines(vm.AiHub.SecurityAuditPolicyContent),
+            "The first visible editor must contain the saved Security audit policy.");
+        Require(!vm.AiHub.HasUnsavedPolicyChanges, "Initial policy editor synchronization must not create unsaved changes.");
+        Require(policies.Items.Count == 2, "Task policies must expose only Security audit and Optimization.");
         string saved = vm.AiHub.CurrentPolicyContent;
         string draft = saved + "\n<!-- UI smoke draft; never saved -->";
-        vm.AiHub.CurrentPolicyContent = draft;
-        Log($"Policy before switch: active={vm.AiHub.ActivePolicyIndex}, task={vm.AiHub.TaskPolicyIndex}, auditLength={vm.AiHub.SecurityAuditPolicyContent.Length}, optimizationLength={vm.AiHub.OptimizationPolicyContent.Length}, selfTestLength={vm.AiHub.SelfTestPolicyContent.Length}");
+        editor.Text = draft;
         Require(vm.AiHub.IsCurrentPolicyDirty && vm.AiHub.SaveActivePolicyCommand.CanExecute(null), "A task draft must enable Save while AI is disabled.");
-        vm.AiHub.TaskPolicyIndex = 2;
-        Require(vm.AiHub.IsSelfTestPolicyTab && vm.AiHub.CurrentPolicyFilePath.EndsWith(Path.Combine("self-test", "AGENTS.md"), StringComparison.OrdinalIgnoreCase), "Self-test must select its own task policy.");
-        vm.AiHub.TaskPolicyIndex = 0;
-        Log($"Policy after switch: active={vm.AiHub.ActivePolicyIndex}, task={vm.AiHub.TaskPolicyIndex}, auditLength={vm.AiHub.SecurityAuditPolicyContent.Length}, optimizationLength={vm.AiHub.OptimizationPolicyContent.Length}, selfTestLength={vm.AiHub.SelfTestPolicyContent.Length}, expectedLength={draft.Length}, actualLength={vm.AiHub.CurrentPolicyContent.Length}, normalizedEqual={NormalizeNewlines(vm.AiHub.CurrentPolicyContent) == NormalizeNewlines(draft)}, markerRetained={vm.AiHub.CurrentPolicyContent.Contains("UI smoke draft; never saved", StringComparison.Ordinal)}");
-        Require(NormalizeNewlines(vm.AiHub.CurrentPolicyContent) == NormalizeNewlines(draft), "Switching task policies must preserve the unsaved draft.");
+        policies.SelectedIndex = 1;
+        Require(vm.AiHub.IsOptimizationPolicyTab && vm.AiHub.CurrentPolicyFilePath.EndsWith(Path.Combine("system-optimization", "AGENTS.md"), StringComparison.OrdinalIgnoreCase), "Optimization must select its own task policy.");
+        string optimizationSaved = vm.AiHub.CurrentPolicyContent;
+        string optimizationDraft = optimizationSaved + "\n<!-- Independent optimization draft; never saved -->";
+        editor.Text = optimizationDraft;
+        policies.SelectedIndex = 0;
+        Require(NormalizeNewlines(editor.Text) == NormalizeNewlines(draft), "Switching task policies must display the unsaved audit draft.");
         vm.AiHub.DiscardActivePolicyCommand.Execute(null);
-        Require(NormalizeNewlines(vm.AiHub.CurrentPolicyContent) == NormalizeNewlines(saved) && !vm.AiHub.IsCurrentPolicyDirty, "Discard must restore only the current saved draft.");
-        Log("Policy lazy construction, disabled-service editing, self-test mapping and per-file drafts PASS");
+        Require(NormalizeNewlines(editor.Text) == NormalizeNewlines(saved) && !vm.AiHub.IsCurrentPolicyDirty,
+            "Discard must restore the current editor's saved content.");
+        policies.SelectedIndex = 1;
+        Require(NormalizeNewlines(editor.Text) == NormalizeNewlines(optimizationDraft) && vm.AiHub.IsCurrentPolicyDirty,
+            "Discarding the audit draft must preserve the independent optimization draft.");
+        vm.AiHub.DiscardActivePolicyCommand.Execute(null);
+        Require(NormalizeNewlines(editor.Text) == NormalizeNewlines(optimizationSaved) && !vm.AiHub.HasUnsavedPolicyChanges,
+            "Discarding both drafts must leave the policy editor clean.");
+        await Navigate(typeof(GeneralPage));
+        await Navigate(typeof(AIHubPage));
+        Require(ReferenceEquals(NavigationService.Frame.Content, page), "Policy revisit must exercise the cached page.");
+        Require(vm.ActiveTabIndex == 2 && panel.Visibility == Visibility.Visible && editor.ActualHeight > 0
+            && NormalizeNewlines(editor.Text) == NormalizeNewlines(optimizationSaved),
+            "Returning to the cached Task policies page must retain its selected policy and visible content.");
+        Log("Policy first-selection rendering, disabled-service editing, two task policies, per-file drafts and cached revisit PASS");
     }
 
     private static List<TempFileInfo> InjectCandidates(AIHubPageViewModel vm)

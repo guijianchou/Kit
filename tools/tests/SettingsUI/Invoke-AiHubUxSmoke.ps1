@@ -60,6 +60,13 @@ try {
     $aiService['isEnabled'] = $false
     [IO.Directory]::CreateDirectory((Split-Path -Parent $aiServicePath)) | Out-Null
     [IO.File]::WriteAllText($aiServicePath, ($aiService | ConvertTo-Json -Depth 100), [Text.UTF8Encoding]::new($false))
+    # Exercise policy loading and editing against identifiable synthetic content.
+    # The original policy bytes are already backed up and restored in finally.
+    foreach ($taskId in @('security-audit', 'system-optimization')) {
+        $path = Join-Path $env:LOCALAPPDATA "Kit\AiHub\chains\$taskId\AGENTS.md"
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $path)) | Out-Null
+        [IO.File]::WriteAllText($path, "# Synthetic $taskId policy`n`nUI regression fixture only. Do not run tasks or inspect workstation data.`n", [Text.UTF8Encoding]::new($false))
+    }
     # Constructors may load local history. Use empty fixture histories so renders
     # cannot include the user's findings or file names, then restore exact bytes.
     foreach ($name in @('audit_history.json', 'optimization_history.json')) {

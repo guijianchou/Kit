@@ -179,6 +179,10 @@ internal static class ModulePageSmoke
                 {
                     target.BaseUrl = "https://example.invalid/v1";
                 }
+                config.Targets[0].Mode = "responses";
+                config.Targets[0].Effort = "max";
+                config.Targets[1].Mode = "chat";
+                config.Targets[1].Effort = "low";
             });
         }
         catch (Exception ex)
@@ -874,12 +878,33 @@ internal static class ModulePageSmoke
             var policyStatus = (InfoBar)page.FindName("AiTaskPolicyStatus");
             if (!policyStatus.IsOpen || policyStatus.Severity != InfoBarSeverity.Success || vm.AiHub.IsCurrentPolicyDirty || vm.AiHub.SaveActivePolicyCommand.CanExecute(null))
                 throw new InvalidOperationException("Task policy save feedback or clean-draft state is missing.");
+            var taskPolicies = (Segmented)page.FindName("AiTaskPolicySegmented");
+            if (taskPolicies.Items.Count != 2) throw new InvalidOperationException("Task policies must expose only Security audit and Optimization.");
+            string savedAuditPolicy = vm.AiHub.CurrentPolicyContent;
             vm.AiHub.TaskPolicyIndex = 1;
-            if (vm.AiHub.ActivePolicyIndex != 2) throw new InvalidOperationException("Optimization policy selection is incorrect.");
-            vm.AiHub.TaskPolicyIndex = 2;
-            if (vm.AiHub.ActivePolicyIndex != 3 || !vm.AiHub.IsSelfTestPolicyTab)
-                throw new InvalidOperationException("Self-test policy selection is incorrect.");
+            if (vm.AiHub.ActivePolicyIndex != 2 || !vm.AiHub.IsOptimizationPolicyTab || vm.AiHub.IsSecurityAuditPolicyTab)
+                throw new InvalidOperationException("Optimization policy selection is incorrect.");
+            string savedOptimizationPolicy = vm.AiHub.CurrentPolicyContent;
+            string optimizationDraft = savedOptimizationPolicy + "\nIndependent optimization draft.";
+            vm.AiHub.CurrentPolicyContent = optimizationDraft;
             vm.AiHub.TaskPolicyIndex = 0;
+            if (vm.AiHub.ActivePolicyIndex != 1 || !vm.AiHub.IsSecurityAuditPolicyTab || vm.AiHub.IsOptimizationPolicyTab ||
+                vm.AiHub.CurrentPolicyContent != savedAuditPolicy || vm.AiHub.IsCurrentPolicyDirty)
+                throw new InvalidOperationException("Switching from Optimization changed the saved Security audit policy.");
+            string auditDraft = savedAuditPolicy + "\nIndependent audit draft.";
+            vm.AiHub.CurrentPolicyContent = auditDraft;
+            vm.AiHub.TaskPolicyIndex = 1;
+            if (vm.AiHub.CurrentPolicyContent != optimizationDraft || !vm.AiHub.IsCurrentPolicyDirty)
+                throw new InvalidOperationException("Optimization did not preserve its independent draft.");
+            vm.AiHub.DiscardActivePolicyCommand.Execute(null);
+            if (vm.AiHub.CurrentPolicyContent != savedOptimizationPolicy || vm.AiHub.IsCurrentPolicyDirty)
+                throw new InvalidOperationException("Optimization discard did not restore only its saved policy.");
+            vm.AiHub.TaskPolicyIndex = 0;
+            if (vm.AiHub.CurrentPolicyContent != auditDraft || !vm.AiHub.IsCurrentPolicyDirty)
+                throw new InvalidOperationException("Discarding Optimization also discarded the Security audit draft.");
+            vm.AiHub.DiscardActivePolicyCommand.Execute(null);
+            if (vm.AiHub.CurrentPolicyContent != savedAuditPolicy || vm.AiHub.IsCurrentPolicyDirty)
+                throw new InvalidOperationException("Security audit discard did not restore its saved policy.");
 
             if (pluginWrites < 3 || !serviceSettings.SequenceEqual(File.ReadAllBytes(store.SettingsFilePath)) ||
                 !secrets.SequenceEqual(File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat"))))
@@ -1456,6 +1481,12 @@ internal static class ModulePageSmoke
         var policy = (SettingsExpander)page.FindName("AiPolicyRulesExpander");
         var statistics = Descendants(page).OfType<SettingsExpander>().Single(control => AutomationProperties.GetAutomationId(control) == "AiHub_DiagnosticsExpander");
 
+        // Do this before assigning Text or toggling the service: those actions can mask
+        // a template-initialization bug that only blanks the visible editable TextBox.
+        await service.Initialization;
+        await CheckEndpointEditorPresentation(page, "first expansion", new[] { ("responses", "max"), ("chat", "low") });
+        if (service.HasUnsavedEndpointChanges) throw new InvalidOperationException("Displaying saved native settings must not create an endpoint draft.");
+
         for (int cycle = 0; cycle < 2; cycle++)
         {
             toggle.IsOn = false;
@@ -1538,15 +1569,34 @@ internal static class ModulePageSmoke
                 var entry = endpointControls[index];
                 if (!entry.Mode.IsEditable || !entry.Effort.IsEditable) throw new InvalidOperationException("Native mode and effort controls must allow custom identifiers.");
                 entry.Model.Text = cycle == 0 ? "gpt-6-luna" : "gpt-6.1-sol";
-                entry.Mode.Text = cycle == 0 ? "fixture-native-api.v2" : "responses";
-                entry.Effort.Text = cycle == 0 ? "fixture-native-effort" : "xhigh";
+                if (cycle == 0)
+                {
+                    if (index == 0)
+                    {
+                        entry.Endpoint.Mode = "fixture-native-api.v2";
+                        await CheckFocusedNativeIdentifier(entry.Mode, entry.Model, "fixture-native-api.v2");
+                    }
+                    else entry.Mode.Text = "fixture-fallback-api.v3";
+                    entry.Effort.Text = index == 0 ? "fixture-native-effort" : "fixture-fallback-effort";
+                }
+                else
+                {
+                    // Exercise real suggestion selection in addition to freeform text.
+                    entry.Mode.SelectedItem = index == 0 ? "responses" : "openai-completions";
+                    entry.Effort.SelectedItem = index == 0 ? "xhigh" : "medium";
+                }
                 entry.Context.Value = index == 0 ? 512000 - (cycle * 128000) : 128000 - (cycle * 64000);
             }
 
             await Task.Delay(100);
+            var editedIdentifiers = cycle == 0
+                ? new[] { ("fixture-native-api.v2", "fixture-native-effort"), ("fixture-fallback-api.v3", "fixture-fallback-effort") }
+                : new[] { ("responses", "xhigh"), ("openai-completions", "medium") };
+            await CheckEndpointEditorPresentation(page, cycle == 0 ? "custom draft" : "suggested draft", editedIdentifiers);
             if (!service.SaveEndpointsCommand.CanExecute(null)) throw new InvalidOperationException("Native endpoint edits did not enable saving.");
             service.SaveEndpointsCommand.Execute(null);
             var savedEndpoints = new Kit.AiHub.Storage.AiHubSettingsStore().Load().Targets;
+            await CheckEndpointEditorReload(page, editedIdentifiers, verifyThemes: cycle == 0);
             foreach (var entry in endpointControls)
             {
                 var savedEndpoint = savedEndpoints.Single(target => target.Name == entry.Endpoint.Settings.Name);
@@ -1562,6 +1612,7 @@ internal static class ModulePageSmoke
             if (!service.DiscardEndpointChangesCommand.CanExecute(null)) throw new InvalidOperationException("Endpoint context drafts did not enable discard.");
             service.DiscardEndpointChangesCommand.Execute(null);
             await Task.Delay(100);
+            await CheckEndpointEditorPresentation(page, "discard to saved values", editedIdentifiers);
             foreach (var entry in endpointControls)
             {
                 var savedEndpoint = savedEndpoints.Single(target => target.Name == entry.Endpoint.Settings.Name);
@@ -1633,8 +1684,169 @@ internal static class ModulePageSmoke
             await Task.Delay(150);
             NavigationService.Navigate(typeof(GeneralPage));
             await Task.Delay(150);
+            if (!ReferenceEquals(page, NavigationService.Frame.Content)) throw new InvalidOperationException("General page was not retained during cached navigation.");
+            await CheckEndpointEditorPresentation(page, "cached navigation", endpointControls.Select(entry => (entry.Original.Mode, entry.Original.Effort)).ToArray());
         }
-        File.AppendAllText(Report, "AI service controls: off/on twice, offline policy draft/discard, editable native mode/effort, independent context save/discard, statistics layouts at 1350/850 px, busy recovery, and cached navigation passed.\n");
+        File.AppendAllText(Report, "AI service controls: initial visible native settings, focused display and selection stability, custom/suggested mode and effort, unfocused fresh-page reload and light/dark display without dirty state, discard and cached navigation, off/on twice, offline policy drafts, independent context save/discard, statistics layouts at 1350/850 px and busy recovery passed.\n");
+    }
+
+    private static async Task CheckFocusedNativeIdentifier(ComboBox combo, Control nextFocus, string value)
+    {
+        // The binding source already contains the fixture value. This verifies its
+        // focus/selection lifetime; it does not simulate physical keyboard input.
+        combo.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+        if (!combo.Focus(FocusState.Keyboard)) throw new InvalidOperationException("Native identifier control could not receive keyboard focus.");
+        await Task.Delay(40);
+        var editor = Descendants(combo).OfType<TextBox>().Single();
+        if (!editor.Focus(FocusState.Keyboard)) throw new InvalidOperationException("Native identifier TextBox could not receive keyboard focus.");
+        var elapsed = Stopwatch.StartNew();
+        var quiet = Stopwatch.StartNew();
+        string Describe() => $"elapsedMs={elapsed.ElapsedMilliseconds}, expectedLength={value.Length}, editorLength={editor.Text.Length}, editorMatches={editor.Text == value}, comboLength={combo.Text.Length}, comboMatches={combo.Text == value}, selection={editor.SelectionStart}+{editor.SelectionLength}, editorFocus={editor.FocusState}, comboFocus={combo.FocusState}";
+        void TextChanged(object sender, TextChangedEventArgs args) => quiet.Restart();
+        void SelectionChanged(object sender, RoutedEventArgs args) => quiet.Restart();
+        async Task WaitForNativeEditingToSettle(string phase)
+        {
+            var timeout = Stopwatch.StartNew();
+            quiet.Restart();
+            var previous = (editor.Text, editor.SelectionStart, editor.SelectionLength, editor.FocusState);
+            while (timeout.ElapsedMilliseconds < 800)
+            {
+                await Task.Delay(15);
+                var current = (editor.Text, editor.SelectionStart, editor.SelectionLength, editor.FocusState);
+                if (current != previous) { quiet.Restart(); previous = current; }
+                if (quiet.ElapsedMilliseconds >= 60)
+                {
+                    return;
+                }
+            }
+            throw new InvalidOperationException("Native editing did not settle during " + phase + ": " + Describe());
+        }
+        editor.TextChanged += TextChanged;
+        editor.SelectionChanged += SelectionChanged;
+        try
+        {
+            // Native focus processing selects all. Establish the explicit selection
+            // only after that setup finishes, as a subsequent user selection would.
+            await WaitForNativeEditingToSettle("focus");
+            if (editor.Text != value || combo.Text != value)
+                throw new InvalidOperationException("Focusing the native identifier lost its bound value: " + Describe());
+            editor.Select(7, 3);
+            await Task.Delay(40);
+            if (editor.Text != value || editor.SelectionStart != 7 || editor.SelectionLength != 3)
+                throw new InvalidOperationException("The focused native identifier reset its text or selection: " + Describe());
+            if (!nextFocus.Focus(FocusState.Keyboard)) throw new InvalidOperationException("Could not move focus out of the native identifier control.");
+            await Task.Delay(40);
+            if (combo.Text != value) throw new InvalidOperationException("Leaving the native editor did not retain its bound identifier: " + Describe());
+        }
+        finally
+        {
+            editor.TextChanged -= TextChanged;
+            editor.SelectionChanged -= SelectionChanged;
+        }
+    }
+
+    private static async Task CheckEndpointEditorPresentation(GeneralPage page, string phase, (string Mode, string Effort)[] expected)
+    {
+        var service = page.ViewModel.AiServices;
+        var routes = new[]
+        {
+            (Expander: (SettingsExpander)page.FindName("AiMainEndpointExpander"), Endpoint: service.MainEndpoint),
+            (Expander: (SettingsExpander)page.FindName("AiFallbackEndpointExpander"), Endpoint: service.FallbackEndpoint),
+        };
+        for (int index = 0; index < routes.Length; index++)
+        {
+            var route = routes[index];
+            route.Expander.IsExpanded = true;
+            route.Expander.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+            page.UpdateLayout();
+            await Task.Delay(100);
+            page.UpdateLayout();
+            var editors = route.Expander.Items.OfType<SettingsCard>().Select(card => card.Content).OfType<ComboBox>().ToArray();
+            var mode = editors.Single(box => AutomationProperties.GetAutomationId(box).EndsWith("_ApiModeComboBox", StringComparison.Ordinal));
+            var effort = editors.Single(box => AutomationProperties.GetAutomationId(box).EndsWith("_EffortComboBox", StringComparison.Ordinal));
+            string capturePhase = phase == "first expansion" ? "initial" :
+                phase == "fresh saved-page reload" && expected[0].Mode == "fixture-native-api.v2" ? "custom-reload" : null;
+            if (capturePhase is not null)
+            {
+                // Capture the actual field, not a tall expander partly clipped by its
+                // scroll viewport. Bringing it into view must not focus or edit it.
+                foreach (var field in new[] { (Control: mode, Name: "mode"), (Control: effort, Name: "effort") })
+                {
+                    field.Control.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+                    await Task.Delay(60);
+                    page.UpdateLayout();
+                    await RenderPage(field.Control, $"ai-service-{capturePhase}-{route.Endpoint.Settings.Name}-{field.Name}.png");
+                }
+            }
+            CheckEditor(mode, expected[index].Mode, route.Endpoint.Mode, phase + "/" + route.Endpoint.Settings.Name + "/mode");
+            CheckEditor(effort, expected[index].Effort, route.Endpoint.Effort, phase + "/" + route.Endpoint.Settings.Name + "/effort");
+        }
+
+        static void CheckEditor(ComboBox combo, string expectedValue, string viewModelValue, string context)
+        {
+            var visibleEditor = Descendants(combo).OfType<TextBox>().SingleOrDefault();
+            bool hasRenderedText = Descendants(combo).OfType<TextBlock>().Any(block =>
+                block.Text == expectedValue && IsRendered(block) &&
+                !Ancestors(block).Any(element => element is ComboBoxItem or Microsoft.UI.Xaml.Controls.Primitives.Popup ||
+                    element is FrameworkElement named && named.Name.Contains("Placeholder", StringComparison.OrdinalIgnoreCase)));
+            bool hasFocusedEditor = visibleEditor is not null && visibleEditor.Text == expectedValue &&
+                visibleEditor.FocusState != FocusState.Unfocused && IsRendered(visibleEditor);
+            string editorState = visibleEditor is null ? "<missing>" :
+                $"name={visibleEditor.Name}, visibility={visibleEditor.Visibility}, effectiveVisible={Ancestors(visibleEditor).OfType<UIElement>().All(item => item.Visibility == Visibility.Visible)}, opacity={visibleEditor.Opacity:F2}, size={visibleEditor.ActualWidth:F1}x{visibleEditor.ActualHeight:F1}, focus={visibleEditor.FocusState}";
+            string templateState = string.Join("; ", Descendants(combo).OfType<FrameworkElement>()
+                .Where(element => element is ContentPresenter or TextBlock)
+                .Select(element => $"{element.GetType().Name}({element.Name}) visibility={element.Visibility}, effectiveVisible={Ancestors(element).OfType<UIElement>().All(item => item.Visibility == Visibility.Visible)}, opacity={element.Opacity:F2}, size={element.ActualWidth:F1}x{element.ActualHeight:F1}, text='{(element is TextBlock block ? block.Text : (element as ContentPresenter)?.Content as string ?? "<non-string>")}'"));
+            File.AppendAllText(Report, $"Native editor {context}: expected='{expectedValue}', model='{viewModelValue}', combo='{combo.Text}', selected='{combo.SelectedItem as string ?? "<none>"}', selectedIndex={combo.SelectedIndex}, comboFocus={combo.FocusState}, renderedText={hasRenderedText}, focusedEditor={hasFocusedEditor}, editorText='{visibleEditor?.Text ?? "<missing>"}', {editorState}; template=[{templateState}]\n");
+            // An unfocused editable ComboBox intentionally sizes its TextBox to zero;
+            // its selection presenter must display the same value until editing begins.
+            if (!combo.IsEditable || visibleEditor is null || combo.Text != expectedValue ||
+                viewModelValue != expectedValue || visibleEditor.Text != expectedValue ||
+                (!hasRenderedText && !hasFocusedEditor) ||
+                ((context.StartsWith("first expansion/", StringComparison.Ordinal) || context.StartsWith("fresh saved-page reload/", StringComparison.Ordinal) || context.StartsWith("saved theme/", StringComparison.Ordinal)) &&
+                    (combo.FocusState != FocusState.Unfocused || visibleEditor.FocusState != FocusState.Unfocused)))
+            {
+                // Fixture identifiers only; never print endpoint URLs or API keys.
+                throw new InvalidOperationException($"Native editor {context}: expected='{expectedValue}', model='{viewModelValue}', combo='{combo.Text}', visible='{visibleEditor?.Text ?? "<missing>"}', selected='{combo.SelectedItem as string ?? "<none>"}', selectedIndex={combo.SelectedIndex}, comboFocus={combo.FocusState}; {editorState}; template=[{templateState}].");
+            }
+
+            static bool IsRendered(FrameworkElement element) => element.ActualWidth > 0 && element.ActualHeight > 0 &&
+                Ancestors(element).OfType<UIElement>().All(ancestor => ancestor.Visibility == Visibility.Visible && ancestor.Opacity > 0);
+        }
+    }
+
+    private static async Task CheckEndpointEditorReload(GeneralPage original, (string Mode, string Effort)[] expected, bool verifyThemes)
+    {
+        // A newly constructed page and view model must populate template children from
+        // persisted values without requiring focus, a selection change or an edit.
+        var fresh = new GeneralPage();
+        try
+        {
+            NavigationService.Frame.Content = fresh;
+            await fresh.ViewModel.AiServices.Initialization;
+            await Task.Delay(150);
+            fresh.UpdateLayout();
+            await CheckEndpointEditorPresentation(fresh, "fresh saved-page reload", expected);
+            if (fresh.ViewModel.AiServices.HasUnsavedEndpointChanges) throw new InvalidOperationException("Loading persisted native identifiers created an unsaved draft.");
+            if (verifyThemes)
+            {
+                foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+                {
+                    fresh.RequestedTheme = theme;
+                    await Task.Delay(100);
+                    fresh.UpdateLayout();
+                    await CheckEndpointEditorPresentation(fresh, "saved theme/" + theme, expected);
+                    if (fresh.ViewModel.AiServices.HasUnsavedEndpointChanges) throw new InvalidOperationException("Changing theme dirtied the saved native identifiers.");
+                    await RenderPage((FrameworkElement)fresh.FindName("AiMainEndpointExpander"), $"ai-service-custom-{theme}.png");
+                }
+            }
+        }
+        finally
+        {
+            NavigationService.Frame.Content = original;
+            fresh.ViewModel.Dispose();
+        }
+        await Task.Delay(150);
+        await CheckEndpointEditorPresentation(original, "return from fresh page", expected);
     }
 
     private static IEnumerable<DependencyObject> Ancestors(DependencyObject element)

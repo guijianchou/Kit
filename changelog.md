@@ -4,6 +4,14 @@
 
 ## English
 
+### 3.4.6
+
+- Fixed AI service API mode and reasoning effort appearing blank after restart or first expanding Main/Fallback. Editable values now synchronize with the native ComboBox's visible presenter after template creation, including custom identifiers outside the suggestions, without replacing the saved value with intermediate empty text.
+- Added real WinUI checks for initial unfocused display, custom identifiers, suggestion selection, save/reload, discard and cached navigation. Source and sparse-package versions are aligned at 3.4.6.
+- Fixed Task policies on first visit: the lazy panel becomes visible after creation, multiline text is synchronized after the editor initializes, and local policy loading completes even while another AI service operation is busy. Concurrent callers share the same load without overwriting unsaved drafts.
+- Removed the self-test policy editor from AI Hub. Task policies now contains Security audit and Optimization; native connection diagnostics remain available.
+- Validation: x64 Release build, 275 Settings unit tests, bilingual AI Hub UI regressions and the module-page smoke passed. Test configuration, credentials and policy files were restored and verified.
+
 ### 3.4.5
 
 - Kept model execution on native Codex/Pi CLI while removing Kit's hardcoded API-mode and reasoning-effort capability lists. Main and Fallback now expose independent context-window settings, each defaulting to 256,000 tokens; native kernels and endpoints still decide which values they support.
@@ -923,6 +931,14 @@
 ## 中文
 
 ## 更新日志
+
+### 3.4.6
+
+- 修复 AI service 重启后或首次展开 Main/Fallback 时，API mode 与推理强度显示为空的问题。可编辑值在原生 ComboBox 模板创建后同步到实际显示区，支持建议列表之外的自定义标识，且不会用中间空文本覆盖已保存值。
+- 补充真实 WinUI 回归，覆盖首次非焦点显示、自定义标识、建议选择、保存重载、放弃修改及缓存导航。源码与稀疏包版本同步为 3.4.6。
+- 修复首次进入任务策略页时未显示内容或只显示首行的问题：延迟面板创建后立即显示，编辑器初始化后同步完整多行文本，其他 AI 服务操作忙碌时也能完成本地策略加载；并发调用复用同一加载任务，不覆盖未保存草稿。
+- 移除 AI Hub 的 self-test 策略编辑入口，任务策略仅保留 Security audit 和 Optimization；原生连接诊断继续保留。
+- 验证：x64 Release 构建、275 项 Settings 单元测试、中英文 AI Hub 界面回归及插件页面 smoke 均通过；测试涉及的配置、凭据与策略文件已恢复并校验。
 
 ### 3.4.5
 

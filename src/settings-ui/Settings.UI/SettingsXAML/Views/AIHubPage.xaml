@@ -77,6 +77,70 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
 
+        <DataTemplate x:Key="OptimizationInventoryScopeTemplate" x:DataType="viewModels:OptimizationInventoryScopeViewModel">
+            <Border Margin="0,0,0,8" CornerRadius="{StaticResource OverlayCornerRadius}"
+                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Background="Transparent" BorderThickness="0"
+                          IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" HorizontalAlignment="Stretch" Padding="0,4">
+                            <FontIcon Glyph="{x:Bind Glyph}" FontSize="18" VerticalAlignment="Top" Margin="0,3,0,0"
+                                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <StackPanel Grid.Column="1" Spacing="6">
+                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{x:Bind Path}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Path}"
+                                           FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <tkcontrols:WrapPanel HorizontalSpacing="10" VerticalSpacing="4">
+                                    <TextBlock Text="{x:Bind SizeText}" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" />
+                                    <TextBlock Text="{x:Bind FileSummary}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </tkcontrols:WrapPanel>
+                                <ProgressBar Minimum="0" Maximum="100" Value="{x:Bind SharePercent}" Height="4"
+                                             AutomationProperties.Name="{x:Bind Name}" IsHitTestVisible="False"
+                                             Visibility="{x:Bind HasMeasuredSize, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <tkcontrols:WrapPanel HorizontalSpacing="6" VerticalSpacing="4">
+                                    <Border Style="{StaticResource KitStatusPillStyle}">
+                                        <TextBlock Text="{x:Bind StateLabel}" FontSize="11" TextWrapping="Wrap" />
+                                    </Border>
+                                    <TextBlock Text="{x:Bind DispositionLabel}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </tkcontrols:WrapPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Expander.Header>
+                    <StackPanel x:Name="InventoryScopeDetails" x:Load="{x:Bind HasBeenExpanded, Mode=OneWay}" Spacing="10" Padding="8,6">
+                        <TextBlock Text="{x:Bind Reason}" TextWrapping="Wrap" FontWeight="SemiBold" IsTextSelectionEnabled="True" />
+                        <TextBlock Text="{x:Bind Guidance}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{x:Bind AgeSummary}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Visibility="{x:Bind HasMeasuredSize, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        <TextBlock Text="{x:Bind ScanNotes}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Visibility="{x:Bind HasScanNotes, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        <StackPanel Spacing="6" Visibility="{x:Bind HasTopFiles, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock x:Uid="AIHub_Inventory_LargestFilesTitle" FontWeight="SemiBold" FontSize="12" />
+                            <ItemsControl ItemsSource="{x:Bind TopFiles}" HorizontalContentAlignment="Stretch">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:OptimizationInventoryFileViewModel">
+                                        <Border Padding="10,8" Margin="0,0,0,4" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
+                                                <TextBlock Text="{x:Bind Path}" FontSize="11" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                           FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="3">
+                                                    <TextBlock Text="{x:Bind SizeText}" FontSize="12" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{x:Bind ModifiedText}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                </tkcontrols:WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+            </Border>
+        </DataTemplate>
+
         <!-- Leaf category item template inside groups -->
         <DataTemplate x:Key="OptimizationCategoryTemplate" x:DataType="viewModels:OptimizationCategoryViewModel">
             <Border Margin="0,0,0,6" CornerRadius="{StaticResource OverlayCornerRadius}" HorizontalAlignment="Stretch"
@@ -387,6 +451,53 @@
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
+            <VisualStateGroup>
+                <VisualState>
+                    <VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=InventoryHeader}" MinWidth="680" /></VisualState.StateTriggers>
+                </VisualState>
+                <VisualState>
+                    <VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=InventoryHeader}" MaxWidth="680" /></VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="InventoryTitle.(Grid.ColumnSpan)" Value="2" />
+                        <Setter Target="InventoryActions.(Grid.Row)" Value="1" />
+                        <Setter Target="InventoryActions.(Grid.Column)" Value="0" />
+                        <Setter Target="InventoryActions.(Grid.ColumnSpan)" Value="2" />
+                        <Setter Target="InventoryActions.HorizontalAlignment" Value="Left" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+            <VisualStateGroup>
+                <VisualState>
+                    <VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=InventoryMetricsGrid}" MinWidth="600" /></VisualState.StateTriggers>
+                </VisualState>
+                <VisualState>
+                    <VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=InventoryMetricsGrid}" MaxWidth="600" /></VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="InventoryObservedTile.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="InventoryRecentTile.(Grid.Row)" Value="1" />
+                        <Setter Target="InventoryRecentTile.(Grid.Column)" Value="0" />
+                        <Setter Target="InventoryRecentTile.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="InventoryOldTile.(Grid.Row)" Value="2" />
+                        <Setter Target="InventoryOldTile.(Grid.Column)" Value="0" />
+                        <Setter Target="InventoryOldTile.(Grid.ColumnSpan)" Value="3" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+            <VisualStateGroup>
+                <VisualState>
+                    <VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=InventoryFilters}" MinWidth="560" /></VisualState.StateTriggers>
+                </VisualState>
+                <VisualState>
+                    <VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=InventoryFilters}" MaxWidth="560" /></VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="InventorySearchBox.(Grid.ColumnSpan)" Value="2" />
+                        <Setter Target="InventoryFilterComboBox.(Grid.Row)" Value="1" />
+                        <Setter Target="InventoryFilterComboBox.(Grid.Column)" Value="0" />
+                        <Setter Target="InventoryFilterComboBox.(Grid.ColumnSpan)" Value="2" />
+                        <Setter Target="InventoryFilterComboBox.HorizontalAlignment" Value="Stretch" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
         <TextBlock x:Name="AiHubPageTitle" x:Uid="AIHub_PageTitle" MaxWidth="1000" Margin="0,0,24,0"
                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
@@ -508,7 +619,7 @@
                                             <FontIcon Glyph="{x:Bind ViewModel.SidebarWorkflowGlyph, Mode=OneWay}" FontSize="16"
                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.SidebarWorkflowTitle, Mode=OneWay}"
-                                                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
                                             <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.SidebarWorkflowPercentText, Mode=OneWay}"
                                                        FontSize="14" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" VerticalAlignment="Center" />
                                         </Grid>
@@ -516,16 +627,24 @@
                                                      IsIndeterminate="{x:Bind ViewModel.IsAuditProgressIndeterminate, Mode=OneWay}"
                                                      Style="{StaticResource KitProgressBarStyle}"
                                                      AutomationProperties.Name="{x:Bind ViewModel.SidebarWorkflowTooltip, Mode=OneWay}" />
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                            <StackPanel Spacing="2">
+                                        <!-- Both messages can contain a complete native failure.
+                                             An Auto column would take the available width away
+                                             from the wrapping status and create a very tall card. -->
+                                        <ScrollViewer x:Name="AuditWorkflowDetailsScroll" MaxHeight="144"
+                                                      HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
+                                                      HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto">
+                                            <StackPanel Spacing="4">
                                                 <TextBlock Text="{x:Bind ViewModel.CurrentStageText, Mode=OneWay}" FontSize="12"
                                                            FontWeight="Medium" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock x:Name="AuditWorkflowStatus" Text="{x:Bind ViewModel.AuditStatusText, Mode=OneWay}"
-                                                           FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                           FontSize="11" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock x:Name="AuditWorkflowAiResult" Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}"
+                                                           Visibility="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}"
+                                                           FontSize="11" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}" FontSize="11"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Bottom" />
-                                        </Grid>
+                                        </ScrollViewer>
                                     </StackPanel>
                                 </Border>
 
@@ -1136,7 +1255,7 @@
                                             <TextBlock Text="{x:Bind ViewModel.OptimizationTabLabel, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="18" AutomationProperties.HeadingLevel="Level2" />
                                             <Border CornerRadius="6" Padding="8,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Left"
                                                     Visibility="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
-                                                <TextBlock Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                             </Border>
                                         </StackPanel>
                                     </Grid>
@@ -1201,6 +1320,84 @@
                                         </StackPanel>
                                     </Border>
                                 </Grid>
+
+                                <Border x:Name="InventoryPanel" AutomationProperties.AutomationId="InventoryPanel"
+                                        Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18">
+                                    <StackPanel Spacing="14">
+                                        <Grid x:Name="InventoryHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+                                            <StackPanel x:Name="InventoryTitle" Spacing="5">
+                                                <TextBlock x:Uid="AIHub_Inventory_Title" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="18"
+                                                           AutomationProperties.HeadingLevel="Level2" />
+                                                <TextBlock x:Uid="AIHub_Inventory_Description" FontSize="12" TextWrapping="Wrap"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                            <tkcontrols:WrapPanel x:Name="InventoryActions" Grid.Column="1" HorizontalAlignment="Right" HorizontalSpacing="8" VerticalSpacing="6">
+                                                <Button x:Uid="AIHub_Inventory_AnalyzeButton" Command="{x:Bind ViewModel.AnalyzeStorageCommand}"
+                                                        IsEnabled="{x:Bind ViewModel.CanAnalyzeStorage, Mode=OneWay}"
+                                                        AutomationProperties.AutomationId="AIHub_AnalyzeStorage" Style="{StaticResource KitActionButtonStyle}" />
+                                                <Button x:Uid="AIHub_Inventory_StopButton" Command="{x:Bind ViewModel.CancelInventoryCommand}"
+                                                        IsEnabled="{x:Bind ViewModel.CanCancelInventory, Mode=OneWay}"
+                                                        Visibility="{x:Bind ViewModel.IsInventoryScanning, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        AutomationProperties.AutomationId="AIHub_CancelInventory" Style="{StaticResource KitActionButtonStyle}" />
+                                            </tkcontrols:WrapPanel>
+                                        </Grid>
+                                        <ProgressBar IsIndeterminate="True" Style="{StaticResource KitProgressBarStyle}"
+                                                     Visibility="{x:Bind ViewModel.IsInventoryScanning, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                     AutomationProperties.Name="{x:Bind ViewModel.InventoryStatusText, Mode=OneWay}" />
+                                        <TextBlock x:Name="InventoryStatusText" Text="{x:Bind ViewModel.InventoryStatusText, Mode=OneWay}" TextWrapping="Wrap"
+                                                   FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" AutomationProperties.LiveSetting="Polite" />
+                                        <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.HasInventory, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Grid x:Name="InventoryMetricsGrid" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                                <Border x:Name="InventoryObservedTile" Style="{StaticResource KitMetricTileBorderStyle}">
+                                                    <StackPanel Spacing="5">
+                                                        <TextBlock x:Uid="AIHub_Inventory_ObservedLabel" Style="{StaticResource KitMetricTileLabelStyle}" TextWrapping="Wrap" />
+                                                        <TextBlock x:Name="InventoryObservedSizeText" Text="{x:Bind ViewModel.Inventory.ObservedSizeText, Mode=OneWay}"
+                                                                   Style="{StaticResource KitMetricTileValueStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border x:Name="InventoryRecentTile" Grid.Column="1" Style="{StaticResource KitMetricTileBorderStyle}">
+                                                    <StackPanel Spacing="5">
+                                                        <TextBlock x:Uid="AIHub_Inventory_RecentLabel" Style="{StaticResource KitMetricTileLabelStyle}" TextWrapping="Wrap" />
+                                                        <TextBlock x:Name="InventoryRecentSizeText" Text="{x:Bind ViewModel.Inventory.RecentSizeText, Mode=OneWay}"
+                                                                   Style="{StaticResource KitMetricTileValueStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border x:Name="InventoryOldTile" Grid.Column="2" Style="{StaticResource KitMetricTileBorderStyle}">
+                                                    <StackPanel Spacing="5">
+                                                        <TextBlock x:Uid="AIHub_Inventory_OldLabel" Style="{StaticResource KitMetricTileLabelStyle}" TextWrapping="Wrap" />
+                                                        <TextBlock x:Name="InventoryOldSizeText" Text="{x:Bind ViewModel.Inventory.OldSizeText, Mode=OneWay}"
+                                                                   Style="{StaticResource KitMetricTileValueStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock x:Uid="AIHub_Inventory_SizeCaveat" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock x:Name="InventoryCoverageText" Text="{x:Bind ViewModel.Inventory.CoverageSummary, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" />
+                                            <TextBlock x:Uid="AIHub_Inventory_PartialHint" TextWrapping="Wrap" FontSize="12"
+                                                       Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                                       Visibility="{x:Bind ViewModel.Inventory.IsPartial, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                            <TextBlock Text="{x:Bind ViewModel.Inventory.SnapshotText, Mode=OneWay}" TextWrapping="Wrap" FontSize="11"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <Grid x:Name="InventoryFilters" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                                                <TextBox x:Name="InventorySearchBox" x:Uid="AIHub_Inventory_SearchBox" AutomationProperties.AutomationId="InventorySearchBox"
+                                                         Text="{x:Bind ViewModel.Inventory.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <ComboBox x:Name="InventoryFilterComboBox" x:Uid="AIHub_Inventory_FilterComboBox" Grid.Column="1" MinWidth="160"
+                                                          AutomationProperties.AutomationId="InventoryFilterComboBox" HorizontalAlignment="Right"
+                                                          ItemsSource="{x:Bind ViewModel.Inventory.FilterOptions}"
+                                                          SelectedIndex="{x:Bind ViewModel.Inventory.FilterIndex, Mode=TwoWay}" />
+                                            </Grid>
+                                            <TextBlock Text="{x:Bind ViewModel.Inventory.FilterSummary, Mode=OneWay}" TextWrapping="Wrap" FontSize="11"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <ListView x:Name="InventoryScopeList" AutomationProperties.AutomationId="InventoryScopeList"
+                                                      ItemsSource="{x:Bind ViewModel.Inventory.FilteredRows, Mode=OneWay}"
+                                                      ItemTemplate="{StaticResource OptimizationInventoryScopeTemplate}"
+                                                      ItemContainerStyle="{StaticResource OptimizationItemContainerStyle}"
+                                                      SelectionMode="None" HorizontalContentAlignment="Stretch" MaxHeight="600"
+                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                                            <TextBlock x:Name="InventoryNoMatches" x:Uid="AIHub_Inventory_NoMatches" TextWrapping="Wrap" FontSize="12"
+                                                       Visibility="{x:Bind ViewModel.Inventory.HasFilteredRows, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
 
                                 <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="16"
                                         Visibility="{x:Bind ViewModel.HasOptimizationResults, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">

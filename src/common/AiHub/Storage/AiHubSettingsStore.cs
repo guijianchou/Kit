@@ -62,13 +62,22 @@ public sealed class AiHubSettingsStore
             return CloneConfig(cached.Config);
         }
 
-        AiHubConfig loaded = _files.Run(LoadUnlocked);
-        if (TryCaptureStamp(out DirectoryStamp postStamp))
+        return _files.Run(() =>
         {
-            Snapshots[DataDirectory] = new CachedSnapshot(postStamp, CloneConfig(loaded));
-        }
+            AiHubConfig loaded = LoadUnlocked();
+            // Keep the snapshot and its file stamps under the same storage lock. Otherwise
+            // a completed writer could lend its new stamps to this older configuration.
+            if (TryCaptureStamp(out DirectoryStamp postStamp))
+            {
+                Snapshots[DataDirectory] = new CachedSnapshot(postStamp, CloneConfig(loaded));
+            }
+            else
+            {
+                Snapshots.TryRemove(DataDirectory, out _);
+            }
 
-        return loaded;
+            return loaded;
+        });
     }
 
     private bool TryCaptureStamp(out DirectoryStamp stamp)
@@ -166,19 +175,7 @@ public sealed class AiHubSettingsStore
             ? AiHubConfig.CreateDefault()
             : JsonSerializer.Deserialize(bytes, AiHubJsonContext.Default.AiHubConfig)
                 ?? throw new InvalidDataException("The AI Hub settings file is invalid.");
-        ValidateTargets(config, allowLegacyEfforts: true);
-
-        // Normalize existing profiles in memory; a normal save persists the three levels.
-        foreach (var target in config.Targets)
-        {
-            target.Effort = target.Effort switch
-            {
-                "none" or "minimal" => "low",
-                "medium" => "high",
-                "xhigh" or "ultra" => "max",
-                _ => target.Effort,
-            };
-        }
+        ValidateTargets(config);
 
         var secrets = _keyStore.ReadUnlocked();
         foreach (var target in config.Targets)
@@ -238,7 +235,7 @@ public sealed class AiHubSettingsStore
         }
     }
 
-    private static void ValidateTargets(AiHubConfig config, bool allowLegacyEfforts = false)
+    private static void ValidateTargets(AiHubConfig config)
     {
         if (config.SelectedKernel is not (AiKernelCatalog.Codex or AiKernelCatalog.Pi) ||
             config.MaxConcurrentAnalysis is < 1 or > 4 ||
@@ -253,9 +250,9 @@ public sealed class AiHubSettingsStore
             if (target.BaseUrl is null || target.BaseUrl.Length > 4096 ||
                 target.ApiKey is null || target.ApiKey.Length > 8192 ||
                 target.Model is null || target.Model.Length > 256 ||
-                target.Mode is not ("responses" or "chat") ||
-                (target.Effort is not ("low" or "high" or "max") &&
-                    (!allowLegacyEfforts || target.Effort is not ("none" or "minimal" or "medium" or "xhigh" or "ultra"))))
+                !AiTargetSettings.IsValidNativeIdentifier(target.Mode) ||
+                !AiTargetSettings.IsValidNativeIdentifier(target.Effort) ||
+                target.ContextWindowTokens < AiTargetSettings.MinimumContextWindowTokens)
             {
                 throw new InvalidDataException("The AI Hub target fields are invalid or exceed their size limits.");
             }

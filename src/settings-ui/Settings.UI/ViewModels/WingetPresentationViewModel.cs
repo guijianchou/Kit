@@ -40,6 +40,39 @@ public sealed partial class WingetViewModel
 
     public bool CanCancelOperation => IsBusy && !cancellationPending && status.Phase != "Cancelling";
 
+    // Presentation state stays separate from localized text, so semantic colors
+    // never depend on the current language or on parsing worker messages.
+    public string ReadinessTone => !IsEnabled ? "Neutral" : !connected ? "Accent" : status.Availability is not { IsAvailable: true } ? "Warning" : IsBusy ? "Accent" : "Success";
+
+    public string ReadinessGlyph => ReadinessTone switch
+    {
+        "Neutral" => "\uE7E8",
+        "Accent" => "\uE895",
+        "Success" => "\uE73E",
+        _ => "\uE7BA",
+    };
+
+    public string OperationTone => IsBusy || requestPending ? "Accent"
+        : status.Queue.Any(item => item.State == "Failed") ? "Error"
+        : status.Queue.Any(item => item.State is "NeedsVerification" or "Cancelled") ? "Warning"
+        : LatestOperationItem is { } latest ? latest.State switch
+        {
+            "Succeeded" => "Success",
+            "Failed" => "Error",
+            "NeedsVerification" or "Cancelled" => "Warning",
+            _ => "Neutral",
+        }
+        : lastPackageResult is { } result ? result.Install?.VerificationPending == true ? "Warning" : result.Succeeded ? "Success" : "Error" : "Neutral";
+
+    public string OperationGlyph => OperationTone switch
+    {
+        "Accent" => "\uE895",
+        "Success" => "\uE73E",
+        "Error" => "\uEA39",
+        "Warning" => "\uE7BA",
+        _ => "\uE81C",
+    };
+
     public string OperationSummary
     {
         get
@@ -151,6 +184,8 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(NotificationErrorText), NotificationErrorText);
         PublishValue(nameof(RestartRequired), RestartRequired);
         PublishValue(nameof(StatusText), StatusText);
+        PublishValue(nameof(ReadinessTone), ReadinessTone);
+        PublishValue(nameof(ReadinessGlyph), ReadinessGlyph);
         PublishValue(nameof(VersionText), VersionText);
         PublishValue(nameof(LastCheckText), LastCheckText);
         PublishValue(nameof(NextCheckText), NextCheckText);
@@ -159,6 +194,8 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(OperationText), OperationText);
         PublishValue(nameof(HasOperationFeedback), HasOperationFeedback);
         PublishValue(nameof(CanCancelOperation), CanCancelOperation);
+        PublishValue(nameof(OperationTone), OperationTone);
+        PublishValue(nameof(OperationGlyph), OperationGlyph);
         PublishValue(nameof(OperationSummary), OperationSummary);
         PublishValue(nameof(OperationDescription), OperationDescription);
         PublishValue(nameof(OperationOutput), OperationOutput);

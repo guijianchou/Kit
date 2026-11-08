@@ -66,6 +66,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     public string ActiveKernel => ReadState().SelectedKernel;
 
+    public AiDiagnosticsStore Diagnostics { get; }
+
     public AiReadiness GetReadiness()
     {
         AiHubConfig config = ReadState();
@@ -153,12 +155,12 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         {
             return validation with { Detail = "The readiness probe was cancelled." };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Remember(validation with
             {
                 Level = AiReadinessLevel.NotConfigured,
-                Detail = ex.Message,
+                Detail = "The native readiness probe could not complete. Check the installed kernel and endpoint settings.",
                 VerifiedAtUtc = DateTimeOffset.UtcNow,
                 ProbeLatency = null,
                 FromCache = false,
@@ -233,6 +235,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
     {
         _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
         _securityService = securityService ?? throw new ArgumentNullException(nameof(securityService));
+        Diagnostics = new AiDiagnosticsStore(_settingsStore.DataDirectory);
         _dispatcher = new RouteDispatcher(kernelManager ?? throw new ArgumentNullException(nameof(kernelManager)), Path.Combine(_settingsStore.DataDirectory, "requests"));
         _watcher = new FileSystemWatcher(_settingsStore.DataDirectory)
         {
@@ -315,13 +318,47 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         CancellationToken cancellationToken = default)
         where TOutput : class
     {
+        Guid requestId = Guid.NewGuid();
+        var config = ReadState();
+        AiTaskResult<TOutput> result = await ExecuteTaskCoreAsync(requestId, config, pluginId, taskId, items, schema, options, cancellationToken).ConfigureAwait(false);
+        await RecordDiagnosticAsync(new AiDiagnosticRecord
+        {
+            Kind = "task",
+            RequestId = requestId,
+            PluginId = pluginId,
+            TaskId = taskId,
+            Kernel = config.SelectedKernel,
+            Route = string.IsNullOrEmpty(result.FailureRoute) ? result.UsedRoute : result.FailureRoute,
+            Outcome = GetOutcome(result.IsSuccess, result.ErrorCode, result.HasPartialResult),
+            ErrorCode = result.ErrorCode,
+            CompletedBatches = result.CompletedBatches,
+            TotalBatches = result.TotalBatches,
+            ElapsedMilliseconds = (long)result.Elapsed.TotalMilliseconds,
+            Diagnostics = result.Diagnostics,
+        }).ConfigureAwait(false);
+        return result;
+    }
+
+    // File persistence must stay off a caller's UI thread, including synchronous early failures.
+    private Task RecordDiagnosticAsync(AiDiagnosticRecord record) => Task.Run(() => Diagnostics.Record(record));
+
+    private async Task<AiTaskResult<TOutput>> ExecuteTaskCoreAsync<TInput, TOutput>(
+        Guid requestId,
+        AiHubConfig config,
+        string pluginId,
+        string taskId,
+        IReadOnlyList<TInput> items,
+        AiTaskSchema<TInput, TOutput> schema,
+        AiTaskOptions? options,
+        CancellationToken cancellationToken)
+        where TOutput : class
+    {
         var stopwatch = Stopwatch.StartNew();
         if (_disposed)
         {
             return Failure<TOutput>(AiErrorCode.HostUnavailable, stopwatch);
         }
 
-        var config = ReadState();
         if (!config.IsEnabled)
         {
             return Failure<TOutput>(AiErrorCode.HubDisabled, stopwatch);
@@ -353,7 +390,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             }
         }
 
-        var requestId = Guid.NewGuid();
+        using var taskDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));
         CancellationTokenSource requestCancellation;
         lock (_lifecycleLock)
         {
@@ -367,13 +404,24 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 return Failure<TOutput>(AiErrorCode.ExecutionFailed, stopwatch);
             }
 
-            requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
-            requestCancellation.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
+            requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token, taskDeadline.Token);
             _requests.TryAdd(requestId, requestCancellation);
         }
 
         using var requestLifetime = requestCancellation;
         CancellationToken token = requestCancellation.Token;
+        int siblingFailure = 0;
+        string CancellationSource() => cancellationToken.IsCancellationRequested ? "caller"
+            : _disposed ? "shutdown" : !IsEnabled ? "serviceDisabled"
+            : taskDeadline.IsCancellationRequested ? "taskDeadline"
+            : Volatile.Read(ref siblingFailure) != 0 ? "siblingFailure" : "request";
+        AiErrorCode RequestCancellationCode() => CancellationSource() switch
+        {
+            "shutdown" => AiErrorCode.HostUnavailable,
+            "serviceDisabled" => AiErrorCode.HubDisabled,
+            "taskDeadline" => AiErrorCode.Timeout,
+            _ => AiErrorCode.Cancelled,
+        };
         try
         {
             token.ThrowIfCancellationRequested();
@@ -466,6 +514,9 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             {
                 bool acquired = false;
                 string validationStage = "execute";
+                string route = "Main";
+                AiTargetSettings usedTarget = main;
+                AiRouteDiagnostics? routeDiagnostics = null;
                 void ReportDiagnostic(string message)
                 {
                     try
@@ -494,8 +545,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     string prompt = prefix + SerializeBatch(batch);
                     KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, routeTimeoutSeconds,
                         ReportDiagnostic, token).ConfigureAwait(false);
-                    string route = "Main";
-                    AiTargetSettings usedTarget = main;
+                    await RecordRouteAsync(execution, "Main").ConfigureAwait(false);
                     if (!execution.IsSuccess && (execution.CanFailover || execution.ErrorCode == AiErrorCode.Timeout)
                         && fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl))
                     {
@@ -504,18 +554,21 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         ReportProgress(new AiTaskProgress("Failover", string.Empty, Volatile.Read(ref completed), batches.Count));
                         execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, fallback, prompt, routeTimeoutSeconds,
                             ReportDiagnostic, token).ConfigureAwait(false);
+                        await RecordRouteAsync(execution, "Fallback").ConfigureAwait(false);
                         route = "Fallback";
                         usedTarget = fallback;
                     }
 
                     if (!execution.IsSuccess)
                     {
-                        var failure = Failure<TOutput>(execution.ErrorCode, stopwatch);
+                        AiErrorCode code = execution.ErrorCode == AiErrorCode.Cancelled ? RequestCancellationCode() : execution.ErrorCode;
+                        var failure = Failure<TOutput>(code, stopwatch, code == execution.ErrorCode ? execution.ErrorMessage : null, routeDiagnostics, route, usedTarget.Model);
                         Interlocked.CompareExchange(ref firstFailure, failure, null);
                         ReportDiagnostic($"AI batch failed: code={execution.ErrorCode}");
                         if (!options.AllowPartialResults || execution.ErrorCode is AiErrorCode.PolicyViolation or AiErrorCode.InvalidConfiguration
                             or AiErrorCode.KernelNotInstalled or AiErrorCode.HubDisabled or AiErrorCode.HostUnavailable)
                         {
+                            Interlocked.Exchange(ref siblingFailure, 1);
                             await requestCancellation.CancelAsync().ConfigureAwait(false);
                         }
 
@@ -550,15 +603,22 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 catch (OperationCanceledException)
                 {
                     ReportDiagnostic($"AI batch cancelled: callerCancelled={cancellationToken.IsCancellationRequested}, taskCancelled={token.IsCancellationRequested}");
-                    return Failure<TOutput>(CancellationCode(cancellationToken), stopwatch);
+                    return Failure<TOutput>(RequestCancellationCode(), stopwatch, diagnostics: (routeDiagnostics ?? new()) with
+                    {
+                        Phase = validationStage,
+                        CancellationSource = CancellationSource(),
+                    }, route: route, model: usedTarget.Model);
                 }
                 catch (Exception ex) when (ex is JsonException or InvalidOperationException or NotSupportedException)
                 {
-                    var failure = Failure<TOutput>(AiErrorCode.PolicyViolation, stopwatch);
+                    var failure = Failure<TOutput>(AiErrorCode.PolicyViolation, stopwatch,
+                        $"The native response failed validation at '{validationStage}'. No rejected output was applied.",
+                        (routeDiagnostics ?? new()) with { Phase = validationStage, Reason = "PolicyViolation" }, route, usedTarget.Model);
                     Interlocked.CompareExchange(ref firstFailure, failure, null);
                     ReportDiagnostic($"AI batch rejected: phase={validationStage}, exception={ex.GetType().Name}");
                     if (!options.AllowPartialResults || validationStage == "response-limit")
                     {
+                        Interlocked.Exchange(ref siblingFailure, 1);
                         await requestCancellation.CancelAsync().ConfigureAwait(false);
                     }
 
@@ -570,6 +630,35 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     {
                         ReleaseSlot();
                     }
+                }
+
+                async Task RecordRouteAsync(KernelExecutionResult execution, string usedRoute)
+                {
+                    routeDiagnostics = execution.Diagnostics;
+                    AiErrorCode routeCode = execution.ErrorCode;
+                    if (execution.ErrorCode == AiErrorCode.Cancelled)
+                    {
+                        routeCode = RequestCancellationCode();
+                        routeDiagnostics = (routeDiagnostics ?? new()) with
+                        {
+                            Reason = routeCode.ToString(),
+                            CancellationSource = CancellationSource(),
+                        };
+                    }
+
+                    await RecordDiagnosticAsync(new AiDiagnosticRecord
+                    {
+                        Kind = "route",
+                        RequestId = requestId,
+                        PluginId = pluginId,
+                        TaskId = taskId,
+                        Kernel = config.SelectedKernel,
+                        Route = usedRoute,
+                        Outcome = GetOutcome(execution.IsSuccess, routeCode),
+                        ErrorCode = routeCode,
+                        Diagnostics = routeDiagnostics,
+                        ElapsedMilliseconds = routeDiagnostics?.ElapsedMilliseconds ?? 0,
+                    }).ConfigureAwait(false);
                 }
             }
 
@@ -584,13 +673,18 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             // earlier failed batch. The task deadline may still retain validated work.
             if (cancellationToken.IsCancellationRequested || _disposed || !IsEnabled)
             {
-                return Failure<TOutput>(CancellationCode(cancellationToken), stopwatch);
+                AiTaskResult<TOutput>? interrupted = results.FirstOrDefault(result => result.Diagnostics?.CancellationSource is not null and not "" and not "none");
+                return Failure<TOutput>(RequestCancellationCode(), stopwatch,
+                    diagnostics: (interrupted?.Diagnostics ?? new()) with
+                    {
+                        CancellationSource = CancellationSource(),
+                    }, route: interrupted?.UsedRoute ?? string.Empty, model: interrupted?.UsedModel ?? string.Empty);
             }
 
             var failed = firstFailure ?? results.FirstOrDefault(result => !result.IsSuccess);
             if (failed?.ErrorCode == AiErrorCode.Cancelled)
             {
-                failed = Failure<TOutput>(CancellationCode(cancellationToken), stopwatch);
+                failed = Failure<TOutput>(RequestCancellationCode(), stopwatch, diagnostics: failed.Diagnostics, route: failed.UsedRoute, model: failed.UsedModel);
             }
 
             var successful = results.Where(result => result.IsSuccess).ToArray();
@@ -600,6 +694,10 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 {
                     ErrorCode = failed.ErrorCode,
                     ErrorMessage = failed.ErrorMessage,
+                    Diagnostics = failed.Diagnostics,
+                    FailureRoute = failed.FailureRoute,
+                    UsedRoute = failed.UsedRoute,
+                    UsedModel = failed.UsedModel,
                     CompletedBatches = successful.Length,
                     TotalBatches = batches.Count,
                     Elapsed = stopwatch.Elapsed,
@@ -625,6 +723,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 IsSuccess = failed is null,
                 ErrorCode = failed?.ErrorCode ?? AiErrorCode.None,
                 ErrorMessage = failed?.ErrorMessage,
+                Diagnostics = failed?.Diagnostics,
+                FailureRoute = failed?.FailureRoute ?? string.Empty,
                 Payload = payload,
                 CompletedBatches = successful.Length,
                 TotalBatches = batches.Count,
@@ -635,7 +735,11 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         }
         catch (OperationCanceledException)
         {
-            return Failure<TOutput>(CancellationCode(cancellationToken), stopwatch);
+            return Failure<TOutput>(RequestCancellationCode(), stopwatch, diagnostics: new AiRouteDiagnostics
+            {
+                Phase = "prepare",
+                CancellationSource = CancellationSource(),
+            });
         }
         catch (Exception ex) when (ex is ArgumentException or JsonException or NotSupportedException)
         {
@@ -699,10 +803,6 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             return AiHubConfig.CreateDefault();
         }
     }
-
-    private AiErrorCode CancellationCode(CancellationToken callerToken) => callerToken.IsCancellationRequested
-        ? AiErrorCode.Cancelled
-        : _disposed ? AiErrorCode.HostUnavailable : !IsEnabled ? AiErrorCode.HubDisabled : AiErrorCode.Timeout;
 
     private async Task AcquireSlotAsync(CancellationToken token)
     {
@@ -788,8 +888,23 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
     }
 
-    private static AiTaskResult<TOutput> Failure<TOutput>(AiErrorCode code, Stopwatch stopwatch) where TOutput : class =>
-        AiTaskResult.Failed<TOutput>(code, code switch
+    private static string GetOutcome(bool success, AiErrorCode code, bool partial = false) => partial ? "partial" : success ? "succeeded" : code switch
+    {
+        AiErrorCode.Cancelled => "cancelled",
+        AiErrorCode.Timeout => "timeout",
+        _ => "failed",
+    };
+
+    private static AiTaskResult<TOutput> Failure<TOutput>(AiErrorCode code, Stopwatch stopwatch, string? message = null,
+        AiRouteDiagnostics? diagnostics = null, string route = "", string model = "") where TOutput : class => new()
+    {
+        ErrorCode = code,
+        Diagnostics = diagnostics ?? new AiRouteDiagnostics { Phase = "prepare", Reason = code.ToString() },
+        UsedRoute = route,
+        FailureRoute = route,
+        UsedModel = model,
+        Elapsed = stopwatch.Elapsed,
+        ErrorMessage = string.IsNullOrWhiteSpace(message) ? code switch
         {
             AiErrorCode.HubDisabled => "AI Hub is disabled in Kit Settings.",
             AiErrorCode.KernelNotInstalled => "Install the selected kernel in AI Hub settings.",
@@ -801,7 +916,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             AiErrorCode.Cancelled => "The AI task was cancelled.",
             AiErrorCode.HostUnavailable => "The AI Hub host is unavailable.",
             _ => "The AI task could not be completed.",
-        }, stopwatch.Elapsed);
+        } : message,
+    };
 
     private sealed record PreparedItem(string Id, JsonElement Payload, int Size);
 }

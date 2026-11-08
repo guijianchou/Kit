@@ -13,14 +13,17 @@ public sealed partial class AiTargetSettings : ObservableObject
     public const string DefaultTerraModel = "gpt-5.6-terra";
     public const string DefaultSolModel = "gpt-5.6-sol";
     public const string DefaultAstraModel = "gpt-6-astra";
+    public const int DefaultContextWindowTokens = 256000;
+    public const int MinimumContextWindowTokens = 1024;
 
     private string _name = string.Empty;
     private bool _isActive;
     private string _baseUrl = string.Empty;
     private string _apiKey = string.Empty;
-    private string _mode = "responses"; // "chat" or "responses"
+    private string _mode = "responses";
     private string _model = DefaultLunaModel;
-    private string _effort = "high"; // low, high, max
+    private string _effort = "high";
+    private int _contextWindowTokens = DefaultContextWindowTokens;
     private bool _isExpanded;
 
     public string Name
@@ -73,6 +76,36 @@ public sealed partial class AiTargetSettings : ObservableObject
     }
 
     /// <summary>
+    /// Context-window size passed to the native kernel for this endpoint.
+    /// </summary>
+    public int ContextWindowTokens
+    {
+        get => _contextWindowTokens;
+        set => SetProperty(ref _contextWindowTokens, value);
+    }
+
+    /// <summary>
+    /// Checks configuration syntax only; the native kernel validates supported values.
+    /// </summary>
+    public static bool IsValidNativeIdentifier(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > 128 || !char.IsAsciiLetterOrDigit(value[0]))
+        {
+            return false;
+        }
+
+        foreach (char character in value)
+        {
+            if (!char.IsAsciiLetterOrDigit(character) && character is not ('_' or '.' or '-'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Creates a deep copy of the settings.
     /// </summary>
     public AiTargetSettings Clone() => new()
@@ -84,6 +117,7 @@ public sealed partial class AiTargetSettings : ObservableObject
         Mode = Mode,
         Model = Model,
         Effort = Effort,
+        ContextWindowTokens = ContextWindowTokens,
         IsExpanded = IsExpanded
     };
 }

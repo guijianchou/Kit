@@ -34,6 +34,10 @@ public sealed class EngineAndIpcTests
         Assert.AreEqual(AiErrorCode.HubDisabled, result.ErrorCode);
         Assert.IsFalse(Directory.Exists(Path.Combine(fixture.RootPath, "kernels")));
         Assert.IsFalse(Directory.Exists(Path.Combine(fixture.RootPath, "requests")));
+        AiDiagnosticsSnapshot snapshot = ((TaskAiEngine)engine).Diagnostics.GetSnapshot();
+        Assert.AreEqual(1L, snapshot.RequestCount);
+        Assert.AreEqual(1L, snapshot.Failed);
+        Assert.AreEqual(0L, snapshot.RouteAttempts);
     }
 
     [TestMethod]
@@ -263,6 +267,12 @@ public sealed class EngineAndIpcTests
         Assert.AreEqual(AiErrorCode.PolicyViolation, result.ErrorCode);
         Assert.IsFalse(result.HasPartialResult);
         Assert.IsTrue(diagnostics.Any(value => value.StatusMessage.Contains("phase=schema", StringComparison.Ordinal)));
+        Assert.AreEqual("schema", result.Diagnostics?.Phase);
+        StringAssert.Contains(result.ErrorMessage, "schema");
+        AiDiagnosticsSnapshot snapshot = engine.Diagnostics.GetSnapshot();
+        Assert.AreEqual(1L, snapshot.Failed);
+        Assert.AreEqual("succeeded", snapshot.RecentRecords.Single(record => record.Kind == "route").Outcome);
+        Assert.AreEqual("schema", snapshot.RecentRecords.Single(record => record.Kind == "task").Diagnostics?.Phase);
         Assert.IsFalse(diagnostics.Any(value => value.StatusMessage.Contains("private-response-marker", StringComparison.Ordinal)
             || value.StatusMessage.Contains("private-input-marker", StringComparison.Ordinal)
             || value.StatusMessage.Contains("synthetic-fixture-secret", StringComparison.Ordinal)));
@@ -278,6 +288,13 @@ public sealed class EngineAndIpcTests
         Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
         Assert.AreEqual("Fallback", result.UsedRoute);
         Assert.AreEqual(2, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+        AiDiagnosticsSnapshot snapshot = engine.Diagnostics.GetSnapshot();
+        Assert.AreEqual(1L, snapshot.RequestCount);
+        Assert.AreEqual(1L, snapshot.Succeeded);
+        Assert.AreEqual(2L, snapshot.RouteAttempts);
+        Assert.AreEqual(1L, snapshot.MainAttempts);
+        Assert.AreEqual(1L, snapshot.FallbackAttempts);
+        Assert.AreEqual(1, snapshot.RecentRecords.Select(record => record.RequestId).Distinct().Count());
     }
 
     [TestMethod]
@@ -290,6 +307,10 @@ public sealed class EngineAndIpcTests
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
         Assert.IsFalse(result.ErrorMessage!.Contains("synthetic-fixture-secret", StringComparison.Ordinal));
+        Assert.AreEqual("Main", result.UsedRoute);
+        Assert.AreEqual("Authentication", result.Diagnostics?.Reason);
+        Assert.AreEqual(401, result.Diagnostics?.HttpStatusCode);
+        StringAssert.Contains(result.ErrorMessage, "401");
     }
 
     [TestMethod]
@@ -320,6 +341,8 @@ public sealed class EngineAndIpcTests
         var result = await running.WaitAsync(TimeSpan.FromSeconds(8));
         Assert.AreEqual(AiErrorCode.HubDisabled, result.ErrorCode);
         Assert.IsFalse(engine.IsEnabled);
+        Assert.AreEqual("serviceDisabled", result.Diagnostics?.CancellationSource);
+        Assert.AreEqual("serviceDisabled", engine.Diagnostics.GetSnapshot().RecentRecords.Single(record => record.Kind == "route").Diagnostics?.CancellationSource);
     }
 
     [TestMethod]
@@ -418,6 +441,52 @@ public sealed class EngineAndIpcTests
 
         Assert.AreEqual(AiErrorCode.InvalidPayload, result.ErrorCode);
         Assert.IsFalse(Directory.Exists(fixture.RequestRoot));
+    }
+
+    [TestMethod]
+    public async Task IpcPreservesFailureDiagnosticsAndOffersReadOnlyStatistics()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, "auth");
+        using var handler = new AiHubIpcHandler(engine);
+        using var item = JsonDocument.Parse("{\"state\":\"running\"}");
+        Guid id = Guid.NewGuid();
+        string request = JsonSerializer.Serialize(new AiHubIpcRequest
+        {
+            RequestId = id, Action = "ai_task_request", PluginId = "Sample", TaskId = "diagnostic", Items = [item.RootElement.Clone()],
+        }, AiHubJsonContext.Default.AiHubIpcRequest);
+        string raw = (await handler.HandleMessageAsync(request))!;
+        var response = JsonSerializer.Deserialize(raw, AiHubJsonContext.Default.AiHubIpcResponse)!;
+        Assert.AreEqual(id, response.RequestId);
+        Assert.AreEqual("Main", response.UsedRoute);
+        Assert.AreEqual("Authentication", response.Diagnostics?.Reason);
+        StringAssert.Contains(response.ErrorMessage, "401");
+        Assert.IsFalse(raw.Contains("synthetic-fixture-secret", StringComparison.Ordinal));
+
+        request = JsonSerializer.Serialize(new AiHubIpcRequest { RequestId = Guid.NewGuid(), Action = "get_diagnostics" }, AiHubJsonContext.Default.AiHubIpcRequest);
+        response = JsonSerializer.Deserialize((await handler.HandleMessageAsync(request))!, AiHubJsonContext.Default.AiHubIpcResponse)!;
+        Assert.IsTrue(response.IsSuccess);
+        Assert.AreEqual(1L, response.Statistics?.RequestCount);
+        Assert.AreEqual(1L, response.Statistics?.Failed);
+        Assert.AreEqual(1L, response.Statistics?.MainAttempts);
+        Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
+    public async Task TaskDeadlineIsRecordedAsTimeoutInBothTaskAndRoute()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, "timeout");
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema(),
+            new AiTaskOptions { TimeoutSeconds = 2 });
+        Assert.AreEqual(AiErrorCode.Timeout, result.ErrorCode);
+        Assert.AreEqual("taskDeadline", result.Diagnostics?.CancellationSource);
+        AiDiagnosticsSnapshot snapshot = engine.Diagnostics.GetSnapshot();
+        Assert.AreEqual(1L, snapshot.Timeout);
+        AiDiagnosticRecord route = snapshot.RecentRecords.Single(record => record.Kind == "route");
+        Assert.AreEqual(AiErrorCode.Timeout, route.ErrorCode);
+        Assert.AreEqual("timeout", route.Outcome);
+        Assert.AreEqual("taskDeadline", route.Diagnostics?.CancellationSource);
     }
 
     private static AiTaskSchema<TestInput, AiTaskReport> Schema() => AiTaskReport.CreateSchema(EngineTestJsonContext.Default.TestInput);

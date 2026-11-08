@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
+using Kit.AiHub.Models;
 using Kit.AIHubLib.Models;
 using ManagedCommon;
 
@@ -189,10 +190,51 @@ public static class AiHubAuditAnalysisService
             : result.ErrorCode.ToString();
         if (!result.IsSuccess)
         {
-            Logger.LogWarning($"AI audit incomplete: id={analysisId}, code={result.ErrorCode}, partial={result.HasPartialResult}, batches={result.CompletedBatches}/{result.TotalBatches}");
+            string failureRoute = SafeFailureRoute(result.FailureRoute);
+            string authenticationHint = AuthenticationFailureHint(result.Diagnostics, failureRoute);
+            if (authenticationHint.Length > 0)
+            {
+                failure = authenticationHint + " " + failure;
+            }
+
+            string diagnostic = AiDiagnosticText.Format(result.Diagnostics);
+            failure += "; failureRoute=" + failureRoute;
+            if (diagnostic.Length > 0)
+            {
+                failure += "; " + diagnostic;
+            }
+
+            Logger.LogWarning($"AI audit incomplete: id={analysisId}, code={result.ErrorCode}, failureRoute={failureRoute}, partial={result.HasPartialResult}, batches={result.CompletedBatches}/{result.TotalBatches}{(diagnostic.Length > 0 ? ", " + diagnostic : string.Empty)}");
         }
 
         return new(result.IsSuccess || result.HasPartialResult ? result.Payload?.Issues : null, result.HasPartialResult, failure);
+    }
+
+    private static string SafeFailureRoute(string? route) => route?.ToLowerInvariant() switch
+    {
+        "main" => "Main",
+        "fallback" => "Fallback",
+        _ => "unknown",
+    };
+
+    private static string AuthenticationFailureHint(AiRouteDiagnostics? diagnostics, string failureRoute)
+    {
+        if (diagnostics is null || (diagnostics.HttpStatusCode != 401 && !string.Equals(diagnostics.Reason, "Authentication", StringComparison.OrdinalIgnoreCase)))
+        {
+            return string.Empty;
+        }
+
+        string status = diagnostics.HttpStatusCode == 401 ? " (HTTP 401)" : string.Empty;
+        if (IsChinese)
+        {
+            string route = failureRoute == "unknown" ? "AI 路由" : failureRoute + " 路由";
+            string target = failureRoute == "unknown" ? "失败路由的" : failureRoute + " 的";
+            return $"{route}身份验证失败{status}。请在 AI service 中核查 {target} Endpoint 与 API key 是否配对、凭据及访问权限是否有效；保存后运行“测试连接”。";
+        }
+
+        string routeLabel = failureRoute == "unknown" ? "the AI route" : failureRoute;
+        string routeTarget = failureRoute == "unknown" ? "the failed route's" : failureRoute + "'s";
+        return $"Authentication failed on {routeLabel}{status}. In AI service, verify that {routeTarget} endpoint and API key belong together and that the credentials and access permissions are valid, then save and run Test connection.";
     }
 
     private sealed class AuditProgress(string analysisId, Stopwatch stopwatch, IProgress<AiTaskProgress>? progress) : IProgress<AiTaskProgress>

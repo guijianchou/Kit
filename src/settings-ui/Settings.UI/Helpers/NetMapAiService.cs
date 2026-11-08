@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
+using Kit.AiHub.Models;
 using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using NetMapLib;
@@ -269,7 +270,13 @@ public static class NetMapAiService
             if (!result.IsSuccess || payload is null)
             {
                 outcome = result.ErrorCode == AiErrorCode.None ? AiErrorCode.InvalidPayload : result.ErrorCode;
-                return NetMapAiAnalysisResponse.Failed(MapErrorText(outcome));
+                string failure = MapErrorText(outcome);
+                if (result.Diagnostics is not null)
+                {
+                    failure += Environment.NewLine + AiDiagnosticText.Format(result.Diagnostics);
+                }
+
+                return NetMapAiAnalysisResponse.Failed(failure);
             }
 
             string cleanLineType = SanitizeLineType(payload.LineType, isChinese);

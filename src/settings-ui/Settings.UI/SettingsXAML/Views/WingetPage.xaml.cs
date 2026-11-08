@@ -61,6 +61,21 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
     public string Text(string name) => WingetViewModel.L(name);
 
+    public Style BadgeStyle(string tone) => (Style)Resources["Winget" + tone + "BadgeStyle"];
+
+    public Style GlyphStyle(string tone) => (Style)Resources["Winget" + tone + "GlyphStyle"];
+
+    public string WorkspaceGlyph(int tab) => tab switch
+    {
+        (int)WingetWorkspace.Installed => "\uE770",
+        (int)WingetWorkspace.Discover => "\uE774",
+        _ => "\uE895",
+    };
+
+    public Style WorkspaceBadgeStyle(int tab) => BadgeStyle(tab == (int)WingetWorkspace.Installed ? "Success" : "Accent");
+
+    public Style WorkspaceGlyphStyle(int tab) => GlyphStyle(tab == (int)WingetWorkspace.Installed ? "Success" : "Accent");
+
     public Visibility IsUpdatesTab(int index) => index == (int)WingetWorkspace.Updates ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility IsDiscoverTab(int index) => index == (int)WingetWorkspace.Discover ? Visibility.Visible : Visibility.Collapsed;
@@ -365,7 +380,20 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             Spacing = 12,
             MaxWidth = 640,
         };
-        content.Children.Add(BoundParagraph(nameof(ViewModel.SelectionIdentity)));
+        var identity = new Grid { ColumnSpacing = 12 };
+        identity.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        identity.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        identity.Children.Add(new Border
+        {
+            Style = BadgeStyle("Accent"),
+            Child = new FontIcon { Glyph = "\uE7B8", Style = GlyphStyle("Accent") },
+        });
+        var identityText = BoundParagraph(nameof(ViewModel.SelectionIdentity));
+        identityText.VerticalAlignment = VerticalAlignment.Center;
+        identityText.FontSize = 12;
+        Grid.SetColumn(identityText, 1);
+        identity.Children.Add(identityText);
+        content.Children.Add(identity);
         var loading = new StackPanel { Name = "DetailsLoadingPanel", Spacing = 10 };
         var progress = new ProgressRing { Width = 28, Height = 28, HorizontalAlignment = HorizontalAlignment.Left };
         loading.Children.Add(progress);
@@ -383,20 +411,32 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         content.Children.Add(error);
 
         var detailsContent = new StackPanel { Name = "DetailsContentPanel", Spacing = 12 };
-        detailsContent.Children.Add(BoundParagraph(nameof(ViewModel.SelectionVersions)));
-        detailsContent.Children.Add(BoundParagraph(nameof(ViewModel.SelectionPublisher)));
-        detailsContent.Children.Add(BoundParagraph(nameof(ViewModel.PackageDescription)));
-        detailsContent.Children.Add(BoundParagraph(nameof(ViewModel.InstallExplanation)));
+        var versions = BoundParagraph(nameof(ViewModel.SelectionVersions));
+        versions.ClearValue(TextBlock.FontWeightProperty);
+        versions.Style = (Style)Resources["WingetVersionTextStyle"];
+        var overview = new StackPanel { Spacing = 8 };
+        overview.Children.Add(versions);
+        overview.Children.Add(BoundParagraph(nameof(ViewModel.SelectionPublisher)));
+        overview.Children.Add(BoundParagraph(nameof(ViewModel.PackageDescription)));
+        detailsContent.Children.Add(DetailSurface(overview));
+        detailsContent.Children.Add(DetailSurface(BoundParagraph(nameof(ViewModel.InstallExplanation))));
         var homepage = new HyperlinkButton { Content = Text("PackageHomepage"), Padding = new Thickness(0) };
         var license = Paragraph(string.Empty);
         var licenseLink = new HyperlinkButton { Content = Text("LicenseLink"), Padding = new Thickness(0) };
-        detailsContent.Children.Add(homepage);
-        detailsContent.Children.Add(license);
-        detailsContent.Children.Add(licenseLink);
-        detailsContent.Children.Add(Paragraph(Text("ReleaseNotesExpander/Header"), true));
-        detailsContent.Children.Add(BoundParagraph(nameof(ViewModel.ReleaseNotes)));
+        var metadata = new StackPanel { Spacing = 6 };
+        metadata.Children.Add(homepage);
+        metadata.Children.Add(license);
+        metadata.Children.Add(licenseLink);
+        detailsContent.Children.Add(metadata);
+        var releaseNotes = new StackPanel { Spacing = 8 };
+        var releaseHeading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        releaseHeading.Children.Add(new FontIcon { Glyph = "\uE8A5", Style = GlyphStyle("Accent") });
+        releaseHeading.Children.Add(Paragraph(Text("ReleaseNotesExpander/Header"), true));
+        releaseNotes.Children.Add(releaseHeading);
+        releaseNotes.Children.Add(BoundParagraph(nameof(ViewModel.ReleaseNotes)));
         var link = new HyperlinkButton { Content = Text("ReleaseLink/Content"), Padding = new Thickness(0) };
-        detailsContent.Children.Add(link);
+        releaseNotes.Children.Add(link);
+        detailsContent.Children.Add(DetailSurface(releaseNotes));
         content.Children.Add(detailsContent);
         var dialog = MakeDialog(selected.Name, ScrollContent(content));
         dialog.CloseButtonText = Text("CloseDetails");
@@ -447,6 +487,12 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             cancel.Click -= Cancel_Click;
         }
     }
+
+    private Border DetailSurface(UIElement child) => new()
+    {
+        Style = (Style)Resources["WingetDetailSurfaceStyle"],
+        Child = child,
+    };
 
     private async Task LoadDialogDetailsAsync()
     {

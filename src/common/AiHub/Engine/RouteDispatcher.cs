@@ -1,10 +1,12 @@
 namespace Kit.AiHub.Engine;
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -21,7 +23,8 @@ public sealed record KernelExecutionResult(
     AiErrorCode ErrorCode,
     bool CanFailover,
     string ErrorMessage = "",
-    string UsedModel = "");
+    string UsedModel = "",
+    AiRouteDiagnostics? Diagnostics = null);
 
 /// <summary>
 /// Runs isolated kernels and classifies failures before the task engine selects a fallback.
@@ -38,7 +41,7 @@ public sealed class RouteDispatcher
     {
         "invalid_api_key", "invalid api key", "api_key_required", "api key is required",
         "unauthorized", "unauthenticated", "authentication", "permission denied", "forbidden",
-        "access denied", "model_not_found", "model not found", "unknown model", "not found",
+        "access denied", "model_not_found", "model not found", "unknown model",
         "invalid_request_error", "invalid configuration", "bad request",
     };
 
@@ -73,9 +76,8 @@ public sealed class RouteDispatcher
         if (target is null || string.IsNullOrWhiteSpace(kernel) || !AiKernelCatalog.SupportedKernels.Contains(kernel.Trim()) ||
             string.IsNullOrWhiteSpace(target.Model) || target.Model.Length > 256 || target.Model.Any(char.IsControl) ||
             (target.ApiKey is { } key && (key.Length > 8192 || key.Any(char.IsControl))) ||
-            target.Effort is not ("low" or "high" or "max") ||
-            target.Mode is not ("responses" or "chat") ||
-            (AiKernelCatalog.Normalize(kernel) == AiKernelCatalog.Codex && target.Mode != "responses"))
+            !AiTargetSettings.IsValidNativeIdentifier(target.Effort) ||
+            !AiTargetSettings.IsValidNativeIdentifier(target.Mode) || target.ContextWindowTokens < AiTargetSettings.MinimumContextWindowTokens)
         {
             return false;
         }
@@ -174,6 +176,8 @@ public sealed class RouteDispatcher
         int nativeEvents = 0;
         int suppressedEvents = 0;
         string? lastActivity = null;
+        string phase = "prepare";
+        var telemetry = new NativeTelemetry();
         using var heartbeat = reportDiagnostic is null ? null : new Timer(
             _ => Report($"AI route waiting: request={Path.GetFileName(requestDirectory) ?? "pending"}, elapsedMs={elapsed.ElapsedMilliseconds}"),
             null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
@@ -189,6 +193,7 @@ public sealed class RouteDispatcher
             var startInfo = new ProcessStartInfo { FileName = executable, WorkingDirectory = requestDirectory };
             await ConfigureProcessAsync(startInfo, normalized, target, prompt, outputPath, lifetime.Token).ConfigureAwait(false);
 
+            phase = normalized == AiKernelCatalog.Codex ? "catalog" : "prepare";
             KernelExecutionResult? preparationFailure = normalized == AiKernelCatalog.Codex
                 ? await ConfigureCodexCatalogAsync(startInfo, target, lifetime.Token).ConfigureAwait(false)
                 : null;
@@ -198,17 +203,21 @@ public sealed class RouteDispatcher
             }
             else
             {
+                phase = "execute";
                 Report($"AI route configured: request={Path.GetFileName(requestDirectory)}, kernel={normalized}, " +
                     $"route={(target.Name is "Main" or "Fallback" ? target.Name : "Custom")}, mode={target.Mode}, " +
-                    $"model=\"{JsonEncodedText.Encode(target.Model.Trim())}\", configuredEffort={target.Effort}, nativeEffortInput={target.Effort}");
+                    $"model=\"{JsonEncodedText.Encode(target.Model.Trim())}\", configuredEffort={target.Effort}, nativeEffortInput={target.Effort}, " +
+                    $"contextWindowTokens={target.ContextWindowTokens}");
 
                 KernelProcessResult process = await KernelProcessRunner.RunAsync(startInfo,
                     normalized == AiKernelCatalog.Codex ? prompt : null,
                     TimeSpan.FromSeconds(timeoutSeconds), lifetime.Token,
-                    standardOutputLine: reportDiagnostic is null ? null : line => ReportNativeLine(line, false),
-                    standardErrorLine: reportDiagnostic is null ? null : line => ReportNativeLine(line, true)).ConfigureAwait(false);
+                    standardOutputLine: line => ReportNativeLine(line, false),
+                    standardErrorLine: line => ReportNativeLine(line, true)).ConfigureAwait(false);
                 processFailure = process.Failure;
                 exitCode = process.ExitCode;
+                // Full captured lines also cover native events larger than the live diagnostic line limit.
+                telemetry.ObserveOutput(normalized, process.StandardOutput, process.StandardError);
                 if (process.Failure != KernelProcessFailure.None)
                 {
                     result = ProcessFailure(process.Failure);
@@ -288,7 +297,8 @@ public sealed class RouteDispatcher
                     }
                     else
                     {
-                        result = Failure(AiErrorCode.ExecutionFailed);
+                        phase = "cleanup";
+                        result = Failure(AiErrorCode.ExecutionFailed, reason: "CleanupFailed");
                     }
                 }
                 catch (DirectoryNotFoundException)
@@ -297,7 +307,8 @@ public sealed class RouteDispatcher
                 }
                 catch (Exception)
                 {
-                    result = Failure(AiErrorCode.ExecutionFailed);
+                    phase = "cleanup";
+                    result = Failure(AiErrorCode.ExecutionFailed, reason: "CleanupFailed");
                 }
             }
 
@@ -314,10 +325,44 @@ public sealed class RouteDispatcher
                 ? Failure(AiErrorCode.Timeout) : result;
         string cancellationSource = cancellationToken.IsCancellationRequested ? "upstream"
             : deadline.IsCancellationRequested ? "routeDeadline"
-            : processFailure == KernelProcessFailure.Timeout ? "processDeadline" : "none";
+            : processFailure == KernelProcessFailure.Timeout || result.Diagnostics?.ProcessFailure == KernelProcessFailure.Timeout.ToString() ? "processDeadline" : "none";
+        AiRouteDiagnostics? failureDiagnostics = result.Diagnostics;
+        var diagnostics = new AiRouteDiagnostics
+        {
+            Phase = result.IsSuccess ? "complete" : phase,
+            HttpStatusCode = failureDiagnostics?.HttpStatusCode ?? telemetry.HttpStatusCode,
+            Reason = result.IsSuccess ? (telemetry.NativeRetryCount > 0 ? "NativeRetryRecovered" : "None")
+                : failureDiagnostics?.Reason ?? result.ErrorCode.ToString(),
+            NativeRetryCount = telemetry.NativeRetryCount,
+            NativeRetryLimit = telemetry.NativeRetryLimit,
+            InputTokens = telemetry.InputTokens,
+            OutputTokens = telemetry.OutputTokens,
+            CachedInputTokens = telemetry.CachedInputTokens,
+            CacheWriteTokens = telemetry.CacheWriteTokens,
+            ElapsedMilliseconds = elapsed.ElapsedMilliseconds,
+            ExitCode = exitCode ?? failureDiagnostics?.ExitCode,
+            ProcessFailure = processFailure != KernelProcessFailure.None ? processFailure.ToString()
+                : string.IsNullOrEmpty(failureDiagnostics?.ProcessFailure) ? KernelProcessFailure.None.ToString() : failureDiagnostics.ProcessFailure,
+            CancellationSource = cancellationSource,
+            ContextWindowTokens = target.ContextWindowTokens,
+        };
+        result = result with { Diagnostics = diagnostics };
+        if (!result.IsSuccess)
+        {
+            string retry = diagnostics.NativeRetryCount > 0 ? $" Native retries: {diagnostics.NativeRetryCount}" +
+                (diagnostics.NativeRetryLimit.HasValue ? $"/{diagnostics.NativeRetryLimit.Value}." : ".") : string.Empty;
+            string status = diagnostics.HttpStatusCode.HasValue ? $" HTTP {diagnostics.HttpStatusCode.Value}." : string.Empty;
+            result = result with { ErrorMessage = result.ErrorMessage + status + retry + $" Phase: {phase}." };
+        }
+
         Report($"AI route finished: request={Path.GetFileName(requestDirectory) ?? "pending"}, kernel={normalized}, code={result.ErrorCode}, " +
-            $"processFailure={processFailure}, exitCode={(exitCode.HasValue ? exitCode.Value.ToString(CultureInfo.InvariantCulture) : "notStarted")}, " +
-            $"elapsedMs={elapsed.ElapsedMilliseconds}, cancellationSource={cancellationSource}, nativeEvents={nativeEvents}, suppressedEvents={suppressedEvents}");
+            $"processFailure={diagnostics.ProcessFailure}, exitCode={(diagnostics.ExitCode.HasValue ? diagnostics.ExitCode.Value.ToString(CultureInfo.InvariantCulture) : "notStarted")}, " +
+            $"elapsedMs={elapsed.ElapsedMilliseconds}, cancellationSource={cancellationSource}, nativeEvents={nativeEvents}, suppressedEvents={suppressedEvents}, " +
+            $"phase={diagnostics.Phase}, reason={diagnostics.Reason}, httpStatus={diagnostics.HttpStatusCode ?? 0}, nativeRetries={diagnostics.NativeRetryCount}, " +
+            $"nativeRetryLimit={diagnostics.NativeRetryLimit?.ToString(CultureInfo.InvariantCulture) ?? "unknown"}, " +
+            $"inputTokens={diagnostics.InputTokens?.ToString(CultureInfo.InvariantCulture) ?? "unknown"}, " +
+            $"cachedInputTokens={diagnostics.CachedInputTokens?.ToString(CultureInfo.InvariantCulture) ?? "unknown"}, " +
+            $"outputTokens={diagnostics.OutputTokens?.ToString(CultureInfo.InvariantCulture) ?? "unknown"}");
         return result;
 
         void Report(string message)
@@ -334,6 +379,7 @@ public sealed class RouteDispatcher
 
         void ReportNativeLine(string line, bool standardError)
         {
+            telemetry.Observe(normalized, line, standardError);
             string? diagnostic = DescribeNativeLine(normalized, line, standardError);
             if (diagnostic is null)
             {
@@ -420,14 +466,14 @@ public sealed class RouteDispatcher
             Directory.CreateDirectory(home);
             string config = $"model = {TomlString(target.Model.Trim())}\n" +
                 $"model_reasoning_effort = {TomlString(target.Effort)}\n" +
-                $"model_context_window = {DynamicBatcher.DefaultContextWindowTokens.ToString(CultureInfo.InvariantCulture)}\n" +
+                $"model_context_window = {target.ContextWindowTokens.ToString(CultureInfo.InvariantCulture)}\n" +
                 "model_provider = \"kit\"\napproval_policy = \"never\"\nweb_search = \"disabled\"\n" +
                 "project_doc_max_bytes = 0\ncheck_for_update_on_startup = false\ncli_auth_credentials_store = \"ephemeral\"\n" +
                 $"model_instructions_file = {TomlString(instructionsPath)}\n" +
                 "[features]\nshell_tool = false\nunified_exec = false\napps = false\n" +
                 "[tools]\nview_image = false\n[analytics]\nenabled = false\n[feedback]\nenabled = false\n" +
                 "[model_providers.kit]\nname = \"Kit\"\n" +
-                $"base_url = {TomlString(baseUrl)}\nwire_api = \"responses\"\nrequires_openai_auth = false\n";
+                $"base_url = {TomlString(baseUrl)}\nwire_api = {TomlString(target.Mode)}\nrequires_openai_auth = false\n";
             if (!string.IsNullOrWhiteSpace(target.ApiKey))
             {
                 config += "env_key = \"KIT_AI_API_KEY\"\n";
@@ -465,7 +511,12 @@ public sealed class RouteDispatcher
                 ["kit"] = new JsonObject
                 {
                     ["baseUrl"] = baseUrl,
-                    ["api"] = target.Mode == "chat" ? "openai-completions" : "openai-responses",
+                    ["api"] = target.Mode switch
+                    {
+                        "chat" => "openai-completions",
+                        "responses" => "openai-responses",
+                        _ => target.Mode,
+                    },
                     ["apiKey"] = "$KIT_AI_API_KEY",
                     ["authHeader"] = !string.IsNullOrWhiteSpace(target.ApiKey),
                     ["models"] = new JsonArray(new JsonObject
@@ -474,8 +525,8 @@ public sealed class RouteDispatcher
                         ["name"] = target.Model.Trim(),
                         ["reasoning"] = true,
                         ["input"] = new JsonArray("text"),
-                        ["contextWindow"] = DynamicBatcher.DefaultContextWindowTokens,
-                        ["maxTokens"] = 8000,
+                        ["contextWindow"] = target.ContextWindowTokens,
+                        ["maxTokens"] = Math.Min(8000, target.ContextWindowTokens),
                     }),
                 },
             },
@@ -509,19 +560,36 @@ public sealed class RouteDispatcher
         KernelProcessResult result = await KernelProcessRunner.RunAsync(startInfo, null, TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
         if (result.Failure != KernelProcessFailure.None)
         {
-            return ProcessFailure(result.Failure);
+            return WithCatalogDiagnostics(ProcessFailure(result.Failure));
         }
 
-        if (result.ExitCode != 0 || JsonNode.Parse(result.StandardOutput) is not JsonObject catalog || catalog["models"] is not JsonArray models)
+        if (result.ExitCode != 0)
         {
-            return Failure(AiErrorCode.InvalidConfiguration);
+            KernelExecutionResult failure = ClassifyEndpointFailure(result.StandardError);
+            return WithCatalogDiagnostics(failure.ErrorCode == AiErrorCode.ExecutionFailed
+                ? Failure(AiErrorCode.InvalidConfiguration, reason: "UnsupportedNativeConfiguration") : failure);
+        }
+
+        JsonNode? parsed;
+        try
+        {
+            parsed = JsonNode.Parse(result.StandardOutput);
+        }
+        catch (JsonException)
+        {
+            return WithCatalogDiagnostics(Failure(AiErrorCode.InvalidPayload));
+        }
+
+        if (parsed is not JsonObject catalog || catalog["models"] is not JsonArray models)
+        {
+            return WithCatalogDiagnostics(Failure(AiErrorCode.InvalidPayload));
         }
 
         foreach (JsonNode? entry in models)
         {
             if (entry is not JsonObject model)
             {
-                return Failure(AiErrorCode.InvalidConfiguration);
+                return WithCatalogDiagnostics(Failure(AiErrorCode.InvalidPayload));
             }
 
             // Preserve bundled capabilities while disabling the private Lite transport.
@@ -560,6 +628,18 @@ public sealed class RouteDispatcher
         reader.Close();
         await File.WriteAllTextAsync(configPath, $"model_catalog_json = {TomlString(catalogPath)}\n{config}", new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
         return null;
+
+        KernelExecutionResult WithCatalogDiagnostics(KernelExecutionResult failure) => failure with
+        {
+            Diagnostics = new AiRouteDiagnostics
+            {
+                Phase = "catalog",
+                Reason = failure.Diagnostics?.Reason ?? failure.ErrorCode.ToString(),
+                HttpStatusCode = failure.Diagnostics?.HttpStatusCode,
+                ExitCode = result.ExitCode,
+                ProcessFailure = result.Failure.ToString(),
+            },
+        };
     }
 
     private static KernelResponse ParseEvents(string kernel, string standardOutput)
@@ -588,12 +668,11 @@ public sealed class RouteDispatcher
                 KernelExecutionResult failure = ClassifyEndpointFailure(GetString(error, "message"), error);
                 if (type == "turn.failed")
                 {
-                    response.Failure = failure;
+                    response.Completed = false;
+                    response.Text = string.Empty;
                 }
-                else
-                {
-                    response.TransientFailure = failure;
-                }
+
+                response.TransientFailure = failure;
             }
 
             if (kernel == AiKernelCatalog.Codex)
@@ -654,16 +733,9 @@ public sealed class RouteDispatcher
         if (stopReason == "error")
         {
             KernelExecutionResult failure = ClassifyEndpointFailure(GetString(message, "errorMessage"), message);
-            // Pi emits failed assistant messages before its native retry. A later valid
-            // response can recover transport failures, but never a policy/configuration failure.
-            if (failure.CanFailover || failure.ErrorCode == AiErrorCode.Timeout)
-            {
-                response.TransientFailure = failure;
-            }
-            else
-            {
-                response.Failure = failure;
-            }
+            // Native kernels own retries, including provider recovery. Only a later complete
+            // assistant response can recover an endpoint error; policy/contract failures remain sticky.
+            response.TransientFailure = failure;
 
             response.Completed = false;
             response.Text = string.Empty;
@@ -725,7 +797,8 @@ public sealed class RouteDispatcher
             if (type is "error" or "turn.failed")
             {
                 JsonElement error = root.TryGetProperty("error", out JsonElement nested) && nested.ValueKind == JsonValueKind.Object ? nested : root;
-                return DescribeError(type, GetString(error, "message"), error, "stdout");
+                string detail = GetString(error, "message");
+                return DescribeError(type == "error" && IsRetry(detail) ? "retry" : type, detail, error, "stdout");
             }
 
             if (kernel == AiKernelCatalog.Codex)
@@ -835,52 +908,101 @@ public sealed class RouteDispatcher
 
         static string DescribeError(string type, string detail, JsonElement? error, string source)
         {
-            int status = ReadHttpStatus(detail, error);
-            string reason = status is 408 or 504 ? "HttpTimeout"
-                : status == 429 ? "RateLimited"
-                : status >= 500 ? "ServerError"
-                : status >= 400 ? "RequestRejected"
-                : TransportTimeouts.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase)) ? "TransportTimeout"
-                : detail.Contains("stream", StringComparison.OrdinalIgnoreCase) &&
-                    (detail.Contains("disconnect", StringComparison.OrdinalIgnoreCase) || detail.Contains("closed", StringComparison.OrdinalIgnoreCase)) ? "StreamDisconnected"
-                : detail.Contains("ENOTFOUND", StringComparison.OrdinalIgnoreCase) || detail.Contains("dns error", StringComparison.OrdinalIgnoreCase)
-                    || detail.Contains("failed to lookup address", StringComparison.OrdinalIgnoreCase) ? "DnsFailure"
-                : detail.Contains("ECONNRESET", StringComparison.OrdinalIgnoreCase) || detail.Contains("connection reset", StringComparison.OrdinalIgnoreCase) ? "ConnectionReset"
-                : detail.Contains("ECONNREFUSED", StringComparison.OrdinalIgnoreCase) || detail.Contains("connection refused", StringComparison.OrdinalIgnoreCase) ? "ConnectionRefused"
-                : detail.Contains("EHOSTUNREACH", StringComparison.OrdinalIgnoreCase) || detail.Contains("ENETUNREACH", StringComparison.OrdinalIgnoreCase)
-                    || detail.Contains("network is unreachable", StringComparison.OrdinalIgnoreCase) ? "NetworkUnavailable"
-                : detail.Contains("error sending request for url", StringComparison.OrdinalIgnoreCase) ? "TransportFailure"
-                : ConfigurationFailures.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase)) ? "Configuration" : "Unknown";
-            return $"event={type}, source={source}, code={ClassifyEndpointFailure(detail, error).ErrorCode}, httpStatus={status}, reason={reason}";
+            KernelExecutionResult failure = ClassifyEndpointFailure(detail, error);
+            (int attempt, int? limit) = ReadRetry(detail, error);
+            string retry = type == "retry" ? $", retryAttempt={attempt}, retryLimit={limit?.ToString(CultureInfo.InvariantCulture) ?? "unknown"}" : string.Empty;
+            return $"event={type}, source={source}, code={failure.ErrorCode}, httpStatus={failure.Diagnostics?.HttpStatusCode ?? 0}, reason={failure.Diagnostics?.Reason ?? "Unknown"}{retry}";
         }
     }
 
     private static KernelExecutionResult ClassifyEndpointFailure(string detail, JsonElement? error = null)
     {
-        if (ConfigurationFailures.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase)))
+        int status = ReadHttpStatus(detail, error);
+        string reason = DescribeFailureReason(detail, status);
+        KernelExecutionResult failure = reason switch
         {
-            return Failure(AiErrorCode.InvalidConfiguration);
+            "HttpTimeout" or "TransportTimeout" => Failure(AiErrorCode.Timeout, canFailover: true, reason: reason),
+            "AccountUnavailable" or "QuotaExceeded" or "RateLimited" or "ServerError" or
+                "StreamDisconnected" or "DnsFailure" or "ConnectionReset" or "ConnectionRefused" or
+                "NetworkUnavailable" or "TransportFailure" => Failure(AiErrorCode.EndpointFailed, canFailover: true, reason: reason),
+            "UnsupportedNativeConfiguration" or "Authentication" or "AccessDenied" or "ModelNotFound" or
+                "InvalidConfiguration" or "RequestRejected" => Failure(AiErrorCode.InvalidConfiguration, reason: reason),
+            _ => Failure(AiErrorCode.ExecutionFailed, reason: reason),
+        };
+        return failure with
+        {
+            Diagnostics = new AiRouteDiagnostics { Reason = reason, HttpStatusCode = status == 0 ? null : status },
+        };
+    }
+
+    private static string DescribeFailureReason(string detail, int status)
+    {
+        bool Contains(string value) => detail.Contains(value, StringComparison.OrdinalIgnoreCase);
+        if (Contains("unknown variant") || Contains("unknown api") || Contains("unsupported api") || Contains("invalid api type") ||
+            Contains("invalid thinking") || Contains("unknown thinking") || Contains("unsupported thinking") ||
+            Contains("unsupported reasoning") || Contains("invalid reasoning effort") ||
+            Contains("error loading config") || Contains("error parsing config") || Contains("toml parse error") ||
+            Contains("failed to deserialize") || Contains("invalid value for"))
+        {
+            return "UnsupportedNativeConfiguration";
         }
 
-        int status = ReadHttpStatus(detail, error);
+        if (status == 401 || Contains("invalid_api_key") || Contains("invalid api key") || Contains("api_key_required") ||
+            Contains("api key is required") || Contains("unauthorized") || Contains("unauthenticated") || Contains("authentication"))
+        {
+            return "Authentication";
+        }
+
+        if (status == 403 || Contains("permission denied") || Contains("forbidden") || Contains("access denied"))
+        {
+            return "AccessDenied";
+        }
+
+        if ((status is 0 or 404 or 429 or 503) &&
+            (Contains("not supported by any configured account") || Contains("no available account") ||
+             Contains("no available channel") || Contains("no healthy upstream")))
+        {
+            return "AccountUnavailable";
+        }
+
+        if (Contains("insufficient_quota") || Contains("quota exceeded") || Contains("quota_exceeded") || Contains("insufficient credits"))
+        {
+            return "QuotaExceeded";
+        }
+
+        if (Contains("model_not_found") || Contains("model not found") || Contains("unknown model"))
+        {
+            return "ModelNotFound";
+        }
+
         if (status is 408 or 504)
         {
-            return Failure(AiErrorCode.Timeout, canFailover: true);
+            return "HttpTimeout";
         }
 
-        if (status == 429 || status is >= 500 and <= 599)
+        if (status == 429)
         {
-            return Failure(AiErrorCode.EndpointFailed, canFailover: true);
+            return "RateLimited";
         }
 
-        if (status is >= 400 and <= 499)
+        if (status >= 500)
         {
-            return Failure(AiErrorCode.InvalidConfiguration);
+            return "ServerError";
         }
 
-        bool transportTimeout = TransportTimeouts.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase));
-        bool networkFailure = transportTimeout || NetworkFailures.Any(value => detail.Contains(value, StringComparison.OrdinalIgnoreCase));
-        return Failure(transportTimeout ? AiErrorCode.Timeout : networkFailure ? AiErrorCode.EndpointFailed : AiErrorCode.ExecutionFailed, networkFailure);
+        if (status >= 400)
+        {
+            return "RequestRejected";
+        }
+
+        return TransportTimeouts.Any(Contains) ? "TransportTimeout"
+            : Contains("stream") && (Contains("disconnect") || Contains("closed")) ? "StreamDisconnected"
+            : Contains("ENOTFOUND") || Contains("dns error") || Contains("failed to lookup address") ? "DnsFailure"
+            : Contains("ECONNRESET") || Contains("connection reset") ? "ConnectionReset"
+            : Contains("ECONNREFUSED") || Contains("connection refused") ? "ConnectionRefused"
+            : Contains("EHOSTUNREACH") || Contains("ENETUNREACH") || Contains("network is unreachable") ? "NetworkUnavailable"
+            : NetworkFailures.Any(Contains) ? "TransportFailure"
+            : ConfigurationFailures.Any(Contains) ? "InvalidConfiguration" : "Unknown";
     }
 
     private static int ReadHttpStatus(string detail, JsonElement? error)
@@ -920,17 +1042,63 @@ public sealed class RouteDispatcher
         _ => AiErrorCode.ExecutionFailed,
     });
 
-    private static KernelExecutionResult Failure(AiErrorCode code, bool canFailover = false) => new(false, string.Empty, code, canFailover, code switch
+    private static KernelExecutionResult Failure(AiErrorCode code, bool canFailover = false, string? reason = null) => new(false, string.Empty, code, canFailover,
+        reason switch
+        {
+            "UnsupportedNativeConfiguration" => "The native kernel rejected its configuration. Check its supported API mode and reasoning effort, or update the kernel.",
+            "Authentication" => "The endpoint rejected authentication. Check the API key for this route.",
+            "AccessDenied" => "The endpoint denied access. Check this API key's model and account permissions.",
+            "AccountUnavailable" => "The endpoint has no available account for this model. Check the provider account group or try again later.",
+            "ModelNotFound" => "The endpoint could not find the configured model. Check the model identifier for this route.",
+            "QuotaExceeded" => "The endpoint reports insufficient quota or credits. Check the provider account balance and limits.",
+            "RateLimited" => "The endpoint rate limit prevented completion after native handling. Wait or use a route with available capacity.",
+            "CleanupFailed" => "The isolated kernel request could not be cleaned up safely.",
+            _ => code switch
+            {
+                AiErrorCode.InvalidConfiguration => "Check the selected kernel, endpoint URL, native API mode, model, reasoning effort, context window, and credentials.",
+                AiErrorCode.KernelNotInstalled => "Install the selected kernel in AI Hub settings.",
+                AiErrorCode.InvalidPayload => "The kernel returned an incomplete or invalid response, or a request limit was exceeded.",
+                AiErrorCode.PolicyViolation => "The kernel attempted an operation outside the analysis contract.",
+                AiErrorCode.Timeout => "The AI request timed out.",
+                AiErrorCode.Cancelled => "The AI request was cancelled.",
+                AiErrorCode.EndpointFailed => "The configured endpoint could not complete this request.",
+                _ => "The kernel could not complete this request.",
+            },
+        }, Diagnostics: new AiRouteDiagnostics { Phase = "prepare", Reason = reason ?? code.ToString() });
+
+    private static bool IsRetry(string detail) => detail.Contains("retry", StringComparison.OrdinalIgnoreCase) ||
+        detail.Contains("reconnect", StringComparison.OrdinalIgnoreCase);
+
+    private static (int Attempt, int? Limit) ReadRetry(string detail, JsonElement? error)
     {
-        AiErrorCode.InvalidConfiguration => "Check the selected kernel, endpoint URL, API mode, model, reasoning effort, and credentials.",
-        AiErrorCode.KernelNotInstalled => "Install the selected kernel in AI Hub settings.",
-        AiErrorCode.InvalidPayload => "The kernel returned an incomplete or invalid response, or a request limit was exceeded.",
-        AiErrorCode.PolicyViolation => "The kernel attempted an operation outside the analysis contract.",
-        AiErrorCode.Timeout => "The AI request timed out.",
-        AiErrorCode.Cancelled => "The AI request was cancelled.",
-        AiErrorCode.EndpointFailed => "The configured endpoint could not complete this request.",
-        _ => "The kernel could not complete this request.",
-    });
+        int attempt = 0;
+        int? limit = null;
+        if (error is { ValueKind: JsonValueKind.Object } element)
+        {
+            if (element.TryGetProperty("attempt", out JsonElement value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int number) && number is > 0 and <= 10000)
+            {
+                attempt = number;
+            }
+
+            if (element.TryGetProperty("maxAttempts", out value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out number) && number is > 0 and <= 10000)
+            {
+                limit = number;
+            }
+        }
+
+        Match match = Regex.Match(detail, @"\b(?:reconnect\w*|retry\w*)[^\d\r\n]{0,24}(?<attempt>\d{1,4})\s*/\s*(?<limit>\d{1,4})\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+        if (match.Success && int.TryParse(match.Groups["attempt"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out int parsedAttempt) && parsedAttempt > 0)
+        {
+            attempt = Math.Max(attempt, parsedAttempt);
+            if (int.TryParse(match.Groups["limit"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out int parsedLimit) && parsedLimit > 0)
+            {
+                limit = parsedLimit;
+            }
+        }
+
+        return (attempt, limit);
+    }
 
     private static string GetString(JsonElement element, string name) =>
         element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : string.Empty;
@@ -938,6 +1106,179 @@ public sealed class RouteDispatcher
     private static string TomlString(string value) => "\"" + value.Replace("\\", "\\\\", StringComparison.Ordinal)
         .Replace("\"", "\\\"", StringComparison.Ordinal).Replace("\r", "\\r", StringComparison.Ordinal)
         .Replace("\n", "\\n", StringComparison.Ordinal).Replace("\t", "\\t", StringComparison.Ordinal) + "\"";
+
+    /// <summary>
+    /// Collects only native counters; hashes deduplicate stdout/stderr retry echoes and Pi agent_end snapshots.
+    /// </summary>
+    private sealed class NativeTelemetry
+    {
+        private readonly object _gate = new();
+        private readonly HashSet<string> _usageEvents = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _retryEvents = new(StringComparer.Ordinal);
+        private int _unnumberedRetries;
+
+        internal int NativeRetryCount { get; private set; }
+
+        internal int? NativeRetryLimit { get; private set; }
+
+        internal int? HttpStatusCode { get; private set; }
+
+        internal long? InputTokens { get; private set; }
+
+        internal long? OutputTokens { get; private set; }
+
+        internal long? CachedInputTokens { get; private set; }
+
+        internal long? CacheWriteTokens { get; private set; }
+
+        internal void ObserveOutput(string kernel, string standardOutput, string standardError)
+        {
+            using var output = new StringReader(standardOutput);
+            while (output.ReadLine() is { } line)
+            {
+                Observe(kernel, line, standardError: false);
+            }
+
+            using var error = new StringReader(standardError);
+            while (error.ReadLine() is { } line)
+            {
+                Observe(kernel, line, standardError: true);
+            }
+        }
+
+        internal void Observe(string kernel, string line, bool standardError)
+        {
+            lock (_gate)
+            {
+                if (standardError)
+                {
+                    ObserveError(line, null, IsRetry(line));
+                    return;
+                }
+
+                try
+                {
+                    using JsonDocument document = JsonDocument.Parse(line, new JsonDocumentOptions { MaxDepth = 64 });
+                    JsonElement root = document.RootElement;
+                    if (root.ValueKind != JsonValueKind.Object)
+                    {
+                        return;
+                    }
+
+                    string type = GetString(root, "type");
+                    if (type is "error" or "turn.failed")
+                    {
+                        JsonElement error = root.TryGetProperty("error", out JsonElement nested) && nested.ValueKind == JsonValueKind.Object ? nested : root;
+                        string detail = GetString(error, "message");
+                        ObserveError(detail, error, type == "error" && IsRetry(detail));
+                    }
+                    else if (type is "auto_retry_start" or "auto_retry_end")
+                    {
+                        ObserveError(GetString(root, type == "auto_retry_start" ? "errorMessage" : "finalError"), root, isRetry: true);
+                    }
+
+                    if (kernel == AiKernelCatalog.Codex && type == "turn.completed")
+                    {
+                        ReadUsage(root, codex: true);
+                    }
+                    else if (kernel == AiKernelCatalog.Pi && type == "message_end" && root.TryGetProperty("message", out JsonElement message))
+                    {
+                        ObservePiMessage(message);
+                    }
+                    else if (kernel == AiKernelCatalog.Pi && type == "agent_end" && root.TryGetProperty("messages", out JsonElement messages) && messages.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (JsonElement completed in messages.EnumerateArray())
+                        {
+                            ObservePiMessage(completed);
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // The strict response parser owns contract validation, never this observer.
+                }
+            }
+        }
+
+        private void ObservePiMessage(JsonElement message)
+        {
+            if (message.ValueKind != JsonValueKind.Object || GetString(message, "role") != "assistant")
+            {
+                return;
+            }
+
+            if (GetString(message, "stopReason") == "error")
+            {
+                ObserveError(GetString(message, "errorMessage"), message, isRetry: false);
+            }
+
+            ReadUsage(message, codex: false);
+        }
+
+        private void ObserveError(string detail, JsonElement? error, bool isRetry)
+        {
+            int status = ReadHttpStatus(detail, error);
+            if (status > 0)
+            {
+                HttpStatusCode = status;
+            }
+
+            if (!isRetry)
+            {
+                return;
+            }
+
+            (int attempt, int? limit) = ReadRetry(detail, error);
+            if (limit.HasValue)
+            {
+                NativeRetryLimit = Math.Max(NativeRetryLimit ?? 0, limit.Value);
+            }
+
+            if (attempt > 0)
+            {
+                NativeRetryCount = Math.Max(NativeRetryCount, attempt);
+            }
+            else if (!string.IsNullOrWhiteSpace(detail) && _retryEvents.Count < 1024 && _retryEvents.Add(Fingerprint(detail.Trim())))
+            {
+                NativeRetryCount = Math.Max(NativeRetryCount, ++_unnumberedRetries);
+            }
+        }
+
+        private void ReadUsage(JsonElement message, bool codex)
+        {
+            if (!message.TryGetProperty("usage", out JsonElement usage) || usage.ValueKind != JsonValueKind.Object ||
+                _usageEvents.Count >= 1024 || !_usageEvents.Add(Fingerprint(message.GetRawText())))
+            {
+                return;
+            }
+
+            long? input = ReadToken(usage, codex ? "input_tokens" : "input");
+            long? cached = ReadToken(usage, codex ? "cached_input_tokens" : "cacheRead");
+            long? written = codex ? null : ReadToken(usage, "cacheWrite");
+            // Codex input_tokens includes cached input. Pi input is uncached input, so add its cache counters once.
+            if (!codex && input.HasValue)
+            {
+                input = AddTokens(input, cached);
+                if (input.HasValue)
+                {
+                    input = AddTokens(input, written);
+                }
+            }
+
+            InputTokens = AddTokens(InputTokens, input);
+            OutputTokens = AddTokens(OutputTokens, ReadToken(usage, codex ? "output_tokens" : "output"));
+            CachedInputTokens = AddTokens(CachedInputTokens, cached);
+            CacheWriteTokens = AddTokens(CacheWriteTokens, written);
+        }
+
+        private static long? ReadToken(JsonElement usage, string name) =>
+            usage.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out long count) && count >= 0 ? count : null;
+
+        private static long? AddTokens(long? total, long? increment) => !increment.HasValue ? total
+            : (total ?? 0) <= long.MaxValue - increment.Value ? (total ?? 0) + increment.Value : null;
+
+        private static string Fingerprint(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+    }
 
     private sealed class KernelResponse
     {

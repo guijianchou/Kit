@@ -629,6 +629,10 @@ namespace Kit.Settings.UI.ViewModels
             {
                 Logger.LogError("Failed to synchronize log_settings.json", ex);
             }
+            finally
+            {
+                _aiServices?.RefreshDiagnostics();
+            }
         }
 
         public string SettingsBackupAndRestoreDir

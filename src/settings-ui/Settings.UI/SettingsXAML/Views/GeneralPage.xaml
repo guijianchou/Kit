@@ -381,16 +381,14 @@
                                         PasswordChanged="AiMainApiKeyBox_PasswordChanged"
                                         PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode" Description="Choose a suggestion or enter a native API identifier. The selected kernel validates support.">
                                     <ComboBox
                                         x:Uid="AiHub_MainEndpoint_ApiModeComboBox"
                                         AutomationProperties.AutomationId="AiHub_MainEndpoint_ApiModeComboBox"
-                                        MinWidth="200"
-                                        SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Mode, Mode=TwoWay}"
-                                        SelectedValuePath="Tag">
-                                        <ComboBoxItem x:Uid="AiHub_ApiModeResponses" Content="responses (/v1/responses)" Tag="responses" />
-                                        <ComboBoxItem x:Uid="AiHub_ApiModeChat" Content="chat (/v1/chat/completions)" Tag="chat" />
-                                    </ComboBox>
+                                        Width="240"
+                                        IsEditable="True"
+                                        ItemsSource="{x:Bind ViewModel.AiServices.MainEndpoint.ModeSuggestions, Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.AiServices.MainEndpoint.Mode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ModelCard" Header="Model">
                                     <TextBox
@@ -400,17 +398,33 @@
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort" Description="Passed unchanged to the selected kernel; support depends on the kernel and model.">
                                     <ComboBox
                                         x:Uid="AiHub_MainEndpoint_EffortComboBox"
                                         AutomationProperties.AutomationId="AiHub_MainEndpoint_EffortComboBox"
-                                        MinWidth="200"
-                                        SelectedValue="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay}"
-                                        SelectedValuePath="Tag">
-                                        <ComboBoxItem x:Uid="AiHub_EffortLow" Content="low" Tag="low" />
-                                        <ComboBoxItem x:Uid="AiHub_EffortHigh" Content="high" Tag="high" />
-                                        <ComboBoxItem x:Uid="AiHub_EffortMax" Content="max" Tag="max" />
-                                    </ComboBox>
+                                        Width="240"
+                                        IsEditable="True"
+                                        ItemsSource="{x:Bind ViewModel.AiServices.MainEndpoint.EffortSuggestions, Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </tkcontrols:SettingsCard>
+                                <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.">
+                                    <StackPanel Width="240" Spacing="6">
+                                        <NumberBox
+                                            x:Uid="AiHub_ContextWindowBox"
+                                            AutomationProperties.AutomationId="AiHub_MainEndpoint_ContextWindowBox"
+                                            Minimum="1024"
+                                            Maximum="2147483647"
+                                            SmallChange="1024"
+                                            LargeChange="8192"
+                                            SpinButtonPlacementMode="Compact"
+                                            Value="{x:Bind ViewModel.AiServices.MainEndpoint.ContextWindowTokens, Mode=TwoWay}" />
+                                        <TextBlock
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                            TextWrapping="Wrap"
+                                            Text="{x:Bind ViewModel.AiServices.MainEndpoint.ContextWindowError, Mode=OneWay}"
+                                            Visibility="{x:Bind ViewModel.AiServices.MainEndpoint.ContextWindowErrorVisibility, Mode=OneWay}" />
+                                    </StackPanel>
                                 </tkcontrols:SettingsCard>
                             </tkcontrols:SettingsExpander.Items>
                         </tkcontrols:SettingsExpander>
@@ -458,16 +472,14 @@
                                         PasswordChanged="AiFallbackApiKeyBox_PasswordChanged"
                                         PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ApiModeCard" Header="API mode">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ApiModeCard" Header="API mode" Description="Choose a suggestion or enter a native API identifier. The selected kernel validates support.">
                                     <ComboBox
                                         x:Uid="AiHub_FallbackEndpoint_ApiModeComboBox"
                                         AutomationProperties.AutomationId="AiHub_FallbackEndpoint_ApiModeComboBox"
-                                        MinWidth="200"
-                                        SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Mode, Mode=TwoWay}"
-                                        SelectedValuePath="Tag">
-                                        <ComboBoxItem x:Uid="AiHub_ApiModeResponses" Content="responses (/v1/responses)" Tag="responses" />
-                                        <ComboBoxItem x:Uid="AiHub_ApiModeChat" Content="chat (/v1/chat/completions)" Tag="chat" />
-                                    </ComboBox>
+                                        Width="240"
+                                        IsEditable="True"
+                                        ItemsSource="{x:Bind ViewModel.AiServices.FallbackEndpoint.ModeSuggestions, Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Mode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ModelCard" Header="Model">
                                     <TextBox
@@ -477,17 +489,33 @@
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ReasoningCard" Header="Reasoning effort">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ReasoningCard" Header="Reasoning effort" Description="Passed unchanged to the selected kernel; support depends on the kernel and model.">
                                     <ComboBox
                                         x:Uid="AiHub_FallbackEndpoint_EffortComboBox"
                                         AutomationProperties.AutomationId="AiHub_FallbackEndpoint_EffortComboBox"
-                                        MinWidth="200"
-                                        SelectedValue="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay}"
-                                        SelectedValuePath="Tag">
-                                        <ComboBoxItem x:Uid="AiHub_EffortLow" Content="low" Tag="low" />
-                                        <ComboBoxItem x:Uid="AiHub_EffortHigh" Content="high" Tag="high" />
-                                        <ComboBoxItem x:Uid="AiHub_EffortMax" Content="max" Tag="max" />
-                                    </ComboBox>
+                                        Width="240"
+                                        IsEditable="True"
+                                        ItemsSource="{x:Bind ViewModel.AiServices.FallbackEndpoint.EffortSuggestions, Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </tkcontrols:SettingsCard>
+                                <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.">
+                                    <StackPanel Width="240" Spacing="6">
+                                        <NumberBox
+                                            x:Uid="AiHub_ContextWindowBox"
+                                            AutomationProperties.AutomationId="AiHub_FallbackEndpoint_ContextWindowBox"
+                                            Minimum="1024"
+                                            Maximum="2147483647"
+                                            SmallChange="1024"
+                                            LargeChange="8192"
+                                            SpinButtonPlacementMode="Compact"
+                                            Value="{x:Bind ViewModel.AiServices.FallbackEndpoint.ContextWindowTokens, Mode=TwoWay}" />
+                                        <TextBlock
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                            TextWrapping="Wrap"
+                                            Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.ContextWindowError, Mode=OneWay}"
+                                            Visibility="{x:Bind ViewModel.AiServices.FallbackEndpoint.ContextWindowErrorVisibility, Mode=OneWay}" />
+                                    </StackPanel>
                                 </tkcontrols:SettingsCard>
                                 <tkcontrols:SettingsCard x:Uid="AiHub_ClearFallbackCard" Header="Clear fallback endpoint">
                                     <Button
@@ -522,6 +550,31 @@
                         </tkcontrols:SettingsCard>
 
                     </StackPanel>
+
+                    <tkcontrols:SettingsExpander
+                        x:Uid="AiHub_DiagnosticsExpander"
+                        AutomationProperties.AutomationId="AiHub_DiagnosticsExpander"
+                        Header="Runtime statistics"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE9D9;}"
+                        Description="{x:Bind ViewModel.AiServices.DiagnosticsSummary, Mode=OneWay}"
+                        IsExpanded="False">
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
+                                <StackPanel Spacing="12">
+                                    <TextBlock
+                                        IsTextSelectionEnabled="True"
+                                        TextWrapping="Wrap"
+                                        Text="{x:Bind ViewModel.AiServices.DiagnosticsDetails, Mode=OneWay}" />
+                                    <TextBlock
+                                        IsTextSelectionEnabled="True"
+                                        Style="{StaticResource CaptionTextBlockStyle}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap"
+                                        Text="{x:Bind ViewModel.AiServices.DiagnosticsPersistenceStatus, Mode=OneWay}" />
+                                </StackPanel>
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
 
                     <!-- Global policy remains editable while AI is off. Task chains live on the AI Hub page. -->
                     <tkcontrols:SettingsExpander

@@ -15,13 +15,15 @@ Kit-specific developer notes. For the current framework and module lifetimes, st
 ### Development & Integration
 - **`kit-first-plugin.md`**: Kit-specific first module/plugin development path, registration checklist, and validation baseline
 - **`kit-development-experience.md`**: first-phase implementation notes, module integration lessons, stability risks, and next stabilization checklist
+- **[`ai-service-native.md`](ai-service-native.md)**: AI service 原生 Codex/Pi 执行边界、Main/Fallback 独立上下文设置与重试行为
 
 ### Optimization & Diagnostics
 - **`startup-optimization-analysis.md`**: 启动优化专项分析
+- **[`aihub-optimization-3.4.md`](aihub-optimization-3.4.md)**: AI Hub 空间构成分析、清理审核边界、执行记录与界面验证
 
 ## Kit Notes
 
-- The current active Kit modules are `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, `AIHub`, and `NetMap`.
+- The current active Kit modules are `Awake`, `LightSwitch`, `Localserver`, `UDPtest`, `AIHub`, `NetMap`, and `Winget`.
 - All official modules use the modern `KitModuleIface` / `kit_create()` contract.
 - Settings and Quick Access surfaces are powered by `Kit.Settings` and `Kit.QuickAccess`.
 

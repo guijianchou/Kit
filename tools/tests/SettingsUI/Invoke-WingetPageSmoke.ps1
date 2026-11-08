@@ -46,9 +46,11 @@ $testProcess = $null
 try {
     $env:TEMP = $testTemp
     $env:TMP = $testTemp
-    # Persisted module state remains disabled. Resize/theme changes also keep the
-    # in-memory flag disabled. Stable layout fixtures enable that flag only after
-    # stopping page polling. No confirmation is accepted or operation submitted.
+    # Persisted module state remains disabled. Enabled synthetic layout fixtures
+    # suspend the page's lifecycle activity source as well as the VM timer, so
+    # delayed window events cannot restart service polling. Real lifecycle
+    # handlers and final cached-navigation checks remain attached and enabled.
+    # No confirmation is accepted or operation submitted.
     $generalPath = Join-Path $env:LOCALAPPDATA 'Kit\settings.json'
     $general = if ($backups[$generalPath]) { [Text.Encoding]::UTF8.GetString($backups[$generalPath]) | ConvertFrom-Json -AsHashtable } else { @{} }
     if ($general -isnot [Collections.IDictionary]) { throw 'General settings must be a JSON object.' }

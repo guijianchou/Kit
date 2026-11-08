@@ -3516,19 +3516,22 @@ namespace ViewModelTests
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,16\"");
             Assert.AreEqual(8, pageXaml.Split("KitIconBadgeStyle").Length - 1, "All 40/36/34 icon badges should use the shared badge style.");
             Assert.AreEqual(2, pageXaml.Split("KitIconBadgeSmallStyle").Length - 1, "The readiness and AI report badges should use the shared small badge style.");
-            Assert.AreEqual(10, pageXaml.Split("KitMetricTileValueStyle").Length - 1, "Metric numbers (audit tiles, activity stats, optimization tiles) should use the shared value style.");
+            Assert.AreEqual(13, pageXaml.Split("KitMetricTileValueStyle").Length - 1, "Metric numbers (audit tiles, activity stats, optimization and inventory tiles) should use the shared value style.");
             Assert.AreEqual(12, pageXaml.Split("KitFilterPillToggleStyle").Length - 1, "Severity, source and view filters should share the filter pill style.");
             Assert.IsFalse(pageXaml.Contains("CornerRadius=\"10\"", StringComparison.Ordinal), "The orphan 10px capsule radius should be normalized.");
             Assert.IsFalse(pageXaml.Contains("Opacity=\"0.25\"", StringComparison.Ordinal), "The fake-track ProgressRing hack should be gone.");
             Assert.AreEqual(2, pageXaml.Split("<ProgressRing").Length - 1, "The health gauge should render a single value ring beside the optimization spinner.");
 
             // 2. Responsive behavior is declarative and mirrors the element-width thresholds.
-            Assert.AreEqual(12, pageXaml.Split("ui:ControlSizeTrigger").Length - 1, "Readiness, audit overview, action headers, download actions and candidate search should have responsive layout triggers.");
+            Assert.AreEqual(18, pageXaml.Split("ui:ControlSizeTrigger").Length - 1, "Readiness, audit overview, action headers, download actions, candidate search and inventory should have responsive layout triggers.");
             Assert.IsFalse(pageXaml.Contains("SizeChanged=\"On", StringComparison.Ordinal), "Page markup should not wire imperative SizeChanged handlers.");
             Assert.IsFalse(pageCode.Contains("SizeChanged", StringComparison.Ordinal), "Code-behind should not keep responsive SizeChanged handlers.");
             StringAssert.Contains(pageXaml, "Target=\"AiReadinessActions.(Grid.Row)\"");
             StringAssert.Contains(pageXaml, "Target=\"AuditFindingsSummary.(Grid.Row)\"");
             StringAssert.Contains(pageXaml, "Target=\"OptimizationCommandActions.(Grid.Row)\"");
+            StringAssert.Contains(pageXaml, "Target=\"InventoryActions.(Grid.Row)\"");
+            StringAssert.Contains(pageXaml, "Target=\"InventoryRecentTile.(Grid.Row)\"");
+            StringAssert.Contains(pageXaml, "Target=\"InventoryFilterComboBox.(Grid.Row)\"");
 
             // 3. Touched controls resolve strings and accessibility names from resw.
             StringAssert.Contains(pageXaml, "x:Uid=\"AIHub_Segment_SecurityAudit\"");

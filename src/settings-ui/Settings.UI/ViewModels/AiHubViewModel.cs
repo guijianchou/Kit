@@ -31,6 +31,8 @@ namespace Kit.Settings.UI.ViewModels;
 /// </summary>
 public sealed class AiHubEndpointViewModel : Observable
 {
+    private double _contextWindowTokens;
+
     public AiTargetSettings Settings { get; }
 
     public string Label { get; }
@@ -40,6 +42,10 @@ public sealed class AiHubEndpointViewModel : Observable
     public Visibility FallbackVisibility { get; }
 
     public ICommand TestCommand { get; }
+
+    public string[] ModeSuggestions { get; } = ["responses", "chat", "openai-responses", "openai-completions"];
+
+    public string[] EffortSuggestions { get; } = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"];
 
     public string BaseUrl
     {
@@ -114,6 +120,34 @@ public sealed class AiHubEndpointViewModel : Observable
         }
     }
 
+    public double ContextWindowTokens
+    {
+        get => _contextWindowTokens;
+        set
+        {
+            if (!_contextWindowTokens.Equals(value))
+            {
+                _contextWindowTokens = value;
+                Settings.ContextWindowTokens = IsValidContextWindow(value) ? (int)value : 0;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ContextWindowError));
+                OnPropertyChanged(nameof(ContextWindowErrorVisibility));
+                OnEdited();
+            }
+        }
+    }
+
+    public string ContextWindowError => IsValidContextWindow(ContextWindowTokens)
+        ? string.Empty
+        : "AiHub_ContextWindowInvalid".GetLocalizedOrFallback("Enter a whole number of tokens between 1,024 and 2,147,483,647.");
+
+    public Visibility ContextWindowErrorVisibility => IsValidContextWindow(ContextWindowTokens) ? Visibility.Collapsed : Visibility.Visible;
+
+    private static bool IsValidContextWindow(double value) => double.IsFinite(value)
+        && value >= AiTargetSettings.MinimumContextWindowTokens
+        && value <= int.MaxValue
+        && value == Math.Truncate(value);
+
     public string ModelSummary => string.IsNullOrWhiteSpace(Settings.Model)
         ? "AiHub_ModelNotSet".GetLocalizedOrFallback("No model set")
         : $"{Settings.Model} · {Settings.Effort}";
@@ -136,11 +170,15 @@ public sealed class AiHubEndpointViewModel : Observable
 
     public void NotifyUpdated()
     {
+        _contextWindowTokens = Settings.ContextWindowTokens;
         OnPropertyChanged(nameof(BaseUrl));
         OnPropertyChanged(nameof(ApiKey));
         OnPropertyChanged(nameof(Mode));
         OnPropertyChanged(nameof(Model));
         OnPropertyChanged(nameof(Effort));
+        OnPropertyChanged(nameof(ContextWindowTokens));
+        OnPropertyChanged(nameof(ContextWindowError));
+        OnPropertyChanged(nameof(ContextWindowErrorVisibility));
         OnPropertyChanged(nameof(ModelSummary));
         OnPropertyChanged(nameof(EndpointSummary));
     }
@@ -150,6 +188,7 @@ public sealed class AiHubEndpointViewModel : Observable
     internal AiHubEndpointViewModel(AiTargetSettings settings, AiHubViewModel owner, bool fallback)
     {
         Settings = settings;
+        _contextWindowTokens = settings.ContextWindowTokens;
         _owner = owner;
         Label = fallback
             ? "AiHub_EndpointLabel_Fallback".GetLocalizedOrFallback("Fallback")
@@ -165,7 +204,7 @@ public sealed class AiHubEndpointViewModel : Observable
 /// <summary>
 /// ViewModel managing AI Hub runtime, endpoints, and security policies within Kit Settings.
 /// </summary>
-public sealed class AiHubViewModel : Observable, IDisposable
+public sealed partial class AiHubViewModel : Observable, IDisposable
 {
     private readonly KernelManagerService _kernelManager = new();
     private readonly RouteDispatcher _routeDispatcher;
@@ -263,6 +302,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
             _securityService = loaded.securityService;
             _config = loaded.config;
             _engine = loaded.engine;
+            InitializeDiagnostics();
             _activeKernelIndex = AiKernelCatalog.IsPi(_config.SelectedKernel) ? 1 : 0;
             _pendingKernelIndex = _activeKernelIndex;
             _settingsLoaded = true;
@@ -771,7 +811,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
     {
         if (!RouteDispatcher.IsTargetCompatible(_config.SelectedKernel, target))
         {
-            ShowStatus("Endpoint configuration is not compatible with the selected kernel.", InfoBarSeverity.Warning);
+            ShowStatus("AiHub_EndpointInvalid".GetLocalizedOrFallback("Check the endpoint URL, model, native API mode, reasoning effort, and context window."), InfoBarSeverity.Warning);
             return;
         }
 
@@ -810,7 +850,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         var saved = _settingsStore.Load();
         if (saved.Targets.Any(target => target.IsActive && !string.IsNullOrWhiteSpace(target.BaseUrl) && !RouteDispatcher.IsTargetCompatible(candidate, target)))
         {
-            ShowStatus("Persisted endpoints are incompatible with the selected kernel.", InfoBarSeverity.Warning);
+            ShowStatus("AiHub_EndpointInvalid".GetLocalizedOrFallback("Check the endpoint URL, model, native API mode, reasoning effort, and context window."), InfoBarSeverity.Warning);
             return;
         }
 
@@ -858,16 +898,14 @@ public sealed class AiHubViewModel : Observable, IDisposable
     {
         try
         {
-            var main = _config.GetMainTarget();
-            if (main is null || !RouteDispatcher.IsTargetCompatible(_config.SelectedKernel, main)
-                || _config.Targets.Skip(1).Any(target => target.IsActive && !RouteDispatcher.IsTargetCompatible(_config.SelectedKernel, target)))
+            if (!TryPrepareEndpointSettings(_config, out var targets))
             {
-                ShowStatus("One or more endpoint configurations are invalid or incompatible.", InfoBarSeverity.Warning);
+                ShowStatus("AiHub_EndpointInvalid".GetLocalizedOrFallback("Check the endpoint URL, model, native API mode, reasoning effort, and context window."), InfoBarSeverity.Warning);
                 return;
             }
 
-            ActivateConfiguredEndpoints();
-            _settingsStore.Update(config => config.Targets = new ObservableCollection<AiTargetSettings>(_config.Targets.Select(target => target.Clone())));
+            _settingsStore.Update(config => config.Targets = targets);
+            _config.Targets[1].IsActive = targets[1].IsActive;
             HasUnsavedEndpointChanges = false;
             AiHubEngine.RaiseStateChanged();
             ShowStatus("AiHub_EndpointsSaved".GetLocalizedOrFallback("Endpoint settings saved."), InfoBarSeverity.Success);
@@ -879,15 +917,20 @@ public sealed class AiHubViewModel : Observable, IDisposable
     }
 
     /// <summary>
-    /// A fallback is only used while it is active, and nothing else in the UI activates it,
-    /// so a filled-in fallback URL counts as switching the fallback on.
+    /// Creates the exact endpoint snapshot to validate and save. Filling a fallback URL
+    /// activates that snapshot before validation without changing an unsaved draft.
     /// </summary>
-    private void ActivateConfiguredEndpoints()
+    internal static bool TryPrepareEndpointSettings(AiHubConfig config, out ObservableCollection<AiTargetSettings> targets)
     {
-        if (_config.GetFallbackTarget() is { } fallback)
+        targets = new ObservableCollection<AiTargetSettings>(config.Targets.Select(target => target.Clone()));
+        if (targets.Count != 2)
         {
-            fallback.IsActive = !string.IsNullOrWhiteSpace(fallback.BaseUrl);
+            return false;
         }
+
+        targets[1].IsActive = !string.IsNullOrWhiteSpace(targets[1].BaseUrl);
+        return RouteDispatcher.IsTargetCompatible(config.SelectedKernel, targets[0])
+            && (!targets[1].IsActive || RouteDispatcher.IsTargetCompatible(config.SelectedKernel, targets[1]));
     }
 
     /// <summary>Restores the endpoint fields from the persisted configuration.</summary>
@@ -906,6 +949,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
                 target.Mode = source.Mode;
                 target.Model = source.Model;
                 target.Effort = source.Effort;
+                target.ContextWindowTokens = source.ContextWindowTokens;
             }
 
             foreach (var endpoint in Endpoints)
@@ -924,15 +968,14 @@ public sealed class AiHubViewModel : Observable, IDisposable
 
     private async Task SaveAllAsync(CancellationToken token)
     {
-        var main = _config.GetMainTarget();
-        if (main is null || !RouteDispatcher.IsTargetCompatible(_config.SelectedKernel, main)
-            || _config.Targets.Skip(1).Any(target => target.IsActive && !RouteDispatcher.IsTargetCompatible(_config.SelectedKernel, target)))
+        if (!TryPrepareEndpointSettings(_config, out var targets))
         {
-            ShowStatus("One or more endpoint configurations are invalid or incompatible.", InfoBarSeverity.Warning);
+            ShowStatus("AiHub_EndpointInvalid".GetLocalizedOrFallback("Check the endpoint URL, model, native API mode, reasoning effort, and context window."), InfoBarSeverity.Warning);
             return;
         }
 
-        _settingsStore.Update(config => config.Targets = new ObservableCollection<AiTargetSettings>(_config.Targets.Select(target => target.Clone())));
+        _settingsStore.Update(config => config.Targets = targets);
+        _config.Targets[1].IsActive = targets[1].IsActive;
         AiHubEngine.RaiseStateChanged();
 
         for (int index = 0; index < _policyDrafts.Length; index++)
@@ -1201,6 +1244,7 @@ public sealed class AiHubViewModel : Observable, IDisposable
         }
 
         _disposed = true;
+        DisposeDiagnostics();
         if (_engine is not null)
         {
             _engine.StateChanged -= OnHubStateChanged;

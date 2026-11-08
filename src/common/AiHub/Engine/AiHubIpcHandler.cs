@@ -79,6 +79,17 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
             return SerializeFailure(request.RequestId, AiErrorCode.HostUnavailable);
         }
 
+        if (request.Action == "get_diagnostics")
+        {
+            return JsonSerializer.Serialize(new AiHubIpcResponse
+            {
+                RequestId = request.RequestId,
+                IsSuccess = _engine is TaskAiEngine,
+                ErrorCode = _engine is TaskAiEngine ? AiErrorCode.None : AiErrorCode.HostUnavailable,
+                Statistics = (_engine as TaskAiEngine)?.Diagnostics.GetSnapshot(),
+            }, AiHubJsonContext.Default.AiHubIpcResponse);
+        }
+
         if (request.Action == "get_status")
         {
             // Reports the cached verdict by default. Pass refresh=true to force a real
@@ -197,6 +208,9 @@ public sealed partial class AiHubIpcHandler(IAiTaskEngine engine) : IDisposable
                 RequestId = request.RequestId,
                 IsSuccess = result.IsSuccess,
                 ErrorCode = result.ErrorCode,
+                ErrorMessage = result.ErrorMessage,
+                Diagnostics = result.Diagnostics,
+                FailureRoute = result.FailureRoute,
                 Payload = result.Payload,
                 UsedModel = result.UsedModel,
                 UsedRoute = result.UsedRoute,

@@ -304,6 +304,17 @@ internal sealed class KernelFixture : IDisposable
                 if (args.Contains("--version")) { Console.WriteLine("codex-cli 1.2.3"); return 0; }
                 if (args.Contains("--bundled"))
                 {
+                    string nativeConfig = File.ReadAllText(Path.Combine(Environment.GetEnvironmentVariable("CODEX_HOME"), "config.toml"));
+                    if (nativeConfig.Contains("wire_api = \"fixture-unsupported\""))
+                    {
+                        Console.Error.WriteLine("Error loading config: unknown variant fixture-unsupported synthetic-fixture-secret https://synthetic.invalid/private");
+                        return 9;
+                    }
+                    if (nativeConfig.Contains("wire_api = \"fixture-malformed-catalog\""))
+                    {
+                        Console.WriteLine("not a catalog");
+                        return 0;
+                    }
                     Emit(new { models = new[] { new { slug = "fixture-success", use_responses_lite = true, retained = "capability" } } });
                     return 0;
                 }
@@ -335,6 +346,40 @@ internal sealed class KernelFixture : IDisposable
                 File.WriteAllText(Path.Combine(captureRoot, "capture-" + Process.GetCurrentProcess().Id + ".json"), capture);
                 try { File.WriteAllText(Path.Combine(captureRoot, "capture.json"), capture); }
                 catch (IOException) { }
+
+                if (!codex && config.Contains("\"api\":\"fixture-unsupported\""))
+                {
+                    Console.Error.WriteLine("unknown API fixture-unsupported synthetic-fixture-secret https://synthetic.invalid/private");
+                    return 9;
+                }
+
+                if (model == "fixture-native-usage")
+                {
+                    if (codex)
+                    {
+                        for (int attempt = 1; attempt <= 2; attempt++)
+                        {
+                            string retry = "Reconnecting... " + attempt + "/3 HTTP 503 synthetic-fixture-secret https://synthetic.invalid/private";
+                            Emit(new { type = "error", message = retry });
+                            Console.Error.WriteLine(retry);
+                        }
+                    }
+                    else
+                    {
+                        Emit(new { type = "auto_retry_start", attempt = 1, maxAttempts = 3, errorMessage = "HTTP 503 synthetic-fixture-secret" });
+                        Emit(new { type = "auto_retry_end", success = true, attempt = 1 });
+                    }
+                }
+
+                if (model == "fixture-account-unavailable" || model == "fixture-model-not-found" || model == "fixture-rate-limit" || model == "fixture-quota")
+                {
+                    string rejection = model == "fixture-account-unavailable" ? "HTTP 404 Model secret-model is not supported by any configured account in this group" :
+                        model == "fixture-model-not-found" ? "HTTP 404 model_not_found secret-model" :
+                        model == "fixture-quota" ? "HTTP 429 insufficient_quota secret-account" : "HTTP 429 rate limit secret-account";
+                    if (codex) Emit(new { type = "turn.failed", error = new { message = rejection } });
+                    else Emit(new { type = "message_end", message = new { role = "assistant", stopReason = "error", errorMessage = rejection } });
+                    return 0;
+                }
 
                 if (model == "fixture-handshake" || model == "fixture-tracked-success")
                 {
@@ -429,21 +474,20 @@ internal sealed class KernelFixture : IDisposable
                     if (model == "fixture-tool") Emit(new { type = "item.completed", item = new { type = "command_execution" } });
                     Emit(new { type = "item.completed", item = new { type = "agent_message", text = payload } });
                     File.WriteAllText(Arg(args, "--output-last-message"), model == "fixture-large-file" ? new string('x', 9000000) : payload);
-                    if (model != "fixture-incomplete") Emit(new { type = "turn.completed", model = "fixture-actual" });
+                    if (model != "fixture-incomplete") Emit(new { type = "turn.completed", model = "fixture-actual",
+                        usage = model == "fixture-native-usage" ? new { input_tokens = 1000, output_tokens = 100, cached_input_tokens = 250 } : null });
                 }
                 else
                 {
-                    Emit(new
+                    var completedMessage = new
                     {
-                        type = "message_end",
-                        message = new
-                        {
-                            role = "assistant", model = "fixture-actual",
-                            stopReason = model == "fixture-incomplete" ? "length" : model == "fixture-tool" ? "toolUse" : "stop",
-                            content = new[] { new { type = "text", text = payload } }
-                        }
-                    });
-                    Emit(new { type = "agent_end", messages = new object[0] });
+                        role = "assistant", model = "fixture-actual",
+                        stopReason = model == "fixture-incomplete" ? "length" : model == "fixture-tool" ? "toolUse" : "stop",
+                        content = new[] { new { type = "text", text = payload } },
+                        usage = model == "fixture-native-usage" ? new { input = 750, output = 100, cacheRead = 250, cacheWrite = 50 } : null
+                    };
+                    Emit(new { type = "message_end", message = completedMessage });
+                    Emit(new { type = "agent_end", messages = model == "fixture-native-usage" ? new object[] { completedMessage } : new object[0] });
                 }
                 return 0;
             }

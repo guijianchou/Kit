@@ -3,6 +3,7 @@ namespace Kit.AiHub.Contract;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Kit.AiHub.Models;
 
 /// <summary>
 /// Version-one messages travel over the existing Runner/Settings two-way pipe.
@@ -57,4 +58,7 @@ public sealed class AiHubIpcResponse
     /// configured value such as an API key.
     /// </summary>
     public string? ErrorMessage { get; init; }
+    public AiRouteDiagnostics? Diagnostics { get; init; }
+    public string FailureRoute { get; init; } = string.Empty;
+    public AiDiagnosticsSnapshot? Statistics { get; init; }
 }

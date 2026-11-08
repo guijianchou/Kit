@@ -20,11 +20,11 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 | [UDPtest](#34-udptest线路质量探测) | 检测已配置线路的延迟、抖动、成功率及 NAT | Settings + 诊断 Service | Kit |
 | [AI Hub](#35-ai-hub审计与系统优化) | 系统事件审计、下载整理与缓存清理 | Settings + 定时审计 Worker | Kit |
 | [NetMap](#36-netmap网络地图与路径观测) | 观察当前 Direct / Proxy 出口、服务连通性和 ICMP 路径 | Settings + 观测 Service | Kit |
-| [WinGet](src/modules/Winget/README.md) | 软件发现、更新与卸载、确认后批量操作、每日检查与通知 | 独立 WingetService 进程 | Kit |
+| [WinGet](#37-winget软件更新与安装) | 软件发现、安装、更新与卸载、确认后批量操作、每日检查与通知 | 独立 WingetService 进程 | Kit |
 
 启动运行目录中的 `Kit.exe` 后，在 Settings 中启用需要的模块并配置。**模块开关与任务开始是两层操作**：例如 Localserver 启用后仍需单独启动服务，NetMap 启用后仍需点击 Start。
 
-首页提供实时系统资源监控（CPU、内存、磁盘空间、双显卡/核显与独显硬件信息、驱动版本及温度）与网络双出口（Direct / Proxy）对比；常规页管理外观、启动行为和共享 AI 服务；Quick Access 通过托盘菜单提供模块入口与动作，Kit 不注册全局快捷键。全界面基于原生 WinUI 3 Fluent Design 规范设计，采用层级设计令牌、响应式卡片布局、Cascadia Code 规范等宽字体排版、无障碍元数据（键盘可达控件、屏幕阅读器名称、高对比度配色）以及 100% 完整中英双语本地化（零硬编码字符串）。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
+首页提供实时系统资源监控（CPU、内存、磁盘空间、双显卡/核显与独显硬件信息、驱动版本及温度）与网络双出口（Direct / Proxy）对比；常规页管理外观、启动行为和共享 AI 服务；Quick Access 通过托盘菜单提供模块入口与动作，Kit 不注册全局快捷键。界面采用原生 WinUI 3 Fluent Design 样式，使用层级设计令牌、响应式卡片布局、Cascadia Code 等宽字体、无障碍元数据（键盘可达控件、屏幕阅读器名称、高对比度配色）及中英文呈现（en-US / zh-CN）。启用托盘图标时，关闭 Settings 不代表退出 Kit，完整退出使用托盘菜单。
 
 ## 2. 主框架
 
@@ -63,11 +63,13 @@ Settings 通过现有 IPC 提交设置和模块开关；Runner 调用模块接�
 
 | 组件 | 负责什么 |
 | --- | --- |
-| **AI Services**（常规页） | 配置 Codex / Pi 内核、Main / Fallback 端点、模型、凭据和策略；由 `Kit.AiHub` 提供执行、取消、分批及结果校验 |
+| **AI Services**（常规页） | 配置 Codex / Pi 内核及独立的 Main / Fallback 端点、模型、凭据、上下文窗口和策略；查看会话统计与安全诊断 |
 | **AI Hub**（插件页） | 组织系统审计、优化候选项与用户操作；业务位于 `Kit.AIHubLib` |
 | **AIHubWorker** | 按计划执行本地规则审计并保存历史，不调用 AI 内核 |
 
-共享 AI 服务是 Kit 内部的库能力，目前由 AI Hub 消费。Settings 中的 AI 分析通过外部 CLI 内核访问所配置的端点；Fallback 需配置并启用才会参与符合条件的失败回退。配置归属及已知限制见 [AI 服务说明](doc/ai-service-review.md)。
+共享 `Kit.AiHub` 服务供 AI Hub 和 NetMap AI Check 使用。模型调用始终通过原生 **Codex CLI 或 Pi CLI**，Kit 负责策略、分批、取消和结果校验。Main 与 Fallback 分别设置上下文窗口，默认均为 **256,000 tokens**。API 模式和推理强度可填写原生标识，是否支持由已安装的 CLI 与端点决定；能保存不代表模型支持该配置。
+
+原生重试结束后，符合条件的失败才会进入已配置的 Fallback；Kit 不另套同路由重试循环。常规页展示当前进程的任务/路由计数、重试结果及已报告的 token 用量，缺失用量标为未知。安全诊断区分鉴权、超时、取消和输出错误。配置归属、协议兼容及诊断边界见[原生执行与设置说明](doc/devdoc/ai-service-native.md)。
 
 ### 2.3 运行目录
 
@@ -197,11 +199,12 @@ flowchart TB
     W -->|"定时规则审计，无 AI 调用"| H
 ```
 
-- **安全审计**：收集 Windows 事件并运行本地规则，AI 可用时增强分析；也可对已有结果执行深度分析。AI 失败时保留规则结果并说明分析状态。
+- **安全审计**：收集 Windows 事件并运行本地规则，AI 可用时增强分析；也可对已有结果执行深度分析。AI 失败时保留规则结果，长错误在有界详情区换行并可选中复制；鉴权失败时标明已知的失败路由，提示检查对应端点、凭据和权限。
+- **空间构成**：“分析空间”无需 AI，盘点已知浏览器、着色器、包管理器和应用缓存、崩溃报告及系统管理的存储，展示实测大小、文件年龄、最大文件与覆盖不完整的情况。这些观测不会成为清理候选，也不代表可回收空间；Windows 核心存储、已安装程序、运行时、凭据和会话保持保护。
 - **系统优化**：本地扫描下载文件及白名单缓存 → AI 审核候选元数据 → 用户审查并确认 → 本地执行。未通过审核的条目不进入可执行集合；执行前重新校验，缓存清理仅永久删除已审核快照中的文件，新文件、变更、占用或不可访问的文件一律跳过。
 - **任务生命周期**：审计与优化可同时运行，各自取消；切换标签页不中断任务，关闭模块会取消两项任务。取消不撤销已经完成的文件操作。
 - **后台审计**：Worker 只执行定时规则扫描，节奏与审计模式读取页面写入的同一份插件设置，保存后无需重启即可生效；未配置节奏时不执行，Worker 随模块常驻。
-- **详细资料**：[模块文档](src/modules/AIHub/README.md)记录架构与维护细节；历史验证见[变更记录](changelog.md)。
+- **详细资料**：[模块文档](src/modules/AIHub/README.md)记录架构与维护细节；[优化工作流](doc/devdoc/aihub-optimization-3.4.md)说明盘点和清理边界。历史验证见[变更记录](changelog.md)。
 
 ### 3.6 NetMap：网络地图与路径观测
 
@@ -235,6 +238,18 @@ flowchart TB
 - **AI 链路判定**：页面上的手动 **AI 分析** 按最新 MTR 快照判定跨境链路类型（如 CMI、CN2、163，可含移动、联通、电信线路），结论以徽标和一句话摘要显示在代理出口卡片，证据在“详情”中。判定经统一 Kit.AiHub 引擎的轻量 `route-analysis` 任务执行，只需一条内联指令，不部署 `Chains/route-analysis/AGENTS.md`；宿主与插件安全策略、脱敏、输出审计与备用链路全部生效。需先在 AI Hub 安装并验证内核；缺少 MTR 数据、AI 中心未开启或内核缺失都有明确提示。结果与检测一样仅保留在当前进程内存。
 - **运行方式**：原生 `Kit.NetMapModuleInterface.dll` 管理开关与后台服务进程，检测结果通过本地命名管道非阻塞流式同步至 Settings 界面。使用方法、数据来源与验证范围见[模块文档](src/modules/NetMap/README.md)。
 
+### 3.7 WinGet：软件更新与安装
+
+使用本机 Windows Package Manager 检查更新、搜索官方 WinGet 社区软件目录及管理已安装软件。启用模块后，`Kit.WingetService.exe` 检测本机 WinGet 状态，并独立于 Settings 窗口执行操作。
+
+- **更新 → 已安装 → 发现软件**：各工作区分别记忆筛选、来源、排序及详细/紧凑/网格视图。更新页比较已安装与可用版本，支持忽略软件；未知已安装版本默认隐藏，需主动选择。已安装页包含匹配的 WinGet 软件及未匹配的 Local PC/MSIX 记录；发现页搜索社区目录，不搜索 Microsoft Store 目录。
+- **搜索与详情**：先展示名称和 ID，再按需解析版本和安装元数据；未解析值明确标注，打开详情或准备批量操作时解析并校验选中软件。详情展示可用的版本、发布者、主页、许可证和发行说明。搜索失败或取消时保留先前结果，并展示加载及重试反馈。
+- **确认后执行**：最多选择 50 个软件组成串行安装/更新/卸载队列，核对精确版本、安装选项和协议后确认。原生 WinGet 负责下载、校验及安装，按需显示安装器和 UAC。操作历史与结果保留；取消会移除待执行项，正在运行的安装器通过其原生窗口控制。重启恢复仅检查安装状态，不自动重放操作。支持列表 CSV 导出及所选目录软件的 WinGet JSON 清单导出。
+- **检查与存储**：手动或每日检查可通过 Windows 通知报告新更新集合，不会自动安装。设置与有界队列/历史存放在 `%LOCALAPPDATA%\Kit\Winget`。原生安装自行管理临时下载与哈希校验；旧下载导出缓存位于 `%TEMP%\Kit\Winget`，有年龄和容量限制。检查失败后退避，安装中断后先核查状态再允许尝试。
+- **WinUI 3 + Mica**：页面居中，使用语义配色和图标区分就绪状态与操作结果，突出版本信息，并提供分层详情卡片和有界输出区。筛选和命令栏适配窄窗口，每日检查与通知选项上下排列。状态轮询只更新变化值，保留列表行、焦点和选择；原生输出经过过滤和节流，减少重复重绘。
+
+来源范围、安装选项、缓存限制、恢复行为及配套插件/服务图标见 [WinGet 模块文档](src/modules/Winget/README.md)。
+
 ## 4. 构建与发布
 
 ### 4.1 开发环境
@@ -264,7 +279,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete 
 .\tools\build\Stage-Release.ps1
 ```
 
-[Stage-Release.ps1](tools/build/Stage-Release.ps1) 从版本文件取值，生成 `bin/release/<版本>/` 和校验清单，不生成 ZIP。通过对各后台 Worker 共享 CoreCLR/BCL 运行时并彻底剔除 PDB 调试符号，输出约 568 MB 的轻量瘦身版发布包。Debug 可用 [Stage-Debug.ps1](tools/build/Stage-Debug.ps1) 整理到 `bin/debug/<版本>/`。需要交付整个目录，不能只复制 `Kit.exe` 或某个插件 DLL。
+[Stage-Release.ps1](tools/build/Stage-Release.ps1) 从版本文件取值，生成 `bin/release/<版本>/` 和 SHA-256 校验清单，不生成 ZIP。脚本从已有的共享运行时构建目录筛选运行文件，排除测试和编译中间产物，并校验版本、依赖及复制文件的哈希；有同名可执行文件或 DLL 的 PDB 会保留，包大小取决于当前构建。Debug 可用 [Stage-Debug.ps1](tools/build/Stage-Debug.ps1) 整理到 `bin/debug/<版本>/`。需要交付整个目录，不能只复制 `Kit.exe` 或某个插件 DLL。
 
 ### 4.3 验证与实机测试
 
@@ -296,12 +311,15 @@ pwsh -ExecutionPolicy Bypass -File .\tools\tests\NetMap\Invoke-NetMapPageSmoke.p
 | `AiHub/service-settings.json` | 共享 AI 服务配置 |
 | `AiHub/secrets.dat`、`AiHub/security.md`、`AiHub/chains/` | 加密凭据、全局与任务策略 |
 | `AiHub/kernels/`、`AiHub/State/` | CLI 内核、审计历史等状态 |
+| `AiHub/Logs/diagnostics.json` | 有界 AI 任务/路由诊断历史，遵循共享日志级别 |
 | `Localserver/services.json`、`Localserver/State/` | 服务目录、进程所有权记录 |
 | `NetMap/Data/` | 手动下载的托管 ASN 数据库 |
 | `RunnerLogs/`、`Settings/Logs/<version>/`、模块日志目录 | Runner、界面与 Worker 诊断日志 |
 | `crash.log` | 异常诊断 |
 
 Windows 不区分目录大小写，因此 AI Hub 插件与共享 AI 服务使用不同文件名：`settings.json` 与 `service-settings.json`。
+
+AI 诊断历史最多 256 条、256 KiB，仅记录任务结果及安全元数据，不含提示词、模型输出、API key 或端点 URL。关闭日志会停止新增磁盘记录，当前进程的会话统计仍可查看。
 
 若出现配置保存被拒绝，先检查构建产物的 Windows 完整性标签。日志固定写入各模块配置的路径，写入失败不再转存到 LocalLow、临时目录或程序目录；诊断工具仍可读取旧版本留下的 LocalLow 日志。清空配置不能修复产物权限。已知情况与处理说明见 [AI 服务说明](doc/ai-service-review.md)。
 
@@ -323,6 +341,8 @@ Windows 不区分目录大小写，因此 AI Hub 插件与共享 AI 服务使用
 
 - [插件开发规范](PLUGIN_DEVELOPMENT.md)：接口、注册、数据隔离、WinUI、本地化与生命周期。
 - [AI 服务说明](doc/ai-service-review.md)：配置归属、执行机制、已知限制与历史验证。
+- [AI 原生执行与设置](doc/devdoc/ai-service-native.md)：独立路由设置、上下文窗口、重试与诊断。
+- [AI Hub 优化工作流](doc/devdoc/aihub-optimization-3.4.md)：只读盘点、审核后执行与受保护路径。
 - [NetMap 模块说明](src/modules/NetMap/README.md)：数据来源、设计决策与测试范围。
 - [架构资料索引](doc/devdoc/README.md)：PowerToys 架构、Kit 设计和开发经验；设计方向不代表已实现能力。
 - [变更记录](changelog.md) · [许可证](LICENSE)。

@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Contract;
+using Kit.AiHub.Models;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -252,6 +253,69 @@ public class NetMapAiServiceTests
         Assert.AreEqual(NetMapViewModel.Text(resourceKey), response.ErrorMessage);
         Assert.IsFalse(string.IsNullOrWhiteSpace(response.ErrorMessage));
         Assert.AreEqual(string.Empty, response.Details);
+    }
+
+    [TestMethod]
+    public async Task AnalyzeRouteAsync_ReportsTypedNativeFailureDetailsWithoutProviderText()
+    {
+        var engine = new CapturingEngine
+        {
+            Result = new AiTaskResult<NetMapAiRouteResult>
+            {
+                ErrorCode = AiErrorCode.EndpointFailed,
+                ErrorMessage = "provider detail must never reach the UI",
+                Diagnostics = new AiRouteDiagnostics
+                {
+                    Phase = "execute",
+                    Reason = "RateLimited",
+                    HttpStatusCode = 429,
+                    NativeRetryCount = 4,
+                    NativeRetryLimit = 4,
+                    CancellationSource = "none",
+                    ProcessFailure = "None",
+                    ExitCode = 1,
+                    ContextWindowTokens = 256000,
+                    ElapsedMilliseconds = 12000,
+                },
+            },
+        };
+
+        var response = await NetMapAiService.AnalyzeRouteAsync(SyntheticTrace(), engine, false);
+
+        Assert.IsFalse(response.Success);
+        StringAssert.StartsWith(response.ErrorMessage, NetMapViewModel.Text("AiEndpointFailed"));
+        StringAssert.Contains(response.ErrorMessage, "phase=execute, reason=RateLimited, httpStatus=429");
+        StringAssert.Contains(response.ErrorMessage, "nativeRetries=4/4");
+        StringAssert.Contains(response.ErrorMessage, "contextTokens=256000");
+        Assert.IsFalse(response.ErrorMessage.Contains("provider detail", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task AnalyzeRouteAsync_RejectsArbitraryTextInsideTypedDiagnosticFields()
+    {
+        const string secret = "https://private-endpoint.example/sk-secret";
+        var engine = new CapturingEngine
+        {
+            Result = new AiTaskResult<NetMapAiRouteResult>
+            {
+                ErrorCode = AiErrorCode.ExecutionFailed,
+                ErrorMessage = secret,
+                Diagnostics = new AiRouteDiagnostics
+                {
+                    Phase = secret,
+                    Reason = secret,
+                    CancellationSource = secret,
+                    ProcessFailure = secret,
+                    HttpStatusCode = 9999,
+                },
+            },
+        };
+
+        var response = await NetMapAiService.AnalyzeRouteAsync(SyntheticTrace(), engine, false);
+
+        Assert.IsFalse(response.Success);
+        Assert.IsFalse(response.ErrorMessage.Contains(secret, StringComparison.Ordinal));
+        StringAssert.Contains(response.ErrorMessage, "phase=unknown, reason=Unknown, httpStatus=unknown");
     }
 
     [TestMethod]

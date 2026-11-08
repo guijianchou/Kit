@@ -5,6 +5,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Kit.AiHub.Models;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -81,6 +82,89 @@ namespace ViewModelTests
             Assert.AreEqual("test security policy", vm.CurrentPolicyContent);
             Assert.AreEqual("updated opt policy", vm.OptimizationPolicyContent);
             Assert.AreEqual(vm.PoliciesLoaded && vm.CanToggle && !vm.IsBusy, vm.CanEditPolicies);
+        }
+
+        [TestMethod]
+        public async Task AiHubEndpointContextWindowsRemainIndependentAndRejectFractionalTokens()
+        {
+            using var vm = new AiHubViewModel();
+            await vm.Initialization;
+            var main = vm.MainEndpoint!;
+            var fallback = vm.FallbackEndpoint!;
+
+            main.ContextWindowTokens = 512000;
+            fallback.ContextWindowTokens = 128000;
+            main.Mode = "native-api.v2";
+            main.Effort = "xhigh";
+
+            Assert.AreEqual(512000, main.Settings.ContextWindowTokens);
+            Assert.AreEqual(128000, fallback.Settings.ContextWindowTokens);
+            Assert.AreEqual("native-api.v2", main.Settings.Mode);
+            Assert.AreEqual("xhigh", main.Settings.Effort);
+            Assert.IsTrue(vm.HasUnsavedEndpointChanges);
+
+            main.ContextWindowTokens = 512000.5;
+            Assert.AreEqual(0, main.Settings.ContextWindowTokens, "A fractional token count must fail persistence validation, not silently truncate.");
+            Assert.IsFalse(string.IsNullOrEmpty(main.ContextWindowError));
+            Assert.AreEqual(128000, fallback.Settings.ContextWindowTokens);
+
+            main.Settings.ContextWindowTokens = 64000;
+            main.NotifyUpdated();
+            Assert.AreEqual(64000d, main.ContextWindowTokens);
+            Assert.AreEqual(string.Empty, main.ContextWindowError);
+        }
+
+        [TestMethod]
+        [DataRow("invalid-url")]
+        [DataRow("invalid-mode")]
+        [DataRow("invalid-effort")]
+        [DataRow("invalid-context")]
+        public void NewlyConfiguredFallbackIsValidatedBeforeItCanBeSaved(string invalidField)
+        {
+            var config = AiHubConfig.CreateDefault();
+            config.Targets[0].BaseUrl = "https://main.example.test";
+            var fallback = config.Targets[1];
+            fallback.BaseUrl = "https://fallback.example.test";
+            switch (invalidField)
+            {
+                case "invalid-url":
+                    fallback.BaseUrl = "not-an-endpoint";
+                    break;
+                case "invalid-mode":
+                    fallback.Mode = "responses\nother";
+                    break;
+                case "invalid-effort":
+                    fallback.Effort = "high other";
+                    break;
+                case "invalid-context":
+                    fallback.ContextWindowTokens = 0;
+                    break;
+            }
+
+            Assert.IsFalse(AiHubViewModel.TryPrepareEndpointSettings(config, out _));
+            Assert.IsFalse(fallback.IsActive, "Validation must not activate the unsaved draft.");
+        }
+
+        [TestMethod]
+        public void EndpointSaveSnapshotActivatesAndClearsFallbackWithoutChangingDrafts()
+        {
+            var config = AiHubConfig.CreateDefault();
+            config.Targets[0].BaseUrl = "https://main.example.test";
+            config.Targets[1].BaseUrl = "https://fallback.example.test";
+            config.Targets[1].ContextWindowTokens = 128000;
+
+            Assert.IsTrue(AiHubViewModel.TryPrepareEndpointSettings(config, out var enabled));
+            Assert.IsTrue(enabled[1].IsActive);
+            Assert.IsFalse(config.Targets[1].IsActive);
+            Assert.AreEqual(128000, enabled[1].ContextWindowTokens);
+            enabled[1].ContextWindowTokens = 64000;
+            Assert.AreEqual(128000, config.Targets[1].ContextWindowTokens);
+
+            config.Targets[1].IsActive = true;
+            config.Targets[1].BaseUrl = string.Empty;
+            Assert.IsTrue(AiHubViewModel.TryPrepareEndpointSettings(config, out var disabled));
+            Assert.IsFalse(disabled[1].IsActive);
+            Assert.IsTrue(config.Targets[1].IsActive);
         }
 
         [TestMethod]

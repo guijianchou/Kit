@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -10,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Contract;
+using Kit.AiHub.Models;
 using Kit.AIHubLib.Models;
 using Kit.Settings.UI;
 using Kit.Settings.UI.Helpers;
@@ -383,7 +385,92 @@ internal static class ModulePageSmoke
         var completed = (AiHubAuditAnalysisService.AuditAnalysisResult)readResult.Invoke(null, new object[] { successful, "smoke" });
         if (completed.IsPartial || completed.Failure != null || !retained.IsPartial || !retained.Failure.Contains("1/7") || rejected.Failure == null)
             throw new InvalidOperationException("Successful audit retained stale failure state.");
+        CheckAuditAuthenticationFailures(readResult, output);
         File.AppendAllText(Report, "Audit output: real reference/bilingual/severity/size validation, partial retention and failure reset passed.\n");
+    }
+
+    private static void CheckAuditAuthenticationFailures(MethodInfo readResult, AuditIssueContainer output)
+    {
+        const string rawError = "provider-secret https://private.example/?api_key=do-not-display";
+        var cultureBefore = CultureInfo.CurrentUICulture;
+        try
+        {
+            foreach (string language in new[] { "en-US", "zh-CN" })
+            {
+                CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+                foreach (string route in new[] { "main", "fallback" })
+                foreach (bool partial in new[] { false, true })
+                {
+                    var nativeFailure = new AiTaskResult<AuditIssueContainer>
+                    {
+                        ErrorCode = AiErrorCode.InvalidConfiguration, ErrorMessage = rawError,
+                        FailureRoute = route, UsedRoute = route == "main" ? "fallback" : "main",
+                        CompletedBatches = partial ? 2 : 0, TotalBatches = 7, Payload = partial ? output : null,
+                        Diagnostics = new AiRouteDiagnostics
+                        {
+                            Reason = "Authentication", HttpStatusCode = 401, Phase = "completed", NativeRetryCount = 2,
+                            NativeRetryLimit = 4, ContextWindowTokens = 256000, ElapsedMilliseconds = 1500,
+                        },
+                    };
+                    var result = Read(nativeFailure);
+                    string expectedRoute = route == "main" ? "Main" : "Fallback";
+                    string hint = language == "zh-CN" ? "身份验证失败" : "Authentication failed";
+                    string connection = language == "zh-CN" ? "保存后运行“测试连接”" : "save and run Test connection";
+                    if (result.IsPartial != partial || (partial ? result.Issues?.Count != 1 : result.Issues != null) ||
+                        !result.Failure.Contains(hint, StringComparison.Ordinal) || !result.Failure.Contains(connection, StringComparison.Ordinal) ||
+                        !result.Failure.Contains(expectedRoute, StringComparison.Ordinal) || !result.Failure.Contains("HTTP 401", StringComparison.Ordinal) ||
+                        !result.Failure.Contains("API key", StringComparison.Ordinal) || !result.Failure.Contains("failureRoute=" + expectedRoute, StringComparison.Ordinal) ||
+                        !result.Failure.Contains("reason=Authentication", StringComparison.Ordinal) || !result.Failure.Contains("nativeRetries=2/4", StringComparison.Ordinal) ||
+                        !result.Failure.Contains(partial ? "2/7" : "0/7", StringComparison.Ordinal) || result.Failure.Contains(rawError, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("Typed authentication guidance lost its route, language, safe diagnostics or partial-result state.");
+                    }
+                }
+
+                var unknownRoute = Read(new AiTaskResult<AuditIssueContainer>
+                {
+                    ErrorCode = AiErrorCode.InvalidConfiguration, FailureRoute = rawError, UsedRoute = "main", ErrorMessage = rawError,
+                    Diagnostics = new AiRouteDiagnostics { HttpStatusCode = 401, Reason = rawError, Phase = rawError },
+                });
+                if (!unknownRoute.Failure.Contains("failureRoute=unknown", StringComparison.Ordinal) ||
+                    !unknownRoute.Failure.Contains("HTTP 401", StringComparison.Ordinal) || unknownRoute.Failure.Contains(rawError, StringComparison.Ordinal) ||
+                    unknownRoute.Failure.Contains("failureRoute=Main", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("An unknown failure route must stay unknown and raw provider values must stay hidden.");
+                }
+
+                var reasonOnly = Read(new AiTaskResult<AuditIssueContainer>
+                {
+                    ErrorCode = AiErrorCode.InvalidConfiguration, FailureRoute = "Main",
+                    Diagnostics = new AiRouteDiagnostics { Reason = "Authentication" },
+                });
+                if (!reasonOnly.Failure.Contains("API key", StringComparison.Ordinal) || reasonOnly.Failure.Contains("HTTP 401", StringComparison.Ordinal))
+                    throw new InvalidOperationException("Authentication guidance must not invent an unreported HTTP status.");
+
+                var unrelated = Read(new AiTaskResult<AuditIssueContainer>
+                {
+                    ErrorCode = AiErrorCode.EndpointFailed, FailureRoute = "fallback", ErrorMessage = "Authentication HTTP 401 " + rawError,
+                    Diagnostics = new AiRouteDiagnostics { HttpStatusCode = 503, Reason = "ServerError" },
+                });
+                if (unrelated.Failure.Contains("API key", StringComparison.Ordinal) || unrelated.Failure.Contains("Authentication", StringComparison.Ordinal) ||
+                    unrelated.Failure.Contains(rawError, StringComparison.Ordinal) || !unrelated.Failure.Contains("reason=ServerError", StringComparison.Ordinal))
+                    throw new InvalidOperationException("Raw provider text must not classify an unrelated typed failure as authentication.");
+
+                var success = Read(new AiTaskResult<AuditIssueContainer>
+                {
+                    IsSuccess = true, Payload = output, FailureRoute = "main",
+                    Diagnostics = new AiRouteDiagnostics { HttpStatusCode = 401, Reason = "Authentication" },
+                });
+                if (success.Failure != null || success.IsPartial || success.Issues?.Count != 1)
+                    throw new InvalidOperationException("A successful result must not show stale authentication diagnostics.");
+            }
+        }
+        finally { CultureInfo.CurrentUICulture = cultureBefore; }
+
+        File.AppendAllText(Report, "Audit authentication: Main/Fallback, bilingual recovery guidance, partial retention, unknown routes, safe metadata and success reset PASS\n");
+
+        AiHubAuditAnalysisService.AuditAnalysisResult Read(AiTaskResult<AuditIssueContainer> result) =>
+            (AiHubAuditAnalysisService.AuditAnalysisResult)readResult.Invoke(null, new object[] { result, "smoke-auth" });
     }
 
     private static async Task CheckAuditWorkflowStates(AIHubPage page)
@@ -1367,6 +1454,7 @@ internal static class ModulePageSmoke
         var main = (SettingsExpander)page.FindName("AiMainEndpointExpander");
         var fallback = (SettingsExpander)page.FindName("AiFallbackEndpointExpander");
         var policy = (SettingsExpander)page.FindName("AiPolicyRulesExpander");
+        var statistics = Descendants(page).OfType<SettingsExpander>().Single(control => AutomationProperties.GetAutomationId(control) == "AiHub_DiagnosticsExpander");
 
         for (int cycle = 0; cycle < 2; cycle++)
         {
@@ -1409,7 +1497,7 @@ internal static class ModulePageSmoke
             await toggled.Task;
             for (int attempt = 0; attempt < 50 && service.IsBusy; attempt++) await Task.Delay(100);
             await Task.Delay(200);
-            foreach (var expander in new[] { kernel, main, fallback, policy }) expander.IsExpanded = true;
+            foreach (var expander in new[] { kernel, main, fallback, policy, statistics }) expander.IsExpanded = true;
             await Task.Delay(200);
             File.AppendAllText(Report, $"AI service cycle={cycle} enabled={service.IsEnabled} busy={service.IsBusy} canEdit={service.CanEdit}\n");
             var required = new List<Control>();
@@ -1419,7 +1507,7 @@ internal static class ModulePageSmoke
                 page.UpdateLayout();
                 await Task.Delay(250);
                 required.AddRange(Descendants(root).OfType<Control>().Where(control =>
-                    control is TextBox or PasswordBox or ComboBox ||
+                    control is TextBox or PasswordBox or ComboBox or NumberBox ||
                     control is Button button && button.Command != null && button.Command.CanExecute(button.CommandParameter) && button.Visibility == Visibility.Visible));
             }
 
@@ -1431,28 +1519,96 @@ internal static class ModulePageSmoke
             if (!service.CanEdit || required.Count == 0 || required.Any(control => !control.IsEnabled)) throw new InvalidOperationException("AI service settings contain disabled editable controls or executable actions after enabling.");
             if (!Descendants(policy).OfType<TextBox>().Any()) throw new InvalidOperationException("Policy editor was not checked.");
 
-            foreach (var entry in new[] { (Expander: main, Endpoint: service.MainEndpoint), (Expander: fallback, Endpoint: service.FallbackEndpoint) })
+            var endpointControls = new[] { (Expander: main, Endpoint: service.MainEndpoint), (Expander: fallback, Endpoint: service.FallbackEndpoint) }
+                .Select(entry => new
+                {
+                    entry.Endpoint,
+                    Original = entry.Endpoint.Settings.Clone(),
+                    Model = entry.Expander.Items.OfType<SettingsCard>().Select(card => card.Content).OfType<TextBox>()
+                        .Single(box => box.PlaceholderText == Kit.AiHub.Models.AiTargetSettings.DefaultLunaModel),
+                    Mode = entry.Expander.Items.OfType<SettingsCard>().Select(card => card.Content).OfType<ComboBox>()
+                        .Single(box => AutomationProperties.GetAutomationId(box).EndsWith("_ApiModeComboBox", StringComparison.Ordinal)),
+                    Effort = entry.Expander.Items.OfType<SettingsCard>().Select(card => card.Content).OfType<ComboBox>()
+                        .Single(box => AutomationProperties.GetAutomationId(box).EndsWith("_EffortComboBox", StringComparison.Ordinal)),
+                    Context = entry.Expander.Items.OfType<SettingsCard>().Select(card => card.Content).OfType<StackPanel>()
+                        .SelectMany(panel => panel.Children.OfType<NumberBox>()).Single(),
+                }).ToArray();
+            for (int index = 0; index < endpointControls.Length; index++)
             {
-                var modelBox = entry.Expander.Items.OfType<SettingsCard>().Select(card => card.Content).OfType<TextBox>()
-                    .Single(box => box.PlaceholderText == Kit.AiHub.Models.AiTargetSettings.DefaultLunaModel);
-                var effortBox = entry.Expander.Items.OfType<SettingsCard>().Select(card => card.Content).OfType<ComboBox>()
-                    .Single(box => box.Items.OfType<ComboBoxItem>().Any(item => (string)item.Tag == "max"));
-                if (!effortBox.Items.OfType<ComboBoxItem>().Select(item => (string)item.Tag).SequenceEqual(new[] { "low", "high", "max" }))
-                    throw new InvalidOperationException("Reasoning effort must offer only low/high/max.");
-                string savedModel = entry.Endpoint.Model;
-                string savedEffort = entry.Endpoint.Effort;
-                string selectedEffort = cycle == 0 ? "max" : "high";
-                modelBox.Text = cycle == 0 ? "gpt-6-luna" : "gpt-6.1-sol";
-                effortBox.SelectedValue = selectedEffort;
-                if (entry.Endpoint.Model != modelBox.Text || !service.SaveEndpointsCommand.CanExecute(null)) throw new InvalidOperationException("Endpoint edit did not enable saving.");
-                service.SaveEndpointsCommand.Execute(null);
-                var saved = new Kit.AiHub.Storage.AiHubSettingsStore().Load();
-                var savedEndpoint = saved.Targets.Single(target => target.Name == entry.Endpoint.Settings.Name);
-                if (savedEndpoint.Model != modelBox.Text || savedEndpoint.Effort != selectedEffort) throw new InvalidOperationException("Endpoint model/effort was not saved unchanged.");
-                modelBox.Text = savedModel;
-                effortBox.SelectedValue = savedEffort;
-                service.SaveEndpointsCommand.Execute(null);
-                if (service.HasUnsavedEndpointChanges) throw new InvalidOperationException("Endpoint restore was not saved.");
+                var entry = endpointControls[index];
+                if (!entry.Mode.IsEditable || !entry.Effort.IsEditable) throw new InvalidOperationException("Native mode and effort controls must allow custom identifiers.");
+                entry.Model.Text = cycle == 0 ? "gpt-6-luna" : "gpt-6.1-sol";
+                entry.Mode.Text = cycle == 0 ? "fixture-native-api.v2" : "responses";
+                entry.Effort.Text = cycle == 0 ? "fixture-native-effort" : "xhigh";
+                entry.Context.Value = index == 0 ? 512000 - (cycle * 128000) : 128000 - (cycle * 64000);
+            }
+
+            await Task.Delay(100);
+            if (!service.SaveEndpointsCommand.CanExecute(null)) throw new InvalidOperationException("Native endpoint edits did not enable saving.");
+            service.SaveEndpointsCommand.Execute(null);
+            var savedEndpoints = new Kit.AiHub.Storage.AiHubSettingsStore().Load().Targets;
+            foreach (var entry in endpointControls)
+            {
+                var savedEndpoint = savedEndpoints.Single(target => target.Name == entry.Endpoint.Settings.Name);
+                if (savedEndpoint.Model != entry.Model.Text || savedEndpoint.Mode != entry.Mode.Text ||
+                    savedEndpoint.Effort != entry.Effort.Text || savedEndpoint.ContextWindowTokens != entry.Context.Value)
+                    throw new InvalidOperationException("A native endpoint field was coerced or its independent context window was not saved.");
+                entry.Mode.Text = "discard-api";
+                entry.Effort.Text = "discard-effort";
+                entry.Context.Value += 8192;
+            }
+
+            await Task.Delay(100);
+            if (!service.DiscardEndpointChangesCommand.CanExecute(null)) throw new InvalidOperationException("Endpoint context drafts did not enable discard.");
+            service.DiscardEndpointChangesCommand.Execute(null);
+            await Task.Delay(100);
+            foreach (var entry in endpointControls)
+            {
+                var savedEndpoint = savedEndpoints.Single(target => target.Name == entry.Endpoint.Settings.Name);
+                if (entry.Mode.Text != savedEndpoint.Mode || entry.Effort.Text != savedEndpoint.Effort ||
+                    entry.Context.Value != savedEndpoint.ContextWindowTokens || service.HasUnsavedEndpointChanges)
+                    throw new InvalidOperationException("Discard did not restore both native identifiers and each route's context control.");
+            }
+
+            foreach (var entry in endpointControls)
+            {
+                entry.Model.Text = entry.Original.Model;
+                entry.Mode.Text = entry.Original.Mode;
+                entry.Effort.Text = entry.Original.Effort;
+                entry.Context.Value = entry.Original.ContextWindowTokens;
+            }
+
+            await Task.Delay(100);
+            service.SaveEndpointsCommand.Execute(null);
+            if (service.HasUnsavedEndpointChanges) throw new InvalidOperationException("Endpoint restore was not saved.");
+
+            var originalSize = App.GetSettingsWindow().AppWindow.Size;
+            try
+            {
+                foreach (int width in new[] { 1350, 850 })
+                {
+                    App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 1000));
+                    statistics.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+                    await Task.Delay(200);
+                    page.UpdateLayout();
+                    var textBlocks = Descendants(statistics).OfType<TextBlock>().Where(block =>
+                        block.Text == service.DiagnosticsDetails || block.Text == service.DiagnosticsPersistenceStatus).ToArray();
+                    if (statistics.ActualWidth <= 0 || statistics.Description?.ToString() != service.DiagnosticsSummary || textBlocks.Length != 2)
+                        throw new InvalidOperationException("AI runtime statistics are missing their bound summary or detail fields.");
+                    foreach (var block in textBlocks)
+                    {
+                        var origin = block.TransformToVisual(statistics).TransformPoint(new Windows.Foundation.Point());
+                        if (block.TextWrapping != TextWrapping.Wrap || block.ActualWidth <= 0 || origin.X < -1 ||
+                            origin.X + block.ActualWidth > statistics.ActualWidth + 1)
+                            throw new InvalidOperationException("AI runtime statistics overflow the expanded card.");
+                    }
+
+                    if (cycle == 0) await RenderPage(page, $"ai-service-statistics-{width}.png");
+                }
+            }
+            finally
+            {
+                App.GetSettingsWindow().AppWindow.Resize(originalSize);
             }
 
             var completion = new TaskCompletionSource();
@@ -1478,7 +1634,7 @@ internal static class ModulePageSmoke
             NavigationService.Navigate(typeof(GeneralPage));
             await Task.Delay(150);
         }
-        File.AppendAllText(Report, "AI service controls: off/on twice, offline global policy draft/discard, expanded editors, endpoint editing/saving, busy recovery, and cached navigation passed.\n");
+        File.AppendAllText(Report, "AI service controls: off/on twice, offline policy draft/discard, editable native mode/effort, independent context save/discard, statistics layouts at 1350/850 px, busy recovery, and cached navigation passed.\n");
     }
 
     private static IEnumerable<DependencyObject> Ancestors(DependencyObject element)

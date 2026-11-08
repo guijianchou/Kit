@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+﻿<?xml version='1.0' encoding='utf-8'?>
 <root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:schema id="root">
     <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -3951,4 +3951,63 @@
   <data name="Winget_PackageHomepage" xml:space="preserve"><value>软件主页</value></data>
   <data name="Winget_LicenseLink" xml:space="preserve"><value>查看许可证</value></data>
   <data name="Winget_SearchElapsed" xml:space="preserve"><value>搜索耗时：{0:N2} 秒</value></data>
+  <data name="AiHub_MainEndpoint_ApiModeCard.Description" xml:space="preserve"><value>选择建议值或输入原生 API 标识，由当前内核校验是否支持。</value></data>
+  <data name="AiHub_FallbackEndpoint_ApiModeCard.Description" xml:space="preserve"><value>选择建议值或输入原生 API 标识，由当前内核校验是否支持。</value></data>
+  <data name="AiHub_MainEndpoint_ReasoningCard.Description" xml:space="preserve"><value>原样传递给当前内核，支持范围由内核和模型决定。</value></data>
+  <data name="AiHub_FallbackEndpoint_ReasoningCard.Description" xml:space="preserve"><value>原样传递给当前内核，支持范围由内核和模型决定。</value></data>
+  <data name="AiHub_ContextWindowCard.Header" xml:space="preserve"><value>上下文窗口</value></data>
+  <data name="AiHub_ContextWindowCard.Description" xml:space="preserve"><value>此端点可用的 token 数，默认 256,000。请与模型支持的上下文大小保持一致。</value></data>
+  <data name="AiHub_ContextWindowBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>上下文窗口 token 数</value></data>
+  <data name="AiHub_ContextWindowInvalid" xml:space="preserve"><value>请输入 1,024 到 2,147,483,647 之间的整数 token 数。</value></data>
+  <data name="AiHub_EndpointInvalid" xml:space="preserve"><value>请检查端点地址、模型、原生 API 模式、推理强度和上下文窗口。</value></data>
+  <data name="AiHub_DiagnosticsExpander.Header" xml:space="preserve"><value>运行统计</value></data>
+  <data name="AiHub_DiagnosticsSummaryFormat" xml:space="preserve"><value>本次会话：{0} 个任务 · 成功 {1} · 失败 {2} · 原生重试 {3}</value></data>
+  <data name="AiHub_DiagnosticsDetailsFormat" xml:space="preserve"><value>取消 {0} · 超时 {1} · 部分完成 {2}
+Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
+已报告 token：输入 {6:N0} · 缓存输入 {7:N0} · 缓存写入 {8:N0} · 输出 {9:N0}
+{10}/{11} 次路由尝试报告了用量，未报告的用量不计入。连接测试不计入统计。</value></data>
+  <data name="AiHub_DiagnosticsPersistenceOnFormat" xml:space="preserve"><value>诊断历史遵循 Kit 日志等级，最多 256 条 / 256 KiB，不记录提示词、回复或凭据。持久化失败：{0}。</value></data>
+  <data name="AiHub_DiagnosticsPersistenceOffFormat" xml:space="preserve"><value>Kit 日志已关闭。会话统计仅保留在内存中，不写入新的诊断历史。持久化失败：{0}。</value></data>
+  <data name="AIHub_Inventory_Title.Text" xml:space="preserve"><value>空间构成</value></data>
+  <data name="AIHub_Inventory_Description.Text" xml:space="preserve"><value>查看缓存、诊断文件和系统管理存储的占用，无需 AI 即可在本机分析。</value></data>
+  <data name="AIHub_Inventory_AnalyzeButton.Content" xml:space="preserve"><value>分析空间</value></data>
+  <data name="AIHub_Inventory_StopButton.Content" xml:space="preserve"><value>取消</value></data>
+  <data name="AIHub_Inventory_ObservedLabel.Text" xml:space="preserve"><value>已统计占用</value></data>
+  <data name="AIHub_Inventory_RecentLabel.Text" xml:space="preserve"><value>7 天内修改</value></data>
+  <data name="AIHub_Inventory_OldLabel.Text" xml:space="preserve"><value>30 天以上未修改</value></data>
+  <data name="AIHub_Inventory_SizeCaveat.Text" xml:space="preserve"><value>占用包含仍在使用的文件；只有下方另行审核通过的项目才能勾选清理。</value></data>
+  <data name="AIHub_Inventory_PartialHint.Text" xml:space="preserve"><value>部分位置未能在扫描限制内完成统计，总量仅包含已观察到的文件。</value></data>
+  <data name="AIHub_Inventory_SearchBox.PlaceholderText" xml:space="preserve"><value>搜索位置、路径或处理建议</value></data>
+  <data name="AIHub_Inventory_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>搜索存储位置</value></data>
+  <data name="AIHub_Inventory_FilterComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>存储位置类型</value></data>
+  <data name="AIHub_Inventory_NoMatches.Text" xml:space="preserve"><value>没有符合筛选条件的位置。</value></data>
+  <data name="AIHub_Inventory_LargestFilesTitle.Text" xml:space="preserve"><value>已观察到的大文件</value></data>
+  <data name="AIHub_Inventory_CoverageFormat" xml:space="preserve"><value>已计量 {0:N0} · 部分 {1:N0} · 无法访问 {2:N0} · 受保护 {3:N0} · 不存在 {4:N0} · 已检查 {5:N0} 个条目</value></data>
+  <data name="AIHub_Inventory_SnapshotFormat" xml:space="preserve"><value>统计于 {0:g} · 耗时 {1:N1} 秒 · 按占用从大到小排列</value></data>
+  <data name="AIHub_Inventory_FilterSummaryFormat" xml:space="preserve"><value>显示 {0:N0}/{1:N0} 个位置。占比基于已统计空间，不代表磁盘容量。</value></data>
+  <data name="AIHub_Inventory_FilterAll" xml:space="preserve"><value>所有位置</value></data>
+  <data name="AIHub_Inventory_FilterCache" xml:space="preserve"><value>缓存位置</value></data>
+  <data name="AIHub_Inventory_FilterAnalysis" xml:space="preserve"><value>仅分析</value></data>
+  <data name="AIHub_Inventory_FilterManaged" xml:space="preserve"><value>系统管理</value></data>
+  <data name="AIHub_Inventory_FilterProtected" xml:space="preserve"><value>受保护</value></data>
+  <data name="AIHub_Inventory_NotMeasured" xml:space="preserve"><value>未统计</value></data>
+  <data name="AIHub_Inventory_FileCountFormat" xml:space="preserve"><value>{0:N0} 个文件 · 占已统计空间的 {1:N1}%</value></data>
+  <data name="AIHub_Inventory_NotEnumerated" xml:space="preserve"><value>未遍历内容</value></data>
+  <data name="AIHub_Inventory_ScanNotesFormat" xml:space="preserve"><value>跳过 {0:N0} 个条目 · {1:N0} 次访问失败。容量仅包含可计量的条目。</value></data>
+  <data name="AIHub_Inventory_AgeSummaryFormat" xml:space="preserve"><value>7 天内修改：{0} · 30 天以上未修改：{1}</value></data>
+  <data name="AIHub_Inventory_StateComplete" xml:space="preserve"><value>已计量</value></data>
+  <data name="AIHub_Inventory_StatePartial" xml:space="preserve"><value>部分计量</value></data>
+  <data name="AIHub_Inventory_StateUnavailable" xml:space="preserve"><value>无法访问</value></data>
+  <data name="AIHub_Inventory_StateProtected" xml:space="preserve"><value>受保护 · 未扫描</value></data>
+  <data name="AIHub_Inventory_StateMissing" xml:space="preserve"><value>不存在</value></data>
+  <data name="AIHub_Inventory_DispositionCache" xml:space="preserve"><value>缓存 · 需另行审核清理</value></data>
+  <data name="AIHub_Inventory_DispositionManaged" xml:space="preserve"><value>请通过 Windows 或所属应用处理</value></data>
+  <data name="AIHub_Inventory_DispositionProtected" xml:space="preserve"><value>保留受保护文件</value></data>
+  <data name="AIHub_Inventory_DispositionAnalysis" xml:space="preserve"><value>仅分析</value></data>
+  <data name="AIHub_Inventory_ModifiedFormat" xml:space="preserve"><value>修改于 {0:g}</value></data>
+  <data name="AIHub_Inventory_StatusReady" xml:space="preserve"><value>分析常见缓存和系统管理存储，不更改文件。</value></data>
+  <data name="AIHub_Inventory_StatusScanning" xml:space="preserve"><value>正在读取文件大小与修改时间，不读取或更改文件内容。</value></data>
+  <data name="AIHub_Inventory_StatusComplete" xml:space="preserve"><value>空间分析已完成。</value></data>
+  <data name="AIHub_Inventory_StatusCancelled" xml:space="preserve"><value>分析已取消，保留上次完成的结果。</value></data>
+  <data name="AIHub_Inventory_StatusFailed" xml:space="preserve"><value>分析未能完成，保留上次完成的结果。</value></data>
 </root>

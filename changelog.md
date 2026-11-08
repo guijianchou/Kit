@@ -6,6 +6,13 @@
 
 ### 3.4.5
 
+- Kept model execution on native Codex/Pi CLI while removing Kit's hardcoded API-mode and reasoning-effort capability lists. Main and Fallback now expose independent context-window settings, each defaulting to 256,000 tokens; native kernels and endpoints still decide which values they support.
+- Added current-process AI task/route statistics, reported token usage with unknown-usage coverage, and bounded safe diagnostic history that respects the logging level. Retry, HTTP status, timeout, cancellation and partial results are visible without recording prompts, model output, keys or endpoint URLs; native retries finish before eligible fallback handling.
+- Added a read-only Optimization space inventory with sizes, file ages, largest-file details, filtering and coverage notes. Browser, shader, package-manager, application and crash-report locations are observed separately from cleanup candidates; protected core paths and the cleanup allowlist remain enforced.
+- Refined WinGet's Mica surfaces, semantic status colors and icons, version emphasis, responsive workspace summaries, details cards and bounded operation output.
+- Fixed Full Scan's oversized blank workflow card when long AI errors consumed the status column. Errors now wrap in a bounded, selectable scroll region; authentication failures identify the failed route when known and provide configuration checks while retaining local findings.
+- Fixed a configuration-cache race that could retain an old model and credentials under newer file stamps. Slow reads, stamp capture and cache publication now share the storage lock; the specific cause of a provider authentication rejection remains a separate diagnosis.
+- Validation: x64 Release build and bilingual WinUI regressions passed, including light/dark, wide/narrow and long-error layouts. AI core tests passed 474 cases with one directory-link test skipped by the environment; subsequent manual testing reported no major issues.
 - Centered WinGet in the shared 1000-DIP plugin layout with balanced side margins; Check daily and Windows notifications now stay vertically stacked.
 - NetMap AI checks now explain cancellations caused by route changes, reject late results from an old route, and distinguish timeout, endpoint and output-validation failures with sanitized diagnostics.
 - Increased NetMap's per-route analysis budget to 300 seconds and total budget to 600 seconds while preserving immediate caller cancellation.
@@ -919,6 +926,13 @@
 
 ### 3.4.5
 
+- 保持模型调用走原生 Codex/Pi CLI，移除 Kit 硬编码的 API 模式和推理档位能力列表。Main 与 Fallback 新增独立上下文窗口设置，默认均为 256,000 tokens；实际支持范围仍由原生内核与端点决定。
+- 新增当前进程的 AI 任务/路由统计、带未知覆盖范围的 token 用量，以及遵循日志级别的有界安全诊断历史。展示重试、HTTP 状态、超时、取消和部分结果，不记录提示词、模型输出、密钥或端点 URL；原生重试结束后才处理符合条件的备用路由。
+- Optimization 新增只读空间盘点，展示大小、文件年龄、最大文件详情、筛选及覆盖说明。浏览器、着色器、包管理器、应用缓存和崩溃报告等观测与清理候选分离，继续执行核心路径保护和原有清理白名单。
+- 优化 WinGet 的 Mica 表面层次、语义状态配色和图标、版本强调、响应式工作区摘要、详情卡片及有界操作输出。
+- 修复 Full Scan 长 AI 错误挤压状态列、产生巨大空白进度卡的问题。错误改为有界滚动区内换行并可选中复制；鉴权失败时标明已知失败路由和配置检查方向，保留本地发现。
+- 修复配置缓存竞态，避免旧模型和凭据绑定到新文件标记后长期残留。慢路径读取、标记捕获及缓存发布统一持有存储锁；服务端鉴权拒绝的具体原因仍需单独诊断。
+- 验证：x64 Release 构建及中英文 WinUI 回归通过，覆盖亮暗主题、宽窄窗口和长错误布局；AI 核心 474 项通过，1 项目录链接测试受环境限制跳过。后续人工实测未报告重大问题。
 - WinGet 统一为最大 1000 DIP 的居中插件布局，左右对称留白；每日检查与 Windows 通知固定上下排列。
 - NetMap AI 检查在线路变化导致取消时显示原因，拦截旧线路的迟到结果，并区分超时、端点及输出校验错误，补充脱敏诊断日志。
 - NetMap 单路分析时限增至 300 秒、总预算增至 600 秒，保留即时主动取消。

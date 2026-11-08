@@ -299,9 +299,9 @@ public sealed class KernelExecutionTests
     [DataRow("recovered", AiErrorCode.None)]
     [DataRow("exhausted", AiErrorCode.EndpointFailed)]
     [DataRow("incomplete", AiErrorCode.EndpointFailed)]
-    [DataRow("auth-recovered", AiErrorCode.InvalidConfiguration)]
+    [DataRow("auth-recovered", AiErrorCode.None)]
     [DataRow("tool-recovered", AiErrorCode.PolicyViolation)]
-    public async Task PiNativeAssistantRetryOnlyRecoversTransportFailures(string scenario, AiErrorCode expected)
+    public async Task PiNativeAssistantRetryCanRecoverEndpointErrorsButNotPolicyFailures(string scenario, AiErrorCode expected)
     {
         using KernelFixture fixture = await KernelFixture.CreateAsync();
         var diagnostics = new ConcurrentQueue<string>();
@@ -402,15 +402,15 @@ public sealed class KernelExecutionTests
     }
 
     [TestMethod]
-    public async Task ModeAndTomlConfigurationAreValidatedBeforeExecution()
+    public async Task NativeModeSupportIsDelegatedAndTomlConfigurationRemainsEscaped()
     {
         using KernelFixture fixture = await KernelFixture.CreateAsync();
-        Assert.IsFalse(RouteDispatcher.IsTargetCompatible("codex", KernelFixture.Target(mode: "chat")));
+        Assert.IsTrue(RouteDispatcher.IsTargetCompatible("codex", KernelFixture.Target(mode: "chat")));
         Assert.IsTrue(RouteDispatcher.IsTargetCompatible("pi", KernelFixture.Target(mode: "chat")));
-        KernelExecutionResult rejected = await fixture.Dispatcher.ExecuteAsync("codex", KernelFixture.Target(mode: "chat"), "input", 10);
-        Assert.AreEqual(AiErrorCode.InvalidConfiguration, rejected.ErrorCode);
-        Assert.IsFalse(rejected.CanFailover);
-        Assert.IsFalse(Directory.Exists(fixture.RequestRoot));
+        KernelExecutionResult forwarded = await fixture.Dispatcher.ExecuteAsync("codex", KernelFixture.Target(mode: "chat"), "input", 10);
+        Assert.IsTrue(forwarded.IsSuccess);
+        using JsonDocument forwardedCapture = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.RequestRoot, "capture.json")));
+        StringAssert.Contains(forwardedCapture.RootElement.GetProperty("Config").GetString()!, "wire_api = \"chat\"");
 
         var target = KernelFixture.Target("quoted\\\"model");
         KernelExecutionResult escaped = await fixture.Dispatcher.ExecuteAsync("codex", target, "input", 10);

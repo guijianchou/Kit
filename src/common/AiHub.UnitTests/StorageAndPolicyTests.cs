@@ -2,11 +2,13 @@ namespace Kit.AiHub.UnitTests;
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Models;
 using Kit.AiHub.Security;
@@ -42,12 +44,12 @@ public sealed class StorageAndPolicyTests
     }
 
     [TestMethod]
-    [DataRow("none", "low")]
-    [DataRow("minimal", "low")]
-    [DataRow("medium", "high")]
-    [DataRow("xhigh", "max")]
-    [DataRow("ultra", "max")]
-    public void LegacyEffortsNormalizeOnLoadWithoutWritingUntilAnUpdate(string legacyEffort, string expectedEffort)
+    [DataRow("none")]
+    [DataRow("minimal")]
+    [DataRow("medium")]
+    [DataRow("xhigh")]
+    [DataRow("ultra")]
+    public void NativeEffortsLoadWithoutCoercionAndSurviveUnrelatedUpdates(string legacyEffort)
     {
         using var fixture = new FixtureDirectory();
         var store = new AiHubSettingsStore(fixture.PathFor("data"));
@@ -64,19 +66,18 @@ public sealed class StorageAndPolicyTests
         byte[] secrets = File.ReadAllBytes(secretsPath);
 
         var loaded = store.Load();
-        Assert.AreEqual(expectedEffort, loaded.Targets[0].Effort);
-        Assert.AreEqual(expectedEffort, loaded.Targets[1].Effort);
+        Assert.AreEqual(legacyEffort, loaded.Targets[0].Effort);
+        Assert.AreEqual(legacyEffort, loaded.Targets[1].Effort);
         Assert.AreEqual("gpt-5.6-luna", loaded.Targets[0].Model);
         Assert.AreEqual("fixture-main-key", loaded.Targets[0].ApiKey);
         Assert.AreEqual("fixture-fallback-key", loaded.Targets[1].ApiKey);
-        Assert.ThrowsExactly<InvalidDataException>(() => store.Save(config));
         CollectionAssert.AreEqual(legacy, File.ReadAllBytes(store.SettingsFilePath));
         CollectionAssert.AreEqual(secrets, File.ReadAllBytes(secretsPath));
 
         store.Update(current => current.RetentionDays = 14);
         var persisted = JsonSerializer.Deserialize(File.ReadAllBytes(store.SettingsFilePath), AiHubJsonContext.Default.AiHubConfig)!;
-        Assert.AreEqual(expectedEffort, persisted.Targets[0].Effort);
-        Assert.AreEqual(expectedEffort, persisted.Targets[1].Effort);
+        Assert.AreEqual(legacyEffort, persisted.Targets[0].Effort);
+        Assert.AreEqual(legacyEffort, persisted.Targets[1].Effort);
         var saved = store.Load();
         Assert.AreEqual("gpt-5.6-luna", saved.Targets[0].Model);
         Assert.AreEqual("fixture-main-key", saved.Targets[0].ApiKey);
@@ -84,13 +85,13 @@ public sealed class StorageAndPolicyTests
     }
 
     [TestMethod]
-    public void UnknownPersistedEffortIsRejectedWithoutChangingSettingsOrCredentials()
+    public void MalformedPersistedEffortIsRejectedWithoutChangingSettingsOrCredentials()
     {
         using var fixture = new FixtureDirectory();
         var store = new AiHubSettingsStore(fixture.PathFor("data"));
         var config = AiHubConfig.CreateDefault();
         store.Save(config);
-        config.Targets[0].Effort = "unknown";
+        config.Targets[0].Effort = "high\nother";
         byte[] invalid = JsonSerializer.SerializeToUtf8Bytes(config, AiHubJsonContext.Default.AiHubConfig);
         File.WriteAllBytes(store.SettingsFilePath, invalid);
         string secretsPath = Path.Combine(store.DataDirectory, "secrets.dat");
@@ -238,6 +239,88 @@ public sealed class StorageAndPolicyTests
     }
 
     [TestMethod]
+    public async Task ConcurrentLoadsKeepCommittedModelsAndCredentialsInTheSameSnapshot()
+    {
+        using var fixture = new FixtureDirectory();
+        var writer = new AiHubSettingsStore(fixture.PathFor("data"));
+        var initial = AiHubConfig.CreateDefault();
+        SetGeneration(initial, 0);
+        writer.Save(initial);
+
+        const int readerCount = 4;
+        const int rounds = 32;
+        int committedGeneration = 0;
+        using var phases = new Barrier(readerCount + 1);
+        var readers = Enumerable.Range(0, readerCount).Select(_ => new AiHubSettingsStore(writer.DataDirectory)).ToArray();
+        Task[] readerTasks = readers.Select(reader => Task.Factory.StartNew(() =>
+        {
+            for (int round = 1; round <= rounds; round++)
+            {
+                Synchronize();
+                for (int sample = 0; sample < 8; sample++)
+                {
+                    int minimumGeneration = Volatile.Read(ref committedGeneration);
+                    AiHubConfig loaded = reader.Load();
+                    int generation = AssertSnapshot(loaded);
+                    Assert.IsTrue(generation >= minimumGeneration, "A load returned a snapshot older than a write completed before the load began.");
+
+                    // Callers own their returned drafts, including after a cache hit.
+                    loaded.Targets[0].Model = "fixture-unsaved-draft";
+                    loaded.Targets[0].ApiKey = "fixture-unsaved-key";
+                    Thread.Yield();
+                }
+
+                Synchronize();
+            }
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
+
+        Task writerTask = Task.Factory.StartNew(() =>
+        {
+            for (int round = 1; round <= rounds; round++)
+            {
+                // This unrelated fixture secret invalidates the cache before each round,
+                // making readers exercise the slow load path alongside an endpoint update.
+                writer.KeyStore.SetSecret("fixture-cache-invalidation", round.ToString(CultureInfo.InvariantCulture));
+                Synchronize();
+                writer.Update(config => SetGeneration(config, round));
+                Volatile.Write(ref committedGeneration, round);
+                Synchronize();
+
+                // Readers have finished this round and no next-round write can begin yet.
+                // A stale load must not have poisoned the shared cache with the new stamps.
+                foreach (AiHubSettingsStore reader in readers)
+                {
+                    Assert.AreEqual(round, AssertSnapshot(reader.Load()));
+                }
+            }
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+        // The barriers bound and coordinate contention; they do not force a particular
+        // instruction-level interleaving inside Load. This is finite concurrency coverage.
+        await Task.WhenAll(readerTasks.Append(writerTask));
+        Assert.AreEqual(rounds, AssertSnapshot(writer.Load()));
+
+        void Synchronize() => Assert.IsTrue(phases.SignalAndWait(TimeSpan.FromSeconds(10)), "Concurrent storage workers did not reach the next phase.");
+
+        static void SetGeneration(AiHubConfig config, int generation)
+        {
+            config.Targets[0].Model = $"fixture-model-{generation:D4}";
+            config.Targets[0].ApiKey = $"fixture-main-{generation:D4}";
+            config.Targets[1].ApiKey = $"fixture-fallback-{generation:D4}";
+        }
+
+        static int AssertSnapshot(AiHubConfig config)
+        {
+            const string prefix = "fixture-model-";
+            Assert.IsTrue(config.Targets[0].Model.StartsWith(prefix, StringComparison.Ordinal), "An unsaved caller draft changed a cached model.");
+            int generation = int.Parse(config.Targets[0].Model.AsSpan(prefix.Length), CultureInfo.InvariantCulture);
+            Assert.AreEqual($"fixture-main-{generation:D4}", config.Targets[0].ApiKey);
+            Assert.AreEqual($"fixture-fallback-{generation:D4}", config.Targets[1].ApiKey);
+            return generation;
+        }
+    }
+
+    [TestMethod]
     public async Task ConcurrentSecretUpdatesDoNotDiscardOtherKeys()
     {
         using var fixture = new FixtureDirectory();
@@ -371,10 +454,10 @@ public sealed class StorageAndPolicyTests
                 config.Targets[0].Model = new string('a', 257);
                 break;
             case "invalid-mode":
-                config.Targets[0].Mode = "invalid";
+                config.Targets[0].Mode = "responses\nother";
                 break;
             case "invalid-effort":
-                config.Targets[0].Effort = "invalid";
+                config.Targets[0].Effort = "high\nother";
                 break;
             default:
                 Assert.Fail("Unknown fixture scenario.");

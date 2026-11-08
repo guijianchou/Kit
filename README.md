@@ -20,11 +20,11 @@ Kit currently includes seven modules. “Plugin” here means a module built and
 | [UDPtest](#34-udptest-configured-line-quality) | Measure configured targets: latency, jitter, success rate and NAT | Settings + diagnosis Service | Kit |
 | [AI Hub](#35-ai-hub-auditing-and-system-optimization) | Audit system events, organize downloads and clean caches | Settings + scheduled-audit Worker | Kit |
 | [NetMap](#36-netmap-current-egress-and-route-observation) | Observe Direct / Proxy egress, service reachability and ICMP routes | Settings + observation Service | Kit |
-| [WinGet](src/modules/Winget/README.md) | Discover, update and uninstall software, confirmed batch queues, daily checks and notifications | Separate WingetService process | Kit |
+| [WinGet](#37-winget-software-updates-and-installation) | Discover, install, update and uninstall software, confirmed batch queues, daily checks and notifications | Separate WingetService process | Kit |
 
 Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
 
-Home provides real-time system resource telemetry (CPU, memory, storage, dual-GPU / iGPU & dGPU hardware details, driver version, and temperatures) and dual-egress network observation. General contains appearance, startup behavior and shared AI service settings; Quick Access provides module entry points and actions through the tray menu. Kit does not register global keyboard shortcuts. The entire UI is built on native WinUI 3 Fluent Design styling with semantic surface tokens, responsive cards, Cascadia Code monospace typography, accessibility metadata (keyboard-reachable controls, screen-reader names, high-contrast palettes), and complete bilingual localization (en-US / zh-CN). With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
+Home provides real-time system resource telemetry (CPU, memory, storage, dual-GPU / iGPU & dGPU hardware details, driver version, and temperatures) and dual-egress network observation. General contains appearance, startup behavior and shared AI service settings; Quick Access provides module entry points and actions through the tray menu. Kit does not register global keyboard shortcuts. The UI uses native WinUI 3 Fluent Design styling with semantic surface tokens, responsive cards, Cascadia Code monospace typography, accessibility metadata (keyboard-reachable controls, screen-reader names, high-contrast palettes), and English/Chinese presentation (en-US / zh-CN). With the tray icon enabled, closing Settings does not exit Kit. Use the tray menu to exit completely.
 
 ## 2. Framework
 
@@ -63,11 +63,13 @@ Settings sends configuration and module switches over the existing IPC channel. 
 
 | Component | Responsibility |
 | --- | --- |
-| **AI Services** in General | Configure Codex / Pi kernels, Main / Fallback endpoints, models, credentials and policies; `Kit.AiHub` provides execution, cancellation, batching and output validation |
+| **AI Services** in General | Configure Codex / Pi kernels, independent Main / Fallback endpoints, models, credentials, context windows and policies; inspect session statistics and safe diagnostics |
 | **AI Hub** plugin page | Organize audits, optimization candidates and user actions; business logic lives in `Kit.AIHubLib` |
 | **AIHubWorker** | Run scheduled local rule-based audits and save history, without calling AI kernels |
 
-The shared AI service is an internal Kit library currently consumed by AI Hub. AI analysis in Settings uses external CLI kernels to access the configured endpoints. Fallback must be configured and enabled before it can handle eligible failures. See the [AI service notes](doc/ai-service-review.md) for configuration ownership and known limitations.
+The shared `Kit.AiHub` service powers AI Hub and NetMap AI Check. Model calls always run through native **Codex CLI or Pi CLI**; Kit handles policies, batching, cancellation and validated results. Main and Fallback each have a context-window setting, defaulting to **256,000 tokens**. API mode and reasoning-effort fields accept native identifiers; the installed CLI and endpoint determine support. Saving a value does not guarantee that the model supports it.
+
+Native retries finish before an eligible failure can use a configured Fallback; Kit does not add another same-route retry loop. General shows current-process request/route counts, retry outcomes and reported token usage, with missing usage marked unknown. Safe diagnostics distinguish authentication, timeout, cancellation and output failures. See [native execution and settings](doc/devdoc/ai-service-native.md) for settings ownership, protocol compatibility and diagnostic limits.
 
 ### 2.3 Runtime layout
 
@@ -197,11 +199,12 @@ flowchart TB
     W -->|"scheduled rule-based audits, no AI calls"| H
 ```
 
-- **Security Audit**: collect Windows events and run local rules, with AI enrichment when available. Existing results can also receive deep analysis. AI failures preserve rule-based findings and report the analysis status.
+- **Security Audit**: collect Windows events and run local rules, with AI enrichment when available. Existing results can also receive deep analysis. AI failures preserve rule-based findings; long errors wrap inside a bounded, selectable detail area. Authentication failures identify the failed route when known and suggest checking its endpoint, credentials and permissions.
+- **Storage composition**: Analyze storage works without AI and observes known browser, shader, package-manager and application caches, crash reports and system-managed storage. It shows measured sizes, file ages, largest files and incomplete coverage. These observations do not become cleanup candidates or promise recoverable space. Core Windows stores, installed programs, runtimes, credentials and sessions stay protected.
 - **Optimization**: local scan of downloads and allowlisted caches → AI review of candidate metadata → user review and confirmation → local execution. Unapproved items cannot enter the executable set. Items are revalidated before execution; cache cleanup permanently deletes only files from the reviewed snapshot and skips new, changed, locked or inaccessible files.
 - **Task lifetime**: audit and optimization can run concurrently and be cancelled separately. Switching tabs preserves work; disabling the module cancels both tasks. Cancellation does not undo completed file operations.
 - **Background audits**: the Worker performs scheduled rule-based scans using the same plugin settings the page edits for cadence and audit mode, so saved schedule changes apply without a restart. The Worker stays resident with the module and only runs while a cadence is configured.
-- **Details**: the [module documentation](src/modules/AIHub/README.md) covers architecture and maintenance; historical validation is recorded in the [changelog](changelog.md).
+- **Details**: the [module documentation](src/modules/AIHub/README.md) covers architecture and maintenance; [optimization workflow](doc/devdoc/aihub-optimization-3.4.md) describes inventory and cleanup boundaries. Historical validation is recorded in the [changelog](changelog.md).
 
 ### 3.6 NetMap: current egress and route observation
 
@@ -235,6 +238,18 @@ flowchart TB
 - **AI route check**: a manual **AI Check** on the page classifies the latest MTR snapshot into a cross-border line type (such as CMI, CN2 or 163, covering China Mobile, Unicom and Telecom lines) and shows the result on the Proxy card with a one-line summary and route evidence in its details. The check runs through the shared Kit.AiHub engine as the lightweight `route-analysis` task with a single inline instruction, so no `Chains/route-analysis/AGENTS.md` is deployed; host and plugin security policies, sanitization, output auditing and failover all apply. An installed and verified AI kernel in AI Hub is required; missing MTR data, a disabled hub or a missing kernel report specific messages. The result follows the same in-memory lifetime as detection.
 - **Runtime**: the native `Kit.NetMapModuleInterface.dll` manages enablement and the `Kit.NetMapService.exe` headless service; results stream to Settings over local IPC. See the [module documentation](src/modules/NetMap/README.md) for setup, sources and validation scope.
 
+### 3.7 WinGet: software updates and installation
+
+Use the installed Windows Package Manager to check updates, search the official WinGet community catalog and manage installed software. Enabling the module starts `Kit.WingetService.exe`, which detects local WinGet availability and owns operations independently of the Settings window.
+
+- **Updates → Installed → Discover**: each workspace remembers its filters, sources, sorting and detailed/compact/grid view. Updates compares installed and available versions, supports ignored packages and hides unknown installed versions unless opted in. Installed includes matched WinGet packages and unmatched Local PC/MSIX records; Discover searches the community catalog rather than the Microsoft Store catalog.
+- **Search and details**: names and IDs appear before version and installer metadata are resolved. Unresolved values are explicit; opening details or preparing a batch resolves and validates the selected package. Details show versions, publisher, homepage, license and release notes when provided. Failed or cancelled searches retain the previous results; loading and retry feedback remain visible.
+- **Confirmed operations**: select up to 50 packages for a serial install/update/uninstall queue, inspect exact versions, installer options and agreements, then confirm. Native WinGet downloads, verifies and runs the selected package, showing installer/UAC prompts as needed. Operation history and results remain available; cancellation removes pending items, while an active installer is controlled through its native window. Restart recovery checks installation state without automatically replaying operations. Lists can be exported to CSV and selected catalog packages to a WinGet JSON bundle.
+- **Checks and storage**: manual or daily checks can report new update sets through Windows notifications; they never install updates automatically. Settings and bounded queue/history state live under `%LOCALAPPDATA%\Kit\Winget`. Native installation owns its temporary downloads and hash checks; the legacy download-export cache uses `%TEMP%\Kit\Winget` with age/size limits. Failed checks back off, and interrupted installations must be checked before another attempt.
+- **WinUI 3 + Mica**: the centered page uses semantic colors and icons for readiness and operation outcomes, version emphasis, layered detail cards and a bounded output area. Filters and command bars adapt to narrow windows; daily-check and notification preferences stay vertically stacked. Status polling updates changed values while retaining rows, focus and selection, and native output is filtered and throttled to avoid repeated redraws.
+
+See the [WinGet module documentation](src/modules/Winget/README.md) for source coverage, installer options, cache limits, recovery behavior and matching plugin/service artwork.
+
 ## 4. Build and Release
 
 ### 4.1 Development environment
@@ -264,7 +279,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete 
 .\tools\build\Stage-Release.ps1
 ```
 
-[Stage-Release.ps1](tools/build/Stage-Release.ps1) reads the version file and creates `bin/release/<version>/` plus a verification manifest, not a ZIP. It deduplicates the shared CoreCLR/BCL runtimes and strips PDB debug symbols, producing a ~568 MB slimmed distribution. [Stage-Debug.ps1](tools/build/Stage-Debug.ps1) stages Debug output under `bin/debug/<version>/`. Distribute the whole directory, rather than only `Kit.exe` or a plugin DLL.
+[Stage-Release.ps1](tools/build/Stage-Release.ps1) reads the version file and creates `bin/release/<version>/` plus a SHA-256 verification manifest, not a ZIP. It selects runtime files from the existing shared-runtime build layout, excludes tests and build intermediates, and checks versions, dependencies and copied file hashes. PDB files with a matching executable or DLL are retained; package size depends on the current build. [Stage-Debug.ps1](tools/build/Stage-Debug.ps1) stages Debug output under `bin/debug/<version>/`. Distribute the whole directory, rather than only `Kit.exe` or a plugin DLL.
 
 ### 4.3 Validation and real-machine testing
 
@@ -296,12 +311,15 @@ The default data root is `%LOCALAPPDATA%\Kit`:
 | `AiHub/service-settings.json` | Shared AI service configuration |
 | `AiHub/secrets.dat`, `AiHub/security.md`, `AiHub/chains/` | Encrypted credentials, global and task policies |
 | `AiHub/kernels/`, `AiHub/State/` | CLI kernels, audit history and other state |
+| `AiHub/Logs/diagnostics.json` | Bounded AI task/route diagnostic history; follows the shared log level |
 | `Localserver/services.json`, `Localserver/State/` | Service catalog and process ownership records |
 | `NetMap/Data/` | Manually downloaded managed ASN database |
 | `RunnerLogs/`, `Settings/Logs/<version>/`, module log directories | Runner, UI and Worker diagnostics |
 | `crash.log` | Exception diagnostics |
 
 Windows ignores directory-name casing, so the AI Hub plugin and shared AI service use different filenames: `settings.json` and `service-settings.json`.
+
+AI diagnostic history is limited to 256 records and 256 KiB. It contains request outcomes and safe metadata, without prompts, model output, API keys or endpoint URLs. Turning logging off stops new disk records while current-process statistics remain available.
 
 If configuration writes are denied, check the Windows integrity labels of the build output first. Logs stay at their configured module path; a failed write no longer redirects them to LocalLow, Temp or the executable directory. Existing LocalLow logs from older versions remain available to diagnostics. Resetting settings does not repair output permissions. See the [AI service notes](doc/ai-service-review.md) for the known case and remediation.
 
@@ -323,6 +341,8 @@ See [src/README.md](src/README.md) for source organization and [PLUGIN_DEVELOPME
 
 - [Plugin development requirements](PLUGIN_DEVELOPMENT.md): contracts, registration, data isolation, WinUI, localization and lifetime.
 - [AI service notes](doc/ai-service-review.md): configuration ownership, execution, known limitations and historical validation.
+- [Native AI execution and settings](doc/devdoc/ai-service-native.md): independent route settings, context windows, retries and diagnostics.
+- [AI Hub optimization workflow](doc/devdoc/aihub-optimization-3.4.md): read-only inventory, reviewed actions and protected paths.
 - [NetMap documentation](src/modules/NetMap/README.md): data sources, design decisions and test scope.
 - [Architecture documentation index](doc/devdoc/README.md): PowerToys architecture, Kit design and development notes; proposed directions are not implemented capabilities.
 - [Changelog](changelog.md) · [License](LICENSE).

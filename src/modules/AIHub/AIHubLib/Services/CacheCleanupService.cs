@@ -15,7 +15,9 @@ public sealed class CacheCleanupService
     private readonly Func<string, (bool Success, string? Error)> _delete;
     private readonly string? _developmentRoot;
     private readonly string? _userProfile;
+    private readonly OptimizationInventoryService _inventory;
     public List<string> UserDirectorySummaries { get; } = new();
+    public OptimizationInventoryReport InventoryReport { get; private set; } = new();
     private readonly Dictionary<string, TempFileInfo> _packageMarkers = new(StringComparer.OrdinalIgnoreCase);
     public bool ScanTruncated { get; private set; }
 
@@ -25,6 +27,7 @@ public sealed class CacheCleanupService
         : this(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Path.GetTempPath(), DeleteFile,
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Environment.GetEnvironmentVariable("KIT_DEV_ROOT"))
     {
+        _inventory = new OptimizationInventoryService();
     }
 
     internal CacheCleanupService(string localAppData, string tempPath, Func<string, (bool Success, string? Error)> delete,
@@ -33,6 +36,7 @@ public sealed class CacheCleanupService
         _delete = delete;
         _developmentRoot = developmentRoot;
         _userProfile = userProfile;
+        _inventory = new OptimizationInventoryService(localAppData, tempPath, userProfile, roamingAppData);
         List<CacheLocation> locations =
         [
             new("Temporary files", Path.GetFullPath(tempPath), RiskLevel.Low, TempOnly: true),
@@ -99,7 +103,8 @@ public sealed class CacheCleanupService
 
     private static bool IsForbiddenRoot(string path)
     {
-        foreach (var folder in new[] { Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolder.UserProfile,
+        if (IsProtectedCorePath(path)) return true;
+        foreach (var folder in new[] { Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolder.CommonApplicationData, Environment.SpecialFolder.UserProfile,
             Environment.SpecialFolder.MyDocuments, Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86, Environment.SpecialFolder.Windows })
         {
             string root = Environment.GetFolderPath(folder);
@@ -107,6 +112,27 @@ public sealed class CacheCleanupService
         }
 
         return string.Equals(path, Path.TrimEndingDirectorySeparator(Path.GetPathRoot(path)!), StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool IsProtectedCorePath(string path)
+    {
+        string full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        foreach (var folder in new[] { Environment.SpecialFolder.Windows, Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 })
+        {
+            string value = Environment.GetFolderPath(folder);
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(value));
+            if (full.Equals(root, StringComparison.OrdinalIgnoreCase) || full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        string commonData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        if (!string.IsNullOrWhiteSpace(commonData))
+        {
+            string installerCache = Path.GetFullPath(Path.Combine(commonData, "Package Cache"));
+            if (full.Equals(installerCache, StringComparison.OrdinalIgnoreCase) || full.StartsWith(installerCache + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
     }
 
     public Task<List<TempFileInfo>> ScanAsync(CancellationToken cancellationToken = default) => Task.Run(() =>
@@ -189,18 +215,23 @@ public sealed class CacheCleanupService
             foreach (var marker in package.Where(item => item.FileName == ".nupkg.metadata"))
                 _packageMarkers[marker.FilePath] = marker;
         }
-        if (_developmentRoot != null)
-            results.AddRange(DevelopmentCacheScanner.Scan(_developmentRoot, 200000 - results.Count, cancellationToken));
+        if (_developmentRoot != null && !IsProtectedCorePath(_developmentRoot))
+        {
+            results.AddRange(DevelopmentCacheScanner.Scan(_developmentRoot, 200000 - results.Count, cancellationToken)
+                .Where(item => !IsProtectedCorePath(item.FilePath)));
+        }
         if (results.Count >= 200000) ScanTruncated = true;
         for (int index = 0; index < results.Count; index++)
         {
             results[index].ItemId = $"item-{index + 1:D6}";
         }
-        AnalyzeUserDirectories(results, cancellationToken);
+        InventoryReport = _inventory.Scan(cancellationToken);
+        DescribeUserDirectories(results);
+        cancellationToken.ThrowIfCancellationRequested();
         return results;
     }, cancellationToken);
 
-    private void AnalyzeUserDirectories(List<TempFileInfo> candidates, CancellationToken token)
+    private void DescribeUserDirectories(List<TempFileInfo> candidates)
     {
         if (string.IsNullOrEmpty(_userProfile)) return;
         bool chinese = System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
@@ -208,33 +239,13 @@ public sealed class CacheCleanupService
         {
             string root = Path.Combine(_userProfile, name);
             if (!Directory.Exists(root)) continue;
-            long bytes = 0;
-            int count = 0;
-            int examined = 0;
-            bool incomplete = false;
-            var pending = new Stack<string>();
-            pending.Push(root);
-            while (pending.Count > 0)
-            {
-                token.ThrowIfCancellationRequested();
-                string current = pending.Pop();
-                try
-                {
-                    if (!OptimizationFileSafety.HasNoReparsePoints(current)) { incomplete = true; continue; }
-                    foreach (var entry in new DirectoryInfo(current).EnumerateFileSystemInfos())
-                    {
-                        token.ThrowIfCancellationRequested();
-                        if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) { incomplete = true; continue; }
-                        if (entry is DirectoryInfo directory) pending.Push(directory.FullName);
-                        else { bytes += ((FileInfo)entry).Length; count++; }
-                        if (++examined >= 200000) { incomplete = true; pending.Clear(); break; }
-                    }
-                }
-                catch (IOException) { incomplete = true; }
-                catch (UnauthorizedAccessException) { incomplete = true; }
-            }
+            var scopes = InventoryReport.Scopes.Where(scope => scope.RootPath.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+                scope.RootPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)).ToArray();
+            long bytes = scopes.Where(scope => scope.ObservedBytes.HasValue).Sum(scope => scope.ObservedBytes!.Value);
+            int count = scopes.Sum(scope => scope.FileCount);
+            bool incomplete = scopes.Length == 0 || scopes.Any(scope => scope.State != "complete");
             int eligible = candidates.Count(item => item.FilePath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
-            string size = new TempFileInfo { SizeInBytes = bytes }.SizeFormatted;
+            string size = scopes.Any(scope => scope.ObservedBytes.HasValue) ? new TempFileInfo { SizeInBytes = bytes }.SizeFormatted : chinese ? "大小未统计" : "size not measured";
             bool knownCache = _whitelist.Any(location => location.Path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && Directory.Exists(location.Path));
             string status = !knownCache
                 ? (chinese ? "未发现已验证缓存路径；配置、凭据、会话及安装内容保留" : "No verified cache path; configuration, credentials, sessions and installed content retained")
@@ -250,8 +261,8 @@ public sealed class CacheCleanupService
         CleanupItem(item, ignoredPaths: null, allowImplicitMarkerDeletion: true, cancellationToken);
 
     internal IReadOnlySet<string> PrepareDevelopmentBatch(IReadOnlyList<TempFileInfo> items, CancellationToken cancellationToken) =>
-        _developmentRoot == null ? new HashSet<string>(StringComparer.OrdinalIgnoreCase) :
-        DevelopmentCacheScanner.CollectIgnoredPaths(items, _developmentRoot, cancellationToken);
+        _developmentRoot == null || IsProtectedCorePath(_developmentRoot) ? new HashSet<string>(StringComparer.OrdinalIgnoreCase) :
+        DevelopmentCacheScanner.CollectIgnoredPaths(items.Where(item => !IsProtectedCorePath(item.FilePath)).ToArray(), _developmentRoot, cancellationToken);
 
     internal (bool Success, string? Error) CleanupItem(TempFileInfo item, IReadOnlySet<string>? ignoredPaths, bool allowImplicitMarkerDeletion, CancellationToken cancellationToken)
     {
@@ -259,6 +270,8 @@ public sealed class CacheCleanupService
         try
         {
             var file = new FileInfo(item.FilePath);
+            if (IsProtectedCorePath(file.FullName))
+                return (false, "Core system and installed application files are protected. / 核心系统及已安装应用文件受保护。");
             bool inScope = Array.Exists(_whitelist, location => MatchesLocation(file, location));
             bool development = false;
             if (!inScope && _developmentRoot != null)

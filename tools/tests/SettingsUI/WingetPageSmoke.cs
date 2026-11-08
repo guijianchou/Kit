@@ -106,17 +106,21 @@ internal static class WingetPageSmoke
         await CaptureShell("winget-disabled-full-shell.png");
         Log("Disabled guards and full-shell startup PASS");
 
-        // Real lifecycle callbacks stay attached. Resizes happen with the
-        // in-memory module flag disabled; only stable layout fixtures are enabled.
-        vm.SetPageActive(false);
+        // Keep the page's activity source consistent with the suspended VM.
+        // SetPageActive(false) alone is not a suspension: a delayed AppWindow
+        // Changed or Loaded callback correctly reactivates a current visible page.
+        // Preserve those handlers and the real cached navigation checks below.
+        var fixtureActivity = new SyntheticPageActivityScope(page);
         try
         {
             general.SettingsConfig.Enabled.Winget = true;
             Apply(vm, Snapshot());
             Require(GetField<CancellationTokenSource>(vm, "pageLifetime") == null, "Enabled synthetic fixture must remain inactive.");
+            await VerifySyntheticLifecycleIsolation(page);
             await VerifyWorkspaceState(page);
             await VerifyLayouts(page, general);
             await VerifyExpandedSettings(page, general);
+            await VerifySemanticPresentation(page);
             await VerifyRepeatedStatusStability(page);
             await VerifyIgnoredStateLabel(page);
             await VerifyLatestOperationOutput(page);
@@ -134,6 +138,7 @@ internal static class WingetPageSmoke
             vm.FilterText = string.Empty;
             vm.RefreshEnabledState();
             vm.SetPageActive(false);
+            fixtureActivity.Dispose();
         }
 
         var original = page;
@@ -143,11 +148,70 @@ internal static class WingetPageSmoke
             Require(GetField<CancellationTokenSource>(vm, "pageLifetime") == null && !GetField<DispatcherTimer>(vm, "timer").IsEnabled, "Leaving Winget must stop polling.");
             await Navigate(typeof(WingetPage));
             Require(ReferenceEquals(original, NavigationService.Frame.Content), "Winget navigation must reuse its page.");
+            InvokeWindowChanged(page);
+            Require((bool)typeof(WingetPage).GetField("currentPage", PrivateInstance).GetValue(page) &&
+                GetField<CancellationTokenSource>(vm, "pageLifetime") != null && GetField<DispatcherTimer>(vm, "timer").IsEnabled && !GetField<bool>(vm, "polling"),
+                "Real cached navigation must restore activity callbacks while the disabled module prevents service requests.");
         }
         vm.SetPageActive(false);
         Require(ipcMessages == 0, "Read-only navigation must not persist module settings.");
         EnsureNoWorker();
         Log("Cached navigation and inactive polling PASS");
+    }
+
+    private sealed class SyntheticPageActivityScope : IDisposable
+    {
+        private readonly WingetPage page;
+        private readonly FieldInfo currentPageField;
+        private readonly bool wasCurrentPage;
+
+        public SyntheticPageActivityScope(WingetPage page)
+        {
+            this.page = page;
+            currentPageField = typeof(WingetPage).GetField("currentPage", PrivateInstance)
+                ?? throw new InvalidOperationException("Winget lifecycle activity field was not found.");
+            wasCurrentPage = (bool)currentPageField.GetValue(page);
+            Require(wasCurrentPage && page.IsLoaded && !page.ViewModel.IsEnabled,
+                "Synthetic activity scope must enter from a loaded current page with Winget disabled.");
+
+            // Reproduce the original race synchronously while IsEnabled=false
+            // guarantees PollCoreAsync cannot connect to the real service.
+            page.ViewModel.SetPageActive(false);
+            InvokeWindowChanged(page);
+            Require(GetField<CancellationTokenSource>(page.ViewModel, "pageLifetime") != null &&
+                GetField<DispatcherTimer>(page.ViewModel, "timer").IsEnabled && !GetField<bool>(page.ViewModel, "polling"),
+                "A current visible page must reactivate its lifetime on a window event, without polling a disabled module.");
+
+            currentPageField.SetValue(page, false);
+            page.ViewModel.SetPageActive(false);
+            Log("Reproduced delayed-window activity reset safely with Winget disabled; enabled fixtures now suspend the page activity source PASS");
+        }
+
+        public void Dispose()
+        {
+            Require(!page.ViewModel.IsEnabled, "Disable the synthetic module before restoring real page activity.");
+            page.ViewModel.SetPageActive(false);
+            currentPageField.SetValue(page, wasCurrentPage);
+        }
+    }
+
+    private static void InvokeWindowChanged(WingetPage page)
+        => typeof(WingetPage).GetMethod("OnWindowChanged", PrivateInstance).Invoke(page, new object[] { App.GetSettingsWindow().AppWindow, null });
+
+    private static async Task VerifySyntheticLifecycleIsolation(WingetPage page)
+    {
+        var vm = page.ViewModel;
+        Require(vm.IsEnabled && !(bool)typeof(WingetPage).GetField("currentPage", PrivateInstance).GetValue(page), "Synthetic layout fixtures must be enabled but lifecycle-inactive.");
+        for (int repeat = 0; repeat < 3; repeat++)
+        {
+            typeof(WingetPage).GetMethod("OnLoaded", PrivateInstance).Invoke(page, new object[] { page, null });
+            InvokeWindowChanged(page);
+            await Settle();
+            Require(GetField<CancellationTokenSource>(vm, "pageLifetime") == null && !GetField<DispatcherTimer>(vm, "timer").IsEnabled && !GetField<bool>(vm, "polling"),
+                "Loaded and delayed window callbacks must retain synthetic isolation without starting a service request.");
+        }
+        EnsureNoWorker();
+        Log("Enabled synthetic fixtures remain isolated across real Loaded/window callback replays; lifecycle handlers remain attached PASS");
     }
 
     private static async Task VerifyWorkspaceState(WingetPage page)
@@ -688,6 +752,57 @@ internal static class WingetPageSmoke
                 Log($"LAYOUT {context} package[{index}]: y={rect.Top:F1}..{rect.Bottom:F1}, size={container.ActualWidth:F1}x{container.ActualHeight:F1}, visibility={container.Visibility}");
             }
         }
+    }
+
+    private static async Task VerifySemanticPresentation(WingetPage page)
+    {
+        var vm = page.ViewModel;
+        var readinessBadge = (Border)page.FindName("ReadinessBadge");
+        var readinessGlyph = (FontIcon)page.FindName("ReadinessGlyph");
+        var operationBadge = (Border)page.FindName("OperationBadge");
+        var operationGlyph = (FontIcon)page.FindName("OperationGlyph");
+        ElementTheme originalTheme = page.RequestedTheme;
+        try
+        {
+            foreach (ElementTheme theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            {
+                page.RequestedTheme = theme;
+                Apply(vm, Snapshot());
+                await Settle();
+                Require(vm.ReadinessTone == "Success" && ReferenceEquals(readinessBadge.Style, page.BadgeStyle("Success")) && readinessGlyph.Glyph == vm.ReadinessGlyph,
+                    "Available WinGet must bind its success badge and glyph in " + theme + ".");
+
+                Apply(vm, Snapshot() with { Availability = new WingetAvailability(false, null, null, "Fixture missing App Installer") });
+                await Settle();
+                Require(vm.ReadinessTone == "Warning" && ReferenceEquals(readinessBadge.Style, page.BadgeStyle("Warning")),
+                    "Unavailable WinGet must replace the ready badge with a warning.");
+
+                var item = new WingetQueueItem("fixture-presentation", NormalPackage, "upgrade", "Running", "Synthetic progress");
+                Apply(vm, Snapshot() with { IsBusy = true, OperationKind = "queue", Phase = "WaitingForInstaller", Queue = new[] { item } });
+                await Settle();
+                Require(vm.OperationTone == "Accent" && ReferenceEquals(operationBadge.Style, page.BadgeStyle("Accent")),
+                    "Running operations must show an active state.");
+                foreach (var outcome in new[] { (State: "Succeeded", Tone: "Success"), (State: "NeedsVerification", Tone: "Warning"), (State: "Failed", Tone: "Error") })
+                {
+                    Apply(vm, Snapshot() with { Queue = new[] { item with { State = outcome.State } } });
+                    await Settle();
+                    Require(vm.OperationTone == outcome.Tone && ReferenceEquals(operationBadge.Style, page.BadgeStyle(outcome.Tone)) &&
+                        ReferenceEquals(operationGlyph.Style, page.GlyphStyle(outcome.Tone)) && operationGlyph.Glyph == vm.OperationGlyph,
+                        "Operation outcome " + outcome.State + " must update the existing semantic badge and glyph.");
+                }
+                Apply(vm, Snapshot() with { Queue = new[] { item with { State = "Failed" }, item with { Id = "fixture-presentation-later", State = "Succeeded" } } });
+                await Settle();
+                Require(vm.OperationTone == "Error", "A later success must not hide a failed item in the same batch.");
+                Require(ReferenceEquals(operationBadge, page.FindName("OperationBadge")) && ReferenceEquals(operationGlyph, page.FindName("OperationGlyph")),
+                    "Semantic state changes must update the existing controls without replacing the operation surface.");
+            }
+        }
+        finally
+        {
+            page.RequestedTheme = originalTheme;
+            Apply(vm, Snapshot());
+        }
+        Log("Readiness and operation semantic badges update in light/dark themes, preserving controls and mixed-batch failure visibility PASS");
     }
 
     private static async Task VerifyRepeatedStatusStability(WingetPage page)

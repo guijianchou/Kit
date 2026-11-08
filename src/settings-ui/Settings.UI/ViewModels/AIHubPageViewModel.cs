@@ -140,7 +140,7 @@ public sealed class AiReportFinding
     public string SeverityLabel => Severity;
 }
 
-public sealed class AIHubPageViewModel : Observable, IDisposable
+public sealed partial class AIHubPageViewModel : Observable, IDisposable
 {
     private static readonly char[] LineSeparators = ['\r', '\n'];
 
@@ -285,6 +285,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         CleanAllCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "delete").ToList()), () => CanCleanAll);
         OrganizeDownloadsCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "move").ToList()), () => CanSelectOptimizationItems && OptimizationCandidates.Any(item => item.Action == "move" && item.IsSelected));
         CancelOptimizationCommand = new RelayCommand(() => _optimizationCts?.Cancel(), () => IsOptimizing);
+        InitializeInventory();
         RefreshOptimizationHistoryCommand = new RelayCommand(() => _ = RefreshOptimizationHistoryAsync());
 
         // Load cached audit history
@@ -951,6 +952,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
                 if (!value)
                 {
                     IsExecutingOptimization = false;
+                    IsInventoryScanning = false;
                 }
 
                 RefreshCommands();
@@ -1629,6 +1631,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void RefreshCommands()
     {
+        RefreshInventoryCommands();
         ((RelayCommand)FastScanCommand).OnCanExecuteChanged();
         ((RelayCommand)FullScanCommand).OnCanExecuteChanged();
         ((RelayCommand)SelectLatestCommand).OnCanExecuteChanged();
@@ -2711,6 +2714,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
             if (action is null || action == "delete")
             {
                 _cachesScanned = true;
+                ApplyInventoryReport(_cacheCleanupService.InventoryReport);
                 UserDirectorySummaries.Clear();
                 foreach (string summary in _cacheCleanupService.UserDirectorySummaries)
                 {
@@ -2783,6 +2787,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         var token = _optimizationCts.Token;
 
         IsOptimizing = true;
+        BeginInventoryScan();
         ResetScanProgress();
         ScanPhase = ScanPhase.Scanning;
         OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_Scanning".GetLocalizedOrFallback("Scanning...");
@@ -2926,11 +2931,6 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
                     RecalculateCandidateMetrics();
                     OptimizationWorkflowStatus = analysis.Describe(PreferChinese());
-                    if (_cacheCleanupService.ScanTruncated)
-                    {
-                        OptimizationWorkflowStatus += "AIHub_Optimization_ScanLimitReached".GetLocalizedOrFallback(" · Scan limit reached; showing reviewed subset");
-                    }
-
                     ShowStatus(analysis.Describe(PreferChinese()), analysis.IsSuccess ? InfoBarSeverity.Success : InfoBarSeverity.Warning, optimization: true);
                 }, token);
             }
@@ -2972,6 +2972,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         var token = _optimizationCts.Token;
 
         IsOptimizing = true;
+        BeginInventoryScan();
         ResetScanProgress();
         ScanPhase = ScanPhase.Scanning;
         OptimizationWorkflowStatus = "AIHub_OptimizationWorkflow_ScanningTempFiles".GetLocalizedOrFallback("Scanning Temporary files...");
@@ -3050,6 +3051,14 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
 
     private void StopOptimization(bool cancelled)
     {
+        if (IsInventoryScanning)
+        {
+            InventoryStatusText = cancelled
+                ? "AIHub_Inventory_StatusCancelled".GetLocalizedOrFallback("Analysis cancelled. The previous inventory is retained.")
+                : "AIHub_Inventory_StatusFailed".GetLocalizedOrFallback("Analysis could not finish. The previous inventory is retained.");
+            IsInventoryScanning = false;
+        }
+
         _scanProgress.Reset();
         ScanPhase = cancelled ? ScanPhase.Idle : ScanPhase.Failed;
         OptimizationWorkflowStatus = cancelled ? "AIHub_OptimizationWorkflow_ScanCancelled".GetLocalizedOrFallback("Scan cancelled") : "AIHub_OptimizationWorkflow_ScanFailed".GetLocalizedOrFallback("Scan failed");
@@ -3412,6 +3421,7 @@ public sealed class AIHubPageViewModel : Observable, IDisposable
         if (!_disposed)
         {
             _disposed = true;
+            Inventory.PropertyChanged -= OnInventoryChanged;
             _readinessCts?.Cancel();
             AiHub?.Dispose();
             if (_aiEngine is not null)

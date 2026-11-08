@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+﻿<?xml version='1.0' encoding='utf-8'?>
 <root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:schema id="root">
     <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -4328,4 +4328,63 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Winget_PackageHomepage" xml:space="preserve"><value>Package homepage</value></data>
   <data name="Winget_LicenseLink" xml:space="preserve"><value>View license</value></data>
   <data name="Winget_SearchElapsed" xml:space="preserve"><value>Search time: {0:N2} s</value></data>
+  <data name="AiHub_MainEndpoint_ApiModeCard.Description" xml:space="preserve"><value>Choose a suggestion or enter a native API identifier. The selected kernel validates support.</value></data>
+  <data name="AiHub_FallbackEndpoint_ApiModeCard.Description" xml:space="preserve"><value>Choose a suggestion or enter a native API identifier. The selected kernel validates support.</value></data>
+  <data name="AiHub_MainEndpoint_ReasoningCard.Description" xml:space="preserve"><value>Passed unchanged to the selected kernel; support depends on the kernel and model.</value></data>
+  <data name="AiHub_FallbackEndpoint_ReasoningCard.Description" xml:space="preserve"><value>Passed unchanged to the selected kernel; support depends on the kernel and model.</value></data>
+  <data name="AiHub_ContextWindowCard.Header" xml:space="preserve"><value>Context window</value></data>
+  <data name="AiHub_ContextWindowCard.Description" xml:space="preserve"><value>Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.</value></data>
+  <data name="AiHub_ContextWindowBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Context window in tokens</value></data>
+  <data name="AiHub_ContextWindowInvalid" xml:space="preserve"><value>Enter a whole number of tokens between 1,024 and 2,147,483,647.</value></data>
+  <data name="AiHub_EndpointInvalid" xml:space="preserve"><value>Check the endpoint URL, model, native API mode, reasoning effort, and context window.</value></data>
+  <data name="AiHub_DiagnosticsExpander.Header" xml:space="preserve"><value>Runtime statistics</value></data>
+  <data name="AiHub_DiagnosticsSummaryFormat" xml:space="preserve"><value>This session: {0} tasks · {1} succeeded · {2} failed · {3} native retries</value></data>
+  <data name="AiHub_DiagnosticsDetailsFormat" xml:space="preserve"><value>Cancelled {0} · Timed out {1} · Partial {2}
+Main attempts {3} · Fallback attempts {4} · Total task time {5:N1} s
+Reported tokens: input {6:N0} · cached input {7:N0} · cache writes {8:N0} · output {9:N0}
+Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Connection probes are excluded.</value></data>
+  <data name="AiHub_DiagnosticsPersistenceOnFormat" xml:space="preserve"><value>Bounded diagnostic history follows the Kit log level (up to 256 records / 256 KiB). No prompts, replies or credentials are recorded. Persistence failures: {0}.</value></data>
+  <data name="AiHub_DiagnosticsPersistenceOffFormat" xml:space="preserve"><value>Kit logging is off. These session counters stay in memory; no new diagnostic history is saved. Persistence failures: {0}.</value></data>
+  <data name="AIHub_Inventory_Title.Text" xml:space="preserve"><value>Space composition</value></data>
+  <data name="AIHub_Inventory_Description.Text" xml:space="preserve"><value>Explore caches, diagnostics and managed storage. Analysis works locally without AI.</value></data>
+  <data name="AIHub_Inventory_AnalyzeButton.Content" xml:space="preserve"><value>Analyze storage</value></data>
+  <data name="AIHub_Inventory_StopButton.Content" xml:space="preserve"><value>Cancel</value></data>
+  <data name="AIHub_Inventory_ObservedLabel.Text" xml:space="preserve"><value>Observed space</value></data>
+  <data name="AIHub_Inventory_RecentLabel.Text" xml:space="preserve"><value>Modified within 7 days</value></data>
+  <data name="AIHub_Inventory_OldLabel.Text" xml:space="preserve"><value>30 days or older</value></data>
+  <data name="AIHub_Inventory_SizeCaveat.Text" xml:space="preserve"><value>Observed space includes active files. Only separately reviewed items below can be selected for cleanup.</value></data>
+  <data name="AIHub_Inventory_PartialHint.Text" xml:space="preserve"><value>Some locations could not be fully measured within the scan limits. Totals show only observed files.</value></data>
+  <data name="AIHub_Inventory_SearchBox.PlaceholderText" xml:space="preserve"><value>Search locations, paths or guidance</value></data>
+  <data name="AIHub_Inventory_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Search storage locations</value></data>
+  <data name="AIHub_Inventory_FilterComboBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Storage location type</value></data>
+  <data name="AIHub_Inventory_NoMatches.Text" xml:space="preserve"><value>No locations match this filter.</value></data>
+  <data name="AIHub_Inventory_LargestFilesTitle.Text" xml:space="preserve"><value>Largest observed files</value></data>
+  <data name="AIHub_Inventory_CoverageFormat" xml:space="preserve"><value>{0:N0} measured · {1:N0} partial · {2:N0} unavailable · {3:N0} protected · {4:N0} not present · {5:N0} entries checked</value></data>
+  <data name="AIHub_Inventory_SnapshotFormat" xml:space="preserve"><value>Observed {0:g} · {1:N1} s · largest locations first</value></data>
+  <data name="AIHub_Inventory_FilterSummaryFormat" xml:space="preserve"><value>{0:N0} of {1:N0} locations shown. Percentages use measured space, not drive capacity.</value></data>
+  <data name="AIHub_Inventory_FilterAll" xml:space="preserve"><value>All locations</value></data>
+  <data name="AIHub_Inventory_FilterCache" xml:space="preserve"><value>Cache locations</value></data>
+  <data name="AIHub_Inventory_FilterAnalysis" xml:space="preserve"><value>Analysis only</value></data>
+  <data name="AIHub_Inventory_FilterManaged" xml:space="preserve"><value>System managed</value></data>
+  <data name="AIHub_Inventory_FilterProtected" xml:space="preserve"><value>Protected</value></data>
+  <data name="AIHub_Inventory_NotMeasured" xml:space="preserve"><value>Not measured</value></data>
+  <data name="AIHub_Inventory_FileCountFormat" xml:space="preserve"><value>{0:N0} files · {1:N1}% of observed space</value></data>
+  <data name="AIHub_Inventory_NotEnumerated" xml:space="preserve"><value>Contents not enumerated</value></data>
+  <data name="AIHub_Inventory_ScanNotesFormat" xml:space="preserve"><value>{0:N0} entries skipped · {1:N0} access failures. Sizes include only entries that could be measured.</value></data>
+  <data name="AIHub_Inventory_AgeSummaryFormat" xml:space="preserve"><value>Modified within 7 days: {0} · 30 days or older: {1}</value></data>
+  <data name="AIHub_Inventory_StateComplete" xml:space="preserve"><value>Measured</value></data>
+  <data name="AIHub_Inventory_StatePartial" xml:space="preserve"><value>Partial measurement</value></data>
+  <data name="AIHub_Inventory_StateUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="AIHub_Inventory_StateProtected" xml:space="preserve"><value>Protected · not scanned</value></data>
+  <data name="AIHub_Inventory_StateMissing" xml:space="preserve"><value>Not present</value></data>
+  <data name="AIHub_Inventory_DispositionCache" xml:space="preserve"><value>Cache · separate cleanup review</value></data>
+  <data name="AIHub_Inventory_DispositionManaged" xml:space="preserve"><value>Use Windows or the owning app</value></data>
+  <data name="AIHub_Inventory_DispositionProtected" xml:space="preserve"><value>Keep protected files</value></data>
+  <data name="AIHub_Inventory_DispositionAnalysis" xml:space="preserve"><value>Analysis only</value></data>
+  <data name="AIHub_Inventory_ModifiedFormat" xml:space="preserve"><value>Modified {0:g}</value></data>
+  <data name="AIHub_Inventory_StatusReady" xml:space="preserve"><value>Analyze common caches and managed storage without changing files.</value></data>
+  <data name="AIHub_Inventory_StatusScanning" xml:space="preserve"><value>Reading file sizes and timestamps. No file contents are read or changed.</value></data>
+  <data name="AIHub_Inventory_StatusComplete" xml:space="preserve"><value>Storage analysis complete.</value></data>
+  <data name="AIHub_Inventory_StatusCancelled" xml:space="preserve"><value>Analysis cancelled. The previous inventory is retained.</value></data>
+  <data name="AIHub_Inventory_StatusFailed" xml:space="preserve"><value>Analysis could not finish. The previous inventory is retained.</value></data>
 </root>

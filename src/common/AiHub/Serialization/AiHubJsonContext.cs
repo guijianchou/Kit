@@ -24,6 +24,7 @@ using Kit.AiHub.Models;
 [JsonSerializable(typeof(AiHubIpcRequest))]
 [JsonSerializable(typeof(AiHubIpcResponse))]
 [JsonSerializable(typeof(SelfTestInput))]
+[JsonSerializable(typeof(List<AiDiagnosticRecord>))]
 public sealed partial class AiHubJsonContext : JsonSerializerContext
 {
 }

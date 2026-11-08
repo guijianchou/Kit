@@ -76,6 +76,7 @@ if (Test-Path -LiteralPath $journalPath) {
 }
 $fileNames = @(
     (Join-Path $localKit 'settings.json'),
+    (Join-Path $localKit 'log_settings.json'),
     (Join-Path $aiHubRoot 'settings.json'),
     (Join-Path $aiHubRoot 'service-settings.json'),
     (Join-Path $aiHubRoot 'secrets.dat'),

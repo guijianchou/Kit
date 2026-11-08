@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
+using Kit.AiHub.Models;
 
 /// <summary>
 /// Status codes returned by AI Hub task execution.
@@ -96,6 +97,8 @@ public sealed class AiTaskResult<TOutput> where TOutput : class
     public bool IsSuccess { get; init; }
     public AiErrorCode ErrorCode { get; init; } = AiErrorCode.None;
     public string? ErrorMessage { get; init; }
+    public AiRouteDiagnostics? Diagnostics { get; init; }
+    public string FailureRoute { get; init; } = string.Empty;
     public TOutput? Payload { get; init; }
     public bool HasPartialResult => !IsSuccess && Payload is not null;
     public int CompletedBatches { get; init; }

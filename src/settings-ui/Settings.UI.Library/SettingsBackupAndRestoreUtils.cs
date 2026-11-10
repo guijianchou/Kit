@@ -10,11 +10,13 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Kit.AiHub.Storage;
 using Kit.Settings.UI.Library.Utilities;
 using ManagedCommon;
 
@@ -22,7 +24,7 @@ namespace Kit.Settings.UI.Library
 {
     public class SettingsBackupAndRestoreUtils
     {
-        private static SettingsBackupAndRestoreUtils instance;
+        private static readonly Lazy<SettingsBackupAndRestoreUtils> InstanceHolder = new(() => new SettingsBackupAndRestoreUtils());
         private (bool Success, string Severity, bool LastBackupExists, DateTime? LastRan) lastBackupSettingsResults;
         private static Lock backupSettingsInternalLock = new Lock();
         private static Lock removeOldBackupsLock = new Lock();
@@ -39,18 +41,7 @@ namespace Kit.Settings.UI.Library
             LastBackupStartTime = DateTime.MinValue;
         }
 
-        public static SettingsBackupAndRestoreUtils Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    instance = new SettingsBackupAndRestoreUtils();
-                }
-
-                return instance;
-            }
-        }
+        public static SettingsBackupAndRestoreUtils Instance => InstanceHolder.Value;
 
         private sealed class JsonMergeHelper
         {
@@ -297,15 +288,39 @@ namespace Kit.Settings.UI.Library
 
                 // get data needed for process
                 var backupRestoreSettings = JsonNode.Parse(GetBackupRestoreSettingsJson());
+
+                // Validate the complete DPAPI snapshot before any ordinary setting is changed.
+                var aiHubBackup = IncludesAiHubService(backupRestoreSettings, latestSettingsFolder)
+                    ? AiHubSettingsStore.ReadBackup(Path.Combine(latestSettingsFolder, "AiHub"))
+                    : null;
                 var currentSettingsFiles = GetSettingsFiles(backupRestoreSettings, appBasePath).ToList().ToDictionary(x => x.Substring(appBasePath.Length));
                 var backupSettingsFiles = GetSettingsFiles(backupRestoreSettings, latestSettingsFolder).ToList().ToDictionary(x => x.Substring(latestSettingsFolder.Length));
 
-                if (backupSettingsFiles.Count == 0)
+                if (backupSettingsFiles.Count == 0 && aiHubBackup == null)
                 {
                     return (false, $"General_SettingsBackupAndRestore_NoBackupsFound", "Warning");
                 }
 
                 var anyFilesUpdated = false;
+                if (aiHubBackup != null)
+                {
+                    var aiHubStore = new AiHubSettingsStore(Path.Combine(appBasePath, "AiHub"));
+                    AiHubSettingsBackup currentAiHub = null;
+                    try
+                    {
+                        currentAiHub = aiHubStore.ExportBackup();
+                    }
+                    catch (Exception exception) when (exception is IOException or InvalidDataException)
+                    {
+                        // A validated encrypted backup can repair a broken current snapshot.
+                    }
+
+                    if (!AiHubSettingsStore.BackupContentEquals(currentAiHub, aiHubBackup))
+                    {
+                        aiHubStore.ImportBackup(aiHubBackup);
+                        anyFilesUpdated = true;
+                    }
+                }
 
                 foreach (var currentFile in backupSettingsFiles)
                 {
@@ -500,8 +515,12 @@ namespace Kit.Settings.UI.Library
         /// <remarks>
         /// The backup will usually be a backup file that has to be extracted to a temp folder. This will do that for us.
         /// </remarks>
-        private string GetLatestSettingsFolder(string settingsBackupAndRestoreDir = null)
+        private string GetLatestSettingsFolder(string settingsBackupAndRestoreDir = null) =>
+            GetLatestSettingsFolder(settingsBackupAndRestoreDir, out _);
+
+        private string GetLatestSettingsFolder(string settingsBackupAndRestoreDir, out string backupFileName)
         {
+            backupFileName = null;
             settingsBackupAndRestoreDir ??= GetSettingsBackupAndRestoreDir();
 
             if (string.IsNullOrEmpty(settingsBackupAndRestoreDir) || !Directory.Exists(settingsBackupAndRestoreDir))
@@ -520,16 +539,29 @@ namespace Kit.Settings.UI.Library
             // Try each available backup starting with the newest. If the newest is damaged, fall back to the next one!
             foreach (var backup in sortedBackups)
             {
-                var fullBackupDir = Path.Combine(tempPath, "Kit_settings_" + backup.SortableKey);
+                string fullBackupDir = null;
 
                 try
                 {
+                    // A timestamp alone is not an archive identity: changing backup
+                    // locations or replacing a same-named archive must not restore
+                    // settings from an earlier extraction. Hash the bytes as well as
+                    // the normalized source path, and hold this stream through
+                    // extraction so the checked archive cannot change underneath us.
+                    using var archiveStream = new FileStream(backup.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    string archiveHash = Convert.ToHexString(SHA256.HashData(archiveStream));
+                    string sourceIdentity = Path.GetFullPath(backup.FilePath).ToUpperInvariant() + "\0" + archiveHash;
+                    string cacheIdentity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sourceIdentity)));
+                    fullBackupDir = Path.Combine(tempPath, "Kit_settings_" + backup.SortableKey + "_" + cacheIdentity);
+
                     lock (backupSettingsInternalLock)
                     {
                         if (!Directory.Exists(fullBackupDir) || !File.Exists(Path.Combine(fullBackupDir, "manifest.json")))
                         {
                             TryDeleteDirectory(fullBackupDir);
-                            ZipFile.ExtractToDirectory(backup.FilePath, fullBackupDir);
+                            archiveStream.Position = 0;
+                            using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true);
+                            archive.ExtractToDirectory(fullBackupDir);
                         }
 
                         string manifestFile = Path.Combine(fullBackupDir, "manifest.json");
@@ -538,6 +570,7 @@ namespace Kit.Settings.UI.Library
                             var manifestNode = JsonNode.Parse(File.ReadAllText(manifestFile));
                             if (manifestNode != null)
                             {
+                                backupFileName = backup.FileName;
                                 ThreadPool.QueueUserWorkItem((x) =>
                                 {
                                     try
@@ -583,19 +616,8 @@ namespace Kit.Settings.UI.Library
                 return string.Empty;
             }
 
-            var folder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
-            if (!string.IsNullOrEmpty(folder))
-            {
-                string dirName = Path.GetFileName(folder);
-                string sortableKey = dirName.Replace("Kit_settings_", string.Empty);
-                var matched = sortedBackups.FirstOrDefault(b => b.SortableKey == sortableKey);
-                if (matched != null)
-                {
-                    return matched.FileName;
-                }
-            }
-
-            return sortedBackups[0].FileName;
+            _ = GetLatestSettingsFolder(settingsBackupAndRestoreDir, out string backupFileName);
+            return backupFileName ?? sortedBackups[0].FileName;
         }
 
         /// <summary>
@@ -671,7 +693,8 @@ namespace Kit.Settings.UI.Library
             {
                 string directory = pending.Pop();
                 files.AddRange(Directory.EnumerateFiles(directory, "*.json", SearchOption.TopDirectoryOnly)
-                    .Where(s => (File.GetAttributes(s) & FileAttributes.ReparsePoint) == 0 && IsIncludeFile(settings, s) && !IsIgnoreFile(settings, s)));
+                    .Where(s => (File.GetAttributes(s) & FileAttributes.ReparsePoint) == 0 && IsIncludeFile(settings, s) && !IsIgnoreFile(settings, s)
+                        && !IsDedicatedAiHubServiceFile(path, s)));
                 foreach (string child in Directory.EnumerateDirectories(directory))
                 {
                     if (!string.Equals(Path.GetFullPath(child), backupDirectory, StringComparison.OrdinalIgnoreCase)
@@ -683,6 +706,42 @@ namespace Kit.Settings.UI.Library
             }
 
             return files.ToArray();
+        }
+
+        private static bool IsAiHubRelativePath(string path, string fileName) =>
+            string.Equals(path.TrimStart('\\', '/').Replace('/', '\\'), "AiHub\\" + fileName, StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsDedicatedAiHubServiceFile(string root, string file)
+        {
+            string relative = Path.GetRelativePath(root, file);
+            if (IsAiHubRelativePath(relative, "service-settings.json"))
+            {
+                return true;
+            }
+
+            if (!IsAiHubRelativePath(relative, "settings.json"))
+            {
+                return false;
+            }
+
+            using var document = JsonDocument.Parse(File.ReadAllText(file));
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                !document.RootElement.TryGetProperty("properties", out _) &&
+                (document.RootElement.TryGetProperty("targets", out _) || document.RootElement.TryGetProperty("targetStorageVersion", out _));
+        }
+
+        private static bool IncludesAiHubService(JsonNode settings, string root)
+        {
+            string path = Path.Combine(root, "AiHub", "service-settings.json");
+            return IsIncludeFile(settings, path) && !IsIgnoreFile(settings, path);
+        }
+
+        private static AiHubSettingsBackup ExportAiHubService(JsonNode settings, string root)
+        {
+            string directory = Path.Combine(root, "AiHub");
+            return Directory.Exists(directory) && IncludesAiHubService(settings, root)
+                ? AiHubSettingsStore.ExportBackup(directory)
+                : null;
         }
 
         /// <summary>
@@ -799,21 +858,38 @@ namespace Kit.Settings.UI.Library
                         return (true, string.Empty, "None", lastBackupExists, string.Empty);
                     }
 
+                    var aiHubBackup = ExportAiHubService(backupRestoreSettings, appBasePath);
                     var currentSettingsFiles = GetSettingsFiles(backupRestoreSettings, appBasePath).ToList().ToDictionary(x => x.Substring(appBasePath.Length));
                     var now = DateTime.Now;
                     string timestampStr = now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
                     var fullBackupDir = Path.Combine(Path.GetTempPath(), $"Kit_settings_{timestampStr}");
                     var latestSettingsFolder = GetLatestSettingsFolder(settingsBackupAndRestoreDir);
                     var lastBackupSettingsFiles = GetSettingsFiles(backupRestoreSettings, latestSettingsFolder).ToList().ToDictionary(x => x.Substring(latestSettingsFolder.Length));
+                    AiHubSettingsBackup previousAiHubBackup = null;
+                    if (latestSettingsFolder != null && IncludesAiHubService(backupRestoreSettings, latestSettingsFolder))
+                    {
+                        try
+                        {
+                            previousAiHubBackup = AiHubSettingsStore.ReadBackup(Path.Combine(latestSettingsFolder, "AiHub"));
+                        }
+                        catch (InvalidDataException)
+                        {
+                            // Preserve a usable current snapshot even if the previous archive's
+                            // protected endpoint pair is damaged or belongs to another account.
+                            Logger.LogWarning("The previous AI service backup could not be validated; creating a fresh encrypted snapshot.");
+                        }
+                    }
 
-                    lastBackupExists = lastBackupSettingsFiles.Count > 0;
+                    bool aiHubChanged = aiHubBackup != null && !AiHubSettingsStore.BackupContentEquals(aiHubBackup, previousAiHubBackup);
 
-                    if (currentSettingsFiles.Count == 0)
+                    lastBackupExists = lastBackupSettingsFiles.Count > 0 || previousAiHubBackup != null;
+
+                    if (currentSettingsFiles.Count == 0 && aiHubBackup == null)
                     {
                         return (false, "General_SettingsBackupAndRestore_NoSettingsFilesFound", "Error", lastBackupExists, string.Empty);
                     }
 
-                    var anyFileBackedUp = false;
+                    var anyFileBackedUp = aiHubChanged;
                     var skippedSettingsFiles = new Dictionary<string, (string Path, string Settings)>();
                     var updatedSettingsFiles = new Dictionary<string, string>();
 
@@ -896,13 +972,22 @@ namespace Kit.Settings.UI.Library
                     }
 
                     // add manifest
+                    string[] aiHubFiles = aiHubBackup == null ? Array.Empty<string>() : new[] { "\\AiHub\\service-settings.json", "\\AiHub\\secrets.dat" };
+                    if (!dryRun && aiHubBackup != null)
+                    {
+                        string aiHubDirectory = Path.Combine(fullBackupDir, "AiHub");
+                        Directory.CreateDirectory(aiHubDirectory);
+                        File.WriteAllBytes(Path.Combine(aiHubDirectory, "service-settings.json"), aiHubBackup.SettingsJson);
+                        File.WriteAllBytes(Path.Combine(aiHubDirectory, "secrets.dat"), aiHubBackup.EncryptedSecrets);
+                    }
+
                     var manifestData = new
                     {
                         CreateDateTime = DateTime.UtcNow.ToString("u", CultureInfo.InvariantCulture),
                         @Version = Helper.GetProductVersion(),
-                        UpdatedFiles = updatedSettingsFiles.Keys.ToList(),
+                        UpdatedFiles = updatedSettingsFiles.Keys.Concat(aiHubChanged ? aiHubFiles : Array.Empty<string>()).ToList(),
                         BackupSource = Environment.MachineName,
-                        UnchangedFiles = skippedSettingsFiles.Keys.ToList(),
+                        UnchangedFiles = skippedSettingsFiles.Keys.Concat(aiHubChanged ? Array.Empty<string>() : aiHubFiles).ToList(),
                     };
 
                     var manifest = JsonSerializer.Serialize(manifestData, _serializerOptions);
@@ -979,7 +1064,8 @@ namespace Kit.Settings.UI.Library
         public static string GetExportVersion(JsonNode backupRestoreSettings, string settingFileKey, string settingsFileName)
         {
             var ignoredSettings = GetIgnoredSettings(backupRestoreSettings, settingFileKey);
-            var settingsFile = JsonDocument.Parse(File.ReadAllText(settingsFileName));
+            using var settingsFile = JsonDocument.Parse(File.ReadAllText(settingsFileName));
+            bool aiHubPlugin = IsAiHubRelativePath(settingFileKey, "settings.json");
 
             var outputBuffer = new ArrayBufferWriter<byte>();
 
@@ -988,7 +1074,8 @@ namespace Kit.Settings.UI.Library
                 jsonWriter.WriteStartObject();
                 foreach (var property in settingsFile.RootElement.EnumerateObject().OrderBy(p => p.Name))
                 {
-                    if (!ignoredSettings.Contains(property.Name))
+                    if (!ignoredSettings.Contains(property.Name) &&
+                        !(aiHubPlugin && property.Name is "targets" or "targetStorageVersion" or "targetStorageId"))
                     {
                         property.WriteTo(jsonWriter);
                     }

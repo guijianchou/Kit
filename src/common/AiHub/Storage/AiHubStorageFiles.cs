@@ -6,6 +6,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using Kit.AiHub.Serialization;
 
@@ -16,16 +17,18 @@ internal sealed class AiHubStorageFiles
 {
     internal const int MaxDataFileBytes = 1024 * 1024;
     internal const string ServiceSettingsFileName = "service-settings.json";
-    private const int MaxJournalBytes = 4 * MaxDataFileBytes;
+    private const int MaxJournalBytes = 6 * MaxDataFileBytes;
     private const string JournalFileName = ".settings-transaction.dat";
     private readonly string _mutexName;
+    private readonly bool _readOnly;
 
     internal string DataDirectory { get; }
 
-    internal AiHubStorageFiles(string dataDirectory)
+    internal AiHubStorageFiles(string dataDirectory, bool readOnly = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
         DataDirectory = NormalizeDirectory(dataDirectory);
+        _readOnly = readOnly;
         byte[] identity = Encoding.UTF8.GetBytes(DataDirectory.ToUpperInvariant());
         _mutexName = @"Global\Kit.AiHub." + Convert.ToHexString(SHA256.HashData(identity));
         Run(static () => { });
@@ -81,9 +84,21 @@ internal sealed class AiHubStorageFiles
 
                 cancellationToken.ThrowIfCancellationRequested();
                 EnsureNoReparsePoints(DataDirectory);
-                Directory.CreateDirectory(DataDirectory);
-                EnsureNoReparsePoints(DataDirectory);
-                RecoverTransaction();
+                if (_readOnly)
+                {
+                    EnsureNoReparsePoints(GetPath(JournalFileName));
+                    if (File.Exists(GetPath(JournalFileName)))
+                    {
+                        throw new IOException("An unfinished AI Hub transaction must be recovered before a backup can be read.");
+                    }
+                }
+                else
+                {
+                    Directory.CreateDirectory(DataDirectory);
+                    EnsureNoReparsePoints(DataDirectory);
+                    RecoverTransaction();
+                }
+
                 return action();
             }
             finally
@@ -159,6 +174,11 @@ internal sealed class AiHubStorageFiles
 
     internal void WriteAtomic(string relativePath, byte[] content, int maximumBytes = MaxDataFileBytes)
     {
+        if (_readOnly)
+        {
+            throw new InvalidOperationException("A read-only AI Hub snapshot cannot write storage.");
+        }
+
         if (content.Length > maximumBytes || string.IsNullOrWhiteSpace(relativePath))
         {
             throw new InvalidDataException("The AI Hub data file is invalid.");
@@ -206,19 +226,59 @@ internal sealed class AiHubStorageFiles
         }
     }
 
-    internal void CommitSettingsAndSecrets(byte[] settings, byte[] secrets)
+    internal void CommitSettingsAndSecrets(byte[] settings, byte[] secrets, string? sanitizeLegacyStorageId = null)
     {
         if (settings.Length > MaxDataFileBytes || secrets.Length > MaxDataFileBytes)
         {
             throw new InvalidDataException("The AI Hub settings exceed their size limit.");
         }
 
+        using FileStream? legacyStream = sanitizeLegacyStorageId is null ? null : OpenLegacyForUpdate();
+        byte[]? originalLegacy = legacyStream is null ? null : ReadPinnedFile(legacyStream);
+        byte[]? sanitizedLegacySettings = null;
+        try
+        {
+            if (originalLegacy is not null && JsonNode.Parse(originalLegacy) is JsonObject legacy && legacy.ContainsKey("targets"))
+            {
+                legacy.Remove("targets");
+                legacy["targetStorageVersion"] = 1;
+                legacy["targetStorageId"] = sanitizeLegacyStorageId;
+                sanitizedLegacySettings = Encoding.UTF8.GetBytes(legacy.ToJsonString());
+            }
+
+            CommitSettingsAndSecretsCore(settings, secrets, legacyStream, originalLegacy, sanitizedLegacySettings);
+        }
+        finally
+        {
+            if (originalLegacy is not null)
+            {
+                CryptographicOperations.ZeroMemory(originalLegacy);
+            }
+
+            if (sanitizedLegacySettings is not null)
+            {
+                CryptographicOperations.ZeroMemory(sanitizedLegacySettings);
+            }
+        }
+    }
+
+    private void CommitSettingsAndSecretsCore(byte[] settings, byte[] secrets, FileStream? legacyStream, byte[]? originalLegacy, byte[]? sanitizedLegacySettings)
+    {
+        if (sanitizedLegacySettings?.Length > MaxDataFileBytes)
+        {
+            throw new InvalidDataException("The AI Hub settings exceed their size limit.");
+        }
+
         var snapshot = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["version"] = "2",
+            ["version"] = sanitizedLegacySettings is null ? "2" : "3",
         };
         AddSnapshot(snapshot, "settings", ServiceSettingsFileName);
         AddSnapshot(snapshot, "secrets", "secrets.dat");
+        if (sanitizedLegacySettings is not null)
+        {
+            snapshot.Add("legacy", Convert.ToBase64String(originalLegacy!));
+        }
 
         byte[] plaintext = JsonSerializer.SerializeToUtf8Bytes(snapshot, AiHubJsonContext.Default.DictionaryStringString);
         byte[] journal;
@@ -237,14 +297,55 @@ internal sealed class AiHubStorageFiles
         {
             WriteAtomic("secrets.dat", secrets);
             WriteAtomic(ServiceSettingsFileName, settings);
+            if (sanitizedLegacySettings is not null)
+            {
+                WritePinnedFile(legacyStream!, sanitizedLegacySettings);
+            }
+
             DeleteJournal();
         }
         catch (Exception)
         {
             // Retain a failed recovery journal so the next reader also fails closed.
-            RecoverTransaction();
+            RecoverTransaction(legacyStream);
             throw new IOException("The AI Hub settings could not be committed.");
         }
+    }
+
+    private FileStream? OpenLegacyForUpdate()
+    {
+        string path = GetPath("settings.json");
+        EnsureNoReparsePoints(path);
+        try
+        {
+            return new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.WriteThrough);
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    private static byte[] ReadPinnedFile(FileStream stream)
+    {
+        if (stream.Length > MaxDataFileBytes)
+        {
+            throw new InvalidDataException("An AI Hub data file exceeds its size limit.");
+        }
+
+        stream.Position = 0;
+        byte[] content = new byte[checked((int)stream.Length)];
+        stream.ReadExactly(content);
+        return content;
+    }
+
+    private static void WritePinnedFile(FileStream stream, byte[] content)
+    {
+        stream.Position = 0;
+        stream.Write(content);
+        stream.SetLength(content.Length);
+        stream.Flush(flushToDisk: true);
+        AiHubSettingsStore.BumpWriteVersion();
     }
 
     private void AddSnapshot(Dictionary<string, string> snapshot, string key, string fileName)
@@ -263,7 +364,7 @@ internal sealed class AiHubStorageFiles
         }
     }
 
-    private void RecoverTransaction()
+    private void RecoverTransaction(FileStream? lockedLegacy = null)
     {
         byte[]? journal = ReadOptionalFile(GetPath(JournalFileName), MaxJournalBytes);
         if (journal is null)
@@ -276,14 +377,14 @@ internal sealed class AiHubStorageFiles
         {
             var snapshot = JsonSerializer.Deserialize(plaintext, AiHubJsonContext.Default.DictionaryStringString)
                 ?? throw new InvalidDataException("The AI Hub recovery journal is invalid.");
-            if (!snapshot.TryGetValue("version", out string? version) || version is not ("1" or "2") || snapshot.Count > 3)
+            if (!snapshot.TryGetValue("version", out string? version) || version is not ("1" or "2" or "3") || snapshot.Count > (version == "3" ? 4 : 3))
             {
                 throw new InvalidDataException("The AI Hub recovery journal is invalid.");
             }
 
             foreach (string key in snapshot.Keys)
             {
-                if (key is not ("version" or "settings" or "secrets"))
+                if (key is not ("version" or "settings" or "secrets") && !(version == "3" && key == "legacy"))
                 {
                     throw new InvalidDataException("The AI Hub recovery journal is invalid.");
                 }
@@ -291,15 +392,38 @@ internal sealed class AiHubStorageFiles
 
             byte[]? settings = ReadSnapshot(snapshot, "settings");
             byte[]? secrets = null;
+            byte[]? legacy = null;
+            FileStream? recoveryLegacy = null;
             try
             {
                 secrets = ReadSnapshot(snapshot, "secrets");
+                legacy = version == "3" ? ReadSnapshot(snapshot, "legacy") : null;
+                if (legacy is not null && lockedLegacy is null)
+                {
+                    string legacyPath = GetPath("settings.json");
+                    EnsureNoReparsePoints(legacyPath);
+                    recoveryLegacy = new FileStream(legacyPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.WriteThrough);
+                }
+
                 RestoreFile(version == "1" ? "settings.json" : ServiceSettingsFileName, settings);
                 RestoreFile("secrets.dat", secrets);
+                if (version == "3")
+                {
+                    if (legacy is null)
+                    {
+                        RestoreFile("settings.json", null);
+                    }
+                    else
+                    {
+                        RestorePinnedLegacy(lockedLegacy ?? recoveryLegacy!, legacy);
+                    }
+                }
+
                 DeleteJournal();
             }
             finally
             {
+                recoveryLegacy?.Dispose();
                 if (settings is not null)
                 {
                     CryptographicOperations.ZeroMemory(settings);
@@ -309,11 +433,66 @@ internal sealed class AiHubStorageFiles
                 {
                     CryptographicOperations.ZeroMemory(secrets);
                 }
+
+                if (legacy is not null)
+                {
+                    CryptographicOperations.ZeroMemory(legacy);
+                }
             }
         }
         finally
         {
             CryptographicOperations.ZeroMemory(plaintext);
+        }
+    }
+
+    private static void RestorePinnedLegacy(FileStream stream, byte[] original)
+    {
+        byte[] current = ReadPinnedFile(stream);
+        byte[]? merged = null;
+        try
+        {
+            if (current.AsSpan().SequenceEqual(original))
+            {
+                return;
+            }
+
+            if (JsonNode.Parse(original) is JsonObject before && before.ContainsKey("targets"))
+            {
+                try
+                {
+                    if (JsonNode.Parse(current) is JsonObject latest)
+                    {
+                        // A plugin may have saved again after a process crash. Roll back
+                        // only the three fields migration owns, retaining its newer preferences.
+                        foreach (string field in new[] { "targets", "targetStorageVersion", "targetStorageId" })
+                        {
+                            latest.Remove(field);
+                            if (before.TryGetPropertyValue(field, out var value))
+                            {
+                                latest[field] = value?.DeepClone();
+                            }
+                        }
+
+                        merged = Encoding.UTF8.GetBytes(latest.ToJsonString());
+                    }
+                }
+                catch (JsonException)
+                {
+                    // An interrupted in-place write may leave torn JSON. The protected
+                    // original is then the only complete recoverable legacy snapshot.
+                }
+            }
+
+            WritePinnedFile(stream, merged ?? original);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(current);
+            if (merged is not null)
+            {
+                CryptographicOperations.ZeroMemory(merged);
+            }
         }
     }
 

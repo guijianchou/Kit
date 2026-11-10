@@ -766,7 +766,9 @@ internal static class ModulePageSmoke
         {
             type.GetField("_auditCts", instance).SetValue(vm, pending);
             type.GetField("_selectedScopeIndex", instance).SetValue(vm, 0);
+            type.GetProperty(nameof(vm.IsAuditing)).SetValue(vm, false);
             type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, true);
+            type.GetProperty(nameof(vm.WindowText)).SetValue(vm, "Synthetic completed audit range");
             foreach (int range in new[] { 1, 2 })
             {
                 vm.AllIssues.Clear();
@@ -779,25 +781,27 @@ internal static class ModulePageSmoke
                 type.GetProperty(nameof(vm.HasAiReport)).SetValue(vm, true);
                 CancellationToken oldToken = pending.Token;
                 vm.FullScanRangeIndex = range;
-                pending = (CancellationTokenSource)type.GetField("_auditCts", instance).GetValue(vm);
-                if (!oldToken.IsCancellationRequested || pending.Token == oldToken || !vm.IsAuditing || vm.IsAiAnalyzing ||
-                    vm.AllIssues.Count != 0 || rawEvents.Count != 0 || vm.AiReportFindings.Count != 0 || vm.HasAiReport || vm.HasAuditData ||
-                    vm.WindowText != vm.ScanRangeDescription || vm.HighCount != 0 || vm.MediumCount != 0 || vm.LowCount != 0)
-                    throw new InvalidOperationException("Changing the top range did not cancel and clear the previous audit before collecting the new range.");
+                if (oldToken.IsCancellationRequested || !ReferenceEquals(pending, type.GetField("_auditCts", instance).GetValue(vm)) ||
+                    vm.IsAuditing || !vm.IsAiAnalyzing || vm.AllIssues.Count != 1 || rawEvents.Count != 1 ||
+                    vm.AiReportFindings.Count != 1 || !vm.HasAiReport || !vm.HasAuditData ||
+                    vm.WindowText != "Synthetic completed audit range" || vm.FullScanRangeIndex != range)
+                    throw new InvalidOperationException("Editing the next scan range interrupted the current analysis or replaced its completed snapshot.");
             }
 
-            // Cancel before yielding the UI thread: this only exercises local collection,
-            // and no queued completion may save history or start an AI request.
-            vm.CancelAuditCommand.Execute(null);
-            for (int attempt = 0; attempt < 50 && vm.IsAuditing; attempt++) await Task.Delay(100);
-            if (vm.IsAuditing || vm.IsAiAnalyzing || vm.HasAuditData || rawEvents.Count != 0 || vm.AiReportFindings.Count != 0 ||
+            // Range selection is a draft in both busy and idle states. No scan command
+            // is executed, and yielding must not publish a queued scan or AI request.
+            type.GetProperty(nameof(vm.IsAiAnalyzing)).SetValue(vm, false);
+            vm.FullScanRangeIndex = 0;
+            await Task.Delay(80);
+            if (vm.IsAuditing || vm.IsAiAnalyzing || !vm.HasAuditData || rawEvents.Count != 1 || vm.AiReportFindings.Count != 1 ||
+                pending.IsCancellationRequested || !ReferenceEquals(pending, type.GetField("_auditCts", instance).GetValue(vm)) ||
                 !Equals(type.GetField("_lastCompletedAuditUtc", instance).GetValue(vm), fields["_lastCompletedAuditUtc"]) ||
-                vm.WindowText != vm.ScanRangeDescription || vm.AuditPhase != ScanPhase.Idle)
-                throw new InvalidOperationException("Cancelled range collection published stale results or advanced the audit history cursor.");
+                vm.WindowText != "Synthetic completed audit range")
+                throw new InvalidOperationException("An idle scan-range draft started work, replaced results or advanced the audit history cursor.");
             byte[] historyAfter = File.Exists(historyPath) ? File.ReadAllBytes(historyPath) : null;
             if ((historyBefore == null) != (historyAfter == null) || (historyBefore != null && !historyBefore.SequenceEqual(historyAfter)))
                 throw new InvalidOperationException("Changing the top range wrote an audit history entry.");
-            File.AppendAllText(Report, "Audit range: rapid 1-week/1-month changes cancel old lifetimes, clear findings/evidence/AI report, update the window, and leave history unchanged after cancellation.\n");
+            File.AppendAllText(Report, "Audit range: rapid draft changes preserve current lifetimes, findings/evidence/AI reports and result range, start no busy or idle work, and leave history unchanged.\n");
         }
         finally
         {
@@ -1243,21 +1247,24 @@ internal static class ModulePageSmoke
                         await Task.Delay(150);
                         foreach (var viewer in Descendants(page).OfType<ScrollViewer>()) viewer.ChangeView(null, 0, null, true);
                         await Task.Delay(100);
-                        var summary = (FrameworkElement)page.FindName("AuditFindingsSummary");
-                        if (tab < 2)
+                        if (tab == 1)
                         {
-                            var header = (Grid)page.FindName(tab == 0 ? "AuditCommandHeader" : "OptimizationCommandHeader");
+                            var header = (Grid)page.FindName("OptimizationCommandHeader");
                             if (Grid.GetRow((FrameworkElement)header.Children[1]) != (header.ActualWidth < 960 ? 1 : 0) ||
                                 ((FrameworkElement)header.Children[0]).ActualWidth < 280)
                                 throw new InvalidOperationException("Command actions must wrap below the title before squeezing it.");
                         }
                         var overview = (Grid)page.FindName("AuditOverviewGrid");
-                        if (tab == 0 && Grid.GetRow(summary) != (overview.ActualWidth < 760 ? 1 : 0))
+                        var summary = (FrameworkElement)page.FindName("AuditScoreSummary");
+                        if (tab == 0 && Grid.GetRow(summary) != (overview.ActualWidth < 480 ? 1 : 0))
                             throw new InvalidOperationException("Audit summary did not adapt to its content width.");
                         var scoreCard = (FrameworkElement)page.FindName("AuditScoreCard");
-                        if (tab == 0 && (Grid.GetColumnSpan(scoreCard) != (overview.ActualWidth < 760 ? 2 : 1) ||
+                        if (tab == 0 && (Grid.GetColumnSpan(scoreCard) != (overview.ActualWidth < 480 ? 2 : 1) ||
                             !ReferenceEquals(VisualTreeHelper.GetParent(scoreCard), overview)))
                             throw new InvalidOperationException("The audit score card must span the actual overview grid at narrow widths.");
+                        var contentScroll = (ScrollViewer)page.FindName("AiHubContentScroll");
+                        if (contentScroll.ExtentWidth > contentScroll.ViewportWidth + 2)
+                            throw new InvalidOperationException("AI Hub content introduced horizontal overflow.");
                         await RenderPage(page, $"aihub-{theme}-tab-{tab}-{width}.png");
                     }
                 }
@@ -1276,24 +1283,31 @@ internal static class ModulePageSmoke
             throw new InvalidOperationException("AI Hub does not inherit the window theme.");
         var vm = page.ViewModel;
         var score = (TextBlock)page.FindName("AuditScoreText");
-        var summary = (FrameworkElement)page.FindName("AuditFindingsSummary");
+        var summary = (FrameworkElement)page.FindName("AuditFindingsCard");
         var surface = VisualTreeHelper.GetParent((DependencyObject)page.FindName("AuditOverviewGrid"));
-        while (surface is not Border) surface = VisualTreeHelper.GetParent(surface);
+        while (surface != null && surface is not Border) surface = VisualTreeHelper.GetParent(surface);
+        if (surface is not Border overviewSurface || summary is not Border findingsSurface)
+            throw new InvalidOperationException("AI Hub overview and findings must expose their actual card surfaces.");
         byte value = theme == ElementTheme.Dark ? (byte)32 : (byte)243;
         var backdrop = Windows.UI.Color.FromArgb(255, value, value, value);
-        var background = Composite(((SolidColorBrush)((Border)surface).Background).Color, backdrop);
-        AssertContrast(((SolidColorBrush)score.Foreground).Color, background, 4.5, "health score");
-        var palette = new List<Windows.UI.Color> { background };
+        // The hero is now a translucent gradient. Check every stop and samples
+        // inside every segment rather than treating it as one solid-color card.
+        var backgrounds = SampleBrushBackgrounds(overviewSurface.Background, backdrop).ToArray();
+        foreach (var background in backgrounds)
+            AssertContrast(BrushColor(score.Foreground), background, 4.5, "health score");
+        var findingsBackgrounds = SampleBrushBackgrounds(findingsSurface.Background, backdrop).ToArray();
+        var palette = new List<Windows.UI.Color>(backgrounds.Concat(findingsBackgrounds));
         foreach (string label in new[] { vm.HighLabel, vm.MediumLabel, vm.LowLabel })
         {
-            var text = Descendants(summary).OfType<TextBlock>().First(item => item.Text == label);
-            var color = ((SolidColorBrush)text.Foreground).Color;
-            AssertContrast(color, background, 4.5, "severity label");
+            var text = Descendants(summary).OfType<TextBlock>().First(item => item.Text.StartsWith(label + " ", StringComparison.Ordinal));
+            var color = BrushColor(text.Foreground);
+            foreach (var background in backgrounds.Concat(findingsBackgrounds))
+                AssertContrast(color, background, 4.5, "severity label");
             palette.Add(color);
         }
 
         var readiness = (FontIcon)page.FindName("AiReadinessIcon");
-        var indicator = (Microsoft.UI.Xaml.Shapes.Ellipse)page.FindName("AuditHealthIndicator");
+        var indicator = Descendants((DependencyObject)page.FindName("AuditScoreCard")).OfType<ProgressRing>().Single();
         var originalLevel = vm.AiReadinessLevel;
         int originalScore = vm.HealthScore;
         var readinessColors = new Dictionary<AiReadinessLevel, Windows.UI.Color>();
@@ -1304,7 +1318,7 @@ internal static class ModulePageSmoke
                 typeof(AIHubPageViewModel).GetProperty(nameof(vm.AiReadinessLevel)).SetValue(vm, level);
                 await Task.Delay(20);
                 var color = ((SolidColorBrush)readiness.Foreground).Color;
-                AssertContrast(color, background, 3, "readiness " + level);
+                AssertContrast(color, backdrop, 3, "readiness " + level);
                 readinessColors[level] = color;
                 palette.Add(color);
             }
@@ -1312,7 +1326,7 @@ internal static class ModulePageSmoke
             {
                 typeof(AIHubPageViewModel).GetProperty(nameof(vm.HealthScore)).SetValue(vm, entry.Item1);
                 await Task.Delay(20);
-                if (((SolidColorBrush)indicator.Fill).Color != readinessColors[entry.Item2])
+                if (((SolidColorBrush)indicator.Foreground).Color != readinessColors[entry.Item2] || indicator.Value != entry.Item1)
                     throw new InvalidOperationException("Health indicator does not match score " + entry.Item1);
             }
         }
@@ -1322,28 +1336,67 @@ internal static class ModulePageSmoke
             typeof(AIHubPageViewModel).GetProperty(nameof(vm.AiReadinessLevel)).SetValue(vm, originalLevel);
         }
 
-        var dialog = new FindingDetailsDialog { XamlRoot = page.XamlRoot, RequestedTheme = page.ActualTheme };
-        var shown = dialog.ShowAsync();
+        var detailsHost = (SplitView)page.FindName("AiHubDetailsHost");
+        var details = (FindingDetailsPane)page.FindName("AiHubFindingDetails");
+        detailsHost.IsPaneOpen = true;
         try
         {
             await Task.Delay(100);
             foreach (string severity in new[] { "High", "Medium", "Low" })
             {
-                dialog.SetFinding(new AuditIssueEnhanced { Title = "Synthetic finding", Severity = severity, LogName = "Application", EventId = "1000" });
-                dialog.UpdateLayout();
-                var badge = (Border)dialog.FindName("SeverityBadge");
-                var text = (TextBlock)dialog.FindName("SeverityTextBlock");
+                details.SetFinding(new AuditIssueEnhanced { Title = "Synthetic finding", Severity = severity, LogName = "Application", EventId = "1000" }, "Synthetic range", 0, 1, false, "Synthetic test");
+                details.UpdateLayout();
+                var badge = (Border)details.FindName("SeverityBadge");
+                var text = (TextBlock)details.FindName("SeverityText");
                 AssertContrast(((SolidColorBrush)text.Foreground).Color, Composite(((SolidColorBrush)badge.Background).Color, backdrop), 4.5, "detail badge " + severity);
-                if (severity == "Medium") await RenderPage(dialog, $"aihub-{theme}-detail.png");
+                if (severity == "Medium") await RenderPage(page, $"aihub-{theme}-detail.png");
             }
         }
         finally
         {
-            dialog.Hide();
-            await shown;
+            detailsHost.IsPaneOpen = false;
+            await Task.Delay(50);
         }
         File.AppendAllText(Report, $"AI Hub {theme}: theme inheritance, text contrast >= 4.5, status contrast >= 3, and score thresholds passed.\n");
         return palette.ToArray();
+    }
+
+    private static Windows.UI.Color BrushColor(Brush brush)
+    {
+        if (brush is not SolidColorBrush solid)
+            throw new InvalidOperationException("AI Hub foreground must resolve to a solid brush.");
+        var color = solid.Color;
+        return Windows.UI.Color.FromArgb((byte)Math.Round(color.A * brush.Opacity), color.R, color.G, color.B);
+    }
+
+    private static IEnumerable<Windows.UI.Color> SampleBrushBackgrounds(Brush brush, Windows.UI.Color backdrop)
+    {
+        if (brush is SolidColorBrush)
+        {
+            yield return Composite(BrushColor(brush), backdrop);
+            yield break;
+        }
+        if (brush is not LinearGradientBrush gradient || gradient.GradientStops.Count == 0)
+            throw new InvalidOperationException("AI Hub card background must resolve to a solid brush or a nonempty linear gradient.");
+
+        var stops = gradient.GradientStops.OrderBy(stop => stop.Offset).ToArray();
+        for (int index = 0; index < stops.Length; index++)
+        {
+            yield return Composite(WithOpacity(stops[index].Color), backdrop);
+            if (index + 1 == stops.Length || stops[index + 1].Offset <= stops[index].Offset) continue;
+            foreach (double amount in new[] { 0.25, 0.5, 0.75 })
+            {
+                var first = stops[index].Color;
+                var second = stops[index + 1].Color;
+                yield return Composite(WithOpacity(Windows.UI.Color.FromArgb(
+                    Mix(first.A, second.A, amount), Mix(first.R, second.R, amount),
+                    Mix(first.G, second.G, amount), Mix(first.B, second.B, amount))), backdrop);
+            }
+        }
+
+        Windows.UI.Color WithOpacity(Windows.UI.Color color) => Windows.UI.Color.FromArgb(
+            (byte)Math.Round(color.A * gradient.Opacity), color.R, color.G, color.B);
+        static byte Mix(byte first, byte second, double amount) => (byte)Math.Round(first + ((second - first) * amount));
     }
 
     private static Windows.UI.Color Composite(Windows.UI.Color foreground, Windows.UI.Color background)

@@ -655,13 +655,8 @@ LExit:
 }
 
 #define MAX_TITLE_LENGTH 100
-void bring_settings_to_front()
+void bring_settings_to_front(DWORD settings_process_id)
 {
-    DWORD settings_process_id;
-    {
-        std::unique_lock lock{ ipc_mutex };
-        settings_process_id = g_settings_process_id;
-    }
     if (settings_process_id == 0)
     {
         return;
@@ -713,10 +708,12 @@ void open_settings_window(std::optional<std::wstring> settings_window)
         return;
     }
 
+    DWORD existing_settings_process_id = 0;
     {
         std::unique_lock lock{ ipc_mutex };
         if (g_settings_process_id != 0)
         {
+            existing_settings_process_id = g_settings_process_id;
             Logger::info("open_settings_window: Settings process already running with PID={}, sending ShowYourself", g_settings_process_id);
             if (current_settings_ipc)
             {
@@ -730,14 +727,21 @@ void open_settings_window(std::optional<std::wstring> settings_window)
                     current_settings_ipc->send(L"{\"ShowYourself\":\"Dashboard\"}");
                 }
             }
-            bring_settings_to_front();
-            return;
         }
-        if (g_isLaunchInProgress)
+        else if (g_isLaunchInProgress)
         {
             Logger::info("open_settings_window: g_isLaunchInProgress is true, returning");
             return;
         }
+    }
+
+    if (existing_settings_process_id != 0)
+    {
+        // Window activation may synchronously reenter the runner. Release both
+        // lifecycle locks before calling Win32 window APIs.
+        launch_lock.unlock();
+        bring_settings_to_front(existing_settings_process_id);
+        return;
     }
 
     // A previous Settings crash or setup failure has finished cleanup. Its worker

@@ -20,21 +20,20 @@ public sealed class NativeEndpointSettingsTests
         var config = AiHubConfig.CreateDefault();
         config.Targets[0].ApiKey = "fixture-main-key";
         store.Save(config);
-        var document = JsonNode.Parse(File.ReadAllText(store.SettingsFilePath))!.AsObject();
+        var document = JsonNode.Parse(JsonSerializer.Serialize(config, AiHubJsonContext.Default.AiHubConfig))!.AsObject();
         foreach (var target in document["targets"]!.AsArray())
         {
             target!.AsObject().Remove("contextWindowTokens");
         }
 
         File.WriteAllText(store.SettingsFilePath, document.ToJsonString());
-        byte[] previous = File.ReadAllBytes(store.SettingsFilePath);
 
         var loaded = store.Load();
 
         Assert.AreEqual(256000, loaded.Targets[0].ContextWindowTokens);
         Assert.AreEqual(256000, loaded.Targets[1].ContextWindowTokens);
         Assert.AreEqual("fixture-main-key", loaded.Targets[0].ApiKey);
-        CollectionAssert.AreEqual(previous, File.ReadAllBytes(store.SettingsFilePath));
+        Assert.IsFalse(File.ReadAllText(store.SettingsFilePath).Contains("targets", StringComparison.Ordinal));
     }
 
     [TestMethod]
@@ -58,7 +57,7 @@ public sealed class NativeEndpointSettingsTests
 
         Assert.AreEqual(512000, loaded.Targets[0].ContextWindowTokens);
         Assert.AreEqual(128000, loaded.Targets[1].ContextWindowTokens);
-        var persisted = JsonSerializer.Deserialize(File.ReadAllText(store.SettingsFilePath), AiHubJsonContext.Default.AiHubConfig)!;
+        var persisted = new AiHubSettingsStore(store.DataDirectory).Load();
         Assert.AreEqual(512000, persisted.Targets[0].ContextWindowTokens);
         Assert.AreEqual(128000, persisted.Targets[1].ContextWindowTokens);
     }

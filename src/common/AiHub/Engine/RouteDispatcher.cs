@@ -205,8 +205,7 @@ public sealed class RouteDispatcher
             {
                 phase = "execute";
                 Report($"AI route configured: request={Path.GetFileName(requestDirectory)}, kernel={normalized}, " +
-                    $"route={(target.Name is "Main" or "Fallback" ? target.Name : "Custom")}, mode={target.Mode}, " +
-                    $"model=\"{JsonEncodedText.Encode(target.Model.Trim())}\", configuredEffort={target.Effort}, nativeEffortInput={target.Effort}, " +
+                    $"route={(target.Name is "Main" or "Fallback" ? target.Name : "Custom")}, " +
                     $"contextWindowTokens={target.ContextWindowTokens}");
 
                 KernelProcessResult process = await KernelProcessRunner.RunAsync(startInfo,
@@ -289,24 +288,15 @@ public sealed class RouteDispatcher
             {
                 try
                 {
-                    string relative = Path.GetRelativePath(_requestRoot, requestDirectory);
-                    if (relative.Length == 40 && relative.StartsWith("request-", StringComparison.Ordinal) &&
-                        Path.GetFileName(relative) == relative && Guid.TryParseExact(relative.AsSpan(8), "N", out _))
-                    {
-                        DeleteDirectorySafe(requestDirectory);
-                    }
-                    else
-                    {
-                        phase = "cleanup";
-                        result = Failure(AiErrorCode.ExecutionFailed, reason: "CleanupFailed");
-                    }
+                    await DeleteRequestDirectoryAsync(_requestRoot, requestDirectory).ConfigureAwait(false);
                 }
                 catch (DirectoryNotFoundException)
                 {
                     // Nothing remains to clean up.
                 }
-                catch (Exception)
+                catch (Exception exception)
                 {
+                    Report($"AI route cleanup failed: type={exception.GetType().Name}, hresult=0x{exception.HResult:X8}");
                     phase = "cleanup";
                     result = Failure(AiErrorCode.ExecutionFailed, reason: "CleanupFailed");
                 }
@@ -402,9 +392,36 @@ public sealed class RouteDispatcher
         }
     }
 
+    internal static async Task DeleteRequestDirectoryAsync(string requestRoot, string path)
+    {
+        // Process termination can briefly overlap a file-system sharing lock. Allow
+        // only Win32 sharing/lock violations four delays (400 ms total), even when
+        // the route deadline has expired. Failed cleanup must still block failover.
+        for (int attempt = 0; ; attempt++)
+        {
+            string relative = Path.GetRelativePath(requestRoot, path);
+            if (relative.Length != 40 || !relative.StartsWith("request-", StringComparison.Ordinal) ||
+                Path.GetFileName(relative) != relative || !Guid.TryParseExact(relative.AsSpan(8), "N", out _))
+            {
+                throw new InvalidOperationException("The kernel cleanup directory is outside its request boundary.");
+            }
+
+            // Recheck the boundary and reparse protection before every attempt.
+            AiHubStorageFiles.EnsureNoReparsePoints(path);
+            try
+            {
+                DeleteDirectorySafe(path);
+                return;
+            }
+            catch (IOException exception) when (attempt < 4 && unchecked((uint)exception.HResult) is 0x80070020u or 0x80070021u)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+            }
+        }
+    }
+
     private static void DeleteDirectorySafe(string path)
     {
-        AiHubStorageFiles.EnsureNoReparsePoints(path);
         try
         {
             foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
@@ -565,9 +582,9 @@ public sealed class RouteDispatcher
 
         if (result.ExitCode != 0)
         {
-            KernelExecutionResult failure = ClassifyEndpointFailure(result.StandardError);
-            return WithCatalogDiagnostics(failure.ErrorCode == AiErrorCode.ExecutionFailed
-                ? Failure(AiErrorCode.InvalidConfiguration, reason: "UnsupportedNativeConfiguration") : failure);
+            // This command reads the kernel's bundled catalog and never contacts the
+            // endpoint. Local permission/configuration errors cannot justify failover.
+            return WithCatalogDiagnostics(Failure(AiErrorCode.InvalidConfiguration, reason: "UnsupportedNativeConfiguration"));
         }
 
         JsonNode? parsed;
@@ -922,11 +939,14 @@ public sealed class RouteDispatcher
         KernelExecutionResult failure = reason switch
         {
             "HttpTimeout" or "TransportTimeout" => Failure(AiErrorCode.Timeout, canFailover: true, reason: reason),
-            "AccountUnavailable" or "QuotaExceeded" or "RateLimited" or "ServerError" or
+            // Credentials, permissions and model availability belong to this endpoint.
+            // An independently configured fallback may succeed; local configuration and
+            // output-policy failures below still must not send the request to another route.
+            "Authentication" or "AccessDenied" or "ModelNotFound" or
+                "AccountUnavailable" or "QuotaExceeded" or "RateLimited" or "ServerError" or
                 "StreamDisconnected" or "DnsFailure" or "ConnectionReset" or "ConnectionRefused" or
                 "NetworkUnavailable" or "TransportFailure" => Failure(AiErrorCode.EndpointFailed, canFailover: true, reason: reason),
-            "UnsupportedNativeConfiguration" or "Authentication" or "AccessDenied" or "ModelNotFound" or
-                "InvalidConfiguration" or "RequestRejected" => Failure(AiErrorCode.InvalidConfiguration, reason: reason),
+            "UnsupportedNativeConfiguration" or "InvalidConfiguration" or "RequestRejected" => Failure(AiErrorCode.InvalidConfiguration, reason: reason),
             _ => Failure(AiErrorCode.ExecutionFailed, reason: reason),
         };
         return failure with

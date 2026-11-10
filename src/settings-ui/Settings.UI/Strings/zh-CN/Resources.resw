@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:schema id="root">
     <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -1005,9 +1005,6 @@
   </data>
   <data name="AIHub_EnableSettingsCard.Header" xml:space="preserve">
     <value>启用 AI 智能中心</value>
-  </data>
-  <data name="AIHub_EnableSettingsCard.Description" xml:space="preserve">
-    <value>分析 Windows 事件日志评估安全运行健康，并在严格安全策略边界下执行系统优化清理。</value>
   </data>
           <data name="AiHub_PipelineCard.Header" xml:space="preserve">
     <value>AI Hub 执行链路</value>
@@ -4004,4 +4001,78 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AIHub_Inventory_StatusComplete" xml:space="preserve"><value>空间分析已完成。</value></data>
   <data name="AIHub_Inventory_StatusCancelled" xml:space="preserve"><value>分析已取消，保留上次完成的结果。</value></data>
   <data name="AIHub_Inventory_StatusFailed" xml:space="preserve"><value>分析未能完成，保留上次完成的结果。</value></data>
+  <data name="AIHub_Fluent_Subtitle.Text" xml:space="preserve"><value>安全审计与空间管理</value></data>
+  <data name="AIHub_Fluent_PriorityButton.Content" xml:space="preserve"><value>查看优先事项 →</value></data>
+  <data name="AIHub_Fluent_ScanMode.Header" xml:space="preserve"><value>扫描模式</value></data>
+  <data name="AIHub_Fluent_ScanRange.Header" xml:space="preserve"><value>时间范围</value></data>
+  <data name="AIHub_Fluent_FullChannels.Content" xml:space="preserve"><value>包含安全与防火墙日志（需要管理员权限）</value></data>
+  <data name="AIHub_Fluent_NextScanHint.Text" xml:space="preserve"><value>仅更改下一次扫描的参数。</value></data>
+  <data name="AIHub_Fluent_AuditHistory.Content" xml:space="preserve"><value>历史结果</value></data>
+  <data name="AIHub_Fluent_AiSummary.Text" xml:space="preserve"><value>AI 分析摘要</value></data>
+  <data name="AIHub_Fluent_FullReport.Content" xml:space="preserve"><value>完整分析 →</value></data>
+  <data name="AIHub_Fluent_ReportExpander.Header" xml:space="preserve"><value>完整 AI 分析</value></data>
+  <data name="AIHub_Fluent_StorageCapacityHint.Text" xml:space="preserve"><value>下载整理仅移动文件，不计入释放空间。</value></data>
+  <data name="AIHub_Fluent_ExecutionHistory.Content" xml:space="preserve"><value>执行记录</value></data>
+  <data name="AIHub_Fluent_OptimizationSteps.Text" xml:space="preserve"><value>扫描候选 → 审核选择 → 确认执行</value></data>
+  <data name="AIHub_Fluent_HistoryExpander.Header" xml:space="preserve"><value>执行记录与结果</value></data>
+  <data name="AIHub_Fluent_InventoryExpander.Header" xml:space="preserve"><value>目录空间盘点</value></data>
+  <data name="AIHub_Fluent_SelectedDeletes.Text" xml:space="preserve"><value>预计释放</value></data>
+  <data name="AIHub_Fluent_SelectedMoves.Text" xml:space="preserve"><value>整理移动</value></data>
+  <data name="AIHub_Fluent_PolicyLocation.Header" xml:space="preserve"><value>策略文件位置</value></data>
+  <data name="AIHub_Fluent_ConfirmSummary" xml:space="preserve"><value>已选 {0:N0} 项 · 删除 {1:N0} 项（预计释放 {2}）· 移动 {3:N0} 项（整理 {4}）</value></data>
+  <data name="AIHub_Fluent_DetailsTitle" xml:space="preserve"><value>发现详情</value></data>
+  <data name="AIHub_Fluent_CloseDetails" xml:space="preserve"><value>关闭详情</value></data>
+  <data name="AIHub_Fluent_PreviousFinding" xml:space="preserve"><value>上一项发现</value></data>
+  <data name="AIHub_Fluent_NextFinding" xml:space="preserve"><value>下一项发现</value></data>
+  <data name="AIHub_Fluent_FindingPosition" xml:space="preserve"><value>第 {0:N0} 项 / 共 {1:N0} 项匹配发现</value></data>
+  <data name="AIHub_Fluent_RelatedFinding" xml:space="preserve"><value>关联发现</value></data>
+  <data name="AIHub_Fluent_EventId" xml:space="preserve"><value>事件 ID</value></data>
+  <data name="AIHub_Fluent_EventSource" xml:space="preserve"><value>事件来源</value></data>
+  <data name="AIHub_Fluent_ResultRange" xml:space="preserve"><value>审计范围</value></data>
+  <data name="AIHub_Fluent_Assessment" xml:space="preserve"><value>判断依据</value></data>
+  <data name="AIHub_Fluent_EventEvidence" xml:space="preserve"><value>事件依据与引用</value></data>
+  <data name="AIHub_Fluent_EventEvidenceDescription" xml:space="preserve"><value>此发现记录的事件依据，可通过事件引用定位对应记录。</value></data>
+  <data name="AIHub_Fluent_EventReferences" xml:space="preserve"><value>事件引用</value></data>
+  <data name="AIHub_Fluent_EventChannel" xml:space="preserve"><value>日志通道</value></data>
+  <data name="AIHub_Fluent_EventTime" xml:space="preserve"><value>发生时间</value></data>
+  <data name="AIHub_Fluent_Affected" xml:space="preserve"><value>受影响对象</value></data>
+  <data name="AIHub_Fluent_IssueKey" xml:space="preserve"><value>问题标识</value></data>
+  <data name="AIHub_Fluent_CopyFinding" xml:space="preserve"><value>复制摘要</value></data>
+  <data name="AIHub_Fluent_AnalyzeRange" xml:space="preserve"><value>分析当前范围</value></data>
+  <data name="AIHub_Fluent_ShowPriority" xml:space="preserve"><value>仅看优先事项</value></data>
+  <data name="AIHub_Fluent_ShowAll" xml:space="preserve"><value>查看全部发现</value></data>
+  <data name="AIHub_Fluent_MatchingFindings" xml:space="preserve"><value>匹配 {0} / 共 {1} 项</value></data>
+  <data name="AIHub_Fluent_VisibleFindings" xml:space="preserve"><value>显示 {0} / 共 {1} 项</value></data>
+  <data name="AIHub_Fluent_FirstAudit" xml:space="preserve"><value>从第一次安全审计开始</value></data>
+  <data name="AIHub_Fluent_PriorityHeadline" xml:space="preserve"><value>有 {0} 项需要优先关注</value></data>
+  <data name="AIHub_Fluent_ModuleDisabled" xml:space="preserve"><value>模块已停用</value></data>
+  <data name="AIHub_Fluent_ServiceReady" xml:space="preserve"><value>AI 服务已就绪</value></data>
+  <data name="AIHub_Fluent_ServiceFallback" xml:space="preserve"><value>正在使用备用路由</value></data>
+  <data name="AIHub_Fluent_ServiceUnverified" xml:space="preserve"><value>AI 服务尚未验证</value></data>
+  <data name="AIHub_Fluent_ServiceNotConfigured" xml:space="preserve"><value>AI 服务尚未配置</value></data>
+  <data name="AIHub_Fluent_ServiceDisabled" xml:space="preserve"><value>AI 服务已关闭</value></data>
+  <data name="AIHub_Fluent_PreviousResult" xml:space="preserve"><value>上一轮结果</value></data>
+  <data name="AIHub_Fluent_Analyzing" xml:space="preserve"><value>正在分析</value></data>
+  <data name="AIHub_Fluent_PreviousAnalysis" xml:space="preserve"><value>保留上次分析</value></data>
+  <data name="AIHub_Fluent_PartialAnalysis" xml:space="preserve"><value>部分完成</value></data>
+  <data name="AIHub_Fluent_AnalysisComplete" xml:space="preserve"><value>分析已完成</value></data>
+  <data name="AIHub_Fluent_AnalysisPending" xml:space="preserve"><value>本次结果尚未深度分析</value></data>
+  <data name="AIHub_Fluent_AnalysisAfterScan" xml:space="preserve"><value>先扫描 Windows 事件，再查看相关依据与分析。</value></data>
+  <data name="AIHub_Fluent_AnalysisReady" xml:space="preserve"><value>分析本次审计的事件，查看关联依据与处理建议。</value></data>
+  <data name="AIHub_Fluent_AnalysisNeedsEvents" xml:space="preserve"><value>已有发现仍可查看。先扫描并采集事件，再进行深度分析。</value></data>
+  <data name="AIHub_Fluent_LatestAuditFormat" xml:space="preserve"><value>安全审计 · {0}</value></data>
+  <data name="AIHub_Fluent_RelatedEvidence.Text" xml:space="preserve"><value>关联依据</value></data>
+  <data name="AIHub_Fluent_AuditBoundaryFooter.Text" xml:space="preserve"><value>规则结果与 AI 建议分别呈现</value></data>
+  <data name="AIHub_Fluent_LegendActionableFormat" xml:space="preserve"><value>可处理 {0}</value></data>
+  <data name="AIHub_Fluent_LegendReviewFormat" xml:space="preserve"><value>待复核 {0}</value></data>
+  <data name="AIHub_Fluent_LegendRetainedFormat" xml:space="preserve"><value>已保留 {0}</value></data>
+  <data name="AIHub_Fluent_SelectionFooterHint.Text" xml:space="preserve"><value>执行前查看操作与影响范围</value></data>
+  <data name="AIHub_Fluent_OptimizationBoundaryFooter.Text" xml:space="preserve"><value>受保护项目保留，下载内容按类型整理方案</value></data>
+  <data name="AIHub_Fluent_AuditPolicyHeading" xml:space="preserve"><value>安全审计指令</value></data>
+  <data name="AIHub_Fluent_OptPolicyHeading" xml:space="preserve"><value>空间优化指令</value></data>
+  <data name="AIHub_Fluent_PolicyScopeTitle.Text" xml:space="preserve"><value>生效范围</value></data>
+  <data name="AIHub_Fluent_AuditPolicyScopePrimary" xml:space="preserve"><value>影响事件分析的重点、结论组织与建议输出。</value></data>
+  <data name="AIHub_Fluent_OptPolicyScopePrimary" xml:space="preserve"><value>影响候选文件的分类方式、清理建议与保留边界。</value></data>
+  <data name="AIHub_Fluent_PolicyScopeBoundary.Text" xml:space="preserve"><value>执行前仍需审核具体项目。</value></data>
+  <data name="AIHub_Fluent_PolicyFooterHint.Text" xml:space="preserve"><value>更改保存后用于下一次任务，切换页签会保留草稿。</value></data>
 </root>

@@ -330,7 +330,8 @@ public sealed partial class WingetViewModel : PageViewModelBase
 
     public bool IsProgressIndeterminate => status.ProgressPercent == null;
 
-    public string StatusText => !IsEnabled ? L("Disabled") : !connected ? L("Connecting") :
+    public string StatusText => !IsEnabled ? L("Disabled") :
+        !connected ? L(string.IsNullOrWhiteSpace(connectionError) ? "Connecting" : "Unavailable") :
         status.Availability is not { IsAvailable: true } ? L("Unavailable") :
         IsBusy ? L("Working") : L("Ready");
 
@@ -689,7 +690,9 @@ public sealed partial class WingetViewModel : PageViewModelBase
         {
             if (IsCurrentPoll())
             {
+                // The active page was not cancelled, so the transport timed out.
                 connected = false;
+                connectionError = L("ServiceUnavailable");
             }
         }
         catch (Exception ex)

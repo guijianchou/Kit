@@ -1,0 +1,55 @@
+// Copyright (c) Microsoft Corporation
+// The Microsoft Corporation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System.Reflection;
+using System.Text.Json;
+using Kit.UDPtestService;
+using ManagedCommon.ServiceHost;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace UDPtest.UnitTests;
+
+[TestClass]
+public sealed class ServiceCommandTests
+{
+    [TestMethod]
+    [DataRow("get-telemetry")]
+    [DataRow("start-sender")]
+    [DataRow("stop-sender")]
+    [DataRow("start-listener")]
+    [DataRow("stop-listener")]
+    [DataRow("apply-impairment")]
+    [DataRow("export-pcap")]
+    [DataRow("START-SENDER")]
+    public async Task UnimplementedProbeCommandsCannotReportSuccess(string command)
+    {
+        using var host = new UDPtestServiceHost();
+        KitPipeResponse response = await SendAsync(host, command);
+
+        Assert.IsFalse(response.Success);
+        Assert.IsNull(response.DataJson);
+        Assert.AreEqual("unsupported-command", response.Error?.Code);
+    }
+
+    [TestMethod]
+    public async Task HostStatusDoesNotClaimThatTheProbeEngineIsAvailable()
+    {
+        using var host = new UDPtestServiceHost();
+        KitPipeResponse response = await SendAsync(host, "get-status");
+
+        Assert.IsTrue(response.Success);
+        using JsonDocument data = JsonDocument.Parse(response.DataJson!);
+        Assert.AreEqual("running", data.RootElement.GetProperty("status").GetString());
+        Assert.IsFalse(data.RootElement.GetProperty("engineAvailable").GetBoolean());
+        Assert.AreEqual("Settings", data.RootElement.GetProperty("executionHost").GetString());
+        Assert.AreEqual("unknown-command", (await SendAsync(host, "not-a-command")).Error?.Code);
+    }
+
+    private static Task<KitPipeResponse> SendAsync(UDPtestServiceHost host, string command)
+    {
+        // Exercise the real dispatcher without starting a worker or touching user settings.
+        MethodInfo handler = typeof(UDPtestServiceHost).GetMethod("HandlePipeCommandAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        return (Task<KitPipeResponse>)handler.Invoke(host, [new KitPipeRequest { Command = command }, CancellationToken.None])!;
+    }
+}

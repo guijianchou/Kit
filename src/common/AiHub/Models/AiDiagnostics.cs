@@ -35,6 +35,8 @@ public sealed record AiDiagnosticRecord
     public string Route { get; init; } = string.Empty;
     public string Outcome { get; init; } = string.Empty;
     public AiErrorCode ErrorCode { get; init; }
+    /// <summary>One-based route batch index; zero for a task summary or older records.</summary>
+    public int BatchIndex { get; init; }
     public int CompletedBatches { get; init; }
     public int TotalBatches { get; init; }
     public long ElapsedMilliseconds { get; init; }

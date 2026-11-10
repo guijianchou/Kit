@@ -176,7 +176,7 @@ namespace ViewModelTests
             var content = ReadPageXaml("AIHubPage.xaml");
 
             // Module enable surface (the module page owns this automation id).
-            Assert.IsTrue(content.Contains("x:Uid=\"AIHub_EnableSettingsCard\""), "AIHubPage.xaml should host the module enable card");
+            Assert.IsTrue(content.Contains("x:Uid=\"AIHub_EnableToggleSwitch\""), "AIHubPage.xaml should host the module enable toggle");
             Assert.IsTrue(content.Contains("AutomationProperties.AutomationId=\"Toggle_AIHub\""), "AIHubPage.xaml should own the module toggle automation id");
 
             // The shared AI service indicator: enabled/disabled plus readiness, colored by

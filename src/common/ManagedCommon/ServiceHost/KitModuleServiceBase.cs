@@ -23,14 +23,20 @@ namespace ManagedCommon.ServiceHost
         private EventWaitHandle? _refreshEvent;
         private KitServicePipeServer? _pipeServer;
         private Timer? _settingsDebounceTimer;
-        private bool _disposed;
+        private int _resourcesReleased;
+        private TSettings _currentSettings = new();
 
         public abstract string ModuleKey { get; }
         public abstract string ServiceExeName { get; }
         public abstract string ExitEventName { get; }
         public abstract string RefreshSettingsEventName { get; }
 
-        public TSettings CurrentSettings { get; private set; } = new();
+        public TSettings CurrentSettings
+        {
+            get => Volatile.Read(ref _currentSettings);
+            private set => Volatile.Write(ref _currentSettings, value);
+        }
+
         public CancellationToken CancellationToken => _cts.Token;
 
         public async Task<int> RunAsync(string[] args)
@@ -69,7 +75,7 @@ namespace ManagedCommon.ServiceHost
                 return 0;
             }
 
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => ReleaseResources();
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 
             if (runnerPid > 0)
             {
@@ -129,9 +135,14 @@ namespace ManagedCommon.ServiceHost
 
         public void Stop()
         {
-            if (!_cts.IsCancellationRequested)
+            try
             {
                 _cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Unregister(null) does not wait for callbacks already queued by an exit
+                // event or the runner watcher. A late stop after cleanup is harmless.
             }
         }
 
@@ -249,7 +260,7 @@ namespace ManagedCommon.ServiceHost
                     {
                         CurrentSettings = parsed;
                         Logger.LogInfo($"[KitModuleServiceBase] Settings reloaded from {file}");
-                        OnSettingsUpdated(CurrentSettings);
+                        OnSettingsUpdated(parsed);
                         return;
                     }
                 }
@@ -321,14 +332,9 @@ namespace ManagedCommon.ServiceHost
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (disposing)
             {
-                if (disposing)
-                {
-                    ReleaseResources();
-                }
-
-                _disposed = true;
+                ReleaseResources();
             }
         }
 
@@ -338,8 +344,16 @@ namespace ManagedCommon.ServiceHost
             GC.SuppressFinalize(this);
         }
 
+        private void OnProcessExit(object? sender, EventArgs e) => ReleaseResources();
+
         private void ReleaseResources()
         {
+            if (Interlocked.Exchange(ref _resourcesReleased, 1) != 0)
+            {
+                return;
+            }
+
+            AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
             _settingsDebounceTimer?.Dispose();
             _settingsWatcher?.Dispose();
 

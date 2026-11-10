@@ -75,14 +75,19 @@ public sealed class KernelExecutionTests
             var elapsed = Stopwatch.StartNew();
             KernelProcessResult limited = await KernelProcessRunner.RunAsync(fixture.Process(scenario), null,
                 TimeSpan.FromSeconds(10), CancellationToken.None, 1024, 1024);
-            Assert.AreEqual(KernelProcessFailure.OutputLimit, limited.Failure);
-            Assert.IsTrue(elapsed.Elapsed < TimeSpan.FromSeconds(5));
+            elapsed.Stop();
+            string context = $"scenario={scenario}, failure={limited.Failure}, exitCode={limited.ExitCode}, elapsedMs={elapsed.Elapsed.TotalMilliseconds:F0}";
+            Assert.AreEqual(KernelProcessFailure.OutputLimit, limited.Failure, context);
+            Assert.IsTrue(elapsed.Elapsed < TimeSpan.FromSeconds(5), context);
         }
 
+        var rejectedElapsed = Stopwatch.StartNew();
         KernelProcessResult rejected = await KernelProcessRunner.RunAsync(fixture.Process("nonzero"), null,
             TimeSpan.FromSeconds(10), CancellationToken.None);
-        Assert.AreEqual(KernelProcessFailure.None, rejected.Failure);
-        Assert.AreEqual(7, rejected.ExitCode);
+        rejectedElapsed.Stop();
+        string rejectedContext = $"scenario=nonzero, failure={rejected.Failure}, exitCode={rejected.ExitCode}, elapsedMs={rejectedElapsed.Elapsed.TotalMilliseconds:F0}";
+        Assert.AreEqual(KernelProcessFailure.None, rejected.Failure, rejectedContext);
+        Assert.AreEqual(7, rejected.ExitCode, rejectedContext);
     }
 
     [TestMethod]
@@ -155,8 +160,9 @@ public sealed class KernelExecutionTests
 
         Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
         Assert.IsNotNull(diagnostic);
-        StringAssert.Contains(diagnostic, $"model=\"{model}\"");
-        StringAssert.Contains(diagnostic, $"configuredEffort={effort}, nativeEffortInput={effort}");
+        Assert.IsFalse(diagnostic.Contains(model, StringComparison.Ordinal));
+        Assert.IsFalse(diagnostic.Contains("Effort", StringComparison.Ordinal));
+        Assert.IsFalse(diagnostic.Contains("mode=", StringComparison.Ordinal));
         Assert.IsFalse(diagnostic.Contains(target.ApiKey, StringComparison.Ordinal));
         Assert.IsFalse(diagnostic.Contains(target.BaseUrl, StringComparison.Ordinal));
         Assert.IsFalse(diagnostic.Contains("synthetic input", StringComparison.Ordinal));
@@ -373,29 +379,32 @@ public sealed class KernelExecutionTests
             foreach (string scenario in new[] { "transport", "transport-timeout", "auth", "error", "incomplete", "tool" })
             {
                 var diagnostics = new ConcurrentQueue<string>();
+                var elapsed = Stopwatch.StartNew();
                 KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target(scenario), "synthetic input", 10, diagnostics.Enqueue);
-                Assert.IsFalse(result.IsSuccess);
-                Assert.AreEqual(scenario is "transport" or "transport-timeout", result.CanFailover);
-                Assert.IsFalse(result.ErrorMessage.Contains("synthetic-fixture-secret", StringComparison.Ordinal));
+                elapsed.Stop();
+                string context = $"kernel={kernel}, scenario={scenario}, errorCode={result.ErrorCode}, success={result.IsSuccess}, canFailover={result.CanFailover}, elapsedMs={elapsed.Elapsed.TotalMilliseconds:F0}";
+                Assert.IsFalse(result.IsSuccess, context);
+                Assert.AreEqual(scenario is "transport" or "transport-timeout" or "auth", result.CanFailover, context);
+                Assert.IsFalse(result.ErrorMessage.Contains("synthetic-fixture-secret", StringComparison.Ordinal), context);
                 if (scenario == "transport-timeout")
                 {
-                    Assert.AreEqual(AiErrorCode.Timeout, result.ErrorCode);
+                    Assert.AreEqual(AiErrorCode.Timeout, result.ErrorCode, context);
                 }
 
                 if (scenario == "auth")
                 {
-                    Assert.AreEqual(AiErrorCode.InvalidConfiguration, result.ErrorCode);
+                    Assert.AreEqual(AiErrorCode.EndpointFailed, result.ErrorCode, context);
                 }
 
                 if (scenario == "tool")
                 {
-                    Assert.AreEqual(AiErrorCode.PolicyViolation, result.ErrorCode);
-                    Assert.IsTrue(diagnostics.Any(value => value.Contains("event=tool", StringComparison.Ordinal)));
+                    Assert.AreEqual(AiErrorCode.PolicyViolation, result.ErrorCode, context);
+                    Assert.IsTrue(diagnostics.Any(value => value.Contains("event=tool", StringComparison.Ordinal)), context);
                 }
 
                 if (scenario == "transport")
                 {
-                    Assert.IsTrue(diagnostics.Any(value => value.Contains("event=turn.failed", StringComparison.Ordinal) && value.Contains("httpStatus=503", StringComparison.Ordinal)));
+                    Assert.IsTrue(diagnostics.Any(value => value.Contains("event=turn.failed", StringComparison.Ordinal) && value.Contains("httpStatus=503", StringComparison.Ordinal)), context);
                 }
             }
         }
@@ -407,19 +416,25 @@ public sealed class KernelExecutionTests
         using KernelFixture fixture = await KernelFixture.CreateAsync();
         Assert.IsTrue(RouteDispatcher.IsTargetCompatible("codex", KernelFixture.Target(mode: "chat")));
         Assert.IsTrue(RouteDispatcher.IsTargetCompatible("pi", KernelFixture.Target(mode: "chat")));
+        var elapsed = Stopwatch.StartNew();
         KernelExecutionResult forwarded = await fixture.Dispatcher.ExecuteAsync("codex", KernelFixture.Target(mode: "chat"), "input", 10);
-        Assert.IsTrue(forwarded.IsSuccess);
+        elapsed.Stop();
+        Assert.IsTrue(forwarded.IsSuccess, $"kernel=codex, scenario=forwarded-chat, errorCode={forwarded.ErrorCode}, canFailover={forwarded.CanFailover}, elapsedMs={elapsed.Elapsed.TotalMilliseconds:F0}");
         using JsonDocument forwardedCapture = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.RequestRoot, "capture.json")));
         StringAssert.Contains(forwardedCapture.RootElement.GetProperty("Config").GetString()!, "wire_api = \"chat\"");
 
         var target = KernelFixture.Target("quoted\\\"model");
+        elapsed.Restart();
         KernelExecutionResult escaped = await fixture.Dispatcher.ExecuteAsync("codex", target, "input", 10);
-        Assert.IsTrue(escaped.IsSuccess);
+        elapsed.Stop();
+        Assert.IsTrue(escaped.IsSuccess, $"kernel=codex, scenario=escaped-model, errorCode={escaped.ErrorCode}, canFailover={escaped.CanFailover}, elapsedMs={elapsed.Elapsed.TotalMilliseconds:F0}");
         using JsonDocument capture = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.RequestRoot, "capture.json")));
         Assert.AreEqual(target.Model, capture.RootElement.GetProperty("Model").GetString());
 
+        elapsed.Restart();
         KernelExecutionResult chat = await fixture.Dispatcher.ExecuteAsync("pi", KernelFixture.Target(mode: "chat"), "input", 10);
-        Assert.IsTrue(chat.IsSuccess);
+        elapsed.Stop();
+        Assert.IsTrue(chat.IsSuccess, $"kernel=pi, scenario=forwarded-chat, errorCode={chat.ErrorCode}, canFailover={chat.CanFailover}, elapsedMs={elapsed.Elapsed.TotalMilliseconds:F0}");
         using JsonDocument piCapture = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.RequestRoot, "capture.json")));
         using JsonDocument piConfig = JsonDocument.Parse(piCapture.RootElement.GetProperty("Config").GetString()!);
         Assert.AreEqual("openai-completions", piConfig.RootElement.GetProperty("providers").GetProperty("kit").GetProperty("api").GetString());
@@ -439,16 +454,40 @@ public sealed class KernelExecutionTests
     }
 
     [TestMethod]
+    public async Task RequestCleanupRecoversAfterAnExclusiveFileHandleIsReleased()
+    {
+        using var fixture = new KernelFixture();
+        string request = Path.Combine(fixture.RequestRoot, $"request-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(request);
+        using var lockedFile = new FileStream(Path.Combine(request, "cleanup-lock"), FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+
+        // The helper's first deletion attempt runs before its first async delay,
+        // while this real handle denies deletion. Release it without a timed sleep.
+        Task cleanup = RouteDispatcher.DeleteRequestDirectoryAsync(fixture.RequestRoot, request);
+        Assert.IsFalse(cleanup.IsCompleted, "An exclusive handle must force cleanup to await its bounded retry.");
+        lockedFile.Dispose();
+        await cleanup.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.IsFalse(Directory.Exists(request), "Cleanup must remove the request after the transient lock is released.");
+    }
+
+    [TestMethod]
     [DataRow("codex")]
     [DataRow("pi")]
     public async Task CleanupFailureIsNotOverwrittenByRouteTimeout(string kernel)
     {
         using KernelFixture fixture = await KernelFixture.CreateAsync();
         FileStream? lockedFile = null;
+        var cleanupDiagnostics = new ConcurrentQueue<string>();
         try
         {
             KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync(kernel, KernelFixture.Target("timeout"), "input", 3, message =>
             {
+                if (message.StartsWith("AI route cleanup failed:", StringComparison.Ordinal))
+                {
+                    cleanupDiagnostics.Enqueue(message);
+                }
+
                 if (message.StartsWith("AI route configured:", StringComparison.Ordinal))
                 {
                     string request = Directory.GetDirectories(fixture.RequestRoot).Single();
@@ -459,6 +498,10 @@ public sealed class KernelExecutionTests
             Assert.IsNotNull(lockedFile, "The fixture must prevent request-directory deletion.");
             Assert.AreEqual(AiErrorCode.ExecutionFailed, result.ErrorCode);
             Assert.IsFalse(result.CanFailover);
+            Assert.AreEqual("CleanupFailed", result.Diagnostics?.Reason);
+            StringAssert.Matches(cleanupDiagnostics.Single(), new System.Text.RegularExpressions.Regex(
+                "^AI route cleanup failed: type=[A-Za-z0-9]+, hresult=0x[0-9A-F]{8}$",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant));
         }
         finally
         {

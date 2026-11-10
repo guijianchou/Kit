@@ -21,6 +21,7 @@ public sealed class AiDiagnosticsStore
     public const int MaximumHistoryRecords = 256;
     public const int MaximumHistoryBytes = 256 * 1024;
     public const int MaximumRecentRecords = 32;
+    public const int HistoryRetentionDays = 30;
     private const string FileName = "diagnostics.json";
     private static readonly string[] KnownPlugins = ["aihub", "netmap", "udptest", "winget", "awake", "lightswitch", "localserver"];
     private static readonly string[] KnownTasks = ["self-test", "security-audit", "system-optimization", "route-analysis"];
@@ -39,6 +40,7 @@ public sealed class AiDiagnosticsStore
     private static readonly string[] KnownCancellationSources = ["none", "caller", "siblingFailure", "serviceDisabled", "task", "route", "shutdown", "taskDeadline", "routeDeadline", "processDeadline", "request", "upstream"];
     private readonly object _gate = new();
     private readonly Queue<AiDiagnosticRecord> _recent = new();
+    private readonly Queue<AiDiagnosticRecord> _persistenceContext = new();
     private readonly string _logSettingsPath;
     private readonly string _mutexName;
     private AiDiagnosticsSnapshot _totals = new() { SessionStartedUtc = DateTimeOffset.UtcNow };
@@ -69,6 +71,7 @@ public sealed class AiDiagnosticsStore
             }
 
             AiDiagnosticRecord safe = Normalize(record);
+            int level = ReadLogLevel();
             lock (_gate)
             {
                 UpdateTotals(safe);
@@ -77,31 +80,85 @@ public sealed class AiDiagnosticsStore
                 {
                     _recent.Dequeue();
                 }
+
+                if (level < 5)
+                {
+                    _persistenceContext.Enqueue(safe);
+                    while (_persistenceContext.Count > MaximumRecentRecords)
+                    {
+                        _persistenceContext.Dequeue();
+                    }
+                }
+                else
+                {
+                    _persistenceContext.Clear();
+                }
             }
 
-            int level = ReadLogLevel();
-            if (level < 5 && (level < 3 || safe.Outcome is "failed" or "timeout" or "partial"))
+            if (level < 5)
             {
                 WithHistoryLock(() =>
                 {
                     // Recheck after acquiring the mutex so toggling logging off takes effect promptly.
                     int currentLevel = ReadLogLevel();
-                    if (currentLevel >= 5 || (currentLevel >= 3 && safe.Outcome is not ("failed" or "timeout" or "partial")))
+                    if (currentLevel >= 5)
                     {
+                        lock (_gate)
+                        {
+                            _persistenceContext.Clear();
+                        }
+
                         return;
                     }
 
                     List<AiDiagnosticRecord> history = ReadHistoryCore();
-                    history.Add(safe);
-                    if (history.Count > MaximumHistoryRecords)
+                    if (currentLevel >= 3)
                     {
-                        history.RemoveRange(0, history.Count - MaximumHistoryRecords);
+                        AiDiagnosticRecord[] related;
+                        lock (_gate)
+                        {
+                            related = safe.RequestId == Guid.Empty ? [] : _persistenceContext
+                                .Where(record => record.RequestId == safe.RequestId).ToArray();
+                        }
+
+                        // A recovered request is still useful warning/error evidence: keep
+                        // Main failure, Fallback recovery and the terminal task together.
+                        // Never correlate unrelated records that have no request identity.
+                        bool failedRequest = IsFailure(safe) || related.Any(IsFailure) ||
+                            (safe.RequestId != Guid.Empty && history.Any(record => record.RequestId == safe.RequestId && IsFailure(record)));
+                        if (!failedRequest)
+                        {
+                            return;
+                        }
+
+                        foreach (AiDiagnosticRecord previous in related)
+                        {
+                            if (!history.Contains(previous))
+                            {
+                                history.Add(previous);
+                            }
+                        }
+                    }
+
+                    if (!history.Contains(safe))
+                    {
+                        history.Add(safe);
+                    }
+
+                    DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-HistoryRetentionDays);
+                    history.RemoveAll(record => record.TimestampUtc < cutoff);
+                    // Backfilled context and concurrently completed batches may arrive
+                    // out of timestamp order. OrderBy preserves insertion order for ties.
+                    history = history.OrderBy(record => record.TimestampUtc).ToList();
+                    while (history.Count > MaximumHistoryRecords)
+                    {
+                        RemoveOldestRequest(history, safe.RequestId);
                     }
 
                     byte[] content = SerializeHistory(history);
                     while (content.Length > MaximumHistoryBytes && history.Count > 1)
                     {
-                        history.RemoveAt(0);
+                        RemoveOldestRequest(history, safe.RequestId);
                         content = SerializeHistory(history);
                     }
 
@@ -133,7 +190,10 @@ public sealed class AiDiagnosticsStore
         }
     }
 
-    /// <summary>Returns newest records first. History is separate from current-session totals.</summary>
+    /// <summary>
+    /// Returns newest records first within the retention period. History is separate from
+    /// current-session totals; expired disk records are reclaimed on the next enabled write.
+    /// </summary>
     public IReadOnlyList<AiDiagnosticRecord> LoadHistory()
     {
         IReadOnlyList<AiDiagnosticRecord> result = Array.Empty<AiDiagnosticRecord>();
@@ -143,6 +203,45 @@ public sealed class AiDiagnosticsStore
 
     private static byte[] SerializeHistory(List<AiDiagnosticRecord> records) =>
         JsonSerializer.SerializeToUtf8Bytes(records, AiHubJsonContext.Default.ListAiDiagnosticRecord);
+
+    private static bool IsFailure(AiDiagnosticRecord record) => record.Outcome is "failed" or "timeout" or "partial";
+
+    private static void RemoveOldestRequest(List<AiDiagnosticRecord> history, Guid currentRequest)
+    {
+        // Keep a long-running request whose latest activity is recent. Selecting by
+        // its first record would discard its new failure ahead of an older idle group.
+        var lastActivity = new Dictionary<Guid, int>();
+        for (int index = 0; index < history.Count; index++)
+        {
+            lastActivity[history[index].RequestId] = index;
+        }
+
+        AiDiagnosticRecord? oldestOther = null;
+        for (int index = 0; index < history.Count; index++)
+        {
+            AiDiagnosticRecord candidate = history[index];
+            if (candidate.RequestId != currentRequest &&
+                (candidate.RequestId == Guid.Empty || lastActivity[candidate.RequestId] == index))
+            {
+                oldestOther = candidate;
+                break;
+            }
+        }
+
+        if (oldestOther is null)
+        {
+            // One large request must still respect the hard record/byte limit.
+            history.RemoveAt(0);
+        }
+        else if (oldestOther.RequestId == Guid.Empty)
+        {
+            history.Remove(oldestOther);
+        }
+        else
+        {
+            history.RemoveAll(record => record.RequestId == oldestOther.RequestId);
+        }
+    }
 
     private void WithHistoryLock(Action action)
     {
@@ -196,7 +295,9 @@ public sealed class AiDiagnosticsStore
             }
 
             List<AiDiagnosticRecord>? records = JsonSerializer.Deserialize(content, AiHubJsonContext.Default.ListAiDiagnosticRecord);
-            return records?.Where(record => record is not null).TakeLast(MaximumHistoryRecords).Select(Normalize).ToList() ?? [];
+            DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-HistoryRetentionDays);
+            return records?.Where(record => record is not null && record.TimestampUtc >= cutoff)
+                .OrderBy(record => record.TimestampUtc).TakeLast(MaximumHistoryRecords).Select(Normalize).ToList() ?? [];
         }
         catch (Exception)
         {
@@ -354,8 +455,10 @@ public sealed class AiDiagnosticsStore
         Route = Known(record.Route, ["main", "fallback"], string.Empty),
         Outcome = Known(record.Outcome, ["succeeded", "failed", "cancelled", "timeout", "partial"]),
         ErrorCode = Enum.IsDefined(record.ErrorCode) ? record.ErrorCode : AiErrorCode.ExecutionFailed,
-        TotalBatches = Math.Max(0, record.TotalBatches),
-        CompletedBatches = Math.Clamp(record.CompletedBatches, 0, Math.Max(0, record.TotalBatches)),
+        TotalBatches = Math.Clamp(record.TotalBatches, 0, 2_000),
+        BatchIndex = string.Equals(record.Kind, "route", StringComparison.OrdinalIgnoreCase)
+            ? Math.Clamp(record.BatchIndex, 0, Math.Clamp(record.TotalBatches, 0, 2_000)) : 0,
+        CompletedBatches = Math.Clamp(record.CompletedBatches, 0, Math.Clamp(record.TotalBatches, 0, 2_000)),
         ElapsedMilliseconds = Math.Max(0, record.ElapsedMilliseconds),
         Diagnostics = record.Diagnostics is { } details ? NormalizeDiagnostics(details) : null,
     };

@@ -50,15 +50,15 @@ namespace Kit.NetMapService
         {
             switch (request.Command.ToLowerInvariant())
             {
-                case "get-topology":
                 case "get-status":
-                    return Task.FromResult(KitPipeResponse.Ok("{\"status\":\"running\"}"));
+                    return Task.FromResult(KitPipeResponse.Ok("{\"status\":\"running\",\"engineAvailable\":false,\"executionHost\":\"Settings\"}"));
+                case "get-topology":
                 case "start-scan":
                 case "cancel-scan":
                 case "scan-host-ports":
                 case "send-wol":
                 case "run-traceroute":
-                    return Task.FromResult(KitPipeResponse.Ok("{\"acknowledged\":true}"));
+                    return Task.FromResult(KitPipeResponse.Fail("unsupported-command", "NetMap operations run in Kit Settings. This service does not execute network operations or provide topology results."));
                 default:
                     return Task.FromResult(KitPipeResponse.Fail("unknown-command", $"Unknown command: {request.Command}"));
             }

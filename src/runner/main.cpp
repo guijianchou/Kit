@@ -59,29 +59,6 @@ namespace
     const wchar_t PT_URI_PROTOCOL_SCHEME[] = L"powertoys://";
     const wchar_t KIT_MODULE_LOAD_FAIL[] = L"Failed to load "; // Module name will be appended on this message and it is not localized.
 
-    constexpr std::wstring_view KitKnownModules[] = {
-        L"Kit.AwakeModuleInterface.dll",
-        L"Kit.LightSwitchModuleInterface.dll",
-        L"Kit.LocalserverModuleInterface.dll",
-        L"Kit.UDPtestModuleInterface.dll",
-        L"Kit.NetMapModuleInterface.dll",
-        L"Kit.AIHubModuleInterface.dll",
-        L"Kit.WingetModuleInterface.dll",
-    };
-
-    bool is_known_module_registered(std::wstring_view moduleName)
-    {
-        for (const auto knownModule : KitKnownModules)
-        {
-            if (knownModule == moduleName)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     std::optional<std::wstring_view> get_uri_protocol_payload(std::wstring_view value)
     {
         if (value.starts_with(KIT_URI_PROTOCOL_SCHEME))
@@ -170,9 +147,10 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 
         // Load Kit module DLLs
 
-        for (auto moduleSubdir : KitKnownModules)
+        for (const auto& entry : KitModuleCatalog)
         {
-            auto moduleKey = get_module_key_for_filename(moduleSubdir);
+            const auto moduleSubdir = entry.filename;
+            const auto moduleKey = entry.key;
             if (!moduleKey.empty())
             {
                 auto it = settings.isModulesEnabledMap.find(std::wstring(moduleKey));
@@ -323,7 +301,6 @@ enum class toast_notification_handler_result
 toast_notification_handler_result toast_notification_handler(const std::wstring_view param)
 {
     const std::wstring_view cant_drag_elevated_disable = L"cant_drag_elevated_disable/";
-    const std::wstring_view couldnt_toggle_powerpreview_modules_disable = L"couldnt_toggle_powerpreview_modules_disable/";
     const std::wstring_view open_settings = L"open_settings/";
     const std::wstring_view open_overview = L"open_overview/";
     const std::wstring_view open_winget = L"open_winget/";
@@ -336,10 +313,6 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
     else if (param.starts_with(update_now))
     {
         return toast_notification_handler_result::exit_error;
-    }
-    else if (param == couldnt_toggle_powerpreview_modules_disable)
-    {
-        return notifications::disable_toast(notifications::PreviewModulesDontShowAgainRegistryPath) ? toast_notification_handler_result::exit_success : toast_notification_handler_result::exit_error;
     }
     else if (param == open_settings)
     {

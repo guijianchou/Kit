@@ -117,7 +117,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
             if (success)
             {
-                ReportReadinessProbe($"succeeded: kernel={kernel}, model={validation.ActiveModel}, latencyMs={stopwatch.ElapsedMilliseconds}");
+                ReportReadinessProbe($"succeeded: kernel={kernel}, route=Main, latencyMs={stopwatch.ElapsedMilliseconds}");
 
                 return Remember(validation with
                 {
@@ -656,6 +656,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         Route = usedRoute,
                         Outcome = GetOutcome(execution.IsSuccess, routeCode),
                         ErrorCode = routeCode,
+                        BatchIndex = batchIndex + 1,
+                        TotalBatches = batches.Count,
                         Diagnostics = routeDiagnostics,
                         ElapsedMilliseconds = routeDiagnostics?.ElapsedMilliseconds ?? 0,
                     }).ConfigureAwait(false);

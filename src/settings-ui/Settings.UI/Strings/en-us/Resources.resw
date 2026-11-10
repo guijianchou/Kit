@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:schema id="root">
     <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -773,9 +773,6 @@ Activate by holding the key for the character you want to add an accent to, then
   </data>
   <data name="AIHub_EnableSettingsCard.Header" xml:space="preserve">
     <value>Enable AI Hub</value>
-  </data>
-  <data name="AIHub_EnableSettingsCard.Description" xml:space="preserve">
-    <value>Analyze Windows event logs for security health and optimize disk hygiene with strict safety policies.</value>
   </data>
     <data name="Localserver_StartAllButton.Content" xml:space="preserve">
     <value>Start all</value>
@@ -3086,7 +3083,7 @@ Activate by holding the key for the character you want to add an accent to, then
     <value>Ready to scan</value>
   </data>
   <data name="AIHub_HealthScoreLabel" xml:space="preserve">
-    <value>Health score</value>
+    <value>Health</value>
   </data>
   <data name="AIHub_FilterHighQuickActionLabel" xml:space="preserve">
     <value>Filter High findings</value>
@@ -4381,4 +4378,78 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Inventory_StatusComplete" xml:space="preserve"><value>Storage analysis complete.</value></data>
   <data name="AIHub_Inventory_StatusCancelled" xml:space="preserve"><value>Analysis cancelled. The previous inventory is retained.</value></data>
   <data name="AIHub_Inventory_StatusFailed" xml:space="preserve"><value>Analysis could not finish. The previous inventory is retained.</value></data>
+  <data name="AIHub_Fluent_Subtitle.Text" xml:space="preserve"><value>Security audits and storage management</value></data>
+  <data name="AIHub_Fluent_PriorityButton.Content" xml:space="preserve"><value>Review priority finding →</value></data>
+  <data name="AIHub_Fluent_ScanMode.Header" xml:space="preserve"><value>Scan mode</value></data>
+  <data name="AIHub_Fluent_ScanRange.Header" xml:space="preserve"><value>Time range</value></data>
+  <data name="AIHub_Fluent_FullChannels.Content" xml:space="preserve"><value>Include Security and Firewall logs (requires administrator)</value></data>
+  <data name="AIHub_Fluent_NextScanHint.Text" xml:space="preserve"><value>Applies to the next scan only.</value></data>
+  <data name="AIHub_Fluent_AuditHistory.Content" xml:space="preserve"><value>Audit history</value></data>
+  <data name="AIHub_Fluent_AiSummary.Text" xml:space="preserve"><value>AI analysis summary</value></data>
+  <data name="AIHub_Fluent_FullReport.Content" xml:space="preserve"><value>Read full analysis →</value></data>
+  <data name="AIHub_Fluent_ReportExpander.Header" xml:space="preserve"><value>Full AI analysis</value></data>
+  <data name="AIHub_Fluent_StorageCapacityHint.Text" xml:space="preserve"><value>Organizing downloads moves files and does not free space.</value></data>
+  <data name="AIHub_Fluent_ExecutionHistory.Content" xml:space="preserve"><value>Execution history</value></data>
+  <data name="AIHub_Fluent_OptimizationSteps.Text" xml:space="preserve"><value>Scan candidates → Review selection → Confirm operations</value></data>
+  <data name="AIHub_Fluent_HistoryExpander.Header" xml:space="preserve"><value>Execution history and results</value></data>
+  <data name="AIHub_Fluent_InventoryExpander.Header" xml:space="preserve"><value>Directory space inventory</value></data>
+  <data name="AIHub_Fluent_SelectedDeletes.Text" xml:space="preserve"><value>To free</value></data>
+  <data name="AIHub_Fluent_SelectedMoves.Text" xml:space="preserve"><value>To organize</value></data>
+  <data name="AIHub_Fluent_PolicyLocation.Header" xml:space="preserve"><value>Policy file location</value></data>
+  <data name="AIHub_Fluent_ConfirmSummary" xml:space="preserve"><value>{0:N0} selected · {1:N0} delete ({2} to free) · {3:N0} move ({4} to organize)</value></data>
+  <data name="AIHub_Fluent_DetailsTitle" xml:space="preserve"><value>Finding details</value></data>
+  <data name="AIHub_Fluent_CloseDetails" xml:space="preserve"><value>Close details</value></data>
+  <data name="AIHub_Fluent_PreviousFinding" xml:space="preserve"><value>Previous finding</value></data>
+  <data name="AIHub_Fluent_NextFinding" xml:space="preserve"><value>Next finding</value></data>
+  <data name="AIHub_Fluent_FindingPosition" xml:space="preserve"><value>{0:N0} of {1:N0} matching findings</value></data>
+  <data name="AIHub_Fluent_RelatedFinding" xml:space="preserve"><value>Related finding</value></data>
+  <data name="AIHub_Fluent_EventId" xml:space="preserve"><value>Event ID</value></data>
+  <data name="AIHub_Fluent_EventSource" xml:space="preserve"><value>Source</value></data>
+  <data name="AIHub_Fluent_ResultRange" xml:space="preserve"><value>Audit range</value></data>
+  <data name="AIHub_Fluent_Assessment" xml:space="preserve"><value>Assessment</value></data>
+  <data name="AIHub_Fluent_EventEvidence" xml:space="preserve"><value>Event evidence and references</value></data>
+  <data name="AIHub_Fluent_EventEvidenceDescription" xml:space="preserve"><value>Evidence recorded with this finding. Event references identify the underlying records.</value></data>
+  <data name="AIHub_Fluent_EventReferences" xml:space="preserve"><value>Event references</value></data>
+  <data name="AIHub_Fluent_EventChannel" xml:space="preserve"><value>Channel</value></data>
+  <data name="AIHub_Fluent_EventTime" xml:space="preserve"><value>Timestamp</value></data>
+  <data name="AIHub_Fluent_Affected" xml:space="preserve"><value>Affected</value></data>
+  <data name="AIHub_Fluent_IssueKey" xml:space="preserve"><value>Issue key</value></data>
+  <data name="AIHub_Fluent_CopyFinding" xml:space="preserve"><value>Copy summary</value></data>
+  <data name="AIHub_Fluent_AnalyzeRange" xml:space="preserve"><value>Analyze current range</value></data>
+  <data name="AIHub_Fluent_ShowPriority" xml:space="preserve"><value>Show priority findings</value></data>
+  <data name="AIHub_Fluent_ShowAll" xml:space="preserve"><value>Show all findings</value></data>
+  <data name="AIHub_Fluent_MatchingFindings" xml:space="preserve"><value>{0} matching / {1} total</value></data>
+  <data name="AIHub_Fluent_VisibleFindings" xml:space="preserve"><value>Showing {0} / {1} findings</value></data>
+  <data name="AIHub_Fluent_FirstAudit" xml:space="preserve"><value>Start with your first security audit</value></data>
+  <data name="AIHub_Fluent_PriorityHeadline" xml:space="preserve"><value>{0} finding(s) need your attention first</value></data>
+  <data name="AIHub_Fluent_ModuleDisabled" xml:space="preserve"><value>Module disabled</value></data>
+  <data name="AIHub_Fluent_ServiceReady" xml:space="preserve"><value>AI service ready</value></data>
+  <data name="AIHub_Fluent_ServiceFallback" xml:space="preserve"><value>Using fallback route</value></data>
+  <data name="AIHub_Fluent_ServiceUnverified" xml:space="preserve"><value>AI service not verified</value></data>
+  <data name="AIHub_Fluent_ServiceNotConfigured" xml:space="preserve"><value>AI service not configured</value></data>
+  <data name="AIHub_Fluent_ServiceDisabled" xml:space="preserve"><value>AI service disabled</value></data>
+  <data name="AIHub_Fluent_PreviousResult" xml:space="preserve"><value>Previous result</value></data>
+  <data name="AIHub_Fluent_Analyzing" xml:space="preserve"><value>Analyzing</value></data>
+  <data name="AIHub_Fluent_PreviousAnalysis" xml:space="preserve"><value>Previous analysis retained</value></data>
+  <data name="AIHub_Fluent_PartialAnalysis" xml:space="preserve"><value>Partially completed</value></data>
+  <data name="AIHub_Fluent_AnalysisComplete" xml:space="preserve"><value>Analysis complete</value></data>
+  <data name="AIHub_Fluent_AnalysisPending" xml:space="preserve"><value>No deep analysis for this result</value></data>
+  <data name="AIHub_Fluent_AnalysisAfterScan" xml:space="preserve"><value>Scan Windows events first, then review their evidence and analysis.</value></data>
+  <data name="AIHub_Fluent_AnalysisReady" xml:space="preserve"><value>Analyze the events from this audit to review related evidence and recommendations.</value></data>
+  <data name="AIHub_Fluent_AnalysisNeedsEvents" xml:space="preserve"><value>Stored findings remain available. Run a scan to collect events for deep analysis.</value></data>
+  <data name="AIHub_Fluent_LatestAuditFormat" xml:space="preserve"><value>Security audit · {0}</value></data>
+  <data name="AIHub_Fluent_RelatedEvidence.Text" xml:space="preserve"><value>Related evidence</value></data>
+  <data name="AIHub_Fluent_AuditBoundaryFooter.Text" xml:space="preserve"><value>Rule-based results and AI suggestions are presented separately</value></data>
+  <data name="AIHub_Fluent_LegendActionableFormat" xml:space="preserve"><value>Actionable {0}</value></data>
+  <data name="AIHub_Fluent_LegendReviewFormat" xml:space="preserve"><value>Review {0}</value></data>
+  <data name="AIHub_Fluent_LegendRetainedFormat" xml:space="preserve"><value>Retained {0}</value></data>
+  <data name="AIHub_Fluent_SelectionFooterHint.Text" xml:space="preserve"><value>Review operations and affected scope before execution</value></data>
+  <data name="AIHub_Fluent_OptimizationBoundaryFooter.Text" xml:space="preserve"><value>Protected items are retained; Downloads are organized by file type</value></data>
+  <data name="AIHub_Fluent_AuditPolicyHeading" xml:space="preserve"><value>Security audit instructions</value></data>
+  <data name="AIHub_Fluent_OptPolicyHeading" xml:space="preserve"><value>Optimization instructions</value></data>
+  <data name="AIHub_Fluent_PolicyScopeTitle.Text" xml:space="preserve"><value>Scope of effect</value></data>
+  <data name="AIHub_Fluent_AuditPolicyScopePrimary" xml:space="preserve"><value>Governs event analysis priorities, conclusion structure, and recommended action output.</value></data>
+  <data name="AIHub_Fluent_OptPolicyScopePrimary" xml:space="preserve"><value>Governs how candidate files are categorized, cleanup suggestions are formed, and retention boundaries are applied.</value></data>
+  <data name="AIHub_Fluent_PolicyScopeBoundary.Text" xml:space="preserve"><value>Specific items still require review before execution.</value></data>
+  <data name="AIHub_Fluent_PolicyFooterHint.Text" xml:space="preserve"><value>Saved changes apply to the next task; switching tabs preserves drafts.</value></data>
 </root>

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "scope": "git-tracked src/common working-tree files with the exact same relative path in the reference",
+  "kit_head": "ff04ab346e4bcd2a0fdd3a50512ac52764769e61",
+  "kit_version": {
+    "Version": "3.4.6"
+  },
+  "reference_version": {
+    "Version": "0.0.1",
+    "VersionChannel": "private",
+    "ReleaseTrainVersion": "0.103",
+    "SourceCommit": ""
+  },
+  "reference_own_git_commit": null,
+  "normalization": [
+    "UTF-8 decode with optional BOM removal",
+    "CRLF and standalone CR to LF",
+    "no whitespace/comment/case/identifier normalization otherwise"
+  ],
+  "brand_map_in_order": [
+    [
+      "PowerToys",
+      "Kit"
+    ],
+    [
+      "powertoys",
+      "kit"
+    ],
+    [
+      "Powertoys",
+      "Kit"
+    ]
+  ],
+  "brand_map_scope": "literal replacements on normalized reference text only; not a semantic equivalence claim",
+  "diff_line_counts": "normalized text before brand replacements; SequenceMatcher opcodes; not semantic change counts",
+  "tracked_common_files": 389,
+  "compared_same_path_files": 304,
+  "counts": {
+    "byte-equal": 164,
+    "normalized-equal": 24,
+    "brand-only": 8,
+    "content-diff": 108,
+    "binary-diff": 0
+  },
+  "no_same_path_reference_files": 85,
+  "tracked_files_missing_from_working_tree": [],
+  "reference_manifest_files": 319,
+  "missing_reference_core_paths": [],
+  "reference_manifest_sha256": "243019adba0ff092db1f76c1bf76bd199081bc5885747a680e47fba97057f02f",
+  "ledger_tsv_sha256": "2eba37754b22244083dac1bcbf9d5fd5090aadbd6b952f7c3b39b04e182c7a46",
+  "unmatched_tsv_sha256": "26e17f0cbb70ae02e0868b77c148bdbf3bae546cdd68cb62759d0f498871506d"
+}

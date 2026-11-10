@@ -3,7 +3,9 @@ param(
     [string]$Configuration = 'Debug',
     [ValidateSet('en-us', 'zh-CN')]
     [string]$Language = 'en-us',
-    [string]$RuntimeRoot
+    [string]$RuntimeRoot,
+    [switch]$ShellOnly,
+    [switch]$NavigationPersistence
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +13,7 @@ $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if (-not $RuntimeRoot) { $RuntimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
 $RuntimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
 $reportRoot = Join-Path $repoRoot "TestResults\AiHubUx\$Configuration\$Language"
+if ($NavigationPersistence) { $reportRoot = Join-Path $reportRoot 'NavigationPersistence' }
 $testName = 'AiHubUxSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $RuntimeRoot ($testName + $_) }
 if (@(Get-Process Kit,Kit.Settings,Kit.QuickAccess,Kit.AIHubWorker,Kit.WingetService,AiHubUxSmoke,winget -ErrorAction SilentlyContinue).Count) {
@@ -29,7 +32,8 @@ $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Ho
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
 $backups = @{}
-foreach ($name in @('settings.json', 'settings-placement.json', 'language.json', 'log_settings.json',
+foreach ($name in @('settings.json', 'settings-placement.json', 'settings-ui.json', 'language.json', 'log_settings.json',
+    'Awake\settings.json', 'LightSwitch\settings.json',
     'AiHub\settings.json', 'AiHub\service-settings.json', 'AiHub\secrets.dat', 'AiHub\security.md',
     'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md',
     'AiHub\State\audit_history.json', 'AiHub\State\optimization_history.json')) {
@@ -42,10 +46,17 @@ $testTemp = Join-Path $reportRoot 'tmp'
 $previousTemp = $env:TEMP
 $previousTmp = $env:TMP
 $previousOutput = $env:KIT_AI_HUB_UX_TEST_OUTPUT
+$previousShellOnly = $env:KIT_SHELL_PALETTE_ONLY
+$previousNavigationPhase = $env:KIT_NAVIGATION_PERSISTENCE_PHASE
 $testProcess = $null
 try {
     $env:TEMP = $testTemp
     $env:TMP = $testTemp
+    $env:KIT_SHELL_PALETTE_ONLY = if ($ShellOnly) { '1' } else { $null }
+    $env:KIT_NAVIGATION_PERSISTENCE_PHASE = $null
+    if ($NavigationPersistence) {
+        [IO.File]::WriteAllText((Join-Path $env:LOCALAPPDATA 'Kit\settings-ui.json'), '{"navigation_pane_open":true}', [Text.UTF8Encoding]::new($false))
+    }
     $generalPath = Join-Path $env:LOCALAPPDATA 'Kit\settings.json'
     $general = if ($backups[$generalPath]) { [Text.Encoding]::UTF8.GetString($backups[$generalPath]) | ConvertFrom-Json -AsHashtable } else { @{} }
     if ($general -isnot [Collections.IDictionary]) { throw 'General settings must be a JSON object.' }
@@ -78,6 +89,8 @@ try {
     foreach ($arg in @('/nostdlib+', '/target:exe', '/langversion:preview')) { $compilerArgs.Add($arg) }
     $compilerArgs.Add('/out:"' + (Join-Path $RuntimeRoot "$testName.dll") + '"')
     $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'AiHubUxSmoke.cs') + '"')
+    $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'ShellPaletteChecks.cs') + '"')
+    $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'NavigationPanePersistenceChecks.cs') + '"')
     foreach ($file in Get-ChildItem -LiteralPath $RuntimeRoot -Filter '*.dll' -File) {
         try { $null = [Reflection.AssemblyName]::GetAssemblyName($file.FullName) } catch { continue }
         $compilerArgs.Add('/reference:"' + $file.FullName + '"')
@@ -105,15 +118,25 @@ try {
     $startInfo.CreateNoWindow = $true
     $startInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
     foreach ($argument in $launchArguments) { $startInfo.ArgumentList.Add($argument) }
-    $testProcess = [Diagnostics.Process]::Start($startInfo)
-    $harnessLog = Join-Path $reportRoot 'aihub-ux-smoke.log'
-    if (-not $testProcess.WaitForExit(60000)) {
-        if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 10 }
-        throw 'AI Hub UI smoke timed out after 60 seconds.'
+    $navigationPhases = if ($NavigationPersistence) { @('collapse', 'restore-collapsed', 'restore-expanded') } else { @('') }
+    foreach ($navigationPhase in $navigationPhases) {
+        if ($navigationPhase) { $startInfo.Environment['KIT_NAVIGATION_PERSISTENCE_PHASE'] = $navigationPhase }
+        $testProcess = [Diagnostics.Process]::Start($startInfo)
+        $harnessLog = Join-Path $reportRoot 'aihub-ux-smoke.log'
+        if (-not $testProcess.WaitForExit(60000)) {
+            if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 10 }
+            throw 'AI Hub UI smoke timed out after 60 seconds.'
+        }
+        Get-Content -LiteralPath $harnessLog
+        if ($testProcess.ExitCode -ne 0) { throw "AI Hub UI smoke failed: $($testProcess.ExitCode)" }
+        if ((Get-Content -LiteralPath $harnessLog -Tail 1) -ne 'PASS') { throw 'AI Hub UI smoke exited before assertions completed.' }
+        if ($navigationPhase) {
+            Copy-Item -LiteralPath $harnessLog -Destination (Join-Path $reportRoot ("aihub-ux-$navigationPhase.log"))
+            Get-Content -LiteralPath (Join-Path $reportRoot ("navigation-pane-$navigationPhase.log"))
+        }
+        $testProcess.Dispose()
+        $testProcess = $null
     }
-    Get-Content -LiteralPath $harnessLog
-    if ($testProcess.ExitCode -ne 0) { throw "AI Hub UI smoke failed: $($testProcess.ExitCode)" }
-    if ((Get-Content -LiteralPath $harnessLog -Tail 1) -ne 'PASS') { throw 'AI Hub UI smoke exited before assertions completed.' }
     if (@(Get-Process Kit.AIHubWorker,Kit.WingetService,winget -ErrorAction SilentlyContinue).Count) { throw 'A worker appeared during the isolated smoke test.' }
     foreach ($name in @('audit_history.json', 'optimization_history.json')) {
         $path = Join-Path $env:LOCALAPPDATA "Kit\AiHub\State\$name"
@@ -122,6 +145,8 @@ try {
 } finally {
     if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
     $env:KIT_AI_HUB_UX_TEST_OUTPUT = $previousOutput
+    $env:KIT_SHELL_PALETTE_ONLY = $previousShellOnly
+    $env:KIT_NAVIGATION_PERSISTENCE_PHASE = $previousNavigationPhase
     $env:TEMP = $previousTemp
     $env:TMP = $previousTmp
     foreach ($path in $backups.Keys) {

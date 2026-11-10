@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using global::Kit.GPOWrapper;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
@@ -53,13 +54,13 @@ namespace Kit.Settings.UI.ViewModels
 
         private Action<int> DoBackupAndRestoreDryRun { get; set; }
 
-        public ButtonClickCommand BackupConfigsEventHandler { get; set; }
+        public ICommand BackupConfigsEventHandler { get; set; }
 
-        public ButtonClickCommand RestoreConfigsEventHandler { get; set; }
+        public ICommand RestoreConfigsEventHandler { get; set; }
 
         public ButtonClickCommand RefreshBackupStatusEventHandler { get; set; }
 
-        public ButtonClickCommand SelectSettingBackupDirEventHandler { get; set; }
+        public ICommand SelectSettingBackupDirEventHandler { get; set; }
 
         public ButtonClickCommand RestartElevatedButtonEventHandler { get; set; }
 
@@ -79,6 +80,7 @@ namespace Kit.Settings.UI.ViewModels
         private Microsoft.UI.Dispatching.DispatcherQueue _dispatcherQueue;
         private IFileSystemWatcher _fileWatcher;
         private bool _deferredStartupMaintenanceQueued;
+        private bool _backupRestoreOperationInProgress;
         private int _manualUpdateCheckRequestId;
         private DateTime? _manualUpdateCheckBaselineLastChecked;
 
@@ -90,9 +92,9 @@ namespace Kit.Settings.UI.ViewModels
         {
             CheckForUpdatesEventHandler = new ButtonClickCommand(CheckForUpdatesClick);
             RestartElevatedButtonEventHandler = new ButtonClickCommand(RestartElevated);
-            BackupConfigsEventHandler = new ButtonClickCommand(BackupConfigsClick);
-            SelectSettingBackupDirEventHandler = new ButtonClickCommand(SelectSettingBackupDir);
-            RestoreConfigsEventHandler = new ButtonClickCommand(RestoreConfigsClick);
+            BackupConfigsEventHandler = new AsyncCommand(BackupConfigsAsync, CanRunBackupRestoreOperation);
+            SelectSettingBackupDirEventHandler = new AsyncCommand(SelectSettingBackupDirAsync, CanRunBackupRestoreOperation);
+            RestoreConfigsEventHandler = new AsyncCommand(RestoreConfigsAsync, CanRunBackupRestoreOperation);
             RefreshBackupStatusEventHandler = new ButtonClickCommand(RefreshBackupStatusEventHandlerClick);
             HideBackupAndRestoreMessageAreaAction = hideBackupAndRestoreMessageAreaAction;
             DoBackupAndRestoreDryRun = doBackupAndRestoreDryRun;
@@ -635,7 +637,7 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        public string SettingsBackupAndRestoreDir
+        public virtual string SettingsBackupAndRestoreDir
         {
             get
             {
@@ -1138,19 +1140,75 @@ namespace Kit.Settings.UI.ViewModels
         }
 
         /// <summary>
-        /// Method <c>SelectSettingBackupDir</c> opens folder browser to select a backup and restore location.
+        /// Opens the folder browser while keeping backup and restore bound to a settled location.
         /// </summary>
-        private async void SelectSettingBackupDir()
+        internal Task SelectSettingBackupDirAsync() => RunBackupRestoreOperationAsync(async () =>
         {
-            var currentDir = settingsBackupAndRestoreUtils.GetSettingsBackupAndRestoreDir();
+            if (PickSingleFolderDialog == null)
+            {
+                return;
+            }
 
             var newPath = await PickSingleFolderDialog();
 
-            if (!string.IsNullOrEmpty(newPath))
+            if (!string.IsNullOrWhiteSpace(newPath))
             {
                 SettingsBackupAndRestoreDir = newPath;
                 NotifyAllBackupAndRestoreProperties();
             }
+        });
+
+        internal Task BackupConfigsAsync() => RunBackupRestoreOperationAsync(() =>
+        {
+            BackupConfigsClick();
+            return Task.CompletedTask;
+        });
+
+        internal Task RestoreConfigsAsync() => RunBackupRestoreOperationAsync(() =>
+        {
+            RestoreConfigsClick();
+            return Task.CompletedTask;
+        });
+
+        private bool CanRunBackupRestoreOperation() => !_backupRestoreOperationInProgress;
+
+        private async Task RunBackupRestoreOperationAsync(Func<Task> operation)
+        {
+            // ICommand callers can invoke Execute even when CanExecute is false.
+            // Share one gate so a pending picker cannot race a backup or restore
+            // against the old directory, and cannot open a second picker.
+            if (_backupRestoreOperationInProgress)
+            {
+                return;
+            }
+
+            _backupRestoreOperationInProgress = true;
+            RaiseBackupRestoreCanExecuteChanged();
+            try
+            {
+                await operation();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("A settings backup, restore or location selection failed.", ex);
+                _settingsBackupRestoreMessageVisible = true;
+                _backupRestoreMessageSeverity = "Error";
+                _settingsBackupMessage = GetResourceString("General_SettingsBackupAndRestore_BackupError");
+                NotifyAllBackupAndRestoreProperties();
+                HideBackupAndRestoreMessageAreaAction?.Invoke();
+            }
+            finally
+            {
+                _backupRestoreOperationInProgress = false;
+                RaiseBackupRestoreCanExecuteChanged();
+            }
+        }
+
+        private void RaiseBackupRestoreCanExecuteChanged()
+        {
+            (BackupConfigsEventHandler as AsyncCommand)?.RaiseCanExecuteChanged();
+            (RestoreConfigsEventHandler as AsyncCommand)?.RaiseCanExecuteChanged();
+            (SelectSettingBackupDirEventHandler as AsyncCommand)?.RaiseCanExecuteChanged();
         }
 
         private void RefreshBackupStatusEventHandlerClick()
@@ -1161,15 +1219,8 @@ namespace Kit.Settings.UI.ViewModels
         /// <summary>
         /// Method <c>RestoreConfigsClick</c> starts the restore.
         /// </summary>
-        private void RestoreConfigsClick()
+        protected virtual void RestoreConfigsClick()
         {
-            string settingsBackupAndRestoreDir = settingsBackupAndRestoreUtils.GetSettingsBackupAndRestoreDir();
-
-            if (string.IsNullOrEmpty(settingsBackupAndRestoreDir))
-            {
-                SelectSettingBackupDir();
-            }
-
             var results = SettingsUtils.RestoreSettings();
             _backupRestoreMessageSeverity = results.Severity;
 
@@ -1196,14 +1247,9 @@ namespace Kit.Settings.UI.ViewModels
         /// <summary>
         /// Method <c>BackupConfigsClick</c> starts the backup.
         /// </summary>
-        private void BackupConfigsClick()
+        protected virtual void BackupConfigsClick()
         {
-            string settingsBackupAndRestoreDir = settingsBackupAndRestoreUtils.GetSettingsBackupAndRestoreDir();
-
-            if (string.IsNullOrEmpty(settingsBackupAndRestoreDir))
-            {
-                SelectSettingBackupDir();
-            }
+            string settingsBackupAndRestoreDir = SettingsBackupAndRestoreDir;
 
             var results = SettingsUtils.BackupSettings();
 

@@ -121,6 +121,7 @@ namespace
     HMENU h_sub_menu = nullptr;
     bool double_click_timer_running = false;
     bool double_clicked = false;
+    constexpr UINT_PTR tray_click_timer_id = 1;
     POINT tray_icon_click_point;
     std::optional<bool> last_quick_access_state; // Track the last known Quick Access state
 
@@ -243,6 +244,9 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         }
         break;
     case WM_DESTROY:
+        KillTimer(window, tray_click_timer_id);
+        double_click_timer_running = false;
+        double_clicked = false;
         cancel_settings_window_startup();
         Logger::info(L"Runner WM_DESTROY, system_session_ending={}", g_system_session_ending);
         if (!g_system_session_ending)
@@ -261,6 +265,17 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         break;
     case WM_COMMAND:
         handle_tray_command(window, wparam, lparam);
+        break;
+    case WM_TIMER:
+        if (wparam == tray_click_timer_id)
+        {
+            KillTimer(window, tray_click_timer_id);
+            if (double_click_timer_running)
+            {
+                click_timer_elapsed();
+            }
+            return 0;
+        }
         break;
     // Shell_NotifyIcon can fail when we invoke it during the time explorer.exe isn't present/ready to handle it.
     // We'll also never receive wm_taskbar_restart message if the first call to Shell_NotifyIcon failed, so we use
@@ -369,11 +384,14 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
                     double_click_timer_running = true;
                     double_clicked = false;
 
-                    UINT doubleClickTime = GetDoubleClickTime();
-                    std::thread([doubleClickTime]() {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(doubleClickTime));
+                    // Keep click state and window actions on the tray UI thread.
+                    // A window timer is cancelled on destruction; no detached
+                    // callback can race Runner shutdown or the second click.
+                    if (!SetTimer(window, tray_click_timer_id, GetDoubleClickTime(), nullptr))
+                    {
+                        Logger::warn("Could not create the tray click timer; handling the click immediately");
                         click_timer_elapsed();
-                    }).detach();
+                    }
                 }
                 break;
             }

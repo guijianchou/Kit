@@ -50,8 +50,6 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
       <DisableSpecificWarnings>4679;4706;4874;5271;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <DisableAnalyzeExternal >true</DisableAnalyzeExternal>
-      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <ConformanceMode>false</ConformanceMode>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpplatest</LanguageStandard>

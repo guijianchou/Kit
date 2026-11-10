@@ -4,7 +4,7 @@
 
 Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). Synchronized with PowerToys upstream **v0.102.3001.0**, it reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-Current source version: **3.4.6**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
+Current source version: **3.5.0**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
 [Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
@@ -17,9 +17,9 @@ Kit currently includes seven modules. “Plugin” here means a module built and
 | [Awake](#31-awake-keep-the-system-awake) | Keep Windows awake under selected conditions | Separate Awake process | PowerToys |
 | [Light Switch](#32-light-switch-theme-scheduling) | Switch light/dark themes on a schedule or manually | Separate Service process | PowerToys |
 | [Localserver](#33-localserver-local-service-management) | Configure, start, monitor and stop local services | Settings + supervision Worker | Kit |
-| [UDPtest](#34-udptest-configured-line-quality) | Measure configured targets: latency, jitter, success rate and NAT | Settings + diagnosis Service | Kit |
+| [UDPtest](#34-udptest-configured-line-quality) | Measure configured targets: latency, jitter, success rate and NAT | Settings process | Kit |
 | [AI Hub](#35-ai-hub-auditing-and-system-optimization) | Audit system events, organize downloads and clean caches | Settings + scheduled-audit Worker | Kit |
-| [NetMap](#36-netmap-current-egress-and-route-observation) | Observe Direct / Proxy egress, service reachability and ICMP routes | Settings + observation Service | Kit |
+| [NetMap](#36-netmap-current-egress-and-route-observation) | Observe Direct / Proxy egress, service reachability and ICMP routes | Settings process | Kit |
 | [WinGet](#37-winget-software-updates-and-installation) | Discover, install, update and uninstall software, confirmed batch queues, daily checks and notifications | Separate WingetService process | Kit |
 
 Start `Kit.exe` from the runtime directory, then enable and configure the modules you need in Settings. **Enabling a module and starting its work are separate operations**: Localserver services need individual starts, and NetMap requires Start after enablement.
@@ -172,14 +172,14 @@ Run TCP/HTTPS, UDP Echo, STUN and NAT probes against configured targets, with la
 
 ```mermaid
 flowchart LR
-    MI["Runner / Kit.UDPtestModuleInterface.dll"] -->|"manage service"| SVC["Kit.UDPtestService.exe"]
+    MI["Runner / Kit.UDPtestModuleInterface.dll"] -->|"manage host lifetime"| SVC["Kit.UDPtestService.exe / lifecycle host only"]
     subgraph S["Settings process"]
-        PG["UDPtest page / ViewModel"] -->|"IPC commands & metrics"| SVC
+        PG["UDPtest page / ViewModel"] --> CORE["ProbeCoordinator"]
     end
-    SVC -->|"parallel probes"| TARGET["Configured TCP/HTTPS, UDP Echo and STUN targets"]
+    CORE -->|"parallel probes"| TARGET["Configured TCP/HTTPS, UDP Echo and STUN targets"]
 ```
 
-- **Runtime**: users control Start / Stop. Probes run in a dedicated headless background service (`Kit.UDPtestService.exe`) over local IPC, allowing diagnostics to persist cleanly across Settings window closures.
+- **Runtime**: users control Start / Stop. The page owns `ProbeCoordinator` inside the Settings process; probes are not hosted by `Kit.UDPtestService.exe`. That executable currently provides lifecycle/status infrastructure only and rejects unimplemented probe commands. Exiting the Settings process ends its probe session; background continuation and IPC reconnection are not implemented.
 - **Interpretation**: HTTPS timing measures response-header arrival. NAT behavior, UDP echo and TCP/HTTPS use distinct probes and represent different network measurements.
 - **Data**: target configuration is saved under `UDPtest/`; sample history stays in memory. See the [module documentation](src/modules/UDPtest/README.md).
 
@@ -212,31 +212,31 @@ Observe the current egress as an external proxy client changes nodes, without im
 
 ```mermaid
 flowchart TB
-    MI["Runner / Kit.NetMapModuleInterface.dll"] -->|"manage service"| SVC["Kit.NetMapService.exe"]
+    MI["Runner / Kit.NetMapModuleInterface.dll"] -->|"manage host lifetime"| SVC["Kit.NetMapService.exe / lifecycle host only"]
     subgraph S["Settings process"]
-        PG["NetMap page / ViewModel"] -->|"IPC commands & observation"| SVC
+        PG["NetMap page / ViewModel"] --> CORE["NetMapSession"]
         PG -->|"AI Check (manual)"| AISVC["NetMapAiService / route analysis"]
         AISVC -->|"one inline instruction, no AGENTS.md"| HUB["Kit.AiHub engine / route-analysis task"]
     end
-    SVC -->|"Direct: bypass application proxy"| D["Bilibili zone"]
-    SVC -->|"Proxy: selected connection mode"| P["Cloudflare trace"]
-    SVC -->|"locate egress and hops"| GEO["Local GeoLite2-ASN / City"]
-    SVC -->|"two matching successful Proxy observations"| DIAG["Service and route diagnostics"]
+    CORE -->|"Direct: bypass application proxy"| D["Bilibili zone"]
+    CORE -->|"Proxy: selected connection mode"| P["Cloudflare trace"]
+    CORE -->|"locate egress and hops"| GEO["Local GeoLite2-ASN / City"]
+    CORE -->|"two matching successful Proxy observations"| DIAG["Service and route diagnostics"]
     GEO -->|"optional enrichment of missing fields"| ONLINE["ipwho.is"]
     DIAG -->|"Proxy: every 10 seconds"| WEB["Claude / ChatGPT trace, Gemini / Google websites"]
     DIAG -->|"local system routing: ICMP hop sampling"| MTR["Proxy egress IPv4"]
     MTR -->|"latest snapshot: mtr-latest.json"| AISVC
     HUB -->|"security policy, sanitization, output audit"| K["Installed AI kernel CLI"]
     HUB -.->|"line type / one-line summary / route evidence"| PG
-    SVC -.->|"egress cards / offline map / MTR / service status via IPC"| PG
+    CORE -.->|"egress cards / offline map / MTR / service status in process"| PG
 ```
 
-- **Start and stop**: enable the module, apply connection settings, then click Start. Detection runs inside the dedicated headless background service (`Kit.NetMapService.exe`), so observation continues when Settings is closed or minimized. Disabling the module or stopping Runner stops the background service.
+- **Start and stop**: enable the module, apply connection settings, then click Start. `NetMapViewModel` owns `NetMapSession` in the Settings process. Its page/window lifecycle controls observation; an independent background session across Settings process exits is not implemented.
 - **Connection modes**: Proxy supports the system proxy, explicit HTTP/HTTPS/SOCKS5, or system routing/TUN. Direct bypasses application proxies only and cannot bypass a system TUN.
 - **Map and data**: bundled Natural Earth offline map, with local ASN/City databases taking priority. Optional online enrichment queries public IPs and can be disabled. ASN databases support manual download with hash verification.
 - **Diagnostic limits**: service checks establish checkpoint or website reachability, not account or model availability. ICMP follows local system routing and does not reveal the inside of a proxy tunnel.
 - **AI route check**: a manual **AI Check** on the page classifies the latest MTR snapshot into a cross-border line type (such as CMI, CN2 or 163, covering China Mobile, Unicom and Telecom lines) and shows the result on the Proxy card with a one-line summary and route evidence in its details. The check runs through the shared Kit.AiHub engine as the lightweight `route-analysis` task with a single inline instruction, so no `Chains/route-analysis/AGENTS.md` is deployed; host and plugin security policies, sanitization, output auditing and failover all apply. An installed and verified AI kernel in AI Hub is required; missing MTR data, a disabled hub or a missing kernel report specific messages. The result follows the same in-memory lifetime as detection.
-- **Runtime**: the native `Kit.NetMapModuleInterface.dll` manages enablement and the `Kit.NetMapService.exe` headless service; results stream to Settings over local IPC. See the [module documentation](src/modules/NetMap/README.md) for setup, sources and validation scope.
+- **Runtime**: the native `Kit.NetMapModuleInterface.dll` manages enablement and the lifecycle host `Kit.NetMapService.exe`. The host exposes status but does not run `NetMapSession` or stream its results; unimplemented business commands return an error. See the [module documentation](src/modules/NetMap/README.md) for setup, sources and validation scope.
 
 ### 3.7 WinGet: software updates and installation
 
@@ -325,7 +325,7 @@ If configuration writes are denied, check the Windows integrity labels of the bu
 
 ## 6. Development and Extension
 
-Modules retain the PowerToys C++ contract and export `kit_create()`. Core interfaces cover enablement, configuration, actions and destruction. Runner explicitly loads the seven modules listed in [KitKnownModules](src/runner/main.cpp).
+Modules retain the PowerToys C++ contract and export `kit_create()`. Core interfaces cover enablement, configuration, actions and destruction. Startup and on-demand loading share the seven-module native [KitModuleCatalog](src/runner/kit_module.h).
 
 Adding a module requires:
 

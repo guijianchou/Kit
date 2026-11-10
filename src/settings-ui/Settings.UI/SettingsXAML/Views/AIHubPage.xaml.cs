@@ -35,6 +35,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public AIHubPageViewModel ViewModel { get; }
 
+    public string ModuleDescription => "AIHub/ModuleDescription".GetLocalized();
+
     public AIHubPage()
     {
         var settingsUtils = SettingsUtils.Default;
@@ -50,6 +52,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
         DataContext = ViewModel;
         InitializeComponent();
+        InitializeFluentDetails();
         _visibleTab = Math.Clamp(ViewModel.ActiveTabIndex, 0, 2);
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.RequestOptimizationConfirmation += ConfirmOptimizationAsync;
@@ -61,6 +64,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     public Visibility IsAuditTab(int index) => index == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility IsOptTab(int index) => index == 1 ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility TaskRunningVisibility(bool scanning, bool analyzing) => scanning || analyzing ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility ShowOptimizationNoMatches(bool hasResults, bool hasMatches) => hasResults && !hasMatches ? Visibility.Visible : Visibility.Collapsed;
 
@@ -97,9 +102,29 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        UpdateHeaderLayout();
         ViewModel.RefreshEnabledState();
         UpdateTaskPolicyPanel();
         RestoreTabScroll();
+    }
+
+    private void OnHeaderLayoutChanged(object sender, SizeChangedEventArgs e) => UpdateHeaderLayout();
+
+    private void UpdateHeaderLayout()
+    {
+        if (AiHubIntroScroll == null || AiHubHeaderTail == null || AIHubRoot.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        // Keep readiness, tab navigation and at least 80 DIPs of tab content
+        // available. The introduction and module gate remain scrollable and
+        // keyboard reachable when the window cannot show the whole header.
+        const double minimumContentHeight = 80;
+        const double roundingAllowance = 2;
+        AiHubIntroScroll.MaxHeight = Math.Max(64, Math.Floor(
+            AIHubRoot.ActualHeight - AiHubPageTitle.ActualHeight - AiHubHeaderTail.ActualHeight
+            - 36 - minimumContentHeight - roundingAllowance));
     }
 
     private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -170,6 +195,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         _currentPage = false;
         _tabOffsets[_visibleTab] = AiHubContentScroll.VerticalOffset;
         _activeDialog?.Hide();
+        CloseFluentDetails(restoreFocus: false);
         base.OnNavigatedFrom(e);
     }
 
@@ -183,6 +209,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         _disposed = true;
         _currentPage = false;
         _activeDialog?.Hide();
+        DisposeFluentDetails();
         _settingsWindow.Closed -= OnWindowClosed;
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
         ViewModel.RequestJumpToAiReport -= OnRequestJumpToAiReport;
@@ -195,42 +222,74 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         NavigationService.Navigate(typeof(GeneralPage), new NavigationParams("GeneralPageAiHubMasterCard"));
     }
 
-    private async void OnFindingClick(object sender, RoutedEventArgs e)
+    private void OnFindingClick(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: AuditIssueEnhanced issue })
+        if (sender is FrameworkElement { Tag: AuditIssueEnhanced issue } trigger)
         {
-            var dialog = new FindingDetailsDialog
-            {
-                XamlRoot = this.XamlRoot,
-                RequestedTheme = ActualTheme,
-            };
-            dialog.SetFinding(issue);
-            await ShowDialogAsync(dialog);
+            OpenFinding(issue, trigger);
         }
     }
 
-    private async void OnPriorityFindingClick(object sender, RoutedEventArgs e)
+    private void OnPriorityFindingClick(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: AuditIssueEnhanced issue })
+        if (sender is FrameworkElement { Tag: AuditIssueEnhanced issue } trigger)
         {
-            var dialog = new FindingDetailsDialog
-            {
-                XamlRoot = this.XamlRoot,
-                RequestedTheme = ActualTheme,
-            };
-            dialog.SetFinding(issue);
-            await ShowDialogAsync(dialog);
+            OpenFinding(issue, trigger);
         }
         else if (ViewModel.AuditPriorityFinding != null)
         {
-            var dialog = new FindingDetailsDialog
-            {
-                XamlRoot = this.XamlRoot,
-                RequestedTheme = ActualTheme,
-            };
-            dialog.SetFinding(ViewModel.AuditPriorityFinding);
-            await ShowDialogAsync(dialog);
+            OpenFinding(ViewModel.AuditPriorityFinding, sender as FrameworkElement);
         }
+    }
+
+    private void OnScanButtonIsEnabledChanged(object sender, DependencyPropertyChangedEventArgs args)
+    {
+        // WinUI can leave the outer SplitButton in its previous state while the inner
+        // buttons follow IsEnabled. Keep both surfaces aligned with the audit gate.
+        if (sender is SplitButton button)
+        {
+            VisualStateManager.GoToState(button, button.IsEnabled ? "Normal" : "Disabled", useTransitions: false);
+        }
+    }
+
+    private void OnSelectedScanClick(SplitButton sender, SplitButtonClickEventArgs args)
+    {
+        sender.Flyout?.Hide();
+        if (ViewModel.StartSelectedScanCommand.CanExecute(null))
+        {
+            ViewModel.StartSelectedScanCommand.Execute(null);
+        }
+    }
+
+    private void OnFullAuditCheckClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox check)
+        {
+            ViewModel.AuditModeIndex = check.IsChecked == true ? 1 : 0;
+            check.IsChecked = ViewModel.IsFullAuditMode;
+        }
+    }
+
+    private void OnFindingSearchToggleClick(object sender, RoutedEventArgs e)
+    {
+        bool show = FindingSearchToggle.IsChecked == true;
+        FindingSearchPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (show)
+        {
+            FindingSearchBox.Focus(FocusState.Programmatic);
+        }
+        else
+        {
+            ViewModel.FindingSearchText = string.Empty;
+            ViewModel.SetSourceFilter("All");
+        }
+    }
+
+    private void OnShowOptimizationHistoryClick(object sender, RoutedEventArgs e)
+    {
+        OptimizationHistoryExpander.IsExpanded = true;
+        AiHubContentScroll.UpdateLayout();
+        OptimizationHistoryExpander.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = true });
     }
 
     private void OnFilterClick(object sender, RoutedEventArgs e)
@@ -297,6 +356,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             ViewModel.ActiveTabIndex = 0;
         }
 
+        AuditReportExpander.IsExpanded = true;
+        AiHubContentScroll.UpdateLayout();
         AuditAiReport?.StartBringIntoView(new BringIntoViewOptions
         {
             AnimationDesired = true,
@@ -401,13 +462,14 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         }
 
         const int previewLimit = 100;
-        string size = new TempFileInfo { SizeInBytes = items.Sum(item => item.SizeInBytes) }.SizeFormatted;
+        string deleteSize = new TempFileInfo { SizeInBytes = items.Where(item => item.Action == "delete").Sum(item => item.SizeInBytes) }.SizeFormatted;
+        string moveSize = new TempFileInfo { SizeInBytes = items.Where(item => item.Action == "move").Sum(item => item.SizeInBytes) }.SizeFormatted;
         var content = new StackPanel { Spacing = 12, MaxWidth = 560 };
         content.Children.Add(new TextBlock
         {
-            Text = "AIHub_OptimizationConfirmSummaryFormat".FormatLocalized(
-                "{0:N0} selected · {1:N0} delete · {2:N0} move · {3}",
-                items.Count, items.Count(item => item.Action == "delete"), items.Count(item => item.Action == "move"), size),
+            Text = "AIHub_Fluent_ConfirmSummary".FormatLocalized(
+                "{0:N0} selected · {1:N0} delete ({2} to free) · {3:N0} move ({4} to organize)",
+                items.Count, items.Count(item => item.Action == "delete"), deleteSize, items.Count(item => item.Action == "move"), moveSize),
             TextWrapping = TextWrapping.Wrap,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
         });
@@ -472,4 +534,31 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     }
 
     public string FormatFilterCount(string label, int count) => $"{label} ({count})";
+
+    private void OnOptFilterPillClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton { Tag: string tag } pill
+            && int.TryParse(tag, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+        {
+            ViewModel.OptimizationFilterIndex = index;
+
+            // These pills select one filter; a second click must not visually
+            // deselect the active filter while its unchanged value remains applied.
+            pill.IsChecked = ViewModel.OptimizationFilterIndex == index;
+        }
+    }
+
+    private void OnTaskPolicyColumnsSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (TaskPolicyEditorCard == null || TaskPolicyScopeCard == null)
+        {
+            return;
+        }
+
+        bool narrow = e.NewSize.Width < 720;
+        Grid.SetColumnSpan(TaskPolicyEditorCard, narrow ? 2 : 1);
+        Grid.SetRow(TaskPolicyScopeCard, narrow ? 1 : 0);
+        Grid.SetColumn(TaskPolicyScopeCard, narrow ? 0 : 1);
+        Grid.SetColumnSpan(TaskPolicyScopeCard, narrow ? 2 : 1);
+    }
 }

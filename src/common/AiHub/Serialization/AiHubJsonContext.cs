@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
 using Kit.AiHub.Models;
+using Kit.AiHub.Storage;
 
 /// <summary>
 /// Source-generated JSON context ensuring high performance and Native AOT compatibility.
@@ -16,6 +17,7 @@ using Kit.AiHub.Models;
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(AiHubConfig))]
+[JsonSerializable(typeof(AiServiceSettingsSnapshot))]
 [JsonSerializable(typeof(AiTargetSettings))]
 [JsonSerializable(typeof(List<AiTargetSettings>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]

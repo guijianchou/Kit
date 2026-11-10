@@ -663,6 +663,7 @@ namespace ViewModelTests
         {
             var solution = File.ReadAllText(FindSourceFile("Kit.slnx"));
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var runnerCatalog = File.ReadAllText(FindSourceFile("src", "runner", "kit_module.h"));
             var runnerSettingsHeader = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.h"));
             var runnerSettingsSource = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
             var shellXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml"));
@@ -680,9 +681,9 @@ namespace ViewModelTests
             StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/awake/Awake/Awake.csproj\"");
             StringAssert.Contains(solution, "BuildDependency Project=\"src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj\"");
             Assert.IsFalse(solution.Contains("src/modules/powerdisplay", StringComparison.OrdinalIgnoreCase));
-            StringAssert.Contains(runnerMain, "KitKnownModules");
-            StringAssert.Contains(runnerMain, "Kit.AwakeModuleInterface.dll");
-            StringAssert.Contains(runnerMain, "Kit.LightSwitchModuleInterface.dll");
+            StringAssert.Contains(runnerMain, "for (const auto& entry : KitModuleCatalog)");
+            StringAssert.Contains(runnerCatalog, "Kit.AwakeModuleInterface.dll");
+            StringAssert.Contains(runnerCatalog, "Kit.LightSwitchModuleInterface.dll");
             Assert.IsFalse(runnerMain.Contains("PowerToys.PowerDisplayModuleInterface.dll", StringComparison.Ordinal));
             Assert.IsFalse(runnerMain.Contains("directory_iterator", StringComparison.Ordinal));
             StringAssert.Contains(runnerSettingsHeader, "Awake,");

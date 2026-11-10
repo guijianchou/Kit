@@ -10,12 +10,14 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.Settings.UI;
+using Kit.Settings.UI.Controls;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Kit.Settings.UI.Views;
 using Kit.WingetLib;
+using ManagedCommon.ServiceHost;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -52,7 +54,7 @@ internal static class WingetPageSmoke
     [STAThread]
     private static void Main()
     {
-        File.WriteAllText(Report, "Real complete Settings shell; synthetic packages only. No install, update, uninstall, import, notification or clipboard execution. Enabled layout fixtures suspend all page polling.\n");
+        File.WriteAllText(Report, "Real complete Settings shell; synthetic packages only. No install, update, uninstall, import, notification or clipboard execution. Enabled layout fixtures suspend all page polling. Connection tests use a unique in-process status-only pipe.\n");
         try
         {
             string settingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit", "settings.json");
@@ -117,8 +119,10 @@ internal static class WingetPageSmoke
             Apply(vm, Snapshot());
             Require(GetField<CancellationTokenSource>(vm, "pageLifetime") == null, "Enabled synthetic fixture must remain inactive.");
             await VerifySyntheticLifecycleIsolation(page);
+            await VerifyConnectionTimeoutRecovery(general, module);
             await VerifyWorkspaceState(page);
             await VerifyLayouts(page, general);
+            await VerifyModuleHeader(page, general);
             await VerifyExpandedSettings(page, general);
             await VerifySemanticPresentation(page);
             await VerifyRepeatedStatusStability(page);
@@ -212,6 +216,92 @@ internal static class WingetPageSmoke
         }
         EnsureNoWorker();
         Log("Enabled synthetic fixtures remain isolated across real Loaded/window callback replays; lifecycle handlers remain attached PASS");
+    }
+
+    private static async Task VerifyConnectionTimeoutRecovery(SettingsRepository<GeneralSettings> general, SettingsRepository<WingetSettings> module)
+    {
+        EnsureNoWorker();
+        bool originallyEnabled = general.SettingsConfig.Enabled.Winget;
+        int settingsMessages = 0;
+        int statusRequests = 0;
+        var vm = new WingetViewModel(general, module, _ => ++settingsMessages);
+        var lifetimeField = typeof(WingetViewModel).GetField("pageLifetime", PrivateInstance);
+        var pollMethod = typeof(WingetViewModel).GetMethod("PollCoreAsync", PrivateInstance);
+        var notifications = new HashSet<string>();
+        vm.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        string moduleKey = "WingetPageTimeout_" + Guid.NewGuid().ToString("N");
+        var isolatedClient = new KitServicePipeClient(moduleKey, Environment.ProcessPath);
+        Task PollOnce() => ((Task)pollMethod.Invoke(vm, null)).WaitAsync(TimeSpan.FromSeconds(8));
+        try
+        {
+            typeof(WingetViewModel).GetField("client", PrivateInstance).SetValue(vm, isolatedClient);
+            Require(ReferenceEquals(GetField<KitServicePipeClient>(vm, "client"), isolatedClient), "Connection fixture must use only its unique test pipe.");
+            // The detached VM has no page callbacks or running timer. Its real
+            // transport can only send get-status to this test's unique pipe.
+            general.SettingsConfig.Enabled.Winget = true;
+            Require(vm.ActiveTabIndex == (int)WingetWorkspace.Updates && !GetField<DispatcherTimer>(vm, "timer").IsEnabled,
+                "Connection fixture must not activate inventory loading or automatic polling.");
+            Require(vm.StatusText == WingetViewModel.L("Connecting") && vm.ReadinessTone == "Accent" && !vm.HasError,
+                "A first connection attempt must remain distinct from a failed connection.");
+
+            lifetimeField.SetValue(vm, new CancellationTokenSource());
+            Task leavingPage = PollOnce();
+            Require(GetField<bool>(vm, "polling"), "The cancellation fixture must have a pending real connection.");
+            vm.SetPageActive(false);
+            await leavingPage;
+            Require(!vm.HasError && GetField<string>(vm, "connectionError") == null && !GetField<bool>(vm, "polling") &&
+                vm.StatusText == WingetViewModel.L("Connecting") && vm.ReadinessTone == "Accent",
+                "Leaving the page must cancel polling without reporting a service failure.");
+
+            lifetimeField.SetValue(vm, new CancellationTokenSource());
+            notifications.Clear();
+            var elapsed = Stopwatch.StartNew();
+            await PollOnce();
+            elapsed.Stop();
+            Require(elapsed.Elapsed >= TimeSpan.FromSeconds(2.5), "The missing-pipe fixture must exercise the real three-second transport timeout.");
+            Require(!GetField<bool>(vm, "connected") && vm.HasError && vm.ErrorText == WingetViewModel.L("ServiceUnavailable") &&
+                vm.StatusText == WingetViewModel.L("Unavailable") && vm.ReadinessTone == "Warning" && vm.ReadinessGlyph == "\uE7BA",
+                "A connection timeout must show the service error and warning state instead of remaining Connecting.");
+            Require(notifications.Contains(nameof(WingetViewModel.StatusText)) && notifications.Contains(nameof(WingetViewModel.HasError)) &&
+                notifications.Contains(nameof(WingetViewModel.ReadinessTone)), "Connection failures must notify the existing UI bindings.");
+            Require(!GetField<CancellationTokenSource>(vm, "pageLifetime").IsCancellationRequested && !GetField<bool>(vm, "polling"),
+                "A timeout must leave the current lifetime available for retry.");
+
+            await using (var server = new KitServicePipeServer(moduleKey, (request, _) =>
+            {
+                Require(request.Version == 1 && request.Command == "get-status" && request.PayloadJson == null,
+                    "The connection regression may only read service status.");
+                Interlocked.Increment(ref statusRequests);
+                return Task.FromResult(KitPipeResponse.Ok(JsonSerializer.Serialize(Snapshot(), WingetServiceJsonContext.Default.WingetServiceStatus)));
+            }))
+            {
+                server.Start();
+                notifications.Clear();
+                await PollOnce();
+                Require(statusRequests == 1 && GetField<bool>(vm, "connected") && !vm.HasError &&
+                    GetField<string>(vm, "connectionError") == null && vm.StatusText == WingetViewModel.L("Ready") && vm.ReadinessTone == "Success",
+                    "A successful retry through the real pipe must clear the previous connection error.");
+                Require(notifications.Contains(nameof(WingetViewModel.StatusText)) && notifications.Contains(nameof(WingetViewModel.HasError)) &&
+                    notifications.Contains(nameof(WingetViewModel.ReadinessTone)), "Connection recovery must notify the existing UI bindings.");
+            }
+
+            await PollOnce();
+            Require(vm.HasError, "Service loss after a successful connection must report a new failure.");
+            general.SettingsConfig.Enabled.Winget = false;
+            vm.RefreshEnabledState();
+            Require(!vm.HasError && GetField<string>(vm, "connectionError") == null && !GetField<bool>(vm, "connected") &&
+                vm.StatusText == WingetViewModel.L("Disabled") && vm.ReadinessTone == "Neutral" && !vm.CanCheck,
+                "Disabling Winget must clear the connection failure and disable service actions.");
+            Require(settingsMessages == 0 && statusRequests == 1 && !GetField<DispatcherTimer>(vm, "timer").IsEnabled,
+                "Connection regression must not persist settings, submit package operations or start automatic polling.");
+            EnsureNoWorker();
+            Log("Real isolated pipe timeout, page cancellation, successful status retry and disabled-state cleanup PASS");
+        }
+        finally
+        {
+            vm.Dispose();
+            general.SettingsConfig.Enabled.Winget = originallyEnabled;
+        }
     }
 
     private static async Task VerifyWorkspaceState(WingetPage page)
@@ -619,6 +709,141 @@ internal static class WingetPageSmoke
         Log("Complete-shell light/dark centered layouts at 1670x985, 1510x985, 1280x900 and 760x900, all workspaces, enabled/busy, empty discovery and three views PASS");
     }
 
+    private static async Task VerifyModuleHeader(WingetPage page, SettingsRepository<GeneralSettings> general)
+    {
+        var window = App.GetSettingsWindow();
+        var shell = (FrameworkElement)window.Content;
+        var vm = page.ViewModel;
+        var originalTheme = shell.RequestedTheme;
+        var originalSize = window.AppWindow.Size;
+        var title = page.FindName("WingetPageTitle") as TextBlock;
+        var introduction = page.FindName("WingetIntroduction") as SettingsPageIntro;
+        var introScroll = page.FindName("WingetIntroScroll") as ScrollViewer;
+        var enable = (FrameworkElement)page.FindName("WingetEnableCard");
+        var expander = (Expander)page.FindName("WingetSettingsExpander");
+        var tabs = (FrameworkElement)page.FindName("WingetSections");
+        var workspace = (FrameworkElement)page.FindName("PackageWorkspaceGrid");
+        Require(title != null && introduction != null && introScroll != null,
+            "WinGet must expose a page title and the shared SettingsPageIntro inside its bounded header scroll.");
+        var iconSurface = introduction.FindName("ModuleIconSurface") as Border;
+        var icon = introduction.FindName("ModuleIcon") as Image;
+        var description = introduction.FindName("AboutDescription") as TextBlock;
+        Require(iconSurface != null && icon != null && description != null,
+            "WinGet must use the shared introduction's image and body-text controls.");
+        double originalIntroOffset = introScroll.VerticalOffset;
+        bool originalExpanded = expander.IsExpanded;
+        var navigationItem = Descendants(tabs).OfType<CommunityToolkit.WinUI.Controls.SegmentedItem>().FirstOrDefault();
+        Require(navigationItem != null, "WinGet must expose a focusable fixed navigation item.");
+        var toggles = Descendants(page).OfType<ToggleSwitch>()
+            .Where(toggle => AutomationProperties.GetAutomationId(toggle) == "Toggle_Winget").ToArray();
+        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], enable),
+            "Exactly one WinGet enable switch must remain inside the enable card.");
+        var toggle = toggles[0];
+        try
+        {
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            foreach (var size in new[] { (1510, 985), (760, 600), (1280, 600) })
+            {
+                general.SettingsConfig.Enabled.Winget = false;
+                vm.SetPageActive(false);
+                expander.IsExpanded = false;
+                shell.RequestedTheme = theme;
+                window.AppWindow.Resize(new Windows.Graphics.SizeInt32(size.Item1, size.Item2));
+                await Settle();
+                general.SettingsConfig.Enabled.Winget = true;
+                vm.ActiveTabIndex = (int)WingetWorkspace.Updates;
+                vm.ViewModeIndex = 0;
+                vm.FilterText = string.Empty;
+                Apply(vm, Snapshot());
+                introScroll.ChangeView(null, 0, null, true);
+                await Settle();
+                for (int attempt = 0; attempt < 20 && (icon.Source is not BitmapImage image || image.PixelWidth == 0); attempt++)
+                    await Settle();
+
+                string context = $"{theme}-{size.Item1}x{size.Item2}-module-header";
+                await CaptureShell($"winget-{context}-top-full-shell.png");
+                Require(title.Text == "WinGet" && ReferenceEquals(title.Style, Application.Current.Resources["TitleTextBlockStyle"]),
+                    context + ": the page must render its localized WinGet heading with the shared title style.");
+                Require(!string.IsNullOrWhiteSpace(introduction.ModuleDescription) && description.Text == introduction.ModuleDescription &&
+                    description.FontSize == 14 && description.TextWrapping == TextWrapping.Wrap && description.ActualHeight > 0,
+                    context + ": the shared introduction must render the full localized body description.");
+                Require(introduction.ModuleImageSource?.AbsoluteUri == "ms-appx:///Assets/Settings/Modules/Winget.png" &&
+                    icon.Source is BitmapImage { PixelWidth: 256, PixelHeight: 256 } bitmap &&
+                    bitmap.UriSource == introduction.ModuleImageSource && icon.ActualWidth > 0 && icon.ActualHeight > 0 &&
+                    Math.Abs(iconSurface.ActualWidth - 64) < 1 && Math.Abs(iconSurface.ActualHeight - 64) < 1,
+                    context + ": the 64-DIP shared icon surface must load the actual 256-pixel WinGet asset.");
+                Require(IsDescendantOf(introduction, introScroll) && IsDescendantOf(enable, introScroll) &&
+                    !IsDescendantOf(title, introScroll) && !IsDescendantOf(tabs, introScroll) && !IsDescendantOf(workspace, introScroll),
+                    context + ": only the introduction and enable card may scroll within the module header.");
+
+                Rect titleRect = Bounds(title, shell);
+                Rect introRect = Bounds(introduction, shell);
+                Rect scrollRect = Bounds(introScroll, shell);
+                Rect enableRect = Bounds(enable, shell);
+                Rect expanderRect = Bounds(expander, shell);
+                Rect tabsBefore = Bounds(tabs, shell);
+                Rect workspaceBefore = Bounds(workspace, shell);
+                Require(titleRect.Bottom <= scrollRect.Top + 1 && introRect.Bottom <= enableRect.Top + 1 &&
+                    scrollRect.Bottom <= expanderRect.Top + 1 && expanderRect.Bottom <= tabsBefore.Top + 1 &&
+                    tabsBefore.Bottom <= workspaceBefore.Top + 1,
+                    context + ": title, introduction, enable card, settings and fixed navigation must retain their visual order.");
+                Require(Math.Abs(titleRect.Left - enableRect.Left) <= 1 && Math.Abs(introRect.Left - enableRect.Left) <= 1 &&
+                    Math.Abs(introRect.Right - enableRect.Right) <= 1 && introScroll.ScrollableWidth <= 1 && introScroll.ViewportHeight >= 48,
+                    context + ": title, introduction and enable card must share the existing content gutters without horizontal overflow.");
+                AssertWorkspaceBounds(page, context);
+                if (size.Item2 == 985)
+                {
+                    Require(introScroll.ScrollableHeight <= 1 && Contains(scrollRect, introRect) && Contains(scrollRect, enableRect),
+                        context + ": a normal-height page must show the complete introduction and enable card together.");
+                }
+                else
+                {
+                    Require(introScroll.ScrollableHeight > 1,
+                        context + ": a short window must scroll the introduction region while retaining useful package rows.");
+                }
+
+                introScroll.ChangeView(null, introScroll.ScrollableHeight, null, true);
+                await Settle();
+                Require(Contains(Bounds(introScroll, shell), Bounds(toggle, shell)),
+                    context + ": scrolling the introductory region must reveal the entire enable switch.");
+                Require(navigationItem.Focus(FocusState.Keyboard), context + ": fixed navigation must be focusable before the keyboard reachability check.");
+                introScroll.ChangeView(null, 0, null, true);
+                await Settle();
+                Require(toggle.Focus(FocusState.Keyboard), context + ": the enable switch must remain keyboard reachable.");
+                for (int attempt = 0; attempt < 12; attempt++)
+                {
+                    await Settle();
+                    if (Contains(Bounds(introScroll, shell), Bounds(toggle, shell))) break;
+                }
+                Require(Contains(Bounds(introScroll, shell), Bounds(toggle, shell)),
+                    context + ": keyboard focus must bring the whole enable switch into the header viewport.");
+                Require(SameBounds(tabsBefore, Bounds(tabs, shell)) && SameBounds(workspaceBefore, Bounds(workspace, shell)),
+                    context + ": scrolling or focusing the header must not move fixed navigation or the package workspace.");
+                Require(toggle.IsOn == vm.IsEnabled && GetField<CancellationTokenSource>(vm, "pageLifetime") == null &&
+                    !GetField<DispatcherTimer>(vm, "timer").IsEnabled,
+                    context + ": header reachability must preserve the module gate and suspended fixture lifecycle.");
+                AssertWorkspaceBounds(page, context + "-toggle-focused");
+                await CaptureShell($"winget-{context}-toggle-focused-full-shell.png");
+                Log($"HEADER {context}: intro={introScroll.ViewportWidth:F1}x{introScroll.ViewportHeight:F1}, scroll={introScroll.ScrollableHeight:F1}, toggle={Bounds(toggle, shell)}, list={((ListView)page.FindName("PackagesList")).ActualHeight:F1}");
+                EnsureNoWorker();
+            }
+        }
+        finally
+        {
+            general.SettingsConfig.Enabled.Winget = false;
+            vm.SetPageActive(false);
+            expander.IsExpanded = originalExpanded;
+            shell.RequestedTheme = originalTheme;
+            window.AppWindow.Resize(originalSize);
+            await Settle();
+            introScroll.ChangeView(null, originalIntroOffset, null, true);
+            await Settle();
+            general.SettingsConfig.Enabled.Winget = true;
+            Apply(vm, Snapshot());
+        }
+        Log("Shared WinGet title, localized introduction, decoded logo, normal-height presentation, short-height header scrolling and keyboard-reachable enable switch with fixed navigation and package rows PASS");
+    }
+
     private static async Task VerifyExpandedSettings(WingetPage page, SettingsRepository<GeneralSettings> general)
     {
         var window = App.GetSettingsWindow();
@@ -730,7 +955,7 @@ internal static class WingetPageSmoke
     {
         page.UpdateLayout();
         var shell = (FrameworkElement)App.GetSettingsWindow().Content;
-        foreach (string name in new[] { "WingetViewport", "WingetEnableCard", "WingetSettingsExpander", "AutomaticSettingsScroll", "DailySettingsCard", "NotifySettingsCard", "AutomaticSettingsFooter", "WingetSections", "PackageWorkspaceGrid", "WorkspaceCommands", "WingetOperationCard", "WorkspaceBody", "PackageTableViewport", "WingetPackageListCard", "PackageTableHeader", "PackagesList", "WorkspaceFooter" })
+        foreach (string name in new[] { "WingetViewport", "WingetPageTitle", "WingetIntroduction", "WingetIntroScroll", "WingetEnableCard", "WingetSettingsExpander", "AutomaticSettingsScroll", "DailySettingsCard", "NotifySettingsCard", "AutomaticSettingsFooter", "WingetSections", "PackageWorkspaceGrid", "WorkspaceCommands", "WingetOperationCard", "WorkspaceBody", "PackageTableViewport", "WingetPackageListCard", "PackageTableHeader", "PackagesList", "WorkspaceFooter" })
         {
             var element = (FrameworkElement)page.FindName(name);
             Rect rect = Bounds(element, shell);
@@ -1023,6 +1248,8 @@ internal static class WingetPageSmoke
         var list = page.ViewModel.ViewModeIndex == 2 ? (ListViewBase)page.FindName("PackageTiles") : (ListViewBase)page.FindName("PackagesList");
         Rect listRect = Bounds(list, shell);
         Require(listRect.Left >= enableRect.Left - 1 && listRect.Right <= enableRect.Right + 1, $"{context}: package list escapes viewport.");
+        if (list.Items.Count > 0)
+            Require(list.ActualHeight >= 40 && Contains(pageRect, listRect), $"{context}: a populated package list must retain at least 40 DIPs inside the page.");
         int checkedRows = 0;
         for (int index = 0; index < list.Items.Count; index++)
         {
@@ -1049,7 +1276,11 @@ internal static class WingetPageSmoke
         }
         Require(list.Items.Count == 0 || checkedRows > 0, $"{context}: populated package list has no current visible rows to validate.");
         foreach (var scroll in Descendants(list).OfType<ScrollViewer>())
+        {
             Require(scroll.ScrollableWidth <= 1, $"{context}: package list has unintended horizontal scrolling.");
+            if (list.Items.Count > 0)
+                Require(scroll.ViewportHeight >= 40, $"{context}: populated package rows require an actual scroll viewport of at least 40 DIPs.");
+        }
         var filters = (FrameworkElement)page.FindName("CompactFiltersButton");
         Require((workspace.ActualWidth < 900) == (filters.Visibility == Visibility.Visible), $"{context}: narrow filter flyout mode is incorrect.");
         Log($"BOUNDS {context}: shell={shell.ActualWidth:F1}, page=[{pageRect.Left:F1},{pageRect.Right:F1}], enable=[{enableRect.Left:F1},{enableRect.Right:F1}], gutters={leftGutter:F1}/{rightGutter:F1}, workspace=[{workspaceRect.Left:F1},{workspaceRect.Right:F1}], table={table.ActualWidth:F1}, visibleRows={checkedRows}/{list.Items.Count}");
@@ -1186,6 +1417,16 @@ internal static class WingetPageSmoke
     private static void Apply(WingetViewModel vm, WingetServiceStatus status) => typeof(WingetViewModel).GetMethod("ApplyStatus", PrivateInstance).Invoke(vm, new object[] { status });
     private static T GetField<T>(WingetViewModel vm, string name) => (T)typeof(WingetViewModel).GetField(name, PrivateInstance).GetValue(vm);
     private static Rect Bounds(FrameworkElement item, UIElement root) => item.TransformToVisual(root).TransformBounds(new Rect(0, 0, item.ActualWidth, item.ActualHeight));
+    private static bool Contains(Rect container, Rect item) => item.Left >= container.Left - 1 && item.Right <= container.Right + 1 &&
+        item.Top >= container.Top - 1 && item.Bottom <= container.Bottom + 1;
+    private static bool SameBounds(Rect left, Rect right) => Math.Abs(left.Left - right.Left) <= 1 && Math.Abs(left.Top - right.Top) <= 1 &&
+        Math.Abs(left.Width - right.Width) <= 1 && Math.Abs(left.Height - right.Height) <= 1;
+    private static bool IsDescendantOf(DependencyObject item, DependencyObject ancestor)
+    {
+        for (DependencyObject current = item; current != null; current = VisualTreeHelper.GetParent(current))
+            if (ReferenceEquals(current, ancestor)) return true;
+        return false;
+    }
 
     private static async Task Navigate(Type type)
     {

@@ -315,6 +315,11 @@ internal sealed class KernelFixture : IDisposable
                         Console.WriteLine("not a catalog");
                         return 0;
                     }
+                    if (nativeConfig.Contains("model = \"fixture-catalog-denied\""))
+                    {
+                        Console.Error.WriteLine("permission denied synthetic-fixture-secret");
+                        return 5;
+                    }
                     Emit(new { models = new[] { new { slug = "fixture-success", use_responses_lite = true, retained = "capability" } } });
                     return 0;
                 }
@@ -415,9 +420,10 @@ internal sealed class KernelFixture : IDisposable
                     if (model == "fixture-error-then-wait") { Thread.Sleep(Timeout.Infinite); return 0; }
                 }
                 string detail = model == "fixture-auth" ? "HTTP 401 synthetic-fixture-secret" :
+                    model == "fixture-forbidden" ? "HTTP 403 synthetic-fixture-secret" :
                     model == "fixture-transport-timeout" ? "HTTP 504 synthetic-fixture-secret" :
                     model == "fixture-transport" ? "HTTP 503 synthetic-fixture-secret" : "synthetic configuration rejection synthetic-fixture-secret";
-                if (model == "fixture-auth" || model == "fixture-transport-timeout" || model == "fixture-transport" || model == "fixture-error")
+                if (model == "fixture-auth" || model == "fixture-forbidden" || model == "fixture-transport-timeout" || model == "fixture-transport" || model == "fixture-error")
                 {
                     if (codex) Emit(new { type = "turn.failed", error = new { message = detail } });
                     else Emit(new { type = "message_end", message = new { role = "assistant", stopReason = "error", errorMessage = detail } });

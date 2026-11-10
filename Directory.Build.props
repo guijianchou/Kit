@@ -1,6 +1,10 @@
 <Project>
   <PropertyGroup>
     <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <!-- Shared by native packages.config imports and the runner's central PackageReference.
+         Keep these in the early Directory.Build.props pass, before project-level imports. -->
+    <WilVersion>1.0.260126.7</WilVersion>
+    <WilPackageDir>$(RepoRoot)packages\Microsoft.Windows.ImplementationLibrary.$(WilVersion)\</WilPackageDir>
   </PropertyGroup>
   <Import Project="$(RepoRoot)src\Version.props" />
   <PropertyGroup>

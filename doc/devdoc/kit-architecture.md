@@ -8,7 +8,7 @@
 - 主框架最小化：runner + Settings UI + 公共库不内置任何模块业务逻辑，模块一律以插件承载；
 - 启动快：只加载已启用插件；Quick Access 延迟到首次使用；关键路径全程可计时（STARTUP_TIMING）；
 - 插件兼容：插件契约 = KitModuleIface + kit_create()，官方模块全量现代化适配、第三方按契约开发；
-- 第一方/第三方分层：第一方模块走编译期清单（深度集成：Home、Quick Access、设置路由、测试），第三方插件走运行时清单（轻量接入：目录扫描 + manifest + 通用设置页）。
+- 第一方/第三方分层：第一方模块走编译期清单（深度集成：Home、Quick Access、设置路由、测试）；第三方运行时清单、目录扫描和通用设置页属于下文路线图，当前尚未实现。
 
 ## 2. 进程模型
 
@@ -29,25 +29,22 @@
 - 可选：call_custom_action、get_hotkeys/on_hotkey、GetHotkeyEx/OnHotkeyEx、gpo_policy_enabled_configuration 等；
 - 设置 UI 描述：get_config() 输出 KitSettings::Settings 序列化 JSON（properties / links / custom_actions）。
 
-### 3.2 现状：第一方硬编码加载
+### 3.2 现状：第一方显式清单加载
 
-- KitKnownModules（src/runner/main.cpp）：constexpr 数组
-    L"Kit.AwakeModuleInterface.dll"
-    L"Kit.LightSwitchModuleInterface.dll"
-    L"Kit.LocalserverModuleInterface.dll"
-- is_known_module_registered()：白名单校验，非白名单模块在注册时被拒；
-- 加载循环：for 每个 known module → load_kit_module() → modules().emplace(get_key())；
-- 启停由 start_enabled_kit_modules() 进行过滤；
-- 缺点：新增插件必须改源码并重编译 runner；未启用插件仍付出加载开销。
+- `src/runner/kit_module.h` 的 `KitModuleCatalog` 包含 Awake、LightSwitch、Localserver、UDPtest、NetMap、AIHub、Winget 七组 key / DLL 文件名。
+- 启动循环和 `get_module_filename_for_key()` 按需加载共用此清单，已删除重复 DLL 列表及从未调用的 `is_known_module_registered()`。
+- 加载路径保持 PowerToys 的原生模块工厂契约：`load_kit_module()` → `modules().emplace(get_key())`；Kit 优先 `kit_create()` 并保留兼容工厂入口。
+- 启动时跳过用户关闭的模块，跳过已由配置流程加载的实例；之后 `start_enabled_kit_modules()` 根据配置和 GPO 应用启停。
+- 新增插件仍需注册原生清单、托管活动目录、设置路由及元数据并重编译；没有任意 DLL 目录扫描。
 
-### 3.3 目标：插件宿主模型
+### 3.3 路线图：第三方插件宿主模型（尚未实现）
 
 - plugins/ 目录（与 runner 同级）承载第三方插件，每个插件一个子目录：接口 DLL + manifest.json；
 - manifest.json 字段：key、name、dll、version、author、enabledByDefault；
 - 加载规则：仅加载"已启用"的插件（enabled 集合来自 general settings + GPO 过滤）；第一方模块仍走编译期清单；
 - 校验：manifest 字段完整、key 不冲突、DLL 导出 powertoy_create；失败插件跳过并记录，不影响启动；
 - 枚举：Settings UI 经 IPC get_all_settings() 拿到 { general, powertoys: { key: json_config } }，第三方插件页面由通用 PluginSettingsPage 渲染（见 §6）；
-- 白名单语义扩展：is_known_module_registered() 变为"编译期清单 ∪ plugins/ 清单"。
+- 路线图中的加载资格校验需同时检查编译期目录和经过验证的插件清单，不能把已删除的空调用函数视为安全边界。
 
 ## 4. Runner 启动流程（实测阶段与计时）
 
@@ -57,21 +54,16 @@ src/runner/main.cpp 全程 log_timing，阶段如下：
 2. Trace Provider 注册；
 3. Load Settings（读 general settings）；
 4. Tray Icon（托盘窗口创建）；
-5. Update Worker（PeriodicUpdateWorker，check-only 线程）；
-6. Quick Access Hotkey（仅注册 Win+Space 热键，进程延迟到首次使用）；
-7. Tray Icon Visible；
-8. Keyboard Hook（CentralizedKeyboardHook::Start）；
-9. Chdir（切到可执行目录）；
-10. Video Conference Cleanup（仅提权且首次，注册表标记一次性）；
-11. 模块加载（按 KitKnownModules，失败 Debug 日志 / Release 弹窗）；
-12. Modules Enabled（start_enabled_powertoys，GPO + 用户配置过滤）；
-13. Event Launch；
-14. 总时长日志。
+5. Tray Icon Visible；
+6. Chdir（切到可执行目录）；
+7. 模块加载（按原生 KitModuleCatalog，失败 Debug 日志 / Release 弹窗）；
+8. Modules Enabled（start_enabled_kit_modules，GPO + 用户配置过滤）；
+9. Event Launch；
+10. 总时长日志。
 
 已落地的启动优化：
 
-- Quick Access 延迟启动：首次 Win+Space 才拉起 WinUI3 进程，省 200-400ms（main.cpp 注释明确）；
-- clean_video_conference_once：注册表标记只清理一次，省 10-20ms 后续提权启动；
+- Quick Access 延迟启动：从托盘首次请求才拉起 WinUI3 进程；Kit 当前不注册全局快捷键；
 - STARTUP_TIMING 全阶段计时日志，作为优化基线。
 
 ## 5. 设置与存储

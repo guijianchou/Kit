@@ -35,36 +35,36 @@ public:
     const wchar_t* get_name() override { return L"NetMap"; }
     const wchar_t* get_key() override { return L"NetMap"; }
     bool is_enabled_by_default() const override { return false; }
-    bool is_enabled() override { return enabled; }
+    bool is_enabled() override
+    {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
+        return enabled;
+    }
 
     void enable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (enabled)
         {
             return;
         }
 
-        {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            enabled = true;
-            start_worker_if_needed();
-        }
+        enabled = true;
+        start_worker_if_needed();
 
         Logger::info(L"NetMap module enabled");
     }
 
     void disable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (!enabled)
         {
             return;
         }
 
-        {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            enabled = false;
-            stop_worker_if_running();
-        }
+        enabled = false;
+        stop_worker_if_running();
 
         Logger::info(L"NetMap module disabled");
     }

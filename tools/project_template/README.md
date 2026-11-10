@@ -23,7 +23,7 @@ Visual Studio 会完成以下替换：
 
 `MyTemplate.vstemplate` 已为工程、`dllmain.cpp` 和资源文件启用参数替换，并包含 `packages.config`。手工复制源码时也必须完成这三类替换、重命名资源文件和工程文件；不能直接把带占位符的 `ModuleTemplate.vcxproj` 加入生产构建。
 
-生成的 DLL 输出到 `$(RepoRoot)$(Platform)\$(Configuration)\`，与 Runner 同目录。例如 `Sample` 项目的 Debug 产物是 `x64\Debug\Sample.dll`。如果按根规范设置 `TargetName` 为 `Kit.SampleModuleInterface`，同步更新 `.rc` 的 `OriginalFilename`，并在 [main.cpp](../../src/runner/main.cpp) 的 `KitKnownModules` 中填写真实 DLL 文件名。
+生成的 DLL 输出到 `$(RepoRoot)$(Platform)\$(Configuration)\`，与 Runner 同目录。例如 `Sample` 项目的 Debug 产物是 `x64\Debug\Sample.dll`。如果按根规范设置 `TargetName` 为 `Kit.SampleModuleInterface`，同步更新 `.rc` 的 `OriginalFilename`，并在 [kit_module.h](../../src/runner/kit_module.h) 的 `KitModuleCatalog` 中填写模块 key 和真实 DLL 文件名。启动与按需加载共用这一原生清单。
 
 加载清单和设置界面均需显式接入，复制 DLL 不会自动注册。原生 `get_config()` 的 JSON 也不会自动生成 WinUI 3 页面；继续按根规范补齐 Settings 的模型、序列化、Catalog、导航和资源。
 

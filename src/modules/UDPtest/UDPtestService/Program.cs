@@ -49,16 +49,16 @@ namespace Kit.UDPtestService
         {
             switch (request.Command.ToLowerInvariant())
             {
-                case "get-telemetry":
                 case "get-status":
-                    return Task.FromResult(KitPipeResponse.Ok("{\"status\":\"running\"}"));
+                    return Task.FromResult(KitPipeResponse.Ok("{\"status\":\"running\",\"engineAvailable\":false,\"executionHost\":\"Settings\"}"));
+                case "get-telemetry":
                 case "start-sender":
                 case "stop-sender":
                 case "start-listener":
                 case "stop-listener":
                 case "apply-impairment":
                 case "export-pcap":
-                    return Task.FromResult(KitPipeResponse.Ok("{\"acknowledged\":true}"));
+                    return Task.FromResult(KitPipeResponse.Fail("unsupported-command", "UDPtest operations run in Kit Settings. This service does not execute probes or provide telemetry results."));
                 default:
                     return Task.FromResult(KitPipeResponse.Fail("unknown-command", $"Unknown command: {request.Command}"));
             }

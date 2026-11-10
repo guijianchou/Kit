@@ -19,7 +19,7 @@ Use this path for a first native or managed utility:
 3. Add the worker project. Keep command-line entry points explicit, for example `--scan-once` for one-shot operation and `--pid` plus a named exit event for runner-managed lifetime.
 4. Add the module interface project. Follow the Awake/LightSwitch pattern: `kit_create` (or `KitModuleIface`), stable module key, `get_config`, `set_config`, `enable`, `disable`, worker launch, and clean shutdown signaling.
 5. Add the module projects to `Kit.slnx`.
-6. Add the module interface DLL to `src/runner/main.cpp` in the `KitKnownModules` list.
+6. Add the module key and interface DLL to `KitModuleCatalog` in `src/runner/kit_module.h`. Startup and on-demand loading share this native catalog. Register the settings model, managed active-module catalog, page route, Home and Quick Access metadata separately.
 7. Use `Kit.Interop` and `Kit.GPOWrapper` project references when the module uses them.
 8. Add Settings route/navigation only for the new module.
 9. Add Home dashboard metadata only if the module should be visible on Home.

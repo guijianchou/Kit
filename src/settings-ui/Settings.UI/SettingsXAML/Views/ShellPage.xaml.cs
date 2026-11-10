@@ -95,9 +95,11 @@ namespace Kit.Settings.UI.Views
 
         public Controls.TitleBar TitleBar => AppTitleBar;
 
+        private readonly NavigationPaneState _navigationPaneState = new(SettingsUtils.Default);
         private CancellationTokenSource _searchDebounceCts;
         private const int SearchDebounceMs = 500;
         private bool _disposed;
+        private bool _paneRestoreQueued;
 
         // Removed trace id counter per cleanup
 
@@ -346,11 +348,42 @@ namespace Kit.Settings.UI.Views
         private void NavigationView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
         {
             AppTitleBar.IsPaneButtonVisible = true;
+            QueueNavigationPaneRestore();
+        }
+
+        private void NavigationView_Loaded(object sender, RoutedEventArgs e)
+        {
+            QueueNavigationPaneRestore();
+        }
+
+        private void QueueNavigationPaneRestore()
+        {
+            if (_paneRestoreQueued || _disposed)
+            {
+                return;
+            }
+
+            _paneRestoreQueued = true;
+
+            // Auto mode updates IsPaneOpen during its layout transition. Restore after
+            // that transition, keeping temporary narrow-window closures out of storage.
+            if (!DispatcherQueue.TryEnqueue(() =>
+            {
+                _paneRestoreQueued = false;
+                if (!_disposed && navigationView.IsLoaded)
+                {
+                    navigationView.IsPaneOpen = _navigationPaneState.ForDisplayMode(navigationView.DisplayMode);
+                }
+            }))
+            {
+                _paneRestoreQueued = false;
+            }
         }
 
         private void PaneToggleBtn_Click(object sender, RoutedEventArgs e)
         {
             navigationView.IsPaneOpen = !navigationView.IsPaneOpen;
+            _navigationPaneState.SetUserPreference(navigationView.IsPaneOpen);
         }
 
         private List<SettingEntry> _lastSearchResults = new();

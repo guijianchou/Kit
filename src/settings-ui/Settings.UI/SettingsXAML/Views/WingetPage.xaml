@@ -3,6 +3,7 @@
     x:Class="Kit.Settings.UI.Views.WingetPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Kit.Settings.UI.Controls"
     xmlns:local="using:Kit.Settings.UI.Helpers"
     xmlns:tk="using:CommunityToolkit.WinUI.Controls"
     xmlns:ui="using:CommunityToolkit.WinUI"
@@ -134,14 +135,24 @@
 
     <!-- Match the shared settings page's 1000-DIP centered content width, plus
          24-DIP minimum gutters. One finite slot still owns every workspace edge. -->
-    <Grid x:Name="WingetViewport" MaxWidth="1048" HorizontalAlignment="Stretch" Padding="24,0,24,16" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10" SizeChanged="Viewport_SizeChanged">
+    <Grid x:Name="WingetViewport" MaxWidth="1048" HorizontalAlignment="Stretch" Padding="24,0,24,16" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="12" SizeChanged="Viewport_SizeChanged">
+        <TextBlock x:Name="WingetPageTitle" Text="{x:Bind ModuleTitle}" Style="{StaticResource TitleTextBlockStyle}"
+                   AutomationProperties.HeadingLevel="Level1" SizeChanged="Viewport_SizeChanged" />
+        <ScrollViewer x:Name="WingetIntroScroll" Grid.Row="1" MaxHeight="240" HorizontalContentAlignment="Stretch"
+                      HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="18">
+                <controls:SettingsPageIntro x:Name="WingetIntroduction"
+                                           ModuleDescription="{x:Bind ModuleDescription}"
+                                           ModuleImageSource="ms-appx:///Assets/Settings/Modules/Winget.png" />
         <Border x:Name="WingetEnableCard" Style="{StaticResource KitHeroSurfaceStyle}">
             <tk:SettingsCard x:Uid="Winget_EnableCard" BorderThickness="0" Background="Transparent">
                 <tk:SettingsCard.HeaderIcon><BitmapIcon UriSource="/Assets/Settings/Icons/Winget.png" ShowAsMonochrome="False" /></tk:SettingsCard.HeaderIcon>
                 <ToggleSwitch x:Uid="Winget_EnableToggle" AutomationProperties.AutomationId="Toggle_Winget" IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
             </tk:SettingsCard>
         </Border>
-        <Expander x:Name="WingetSettingsExpander" Grid.Row="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="16" IsExpanded="False">
+            </StackPanel>
+        </ScrollViewer>
+        <Expander x:Name="WingetSettingsExpander" Grid.Row="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="16" IsExpanded="False" SizeChanged="Viewport_SizeChanged">
             <Expander.Header>
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                     <Border x:Name="ReadinessBadge" Style="{x:Bind BadgeStyle(ViewModel.ReadinessTone), Mode=OneWay}">
@@ -178,13 +189,13 @@
                 </StackPanel>
             </ScrollViewer>
         </Expander>
-        <tk:Segmented x:Name="WingetSections" Grid.Row="2" SelectedIndex="{x:Bind ViewModel.ActiveTabIndex, Mode=TwoWay}" HorizontalAlignment="Left">
+        <tk:Segmented x:Name="WingetSections" Grid.Row="3" SelectedIndex="{x:Bind ViewModel.ActiveTabIndex, Mode=TwoWay}" HorizontalAlignment="Left" SizeChanged="Viewport_SizeChanged">
             <tk:SegmentedItem x:Uid="Winget_UpdatesTab" Icon="{ui:FontIcon Glyph=&#xE895;}" />
             <tk:SegmentedItem x:Uid="Winget_InstalledTab" Icon="{ui:FontIcon Glyph=&#xE770;}" />
             <tk:SegmentedItem x:Uid="Winget_DiscoverTab" Icon="{ui:FontIcon Glyph=&#xE774;}" />
         </tk:Segmented>
 
-        <Grid x:Name="PackageWorkspaceGrid" Grid.Row="3" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="8">
+        <Grid x:Name="PackageWorkspaceGrid" Grid.Row="4" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="8">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="0,4,0,2">
                 <Border x:Name="WorkspaceBadge" Style="{x:Bind WorkspaceBadgeStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" Width="40" Height="40" CornerRadius="10">
                     <FontIcon Glyph="{x:Bind WorkspaceGlyph(ViewModel.ActiveTabIndex), Mode=OneWay}" Style="{x:Bind WorkspaceGlyphStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" FontSize="20" />

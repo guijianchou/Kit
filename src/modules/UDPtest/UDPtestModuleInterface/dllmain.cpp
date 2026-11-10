@@ -124,16 +124,14 @@ public:
 
     virtual void enable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (m_enabled)
         {
             return;
         }
 
-        {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            m_enabled = true;
-            start_worker_if_needed();
-        }
+        m_enabled = true;
+        start_worker_if_needed();
 
         Trace::EnableUDPtest(true);
         Logger::info(L"UDPtest module enabled");
@@ -141,16 +139,14 @@ public:
 
     virtual void disable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (!m_enabled)
         {
             return;
         }
 
-        {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            m_enabled = false;
-            stop_worker_if_running();
-        }
+        m_enabled = false;
+        stop_worker_if_running();
 
         Trace::EnableUDPtest(false);
         Logger::info(L"UDPtest module disabled");
@@ -158,6 +154,7 @@ public:
 
     virtual bool is_enabled() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         return m_enabled;
     }
 };

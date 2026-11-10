@@ -2,16 +2,19 @@ namespace Kit.AiHub.Storage;
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using Kit.AiHub.Models;
 using Kit.AiHub.Serialization;
 
 /// <summary>
-/// Persists AI Hub settings and DPAPI credentials as one recoverable transaction.
+/// Persists public preferences and DPAPI endpoint profiles as one recoverable transaction.
 /// </summary>
 public sealed class AiHubSettingsStore
 {
@@ -128,7 +131,7 @@ public sealed class AiHubSettingsStore
     }
 
     /// <summary>
-    /// Saves the complete configuration, committing settings and encrypted keys together.
+    /// Saves the complete configuration, committing public preferences and encrypted endpoints together.
     /// </summary>
     public void Save(AiHubConfig config)
     {
@@ -151,43 +154,200 @@ public sealed class AiHubSettingsStore
         });
     }
 
-    private AiHubConfig LoadUnlocked()
+    /// <summary>Captures the complete encrypted service snapshot without changing the source.</summary>
+    public AiHubSettingsBackup? ExportBackup() => ExportBackup(DataDirectory);
+
+    /// <summary>Reads under the storage lock; legacy profiles are encrypted only in memory.</summary>
+    public static AiHubSettingsBackup? ExportBackup(string directory)
     {
-        byte[]? bytes = AiHubStorageFiles.ReadOptionalFile(SettingsFilePath, AiHubStorageFiles.MaxDataFileBytes);
-        bool migrate = false;
-        if (bytes is null)
+        var files = new AiHubStorageFiles(directory, readOnly: true);
+        return files.Run(() =>
         {
-            // Windows treats AIHub and AiHub as the same directory. The legacy file may
-            // contain either the plugin settings or the shared service configuration.
-            byte[]? legacy = AiHubStorageFiles.ReadOptionalFile(_files.GetPath("settings.json"), AiHubStorageFiles.MaxDataFileBytes);
-            if (legacy is not null)
+            var snapshot = ReadBackup(files.DataDirectory);
+            if (snapshot is null || UsesProtectedTargets(snapshot.SettingsJson))
             {
-                using var document = JsonDocument.Parse(legacy);
-                if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("targets", out _))
+                return snapshot;
+            }
+
+            var (config, secrets) = DecodeBackup(snapshot);
+            return CreateProtectedSnapshot(config, secrets);
+        });
+    }
+
+    /// <summary>Reads and validates a backup without migrating or changing the archive.</summary>
+    public static AiHubSettingsBackup? ReadBackup(string directory)
+    {
+        try
+        {
+            string root = AiHubStorageFiles.NormalizeDirectory(directory);
+            byte[]? settings = AiHubStorageFiles.ReadOptionalFile(Path.Combine(root, AiHubStorageFiles.ServiceSettingsFileName), AiHubStorageFiles.MaxDataFileBytes);
+            if (settings is null)
+            {
+                byte[]? legacy = AiHubStorageFiles.ReadOptionalFile(Path.Combine(root, "settings.json"), AiHubStorageFiles.MaxDataFileBytes);
+                if (legacy is null)
                 {
-                    bytes = legacy;
-                    migrate = true;
+                    RejectOrphanedProfiles(root);
+                    return null;
                 }
+
+                using var document = JsonDocument.Parse(legacy);
+                if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                    (!document.RootElement.TryGetProperty("targets", out _) && !document.RootElement.TryGetProperty("targetStorageVersion", out _)))
+                {
+                    RejectOrphanedProfiles(root);
+                    return null;
+                }
+
+                settings = legacy;
+            }
+
+            byte[]? secrets = AiHubStorageFiles.ReadOptionalFile(Path.Combine(root, "secrets.dat"), AiHubStorageFiles.MaxDataFileBytes);
+            var snapshot = new AiHubSettingsBackup(settings, secrets);
+            DecodeBackup(snapshot);
+            return snapshot;
+        }
+        catch (Exception)
+        {
+            // A bad or foreign-user DPAPI archive must not leak settings/parser details.
+            throw new InvalidDataException("The AI Hub backup is incomplete or cannot be read by this Windows user.");
+        }
+    }
+
+    private static void RejectOrphanedProfiles(string root)
+    {
+        byte[]? ciphertext = AiHubStorageFiles.ReadOptionalFile(Path.Combine(root, "secrets.dat"), AiHubStorageFiles.MaxDataFileBytes);
+        if (ciphertext is not null)
+        {
+            var secrets = SecureKeyStore.Decrypt(ciphertext);
+            if (secrets.ContainsKey(SecureKeyStore.TargetProfilesKey) || secrets.ContainsKey(SecureKeyStore.TargetProfilesIdKey))
+            {
+                throw new InvalidDataException("The AI Hub service preferences are missing.");
             }
         }
+    }
 
-        var config = bytes is null
-            ? AiHubConfig.CreateDefault()
-            : JsonSerializer.Deserialize(bytes, AiHubJsonContext.Default.AiHubConfig)
-                ?? throw new InvalidDataException("The AI Hub settings file is invalid.");
+    /// <summary>Compares decrypted content in memory so randomized DPAPI bytes do not create duplicate backups.</summary>
+    public static bool BackupContentEquals(AiHubSettingsBackup? left, AiHubSettingsBackup? right)
+    {
+        if (left is null || right is null)
+        {
+            return left is null && right is null;
+        }
+
+        var (leftConfig, leftSecrets) = DecodeBackup(left);
+        var (rightConfig, rightSecrets) = DecodeBackup(right);
+        return JsonSerializer.Serialize(leftConfig, AiHubJsonContext.Default.AiHubConfig) == JsonSerializer.Serialize(rightConfig, AiHubJsonContext.Default.AiHubConfig) &&
+            leftSecrets.Count == rightSecrets.Count && leftSecrets.All(pair => pair.Key == SecureKeyStore.TargetProfilesIdKey ||
+                (rightSecrets.TryGetValue(pair.Key, out string? value) && pair.Value == value));
+    }
+
+    /// <summary>Restores a validated service snapshot atomically; old archives retain the current encrypted keys.</summary>
+    public void ImportBackup(AiHubSettingsBackup snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var ownedSnapshot = new AiHubSettingsBackup(snapshot.SettingsJson, snapshot.EncryptedSecrets);
+        _files.Run(() =>
+        {
+            var (config, secrets) = DecodeBackup(ownedSnapshot);
+            if (ownedSnapshot.EncryptedSecrets is null)
+            {
+                secrets = _keyStore.ReadUnlocked();
+                foreach (var target in config.Targets)
+                {
+                    target.ApiKey = secrets.TryGetValue($"target_key_{target.Name}", out string? key) ? key : string.Empty;
+                }
+            }
+
+            ValidateTargets(config);
+            PersistUnlocked(config, secrets);
+        });
+    }
+
+    private static (AiHubConfig Config, Dictionary<string, string> Secrets) DecodeBackup(AiHubSettingsBackup snapshot)
+    {
+        if (snapshot.SettingsJson.Length > AiHubStorageFiles.MaxDataFileBytes)
+        {
+            throw new InvalidDataException("The AI Hub backup exceeds its size limit.");
+        }
+
+        bool protectedTargets = UsesProtectedTargets(snapshot.SettingsJson);
+        var secrets = snapshot.EncryptedSecrets is null ? new Dictionary<string, string>(StringComparer.Ordinal) : SecureKeyStore.Decrypt(snapshot.EncryptedSecrets);
+        if (protectedTargets)
+        {
+            EnsureProtectedPair(snapshot.SettingsJson, secrets);
+        }
+
+        var config = protectedTargets
+            ? JsonSerializer.Deserialize(snapshot.SettingsJson, AiHubJsonContext.Default.AiServiceSettingsSnapshot)?.ToConfig()
+            : JsonSerializer.Deserialize(snapshot.SettingsJson, AiHubJsonContext.Default.AiHubConfig);
+        if (config is null)
+        {
+            throw new InvalidDataException("The AI Hub backup is invalid.");
+        }
+
+        List<AiTargetSettings>? profiles = ReadEncryptedProfiles(secrets, required: protectedTargets);
+        if (protectedTargets)
+        {
+            config.Targets = new ObservableCollection<AiTargetSettings>(profiles!);
+        }
+
         ValidateTargets(config);
-
-        var secrets = _keyStore.ReadUnlocked();
         foreach (var target in config.Targets)
         {
             target.ApiKey = secrets.TryGetValue($"target_key_{target.Name}", out string? key) ? key : string.Empty;
         }
 
         ValidateTargets(config);
-        if (migrate)
+        return (config, secrets);
+    }
+
+    private AiHubConfig LoadUnlocked()
+    {
+        byte[]? bytes = AiHubStorageFiles.ReadOptionalFile(SettingsFilePath, AiHubStorageFiles.MaxDataFileBytes);
+        JsonObject? legacy = ReadLegacySettings(requireValidJson: bytes is null);
+        bool migrateLegacyFile = bytes is null && legacy is not null &&
+            (legacy.ContainsKey("targets") || legacy.ContainsKey("targetStorageVersion"));
+        if (migrateLegacyFile)
         {
-            // Leave the legacy file intact; only publish a validated service snapshot.
-            _files.WriteAtomic(AiHubStorageFiles.ServiceSettingsFileName, bytes!);
+            bytes = Encoding.UTF8.GetBytes(legacy!.ToJsonString());
+        }
+
+        bool protectedTargets = bytes is not null && UsesProtectedTargets(bytes);
+        var config = bytes is null ? AiHubConfig.CreateDefault() : protectedTargets
+            ? JsonSerializer.Deserialize(bytes, AiHubJsonContext.Default.AiServiceSettingsSnapshot)?.ToConfig()
+                ?? throw new InvalidDataException("The AI Hub settings file is invalid.")
+            : JsonSerializer.Deserialize(bytes, AiHubJsonContext.Default.AiHubConfig)
+                ?? throw new InvalidDataException("The AI Hub settings file is invalid.");
+
+        var secrets = _keyStore.ReadUnlocked();
+        if (protectedTargets)
+        {
+            EnsureProtectedPair(bytes!, secrets);
+        }
+
+        List<AiTargetSettings>? profiles = ReadEncryptedProfiles(secrets, required: protectedTargets);
+        if (bytes is null && profiles is not null)
+        {
+            throw new InvalidDataException("The AI Hub service preferences are missing.");
+        }
+
+        if (protectedTargets)
+        {
+            config.Targets = new ObservableCollection<AiTargetSettings>(profiles!);
+        }
+
+        ValidateTargets(config);
+        foreach (var target in config.Targets)
+        {
+            target.ApiKey = secrets.TryGetValue($"target_key_{target.Name}", out string? key) ? key : string.Empty;
+        }
+
+        ValidateTargets(config);
+        if ((bytes is not null && !protectedTargets) || migrateLegacyFile || legacy?.ContainsKey("targets") == true)
+        {
+            // A successful read upgrades old endpoint metadata and removes its legacy copy.
+            // All affected files are protected by the same recoverable storage transaction.
+            SaveUnlocked(config);
         }
 
         return config;
@@ -196,21 +356,61 @@ public sealed class AiHubSettingsStore
     private void SaveUnlocked(AiHubConfig config)
     {
         ValidateTargets(config);
-        var clone = new AiHubConfig
-        {
-            IsEnabled = config.IsEnabled,
-            SelectedKernel = config.SelectedKernel,
-            MaxConcurrentAnalysis = config.MaxConcurrentAnalysis,
-            ScanIntervalHours = config.ScanIntervalHours,
-            AuditModeIndex = config.AuditModeIndex,
-            RetentionDays = config.RetentionDays,
-        };
         var secrets = _keyStore.ReadUnlocked();
+        byte[]? existingSettings = AiHubStorageFiles.ReadOptionalFile(SettingsFilePath, AiHubStorageFiles.MaxDataFileBytes);
+        // Missing or malformed protected profiles are never silently replaced by defaults
+        // or an unrelated preference edit. Legacy plaintext settings remain importable.
+        bool protectedTargets = existingSettings is not null && UsesProtectedTargets(existingSettings);
+        if (protectedTargets)
+        {
+            EnsureProtectedPair(existingSettings!, secrets);
+        }
+
+        var profiles = ReadEncryptedProfiles(secrets, required: protectedTargets);
+        if (existingSettings is null && profiles is not null)
+        {
+            JsonObject? legacy = ReadLegacySettings(requireValidJson: true);
+            if (legacy is null || (!legacy.ContainsKey("targets") && !legacy.ContainsKey("targetStorageVersion")))
+            {
+                throw new InvalidDataException("The AI Hub service preferences are missing.");
+            }
+
+            byte[] legacyBytes = Encoding.UTF8.GetBytes(legacy.ToJsonString());
+            if (UsesProtectedTargets(legacyBytes))
+            {
+                EnsureProtectedPair(legacyBytes, secrets);
+            }
+        }
+
+        PersistUnlocked(config, secrets);
+    }
+
+    private void PersistUnlocked(AiHubConfig config, Dictionary<string, string> secrets)
+    {
+        var snapshot = CreateProtectedSnapshot(config, secrets);
+        JsonObject? legacy = ReadLegacySettings(requireValidJson: false);
+        // The storage layer re-reads the legacy file after denying other writers,
+        // so unrelated plugin properties cannot be replaced with this earlier read.
+        string? sanitizeLegacyStorageId = legacy?.ContainsKey("targets") == true ? secrets[SecureKeyStore.TargetProfilesIdKey] : null;
+        _files.CommitSettingsAndSecrets(snapshot.SettingsJson, snapshot.EncryptedSecrets!, sanitizeLegacyStorageId);
+        if (TryCaptureStamp(out DirectoryStamp postStamp))
+        {
+            Snapshots[DataDirectory] = new CachedSnapshot(postStamp, CloneConfig(config));
+        }
+        else
+        {
+            Snapshots.TryRemove(DataDirectory, out _);
+        }
+    }
+
+    private static AiHubSettingsBackup CreateProtectedSnapshot(AiHubConfig config, Dictionary<string, string> secrets)
+    {
         foreach (string key in secrets.Keys.Where(key => key.StartsWith("target_key_", StringComparison.Ordinal)).ToArray())
         {
             secrets.Remove(key);
         }
 
+        var profiles = new List<AiTargetSettings>();
         foreach (var target in config.Targets)
         {
             var targetClone = target.Clone();
@@ -220,18 +420,86 @@ public sealed class AiHubSettingsStore
             }
 
             targetClone.ApiKey = string.Empty;
-            clone.Targets.Add(targetClone);
+            profiles.Add(targetClone);
         }
 
-        byte[] settings = JsonSerializer.SerializeToUtf8Bytes(clone, AiHubJsonContext.Default.AiHubConfig);
-        _files.CommitSettingsAndSecrets(settings, SecureKeyStore.Encrypt(secrets));
-        if (TryCaptureStamp(out DirectoryStamp postStamp))
+        secrets[SecureKeyStore.TargetProfilesKey] = JsonSerializer.Serialize(profiles, AiHubJsonContext.Default.ListAiTargetSettings);
+        string storageId = Guid.NewGuid().ToString("N");
+        secrets[SecureKeyStore.TargetProfilesIdKey] = storageId;
+        byte[] settings = JsonSerializer.SerializeToUtf8Bytes(AiServiceSettingsSnapshot.FromConfig(config, storageId), AiHubJsonContext.Default.AiServiceSettingsSnapshot);
+        return new AiHubSettingsBackup(settings, SecureKeyStore.Encrypt(secrets));
+    }
+
+    private static bool UsesProtectedTargets(byte[] settings)
+    {
+        using var document = JsonDocument.Parse(settings);
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
-            Snapshots[DataDirectory] = new CachedSnapshot(postStamp, CloneConfig(config));
+            throw new InvalidDataException("The AI Hub settings file is invalid.");
         }
-        else
+
+        if (!document.RootElement.TryGetProperty("targetStorageVersion", out var version))
         {
-            Snapshots.TryRemove(DataDirectory, out _);
+            return false;
+        }
+
+        if (version.ValueKind != JsonValueKind.Number || !version.TryGetInt32(out int number) || number != 1 ||
+            document.RootElement.TryGetProperty("targets", out _))
+        {
+            throw new InvalidDataException("The AI Hub endpoint storage version is invalid.");
+        }
+
+        return true;
+    }
+
+    private static List<AiTargetSettings>? ReadEncryptedProfiles(Dictionary<string, string> secrets, bool required)
+    {
+        if (!secrets.TryGetValue(SecureKeyStore.TargetProfilesKey, out string? json))
+        {
+            if (required)
+            {
+                throw new InvalidDataException("The protected AI Hub endpoint profiles are missing.");
+            }
+
+            return null;
+        }
+
+        var profiles = JsonSerializer.Deserialize(json, AiHubJsonContext.Default.ListAiTargetSettings)
+            ?? throw new InvalidDataException("The protected AI Hub endpoint profiles are invalid.");
+        var validation = AiHubConfig.CreateDefault();
+        validation.Targets = new ObservableCollection<AiTargetSettings>(profiles);
+        ValidateTargets(validation);
+        return profiles;
+    }
+
+    private static void EnsureProtectedPair(byte[] settings, Dictionary<string, string> secrets)
+    {
+        using var document = JsonDocument.Parse(settings);
+        if (!document.RootElement.TryGetProperty("targetStorageId", out var id) || id.ValueKind != JsonValueKind.String ||
+            !Guid.TryParseExact(id.GetString(), "N", out _) ||
+            !secrets.TryGetValue(SecureKeyStore.TargetProfilesIdKey, out string? protectedId) || id.GetString() != protectedId)
+        {
+            throw new InvalidDataException("The protected AI Hub endpoint snapshot is incomplete or mismatched.");
+        }
+    }
+
+    private JsonObject? ReadLegacySettings(bool requireValidJson)
+    {
+        byte[]? bytes = AiHubStorageFiles.ReadOptionalFile(_files.GetPath("settings.json"), AiHubStorageFiles.MaxDataFileBytes);
+        if (bytes is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonNode.Parse(bytes) as JsonObject;
+        }
+        catch (JsonException) when (!requireValidJson)
+        {
+            // A malformed plugin-only settings file must not prevent reading the
+            // separate service configuration, and cannot safely be rewritten here.
+            return null;
         }
     }
 

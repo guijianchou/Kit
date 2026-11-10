@@ -192,8 +192,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     private int _selectedScopeIndex; // 0 = 2d, 1 = 1w, 2 = 1mo
     private string _severityFilter = "All"; // "All", "High", "Medium", "Low"
     private string _sourceFilter = "All"; // "All", "Application", "Security", "System", "Setup", "ForwardedEvents"
-    private bool _isPriorityView;
-    private bool _showAllFindings = true;
+    private bool _isPriorityView = true;
+    private bool _showAllFindings;
     private string _findingSearchText = string.Empty;
     private bool _isAuditing;
     private string _auditStatusText = "AIHub_AuditStatus_Ready".GetLocalizedOrFallback("Ready");
@@ -268,7 +268,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         // Commands
         FastScanCommand = new RelayCommand(() => RunAudit(fast: true), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
         FullScanCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
-        SelectLatestCommand = new RelayCommand(LoadRecentAudit, () => IsEnabled && !_isAuditing);
+        SelectLatestCommand = new RelayCommand(LoadRecentAudit, () => CanConfigureAudit);
         ReanalyzeRangeCommand = new RelayCommand(() => RunAudit(fast: false), () => IsEnabled && !_isAuditing && !_isAiAnalyzing);
         DeepAnalyzeCommand = new RelayCommand(RunDeepAnalysis, () => CanRunDeepAnalysis);
         CancelAuditCommand = new RelayCommand(() => _auditCts?.Cancel(), () => IsAuditing || IsAiAnalyzing);
@@ -286,6 +286,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         OrganizeDownloadsCommand = new RelayCommand(() => RunExecuteOptimization(OptimizationCandidates.Where(item => item.Action == "move").ToList()), () => CanSelectOptimizationItems && OptimizationCandidates.Any(item => item.Action == "move" && item.IsSelected));
         CancelOptimizationCommand = new RelayCommand(() => _optimizationCts?.Cancel(), () => IsOptimizing);
         InitializeInventory();
+        InitializeFluentView();
         RefreshOptimizationHistoryCommand = new RelayCommand(() => _ = RefreshOptimizationHistoryAsync());
 
         // Load cached audit history
@@ -427,7 +428,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         private set => Set(ref _healthScoreGrade, value);
     }
 
-    public string HealthScoreLabel => "AIHub_HealthScoreLabel".GetLocalizedOrFallback("Health score");
+    public string HealthScoreLabel => "AIHub_HealthScoreLabel".GetLocalizedOrFallback("Health");
     public string HealthScoreText => HasAuditData ? HealthScore.ToString(CultureInfo.CurrentCulture) : "—";
 
     public bool IsCriticalScore => HasAuditData && HealthScore < 60 && HighCount > 0;
@@ -466,6 +467,11 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         get => _selectedAuditDate;
         set
         {
+            if (!_suppressAuditDateLoad && !CanConfigureAudit)
+            {
+                return;
+            }
+
             if (Set(ref _selectedAuditDate, value) && !_suppressAuditDateLoad && value.HasValue)
             {
                 _ = LoadAuditForDateAsync(value.Value.LocalDateTime.Date);
@@ -508,8 +514,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     }
 
     /// <summary>
-    /// Selected range: 0 = 2 days, 1 = 1 week, 2 = 1 month. Once an audit exists,
-    /// refresh its local findings without issuing AI requests or saving another history entry.
+    /// Next full scan range: 0 = 2 days, 1 = 1 week, 2 = 1 month.
+    /// Changing this draft does not replace an existing audit or start a task.
     /// </summary>
     public int FullScanRangeIndex
     {
@@ -519,41 +525,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             if (value is >= 0 and <= 2 && Set(ref _selectedScopeIndex, value))
             {
                 OnPropertyChanged(nameof(ScanRangeDescription));
-
-                if (HasAuditData || IsAuditing || IsAiAnalyzing)
-                {
-                    RefreshSelectedRange();
-                }
             }
         }
-    }
-
-    private void RefreshSelectedRange()
-    {
-        _auditCts?.Cancel();
-        IsAuditing = false;
-        IsAiAnalyzing = false;
-        AllIssues.Clear();
-        _hasAuditResult = false;
-        lock (_lastAuditEvents)
-        {
-            _lastAuditEvents.Clear();
-        }
-
-        _aiReportFindings.Clear();
-        HasAiReport = false;
-        AiReportSummaryText = AiReportMetaText = AiStatusText = string.Empty;
-        HighCount = MediumCount = LowCount = 0;
-        HealthScoreGrade = "—";
-        ActivityFindingsText = "0";
-        EventCountText = FinishedText = "—";
-        WindowText = ScanRangeDescription;
-        ScanTypeText = "AIHub_ScanType_LocalFindings".GetLocalizedOrFallback("Local findings");
-        HealthVerdict = "AIHub_HealthVerdict_Updating".GetLocalizedOrFallback("Updating");
-        HealthSummaryText = "AIHub_HealthSummary_Updating".GetLocalizedOrFallback("Reading events and updating findings for the selected range.");
-        AuditTimestampText = HealthSummaryText;
-        RebuildSections();
-        RunAudit(fast: false, rangeRefresh: true);
     }
 
     /// <summary>Selected range as a bilingual label for the status text.</summary>
@@ -591,12 +564,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                     // Persisting the mode is best-effort; the next scan picks up the change.
                 }
 
-                // The mode change is persisted only; switching modes must not start a scan
-                // by itself, otherwise entering the tab fired one on binding initialization.
-                if (!IsAuditing)
-                {
-                    AuditPhase = ScanPhase.Idle;
-                }
+                // This configures the next scan without changing the current task or result.
             }
         }
     }
@@ -1178,7 +1146,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
         CurrentEngineAndModelLabel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
             ? kernelDisplay
-            : $"{kernelDisplay} · {readiness.ActiveModel}";
+            : $"{kernelDisplay} / {readiness.ActiveModel}";
     }
 
     /// <summary>
@@ -1632,6 +1600,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     private void RefreshCommands()
     {
         RefreshInventoryCommands();
+        RefreshFluentCommands();
         ((RelayCommand)FastScanCommand).OnCanExecuteChanged();
         ((RelayCommand)FullScanCommand).OnCanExecuteChanged();
         ((RelayCommand)SelectLatestCommand).OnCanExecuteChanged();
@@ -1829,8 +1798,6 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         {
             events = _lastAuditEvents.ToList();
         }
-        _aiReportFindings.Clear();
-        HasAiReport = false;
         _auditProgress.Reset();
         _auditWasDeepAnalysis = true;
         _auditIncomplete = false;
@@ -1883,6 +1850,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                         return;
                     }
 
+                    _aiReportFindings.Clear();
                     foreach (AuditIssue issue in issues.OrderByDescending(item => item.Severity == "High").ThenByDescending(item => item.Occurrences))
                     {
                         _aiReportFindings.Add(new AiReportFinding(
@@ -1894,13 +1862,14 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                                 PreferChinese() && !string.IsNullOrWhiteSpace(issue.RootCauseZh) ? issue.RootCauseZh : issue.RootCause,
                             }.Where(text => !string.IsNullOrWhiteSpace(text))),
                             PreferChinese() && !string.IsNullOrWhiteSpace(issue.RecommendationZh) ? issue.RecommendationZh : issue.Recommendation,
-                            $"{issue.Severity} · Event {issue.EventId} · {issue.Occurrences}x"));
+                            issue.EventId));
                     }
 
                     AiReportSummaryText = partial
                         ? "AIHub_DeepAnalysis_SummaryPartialFormat".FormatLocalized("AI partially completed: retained {0} enhanced finding(s) ({1}).", issues.Count, failure)
                         : "AIHub_DeepAnalysis_SummaryCompleteFormat".FormatLocalized("AI deep analysis completed: {0} enhanced finding(s).", issues.Count);
                     AiReportMetaText = "AIHub_DeepAnalysis_MetaFormat".FormatLocalized("Kernel {0} · {1:HH:mm:ss}", AiHubEngine.Current.ActiveKernel, DateTime.Now);
+                    _fluentAiReportPartial = partial;
                     HasAiReport = true;
                     AiStatusText = AiReportSummaryText;
                     AuditStatusText = AiStatusText;
@@ -1985,9 +1954,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         _auditProgress.Reset();
         _auditWasDeepAnalysis = false;
         _auditIncomplete = false;
-        _aiReportFindings.Clear();
-        HasAiReport = false;
-        AiStatusText = AiReportSummaryText = AiReportMetaText = string.Empty;
+        AiStatusText = string.Empty;
         AiAnalysisRanText = string.Empty;
         AuditPhase = ScanPhase.Scanning;
         BeginStage("Collect event logs", audit: true);
@@ -1998,7 +1965,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         CancellationToken token = _auditCts.Token;
         AuditStatusText = fast ? "AIHub_RunAudit_FastInProgress".GetLocalizedOrFallback("Fast scan in progress...") : "AIHub_RunAudit_FullInProgress".GetLocalizedOrFallback("Full event audit in progress...");
 
-        // Snapshot the user's selection before dispatching. Later selections cancel this run.
+        // Freeze the next-scan draft before dispatching. Later edits do not change this run.
         int rangeDays = _selectedScopeIndex switch { 1 => 7, 2 => 30, _ => 2 };
         string rangeDescription = ScanRangeDescription;
         int maxEvents = fast ? 500 : 5000;
@@ -2050,7 +2017,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
                 Logger.LogInfo(
                     $"Audit readiness: level={readiness.Level}, kernel={readiness.ActiveKernel}, " +
-                    $"model={readiness.ActiveModel}, cached={readiness.FromCache}, detail={readiness.Detail ?? "-"}");
+                    $"cached={readiness.FromCache}, detail={readiness.Detail ?? "-"}");
 
                 bool aiEligible = !rangeRefresh && readiness.CanAttempt;
 
@@ -2177,6 +2144,10 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                     AuditPhase = ScanPhase.SelectingTargets;
 
                     // Only the accepted result can supply evidence to a later deep analysis.
+                    _fluentAiReportPartial = false;
+                    _aiReportFindings.Clear();
+                    HasAiReport = false;
+                    AiReportSummaryText = AiReportMetaText = string.Empty;
                     lock (_lastAuditEvents)
                     {
                         _lastAuditEvents.Clear();
@@ -2409,10 +2380,12 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             Key = ai.Key,
             EventRef = ai.EventRef,
             EventId = ai.EventId,
+            EventTimestamp = ai.EventTimestamp,
             LogName = ai.LogName,
             Category = string.IsNullOrWhiteSpace(ai.Category) ? "Other" : ai.Category,
             Severity = ai.Severity,
             Confidence = ai.Confidence,
+            Affected = ai.Affected ?? string.Empty,
             Title = ai.Title,
             TitleZh = ai.TitleZh,
             Description = ai.Description,
@@ -2422,7 +2395,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             Recommendation = ai.Recommendation,
             RecommendationZh = ai.RecommendationZh,
             Occurrences = ai.Occurrences,
-            Source = "AI",
+            RelatedEventRefs = ai.RelatedEventRefs?.ToList() ?? new List<string>(),
+            Source = string.IsNullOrWhiteSpace(ai.Source) ? "AI" : ai.Source,
         };
 
     private static List<AuditIssueEnhanced> RunRuleBasedAuditAnalysis(List<SecurityEvent> events)
@@ -2491,9 +2465,9 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             FindingSections.Add(s);
         }
 
-        // 5. Priority findings (top 5)
+        // 5. Priority findings (top 3)
         PriorityFindings.Clear();
-        foreach (var item in visibleIssues.OrderByDescending(i => i.IsHigh).ThenByDescending(i => i.IsMedium).ThenByDescending(i => i.Occurrences).Take(5))
+        foreach (var item in visibleIssues.OrderByDescending(i => i.IsHigh).ThenByDescending(i => i.IsMedium).ThenByDescending(i => i.Occurrences).Take(3))
         {
             PriorityFindings.Add(item);
         }
@@ -2504,6 +2478,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         {
             FilteredIssues.Add(item);
         }
+
+        RebuildOverviewFindings();
 
         // Notify properties
         OnPropertyChanged(nameof(CanRunDeepAnalysis));
@@ -2599,7 +2575,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         WindowText = history.ScanStart.HasValue && history.ScanEnd.HasValue
             ? $"{history.ScanStart.Value.ToLocalTime():g} – {history.ScanEnd.Value.ToLocalTime():g}"
             : "AIHub_Window_AllTimes".GetLocalizedOrFallback("All times");
-        EventCountText = history.EventsScanned > 0 ? history.EventsScanned.ToString("N0", CultureInfo.CurrentCulture)
+        EventCountText = history.EventsScanned > 0 ? "AIHub_EventCountFormat".FormatLocalized("{0} events", history.EventsScanned)
             : "AIHub_EventCount_HistoricalFormat".FormatLocalized("{0} findings", history.Findings.Count);
         ActivityFindingsText = history.Findings.Count.ToString(CultureInfo.InvariantCulture);
         SelectedAuditLabel = history.Timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -2623,6 +2599,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         _hasAuditResult = false;
         _auditIncomplete = false;
         _auditWasDeepAnalysis = false;
+        _fluentAiReportPartial = false;
         _aiReportFindings.Clear();
         HasAiReport = false;
         AiReportSummaryText = string.Empty;
@@ -3190,6 +3167,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         var selected = OptimizationCandidates.Where(c => c.IsSelected).ToList();
         SelectedCandidatesCount = selected.Count;
         SelectedCandidatesBytes = selected.Sum(c => c.SizeInBytes);
+        RefreshFluentSelection();
         foreach (var category in OptimizationCategories)
         {
             category.RefreshSelection();
@@ -3421,6 +3399,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         if (!_disposed)
         {
             _disposed = true;
+            DisposeFluentView();
             Inventory.PropertyChanged -= OnInventoryChanged;
             _readinessCts?.Cancel();
             AiHub?.Dispose();

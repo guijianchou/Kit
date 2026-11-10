@@ -4,6 +4,16 @@
 
 ## English
 
+### 3.5.0
+
+- Refined AI Hub with a Fluent overview, semantic status colors, clearer task progress and readable finding details in light and dark themes. Unified plugin headers and restored the Awake and Light Switch logos.
+- Updated the shell navigation with Windows Settings-style rows and colored module icons. The navigation pane now remembers the user's expanded or collapsed preference across Settings and Kit restarts while retaining responsive behavior in narrow windows.
+- Fixed the Runner exit triggered by clicking a WinGet notification while Settings was already open: existing-window activation now releases its IPC and lifecycle locks before calling Win32 window APIs.
+- Improved native AI fallback for endpoint authentication and missing-model failures. Main/Fallback profiles now use Windows per-user encryption, and bounded diagnostic retention preserves failure-to-fallback correlation without storing prompts, keys or endpoints.
+- Hardened worker startup, module commands and settings backup/restore; aligned shared framework dependencies with the checked-in build setup and documented the PowerToys reference-source differences.
+- Aligned source and sparse-package identity at 3.5.0.
+- Validation: x64 Release build, 1,109 passing unit tests with one environment-dependent directory-link test skipped, bilingual UI regressions, module-page smoke and three-process navigation preference restoration passed. The staged runtime passed version, dependency, resource and SHA-256 checks.
+
 ### 3.4.6
 
 - Fixed AI service API mode and reasoning effort appearing blank after restart or first expanding Main/Fallback. Editable values now synchronize with the native ComboBox's visible presenter after template creation, including custom identifiers outside the suggestions, without replacing the saved value with intermediate empty text.
@@ -931,6 +941,16 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.0
+
+- 深化 AI Hub 的 Fluent 概览、语义状态配色、任务进度和明暗主题详情面板；统一插件页顶部标题与简介，并修正 Awake、Light Switch 图标。
+- 主侧栏采用 Windows 设置风格的中性色条目和彩色模块图标；手动展开或收缩状态现在会跨 Settings 和 Kit 重启保留，窄窗口仍保持响应式布局。
+- 修复 Settings 已打开时点击 WinGet 通知导致 Runner 报错退出的问题：调用 Win32 窗口激活接口前释放 IPC 与生命周期锁。
+- 改善原生 AI 在端点鉴权、模型不存在等失败后的备用路由；Main/Fallback 配置采用 Windows 当前用户加密，诊断保留有界且保留失败到备用路由的关联，不记录提示词、密钥或端点。
+- 加固 Worker 启动、模块命令与设置备份恢复；对齐共享框架构建依赖，补充与 PowerToys 参考源码的差异文档。
+- 源码与稀疏包版本统一为 3.5.0。
+- 验证：x64 Release 构建、1109 项单元测试、中英文 UI 回归、模块页面冒烟与三进程侧栏状态恢复通过；1 项目录链接测试受环境限制跳过。发布目录已通过版本、依赖、资源与 SHA-256 校验。
 
 ### 3.4.6
 

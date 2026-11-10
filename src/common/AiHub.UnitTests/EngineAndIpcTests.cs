@@ -298,19 +298,81 @@ public sealed class EngineAndIpcTests
     }
 
     [TestMethod]
-    public async Task AuthenticationFailureDoesNotSendInputToFallback()
+    [DataRow("codex", "auth")]
+    [DataRow("pi", "auth")]
+    [DataRow("codex", "forbidden")]
+    [DataRow("pi", "forbidden")]
+    [DataRow("codex", "model-not-found")]
+    [DataRow("pi", "model-not-found")]
+    public async Task EndpointCredentialsOrModelFailureUsesTheEnabledFallback(string kernel, string scenario)
     {
         using KernelFixture fixture = await KernelFixture.CreateAsync();
-        using var engine = await CreateEngineAsync(fixture, "auth", true);
+        using var engine = await CreateEngineAsync(fixture, scenario, fallback: true, kernel: kernel);
         await fixture.SetResponseAsync(ValidReport);
         var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema());
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        Assert.AreEqual("Fallback", result.UsedRoute);
+        Assert.AreEqual(2, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+        var records = engine.Diagnostics.GetSnapshot().RecentRecords.Where(record => record.Kind == "route").Reverse().ToArray();
+        Assert.AreEqual(2, records.Length);
+        Assert.AreEqual("main", records[0].Route);
+        Assert.AreEqual(AiErrorCode.EndpointFailed, records[0].ErrorCode);
+        Assert.AreEqual("fallback", records[1].Route);
+        Assert.AreEqual("succeeded", records[1].Outcome);
+        Assert.AreEqual(records[0].RequestId, records[1].RequestId);
+        Assert.IsTrue(records.All(record => record.BatchIndex == 1 && record.TotalBatches == 1));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task AuthenticationFailureStopsAtTheLastEnabledRoute(bool enableFallback)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, "auth", fallback: enableFallback);
+        if (enableFallback)
+        {
+            new AiHubSettingsStore(fixture.Root).Update(config => config.Targets[1].Model = "fixture-auth");
+        }
+
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema());
         Assert.IsFalse(result.IsSuccess);
-        Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
-        Assert.IsFalse(result.ErrorMessage!.Contains("synthetic-fixture-secret", StringComparison.Ordinal));
-        Assert.AreEqual("Main", result.UsedRoute);
+        Assert.AreEqual(AiErrorCode.EndpointFailed, result.ErrorCode);
+        Assert.AreEqual(enableFallback ? "Fallback" : "Main", result.UsedRoute);
         Assert.AreEqual("Authentication", result.Diagnostics?.Reason);
         Assert.AreEqual(401, result.Diagnostics?.HttpStatusCode);
-        StringAssert.Contains(result.ErrorMessage, "401");
+        Assert.IsFalse(result.ErrorMessage!.Contains("synthetic-fixture-secret", StringComparison.Ordinal));
+        Assert.AreEqual(enableFallback ? 2 : 1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
+    public async Task LocalCatalogPermissionFailureDoesNotInvokeTheFallbackEndpoint()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, "catalog-denied", fallback: true);
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema());
+        Assert.IsFalse(result.IsSuccess);
+        Assert.AreEqual(AiErrorCode.InvalidConfiguration, result.ErrorCode);
+        Assert.AreEqual("catalog", result.Diagnostics?.Phase);
+        Assert.AreEqual(5, result.Diagnostics?.ExitCode);
+        Assert.AreEqual(0L, engine.Diagnostics.GetSnapshot().FallbackAttempts);
+        Assert.AreEqual(0, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
+    public async Task CallerCancellationStopsMainWithoutStartingTheEnabledFallback()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, "timeout", fallback: true);
+        using var cancellation = new CancellationTokenSource();
+        var pending = engine.ExecuteTaskAsync("Sample", "diagnostic", new[] { new TestInput("sample", string.Empty, string.Empty) }, Schema(), cancellationToken: cancellation.Token);
+        await WaitForCaptureAsync(fixture);
+        await cancellation.CancelAsync();
+        var result = await pending.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.AreEqual(AiErrorCode.Cancelled, result.ErrorCode);
+        Assert.AreEqual("caller", result.Diagnostics?.CancellationSource);
+        Assert.AreEqual(0L, engine.Diagnostics.GetSnapshot().FallbackAttempts);
+        Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
     }
 
     [TestMethod]

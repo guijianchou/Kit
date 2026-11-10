@@ -14,5 +14,6 @@
   <ItemGroup>
     <PackageReference Include="MSTest" />
     <ProjectReference Include="..\NetMapLib\NetMapLib.csproj" />
+    <ProjectReference Include="..\NetMapService\NetMapService.csproj" />
   </ItemGroup>
 </Project>

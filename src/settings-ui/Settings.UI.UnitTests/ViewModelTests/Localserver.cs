@@ -136,12 +136,14 @@ namespace ViewModelTests
         public void LocalserverModuleInterfaceAndRunnerShouldBeRegistered()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var runnerCatalog = File.ReadAllText(FindSourceFile("src", "runner", "kit_module.h"));
             var runnerSettingsSource = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
             var runnerSettingsHeader = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.h"));
             var shellPageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml"));
             var appXamlCs = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
 
-            StringAssert.Contains(runnerMain, "Kit.LocalserverModuleInterface.dll");
+            StringAssert.Contains(runnerMain, "KitModuleCatalog");
+            StringAssert.Contains(runnerCatalog, "Kit.LocalserverModuleInterface.dll");
             StringAssert.Contains(runnerSettingsHeader, "Localserver");
             StringAssert.Contains(runnerSettingsSource, "Localserver");
             StringAssert.Contains(shellPageXaml, "LocalserverNavigationItem");

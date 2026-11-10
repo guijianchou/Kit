@@ -13,7 +13,6 @@
     xmlns:models="using:Kit.Settings.UI.ViewModels"
     xmlns:ui="using:CommunityToolkit.WinUI"
     xmlns:views="using:Kit.Settings.UI.Views"
-    HighContrastAdjustment="None"
     mc:Ignorable="d">
     <UserControl.Resources>
         <converters:IconConverter x:Key="IconConverter" />
@@ -131,7 +130,8 @@
             DisplayModeChanged="NavigationView_DisplayModeChanged"
             IsBackButtonVisible="Collapsed"
             IsBackEnabled="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}"
-            IsPaneOpen="True"
+            IsPaneOpen="{x:Bind _navigationPaneState.IsPaneOpen}"
+            Loaded="NavigationView_Loaded"
             IsPaneToggleButtonVisible="False"
             IsSettingsVisible="False"
             IsTitleBarAutoPaddingEnabled="False"
@@ -162,44 +162,65 @@
                 <NavigationViewItem
                     x:Name="AIHubNavigationItem"
                     x:Uid="Shell_AIHub"
-                    AutomationProperties.AutomationId="AIHubNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xEA80;}" />
+                    AutomationProperties.AutomationId="AIHubNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/AiHub.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="AwakeNavigationItem"
                     x:Uid="Shell_Awake"
-                    AutomationProperties.AutomationId="AwakeNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xE706;}" />
+                    AutomationProperties.AutomationId="AwakeNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/Awake.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="LightSwitchNavigationItem"
                     x:Uid="Shell_LightSwitch"
-                    AutomationProperties.AutomationId="LightSwitchNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xE790;}" />
+                    AutomationProperties.AutomationId="LightSwitchNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/LightSwitch.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="LocalserverNavigationItem"
                     x:Uid="Shell_Localserver"
-                    AutomationProperties.AutomationId="LocalserverNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xE968;}" />
+                    AutomationProperties.AutomationId="LocalserverNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/Localserver.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="NetMapNavigationItem"
                     x:Uid="Shell_NetMap"
-                    AutomationProperties.AutomationId="NetMapNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xE774;}" />
+                    AutomationProperties.AutomationId="NetMapNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/NetMap.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="UDPtestNavigationItem"
                     x:Uid="Shell_UDPtest"
-                    AutomationProperties.AutomationId="UDPtestNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xE945;}" />
+                    AutomationProperties.AutomationId="UDPtestNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/UDPtest.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
                 <NavigationViewItem
                     x:Name="WingetNavigationItem"
                     x:Uid="Shell_Winget"
-                    AutomationProperties.AutomationId="WingetNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xE896;}" />
+                    AutomationProperties.AutomationId="WingetNavItem">
+                    <NavigationViewItem.Icon>
+                        <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/Winget.png" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
 
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>

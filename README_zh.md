@@ -4,7 +4,7 @@
 
 Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 Windows 11 本地工具集（同步对齐上游 PowerToys **v0.102.3001.0** 代码）。它复用 Runner、原生模块接口和 WinUI 3 设置框架，整合系统工具、本地服务管理、网络诊断与 AI 辅助维护。
 
-当前源码版本：**3.4.6**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
+当前源码版本：**3.5.0**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
 
 [功能概览](#1-功能概览) · [主框架](#2-主框架) · [插件](#3-插件) · [构建与发布](#4-构建与发布) · [数据与日志](#5-数据与日志) · [开发与扩展](#6-开发与扩展)
 
@@ -17,9 +17,9 @@ Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 
 | [Awake](#31-awake保持唤醒) | 按条件保持系统唤醒 | 独立 Awake 进程 | PowerToys |
 | [Light Switch](#32-light-switch主题切换) | 定时或手动切换明暗主题 | 独立 Service 进程 | PowerToys |
 | [Localserver](#33-localserver本地服务管理) | 配置、启动、监控和停止本地服务 | Settings + 监督 Worker | Kit |
-| [UDPtest](#34-udptest线路质量探测) | 检测已配置线路的延迟、抖动、成功率及 NAT | Settings + 诊断 Service | Kit |
+| [UDPtest](#34-udptest线路质量探测) | 检测已配置线路的延迟、抖动、成功率及 NAT | Settings 进程 | Kit |
 | [AI Hub](#35-ai-hub审计与系统优化) | 系统事件审计、下载整理与缓存清理 | Settings + 定时审计 Worker | Kit |
-| [NetMap](#36-netmap网络地图与路径观测) | 观察当前 Direct / Proxy 出口、服务连通性和 ICMP 路径 | Settings + 观测 Service | Kit |
+| [NetMap](#36-netmap网络地图与路径观测) | 观察当前 Direct / Proxy 出口、服务连通性和 ICMP 路径 | Settings 进程 | Kit |
 | [WinGet](#37-winget软件更新与安装) | 软件发现、安装、更新与卸载、确认后批量操作、每日检查与通知 | 独立 WingetService 进程 | Kit |
 
 启动运行目录中的 `Kit.exe` 后，在 Settings 中启用需要的模块并配置。**模块开关与任务开始是两层操作**：例如 Localserver 启用后仍需单独启动服务，NetMap 启用后仍需点击 Start。
@@ -172,14 +172,14 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    MI["Runner / Kit.UDPtestModuleInterface.dll"] -->|"管理服务进程"| SVC["Kit.UDPtestService.exe"]
+    MI["Runner / Kit.UDPtestModuleInterface.dll"] -->|"管理宿主生命周期"| SVC["Kit.UDPtestService.exe / 仅生命周期宿主"]
     subgraph S["Settings 进程"]
-        PG["UDPtest 页面 / ViewModel"] -->|"IPC 控制与数据流"| SVC
+        PG["UDPtest 页面 / ViewModel"] --> CORE["ProbeCoordinator"]
     end
-    SVC -->|"并行探测"| TARGET["已配置的 TCP/HTTPS、UDP、STUN 目标"]
+    CORE -->|"并行探测"| TARGET["已配置的 TCP/HTTPS、UDP、STUN 目标"]
 ```
 
-- **运行方式**：用户在界面控制 Start / Stop；探测核心引擎运行于独立的无界面后台服务（`Kit.UDPtestService.exe`），关闭 Settings 窗口后后台探测依然持续平稳运行，重新进入界面无缝重连。
+- **运行方式**：用户在界面控制 Start / Stop；页面在 Settings 进程内持有 `ProbeCoordinator`。`Kit.UDPtestService.exe` 目前仅提供生命周期与宿主状态，未实现的探测命令返回错误。Settings 进程退出会结束探测会话，尚未实现跨进程退出的后台持续探测或 IPC 重连。
 - **结果含义**：HTTPS 耗时衡量响应头到达时间；NAT 行为、UDP 回显与 TCP/HTTPS 使用各自的探针，不能混作同一种网络指标。
 - **数据**：线路配置保存在 `UDPtest/`，采样历史仅保留在内存。详见[模块文档](src/modules/UDPtest/README.md)。
 
@@ -212,31 +212,31 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    MI["Runner / Kit.NetMapModuleInterface.dll"] -->|"管理服务进程"| SVC["Kit.NetMapService.exe"]
+    MI["Runner / Kit.NetMapModuleInterface.dll"] -->|"管理宿主生命周期"| SVC["Kit.NetMapService.exe / 仅生命周期宿主"]
     subgraph S["Settings 进程"]
-        PG["NetMap 页面 / ViewModel"] -->|"IPC 控制与数据流"| SVC
+        PG["NetMap 页面 / ViewModel"] --> CORE["NetMapSession"]
         PG -->|"AI 分析（手动）"| AISVC["NetMapAiService / 链路判定"]
         AISVC -->|"一条内联指令，无需 AGENTS.md"| HUB["Kit.AiHub 引擎 / route-analysis 任务"]
     end
-    SVC -->|"Direct：绕过应用层代理"| D["Bilibili zone"]
-    SVC -->|"Proxy：所选连接方式"| P["Cloudflare trace"]
-    SVC -->|"出口与节点定位"| GEO["本地 GeoLite2-ASN / City"]
-    SVC -->|"两次 Proxy 成功且一致"| DIAG["服务与路径诊断"]
+    CORE -->|"Direct：绕过应用层代理"| D["Bilibili zone"]
+    CORE -->|"Proxy：所选连接方式"| P["Cloudflare trace"]
+    CORE -->|"出口与节点定位"| GEO["本地 GeoLite2-ASN / City"]
+    CORE -->|"两次 Proxy 成功且一致"| DIAG["服务与路径诊断"]
     GEO -->|"缺失字段可在线补齐"| ONLINE["ipwho.is"]
     DIAG -->|"Proxy：每 10 秒"| WEB["Claude / ChatGPT trace、Gemini / Google 网页"]
     DIAG -->|"本机系统路由：ICMP 逐跳采样"| MTR["Proxy 出口 IPv4"]
     MTR -->|"最新快照：mtr-latest.json"| AISVC
     HUB -->|"安全策略 / 脱敏 / 输出审计"| K["已安装的 AI 内核 CLI"]
     HUB -.->|"链路类型 / 一句话摘要 / 路径证据"| PG
-    SVC -.->|"出口卡片 / 离线地图 / MTR / 服务状态 via IPC"| PG
+    CORE -.->|"进程内：出口卡片 / 离线地图 / MTR / 服务状态"| PG
 ```
 
-- **开始与停止**：启用模块、应用连接设置后点击 Start。观测引擎运行于独立的后台服务（`Kit.NetMapService.exe`），关闭或最小化 Settings 窗口后后台观测依然平稳运行，重新进入界面无缝恢复会话。禁用模块或退出 Runner 时自动终止后台服务。
+- **开始与停止**：启用模块、应用连接设置后点击 Start。`NetMapViewModel` 在 Settings 进程内持有 `NetMapSession`，观测受页面和窗口生命周期控制；尚未实现 Settings 进程退出后独立运行的后台会话。
 - **连接方式**：Proxy 支持系统代理、显式 HTTP/HTTPS/SOCKS5 或系统路由/TUN。Direct 只绕过应用层代理，无法绕过系统 TUN。
 - **地图与数据**：内置 Natural Earth 离线底图，优先使用本地 ASN/City 数据库；在线补齐会查询公网 IP，可关闭。ASN 数据库支持手动下载及哈希校验。
 - **诊断边界**：服务检查反映检查点或网页连通性，不代表账号或模型可用；ICMP 路径经本机系统路由，不是代理隧道内部路径。
 - **AI 链路判定**：页面上的手动 **AI 分析** 按最新 MTR 快照判定跨境链路类型（如 CMI、CN2、163，可含移动、联通、电信线路），结论以徽标和一句话摘要显示在代理出口卡片，证据在“详情”中。判定经统一 Kit.AiHub 引擎的轻量 `route-analysis` 任务执行，只需一条内联指令，不部署 `Chains/route-analysis/AGENTS.md`；宿主与插件安全策略、脱敏、输出审计与备用链路全部生效。需先在 AI Hub 安装并验证内核；缺少 MTR 数据、AI 中心未开启或内核缺失都有明确提示。结果与检测一样仅保留在当前进程内存。
-- **运行方式**：原生 `Kit.NetMapModuleInterface.dll` 管理开关与后台服务进程，检测结果通过本地命名管道非阻塞流式同步至 Settings 界面。使用方法、数据来源与验证范围见[模块文档](src/modules/NetMap/README.md)。
+- **运行方式**：原生 `Kit.NetMapModuleInterface.dll` 管理开关与 `Kit.NetMapService.exe` 生命周期宿主。宿主可报告自身状态，但没有承载 `NetMapSession` 或传输观测结果，未实现的业务命令返回错误。使用方法、数据来源与验证范围见[模块文档](src/modules/NetMap/README.md)。
 
 ### 3.7 WinGet：软件更新与安装
 
@@ -325,7 +325,7 @@ AI 诊断历史最多 256 条、256 KiB，仅记录任务结果及安全元数�
 
 ## 6. 开发与扩展
 
-模块沿用 PowerToys 的 C++ 契约，导出 `kit_create()`。核心接口包括启用/禁用、读取/保存配置、快捷动作和销毁；Runner 从 [KitKnownModules](src/runner/main.cpp) 显式加载七个模块。
+模块沿用 PowerToys 的 C++ 契约，导出 `kit_create()`。核心接口包括启用/禁用、读取/保存配置、快捷动作和销毁；Runner 启动和按需加载共用 [KitModuleCatalog](src/runner/kit_module.h) 中的七个模块。
 
 新增模块需完成：
 

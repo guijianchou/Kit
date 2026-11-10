@@ -25,7 +25,7 @@ For architecture details, module set, and stability direction, see the [project 
 ## Conventions
 
 - Follow Kit's `KitModuleIface` and `kit_create()` plugin contract.
-- Keep module registration explicit through maintained Kit lists (`KitKnownModules` in `src/runner/main.cpp`, `KitModuleCatalog`, navigation routes).
+- Keep native module registration in the single `KitModuleCatalog` in `src/runner/kit_module.h`; keep the managed `KitModuleCatalog` and navigation routes aligned with it.
 - Keep Kit storage, backup, window title, and visible text separate from official PowerToys (`%LOCALAPPDATA%\Kit\`, `Documents\Kit\Backup`, `HKCU\Software\Microsoft\Kit`).
 - Do not re-enable automatic download/install or telemetry behavior.
 - Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
@@ -101,7 +101,7 @@ For complete details, see [Build Guidelines](tools/build/BUILD-GUIDELINES.md).
 | `src/common/` | ABI breaks affecting copied modules |
 | `src/runner/`, `src/settings-ui/` | IPC contracts, settings schema |
 | Updater entry points | Keep check-only; no auto download/install or telemetry |
-| `KitKnownModules` and module catalogs | Must be updated together when adding/removing a module |
+| Native `KitModuleCatalog`, managed catalog and navigation routes | Native startup consumes the single catalog; keep managed keys and routes aligned when adding/removing a module |
 
 ### What not to do
 

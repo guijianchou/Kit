@@ -59,6 +59,10 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
     public WingetViewModel ViewModel { get; }
 
+    public string ModuleTitle => "Winget/ModuleTitle".GetLocalized();
+
+    public string ModuleDescription => "Winget/ModuleDescription".GetLocalized();
+
     public string Text(string name) => WingetViewModel.L(name);
 
     public Style BadgeStyle(string tone) => (Style)Resources["Winget" + tone + "BadgeStyle"];
@@ -167,7 +171,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
     private void UpdateWorkspaceLayout()
     {
-        if (WorkspaceBody == null || WingetEnableCard == null)
+        if (WorkspaceBody == null || WingetEnableCard == null || WingetSections == null)
         {
             return;
         }
@@ -177,9 +181,13 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         // feeding a larger DesiredSize back into that cell.
         double width = Math.Max(0, WingetViewport.ActualWidth - WingetViewport.Padding.Left - WingetViewport.Padding.Right);
 
-        // Reserve space for the page header, workspace commands, table header
-        // and visible package rows; only preferences scroll on short windows.
-        AutomaticSettingsScroll.MaxHeight = Math.Clamp(WingetViewport.ActualHeight - 540, 96, 280);
+        // Budget the two optional scroll regions separately so an expanded
+        // preferences card cannot push package rows below the window edge.
+        // The module gate remains keyboard reachable inside the intro scroll.
+        double headerSpace = WingetViewport.ActualHeight - WingetPageTitle.ActualHeight
+            - WingetSections.ActualHeight - WingetViewport.Padding.Bottom - (4 * WingetViewport.RowSpacing);
+        AutomaticSettingsScroll.MaxHeight = Math.Clamp(headerSpace - 540, 84, 280);
+        WingetIntroScroll.MaxHeight = Math.Max(64, headerSpace - WingetSettingsExpander.ActualHeight - 300);
         if (width <= 0 || Math.Abs(width - appliedWorkspaceWidth) < 0.5)
         {
             return;

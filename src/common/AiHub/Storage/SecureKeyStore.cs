@@ -9,12 +9,14 @@ using System.Text.Json;
 using Kit.AiHub.Serialization;
 
 /// <summary>
-/// Stores API keys encrypted for the current Windows user in secrets.dat.
+/// Stores endpoint profiles and API keys encrypted for the current Windows user in secrets.dat.
 /// Every operation reads the current disk snapshot while holding the shared storage mutex.
 /// </summary>
 [SupportedOSPlatform("windows")]
 public sealed class SecureKeyStore
 {
+    internal const string TargetProfilesKey = "target_profiles_v1";
+    internal const string TargetProfilesIdKey = "target_profiles_id";
     private readonly AiHubStorageFiles _files;
 
     public SecureKeyStore(string dataDirectory)
@@ -50,6 +52,11 @@ public sealed class SecureKeyStore
     public void SetSecret(string key, string secret)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        if (key is TargetProfilesKey or TargetProfilesIdKey)
+        {
+            throw new ArgumentException("Endpoint profiles must be updated through the settings store.", nameof(key));
+        }
+
         _files.Run(() =>
         {
             var secrets = ReadUnlocked();
@@ -82,6 +89,16 @@ public sealed class SecureKeyStore
         if (ciphertext is null)
         {
             return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        return Decrypt(ciphertext);
+    }
+
+    internal static Dictionary<string, string> Decrypt(byte[] ciphertext)
+    {
+        if (ciphertext.Length > AiHubStorageFiles.MaxDataFileBytes)
+        {
+            throw new InvalidDataException("The AI Hub credentials exceed their size limit.");
         }
 
         byte[] plaintext = ProtectedData.Unprotect(ciphertext, optionalEntropy: null, DataProtectionScope.CurrentUser);

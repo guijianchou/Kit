@@ -71,7 +71,7 @@ namespace Kit.Settings.UI.Controls
 
         private void UserControl_Loaded(object sender, RoutedEventArgs e)
         {
-            PrimaryLinksControl.Focus(FocusState.Programmatic);
+            PageIntro.FocusPrimaryLinks();
         }
     }
 }

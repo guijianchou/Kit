@@ -101,12 +101,14 @@ namespace ViewModelTests
         public void UDPtestModuleInterfaceAndRunnerShouldBeRegistered()
         {
             var runnerMain = File.ReadAllText(FindSourceFile("src", "runner", "main.cpp"));
+            var runnerCatalog = File.ReadAllText(FindSourceFile("src", "runner", "kit_module.h"));
             var runnerSettingsSource = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
             var runnerSettingsHeader = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.h"));
             var shellPageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml"));
             var appXamlCs = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "App.xaml.cs"));
 
-            StringAssert.Contains(runnerMain, "Kit.UDPtestModuleInterface.dll");
+            StringAssert.Contains(runnerMain, "KitModuleCatalog");
+            StringAssert.Contains(runnerCatalog, "Kit.UDPtestModuleInterface.dll");
             StringAssert.Contains(runnerSettingsHeader, "UDPtest");
             StringAssert.Contains(runnerSettingsSource, "UDPtest");
             StringAssert.Contains(shellPageXaml, "UDPtestNavigationItem");

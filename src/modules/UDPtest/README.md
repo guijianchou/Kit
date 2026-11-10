@@ -35,10 +35,13 @@ Kit.UDPtestLib
   Probes/StunMessageCodec.cs   — STUN 编解码（MagicCookie / 事务 ID / XOR）
   Core/MetricsEngine.cs        — 平均 RTT/抖动/质量/成功率/周期平均
   Storage/TargetSettingsStore.cs — 线路目标持久化
-        │ IPC / Lifecycle Sync
+        │ 配置与模块开关 IPC（非探测数据）
 Kit.exe Runner (C++ Win32 Core)
   — 动态加载 Kit.UDPtestModuleInterface.dll，管理模块生命周期
+  — Kit.UDPtestService.exe 仅为生命周期宿主，不承载 ProbeCoordinator
 ```
+
+探测实际在 Settings 进程内运行；退出该进程会结束当前会话。服务状态中的 `engineAvailable=false`、`executionHost=Settings` 明确区分宿主存活与探测能力，未实现的业务命令返回 `unsupported-command`。尚未实现后台探测或跨 Settings 进程退出的自动重连。
 
 ---
 

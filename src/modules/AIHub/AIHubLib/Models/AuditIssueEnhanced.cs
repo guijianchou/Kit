@@ -26,6 +26,70 @@ public sealed class AuditIssueEnhanced : AuditIssue
         }
     }
 
+    public string RiskBadgeText
+    {
+        get
+        {
+            if (IsChinese)
+            {
+                if (IsHigh) return "高风险";
+                if (IsMedium) return "中风险";
+                return "低风险";
+            }
+
+            if (IsHigh) return "High";
+            if (IsMedium) return "Medium";
+            return "Low";
+        }
+    }
+
+    public string SeverityGlyph => IsHigh ? "\uEA39" : IsMedium ? "\uE7BA" : "\uE946";
+
+    public string CompactMetaText
+    {
+        get
+        {
+            string category = CategoryLabel;
+            string eventPart = string.IsNullOrWhiteSpace(EventId)
+                ? string.Empty
+                : (IsChinese ? $"事件 {EventId}" : $"Event {EventId}");
+            string countPart = Occurrences <= 1
+                ? string.Empty
+                : (IsChinese ? $"{Occurrences} 次" : $"{Occurrences} occurrences");
+
+            if (!string.IsNullOrEmpty(eventPart) && !string.IsNullOrEmpty(countPart))
+            {
+                return $"{category} · {eventPart} · {countPart}";
+            }
+
+            if (!string.IsNullOrEmpty(eventPart))
+            {
+                return $"{category} · {eventPart}";
+            }
+
+            if (!string.IsNullOrEmpty(countPart))
+            {
+                return $"{category} · {countPart}";
+            }
+
+            return category;
+        }
+    }
+
+    public string EvidenceChipText
+    {
+        get
+        {
+            string id = !string.IsNullOrWhiteSpace(EventId) ? EventId : CategoryLabel;
+            if (Occurrences > 1)
+            {
+                return IsChinese ? $"{id} · {Occurrences} 次" : $"{id} · {Occurrences}x";
+            }
+
+            return id;
+        }
+    }
+
     public string DisplayTitle
     {
         get

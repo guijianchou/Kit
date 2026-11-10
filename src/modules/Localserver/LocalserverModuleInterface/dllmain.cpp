@@ -126,17 +126,15 @@ public:
 
     virtual void enable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (m_enabled)
         {
             return;
         }
 
-        {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            m_enabled = true;
-            delete_module_disabled_flag();
-            start_worker_if_needed();
-        }
+        m_enabled = true;
+        delete_module_disabled_flag();
+        start_worker_if_needed();
 
         Trace::EnableLocalserver(true);
         Logger::info(L"Localserver module enabled");
@@ -144,17 +142,15 @@ public:
 
     virtual void disable() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         if (!m_enabled)
         {
             return;
         }
 
-        {
-            std::lock_guard lifecycleLock(m_lifecycle_mutex);
-            m_enabled = false;
-            write_module_disabled_flag();
-            stop_worker_if_running();
-        }
+        m_enabled = false;
+        write_module_disabled_flag();
+        stop_worker_if_running();
 
         Trace::EnableLocalserver(false);
         Logger::info(L"Localserver module disabled");
@@ -162,6 +158,7 @@ public:
 
     virtual bool is_enabled() override
     {
+        std::lock_guard lifecycleLock(m_lifecycle_mutex);
         return m_enabled;
     }
 

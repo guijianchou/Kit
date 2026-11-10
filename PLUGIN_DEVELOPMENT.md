@@ -19,7 +19,7 @@ Kit 当前活动模块为 **Awake、LightSwitch、Localserver、UDPtest、AIHub�
 
 [Kit 接口头](src/modules/interface/kit_module_interface.h)（保留旧 [powertoy_module_interface.h](src/modules/interface/powertoy_module_interface.h) 重定向头供平滑过渡）已按[上游接口头](source/PowerToys/src/modules/interface/powertoy_module_interface.h) 恢复 `keep_track_of_pressed_win_key()` 和 `milliseconds_win_key_must_be_pressed()` 的原始位置，但不恢复 Win 键长按轮询。`tools/tests/NativeModules/ModuleAbiSmoke.cpp` 分别使用上游头编译 DLL、Kit 头编译宿主，验证全部虚函数槽位、热键结构体及销毁调用。该测试只证明这一契约在当前 x64 工具链下对齐，不代表上游所有插件的运行依赖都已提供。
 
-[Runner](src/runner/main.cpp) 的 `KitKnownModules` 与 [KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 是活动模块入口。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表；Kit 维护 7 个活动模块，未实现快捷动作的模块自动回退至设置页。
+[原生 KitModuleCatalog](src/runner/kit_module.h) 是 Runner 启动及按需加载的共同入口；[托管 KitModuleCatalog](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs) 管理设置界面的活动模块。保留的历史枚举、DTO 或文档不是模块已启用的依据。上游 Runner 本身也使用显式模块列表；Kit 维护 7 个活动模块，未实现快捷动作的模块自动回退至设置页。
 
 原生 DLL 与 Runner 共享进程和权限。Worker 隔离能限制业务进程崩溃的影响，**不构成不可信插件沙箱**；DLL 初始化、回调和销毁仍能影响主程序。
 
@@ -388,7 +388,7 @@ SettingsUtils.Default.SaveSettings(
 | 接入面 | 必须检查的文件与动作 |
 | --- | --- |
 | 工程与构建依赖 | [Kit.slnx](Kit.slnx)：添加实际需要的项目和 Runner 的 BuildDependency；独立构建项目与解决方案构建的依赖行为不同 |
-| 原生加载 | [main.cpp](src/runner/main.cpp)：`KitKnownModules` 添加真实 DLL 文件名；当前三个活动接口 DLL 均部署在 Runner 旁 |
+| 原生加载 | [kit_module.h](src/runner/kit_module.h)：`KitModuleCatalog` 添加模块 key 与真实 DLL 文件名；当前七个活动接口 DLL 均部署在 Runner 旁，启动和按需加载共用该清单 |
 | 模块身份 | [ModuleType.cs](src/common/ManagedCommon/ModuleType.cs)、C++ Key、Settings.ModuleName、JSON key 保持一致 |
 | 全局开关 | [EnabledModules.cs](src/settings-ui/Settings.UI.Library/EnabledModules.cs) 添加属性/default/通知；[EnabledModulesJsonConverter.cs](src/settings-ui/Settings.UI.Library/EnabledModulesJsonConverter.cs) **同时增加 Read 和 Write** |
 | 活动列表与 CLI | [KitModuleCatalog.cs](src/settings-ui/Settings.UI.Library/Helpers/KitModuleCatalog.cs)：ActiveModules、ActiveSettingsModuleKeys、ActiveEnabledModuleKeys；DashboardModules 当前复用 ActiveModules |
@@ -833,7 +833,7 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 | [设置实现](source/PowerToys/doc/devdocs/core/settings/settings-implementation.md)与[设置工具](source/PowerToys/doc/devdocs/core/settings/settings-utilities.md) | DTO、配置读写、仓储 | 使用 Kit 根路径、Library source generation 与当前实际 API |
 | [模块通信](source/PowerToys/doc/devdocs/core/settings/communication-with-modules.md)与[Runner IPC](source/PowerToys/doc/devdocs/core/settings/runner-ipc.md) | JSON 消息与配置分派 | 保留协议字段，按 Kit 当前命名事件与进程生命周期验证 |
 | [Run 插件清单](source/PowerToys/doc/devdocs/modules/launcher/new-plugin-checklist.md) | Run 宿主的插件开发方式 | 当前不可直接用于 Kit 原生模块，必须先有对应宿主 |
-| [Kit first-plugin](doc/devdoc/kit-first-plugin.md) | 原生模块优先、注册及构建经验 | 文中的 `knownModules` / `src/kit` 是旧写法，当前为 `KitKnownModules` / 仓库根 |
+| [Kit first-plugin](doc/devdoc/kit-first-plugin.md) | 原生模块优先、注册及构建经验 | 原生清单位于 `src/runner/kit_module.h` 的 `KitModuleCatalog`；托管目录与页面路由分别注册 |
 | [Kit 开发经验](doc/devdoc/kit-development-experience.md) | 生命周期、状态/配置分离、WinMD、注册一致性 | Monitor、PowerDisplay、旧版本号和测试数量属于历史，不能当作当前活动结构 |
 | [历史 devdoc 指南](doc/devdoc/AGENTS.md) | 上游小差异、显式列表、构建纪律 | 当前活动模块以本规范和源码为准：Awake/LightSwitch/Localserver |
 | [原 Localserver 项目](../Localserver) | 配置来源回写、进程所有权、日志批处理与环境检查 | 复用现有逻辑并接入 Kit 语言和目录；不恢复独立窗口、托盘或另一套主框架 |
@@ -842,7 +842,7 @@ Monitor 已删除，其开发材料可复用的经验是：Worker 无界面运�
 
 ## 14. AI Hub：原生模块、任务策略编排管线与移植约束
 
-AI Hub 在 `2.2.0` 版本中已演进为完整的原生第一方模块：拥有原生模块接口 DLL（`Kit.AIHubModuleInterface.dll`，在 Runner `KitKnownModules` 中注册）、独立二级设置主页（`AIHubPage.xaml`，包含“安全审计”“优化”“任务策略”三个标签页；共享 AI 服务设置位于 Kit 常规设置），并由底层共享库 [Kit.AiHub.csproj](src/common/AiHub/Kit.AiHub.csproj)、[IAiTaskEngine](src/common/AiHub/Models/AiTaskContracts.cs)、[TaskAiEngine](src/common/AiHub/Engine/TaskAiEngine.cs) 提供统一的高性能任务执行引擎。
+AI Hub 在 `2.2.0` 版本中已演进为完整的原生第一方模块：拥有原生模块接口 DLL（`Kit.AIHubModuleInterface.dll`，在原生 `KitModuleCatalog` 中注册）、独立二级设置主页（`AIHubPage.xaml`，包含“安全审计”“优化”“任务策略”三个标签页；共享 AI 服务设置位于 Kit 常规设置），并由底层共享库 [Kit.AiHub.csproj](src/common/AiHub/Kit.AiHub.csproj)、[IAiTaskEngine](src/common/AiHub/Models/AiTaskContracts.cs)、[TaskAiEngine](src/common/AiHub/Engine/TaskAiEngine.cs) 提供统一的高性能任务执行引擎。
 
 插件开关 `GeneralSettings.Enabled.AIHub` 与共享 AI 服务开关相互独立；前者控制 AI Hub，后者只服务于 Kit 内部调用方，目前为 AI Hub。服务配置保存在 `%LOCALAPPDATA%\Kit\AiHub\service-settings.json`，插件配置仍使用 `%LOCALAPPDATA%\Kit\AIHub\settings.json`。Windows 不区分目录大小写，因此二者必须使用不同文件名。首次读取时仅迁移仍包含有效服务配置的旧文件，保留原文件和 DPAPI 凭据；不要求清空用户配置。底层项目跟随 Kit 的 `net10.0-windows10.0.26100.0` 和集中包版本管理；JSON 序列化必须使用 source-generated metadata（禁止反射）。共享库的 Native AOT smoke 与整个 WinUI Settings 应用的发布方式独立验证，不宣称未测量的性能数据。
 

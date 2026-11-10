@@ -63,7 +63,6 @@ public sealed class StorageAndPolicyTests
         byte[] legacy = JsonSerializer.SerializeToUtf8Bytes(config, AiHubJsonContext.Default.AiHubConfig);
         File.WriteAllBytes(store.SettingsFilePath, legacy);
         string secretsPath = Path.Combine(store.DataDirectory, "secrets.dat");
-        byte[] secrets = File.ReadAllBytes(secretsPath);
 
         var loaded = store.Load();
         Assert.AreEqual(legacyEffort, loaded.Targets[0].Effort);
@@ -71,11 +70,11 @@ public sealed class StorageAndPolicyTests
         Assert.AreEqual("gpt-5.6-luna", loaded.Targets[0].Model);
         Assert.AreEqual("fixture-main-key", loaded.Targets[0].ApiKey);
         Assert.AreEqual("fixture-fallback-key", loaded.Targets[1].ApiKey);
-        CollectionAssert.AreEqual(legacy, File.ReadAllBytes(store.SettingsFilePath));
-        CollectionAssert.AreEqual(secrets, File.ReadAllBytes(secretsPath));
+        Assert.IsFalse(File.ReadAllText(store.SettingsFilePath).Contains("targets", StringComparison.Ordinal));
+        Assert.IsTrue(File.Exists(secretsPath));
 
         store.Update(current => current.RetentionDays = 14);
-        var persisted = JsonSerializer.Deserialize(File.ReadAllBytes(store.SettingsFilePath), AiHubJsonContext.Default.AiHubConfig)!;
+        var persisted = new AiHubSettingsStore(store.DataDirectory).Load();
         Assert.AreEqual(legacyEffort, persisted.Targets[0].Effort);
         Assert.AreEqual(legacyEffort, persisted.Targets[1].Effort);
         var saved = store.Load();
@@ -103,7 +102,7 @@ public sealed class StorageAndPolicyTests
     }
 
     [TestMethod]
-    public void LegacyServiceMigratesWithoutTouchingPluginSettingsOrCredentials()
+    public void LegacyServiceMigrationPreservesCredentialsAndLaterPluginSettings()
     {
         using var fixture = new FixtureDirectory();
         var store = new AiHubSettingsStore(fixture.PathFor("data"));
@@ -111,17 +110,15 @@ public sealed class StorageAndPolicyTests
         config.IsEnabled = true;
         config.Targets[0].Model = "fixture-model";
         config.Targets[0].ApiKey = "fixture-key";
-        store.Save(config);
         string legacyPath = Path.Combine(store.DataDirectory, "settings.json");
-        File.Move(store.SettingsFilePath, legacyPath);
-        byte[] legacy = File.ReadAllBytes(legacyPath);
-        byte[] secrets = File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat"));
+        File.WriteAllBytes(legacyPath, JsonSerializer.SerializeToUtf8Bytes(config, AiHubJsonContext.Default.AiHubConfig));
+        store.KeyStore.SetSecret("target_key_Main", config.Targets[0].ApiKey);
 
         var migrated = store.Load();
         Assert.IsTrue(migrated.IsEnabled);
         Assert.AreEqual("fixture-key", migrated.Targets[0].ApiKey);
-        CollectionAssert.AreEqual(legacy, File.ReadAllBytes(legacyPath));
-        CollectionAssert.AreEqual(secrets, File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat")));
+        Assert.IsFalse(File.ReadAllText(legacyPath).Contains("fixture-model", StringComparison.Ordinal));
+        Assert.IsFalse(File.ReadAllText(store.SettingsFilePath).Contains("fixture-model", StringComparison.Ordinal));
 
         const string plugin = "{\"name\":\"AIHub\",\"properties\":{\"activeTabIndex\":{\"value\":1}}}";
         File.WriteAllText(legacyPath, plugin);
@@ -569,9 +566,8 @@ public sealed class StorageAndPolicyTests
         using var fixture = new FixtureDirectory();
         var store = new AiHubSettingsStore(fixture.PathFor("data"));
         var config = AiHubConfig.CreateDefault();
-        store.Save(config);
+        File.WriteAllBytes(store.SettingsFilePath, JsonSerializer.SerializeToUtf8Bytes(config, AiHubJsonContext.Default.AiHubConfig));
         string secretsPath = Path.Combine(store.DataDirectory, "secrets.dat");
-        File.Delete(secretsPath);
         File.SetAttributes(store.SettingsFilePath, FileAttributes.ReadOnly);
         try
         {
@@ -590,6 +586,7 @@ public sealed class StorageAndPolicyTests
     [TestMethod]
     [DataRow("1")]
     [DataRow("2")]
+    [DataRow("3")]
     public void PendingEncryptedTransactionIsRecoveredBeforeAReaderReturns(string version)
     {
         using var fixture = new FixtureDirectory();

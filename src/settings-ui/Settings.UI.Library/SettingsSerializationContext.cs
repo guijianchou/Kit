@@ -40,6 +40,7 @@ namespace Kit.Settings.UI.Library
 
     // Main Settings Classes
     [JsonSerializable(typeof(GeneralSettings))]
+    [JsonSerializable(typeof(SettingsUiPreferences))]
     [JsonSerializable(typeof(OutGoingGeneralSettings))]
     [JsonSerializable(typeof(AdvancedPasteSettings))]
     [JsonSerializable(typeof(AlwaysOnTopSettings))]

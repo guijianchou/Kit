@@ -42,7 +42,9 @@ public sealed partial class WingetViewModel
 
     // Presentation state stays separate from localized text, so semantic colors
     // never depend on the current language or on parsing worker messages.
-    public string ReadinessTone => !IsEnabled ? "Neutral" : !connected ? "Accent" : status.Availability is not { IsAvailable: true } ? "Warning" : IsBusy ? "Accent" : "Success";
+    public string ReadinessTone => !IsEnabled ? "Neutral" :
+        !connected ? string.IsNullOrWhiteSpace(connectionError) ? "Accent" : "Warning" :
+        status.Availability is not { IsAvailable: true } ? "Warning" : IsBusy ? "Accent" : "Success";
 
     public string ReadinessGlyph => ReadinessTone switch
     {

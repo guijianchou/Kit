@@ -1,0 +1,107 @@
+name: Windows CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: x64 Debug build and tests
+    runs-on: windows-2022
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Visual Studio MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\.nuget\packages
+            packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.config', '**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore and build the full solution
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/build/build.ps1 `
+            -Platform x64 `
+            -Configuration Debug `
+            '/m:1' `
+            '/p:CIBuild=true' `
+            '/p:PowerToysSkipCopyOnWriteSdk=true' `
+            '/p:PowerToysSkipRunVSTestSdk=true'
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run AI Hub core tests
+        shell: pwsh
+        run: |
+          $reportDirectory = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/AiHub'
+          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/AiHub/Kit.AiHub.UnitTests.exe') `
+            --report-trx `
+            --results-directory $reportDirectory `
+            --minimum-expected-tests 524
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run Settings UI unit tests
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/tests/SettingsUI/Invoke-SettingsUnitTests.ps1 `
+            -MinimumExpectedTests 321 `
+            -ReportRoot TestResults/GitHubActions/Settings
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run UDP Test unit tests
+        shell: pwsh
+        run: |
+          $reportDirectory = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/UDPtest'
+          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/UDPtest/UDPtest.UnitTests.exe') `
+            --report-trx `
+            --results-directory $reportDirectory `
+            --minimum-expected-tests 37
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Upload build and test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ci-reports
+          if-no-files-found: warn
+          path: |
+            TestResults/GitHubActions/**/*.trx
+            build.debug.x64.all.log
+            build.debug.x64.errors.log
+            build.debug.x64.warnings.log

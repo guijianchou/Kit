@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Kit.AIHubLib.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -84,7 +85,25 @@ public sealed class RecycleBinHelperTests
 
     private static string? ReadOriginalPath(string metadata)
     {
-        byte[] bytes = File.ReadAllBytes(metadata);
+        byte[] bytes;
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                using var stream = new FileStream(metadata, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var buffer = new MemoryStream();
+                stream.CopyTo(buffer);
+                bytes = buffer.ToArray();
+                break;
+            }
+            catch (IOException exception) when (attempt < 10 && unchecked((uint)exception.HResult) is 0x80070020u or 0x80070021u)
+            {
+                // Explorer/antivirus may briefly open fresh metadata after the shell
+                // operation completes. Retry only sharing locks, not other failures.
+                Thread.Sleep(50);
+            }
+        }
+
         if (bytes.Length < 28)
         {
             return null;

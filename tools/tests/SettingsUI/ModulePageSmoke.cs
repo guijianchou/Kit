@@ -785,15 +785,24 @@ internal static class ModulePageSmoke
             var progressType = typeof(AiHubAuditAnalysisService).GetNestedType("AuditProgress", BindingFlags.NonPublic);
             var progress = (IProgress<AiTaskProgress>)Activator.CreateInstance(progressType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                 binder: null, args: new object[] { "smoke", Stopwatch.StartNew(), captured }, culture: null);
-            progress.Report(new AiTaskProgress("Route", "batch=1/7, AI native event: request=request-fixture, event=retry, source=stderr, code=EndpointFailed, httpStatus=0, reason=StreamDisconnected", 1, 7));
+            progress.Report(new AiTaskProgress("Route", "request-fixture; provider text must not appear", 1, 7)
+            {
+                BatchIndex = 2, Route = "Main", Activity = "retrying", RetryCount = 2,
+                ActiveBatches = 1, QueuedBatches = 5, ElapsedMilliseconds = 61_000,
+            });
             if (captured.Value.Stage != "Route" || captured.Value.CompletedBatches != 1 || captured.Value.TotalBatches != 7)
                 throw new InvalidOperationException("Audit progress translation lost its typed phase or batch counts.");
             if (!captured.Message.Contains("1/7") || captured.Message.Contains("request-fixture") || captured.Message.Contains("StreamDisconnected"))
                 throw new InvalidOperationException("Audit retry progress omitted batch counts or exposed diagnostic details.");
             if (!captured.Message.Contains("Retrying connection") && !captured.Message.Contains("连接重试中"))
-                throw new InvalidOperationException("Batch-prefixed native retry diagnostics did not reach the audit status.");
-            progress.Report(new AiTaskProgress("Failover", "batch=1/7, request=request-fixture, reason=RouteTimeout", 1, 7));
-            if ((!captured.Message.Contains("Main did not complete; using fallback") && !captured.Message.Contains("主链未完成，正在使用备用链路"))
+                throw new InvalidOperationException("Typed retry progress did not reach the audit status.");
+            if (captured.Value.RetryCount != 2 || captured.Value.ActiveBatches != 1 || captured.Value.QueuedBatches != 5 || captured.Value.Route != "Main")
+                throw new InvalidOperationException("Audit progress translation dropped live scheduler state.");
+            progress.Report(new AiTaskProgress("Failover", "request=request-fixture, reason=RouteTimeout", 1, 7)
+            {
+                BatchIndex = 2, Route = "Fallback", ActiveBatches = 1, QueuedBatches = 5,
+            });
+            if ((!captured.Message.Contains("Switching to fallback") && !captured.Message.Contains("正在切换备用服务"))
                 || !captured.Message.Contains("1/7") || captured.Message.Contains("request-fixture") || captured.Message.Contains("RouteTimeout")
                 || captured.Message.Contains("Retrying connection") || captured.Message.Contains("连接重试中"))
                 throw new InvalidOperationException("Audit failover status omitted the fallback message or retained retry/diagnostic details.");

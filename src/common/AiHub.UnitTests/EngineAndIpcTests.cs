@@ -205,6 +205,10 @@ public sealed class EngineAndIpcTests
     {
         using KernelFixture fixture = await KernelFixture.CreateAsync();
         using var engine = await CreateEngineAsync(fixture, "mixed-timeout");
+
+        // Keep two bulk lanes plus the reserved lane so a blocked batch overlaps
+        // validated work. The assertion exercises partial results at the deadline.
+        new AiHubSettingsStore(fixture.Root).Update(config => config.MaxConcurrentAnalysis = 3);
         await fixture.SetResponseAsync(ValidReport);
         var input = Enumerable.Range(0, 37).Select(index => new TestInput(index.ToString(), string.Empty, string.Empty)).ToArray();
         var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", input, Schema(), new AiTaskOptions

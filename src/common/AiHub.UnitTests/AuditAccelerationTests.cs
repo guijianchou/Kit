@@ -1,6 +1,7 @@
 namespace Kit.AiHub.UnitTests;
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -106,11 +107,13 @@ public sealed class AuditAccelerationTests
     {
         using KernelFixture fixture = await KernelFixture.CreateAsync();
         using TaskAiEngine engine = await CreateEngineAsync(fixture, "mixed-timeout", kernel: kernel, concurrency: 1);
+        var progress = new ConcurrentQueue<AiTaskProgress>();
         var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(37), Schema(), new AiTaskOptions
         {
             AllowPartialResults = true,
             RouteTimeoutSeconds = 3,
             TimeoutSeconds = 15,
+            Progress = new ImmediateProgress(progress.Enqueue),
         });
 
         Assert.AreEqual(AiErrorCode.Timeout, result.ErrorCode);
@@ -119,6 +122,41 @@ public sealed class AuditAccelerationTests
         Assert.AreEqual(3, result.TotalBatches);
         CollectionAssert.AreEqual(new[] { "item-000001", "item-000031" }, result.Payload!.Findings.Select(item => item.ItemId).ToArray());
         Assert.AreEqual(3, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+        AiTaskProgress failed = progress.First(value => value.Stage == "Failed");
+        Assert.AreEqual(1, failed.FailedBatches);
+        Assert.AreEqual(1, failed.CompletedBatches, "A failed batch must not be counted as successfully validated.");
+        Assert.AreEqual(1, failed.QueuedBatches);
+        Assert.AreEqual(0, failed.ActiveBatches);
+        Assert.AreEqual(2, failed.BatchIndex);
+        AiTaskProgress final = progress.Last(value => value.Stage == "Validate");
+        Assert.AreEqual(1, final.FailedBatches);
+        Assert.AreEqual(2, final.CompletedBatches);
+        Assert.AreEqual(0, final.QueuedBatches);
+        Assert.IsTrue(final.ElapsedMilliseconds >= failed.ElapsedMilliseconds);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task NativeRetriesProduceTypedProgressWithoutLeakingProviderText(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using TaskAiEngine engine = await CreateEngineAsync(fixture, "native-usage", kernel: kernel);
+        var progress = new ConcurrentQueue<AiTaskProgress>();
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(1), Schema(), new AiTaskOptions
+        {
+            Progress = new ImmediateProgress(progress.Enqueue),
+        });
+
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        AiTaskProgress retry = progress.Last(value => value.Activity == "retrying");
+        Assert.AreEqual(kernel == "codex" ? 2 : 1, retry.RetryCount);
+        Assert.AreEqual("Main", retry.Route);
+        Assert.AreEqual(1, retry.BatchIndex);
+        Assert.AreEqual(1, retry.ActiveBatches);
+        Assert.AreEqual(0, retry.CompletedBatches);
+        Assert.IsFalse(progress.Any(value => value.StatusMessage.Contains("synthetic-fixture-secret", StringComparison.Ordinal)));
+        Assert.IsFalse(progress.Any(value => value.StatusMessage.Contains("https://synthetic.invalid", StringComparison.Ordinal)));
     }
 
     [TestMethod]

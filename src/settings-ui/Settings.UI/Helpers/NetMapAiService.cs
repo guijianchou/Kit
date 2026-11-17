@@ -195,7 +195,12 @@ public static class NetMapAiService
     /// Classifies the latest MTR trace through the shared AI Hub engine on the lightweight
     /// "route-analysis" chain with a single inline instruction.
     /// </summary>
-    public static async Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(CancellationToken cancellationToken = default)
+    public static Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(CancellationToken cancellationToken = default) =>
+        AnalyzeRouteAsync(null, cancellationToken);
+
+    public static async Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(
+        IProgress<AiTaskProgress>? progress,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -226,13 +231,20 @@ public static class NetMapAiService
         }
 
         bool isChinese = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-        return await AnalyzeRouteAsync(traceData, AiHubEngine.Current, isChinese, cancellationToken).ConfigureAwait(false);
+        return await AnalyzeRouteAsync(traceData, AiHubEngine.Current, isChinese, progress, cancellationToken).ConfigureAwait(false);
     }
+
+    internal static Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(
+        NetMapMtrTraceData traceData,
+        IAiTaskEngine engine,
+        bool isChinese,
+        CancellationToken cancellationToken = default) => AnalyzeRouteAsync(traceData, engine, isChinese, null, cancellationToken);
 
     internal static async Task<NetMapAiAnalysisResponse> AnalyzeRouteAsync(
         NetMapMtrTraceData traceData,
         IAiTaskEngine engine,
         bool isChinese,
+        IProgress<AiTaskProgress>? progress,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -260,7 +272,7 @@ public static class NetMapAiService
                     TimeoutSeconds = AnalysisTimeoutSeconds,
                     RouteTimeoutSeconds = AnalysisRouteTimeoutSeconds,
                     InlineInstructions = GetRouteInstruction(isChinese),
-                    Progress = new RouteAnalysisProgress(analysisId, stopwatch),
+                    Progress = new RouteAnalysisProgress(analysisId, stopwatch, progress),
                 },
                 cancellationToken).ConfigureAwait(false);
 
@@ -339,18 +351,23 @@ public static class NetMapAiService
         _ => NetMapViewModel.Text("AiCheckFailed"),
     };
 
-    private sealed class RouteAnalysisProgress(string analysisId, Stopwatch stopwatch) : IProgress<AiTaskProgress>
+    private sealed class RouteAnalysisProgress(string analysisId, Stopwatch stopwatch, IProgress<AiTaskProgress>? progress) : IProgress<AiTaskProgress>
     {
         public void Report(AiTaskProgress value)
         {
             // StatusMessage may come from an engine/provider; never persist arbitrary text.
             string stage = value.Stage switch
             {
-                "Prepare" or "Queue" or "Execute" or "Route" or "Failover" or "Validate" => value.Stage,
+                "Prepare" or "Queue" or "Execute" or "Route" or "Failover" or "Validate" or "Failed" or "Cancelled" => value.Stage,
                 _ => "Other",
             };
             string diagnostic = stage == "Route" ? FormatRouteDiagnostic(value.StatusMessage) : string.Empty;
             Logger.LogInfo($"NetMap AI progress: id={analysisId}, stage={stage}, batches={value.CompletedBatches}/{value.TotalBatches}, elapsedMs={stopwatch.ElapsedMilliseconds}{(diagnostic.Length > 0 ? ", " + diagnostic : string.Empty)}");
+            progress?.Report(value with
+            {
+                StatusMessage = string.Empty,
+                ElapsedMilliseconds = Math.Max(value.ElapsedMilliseconds, stopwatch.ElapsedMilliseconds),
+            });
         }
     }
 

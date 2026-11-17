@@ -115,7 +115,7 @@ internal sealed class KernelFixture : IDisposable
 
     internal void AssertChildrenExited()
     {
-        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(Path.Combine(Root, "children.json")));
+        using JsonDocument document = ReadChildrenSnapshot(Path.Combine(Root, "children.json"));
         foreach (JsonElement value in document.RootElement.EnumerateArray())
         {
             try
@@ -126,6 +126,25 @@ internal sealed class KernelFixture : IDisposable
             catch (ArgumentException)
             {
                 // Windows already reaped the terminated synthetic process.
+            }
+        }
+    }
+
+    private static JsonDocument ReadChildrenSnapshot(string path)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                // The child manifest is atomically published after its writer closes.
+                // Allow scanner handles and retry sharing locks without relaxing JSON
+                // validation or the assertion that every descendant has already exited.
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                return JsonDocument.Parse(stream);
+            }
+            catch (IOException exception) when (attempt < 10 && unchecked((uint)exception.HResult) is 0x80070020u or 0x80070021u)
+            {
+                Thread.Sleep(50);
             }
         }
     }
@@ -144,7 +163,7 @@ internal sealed class KernelFixture : IDisposable
             string childrenPath = Path.Combine(root, "children.json");
             if (File.Exists(childrenPath))
             {
-                using JsonDocument children = JsonDocument.Parse(File.ReadAllText(childrenPath));
+                using JsonDocument children = ReadChildrenSnapshot(childrenPath);
                 foreach (JsonElement value in children.RootElement.EnumerateArray())
                 {
                     try

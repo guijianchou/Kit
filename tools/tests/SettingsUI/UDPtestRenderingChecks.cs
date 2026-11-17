@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -11,6 +13,8 @@ using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Kit.Settings.UI.Views;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using ShapePath = Microsoft.UI.Xaml.Shapes.Path;
@@ -41,6 +45,7 @@ internal static class UDPtestRenderingChecks
         }
 
         Require(page.IsLoaded && canvas.ActualWidth > 0 && canvas.ActualHeight > 0, "The disabled health chart did not complete layout.");
+        await CheckCachedRows(page, report);
         await CheckHistoryDirection(canvas);
         var line = viewModel.Lines[0];
         viewModel.SelectedLine = line;
@@ -118,6 +123,188 @@ internal static class UDPtestRenderingChecks
         await DrainLowPriority();
         File.AppendAllText(report, "UDPtest rendering: hidden sampling, deferred activation, one batch, bounded history, window expiry and geometry reuse PASS\n");
         File.AppendAllText(report, "UDPtest status: left-to-right growth, chronological overflow and narrow-width drawing PASS\n");
+    }
+
+    private static async Task CheckCachedRows(UDPtestPage page, string report)
+    {
+        var viewModel = page.ViewModel;
+        var tcpRows = (ItemsControl)page.FindName("TcpRows");
+        var udpRows = (ItemsControl)page.FindName("UdpRows");
+        var scroll = Descendants(page).OfType<ScrollViewer>()
+            .Single(item => AutomationProperties.GetAutomationId(item) == "PageScrollViewer");
+        var activeIds = (HashSet<string>)Field(viewModel, "_activeLineIds");
+        var additions = new List<UDPtestLineRowViewModel>();
+        var originalSelection = viewModel.SelectedLine;
+        double originalOffset = scroll.VerticalOffset;
+        int collectionChanges = 0;
+        int rowNotifications = 0;
+        int enabledNotifications = 0;
+        NotifyCollectionChangedEventHandler collectionChanged = (_, _) => collectionChanges++;
+        PropertyChangedEventHandler rowChanged = (_, _) => rowNotifications++;
+        PropertyChangedEventHandler enabledChanged = (_, args) =>
+        {
+            if (args.PropertyName == nameof(UDPtestViewModel.IsEnabled)) enabledNotifications++;
+        };
+        try
+        {
+            // Keep the module disabled: these rows and snapshots are in memory only,
+            // with no save/toggle callbacks, probes or identity requests.
+            for (int index = 0; index < 10; index++)
+            {
+                bool isTcp = index < 2;
+                var row = new UDPtestLineRowViewModel(new ProbeLineDefinition(
+                    "render-only-" + Guid.NewGuid().ToString("N"), "Rendering fixture " + index,
+                    isTcp ? ProbeProtocol.Tcp : ProbeProtocol.Udp,
+                    isTcp ? ProbeKind.Https204 : ProbeKind.StunBinding,
+                    "example.invalid", isTcp ? 443 : 3478, TargetLabel: "Rendering fixture " + index));
+                row.StatusVisibility = Visibility.Visible;
+                additions.Add(row);
+                activeIds.Add(row.Id);
+                viewModel.Lines.Add(row);
+                (isTcp ? viewModel.TcpLines : viewModel.UdpLines).Add(row);
+            }
+
+            var tcpLine = additions[0];
+            var udpLine = additions[2];
+            udpLine.IsConfigExpanded = true;
+            udpLine.EditName = "Unsaved rendering draft";
+            udpLine.EditEndpoint = "draft.example.invalid:3478";
+            viewModel.SelectedLine = udpLine;
+            Commit(viewModel, Snapshot(tcpLine.Id, DateTimeOffset.UtcNow, 20));
+            Commit(viewModel, Snapshot(udpLine.Id, DateTimeOffset.UtcNow, 30));
+            await DrainLowPriority();
+            await NextFrame(page);
+            scroll.ChangeView(null, Math.Min(250, scroll.ScrollableHeight), null, true);
+            await NextFrame(page);
+            double savedOffset = scroll.VerticalOffset;
+            Require(savedOffset > 0, "UDPtest fixture did not create scrollable content.");
+
+            var all = viewModel.Lines.ToArray();
+            var tcp = viewModel.TcpLines.ToArray();
+            var udp = viewModel.UdpLines.ToArray();
+            var tcpSource = tcpRows.ItemsSource;
+            var udpSource = udpRows.ItemsSource;
+            var tcpContainers = tcp.Select(row => tcpRows.ContainerFromItem(row)).ToArray();
+            var udpContainers = udp.Select(row => udpRows.ContainerFromItem(row)).ToArray();
+            Require(tcpContainers.Concat(udpContainers).All(item => item is FrameworkElement { ActualHeight: > 0 }),
+                "UDPtest TCP/UDP row containers were not materialized.");
+            Require((tcpRows.ItemsPanelRoot.ChildrenTransitions?.Count ?? 0) == 0 &&
+                (udpRows.ItemsPanelRoot.ChildrenTransitions?.Count ?? 0) == 0,
+                "Cached TCP/UDP rows still replay entrance transitions.");
+
+            viewModel.Lines.CollectionChanged += collectionChanged;
+            viewModel.TcpLines.CollectionChanged += collectionChanged;
+            viewModel.UdpLines.CollectionChanged += collectionChanged;
+            viewModel.PropertyChanged += enabledChanged;
+            foreach (var row in all) row.PropertyChanged += rowChanged;
+            viewModel.RefreshEnabledState();
+            viewModel.SetPageActive(true);
+            Require(enabledNotifications == 0 && rowNotifications == 0 && (int)Field(viewModel, "_snapshotRefreshQueued") == 0,
+                "Unchanged enabled state or duplicate activation refreshed cached UDPtest rows.");
+
+            // A return without new measurements must retain every existing object and
+            // draft. This distinguishes animation replay from a real catalog reload.
+            Require(NavigationService.Navigate(typeof(DashboardPage)), "Could not leave UDPtest.");
+            await WaitForLoaded((FrameworkElement)NavigationService.Frame.Content);
+            Require(NavigationService.Navigate(typeof(UDPtestPage)), "Could not return to UDPtest.");
+            await WaitForLoaded(page);
+            await DrainLowPriority();
+            await NextFrame(page);
+            CheckRetainedRows();
+            Require(rowNotifications == 0 && enabledNotifications == 0 && tcpLine.RecentBars.Count == 1 && udpLine.RecentBars.Count == 1,
+                "An unchanged cached return republished rows or reset measurement history.");
+
+            Require(NavigationService.Navigate(typeof(DashboardPage)), "Could not leave UDPtest for background snapshots.");
+            await WaitForLoaded((FrameworkElement)NavigationService.Frame.Content);
+            Commit(viewModel, Snapshot(tcpLine.Id, DateTimeOffset.UtcNow, 80));
+            Commit(viewModel, Snapshot(udpLine.Id, DateTimeOffset.UtcNow, 40));
+            Commit(viewModel, Snapshot(udpLine.Id, DateTimeOffset.UtcNow, 60));
+            Require(rowNotifications == 0 && tcpLine.AverageRtt == "20 ms" && udpLine.AverageRtt == "30 ms",
+                "Background snapshots changed hidden row controls before activation.");
+
+            Require(NavigationService.Navigate(typeof(UDPtestPage)), "Could not return to pending UDPtest snapshots.");
+            await WaitForLoaded(page);
+            await DrainLowPriority();
+            await NextFrame(page);
+            CheckRetainedRows();
+            Require(rowNotifications > 0 && tcpLine.AverageRtt == "80 ms" && udpLine.AverageRtt == "60 ms" &&
+                tcpLine.RecentBars.Count == 2 && udpLine.RecentBars.Count == 3,
+                "Returning to UDPtest failed to apply the latest background measurements and retained history.");
+            foreach (var entry in new[] { (Rows: tcpRows, Line: tcpLine), (Rows: udpRows, Line: udpLine) })
+            {
+                var container = (FrameworkElement)entry.Rows.ContainerFromItem(entry.Line);
+                Require(Descendants(container).OfType<TextBlock>().Any(text => text.Text == entry.Line.AverageRtt && text.ActualHeight > 0),
+                    "The returned TCP/UDP row did not render its latest measurement.");
+            }
+            Require(Descendants((FrameworkElement)udpRows.ContainerFromItem(udpLine)).OfType<TextBox>()
+                .Any(editor => editor.Text == "Unsaved rendering draft" && editor.ActualHeight > 0),
+                "The returned UDP editor lost its unsaved draft.");
+            File.AppendAllText(report, "UDPtest cached return: same page/VM/collections/TCP+UDP rows/containers, selection/draft/scroll retained, no entrance transition or unchanged row refresh, pending background measurements and history applied without probes PASS\n");
+
+            void CheckRetainedRows()
+            {
+                Require(ReferenceEquals(NavigationService.Frame.Content, page) && ReferenceEquals(page.ViewModel, viewModel),
+                    "Navigation replaced the cached UDPtest page or ViewModel.");
+                Require(ReferenceEquals(tcpRows.ItemsSource, tcpSource) && ReferenceEquals(udpRows.ItemsSource, udpSource) &&
+                    viewModel.Lines.SequenceEqual(all) && viewModel.TcpLines.SequenceEqual(tcp) && viewModel.UdpLines.SequenceEqual(udp) && collectionChanges == 0,
+                    "Navigation rebuilt or reset the TCP/UDP collections.");
+                Require(ReferenceEquals(viewModel.SelectedLine, udpLine) && udpLine.IsConfigExpanded &&
+                    udpLine.EditName == "Unsaved rendering draft" && udpLine.EditEndpoint == "draft.example.invalid:3478" &&
+                    Math.Abs(scroll.VerticalOffset - savedOffset) < 1,
+                    "Returning to UDPtest lost selection, an expanded draft or scroll position.");
+                for (int index = 0; index < tcp.Length; index++)
+                    Require(ReferenceEquals(tcpRows.ContainerFromItem(tcp[index]), tcpContainers[index]), "Returning recreated a TCP row container.");
+                for (int index = 0; index < udp.Length; index++)
+                    Require(ReferenceEquals(udpRows.ContainerFromItem(udp[index]), udpContainers[index]), "Returning recreated a UDP row container.");
+            }
+        }
+        finally
+        {
+            viewModel.Lines.CollectionChanged -= collectionChanged;
+            viewModel.TcpLines.CollectionChanged -= collectionChanged;
+            viewModel.UdpLines.CollectionChanged -= collectionChanged;
+            viewModel.PropertyChanged -= enabledChanged;
+            foreach (var row in viewModel.Lines) row.PropertyChanged -= rowChanged;
+            foreach (var row in additions)
+            {
+                activeIds.Remove(row.Id);
+                viewModel.Lines.Remove(row);
+                viewModel.TcpLines.Remove(row);
+                viewModel.UdpLines.Remove(row);
+            }
+            viewModel.SelectedLine = originalSelection;
+            scroll.ChangeView(null, originalOffset, null, true);
+        }
+    }
+
+    private static async Task WaitForLoaded(FrameworkElement element)
+    {
+        if (element.IsLoaded) return;
+        var loaded = new TaskCompletionSource<bool>();
+        RoutedEventHandler handler = (_, _) => loaded.TrySetResult(true);
+        element.Loaded += handler;
+        try { await loaded.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+        finally { element.Loaded -= handler; }
+    }
+
+    private static async Task NextFrame(FrameworkElement element)
+    {
+        element.UpdateLayout();
+        var rendered = new TaskCompletionSource<bool>();
+        EventHandler<object> handler = (_, _) => rendered.TrySetResult(true);
+        CompositionTarget.Rendering += handler;
+        try { await rendered.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+        finally { CompositionTarget.Rendering -= handler; }
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            yield return child;
+            foreach (var descendant in Descendants(child)) yield return descendant;
+        }
     }
 
     private static async Task CheckHistoryDirection(Canvas host)

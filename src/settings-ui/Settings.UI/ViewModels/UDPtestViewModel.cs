@@ -202,8 +202,12 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RefreshEnabledState()
         {
+            bool previousEnabled = IsEnabled;
             _isEnabled = _generalSettingsRepository.SettingsConfig.Enabled.UDPtest;
-            OnPropertyChanged(nameof(IsEnabled));
+            if (previousEnabled != IsEnabled)
+            {
+                OnPropertyChanged(nameof(IsEnabled));
+            }
 
             if (!IsEnabled)
             {
@@ -227,7 +231,7 @@ namespace Kit.Settings.UI.ViewModels
                 CanStart = _state == MonitorRunState.Stopped;
                 CanStop = _state == MonitorRunState.Running;
                 CanClear = _state == MonitorRunState.Stopped;
-                if (_isPageActive)
+                if (!previousEnabled && _isPageActive)
                 {
                     SignalPoll();
                 }
@@ -236,7 +240,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public void SetPageActive(bool active)
         {
-            if (_disposed)
+            if (_disposed || _isPageActive == active)
             {
                 return;
             }

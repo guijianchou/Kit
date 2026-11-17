@@ -549,10 +549,10 @@
                                         <TextBlock x:Uid="UDPtest_ColLastError" Grid.Column="7" Style="{StaticResource ColumnHeaderStyle}" Text="LAST ERROR" />
                                         <TextBlock x:Uid="UDPtest_ColOn" Grid.Column="8" Style="{StaticResource ColumnHeaderStyle}" HorizontalAlignment="Center" Text="ON" />
                                     </Grid>
-                                    <ItemsControl ItemsSource="{x:Bind ViewModel.TcpLines, Mode=OneWay}" ItemTemplate="{StaticResource TcpLineTemplate}">
+                                    <ItemsControl x:Name="TcpRows" ItemsSource="{x:Bind ViewModel.TcpLines, Mode=OneWay}" ItemTemplate="{StaticResource TcpLineTemplate}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource DynamicListTransitions}" />
+                                                <StackPanel Spacing="0" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>
@@ -591,10 +591,10 @@
                                         <TextBlock x:Uid="UDPtest_ColLastError" Grid.Column="7" Style="{StaticResource ColumnHeaderStyle}" Text="LAST ERROR" />
                                         <TextBlock x:Uid="UDPtest_ColActions" Grid.Column="8" Style="{StaticResource ColumnHeaderStyle}" HorizontalAlignment="Right" Text="ACTIONS" />
                                     </Grid>
-                                    <ItemsControl ItemsSource="{x:Bind ViewModel.UdpLines, Mode=OneWay}" ItemTemplate="{StaticResource UdpLineTemplate}">
+                                    <ItemsControl x:Name="UdpRows" ItemsSource="{x:Bind ViewModel.UdpLines, Mode=OneWay}" ItemTemplate="{StaticResource UdpLineTemplate}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Spacing="0" ChildrenTransitions="{StaticResource DynamicListTransitions}" />
+                                                <StackPanel Spacing="0" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>

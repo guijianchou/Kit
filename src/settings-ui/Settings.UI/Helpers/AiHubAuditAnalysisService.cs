@@ -58,10 +58,9 @@ public static class AiHubAuditAnalysisService
     /// </summary>
     public const int AnalysisTimeoutSeconds = 1_800;
 
-    // Keep related evidence together and avoid repeating the full policy for every 15 events.
-    // The engine still splits at its 96 KB encoded input limit. 50 items per batch allows
-    // balanced multi-core concurrency across LLM routes and cuts total audit latency.
-    public const int AnalysisBatchSize = 50;
+    // Use the engine's effort-based batch size so high-effort analysis receives smaller
+    // batches within the same route deadline. The selected input set remains unchanged.
+    public const int AnalysisBatchSize = 0;
 
     // Each native route owns its retries within this budget; a slow Main can then use Fallback.
     public const int AnalysisRouteTimeoutSeconds = 300;
@@ -242,8 +241,7 @@ public static class AiHubAuditAnalysisService
         private readonly object _sync = new();
         private int _completed;
         private int _total;
-        private string _activityStatus = string.Empty;
-        private string _connectionStatus = string.Empty;
+        private int _failed;
 
         public void Report(AiTaskProgress value)
         {
@@ -251,69 +249,18 @@ public static class AiHubAuditAnalysisService
             {
                 _completed = Math.Max(_completed, value.CompletedBatches);
                 _total = Math.Max(_total, value.TotalBatches);
-                Logger.LogInfo($"AI audit progress: id={analysisId}, stage={value.Stage}, batches={_completed}/{value.TotalBatches}, elapsedMs={stopwatch.ElapsedMilliseconds}");
-                _activityStatus = value.Stage switch
+                _failed = Math.Max(_failed, value.FailedBatches);
+                var current = value with
                 {
-                    "Prepare" => IsChinese ? "正在准备分析" : "Preparing analysis",
-                    "Queue" => IsChinese ? "正在等待分析空位" : "Waiting for analysis capacity",
-                    "Execute" => IsChinese ? "正在请求模型" : "Requesting model analysis",
-                    "Validate" => IsChinese ? "已验证批次结果" : "Batch results validated",
-                    "Failover" => IsChinese ? "正在请求备用模型" : "Requesting fallback analysis",
-                    _ => _activityStatus,
+                    CompletedBatches = _completed,
+                    TotalBatches = _total,
+                    FailedBatches = _failed,
+                    ElapsedMilliseconds = Math.Max(value.ElapsedMilliseconds, stopwatch.ElapsedMilliseconds),
                 };
-                if (value.Stage == "Route" && !string.IsNullOrEmpty(value.StatusMessage))
-                {
-                    Logger.LogInfo($"AI audit id={analysisId}: {value.StatusMessage}");
-                    if (value.StatusMessage.Contains("AI native event:", StringComparison.Ordinal))
-                    {
-                        if (value.StatusMessage.Contains("event=retry,", StringComparison.Ordinal))
-                        {
-                            _connectionStatus = IsChinese ? "连接重试中" : "Retrying connection";
-                        }
-                        else if (value.StatusMessage.Contains("reason=StreamDisconnected", StringComparison.Ordinal))
-                        {
-                            _connectionStatus = IsChinese ? "连接中断，等待恢复" : "Connection interrupted; waiting for recovery";
-                        }
-                        else if (value.StatusMessage.Contains("event=completed,", StringComparison.Ordinal))
-                        {
-                            _connectionStatus = string.Empty;
-                            _activityStatus = IsChinese ? "模型已返回，正在验证结果" : "Model responded; validating results";
-                        }
-                        else if (value.StatusMessage.Contains("event=activity,", StringComparison.Ordinal))
-                        {
-                            _activityStatus = value.StatusMessage.Contains("phase=reasoning,", StringComparison.Ordinal)
-                                ? (IsChinese ? "模型正在分析" : "Model is analyzing")
-                                : value.StatusMessage.Contains("phase=responding,", StringComparison.Ordinal)
-                                    ? (IsChinese ? "模型正在生成结果" : "Model is generating results")
-                                    : value.StatusMessage.Contains("phase=started,", StringComparison.Ordinal)
-                                        ? (IsChinese ? "模型已开始处理" : "Model has started processing")
-                                        : _activityStatus;
-                        }
-                    }
-                }
-
-                if (value.Stage == "Validate")
-                {
-                    _connectionStatus = string.Empty;
-                }
-                else if (value.Stage == "Failover")
-                {
-                    _connectionStatus = IsChinese ? "主链未完成，正在使用备用链路" : "Main did not complete; using fallback";
-                }
-
-                string status = _total > 0
-                    ? (IsChinese
-                        ? $"AI 分析：已完成 {_completed}/{_total} 批，耗时 {stopwatch.Elapsed.TotalMinutes:F1} 分钟"
-                        : $"AI analysis: {_completed}/{_total} batches complete, {stopwatch.Elapsed.TotalMinutes:F1} min elapsed")
-                    : (IsChinese
-                        ? $"AI 分析：耗时 {stopwatch.Elapsed.TotalMinutes:F1} 分钟"
-                        : $"AI analysis: {stopwatch.Elapsed.TotalMinutes:F1} min elapsed");
-                if (!string.IsNullOrEmpty(_activityStatus))
-                {
-                    status += $" · {_activityStatus}";
-                }
-
-                progress?.Report(new(value.Stage, string.IsNullOrEmpty(_connectionStatus) ? status : $"{status} · {_connectionStatus}", _completed, _total));
+                string stage = value.Stage is "Prepare" or "Queue" or "Execute" or "Route" or "Failover" or "Validate" or "Failed" or "Cancelled" ? value.Stage : "Other";
+                string diagnostic = NetMapAiService.FormatRouteDiagnostic(value.StatusMessage);
+                Logger.LogInfo($"AI audit progress: id={analysisId}, stage={stage}, batches={_completed}/{_total}, failed={_failed}, active={value.ActiveBatches}, queued={value.QueuedBatches}, elapsedMs={current.ElapsedMilliseconds}{(diagnostic.Length > 0 ? ", " + diagnostic : string.Empty)}");
+                progress?.Report(current with { StatusMessage = AiTaskProgressText.Summary(current, IsChinese) });
             }
         }
     }

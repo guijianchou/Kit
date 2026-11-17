@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Kit.AiHub.Contract;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
@@ -229,6 +230,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private bool onlineLookup;
     private CancellationTokenSource? updateCancellation;
     private CancellationTokenSource? aiCheckCancellation;
+    private IProgress<AiTaskProgress>? aiCheckProgress;
+    private AiTaskProgress? aiProgress;
     private bool isUpdating;
     private double updateProgress;
     private string updateStatus = string.Empty;
@@ -245,7 +248,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         Func<CancellationToken, Task<NetMapAiAnalysisResponse>>? analyzeRoute = null)
     {
         dispatcher = DispatcherQueue.GetForCurrentThread();
-        this.analyzeRoute = analyzeRoute ?? NetMapAiService.AnalyzeRouteAsync;
+        this.analyzeRoute = analyzeRoute ?? (token => NetMapAiService.AnalyzeRouteAsync(aiCheckProgress, token));
         var settingsUtils = SettingsUtils.Default;
         general = generalSettingsRepository ?? SettingsRepository<GeneralSettings>.GetInstance(settingsUtils);
         _moduleSettingsRepository = moduleSettingsRepository ?? SettingsRepository<NetMapSettings>.GetInstance(settingsUtils);
@@ -266,7 +269,17 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     public NetMapCard Direct => new("Direct", snapshot.Direct, snapshot.Running);
 
-    public NetMapCard Proxy => new("Proxy", snapshot.Proxy, snapshot.Running, isAiChecking ? Text("AiAnalyzing") : aiRoute, aiRouteSummary, aiRouteDetails);
+    public NetMapCard Proxy
+    {
+        get
+        {
+            bool isChinese = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            return new("Proxy", snapshot.Proxy, snapshot.Running,
+                isAiChecking ? (aiProgress is null ? Text("AiAnalyzing") : AiTaskProgressText.Compact(aiProgress, isChinese)) : aiRoute,
+                isAiChecking ? (aiProgress is null ? null : AiTaskProgressText.Summary(aiProgress, isChinese)) : aiRouteSummary,
+                isAiChecking ? null : aiRouteDetails);
+        }
+    }
 
     public bool IsAiChecking => isAiChecking;
 
@@ -543,6 +556,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     {
         var source = aiCheckCancellation;
         aiCheckCancellation = null;
+        aiCheckProgress = null;
+        aiProgress = null;
         try
         {
             source?.Cancel();
@@ -580,6 +595,15 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         aiCheckCancellation = source;
         var token = source.Token;
         long generation = snapshot.Generation;
+        aiProgress = null;
+        aiCheckProgress = new Progress<AiTaskProgress>(update => dispatcher.TryEnqueue(() =>
+        {
+            if (CanPublishAiResult(source, generation, token))
+            {
+                aiProgress = update;
+                OnPropertyChanged(nameof(Proxy));
+            }
+        }));
         Message = string.Empty;
         isAiChecking = true;
         OnPropertyChanged(nameof(IsAiChecking));
@@ -634,6 +658,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
                 }
 
                 aiCheckCancellation = null;
+                aiCheckProgress = null;
+                aiProgress = null;
                 isAiChecking = false;
                 OnPropertyChanged(nameof(IsAiChecking));
                 OnPropertyChanged(nameof(CanAiCheck));

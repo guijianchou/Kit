@@ -510,6 +510,10 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             AiTaskResult<TOutput>? firstFailure = null;
             int completed = 0;
             int responseCharacters = 0;
+            object progressLock = new();
+            var activeBatches = new bool[batches.Count];
+            var finishedBatches = new bool[batches.Count];
+            var failedBatches = new bool[batches.Count];
             async Task<AiTaskResult<TOutput>> ExecuteBatchAsync(List<PreparedItem> batch, int batchIndex)
             {
                 bool acquired = false;
@@ -517,30 +521,108 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 string route = "Main";
                 AiTargetSettings usedTarget = main;
                 AiRouteDiagnostics? routeDiagnostics = null;
+                string activity = "queued";
+                int? retryCount = null;
+                long queueMilliseconds = 0;
+                void ReportBatch(string stage, string message = "", bool? active = null, bool finished = false, bool failed = false)
+                {
+                    lock (progressLock)
+                    {
+                        if (active.HasValue)
+                        {
+                            activeBatches[batchIndex] = active.Value;
+                        }
+
+                        if (finished)
+                        {
+                            finishedBatches[batchIndex] = true;
+                            failedBatches[batchIndex] = failed;
+                            activeBatches[batchIndex] = false;
+                        }
+
+                        ReportProgress(new AiTaskProgress(stage, message, Volatile.Read(ref completed), batches.Count)
+                        {
+                            FailedBatches = failedBatches.Count(value => value),
+                            ActiveBatches = activeBatches.Count(value => value),
+                            QueuedBatches = Enumerable.Range(0, batches.Count).Count(index => !finishedBatches[index] && !activeBatches[index]),
+                            BatchIndex = batchIndex + 1,
+                            Route = route,
+                            Activity = activity,
+                            RetryCount = retryCount,
+                            ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                            QueueElapsedMilliseconds = queueMilliseconds,
+                        });
+                    }
+                }
+
                 void ReportDiagnostic(string message)
                 {
-                    try
+                    // These are the dispatcher's bounded, sanitized event descriptions,
+                    // never raw model output. Hosts consume typed progress fields.
+                    lock (progressLock)
                     {
-                        ReportProgress(new AiTaskProgress("Route", $"batch={batchIndex + 1}/{batches.Count}, {message}", Volatile.Read(ref completed), batches.Count));
+                        if (message.Contains("event=retry,", StringComparison.Ordinal))
+                        {
+                            activity = "retrying";
+                            const string marker = "retryAttempt=";
+                            int start = message.IndexOf(marker, StringComparison.Ordinal);
+                            if (start >= 0 && int.TryParse(message.AsSpan(start + marker.Length).ToString().Split(',')[0],
+                                NumberStyles.None, CultureInfo.InvariantCulture, out int attempt) && attempt > 0)
+                            {
+                                retryCount = Math.Max(retryCount ?? 0, attempt);
+                            }
+                        }
+                        else if (message.Contains("phase=reasoning,", StringComparison.Ordinal))
+                        {
+                            activity = "reasoning";
+                        }
+                        else if (message.Contains("phase=responding,", StringComparison.Ordinal))
+                        {
+                            activity = "responding";
+                        }
+                        else if (message.Contains("event=completed,", StringComparison.Ordinal))
+                        {
+                            activity = "validating";
+                        }
+                        else if (message.Contains("event=turn.failed,", StringComparison.Ordinal))
+                        {
+                            activity = "failed";
+                        }
+
+                        ReportBatch("Route", $"batch={batchIndex + 1}/{batches.Count}, {message}");
                     }
-                    catch (Exception)
+                }
+
+                async Task AcquireBatchSlotAsync()
+                {
+                    activity = "queued";
+                    long queuedAt = Stopwatch.GetTimestamp();
+                    long previousQueueMilliseconds = queueMilliseconds;
+                    void Queued()
                     {
-                        // Observability must not change a batch's result or cancellation.
+                        queueMilliseconds = previousQueueMilliseconds + (long)Stopwatch.GetElapsedTime(queuedAt).TotalMilliseconds;
+                        ReportBatch("Queue", active: false);
                     }
+
+                    Queued();
+                    await AcquireSlotAsync(token, Queued).ConfigureAwait(false);
+                    acquired = true;
+                    queueMilliseconds = previousQueueMilliseconds + (long)Stopwatch.GetElapsedTime(queuedAt).TotalMilliseconds;
+                    activity = "waiting";
+                    ReportBatch("Execute", active: true);
                 }
 
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    ReportProgress(new AiTaskProgress("Queue", string.Empty, Volatile.Read(ref completed), batches.Count));
-                    await AcquireSlotAsync(token).ConfigureAwait(false);
-                    acquired = true;
+                    await AcquireBatchSlotAsync().ConfigureAwait(false);
                     if (!IsEnabled)
                     {
+                        activity = "failed";
+                        ReportBatch("Failed", finished: true, failed: true);
                         return Failure<TOutput>(AiErrorCode.HubDisabled, stopwatch);
                     }
 
-                    ReportProgress(new AiTaskProgress("Execute", string.Empty, Volatile.Read(ref completed), batches.Count));
                     ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}, fallbackAvailable={fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl)}");
                     string prompt = prefix + SerializeBatch(batch);
                     KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, routeTimeoutSeconds,
@@ -551,7 +633,17 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     {
                         token.ThrowIfCancellationRequested();
                         ReportDiagnostic($"AI batch failover: reason={execution.ErrorCode}, from=Main, to=Fallback");
-                        ReportProgress(new AiTaskProgress("Failover", string.Empty, Volatile.Read(ref completed), batches.Count));
+                        // A fallback is a new attempt, after the main process tree has
+                        // exited. Let other queued requests use the released capacity.
+                        ReleaseSlot();
+                        acquired = false;
+                        route = "Fallback";
+                        usedTarget = fallback;
+                        routeDiagnostics = null;
+                        retryCount = null;
+                        activity = "waiting";
+                        ReportBatch("Failover", active: false);
+                        await AcquireBatchSlotAsync().ConfigureAwait(false);
                         execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, fallback, prompt, routeTimeoutSeconds,
                             ReportDiagnostic, token).ConfigureAwait(false);
                         await RecordRouteAsync(execution, "Fallback").ConfigureAwait(false);
@@ -564,6 +656,9 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         AiErrorCode code = execution.ErrorCode == AiErrorCode.Cancelled ? RequestCancellationCode() : execution.ErrorCode;
                         var failure = Failure<TOutput>(code, stopwatch, code == execution.ErrorCode ? execution.ErrorMessage : null, routeDiagnostics, route, usedTarget.Model);
                         Interlocked.CompareExchange(ref firstFailure, failure, null);
+                        bool cancelled = execution.ErrorCode == AiErrorCode.Cancelled && code != AiErrorCode.Timeout;
+                        activity = cancelled ? "cancelled" : "failed";
+                        ReportBatch(cancelled ? "Cancelled" : "Failed", finished: true, failed: !cancelled);
                         ReportDiagnostic($"AI batch failed: code={execution.ErrorCode}");
                         if (!options.AllowPartialResults || execution.ErrorCode is AiErrorCode.PolicyViolation or AiErrorCode.InvalidConfiguration
                             or AiErrorCode.KernelNotInstalled or AiErrorCode.HubDisabled or AiErrorCode.HostUnavailable)
@@ -596,12 +691,19 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         throw new InvalidOperationException("The task output did not pass validation.");
                     }
 
-                    int count = Interlocked.Increment(ref completed);
-                    ReportProgress(new AiTaskProgress("Validate", string.Empty, count, batches.Count));
+                    lock (progressLock)
+                    {
+                        Interlocked.Increment(ref completed);
+                        activity = "validating";
+                        ReportBatch("Validate", finished: true);
+                    }
                     return AiTaskResult.Success(output, string.IsNullOrWhiteSpace(execution.UsedModel) ? usedTarget.Model : execution.UsedModel, route, stopwatch.Elapsed);
                 }
                 catch (OperationCanceledException)
                 {
+                    bool timedOut = RequestCancellationCode() == AiErrorCode.Timeout;
+                    activity = timedOut ? "failed" : "cancelled";
+                    ReportBatch(timedOut ? "Failed" : "Cancelled", finished: true, failed: timedOut);
                     ReportDiagnostic($"AI batch cancelled: callerCancelled={cancellationToken.IsCancellationRequested}, taskCancelled={token.IsCancellationRequested}");
                     return Failure<TOutput>(RequestCancellationCode(), stopwatch, diagnostics: (routeDiagnostics ?? new()) with
                     {
@@ -615,6 +717,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         $"The native response failed validation at '{validationStage}'. No rejected output was applied.",
                         (routeDiagnostics ?? new()) with { Phase = validationStage, Reason = "PolicyViolation" }, route, usedTarget.Model);
                     Interlocked.CompareExchange(ref firstFailure, failure, null);
+                    activity = "failed";
+                    ReportBatch("Failed", finished: true, failed: true);
                     ReportDiagnostic($"AI batch rejected: phase={validationStage}, exception={ex.GetType().Name}");
                     if (!options.AllowPartialResults || validationStage == "response-limit")
                     {
@@ -664,11 +768,18 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 }
             }
 
-            // Bound each request's queue footprint so a large audit cannot enqueue every
-            // batch ahead of later plugin requests. Result indexes still preserve input order.
+            // A bulk request must leave one configured slot available to another task.
+            // Native Codex/Pi processes still run concurrently up to the global limit;
+            // one audit cannot hold all of them through long main/fallback attempts.
+            int requestConcurrency = Math.Clamp(config.MaxConcurrentAnalysis, 1, 4);
+            if (batches.Count > 1 && requestConcurrency > 1)
+            {
+                requestConcurrency--;
+            }
+
             var results = new AiTaskResult<TOutput>[batches.Count];
             await Parallel.ForEachAsync(Enumerable.Range(0, batches.Count),
-                new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(config.MaxConcurrentAnalysis, 1, 4) },
+                new ParallelOptions { MaxDegreeOfParallelism = requestConcurrency },
                 async (index, _) => results[index] = await ExecuteBatchAsync(batches[index], index).ConfigureAwait(false)).ConfigureAwait(false);
 
             // An explicit stop must not be turned into a partial audit or hidden by an
@@ -807,7 +918,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         }
     }
 
-    private async Task AcquireSlotAsync(CancellationToken token)
+    private async Task AcquireSlotAsync(CancellationToken token, Action? reportWaiting = null)
     {
         LinkedListNode<object> waiter;
         lock (_schedulerLock)
@@ -838,7 +949,14 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     changed = _capacityChanged.Task;
                 }
 
-                await changed.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    await changed.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                }
+                catch (TimeoutException)
+                {
+                    reportWaiting?.Invoke();
+                }
             }
         }
         finally

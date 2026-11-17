@@ -1,6 +1,7 @@
 namespace Kit.AiHub.UnitTests;
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -58,13 +59,17 @@ public sealed class ConcurrentTaskTests
         using EventWaitHandle auditGate = CreateGate(fixture, "audit");
         using EventWaitHandle optimizationGate = CreateGate(fixture, "optimization");
         using var auditCancellation = new CancellationTokenSource();
-        Task<AiTaskResult<AiTaskReport>> audit = Run(engine, "audit", "audit", cancellationToken: auditCancellation.Token);
+        var auditProgress = new ConcurrentQueue<AiTaskProgress>();
+        Task<AiTaskResult<AiTaskReport>> audit = Run(engine, "audit", "audit", cancellationToken: auditCancellation.Token,
+            progress: new ImmediateProgress(auditProgress.Enqueue));
         Task<AiTaskResult<AiTaskReport>> optimization = Run(engine, "optimization", "optimization");
 
         await Task.WhenAll(fixture.WaitForFileAsync("kit-gate-audit.ready"), fixture.WaitForFileAsync("kit-gate-optimization.ready"));
         auditCancellation.Cancel();
         AiTaskResult<AiTaskReport> cancelled = await audit.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.AreEqual(AiErrorCode.Cancelled, cancelled.ErrorCode);
+        Assert.IsTrue(auditProgress.Any(value => value.Stage == "Cancelled" && value.Activity == "cancelled"));
+        Assert.IsTrue(auditProgress.All(value => value.FailedBatches == 0), "Caller cancellation is not a failed analysis batch.");
         Assert.IsFalse(IsGateProcessRunning(fixture, "audit"));
         Assert.IsFalse(optimization.IsCompleted);
         Assert.IsTrue(IsGateProcessRunning(fixture, "optimization"));
@@ -123,6 +128,75 @@ public sealed class ConcurrentTaskTests
         Assert.IsTrue(results.All(result => result.CompletedBatches == 3));
         Assert.AreEqual(6, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
         Assert.AreEqual(2, MaximumConcurrentProcesses(fixture));
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task SmallTaskStartsWhileTheEarlierBulkRequestIsStillBlocked(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using TaskAiEngine engine = await CreateEngineAsync(fixture, kernel);
+        using EventWaitHandle auditGate = CreateGate(fixture, "audit");
+        using EventWaitHandle optimizationGate = CreateGate(fixture, "optimization");
+        using var cancellation = new CancellationTokenSource();
+        Task<AiTaskResult<AiTaskReport>> audit = Run(engine, "audit", "audit", records: 3, cancellationToken: cancellation.Token);
+        await fixture.WaitForFileAsync("kit-gate-audit.ready");
+        Task<AiTaskResult<AiTaskReport>> optimization = Run(engine, "optimization", "optimization", cancellationToken: cancellation.Token);
+        try
+        {
+            await fixture.WaitForFileAsync("kit-gate-optimization.ready");
+            Assert.IsFalse(audit.IsCompleted, "The bulk task remains blocked; the later task must use the reserved slot.");
+            Assert.IsTrue(IsGateProcessRunning(fixture, "audit"));
+            optimizationGate.Set();
+            Assert.IsTrue((await optimization.WaitAsync(TimeSpan.FromSeconds(10))).IsSuccess);
+            Assert.IsFalse(audit.IsCompleted);
+            auditGate.Set();
+            Assert.IsTrue((await audit.WaitAsync(TimeSpan.FromSeconds(15))).IsSuccess);
+            Assert.AreEqual(2, MaximumConcurrentProcesses(fixture));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            auditGate.Set();
+            optimizationGate.Set();
+            await Task.WhenAll(audit, optimization);
+        }
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task FallbackQueuesBehindAnAlreadyWaitingIndependentTask(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using TaskAiEngine engine = await CreateEngineAsync(fixture, kernel, fallback: true);
+        new AiHubSettingsStore(fixture.Root).Update(config => config.MaxConcurrentAnalysis = 1);
+        using EventWaitHandle auditGate = CreateGate(fixture, "audit");
+        using EventWaitHandle optimizationGate = CreateGate(fixture, "optimization");
+        using var cancellation = new CancellationTokenSource();
+        Task<AiTaskResult<AiTaskReport>> audit = Run(engine, "audit", "audit", routeTimeoutSeconds: 3, cancellationToken: cancellation.Token);
+        await fixture.WaitForFileAsync("kit-gate-audit.ready");
+        Task<AiTaskResult<AiTaskReport>> optimization = Run(engine, "optimization", "optimization", cancellationToken: cancellation.Token);
+        try
+        {
+            await fixture.WaitForFileAsync("kit-gate-optimization.ready");
+            Assert.IsFalse(audit.IsCompleted, "Fallback must queue behind the task already waiting for capacity.");
+            Assert.AreEqual(2, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+            optimizationGate.Set();
+            var results = await Task.WhenAll(audit, optimization).WaitAsync(TimeSpan.FromSeconds(15));
+            Assert.IsTrue(results.All(result => result.IsSuccess));
+            Assert.AreEqual("Fallback", results[0].UsedRoute);
+            Assert.AreEqual("Main", results[1].UsedRoute);
+            Assert.AreEqual(1, MaximumConcurrentProcesses(fixture));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            auditGate.Set();
+            optimizationGate.Set();
+            await Task.WhenAll(audit, optimization);
+        }
     }
 
     [TestMethod]

@@ -69,3 +69,13 @@
 1. [已完成] 最终 3.5.1 x64 Release 单节点构建 exit 0，30 warnings / 0 errors；单测 1,942 通过、1 项环境跳过。修复 Release 首次显示 29 DIP 布局位移后，Settings 311 项及交付目录内 10 个页面场景通过。
 2. [已完成] 使用 Stage-Release.ps1 生成 bin/release/3.5.1；1,060 个文件、53 个自有二进制版本、9 份依赖清单/2,137 项资产、资源及全目录 SHA-256 核验通过，0 PDB。
 3. [已完成] 验证记录及本轮源码/测试/文档纳入本次本地 Git 提交，提交号由 TestResults/Release351/result.json 记录。参考源码、外部 fix.md、构建/测试产物与 .dsh-acl-recovery 不进入提交；不推送、不替换用户安装目录。
+
+## 第三轮实机反馈：UDP 缓存与 AI 调度（2026-11-16）
+
+起点为 3.5.1 / cf6969c。已保存本轮正式日志到 TestResults/ManualFeedback351/20261117T073403Z，保留用户日志及配置。
+
+1. [已完成] 修复 UDP Test 两张缓存列表重复入场动画与无变化通知；中英文真实页面验证行、容器、选择、展开草稿、滚动及后台快照恢复。
+2. [已完成] 修复单个 AI 审计占满全局容量、备用线路持续占槽；用模拟 Codex/Pi 协议的独立子进程验证跨任务并发、排队公平、取消和总并发上限。AI 核心最终 524 项通过、0 失败、1 项环境跳过。
+3. [已完成] 恢复按 reasoning effort 分批，向 AIHub/NetMap 显示类型化的排队、等待响应、重试、失败及耗时，保持成功数语义；NetMap 中英文布局及迟到进度拒绝通过。
+4. [已完成] 实机其他插件/Settings 日志未发现 Error/Warning 或未处理崩溃；可选事件通道异常已处理。不能将本地调度修复等同于远端超时/断流已修好。
+5. [已完成] 最终全方案 x64 Debug 构建通过；AI/Settings/UDPtest 最终 882 项通过、0 失败、1 项环境跳过，模块页与 NetMap 四次中英文回归通过，配置恢复及产物哈希核验完成。实机入口 x64/Debug/Kit.exe，版本保持 3.5.1.0；本轮尚未提交或更新历史 Release。详见 review-manual-feedback-351.md 和 TestResults/ManualFeedback351/result.json。

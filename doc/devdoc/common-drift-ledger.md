@@ -4,7 +4,7 @@
 
 ## 当前基线
 
-本次 Kit 3.5.1 提交前快照；起点为 Kit 3.5.0、HEAD `2cb5ff9b0c9bd57dbd0bc24afb199c05ec822eb4`，内容包含已纳入暂存的新增文件。摘要的 kit_head 是生成时的起点提交，不是随后生成的交付提交号。Source 的 `Version=0.0.1`、`ReleaseTrainVersion=0.102`、空 `SourceCommit` 是发布源码内的实际字段；没有独立 Git 提交号。使用文件哈希追溯参考子集，不借用外层 Kit HEAD。
+本次为 2026-11-17 Kit 3.5.1 实机反馈修复后的工作树快照，起点 HEAD `cf6969cf454b6d6826143d55320fa958cbdbe3f5`；包含 AI 调度、进度和对应测试的本地修改。摘要的 kit_head 是生成时的起点提交，不表示这些修改已提交。Source 的 `Version=0.0.1`、`ReleaseTrainVersion=0.102`、空 `SourceCommit` 是发布源码内的实际字段；没有独立 Git 提交号。使用文件哈希追溯参考子集，不借用外层 Kit HEAD。
 
 | 统计 | 文件数 |
 |---|---:|

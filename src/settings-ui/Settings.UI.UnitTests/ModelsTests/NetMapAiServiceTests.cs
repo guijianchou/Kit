@@ -196,6 +196,36 @@ public class NetMapAiServiceTests
     }
 
     [TestMethod]
+    public async Task AnalyzeRouteAsync_ForwardsStructuredWaitAndRetryProgressWithoutProviderText()
+    {
+        var updates = new List<AiTaskProgress>();
+        var engine = new CapturingEngine
+        {
+            Progress = new AiTaskProgress("Route", "provider-private-text", 0, 1)
+            {
+                Activity = "retrying", Route = "Fallback", BatchIndex = 1,
+                ActiveBatches = 1, RetryCount = 3, ElapsedMilliseconds = 24000, QueueElapsedMilliseconds = 20000,
+            },
+        };
+        await NetMapAiService.AnalyzeRouteAsync(SyntheticTrace(), engine, false, new ImmediateProgress(updates.Add));
+        Assert.AreEqual(1, updates.Count);
+        AiTaskProgress update = updates[0];
+        Assert.AreEqual(string.Empty, update.StatusMessage);
+        Assert.AreEqual("retrying", update.Activity);
+        Assert.AreEqual("Fallback", update.Route);
+        Assert.AreEqual(1, update.BatchIndex);
+        Assert.AreEqual(1, update.ActiveBatches);
+        Assert.AreEqual(3, update.RetryCount);
+        Assert.AreEqual(24000L, update.ElapsedMilliseconds);
+        Assert.AreEqual(20000L, update.QueueElapsedMilliseconds);
+    }
+
+    private sealed class ImmediateProgress(Action<AiTaskProgress> report) : IProgress<AiTaskProgress>
+    {
+        public void Report(AiTaskProgress value) => report(value);
+    }
+
+    [TestMethod]
     [DataRow(false, "en-US")]
     [DataRow(true, "zh-CN")]
     public async Task AnalyzeRouteAsync_DispatchesTraceAndSanitizesSuccess(bool isChinese, string language)
@@ -415,6 +445,8 @@ public class NetMapAiServiceTests
 
         public AiTaskOptions Options { get; private set; }
 
+        public AiTaskProgress Progress { get; init; } = new("Execute", "private status must not be logged", 0, 1);
+
         public AiTaskSchema<NetMapMtrTraceData, NetMapAiRouteResult> Schema { get; private set; }
 
         public AiReadiness GetReadiness() => throw new NotSupportedException();
@@ -440,7 +472,7 @@ public class NetMapAiServiceTests
             Inputs = (IReadOnlyList<NetMapMtrTraceData>)(object)items;
             Schema = (AiTaskSchema<NetMapMtrTraceData, NetMapAiRouteResult>)(object)schema;
             Options = options;
-            options?.Progress?.Report(new AiTaskProgress("Execute", "private status must not be logged", 0, 1));
+            options?.Progress?.Report(Progress);
             OnExecute?.Invoke();
             return Task.FromResult((AiTaskResult<TOutput>)(object)Result);
         }

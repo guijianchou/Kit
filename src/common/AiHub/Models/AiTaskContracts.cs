@@ -87,7 +87,18 @@ public sealed class AiTaskOptions
 /// <summary>
 /// Standard execution progress reported back to the plugin.
 /// </summary>
-public sealed record AiTaskProgress(string Stage, string StatusMessage, int CompletedBatches, int TotalBatches);
+public sealed record AiTaskProgress(string Stage, string StatusMessage, int CompletedBatches, int TotalBatches)
+{
+    public int FailedBatches { get; init; }
+    public int ActiveBatches { get; init; }
+    public int QueuedBatches { get; init; }
+    public int? BatchIndex { get; init; }
+    public string Route { get; init; } = string.Empty;
+    public string Activity { get; init; } = string.Empty;
+    public int? RetryCount { get; init; }
+    public long ElapsedMilliseconds { get; init; }
+    public long? QueueElapsedMilliseconds { get; init; }
+}
 
 /// <summary>
 /// Result envelope returned by the AI Hub engine.

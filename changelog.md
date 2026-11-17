@@ -4,6 +4,12 @@
 
 ## English
 
+### 3.5.1 local follow-up (2026-11-17)
+
+- Preserve UDP Test TCP/UDP row containers, selection, editor drafts and scroll position on cached navigation; remove repeated entry transitions and unchanged activation notifications.
+- Reserve capacity for other AI tasks when a bulk analysis runs, and requeue fallback attempts after native process cleanup. Use effort-based audit batches (15 records for max/xhigh), with visible queued/active/failed counts, native retry progress and elapsed time in AI Hub and NetMap.
+- This follow-up is a Debug working-tree build. The earlier Release delivery below predates these fixes; remote provider timeouts/disconnects still require live retesting. See review-manual-feedback-351.md for evidence and validation.
+
 ### 3.5.1 (2026-11-16)
 
 - Preserve Localserver rows, selection, expanded editors and scroll position when returning to the cached page. Present General settings after the initial AI service configuration is ready, with a retry action for read failures.
@@ -955,6 +961,12 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.1 本地跟进（2026-11-17）
+
+- UDP Test 返回缓存页时保留 TCP/UDP 行容器、选择、编辑草稿及滚动位置，取消重复入场动画和无变化激活通知。
+- 多批 AI 分析为其他任务保留容量；原生进程清理后，备用线路重新排队。审计按 effort 分批（max/xhigh 每批 15 条），AI Hub/NetMap 显示排队、进行中、失败、原生重试进度及耗时。
+- 本轮交付为工作树 Debug 版本。下文历史 Release 不含这些修复；远端服务超时/断流仍需在线复测。证据和验收见 review-manual-feedback-351.md。
 
 ### 3.5.1（2026-11-16）
 

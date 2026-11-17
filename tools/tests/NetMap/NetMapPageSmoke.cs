@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Kit.AiHub.Contract;
 using Kit.Settings.UI;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
@@ -489,6 +490,27 @@ internal static class NetMapPageSmoke
             var successful = vm.CheckRouteWithAiAsync();
             Require(vm.IsAiChecking && !button.IsEnabled && vm.Proxy.AiRoute == NetMapViewModel.Text("AiAnalyzing"), "AI check exposes its busy state and prevents another request.");
             await CheckLayout("busy");
+            var liveProgress = (IProgress<AiTaskProgress>)typeof(NetMapViewModel).GetField("aiCheckProgress", PrivateInstance).GetValue(vm);
+            liveProgress.Report(new AiTaskProgress("Queue", "private-provider-text", 0, 1)
+            {
+                Activity = "queued", QueuedBatches = 1, ElapsedMilliseconds = 293717, QueueElapsedMilliseconds = 293717,
+            });
+            await Task.Delay(100);
+            Require(vm.Proxy.AiRoute.Contains("4:53") && (vm.Proxy.AiRoute.Contains("Queued") || vm.Proxy.AiRoute.Contains("排队中")) &&
+                vm.Proxy.AiRouteSummary.Contains("4:53") && !vm.Proxy.AiRouteSummary.Contains("private-provider-text"),
+                "Live queued progress reaches the existing Proxy row and full summary without provider text.");
+            await CheckLayout("queued-progress");
+            liveProgress.Report(new AiTaskProgress("Route", string.Empty, 0, 1)
+            {
+                Activity = "retrying", Route = "Fallback", RetryCount = 2, ActiveBatches = 1,
+                ElapsedMilliseconds = 304000, QueueElapsedMilliseconds = 293717,
+            });
+            await Task.Delay(100);
+            Require((vm.Proxy.AiRoute.Contains("Retrying") || vm.Proxy.AiRoute.Contains("重试中")) &&
+                (vm.Proxy.AiRouteSummary.Contains("Fallback service") || vm.Proxy.AiRouteSummary.Contains("备用服务")) &&
+                (vm.Proxy.AiRouteSummary.Contains("2 retries") || vm.Proxy.AiRouteSummary.Contains("已重试 2 次")),
+                "Observed fallback retry count and elapsed time reach the route summary.");
+            await CheckLayout("retry-progress");
             await vm.CheckRouteWithAiAsync();
             Require(calls == 1, "Repeated AI check cannot dispatch a duplicate request.");
             pending.SetResult(NetMapAiAnalysisResponse.Successful("Fixture route", "Fixture summary", "Fixture details"));
@@ -536,19 +558,40 @@ internal static class NetMapPageSmoke
                     "Truncated IPv6 preserves the complete address in its tooltip.");
                 var detailsButton = FindChild<Button>(proxyCard);
                 var details = (Flyout)detailsButton.Flyout;
-                details.ShowAt(detailsButton);
-                await Task.Delay(150);
-                foreach (var field in new[] { ("EgressIpDetails", ipv6.Identity.Ip), ("AiRouteFullLabel", vm.Proxy.AiRoute),
-                    ("AiRouteFullSummary", vm.Proxy.AiRouteSummary), ("AiRouteFullDetails", vm.Proxy.AiRouteDetails) })
+                var opened = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                void OnOpened(object sender, object args) => opened.TrySetResult();
+                void OnClosed(object sender, object args) => closed.TrySetResult();
+                details.Opened += OnOpened;
+                details.Closed += OnClosed;
+                try
                 {
-                    var text = (TextBlock)FindNamed(details.Content, field.Item1);
-                    Require(text != null && text.IsLoaded && text.Text == field.Item2 && text.TextWrapping == TextWrapping.Wrap &&
-                        text.ActualWidth > 0 && text.ActualWidth <= ((FrameworkElement)details.Content).ActualWidth,
-                        "Opened Details preserves complete, wrapping " + field.Item1 + " at width " + width + ".");
-                }
+                    // A fixed delay can observe the opening/closing animation mid-layout.
+                    // Await the flyout lifecycle before checking or resizing its anchor.
+                    details.ShowAt(detailsButton);
+                    await opened.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                    var content = (FrameworkElement)details.Content;
+                    for (int attempt = 0; attempt < 40 && (!content.IsLoaded || content.ActualWidth <= 0); attempt++) await Task.Delay(25);
+                    foreach (var field in new[] { ("EgressIpDetails", ipv6.Identity.Ip), ("AiRouteFullLabel", vm.Proxy.AiRoute),
+                        ("AiRouteFullSummary", vm.Proxy.AiRouteSummary), ("AiRouteFullDetails", vm.Proxy.AiRouteDetails) })
+                    {
+                        var text = (TextBlock)FindNamed(details.Content, field.Item1);
+                        File.AppendAllText(Path.Combine(Output, "page-smoke.log"),
+                            $"Details layout {width}/{field.Item1}: loaded={text?.IsLoaded}, textMatches={text?.Text == field.Item2}, wrap={text?.TextWrapping}, width={text?.ActualWidth:R}, contentWidth={content.ActualWidth:R}.\n");
+                        Require(text != null && text.IsLoaded && text.Text == field.Item2 && text.TextWrapping == TextWrapping.Wrap &&
+                            text.ActualWidth > 0 && text.ActualWidth <= content.ActualWidth,
+                            "Opened Details preserves complete, wrapping " + field.Item1 + " at width " + width + ".");
+                    }
 
-                details.Hide();
-                await Task.Delay(100);
+                    details.Hide();
+                    await closed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+                }
+                finally
+                {
+                    details.Opened -= OnOpened;
+                    details.Closed -= OnClosed;
+                    details.Hide();
+                }
             }
 
             App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 900));
@@ -563,11 +606,16 @@ internal static class NetMapPageSmoke
 
             pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var cancelled = vm.CheckRouteWithAiAsync();
+            var staleProgress = (IProgress<AiTaskProgress>)typeof(NetMapViewModel).GetField("aiCheckProgress", PrivateInstance).GetValue(vm);
             Require(string.IsNullOrEmpty(vm.Message), "Retry clears the previous AI failure while analyzing.");
             var changed = fixture with { Generation = fixture.Generation + 1, Hops = Array.Empty<HopResult>() };
             Apply(changed);
             await Task.Delay(50);
             Require(requestToken.IsCancellationRequested && !vm.IsAiChecking && vm.AiRoute == null && notice.Visibility == Visibility.Visible && notice.Message == NetMapViewModel.Text("AiRouteChanged"), "Changing route cancels active AI analysis with a visible reason and clears stale results.");
+            staleProgress.Report(new AiTaskProgress("Route", string.Empty, 0, 1) { Activity = "retrying", RetryCount = 99 });
+            await Task.Delay(50);
+            Require(vm.Proxy.AiRoute == null && vm.Proxy.AiRouteSummary == null,
+                "Late progress from the previous route cannot restore a stale analyzing label.");
             pending.SetResult(NetMapAiAnalysisResponse.Successful("Stale route", "Stale summary", "Stale details"));
             await SettleResult(cancelled);
             Require(vm.AiRoute == null && vm.Message == NetMapViewModel.Text("AiRouteChanged"), "A late cancelled result cannot overwrite the new route or its cancellation notice.");

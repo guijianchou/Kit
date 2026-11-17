@@ -34,7 +34,7 @@ public static class DynamicBatcher
 
         int targetSize = effort.ToLowerInvariant() switch
         {
-            "max" => 15,
+            "max" or "xhigh" => 15,
             "high" => 20,
             "low" => 40,
             _ => NormalBatchSize

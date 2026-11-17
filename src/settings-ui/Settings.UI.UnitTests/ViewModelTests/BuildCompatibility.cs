@@ -2849,7 +2849,7 @@ namespace ViewModelTests
                 dispose >= 0 && disposeCancelsAi > dispose,
                 "Disposing the NetMap view model must cancel a running AI route check.");
 
-            StringAssert.Contains(viewModel, "this.analyzeRoute = analyzeRoute ?? NetMapAiService.AnalyzeRouteAsync;");
+            StringAssert.Contains(viewModel, "this.analyzeRoute = analyzeRoute ?? (token => NetMapAiService.AnalyzeRouteAsync(aiCheckProgress, token));");
             StringAssert.Contains(viewModel, "analyzeRoute(source.Token)");
             StringAssert.Contains(viewModel, "catch (OperationCanceledException)");
 

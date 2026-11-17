@@ -11,6 +11,7 @@ public sealed class DynamicBatcherTests
     [DataRow("low", 40, 3)]
     [DataRow("high", 20, 6)]
     [DataRow("max", 15, 7)]
+    [DataRow("xhigh", 15, 7)]
     public void EffortsKeepLargeAuditsWithinBatchLimitsWithoutDroppingRecords(string effort, int maximumBatchSize, int expectedBatchCount)
     {
         int[] records = Enumerable.Range(0, 102).ToArray();

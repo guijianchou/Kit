@@ -55,7 +55,29 @@ jobs:
             '/p:PowerToysSkipCopyOnWriteSdk=true' `
             '/p:PowerToysSkipRunVSTestSdk=true'
           if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
+            $buildExitCode = $LASTEXITCODE
+            $errorLogs = @(Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Filter 'build.debug.x64.errors.log' -File -Recurse -ErrorAction SilentlyContinue)
+            $errorLines = @($errorLogs | ForEach-Object { Get-Content -LiteralPath $_.FullName -ErrorAction SilentlyContinue } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            if ($errorLines.Count -eq 0) {
+              $fullLogs = @(Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Filter 'build.debug.x64.all.log' -File -Recurse -ErrorAction SilentlyContinue)
+              $errorLines = @($fullLogs | ForEach-Object { Select-String -LiteralPath $_.FullName -Pattern 'error [A-Z]+[0-9]+:|error MSB[0-9]+' -ErrorAction SilentlyContinue | ForEach-Object { $_.Line } | Select-Object -Last 30 })
+            }
+            if ($errorLines.Count -eq 0) {
+              $errorLines = @('No MSBuild diagnostic lines were found. Inspect the uploaded build logs.')
+            }
+            Write-Host '::group::MSBuild failure diagnostics'
+            foreach ($line in ($errorLines | Select-Object -Last 80)) {
+              Write-Output $line
+            }
+            Write-Host '::endgroup::'
+            foreach ($line in ($errorLines | Where-Object { $_ -match 'error [A-Z]+[0-9]+:|error MSB[0-9]+' } | Select-Object -Last 10)) {
+              $annotation = $line.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+              Write-Host "::error title=MSBuild diagnostic::$annotation"
+            }
+            if ($env:GITHUB_STEP_SUMMARY) {
+              Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value "### MSBuild failure diagnostics`n````text`n$($errorLines | Select-Object -Last 80 | Out-String)````"
+            }
+            exit $buildExitCode
           }
 
       - name: Run AI Hub core tests

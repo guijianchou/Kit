@@ -101,7 +101,7 @@ Kit.Awake.exe --pid 1234
 | `Core/Manager.cs` | State orchestration & power management |
 | `Core/TrayHelper.cs` | System tray UI management |
 | `Core/Native/Bridge.cs` | Win32 P/Invoke declarations |
-| `Core/Threading/SingleThreadSynchronizationContext.cs` | Threading utilities |
+| `Core/TrayHelper.cs` | Native window message queue for tray-thread work and shutdown |
 
 ## Building
 

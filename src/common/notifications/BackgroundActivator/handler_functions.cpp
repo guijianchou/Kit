@@ -12,6 +12,7 @@ namespace
 }
 
 void dispatch_to_background_handler(std::wstring_view argument)
+try
 {
     winrt::Windows::Foundation::WwwFormUrlDecoder decoder{ argument };
 
@@ -24,4 +25,9 @@ void dispatch_to_background_handler(std::wstring_view argument)
         return;
     }
     found_handler->second(button_id);
+}
+
+catch (...)
+{
+    // Invalid or unsupported activation arguments are ignored at the COM boundary.
 }

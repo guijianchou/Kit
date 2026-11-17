@@ -116,6 +116,28 @@ namespace
         return DefWindowProcW(window, message, wParam, lParam);
     }
 
+    void DumpActivationCandidates(const char* phase, HWND target)
+    {
+        std::cout << "WINDOWS " << phase << "; target=" << target << std::endl;
+        EnumWindows([](HWND candidate, LPARAM) -> BOOL {
+            DWORD processId = 0;
+            GetWindowThreadProcessId(candidate, &processId);
+            if (processId == GetCurrentProcessId())
+            {
+                char className[128]{};
+                GetClassNameA(candidate, className, static_cast<int>(sizeof(className)));
+                const auto style = static_cast<DWORD>(GetWindowLongW(candidate, GWL_STYLE));
+                std::cout << "  hwnd=" << candidate << "; class=" << className
+                          << "; style=0x" << std::hex << style << std::dec
+                          << "; caption_match=" << ((style & WS_CAPTION) != 0)
+                          << "; owner=" << GetWindow(candidate, GW_OWNER)
+                          << "; visible=" << IsWindowVisible(candidate)
+                          << "; iconic=" << IsIconic(candidate) << std::endl;
+            }
+            return TRUE;
+        }, 0);
+    }
+
     void Activate(HWND window, TwoWayPipeMessageIPC& ipc, const char* name,
                   std::optional<std::wstring> target, bool hasIpc, int initialShow, bool nested = false, bool requireCallback = true)
     {
@@ -129,12 +151,17 @@ namespace
         requestReentry = nested;
         observeActivation = true;
         std::cout << "CASE " << name << std::endl;
+        if (initialShow == SW_MINIMIZE) DumpActivationCandidates("before-minimized-activation", window);
         try { open_settings_window(target); }
         catch (...) { observeActivation = false; throw; }
         observeActivation = false;
         Require(!probeTimedOut, "Lock probe timed out during activation callback.");
         Require(!lockViolation, "Activation callback ran while ipc_mutex or settings_launch_mutex was held.");
-        Require(IsWindowVisible(window) && !IsIconic(window), "Existing test window was not restored and shown.");
+        if (!IsWindowVisible(window) || IsIconic(window))
+        {
+            DumpActivationCandidates("after-failed-activation", window);
+            Require(false, "Existing test window was not restored and shown.");
+        }
         if (requireCallback) Require(activationMessages > 0, "No real Win32 activation callback was observed.");
         Require(unexpectedLaunches == 0 && !settings_thread.joinable(), "Existing-window activation entered the process launch path.");
         if (hasIpc)
@@ -157,6 +184,16 @@ int main()
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+
+    // Settings is a GUI process without a console. A console-subsystem harness
+    // otherwise owns an extra captioned top-level window that EnumWindows can
+    // select ahead of the minimized fixture. Redirected stdout/stderr stay open.
+    if (GetConsoleWindow() != nullptr && !FreeConsole())
+    {
+        std::cerr << "FAIL: Could not detach the harness console (error " << GetLastError() << ")." << std::endl;
+        return 2;
+    }
+
     probeRequest.reset(CreateEventW(nullptr, FALSE, FALSE, nullptr));
     probeComplete.reset(CreateEventW(nullptr, TRUE, FALSE, nullptr));
     if (!probeRequest || !probeComplete) return 2;

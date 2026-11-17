@@ -37,6 +37,28 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
 VOID WINAPI ServiceCtrlHandler(DWORD dwCtrl);
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 
+static DWORD RunServiceWorkerAndWait(DWORD parentPid)
+{
+    wil::unique_handle thread(CreateThread(
+        nullptr, 0, ServiceWorkerThread, reinterpret_cast<void*>(static_cast<ULONG_PTR>(parentPid)), 0, nullptr));
+    if (!thread)
+    {
+        return GetLastError();
+    }
+
+    if (WaitForSingleObject(thread.get(), INFINITE) != WAIT_OBJECT_0)
+    {
+        return GetLastError();
+    }
+
+    DWORD exitCode = ERROR_GEN_FAILURE;
+    if (!GetExitCodeThread(thread.get(), &exitCode))
+    {
+        return GetLastError();
+    }
+    return exitCode;
+}
+
 // Entry point for the executable
 int _tmain(int argc, TCHAR* argv[])
 {
@@ -70,14 +92,10 @@ int _tmain(int argc, TCHAR* argv[])
             {
                 return static_cast<int>(GetLastError());
             }
-            HANDLE hThread = CreateThread(
-                nullptr, 0, ServiceWorkerThread, reinterpret_cast<void*>(static_cast<ULONG_PTR>(parentPid)), 0, nullptr);
-
-            // Wait so the process stays alive
-            WaitForSingleObject(hThread, INFINITE);
-            CloseHandle(hThread);
+            const auto exitCode = RunServiceWorkerAndWait(parentPid);
             CloseHandle(g_ServiceStopEvent);
-            return 0;
+            g_ServiceStopEvent = nullptr;
+            return static_cast<int>(exitCode);
         }
         return static_cast<int>(err);
     }
@@ -117,13 +135,12 @@ VOID WINAPI ServiceMain(DWORD, LPTSTR*)
     g_ServiceStatus.dwCurrentState = SERVICE_RUNNING;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
 
-    HANDLE hThread = CreateThread(nullptr, 0, ServiceWorkerThread, nullptr, 0, nullptr);
-    WaitForSingleObject(hThread, INFINITE);
-    CloseHandle(hThread);
+    const auto exitCode = RunServiceWorkerAndWait(0);
 
     CloseHandle(g_ServiceStopEvent);
+    g_ServiceStopEvent = nullptr;
     g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
-    g_ServiceStatus.dwWin32ExitCode = 0;
+    g_ServiceStatus.dwWin32ExitCode = exitCode;
     SetServiceStatus(g_StatusHandle, &g_ServiceStatus);
 }
 
@@ -187,6 +204,21 @@ static DWORD RunServiceWorker(LPVOID lpParam)
 
     const DWORD parentPid = static_cast<DWORD>(reinterpret_cast<ULONG_PTR>(lpParam));
     wil::unique_handle parent(parentPid ? OpenProcess(SYNCHRONIZE, FALSE, parentPid) : nullptr);
+    if (parentPid && !parent)
+    {
+        const auto error = GetLastError();
+        Logger::error(L"[LightSwitchService] Cannot bind parent PID {} (error: {}).", parentPid, error);
+        return error;
+    }
+
+    // Do not initialize settings or apply a theme after an early stop request or
+    // after a parent that was successfully opened has already exited.
+    if (WaitForSingleObject(g_ServiceStopEvent, 0) == WAIT_OBJECT_0 ||
+        (parent && WaitForSingleObject(parent.get(), 0) == WAIT_OBJECT_0))
+    {
+        return ERROR_SUCCESS;
+    }
+
     wil::unique_handle toggleRequests(OpenSemaphoreW(SYNCHRONIZE, FALSE, LIGHT_SWITCH_TOGGLE_REQUEST_SEMAPHORE));
     LightSwitchStateManager stateManager;
     auto& settingsStore = LightSwitchSettings::instance();

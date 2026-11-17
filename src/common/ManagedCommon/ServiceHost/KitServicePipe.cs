@@ -8,6 +8,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -73,7 +74,9 @@ namespace ManagedCommon.ServiceHost
         private readonly string _pipeName;
         private readonly Func<KitPipeRequest, CancellationToken, Task<KitPipeResponse>> _handler;
         private readonly CancellationTokenSource _cts = new();
+        private readonly object _lifecycleLock = new();
         private Task? _listenerTask;
+        private Task? _disposeTask;
 
         public KitServicePipeServer(string moduleKey, Func<KitPipeRequest, CancellationToken, Task<KitPipeResponse>> handler)
         {
@@ -83,7 +86,11 @@ namespace ManagedCommon.ServiceHost
 
         public void Start()
         {
-            _listenerTask = Task.Run(ListenLoopAsync);
+            lock (_lifecycleLock)
+            {
+                ObjectDisposedException.ThrowIf(_disposeTask is not null, this);
+                _listenerTask ??= Task.Run(ListenLoopAsync);
+            }
         }
 
         private async Task ListenLoopAsync()
@@ -96,12 +103,14 @@ namespace ManagedCommon.ServiceHost
                     server = new NamedPipeServerStream(
                         _pipeName,
                         PipeDirection.InOut,
-                        NamedPipeServerStream.MaxAllowedServerInstances,
+                        1,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
 
                     await server.WaitForConnectionAsync(_cts.Token).ConfigureAwait(false);
-                    _ = HandleConnectionAsync(server, _cts.Token);
+
+                    // Serialize short service commands and retain ownership through shutdown.
+                    await HandleConnectionAsync(server, _cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -128,6 +137,9 @@ namespace ManagedCommon.ServiceHost
         {
             // AutoFlush writes an encoding preamble during construction. A BOM can
             // block both pipe peers before either starts reading the first message.
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            deadline.CancelAfter(TimeSpan.FromSeconds(30));
+            ct = deadline.Token;
             using (pipe)
             using (var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true))
             using (var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true })
@@ -136,7 +148,7 @@ namespace ManagedCommon.ServiceHost
                 {
                     while (pipe.IsConnected && !ct.IsCancellationRequested)
                     {
-                        string? line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
+                        string? line = await ReadBoundedLineAsync(reader, ct).ConfigureAwait(false);
                         if (line == null)
                         {
                             break;
@@ -169,16 +181,59 @@ namespace ManagedCommon.ServiceHost
                         await writer.WriteLineAsync(responseJson.AsMemory(), ct).ConfigureAwait(false);
                     }
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception ex)
                 {
                     Logger.LogDebug($"[KitServicePipeServer] Pipe client disconnected: {ex.Message}");
                 }
             }
         }
 
-        public async ValueTask DisposeAsync()
+        internal static async Task<string?> ReadBoundedLineAsync(StreamReader reader, CancellationToken ct)
         {
-            _cts.Cancel();
+            const int maximumCharacters = 1024 * 1024;
+            var line = new StringBuilder();
+            var character = new char[1];
+            while (await reader.ReadAsync(character.AsMemory(), ct).ConfigureAwait(false) != 0)
+            {
+                if (character[0] == '\n')
+                {
+                    return line.ToString().TrimEnd('\r');
+                }
+
+                if (line.Length >= maximumCharacters)
+                {
+                    throw new InvalidDataException("Pipe message exceeds the size limit.");
+                }
+
+                line.Append(character[0]);
+            }
+
+            return line.Length == 0 ? null : line.ToString();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            lock (_lifecycleLock)
+            {
+                _disposeTask ??= Task.Run(DisposeCoreAsync);
+                return new ValueTask(_disposeTask);
+            }
+        }
+
+        private async Task DisposeCoreAsync()
+        {
+            try
+            {
+                _cts.Cancel();
+            }
+            catch (AggregateException ex)
+            {
+                Logger.LogWarning($"[KitServicePipeServer] A cancellation callback failed: {ex.GetType().Name}");
+            }
+
             if (_listenerTask != null)
             {
                 try
@@ -209,7 +264,7 @@ namespace ManagedCommon.ServiceHost
 
         public async Task<KitPipeResponse> SendCommandAsync(string command, string? payloadJson = null, CancellationToken ct = default)
         {
-            using var client = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            using var client = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Identification);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             linkedCts.CancelAfter(_timeout);
 
@@ -233,7 +288,7 @@ namespace ManagedCommon.ServiceHost
             string requestJson = JsonSerializer.Serialize(request, ServicePipeJsonContext.Default.KitPipeRequest);
             await writer.WriteLineAsync(requestJson.AsMemory(), linkedCts.Token).ConfigureAwait(false);
 
-            string? responseLine = await reader.ReadLineAsync(linkedCts.Token).ConfigureAwait(false);
+            string? responseLine = await KitServicePipeServer.ReadBoundedLineAsync(reader, linkedCts.Token).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(responseLine))
             {
                 return KitPipeResponse.Fail("EMPTY_RESPONSE", "Received empty response from service.");

@@ -65,6 +65,24 @@ public sealed class JsonPrimitiveConverter : JsonConverter<object?>
             case int integral:
                 writer.WriteNumberValue(integral);
                 break;
+            case uint integral:
+                writer.WriteNumberValue(integral);
+                break;
+            case ulong integral:
+                writer.WriteNumberValue(integral);
+                break;
+            case short integral:
+                writer.WriteNumberValue(integral);
+                break;
+            case ushort integral:
+                writer.WriteNumberValue(integral);
+                break;
+            case byte integral:
+                writer.WriteNumberValue(integral);
+                break;
+            case sbyte integral:
+                writer.WriteNumberValue(integral);
+                break;
             case double number:
                 writer.WriteNumberValue(number);
                 break;
@@ -78,10 +96,7 @@ public sealed class JsonPrimitiveConverter : JsonConverter<object?>
                 element.WriteTo(writer);
                 break;
             default:
-                // Serialising by runtime type would re-enter this converter and
-                // recurse; the concrete type is passed explicitly instead.
-                JsonSerializer.Serialize(writer, value, value.GetType(), options);
-                break;
+                throw new JsonException($"Unsupported parameter value type: {value.GetType().Name}.");
         }
     }
 }

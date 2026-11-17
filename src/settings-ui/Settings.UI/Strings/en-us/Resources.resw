@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+﻿<?xml version='1.0' encoding='utf-8'?>
 <root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:schema id="root">
     <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -350,18 +350,6 @@
     <value>On</value>
     <comment>The state of a ToggleSwitch when it's on</comment>
   </data>
-  <data name="QuickAccent.ModuleDescription" xml:space="preserve">
-    <value>Quick Accent is an alternative way to type accented characters, useful for when a keyboard doesn't support that specific accent.
-
-Activate by holding the key for the character you want to add an accent to, then press the activation key (space, left or right arrow keys) and an overlay to select accented characters will appear!</value>
-    <comment>key refers to a physical key on a keyboard</comment>
-  </data>
-  <data name="QuickAccent.ModuleTitle" xml:space="preserve">
-    <value>Quick Accent</value>
-  </data>
-  <data name="QuickAccent.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-  </data>
   <data name="General_SettingsBackupAndRestore_NothingToBackup" xml:space="preserve">
     <value>A new backup was not created because no settings have been changed since last backup.</value>
   </data>
@@ -420,28 +408,11 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="General_SettingsBackupAndRestore_InvalidBackupLocation" xml:space="preserve">
     <value>Invalid backup location.</value>
   </data>
-  <data name="TextExtractor.ModuleDescription" xml:space="preserve">
-    <value>Text Extractor is a convenient way to copy text from anywhere on screen</value>
-  </data>
-  <data name="TextExtractor.ModuleTitle" xml:space="preserve">
-    <value>Text Extractor</value>
-  </data>
-  <data name="TextExtractor.SecondaryLinksHeader" xml:space="preserve">
-    <value>Attribution</value>
-  </data>
   <data name="GPO_SettingIsManaged.Title" xml:space="preserve">
     <value>This setting is managed by your organization.</value>
   </data>
   <data name="General_DiagnosticsAndFeedback.Header" xml:space="preserve">
     <value>Diagnostics &amp; feedback</value>
-  </data>
-  <data name="CmdNotFound.ModuleDescription" xml:space="preserve">
-    <value>A PowerShell module that detects an error thrown by a command and suggests a relevant WinGet package to install, if available.</value>
-    <comment>"Command Not Found" is a product name</comment>
-  </data>
-  <data name="CmdNotFound.ModuleTitle" xml:space="preserve">
-    <value>Command Not Found</value>
-    <comment>"Command Not Found" is a product name</comment>
   </data>
   <data name="AllAppsTxt.Text" xml:space="preserve">
     <value>All apps</value>
@@ -4203,6 +4174,9 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Winget_DiscoverTab.Content" xml:space="preserve"><value>Discover software</value></data>
   <data name="Winget_InstalledTab.Content" xml:space="preserve"><value>Installed software</value></data>
   <data name="Winget_FiltersButton.Content" xml:space="preserve"><value>Filters</value></data>
+  <data name="Winget_FiltersButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Open package filters</value></data>
+  <data name="Winget_ShowFilters" xml:space="preserve"><value>Show filters</value></data>
+  <data name="Winget_HideFilters" xml:space="preserve"><value>Hide filters</value></data>
   <data name="Winget_FiltersHeading.Text" xml:space="preserve"><value>Filters</value></data>
   <data name="Winget_LocalFilter.PlaceholderText" xml:space="preserve"><value>Filter this list</value></data>
   <data name="Winget_LocalFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Filter visible packages by name or ID</value></data>
@@ -4256,6 +4230,11 @@ Activate by holding the key for the character you want to add an accent to, then
   <data name="Winget_RestoreSelected" xml:space="preserve"><value>Restore selection</value></data>
   <data name="Winget_QueueTitle" xml:space="preserve"><value>Current queue</value></data>
   <data name="Winget_HistoryTitle" xml:space="preserve"><value>Recent history</value></data>
+  <data name="Winget_ClearOldHistory" xml:space="preserve"><value>Clear history older than 7 days</value></data>
+  <data name="Winget_HistoryClearWorking" xml:space="preserve"><value>Clearing history older than 7 days…</value></data>
+  <data name="Winget_HistoryClearResult" xml:space="preserve"><value>Removed {0} history entries older than 7 days.</value></data>
+  <data name="Winget_HistoryClearFailed" xml:space="preserve"><value>Could not clear old history. Please try again.</value></data>
+  <data name="Winget_HistoryClearRefreshFailed" xml:space="preserve"><value>Removed {0} old history entries, but the list could not refresh. Reconnect to see the updated history.</value></data>
   <data name="Winget_BundleFileType" xml:space="preserve"><value>WinGet bundle</value></data>
   <data name="Winget_CsvFileType" xml:space="preserve"><value>CSV table</value></data>
   <data name="Winget_OptionOn" xml:space="preserve"><value>On</value></data>
@@ -4452,4 +4431,34 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_OptPolicyScopePrimary" xml:space="preserve"><value>Governs how candidate files are categorized, cleanup suggestions are formed, and retention boundaries are applied.</value></data>
   <data name="AIHub_Fluent_PolicyScopeBoundary.Text" xml:space="preserve"><value>Specific items still require review before execution.</value></data>
   <data name="AIHub_Fluent_PolicyFooterHint.Text" xml:space="preserve"><value>Saved changes apply to the next task; switching tabs preserves drafts.</value></data>
+  <data name="UDPtest_UdpAssessmentSingleTargetStable" xml:space="preserve">
+    <value>Supported / Single-Target Stable</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentNotMonitored" xml:space="preserve">
+    <value>Not Monitored</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentInternalError" xml:space="preserve">
+    <value>Unknown / Internal Error</value>
+  </data>
+  <data name="LightSwitch_ShortcutsSettingsGroup.Header" xml:space="preserve">
+    <value>Shortcuts</value>
+  </data>
+  <data name="LightSwitch_ThemeToggle_Shortcut.Header" xml:space="preserve">
+    <value>Theme toggle shortcut</value>
+  </data>
+  <data name="LightSwitch_ThemeToggle_Shortcut.Description" xml:space="preserve">
+    <value>Switch between light and dark mode</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_CredentialsSkipped" xml:space="preserve">
+    <value>Settings were restored. AI endpoints and credentials in this backup could not be decrypted for this Windows account. Existing endpoints and credentials were preserved; AI services remain off. Restart Kit, then review the AI configuration.</value>
+  </data>
+  <data name="LightSwitch_ShortcutInput.PlaceholderText" xml:space="preserve">
+    <value>Press a shortcut; Delete clears it</value>
+  </data>
+  <data name="AiHub_RetryConfigurationButton.Content" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="AiHub_ConfigurationLoading.AutomationProperties.Name" xml:space="preserve">
+    <value>Loading AI service settings</value>
+  </data>
 </root>

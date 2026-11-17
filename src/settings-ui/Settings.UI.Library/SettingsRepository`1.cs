@@ -67,8 +67,10 @@ namespace Kit.Settings.UI.Library
                 }
 
                 _watcher = new FileSystemWatcher(directory, fileName);
-                _watcher.NotifyFilter = NotifyFilters.LastWrite;
+                _watcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName;
                 _watcher.Changed += Watcher_Changed;
+                _watcher.Created += Watcher_Changed;
+                _watcher.Renamed += Watcher_Changed;
                 _watcher.EnableRaisingEvents = true;
             }
             catch (Exception ex)
@@ -85,7 +87,6 @@ namespace Kit.Settings.UI.Library
                 Thread.Sleep(100);
                 if (ReloadSettings())
                 {
-                    SettingsChanged?.Invoke(SettingsConfig);
                     return;
                 }
             }
@@ -99,6 +100,7 @@ namespace Kit.Settings.UI.Library
                 settingsConfig = _settingsUtils.GetSettings<T>(settingsItem.GetModuleName());
 
                 SettingsConfig = settingsConfig;
+                NotifySettingsChanged();
 
                 return true;
             }

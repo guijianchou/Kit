@@ -40,6 +40,18 @@
                         </controls:GPOInfoControl>
                     </Border>
 
+                    <controls:SettingsGroup x:Uid="LightSwitch_ShortcutsSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
+                        <tkcontrols:SettingsCard x:Uid="LightSwitch_ThemeToggle_Shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE708;}">
+                            <TextBox
+                                x:Uid="LightSwitch_ShortcutInput"
+                                MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                IsReadOnly="True"
+                                AutomationProperties.AutomationId="Shortcut_LightSwitch"
+                                KeyDown="ThemeShortcut_KeyDown"
+                                Text="{x:Bind ViewModel.ToggleThemeShortcutText, Mode=OneWay}" />
+                        </tkcontrols:SettingsCard>
+                    </controls:SettingsGroup>
+
                     <controls:SettingsGroup x:Uid="LightSwitch_ScheduleSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
                         <tkcontrols:SettingsExpander
                             x:Uid="LightSwitch_ModeSettingsExpander"

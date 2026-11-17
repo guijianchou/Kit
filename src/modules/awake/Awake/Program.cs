@@ -29,6 +29,7 @@ namespace Awake
         private static readonly JsonSerializerOptions _serializerOptions = new() { IncludeFields = true };
 
         private static FileSystemWatcher? _watcher;
+        private static int _exitStarted;
         private static SettingsUtils? _settingsUtils;
         private static EventWaitHandle? _exitEventHandle;
         private static RegisteredWaitHandle? _registeredWaitHandle;
@@ -85,7 +86,7 @@ namespace Awake
             }
 
             await TrayHelper.InitializeTray(TrayHelper.DefaultAwakeIcon, Core.Constants.FullAppName);
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => TrayHelper.RunOnMainThread(() => LockMutex?.ReleaseMutex());
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => LockMutex?.Dispose();
             AppDomain.CurrentDomain.UnhandledException += AwakeUnhandledExceptionCatcher;
 
             if (!instantiated)
@@ -249,6 +250,11 @@ namespace Awake
 
         private static void Exit(string message, int exitCode)
         {
+            if (Interlocked.Exchange(ref _exitStarted, 1) != 0)
+            {
+                return;
+            }
+
             DisposeFileSystemWatcher();
             _registeredWaitHandle?.Unregister(null);
             _exitEventHandle?.Dispose();
@@ -317,7 +323,6 @@ namespace Awake
             Manager.StartMonitor();
 
             _exitEventHandle = new EventWaitHandle(false, EventResetMode.ManualReset, Kit.Interop.Constants.AwakeExitEvent());
-            _exitEventHandle.Reset();
             _registeredWaitHandle = ThreadPool.RegisterWaitForSingleObject(
                 _exitEventHandle,
                 (state, timedOut) => Exit(Resources.AWAKE_EXIT_SIGNAL_MESSAGE, 0),

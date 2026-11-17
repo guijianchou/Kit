@@ -22,7 +22,10 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
+using Microsoft.UI.Xaml.Automation.Provider;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Foundation;
@@ -54,7 +57,7 @@ internal static class WingetPageSmoke
     [STAThread]
     private static void Main()
     {
-        File.WriteAllText(Report, "Real complete Settings shell; synthetic packages only. No install, update, uninstall, import, notification or clipboard execution. Enabled layout fixtures suspend all page polling. Connection tests use a unique in-process status-only pipe.\n");
+        File.WriteAllText(Report, "Real complete Settings shell; synthetic packages only. No install, update, uninstall, import, notification or clipboard execution. Enabled layout fixtures suspend all page polling. Connection and history tests use unique in-process pipes; history cleanup mutates synthetic memory only.\n");
         try
         {
             string settingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kit", "settings.json");
@@ -121,6 +124,7 @@ internal static class WingetPageSmoke
             await VerifySyntheticLifecycleIsolation(page);
             await VerifyConnectionTimeoutRecovery(general, module);
             await VerifyWorkspaceState(page);
+            await VerifyCollapsibleFilters(page);
             await VerifyLayouts(page, general);
             await VerifyModuleHeader(page, general);
             await VerifyExpandedSettings(page, general);
@@ -128,6 +132,7 @@ internal static class WingetPageSmoke
             await VerifyRepeatedStatusStability(page);
             await VerifyIgnoredStateLabel(page);
             await VerifyLatestOperationOutput(page);
+            await VerifyHistoryCleanupDialog(page, general);
             await VerifyDetailsDialog(page);
             await VerifyCancelledConfirmation(page);
             Require(ipcMessages == 0, "Synthetic layout and cancelled dialogs must not send settings.");
@@ -622,6 +627,103 @@ internal static class WingetPageSmoke
         }
         vm.ActiveTabIndex = (int)WingetWorkspace.Updates;
         Log("Updates/Installed/Discover order and independent filter, sort, view and focused selection memory PASS");
+    }
+
+    private static async Task VerifyCollapsibleFilters(WingetPage page)
+    {
+        var window = App.GetSettingsWindow();
+        var originalSize = window.AppWindow.Size;
+        var vm = page.ViewModel;
+        var toggle = (ToggleButton)page.FindName("FiltersToggleButton");
+        var compactButton = (Button)page.FindName("CompactFiltersButton");
+        var host = (Grid)page.FindName("FiltersHost");
+        var panel = (ScrollViewer)page.FindName("FiltersPanel");
+        var body = (Grid)page.FindName("WorkspaceBody");
+        var table = (Grid)page.FindName("PackageTableViewport");
+        var filter = (TextBox)page.FindName("LocalFilterBox");
+        var flyout = (Flyout)page.FindName("FiltersFlyout");
+        var toggleProvider = (IToggleProvider)new ToggleButtonAutomationPeer(toggle).GetPattern(PatternInterface.Toggle);
+        try
+        {
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1670, 985));
+            vm.ActiveTabIndex = (int)WingetWorkspace.Updates;
+            Apply(vm, Snapshot());
+            await Settle();
+            Require(body.ActualWidth >= 900 && toggle.Visibility == Visibility.Visible && toggle.IsChecked != true,
+                "Wide startup must offer a visible, unchecked filter toggle.");
+            Require(host.Visibility == Visibility.Collapsed && Math.Abs(table.ActualWidth - body.ActualWidth) <= 1,
+                "Filters must default to collapsed and release the entire sidebar column and gap to the list.");
+            Require(AutomationProperties.GetName(toggle) == WingetViewModel.L("ShowFilters"), "Collapsed filters need a localized accessible expand name.");
+            double fullWidth = table.ActualWidth;
+            await CaptureShell("winget-filters-collapsed-full-shell.png");
+
+            toggleProvider.Toggle();
+            await Settle();
+            Require(toggle.IsChecked == true && host.Visibility == Visibility.Visible && host.Children.Contains(panel),
+                "The accessibility toggle must expand the existing filter controls in the sidebar.");
+            Require(Math.Abs(fullWidth - table.ActualWidth - 202) <= 1,
+                "Expanding filters must reserve exactly the 190-DIP sidebar and 12-DIP gap.");
+            Require(AutomationProperties.GetName(toggle) == WingetViewModel.L("HideFilters"), "Expanded filters need a localized accessible collapse name.");
+            filter.Text = "Fixture.Terminal";
+            await Settle();
+            Require(vm.FilterText == filter.Text && vm.DisplayPackages.Count == 1, "The visible filter control must still filter the real bound list.");
+            await CaptureShell("winget-filters-expanded-full-shell.png");
+
+            toggleProvider.Toggle();
+            await Settle();
+            Require(host.Visibility == Visibility.Collapsed && Math.Abs(table.ActualWidth - fullWidth) <= 1 && vm.FilterText == "Fixture.Terminal" && vm.DisplayPackages.Count == 1,
+                "Collapsing must restore the actual list width without clearing its filter.");
+            vm.ActiveTabIndex = (int)WingetWorkspace.Installed;
+            vm.FilterText = LocalPackage.Id;
+            vm.ExactMatch = true;
+            var localSource = vm.SourceFilters.Single(item => item.Key == "local");
+            localSource.IsSelected = false;
+            vm.ActiveTabIndex = (int)WingetWorkspace.Updates;
+            await Settle();
+            Require(vm.FilterText == "Fixture.Terminal" && host.Visibility == Visibility.Collapsed && toggle.IsChecked != true,
+                "Switching tabs must retain the collapsed sidebar and each tab's filter.");
+            toggleProvider.Toggle();
+            vm.ActiveTabIndex = (int)WingetWorkspace.Installed;
+            await Settle();
+            Require(host.Visibility == Visibility.Visible && filter.Text == LocalPackage.Id && vm.ExactMatch && !vm.SourceFilters.Single(item => item.Key == "local").IsSelected,
+                "Reopening and switching tabs must preserve text, exact-match and source selections.");
+
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(760, 900));
+            await Settle();
+            Require(toggle.Visibility == Visibility.Collapsed && compactButton.Visibility == Visibility.Visible &&
+                host.Visibility == Visibility.Collapsed && ReferenceEquals(flyout.Content, panel) && Math.Abs(table.ActualWidth - body.ActualWidth) <= 1,
+                "Narrow mode must move the same controls to the flyout and keep all list width.");
+            Require(!string.IsNullOrWhiteSpace(AutomationProperties.GetName(compactButton)), "The compact filter entry needs an accessible name.");
+            flyout.ShowAt(compactButton);
+            await Settle();
+            Require(panel.IsLoaded && filter.IsLoaded && filter.Text == LocalPackage.Id,
+                "The narrow filter flyout must open with the preserved filter controls and values.");
+            flyout.Hide();
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1670, 985));
+            await Settle();
+            Require(toggle.IsChecked == true && host.Visibility == Visibility.Visible && host.Children.Contains(panel) && filter.Text == LocalPackage.Id,
+                "Returning to wide mode must restore the previous expanded state and original controls.");
+            toggleProvider.Toggle();
+            await Settle();
+            Require(Math.Abs(table.ActualWidth - body.ActualWidth) <= 1, "Final collapse must release all sidebar width again.");
+        }
+        finally
+        {
+            flyout.Hide();
+            toggle.IsChecked = false;
+            foreach (var workspace in new[] { WingetWorkspace.Updates, WingetWorkspace.Installed, WingetWorkspace.Discover })
+            {
+                vm.ActiveTabIndex = (int)workspace;
+                vm.FilterText = string.Empty;
+                vm.ExactMatch = false;
+                foreach (var source in vm.SourceFilters) source.IsSelected = true;
+            }
+            vm.ActiveTabIndex = (int)WingetWorkspace.Updates;
+            window.AppWindow.Resize(originalSize);
+            Apply(vm, Snapshot());
+            await Settle();
+        }
+        Log("Default-collapsed filters, real list-width recovery, accessible toggle, tab/filter retention and narrow flyout roundtrip PASS");
     }
 
     private static async Task VerifyLayouts(WingetPage page, SettingsRepository<GeneralSettings> general)
@@ -1283,6 +1385,13 @@ internal static class WingetPageSmoke
         }
         var filters = (FrameworkElement)page.FindName("CompactFiltersButton");
         Require((workspace.ActualWidth < 900) == (filters.Visibility == Visibility.Visible), $"{context}: narrow filter flyout mode is incorrect.");
+        var filterToggle = (ToggleButton)page.FindName("FiltersToggleButton");
+        bool sidebarVisible = workspace.ActualWidth >= 900 && filterToggle.IsChecked == true;
+        Require((workspace.ActualWidth >= 900) == (filterToggle.Visibility == Visibility.Visible), $"{context}: wide filter toggle visibility is incorrect.");
+        Require(((FrameworkElement)page.FindName("FiltersHost")).Visibility == (sidebarVisible ? Visibility.Visible : Visibility.Collapsed),
+            $"{context}: sidebar visibility must follow the wide toggle state.");
+        Require(Math.Abs(((FrameworkElement)page.FindName("PackageTableViewport")).ActualWidth - workspace.ActualWidth + (sidebarVisible ? 202 : 0)) <= 1,
+            $"{context}: package viewport must use the entire width released by collapsed filters.");
         Log($"BOUNDS {context}: shell={shell.ActualWidth:F1}, page=[{pageRect.Left:F1},{pageRect.Right:F1}], enable=[{enableRect.Left:F1},{enableRect.Right:F1}], gutters={leftGutter:F1}/{rightGutter:F1}, workspace=[{workspaceRect.Left:F1},{workspaceRect.Right:F1}], table={table.ActualWidth:F1}, visibleRows={checkedRows}/{list.Items.Count}");
     }
 
@@ -1321,6 +1430,111 @@ internal static class WingetPageSmoke
         }
         finally { ((ContentDialog)field.GetValue(page))?.Hide(); }
         Log("Batch review shows every package/version/agreement and UAC guidance; duplicate guard, cancel and tab-dismissal PASS");
+    }
+
+    private static async Task VerifyHistoryCleanupDialog(WingetPage page, SettingsRepository<GeneralSettings> general)
+    {
+        var vm = page.ViewModel;
+        vm.ActiveTabIndex = (int)WingetWorkspace.Updates;
+        var originalClient = GetField<KitServicePipeClient>(vm, "client");
+        var clientField = typeof(WingetViewModel).GetField("client", PrivateInstance);
+        var lifetimeField = typeof(WingetViewModel).GetField("pageLifetime", PrivateInstance);
+        var currentPageField = typeof(WingetPage).GetField("currentPage", PrivateInstance);
+        var dialogField = typeof(WingetPage).GetField("activeDialog", PrivateInstance);
+        bool wasCurrent = (bool)currentPageField.GetValue(page);
+        bool wasEnabled = general.SettingsConfig.Enabled.Winget;
+        var now = DateTimeOffset.UtcNow;
+        var old = new WingetQueueItem("fixture-old-history", NormalPackage, "upgrade", "Succeeded", CompletedUtc: now.AddDays(-8));
+        var recent = old with { Id = "fixture-recent-history", CompletedUtc = now.AddDays(-1) };
+        var unknown = old with { Id = "fixture-undated-history", CompletedUtc = null };
+        var queued = old with { Id = "fixture-current-queue", CompletedUtc = now.AddDays(-20) };
+        var snapshot = Snapshot() with { History = new[] { old, recent, unknown }, Queue = new[] { queued } };
+        var requestEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requestRelease = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        int cleanupRequests = 0;
+        string moduleKey = "WingetHistoryPage_" + Guid.NewGuid().ToString("N");
+        await using var server = new KitServicePipeServer(moduleKey, async (request, token) =>
+        {
+            Require(request.Version == 1 && request.PayloadJson == null, "History UI must send a parameter-free command to its isolated pipe.");
+            if (request.Command == "get-status")
+                return KitPipeResponse.Ok(JsonSerializer.Serialize(snapshot, WingetServiceJsonContext.Default.WingetServiceStatus));
+            Require(request.Command == "clear-old-history", "The history fixture must not submit a package operation.");
+            Interlocked.Increment(ref cleanupRequests);
+            requestEntered.TrySetResult(true);
+            await requestRelease.Task.WaitAsync(token);
+            snapshot = snapshot with { History = new[] { recent, unknown } };
+            return KitPipeResponse.Ok(JsonSerializer.Serialize(new WingetServiceAck(true) { RemovedHistoryCount = 1 }, WingetServiceJsonContext.Default.WingetServiceAck));
+        });
+        server.Start();
+        try
+        {
+            clientField.SetValue(vm, new KitServicePipeClient(moduleKey, Environment.ProcessPath));
+            Require(ReferenceEquals(GetField<KitServicePipeClient>(vm, "client"), originalClient) == false,
+                "History cleanup fixture must replace the production endpoint before activation.");
+            lifetimeField.SetValue(vm, new CancellationTokenSource());
+            currentPageField.SetValue(page, true);
+            general.SettingsConfig.Enabled.Winget = true;
+            Apply(vm, snapshot);
+            typeof(WingetPage).GetMethod("Activity_Click", PrivateInstance).Invoke(page, new object[] { null, new RoutedEventArgs() });
+            for (int attempt = 0; attempt < 80 && dialogField.GetValue(page) == null; attempt++) await Task.Delay(25);
+            var dialog = (ContentDialog)dialogField.GetValue(page);
+            Require(dialog != null, "Queue and history must open its real dialog.");
+            await Settle();
+            var button = Descendants(dialog).OfType<Button>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_ClearOldHistory");
+            var result = Descendants(dialog).OfType<TextBlock>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryClearResult");
+            var history = Descendants(dialog).OfType<ItemsControl>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryItems");
+            Require(button.IsEnabled && Equals(button.Content, WingetViewModel.L("ClearOldHistory")) &&
+                AutomationProperties.GetName(button) == WingetViewModel.L("ClearOldHistory"), "The history action needs a localized label and accessible name.");
+            Apply(vm, snapshot with { IsBusy = true });
+            await Settle();
+            Require(!button.IsEnabled, "History cleanup must be disabled while a package action is busy.");
+            Apply(vm, snapshot);
+            general.SettingsConfig.Enabled.Winget = false;
+            vm.RefreshEnabledState();
+            await Settle();
+            Require(!button.IsEnabled, "Disabled Winget must not permit history cleanup.");
+            general.SettingsConfig.Enabled.Winget = true;
+            Apply(vm, snapshot);
+            typeof(WingetViewModel).GetField("connected", PrivateInstance).SetValue(vm, false);
+            typeof(WingetViewModel).GetMethod("NotifyState", PrivateInstance).Invoke(vm, null);
+            await Settle();
+            Require(!button.IsEnabled, "Disconnected Winget must not permit history cleanup.");
+            Apply(vm, snapshot);
+            await Settle();
+            Require(!GetField<DispatcherTimer>(vm, "timer").IsEnabled, "History fixture must not start automatic polling.");
+            var queueRow = vm.QueueItems.Single();
+            ((IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
+            await requestEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await Settle();
+            Require(!button.IsEnabled && result.Text == WingetViewModel.L("HistoryClearWorking"), "Pending history cleanup must disable duplicate submissions and show progress.");
+            await vm.ClearOldHistoryAsync();
+            Require(cleanupRequests == 1, "Repeated cleanup during an active request must not dispatch twice.");
+            requestRelease.TrySetResult(true);
+            for (int attempt = 0; attempt < 120 && GetField<bool>(vm, "requestPending"); attempt++) await Task.Delay(25);
+            await Settle();
+            string expected = string.Format(CultureInfo.CurrentCulture, WingetViewModel.L("HistoryClearResult"), 1);
+            Require(result.Text == expected && history.Items.Count == 2 && !vm.HistoryItems.Any(item => item.Item.Id == old.Id),
+                "Accepted cleanup must refresh the visible history and display the service's actual removal count.");
+            Require(!button.IsEnabled && ReferenceEquals(queueRow, vm.QueueItems.Single()) && vm.QueueItems.Single().Item == queued,
+                "No remaining old records must disable cleanup while retaining the current queue row.");
+            // Popup visuals are outside the shell's RenderTargetBitmap subtree.
+            await CaptureShell("winget-history-cleanup-dialog.png", dialog);
+            dialog.Hide();
+            for (int attempt = 0; attempt < 80 && dialogField.GetValue(page) != null; attempt++) await Task.Delay(25);
+            Require(cleanupRequests == 1, "History fixture must make exactly one cleanup request to the unique in-process service.");
+            EnsureNoWorker();
+        }
+        finally
+        {
+            requestRelease.TrySetResult(true);
+            ((ContentDialog)dialogField.GetValue(page))?.Hide();
+            vm.SetPageActive(false);
+            currentPageField.SetValue(page, wasCurrent);
+            clientField.SetValue(vm, originalClient);
+            general.SettingsConfig.Enabled.Winget = wasEnabled;
+            Apply(vm, Snapshot());
+        }
+        Log("History dialog localized cleanup, disabled/busy/disconnected/pending guards, isolated IPC result refresh and unchanged queue PASS");
     }
 
     private static async Task VerifyDetailsDialog(WingetPage page)
@@ -1455,17 +1669,18 @@ internal static class WingetPageSmoke
         finally { CompositionTarget.Rendering -= handler; }
     }
 
-    private static async Task CaptureShell(string name)
+    private static async Task CaptureShell(string name, FrameworkElement captureRoot = null)
     {
         var windowRoot = (FrameworkElement)App.GetSettingsWindow().Content;
         var shell = windowRoot as ShellPage ?? Descendants(windowRoot).OfType<ShellPage>().Single();
         var root = (Grid)shell.FindName("RootGrid");
         var background = root.Background;
         root.Background = new SolidColorBrush(shell.ActualTheme == ElementTheme.Dark ? Microsoft.UI.ColorHelper.FromArgb(255, 32, 32, 32) : Microsoft.UI.ColorHelper.FromArgb(255, 243, 243, 243));
+        var target = captureRoot ?? windowRoot;
         var bitmap = new RenderTargetBitmap();
-        try { await bitmap.RenderAsync(windowRoot); }
+        try { await bitmap.RenderAsync(target); }
         finally { root.Background = background; }
-        Require(bitmap.PixelWidth >= windowRoot.ActualWidth - 2 && bitmap.PixelHeight >= windowRoot.ActualHeight - 2, "Capture must include the complete window root, not a centered content child.");
+        Require(bitmap.PixelWidth >= target.ActualWidth - 2 && bitmap.PixelHeight >= target.ActualHeight - 2, "Capture must include the complete requested visual.");
         var pixels = await bitmap.GetPixelsAsync();
         var bytes = new byte[pixels.Length];
         using (var reader = Windows.Storage.Streams.DataReader.FromBuffer(pixels)) reader.ReadBytes(bytes);

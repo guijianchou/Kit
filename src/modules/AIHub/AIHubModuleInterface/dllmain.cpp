@@ -16,7 +16,6 @@
 
 #include <filesystem>
 #include <mutex>
-#include <thread>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -40,12 +39,6 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/, DWORD ul_reason_for_call, LPVOID /*lp
 const static wchar_t* MODULE_NAME = L"AI Hub";
 const static wchar_t* MODULE_DESC = L"AI Hub provides local security audit and system optimization pipelines using Codex and Pi CLI.";
 
-namespace
-{
-    // Must match the name the worker listens on so disable() can request a clean stop.
-    const wchar_t AIHUB_WORKER_STOP_EVENT[] = L"Local\\KitAIHubWorkerStopEvent-3f8c1a52-6d47-4b9e-8a11-2c7d5e9f4b60";
-}
-
 class AIHubModule : public KitModuleIface
 {
     std::wstring app_name;
@@ -56,7 +49,7 @@ class AIHubModule : public KitModuleIface
     // running after the Settings window closes.
     HANDLE m_worker_process{ nullptr };
     std::mutex m_lifecycle_mutex;
-    std::thread m_startup_thread;
+    HANDLE m_exit_event{ nullptr };
 
     void start_worker_if_needed();
     void stop_worker_if_running();
@@ -82,6 +75,10 @@ public:
     {
         disable();
         close_worker_handle();
+        if (m_exit_event)
+        {
+            CloseHandle(m_exit_event);
+        }
         delete this;
     }
 
@@ -120,23 +117,29 @@ public:
                 CloseHandle(refreshEvent);
             }
         }
-        catch (std::exception&)
+        catch (...)
         {
+            Logger::warn(L"Invalid module settings were ignored.");
         }
     }
 
     virtual void enable() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        if (m_enabled)
+        if (m_enabled && m_worker_process && WaitForSingleObject(m_worker_process, 0) == WAIT_TIMEOUT)
         {
             return;
         }
 
-        m_startup_thread = std::thread([this]() {
+        try
+        {
             start_worker_if_needed();
-        });
-        m_enabled = true;
+        }
+        catch (...)
+        {
+            Logger::error(L"[AIHub] Worker startup failed.");
+        }
+        m_enabled = m_worker_process && WaitForSingleObject(m_worker_process, 0) == WAIT_TIMEOUT;
 
         Trace::EnableAIHub(true);
         Logger::info(L"AIHub module enabled");
@@ -151,12 +154,6 @@ public:
         }
 
         m_enabled = false;
-        // The startup thread never takes m_lifecycle_mutex, so joining here also
-        // serializes repeated enable/disable calls without blocking its completion.
-        if (m_startup_thread.joinable())
-        {
-            m_startup_thread.join();
-        }
         stop_worker_if_running();
 
         Trace::EnableAIHub(false);
@@ -166,7 +163,7 @@ public:
     virtual bool is_enabled() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        return m_enabled;
+        return m_enabled && m_worker_process && WaitForSingleObject(m_worker_process, 0) == WAIT_TIMEOUT;
     }
 
     virtual bool is_enabled_by_default() const override
@@ -193,6 +190,16 @@ void AIHubModule::start_worker_if_needed()
     }
 
     close_worker_handle();
+    if (!m_exit_event)
+    {
+        m_exit_event = CreateEventW(nullptr, FALSE, FALSE, CommonSharedConstants::AIHUB_EXIT_EVENT);
+    }
+    if (!m_exit_event)
+    {
+        Logger::error(L"[AIHub] Cannot create the worker exit event.");
+        return;
+    }
+    ResetEvent(m_exit_event);
 
     const auto module_path = get_module_filename(reinterpret_cast<HMODULE>(&__ImageBase));
     if (module_path.empty())
@@ -261,13 +268,13 @@ void AIHubModule::stop_worker_if_running()
 
         // Ask the worker to drain and exit first, then terminate as a fallback so a stuck
         // worker cannot outlive the module.
-        HANDLE stopEvent = OpenEventW(EVENT_MODIFY_STATE, FALSE, CommonSharedConstants::AIHUB_EXIT_EVENT);
-        if (stopEvent)
+        if (m_exit_event)
         {
-            SetEvent(stopEvent);
-            CloseHandle(stopEvent);
-            result = WaitForSingleObject(m_worker_process, 2000);
+            // Created before launch and held until destruction, so a stop requested during
+            // CLR startup remains signaled until the worker opens the same event.
+            SetEvent(m_exit_event);
         }
+        result = WaitForSingleObject(m_worker_process, 2000);
 
         if (result == WAIT_TIMEOUT && TerminateProcess(m_worker_process, 0))
         {

@@ -13,6 +13,8 @@ internal static class DevelopmentCacheScanner
     internal static readonly TimeSpan MinimumAge = TimeSpan.FromHours(1);
     private static readonly string[] Extensions = [".pch", ".pchast", ".obj", ".iobj", ".ilk", ".pyc", ".cache", ".dll", ".exe", ".lib", ".ipdb", ".winmd", ".pri", ".pdb", ".json", ".cs", ".props", ".targets", ".db", ".opendb", ".ipch"];
     private static readonly string[] OutputExtensions = [".dll", ".exe", ".lib", ".ipdb", ".pdb", ".winmd", ".pri"];
+    private static readonly string[] IntermediateExtensions = [".dll", ".pdb", ".cache"];
+    private static readonly string[] IntermediateSuffixes = [".nuget.g.props", ".nuget.g.targets", ".AssemblyInfo.cs", ".GlobalUsings.g.cs", ".AssemblyAttributes.cs"];
     private const string ManifestSuffix = ".FileListAbsolute.txt";
 
     internal static List<TempFileInfo> Scan(string root, int limit, CancellationToken token)
@@ -204,9 +206,9 @@ internal static class DevelopmentCacheScanner
 
     private static bool IsDotNetIntermediate(FileInfo file, string repository)
     {
-        bool known = new[] { ".dll", ".pdb", ".cache" }.Contains(file.Extension, StringComparer.OrdinalIgnoreCase) ||
+        bool known = IntermediateExtensions.Contains(file.Extension, StringComparer.OrdinalIgnoreCase) ||
             file.Name.Equals("project.assets.json", StringComparison.OrdinalIgnoreCase) ||
-            new[] { ".nuget.g.props", ".nuget.g.targets", ".AssemblyInfo.cs", ".GlobalUsings.g.cs", ".AssemblyAttributes.cs" }.Any(suffix => file.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+            IntermediateSuffixes.Any(suffix => file.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
         if (!known) return false;
         for (var directory = file.Directory; directory != null && directory.FullName.StartsWith(repository + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase); directory = directory.Parent)
         {

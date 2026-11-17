@@ -25,13 +25,9 @@ $methods = foreach ($signature in @('virtual void destroy()', 'virtual void enab
     $source.Substring($start, $end - $start)
 }
 $methods = $methods -join "`r`n"
-$threadEntry = 'std::thread([this]() {'
-if (($methods.Split($threadEntry, [StringSplitOptions]::None)).Count -ne 2) {
-    throw 'Expected exactly one startup thread entry to gate.'
-}
-# Pause before the first production lambda statement, including its old lock/access
-# to this. This makes the previous detached-thread lifetime race deterministic.
-$methods = $methods.Replace($threadEntry, "$threadEntry`r`n            WaitAtStartupGate();")
+# Exercise the unchanged production bodies on the actual Runner lifecycle queue.
+# The harness blocks its inert worker callback; no production source is rewritten
+# to introduce a thread or manufacture a lifecycle result.
 [IO.Directory]::CreateDirectory($output) | Out-Null
 [IO.File]::WriteAllText((Join-Path $output 'AIHubLifecycleMethods.generated.h'), $methods)
 
@@ -39,7 +35,19 @@ Push-Location -LiteralPath $repoRoot
 try {
     . ./tools/build/build-common.ps1
     if (-not (Ensure-VsDevEnvironment)) { throw 'Visual Studio environment is unavailable.' }
-    & cl.exe /nologo /std:c++20 /EHsc /W4 /MT "/I$output" (Join-Path $PSScriptRoot 'AIHubLifecycleSmoke.cpp') "/Fo$output\AIHubLifecycleSmoke.obj" "/Fe$output\AIHubLifecycleSmoke.exe"
+    if ($env:VSCMD_ARG_TGT_ARCH -notin @('x64', 'amd64')) {
+        if (-not $env:VSINSTALLDIR) { throw 'The Visual Studio installation directory is unavailable.' }
+        $x64DevShell = Join-Path $env:VSINSTALLDIR 'Common7/Tools/Launch-VsDevShell.ps1'
+        if (-not (Test-Path -LiteralPath $x64DevShell -PathType Leaf)) {
+            throw "Cannot select the Visual Studio x64 tools: $x64DevShell"
+        }
+        & $x64DevShell -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+        Normalize-ProcessPathEnvironment
+    }
+    if ($env:VSCMD_ARG_TGT_ARCH -notin @('x64', 'amd64')) {
+        throw 'AIHub lifecycle smoke requires the Visual Studio x64 target tools.'
+    }
+    & cl.exe /nologo /std:c++20 /EHsc /W4 /MT "/I$output" (Join-Path $PSScriptRoot 'AIHubLifecycleSmoke.cpp') "/Fo$output\AIHubLifecycleSmoke.obj" "/Fe$output\AIHubLifecycleSmoke.exe" /link /MACHINE:X64
     if ($LASTEXITCODE -ne 0) { throw 'AIHub lifecycle smoke compilation failed.' }
     & (Join-Path $output 'AIHubLifecycleSmoke.exe')
     if ($LASTEXITCODE -ne 0) { throw "AIHub lifecycle smoke failed: $LASTEXITCODE" }

@@ -559,7 +559,7 @@
                             </tkcontrols:WrapPanel>
                         </Grid>
                     </Border>
-                    <tkcontrols:Segmented x:Name="AiHubSections" SelectedIndex="{x:Bind ViewModel.ActiveTabIndex, Mode=TwoWay}" HorizontalAlignment="Left">
+                    <tkcontrols:Segmented x:Name="AiHubSections" SelectionChanged="OnAiHubSectionChanged" HorizontalAlignment="Left">
                         <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.SecurityAuditTabLabel}" Icon="{ui:FontIcon Glyph=&#xE72E;}" />
                         <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.OptimizationTabLabel}" Icon="{ui:FontIcon Glyph=&#xE9F5;}" />
                         <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.TaskPoliciesTabLabel}" Icon="{ui:FontIcon Glyph=&#xE8A5;}" />
@@ -578,7 +578,7 @@
                                  Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}" AutomationProperties.LiveSetting="Assertive" />
 
                         <!-- TAB 0: SECURITY AUDIT -->
-                        <StackPanel Spacing="16" Visibility="{x:Bind IsAuditTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
+                        <StackPanel x:Name="AuditPanel" Spacing="16">
                             <Border x:Name="AuditWorkflowCard"
                                     Style="{StaticResource KitCardSurfaceStyle}"
                                     Visibility="{x:Bind ViewModel.SidebarWorkflowVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -1101,7 +1101,7 @@
                         </StackPanel>
 
                         <!-- TAB 1: SPACE OPTIMIZATION -->
-                        <StackPanel x:Name="OptimizationPanel" Spacing="16" HorizontalAlignment="Stretch" Visibility="{x:Bind IsOptTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
+                        <StackPanel x:Name="OptimizationPanel" Spacing="16" HorizontalAlignment="Stretch" Visibility="Collapsed">
                             <Border x:Name="OptimizationWorkflowCard"
                                     Style="{StaticResource KitCardSurfaceStyle}"
                                     Visibility="{x:Bind ViewModel.IsWorkflowVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">

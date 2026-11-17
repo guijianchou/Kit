@@ -14,6 +14,50 @@ namespace NetMap.UnitTests;
 public sealed class ServiceClientReuseTests
 {
     [TestMethod]
+    public async Task NewGenerationDoesNotDisposeAnInFlightBorrower()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        DeferredHandler? oldHandler = null;
+        using var probe = new NetworkProbe((name, _) =>
+        {
+            if (name == "Claude" && oldHandler is null)
+            {
+                oldHandler = new DeferredHandler(entered, release);
+                return new HttpClient(oldHandler);
+            }
+
+            return new HttpClient(new Handler(name is "Gemini" or "Google" ? "<html>Page</html>" : "ip=198.51.100.8\nloc=JP\n", false));
+        });
+        Task<IReadOnlyList<ServiceResult>> first = probe.CheckServicesAsync(new(), 7, _ => { }, CancellationToken.None);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await probe.CheckServicesAsync(new(), 8, _ => { }, CancellationToken.None);
+        Assert.IsFalse(oldHandler!.Disposed, "Retired clients must remain alive until their requests finish.");
+        release.SetResult();
+        await first.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsTrue(oldHandler.Disposed);
+    }
+
+    private sealed class DeferredHandler(TaskCompletionSource entered, TaskCompletionSource release) : HttpMessageHandler
+    {
+        internal bool Disposed { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            entered.TrySetResult();
+            await release.Task.WaitAsync(cancellationToken);
+            ObjectDisposedException.ThrowIf(Disposed, this);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("ip=198.51.100.8\nloc=JP\n") };
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed |= disposing;
+            base.Dispose(disposing);
+        }
+    }
+
+    [TestMethod]
     public async Task TraceClientsAreReusedWithinOneEgressGeneration()
     {
         var created = new List<string>();

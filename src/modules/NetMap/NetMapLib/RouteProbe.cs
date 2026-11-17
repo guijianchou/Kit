@@ -13,9 +13,10 @@ public static class RouteProbe
 {
     public static async Task TraceAsync(string target, Action<IReadOnlyList<HopResult>> progress, CancellationToken cancellationToken)
     {
-        if (!IPAddress.TryParse(target, out var address) || address.AddressFamily != AddressFamily.InterNetwork)
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IPAddress.TryParse(target, out var address))
         {
-            return;
+            throw new ArgumentException("The route target must be an IP address.", nameof(target));
         }
 
         byte[] payload = new byte[24];
@@ -29,13 +30,17 @@ public static class RouteProbe
                 if (reply.Status is IPStatus.Success or IPStatus.TtlExpired or IPStatus.TimeExceeded or IPStatus.TtlReassemblyTimeExceeded)
                 {
                     string ipStr = reply.Address?.ToString() ?? string.Empty;
-                    if (ipStr == "0.0.0.0")
+                    if (ipStr is "0.0.0.0" or "::")
                     {
                         ipStr = string.Empty;
                     }
 
                     return (ipStr, Stopwatch.GetElapsedTime(started).TotalMilliseconds, reply.Status == IPStatus.Success);
                 }
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception)
             {

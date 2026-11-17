@@ -35,7 +35,7 @@ FileWatcher::FileWatcher(const std::wstring& path, std::function<void()> callbac
             std::wstring lowerFileName(fileName);
             std::transform(lowerFileName.begin(), lowerFileName.end(), lowerFileName.begin(), ::towlower);
 
-            if (m_file_name.compare(fileName) == 0)
+            if (m_file_name.compare(lowerFileName) == 0)
             {
                 auto lastWrite = MyFileTime();
                 // The first observed write is a change too, not a baseline to discard.

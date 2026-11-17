@@ -119,22 +119,30 @@ public:
                 CloseHandle(refreshEvent);
             }
         }
-        catch (std::exception&)
+        catch (...)
         {
+            Logger::warn(L"Invalid module settings were ignored.");
         }
     }
 
     virtual void enable() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        if (m_enabled)
+        if (m_enabled && m_worker_process && WaitForSingleObject(m_worker_process, 0) == WAIT_TIMEOUT)
         {
             return;
         }
 
-        m_enabled = true;
         delete_module_disabled_flag();
-        start_worker_if_needed();
+        try
+        {
+            start_worker_if_needed();
+        }
+        catch (...)
+        {
+            Logger::error(L"[Localserver] Worker startup failed.");
+        }
+        m_enabled = m_worker_process && WaitForSingleObject(m_worker_process, 0) == WAIT_TIMEOUT;
 
         Trace::EnableLocalserver(true);
         Logger::info(L"Localserver module enabled");
@@ -159,7 +167,7 @@ public:
     virtual bool is_enabled() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        return m_enabled;
+        return m_enabled && m_worker_process && WaitForSingleObject(m_worker_process, 0) == WAIT_TIMEOUT;
     }
 
     virtual bool is_enabled_by_default() const override

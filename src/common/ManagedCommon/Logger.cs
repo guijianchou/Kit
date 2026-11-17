@@ -19,12 +19,13 @@ namespace ManagedCommon
         private static readonly string Error = "Error";
         private static readonly string Warning = "Warning";
         private static readonly string Info = "Info";
-#if DEBUG
         private static readonly string Debug = "Debug";
-#endif
         private static readonly string TraceFlag = "Trace";
 
         private static readonly string Version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
+
+        private static readonly object InitializationLock = new();
+        private static bool _initialized;
 
         private static int _activeLogLevel; // 0: Trace, 1: Debug, 2: Info, 3: Warning, 4: Error, 5: Off
         private static bool _isLoggingEnabled = true;
@@ -159,6 +160,19 @@ namespace ManagedCommon
         /// <param name="isLocalLow">If the process using Logger is a low-privilege process.</param>
         public static void InitializeLogger(string applicationLogPath, bool isLocalLow = false)
         {
+            lock (InitializationLock)
+            {
+                if (_initialized)
+                {
+                    return;
+                }
+
+                InitializeLoggerCore(applicationLogPath, isLocalLow);
+            }
+        }
+
+        private static void InitializeLoggerCore(string applicationLogPath, bool isLocalLow)
+        {
             LoadLogSettings();
             var logFile = "Log_" + DateTime.Now.ToString(@"yyyy-MM-dd", CultureInfo.InvariantCulture) + ".log";
             string versionedPath = LogDirectoryPath(applicationLogPath, isLocalLow);
@@ -178,6 +192,7 @@ namespace ManagedCommon
                 CurrentLogFile = logFilePath;
 
                 Trace.Listeners.Add(listener);
+                _initialized = true;
                 Trace.AutoFlush = true;
 
                 // Clean up old version log folders
@@ -233,7 +248,6 @@ namespace ManagedCommon
                     {
                         Directory.Delete(directory.FullName, true);
                         LogInfo($"Deleted old log directory: {directory.FullName}");
-                        Task.Delay(500).Wait();
                     }
                     catch (Exception ex)
                     {
@@ -291,9 +305,7 @@ namespace ManagedCommon
 
         public static void LogDebug(string message, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "", [System.Runtime.CompilerServices.CallerFilePath] string sourceFilePath = "", [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = 0)
         {
-#if DEBUG
             Log(message, Debug, memberName, sourceFilePath, sourceLineNumber);
-#endif
         }
 
         public static void LogTrace([System.Runtime.CompilerServices.CallerMemberName] string memberName = "", [System.Runtime.CompilerServices.CallerFilePath] string sourceFilePath = "", [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = 0)

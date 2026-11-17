@@ -19,7 +19,7 @@
     <!-- NativeAOT disables EventSource by default. -->
     <EventSourceSupport>true</EventSourceSupport>
     <PublishSingleFile>false</PublishSingleFile>
-    <DisableRuntimeMarshalling>false</DisableRuntimeMarshalling>
+    <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>

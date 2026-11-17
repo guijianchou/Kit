@@ -9,7 +9,9 @@ namespace Kit.LocalserverWorker;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LocalServerHub.Core.Configuration;
@@ -41,6 +43,7 @@ public sealed class ServiceSupervisor : IDisposable
     private readonly Dictionary<string, ServiceRunner> _runners = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private bool _disposed;
+    private string? _catalogStamp;
 
     public ServiceSupervisor(string dataDirectory)
     {
@@ -78,24 +81,83 @@ public sealed class ServiceSupervisor : IDisposable
     /// </summary>
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
-        ServiceCatalog catalog = await _catalogStore.LoadAsync(cancellationToken).ConfigureAwait(false);
-        IReadOnlyList<ServiceDefinition> services = catalog.Services;
+        await ReloadAsync(force: true, cancellationToken).ConfigureAwait(false);
+    }
 
-        lock (_runners)
+    /// <summary>Reconciles changed catalog entries without launching services.</summary>
+    public async Task ReloadAsync(bool force = false, CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            foreach (ServiceDefinition definition in services)
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            string stamp = ServiceCatalogStore.GetChangeStamp(_catalogStore.CatalogPath);
+            if (!force && stamp == _catalogStamp)
             {
-                // Disabled services get no runner: they must not be supervised or started.
-                if (string.IsNullOrWhiteSpace(definition.Id) || !definition.IsEnabled || _runners.ContainsKey(definition.Id))
+                return;
+            }
+
+            ServiceCatalog catalog = await _catalogStore.LoadAsync(cancellationToken).ConfigureAwait(false);
+            var definitions = catalog.Services
+                .Where(definition => !string.IsNullOrWhiteSpace(definition.Id) && definition.IsEnabled)
+                .ToDictionary(definition => definition.Id, StringComparer.OrdinalIgnoreCase);
+            var retired = new List<ServiceRunner>();
+            bool deferred = false;
+            lock (_runners)
+            {
+                foreach (var (id, runner) in _runners.ToArray())
                 {
-                    continue;
+                    if (definitions.TryGetValue(id, out var definition))
+                    {
+                        // A live tree retains the definition that established its ownership.
+                        // A subsequent pass applies edits once the tree has stopped.
+                        if (runner.State.AllowsEditing())
+                        {
+                            runner.UpdateDefinition(definition);
+                        }
+                        else
+                        {
+                            deferred = true;
+                        }
+
+                        definitions.Remove(id);
+                    }
+                    else if (!runner.State.IsActive())
+                    {
+                        _runners.Remove(id);
+                        retired.Add(runner);
+                    }
+                    else
+                    {
+                        deferred = true;
+                    }
+
+                    // Retain removed/renamed live services until shutdown can stop them.
                 }
 
-                _runners[definition.Id] = new ServiceRunner(definition, formatMessage: FormatMessage);
+                foreach (var (id, definition) in definitions)
+                {
+                    _runners[id] = new ServiceRunner(definition, formatMessage: FormatMessage);
+                }
             }
-        }
 
-        Logger.LogInfo($"[Localserver.Worker] Loaded {SupervisedCount} service definition(s) from {_dataDirectory}.");
+            foreach (var runner in retired)
+            {
+                runner.Dispose();
+            }
+
+            _catalogStamp = deferred ? null : stamp;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            // An editor can expose a partial file. Keep the last known catalog and
+            // still stop already-owned trees during shutdown; retry on the next pass.
+            Logger.LogWarning($"[Localserver.Worker] Catalog reload deferred: {ex.Message}");
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     /// <summary>
@@ -107,6 +169,7 @@ public sealed class ServiceSupervisor : IDisposable
     /// </summary>
     public async Task RecoverRunningServicesAsync(CancellationToken cancellationToken = default)
     {
+        await ReloadAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         var snapshot = new Lazy<ProcessTreeSnapshot>(ProcessTreeSnapshot.Capture);
         foreach ((string id, ServiceRunner runner) in Snapshot())
         {

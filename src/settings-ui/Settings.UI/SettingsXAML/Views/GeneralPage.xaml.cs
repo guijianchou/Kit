@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -9,21 +9,28 @@ using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 
 namespace Kit.Settings.UI.Views
 {
     /// <summary>
     /// General Settings Page.
     /// </summary>
-    public sealed partial class GeneralPage : NavigablePage, IRefreshablePage
+    public sealed partial class GeneralPage : NavigablePage, IRefreshablePage, IDisposable
     {
         private static DateTime OkToHideBackupAndRestoreMessageTime { get; set; }
 
+        private readonly System.Collections.Generic.List<(Panel Panel, TransitionCollection Transitions)> _initialTransitions = new();
         private bool _backupStatusRefreshQueued;
-        private bool _apiKeysApplied;
+        private bool _initialContentPresented;
+        private bool _presentationQueued;
+        private bool _waitingForInitialRender;
+        private (double Width, double Height, double AiWidth, double AiHeight, double DiagnosticsY)? _initialLayout;
 
         /// <summary>
         /// Gets or sets view model.
@@ -86,26 +93,159 @@ namespace Kit.Settings.UI.Views
             DataContext = ViewModel;
             InitializeComponent();
 
+            // The first service configuration read runs off the dispatcher. Keep its
+            // provisional default state out of the visible page while controls still
+            // measure normally, then reveal the completed layout in one frame.
+            SuppressInitialTransitions(GeneralSettingsSurface);
+            Unloaded += OnInitialPresentationUnloaded;
+
             this.Loaded += async (s, e) =>
             {
-                ViewModel.OnPageLoaded();
-
-                if (!_backupStatusRefreshQueued)
+                try
                 {
-                    _backupStatusRefreshQueued = true;
-                    doRefreshBackupRestoreStatus(500);
+                    ViewModel.OnPageLoaded();
+
+                    if (!_backupStatusRefreshQueued)
+                    {
+                        _backupStatusRefreshQueued = true;
+                        doRefreshBackupRestoreStatus(500);
+                    }
+
+                    SuppressInitialTransitions(GeneralSettingsSurface);
+                    await ViewModel.AiServices.Initialization.ConfigureAwait(false);
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        if (IsLoaded)
+                        {
+                            if (ViewModel.AiServices.CanToggle)
+                            {
+                                ApplyStoredApiKeys();
+                            }
+
+                            QueueInitialContentPresentation();
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Failed to initialize general settings.", ex);
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        if (IsLoaded)
+                        {
+                            QueueInitialContentPresentation();
+                        }
+                    });
+                }
+            };
+        }
+
+        private void SuppressInitialTransitions(DependencyObject root)
+        {
+            if (_initialContentPresented)
+            {
+                return;
+            }
+
+            if (root is Panel panel && panel.ChildrenTransitions?.Count > 0)
+            {
+                _initialTransitions.Add((panel, panel.ChildrenTransitions));
+                panel.ChildrenTransitions = null;
+            }
+
+            for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+            {
+                SuppressInitialTransitions(VisualTreeHelper.GetChild(root, index));
+            }
+        }
+
+        private void QueueInitialContentPresentation()
+        {
+            if (_initialContentPresented || _presentationQueued || _waitingForInitialRender)
+            {
+                return;
+            }
+
+            _presentationQueued = true;
+            DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+            {
+                _presentationQueued = false;
+                if (!IsLoaded)
+                {
+                    return;
                 }
 
-                await ViewModel.AiServices.Initialization.ConfigureAwait(false);
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    if (IsLoaded && !_apiKeysApplied && ViewModel.AiServices.CanToggle)
-                    {
-                        ApplyStoredApiKeys();
-                        _apiKeysApplied = true;
-                    }
-                });
-            };
+                // Enabling controls can change their template states and invalidate
+                // measure. Apply it while hidden, before the initial render passes.
+                Bindings.Update();
+                GeneralSettingsSurface.IsEnabled = true;
+                SuppressInitialTransitions(GeneralSettingsSurface);
+                GeneralSettingsSurface.UpdateLayout();
+                _initialLayout = null;
+                _waitingForInitialRender = true;
+                CompositionTarget.Rendering += OnInitialContentRendering;
+            });
+        }
+
+        private void OnInitialContentRendering(object sender, object args)
+        {
+            if (!IsLoaded)
+            {
+                CancelInitialContentRendering();
+                return;
+            }
+
+            // Template size triggers can invalidate measure after UpdateLayout.
+            // Require matching layouts across actual render passes before exposing
+            // the content; no timer or assumed device/render speed is involved.
+            SuppressInitialTransitions(GeneralSettingsSurface);
+            GeneralSettingsSurface.UpdateLayout();
+            var content = (FrameworkElement)GeneralSettingsSurface.ModuleContent;
+            var layout = (content.ActualWidth, content.ActualHeight,
+                AiServicesGroup.ActualWidth, AiServicesGroup.ActualHeight,
+                DiagnosticsGroup.TransformToVisual(content).TransformPoint(default).Y);
+            if (_initialLayout == layout)
+            {
+                CancelInitialContentRendering();
+                PresentInitialContent();
+            }
+            else
+            {
+                _initialLayout = layout;
+            }
+        }
+
+        private void OnInitialPresentationUnloaded(object sender, RoutedEventArgs e) => CancelInitialContentRendering();
+
+        private void CancelInitialContentRendering()
+        {
+            if (_waitingForInitialRender)
+            {
+                CompositionTarget.Rendering -= OnInitialContentRendering;
+                _waitingForInitialRender = false;
+            }
+
+            _initialLayout = null;
+        }
+
+        private void PresentInitialContent()
+        {
+            _initialContentPresented = true;
+            GeneralSettingsSurface.Opacity = 1;
+            GeneralSettingsSurface.IsHitTestVisible = true;
+            GeneralSettingsLoading.Visibility = Visibility.Collapsed;
+            foreach (var (panel, transitions) in _initialTransitions)
+            {
+                panel.ChildrenTransitions = transitions;
+            }
+
+            _initialTransitions.Clear();
+        }
+
+        public void Dispose()
+        {
+            CancelInitialContentRendering();
+            ViewModel.Dispose();
         }
 
         private void SettingsSection_Click(object sender, RoutedEventArgs e)

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -15,6 +15,8 @@ using Kit.WingetLib;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
@@ -32,6 +34,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     private bool disposed;
     private bool confirmationOpen;
     private bool compactFilters;
+    private bool filtersExpanded;
     private ContentDialog activeDialog;
     private WingetWorkspace visibleWorkspace = WingetWorkspace.Updates;
     private PackageViewMode appliedListViewMode = PackageViewMode.Details;
@@ -197,31 +200,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         WingetEnableCard.Width = width;
         WingetSettingsExpander.Width = width;
         appliedWorkspaceWidth = width;
-        bool compact = width < 900;
-        if (compact != compactFilters)
-        {
-            FiltersFlyout.Hide();
-            if (compact)
-            {
-                FiltersHost.Children.Remove(FiltersPanel);
-                FiltersPanel.Width = Math.Min(280, Math.Max(220, width - 48));
-                FiltersPanel.MaxHeight = 500;
-                FiltersFlyout.Content = FiltersPanel;
-            }
-            else
-            {
-                FiltersFlyout.Content = null;
-                FiltersPanel.Width = double.NaN;
-                FiltersPanel.MaxHeight = double.PositiveInfinity;
-                FiltersHost.Children.Add(FiltersPanel);
-            }
-
-            compactFilters = compact;
-        }
-
-        FilterColumn.Width = new GridLength(compact ? 0 : 190);
-        WorkspaceBody.ColumnSpacing = compact ? 0 : 12;
-        CompactFiltersButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        UpdateFiltersLayout(width);
         AutomaticSettingsLabel.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
 
         bool stackedFooter = width < 650;
@@ -230,6 +209,48 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         AutomaticSettingsFooter.RowSpacing = stackedFooter ? 8 : 0;
         Grid.SetColumn(WingetHelpLink, stackedFooter ? 0 : 1);
         Grid.SetRow(WingetHelpLink, stackedFooter ? 1 : 0);
+    }
+
+    private void FiltersToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        filtersExpanded = FiltersToggleButton.IsChecked == true;
+        if (appliedWorkspaceWidth > 0)
+        {
+            UpdateFiltersLayout(appliedWorkspaceWidth);
+        }
+    }
+
+    private void UpdateFiltersLayout(double width)
+    {
+        bool compact = width < 900;
+        if (compact != compactFilters)
+        {
+            FiltersFlyout.Hide();
+            if (compact)
+            {
+                FiltersHost.Children.Remove(FiltersPanel);
+                FiltersFlyout.Content = FiltersPanel;
+            }
+            else
+            {
+                FiltersFlyout.Content = null;
+                FiltersHost.Children.Add(FiltersPanel);
+            }
+
+            compactFilters = compact;
+        }
+
+        FiltersPanel.Width = compact ? Math.Min(280, Math.Max(220, width - 48)) : double.NaN;
+        FiltersPanel.MaxHeight = compact ? 500 : double.PositiveInfinity;
+        bool showSidebar = !compact && filtersExpanded;
+        FiltersHost.Visibility = showSidebar ? Visibility.Visible : Visibility.Collapsed;
+        FilterColumn.Width = new GridLength(showSidebar ? 190 : 0);
+        WorkspaceBody.ColumnSpacing = showSidebar ? 12 : 0;
+        CompactFiltersButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        FiltersToggleButton.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        string label = Text(filtersExpanded ? "HideFilters" : "ShowFilters");
+        FiltersToggleLabel.Text = label;
+        AutomationProperties.SetName(FiltersToggleButton, label);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e) => ViewModel.SetPageActive(false);
@@ -265,34 +286,65 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         ViewModel.Dispose();
     }
 
-    private async void Reload_Click(object sender, RoutedEventArgs e) => await ViewModel.ReloadAsync();
+    private async void Reload_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ViewModel.ReloadAsync();
+        }
+        catch (System.Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Settings action Reload_Click failed.", ex);
+        }
+    }
 
     private async void Cancel_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.IsQueueRunning)
+        try
         {
-            await ViewModel.CancelQueueAsync();
+            if (ViewModel.IsQueueRunning)
+            {
+                await ViewModel.CancelQueueAsync();
+            }
+            else
+            {
+                await ViewModel.RequestAsync("cancel");
+            }
         }
-        else
+        catch (System.Exception ex)
         {
-            await ViewModel.RequestAsync("cancel");
+            ManagedCommon.Logger.LogError("Settings action Cancel_Click failed.", ex);
         }
     }
 
     private async void Search_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.CanSearch)
+        try
         {
-            await ViewModel.RequestAsync("search");
+            if (ViewModel.CanSearch)
+            {
+                await ViewModel.RequestAsync("search");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Settings action Search_Click failed.", ex);
         }
     }
 
     private async void SearchBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == VirtualKey.Enter && ViewModel.CanSearch)
+        try
         {
-            e.Handled = true;
-            await ViewModel.RequestAsync("search");
+            if (e.Key == VirtualKey.Enter && ViewModel.CanSearch)
+            {
+                e.Handled = true;
+                await ViewModel.RequestAsync("search");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Settings action SearchBox_KeyDown failed.", ex);
         }
     }
 
@@ -674,12 +726,36 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         content.Children.Add(Paragraph(Text("QueueTitle"), true));
         content.Children.Add(new ItemsControl { ItemsSource = ViewModel.QueueItems, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] });
         content.Children.Add(Paragraph(Text("HistoryTitle"), true));
-        content.Children.Add(new ItemsControl { ItemsSource = ViewModel.HistoryItems, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] });
+        var clearHistory = new Button { Content = Text("ClearOldHistory"), HorizontalAlignment = HorizontalAlignment.Left };
+        AutomationProperties.SetAutomationId(clearHistory, "Winget_ClearOldHistory");
+        AutomationProperties.SetName(clearHistory, Text("ClearOldHistory"));
+        clearHistory.SetBinding(IsEnabledProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.CanClearOldHistory)), Mode = BindingMode.OneWay });
+        clearHistory.Click += ClearOldHistory_Click;
+        content.Children.Add(clearHistory);
+        var clearResult = BoundParagraph(nameof(ViewModel.HistoryClearMessage));
+        AutomationProperties.SetAutomationId(clearResult, "Winget_HistoryClearResult");
+        AutomationProperties.SetLiveSetting(clearResult, AutomationLiveSetting.Polite);
+        content.Children.Add(clearResult);
+        var history = new ItemsControl { ItemsSource = ViewModel.HistoryItems, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] };
+        AutomationProperties.SetAutomationId(history, "Winget_HistoryItems");
+        content.Children.Add(history);
         content.Children.Add(BoundParagraph(nameof(ViewModel.Activity)));
         await ShowDialogAsync(MakeDialog(Text("Activity/Header"), ScrollContent(content)));
     });
 
     private async void ExportCsv_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(() => ExportAsync(false));
+
+    private async void ClearOldHistory_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ViewModel.ClearOldHistoryAsync();
+        }
+        catch (Exception exception)
+        {
+            ViewModel.ReportActionError(exception);
+        }
+    }
 
     private async void ExportBundle_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(() => ExportAsync(true));
 

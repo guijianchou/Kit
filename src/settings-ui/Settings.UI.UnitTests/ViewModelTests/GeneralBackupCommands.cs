@@ -125,9 +125,17 @@ public class GeneralBackupCommands
 
         public ICommand[] BackupCommands => new[] { SelectSettingBackupDirEventHandler, BackupConfigsEventHandler, RestoreConfigsEventHandler };
 
-        protected override void BackupConfigsClick() => BackupDirectories.Add(SettingsBackupAndRestoreDir);
+        protected override Task BackupConfigsClickAsync()
+        {
+            BackupDirectories.Add(SettingsBackupAndRestoreDir);
+            return Task.CompletedTask;
+        }
 
-        protected override void RestoreConfigsClick() => RestoreDirectories.Add(SettingsBackupAndRestoreDir);
+        protected override Task RestoreConfigsClickAsync()
+        {
+            RestoreDirectories.Add(SettingsBackupAndRestoreDir);
+            return Task.CompletedTask;
+        }
 
         protected override Microsoft.UI.Dispatching.DispatcherQueue GetDispatcherQueue() => null;
 

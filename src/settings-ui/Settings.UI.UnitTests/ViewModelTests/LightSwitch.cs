@@ -20,6 +20,36 @@ namespace ViewModelTests
     [TestClass]
     public class LightSwitch
     {
+        [TestMethod]
+        public void ThemeShortcutPersistsUpstreamSchemaAndRefreshDoesNotSend()
+        {
+            var messages = new List<string>();
+            using var viewModel = CreateViewModel(new LightSwitchSettings(), message =>
+            {
+                messages.Add(message);
+                return 0;
+            });
+            viewModel.ToggleThemeActivationShortcut = new LightSwitchHotkey { Win = false, Ctrl = true, Alt = true, Shift = false, Code = 0x4B };
+            Assert.AreEqual(1, messages.Count);
+            using var json = JsonDocument.Parse(messages[0]);
+            var hotkey = json.RootElement.GetProperty("kit").GetProperty("LightSwitch")
+                .GetProperty("properties").GetProperty("toggle-theme-hotkey").GetProperty("value");
+            Assert.AreEqual(0x4B, hotkey.GetProperty("code").GetInt32());
+            Assert.IsTrue(hotkey.GetProperty("ctrl").GetBoolean());
+            Assert.IsTrue(hotkey.GetProperty("alt").GetBoolean());
+            Assert.IsFalse(hotkey.GetProperty("win").GetBoolean());
+            var clone = (LightSwitchSettings)viewModel.ModuleSettings.Clone();
+            Assert.AreEqual(0x4B, clone.Properties.ToggleThemeHotkey.Value.Code);
+            clone.Properties.ToggleThemeHotkey.Value.Code = 0;
+            Assert.AreEqual(0x4B, viewModel.ToggleThemeActivationShortcut.Code, "Cloning must not alias the mutable shortcut.");
+
+            var reloaded = new LightSwitchSettings();
+            reloaded.Properties.ToggleThemeHotkey.Value.Code = 0;
+            viewModel.ModuleSettings = reloaded;
+            Assert.AreEqual(string.Empty, viewModel.ToggleThemeShortcutText);
+            Assert.AreEqual(1, messages.Count, "External reload must not write the old shortcut back.");
+        }
+
         private static string FindSourceFile(params string[] relativePathParts)
         {
             DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);

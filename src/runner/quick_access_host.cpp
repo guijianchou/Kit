@@ -8,9 +8,12 @@
 #include <new>
 #include <memory>
 #include <atomic>
+#include <condition_variable>
+#include <thread>
 
 #include <common/logger/logger.h>
 #include <common/utils/process_path.h>
+#include <common/utils/json.h>
 #include <common/interop/two_way_pipe_message_ipc.h>
 #include <wil/resource.h>
 
@@ -18,6 +21,29 @@ extern void receive_json_send_to_main_thread(const std::wstring& msg);
 
 namespace
 {
+    void receive_quick_access_message(const std::wstring& message)
+    {
+        if (message.size() > 1024 * 1024) return;
+        try
+        {
+            json::JsonObject request;
+            if (!json::JsonObject::TryParse(message, request) || request.Size() != 1) return;
+            if (json::has(request, L"module_status", json::JsonValueType::Object))
+            {
+                receive_json_send_to_main_thread(message);
+            }
+            else if (json::has(request, L"general", json::JsonValueType::Object))
+            {
+                const auto general = request.GetNamedObject(L"general");
+                if (general.Size() == 1 && json::has(general, L"dashboard_sort_order", json::JsonValueType::Number))
+                {
+                    receive_json_send_to_main_thread(message);
+                }
+            }
+        }
+        catch (...) { Logger::warn(L"Rejected malformed Quick Access request."); }
+    }
+
     wil::unique_handle quick_access_process;
     wil::unique_handle quick_access_job;
     wil::unique_handle show_event;
@@ -28,9 +54,7 @@ namespace
     std::wstring app_pipe_name;
     std::unique_ptr<TwoWayPipeMessageIPC> quick_access_ipc;
     std::mutex quick_access_mutex;
-    std::mutex show_request_mutex;
-    std::atomic_bool show_pending = false;
-    wil::unique_threadpool_work show_work;
+    std::atomic_bool process_running = false;
 
     bool is_process_active_locked()
     {
@@ -51,6 +75,7 @@ namespace
 
     void reset_state_locked()
     {
+        process_running = false;
         if (quick_access_ipc)
         {
             quick_access_ipc->end();
@@ -101,22 +126,13 @@ namespace
         }
         return command_line;
     }
-}
-
-namespace QuickAccessHost
-{
-    bool is_running()
-    {
-        std::scoped_lock lock(quick_access_mutex);
-        return is_process_active_locked();
-    }
-
-    void start()
+    void start_process()
     {
         Logger::info(L"QuickAccessHost::start() called");
         std::scoped_lock lock(quick_access_mutex);
         if (is_process_active_locked())
         {
+            process_running = true;
             Logger::info(L"QuickAccessHost::start: process already active");
             return;
         }
@@ -178,21 +194,10 @@ namespace QuickAccessHost
         }
 
         wil::unique_handle token(token_handle);
-        quick_access_ipc.reset(new (std::nothrow) TwoWayPipeMessageIPC(runner_pipe_name, app_pipe_name, receive_json_send_to_main_thread));
+        quick_access_ipc.reset(new (std::nothrow) TwoWayPipeMessageIPC(runner_pipe_name, app_pipe_name, receive_quick_access_message));
         if (!quick_access_ipc)
         {
             Logger::error(L"QuickAccessHost: failed to allocate IPC instance.");
-            reset_state_locked();
-            return;
-        }
-
-        try
-        {
-            quick_access_ipc->start(token.get());
-        }
-        catch (...)
-        {
-            Logger::error(L"QuickAccessHost: failed to start IPC server for Quick Access.");
             reset_state_locked();
             return;
         }
@@ -223,6 +228,25 @@ namespace QuickAccessHost
         quick_access_process.reset(process_info.hProcess);
         const wil::unique_handle quick_access_thread{ process_info.hThread };
 
+        try
+        {
+            interop_auth::CallerPolicy policy;
+            policy.enabled = true;
+            policy.expectedClientPid = process_info.dwProcessId;
+            policy.expectedDirectory = get_module_folderpath() + L"\\WinUI3Apps";
+            policy.allowedBasenames = { L"Kit.QuickAccess.exe" };
+            policy.expectedVersion = interop_auth::GetOwnModuleVersion();
+            policy.requireMicrosoftSignature = false; // Locally built Kit; exact child PID is pinned.
+            quick_access_ipc->start(token.get(), policy);
+        }
+        catch (...)
+        {
+            TerminateProcess(quick_access_process.get(), 1);
+            reset_state_locked();
+            Logger::error(L"QuickAccessHost: failed to start authenticated IPC.");
+            return;
+        }
+
         // Assign to job object to ensure the process is killed if the runner exits unexpectedly (e.g. debugging stop)
         quick_access_job.reset(CreateJobObjectW(nullptr, nullptr));
         if (quick_access_job)
@@ -246,62 +270,22 @@ namespace QuickAccessHost
             Logger::warn(L"QuickAccessHost: failed to create job object. error={}", GetLastError());
         }
 
-        ResumeThread(quick_access_thread.get());
-    }
-
-    void show()
-    {
-        std::unique_lock lock(show_request_mutex, std::try_to_lock);
-        if (!lock.owns_lock())
+        if (ResumeThread(quick_access_thread.get()) == static_cast<DWORD>(-1))
         {
-            // A show request arriving during shutdown must not wait for process cleanup.
-            return;
+            TerminateProcess(quick_access_process.get(), 1);
+            reset_state_locked();
         }
-        if (!show_work)
+        else
         {
-            show_work.reset(CreateThreadpoolWork(
-                [](PTP_CALLBACK_INSTANCE, PVOID, PTP_WORK) noexcept {
-                    try
-                    {
-                        winrt::init_apartment(winrt::apartment_type::multi_threaded);
-                        auto uninitialize = wil::scope_exit([] { winrt::uninit_apartment(); });
-                        start();
-                        std::scoped_lock process_lock(quick_access_mutex);
-                        if (show_event && !SetEvent(show_event.get()))
-                        {
-                            Logger::warn(L"QuickAccessHost: failed to signal show event. error={}.", GetLastError());
-                        }
-                    }
-                    catch (...)
-                    {
-                        Logger::error(L"QuickAccessHost: failed to show Quick Access.");
-                    }
-                    show_pending = false;
-                },
-                nullptr,
-                nullptr));
-            if (!show_work)
-            {
-                Logger::error(L"QuickAccessHost: failed to create launch work. error={}.", GetLastError());
-                return;
-            }
-        }
-
-        // Coalesce repeated show requests while a cold launch is already in progress.
-        if (!show_pending.exchange(true))
-        {
-            SubmitThreadpoolWork(show_work.get());
+            process_running = true;
         }
     }
 
-    void stop()
+    void stop_process(bool wait_for_process, HANDLE fast_shutdown_event)
     {
-        std::scoped_lock request_lock(show_request_mutex);
-        // WIL cancels queued callbacks and waits for an active callback before closing the work.
-        show_work.reset();
-        show_pending = false;
         Logger::info(L"QuickAccessHost::stop() called");
         std::unique_lock lock(quick_access_mutex);
+        process_running = false;
         if (exit_event)
         {
             SetEvent(exit_event.get());
@@ -309,9 +293,13 @@ namespace QuickAccessHost
 
         if (quick_access_process)
         {
-            const DWORD wait_result = WaitForSingleObject(quick_access_process.get(), 2000);
-            Logger::info(L"QuickAccessHost::stop: WaitForSingleObject result={}", wait_result);
-            if (wait_result == WAIT_TIMEOUT)
+            HANDLE wait_handles[] = { quick_access_process.get(), fast_shutdown_event };
+            const auto wait_for_exit = [&](DWORD timeout) {
+                return WaitForMultipleObjects(fast_shutdown_event ? 2 : 1, wait_handles, FALSE, wait_for_process ? timeout : 0);
+            };
+            const DWORD wait_result = wait_for_exit(2000);
+            Logger::info(L"QuickAccessHost::stop: process wait result={}", wait_result);
+            if (wait_result == WAIT_TIMEOUT || wait_result == WAIT_OBJECT_0 + 1)
             {
                 Logger::warn(L"QuickAccessHost: Quick Access process did not exit in time, terminating.");
                 if (!TerminateProcess(quick_access_process.get(), 0))
@@ -321,15 +309,73 @@ namespace QuickAccessHost
                 else
                 {
                     Logger::info(L"QuickAccessHost: TerminateProcess succeeded.");
-                    WaitForSingleObject(quick_access_process.get(), 5000);
+                    wait_for_exit(5000);
                 }
             }
             else if (wait_result == WAIT_FAILED)
             {
                 Logger::error(L"QuickAccessHost: failed while waiting for Quick Access process. error={}.", GetLastError());
             }
+
+            if (WaitForSingleObject(quick_access_process.get(), 0) != WAIT_OBJECT_0 &&
+                (!fast_shutdown_event || WaitForSingleObject(fast_shutdown_event, 0) != WAIT_OBJECT_0))
+            {
+                // Retain ownership if bounded shutdown failed. A subsequent show
+                // must not launch a second host while this child is still alive.
+                process_running = is_process_active_locked();
+                Logger::warn(L"QuickAccessHost: retaining process ownership after incomplete shutdown.");
+                return;
+            }
         }
 
         reset_state_locked();
+    }
+
+    // Declared after process state so its destructor joins before handles are destroyed.
+    using QuickAccessHost::detail::Request;
+    QuickAccessHost::detail::LifecycleWorker lifecycle({
+        start_process,
+        [] {
+            std::scoped_lock lock(quick_access_mutex);
+            if (show_event && !SetEvent(show_event.get()))
+                Logger::warn(L"QuickAccessHost: failed to signal show event. error={}.", GetLastError());
+        },
+        [](HANDLE fast_shutdown_event) { stop_process(true, fast_shutdown_event); },
+        [] { Logger::error(L"QuickAccessHost: lifecycle request failed."); }
+    });
+}
+
+namespace QuickAccessHost
+{
+    bool is_running()
+    {
+        // State queries must not inherit the child shutdown grace period.
+        std::unique_lock lock(quick_access_mutex, std::try_to_lock);
+        if (!lock.owns_lock()) return process_running.load();
+        process_running = is_process_active_locked();
+        return process_running.load();
+    }
+
+    void start()
+    {
+        try { lifecycle.request(Request::Start); }
+        catch (...) { Logger::error(L"QuickAccessHost: failed to queue startup."); }
+    }
+
+    void show()
+    {
+        try { lifecycle.request(Request::Show); }
+        catch (...) { Logger::error(L"QuickAccessHost: failed to queue show."); }
+    }
+
+    void request_stop()
+    {
+        try { lifecycle.request(Request::Stop); }
+        catch (...) { Logger::error(L"QuickAccessHost: failed to queue stop."); }
+    }
+
+    void stop(bool wait_for_process)
+    {
+        lifecycle.shutdown(wait_for_process);
     }
 }

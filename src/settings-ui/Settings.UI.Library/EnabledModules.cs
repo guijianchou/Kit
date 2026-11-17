@@ -671,15 +671,13 @@ namespace Kit.Settings.UI.Library
 
         internal void AddEnabledModuleChangeNotification(Action callBack)
         {
-            notifyEnabledChangedAction = callBack;
+            notifyEnabledChangedAction -= callBack;
+            notifyEnabledChangedAction += callBack;
         }
 
         internal void RemoveEnabledModuleChangeNotification(Action callBack)
         {
-            if (notifyEnabledChangedAction == callBack)
-            {
-                notifyEnabledChangedAction = null;
-            }
+            notifyEnabledChangedAction -= callBack;
         }
     }
 }

@@ -26,8 +26,7 @@
     - call_custom_action() when a UI custom action is triggered.
 
   Keyboard-related types and virtual slots below are retained only for binary
-  compatibility with existing modules. Kit does not register module hotkeys or
-  call their keyboard callbacks.
+  compatibility with existing modules. Kit registers explicitly supplied module hotkeys on the runner window thread.
 
   When terminating, the runner will:
     - call destroy() which must free all resources and delete the module instance,
@@ -37,7 +36,7 @@
 class KitModuleIface
 {
 public:
-    /* Legacy ABI data layout; Kit does not use this to register hotkeys. */
+    /* Module shortcut descriptor; its upstream ABI layout is preserved. */
     struct Hotkey
     {
         bool win = false;
@@ -112,7 +111,7 @@ public:
     /* Destroy the module and free all memory */
     virtual void destroy() = 0;
 
-    /* Inert legacy vtable slot. Kit does not query or register module hotkeys. */
+    /* Return shortcuts to register while the module is enabled. A zero key disables a shortcut. */
     virtual size_t get_hotkeys(Hotkey* /*buffer*/, size_t /*buffer_size*/)
     {
         return 0;
@@ -129,7 +128,7 @@ public:
     {
     }
 
-    /* Inert legacy callback; the Kit runner never invokes it. */
+    /* Invoked through the module's serial executor for a registered shortcut. */
     virtual bool on_hotkey(size_t /*hotkeyId*/)
     {
         return false;

@@ -787,7 +787,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     private void OnConfigurationChanged(object sender, FileSystemEventArgs args)
     {
-        if (string.Equals(args.Name, AiHubStorageFiles.ServiceSettingsFileName, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(args.Name, AiHubStorageFiles.ServiceSettingsFileName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(args.Name, "secrets.dat", StringComparison.OrdinalIgnoreCase))
         {
             NotifyStateChanged();
         }

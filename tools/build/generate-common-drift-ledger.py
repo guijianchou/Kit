@@ -31,6 +31,7 @@ CORE_REFERENCE_PATHS = (
     'src/settings-ui/Settings.UI/SettingsXAML/Views/ShellPage.xaml',
 )
 CATEGORIES = ('byte-equal', 'normalized-equal', 'brand-only', 'content-diff', 'binary-diff')
+MODULE_REFERENCE_ROOTS = ('src/modules/awake', 'src/modules/LightSwitch')
 
 
 def git(repo: Path, *args: str) -> bytes:
@@ -80,7 +81,9 @@ def diff_stats(reference: str, kit: str) -> tuple[int, int, str, str]:
 
 def tsv(fields: list[str], rows: list[dict]) -> bytes:
     stream = io.StringIO(newline='')
-    writer = csv.DictWriter(stream, fieldnames=fields, delimiter='\t', lineterminator='\n')
+    # Quote empty preview fields too, retaining the TSV column count without
+    # producing trailing whitespace that fails the repository's diff checks.
+    writer = csv.DictWriter(stream, fieldnames=fields, delimiter='\t', lineterminator='\n', quoting=csv.QUOTE_ALL)
     writer.writeheader()
     writer.writerows(rows)
     return stream.getvalue().encode('utf-8')
@@ -148,6 +151,12 @@ def generate(repo: Path, reference: Path) -> dict[str, bytes]:
             baseline[relative] = digest(path.read_bytes())
         else:
             missing_core_paths.append(relative)
+    # Pin the actual official-module reference contents used by this sync too.
+    # This extends provenance only; the common comparison scope stays unchanged.
+    for relative_root in MODULE_REFERENCE_ROOTS:
+        for path in sorted((reference / relative_root).rglob('*')):
+            if path.is_file():
+                baseline[path.relative_to(reference).as_posix()] = digest(path.read_bytes())
     manifest = ''.join(f'{sha}  {relative}\n' for relative, sha in sorted(baseline.items())).encode('utf-8')
     table = tsv([
         'path', 'classification', 'review', 'added_lines', 'removed_lines',
@@ -166,6 +175,7 @@ def generate(repo: Path, reference: Path) -> dict[str, bytes]:
         'kit_version': version_fields(repo / 'src/Version.props'),
         'reference_version': version_fields(reference / 'src/Version.props'),
         'reference_own_git_commit': own_git,
+        'reference_module_roots': list(MODULE_REFERENCE_ROOTS),
         'normalization': ['UTF-8 decode with optional BOM removal', 'CRLF and standalone CR to LF', 'no whitespace/comment/case/identifier normalization otherwise'],
         'brand_map_in_order': list(BRAND_MAP),
         'brand_map_scope': 'literal replacements on normalized reference text only; not a semantic equivalence claim',
@@ -199,7 +209,7 @@ def main() -> int:
     mode.add_argument('--check', action='store_true', help='read-only check that report bytes match the current inputs')
     args = parser.parse_args()
     repo = args.repo_root.resolve()
-    reference = (args.reference_root or repo / 'Source/PowerToys-main').resolve()
+    reference = (args.reference_root or repo / 'Source/PowerToys-0.102.3101').resolve()
     output = (args.output_dir or repo / 'doc/devdoc/common-drift').resolve()
     if not (reference / 'src/common').is_dir():
         parser.error(f'Missing reference common directory: {reference / "src/common"}')

@@ -65,6 +65,12 @@ public static class Program
         AuditScheduler? scheduler = null;
         try
         {
+            using System.Diagnostics.Process? parent = OpenParentProcess(parentPid);
+            if (parentPid.HasValue && parent is null)
+            {
+                return 0;
+            }
+
             var store = dataDirectory is null ? new AiHubSettingsStore() : new AiHubSettingsStore(dataDirectory);
 
             // The plugin settings file owns the audit schedule; the page writes it and signals
@@ -94,7 +100,7 @@ public static class Program
 
             scheduler.Start();
 
-            await WaitForShutdownAsync(parentPid, stopEvent, refreshEvent, scheduler, store, shutdown.Token).ConfigureAwait(false);
+            await WaitForShutdownAsync(parent, stopEvent, refreshEvent, scheduler, store, shutdown.Token).ConfigureAwait(false);
 
             Logger.LogInfo("[AIHub.Worker] Stopped watching; ending the schedule.");
             return 0;
@@ -122,7 +128,7 @@ public static class Program
     private static EventLogService.AuditMode ToAuditMode(int auditModeIndex)
         => auditModeIndex == 1 ? EventLogService.AuditMode.Full : EventLogService.AuditMode.Extended;
 
-    private static async Task WaitForShutdownAsync(int? parentPid, EventWaitHandle stopEvent, EventWaitHandle refreshEvent, AuditScheduler scheduler, AiHubSettingsStore store, CancellationToken cancellationToken)
+    private static async Task WaitForShutdownAsync(System.Diagnostics.Process? parent, EventWaitHandle stopEvent, EventWaitHandle refreshEvent, AuditScheduler scheduler, AiHubSettingsStore store, CancellationToken cancellationToken)
     {
         WaitHandle[] handles = { stopEvent, refreshEvent, cancellationToken.WaitHandle };
 
@@ -167,19 +173,39 @@ public static class Program
                 return;
             }
 
-            if (parentPid is int pid && !IsProcessAlive(pid))
+            if (parent is not null && !IsProcessAlive(parent))
             {
-                Logger.LogInfo($"[AIHub.Worker] Parent process {pid} exited.");
+                Logger.LogInfo($"[AIHub.Worker] Parent process {parent.Id} exited.");
                 return;
             }
         }
     }
 
-    private static bool IsProcessAlive(int pid)
+    private static System.Diagnostics.Process? OpenParentProcess(int? pid)
+    {
+        if (pid is null)
+        {
+            return null;
+        }
+
+        System.Diagnostics.Process? process = null;
+        try
+        {
+            process = System.Diagnostics.Process.GetProcessById(pid.Value);
+            _ = process.SafeHandle; // Pin this process identity; a reused PID is not the parent.
+            return process;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            process?.Dispose();
+            return null;
+        }
+    }
+
+    private static bool IsProcessAlive(System.Diagnostics.Process process)
     {
         try
         {
-            using System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
             return !process.HasExited;
         }
         catch (ArgumentException)

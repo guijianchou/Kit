@@ -33,27 +33,22 @@ namespace ManagedCommon
         /// <returns>The path to Kit installation directory, or null if not found.</returns>
         public static string GetKitInstallPath()
         {
-#if DEBUG
-            // In debug builds, resolve directly from the running process (no installer/registry involved).
-            return GetPathFromCurrentProcess(kitOnly: true);
-#else
-            // Try to get path from Per-User installation first
-            string path = GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: true);
+            string path = GetPathFromCurrentProcess(kitOnly: true);
             if (!string.IsNullOrEmpty(path))
             {
                 return path;
             }
 
-            // Fall back to Per-Machine installation
-            path = GetPathFromRegistry(RegistryHive.LocalMachine, kitOnly: true);
-            if (!string.IsNullOrEmpty(path))
+            if (!IsProcessElevated())
             {
-                return path;
+                path = GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: true);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    return path;
+                }
             }
 
-            // Fallback for portable / standalone staged releases without registry registration
-            return GetPathFromCurrentProcess(kitOnly: true);
-#endif
+            return GetPathFromRegistry(RegistryHive.LocalMachine, kitOnly: true);
         }
 
         /// <summary>
@@ -62,27 +57,56 @@ namespace ManagedCommon
         /// <returns>The path to a compatible runner installation directory, or null if not found.</returns>
         public static string GetPowerToysCompatibleInstallPath()
         {
-#if DEBUG
-            // In debug builds, resolve directly from the running process (no installer/registry involved).
-            return GetPathFromCurrentProcess(kitOnly: false);
-#else
-            // Try to get path from Per-User installation first
-            string path = GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: false);
+            string path = GetPathFromCurrentProcess(kitOnly: false);
             if (!string.IsNullOrEmpty(path))
             {
                 return path;
             }
 
-            // Fall back to Per-Machine installation
-            path = GetPathFromRegistry(RegistryHive.LocalMachine, kitOnly: false);
-            if (!string.IsNullOrEmpty(path))
+            if (!IsProcessElevated())
             {
-                return path;
+                path = GetPathFromRegistry(RegistryHive.CurrentUser, kitOnly: false);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    return path;
+                }
             }
 
-            // Fallback for portable / standalone staged releases without registry registration
-            return GetPathFromCurrentProcess(kitOnly: false);
-#endif
+            return GetPathFromRegistry(RegistryHive.LocalMachine, kitOnly: false);
+        }
+
+        private const uint TokenQuery = 0x0008;
+        private const int TokenElevation = 20;
+
+        [System.Runtime.InteropServices.DllImport("advapi32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out Microsoft.Win32.SafeHandles.SafeAccessTokenHandle tokenHandle);
+
+        [System.Runtime.InteropServices.DllImport("advapi32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool GetTokenInformation(Microsoft.Win32.SafeHandles.SafeAccessTokenHandle tokenHandle, int tokenInformationClass, out uint tokenInformation, uint tokenInformationLength, out uint returnLength);
+
+        private static bool IsProcessElevated()
+        {
+            try
+            {
+                using var process = Process.GetCurrentProcess();
+                if (!OpenProcessToken(process.Handle, TokenQuery, out var token))
+                {
+                    return true;
+                }
+
+                using (token)
+                {
+                    return !GetTokenInformation(token, TokenElevation, out var elevation, sizeof(uint), out _) || elevation != 0;
+                }
+            }
+            catch (Exception)
+            {
+                // If elevation can't be determined, fail safe by treating the process as elevated so the
+                // user-writable HKCU hive is never trusted.
+                return true;
+            }
         }
 
         private static string GetPathFromRegistry(RegistryHive hive, bool kitOnly)

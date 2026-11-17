@@ -44,7 +44,7 @@ public sealed class SecretStore
                 DataProtectionScope.CurrentUser);
 
             string json = Encoding.UTF8.GetString(plaintext);
-            var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+            var dict = JsonSerializer.Deserialize(json, LocalserverJsonContext.Default.DictionaryStringString);
             if (dict is not null)
             {
                 _secrets.Clear();
@@ -76,7 +76,7 @@ public sealed class SecretStore
     public void Save()
     {
         Dictionary<string, string> snapshot = new(_secrets, StringComparer.Ordinal);
-        string json = JsonSerializer.Serialize(snapshot);
+        string json = JsonSerializer.Serialize(snapshot, LocalserverJsonContext.Default.DictionaryStringString);
         byte[] plaintext = Encoding.UTF8.GetBytes(json);
         byte[] ciphertext = ProtectedData.Protect(
             plaintext,

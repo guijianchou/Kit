@@ -27,7 +27,7 @@ void RestartProcess(const std::wstring& processName)
     }
 
     if (pInfo.empty() ||
-        RmRegisterResources(sessionHandle, 0, nullptr, sizeof(pInfo), pInfo.data(), 0, nullptr) != ERROR_SUCCESS)
+        RmRegisterResources(sessionHandle, 0, nullptr, static_cast<UINT>(pInfo.size()), pInfo.data(), 0, nullptr) != ERROR_SUCCESS)
     {
         return;
     }

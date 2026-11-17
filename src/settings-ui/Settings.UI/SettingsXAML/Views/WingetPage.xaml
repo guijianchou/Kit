@@ -207,6 +207,13 @@
                 <Button x:Name="CompactFiltersButton" Grid.Column="2" x:Uid="Winget_FiltersButton" Visibility="Collapsed" VerticalAlignment="Center">
                     <Button.Flyout><Flyout x:Name="FiltersFlyout" Placement="BottomEdgeAlignedRight" /></Button.Flyout>
                 </Button>
+                <ToggleButton x:Name="FiltersToggleButton" Grid.Column="2" VerticalAlignment="Center" Checked="FiltersToggle_Changed" Unchecked="FiltersToggle_Changed"
+                              AutomationProperties.AutomationId="Winget_ToggleFilters">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE71C;" FontSize="14" />
+                        <TextBlock x:Name="FiltersToggleLabel" Text="{x:Bind Text('ShowFilters')}" />
+                    </StackPanel>
+                </ToggleButton>
             </Grid>
             <CommandBar x:Name="WorkspaceCommands" Grid.Row="1" Background="Transparent" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" HorizontalAlignment="Left" HorizontalContentAlignment="Stretch">
                 <AppBarButton x:Name="PrimaryActionButton" Label="{x:Bind ViewModel.PrimaryActionLabel, Mode=OneWay}" Icon="Sync" Background="{ThemeResource KitAccentTintBrush}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" CornerRadius="6" IsEnabled="{x:Bind ViewModel.CanPrepareSelection, Mode=OneWay}" Click="PrimaryAction_Click" AutomationProperties.AutomationId="Winget_PrimaryAction" />
@@ -269,13 +276,13 @@
                     </Expander>
                 </Grid>
             </Border>
-            <Grid x:Name="WorkspaceBody" Grid.Row="4" MinWidth="0" ColumnSpacing="12">
-                <Grid.ColumnDefinitions><ColumnDefinition x:Name="FilterColumn" Width="190" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Grid x:Name="FiltersHost">
+            <Grid x:Name="WorkspaceBody" Grid.Row="4" MinWidth="0">
+                <Grid.ColumnDefinitions><ColumnDefinition x:Name="FilterColumn" Width="0" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Grid x:Name="FiltersHost" Visibility="Collapsed">
                     <ScrollViewer x:Name="FiltersPanel" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
                         <StackPanel Spacing="10">
                             <TextBlock x:Uid="Winget_FiltersHeading" FontWeight="SemiBold" />
-                            <TextBox x:Uid="Winget_LocalFilter" Text="{x:Bind ViewModel.FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBox x:Name="LocalFilterBox" x:Uid="Winget_LocalFilter" Text="{x:Bind ViewModel.FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             <Expander x:Uid="Winget_SourcesExpander" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                 <ItemsControl ItemsSource="{x:Bind ViewModel.SourceFilters}" ItemTemplate="{StaticResource SourceFilterTemplate}" />
                             </Expander>

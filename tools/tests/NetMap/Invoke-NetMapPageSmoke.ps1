@@ -11,7 +11,9 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if (-not $RuntimeRoot) { $RuntimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
 $runtimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
-$reportRoot = Join-Path $repoRoot "TestResults\NetMap\$Language"
+$runId = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N')
+$reportRoot = Join-Path $repoRoot "TestResults\NetMap\$Language\$runId"
+$harnessLog = Join-Path $reportRoot 'page-smoke.log'
 $testName = 'NetMapPageSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $runtimeRoot ($testName + $_) }
 if (@(Get-Process Kit,Kit.Settings,NetMapPageSmoke -ErrorAction SilentlyContinue).Count) {
@@ -24,9 +26,18 @@ if ((Get-Item -LiteralPath $runtimeRoot).Attributes -band [IO.FileAttributes]::R
     throw 'Refusing to use a redirected runtime directory.'
 }
 [IO.Directory]::CreateDirectory($reportRoot) | Out-Null
+Write-Host "NetMap smoke report directory: $reportRoot"
 $dotnetRoot = Split-Path (Get-Command dotnet.exe).Source
-$sdkVersion = (& dotnet --version).Trim()
-$sdkRoot = Join-Path $dotnetRoot "sdk\$sdkVersion"
+# HostModel is loaded inside PowerShell (.NET 10), so a globally selected .NET 11
+# SDK cannot supply its apphost writer even though its compiler runs separately.
+$net10Sdk = & dotnet --list-sdks | ForEach-Object {
+    if ($_ -match '^(10\.0\.\d+) \[(.+)\]$') {
+        [pscustomobject]@{ Version = [version]$Matches[1]; Root = Join-Path $Matches[2] $Matches[1] }
+    }
+} | Sort-Object Version -Descending | Select-Object -First 1
+if (-not $net10Sdk) { throw 'An installed .NET 10 SDK is required for the UI smoke apphost writer.' }
+$sdkRoot = $net10Sdk.Root
+Write-Host "UI smoke SDK: $($net10Sdk.Version); PowerShell runtime: $([Environment]::Version)"
 $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Host.win-x64') -Directory |
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
@@ -57,6 +68,9 @@ try {
         (Join-Path $hostPack.FullName 'runtimes\win-x64\native\apphost.exe'),
         (Join-Path $runtimeRoot "$testName.exe"), "$testName.dll", $true,
         (Join-Path $runtimeRoot 'Kit.Settings.exe'), $false, $false, $null)
+    # Match KitSetExecutableIntegrity for this manually generated apphost only.
+    & icacls.exe (Join-Path $runtimeRoot "$testName.exe") /setintegritylevel M /L | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Could not set the temporary smoke executable to medium integrity.' }
     foreach ($extension in @('.deps.json', '.runtimeconfig.json', '.pri')) {
         Copy-Item -LiteralPath (Join-Path $runtimeRoot ('Kit.Settings' + $extension)) -Destination (Join-Path $runtimeRoot ($testName + $extension))
     }
@@ -65,17 +79,25 @@ try {
     # Release Settings requires the Runner launch contract; use private, unused pipes
     # because the harness supplies its own in-memory replies after startup.
     $pipeSuffix = [guid]::NewGuid().ToString('N')
-    $launchArguments = @("KitPageSmokeRunner-$pipeSuffix", "KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
-    $testProcess = Start-Process -FilePath (Join-Path $runtimeRoot "$testName.exe") -ArgumentList $launchArguments -WorkingDirectory $runtimeRoot -WindowStyle Hidden -PassThru
+    $launchArguments = @("\\.\pipe\KitPageSmokeRunner-$pipeSuffix", "\\.\pipe\KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
+    $startInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $runtimeRoot "$testName.exe"))
+    $startInfo.WorkingDirectory = $runtimeRoot
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    foreach ($argument in $launchArguments) { $startInfo.ArgumentList.Add($argument) }
+    Write-Host 'Starting the NetMap smoke process directly.'
+    $testProcess = [Diagnostics.Process]::Start($startInfo)
+    Write-Host "NetMap smoke process: $($testProcess.Id)"
     if (-not $testProcess.WaitForExit(45000)) {
         Write-Host 'Page smoke test timed out after 45s; harness log tail:'
-        $harnessLog = Join-Path $reportRoot 'page-smoke.log'
         if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 5 }
         throw 'Page smoke test timed out.'
     }
-    Get-Content -LiteralPath (Join-Path $reportRoot 'page-smoke.log')
+    if (-not (Test-Path -LiteralPath $harnessLog)) { throw "Page smoke test produced no report in this run: $reportRoot" }
+    Get-Content -LiteralPath $harnessLog
     if ($testProcess.ExitCode -ne 0) { throw "Page smoke test failed: $($testProcess.ExitCode)" }
-    if ((Get-Content -LiteralPath (Join-Path $reportRoot 'page-smoke.log') -Tail 1) -ne 'PASS') {
+    if ((Get-Content -LiteralPath $harnessLog -Tail 1) -ne 'PASS') {
         throw 'Page smoke test exited before completing its assertions.'
     }
 } finally {
@@ -89,4 +111,12 @@ try {
     foreach ($path in $temporaryFiles) {
         if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }
     }
+    foreach ($path in $backups.Keys) {
+        if ($null -eq $backups[$path]) {
+            if (Test-Path -LiteralPath $path) { throw "Originally absent settings file remains: $path" }
+        } elseif ([Convert]::ToBase64String([byte[]]$backups[$path]) -cne [Convert]::ToBase64String([IO.File]::ReadAllBytes($path))) {
+            throw "Settings restore verification failed: $path"
+        }
+    }
+    Write-Host "Settings restore verified: $($backups.Count) files, byte-for-byte or originally absent."
 }

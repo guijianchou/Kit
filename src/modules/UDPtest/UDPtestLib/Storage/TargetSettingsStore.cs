@@ -84,7 +84,7 @@ namespace UDPtestLib.Storage
         }
     }
 
-    public sealed class TargetSettingsStore
+    public sealed class TargetSettingsStore : IDisposable
     {
         private static readonly JsonSerializerOptions SerializerOptions = new()
         {
@@ -93,6 +93,8 @@ namespace UDPtestLib.Storage
         };
 
         private readonly string _filePath;
+        private static readonly TargetSettingsJsonContext JsonContext = new(SerializerOptions);
+
         private readonly SemaphoreSlim _gate = new(1, 1);
 
         public TargetSettingsStore(string? filePath = null)
@@ -119,9 +121,9 @@ namespace UDPtestLib.Storage
                     FileShare.Read,
                     bufferSize: 4_096,
                     FileOptions.Asynchronous | FileOptions.SequentialScan);
-                TargetSettings? settings = await JsonSerializer.DeserializeAsync<TargetSettings>(
+                TargetSettings? settings = await JsonSerializer.DeserializeAsync(
                     stream,
-                    SerializerOptions,
+                    JsonContext.TargetSettings,
                     cancellationToken).ConfigureAwait(false);
                 return (settings ?? new TargetSettings()).Normalize();
             }
@@ -157,7 +159,7 @@ namespace UDPtestLib.Storage
                     await JsonSerializer.SerializeAsync(
                         stream,
                         normalized,
-                        SerializerOptions,
+                        JsonContext.TargetSettings,
                         cancellationToken).ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                     stream.Flush(flushToDisk: true);
@@ -171,6 +173,8 @@ namespace UDPtestLib.Storage
                 _gate.Release();
             }
         }
+
+        public void Dispose() => _gate.Dispose();
 
         private static void TryDeleteTemporaryFile(string path)
         {

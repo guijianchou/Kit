@@ -6,6 +6,8 @@
 
 #include <optional>
 #include <fstream>
+#include <atomic>
+#include <algorithm>
 
 namespace json
 {
@@ -32,8 +34,40 @@ namespace json
 
     inline void to_file(std::wstring_view file_name, const JsonObject& obj)
     {
-        std::wstring obj_str{ obj.Stringify().c_str() };
-        std::ofstream{ file_name.data(), std::ios::binary } << winrt::to_string(obj_str);
+        const std::wstring destination(file_name);
+        const std::string contents = winrt::to_string(obj.Stringify());
+        static std::atomic<unsigned long long> sequence{ 0 };
+        const std::wstring temporary = destination + L"." + std::to_wstring(GetCurrentProcessId()) + L"." +
+                                       std::to_wstring(GetTickCount64()) + L"." + std::to_wstring(sequence.fetch_add(1)) + L".tmp";
+        struct TemporaryFile
+        {
+            const std::wstring& path;
+            HANDLE handle = INVALID_HANDLE_VALUE;
+            bool created = false;
+            ~TemporaryFile()
+            {
+                if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle);
+                if (created) DeleteFileW(path.c_str());
+            }
+        } file{ temporary };
+        file.handle = CreateFileW(temporary.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file.handle == INVALID_HANDLE_VALUE) winrt::throw_last_error();
+        file.created = true;
+        size_t offset = 0;
+        while (offset < contents.size())
+        {
+            const DWORD chunk = static_cast<DWORD>((std::min)(contents.size() - offset, size_t{ 1024 * 1024 }));
+            DWORD written = 0;
+            if (!WriteFile(file.handle, contents.data() + offset, chunk, &written, nullptr)) winrt::throw_last_error();
+            if (written == 0) winrt::throw_hresult(HRESULT_FROM_WIN32(ERROR_WRITE_FAULT));
+            offset += written;
+        }
+        if (!FlushFileBuffers(file.handle)) winrt::throw_last_error();
+        CloseHandle(file.handle);
+        file.handle = INVALID_HANDLE_VALUE;
+        if (!MoveFileExW(temporary.c_str(), destination.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+            winrt::throw_last_error();
+        file.created = false;
     }
 
     inline bool has(

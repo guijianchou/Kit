@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "module_hotkeys.h"
 #include "general_settings.h"
 #include "general_settings_reader.h"
 #include "auto_start_helper.h"
@@ -278,6 +279,7 @@ void apply_module_status_update(const json::JsonObject& module_config, bool save
             }
         }
         target_enabled = powertoy->is_enabled();
+        refresh_module_hotkeys();
     }
     else
     {
@@ -336,9 +338,9 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     }
 
     Logger::info(L"apply_general_settings: {}", std::wstring{ general_configs.ToString() });
-    run_as_elevated = general_configs.GetNamedBoolean(L"run_elevated", false);
+    run_as_elevated = general_configs.GetNamedBoolean(L"run_elevated", run_as_elevated);
 
-    enable_warnings_elevated_apps = general_configs.GetNamedBoolean(L"enable_warnings_elevated_apps", true);
+    enable_warnings_elevated_apps = general_configs.GetNamedBoolean(L"enable_warnings_elevated_apps", enable_warnings_elevated_apps);
 
     bool new_enable_quick_access = general_configs.GetNamedBoolean(L"enable_quick_access", enable_quick_access);
     Logger::info(L"apply_general_settings: enable_quick_access={}, new_enable_quick_access={}", enable_quick_access, new_enable_quick_access);
@@ -348,29 +350,35 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
         enable_quick_access = new_enable_quick_access;
         if (!enable_quick_access)
         {
-            QuickAccessHost::stop();
+            QuickAccessHost::request_stop();
         }
     }
 
-    show_new_updates_toast_notification = general_configs.GetNamedBoolean(L"show_new_updates_toast_notification", false);
+    show_new_updates_toast_notification = general_configs.GetNamedBoolean(L"show_new_updates_toast_notification", show_new_updates_toast_notification);
 
-    download_updates_automatically = general_configs.GetNamedBoolean(L"download_updates_automatically", false);
-        show_whats_new_after_updates = general_configs.GetNamedBoolean(L"show_whats_new_after_updates", false);
+    download_updates_automatically = general_configs.GetNamedBoolean(L"download_updates_automatically", download_updates_automatically);
+        show_whats_new_after_updates = general_configs.GetNamedBoolean(L"show_whats_new_after_updates", show_whats_new_after_updates);
 
-    enable_experimentation = general_configs.GetNamedBoolean(L"enable_experimentation", false);
+    enable_experimentation = general_configs.GetNamedBoolean(L"enable_experimentation", enable_experimentation);
     dashboard_sort_order = parse_dashboard_sort_order(general_configs, dashboard_sort_order);
 
-    if (json::has(general_configs, L"startup", json::JsonValueType::Boolean) &&
-        general_configs.GetNamedBoolean(L"startup"))
+    if (json::has(general_configs, L"startup", json::JsonValueType::Boolean))
     {
-        // Reconcile only Kit's task; unchanged actions and run levels need no write.
-        create_auto_start_task_for_this_user(run_as_elevated);
+        if (general_configs.GetNamedBoolean(L"startup"))
+        {
+            // A standard process cannot create an elevated scheduled task.
+            if (run_as_elevated && !is_process_elevated())
+            {
+                run_as_elevated = false;
+            }
+            create_auto_start_task_for_this_user(run_as_elevated);
+        }
+        else
+        {
+            delete_auto_start_task_for_this_user();
+        }
+        invalidate_auto_start_task_cache();
     }
-    else
-    {
-        delete_auto_start_task_for_this_user();
-    }
-    invalidate_auto_start_task_cache();
 
     if (json::has(general_configs, L"enabled"))
     {
@@ -429,6 +437,8 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
             }
         }
     }
+
+    refresh_module_hotkeys();
 
     if (json::has(general_configs, L"theme", json::JsonValueType::String))
     {

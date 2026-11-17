@@ -1,6 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +14,7 @@ public sealed class AuditHistoryStorage
 {
     private readonly string _storagePath;
     private readonly object _lock = new();
+    private readonly string _mutexName;
 
     public AuditHistoryStorage(string? customDirectory = null)
     {
@@ -23,26 +26,56 @@ public sealed class AuditHistoryStorage
 
         Directory.CreateDirectory(dir);
         _storagePath = Path.Combine(dir, "audit_history.json");
+        _mutexName = @"Local\Kit.AuditHistory." + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(_storagePath).ToUpperInvariant())));
     }
 
     public List<AuditResult> LoadHistory()
     {
         lock (_lock)
         {
-            if (!File.Exists(_storagePath))
-            {
-                return new List<AuditResult>();
-            }
-
+            using var mutex = new Mutex(false, _mutexName);
+            AcquireMutex(mutex);
             try
             {
-                string json = File.ReadAllText(_storagePath);
-                return JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.ListAuditResult) ?? new List<AuditResult>();
+                return ReadHistory();
             }
-            catch
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
             {
+                // UI reads can degrade gracefully. The writer always uses strict ReadHistory.
                 return new List<AuditResult>();
             }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+    }
+
+    private List<AuditResult> ReadHistory()
+    {
+        if (!File.Exists(_storagePath))
+        {
+            return new List<AuditResult>();
+        }
+
+        // A damaged/unreadable history must never become an empty history on the next save.
+        string json = File.ReadAllText(_storagePath);
+        return JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.ListAuditResult)
+            ?? throw new InvalidDataException("The audit history does not contain a valid list.");
+    }
+
+    private static void AcquireMutex(Mutex mutex)
+    {
+        try
+        {
+            if (!mutex.WaitOne(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException("Timed out waiting for the audit history writer.");
+            }
+        }
+        catch (AbandonedMutexException)
+        {
+            // Ownership was granted; atomic replacement keeps the last committed file intact.
         }
     }
 
@@ -57,19 +90,35 @@ public sealed class AuditHistoryStorage
     {
         lock (_lock)
         {
-            var history = LoadHistory();
-            history.RemoveAll(r => r.Timestamp < DateTime.UtcNow.AddDays(-retentionDays));
-            history.Insert(0, result);
-
-            if (history.Count > MaxRetainedAudits)
+            using var mutex = new Mutex(false, _mutexName);
+            AcquireMutex(mutex);
+            string tempPath = _storagePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
             {
-                history.RemoveRange(MaxRetainedAudits, history.Count - MaxRetainedAudits);
-            }
+                var history = ReadHistory();
+                history.RemoveAll(r => r.Timestamp < DateTime.UtcNow.AddDays(-retentionDays));
+                history.Insert(0, result);
 
-            string json = JsonSerializer.Serialize(history, AIHubLibJsonContext.Default.ListAuditResult);
-            string tempPath = _storagePath + ".tmp";
-            File.WriteAllText(tempPath, json);
-            File.Move(tempPath, _storagePath, overwrite: true);
+                if (history.Count > MaxRetainedAudits)
+                {
+                    history.RemoveRange(MaxRetainedAudits, history.Count - MaxRetainedAudits);
+                }
+
+                string json = JsonSerializer.Serialize(history, AIHubLibJsonContext.Default.ListAuditResult);
+                File.WriteAllText(tempPath, json);
+                File.Move(tempPath, _storagePath, overwrite: true);
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                finally
+                {
+                    mutex.ReleaseMutex();
+                }
+            }
         }
     }
 

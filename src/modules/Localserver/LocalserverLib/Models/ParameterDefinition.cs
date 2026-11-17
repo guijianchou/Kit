@@ -41,28 +41,28 @@ public sealed record ParameterDefinition
     /// <summary>Human label shown in the parameter form.</summary>
     public required string Name { get; init; }
 
-    public ParameterType Type { get; init; } = ParameterType.Boolean;
+    public ParameterType Type { get; set; } = ParameterType.Boolean;
 
     /// <summary>Default value, in the JSON-native type for <see cref="Type"/>.</summary>
     public object? Default { get; init; }
 
-    public ParameterValueStyle Style { get; init; } = ParameterValueStyle.Space;
+    public ParameterValueStyle Style { get; set; } = ParameterValueStyle.Space;
 
     public double? Min { get; init; }
 
     public double? Max { get; init; }
 
     /// <summary>Allowed values when <see cref="Type"/> is <see cref="ParameterType.Enum"/>.</summary>
-    public IReadOnlyList<string> Options { get; init; } = [];
+    public IReadOnlyList<string> Options { get; set; } = [];
 
     /// <summary>
     /// Flags that cannot be used together with this one. Enabling this flag clears
     /// them in the UI instead of letting the user build a command that fails.
     /// </summary>
-    public IReadOnlyList<string> ConflictsWith { get; init; } = [];
+    public IReadOnlyList<string> ConflictsWith { get; set; } = [];
 
     /// <summary>Flags that must also be present for this one to be meaningful.</summary>
-    public IReadOnlyList<string> Requires { get; init; } = [];
+    public IReadOnlyList<string> Requires { get; set; } = [];
 
     /// <summary>
     /// Binds this parameter to a well-known service field so the rest of the app
@@ -74,7 +74,7 @@ public sealed record ParameterDefinition
     public string? Description { get; init; }
 
     /// <summary>False for switches the user should not touch from the UI.</summary>
-    public bool IsEditable { get; init; } = true;
+    public bool IsEditable { get; set; } = true;
 }
 
 /// <summary>
@@ -87,6 +87,6 @@ public sealed record ServicePreset
     public string? Description { get; init; }
 
     /// <summary>Flag to value. Flags absent here fall back to their defaults.</summary>
-    public IReadOnlyDictionary<string, object?> Args { get; init; } =
+    public IReadOnlyDictionary<string, object?> Args { get; set; } =
         new Dictionary<string, object?>(StringComparer.Ordinal);
 }

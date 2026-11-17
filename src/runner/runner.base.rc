@@ -1,4 +1,4 @@
-﻿#include <windows.h>
+#include <windows.h>
 #include "resource.h"
 #include "../common/version/version.h"
 
@@ -10,6 +10,7 @@ BEGIN
     POPUP "POPUP"
     BEGIN
         MENUITEM "Settings", ID_SETTINGS_MENU_COMMAND
+        MENUITEM "Quick Access", ID_QUICK_ACCESS_MENU_COMMAND
         //MENUITEM "About", ID_ABOUT_MENU_COMMAND
         MENUITEM SEPARATOR
         MENUITEM "Documentation" ID_DOCUMENTATION_MENU_COMMAND
@@ -28,7 +29,7 @@ FILEFLAGS VS_FF_DEBUG
 FILEFLAGS 0x0L
 #endif
 FILEOS VOS_NT_WINDOWS32
-FILETYPE VFT_DLL
+FILETYPE VFT_APP
 FILESUBTYPE VFT2_UNKNOWN 
 BEGIN
     BLOCK "StringFileInfo"

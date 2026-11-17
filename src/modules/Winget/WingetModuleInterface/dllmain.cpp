@@ -9,7 +9,6 @@
 #include <common/utils/resources.h>
 #include <filesystem>
 #include <mutex>
-#include <thread>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 
@@ -22,7 +21,6 @@ class WingetModule final : public KitModuleIface
 {
     const std::wstring m_name = GET_RESOURCE_STRING_FALLBACK(IDS_WINGET_NAME, L"Winget");
     std::mutex m_lifecycle;
-    std::thread m_startup;
     HANDLE m_process = nullptr;
     HANDLE m_exit = nullptr;
     bool m_enabled = false;
@@ -80,17 +78,23 @@ class WingetModule final : public KitModuleIface
 
         if (m_process)
         {
-            // The service cancels its active WinGet operation before exiting. Keep the
-            // fallback bounded so a broken worker cannot survive a disabled module.
+            // Native installers can ignore cancellation until their own exit. This timeout
+            // bounds the host lifetime only; terminating it does not claim installation was
+            // cancelled, and persisted queue state is reconciled on the next service start.
             DWORD wait = WaitForSingleObject(m_process, 5000);
             if (wait == WAIT_TIMEOUT)
             {
                 Logger::warn(L"[Winget] Service did not drain after cancellation; terminating its host.");
-                TerminateProcess(m_process, 0);
-                WaitForSingleObject(m_process, 1000);
+                if (TerminateProcess(m_process, 0))
+                {
+                    wait = WaitForSingleObject(m_process, 1000);
+                }
             }
 
-            close_process();
+            if (wait == WAIT_OBJECT_0)
+            {
+                close_process();
+            }
         }
     }
 
@@ -134,13 +138,13 @@ public:
     void enable() override
     {
         std::lock_guard lock(m_lifecycle);
-        if (m_startup.joinable())
+        if (m_process && WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT)
         {
-            m_startup.join();
-        }
-
-        if (m_enabled && m_process && WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT)
-        {
+            m_enabled = true;
+            if (m_exit)
+            {
+                ResetEvent(m_exit);
+            }
             return;
         }
 
@@ -159,8 +163,8 @@ public:
         ResetEvent(m_exit);
         try
         {
-            m_startup = std::thread([this] { start_worker(); });
-            m_enabled = true;
+            start_worker();
+            m_enabled = m_process && WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT;
         }
         catch (...)
         {
@@ -173,23 +177,19 @@ public:
     {
         std::lock_guard lock(m_lifecycle);
         m_enabled = false;
-        if (m_startup.joinable())
-        {
-            m_startup.join();
-        }
-
         stop_worker();
     }
 
     bool is_enabled() override
     {
         std::lock_guard lock(m_lifecycle);
-        return m_enabled;
+        return m_enabled && m_process && WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT;
     }
 
     void destroy() override
     {
         disable();
+        close_process();
         if (m_exit)
         {
             CloseHandle(m_exit);

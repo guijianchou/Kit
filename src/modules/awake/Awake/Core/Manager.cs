@@ -67,7 +67,9 @@ namespace Awake.Core
         private static readonly Lock StateLock = new();
 
         private static CancellationTokenSource _monitorTokenSource;
+        private static Thread? _monitorThread;
         private static IDisposable? _timerSubscription;
+        private static int _exiting;
 
         static Manager()
         {
@@ -83,14 +85,15 @@ namespace Awake.Core
 
         internal static void StartMonitor()
         {
-            Thread monitorThread = new(() =>
+            var cancellation = _monitorTokenSource.Token;
+            _monitorThread = new(() =>
             {
                 Thread.CurrentThread.IsBackground = false;
                 try
                 {
-                    while (!_monitorTokenSource.Token.IsCancellationRequested)
+                    while (!cancellation.IsCancellationRequested)
                     {
-                        ExecutionState state = _stateQueue.Take(_monitorTokenSource.Token);
+                        ExecutionState state = _stateQueue.Take(cancellation);
 
                         Logger.LogInfo($"Setting state to {state}");
 
@@ -111,13 +114,17 @@ namespace Awake.Core
                     Logger.LogInfo("Monitor thread received cancellation signal. Exiting gracefully.");
                 }
             });
-            monitorThread.Start();
+            _monitorThread.Start();
         }
 
         internal static void StopMonitor()
         {
             _monitorTokenSource.Cancel();
-            _monitorTokenSource.Dispose();
+            if (_monitorThread == null ||
+                (Thread.CurrentThread != _monitorThread && _monitorThread.Join(TimeSpan.FromSeconds(1))))
+            {
+                _monitorTokenSource.Dispose();
+            }
         }
 
         internal static void SetConsoleControlHandler(ConsoleEventHandler handler, bool addHandler)
@@ -443,6 +450,11 @@ namespace Awake.Core
         /// <param name="exitCode">Exit code to exit with.</param>
         internal static void CompleteExit(int exitCode)
         {
+            if (Interlocked.Exchange(ref _exiting, 1) != 0)
+            {
+                return;
+            }
+
             SetPassiveKeepAwake(updateSettings: false);
 
             // Stop the monitor thread gracefully
@@ -452,21 +464,8 @@ namespace Awake.Core
             _timerSubscription?.Dispose();
             _timerSubscription = null;
 
-            // Dispose tray icons
-            TrayHelper.DisposeIcons();
-
-            if (TrayHelper.WindowHandle != IntPtr.Zero)
-            {
-                // Delete the icon.
-                TrayHelper.SetShellIcon(TrayHelper.WindowHandle, string.Empty, null, TrayIconAction.Delete);
-
-                // Close the message window that we used for the tray.
-                Bridge.SendMessage(TrayHelper.WindowHandle, Native.Constants.WM_CLOSE, 0, 0);
-
-                Bridge.DestroyWindow(TrayHelper.WindowHandle);
-            }
-
-            Bridge.PostQuitMessage(exitCode);
+            // Window, menu and icon ownership belongs to the tray message thread.
+            TrayHelper.Shutdown();
             Environment.Exit(exitCode);
         }
 

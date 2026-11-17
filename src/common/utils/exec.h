@@ -13,6 +13,7 @@
 #pragma warning(pop)
 
 #include <optional>
+#include <atomic>
 #include <string>
 
 inline std::optional<std::string> exec_and_read_output(const std::wstring_view command, DWORD timeout_ms = 30000)
@@ -22,13 +23,12 @@ inline std::optional<std::string> exec_and_read_output(const std::wstring_view c
 
     constexpr size_t bufferSize = 4096;
     // We must use a named pipe for async I/O
-    char pipename[MAX_PATH + 1];
-    if (!GetTempFileNameA(R"(\\.\pipe\)", "tmp", 1, pipename))
-    {
-        return std::nullopt;
-    }
+    static std::atomic<unsigned long long> pipe_sequence{ 0 };
+    const std::string pipe_name = "\\\\.\\pipe\\Kit.Exec." + std::to_string(GetCurrentProcessId()) + "." +
+                                  std::to_string(GetTickCount64()) + "." + std::to_string(pipe_sequence.fetch_add(1));
+    const char* pipename = pipe_name.c_str();
 
-    wil::unique_handle readPipe{ CreateNamedPipeA(pipename, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE, PIPE_UNLIMITED_INSTANCES, bufferSize, bufferSize, 0, &saAttr) };
+    wil::unique_handle readPipe{ CreateNamedPipeA(pipename, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE, PIPE_UNLIMITED_INSTANCES, bufferSize, bufferSize, 0, &saAttr) };
 
     saAttr.bInheritHandle = true;
     wil::unique_handle writePipe{ CreateFileA(pipename, GENERIC_WRITE, 0, &saAttr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr) };

@@ -260,10 +260,10 @@ internal static class NetMapPageSmoke
             new[] { new ServiceResult("Claude", true, ProbeError.None, 200, now, "TraceResponded", 45, Checkpoint: new("198.51.100.66", "SG", "SG")), new ServiceResult("ChatGPT", true, ProbeError.None, 200, now, "TraceResponded", 180, Checkpoint: new("198.51.100.88", "JP", "JP")), new ServiceResult("Gemini", true, ProbeError.None, 403, now, "BrowserCheck", 30), new ServiceResult("Google", true, ProbeError.Timeout, null, now, ConsecutiveFailures: 3) }, hops);
         typeof(NetMapSession).GetField("current", PrivateInstance).SetValue(session, fixture);
         typeof(NetMapViewModel).GetMethod("ApplySnapshot", PrivateInstance).Invoke(vm, new object[] { fixture });
-        await VerifyAiResultLifecycle(page, session, fixture);
         window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 900));
         ((FrameworkElement)window.Content).RequestedTheme = ElementTheme.Light;
         await Task.Delay(250);
+        await VerifyAiResultLifecycle(page, session, fixture);
         Require(vm.Direct.Ip == "192.0.2.16" && vm.Proxy.Ip == "198.51.100.27", "Synthetic dual-egress results remain visible.");
         Require(vm.Direct.Asn.Contains("AS64496") && vm.Proxy.Asn.Contains("AS64497"), "Local and online ASN results are displayed.");
         Require(vm.Direct.Location.StartsWith(chinese ? "中国大陆" : "Mainland China") && vm.Proxy.Location.StartsWith(chinese ? "日本" : "Japan"), "Country names follow Kit language independently of Windows language.");
@@ -434,6 +434,31 @@ internal static class NetMapPageSmoke
         var messageProperty = typeof(NetMapViewModel).GetProperty("Message");
         var button = (Button)page.FindName("AiCheckButton");
         var notice = FindChild<InfoBar>(page);
+        var proxyCard = (FrameworkElement)page.FindName("ProxyCard");
+        var directCard = (FrameworkElement)page.FindName("DirectCard");
+        var mapCard = (FrameworkElement)page.FindName("MapCard");
+        var baseline = (Proxy: proxyCard.ActualHeight, Direct: directCard.ActualHeight,
+            MapY: mapCard.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point()).Y);
+        async Task CheckLayout(string state)
+        {
+            await Task.Delay(250);
+            var mapY = mapCard.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point()).Y;
+            File.AppendAllText(Path.Combine(Output, "page-smoke.log"),
+                $"AI {state}: Proxy={baseline.Proxy:F1}->{proxyCard.ActualHeight:F1}; Direct={baseline.Direct:F1}->{directCard.ActualHeight:F1}; MapY={baseline.MapY:F1}->{mapY:F1}.\n");
+            await Capture(page, "netmap-ai-" + state + ".png");
+            Require(Math.Abs(proxyCard.ActualHeight - baseline.Proxy) < 1 &&
+                Math.Abs(directCard.ActualHeight - baseline.Direct) < 1 && Math.Abs(mapY - baseline.MapY) < 1,
+                "AI " + state + " preserves both egress card heights and the map position.");
+            var ip = FindNamed(proxyCard, "EgressIpText");
+            var ai = FindNamed(proxyCard, "AiRouteInline");
+            Require(ip != null && ai != null && ai.Visibility == Visibility.Visible && ip.ActualWidth > 60,
+                "Proxy keeps a usable IP field beside visible AI analysis.");
+            var ipOrigin = ip.TransformToVisual(proxyCard).TransformPoint(new Windows.Foundation.Point());
+            var aiOrigin = ai.TransformToVisual(proxyCard).TransformPoint(new Windows.Foundation.Point());
+            Require(Math.Abs(ipOrigin.Y + (ip.ActualHeight / 2) - aiOrigin.Y - (ai.ActualHeight / 2)) < 1 &&
+                ipOrigin.X + ip.ActualWidth <= aiOrigin.X && aiOrigin.X + ai.ActualWidth <= proxyCard.ActualWidth,
+                "AI analysis is centered on the IP line without overlap or horizontal overflow.");
+        }
         TaskCompletionSource<NetMapAiAnalysisResponse> pending = null;
         CancellationToken requestToken = default;
         int calls = 0;
@@ -463,11 +488,72 @@ internal static class NetMapPageSmoke
             pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var successful = vm.CheckRouteWithAiAsync();
             Require(vm.IsAiChecking && !button.IsEnabled && vm.Proxy.AiRoute == NetMapViewModel.Text("AiAnalyzing"), "AI check exposes its busy state and prevents another request.");
+            await CheckLayout("busy");
             await vm.CheckRouteWithAiAsync();
             Require(calls == 1, "Repeated AI check cannot dispatch a duplicate request.");
             pending.SetResult(NetMapAiAnalysisResponse.Successful("Fixture route", "Fixture summary", "Fixture details"));
             await SettleResult(successful);
             Require(vm.AiRoute == "Fixture route" && vm.Proxy.AiRouteSummary == "Fixture summary" && vm.AiRouteDetails == "Fixture details" && string.IsNullOrEmpty(vm.Message), "Successful AI analysis publishes all route fields and clears its notice.");
+            await CheckLayout("success");
+
+            var ipv6 = fixture.Proxy.LastSuccess with { Identity = fixture.Proxy.LastSuccess.Identity with { Ip = "2001:db8:1234:5678:abcd:ef01:2345:6789" } };
+            foreach (int width in new[] { 1200, 651, 720 })
+            {
+                var window = App.GetSettingsWindow();
+                var egressGrid = (FrameworkElement)page.FindName("EgressGrid");
+                if (width == 651)
+                {
+                    // Exercise the actual two-column breakpoint, including DPI and
+                    // the shell's navigation width, rather than assuming window DIPs.
+                    for (int attempt = 0; attempt < 4; attempt++)
+                    {
+                        int adjusted = (int)Math.Ceiling(window.AppWindow.Size.Width + ((651 - egressGrid.ActualWidth) * page.XamlRoot.RasterizationScale));
+                        window.AppWindow.Resize(new Windows.Graphics.SizeInt32(adjusted, 900));
+                        await Task.Delay(200);
+                        if (Math.Abs(egressGrid.ActualWidth - 651) < 2) break;
+                    }
+
+                    Require(egressGrid.ActualWidth >= 650 && egressGrid.ActualWidth <= 653 && Grid.GetColumn(proxyCard) == 1,
+                        "AI layout covers the narrowest side-by-side egress cards: " + egressGrid.ActualWidth);
+                }
+                else
+                {
+                    window.AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 900));
+                }
+                var longFixture = fixture with { Generation = fixture.Generation + width, Proxy = new(ipv6, ipv6, fixture.Proxy.Geography) };
+                Apply(longFixture);
+                await Task.Delay(250);
+                baseline = (proxyCard.ActualHeight, directCard.ActualHeight,
+                    mapCard.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point()).Y);
+                pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                var longResult = vm.CheckRouteWithAiAsync();
+                await CheckLayout("ipv6-busy-" + width);
+                pending.SetResult(NetMapAiAnalysisResponse.Successful(
+                    "Fixture route with a very long analysis label and Unicode 日本线路分析", "Full analysis summary remains available in a tooltip.", "Full detailed analysis remains in Details."));
+                await SettleResult(longResult);
+                await CheckLayout("ipv6-success-" + width);
+                Require((string)ToolTipService.GetToolTip(FindNamed(proxyCard, "EgressIpText")) == ipv6.Identity.Ip,
+                    "Truncated IPv6 preserves the complete address in its tooltip.");
+                var detailsButton = FindChild<Button>(proxyCard);
+                var details = (Flyout)detailsButton.Flyout;
+                details.ShowAt(detailsButton);
+                await Task.Delay(150);
+                foreach (var field in new[] { ("EgressIpDetails", ipv6.Identity.Ip), ("AiRouteFullLabel", vm.Proxy.AiRoute),
+                    ("AiRouteFullSummary", vm.Proxy.AiRouteSummary), ("AiRouteFullDetails", vm.Proxy.AiRouteDetails) })
+                {
+                    var text = (TextBlock)FindNamed(details.Content, field.Item1);
+                    Require(text != null && text.IsLoaded && text.Text == field.Item2 && text.TextWrapping == TextWrapping.Wrap &&
+                        text.ActualWidth > 0 && text.ActualWidth <= ((FrameworkElement)details.Content).ActualWidth,
+                        "Opened Details preserves complete, wrapping " + field.Item1 + " at width " + width + ".");
+                }
+
+                details.Hide();
+                await Task.Delay(100);
+            }
+
+            App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 900));
+            Apply(fixture);
+            await Task.Delay(250);
 
             pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var failed = vm.CheckRouteWithAiAsync();
@@ -518,6 +604,19 @@ internal static class NetMapPageSmoke
             var child = VisualTreeHelper.GetChild(parent, index);
             if (child is T match) return match;
             var nested = FindChild<T>(child);
+            if (nested != null) return nested;
+        }
+
+        return null;
+    }
+
+    private static FrameworkElement FindNamed(DependencyObject parent, string name)
+    {
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is FrameworkElement element && element.Name == name) return element;
+            var nested = FindNamed(child, name);
             if (nested != null) return nested;
         }
 

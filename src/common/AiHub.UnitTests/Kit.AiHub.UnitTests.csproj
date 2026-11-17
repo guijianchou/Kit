@@ -20,7 +20,7 @@
     <!-- The audit reads the Windows event log, which needs this package's RID-specific
          runtime asset. A self-contained test output does not copy it by default, so the
          tests failed to load the assembly rather than exercising the reader. -->
-    <PackageReference Include="System.Diagnostics.EventLog">
+    <PackageReference Include="System.Diagnostics.EventLog" GeneratePathProperty="true">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>none</PrivateAssets>
     </PackageReference>
@@ -33,7 +33,7 @@
        explicitly so the audit tests exercise the reader instead of failing to load it. -->
   <Target Name="CopyEventLogRuntimeAsset" AfterTargets="Build">
     <ItemGroup>
-      <EventLogRuntimeAsset Include="$(NuGetPackageRoot)system.diagnostics.eventlog\10.0.8\runtimes\win\lib\net10.0\System.Diagnostics.EventLog.dll" />
+      <EventLogRuntimeAsset Include="$(PkgSystem_Diagnostics_EventLog)\runtimes\win\lib\net10.0\System.Diagnostics.EventLog.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(EventLogRuntimeAsset)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('%(EventLogRuntimeAsset.Identity)')" />
   </Target>

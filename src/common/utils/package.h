@@ -182,7 +182,7 @@ namespace package
             if (packageFullName.contains(packageDisplayName))
             {
                 // If checkVersion is true, verify if the package has the same version as PowerToys.
-                if ((!checkVersion) || (packageVersion.Major == VERSION_MAJOR && packageVersion.Minor == VERSION_MINOR && packageVersion.Revision == VERSION_REVISION))
+                if ((!checkVersion) || (packageVersion.Major == VERSION_MAJOR && packageVersion.Minor == VERSION_MINOR && packageVersion.Build == VERSION_REVISION && packageVersion.Revision == 0))
                 {
                     return { package };
                 }
@@ -253,7 +253,7 @@ namespace package
         try
         {
             PackageManager packageManager;
-            const static auto packages = packageManager.FindPackagesForUser({});
+            const auto packages = packageManager.FindPackagesForUser({});
 
             for (auto const& package : packages)
             {
@@ -272,10 +272,12 @@ namespace package
                         auto errorText = deploymentResult.ErrorText();
 
                         Logger::error(L"Unregister {} package failed. ErrorCode: {}, ErrorText: {}", packageFullName, std::to_wstring(errorCode), errorText);
+                        return false;
                     }
                     else if (deploymentOperation.Status() == AsyncStatus::Canceled)
                     {
                         Logger::error(L"Unregister {} package canceled.", packageFullName);
+                        return false;
                     }
                     else if (deploymentOperation.Status() == AsyncStatus::Completed)
                     {
@@ -284,11 +286,17 @@ namespace package
                     else
                     {
                         Logger::debug(L"Unregister {} package started.", packageFullName);
+                        return false;
                     }
 
                     break;
                 }
             }
+        }
+        catch (const winrt::hresult_error& e)
+        {
+            Logger::error(L"Package removal failed: {}", e.message());
+            return false;
         }
         catch (std::exception& e)
         {

@@ -13,7 +13,7 @@ namespace UDPtest.UnitTests
             string tempFile = Path.Combine(Path.GetTempPath(), $"udptest_test_{Guid.NewGuid():N}.json");
             try
             {
-                TargetSettingsStore store = new(tempFile);
+                using TargetSettingsStore store = new(tempFile);
                 TargetSettings initial = await store.LoadAsync();
                 Assert.AreEqual(2, initial.TcpSettings.Count);
                 Assert.AreEqual(4, initial.UdpSettings.Count);

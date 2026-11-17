@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "tray_icon.h"
 #include "ai_hub_ipc.h"
 
 #include <common/interop/two_way_pipe_message_ipc.h>
@@ -61,8 +62,12 @@ extern "C" __declspec(dllexport) HRESULT WINAPI KitAiHubRequest(PCWSTR request_j
         return HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
     }
 
-    const HWND tray = FindWindowW(L"KitTrayIconWindow", nullptr);
-    if (tray && GetWindowThreadProcessId(tray, nullptr) == GetCurrentThreadId())
+    const HWND tray = FindWindowW(pt_tray_icon_window_class, nullptr);
+    if (!tray) return HRESULT_FROM_WIN32(ERROR_NOT_READY);
+    DWORD tray_process = 0;
+    const DWORD tray_thread = GetWindowThreadProcessId(tray, &tray_process);
+    if (tray_process != GetCurrentProcessId()) return HRESULT_FROM_WIN32(ERROR_NOT_READY);
+    if (tray_thread == GetCurrentThreadId())
     {
         return HRESULT_FROM_WIN32(ERROR_POSSIBLE_DEADLOCK);
     }

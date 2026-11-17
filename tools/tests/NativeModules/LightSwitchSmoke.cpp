@@ -8,6 +8,7 @@
 #include <string_view>
 
 constexpr wchar_t StopEventName[] = L"Local\\KitLightSwitchServiceStopEvent-09b983c3-01df-4490-9f84-9f6e5c52c7d5";
+constexpr wchar_t ToggleSemaphoreName[] = L"Local\\Kit-LightSwitch-ToggleRequest-49904";
 
 std::wstring WorkerReadyEventName(DWORD pid)
 {
@@ -155,7 +156,12 @@ void StableCount(const std::wstring& path, size_t expected, DWORD durationMs = 3
     const auto deadline = Clock::now() + std::chrono::milliseconds(durationMs);
     do
     {
-        Check(FindOwnedWorkers(path).size() == expected, "The fake-worker count was not stable.");
+        const auto observed = FindOwnedWorkers(path).size();
+        if (observed != expected)
+        {
+            std::cerr << "Expected stable worker count " << expected << ", observed " << observed << '\n';
+            throw std::runtime_error("The fake-worker count was not stable.");
+        }
         Sleep(20);
     } while (Clock::now() < deadline);
 }
@@ -273,15 +279,36 @@ void RunLifecycle(const std::wstring& dllPath)
 
         module->enable();
         Check(module->is_enabled(), "Off mode did not keep the module enabled.");
+        const auto offWorker = WaitForReadyWorker(fakePath);
         for (int i = 0; i < 8; ++i)
             module->enable();
-        StableCount(fakePath, 0);
-        Check(module->get_hotkeys(nullptr, 0) == 0 && !module->on_hotkey(0), "Removed manual hotkeys were unexpectedly exposed.");
-        StableCount(fakePath, 0);
-        std::cout << "PASS Off cold start and repeated enable: no worker; removed hotkey stays unavailable.\n";
+        StableCount(fakePath, 1);
+        KitModuleIface::Hotkey hotkey{};
+        Check(module->get_hotkeys(nullptr, 0) == 1 && module->get_hotkeys(&hotkey, 1) == 1,
+            "The stable LightSwitch shortcut was not exposed.");
+        Check(hotkey.win && hotkey.ctrl && hotkey.shift && !hotkey.alt && hotkey.key == 0x44,
+            "The default shortcut was not Win+Ctrl+Shift+D.");
+        {
+            // The fake worker deliberately never consumes toggle requests. Read
+            // the semaphore here to prove each shortcut queues one action without
+            // invoking real theme APIs or changing the user's desktop theme.
+            ScopedHandle toggles(OpenSemaphoreW(SYNCHRONIZE, FALSE, ToggleSemaphoreName));
+            Check(static_cast<bool>(toggles), "Cannot inspect the fake-worker toggle semaphore.");
+            Check(WaitForSingleObject(toggles.get(), 0) == WAIT_TIMEOUT, "Unexpected pending toggle before shortcut test.");
+            Check(module->on_hotkey(0) && module->on_hotkey(0), "Enabled Off mode rejected its manual shortcut.");
+            Check(!module->on_hotkey(1), "An invalid shortcut index was accepted.");
+            Check(WaitForSingleObject(toggles.get(), 0) == WAIT_OBJECT_0 &&
+                WaitForSingleObject(toggles.get(), 0) == WAIT_OBJECT_0 &&
+                WaitForSingleObject(toggles.get(), 0) == WAIT_TIMEOUT,
+                "Shortcut presses did not queue exactly one request each.");
+        }
+        StableCount(fakePath, 1);
+        std::cout << "PASS Off cold start and repeated enable: one worker; default shortcut queues each manual request.\n";
 
         SetMode(module, L"FixedHours");
         auto first = WaitForReadyWorker(fakePath);
+        Check(first.pid == offWorker.pid && CompareFileTime(&first.created, &offWorker.created) == 0,
+            "Changing from Off to an active schedule replaced the live worker.");
         std::cout << "DIAG first worker PID=" << first.pid << " tick=" << GetTickCount64() << '\n';
         for (int i = 0; i < 8; ++i)
             module->enable();
@@ -295,6 +322,7 @@ void RunLifecycle(const std::wstring& dllPath)
         StopExactFakeWorker(fakePath, first);
         std::cout << "DIAG terminated first worker; waiting for zero tick=" << GetTickCount64() << '\n';
         WaitForCount(fakePath, 0);
+        Check(!module->is_enabled(), "The module reported enabled after its worker exited.");
         std::cout << "DIAG crash cleanup observed; dispatching recovery tick=" << GetTickCount64() << '\n';
         const auto actionStart = Clock::now();
         module->enable();
@@ -315,16 +343,20 @@ void RunLifecycle(const std::wstring& dllPath)
         WaitForReadyWorker(fakePath);
         StableCount(fakePath, 1);
         SetMode(module, L"Off");
-        WaitForCount(fakePath, 0);
-        StableCount(fakePath, 0);
-        std::cout << "PASS Rapid Off/active changes converge to the final mode without duplicate workers.\n";
+        const auto finalOffWorker = WaitForReadyWorker(fakePath);
+        StableCount(fakePath, 1);
+        Check(finalOffWorker.pid == recovered.pid && CompareFileTime(&finalOffWorker.created, &recovered.created) == 0,
+            "Rapid schedule changes replaced the manual-toggle worker.");
+        std::cout << "PASS Rapid Off/active changes retain one worker for manual requests without duplicates.\n";
 
         module->disable();
         module->disable();
         Check(!module->is_enabled() && !module->on_hotkey(0), "Disabled module still accepts actions.");
+        WaitForCount(fakePath, 0);
         module->enable();
         module->enable();
-        StableCount(fakePath, 0);
+        WaitForReadyWorker(fakePath);
+        StableCount(fakePath, 1);
         SetMode(module, L"FixedHours");
         WaitForReadyWorker(fakePath);
         module->disable();

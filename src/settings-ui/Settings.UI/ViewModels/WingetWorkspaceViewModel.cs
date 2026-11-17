@@ -148,6 +148,7 @@ public sealed partial class WingetViewModel
     private bool exactMatch;
     private bool includeUnknown;
     private bool showIgnored;
+    private string historyClearMessage = string.Empty;
     private bool sortDescending;
     private bool silentInstall;
     private bool refreshingWorkspace;
@@ -188,6 +189,10 @@ public sealed partial class WingetViewModel
     public ObservableCollection<WingetQueueRow> QueueItems { get; } = new();
 
     public ObservableCollection<WingetQueueRow> HistoryItems { get; } = new();
+
+    public bool CanClearOldHistory => CanCheck && status.History.Any(item => item.CompletedUtc is { } completed && completed < DateTimeOffset.UtcNow.AddDays(-7));
+
+    public string HistoryClearMessage => historyClearMessage;
 
     public IReadOnlyList<WingetPackageIdentity> IgnoredPackages => status.IgnoredPackages;
 
@@ -361,6 +366,24 @@ public sealed partial class WingetViewModel
         }
 
         return true;
+    });
+
+    public Task ClearOldHistoryAsync() => RunOnUiContextAsync(async () =>
+    {
+        if (!CanClearOldHistory)
+        {
+            return false;
+        }
+
+        historyClearMessage = L("HistoryClearWorking");
+        NotifyState();
+        int? removed = null;
+        bool cleared = await SendWorkspaceRequestAsync(new WingetServiceRequest { Command = "clear-old-history" }, onAccepted: ack => removed = ack.RemovedHistoryCount);
+        historyClearMessage = removed is >= 0
+            ? string.Format(CultureInfo.CurrentCulture, L(cleared ? "HistoryClearResult" : "HistoryClearRefreshFailed"), removed.Value)
+            : L("HistoryClearFailed");
+        NotifyState();
+        return cleared;
     });
 
     public Task<bool> LoadDetailsAsync() => RunOnUiContextAsync(async () =>
@@ -737,7 +760,7 @@ public sealed partial class WingetViewModel
         }
     }
 
-    private async Task<bool> SendWorkspaceRequestAsync(WingetServiceRequest request, bool waitForCompletion = false)
+    private async Task<bool> SendWorkspaceRequestAsync(WingetServiceRequest request, bool waitForCompletion = false, Action<WingetServiceAck>? onAccepted = null)
     {
         bool control = request.Command is "cancel" or "cancel-queue";
         if (disposed || !IsEnabled || pageLifetime == null || (!control && (requestPending || status.IsBusy)))
@@ -764,7 +787,8 @@ public sealed partial class WingetViewModel
         NotifyState();
         try
         {
-            var reply = await client.SendCommandAsync(request.Command, JsonSerializer.Serialize(request, WingetServiceJsonContext.Default.WingetServiceRequest), token);
+            var payload = request.Command == "clear-old-history" ? null : JsonSerializer.Serialize(request, WingetServiceJsonContext.Default.WingetServiceRequest);
+            var reply = await client.SendCommandAsync(request.Command, payload, token);
             if (!IsCurrent())
             {
                 return false;
@@ -777,10 +801,26 @@ public sealed partial class WingetViewModel
                 return false;
             }
 
+            onAccepted?.Invoke(ack);
             do
             {
+                if (request.Command == "clear-old-history")
+                {
+                    // Drain an older status request before fetching the durable
+                    // cleanup result, so it cannot republish the removed rows.
+                    while (polling)
+                    {
+                        await Task.Delay(25, token);
+                    }
+                }
+
                 await PollAsync();
                 if (!IsCurrent())
+                {
+                    return false;
+                }
+
+                if (request.Command == "clear-old-history" && !connected)
                 {
                     return false;
                 }

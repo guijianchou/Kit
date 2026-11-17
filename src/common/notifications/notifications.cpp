@@ -143,7 +143,7 @@ void notifications::show_toast(std::wstring message, std::wstring title, toast_p
     show_toast_with_activations(std::move(message), std::move(title), {}, {}, std::move(params));
 }
 
-constexpr inline void xml_escape(std::wstring data)
+inline std::wstring xml_escape(std::wstring_view data)
 {
     std::wstring buffer;
     buffer.reserve(data.size());
@@ -171,7 +171,7 @@ constexpr inline void xml_escape(std::wstring data)
             break;
         }
     }
-    data.swap(buffer);
+    return buffer;
 }
 
 void notifications::show_toast_with_activations(std::wstring message,
@@ -194,7 +194,7 @@ void notifications::show_toast_with_activations(std::wstring message,
     toast_xml += LR"(<?xml version="1.0"?>)";
     if (!launch_uri.empty())
     {
-        toast_xml += LR"(<toast launch=")" + launch_uri + LR"(" activationType="protocol">)"; // Use the launch URI if provided
+        toast_xml += LR"(<toast launch=")" + xml_escape(launch_uri) + LR"(" activationType="protocol">)"; // Use the launch URI if provided
     }
     else
     {
@@ -203,10 +203,10 @@ void notifications::show_toast_with_activations(std::wstring message,
 
     toast_xml += LR"(<visual><binding template="ToastGeneric">)";
     toast_xml += LR"(<text id="1">)";
-    toast_xml += std::move(title);
+    toast_xml += xml_escape(std::move(title));
     toast_xml += LR"(</text>)";
     toast_xml += LR"(<text id="2">)";
-    toast_xml += std::move(message);
+    toast_xml += xml_escape(std::move(message));
     toast_xml += LR"(</text>)";
 
     if (params.progress_bar.has_value())
@@ -231,7 +231,7 @@ void notifications::show_toast_with_activations(std::wstring message,
                                if (!b.snooze_title.empty())
                                {
                                    toast_xml += LR"( title=")";
-                                   toast_xml += b.snooze_title;
+                                   toast_xml += xml_escape(b.snooze_title);
                                    toast_xml += L'"';
                                }
                                toast_xml += L'>';
@@ -240,7 +240,7 @@ void notifications::show_toast_with_activations(std::wstring message,
                                    toast_xml += LR"(<selection id=")";
                                    toast_xml += std::to_wstring(duration.minutes);
                                    toast_xml += LR"(" content=")";
-                                   toast_xml += duration.label;
+                                   toast_xml += xml_escape(duration.label);
                                    toast_xml += LR"("/>)";
                                }
                                toast_xml += LR"(</input>)";
@@ -260,9 +260,9 @@ void notifications::show_toast_with_activations(std::wstring message,
                                toast_xml += LR"(placement="contextMenu" )";
                            }
                            toast_xml += LR"(arguments=")";
-                           toast_xml += b.url;
+                           toast_xml += xml_escape(b.url);
                            toast_xml += LR"(" content=")";
-                           toast_xml += b.label;
+                           toast_xml += xml_escape(b.label);
                            toast_xml += LR"(" />)";
                        },
                        [&](const background_activated_button& b) {
@@ -274,9 +274,9 @@ void notifications::show_toast_with_activations(std::wstring message,
                            toast_xml += LR"(arguments=")";
                            toast_xml += L"button_id=" + std::to_wstring(i); // pass the button ID
                            toast_xml += L"&amp;handler=";
-                           toast_xml += background_handler_id;
+                           toast_xml += xml_escape(background_handler_id);
                            toast_xml += LR"(" content=")";
-                           toast_xml += b.label;
+                           toast_xml += xml_escape(b.label);
                            toast_xml += LR"(" />)";
                        },
                        [&](const snooze_button& b) {
@@ -291,7 +291,7 @@ void notifications::show_toast_with_activations(std::wstring message,
                                toast_xml += '"';
                            }
                            toast_xml += LR"( content=")";
-                           toast_xml += b.snooze_button_title;
+                           toast_xml += xml_escape(b.snooze_button_title);
                            toast_xml += LR"(" />)";
                        } },
                    actions[i]);
@@ -299,7 +299,6 @@ void notifications::show_toast_with_activations(std::wstring message,
     toast_xml += L"</actions></toast>";
 
     XmlDocument toast_xml_doc;
-    xml_escape(toast_xml);
     toast_xml_doc.LoadXml(toast_xml);
     ToastNotification notification{ toast_xml_doc };
     notification.Group(DEFAULT_TOAST_GROUP);
@@ -362,12 +361,13 @@ void notifications::remove_toasts_by_tag(std::wstring_view tag)
     using namespace winrt::Windows::System;
     try
     {
-        User currentUser{ *User::FindAllAsync(UserType::LocalUser, UserAuthenticationStatus::LocallyAuthenticated).get().First() };
+        const auto users = User::FindAllAsync(UserType::LocalUser, UserAuthenticationStatus::LocallyAuthenticated).get();
+        if (users.Size() == 0) return;
+        User currentUser{ users.GetAt(0) };
         if (!currentUser)
         {
             return;
         }
-        currentUser.GetPropertyAsync(KnownUserProperties::AccountName());
         auto toastHistory = ToastNotificationManager::GetForUser(currentUser).History();
 
         toastHistory.Remove(tag, DEFAULT_TOAST_GROUP, APPLICATION_ID);

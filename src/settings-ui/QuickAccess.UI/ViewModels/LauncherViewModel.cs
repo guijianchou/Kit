@@ -44,8 +44,14 @@ public sealed class LauncherViewModel : Observable, IDisposable
             moduleType => Helpers.ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Enabled,
             _resourceLoader,
             fallbackLauncher: OpenModuleSettings);
+        RefreshUpdateStatus();
+    }
+
+    internal void RefreshUpdateStatus()
+    {
         var updatingSettings = UpdatingSettings.LoadSettings() ?? new UpdatingSettings();
         IsUpdateAvailable = updatingSettings.State is UpdatingSettings.UpdatingState.ReadyToInstall or UpdatingSettings.UpdatingState.ReadyToDownload;
+        OnPropertyChanged(nameof(IsUpdateAvailable));
     }
 
     private bool OpenModuleSettings(ModuleType moduleType)

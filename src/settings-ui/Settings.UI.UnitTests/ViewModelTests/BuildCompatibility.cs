@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -42,27 +42,9 @@ namespace ViewModelTests
             return false;
         }
 
-        private static bool TryFindSourceOrPowerToysReferenceFile(out string sourceFile, params string[] relativePathParts)
+        private static string FindPowerToysReferenceFile(params string[] relativePathParts)
         {
-            if (TryFindSourceFile(out sourceFile, relativePathParts))
-            {
-                return true;
-            }
-
-            DirectoryInfo directory = new DirectoryInfo(AppContext.BaseDirectory);
-            while (directory != null)
-            {
-                var candidate = Path.Combine(new[] { directory.FullName, "PowerToys-main" }.Concat(relativePathParts).ToArray());
-                if (File.Exists(candidate))
-                {
-                    sourceFile = candidate;
-                    return true;
-                }
-
-                directory = directory.Parent;
-            }
-
-            return false;
+            return FindSourceFile(["Source", "PowerToys-0.102.3101", .. relativePathParts]);
         }
 
         [TestMethod]
@@ -1210,7 +1192,20 @@ namespace ViewModelTests
             StringAssert.Contains(settingsWindow, "if (!CreateProcessW(executable_path.c_str(),");
             var cleanup = settingsWindow[settingsWindow.IndexOf("\nLExit:\n", StringComparison.Ordinal)..settingsWindow.IndexOf("#define MAX_TITLE_LENGTH", StringComparison.Ordinal)];
             StringAssert.Contains(cleanup, "g_settings_process_id = 0;");
-            StringAssert.Contains(cleanup, "PostMessageW(pt_main_window, WM_CLOSE, 0, 0);");
+            StringAssert.Contains(cleanup, "g_isLaunchInProgress = false;");
+
+            // The worker must marshal both the tray-setting read and quit request to
+            // the UI thread; PostQuitMessage on the worker cannot stop the main loop.
+            int dispatchStart = cleanup.IndexOf("dispatch_run_on_main_ui_thread([](PVOID)", StringComparison.Ordinal);
+            Assert.IsTrue(dispatchStart >= 0, "Settings cleanup must dispatch its exit decision to the UI thread.");
+            int dispatchEnd = cleanup.IndexOf("}, nullptr);", dispatchStart, StringComparison.Ordinal);
+            Assert.IsTrue(dispatchEnd > dispatchStart, "The exit callback must have a complete dispatch boundary.");
+            string exitCallback = cleanup[dispatchStart..dispatchEnd];
+            StringAssert.Contains(exitCallback, "if (!get_general_settings().showSystemTrayIcon)");
+            StringAssert.Contains(exitCallback, "PostQuitMessage(0);");
+            string workerCleanup = cleanup[..dispatchStart] + cleanup[dispatchEnd..];
+            Assert.IsFalse(workerCleanup.Contains("PostQuitMessage", StringComparison.Ordinal), "The worker must not post quit to its own queue.");
+            Assert.IsFalse(workerCleanup.Contains("get_general_settings()", StringComparison.Ordinal), "The worker must not read the UI-owned tray setting.");
         }
 
         [TestMethod]
@@ -2520,46 +2515,52 @@ namespace ViewModelTests
             }
 
             var packages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
-            string[] expectedNet10PackagePins =
+            var stablePackages = System.Xml.Linq.XDocument.Load(FindPowerToysReferenceFile("Directory.Packages.props"));
+            var kitPackages = System.Xml.Linq.XDocument.Parse(packages);
+            string runtimeVersion = stablePackages.Descendants("DotNetRuntimePackageVersion").Single().Value;
+            string[] packageNames =
             {
-                @"<PackageVersion Include=""Microsoft.Bcl.AsyncInterfaces"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.CodeAnalysis.NetAnalyzers"" Version=""10.0.102"" />",
-                @"<PackageVersion Include=""Microsoft.Extensions.Caching.Abstractions"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Extensions.Caching.Memory"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Extensions.DependencyInjection"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Extensions.Hosting"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Extensions.Hosting.WindowsServices"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Extensions.Logging"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Extensions.Logging.Abstractions"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Web.WebView2"" Version=""1.0.3719.77"" />",
-                @"<PackageVersion Include=""Microsoft.Win32.SystemEvents"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Windows.Compatibility"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""Microsoft.Windows.CsWin32"" Version=""0.3.269"" />",
-                @"<PackageVersion Include=""Microsoft.WindowsAppSDK"" Version=""2.0.1"" />",
-                @"<PackageVersion Include=""Microsoft.WindowsAppSDK.Foundation"" Version=""2.0.20"" />",
-                @"<PackageVersion Include=""Microsoft.WindowsAppSDK.Runtime"" Version=""2.0.1"" />",
-                @"<PackageVersion Include=""Newtonsoft.Json"" Version=""13.0.4"" />",
-                @"<PackageVersion Include=""System.CodeDom"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.ComponentModel.Composition"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Configuration.ConfigurationManager"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Data.OleDb"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Data.SqlClient"" Version=""4.9.1"" />",
-                @"<PackageVersion Include=""System.Diagnostics.EventLog"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Diagnostics.PerformanceCounter"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Drawing.Common"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Management"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Runtime.Caching"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.ServiceProcess.ServiceController"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Text.Encoding.CodePages"" Version=""10.0.8"" />",
-                @"<PackageVersion Include=""System.Text.Json"" Version=""10.0.8"" />",
+                "Microsoft.Bcl.AsyncInterfaces",
+                "Microsoft.CodeAnalysis.NetAnalyzers",
+                "Microsoft.Extensions.Caching.Abstractions",
+                "Microsoft.Extensions.Caching.Memory",
+                "Microsoft.Extensions.DependencyInjection",
+                "Microsoft.Extensions.Hosting",
+                "Microsoft.Extensions.Hosting.WindowsServices",
+                "Microsoft.Extensions.Logging",
+                "Microsoft.Extensions.Logging.Abstractions",
+                "Microsoft.Web.WebView2",
+                "Microsoft.Win32.SystemEvents",
+                "Microsoft.Windows.Compatibility",
+                "Microsoft.Windows.CsWin32",
+                "Microsoft.WindowsAppSDK",
+                "Microsoft.WindowsAppSDK.Foundation",
+                "Microsoft.WindowsAppSDK.Runtime",
+                "Newtonsoft.Json",
+                "System.CodeDom",
+                "System.ComponentModel.Composition",
+                "System.Configuration.ConfigurationManager",
+                "System.Data.OleDb",
+                "System.Diagnostics.EventLog",
+                "System.Diagnostics.PerformanceCounter",
+                "System.Drawing.Common",
+                "System.Management",
+                "System.Runtime.Caching",
+                "System.ServiceProcess.ServiceController",
+                "System.Text.Encoding.CodePages",
+                "System.Text.Json",
             };
-
-            foreach (var packagePin in expectedNet10PackagePins)
+            foreach (string name in packageNames)
             {
-                StringAssert.Contains(packages, packagePin);
+                var kitPin = kitPackages.Descendants("PackageVersion").Single(element => (string)element.Attribute("Include") == name);
+                var stablePin = stablePackages.Descendants("PackageVersion").SingleOrDefault(element => (string)element.Attribute("Include") == name);
+                string expected = stablePin is null
+                    ? runtimeVersion
+                    : ((string)stablePin.Attribute("Version")).Replace("$(DotNetRuntimePackageVersion)", runtimeVersion, StringComparison.Ordinal);
+                Assert.AreEqual(expected, (string)kitPin.Attribute("Version"), $"{name} must follow the stable source package baseline.");
             }
 
-            Assert.IsFalse(packages.Contains(@"<PackageVersion Include=""System.Collections.Immutable""", StringComparison.Ordinal), "PowerToys-main no longer pins System.Collections.Immutable centrally.");
+            Assert.IsFalse(packages.Contains(@"<PackageVersion Include=""System.Collections.Immutable""", StringComparison.Ordinal), "The stable PowerToys baseline does not pin System.Collections.Immutable centrally.");
 
             var settingsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Kit.Settings.csproj"));
             var settingsUnitTestsProject = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.UnitTests", "Settings.UI.UnitTests.csproj"));
@@ -2576,37 +2577,22 @@ namespace ViewModelTests
             Assert.IsFalse(xamlIndexBuilderProject.Contains(@"<PackageReference Include=""System.Text.Json""", StringComparison.Ordinal));
             Assert.IsFalse(uiTestAutomationProject.Contains(@"<PackageReference Include=""System.Text.RegularExpressions""", StringComparison.Ordinal));
 
-            if (TryFindSourceOrPowerToysReferenceFile(out var buildTemplatePath, ".pipelines", "v2", "templates", "job-build-project.yml"))
-            {
-                var buildTemplate = File.ReadAllText(buildTemplatePath);
-                StringAssert.Contains(buildTemplate, "TargetFramework=net10.0-windows10.0.26100.0");
-                Assert.IsFalse(buildTemplate.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
-            }
+            var buildTemplatePath = FindPowerToysReferenceFile(".pipelines", "v2", "templates", "job-build-project.yml");
+            var buildTemplate = File.ReadAllText(buildTemplatePath);
+            StringAssert.Contains(buildTemplate, "TargetFramework=net10.0-windows10.0.26100.0");
+            Assert.IsFalse(buildTemplate.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
 
-            if (TryFindSourceOrPowerToysReferenceFile(out var publishScriptPath, "installer", "PowerToysSetupVNext", "publish.cmd"))
-            {
-                var publishScript = File.ReadAllText(publishScriptPath);
-                StringAssert.Contains(publishScript, "TargetFramework=net10.0-windows10.0.26100.0");
-                Assert.IsFalse(publishScript.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
-            }
+            var publishScriptPath = FindPowerToysReferenceFile("installer", "PowerToysSetupVNext", "publish.cmd");
+            var publishScript = File.ReadAllText(publishScriptPath);
+            StringAssert.Contains(publishScript, "TargetFramework=net10.0-windows10.0.26100.0");
+            Assert.IsFalse(publishScript.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
 
-            if (TryFindSourceOrPowerToysReferenceFile(out var devDocPluginChecklistPath, "doc", "devdoc", "modules", "launcher", "new-plugin-checklist.md"))
-            {
-                var devDocPluginChecklist = File.ReadAllText(devDocPluginChecklistPath);
-                StringAssert.Contains(devDocPluginChecklist, "net10.0-windows10.0.22621.0");
-                StringAssert.Contains(devDocPluginChecklist, ".NET 10");
-                Assert.IsFalse(devDocPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
-                Assert.IsFalse(devDocPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
-            }
-
-            if (TryFindSourceOrPowerToysReferenceFile(out var devDocsPluginChecklistPath, "doc", "devdocs", "modules", "launcher", "new-plugin-checklist.md"))
-            {
-                var devDocsPluginChecklist = File.ReadAllText(devDocsPluginChecklistPath);
-                StringAssert.Contains(devDocsPluginChecklist, "net10.0-windows10.0.22621.0");
-                StringAssert.Contains(devDocsPluginChecklist, ".NET 10");
-                Assert.IsFalse(devDocsPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
-                Assert.IsFalse(devDocsPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
-            }
+            var devDocsPluginChecklistPath = FindPowerToysReferenceFile("doc", "devdocs", "modules", "launcher", "new-plugin-checklist.md");
+            var devDocsPluginChecklist = File.ReadAllText(devDocsPluginChecklistPath);
+            StringAssert.Contains(devDocsPluginChecklist, "net10.0-windows10.0.22621.0");
+            StringAssert.Contains(devDocsPluginChecklist, ".NET 10");
+            Assert.IsFalse(devDocsPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
+            Assert.IsFalse(devDocsPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
         }
 
         [TestMethod]
@@ -3094,22 +3080,6 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitLightSwitchShouldNotRegisterOrHandleHotkeys()
-        {
-            var lightSwitchInterface = File.ReadAllText(FindSourceFile("src", "modules", "LightSwitch", "LightSwitchModuleInterface", "dllmain.cpp"));
-            var lightSwitchProperties = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "LightSwitchProperties.cs"));
-            var lightSwitchPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "LightSwitchPage.xaml"));
-            var lightSwitchViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "LightSwitchViewModel.cs"));
-
-            Assert.IsFalse(lightSwitchInterface.Contains("on_hotkey", StringComparison.Ordinal), "LightSwitch interface should not implement on_hotkey.");
-            Assert.IsFalse(lightSwitchInterface.Contains("get_hotkeys", StringComparison.Ordinal), "LightSwitch interface should not implement get_hotkeys.");
-            Assert.IsFalse(lightSwitchInterface.Contains("add_hotkey", StringComparison.Ordinal), "LightSwitch interface should not add hotkey configuration.");
-            Assert.IsFalse(lightSwitchProperties.Contains("ToggleThemeHotkey", StringComparison.Ordinal), "LightSwitch properties should not expose ToggleThemeHotkey.");
-            Assert.IsFalse(lightSwitchPage.Contains("ShortcutControl", StringComparison.Ordinal), "LightSwitch page should not contain ShortcutControl.");
-            Assert.IsFalse(lightSwitchViewModel.Contains("ToggleThemeActivationShortcut", StringComparison.Ordinal), "LightSwitch ViewModel should not expose ToggleThemeActivationShortcut.");
-        }
-
-        [TestMethod]
         public void KitRuntimePipePrefixesShouldUseKitNames()
         {
             var settingsWindow = File.ReadAllText(FindSourceFile("src", "runner", "settings_window.cpp"));
@@ -3248,8 +3218,6 @@ namespace ViewModelTests
             // pin by name for negative assertions, and shared control vocabulary.
             var englishOnlyAllowlist = new string[]
             {
-                "CmdNotFound.ModuleDescription",
-                "CmdNotFound.ModuleTitle",
                 "Default.Content",
                 "File.Header",
                 "GeneralPage_ShowNewUpdatesToast.Header",
@@ -3262,12 +3230,6 @@ namespace ViewModelTests
                 "PasteAsHtmlFile.Header",
                 "PasteAsPngFile.Header",
                 "PasteAsTxtFile.Header",
-                "QuickAccent.ModuleDescription",
-                "QuickAccent.ModuleTitle",
-                "QuickAccent.SecondaryLinksHeader",
-                "TextExtractor.ModuleDescription",
-                "TextExtractor.ModuleTitle",
-                "TextExtractor.SecondaryLinksHeader",
                 "TranscodeToMp3.Header",
                 "TranscodeToMp4.Header",
             };

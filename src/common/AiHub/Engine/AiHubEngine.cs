@@ -10,17 +10,28 @@ using Kit.AiHub.Storage;
 /// </summary>
 public static class AiHubEngine
 {
-    private static readonly Lazy<TaskAiEngine> LazyInstance = new(CreateDefaultEngine);
+    private static readonly object Gate = new();
+    private static TaskAiEngine? _instance;
 
     /// <summary>
     /// Gets the shared singleton instance of IAiTaskEngine.
     /// </summary>
-    public static IAiTaskEngine Current => LazyInstance.Value;
+    public static IAiTaskEngine Current => ConcreteEngine;
 
     /// <summary>
     /// Gets the concrete implementation for settings management and notification.
     /// </summary>
-    public static TaskAiEngine ConcreteEngine => LazyInstance.Value;
+    public static TaskAiEngine ConcreteEngine
+    {
+        get
+        {
+            lock (Gate)
+            {
+                // Failed construction is retryable, and shutdown never republishes a disposed engine.
+                return _instance ??= CreateDefaultEngine();
+            }
+        }
+    }
 
     /// <summary>
     /// Raises state changed notification across listeners.
@@ -47,9 +58,11 @@ public static class AiHubEngine
 
     public static void Shutdown()
     {
-        if (LazyInstance.IsValueCreated)
+        lock (Gate)
         {
-            LazyInstance.Value.Dispose();
+            TaskAiEngine? instance = _instance;
+            _instance = null;
+            instance?.Dispose();
         }
     }
 

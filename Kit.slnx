@@ -250,4 +250,9 @@
   </Project>
   <Project Path="src/ActionRunner/ActionRunner.vcxproj" Id="d29ddd63-e2cf-4657-9fd5-2aede4257e5d" />
   <Project Path="tools/project_template/ModuleTemplate/ModuleTemplateCompileTest.vcxproj" Id="64a80062-4d8b-4229-8a38-dfa1d7497749" />
+  <Project Path="src/modules/LightSwitch/Tests/LightSwitch.Cli.UnitTests/LightSwitch.Cli.UnitTests.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="src/modules/LightSwitch/Tests/LightSwitchService.UnitTests/LightSwitchService.UnitTests.vcxproj" />
+  <Project Path="src/common/interop/native-tests/Common.Interop.NativeTests.vcxproj" />
 </Solution>

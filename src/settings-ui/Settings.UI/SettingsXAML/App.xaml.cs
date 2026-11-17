@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -57,6 +57,8 @@ namespace Kit.Settings.UI
 
         private static readonly Stopwatch StartupStopwatch = Stopwatch.StartNew();
         private static bool _startupCompleted;
+        private readonly Microsoft.UI.Dispatching.DispatcherQueue _uiDispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        private int _shutdownRequested;
 
         /// <summary>
         /// Logs a Settings startup milestone in the same STARTUP_TIMING form the runner uses,
@@ -117,8 +119,7 @@ namespace Kit.Settings.UI
             NativeEventWaiter.WaitForEventLoop(
                 Constants.KitRunnerTerminateSettingsEvent(), () =>
             {
-                AiHubIpcBridge.Shutdown();
-                Environment.Exit(0);
+                RequestGracefulShutdown();
             });
         }
 
@@ -217,8 +218,7 @@ namespace Kit.Settings.UI
 
             RunnerHelper.WaitForPowerToysRunner(PowerToysPID, () =>
             {
-                AiHubIpcBridge.Shutdown();
-                Environment.Exit(0);
+                RequestGracefulShutdown();
             });
 
             ipcmanager = new TwoWayPipeMessageIPCManaged(cmdArgs[(int)Arguments.SettingsPipeName], cmdArgs[(int)Arguments.PTPipeName], (string message) =>
@@ -246,6 +246,36 @@ namespace Kit.Settings.UI
             // https://github.com/microsoft/microsoft-ui-xaml/issues/7595 - Activate doesn't bring window to the foreground
             // Need to call SetForegroundWindow to actually gain focus.
             WindowHelpers.BringToForeground(settingsWindow.GetWindowHandle());
+        }
+
+        private void RequestGracefulShutdown()
+        {
+            if (System.Threading.Interlocked.Exchange(ref _shutdownRequested, 1) != 0)
+            {
+                return;
+            }
+
+            _uiDispatcher.TryEnqueue(() =>
+            {
+                try
+                {
+                    if (settingsWindow is { } window)
+                    {
+                        // Runner exit overrides background-work keepalive, but still flushes edits.
+                        window.KeepAliveForBackgroundWork = null;
+                        window.Close();
+                    }
+                    else
+                    {
+                        AiHubIpcBridge.Shutdown();
+                        Exit();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Unable to close Settings cleanly after Runner exit.", ex);
+                }
+            });
         }
 
         /// <summary>

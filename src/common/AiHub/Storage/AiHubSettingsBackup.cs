@@ -5,10 +5,12 @@ public sealed class AiHubSettingsBackup
 {
     public byte[] SettingsJson { get; }
     public byte[]? EncryptedSecrets { get; }
+    internal bool CredentialsUnavailable { get; }
 
-    internal AiHubSettingsBackup(byte[] settingsJson, byte[]? encryptedSecrets)
+    internal AiHubSettingsBackup(byte[] settingsJson, byte[]? encryptedSecrets, bool credentialsUnavailable = false)
     {
         SettingsJson = (byte[])settingsJson.Clone();
         EncryptedSecrets = encryptedSecrets is null ? null : (byte[])encryptedSecrets.Clone();
+        CredentialsUnavailable = credentialsUnavailable;
     }
 }

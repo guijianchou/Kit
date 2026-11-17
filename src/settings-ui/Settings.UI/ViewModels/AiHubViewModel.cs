@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -206,6 +206,37 @@ public sealed class AiHubEndpointViewModel : Observable
 /// </summary>
 public sealed partial class AiHubViewModel : Observable, IDisposable
 {
+    private static readonly object SharedGate = new();
+    private static AiHubViewModel? _shared;
+    private static int _sharedOwners;
+
+    internal static AiHubViewModel AcquireShared(DispatcherQueue? dispatcherQueue)
+    {
+        lock (SharedGate)
+        {
+            _shared ??= new AiHubViewModel(dispatcherQueue);
+            _sharedOwners++;
+            return _shared;
+        }
+    }
+
+    internal static void ReleaseShared(AiHubViewModel? instance)
+    {
+        lock (SharedGate)
+        {
+            if (instance is null || !ReferenceEquals(instance, _shared))
+            {
+                return;
+            }
+
+            if (--_sharedOwners == 0)
+            {
+                _shared = null;
+                instance.Dispose();
+            }
+        }
+    }
+
     private readonly KernelManagerService _kernelManager = new();
     private readonly RouteDispatcher _routeDispatcher;
     private readonly DispatcherQueue? _dispatcherQueue;
@@ -265,6 +296,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
         SaveActivePolicyCommand = new RelayCommand(() => StartPolicySave(ActivePolicyIndex), () => CanSavePolicy(ActivePolicyIndex));
         ResetActivePolicyCommand = new RelayCommand(() => StageDefaultPolicy(ActivePolicyIndex), () => CanEditPolicies);
         DiscardActivePolicyCommand = new RelayCommand(DiscardActivePolicy, () => CanEditPolicies && IsCurrentPolicyDirty);
+        RetryConfigurationCommand = new RelayCommand(RetryConfiguration, () => CanRetryConfiguration);
         CancelOperationCommand = new RelayCommand(
             () =>
             {
@@ -278,7 +310,25 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
         Initialization = RunOperationAsync(LoadConfigurationAsync);
     }
 
-    public Task Initialization { get; }
+    public Task Initialization { get; private set; }
+
+    public bool CanRetryConfiguration => _loadFailed && !IsBusy && !_disposed;
+
+    public ICommand RetryConfigurationCommand { get; }
+
+    private void RetryConfiguration()
+    {
+        if (!CanRetryConfiguration)
+        {
+            return;
+        }
+
+        _loadFailed = false;
+        OnPropertyChanged(nameof(IsStatusClosable));
+        IsStatusOpen = false;
+        Initialization = RunOperationAsync(LoadConfigurationAsync);
+        EnsurePoliciesLoaded();
+    }
 
     private async Task LoadConfigurationAsync(CancellationToken token)
     {
@@ -299,6 +349,11 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
             _settingsStore = loaded.settingsStore;
             _securityService = loaded.securityService;
             _config = loaded.config;
+            if (_engine is not null)
+            {
+                _engine.StateChanged -= OnHubStateChanged;
+            }
+
             _engine = loaded.engine;
             InitializeDiagnostics();
             _activeKernelIndex = AiKernelCatalog.IsPi(_config.SelectedKernel) ? 1 : 0;
@@ -326,6 +381,10 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
         catch (Exception)
         {
             _loadFailed = true;
+            _settingsLoaded = false;
+            OnPropertyChanged(nameof(IsStatusClosable));
+            OnPropertyChanged(nameof(CanToggle));
+            NotifyEnabledChanged();
             ShowStatus(Text("AiHub_LoadFailed"), InfoBarSeverity.Error);
         }
     }
@@ -615,6 +674,8 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
 
     public bool IsStatusOpen { get => _isStatusOpen; set => Set(ref _isStatusOpen, value); }
 
+    public bool IsStatusClosable => !_loadFailed;
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -624,6 +685,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
             {
                 OnPropertyChanged(nameof(CanEdit));
                 OnPropertyChanged(nameof(CanEditPolicies));
+                OnPropertyChanged(nameof(CanRetryConfiguration));
                 RefreshCommands();
             }
         }
@@ -670,7 +732,9 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
     public string ServiceStatusGlyph { get => _serviceStatusGlyph; private set => Set(ref _serviceStatusGlyph, value); }
 
     /// <summary>Reads the cached readiness verdict. No probe or kernel process is started.</summary>
-    private void RefreshServiceStatus(AiReadiness? cachedReadiness = null)
+    private void RefreshServiceStatus(AiReadiness? cachedReadiness = null) => _ = RefreshServiceStatusAsync(cachedReadiness);
+
+    private async Task RefreshServiceStatusAsync(AiReadiness? cachedReadiness)
     {
         if (_engine is null)
         {
@@ -681,7 +745,11 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
 
         try
         {
-            AiReadiness readiness = cachedReadiness ?? _engine.GetReadiness();
+            AiReadiness readiness = cachedReadiness ?? await Task.Run(_engine.GetReadiness);
+            if (_disposed)
+            {
+                return;
+            }
             string kernelModel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
                 ? readiness.ActiveKernel
                 : $"{readiness.ActiveKernel} · {readiness.ActiveModel}";
@@ -1205,7 +1273,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
 
     private void RefreshCommands()
     {
-        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, DiscardActivePolicyCommand, CancelOperationCommand })
+        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, DiscardActivePolicyCommand, RetryConfigurationCommand, CancelOperationCommand })
         {
             ((RelayCommand)command).OnCanExecuteChanged();
         }

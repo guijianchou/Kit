@@ -1,4 +1,4 @@
-namespace Kit.AiHub.Storage;
+﻿namespace Kit.AiHub.Storage;
 
 using System;
 using System.Collections.Concurrent;
@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Threading;
 using Kit.AiHub.Models;
 using Kit.AiHub.Serialization;
 
@@ -19,7 +18,6 @@ using Kit.AiHub.Serialization;
 public sealed class AiHubSettingsStore
 {
     private static readonly ConcurrentDictionary<string, CachedSnapshot> Snapshots = new(StringComparer.OrdinalIgnoreCase);
-    private static long _writeVersion;
 
     private readonly AiHubStorageFiles _files;
     private readonly SecureKeyStore _keyStore;
@@ -33,8 +31,6 @@ public sealed class AiHubSettingsStore
         FileStamp Secrets);
 
     private sealed record CachedSnapshot(DirectoryStamp Stamp, AiHubConfig Config);
-
-    internal static void BumpWriteVersion() => Interlocked.Increment(ref _writeVersion);
 
     public string DataDirectory => _files.DataDirectory;
     public string SettingsDirectory => DataDirectory;
@@ -94,7 +90,7 @@ public sealed class AiHubSettingsStore
                 return false;
             }
 
-            long version = Interlocked.Read(ref _writeVersion);
+            long version = AiHubStorageFiles.WriteVersion;
             stamp = new DirectoryStamp(
                 version,
                 GetFileStamp(SettingsFilePath),
@@ -176,11 +172,16 @@ public sealed class AiHubSettingsStore
 
     /// <summary>Reads and validates a backup without migrating or changing the archive.</summary>
     public static AiHubSettingsBackup? ReadBackup(string directory)
+        => ReadBackup(directory, skipUnreadableCredentials: false, out _);
+
+    public static AiHubSettingsBackup? ReadBackup(string directory, bool skipUnreadableCredentials, out bool credentialsSkipped)
     {
+        credentialsSkipped = false;
+        byte[]? settings = null;
         try
         {
             string root = AiHubStorageFiles.NormalizeDirectory(directory);
-            byte[]? settings = AiHubStorageFiles.ReadOptionalFile(Path.Combine(root, AiHubStorageFiles.ServiceSettingsFileName), AiHubStorageFiles.MaxDataFileBytes);
+            settings = AiHubStorageFiles.ReadOptionalFile(Path.Combine(root, AiHubStorageFiles.ServiceSettingsFileName), AiHubStorageFiles.MaxDataFileBytes);
             if (settings is null)
             {
                 byte[]? legacy = AiHubStorageFiles.ReadOptionalFile(Path.Combine(root, "settings.json"), AiHubStorageFiles.MaxDataFileBytes);
@@ -205,6 +206,23 @@ public sealed class AiHubSettingsStore
             var snapshot = new AiHubSettingsBackup(settings, secrets);
             DecodeBackup(snapshot);
             return snapshot;
+        }
+        catch (System.Security.Cryptography.CryptographicException) when (skipUnreadableCredentials && settings is not null)
+        {
+            // Endpoints and keys are protected together. Restore public preferences only,
+            // retaining destination endpoints/keys and leaving the service disabled for review.
+            var config = UsesProtectedTargets(settings)
+                ? JsonSerializer.Deserialize(settings, AiHubJsonContext.Default.AiServiceSettingsSnapshot)?.ToConfig()
+                : JsonSerializer.Deserialize(settings, AiHubJsonContext.Default.AiHubConfig);
+            if (config is null)
+            {
+                throw new InvalidDataException("The AI Hub public preferences are invalid.");
+            }
+
+            config.IsEnabled = false;
+            config.Targets = AiHubConfig.CreateDefault().Targets;
+            credentialsSkipped = true;
+            return new AiHubSettingsBackup(JsonSerializer.SerializeToUtf8Bytes(config, AiHubJsonContext.Default.AiHubConfig), null, credentialsUnavailable: true);
         }
         catch (Exception)
         {
@@ -245,11 +263,18 @@ public sealed class AiHubSettingsStore
     public void ImportBackup(AiHubSettingsBackup snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        var ownedSnapshot = new AiHubSettingsBackup(snapshot.SettingsJson, snapshot.EncryptedSecrets);
+        var ownedSnapshot = new AiHubSettingsBackup(snapshot.SettingsJson, snapshot.EncryptedSecrets, snapshot.CredentialsUnavailable);
         _files.Run(() =>
         {
             var (config, secrets) = DecodeBackup(ownedSnapshot);
-            if (ownedSnapshot.EncryptedSecrets is null)
+            if (ownedSnapshot.CredentialsUnavailable)
+            {
+                // A foreign or damaged DPAPI payload is not permission to erase the destination's
+                // existing protected profiles or other secrets. Preserve them under the same lock.
+                config.Targets = LoadUnlocked().Targets;
+                secrets = _keyStore.ReadUnlocked();
+            }
+            else if (ownedSnapshot.EncryptedSecrets is null)
             {
                 secrets = _keyStore.ReadUnlocked();
                 foreach (var target in config.Targets)

@@ -31,6 +31,7 @@ public static class Program
 
     /// <summary>Named event signaled on module disable.</summary>
     private const string ExitEventName = @"Local\Kit_Localserver_Exit_Event_3d8a1b21";
+    private const string RefreshEventName = @"Local\Kit_Localserver_RefreshSettings_Event_3d8a1b22";
 
     /// <summary>
     /// Marker file the module writes when it is disabled. Its presence tells the worker to
@@ -48,6 +49,7 @@ public static class Program
 
         using var shutdown = new CancellationTokenSource();
         using var exitEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ExitEventName);
+        using var refreshEvent = new EventWaitHandle(false, EventResetMode.AutoReset, RefreshEventName);
         Console.CancelKeyPress += (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
@@ -57,6 +59,12 @@ public static class Program
 
         try
         {
+            using System.Diagnostics.Process? parent = OpenParentProcess(parentPid);
+            if (parentPid.HasValue && parent is null)
+            {
+                return 0;
+            }
+
             using var supervisor = new ServiceSupervisor(dataDirectory);
             await supervisor.LoadAsync(shutdown.Token).ConfigureAwait(false);
             try
@@ -65,7 +73,7 @@ public static class Program
 
                 Logger.LogInfo($"[Localserver.Worker] Supervising {supervisor.SupervisedCount} service(s).");
 
-                _ = await WaitForShutdownAsync(parentPid, dataDirectory, supervisor, exitEvent, shutdown.Token).ConfigureAwait(false);
+                _ = await WaitForShutdownAsync(parent, dataDirectory, supervisor, exitEvent, refreshEvent, shutdown.Token).ConfigureAwait(false);
             }
             finally
             {
@@ -100,14 +108,15 @@ public static class Program
     /// immediate shutdown so the worker can still be run standalone.
     /// </summary>
     private static async Task<bool> WaitForShutdownAsync(
-        int? parentPid,
+        System.Diagnostics.Process? parent,
         string dataDirectory,
         ServiceSupervisor supervisor,
         EventWaitHandle exitEvent,
+        EventWaitHandle refreshEvent,
         CancellationToken cancellationToken)
     {
         string moduleDisabledFlagPath = ModuleDisabledFlagPath(dataDirectory);
-        WaitHandle[] handles = { exitEvent, cancellationToken.WaitHandle };
+        WaitHandle[] handles = { exitEvent, cancellationToken.WaitHandle, refreshEvent };
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -123,10 +132,15 @@ public static class Program
                 return false;
             }
 
-            if (parentPid is int pid && !IsProcessAlive(pid))
+            if (parent is not null && !IsProcessAlive(parent))
             {
-                Logger.LogInfo($"[Localserver.Worker] Parent process {pid} exited.");
+                Logger.LogInfo($"[Localserver.Worker] Parent process {parent.Id} exited.");
                 return false;
+            }
+
+            if (index == 2)
+            {
+                await supervisor.ReloadAsync(force: true, cancellationToken).ConfigureAwait(false);
             }
 
             await supervisor.RecoverRunningServicesAsync(cancellationToken).ConfigureAwait(false);
@@ -141,11 +155,31 @@ public static class Program
         return false;
     }
 
-    private static bool IsProcessAlive(int pid)
+    private static System.Diagnostics.Process? OpenParentProcess(int? pid)
+    {
+        if (pid is null)
+        {
+            return null;
+        }
+
+        System.Diagnostics.Process? process = null;
+        try
+        {
+            process = System.Diagnostics.Process.GetProcessById(pid.Value);
+            _ = process.SafeHandle; // Pin this process identity; a reused PID is not the parent.
+            return process;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            process?.Dispose();
+            return null;
+        }
+    }
+
+    private static bool IsProcessAlive(System.Diagnostics.Process process)
     {
         try
         {
-            using System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
             return !process.HasExited;
         }
         catch (ArgumentException)

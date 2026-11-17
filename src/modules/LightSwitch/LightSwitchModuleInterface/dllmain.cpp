@@ -93,7 +93,7 @@ struct ModuleSettings
     int m_sunset_offset = 0;
     std::wstring m_latitude = L"0.0";
     std::wstring m_longitude = L"0.0";
-} g_settings;
+};
 
 class LightSwitchInterface : public KitModuleIface
 {
@@ -102,6 +102,9 @@ private:
     // request that is already waiting for the service lock.
     std::mutex m_lifecycle_mutex;
     std::mutex m_service_mutex;
+    std::mutex m_settings_mutex;
+    ModuleSettings g_settings;
+    Hotkey m_toggle_theme_hotkey = { .win = true, .ctrl = true, .shift = true, .alt = false, .key = 'D' };
     bool m_enabled = false;
 
     HANDLE m_process{ nullptr };
@@ -139,6 +142,16 @@ public:
     {
         // Ensure worker threads/process handles are cleaned up before destruction
         disable();
+        if (m_toggle_request_semaphore)
+        {
+            CloseHandle(m_toggle_request_semaphore);
+            m_toggle_request_semaphore = nullptr;
+        }
+        if (m_process)
+        {
+            CloseHandle(m_process);
+            m_process = nullptr;
+        }
         if (m_toggle_event_handle)
         {
             CloseHandle(m_toggle_event_handle);
@@ -167,6 +180,7 @@ public:
     // Return JSON with the configuration options.
     virtual bool get_config(wchar_t* buffer, int* buffer_size) override
     {
+        std::lock_guard settings_lock(m_settings_mutex);
         HINSTANCE hinstance = reinterpret_cast<HINSTANCE>(&__ImageBase);
 
         // Create a Settings object with your module name
@@ -239,8 +253,30 @@ public:
             L"Your longitude in decimal degrees (e.g. -75.16).",
             g_settings.m_longitude);
 
-        // Serialize to buffer for the Kit runner
-        return settings.serialize_to_buffer(buffer, buffer_size);
+        json::JsonObject hotkey;
+        hotkey.SetNamedValue(L"win", json::value(m_toggle_theme_hotkey.win));
+        hotkey.SetNamedValue(L"ctrl", json::value(m_toggle_theme_hotkey.ctrl));
+        hotkey.SetNamedValue(L"alt", json::value(m_toggle_theme_hotkey.alt));
+        hotkey.SetNamedValue(L"shift", json::value(m_toggle_theme_hotkey.shift));
+        hotkey.SetNamedValue(L"code", json::value(static_cast<int>(m_toggle_theme_hotkey.key)));
+        json::JsonObject shortcut;
+        shortcut.SetNamedValue(L"value", hotkey);
+        shortcut.SetNamedValue(L"editor_type", json::value(L"hotkey"));
+        shortcut.SetNamedValue(L"display_name", json::value(L"Shortcut to toggle theme immediately"));
+        auto document = json::JsonObject::Parse(settings.serialize());
+        document.GetNamedObject(L"properties").SetNamedValue(L"toggle-theme-hotkey", shortcut);
+        const auto serialized = document.Stringify();
+        if (!buffer_size)
+            return false;
+        const auto required = static_cast<int>(serialized.size() + 1);
+        if (!buffer || *buffer_size < required)
+        {
+            *buffer_size = required;
+            return false;
+        }
+        wcscpy_s(buffer, *buffer_size, serialized.c_str());
+        *buffer_size = required;
+        return true;
     }
 
     // Signal from the Settings editor to call a custom action.
@@ -253,9 +289,11 @@ public:
     // Called by the runner to pass the updated settings values as a serialized JSON.
     virtual void set_config(const wchar_t* config) override
     {
+        std::lock_guard settings_lock(m_settings_mutex);
         try
         {
             auto values = KitSettings::PowerToyValues::from_json_string(config, get_key());
+            parse_hotkey(values);
             bool scheduleModeChanged = false;
 
             if (auto v = values.get_bool_value(L"changeSystem"))
@@ -406,13 +444,53 @@ public:
     virtual bool is_enabled() override
     {
         std::lock_guard lock(m_service_mutex);
-        return m_enabled;
+        return m_enabled && m_process && WaitForSingleObject(m_process, 0) == WAIT_TIMEOUT;
     }
 
     // Returns whether the PowerToys should be enabled by default
     virtual bool is_enabled_by_default() const override
     {
         return false;
+    }
+
+    void parse_hotkey(KitSettings::PowerToyValues& settings)
+    {
+        const auto properties = settings.get_raw_json().GetNamedObject(L"properties", nullptr);
+        if (!properties || !properties.HasKey(L"toggle-theme-hotkey"))
+        {
+            return;
+        }
+
+        const auto hotkey = properties.GetNamedObject(L"toggle-theme-hotkey").GetNamedObject(L"value");
+        Hotkey parsed{};
+        parsed.win = hotkey.GetNamedBoolean(L"win", false);
+        parsed.alt = hotkey.GetNamedBoolean(L"alt", false);
+        parsed.ctrl = hotkey.GetNamedBoolean(L"ctrl", false);
+        parsed.shift = hotkey.GetNamedBoolean(L"shift", false);
+        const auto key = hotkey.GetNamedNumber(L"code", 0);
+        if (key < 0 || key > UCHAR_MAX || key != static_cast<unsigned char>(key))
+        {
+            throw std::invalid_argument("Invalid LightSwitch hotkey code");
+        }
+        parsed.key = static_cast<unsigned char>(key);
+        m_toggle_theme_hotkey = parsed;
+    }
+
+    size_t get_hotkeys(Hotkey* hotkeys, size_t buffer_size) override
+    {
+        std::lock_guard settings_lock(m_settings_mutex);
+        if (hotkeys && buffer_size >= 1)
+        {
+            hotkeys[0] = m_toggle_theme_hotkey;
+        }
+        return 1;
+    }
+
+    bool on_hotkey(size_t hotkeyId) override
+    {
+        std::lock_guard service_lock(m_service_mutex);
+        return hotkeyId == 0 && m_enabled && m_toggle_request_semaphore &&
+               ReleaseSemaphore(m_toggle_request_semaphore, 1, nullptr);
     }
 };
 
@@ -483,7 +561,7 @@ bool LightSwitchInterface::EnsureServiceRunningLocked()
             command_line.data(),
             nullptr,
             nullptr,
-            TRUE,
+            FALSE,
             0,
             nullptr,
             nullptr,
@@ -525,18 +603,30 @@ void LightSwitchInterface::StartToggleListener()
 
     m_toggle_thread_running = true;
     m_toggle_thread = std::thread([this]() {
-        while (m_toggle_thread_running)
+        try
         {
-            const DWORD wait_result = WaitForSingleObject(m_toggle_event_handle, 500);
-            if (!m_toggle_thread_running)
+            while (m_toggle_thread_running)
             {
-                break;
-            }
+                const DWORD wait_result = WaitForSingleObject(m_toggle_event_handle, 500);
+                if (!m_toggle_thread_running)
+                {
+                    break;
+                }
 
-            if (wait_result == WAIT_OBJECT_0)
-            {
-                ToggleTheme();
+                if (wait_result == WAIT_OBJECT_0)
+                {
+                    ToggleTheme();
+                }
+                else if (wait_result == WAIT_FAILED)
+                {
+                    Logger::error(L"[Light Switch] Toggle listener wait failed (error: {}).", GetLastError());
+                    break;
+                }
             }
+        }
+        catch (...)
+        {
+            Logger::error(L"[Light Switch] Toggle listener failed unexpectedly.");
         }
     });
 }
@@ -593,12 +683,14 @@ std::wstring utf8_to_wstring(const std::string& str)
 // Load the settings file.
 void LightSwitchInterface::init_settings()
 {
+    std::lock_guard settings_lock(m_settings_mutex);
     Logger::info(L"[Light Switch] init_settings: starting to load settings for module");
 
     try
     {
         KitSettings::PowerToyValues settings =
             KitSettings::PowerToyValues::load_from_settings_file(get_name());
+        parse_hotkey(settings);
 
         if (auto v = settings.get_bool_value(L"changeSystem"))
             g_settings.m_changeSystem = *v;

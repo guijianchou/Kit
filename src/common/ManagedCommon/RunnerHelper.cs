@@ -53,14 +53,20 @@ namespace ManagedCommon
             int[] processIds = new int[1024];
             uint bytesCopied;
 
-            NativeMethods.EnumProcesses(processIds, (uint)processIds.Length * sizeof(uint), out bytesCopied);
+            if (!NativeMethods.EnumProcesses(processIds, (uint)processIds.Length * sizeof(uint), out bytesCopied))
+            {
+                Logger.LogWarning("Could not enumerate runner processes.");
+                return;
+            }
 
             const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
             var handleAccess = PROCESS_QUERY_LIMITED_INFORMATION;
 
             IntPtr runnerHandle = IntPtr.Zero;
-            foreach (var processId in processIds)
+            int count = Math.Min(processIds.Length, (int)(bytesCopied / sizeof(uint)));
+            for (int index = 0; index < count; index++)
             {
+                int processId = processIds[index];
                 IntPtr hProcess = NativeMethods.OpenProcess(handleAccess, false, processId);
                 if (hProcess == IntPtr.Zero)
                 {
@@ -107,7 +113,11 @@ namespace ManagedCommon
                     do
                     {
                         System.Threading.Thread.Sleep(1000);
-                        NativeMethods.GetExitCodeProcess(runnerHandle, out exit_status);
+                        if (!NativeMethods.GetExitCodeProcess(runnerHandle, out exit_status))
+                        {
+                            Logger.LogWarning("Could not query runner exit status; ending fallback watcher.");
+                            return;
+                        }
                     }
                     while (exit_status == STILL_ACTIVE);
                 }

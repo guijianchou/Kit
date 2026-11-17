@@ -12,6 +12,7 @@
 #include <comdef.h>
 
 #include <winrt/base.h>
+#include <wil/resource.h>
 #include <winrt/Windows.Foundation.Collections.h>
 
 #include <string>
@@ -203,6 +204,7 @@ inline bool drop_elevated_privileges()
     PSID medium_sid = NULL;
     if (!::ConvertStringSidToSid(SDDL_ML_MEDIUM, &medium_sid))
     {
+        CloseHandle(token);
         return false;
     }
 
@@ -324,6 +326,8 @@ inline bool run_non_elevated(const std::wstring& file, const std::wstring& param
         return false;
     }
 
+    auto delete_attributes = wil::scope_exit([&] { DeleteProcThreadAttributeList(pptal); });
+
     HANDLE process_handle = process.get();
     if (!UpdateProcThreadAttribute(pptal,
                                    0,
@@ -347,7 +351,7 @@ inline bool run_non_elevated(const std::wstring& file, const std::wstring& param
     {
         siex.StartupInfo.dwFlags = STARTF_USESHOWWINDOW;
         siex.StartupInfo.wShowWindow = SW_HIDE;
-        dwCreationFlags = CREATE_NO_WINDOW;
+        dwCreationFlags |= CREATE_NO_WINDOW;
     }
 
     auto succeeded = CreateProcessW(file.c_str(),
@@ -512,6 +516,8 @@ inline bool check_user_is_admin()
     {
         return true;
     }
+
+    wil::unique_handle token_owner{ hToken };
 
     // Call GetTokenInformation to get the buffer size.
     if (!GetTokenInformation(hToken, TokenGroups, NULL, dwSize, &dwSize))

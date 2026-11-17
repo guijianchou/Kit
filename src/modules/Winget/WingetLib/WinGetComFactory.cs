@@ -27,14 +27,23 @@ internal static class WinGetComFactory
     {
         // Each public operation runs on a background thread and keeps its COM apartment
         // alive until the asynchronous WinGet operation (including cancellation) finishes.
-        Marshal.ThrowExceptionForHR(CoInitializeEx(IntPtr.Zero, 0));
+        const int ChangedMode = unchecked((int)0x80010106);
+        int result = CoInitializeEx(IntPtr.Zero, 0);
+        if (result != ChangedMode)
+        {
+            Marshal.ThrowExceptionForHR(result);
+        }
+
         try
         {
             return action();
         }
         finally
         {
-            CoUninitialize();
+            if (result >= 0)
+            {
+                CoUninitialize();
+            }
         }
     }
 

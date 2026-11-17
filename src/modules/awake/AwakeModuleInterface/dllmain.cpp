@@ -158,6 +158,7 @@ public:
     virtual void destroy() override
     {
         disable();
+        close_process_handles();
         delete this;
     }
 
@@ -189,20 +190,38 @@ public:
                 KitSettings::PowerToyValues::from_json_string(config, get_key());
             values.save_to_settings_file();
         }
-        catch (std::exception&)
+        catch (const winrt::hresult_error& error)
         {
+            Logger::error(L"Awake settings failed: {}", error.message().c_str());
+        }
+        catch (const std::exception& error)
+        {
+            Logger::error("Awake settings failed: {}", error.what());
+        }
+        catch (...)
+        {
+            Logger::error("Awake settings failed unexpectedly.");
         }
     }
 
     virtual void enable() override
     {
-        if (m_enabled && is_process_running())
+        if (is_process_running())
         {
+            m_enabled = true;
             return;
         }
 
         close_process_handles();
-        m_enabled = launch_process();
+        try
+        {
+            m_enabled = launch_process();
+        }
+        catch (...)
+        {
+            m_enabled = false;
+            Logger::error("Awake process launch failed unexpectedly.");
+        }
         if (m_enabled)
         {
             Trace::EnableAwake(true);
@@ -230,18 +249,25 @@ public:
                     Logger::warn(L"Failed to signal exit event for Kit Awake. {}", get_last_error_or_default(GetLastError()));
                     terminate_process_if_running();
                 }
-                CloseHandle(exitEvent);
                 wait_for_process_shutdown();
+                CloseHandle(exitEvent);
             }
         }
 
-        close_process_handles();
         m_enabled = false;
+        if (!is_process_running())
+        {
+            close_process_handles();
+        }
+        else
+        {
+            Logger::error(L"Kit Awake is still running; preserving process ownership for a later shutdown.");
+        }
     }
 
     virtual bool is_enabled() override
     {
-        return m_enabled;
+        return m_enabled && is_process_running();
     }
 };
 

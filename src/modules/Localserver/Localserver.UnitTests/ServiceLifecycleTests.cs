@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Kit.LocalserverWorker;
+using LocalServerHub.Core.Logging;
 using LocalServerHub.Core.Models;
 using LocalServerHub.Windows;
 using LocalServerHub.Windows.Native;
@@ -16,16 +18,59 @@ namespace Localserver.UnitTests;
 public sealed class ServiceLifecycleTests
 {
     [TestMethod]
+    public async Task FirstInstructionAndImmediateChildBelongToTheOwnershipJob()
+    {
+        using var fixture = await ServiceFixture.CreateAsync("tree");
+        using var runner = new ServiceRunner(fixture.Definition);
+        await runner.StartAsync();
+        Assert.AreEqual(ServiceState.Running, runner.State, runner.LastError);
+        fixture.Track(runner);
+        string rootMarker = Path.Combine(fixture.Root, "root.job");
+        string childMarker = Path.Combine(fixture.Root, "child.job");
+        await ServiceFixture.UntilAsync(() => File.Exists(rootMarker) && File.Exists(childMarker) && File.Exists(Path.Combine(fixture.Root, "child.pid")));
+        Assert.AreEqual("True", await File.ReadAllTextAsync(rootMarker));
+        Assert.AreEqual("True", await File.ReadAllTextAsync(childMarker));
+        Process child = fixture.Track(int.Parse(await File.ReadAllTextAsync(Path.Combine(fixture.Root, "child.pid")), System.Globalization.CultureInfo.InvariantCulture));
+        await runner.StopAsync();
+        Assert.IsTrue(child.HasExited, "An immediate descendant escaped the ownership job.");
+    }
+
+    [TestMethod]
+    public async Task SuspendedLaunchPreservesArgumentsEnvironmentAndRedirectedStreams()
+    {
+        using var fixture = await ServiceFixture.CreateAsync("contract");
+        string[] arguments = ["contract", string.Empty, "with spaces", "quoted\"value", @"C:\ends with slash\", "中文参数"];
+        using var runner = new ServiceRunner(fixture.Definition with
+        {
+            BaseArgs = arguments,
+            Env = new Dictionary<string, string> { ["KIT_LAUNCH_TEST"] = "值 with spaces" },
+        });
+        await runner.StartAsync();
+        Assert.AreEqual(ServiceState.Running, runner.State, runner.LastError);
+        fixture.Track(runner);
+        string argsFile = Path.Combine(fixture.Root, "arguments.txt");
+        await ServiceFixture.UntilAsync(() => File.Exists(argsFile) && File.Exists(Path.Combine(fixture.Root, "directory.txt")));
+        string[] received = (await File.ReadAllLinesAsync(argsFile)).Select(value => Encoding.UTF8.GetString(Convert.FromBase64String(value))).ToArray();
+        CollectionAssert.AreEqual(arguments, received);
+        Assert.AreEqual("值 with spaces", await File.ReadAllTextAsync(Path.Combine(fixture.Root, "environment.txt")));
+        Assert.AreEqual(fixture.Root, await File.ReadAllTextAsync(Path.Combine(fixture.Root, "directory.txt")));
+        await runner.SendInputAsync("输入 with spaces");
+        await ServiceFixture.UntilAsync(() => runner.Log.Snapshot().Any(line => line.Stream == LogStream.StdOut && line.Text == "echo:输入 with spaces"));
+        Assert.IsTrue(runner.Log.Snapshot().Any(line => line.Stream == LogStream.StdErr && line.Text == "fixture-stderr"));
+        await runner.StopAsync();
+    }
+
+    [TestMethod]
     public async Task StartStopAndRestartReleaseOnlyOwnedProcesses()
     {
         using var fixture = await ServiceFixture.CreateAsync();
         using var runner = new ServiceRunner(fixture.Definition);
         await runner.StartAsync();
-        Assert.AreEqual(ServiceState.Running, runner.State);
-        Process first = fixture.Track(runner.ProcessId!.Value);
+        Assert.AreEqual(ServiceState.Running, runner.State, runner.LastError);
+        Process first = fixture.Track(runner);
         await runner.RestartAsync();
-        Assert.AreEqual(ServiceState.Running, runner.State);
-        Process second = fixture.Track(runner.ProcessId!.Value);
+        Assert.AreEqual(ServiceState.Running, runner.State, runner.LastError);
+        Process second = fixture.Track(runner);
         Assert.IsTrue(first.HasExited);
         Assert.AreNotEqual(first.Id, second.Id);
         await runner.StopAsync();
@@ -41,7 +86,7 @@ public sealed class ServiceLifecycleTests
         using var fixture = await ServiceFixture.CreateAsync("graceful");
         using var runner = new ServiceRunner(fixture.Definition with { StopTimeoutSec = 3 });
         await runner.StartAsync();
-        fixture.Track(runner.ProcessId!.Value);
+        fixture.Track(runner);
         await runner.StopAsync();
         Assert.AreEqual(ServiceState.Stopped, runner.State);
         Assert.IsTrue(File.Exists(Path.Combine(fixture.Root, "flushed")), "The service was killed before its configured graceful shutdown deadline.");
@@ -53,7 +98,7 @@ public sealed class ServiceLifecycleTests
         using var fixture = await ServiceFixture.CreateAsync("tree");
         using var runner = new ServiceRunner(fixture.Definition);
         await runner.StartAsync();
-        fixture.Track(runner.ProcessId!.Value);
+        fixture.Track(runner);
         string childFile = Path.Combine(fixture.Root, "child.pid");
         await ServiceFixture.UntilAsync(() => File.Exists(childFile));
         Process child = fixture.Track(int.Parse(await File.ReadAllTextAsync(childFile), System.Globalization.CultureInfo.InvariantCulture));
@@ -68,7 +113,7 @@ public sealed class ServiceLifecycleTests
         using var fixture = await ServiceFixture.CreateAsync();
         var runner = new ServiceRunner(fixture.Definition);
         await runner.StartAsync();
-        Process process = fixture.Track(runner.ProcessId!.Value);
+        Process process = fixture.Track(runner);
         runner.Dispose();
         runner.Dispose();
         Assert.IsFalse(process.HasExited);
@@ -78,6 +123,25 @@ public sealed class ServiceLifecycleTests
         await recovered.StopAsync();
         Assert.IsTrue(process.HasExited);
         Assert.AreEqual(ServiceState.Stopped, recovered.State);
+    }
+
+    [TestMethod]
+    public async Task LegacyOwnershipWithoutAProcessChainRemainsRecoverable()
+    {
+        using var fixture = await ServiceFixture.CreateAsync();
+        using var runner = new ServiceRunner(fixture.Definition);
+        await runner.StartAsync();
+        Process process = fixture.Track(runner);
+        runner.Dispose();
+        var ownership = JsonNode.Parse(await File.ReadAllTextAsync(fixture.OwnershipPath))!.AsObject();
+        Assert.IsTrue(ownership.Remove("processChain"));
+        await File.WriteAllTextAsync(fixture.OwnershipPath, ownership.ToJsonString());
+
+        using var recovered = new ServiceRunner(fixture.Definition);
+        Assert.IsTrue(recovered.TryRecover(), "Legacy ownership must preserve the named job and process identity.");
+        await recovered.StopAsync();
+        Assert.IsTrue(process.HasExited);
+        Assert.IsFalse(File.Exists(fixture.OwnershipPath));
     }
 
     [TestMethod]
@@ -100,8 +164,8 @@ public sealed class ServiceLifecycleTests
         using var secondOwner = new ServiceRunner(second.Definition);
         await firstOwner.StartAsync();
         await secondOwner.StartAsync();
-        Process firstProcess = first.Track(firstOwner.ProcessId!.Value);
-        Process secondProcess = second.Track(secondOwner.ProcessId!.Value);
+        Process firstProcess = first.Track(firstOwner);
+        Process secondProcess = second.Track(secondOwner);
         firstOwner.Dispose();
         secondOwner.Dispose();
         int scans = 0;
@@ -133,7 +197,7 @@ public sealed class ServiceLifecycleTests
         });
         Task starting = runner.StartAsync();
         await ServiceFixture.UntilAsync(() => runner.ProcessId.HasValue);
-        Process process = fixture.Track(runner.ProcessId!.Value);
+        Process process = fixture.Track(runner);
         await runner.StopAsync();
         try
         {
@@ -159,7 +223,7 @@ public sealed class ServiceLifecycleTests
         });
         Task starting = runner.StartAsync();
         await ServiceFixture.UntilAsync(() => runner.ProcessId.HasValue);
-        Process process = fixture.Track(runner.ProcessId!.Value);
+        Process process = fixture.Track(runner);
         runner.Dispose();
         try
         {
@@ -238,7 +302,7 @@ public sealed class ServiceLifecycleTests
         using var fixture = await ServiceFixture.CreateAsync();
         var runner = new ServiceRunner(fixture.Definition);
         await runner.StartAsync();
-        Process process = fixture.Track(runner.ProcessId!.Value);
+        Process process = fixture.Track(runner);
         runner.Dispose();
         Assert.IsFalse(process.HasExited);
         process.Kill();
@@ -313,6 +377,13 @@ internal sealed class ServiceFixture : IDisposable
         return process;
     }
 
+    internal Process Track(ServiceRunner runner)
+    {
+        int? processId = runner.ProcessId;
+        Assert.IsNotNull(processId, runner.LastError);
+        return Track(processId.GetValueOrDefault());
+    }
+
     internal static async Task UntilAsync(Func<bool> condition)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -372,18 +443,47 @@ internal sealed class ServiceFixture : IDisposable
         using System.Diagnostics;
         using System.IO;
         using System.Threading;
+        using System.Runtime.InteropServices;
+        using System.Security.Cryptography;
+        using System.Text;
         class Worker
         {
             static void Main(string[] args)
             {
                 string mode = args.Length == 0 ? "normal" : args[0];
+                string tag = Environment.GetEnvironmentVariable("LOCALSERVERHUB_OWNER_TAG");
+                if (tag != null)
+                {
+                    string id = tag.Split('/')[1];
+                    byte[] digest;
+                    using (var sha = SHA256.Create()) digest = sha.ComputeHash(Encoding.UTF8.GetBytes(id + "\n" + tag));
+                    string jobName = "Local\\LocalServerHub.Service." + BitConverter.ToString(digest, 0, 16).Replace("-", "");
+                    IntPtr job = OpenJobObjectW(4, false, jobName);
+                    bool member = false;
+                    bool found = job != IntPtr.Zero && IsProcessInJob(Process.GetCurrentProcess().Handle, job, out member);
+                    if (job != IntPtr.Zero) CloseHandle(job);
+                    WriteText(mode == "child" ? "child.job" : "root.job", (found && member).ToString());
+                }
+                Console.InputEncoding = new UTF8Encoding(false);
+                Console.OutputEncoding = new UTF8Encoding(false);
+                if (mode == "contract")
+                {
+                    File.WriteAllLines("arguments.txt.tmp", Array.ConvertAll(args, value => Convert.ToBase64String(Encoding.UTF8.GetBytes(value))));
+                    File.Move("arguments.txt.tmp", "arguments.txt");
+                    WriteText("environment.txt", Environment.GetEnvironmentVariable("KIT_LAUNCH_TEST"));
+                    WriteText("directory.txt", Environment.CurrentDirectory);
+                    Console.Error.WriteLine("fixture-stderr");
+                    Console.Error.Flush();
+                    Console.WriteLine("echo:" + Console.ReadLine());
+                    Console.Out.Flush();
+                }
                 if (mode == "tree")
                 {
                     var start = new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName, "child");
                     start.UseShellExecute = false;
                     start.CreateNoWindow = true;
                     var child = Process.Start(start);
-                    File.WriteAllText("child.pid", child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    WriteText("child.pid", child.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 }
                 Console.WriteLine("fixture-started");
                 Console.Out.Flush();
@@ -391,11 +491,22 @@ internal sealed class ServiceFixture : IDisposable
                 {
                     Console.In.ReadToEnd();
                     Thread.Sleep(1400);
-                    File.WriteAllText("flushed", "complete");
+                    WriteText("flushed", "complete");
                     return;
                 }
                 Thread.Sleep(60000);
             }
+            static void WriteText(string path, string value)
+            {
+                File.WriteAllText(path + ".tmp", value);
+                File.Move(path + ".tmp", path);
+            }
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+            static extern IntPtr OpenJobObjectW(uint access, bool inherit, string name);
+            [DllImport("kernel32.dll")]
+            static extern bool IsProcessInJob(IntPtr process, IntPtr job, out bool member);
+            [DllImport("kernel32.dll")]
+            static extern bool CloseHandle(IntPtr handle);
         }
         """;
 }

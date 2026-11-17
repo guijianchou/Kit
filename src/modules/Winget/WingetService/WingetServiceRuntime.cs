@@ -110,7 +110,7 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
         }
 
         if (command is not ("check" or "search" or "list-installed" or "details" or "download" or "install" or "upgrade" or "cancel"
-            or "prepare" or "enqueue" or "cancel-queue" or "ignore" or "unignore"))
+            or "prepare" or "enqueue" or "cancel-queue" or "ignore" or "unignore" or "clear-old-history"))
         {
             return Task.FromResult(KitPipeResponse.Fail("UNKNOWN_COMMAND", "Unknown Winget command."));
         }
@@ -122,6 +122,17 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                 return Task.FromResult(KitPipeResponse.Fail("INVALID_REQUEST", "Winget command payload is too large."));
             }
 
+            // Retention and the state path are service-owned. This command never
+            // accepts caller-selected paths, package IDs, or cutoff timestamps.
+            if (command == "clear-old-history" && !string.IsNullOrWhiteSpace(envelope.PayloadJson))
+            {
+                using var payload = JsonDocument.Parse(envelope.PayloadJson);
+                if (payload.RootElement.ValueKind != JsonValueKind.Object || payload.RootElement.EnumerateObject().Any())
+                {
+                    return Task.FromResult(KitPipeResponse.Fail("INVALID_REQUEST", "History cleanup does not accept parameters."));
+                }
+            }
+
             var request = string.IsNullOrWhiteSpace(envelope.PayloadJson)
                 ? new WingetServiceRequest()
                 : JsonSerializer.Deserialize(envelope.PayloadJson, WingetServiceJsonContext.Default.WingetServiceRequest) ?? new();
@@ -131,6 +142,7 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                 "cancel-queue" => CancelQueue(request.OperationId),
                 "enqueue" => Enqueue(request),
                 "ignore" or "unignore" => SetIgnored(command == "ignore", request),
+                "clear-old-history" => ClearOldHistory(),
                 _ => StartOperation(command, request),
             };
             return Task.FromResult(KitPipeResponse.Ok(JsonSerializer.Serialize(response, WingetServiceJsonContext.Default.WingetServiceAck)));
@@ -142,6 +154,34 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
         catch (Exception exception) when (exception is ArgumentException or IOException or UnauthorizedAccessException)
         {
             return Task.FromResult(KitPipeResponse.Ok(JsonSerializer.Serialize(new WingetServiceAck(false, Error: exception.Message), WingetServiceJsonContext.Default.WingetServiceAck)));
+        }
+    }
+
+    private WingetServiceAck ClearOldHistory()
+    {
+        // Match PersistState's lock order. Keep the current queue and recovery
+        // marker in the same durable snapshot, and publish only after Save works.
+        lock (_stateWriteGate)
+        {
+            lock (_gate)
+            {
+                if (_stopping)
+                {
+                    return new(false, Error: "The Winget service is stopping.");
+                }
+
+                DateTimeOffset cutoff = _utcNow().AddDays(-7);
+                var retained = _state.History.Where(item => item.CompletedUtc is not { } completed || completed >= cutoff).ToArray();
+                int removed = _state.History.Count - retained.Length;
+                if (removed > 0)
+                {
+                    var updated = _state with { History = retained };
+                    _store.Save(updated);
+                    _state = updated;
+                }
+
+                return new(true) { RemovedHistoryCount = removed };
+            }
         }
     }
 

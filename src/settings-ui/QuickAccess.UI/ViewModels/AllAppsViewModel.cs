@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -19,7 +20,7 @@ using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace Kit.QuickAccess.ViewModels;
 
-public sealed class AllAppsViewModel : Observable
+public sealed class AllAppsViewModel : Observable, IDisposable
 {
     private readonly object _sortLock = new object();
     private readonly IQuickAccessCoordinator _coordinator;
@@ -117,10 +118,13 @@ public sealed class AllAppsViewModel : Observable
 
     public void RefreshSettings()
     {
-        if (_settingsRepository.ReloadSettings())
-        {
-            OnSettingsChanged(_settingsRepository.SettingsConfig);
-        }
+        _settingsRepository.ReloadSettings();
+    }
+
+    public void Dispose()
+    {
+        _settingsRepository.SettingsChanged -= OnSettingsChanged;
+        GC.SuppressFinalize(this);
     }
 
     private void RefreshFlyoutMenuItems()

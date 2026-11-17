@@ -74,7 +74,7 @@ namespace
             return;
         }
 
-        set_tray_icon_update_available(available);
+        Logger::debug(L"Update badge dispatch skipped during UI shutdown.");
     }
 
     std::optional<winrt::hstring> fetch_latest_release_body()
@@ -152,7 +152,7 @@ namespace
     {
         UpdateState::store([](UpdateState& state) {
             state.state = UpdateState::networkError;
-            state.releasePageUrl = {};
+            // Preserve the last verified release target while reporting a network failure.
             state.downloadedInstallerFilename = {};
             state.githubUpdateLastCheckedDate.emplace(timeutil::now());
         });

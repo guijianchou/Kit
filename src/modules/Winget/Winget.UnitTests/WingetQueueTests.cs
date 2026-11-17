@@ -155,6 +155,44 @@ public sealed class WingetQueueTests
     }
 
     [TestMethod]
+    public async Task HistoryCleanupDoesNotChangeOrCancelTheRunningQueueAndRecoveryMarker()
+    {
+        var old = new WingetQueueItem("old-history", First, "upgrade", "Succeeded", CompletedUtc: DateTimeOffset.UtcNow.AddDays(-8));
+        new WingetStateStore(_directory).Save(new() { Packages = [First, Second], History = [old] });
+        var client = new FakeClient { BlockFirstAction = true };
+        await using var runtime = Create(client);
+        try
+        {
+            var prepared = await Prepare(runtime, "upgrade", [First, Second]);
+            await Send(runtime, "enqueue", new() { PreparationId = prepared.Id });
+            await client.ActionStarted.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            var before = runtime.GetStatus();
+            var marker = new WingetStateStore(_directory).Load().PendingInstall;
+            var response = await runtime.HandleRequestAsync(new KitPipeRequest { Command = "clear-old-history" }, CancellationToken.None);
+            var ack = JsonSerializer.Deserialize(response.DataJson!, WingetServiceJsonContext.Default.WingetServiceAck)!;
+            Assert.IsTrue(response.Success && ack.Accepted);
+            Assert.AreEqual(1, ack.RemovedHistoryCount);
+            var after = runtime.GetStatus();
+            CollectionAssert.AreEqual(before.Queue.ToArray(), after.Queue.ToArray());
+            Assert.AreEqual(before.OperationId, after.OperationId);
+            Assert.AreEqual(before.Phase, after.Phase);
+            Assert.IsTrue(after.IsBusy);
+            Assert.IsFalse(client.CurrentToken.IsCancellationRequested);
+            Assert.AreEqual(marker, new WingetStateStore(_directory).Load().PendingInstall);
+            CollectionAssert.AreEqual(before.Queue.ToArray(), new WingetStateStore(_directory).Load().Queue.ToArray());
+            client.ActionRelease.TrySetResult();
+            await Idle(runtime);
+            Assert.AreEqual(2, client.ActionCalls.Count);
+            Assert.IsFalse(runtime.GetStatus().History.Any(item => item.Id == old.Id), "Later queue persistence must not resurrect cleared history.");
+            Assert.AreEqual(2, new WingetStateStore(_directory).Load().History.Count);
+        }
+        finally
+        {
+            client.ActionRelease.TrySetResult();
+        }
+    }
+
+    [TestMethod]
     public async Task OrdinaryFailureReadsInstalledStateBeforeContinuingRemainingItems()
     {
         Seed(First, Second);

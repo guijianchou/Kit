@@ -32,21 +32,44 @@ struct KitModuleDLLDeleter
 class KitModule
 {
 public:
-    KitModule(KitModuleIface* pt_module, HMODULE handle);
+    KitModule(KitModuleIface* module, HMODULE handle);
+    ~KitModule();
+    KitModule(KitModule&&) noexcept;
+    KitModule& operator=(KitModule&&) noexcept;
+    KitModule(const KitModule&) = delete;
+    KitModule& operator=(const KitModule&) = delete;
 
-    inline KitModuleIface* operator->()
-    {
-        return pt_module.get();
-    }
-
+    // Keep existing call sites, but never expose the raw DLL object to UI code.
+    KitModule* operator->() { return this; }
+    const KitModule* operator->() const { return this; }
+    const wchar_t* get_key() const;
+    const wchar_t* get_name() const;
+    bool is_enabled_by_default() const;
+    kit_gpo::gpo_rule_configured_t gpo_policy_enabled_configuration() const;
+    // Accepted user intent persists through pending startup and recoverable crashes.
+    bool is_enabled() const;
+    // Last confirmed process state, distinct from the persisted switch.
+    bool is_running() const;
+    bool configuration_pending() const noexcept;
+    void enable();
+    void disable();
+    void begin_shutdown() noexcept;
+    void set_config(const wchar_t* config);
+    void call_custom_action(const wchar_t* action);
+    size_t get_hotkeys(KitModuleIface::Hotkey* buffer, size_t size) const;
+    bool on_hotkey(size_t index);
+    bool get_config(wchar_t* buffer, int* size) const;
     json::JsonObject json_config() const;
 
 private:
-    std::unique_ptr<HMODULE, KitModuleDLLDeleter> handle;
-    std::unique_ptr<KitModuleIface, KitModuleDeleter> pt_module;
+    struct State;
+    std::unique_ptr<State> state;
 };
 
 std::map<std::wstring, KitModule>& modules();
+// Stop admission/retries for every module before clearing the registry joins each worker.
+void begin_module_shutdown() noexcept;
+bool module_configuration_pending() noexcept;
 KitModule load_kit_module(const std::wstring_view filename);
 
 struct KitModuleCatalogEntry

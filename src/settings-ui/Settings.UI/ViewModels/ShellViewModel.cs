@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -98,7 +98,8 @@ namespace Kit.Settings.UI.ViewModels
 
         private void Frame_NavigationFailed(object sender, NavigationFailedEventArgs e)
         {
-            throw e.Exception;
+            e.Handled = true;
+            ManagedCommon.Logger.LogError("Settings navigation failed.", e.Exception);
         }
 
         private void Frame_Navigated(object sender, NavigationEventArgs e)

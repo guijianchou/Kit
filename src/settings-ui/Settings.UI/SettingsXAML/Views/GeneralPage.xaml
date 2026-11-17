@@ -25,7 +25,8 @@
         </ResourceDictionary>
     </local:NavigablePage.Resources>
 
-    <controls:SettingsPageControl x:Uid="General">
+    <Grid>
+    <controls:SettingsPageControl x:Name="GeneralSettingsSurface" x:Uid="General" Opacity="0" IsEnabled="False" IsHitTestVisible="False">
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical" Spacing="24">
                 <ContentControl Style="{StaticResource KitHeroPanelStyle}">
@@ -240,11 +241,19 @@
                     </tkcontrols:SettingsCard>
 
                     <InfoBar
-                        IsClosable="True"
+                        IsClosable="{x:Bind ViewModel.AiServices.IsStatusClosable, Mode=OneWay}"
                         IsOpen="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=TwoWay}"
                         Message="{x:Bind ViewModel.AiServices.StatusMessage, Mode=OneWay}"
                         Severity="{x:Bind ViewModel.AiServices.StatusSeverity, Mode=OneWay}"
-                        Visibility="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        Visibility="{x:Bind ViewModel.AiServices.IsStatusOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <InfoBar.ActionButton>
+                            <Button
+                                x:Uid="AiHub_RetryConfigurationButton"
+                                AutomationProperties.AutomationId="AiHub_RetryConfigurationButton"
+                                Command="{x:Bind ViewModel.AiServices.RetryConfigurationCommand}"
+                                Visibility="{x:Bind ViewModel.AiServices.CanRetryConfiguration, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
 
                     <!-- The service configuration is only shown while the service is on. -->
                     <StackPanel
@@ -912,4 +921,8 @@
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>
     </controls:SettingsPageControl>
+        <Grid x:Name="GeneralSettingsLoading" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <ProgressRing x:Uid="AiHub_ConfigurationLoading" Width="32" Height="32" IsActive="True" />
+        </Grid>
+    </Grid>
 </local:NavigablePage>

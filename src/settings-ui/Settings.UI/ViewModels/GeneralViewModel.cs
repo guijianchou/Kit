@@ -48,7 +48,7 @@ namespace Kit.Settings.UI.ViewModels
         /// The shared AI service configuration: execution kernel, main and fallback endpoints,
         /// credentials, and the global security policy that applies to every plugin.
         /// </summary>
-        public AiHubViewModel AiServices => _aiServices ??= new AiHubViewModel(_dispatcherQueue);
+        public AiHubViewModel AiServices => _aiServices ??= AiHubViewModel.AcquireShared(_dispatcherQueue);
 
         private Action HideBackupAndRestoreMessageAreaAction { get; set; }
 
@@ -1158,17 +1158,9 @@ namespace Kit.Settings.UI.ViewModels
             }
         });
 
-        internal Task BackupConfigsAsync() => RunBackupRestoreOperationAsync(() =>
-        {
-            BackupConfigsClick();
-            return Task.CompletedTask;
-        });
+        internal Task BackupConfigsAsync() => RunBackupRestoreOperationAsync(BackupConfigsClickAsync);
 
-        internal Task RestoreConfigsAsync() => RunBackupRestoreOperationAsync(() =>
-        {
-            RestoreConfigsClick();
-            return Task.CompletedTask;
-        });
+        internal Task RestoreConfigsAsync() => RunBackupRestoreOperationAsync(RestoreConfigsClickAsync);
 
         private bool CanRunBackupRestoreOperation() => !_backupRestoreOperationInProgress;
 
@@ -1219,9 +1211,9 @@ namespace Kit.Settings.UI.ViewModels
         /// <summary>
         /// Method <c>RestoreConfigsClick</c> starts the restore.
         /// </summary>
-        protected virtual void RestoreConfigsClick()
+        protected virtual async Task RestoreConfigsClickAsync()
         {
-            var results = SettingsUtils.RestoreSettings();
+            var results = await Task.Run(SettingsUtils.RestoreSettings);
             _backupRestoreMessageSeverity = results.Severity;
 
             if (!results.Success)
@@ -1247,11 +1239,11 @@ namespace Kit.Settings.UI.ViewModels
         /// <summary>
         /// Method <c>BackupConfigsClick</c> starts the backup.
         /// </summary>
-        protected virtual void BackupConfigsClick()
+        protected virtual async Task BackupConfigsClickAsync()
         {
             string settingsBackupAndRestoreDir = SettingsBackupAndRestoreDir;
 
-            var results = SettingsUtils.BackupSettings();
+            var results = await Task.Run(SettingsUtils.BackupSettings);
 
             _settingsBackupRestoreMessageVisible = true;
             _backupRestoreMessageSeverity = results.Severity;
@@ -1260,7 +1252,7 @@ namespace Kit.Settings.UI.ViewModels
             // now we do a dry run to get the results for "setting match"
             var settingsUtils = SettingsUtils.Default;
             var appBasePath = Path.GetDirectoryName(settingsUtils.GetSettingsFilePath());
-            settingsBackupAndRestoreUtils.BackupSettings(appBasePath, settingsBackupAndRestoreDir, true);
+            await Task.Run(() => settingsBackupAndRestoreUtils.BackupSettings(appBasePath, settingsBackupAndRestoreDir, true));
 
             NotifyAllBackupAndRestoreProperties();
 
@@ -1702,7 +1694,9 @@ namespace Kit.Settings.UI.ViewModels
                 _settingsRepository.SettingsChanged -= OnSettingsChanged;
             }
 
-            _aiServices?.Dispose();
+            _fileWatcher?.Dispose();
+            AiHubViewModel.ReleaseShared(_aiServices);
+            _aiServices = null;
 
             GC.SuppressFinalize(this);
         }

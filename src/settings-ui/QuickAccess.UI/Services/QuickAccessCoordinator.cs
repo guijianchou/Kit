@@ -107,13 +107,12 @@ internal sealed class QuickAccessCoordinator : IQuickAccessCoordinator, IDisposa
 
     private void OnIpcMessageReceived(string message)
     {
-        Logger.LogDebug($"QuickAccessCoordinator received IPC payload: {message}");
+        Logger.LogDebug("QuickAccessCoordinator received an IPC payload.");
     }
 
     public void SendSortOrderUpdate(GeneralSettings generalSettings)
     {
-        var outgoing = new OutGoingGeneralSettings(generalSettings);
-        TrySendIpcMessage(outgoing.ToString(), "sort order update");
+        TrySendIpcMessage($"{{\"general\":{{\"dashboard_sort_order\":{(int)generalSettings.DashboardSortOrder}}}}}", "sort order update");
     }
 
     private bool TrySendIpcMessage(string payload, string operationDescription)

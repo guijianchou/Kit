@@ -101,7 +101,10 @@ public sealed record WingetServiceRequest
     public string? PreparationId { get; init; }
 }
 
-public sealed record WingetServiceAck(bool Accepted, string? OperationId = null, string? Error = null);
+public sealed record WingetServiceAck(bool Accepted, string? OperationId = null, string? Error = null)
+{
+    public int? RemovedHistoryCount { get; init; }
+}
 
 public sealed record WingetPackageIdentity(string Id, string Source, string InstalledVersion, string AvailableVersion);
 

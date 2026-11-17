@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -55,6 +55,7 @@ namespace Kit.Settings.UI.ViewModels
         private readonly ISettingsRepository<UDPtestSettings> _moduleSettingsRepository;
         private readonly Func<string, int> _sendConfigMsg;
         private readonly TargetSettingsStore _targetStore = new();
+        private readonly Task _initializationTask;
         private readonly ProbeCoordinator _coordinator = new();
         private readonly HttpClient _identityClient = CreateIdentityClient();
         private readonly DispatcherQueue _dispatcherQueue;
@@ -65,6 +66,8 @@ namespace Kit.Settings.UI.ViewModels
         private readonly Dictionary<string, LineMetricSnapshot> _pendingSnapshots = [];
         private readonly Dictionary<string, Queue<LineMetricSnapshot>> _pendingResultBars = [];
         private readonly HashSet<string> _activeLineIds = [];
+        private Task _identityTask = Task.CompletedTask;
+        private Task _targetSaveTask = Task.CompletedTask;
         private UdpAssessment? _pendingUdpAssessment;
         private NatAssessment? _pendingNatAssessment;
         private int _snapshotRefreshQueued;
@@ -152,7 +155,7 @@ namespace Kit.Settings.UI.ViewModels
             _coordinator.ErrorOccurred += OnCoordinatorError;
             _generalSettingsRepository.SettingsChanged += OnGeneralSettingsChanged;
 
-            _ = InitializeAsync();
+            _initializationTask = InitializeAsync();
         }
 
         public bool IsEnabled
@@ -628,8 +631,13 @@ namespace Kit.Settings.UI.ViewModels
 
         public void AddUdpLine()
         {
+            if (_disposed || _coordinator.State != MonitorRunState.Stopped)
+            {
+                return;
+            }
+
             int nextIndex = UdpLines.Count + 1;
-            string id = $"udp_{Guid.NewGuid():N[..8]}";
+            string id = $"udp_{Guid.NewGuid():N}";
             var def = new ProbeLineDefinition(
                 id,
                 $"UDP {nextIndex}",
@@ -653,10 +661,15 @@ namespace Kit.Settings.UI.ViewModels
             try
             {
                 TargetSettings targets = await _targetStore.LoadAsync(_lifecycleCancellation.Token);
+                if (_disposed)
+                {
+                    return;
+                }
+
                 PopulateLines(targets);
 
                 LocalRouteText = CaptureLocalRoute();
-                _ = PollNetworkIdentityAsync(_lifecycleCancellation.Token);
+                _identityTask = PollNetworkIdentityAsync(_lifecycleCancellation.Token);
 
                 SelectedLine = Lines.FirstOrDefault();
                 UpdateLineCounts();
@@ -805,6 +818,11 @@ namespace Kit.Settings.UI.ViewModels
 
         private async Task SaveTargetsAsync()
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             try
             {
                 TargetSettings settings = new()
@@ -812,7 +830,11 @@ namespace Kit.Settings.UI.ViewModels
                     TcpSettings = TcpLines.Select(l => new TcpEndpointSetting(l.Name, l.Definition.Target, l.Definition.Kind)).ToList(),
                     UdpSettings = UdpLines.Select(l => new UdpEndpointSetting(l.Name, UdpTargetParser.Format(l.Definition.Target, l.Definition.Port), l.Definition.Kind)).ToList(),
                 };
-                await _targetStore.SaveAsync(settings, _lifecycleCancellation.Token);
+                CancellationToken token = _lifecycleCancellation.Token;
+                _targetSaveTask = _targetSaveTask.ContinueWith(
+                    _ => _targetStore.SaveAsync(settings, token),
+                    CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default).Unwrap();
+                await _targetSaveTask;
             }
             catch (Exception ex)
             {
@@ -992,6 +1014,9 @@ namespace Kit.Settings.UI.ViewModels
 
         private static string LocalizedUdpAssessment(string state) => state switch
         {
+            "Supported / Single-Target Stable" => "UDPtest_UdpAssessmentSingleTargetStable".GetLocalizedOrFallback(state),
+            "Not Monitored" => "UDPtest_UdpAssessmentNotMonitored".GetLocalizedOrFallback(state),
+            "Unknown / Internal Error" => "UDPtest_UdpAssessmentInternalError".GetLocalizedOrFallback(state),
             "Supported / Stable" => "UDPtest_UdpAssessmentSupportedStable".GetLocalizedOrFallback(state),
             "Supported / Unstable" => "UDPtest_UdpAssessmentSupportedUnstable".GetLocalizedOrFallback(state),
             "Supported / Degraded" => "UDPtest_UdpAssessmentSupportedDegraded".GetLocalizedOrFallback(state),
@@ -1012,9 +1037,9 @@ namespace Kit.Settings.UI.ViewModels
 
         private static string LocalizedNatType(string type) => type switch
         {
-            "Endpoint-Independent Mapping" => "UDPtest_NatEim".GetLocalizedOrFallback(type),
-            "Address-Dependent Mapping" => "UDPtest_NatAdm".GetLocalizedOrFallback(type),
-            "Address and Port-Dependent Mapping" => "UDPtest_NatApdm".GetLocalizedOrFallback(type),
+            "Full Cone" or "Endpoint-Independent Mapping" => "UDPtest_NatEim".GetLocalizedOrFallback(type),
+            "Address Restricted" or "Address-Dependent Mapping" => "UDPtest_NatAdm".GetLocalizedOrFallback(type),
+            "Port Restricted" or "Address and Port-Dependent Mapping" => "UDPtest_NatApdm".GetLocalizedOrFallback(type),
             "Symmetric" => "UDPtest_NatSymmetric".GetLocalizedOrFallback(type),
             "Open Internet" => "UDPtest_NatOpen".GetLocalizedOrFallback(type),
             "Blocked" => "UDPtest_NatBlocked".GetLocalizedOrFallback(type),
@@ -1381,6 +1406,25 @@ namespace Kit.Settings.UI.ViewModels
             });
         }
 
+        private async Task DisposeCoordinatorAsync()
+        {
+            try
+            {
+                await Task.WhenAll(_initializationTask, _identityTask, _targetSaveTask, _coordinator.DisposeAsync().AsTask()).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                ManagedCommon.Logger.LogError("Failed to stop UDPtest probes.", ex);
+            }
+            finally
+            {
+                _targetStore.Dispose();
+                _identityClient.Dispose();
+                _pollSignal.Dispose();
+                _lifecycleCancellation.Dispose();
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && !_disposed)
@@ -1396,7 +1440,13 @@ namespace Kit.Settings.UI.ViewModels
                 {
                 }
                 _sessionTimer.Stop();
-                _ = _coordinator.DisposeAsync().AsTask();
+                _sessionTimer.Tick -= OnSessionTimerTick;
+                _coordinator.StateChanged -= OnCoordinatorStateChanged;
+                _coordinator.SnapshotCommitted -= OnCoordinatorSnapshotCommitted;
+                _coordinator.UdpAssessmentCommitted -= OnCoordinatorUdpAssessmentCommitted;
+                _coordinator.NatAssessmentCommitted -= OnCoordinatorNatAssessmentCommitted;
+                _coordinator.ErrorOccurred -= OnCoordinatorError;
+                _ = DisposeCoordinatorAsync();
             }
             base.Dispose(disposing);
         }

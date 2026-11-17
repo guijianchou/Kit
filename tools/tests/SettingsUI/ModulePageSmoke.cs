@@ -35,6 +35,7 @@ internal static class ModulePageSmoke
 
     private static readonly string Report = Path.Combine(Environment.GetEnvironmentVariable("KIT_MODULE_PAGE_TEST_OUTPUT"), "module-pages-smoke.log");
     private static bool _aiHubStoreWritable = true;
+    private static byte[] _coldGeneralValidSettings;
     private static readonly (ModuleType Module, Type Page)[] Modules =
     {
         (ModuleType.Awake, typeof(AwakePage)),
@@ -50,6 +51,8 @@ internal static class ModulePageSmoke
         string aiHubSetupSkip = null;
         try
         {
+            if (int.TryParse(Environment.GetEnvironmentVariable("KIT_MODULE_PAGE_COLD_START_TAB"), out int coldStartTab))
+                SettingsRepository<AIHubSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Properties.ActiveTabIndex.Value = coldStartTab;
             if (Environment.GetEnvironmentVariable("KIT_MODULE_PAGE_DIAG") == "1")
             {
                 RunStorageDiag();
@@ -57,7 +60,26 @@ internal static class ModulePageSmoke
 
             try
             {
-                new Kit.AiHub.Storage.AiHubSettingsStore().Update(config => config.IsEnabled = false);
+                string generalCold = Environment.GetEnvironmentVariable("KIT_MODULE_PAGE_COLD_START_GENERAL");
+                var store = new Kit.AiHub.Storage.AiHubSettingsStore();
+                store.Update(config =>
+                {
+                    config.IsEnabled = generalCold is "Enabled" or "Failed";
+                    if (!string.IsNullOrEmpty(generalCold))
+                    {
+                        config.Targets = AiHubConfig.CreateDefault().Targets;
+                        foreach (var target in config.Targets)
+                        {
+                            target.BaseUrl = "https://example.invalid";
+                            target.Model = "fixture-model";
+                        }
+                    }
+                });
+                if (generalCold == "Failed")
+                {
+                    _coldGeneralValidSettings = File.ReadAllBytes(store.SettingsFilePath);
+                    File.WriteAllText(store.SettingsFilePath, "{invalid fixture settings");
+                }
             }
             catch (Exception ex)
             {
@@ -165,6 +187,19 @@ internal static class ModulePageSmoke
 
     private static async Task Run()
     {
+        string generalCold = Environment.GetEnvironmentVariable("KIT_MODULE_PAGE_COLD_START_GENERAL");
+        if (!string.IsNullOrEmpty(generalCold))
+        {
+            await CheckGeneralColdStart(generalCold is "Enabled" or "Failed", generalCold == "Failed");
+            return;
+        }
+
+        if (int.TryParse(Environment.GetEnvironmentVariable("KIT_MODULE_PAGE_COLD_START_TAB"), out int coldStartTab))
+        {
+            await CheckAiHubColdStart(coldStartTab);
+            return;
+        }
+
         CheckBackupUnderDataDirectory();
         CheckAuditOutputContract();
         // The wrapper restores these files. Keep save checks independent of the user's endpoints.
@@ -247,6 +282,7 @@ internal static class ModulePageSmoke
         if (toggleMessages != 20) throw new InvalidOperationException("Expected exactly 20 Utilities commands, got " + toggleMessages);
         File.AppendAllText(Report, "20 Utilities commands; 25 real page-state assertions; no commands from page refresh.\n");
         await UDPtestRenderingChecks.Run(Report);
+        await LocalserverRenderingChecks.Run(Report);
 
         int generalMessages = 0;
         ShellPage.SetDefaultSndMessageCallback(message =>
@@ -281,6 +317,234 @@ internal static class ModulePageSmoke
         await CheckAiServiceControls((GeneralPage)NavigationService.Frame.Content);
         if (generalMessages != 1) throw new InvalidOperationException("AI service toggles restarted the general-settings feedback loop.");
         await CheckAiHubPage(repository);
+    }
+
+    private static async Task CheckAiHubColdStart(int persistedTab)
+    {
+        // Seed the persisted choice before the first AI Hub page exists. Do not touch
+        // the page's selector or ViewModel: a tab round trip would hide this defect.
+        bool directRoute = Environment.GetEnvironmentVariable("KIT_MODULE_PAGE_COLD_START_DIRECT") == "1";
+        if (directRoute && NavigationService.Frame.Content is not AIHubPage)
+            throw new InvalidOperationException("The direct AI Hub startup route did not create its page.");
+        if (!directRoute && !NavigationService.Navigate(typeof(AIHubPage)))
+            throw new InvalidOperationException("Cold AI Hub navigation failed.");
+        var page = (AIHubPage)NavigationService.Frame.Content;
+        var sections = (Segmented)page.FindName("AiHubSections");
+        File.AppendAllText(Report, $"AI Hub cold construction: directRoute={directRoute}; model={page.ViewModel.ActiveTabIndex}; selector={sections.SelectedIndex}.\n");
+        for (int attempt = 0; attempt < 50 && !page.IsLoaded; attempt++) await Task.Delay(20);
+        await Task.Delay(200);
+        var score = (FrameworkElement)page.FindName("AuditScoreCard");
+        var scroll = (ScrollViewer)page.FindName("AiHubContentScroll");
+        var tabContent = (FrameworkElement)page.FindName("AiHubTabContent");
+        FrameworkElement auditPanel = score;
+        while (VisualTreeHelper.GetParent(auditPanel) is FrameworkElement parent && parent != tabContent)
+            auditPanel = parent;
+        int expectedTab = persistedTab is >= 0 and <= 2 ? persistedTab : 0;
+        FrameworkElement expectedContent = expectedTab switch
+        {
+            1 => (FrameworkElement)page.FindName("OptimizationPanel"),
+            2 => (FrameworkElement)page.FindName("TaskPolicyPanel"),
+            _ => auditPanel,
+        };
+        bool effectivelyVisible = expectedContent is not null;
+        for (DependencyObject element = expectedContent; element is FrameworkElement framework; element = VisualTreeHelper.GetParent(element))
+            effectivelyVisible &= framework.Visibility == Visibility.Visible && framework.Opacity > 0;
+        File.AppendAllText(Report, $"AI Hub cold first frame: persisted={persistedTab}; loaded={page.IsLoaded}; model={page.ViewModel.ActiveTabIndex}; selector={sections.SelectedIndex}; auditVisibility={auditPanel.Visibility}; auditSize={auditPanel.ActualWidth:F1}x{auditPanel.ActualHeight:F1}; scoreSize={score.ActualWidth:F1}x{score.ActualHeight:F1}; viewport={scroll.ViewportHeight:F1}; expectedContentSize={expectedContent?.ActualWidth:F1}x{expectedContent?.ActualHeight:F1}; effectiveVisible={effectivelyVisible}.\n");
+        await RenderPage(page, $"aihub-cold-tab-{persistedTab}.png");
+        if (!page.IsLoaded || sections.SelectedIndex != expectedTab || page.ViewModel.ActiveTabIndex != expectedTab || !effectivelyVisible ||
+            expectedContent?.ActualHeight <= 0 || scroll.ViewportHeight <= 0)
+            throw new InvalidOperationException("AI Hub cold first frame is empty or inconsistent before any tab selection.");
+        File.AppendAllText(Report, "AI Hub cold first frame passed before any tab selection.\n");
+
+        // Exercise the real selector after recording the untouched first frame. A
+        // transient no-selection state must retain the valid model and saved tab.
+        var repository = SettingsRepository<AIHubSettings>.GetInstance(SettingsUtils.Default);
+        string settingsPath = SettingsUtils.Default.GetSettingsFilePath(AIHubSettings.ModuleName);
+        byte[] settingsBefore = File.Exists(settingsPath) ? File.ReadAllBytes(settingsPath) : null;
+        int moduleMessages = 0;
+        int selectionEvents = 0;
+        sections.SelectionChanged += (_, _) => selectionEvents++;
+        ShellPage.SetDefaultSndMessageCallback(message =>
+        {
+            using var json = JsonDocument.Parse(message);
+            if (json.RootElement.TryGetProperty("kit", out var modules) && modules.TryGetProperty("AIHub", out _))
+                moduleMessages++;
+        });
+        sections.SelectedIndex = -1;
+        await Task.Delay(200);
+        bool contentRestored = expectedContent is not null && expectedContent.ActualHeight > 0;
+        for (DependencyObject element = expectedContent; element is FrameworkElement framework; element = VisualTreeHelper.GetParent(element))
+            contentRestored &= framework.Visibility == Visibility.Visible && framework.Opacity > 0;
+        bool settingsUnchanged = settingsBefore is null
+            ? !File.Exists(settingsPath)
+            : File.Exists(settingsPath) && settingsBefore.SequenceEqual(File.ReadAllBytes(settingsPath));
+        int storedTab = repository.SettingsConfig.Properties.ActiveTabIndex.Value;
+        File.AppendAllText(Report, $"AI Hub no-selection recovery: events={selectionEvents}; model={page.ViewModel.ActiveTabIndex}; selector={sections.SelectedIndex}; storedTab={storedTab}; contentVisible={contentRestored}; moduleMessages={moduleMessages}; settingsUnchanged={settingsUnchanged}.\n");
+        await RenderPage(page, $"aihub-no-selection-tab-{persistedTab}.png");
+        if (selectionEvents == 0 || page.ViewModel.ActiveTabIndex != expectedTab || sections.SelectedIndex != expectedTab ||
+            storedTab != expectedTab || !contentRestored || moduleMessages != 0 || !settingsUnchanged)
+            throw new InvalidOperationException("AI Hub no-selection state changed the valid tab, persisted it, or left content empty.");
+        File.AppendAllText(Report, "AI Hub selector no-selection recovery passed without a tab round trip or settings write.\n");
+    }
+
+    private static async Task CheckGeneralColdStart(bool enabled, bool failInitialLoad)
+    {
+        if (!_aiHubStoreWritable) throw new InvalidOperationException("Cold General settings requires a writable fixture store.");
+        if (typeof(AiHubViewModel).GetField("_shared", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null) != null)
+            throw new InvalidOperationException("The AI service ViewModel was already initialized before the cold General test.");
+
+        // Hold the actual storage mutex on a dedicated thread. This models a slow
+        // initial read without delaying or replacing any production UI callback.
+        var store = new Kit.AiHub.Storage.AiHubSettingsStore();
+        var files = store.GetType().GetField("_files", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(store);
+        string mutexName = (string)files.GetType().GetField("_mutexName", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(files);
+        using var lockAcquired = new ManualResetEventSlim();
+        using var releaseStorage = new ManualResetEventSlim();
+        Exception lockError = null;
+        var storageThread = new Thread(() =>
+        {
+            try
+            {
+                using var mutex = new Mutex(false, mutexName);
+                if (!mutex.WaitOne(2000)) throw new TimeoutException("Fixture could not acquire the AI Hub storage mutex.");
+                try
+                {
+                    lockAcquired.Set();
+                    releaseStorage.Wait(8000);
+                }
+                finally { mutex.ReleaseMutex(); }
+            }
+            catch (Exception ex) { lockError = ex; lockAcquired.Set(); }
+        }) { IsBackground = true, Name = "General cold storage fixture" };
+        storageThread.Start();
+        if (!lockAcquired.Wait(3000) || lockError != null)
+            throw new InvalidOperationException("Cold General storage fixture failed.", lockError);
+
+        GeneralPage page = null;
+        double firstGroupHeight = 0;
+        double firstDiagnosticsY = 0;
+        bool initialSurfaceVisible = false;
+        FrameworkElement settingsSurface = null;
+        long presentationToken = 0;
+        var firstPresentation = new TaskCompletionSource<(double Height, double DiagnosticsY)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        string firstLayout = string.Empty;
+        try
+        {
+            if (!NavigationService.Navigate(typeof(GeneralPage))) throw new InvalidOperationException("Cold General navigation failed.");
+            page = (GeneralPage)NavigationService.Frame.Content;
+            var service = page.ViewModel.AiServices;
+            for (int attempt = 0; attempt < 50 && !page.IsLoaded; attempt++) await Task.Delay(20);
+            page.UpdateLayout();
+            var surface = page.FindName("GeneralSettingsSurface") as FrameworkElement ?? (FrameworkElement)page.Content;
+            var group = (FrameworkElement)page.FindName("AiServicesGroup");
+            var diagnostics = (FrameworkElement)page.FindName("DiagnosticsGroup");
+            initialSurfaceVisible = surface.Visibility == Visibility.Visible && surface.Opacity > 0;
+            firstGroupHeight = group.ActualHeight;
+            firstDiagnosticsY = diagnostics.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point()).Y;
+            var heartbeat = new TaskCompletionSource();
+            page.DispatcherQueue.TryEnqueue(() => heartbeat.TrySetResult());
+            if (await Task.WhenAny(heartbeat.Task, Task.Delay(1000)) != heartbeat.Task)
+                throw new InvalidOperationException("The UI dispatcher is blocked during initial AI service settings load.");
+            File.AppendAllText(Report, $"General cold first frame: persistedEnabled={enabled}; initializationComplete={service.Initialization.IsCompleted}; surfaceVisible={initialSurfaceVisible}; groupHeight={firstGroupHeight:F1}; diagnosticsY={firstDiagnosticsY:F1}; hubContent={service.HubContentVisibility}; dispatcherResponsive=True.\n");
+            await RenderPage(page, "general-cold-first-frame.png");
+            if (service.Initialization.IsCompleted)
+                throw new InvalidOperationException("The cold General snapshot did not capture the pending initial configuration read.");
+            settingsSurface = surface;
+            presentationToken = surface.RegisterPropertyChangedCallback(UIElement.OpacityProperty, (sender, property) =>
+            {
+                if (surface.Opacity > 0 && !firstPresentation.Task.IsCompleted)
+                {
+                    // Capture the actual reveal callback, without a polling delay or
+                    // forcing another layout that could conceal the first-frame race.
+                    firstPresentation.TrySetResult((group.ActualHeight,
+                        diagnostics.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point()).Y));
+                    firstLayout = CaptureGeneralColdLayout(page, "reveal-callback");
+                }
+            });
+        }
+        finally
+        {
+            releaseStorage.Set();
+            storageThread.Join(2000);
+        }
+
+        (double Height, double DiagnosticsY) presented;
+        try
+        {
+            await page.ViewModel.AiServices.Initialization;
+            if (await Task.WhenAny(firstPresentation.Task, Task.Delay(2000)) != firstPresentation.Task)
+                throw new InvalidOperationException("General settings did not present its initialized content.");
+            presented = await firstPresentation.Task;
+        }
+        finally
+        {
+            settingsSurface.UnregisterPropertyChangedCallback(UIElement.OpacityProperty, presentationToken);
+        }
+        var aiGroup = (FrameworkElement)page.FindName("AiServicesGroup");
+        var diagnosticsGroup = (FrameworkElement)page.FindName("DiagnosticsGroup");
+        double displayedHeight = presented.Height;
+        double displayedY = presented.DiagnosticsY;
+        await RenderPage(aiGroup, "general-cold-first-content.png");
+        await Task.Delay(600);
+        page.UpdateLayout();
+        double stableHeight = aiGroup.ActualHeight;
+        double stableY = diagnosticsGroup.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point()).Y;
+        File.AppendAllText(Report, firstLayout + CaptureGeneralColdLayout(page, "settled-content"));
+        await RenderPage(aiGroup, "general-cold-settled-content.png");
+        var expanders = new[] { "AiKernelSettingsExpander", "AiMainEndpointExpander", "AiFallbackEndpointExpander", "AiPolicyRulesExpander" }
+            .Select(name => (SettingsExpander)page.FindName(name)).ToArray();
+        bool expanded = expanders.Any(expander => expander.IsExpanded);
+        var actualService = page.ViewModel.AiServices;
+        File.AppendAllText(Report, $"General cold loaded: enabled={actualService.IsEnabled}; canToggle={actualService.CanToggle}; canEdit={actualService.CanEdit}; groupHeight={displayedHeight:F1}->{stableHeight:F1}; diagnosticsY={displayedY:F1}->{stableY:F1}; initialHeightDelta={displayedHeight - firstGroupHeight:F1}; initialPositionDelta={displayedY - firstDiagnosticsY:F1}; anyExpanded={expanded}.\n");
+        if (initialSurfaceVisible || settingsSurface.Opacity <= 0 ||
+            (!failInitialLoad && (!actualService.CanToggle || actualService.IsEnabled != enabled)) ||
+            expanded || displayedHeight <= 0 || Math.Abs(displayedHeight - stableHeight) > 1 || Math.Abs(displayedY - stableY) > 1)
+            throw new InvalidOperationException("General settings displayed a provisional configuration or moved after its first completed presentation.");
+
+        if (failInitialLoad)
+        {
+            var retry = Descendants(page).OfType<Button>().Single(control => AutomationProperties.GetAutomationId(control) == "AiHub_RetryConfigurationButton");
+            var failureInfo = Descendants(page).OfType<InfoBar>().Single(control => ReferenceEquals(control.ActionButton, retry));
+            if (actualService.CanToggle || !actualService.CanRetryConfiguration || !actualService.IsStatusOpen ||
+                failureInfo.IsClosable || !retry.IsEnabled || Ancestors(retry).OfType<FrameworkElement>().Any(element => element.Visibility != Visibility.Visible || element.Opacity <= 0))
+                throw new InvalidOperationException("Failed AI service initialization did not expose a visible, usable retry.");
+            File.WriteAllBytes(store.SettingsFilePath, _coldGeneralValidSettings);
+            new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(retry).Invoke();
+            await actualService.Initialization;
+            for (int attempt = 0; attempt < 100 && !actualService.PoliciesLoaded; attempt++) await Task.Delay(20);
+            var policyEditor = (TextBox)page.FindName("AiPolicyContentBox");
+            if (!actualService.CanToggle || !actualService.CanEdit || actualService.CanRetryConfiguration || !actualService.IsEnabled ||
+                !actualService.PoliciesLoaded || !actualService.CanEditPolicies || policyEditor.IsReadOnly || !failureInfo.IsClosable)
+                throw new InvalidOperationException("Retry did not recover editable AI service settings after the read error was removed.");
+            await RenderPage(aiGroup, "general-cold-retry-recovered.png");
+            File.AppendAllText(Report, "General failed initialization: error and retry visible; real retry recovered enabled settings and editable global policy before toggling.\n");
+        }
+
+        // Only after verifying untouched first presentation, exercise real toggles.
+        var toggle = Descendants(page).OfType<ToggleSwitch>().Single(control => AutomationProperties.GetAutomationId(control) == "Toggle_AiHub");
+        for (int cycle = 0; cycle < 2; cycle++)
+        {
+            toggle.IsOn = !toggle.IsOn;
+            await Task.Delay(200);
+            bool expected = cycle == 0 ? !enabled : enabled;
+            if (actualService.IsEnabled != expected || actualService.HubContentVisibility != (expected ? Visibility.Visible : Visibility.Collapsed) ||
+                expanders.Any(expander => expander.IsExpanded))
+                throw new InvalidOperationException("The AI service toggle or collapsed editor state changed after cold initialization.");
+        }
+        File.AppendAllText(Report, "General cold first presentation stable; dispatcher remained responsive; real toggle preserved visibility and collapsed editors.\n");
+    }
+
+    private static string CaptureGeneralColdLayout(GeneralPage page, string phase)
+    {
+        var lines = new List<string>();
+        foreach (string name in new[] { "GeneralSettingsSurface", "AiServicesGroup", "GeneralPageAiHubMasterCard", "AiServiceStatusCard", "AiKernelSettingsExpander", "AiMainEndpointExpander", "AiFallbackEndpointExpander", "AiPolicyRulesExpander" })
+        {
+            if (page.FindName(name) is not FrameworkElement element) continue;
+            string enabled = element is Control control ? control.IsEnabled.ToString() : "n/a";
+            lines.Add($"General layout {phase}: {name}={element.ActualWidth:F1}x{element.ActualHeight:F1}; desired={element.DesiredSize.Width:F1}x{element.DesiredSize.Height:F1}; enabled={enabled}.\n");
+        }
+
+        return string.Concat(lines);
     }
 
     private static void CheckBackupUnderDataDirectory()
@@ -840,10 +1104,14 @@ internal static class ModulePageSmoke
         ShellPage.SetDefaultSndMessageCallback(message =>
         {
             using var json = JsonDocument.Parse(message);
-            if (json.RootElement.TryGetProperty("AIHub", out var plugin))
+            if (json.RootElement.TryGetProperty("kit", out var modules) && modules.TryGetProperty("AIHub", out var plugin))
             {
+                // Runner dispatches the module object inside the canonical Kit envelope.
                 // Reproduce the native module's actual settings-file writeback.
                 SettingsUtils.Default.SaveSettings(plugin.GetRawText(), AIHubSettings.ModuleName);
+                using var savedPlugin = JsonDocument.Parse(File.ReadAllText(SettingsUtils.Default.GetSettingsFilePath(AIHubSettings.ModuleName)));
+                if (!JsonElement.DeepEquals(plugin, savedPlugin.RootElement))
+                    throw new InvalidOperationException("AIHub/settings.json did not persist the dispatched module object.");
                 pluginWrites++;
             }
         });
@@ -910,9 +1178,18 @@ internal static class ModulePageSmoke
             if (vm.AiHub.CurrentPolicyContent != savedAuditPolicy || vm.AiHub.IsCurrentPolicyDirty)
                 throw new InvalidOperationException("Security audit discard did not restore its saved policy.");
 
-            if (pluginWrites < 3 || !serviceSettings.SequenceEqual(File.ReadAllBytes(store.SettingsFilePath)) ||
-                !secrets.SequenceEqual(File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat"))))
-                throw new InvalidOperationException("Plugin settings writeback changed AI service configuration or credentials.");
+            byte[] serviceSettingsAfter = File.ReadAllBytes(store.SettingsFilePath);
+            byte[] secretsAfter = File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat"));
+            bool serviceUnchanged = serviceSettings.SequenceEqual(serviceSettingsAfter);
+            bool secretsUnchanged = secrets.SequenceEqual(secretsAfter);
+            string Hash(byte[] bytes) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+            File.AppendAllText(Report, $"AI Hub plugin writeback: writes={pluginWrites}; service-settings.json unchanged={serviceUnchanged}, SHA256 before={Hash(serviceSettings)}, after={Hash(serviceSettingsAfter)}; secrets.dat unchanged={secretsUnchanged}, SHA256 before={Hash(secrets)}, after={Hash(secretsAfter)}.\n");
+            if (pluginWrites < 3)
+                throw new InvalidOperationException($"Expected at least 3 kit.AIHub module writebacks; observed {pluginWrites}.");
+            if (!serviceUnchanged)
+                throw new InvalidOperationException("Plugin settings writeback changed service-settings.json; see SHA256 diagnostics.");
+            if (!secretsUnchanged)
+                throw new InvalidOperationException("Plugin settings writeback changed secrets.dat; see SHA256 diagnostics.");
         }
 
         ModuleHelper.SetIsModuleEnabled(repository.SettingsConfig, ModuleType.AIHub, false);
@@ -1800,6 +2077,7 @@ internal static class ModulePageSmoke
 
     private static async Task CheckEndpointEditorPresentation(GeneralPage page, string phase, (string Mode, string Effort)[] expected)
     {
+        await WaitForGeneralPresentation(page, phase);
         var service = page.ViewModel.AiServices;
         var routes = new[]
         {
@@ -1846,10 +2124,13 @@ internal static class ModulePageSmoke
                 visibleEditor.FocusState != FocusState.Unfocused && IsRendered(visibleEditor);
             string editorState = visibleEditor is null ? "<missing>" :
                 $"name={visibleEditor.Name}, visibility={visibleEditor.Visibility}, effectiveVisible={Ancestors(visibleEditor).OfType<UIElement>().All(item => item.Visibility == Visibility.Visible)}, opacity={visibleEditor.Opacity:F2}, size={visibleEditor.ActualWidth:F1}x{visibleEditor.ActualHeight:F1}, focus={visibleEditor.FocusState}";
+            string hiddenAncestors = string.Join(", ", Ancestors(combo).OfType<FrameworkElement>()
+                .Where(element => element.Visibility != Visibility.Visible || element.Opacity <= 0)
+                .Select(element => $"{element.GetType().Name}({element.Name}) visibility={element.Visibility}, opacity={element.Opacity:F2}"));
             string templateState = string.Join("; ", Descendants(combo).OfType<FrameworkElement>()
                 .Where(element => element is ContentPresenter or TextBlock)
                 .Select(element => $"{element.GetType().Name}({element.Name}) visibility={element.Visibility}, effectiveVisible={Ancestors(element).OfType<UIElement>().All(item => item.Visibility == Visibility.Visible)}, opacity={element.Opacity:F2}, size={element.ActualWidth:F1}x{element.ActualHeight:F1}, text='{(element is TextBlock block ? block.Text : (element as ContentPresenter)?.Content as string ?? "<non-string>")}'"));
-            File.AppendAllText(Report, $"Native editor {context}: expected='{expectedValue}', model='{viewModelValue}', combo='{combo.Text}', selected='{combo.SelectedItem as string ?? "<none>"}', selectedIndex={combo.SelectedIndex}, comboFocus={combo.FocusState}, renderedText={hasRenderedText}, focusedEditor={hasFocusedEditor}, editorText='{visibleEditor?.Text ?? "<missing>"}', {editorState}; template=[{templateState}]\n");
+            File.AppendAllText(Report, $"Native editor {context}: expected='{expectedValue}', model='{viewModelValue}', combo='{combo.Text}', selected='{combo.SelectedItem as string ?? "<none>"}', selectedIndex={combo.SelectedIndex}, comboFocus={combo.FocusState}, renderedText={hasRenderedText}, focusedEditor={hasFocusedEditor}, editorText='{visibleEditor?.Text ?? "<missing>"}', {editorState}; hiddenAncestors=[{hiddenAncestors}]; template=[{templateState}]\n");
             // An unfocused editable ComboBox intentionally sizes its TextBox to zero;
             // its selection presenter must display the same value until editing begins.
             if (!combo.IsEditable || visibleEditor is null || combo.Text != expectedValue ||
@@ -1867,6 +2148,36 @@ internal static class ModulePageSmoke
         }
     }
 
+    private static async Task WaitForGeneralPresentation(GeneralPage page, string phase)
+    {
+        var surface = (FrameworkElement)page.FindName("GeneralSettingsSurface");
+        var presented = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Check()
+        {
+            if (page.IsLoaded && surface.Opacity > 0 && surface.IsHitTestVisible &&
+                surface.Visibility == Visibility.Visible && ReferenceEquals(NavigationService.Frame.Content, page))
+                presented.TrySetResult();
+        }
+        void Loaded(object sender, RoutedEventArgs args) => Check();
+        page.Loaded += Loaded;
+        long opacityToken = surface.RegisterPropertyChangedCallback(UIElement.OpacityProperty, (_, _) => Check());
+        long hitTestToken = surface.RegisterPropertyChangedCallback(UIElement.IsHitTestVisibleProperty, (_, _) => Check());
+        try
+        {
+            Check();
+            if (await Task.WhenAny(presented.Task, Task.Delay(3000)) != presented.Task)
+                throw new InvalidOperationException($"General presentation timed out before {phase}: loaded={page.IsLoaded}, opacity={surface.Opacity}, hitTest={surface.IsHitTestVisible}, mounted={ReferenceEquals(NavigationService.Frame.Content, page)}.");
+            await presented.Task;
+            File.AppendAllText(Report, $"General presentation ready before {phase}: loaded=True, opacity={surface.Opacity}, hitTest={surface.IsHitTestVisible}.\n");
+        }
+        finally
+        {
+            page.Loaded -= Loaded;
+            surface.UnregisterPropertyChangedCallback(UIElement.OpacityProperty, opacityToken);
+            surface.UnregisterPropertyChangedCallback(UIElement.IsHitTestVisibleProperty, hitTestToken);
+        }
+    }
+
     private static async Task CheckEndpointEditorReload(GeneralPage original, (string Mode, string Effort)[] expected, bool verifyThemes)
     {
         // A newly constructed page and view model must populate template children from
@@ -1876,8 +2187,6 @@ internal static class ModulePageSmoke
         {
             NavigationService.Frame.Content = fresh;
             await fresh.ViewModel.AiServices.Initialization;
-            await Task.Delay(150);
-            fresh.UpdateLayout();
             await CheckEndpointEditorPresentation(fresh, "fresh saved-page reload", expected);
             if (fresh.ViewModel.AiServices.HasUnsavedEndpointChanges) throw new InvalidOperationException("Loading persisted native identifiers created an unsaved draft.");
             if (verifyThemes)
@@ -1896,9 +2205,8 @@ internal static class ModulePageSmoke
         finally
         {
             NavigationService.Frame.Content = original;
-            fresh.ViewModel.Dispose();
+            fresh.Dispose();
         }
-        await Task.Delay(150);
         await CheckEndpointEditorPresentation(original, "return from fresh page", expected);
     }
 

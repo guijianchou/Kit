@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "module_hotkeys.h"
 #include <WinSafer.h>
 #include <Sddl.h>
 #include <atomic>
@@ -75,12 +76,13 @@ json::JsonObject get_all_settings()
     result.SetNamedValue(L"general", get_general_settings().to_json());
     const auto moduleSettings = get_power_toys_settings();
     result.SetNamedValue(L"kit", moduleSettings);
-    result.SetNamedValue(L"powertoys", moduleSettings);
+    // Read legacy aliases, but publish the canonical Kit envelope only.
     return result;
 }
 
 void send_all_settings_to_settings()
 {
+    if (module_configuration_pending()) return;
     const std::wstring settings_string{ get_all_settings().Stringify().c_str() };
     std::unique_lock lock{ ipc_mutex };
     if (current_settings_ipc)
@@ -168,6 +170,7 @@ void send_json_config_to_module(const std::wstring& module_key, const std::wstri
     if (moduleIt != modules().end())
     {
         moduleIt->second->set_config(settings.c_str());
+        refresh_module_hotkeys();
     }
 }
 
@@ -182,16 +185,22 @@ void dispatch_json_config_to_modules(const json::JsonObject& powertoys_configs)
 };
 
 void dispatch_received_json(const std::wstring& json_to_parse)
+try
 {
+    if (json_to_parse.size() > 1024 * 1024)
+    {
+        Logger::warn(L"Rejected oversized settings IPC message.");
+        return;
+    }
     json::JsonObject j;
     const bool ok = json::JsonObject::TryParse(json_to_parse, j);
     if (!ok)
     {
-        Logger::error(L"dispatch_received_json: got malformed json: {}", json_to_parse);
+        Logger::warn(L"dispatch_received_json: rejected malformed JSON.");
         return;
     }
 
-    Logger::info(L"dispatch_received_json: {}", json_to_parse);
+    Logger::debug(L"dispatch_received_json: {} top-level fields", j.Size());
 
     for (const auto& base_element : j)
     {
@@ -213,7 +222,7 @@ void dispatch_received_json(const std::wstring& json_to_parse)
         else if (name == L"powertoys" || name == L"kit")
         {
             dispatch_json_config_to_modules(value.GetObjectW());
-            send_all_settings_to_settings();
+            // The module executor sends the committed snapshot after all pending writes finish.
         }
         else if (name == L"refresh")
         {
@@ -249,22 +258,38 @@ void dispatch_received_json(const std::wstring& json_to_parse)
     return;
 }
 
+catch (const winrt::hresult_error& error)
+{
+    Logger::warn(L"Rejected settings IPC value: {}", error.message());
+}
+catch (const std::exception& error)
+{
+    Logger::warn("Settings IPC dispatch failed: {}", error.what());
+}
+
 void dispatch_received_json_callback(PVOID data)
 {
-    std::wstring* msg = static_cast<std::wstring*>(data);
+    std::unique_ptr<std::wstring> msg{ static_cast<std::wstring*>(data) };
     dispatch_received_json(*msg);
-    delete msg;
 }
 
 void receive_json_send_to_main_thread(const std::wstring& msg)
 {
+    if (msg.size() > 1024 * 1024)
+    {
+        Logger::warn(L"Rejected oversized IPC response.");
+        return;
+    }
     if (try_complete_ai_hub_response(msg))
     {
         return;
     }
 
-    std::wstring* copy = new std::wstring(msg);
-    dispatch_run_on_main_ui_thread(dispatch_received_json_callback, copy);
+    auto copy = std::make_unique<std::wstring>(msg);
+    if (dispatch_run_on_main_ui_thread(dispatch_received_json_callback, copy.get()))
+    {
+        copy.release();
+    }
 }
 
 // Try to run the Settings process with non-elevated privileges.
@@ -298,6 +323,8 @@ BOOL run_settings_non_elevated(LPCWSTR executable_path, LPWSTR executable_args, 
     {
         return false;
     }
+
+    auto delete_attributes = wil::scope_exit([&] { DeleteProcThreadAttributeList(pptal); });
 
     if (!UpdateProcThreadAttribute(pptal,
                                    0,
@@ -524,7 +551,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
                                         nullptr,
                                         nullptr,
                                         FALSE,
-                                        0,
+                                        CREATE_SUSPENDED,
                                         nullptr,
                                         working_dir.c_str(),
                                         &startup_info,
@@ -554,9 +581,11 @@ void run_settings_window(std::optional<std::wstring> settings_window)
 
             interop_auth::CallerPolicy settings_caller_policy;
             settings_caller_policy.enabled = true;
+            settings_caller_policy.expectedClientPid = process_info.dwProcessId;
             settings_caller_policy.expectedDirectory = get_module_folderpath() + L"\\WinUI3Apps";
             settings_caller_policy.allowedBasenames = { L"Kit.Settings.exe" };
             settings_caller_policy.expectedVersion = interop_auth::GetOwnModuleVersion();
+            // Kit is locally built and unsigned; the child PID, path and version are pinned.
             settings_caller_policy.requireMicrosoftSignature = false;
             settings_caller_policy.logReject = [](const interop_auth::AuthResult& r) {
                 Logger::warn(L"Rejected unauthenticated Settings pipe client: pid={} image='{}' reason={}",
@@ -565,6 +594,7 @@ void run_settings_window(std::optional<std::wstring> settings_window)
                              r.reasonCode);
             };
             current_settings_ipc->start(hToken, settings_caller_policy);
+            if (ResumeThread(process_info.hThread) == static_cast<DWORD>(-1)) winrt::throw_last_error();
             g_settings_process_id = process_info.dwProcessId;
             g_isLaunchInProgress = false;
         }
@@ -625,22 +655,17 @@ LExit:
 
     // Closing the last Settings window while the tray icon is hidden ends the runner.
     // Without this, Kit.exe would linger headless (no tray icon, no visible close path)
-    // with its modules, worker and supervised services still running. Routing through
-    // WM_CLOSE runs the normal teardown: module destructors disable modules, which lets
-    // the Localserver worker stop its services before the runner exits.
-    if (settings_process_closed && !get_general_settings().showSystemTrayIcon)
+    // with its modules, workers and supervised services still running. End the UI
+    // message loop to run normal teardown, including the Localserver worker's
+    // supervised-service cleanup.
+    if (settings_process_closed)
     {
-        const HWND pt_main_window = FindWindowW(pt_tray_icon_window_class, nullptr);
-        if (pt_main_window != nullptr)
-        {
-            Logger::info("run_settings_window: Settings closed without a tray icon; requesting runner exit.");
-            PostMessageW(pt_main_window, WM_CLOSE, 0, 0);
-        }
-        else
-        {
-            Logger::info("run_settings_window: Settings closed without a tray icon and no main window; posting quit.");
-            PostQuitMessage(0);
-        }
+        dispatch_run_on_main_ui_thread([](PVOID) {
+            if (!get_general_settings().showSystemTrayIcon)
+            {
+                PostQuitMessage(0);
+            }
+        }, nullptr);
     }
 
     if (process_info.hProcess)
@@ -857,7 +882,7 @@ std::string ESettingsWindowNames_to_string(ESettingsWindowNames value)
     default:
     {
         Logger::error(L"Can't convert ESettingsWindowNames value={} to string", static_cast<int>(value));
-        assert(false);
+        Logger::warn(L"Unknown Settings page; using Dashboard.");
     }
     }
     return "";
@@ -904,7 +929,7 @@ ESettingsWindowNames ESettingsWindowNames_from_string(std::string value)
     else
     {
         Logger::error(L"Can't convert string value={} to ESettingsWindowNames", winrt::to_hstring(value));
-        assert(false);
+        Logger::warn(L"Unknown Settings page; using Dashboard.");
     }
 
     return ESettingsWindowNames::Dashboard;

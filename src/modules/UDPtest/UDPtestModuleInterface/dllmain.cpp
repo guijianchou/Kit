@@ -117,21 +117,29 @@ public:
                 CloseHandle(refreshEvent);
             }
         }
-        catch (std::exception&)
+        catch (...)
         {
+            Logger::warn(L"Invalid module settings were ignored.");
         }
     }
 
     virtual void enable() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        if (m_enabled)
+        if (m_enabled && m_worker.is_running())
         {
             return;
         }
 
-        m_enabled = true;
-        start_worker_if_needed();
+        try
+        {
+            start_worker_if_needed();
+        }
+        catch (...)
+        {
+            Logger::error(L"[UDPtest] Worker startup failed.");
+        }
+        m_enabled = m_worker.is_running();
 
         Trace::EnableUDPtest(true);
         Logger::info(L"UDPtest module enabled");
@@ -155,7 +163,7 @@ public:
     virtual bool is_enabled() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        return m_enabled;
+        return m_enabled && m_worker.is_running();
     }
 };
 

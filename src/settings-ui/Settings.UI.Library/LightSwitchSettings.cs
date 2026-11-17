@@ -46,6 +46,17 @@ namespace Kit.Settings.UI.Library
                     SunsetOffset = new IntProperty((int)Properties.SunsetOffset.Value),
                     Latitude = new StringProperty(Properties.Latitude.Value),
                     Longitude = new StringProperty(Properties.Longitude.Value),
+                    ToggleThemeHotkey = new LightSwitchHotkeyProperty
+                    {
+                        Value = new LightSwitchHotkey
+                        {
+                            Win = Properties.ToggleThemeHotkey.Value.Win,
+                            Ctrl = Properties.ToggleThemeHotkey.Value.Ctrl,
+                            Alt = Properties.ToggleThemeHotkey.Value.Alt,
+                            Shift = Properties.ToggleThemeHotkey.Value.Shift,
+                            Code = Properties.ToggleThemeHotkey.Value.Code,
+                        },
+                    },
                 },
             };
         }

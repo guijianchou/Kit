@@ -37,34 +37,34 @@ public enum HealthCheckKind
 
 public sealed record HealthCheck
 {
-    public HealthCheckKind Kind { get; init; } = HealthCheckKind.None;
+    public HealthCheckKind Kind { get; set; } = HealthCheckKind.None;
 
     /// <summary>May contain <c>${service.port}</c> and friends.</summary>
     public string? Url { get; init; }
 
-    public IReadOnlyList<int> ExpectStatus { get; init; } = [200];
+    public IReadOnlyList<int> ExpectStatus { get; set; } = [200];
 
     /// <summary>Regex applied to log lines when <see cref="Kind"/> is LogPattern.</summary>
     public string? Pattern { get; init; }
 
     /// <summary>How long the service may take to become healthy before it is Failed.</summary>
-    public int TimeoutSec { get; init; } = 60;
+    public int TimeoutSec { get; set; } = 60;
 
     /// <summary>Gap between probe attempts.</summary>
-    public int IntervalSec { get; init; } = 2;
+    public int IntervalSec { get; set; } = 2;
 
     /// <summary>Running HTTP/TCP probe cadence; zero disables ongoing checks.</summary>
-    public int MonitorIntervalSec { get; init; } = 30;
+    public int MonitorIntervalSec { get; set; } = 30;
 }
 
 public sealed record RestartSettings
 {
-    public RestartPolicy Policy { get; init; } = RestartPolicy.Never;
+    public RestartPolicy Policy { get; set; } = RestartPolicy.Never;
 
-    public int MaxRetries { get; init; } = 3;
+    public int MaxRetries { get; set; } = 3;
 
     /// <summary>Backoff in seconds per attempt; the last entry repeats.</summary>
-    public IReadOnlyList<int> BackoffSec { get; init; } = [2, 5, 15];
+    public IReadOnlyList<int> BackoffSec { get; set; } = [2, 5, 15];
 
     public int BackoffForAttempt(int attempt)
     {
@@ -93,7 +93,7 @@ public sealed record RuntimeRequirement
     public string? MinVersion { get; init; }
 
     /// <summary>When false a missing runtime is reported but does not block Start.</summary>
-    public bool IsRequired { get; init; } = true;
+    public bool IsRequired { get; set; } = true;
 }
 
 /// <summary>
@@ -120,41 +120,41 @@ public sealed record ServiceDefinition
     /// Fixed arguments that always precede the generated parameter tokens, e.g.
     /// the script path for "node server.js".
     /// </summary>
-    public IReadOnlyList<string> BaseArgs { get; init; } = [];
+    public IReadOnlyList<string> BaseArgs { get; set; } = [];
 
     public string? Description { get; init; }
 
     /// <summary>Free-form tags. The first one drives the row's category colour.</summary>
-    public IReadOnlyList<string> Tags { get; init; } = [];
+    public IReadOnlyList<string> Tags { get; set; } = [];
 
     /// <summary>Port the service is expected to listen on, before parameter overrides.</summary>
     public int? DefaultPort { get; init; }
 
-    public IReadOnlyList<RuntimeRequirement> Runtimes { get; init; } = [];
+    public IReadOnlyList<RuntimeRequirement> Runtimes { get; set; } = [];
 
     /// <summary>Extra environment variables. Values may contain <c>${...}</c> placeholders.</summary>
-    public IReadOnlyDictionary<string, string> Env { get; init; } =
+    public IReadOnlyDictionary<string, string> Env { get; set; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyList<ParameterDefinition> Parameters { get; init; } = [];
+    public IReadOnlyList<ParameterDefinition> Parameters { get; set; } = [];
 
-    public IReadOnlyList<ServicePreset> Presets { get; init; } = [];
+    public IReadOnlyList<ServicePreset> Presets { get; set; } = [];
 
-    public HealthCheck Health { get; init; } = new();
+    public HealthCheck Health { get; set; } = new();
 
-    public RestartSettings Restart { get; init; } = new();
+    public RestartSettings Restart { get; set; } = new();
 
-    public ServiceIoMode Io { get; init; } = ServiceIoMode.Pipe;
+    public ServiceIoMode Io { get; set; } = ServiceIoMode.Pipe;
 
     /// <summary>Console encoding of the child process. "auto" sniffs UTF-8 then falls back.</summary>
-    public string Encoding { get; init; } = "auto";
+    public string Encoding { get; set; } = "auto";
 
     /// <summary>Shown as the "open" affordance once the service is healthy.</summary>
     public string? OpenUrl { get; init; }
 
     /// <summary>Seconds to wait for a graceful stop before escalating (plan.md §4.1).</summary>
-    public int StopTimeoutSec { get; init; } = 10;
+    public int StopTimeoutSec { get; set; } = 10;
 
     /// <summary>Excluded from "Start all" when false.</summary>
-    public bool IsEnabled { get; init; } = true;
+    public bool IsEnabled { get; set; } = true;
 }

@@ -12,6 +12,63 @@ namespace NetMap.UnitTests;
 public sealed class SessionTests
 {
     [TestMethod]
+    public async Task DisposeAsyncWaitsForAllGenerationsToDrain()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<IdentityResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var session = new NetMapSession(
+            (_, _, _) =>
+            {
+                entered.TrySetResult();
+                return release.Task;
+            },
+            (_, _, _, _) => Task.FromResult<IReadOnlyList<ServiceResult>>([]),
+            (_, _, _) => Task.CompletedTask,
+            TimeSpan.FromMilliseconds(2),
+            TimeSpan.FromMilliseconds(2));
+        session.Start(new(OnlineLookup: false));
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        session.Stop();
+        session.Start(new(OnlineLookup: false));
+        Task disposal = session.DisposeAsync().AsTask();
+        Assert.IsFalse(disposal.IsCompleted);
+        release.SetResult(Success("192.0.2.1", "CN"));
+        await disposal.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.ThrowsException<ObjectDisposedException>(() => session.Start(new()));
+    }
+
+    [TestMethod]
+    public async Task SubscriberCanReadStateFromAnotherThread()
+    {
+        var notified = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var session = new NetMapSession(
+            async (_, _, token) =>
+            {
+                await Task.Delay(Timeout.Infinite, token);
+                throw new InvalidOperationException();
+            },
+            (_, _, _, _) => Task.FromResult<IReadOnlyList<ServiceResult>>([]),
+            (_, _, _) => Task.CompletedTask,
+            TimeSpan.FromMilliseconds(2),
+            TimeSpan.FromMilliseconds(2));
+        session.Changed += _ =>
+        {
+            try
+            {
+                Assert.IsTrue(Task.Run(() => session.Current).Wait(TimeSpan.FromSeconds(1)));
+                notified.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                notified.TrySetException(ex);
+            }
+        };
+        session.Start(new(OnlineLookup: false));
+        await notified.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await session.DisposeAsync();
+    }
+
+    [TestMethod]
     public async Task WebsiteProgressPublishesBeforeTheWholeBatchCompletes()
     {
         var proxy = Channel.CreateUnbounded<IdentityResult>();

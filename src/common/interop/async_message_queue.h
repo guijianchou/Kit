@@ -4,6 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <string>
+#include <utility>
 
 class AsyncMessageQueue
 {
@@ -23,9 +24,11 @@ public:
     }
     void queue_message(std::wstring message)
     {
-        this->queue_mutex.lock();
-        this->message_queue.push(message);
-        this->queue_mutex.unlock();
+        {
+            std::scoped_lock lock(this->queue_mutex);
+            if (interrupted) return;
+            this->message_queue.push(std::move(message));
+        }
         this->message_ready.notify_one();
     }
     std::wstring pop_message()
@@ -40,15 +43,16 @@ public:
             //Just returns an empty string if the queue was interrupted.
             return std::wstring(L"");
         }
-        std::wstring message = this->message_queue.front();
+        std::wstring message = std::move(this->message_queue.front());
         this->message_queue.pop();
         return message;
     }
     void interrupt()
     {
-        this->queue_mutex.lock();
-        this->interrupted = true;
-        this->queue_mutex.unlock();
+        {
+            std::scoped_lock lock(this->queue_mutex);
+            this->interrupted = true;
+        }
         this->message_ready.notify_all();
     }
 };

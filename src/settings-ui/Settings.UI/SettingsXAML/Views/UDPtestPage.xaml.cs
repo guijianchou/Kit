@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -94,17 +94,38 @@ namespace Kit.Settings.UI.Views
 
         private async void OnStartClicked(object sender, RoutedEventArgs e)
         {
-            await ViewModel.StartAsync();
+            try
+            {
+                await ViewModel.StartAsync();
+            }
+            catch (System.Exception ex)
+            {
+                ManagedCommon.Logger.LogError("Settings action OnStartClicked failed.", ex);
+            }
         }
 
         private async void OnStopClicked(object sender, RoutedEventArgs e)
         {
-            await ViewModel.StopAsync();
+            try
+            {
+                await ViewModel.StopAsync();
+            }
+            catch (System.Exception ex)
+            {
+                ManagedCommon.Logger.LogError("Settings action OnStopClicked failed.", ex);
+            }
         }
 
         private async void OnClearClicked(object sender, RoutedEventArgs e)
         {
-            await ViewModel.ClearHistoryAsync();
+            try
+            {
+                await ViewModel.ClearHistoryAsync();
+            }
+            catch (System.Exception ex)
+            {
+                ManagedCommon.Logger.LogError("Settings action OnClearClicked failed.", ex);
+            }
         }
 
         private void OnAddUdpLineClicked(object sender, RoutedEventArgs e)

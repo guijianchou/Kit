@@ -26,8 +26,16 @@ if ((Get-Item -LiteralPath $runtimeRoot).Attributes -band [IO.FileAttributes]::R
 }
 [IO.Directory]::CreateDirectory($reportRoot) | Out-Null
 $dotnetRoot = Split-Path (Get-Command dotnet.exe).Source
-$sdkVersion = (& dotnet --version).Trim()
-$sdkRoot = Join-Path $dotnetRoot "sdk\$sdkVersion"
+# HostModel is loaded inside PowerShell (.NET 10), so a globally selected .NET 11
+# SDK cannot supply its apphost writer even though its compiler runs separately.
+$net10Sdk = & dotnet --list-sdks | ForEach-Object {
+    if ($_ -match '^(10\.0\.\d+) \[(.+)\]$') {
+        [pscustomobject]@{ Version = [version]$Matches[1]; Root = Join-Path $Matches[2] $Matches[1] }
+    }
+} | Sort-Object Version -Descending | Select-Object -First 1
+if (-not $net10Sdk) { throw 'An installed .NET 10 SDK is required for the UI smoke apphost writer.' }
+$sdkRoot = $net10Sdk.Root
+Write-Host "UI smoke SDK: $($net10Sdk.Version); PowerShell runtime: $([Environment]::Version)"
 $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Host.win-x64') -Directory |
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
@@ -68,7 +76,7 @@ try {
     $env:KIT_DASHBOARD_LAYOUT_ONLY = if ($LayoutOnly) { '1' } else { '0' }
     # Release Settings requires the Runner launch contract; use private, unused pipes.
     $pipeSuffix = [guid]::NewGuid().ToString('N')
-    $launchArguments = @("KitPageSmokeRunner-$pipeSuffix", "KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
+    $launchArguments = @("\\.\pipe\KitPageSmokeRunner-$pipeSuffix", "\\.\pipe\KitPageSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
     $startInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $runtimeRoot "$testName.exe"))
     $startInfo.WorkingDirectory = $launchDirectory
     $startInfo.UseShellExecute = $false

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -39,25 +39,32 @@ internal static class GpuInspector
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan FailureCacheDuration = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan SuccessCacheDuration = TimeSpan.FromSeconds(3);
+    private static readonly object CacheGate = new();
     private static (GpuSnapshot Snapshot, DateTime ExpiresAt)? _cachedFailure;
     private static (GpuSnapshot Snapshot, DateTime ExpiresAt)? _cachedSuccess;
 
     private static GpuSnapshot CacheFailure(GpuSnapshot failure)
     {
-        _cachedFailure = (failure, DateTime.UtcNow.Add(FailureCacheDuration));
+        lock (CacheGate)
+        {
+            _cachedFailure = (failure, DateTime.UtcNow.Add(FailureCacheDuration));
+        }
         return failure;
     }
 
     public static async Task<GpuSnapshot> SampleAsync(CancellationToken cancellationToken = default)
     {
-        if (_cachedFailure is { } cachedFail && DateTime.UtcNow < cachedFail.ExpiresAt)
+        lock (CacheGate)
         {
-            return cachedFail.Snapshot;
-        }
+            if (_cachedFailure is { } cachedFail && DateTime.UtcNow < cachedFail.ExpiresAt)
+            {
+                return cachedFail.Snapshot;
+            }
 
-        if (_cachedSuccess is { } cachedSucc && DateTime.UtcNow < cachedSucc.ExpiresAt)
-        {
-            return cachedSucc.Snapshot;
+            if (_cachedSuccess is { } cachedSucc && DateTime.UtcNow < cachedSucc.ExpiresAt)
+            {
+                return cachedSucc.Snapshot;
+            }
         }
 
         ProcessStartInfo startInfo = new()
@@ -123,9 +130,12 @@ internal static class GpuInspector
                 return CacheFailure(new([], "nvidia-smi returned no readable GPU telemetry."));
             }
 
-            _cachedFailure = null;
             var snapshot = new GpuSnapshot(devices, null);
-            _cachedSuccess = (snapshot, DateTime.UtcNow.Add(SuccessCacheDuration));
+            lock (CacheGate)
+            {
+                _cachedFailure = null;
+                _cachedSuccess = (snapshot, DateTime.UtcNow.Add(SuccessCacheDuration));
+            }
             return snapshot;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)

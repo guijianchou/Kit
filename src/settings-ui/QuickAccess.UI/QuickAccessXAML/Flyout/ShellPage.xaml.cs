@@ -60,9 +60,7 @@ public sealed partial class ShellPage : Page
 
     internal void RefreshIfAppsList()
     {
-        if (ContentFrame.Content is AppsListPage appsListPage)
-        {
-            appsListPage.ViewModel?.RefreshSettings();
-        }
+        _allAppsViewModel?.RefreshSettings();
+        _launcherViewModel?.RefreshUpdateStatus();
     }
 }

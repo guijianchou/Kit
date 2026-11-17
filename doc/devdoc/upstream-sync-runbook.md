@@ -1,6 +1,6 @@
 # PowerToys 上游同步流程
 
-本流程将本地只读 `Source/PowerToys-main` 作为对照，沿 Runner、模块、服务 / worker、Settings 和 IPC 的实际调用链审查。每次同步应形成可追溯的小范围改动和验证记录，不以文件数量减少或品牌替换完成作为行为对齐的证据。
+本流程将本地只读 `Source/PowerToys-0.102.3101` 作为对照，沿 Runner、模块、服务 / worker、Settings 和 IPC 的实际调用链审查。每次同步应形成可追溯的小范围改动和验证记录，不以文件数量减少或品牌替换完成作为行为对齐的证据。
 
 当前工作要求只构建、测试 **x64 Debug**。本流程不包含 Release、发布、提交或推送步骤。
 
@@ -8,7 +8,7 @@
 
 先查看 `git status --short` 与相关 diff，识别已有用户修改，确定本轮负责的文件。保留其他工作，不通过 reset、清空包缓存或删除输出目录解决来源不明的问题。
 
-记录 Kit HEAD、`src/Version.props`、Source 的对应版本文件和来源。如果 Source 有自己的 Git 仓库，确认 Git 顶层目录确实是 Source 根目录，再记录其 HEAD；否则记录实际可得的快照信息及内容哈希，明确 commit 不可得。当前快照 `SourceCommit` 为空，`ReleaseTrainVersion=0.103` 不能作为提交号。
+记录 Kit HEAD、`src/Version.props`、Source 的对应版本文件和来源。如果 Source 有自己的 Git 仓库，确认 Git 顶层目录确实是 Source 根目录，再记录其 HEAD；否则记录实际可得的快照信息及内容哈希，明确 commit 不可得。当前快照 `SourceCommit` 为空，`ReleaseTrainVersion=0.102` 不能作为提交号。
 
 只读复算差异概要：
 
@@ -49,9 +49,9 @@ python tools/build/generate-common-drift-ledger.py --check
 
 ## 4. 按差异片段保留 Kit 边界
 
-结合 [关键契约表](common-drift-ledger.md#已核对的关键契约与待审方向) 逐段比较。保留 Kit 的存储与任务命名空间、签名 / 对端身份检查、受限任务写权限、持有进程句柄的退出回收、显式破坏性操作确认，以及 check-only 更新和关闭遥测的边界。
+结合 [本次保留与修正](common-drift-ledger.md#本次具体保留与修正) 逐段比较。保留 Kit 的存储与任务命名空间、签名 / 对端身份检查、受限任务写权限、持有进程句柄的退出回收、显式破坏性操作确认，以及 check-only 更新和关闭遥测的边界。
 
-这些是行为约束，不是整文件永久禁止同步的理由。例如 Source 已有任务 SDDL、机器证书根信任和 IPC 测试钩子；Source 还包含 Kit 当前认证文件没有的服务端认证入口。应判断具体实现及消费者，而不是将整个文件标为“Kit 领先”。
+这些是行为约束，不是整文件永久禁止同步的理由。例如 Source 已有任务 SDDL、机器证书根信任和 IPC 测试钩子；应按实际 stable 快照核对认证入口，不能套用旧 main 对照结论。应判断具体实现及消费者，而不是将整个文件标为“Kit 领先”。
 
 对无同路径参考的文件，先搜索上游改名或拆分位置；对兼容 API / 协议入口，先查实际消费者。不得仅凭名字含 PowerToys、文件未进入当前解决方案、或机械差异分类删除它。
 

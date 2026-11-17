@@ -90,6 +90,25 @@ namespace UnitTestsCommonUtils
             Assert::IsTrue(result->GetNamedBoolean(L"enabled"));
         }
 
+        TEST_METHOD(ToFile_LockedDestinationPreservesOriginalAndReportsFailure)
+        {
+            TestHelpers::TempFile tempFile(L"", L".json");
+            tempFile.write("{\"key\":\"old\"}");
+            const HANDLE held = CreateFileW(tempFile.path().c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+            Assert::IsTrue(held != INVALID_HANDLE_VALUE);
+            struct HandleGuard
+            {
+                HANDLE value;
+                ~HandleGuard() { CloseHandle(value); }
+            } closeHeld{ held };
+            JsonObject replacement;
+            replacement.SetNamedValue(L"key", JsonValue::CreateStringValue(L"new"));
+            Assert::ExpectException<winrt::hresult_error>([&] { json::to_file(tempFile.path(), replacement); });
+            const auto loaded = json::from_file(tempFile.path());
+            Assert::IsTrue(loaded.has_value());
+            Assert::AreEqual(std::wstring(L"old"), std::wstring(loaded->GetNamedString(L"key")));
+        }
+
         // has tests
         TEST_METHOD(Has_ExistingKey_ReturnsTrue)
         {

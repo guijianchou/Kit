@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -29,7 +29,7 @@ public class StringMatcher
     {
         opt = opt ?? new MatchOption();
 
-        if (string.IsNullOrEmpty(stringToCompare))
+        if (string.IsNullOrEmpty(stringToCompare) || string.IsNullOrWhiteSpace(query))
         {
             return new MatchResult(false, SearchPrecisionScore.Regular);
         }
@@ -52,7 +52,7 @@ public class StringMatcher
 
     private static MatchResult FuzzyMatch(string query, string stringToCompare, MatchOption opt, int startIndex)
     {
-        if (string.IsNullOrEmpty(stringToCompare) || string.IsNullOrEmpty(query))
+        if (string.IsNullOrEmpty(stringToCompare) || string.IsNullOrWhiteSpace(query))
         {
             return new MatchResult(false, SearchPrecisionScore.Regular);
         }

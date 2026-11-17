@@ -43,9 +43,9 @@ namespace ManagedCommon
             string actualPath = builder.ToString();
             string expectedPath = expectedExeNameOrPath;
 
-            if (!expectedPath.Contains(Path.DirectorySeparatorChar) && !expectedPath.Contains(Path.AltDirectorySeparatorChar))
+            if (!Path.IsPathFullyQualified(expectedPath))
             {
-                return string.Equals(Path.GetFileName(actualPath), expectedPath, StringComparison.OrdinalIgnoreCase);
+                return false;
             }
 
             return string.Equals(Path.GetFullPath(actualPath), Path.GetFullPath(expectedPath), StringComparison.OrdinalIgnoreCase);

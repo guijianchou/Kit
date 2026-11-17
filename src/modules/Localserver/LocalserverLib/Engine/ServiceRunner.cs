@@ -51,6 +51,7 @@ public sealed class ServiceRunner : IDisposable
 
     private ServiceDefinition _definition;
     private Process? _process;
+    private JobProcess? _processIo;
     private JobObject? _job;
     private CancellationTokenSource? _runCts;
     private CancellationTokenSource? _outputCts;
@@ -193,7 +194,7 @@ public sealed class ServiceRunner : IDisposable
                 {
                     if (!CanSendInput || !ReferenceEquals(_process, process) || process.HasExited)
                         throw new InvalidOperationException("The input process is no longer available.");
-                    input = process.StandardInput;
+                    input = _processIo?.Input ?? throw new InvalidOperationException("The process input stream is unavailable.");
                 }
                 await input.WriteLineAsync(text.AsMemory(), timeout.Token).ConfigureAwait(false);
                 await input.FlushAsync(timeout.Token).ConfigureAwait(false);
@@ -1063,10 +1064,10 @@ public sealed class ServiceRunner : IDisposable
                 if (!force && process is not null && !process.HasExited)
                 {
                     bool closeRequested = process.CloseMainWindow();
-                    if (!_isRecoveredProcess && process.StartInfo.RedirectStandardInput)
+                    if (!_isRecoveredProcess && _processIo is not null)
                     {
                         await _inputGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
-                        try { process.StandardInput.Close(); }
+                        try { _processIo?.Input.Close(); }
                         finally { _inputGate.Release(); }
                         closeRequested = true;
                     }
@@ -1532,7 +1533,7 @@ public sealed class ServiceRunner : IDisposable
             bool terminated = prepared.Job.TryTerminateAll();
             foreach (int processId in prepared.UnassignedProcessIds)
             {
-                terminated |= TryKillProcessTree(processId);
+                terminated |= TryKillProcessTree(processId, definition, record.OwnerTag);
             }
 
             if (!terminated)
@@ -1572,16 +1573,31 @@ public sealed class ServiceRunner : IDisposable
         return false;
     }
 
-    private static bool TryKillProcessTree(int processId)
+    private static bool TryKillProcessTree(int processId, ServiceDefinition definition, string? ownerTag)
     {
         try
         {
-            using Process process = Process.GetProcessById(processId);
-            if (process.HasExited)
+            if (ownerTag is null)
             {
                 return false;
             }
 
+            using Process process = Process.GetProcessById(processId);
+            _ = process.SafeHandle;
+            ServiceOwnershipRecord? ownership = ServiceOwnershipStore.Load(definition.Id);
+            if (ownership is null || !string.Equals(ownership.OwnerTag, ownerTag, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            ServiceProcessRecord? expected = GetRecordedProcessChain(ownership)
+                .FirstOrDefault(record => record.ProcessId == processId);
+            if (expected is null || !TryReadOwnedProcess(process, definition, ownerTag, expected, out _))
+            {
+                return false;
+            }
+
+            // Kill through the same opened process identity that was just validated.
             process.Kill(entireProcessTree: true);
             return true;
         }
@@ -1699,20 +1715,13 @@ public sealed class ServiceRunner : IDisposable
                 .Where(value => !string.IsNullOrEmpty(value))
                 .Distinct(StringComparer.Ordinal),
         ];
-        Process process = new() { StartInfo = startInfo };
-
-        bool processStarted = false;
+        Process? process = null;
+        JobProcess? processIo = null;
         bool ownershipSaved = false;
         try
         {
-            if (!process.Start())
-            {
-                throw new InvalidOperationException(FormatMessage("Localserver_ProcessStartFailed", "The process failed to start."));
-            }
-
-            processStarted = true;
-            job.Assign(process.Handle);
-            await AttachExistingDescendantsAsync(job, process.Id, cancellationToken).ConfigureAwait(false);
+            processIo = JobProcess.Start(startInfo, job, cancellationToken);
+            process = processIo.Process;
             cancellationToken.ThrowIfCancellationRequested();
 
             DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
@@ -1740,6 +1749,7 @@ public sealed class ServiceRunner : IDisposable
             lock (_gate)
             {
                 _process = process;
+                _processIo = processIo;
                 _job = job;
                 _ownerTag = ownerTag;
                 _ownershipJobName = jobName;
@@ -1769,8 +1779,8 @@ public sealed class ServiceRunner : IDisposable
 
             _outputCts = new CancellationTokenSource();
             _outputTask = Task.WhenAll(
-                PumpOutputAsync(process, process.StandardOutput.BaseStream, LogStream.StdOut, definition.Encoding, secretValues, _outputCts.Token),
-                PumpOutputAsync(process, process.StandardError.BaseStream, LogStream.StdErr, definition.Encoding, secretValues, _outputCts.Token));
+                PumpOutputAsync(process, processIo.Output, LogStream.StdOut, definition.Encoding, secretValues, _outputCts.Token),
+                PumpOutputAsync(process, processIo.Error, LogStream.StdErr, definition.Encoding, secretValues, _outputCts.Token));
 
             AppendHub(FormatMessage("Localserver_LogProcessStarted", "Started PID {0}: {1}", process.Id, CommandLineBuilder.ToDisplayCommand(plan)));
             if (startingChange is not null)
@@ -1813,7 +1823,7 @@ public sealed class ServiceRunner : IDisposable
 
             job.TerminateAll();
             job.Dispose();
-            if (processStarted)
+            if (process is not null)
             {
                 try
                 {
@@ -1830,7 +1840,8 @@ public sealed class ServiceRunner : IDisposable
                 }
             }
 
-            process.Dispose();
+            processIo?.Dispose();
+            process?.Dispose();
             throw;
         }
     }
@@ -1847,50 +1858,6 @@ public sealed class ServiceRunner : IDisposable
         {
             if (!cancellationToken.IsCancellationRequested && !_disposed)
                 AppendHub(FormatMessage("Localserver_LogOutputCaptureEnded", "Output capture ended ({0}).", ex.GetType().Name));
-        }
-    }
-
-    private static async Task AttachExistingDescendantsAsync(
-        JobObject job,
-        int rootProcessId,
-        CancellationToken cancellationToken)
-    {
-        HashSet<int> assignedProcessIds = [.. job.GetProcessIds()];
-        DateTimeOffset deadline = DateTimeOffset.UtcNow.AddSeconds(2);
-        while (DateTimeOffset.UtcNow < deadline)
-        {
-            bool attachedAny = false;
-            foreach (int processId in ProcessResourceInspector.GetProcessTreeIds(rootProcessId))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!assignedProcessIds.Add(processId))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    using Process descendant = Process.GetProcessById(processId);
-                    if (!descendant.HasExited)
-                    {
-                        job.Assign(descendant.Handle);
-                        attachedAny = true;
-                    }
-                }
-                catch (Exception ex) when (ex is ArgumentException
-                    or InvalidOperationException
-                    or System.ComponentModel.Win32Exception)
-                {
-                    // A short-lived child may disappear between the snapshot and
-                    // the assignment. The Job still owns the root and later
-                    // descendants inherit that boundary.
-                }
-            }
-
-            if (!attachedAny)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken).ConfigureAwait(false);
-            }
         }
     }
 
@@ -1913,8 +1880,8 @@ public sealed class ServiceRunner : IDisposable
 
         // Batch files, .py, .ps1 and .js are not PE images, so they cannot be
         // handed to CreateProcess directly; ScriptLauncher routes each one through
-        // its interpreter. ArgumentList still does the quoting, so this stays a
-        // token list rather than a hand-built string.
+        // its interpreter. Arguments remain a token list; JobProcess applies the
+        // same Windows argument quoting before creating the suspended process.
         ScriptLauncher.Apply(startInfo, ScriptLauncher.ResolveForService(definition, executable));
 
         VariableExpander expander = VariableExpander.ForService(definition, plan.Port, _secretStore);
@@ -2267,6 +2234,7 @@ public sealed class ServiceRunner : IDisposable
         }
 
         Process? process;
+        JobProcess? processIo;
         JobObject? job;
         string? ownerTag;
         bool wasRecovered;
@@ -2291,6 +2259,8 @@ public sealed class ServiceRunner : IDisposable
             }
 
             process = _process;
+            processIo = _processIo;
+            _processIo = null;
             job = _job;
             runCts = _runCts;
             cancelled = _stopRequested || runCts?.IsCancellationRequested == true;
@@ -2322,6 +2292,7 @@ public sealed class ServiceRunner : IDisposable
         runCts?.Dispose();
         job?.TerminateAll();
         job?.Dispose();
+        processIo?.Dispose();
         process?.Dispose();
         if (ownerTag is not null)
         {
@@ -2441,6 +2412,7 @@ public sealed class ServiceRunner : IDisposable
         CancellationTokenSource? runCts;
         JobObject? job;
         Process? process;
+        JobProcess? processIo;
         string? ownerTag;
         IReadOnlyList<int> unassignedProcessIds;
         lock (_gate)
@@ -2448,6 +2420,8 @@ public sealed class ServiceRunner : IDisposable
             runCts = _runCts;
             job = _job;
             process = _process;
+            processIo = _processIo;
+            _processIo = null;
             _runCts = null;
             _job = null;
             _process = null;
@@ -2477,7 +2451,7 @@ public sealed class ServiceRunner : IDisposable
         {
             foreach (int processId in unassignedProcessIds)
             {
-                TryKillProcessTree(processId);
+                TryKillProcessTree(processId, Definition, ownerTag);
             }
         }
 
@@ -2487,6 +2461,7 @@ public sealed class ServiceRunner : IDisposable
         runCts?.Cancel();
         runCts?.Dispose();
         job?.Dispose();
+        processIo?.Dispose();
         process?.Dispose();
         if (deleteOwnership && ownerTag is not null)
         {
@@ -2498,11 +2473,13 @@ public sealed class ServiceRunner : IDisposable
     {
         JobObject? job;
         Process? process;
+        string? ownerTag;
         IReadOnlyList<int> unassignedProcessIds;
         lock (_gate)
         {
             job = _job;
             process = _process;
+            ownerTag = _ownerTag;
             unassignedProcessIds = _unassignedProcessIds;
         }
 
@@ -2516,7 +2493,7 @@ public sealed class ServiceRunner : IDisposable
 
         foreach (int processId in unassignedProcessIds)
         {
-            TryKillProcessTree(processId);
+            TryKillProcessTree(processId, Definition, ownerTag);
         }
 
         try

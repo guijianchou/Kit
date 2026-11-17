@@ -24,16 +24,16 @@ public sealed record HubSettings
 {
     public const int CurrentVersion = 1;
 
-    public int Version { get; init; } = CurrentVersion;
+    public int Version { get; set; } = CurrentVersion;
 
-    public AppThemePreference Theme { get; init; } = AppThemePreference.System;
+    public AppThemePreference Theme { get; set; } = AppThemePreference.System;
 
     public bool MinimizeToTray { get; init; }
 
-    public int LogRingBufferLines { get; init; } = 1000;
-    public int LogRotationSizeMB { get; init; } = 10;
-    public int LogRetentionCopies { get; init; } = 5;
-    public string LogDirectory { get; init; } = "logs";
+    public int LogRingBufferLines { get; set; } = 1000;
+    public int LogRotationSizeMB { get; set; } = 10;
+    public int LogRetentionCopies { get; set; } = 5;
+    public string LogDirectory { get; set; } = "logs";
 
     public WindowPlacementSettings? WindowPlacement { get; init; }
 
@@ -67,7 +67,7 @@ public sealed record HubSettings
     }
 }
 
-public sealed class HubSettingsStore
+public sealed partial class HubSettingsStore : IDisposable
 {
     public const string SettingsFileName = "hub.settings.json";
 
@@ -76,6 +76,8 @@ public sealed class HubSettingsStore
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
     };
+
+    private static readonly LocalserverJsonContext JsonContext = new(SerializerOptions);
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -112,9 +114,9 @@ public sealed class HubSettingsStore
                 FileShare.Read,
                 bufferSize: 4_096,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
-            HubSettings? settings = await JsonSerializer.DeserializeAsync<HubSettings>(
+            HubSettings? settings = await JsonSerializer.DeserializeAsync(
                 stream,
-                SerializerOptions,
+                JsonContext.HubSettings,
                 cancellationToken).ConfigureAwait(false);
             return (settings ?? new HubSettings()).Normalize();
         }
@@ -165,7 +167,7 @@ public sealed class HubSettingsStore
                 await JsonSerializer.SerializeAsync(
                     stream,
                     normalized,
-                    SerializerOptions,
+                    JsonContext.HubSettings,
                     cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 stream.Flush(flushToDisk: true);
@@ -179,6 +181,8 @@ public sealed class HubSettingsStore
             TryDeleteTemporaryFile(temporaryPath);
         }
     }
+
+    public void Dispose() => _gate.Dispose();
 
     private static void TryDeleteTemporaryFile(string path)
     {
@@ -194,4 +198,3 @@ public sealed class HubSettingsStore
         }
     }
 }
-

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -14,7 +15,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Awake.Core.Models;
 using Awake.Core.Native;
-using Awake.Core.Threading;
 using Awake.Properties;
 using Kit.Settings.UI.Library;
 using ManagedCommon;
@@ -30,8 +30,11 @@ namespace Awake.Core
     /// </remarks>
     internal static class TrayHelper
     {
+        private static readonly ConcurrentQueue<Action> PendingActions = new();
+        private static readonly Bridge.WndProcDelegate WindowProcedure = WndProc;
+        private const uint DispatchMessage = 0x8001;
         private static NotifyIconData _notifyIconData;
-        private static SingleThreadSynchronizationContext? _syncContext;
+        private static int _shuttingDown;
         private static Thread? _mainThread;
         private static uint _taskbarCreatedMessage;
 
@@ -99,83 +102,73 @@ namespace Awake.Core
 
         public static Task InitializeTray(Icon icon, string text)
         {
-            TaskCompletionSource<bool> trayInitialized = new();
+            TaskCompletionSource<bool> trayInitialized = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
             IntPtr hWnd = IntPtr.Zero;
 
             // Start the message loop asynchronously
             _mainThread = new Thread(() =>
             {
-                _syncContext = new SingleThreadSynchronizationContext();
-                SynchronizationContext.SetSynchronizationContext(_syncContext);
-
-                RunOnMainThread(() =>
+                try
                 {
-                    try
+                    WndClassEx wcex = new()
                     {
-                        WndClassEx wcex = new()
-                        {
-                            CbSize = (uint)Marshal.SizeOf<WndClassEx>(),
-                            Style = 0,
-                            LpfnWndProc = Marshal.GetFunctionPointerForDelegate<Bridge.WndProcDelegate>(WndProc),
-                            CbClsExtra = 0,
-                            CbWndExtra = 0,
-                            HInstance = Marshal.GetHINSTANCE(typeof(Program).Module),
-                            HIcon = IntPtr.Zero,
-                            HCursor = IntPtr.Zero,
-                            HbrBackground = IntPtr.Zero,
-                            LpszMenuName = string.Empty,
-                            LpszClassName = Constants.TrayWindowId,
-                            HIconSm = IntPtr.Zero,
-                        };
+                        CbSize = (uint)Marshal.SizeOf<WndClassEx>(),
+                        Style = 0,
+                        LpfnWndProc = Marshal.GetFunctionPointerForDelegate(WindowProcedure),
+                        CbClsExtra = 0,
+                        CbWndExtra = 0,
+                        HInstance = Marshal.GetHINSTANCE(typeof(Program).Module),
+                        HIcon = IntPtr.Zero,
+                        HCursor = IntPtr.Zero,
+                        HbrBackground = IntPtr.Zero,
+                        LpszMenuName = string.Empty,
+                        LpszClassName = Constants.TrayWindowId,
+                        HIconSm = IntPtr.Zero,
+                    };
 
-                        Bridge.RegisterClassEx(ref wcex);
+                    Bridge.RegisterClassEx(ref wcex);
 
-                        hWnd = Bridge.CreateWindowEx(
-                            0,
-                            Constants.TrayWindowId,
-                            text,
-                            0x00CF0000 | 0x00000001 | 0x00000008, // WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_MINIMIZEBOX
-                            0,
-                            0,
-                            0,
-                            0,
-                            IntPtr.Zero,
-                            IntPtr.Zero,
-                            Marshal.GetHINSTANCE(typeof(Program).Module),
-                            IntPtr.Zero);
+                    hWnd = Bridge.CreateWindowEx(
+                        0,
+                        Constants.TrayWindowId,
+                        text,
+                        0x00CF0000 | 0x00000001 | 0x00000008, // WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_MINIMIZEBOX
+                        0,
+                        0,
+                        0,
+                        0,
+                        IntPtr.Zero,
+                        IntPtr.Zero,
+                        Marshal.GetHINSTANCE(typeof(Program).Module),
+                        IntPtr.Zero);
 
-                        if (hWnd == IntPtr.Zero)
-                        {
-                            int errorCode = Marshal.GetLastWin32Error();
-                            throw new Win32Exception(errorCode, "Failed to add tray icon. Error code: " + errorCode);
-                        }
-
-                        // Keep this as a reference because we will need it when we update
-                        // the tray icon in the future.
-                        WindowHandle = hWnd;
-
-                        Bridge.ShowWindow(hWnd, 0); // SW_HIDE
-                        Bridge.UpdateWindow(hWnd);
-                        Logger.LogInfo($"Created HWND for the window: {hWnd}");
-
-                        SetShellIcon(hWnd, text, icon);
-
-                        trayInitialized.SetResult(true);
-                    }
-                    catch (Exception ex)
+                    if (hWnd == IntPtr.Zero)
                     {
-                        Logger.LogError($"Failed to properly initialize the tray. {ex.Message}");
-                        trayInitialized.SetException(ex);
+                        int errorCode = Marshal.GetLastWin32Error();
+                        throw new Win32Exception(errorCode, "Failed to add tray icon. Error code: " + errorCode);
                     }
-                });
 
-                RunOnMainThread(() =>
+                    // Keep this as a reference because we will need it when we update
+                    // the tray icon in the future.
+                    WindowHandle = hWnd;
+
+                    Bridge.ShowWindow(hWnd, 0); // SW_HIDE
+                    Bridge.UpdateWindow(hWnd);
+                    Logger.LogInfo($"Created HWND for the window: {hWnd}");
+
+                    SetShellIcon(hWnd, text, icon);
+
+                    trayInitialized.SetResult(true);
+                }
+                catch (Exception ex)
                 {
-                    RunMessageLoop();
-                });
+                    Logger.LogError($"Failed to properly initialize the tray. {ex.Message}");
+                    trayInitialized.SetException(ex);
+                    return;
+                }
 
-                _syncContext!.BeginMessageLoop();
+                RunMessageLoop();
             });
 
             _mainThread.IsBackground = true;
@@ -186,6 +179,12 @@ namespace Awake.Core
 
         internal static void SetShellIcon(IntPtr hWnd, string text, Icon? icon, TrayIconAction action = TrayIconAction.Add, [CallerMemberName] string callerName = "")
         {
+            if (Thread.CurrentThread != _mainThread)
+            {
+                RunOnMainThread(() => SetShellIcon(hWnd, text, icon, action, callerName));
+                return;
+            }
+
             // For Delete operations, we don't need an icon - only hWnd is required
             // For Add/Update operations, we need both hWnd and icon
             bool canProceed = hWnd != IntPtr.Zero && (action == TrayIconAction.Delete || icon != null);
@@ -293,7 +292,7 @@ namespace Awake.Core
 
         private static void RunMessageLoop()
         {
-            while (Bridge.GetMessage(out Msg msg, IntPtr.Zero, 0, 0))
+            while (Bridge.GetMessage(out Msg msg, IntPtr.Zero, 0, 0) > 0)
             {
                 Bridge.TranslateMessage(ref msg);
                 Bridge.DispatchMessage(ref msg);
@@ -306,6 +305,32 @@ namespace Awake.Core
         {
             switch (message)
             {
+                case DispatchMessage:
+                    while (PendingActions.TryDequeue(out var action))
+                    {
+                        if (Volatile.Read(ref _shuttingDown) != 0)
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            action();
+                        }
+                        catch (Exception error)
+                        {
+                            Logger.LogError($"Error in tray thread execution: {error.Message}");
+                        }
+                    }
+
+                    return 0;
+                case Native.Constants.WM_CLOSE:
+                    Interlocked.Exchange(ref _shuttingDown, 1);
+                    SetShellIcon(hWnd, string.Empty, null, TrayIconAction.Delete);
+                    ClearExistingTrayMenu();
+                    DisposeIcons();
+                    Bridge.DestroyWindow(hWnd);
+                    return 0;
                 case Native.Constants.WM_USER:
                     if (lParam is Native.Constants.WM_LBUTTONDOWN or Native.Constants.WM_RBUTTONDOWN)
                     {
@@ -323,6 +348,7 @@ namespace Awake.Core
                     break;
                 case Native.Constants.WM_DESTROY:
                     // Clean up resources when the window is destroyed
+                    WindowHandle = IntPtr.Zero;
                     Bridge.PostQuitMessage(0);
                     break;
                 case Native.Constants.WM_COMMAND:
@@ -411,20 +437,40 @@ namespace Awake.Core
 
         internal static void RunOnMainThread(Action action)
         {
-            _syncContext!.Post(
-                _ =>
-                {
-                    try
-                    {
-                        Logger.LogInfo($"Thread execution is on: {Environment.CurrentManagedThreadId}");
-                        action();
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.LogError($"Error in tray thread execution: {e.Message}");
-                    }
-                },
-                null);
+            if (Volatile.Read(ref _shuttingDown) != 0 || WindowHandle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            if (Thread.CurrentThread == _mainThread)
+            {
+                action();
+                return;
+            }
+
+            PendingActions.Enqueue(action);
+            if (!Bridge.PostMessage(WindowHandle, DispatchMessage, 0, 0))
+            {
+                Logger.LogError($"Could not dispatch work to the tray thread: {Marshal.GetLastWin32Error()}");
+            }
+        }
+
+        internal static void Shutdown()
+        {
+            if (Interlocked.Exchange(ref _shuttingDown, 1) != 0 || WindowHandle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            if (Thread.CurrentThread == _mainThread)
+            {
+                WndProc(WindowHandle, Native.Constants.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+            }
+            else
+            {
+                Bridge.PostMessage(WindowHandle, Native.Constants.WM_CLOSE, 0, 0);
+                _mainThread?.Join(TimeSpan.FromSeconds(3));
+            }
         }
 
         internal static void SetTray(AwakeSettings settings, bool startedFromKit)
@@ -438,6 +484,13 @@ namespace Awake.Core
 
         public static void SetTray(bool keepDisplayOn, AwakeMode mode, Dictionary<string, uint> trayTimeShortcuts, bool startedFromKit)
         {
+            if (Thread.CurrentThread != _mainThread)
+            {
+                var shortcuts = new Dictionary<string, uint>(trayTimeShortcuts);
+                RunOnMainThread(() => SetTray(keepDisplayOn, mode, shortcuts, startedFromKit));
+                return;
+            }
+
             ClearExistingTrayMenu();
             CreateNewTrayMenu(startedFromKit, keepDisplayOn, mode);
 
@@ -454,6 +507,8 @@ namespace Awake.Core
                 int errorCode = Marshal.GetLastWin32Error();
                 Logger.LogError($"Failed to destroy menu: {errorCode}");
             }
+
+            TrayMenu = IntPtr.Zero;
         }
 
         private static void CreateNewTrayMenu(bool startedFromKit, bool keepDisplayOn, AwakeMode mode)

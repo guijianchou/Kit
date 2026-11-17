@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 $ErrorActionPreference = 'Stop'
@@ -52,15 +52,18 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The no-window fake worker build failed.' }
 
     $abiSource = Join-Path $PSScriptRoot 'ModuleAbiSmoke.cpp'
-    $upstreamSrc = if (Test-Path (Join-Path $repoRoot 'Source\PowerToys-main\src')) {
-        Join-Path $repoRoot 'Source\PowerToys-main\src'
-    } else {
-        Join-Path $repoRoot 'source\PowerToys\src'
+    $upstreamSrc = Join-Path $repoRoot 'Source\PowerToys-0.102.3101\src'
+    if (-not (Test-Path -LiteralPath $upstreamSrc)) {
+        throw 'The required stable reference Source/PowerToys-0.102.3101/src is missing.'
     }
     & cl.exe /nologo /std:c++20 /EHsc /W4 /MTd /Zi /DUNICODE /D_UNICODE /LD /DKIT_UPSTREAM_ABI_FIXTURE "/I$upstreamSrc" $abiSource /FoUpstreamFixture.obj /FdUpstreamFixture.pdb /FeUpstreamFixture.dll /link Advapi32.lib
     if ($LASTEXITCODE -ne 0) { throw 'The upstream ABI fixture build failed.' }
     & cl.exe @commonArguments $abiSource /FoModuleAbiSmoke.obj /FdModuleAbiSmoke.pdb /FeModuleAbiSmoke.exe /link Advapi32.lib
     if ($LASTEXITCODE -ne 0) { throw 'The Kit ABI host build failed.' }
+
+    $lifecycleSource = Join-Path $PSScriptRoot 'ModuleLifecycleTests.cpp'
+    & cl.exe @commonArguments $lifecycleSource /FoModuleLifecycleTests.obj /FdModuleLifecycleTests.pdb /FeModuleLifecycleTests.exe /link RuntimeObject.lib
+    if ($LASTEXITCODE -ne 0) { throw 'The module lifecycle behavior harness build failed.' }
 }
 finally {
     Pop-Location

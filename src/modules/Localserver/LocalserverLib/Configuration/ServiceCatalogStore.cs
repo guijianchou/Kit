@@ -12,9 +12,9 @@ public sealed record ServiceCatalog
     [JsonPropertyName("$schema")]
     public string? Schema { get; init; }
 
-    public int Version { get; init; } = 2;
+    public int Version { get; set; } = 2;
 
-    public IReadOnlyList<ServiceDefinition> Services { get; init; } = [];
+    public IReadOnlyList<ServiceDefinition> Services { get; set; } = [];
 }
 
 /// <summary>
@@ -40,12 +40,18 @@ public sealed class ServiceCatalogStore
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         Converters =
         {
-            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+            new JsonStringEnumConverter<ServiceIoMode>(JsonNamingPolicy.CamelCase),
+            new JsonStringEnumConverter<RestartPolicy>(JsonNamingPolicy.CamelCase),
+            new JsonStringEnumConverter<HealthCheckKind>(JsonNamingPolicy.CamelCase),
+            new JsonStringEnumConverter<ParameterType>(JsonNamingPolicy.CamelCase),
+            new JsonStringEnumConverter<ParameterValueStyle>(JsonNamingPolicy.CamelCase),
             // Parameter defaults and preset values are object?; without this they
             // arrive as JsonElement and boolean switches silently never fire.
             new JsonPrimitiveConverter(),
         },
     };
+
+    private static readonly LocalserverJsonContext JsonContext = new(SerializerOptions);
 
     private readonly string _catalogPath;
     private readonly string _dropInDirectory;
@@ -267,8 +273,8 @@ public sealed class ServiceCatalogStore
         {
             ServiceCatalog current = await LoadAsync(cancellationToken).ConfigureAwait(false);
             if (expectedCatalog is not null && !JsonElement.DeepEquals(
-                    JsonSerializer.SerializeToElement(expectedCatalog, SerializerOptions),
-                    JsonSerializer.SerializeToElement(current, SerializerOptions)))
+                    JsonSerializer.SerializeToElement(expectedCatalog, JsonContext.ServiceCatalog),
+                    JsonSerializer.SerializeToElement(current, JsonContext.ServiceCatalog)))
             {
                 throw new InvalidOperationException("The service configuration changed since this page was loaded. Reload Targets before saving; your edits have not been written.");
             }
@@ -358,7 +364,7 @@ public sealed class ServiceCatalogStore
         {
             await using (FileStream stream = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                await JsonSerializer.SerializeAsync(stream, catalog, SerializerOptions, cancellationToken)
+                await JsonSerializer.SerializeAsync(stream, catalog, JsonContext.ServiceCatalog, cancellationToken)
                     .ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -388,7 +394,7 @@ public sealed class ServiceCatalogStore
         {
             await using (FileStream stream = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                await JsonSerializer.SerializeAsync(stream, catalog, SerializerOptions, cancellationToken)
+                await JsonSerializer.SerializeAsync(stream, catalog, JsonContext.ServiceCatalog, cancellationToken)
                     .ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -417,7 +423,7 @@ public sealed class ServiceCatalogStore
                 || !document.RootElement.EnumerateObject().Any(p => p.Name.Equals("services", StringComparison.OrdinalIgnoreCase)
                     && p.Value.ValueKind == JsonValueKind.Array))
                 throw new InvalidDataException("Catalog root must contain a services array.");
-            ServiceCatalog catalog = document.RootElement.Deserialize<ServiceCatalog>(SerializerOptions)
+            ServiceCatalog catalog = document.RootElement.Deserialize(JsonContext.ServiceCatalog)
                 ?? throw new InvalidDataException("Catalog cannot be null.");
             ServiceCatalogValidator.Validate(catalog);
             return catalog;

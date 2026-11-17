@@ -26,8 +26,16 @@ foreach ($path in $temporaryFiles) {
 }
 if (-not (Test-Path -LiteralPath (Join-Path $RuntimeRoot 'Kit.AIHubLib.dll'))) { throw 'Build Settings and AIHubLib before running this smoke test.' }
 $dotnetRoot = Split-Path (Get-Command dotnet.exe).Source
-$sdkVersion = (& dotnet --version).Trim()
-$sdkRoot = Join-Path $dotnetRoot "sdk\$sdkVersion"
+# HostModel is loaded inside PowerShell (.NET 10), so a globally selected .NET 11
+# SDK cannot supply its apphost writer even though its compiler runs separately.
+$net10Sdk = & dotnet --list-sdks | ForEach-Object {
+    if ($_ -match '^(10\.0\.\d+) \[(.+)\]$') {
+        [pscustomobject]@{ Version = [version]$Matches[1]; Root = Join-Path $Matches[2] $Matches[1] }
+    }
+} | Sort-Object Version -Descending | Select-Object -First 1
+if (-not $net10Sdk) { throw 'An installed .NET 10 SDK is required for the UI smoke apphost writer.' }
+$sdkRoot = $net10Sdk.Root
+Write-Host "UI smoke SDK: $($net10Sdk.Version); PowerShell runtime: $([Environment]::Version)"
 $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Host.win-x64') -Directory |
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
@@ -111,7 +119,7 @@ try {
     }
     $env:KIT_AI_HUB_UX_TEST_OUTPUT = $reportRoot
     $pipeSuffix = [guid]::NewGuid().ToString('N')
-    $launchArguments = @("KitAiHubUxRunner-$pipeSuffix", "KitAiHubUxSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
+    $launchArguments = @("\\.\pipe\KitAiHubUxRunner-$pipeSuffix", "\\.\pipe\KitAiHubUxSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
     $startInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $RuntimeRoot "$testName.exe"))
     $startInfo.WorkingDirectory = $RuntimeRoot
     $startInfo.UseShellExecute = $false

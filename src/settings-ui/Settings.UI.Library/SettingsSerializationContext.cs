@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -135,7 +135,6 @@ namespace Kit.Settings.UI.Library
     [JsonSerializable(typeof(KeysDataModel))]
     [JsonSerializable(typeof(EnabledModules))]
     [JsonSerializable(typeof(GeneralSettingsCustomAction))]
-    [JsonSerializable(typeof(OutGoingGeneralSettings))]
     [JsonSerializable(typeof(OutGoingLanguageSettings))]
     [JsonSerializable(typeof(AdvancedPasteCustomActions))]
     [JsonSerializable(typeof(AdvancedPasteAdditionalActions))]

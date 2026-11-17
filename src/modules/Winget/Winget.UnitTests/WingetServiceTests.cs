@@ -654,6 +654,109 @@ public sealed class WingetServiceTests
 
     private static WingetServiceRequest PackageRequest() => new() { PackageId = Package.Id, Source = Package.Source, AvailableVersion = Package.AvailableVersion };
 
+    [TestMethod]
+    public async Task HistoryCleanupUsesStrictCompletionCutoffAndPersistsOnlyTheHistoryChange()
+    {
+        var now = new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero);
+        var cutoff = now.AddDays(-7);
+        WingetQueueItem Entry(string id, DateTimeOffset? completed) => new(id, Package, "upgrade", "Succeeded", CompletedUtc: completed);
+        WingetQueueItem[] history =
+        [
+            Entry("old", cutoff.AddTicks(-1)), Entry("boundary", cutoff), Entry("recent", cutoff.AddTicks(1)),
+            Entry("unknown", null), Entry("future", now.AddDays(1)), Entry("offset-boundary", cutoff.ToOffset(TimeSpan.FromHours(8))),
+        ];
+        var queue = Entry("current-queue-result", now.AddDays(-30));
+        var original = new WingetPersistentState { History = history, Queue = [queue], Packages = [Package], LastSuccessUtc = now };
+        new WingetStateStore(_directory).Save(original);
+        var client = new FakeClient();
+        await using (var runtime = new WingetServiceRuntime(client, _directory, new FakeNotifier(), () => now))
+        {
+            var ack = ParseAck(await runtime.HandleRequestAsync(new KitPipeRequest { Command = "clear-old-history" }, CancellationToken.None));
+            Assert.IsTrue(ack.Accepted);
+            Assert.AreEqual(1, ack.RemovedHistoryCount);
+            CollectionAssert.AreEqual(history.Skip(1).ToArray(), runtime.GetStatus().History.ToArray());
+            CollectionAssert.AreEqual(new[] { queue }, runtime.GetStatus().Queue.ToArray());
+            Assert.AreEqual(now, runtime.GetStatus().LastSuccessUtc);
+            Assert.AreEqual(0, client.CheckCalls + client.DownloadCalls + client.InstallCalls);
+            var repeated = ParseAck(await runtime.HandleRequestAsync(new KitPipeRequest { Command = "clear-old-history", PayloadJson = "{}" }, CancellationToken.None));
+            Assert.AreEqual(0, repeated.RemovedHistoryCount);
+        }
+
+        await using var restarted = new WingetServiceRuntime(client, _directory, new FakeNotifier(), () => now);
+        CollectionAssert.AreEqual(history.Skip(1).ToArray(), restarted.GetStatus().History.ToArray());
+        CollectionAssert.AreEqual(new[] { queue }, restarted.GetStatus().Queue.ToArray());
+        CollectionAssert.AreEqual(new[] { Package }, restarted.GetStatus().Packages.ToArray());
+    }
+
+    [TestMethod]
+    public async Task HistoryCleanupSaveFailureKeepsPublishedAndPersistedHistory()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var old = new WingetQueueItem("old", Package, "upgrade", "Succeeded", CompletedUtc: now.AddDays(-8));
+        new WingetStateStore(_directory).Save(new() { History = [old] });
+        string path = Path.Combine(_directory, "State", "service-state.json");
+        byte[] original = File.ReadAllBytes(path);
+        await using var runtime = new WingetServiceRuntime(new FakeClient(), _directory, new FakeNotifier(), () => now);
+        using (var heldFile = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var ack = ParseAck(await runtime.HandleRequestAsync(new KitPipeRequest { Command = "clear-old-history" }, CancellationToken.None));
+            Assert.IsFalse(ack.Accepted);
+            Assert.IsNull(ack.RemovedHistoryCount);
+            Assert.AreEqual(old, runtime.GetStatus().History.Single());
+            CollectionAssert.AreEqual(original, File.ReadAllBytes(path));
+        }
+
+        Assert.AreEqual(0, Directory.GetFiles(_directory, "*.tmp", SearchOption.AllDirectories).Length);
+        Assert.AreEqual(old, new WingetStateStore(_directory).Load().History.Single());
+    }
+
+    [TestMethod]
+    public async Task HistoryCleanupRejectsCallerPathsCutoffsMalformedVersionAndCancellation()
+    {
+        var old = new WingetQueueItem("old", Package, "upgrade", "Succeeded", CompletedUtc: DateTimeOffset.UtcNow.AddDays(-8));
+        new WingetStateStore(_directory).Save(new() { History = [old] });
+        await using var runtime = new WingetServiceRuntime(new FakeClient(), _directory, new FakeNotifier());
+        foreach (string payload in new[] { "{\"path\":\"../other.json\"}", "{\"cutoffUtc\":\"2099-01-01T00:00:00Z\"}", "{\"command\":\"clear-old-history\"}", "[]", "null", "{", new string(' ', 65537) })
+        {
+            var response = await runtime.HandleRequestAsync(new KitPipeRequest { Command = "clear-old-history", PayloadJson = payload }, CancellationToken.None);
+            Assert.IsFalse(response.Success);
+            Assert.AreEqual("INVALID_REQUEST", response.Error?.Code);
+        }
+
+        var version = await runtime.HandleRequestAsync(new KitPipeRequest { Version = 2, Command = "clear-old-history" }, CancellationToken.None);
+        Assert.AreEqual("VERSION", version.Error?.Code);
+        var cancelled = await runtime.HandleRequestAsync(new KitPipeRequest { Command = "clear-old-history" }, new CancellationToken(canceled: true));
+        Assert.AreEqual("CANCELLED", cancelled.Error?.Code);
+        Assert.AreEqual(old, runtime.GetStatus().History.Single());
+        Assert.AreEqual(old, new WingetStateStore(_directory).Load().History.Single());
+    }
+
+    [TestMethod]
+    public async Task HistoryCleanupUsesTheVerifiedServicePipeAndRejectsAnotherServerPath()
+    {
+        var old = new WingetQueueItem("old", Package, "upgrade", "Succeeded", CompletedUtc: DateTimeOffset.UtcNow.AddDays(-8));
+        new WingetStateStore(_directory).Save(new() { History = [old] });
+        await using var runtime = new WingetServiceRuntime(new FakeClient(), _directory, new FakeNotifier());
+        string key = "WingetHistory_" + Guid.NewGuid().ToString("N");
+        int dispatched = 0;
+        await using var server = new KitServicePipeServer(key, (request, token) =>
+        {
+            Interlocked.Increment(ref dispatched);
+            return runtime.HandleRequestAsync(request, token);
+        });
+        server.Start();
+        var untrusted = new KitServicePipeClient(key, Path.Combine(_directory, "OtherService.exe"));
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => untrusted.SendCommandAsync("clear-old-history"));
+        Assert.AreEqual(0, dispatched, "Server identity must be checked before transmitting a destructive history command.");
+        Assert.AreEqual(1, runtime.GetStatus().History.Count);
+        var trusted = new KitServicePipeClient(key, Environment.ProcessPath!);
+        var ack = ParseAck(await trusted.SendCommandAsync("clear-old-history"));
+        Assert.IsTrue(ack.Accepted);
+        Assert.AreEqual(1, ack.RemovedHistoryCount);
+        Assert.AreEqual(1, dispatched);
+        Assert.AreEqual(0, new WingetStateStore(_directory).Load().History.Count);
+    }
+
     private static KitPipeRequest Envelope(string command, WingetServiceRequest request)
         => new() { Command = command, PayloadJson = JsonSerializer.Serialize(request, WingetServiceJsonContext.Default.WingetServiceRequest) };
 

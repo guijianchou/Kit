@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using LocalServerHub.Core.Configuration;
 using LocalServerHub.Windows.Native;
 
 namespace LocalServerHub.Windows;
@@ -33,7 +34,7 @@ internal sealed record ServiceOwnershipRecord(
     /// Job Object remains authoritative for current membership; this snapshot
     /// supplies PID-reuse checks without requiring a machine-wide process scan.
     /// </summary>
-    public IReadOnlyList<ServiceProcessRecord> ProcessChain { get; init; } = [];
+    public IReadOnlyList<ServiceProcessRecord> ProcessChain { get; set; } = [];
 }
 
 internal static class ServiceOwnershipStore
@@ -46,6 +47,8 @@ internal static class ServiceOwnershipStore
     {
         WriteIndented = true,
     };
+
+    private static readonly LocalserverJsonContext JsonContext = new(SerializerOptions);
 
     private static string RuntimeDirectory => LocalserverLib.Common.LocalserverPathHelper.StateDirectory;
 
@@ -77,9 +80,9 @@ internal static class ServiceOwnershipStore
 
         try
         {
-            return JsonSerializer.Deserialize<ServiceOwnershipRecord>(
+            return JsonSerializer.Deserialize(
                 File.ReadAllText(path),
-                SerializerOptions);
+                JsonContext.ServiceOwnershipRecord);
         }
         catch (JsonException)
         {
@@ -107,7 +110,7 @@ internal static class ServiceOwnershipStore
         {
             File.WriteAllText(
                 tempPath,
-                JsonSerializer.Serialize(record, SerializerOptions),
+                JsonSerializer.Serialize(record, JsonContext.ServiceOwnershipRecord),
                 Encoding.UTF8);
             File.Move(tempPath, path, overwrite: true);
         }

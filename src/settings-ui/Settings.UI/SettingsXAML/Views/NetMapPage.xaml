@@ -96,28 +96,47 @@
                             <!-- Health Status Pill Badge -->
                             <Border Grid.Column="1" Style="{StaticResource KitStatusPillStyle}" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                    <Ellipse Width="8" Height="8" Style="{x:Bind DotStyle, Mode=OneWay}" VerticalAlignment="Center" />
-                                    <TextBlock Text="{x:Bind Status}" FontSize="12" FontWeight="SemiBold" Style="{x:Bind TextStyle, Mode=OneWay}" VerticalAlignment="Center" />
+                                    <Ellipse Width="8" Height="8" Style="{x:Bind DotStyle, Mode=OneTime}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Bind Status}" FontSize="12" FontWeight="SemiBold" Style="{x:Bind TextStyle, Mode=OneTime}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Border>
                         </Grid>
 
                         <!-- Row 1: Egress IP in Monospace font with copy/selection enabled -->
-                        <Border Grid.Row="1" Padding="12,6"
+                        <Border x:Name="EgressIpRow" Grid.Row="1" Padding="12,6"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 CornerRadius="4">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="{x:Bind Ip}"
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <TextBlock x:Name="EgressIpText" Text="{x:Bind Ip}"
                                            FontFamily="{StaticResource KitMonoFontFamily}"
                                            FontSize="20"
                                            FontWeight="SemiBold"
-                                           TextWrapping="Wrap"
+                                           TextWrapping="NoWrap"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTipService.ToolTip="{x:Bind Ip}"
                                            IsTextSelectionEnabled="True"
-                                           Style="{x:Bind TextStyle, Mode=OneWay}"
+                                           Style="{x:Bind TextStyle, Mode=OneTime}"
                                            VerticalAlignment="Center" />
-                                <FontIcon Grid.Column="1" Glyph="&#xE756;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Opacity="0.7" />
+                                <Border x:Name="AiRouteInline" Grid.Column="1"
+                                        Style="{StaticResource KitStatusPillStyle}" Padding="7,2"
+                                        VerticalAlignment="Center"
+                                        Visibility="{x:Bind AiRoute, Converter={StaticResource StringVisibilityConverter}}">
+                                    <ToolTipService.ToolTip>
+                                        <StackPanel MaxWidth="320" Spacing="4">
+                                            <TextBlock Text="{x:Bind AiRoute}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <TextBlock Text="{x:Bind AiRouteSummary}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </ToolTipService.ToolTip>
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="&#xE9D9;" FontSize="12" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="AiRouteLabel" Text="{x:Bind AiRoute}" FontSize="11"
+                                                   FontWeight="SemiBold" MaxWidth="100" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                                <FontIcon Grid.Column="2" Glyph="&#xE756;" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Opacity="0.7" />
                             </Grid>
                         </Border>
 
@@ -132,16 +151,6 @@
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                 <FontIcon Glyph="&#xE770;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="1" Text="{x:Bind Asn}" FontSize="12" Style="{StaticResource NetMapSecondary}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Asn}" VerticalAlignment="Center" />
-                            </Grid>
-                            <!-- AI Route Analysis (Shown on Proxy Card when available) -->
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Visibility="{x:Bind AiRoute, Converter={StaticResource StringVisibilityConverter}}">
-                                <FontIcon Glyph="&#xE9D9;" FontSize="12" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
-                                <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
-                                    <Border Grid.Column="0" Style="{StaticResource KitStatusPillStyle}" Padding="7,2" VerticalAlignment="Center">
-                                        <TextBlock Text="{x:Bind AiRoute}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" MaxWidth="110" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind AiRoute}" VerticalAlignment="Center" />
-                                    </Border>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind AiRouteSummary}" FontSize="12" Style="{StaticResource NetMapSecondary}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind AiRouteSummary}" VerticalAlignment="Center" Visibility="{x:Bind AiRouteSummary, Converter={StaticResource StringVisibilityConverter}}" />
-                                </Grid>
                             </Grid>
                         </StackPanel>
 
@@ -172,6 +181,7 @@
                                                 <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" FontSize="14" />
                                             </StackPanel>
                                             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                            <TextBlock x:Name="EgressIpDetails" Text="{x:Bind Ip}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="14" />
                                             <StackPanel Spacing="3">
                                                 <TextBlock x:Uid="NetMap_SourceEndpointLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
                                                 <TextBlock Text="{x:Bind Source}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" />
@@ -190,8 +200,9 @@
                                             </StackPanel>
                                             <StackPanel Spacing="3" Visibility="{x:Bind AiRoute, Converter={StaticResource StringVisibilityConverter}}">
                                                 <TextBlock x:Uid="NetMap_AiRouteLabel" Style="{StaticResource KitMicroLabelTextStyle}" />
-                                                <TextBlock Text="{x:Bind AiRoute}" FontWeight="SemiBold" FontSize="12" />
-                                                <TextBlock Text="{x:Bind AiRouteDetails}" TextWrapping="Wrap" FontSize="12" Style="{StaticResource NetMapSecondary}" IsTextSelectionEnabled="True" />
+                                                <TextBlock x:Name="AiRouteFullLabel" Text="{x:Bind AiRoute}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontWeight="SemiBold" FontSize="12" />
+                                                <TextBlock x:Name="AiRouteFullSummary" Text="{x:Bind AiRouteSummary}" TextWrapping="Wrap" IsTextSelectionEnabled="True" FontSize="12" />
+                                                <TextBlock x:Name="AiRouteFullDetails" Text="{x:Bind AiRouteDetails}" TextWrapping="Wrap" FontSize="12" Style="{StaticResource NetMapSecondary}" IsTextSelectionEnabled="True" />
                                             </StackPanel>
                                             <Border CornerRadius="4" Padding="6,4" Background="{ThemeResource BadgeWarningBackgroundBrush}" Visibility="{x:Bind IsStale, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">

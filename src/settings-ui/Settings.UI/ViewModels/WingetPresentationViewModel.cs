@@ -157,6 +157,8 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(PrimaryActionLabel), PrimaryActionLabel);
         PublishValue(nameof(CanPrepareSelection), CanPrepareSelection);
         PublishValue(nameof(CanReload), CanReload);
+        PublishValue(nameof(CanClearOldHistory), CanClearOldHistory);
+        PublishValue(nameof(HistoryClearMessage), HistoryClearMessage);
         PublishValue(nameof(HasRows), HasRows);
         PublishValue(nameof(HasSearchResults), HasSearchResults);
         PublishValue(nameof(SearchResultsLimited), SearchResultsLimited);

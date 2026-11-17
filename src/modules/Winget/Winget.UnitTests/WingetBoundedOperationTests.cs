@@ -11,6 +11,29 @@ namespace Winget.UnitTests;
 public sealed class WingetBoundedOperationTests
 {
     [TestMethod]
+    public async Task ComFactoryPreservesAnExistingStaApartment()
+    {
+        var completion = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                int value = WinGetComFactory.Run(() => 42);
+                Assert.AreEqual(ApartmentState.STA, Thread.CurrentThread.GetApartmentState());
+                completion.SetResult(value);
+            }
+            catch (Exception ex)
+            {
+                completion.SetException(ex);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.AreEqual(42, await completion.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.IsTrue(thread.Join(TimeSpan.FromSeconds(5)));
+    }
+
+    [TestMethod]
     public async Task TimedOutSearchRetainsAdmissionUntilUncooperativeWorkerActuallyExits()
     {
         var gate = new WingetBoundedOperation(TimeSpan.FromMilliseconds(50));

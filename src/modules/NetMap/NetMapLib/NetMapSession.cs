@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace NetMapLib;
 
-public sealed class NetMapSession : IDisposable
+public sealed class NetMapSession : IDisposable, IAsyncDisposable
 {
     private readonly object gate = new();
     private readonly Func<bool, NetMapOptions, CancellationToken, Task<IdentityResult>> observe;
@@ -18,12 +18,15 @@ public sealed class NetMapSession : IDisposable
     private readonly TimeSpan directInterval;
     private readonly TimeSpan proxyInterval;
     private readonly TimeSpan serviceInterval;
+    private readonly List<Task> runs = [];
+    private readonly Queue<NetMapSnapshot> notifications = new();
     private CancellationTokenSource? cancellation;
     private CancellationTokenSource? diagnosticCancellation;
     private Task completion = Task.CompletedTask;
     private NetMapSnapshot current = NetMapSnapshot.Empty;
     private long sessionId;
     private bool disposed;
+    private bool notifying;
 
     public NetMapSession()
     {
@@ -100,6 +103,8 @@ public sealed class NetMapSession : IDisposable
                 DiagnosticFailed = false,
             });
             completion = Task.Run(() => RunAsync(id, options, source));
+            runs.RemoveAll(task => task.IsCompleted);
+            runs.Add(completion);
         }
     }
 
@@ -123,12 +128,38 @@ public sealed class NetMapSession : IDisposable
 
     public void Dispose()
     {
-        Stop();
-        ownedProbe?.Dispose();
         lock (gate)
         {
+            if (disposed)
+            {
+                return;
+            }
+
+            Stop();
             disposed = true;
             Changed = null;
+            notifications.Clear();
+
+            // A rapid stop/start can leave an older generation draining too.
+            completion = DisposeProbeAsync(Task.WhenAll(runs));
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return new ValueTask(completion);
+    }
+
+    private async Task DisposeProbeAsync(Task pending)
+    {
+        try
+        {
+            await pending.ConfigureAwait(false);
+        }
+        finally
+        {
+            ownedProbe?.Dispose();
         }
     }
 
@@ -398,6 +429,46 @@ public sealed class NetMapSession : IDisposable
     private void Publish(NetMapSnapshot snapshot)
     {
         current = snapshot;
-        Changed?.Invoke(snapshot);
+        if (disposed)
+        {
+            return;
+        }
+
+        notifications.Enqueue(snapshot);
+        if (!notifying)
+        {
+            notifying = true;
+            _ = Task.Run(DispatchNotifications);
+        }
+    }
+
+    private void DispatchNotifications()
+    {
+        while (true)
+        {
+            NetMapSnapshot snapshot;
+            Action<NetMapSnapshot>? handler;
+            lock (gate)
+            {
+                if (notifications.Count == 0)
+                {
+                    notifying = false;
+                    return;
+                }
+
+                snapshot = notifications.Dequeue();
+                handler = Changed;
+            }
+
+            try
+            {
+                // Consumer callbacks never execute under the session state lock.
+                handler?.Invoke(snapshot);
+            }
+            catch (Exception)
+            {
+                // A failing view must not terminate sampling or strand the dispatcher.
+            }
+        }
     }
 }

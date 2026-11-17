@@ -66,6 +66,7 @@ public sealed class RouteDispatcher
     {
         _kernelManager = kernelManager ?? throw new ArgumentNullException(nameof(kernelManager));
         _requestRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(requestRoot ?? Path.Combine(Path.GetDirectoryName(kernelManager.KernelRoot)!, "requests")));
+        _ = Task.Run(() => CleanupStaleRequestsAsync(_requestRoot));
     }
 
     /// <summary>
@@ -168,6 +169,7 @@ public sealed class RouteDispatcher
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         string? requestDirectory = null;
+        FileStream? requestLease = null;
         IDisposable? executionLease = null;
         KernelExecutionResult result = Failure(AiErrorCode.ExecutionFailed);
         var elapsed = Stopwatch.StartNew();
@@ -189,6 +191,7 @@ public sealed class RouteDispatcher
             requestDirectory = Path.Combine(_requestRoot, $"request-{Guid.NewGuid():N}");
             Directory.CreateDirectory(requestDirectory);
             AiHubStorageFiles.EnsureNoReparsePoints(requestDirectory);
+            requestLease = new FileStream(Path.Combine(requestDirectory, ".active"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
             string outputPath = Path.Combine(requestDirectory, "response.txt");
             var startInfo = new ProcessStartInfo { FileName = executable, WorkingDirectory = requestDirectory };
             await ConfigureProcessAsync(startInfo, normalized, target, prompt, outputPath, lifetime.Token).ConfigureAwait(false);
@@ -284,6 +287,7 @@ public sealed class RouteDispatcher
         }
         finally
         {
+            requestLease?.Dispose();
             if (requestDirectory is not null)
             {
                 try
@@ -417,6 +421,51 @@ public sealed class RouteDispatcher
             {
                 await Task.Delay(100).ConfigureAwait(false);
             }
+        }
+    }
+
+    internal static async Task CleanupStaleRequestsAsync(string requestRoot)
+    {
+        try
+        {
+            AiHubStorageFiles.EnsureNoReparsePoints(requestRoot);
+            if (!Directory.Exists(requestRoot))
+            {
+                return;
+            }
+
+            foreach (string directory in Directory.EnumerateDirectories(requestRoot, "request-*", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    AiHubStorageFiles.EnsureNoReparsePoints(directory);
+                    // Routes have a one-hour ceiling. Keep a full day for older hosts without leases.
+                    if (Directory.GetLastWriteTimeUtc(directory) > DateTime.UtcNow.AddDays(-1))
+                    {
+                        continue;
+                    }
+
+                    string lease = Path.Combine(directory, ".active");
+                    if (File.Exists(lease))
+                    {
+                        AiHubStorageFiles.EnsureNoReparsePoints(lease);
+                        using (new FileStream(lease, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                        {
+                            // An active route owns this file exclusively, including while suspended.
+                        }
+                    }
+
+                    await DeleteRequestDirectoryAsync(requestRoot, directory).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    // Active, inaccessible, or untrusted directories are never traversed.
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            // Startup cleanup must not prevent the engine from starting.
         }
     }
 

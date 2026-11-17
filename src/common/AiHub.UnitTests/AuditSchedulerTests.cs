@@ -43,6 +43,17 @@ public sealed class AuditSchedulerTests
 
     private AuditPipeline CreatePipeline() => new(historyStorage: new AuditHistoryStorage(_dataDirectory));
 
+    [TestMethod]
+    public async Task AsyncDisposeStopsTheLoopAndRejectsNewRuns()
+    {
+        var scheduler = new AuditScheduler(CreatePipeline(), intervalHours: 0, pollInterval: TimeSpan.FromMilliseconds(10));
+        scheduler.Start();
+        await Task.WhenAll(scheduler.DisposeAsync().AsTask(), scheduler.DisposeAsync().AsTask());
+        Assert.IsFalse(scheduler.IsRunning);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => scheduler.RunOnceAsync());
+        scheduler.Dispose();
+    }
+
     private static bool EventLogAvailable()
     {
         try

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -532,7 +532,8 @@ namespace Kit.Settings.UI.ViewModels
                     return ProcessResourceInspector.Sample(processId.Value, _runner.GetManagedProcessIds(), treeSnapshot);
                 }, cancellationToken);
 
-                if (_disposed)
+                if (_disposed || cancellationToken.IsCancellationRequested
+                    || processId != _runner.ProcessId || processGeneration != _runner.ProcessGeneration || !State.IsActive())
                 {
                     return;
                 }
@@ -586,7 +587,8 @@ namespace Kit.Settings.UI.ViewModels
             }
             catch
             {
-                if (!_disposed)
+                if (!_disposed && !cancellationToken.IsCancellationRequested
+                    && processId == _runner.ProcessId && processGeneration == _runner.ProcessGeneration && State.IsActive())
                 {
                     RecordCpuSample(null);
                     SetMemoryText("—", 0d);
@@ -767,6 +769,7 @@ namespace Kit.Settings.UI.ViewModels
         private bool _isErrorOpen;
         private bool _isPageActive;
         private bool _isInitialized;
+        private bool _enabledLifecycleApplied;
         private bool _disposed;
         private int _telemetryRefreshInFlight;
         private int _environmentCheckInFlight;
@@ -902,8 +905,14 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RefreshEnabledState()
         {
+            bool previousEnabled = _isEnabled;
             _generalSettingsConfig = _generalSettingsRepository.SettingsConfig;
             InitializeEnabledValue();
+            if (_enabledLifecycleApplied && previousEnabled == _isEnabled)
+            {
+                return;
+            }
+
             ApplyEnabledLifecycle();
             OnPropertyChanged(nameof(IsEnabled));
             OnPropertyChanged(nameof(CanAddLine));
@@ -918,6 +927,7 @@ namespace Kit.Settings.UI.ViewModels
 
         private void ApplyEnabledLifecycle()
         {
+            _enabledLifecycleApplied = true;
             if (!_isEnabled)
             {
                 _telemetryTimer.Stop();
@@ -991,6 +1001,7 @@ namespace Kit.Settings.UI.ViewModels
 
         private readonly ServiceCatalogStore _catalogStore;
         private readonly HubSettingsStore _hubSettingsStore;
+        private readonly Task _initializationTask;
         private readonly SecretStore _secretStore;
         private readonly DispatcherTimer _telemetryTimer = new();
         private readonly LocalserverLogSink _logSink;
@@ -1325,26 +1336,36 @@ namespace Kit.Settings.UI.ViewModels
             _telemetryTimer.Tick += OnTelemetryTimerTick;
             Lines.CollectionChanged += (_, _) => NotifyCatalogState();
 
-            _ = InitializeAsync();
+            _initializationTask = InitializeAsync();
         }
 
         public void SetPageActive(bool active)
         {
-            if (_disposed)
+            if (_disposed || _isPageActive == active)
             {
                 return;
             }
 
             _isPageActive = active;
-            if (active && _isInitialized && _isEnabled)
+            ApplyPageActivity();
+        }
+
+        private void ApplyPageActivity()
+        {
+            if (_isPageActive && _isInitialized && _isEnabled)
             {
+                // A cached page already owns its rows and last completed checks. Publish
+                // current runtime state without waiting for the next process sample.
+                UpdateSessionMetrics();
+                RefreshEnvironmentCard();
+                RefreshLogPanel();
                 _telemetryTimer.Start();
                 _ = RefreshTelemetryAsync();
             }
             else
             {
                 _telemetryTimer.Stop();
-                CancelEnvironmentCheck();
+                CancelEnvironmentCheck(invalidateCompletedResult: false);
             }
         }
 
@@ -1361,7 +1382,7 @@ namespace Kit.Settings.UI.ViewModels
 
                 await LoadLinesAsync();
                 _isInitialized = true;
-                SetPageActive(_isPageActive);
+                ApplyPageActivity();
             }
             catch (Exception ex)
             {
@@ -1773,6 +1794,11 @@ namespace Kit.Settings.UI.ViewModels
                 // Sample lines
                 foreach (var line in Lines.ToArray())
                 {
+                    if (_disposed || !_isPageActive || IsCatalogBusy)
+                    {
+                        return;
+                    }
+
                     await line.RefreshResourceSampleAsync(treeSnapshot);
                     if (_disposed || !_isPageActive || IsCatalogBusy)
                     {
@@ -2004,10 +2030,17 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
-        private void CancelEnvironmentCheck()
+        private void CancelEnvironmentCheck(bool invalidateCompletedResult = true)
         {
-            _environmentCheckCancellation?.Cancel();
-            _environmentCheckLine = null;
+            if (_environmentCheckCancellation is { } pending)
+            {
+                pending.Cancel();
+                _environmentCheckLine = null;
+            }
+            else if (invalidateCompletedResult)
+            {
+                _environmentCheckLine = null;
+            }
         }
 
         public void NotifySelectedLineCpuUpdated()
@@ -2244,6 +2277,18 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
+        private async Task DisposeSettingsStoreAsync()
+        {
+            try
+            {
+                await _initializationTask.ConfigureAwait(false);
+            }
+            finally
+            {
+                _hubSettingsStore.Dispose();
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (_disposed)
@@ -2267,6 +2312,7 @@ namespace Kit.Settings.UI.ViewModels
                 }
 
                 _logSink.Dispose();
+                _ = DisposeSettingsStoreAsync();
             }
 
             base.Dispose(disposing);

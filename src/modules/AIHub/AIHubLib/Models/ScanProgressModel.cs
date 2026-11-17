@@ -44,11 +44,12 @@ public sealed class OptimizationStep
 /// </remarks>
 public sealed class ScanProgressModel
 {
+    private static readonly string[] DefaultStageTitles = { "Preparing scan", "Scan cache locations", "Scan Downloads", "Finish" };
     private readonly List<OptimizationStep> _steps;
 
     /// <summary>Creates a model with the optimization workflow stages.</summary>
     public ScanProgressModel()
-        : this(new[] { "Preparing scan", "Scan cache locations", "Scan Downloads", "Finish" })
+        : this(DefaultStageTitles)
     {
     }
 

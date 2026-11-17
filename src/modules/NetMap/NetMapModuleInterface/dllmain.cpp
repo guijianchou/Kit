@@ -38,19 +38,26 @@ public:
     bool is_enabled() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        return enabled;
+        return enabled && m_worker.is_running();
     }
 
     void enable() override
     {
         std::lock_guard lifecycleLock(m_lifecycle_mutex);
-        if (enabled)
+        if (enabled && m_worker.is_running())
         {
             return;
         }
 
-        enabled = true;
-        start_worker_if_needed();
+        try
+        {
+            start_worker_if_needed();
+        }
+        catch (...)
+        {
+            Logger::error(L"[NetMap] Worker startup failed.");
+        }
+        enabled = m_worker.is_running();
 
         Logger::info(L"NetMap module enabled");
     }

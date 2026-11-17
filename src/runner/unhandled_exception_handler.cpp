@@ -72,7 +72,7 @@ void init_symbols()
 
 void log_stack_trace(std::wstring& generalErrorDescription)
 {
-    memset(p_symbol, '\0', sizeof(*p_symbol) + MAX_PATH);
+    memset(p_symbol, '\0', sizeof(*p_symbol) + MAX_PATH * sizeof(WCHAR));
     memset(&module_path[0], '\0', sizeof(module_path));
     line.LineNumber = 0;
 

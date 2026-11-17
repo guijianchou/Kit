@@ -15,6 +15,10 @@ namespace ManagedCommon.ServiceHost
         where TSettings : class, new()
     {
         private readonly CancellationTokenSource _cts = new();
+        private readonly object _lifecycleLock = new();
+        private readonly object _settingsReloadLock = new();
+        private readonly object _settingsTimerLock = new();
+        private bool _runActive;
         private Mutex? _instanceMutex;
         private FileSystemWatcher? _settingsWatcher;
         private RegisteredWaitHandle? _exitWaitHandle;
@@ -40,6 +44,33 @@ namespace ManagedCommon.ServiceHost
         public CancellationToken CancellationToken => _cts.Token;
 
         public async Task<int> RunAsync(string[] args)
+        {
+            lock (_lifecycleLock)
+            {
+                ObjectDisposedException.ThrowIf(Volatile.Read(ref _resourcesReleased) != 0, this);
+                if (_runActive)
+                {
+                    throw new InvalidOperationException("The service host is already running.");
+                }
+
+                _runActive = true;
+            }
+
+            try
+            {
+                return await RunCoreAsync(args).ConfigureAwait(false);
+            }
+            finally
+            {
+                ReleaseResources();
+                lock (_lifecycleLock)
+                {
+                    _runActive = false;
+                }
+            }
+        }
+
+        private async Task<int> RunCoreAsync(string[] args)
         {
             Logger.InitializeLogger(Path.Combine("\\", ModuleKey, "Service", "Logs"));
             Logger.LogInfo($"[KitModuleServiceBase] Starting {ModuleKey} Service...");
@@ -68,9 +99,11 @@ namespace ManagedCommon.ServiceHost
             _ = useKitConfig;
 
             string mutexName = $@"Local\Kit.{ModuleKey}.Service.Mutex";
-            _instanceMutex = new Mutex(true, mutexName, out bool createdNew);
+            _instanceMutex = new Mutex(false, mutexName, out bool createdNew);
             if (!createdNew)
             {
+                _instanceMutex.Dispose();
+                _instanceMutex = null;
                 Logger.LogWarning($"[KitModuleServiceBase] Another instance of {ModuleKey} Service is already running. Exiting.");
                 return 0;
             }
@@ -94,11 +127,11 @@ namespace ManagedCommon.ServiceHost
             InitSettingsWatcher();
 
             _pipeServer = new KitServicePipeServer(ModuleKey, HandlePipeCommandAsync);
-            _pipeServer.Start();
 
             try
             {
                 await StartServiceAsync(CurrentSettings, _cts.Token).ConfigureAwait(false);
+                _pipeServer.Start();
                 Logger.LogInfo($"[KitModuleServiceBase] {ModuleKey} Service started successfully.");
 
                 var tcs = new TaskCompletionSource();
@@ -117,6 +150,18 @@ namespace ManagedCommon.ServiceHost
             }
             finally
             {
+                Stop();
+
+                // Fence settings callbacks and drain requests before stopping their business state.
+                lock (_settingsReloadLock)
+                {
+                }
+
+                if (_pipeServer is not null)
+                {
+                    await _pipeServer.DisposeAsync().ConfigureAwait(false);
+                }
+
                 try
                 {
                     await StopServiceAsync().ConfigureAwait(false);
@@ -125,8 +170,6 @@ namespace ManagedCommon.ServiceHost
                 {
                     Logger.LogWarning($"[KitModuleServiceBase] Error during {ModuleKey} Service shutdown: {ex.Message}");
                 }
-
-                ReleaseResources();
             }
 
             Logger.LogInfo($"[KitModuleServiceBase] {ModuleKey} Service terminated cleanly.");
@@ -163,7 +206,7 @@ namespace ManagedCommon.ServiceHost
         {
         }
 
-        private string GetSettingsFolderPath()
+        protected virtual string GetSettingsFolderPath()
         {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             return Path.Combine(localAppData, "Kit", ModuleKey);
@@ -193,8 +236,10 @@ namespace ManagedCommon.ServiceHost
                     if (parsed != null)
                     {
                         CurrentSettings = parsed;
-                        return;
                     }
+
+                    // Existing invalid/null settings are never overwritten with defaults.
+                    return;
                 }
 
                 CurrentSettings = new TSettings();
@@ -227,6 +272,7 @@ namespace ManagedCommon.ServiceHost
 
                 _settingsWatcher.Changed += OnSettingsFileChanged;
                 _settingsWatcher.Created += OnSettingsFileChanged;
+                _settingsWatcher.Renamed += OnSettingsFileChanged;
             }
             catch (Exception ex)
             {
@@ -236,11 +282,32 @@ namespace ManagedCommon.ServiceHost
 
         private void OnSettingsFileChanged(object sender, FileSystemEventArgs e)
         {
-            _settingsDebounceTimer?.Dispose();
-            _settingsDebounceTimer = new Timer(_ => ReloadSettings(), null, 250, Timeout.Infinite);
+            lock (_settingsTimerLock)
+            {
+                if (Volatile.Read(ref _resourcesReleased) != 0)
+                {
+                    return;
+                }
+
+                _settingsDebounceTimer ??= new Timer(_ => ReloadSettings(), null, Timeout.Infinite, Timeout.Infinite);
+                _settingsDebounceTimer.Change(250, Timeout.Infinite);
+            }
         }
 
         private void ReloadSettings()
+        {
+            lock (_settingsReloadLock)
+            {
+                if (Volatile.Read(ref _resourcesReleased) != 0 || _cts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                ReloadSettingsCore();
+            }
+        }
+
+        private void ReloadSettingsCore()
         {
             string file = GetSettingsFilePath();
             if (!File.Exists(file))
@@ -334,7 +401,16 @@ namespace ManagedCommon.ServiceHost
         {
             if (disposing)
             {
-                ReleaseResources();
+                Stop();
+                lock (_lifecycleLock)
+                {
+                    // An active RunAsync owns asynchronous shutdown; disposing its token source
+                    // here would race its continuation and in-flight pipe/settings callbacks.
+                    if (!_runActive)
+                    {
+                        ReleaseResources();
+                    }
+                }
             }
         }
 
@@ -344,7 +420,7 @@ namespace ManagedCommon.ServiceHost
             GC.SuppressFinalize(this);
         }
 
-        private void OnProcessExit(object? sender, EventArgs e) => ReleaseResources();
+        private void OnProcessExit(object? sender, EventArgs e) => Stop();
 
         private void ReleaseResources()
         {
@@ -354,7 +430,12 @@ namespace ManagedCommon.ServiceHost
             }
 
             AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
-            _settingsDebounceTimer?.Dispose();
+            lock (_settingsTimerLock)
+            {
+                _settingsDebounceTimer?.Dispose();
+                _settingsDebounceTimer = null;
+            }
+
             _settingsWatcher?.Dispose();
 
             _exitWaitHandle?.Unregister(null);
@@ -378,14 +459,6 @@ namespace ManagedCommon.ServiceHost
 
             if (_instanceMutex != null)
             {
-                try
-                {
-                    _instanceMutex.ReleaseMutex();
-                }
-                catch
-                {
-                }
-
                 _instanceMutex.Dispose();
                 _instanceMutex = null;
             }

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "module_hotkeys.h"
 #include <ShellScalingApi.h>
 #include <lmcons.h>
 #include <filesystem>
@@ -96,12 +97,13 @@ void open_menu_from_another_instance(std::optional<std::string> settings_window)
 {
     const HWND hwnd_main = FindWindowW(pt_tray_icon_window_class, nullptr);
     Logger::info(L"open_menu_from_another_instance: FindWindowW({}) returned hwnd={}", pt_tray_icon_window_class, (void*)hwnd_main);
+    if (!hwnd_main) return;
     LPARAM msg = static_cast<LPARAM>(ESettingsWindowNames::Dashboard);
     if (settings_window.has_value() && settings_window.value() != "")
     {
         msg = static_cast<LPARAM>(ESettingsWindowNames_from_string(settings_window.value()));
     }
-    BOOL posted = PostMessageW(hwnd_main, WM_COMMAND, ID_SETTINGS_MENU_COMMAND, msg);
+    BOOL posted = PostMessageW(hwnd_main, settings_activation_message(), 0, msg);
     Logger::info("open_menu_from_another_instance: PostMessageW result={}", posted);
     if (hwnd_main)
     {
@@ -215,6 +217,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
         // Start initial Kit modules
         start_enabled_kit_modules(startupGeneralSettings);
         log_timing("Modules Enabled");
+        initialize_module_hotkeys(FindWindowW(pt_tray_icon_window_class, nullptr));
 
         std::wstring product_version = get_product_version();
         Trace::EventLaunch(product_version, isProcessElevated);
@@ -239,7 +242,12 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 
         result = run_message_loop();
     }
-    catch (std::runtime_error& err)
+    catch (const winrt::hresult_error& err)
+    {
+        Logger::error(L"Runner failed: {}", err.message());
+        result = -1;
+    }
+    catch (const std::exception& err)
     {
         cancel_settings_window_startup();
         std::string err_what = err.what();
@@ -252,10 +260,7 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
     // host process in parallel, so its stop timeout is pure dead time against
     // the quiesce budget. User exits and Restart Manager ENDSESSION_CLOSEAPP
     // requests retain the full graceful cleanup.
-    if (!is_system_session_ending())
-    {
-        QuickAccessHost::stop();
-    }
+    QuickAccessHost::stop(!is_system_session_ending());
     return result;
 }
 
@@ -270,7 +275,7 @@ enum class SpecialMode
 
 SpecialMode should_run_in_special_mode(const int n_cmd_args, LPWSTR* cmd_arg_list)
 {
-    for (size_t i = 1; i < n_cmd_args; ++i)
+    for (int i = 1; i < n_cmd_args; ++i)
     {
         if (!wcscmp(notifications::TOAST_ACTIVATED_LAUNCH_ARG, cmd_arg_list[i]))
         {
@@ -366,6 +371,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
 
     int n_cmd_args = 0;
     LPWSTR* cmd_arg_list = CommandLineToArgvW(GetCommandLineW(), &n_cmd_args);
+    auto free_arguments = wil::scope_exit([&] { LocalFree(cmd_arg_list); });
     bool openWingetFromNotification = false;
     switch (should_run_in_special_mode(n_cmd_args, cmd_arg_list))
     {
@@ -434,6 +440,9 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         auto shutdown_modules = wil::scope_exit([] {
             cancel_settings_window_startup();
             Logger::info("Unloading {} modules before CRT exit", modules().size());
+            close_settings_window();
+            begin_module_shutdown();
+            clear_module_hotkeys();
             modules().clear();
             Logger::info("Runner module shutdown completed");
         });
@@ -480,7 +489,12 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
             result = 0;
         }
     }
-    catch (std::runtime_error& err)
+    catch (const winrt::hresult_error& err)
+    {
+        Logger::error(L"Runner failed: {}", err.message());
+        result = -1;
+    }
+    catch (const std::exception& err)
     {
         std::string err_what = err.what();
         MessageBoxW(nullptr, std::wstring(err_what.begin(), err_what.end()).c_str(), GET_RESOURCE_STRING(IDS_ERROR).c_str(), MB_OK | MB_ICONERROR);

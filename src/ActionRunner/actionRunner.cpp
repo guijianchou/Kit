@@ -32,6 +32,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
     int nArgs = 0;
     LPWSTR* args = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+    auto free_arguments = wil::scope_exit([&] { LocalFree(args); });
     if (!args || nArgs < 2)
     {
         return 1;
@@ -65,10 +66,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             }
             else
             {
-                params += args[nextArg];
+                params += L'"';
+                size_t slashes = 0;
+                for (const wchar_t ch : std::wstring_view(args[nextArg]))
+                {
+                    if (ch == L'\\') { ++slashes; continue; }
+                    params.append(ch == L'"' ? slashes * 2 + 1 : slashes, L'\\');
+                    slashes = 0;
+                    params += ch;
+                }
+                params.append(slashes * 2, L'\\');
+                params += L'"';
                 params += L' ';
                 nextArg++;
             }
+        }
+
+        if (target.empty() || !std::filesystem::path(target).is_absolute())
+        {
+            Logger::warn(L"ActionRunner requires an absolute -target executable path.");
+            return 1;
         }
 
         HANDLE hMapFile = NULL;
@@ -99,7 +116,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
             if (hMapFile)
             {
-                FlushFileBuffers(hMapFile);
                 CloseHandle(hMapFile);
             }
         }

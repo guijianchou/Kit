@@ -72,6 +72,7 @@
       <PrecompiledHeader Condition="'$(UsePrecompiledHeaders)' != 'false'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="kit_module.cpp" />
+    <ClCompile Include="module_hotkeys.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="quick_access_host.cpp" />
     <ClCompile Include="restart_elevated.cpp" />
@@ -90,6 +91,7 @@
     <ClInclude Include="general_settings_reader.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="kit_module.h" />
+    <ClInclude Include="module_hotkeys.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="restart_elevated.h" />
     <ClInclude Include="settings_window.h" />

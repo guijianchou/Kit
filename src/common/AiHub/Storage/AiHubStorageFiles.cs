@@ -1,4 +1,4 @@
-namespace Kit.AiHub.Storage;
+﻿namespace Kit.AiHub.Storage;
 
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,9 @@ using Kit.AiHub.Serialization;
 /// </summary>
 internal sealed class AiHubStorageFiles
 {
+    private static long _writeVersion;
+    internal static long WriteVersion => Interlocked.Read(ref _writeVersion);
+
     internal const int MaxDataFileBytes = 1024 * 1024;
     internal const string ServiceSettingsFileName = "service-settings.json";
     private const int MaxJournalBytes = 6 * MaxDataFileBytes;
@@ -214,7 +217,7 @@ internal sealed class AiHubStorageFiles
             EnsureNoReparsePoints(destination);
             File.Move(temporaryPath, destination, overwrite: true);
             temporaryCreated = false;
-            AiHubSettingsStore.BumpWriteVersion();
+            Interlocked.Increment(ref _writeVersion);
         }
         finally
         {
@@ -345,7 +348,7 @@ internal sealed class AiHubStorageFiles
         stream.Write(content);
         stream.SetLength(content.Length);
         stream.Flush(flushToDisk: true);
-        AiHubSettingsStore.BumpWriteVersion();
+        Interlocked.Increment(ref _writeVersion);
     }
 
     private void AddSnapshot(Dictionary<string, string> snapshot, string key, string fileName)
@@ -546,6 +549,6 @@ internal sealed class AiHubStorageFiles
         string path = GetPath(JournalFileName);
         EnsureNoReparsePoints(path);
         File.Delete(path);
-        AiHubSettingsStore.BumpWriteVersion();
+        Interlocked.Increment(ref _writeVersion);
     }
 }

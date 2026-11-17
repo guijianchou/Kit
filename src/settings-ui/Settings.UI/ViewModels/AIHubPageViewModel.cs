@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -253,12 +253,14 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
         _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.AIHub);
 
-        AiHub = new AiHubViewModel(_dispatcherQueue) { TaskPolicyIndex = 0 };
+        AiHub = AiHubViewModel.AcquireShared(_dispatcherQueue);
 
         // Load persisted tab
         try
         {
-            _activeTabIndex = _moduleSettingsRepository.SettingsConfig.Properties.ActiveTabIndex.Value;
+            int persistedTab = _moduleSettingsRepository.SettingsConfig.Properties.ActiveTabIndex.Value;
+            _activeTabIndex = persistedTab is >= 0 and <= 2 ? persistedTab : 0;
+            _moduleSettingsRepository.SettingsConfig.Properties.ActiveTabIndex.Value = _activeTabIndex;
         }
         catch
         {
@@ -385,6 +387,13 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         get => _activeTabIndex;
         set
         {
+            // Selector initialization can temporarily report no selection. It is not
+            // a tab choice and must never replace or persist the current valid tab.
+            if (value is < 0 or > 2)
+            {
+                return;
+            }
+
             if (Set(ref _activeTabIndex, value))
             {
                 if (value == 1)
@@ -398,7 +407,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                 {
                     _moduleSettingsRepository.SettingsConfig.Properties.ActiveTabIndex.Value = value;
                     var snd = new SndAIHubSettings(_moduleSettingsRepository.SettingsConfig);
-                    _ipcSendMethod(snd.ToJsonString());
+                    _ipcSendMethod(snd.ToModuleJsonString());
                 }
                 catch (Exception ex)
                 {
@@ -557,7 +566,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                 try
                 {
                     var snd = new SndAIHubSettings(_moduleSettingsRepository.SettingsConfig);
-                    _ipcSendMethod(snd.ToJsonString());
+                    _ipcSendMethod(snd.ToModuleJsonString());
                 }
                 catch
                 {
@@ -1096,7 +1105,9 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     /// Re-reads the cached readiness verdict. Cheap (no probe, no kernel process), so it is
     /// safe to run on page load and on engine state-change notifications.
     /// </summary>
-    private void RefreshAiReadinessFromCache()
+    private void RefreshAiReadinessFromCache() => _ = RefreshAiReadinessFromCacheAsync();
+
+    private async Task RefreshAiReadinessFromCacheAsync()
     {
         if (_aiEngine is null)
         {
@@ -1105,7 +1116,11 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
         try
         {
-            AiReadiness readiness = _aiEngine.GetReadiness();
+            AiReadiness readiness = await Task.Run(_aiEngine.GetReadiness);
+            if (_disposed)
+            {
+                return;
+            }
             AiReadinessLevel = readiness.Level;
             AiReadinessText = DescribeReadiness(readiness);
             UpdateEngineAndModelInfo(readiness);
@@ -1724,7 +1739,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             try
             {
                 var snd = new SndAIHubSettings(_moduleSettingsRepository.SettingsConfig);
-                _ipcSendMethod(snd.ToJsonString());
+                _ipcSendMethod(snd.ToModuleJsonString());
             }
             catch (Exception ex)
             {
@@ -2007,7 +2022,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                 // Decide up front whether the AI pass can run, and say so before spending
                 // time on it. Previously availability was an optimistic switch check, so a
                 // misconfigured route only surfaced after the whole scan had finished.
-                AiReadiness readiness = AiHubEngine.Current.GetReadiness();
+                AiReadiness readiness = await Task.Run(() => AiHubEngine.Current.GetReadiness());
 
                 EnqueueOnUI(() =>
                 {
@@ -2328,7 +2343,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         IReadOnlyList<SecurityEvent> events)
     {
         var merged = new List<AuditIssueEnhanced>(ruleIssues);
-        var seenEventIds = new HashSet<string>(ruleIssues.Select(issue => issue.EventId), StringComparer.Ordinal);
+        var seenEventIds = new HashSet<string>(ruleIssues.Select(issue => issue.LogName + "\0" + issue.EventId), StringComparer.OrdinalIgnoreCase);
 
         foreach (AuditIssue ai in aiIssues)
         {
@@ -2341,16 +2356,18 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             // reachable through the source filter.
             if (string.IsNullOrWhiteSpace(ai.LogName) && int.TryParse(ai.EventId, out int eventId))
             {
-                var origin = events.FirstOrDefault(e => e.EventId == eventId);
+                var matchingOrigins = events.Where(e => e.EventId == eventId).Select(e => e.LogName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                var origin = matchingOrigins.Length == 1 ? events.First(e => e.EventId == eventId) : null;
                 if (origin is not null)
                 {
                     ai.LogName = origin.LogName ?? string.Empty;
                 }
             }
 
-            if (seenEventIds.Contains(ai.EventId))
+            string identity = ai.LogName + "\0" + ai.EventId;
+            if (!seenEventIds.Add(identity))
             {
-                int index = merged.FindIndex(issue => issue.EventId == ai.EventId);
+                int index = merged.FindIndex(issue => issue.EventId == ai.EventId && string.Equals(issue.LogName, ai.LogName, StringComparison.OrdinalIgnoreCase));
                 if (index >= 0)
                 {
                     merged[index] = ToEnhanced(ai);
@@ -2358,7 +2375,6 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             }
             else
             {
-                seenEventIds.Add(ai.EventId);
                 merged.Add(ToEnhanced(ai));
             }
         }
@@ -3402,7 +3418,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
             DisposeFluentView();
             Inventory.PropertyChanged -= OnInventoryChanged;
             _readinessCts?.Cancel();
-            AiHub?.Dispose();
+            AiHubViewModel.ReleaseShared(AiHub);
             if (_aiEngine is not null)
             {
                 _aiEngine.StateChanged -= OnEngineStateChanged;

@@ -7,6 +7,9 @@ namespace Kit.AiHub.UnitTests;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Kit.AIHubLib.Models;
 using Kit.AIHubLib.Storage;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -117,5 +120,26 @@ public sealed class AuditHistoryStorageTests
         List<AuditResult> history = storage.LoadHistory();
 
         Assert.AreEqual(0, history.Count, "A corrupt file must not break the audit path.");
+    }
+
+    [TestMethod]
+    public void SaveDoesNotOverwriteCorruptHistory()
+    {
+        const string damaged = "{ this is not json";
+        string path = Path.Combine(_directory, "audit_history.json");
+        File.WriteAllText(path, damaged);
+        var storage = new AuditHistoryStorage(_directory);
+        Assert.ThrowsExactly<JsonException>(() => storage.SaveResult(new AuditResult { Timestamp = DateTime.UtcNow }));
+        Assert.AreEqual(damaged, File.ReadAllText(path));
+    }
+
+    [TestMethod]
+    public async Task IndependentWritersPreserveEveryResult()
+    {
+        await Task.WhenAll(Enumerable.Range(0, 32).Select(index => Task.Run(() =>
+            new AuditHistoryStorage(_directory).SaveResult(new AuditResult { Timestamp = DateTime.UtcNow, HealthScore = index }))));
+        var history = new AuditHistoryStorage(_directory).LoadHistory();
+        Assert.AreEqual(32, history.Count);
+        Assert.AreEqual(32, history.Select(result => result.HealthScore).Distinct().Count());
     }
 }

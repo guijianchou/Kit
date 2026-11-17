@@ -25,5 +25,7 @@ namespace Kit.Settings.UI.Library
         {
             return JsonSerializer.Serialize(this, SettingsSerializationContext.Default.SndAIHubSettings);
         }
+
+        public string ToModuleJsonString() => "{\"kit\":" + ToJsonString() + "}";
     }
 }

@@ -10,7 +10,9 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if (-not $RuntimeRoot) { $RuntimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
 $RuntimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
-$reportRoot = Join-Path $repoRoot "TestResults\WingetPage\$Configuration\$Language"
+$runName = '{0}-{1}' -f [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'), [guid]::NewGuid().ToString('N')
+$reportRoot = Join-Path $repoRoot "TestResults\WingetPage\$Configuration\$Language\$runName"
+Write-Host "Winget page smoke report: $reportRoot"
 $testName = 'WingetPageSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $RuntimeRoot ($testName + $_) }
 if (@(Get-Process Kit,Kit.Settings,Kit.QuickAccess,Kit.WingetService,WingetPageSmoke,winget -ErrorAction SilentlyContinue).Count) {
@@ -25,8 +27,16 @@ foreach ($path in $temporaryFiles) {
 }
 if (-not (Test-Path -LiteralPath (Join-Path $RuntimeRoot 'Kit.WingetLib.dll'))) { throw 'Build the Winget Settings integration before running this smoke test.' }
 $dotnetRoot = Split-Path (Get-Command dotnet.exe).Source
-$sdkVersion = (& dotnet --version).Trim()
-$sdkRoot = Join-Path $dotnetRoot "sdk\$sdkVersion"
+# HostModel is loaded inside PowerShell (.NET 10), so a globally selected .NET 11
+# SDK cannot supply its apphost writer even though its compiler runs separately.
+$net10Sdk = & dotnet --list-sdks | ForEach-Object {
+    if ($_ -match '^(10\.0\.\d+) \[(.+)\]$') {
+        [pscustomobject]@{ Version = [version]$Matches[1]; Root = Join-Path $Matches[2] $Matches[1] }
+    }
+} | Sort-Object Version -Descending | Select-Object -First 1
+if (-not $net10Sdk) { throw 'An installed .NET 10 SDK is required for the UI smoke apphost writer.' }
+$sdkRoot = $net10Sdk.Root
+Write-Host "UI smoke SDK: $($net10Sdk.Version); PowerShell runtime: $([Environment]::Version)"
 $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Host.win-x64') -Directory |
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
@@ -50,7 +60,8 @@ try {
     # suspend the page's lifecycle activity source as well as the VM timer, so
     # delayed window events cannot restart service polling. Real lifecycle
     # handlers and final cached-navigation checks remain attached and enabled.
-    # No confirmation is accepted or operation submitted.
+    # No package confirmation is accepted or package operation submitted. The
+    # history-cleanup fixture uses a unique in-process pipe and synthetic state.
     $generalPath = Join-Path $env:LOCALAPPDATA 'Kit\settings.json'
     $general = if ($backups[$generalPath]) { [Text.Encoding]::UTF8.GetString($backups[$generalPath]) | ConvertFrom-Json -AsHashtable } else { @{} }
     if ($general -isnot [Collections.IDictionary]) { throw 'General settings must be a JSON object.' }
@@ -90,7 +101,7 @@ try {
     $env:KIT_WINGET_PAGE_TEST_OUTPUT = $reportRoot
     $env:KIT_WINGET_PAGE_TEST_LANGUAGE = $Language
     $pipeSuffix = [guid]::NewGuid().ToString('N')
-    $launchArguments = @("KitWingetSmokeRunner-$pipeSuffix", "KitWingetSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
+    $launchArguments = @("\\.\pipe\KitWingetSmokeRunner-$pipeSuffix", "\\.\pipe\KitWingetSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
     $startInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $RuntimeRoot "$testName.exe"))
     $startInfo.WorkingDirectory = $RuntimeRoot
     $startInfo.UseShellExecute = $false

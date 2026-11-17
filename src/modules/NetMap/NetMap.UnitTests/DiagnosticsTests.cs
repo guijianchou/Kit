@@ -11,6 +11,20 @@ namespace NetMap.UnitTests;
 public sealed class DiagnosticsTests
 {
     [TestMethod]
+    public async Task InvalidRouteTargetIsReportedAsFailure()
+    {
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => RouteProbe.TraceAsync("not-an-ip", _ => { }, CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task CancelledIpv6RouteDoesNotReportCompletion()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => RouteProbe.TraceAsync("::1", _ => Assert.Fail("Cancelled traces must not publish."), cancellation.Token));
+    }
+
+    [TestMethod]
     public void GeographyRequiresMatchingIpAndValidCoordinates()
     {
         const string body = """{"success":true,"ip":"8.8.8.8","country_code":"US","city":"Example","latitude":37.4,"longitude":-122.1,"connection":{"asn":15169,"org":"Example network"}}""";

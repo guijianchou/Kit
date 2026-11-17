@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -180,11 +180,31 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void Start_Click(object sender, RoutedEventArgs e) => ViewModel.IsDetectionOn = true;
 
-    private async void AiCheck_Click(object sender, RoutedEventArgs e) => await ViewModel.CheckRouteWithAiAsync();
+    private async void AiCheck_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ViewModel.CheckRouteWithAiAsync();
+        }
+        catch (System.Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Settings action AiCheck_Click failed.", ex);
+        }
+    }
 
     private void Apply_Click(object sender, RoutedEventArgs e) => ViewModel.ApplySettings();
 
-    private async void UpdateAsn_Click(object sender, RoutedEventArgs e) => await ViewModel.UpdateAsnAsync();
+    private async void UpdateAsn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ViewModel.UpdateAsnAsync();
+        }
+        catch (System.Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Settings action UpdateAsn_Click failed.", ex);
+        }
+    }
 
     private void CancelUpdate_Click(object sender, RoutedEventArgs e) => ViewModel.CancelDataUpdate();
 

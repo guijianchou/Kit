@@ -23,3 +23,4 @@ void open_settings_window(std::optional<std::wstring> settings_window);
 SettingsWindowStartup::Completion complete_settings_window_startup(bool openSettings, std::optional<std::wstring> settings_window);
 void cancel_settings_window_startup();
 bool close_settings_window();
+void send_all_settings_to_settings();

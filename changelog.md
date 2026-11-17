@@ -4,6 +4,20 @@
 
 ## English
 
+### 3.5.1 (2026-11-16)
+
+- Preserve Localserver rows, selection, expanded editors and scroll position when returning to the cached page. Present General settings after the initial AI service configuration is ready, with a retry action for read failures.
+- Enable and settle General settings controls while hidden, then reveal them after matching render layouts to prevent a remaining first-presentation size change in Release.
+- Keep NetMap AI analysis beside the Proxy IP without adding a row; full IP, route label, summary and details remain accessible in Details. Add a WinGet history action to clear entries completed more than seven days ago while retaining current queue state.
+
+- Followed the local PowerToys stable v0.102.3101 source from the previous v0.102.3001.0 baseline: framework dependencies, configurable Light Switch hotkey and CLI interop/tests, while retaining Kit's seven modules, identity, check-only updates and disabled telemetry.
+- Hardened Runner IPC, partial settings updates, module startup/shutdown and crash recovery; fixed Awake tray thread ownership and Quick Access state/lifecycle handling.
+- Fixed AI settings routing, backup preservation and cross-account restore, storage races, UDP line creation, empty search, Localserver process ownership and NetMap asynchronous disposal.
+- Fixed the AI Hub blank-page path caused by an invalid saved tab or a transient unselected control: the valid tab now drives selection and content together. WinGet filters default to collapsed and can be expanded while preserving filters and responsive layout.
+- Reviewed the external audit against actual callers; see plan.md and review-*.md for confirmed defects, corrected claims and remaining architectural limits. Initial stable-sync validation included 1,937 passing unit tests (one environment skip), native IPC/lifecycle/ABI, shared AiHub Native AOT, LightSwitch worker and WinUI module/NetMap checks. The UI follow-up passed 311 Settings tests, ten independent cold-start scenarios, the full module-page check and bilingual WinGet layout checks. Final versioned build evidence and limits are in review-validation.md; these are Debug checks, separate from historical 3.5.0 Release results.
+
+- Release delivery: x64 build passed with 30 warnings and no errors; 1,942 unit tests passed with one environment-dependent directory-link test skipped. Final Settings tests and ten staged UI scenarios passed; the 1,060-file runtime passed version, dependency, resource and SHA-256 verification. See review-validation.md for intermediate failures and remaining limits.
+
 ### 3.5.0
 
 - Refined AI Hub with a Fluent overview, semantic status colors, clearer task progress and readable finding details in light and dark themes. Unified plugin headers and restored the Awake and Light Switch logos.
@@ -941,6 +955,20 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.1（2026-11-16）
+
+- Localserver 返回缓存页时保留服务行、选择、展开编辑器和滚动位置；Settings 首次等 AI service 配置就绪后一次呈现，读取失败提供重试。
+- Settings 在隐藏阶段启用控件，等真实渲染布局稳定后再显示，消除 Release 首次呈现仍有的尺寸变化。
+- NetMap AI 分析改到 Proxy IP 同行，不新增内容行；详情保留完整 IP、分析标签、摘要和说明。WinGet 历史增加清除完成时间超过七天记录的操作，保留当前队列。
+
+- 从前次 v0.102.3001.0 跟随本地 PowerToys stable v0.102.3101：框架依赖、Light Switch 可配置热键及 CLI 互操作/测试，保留 Kit 七模块、身份隔离、手动检查更新和遥测关闭。
+- 加固 Runner IPC、局部配置、模块启停与崩溃恢复；修复 Awake 托盘线程归属和 Quick Access 状态/生命周期。
+- 修复 AI 设置路由、失败备份保留与跨账户恢复、存储竞态、UDP 添加线路、空白搜索、Localserver 进程归属和 NetMap 异步释放。
+- 修复 AI Hub 在保存的标签无效或控件暂时取消选择时内容空白的路径，由有效标签统一同步选中状态与内容。WinGet 筛选栏默认收起，可展开并保留筛选值和响应式布局。
+- 按实际调用链复核外部审计；确认项、误报及架构边界见 plan.md 和 review-*.md。首次 stable 同步验收包含 1,937 项单测通过、1 项环境跳过，以及原生 IPC/生命周期/ABI、共享 AIHub Native AOT、LightSwitch 实际进程及 WinUI 模块/NetMap 检查。本次 UI 跟进通过 311 项 Settings 单测、10 个独立冷启动场景、完整模块页及中英文 WinGet 布局检查。升版产物最终验证及边界见 review-validation.md；本轮为 Debug 验证，与历史 3.5.0 Release 结果分开。
+
+- Release 交付：x64 构建通过，30 条告警、0 错误；1,942 项单测通过，1 项目录链接测试因环境跳过。最终 Settings 单测及交付目录内 10 个页面场景通过；1,060 个文件的版本、依赖、资源和 SHA-256 核验通过。中间失败与未覆盖边界见 review-validation.md。
 
 ### 3.5.0
 

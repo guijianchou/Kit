@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+﻿<?xml version='1.0' encoding='utf-8'?>
 <root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:schema id="root">
     <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -3826,6 +3826,9 @@
   <data name="Winget_DiscoverTab.Content" xml:space="preserve"><value>发现软件</value></data>
   <data name="Winget_InstalledTab.Content" xml:space="preserve"><value>已安装</value></data>
   <data name="Winget_FiltersButton.Content" xml:space="preserve"><value>筛选</value></data>
+  <data name="Winget_FiltersButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>打开软件包筛选</value></data>
+  <data name="Winget_ShowFilters" xml:space="preserve"><value>展开筛选</value></data>
+  <data name="Winget_HideFilters" xml:space="preserve"><value>收起筛选</value></data>
   <data name="Winget_FiltersHeading.Text" xml:space="preserve"><value>筛选</value></data>
   <data name="Winget_LocalFilter.PlaceholderText" xml:space="preserve"><value>筛选当前列表</value></data>
   <data name="Winget_LocalFilter.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>按名称或 ID 筛选当前软件</value></data>
@@ -3879,6 +3882,11 @@
   <data name="Winget_RestoreSelected" xml:space="preserve"><value>恢复所选更新</value></data>
   <data name="Winget_QueueTitle" xml:space="preserve"><value>当前队列</value></data>
   <data name="Winget_HistoryTitle" xml:space="preserve"><value>近期历史</value></data>
+  <data name="Winget_ClearOldHistory" xml:space="preserve"><value>清除超过 7 天的历史记录</value></data>
+  <data name="Winget_HistoryClearWorking" xml:space="preserve"><value>正在清除超过 7 天的历史记录…</value></data>
+  <data name="Winget_HistoryClearResult" xml:space="preserve"><value>已清除 {0} 条超过 7 天的历史记录。</value></data>
+  <data name="Winget_HistoryClearFailed" xml:space="preserve"><value>无法清除旧历史记录，请重试。</value></data>
+  <data name="Winget_HistoryClearRefreshFailed" xml:space="preserve"><value>已清除 {0} 条旧历史记录，但列表刷新失败。重新连接后可查看更新的历史记录。</value></data>
   <data name="Winget_BundleFileType" xml:space="preserve"><value>WinGet 软件清单</value></data>
   <data name="Winget_CsvFileType" xml:space="preserve"><value>CSV 表格</value></data>
   <data name="Winget_OptionOn" xml:space="preserve"><value>开启</value></data>
@@ -4075,4 +4083,34 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AIHub_Fluent_OptPolicyScopePrimary" xml:space="preserve"><value>影响候选文件的分类方式、清理建议与保留边界。</value></data>
   <data name="AIHub_Fluent_PolicyScopeBoundary.Text" xml:space="preserve"><value>执行前仍需审核具体项目。</value></data>
   <data name="AIHub_Fluent_PolicyFooterHint.Text" xml:space="preserve"><value>更改保存后用于下一次任务，切换页签会保留草稿。</value></data>
+  <data name="UDPtest_UdpAssessmentSingleTargetStable" xml:space="preserve">
+    <value>支持 / 单目标稳定</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentNotMonitored" xml:space="preserve">
+    <value>未监测</value>
+  </data>
+  <data name="UDPtest_UdpAssessmentInternalError" xml:space="preserve">
+    <value>未知 / 内部错误</value>
+  </data>
+  <data name="LightSwitch_ShortcutsSettingsGroup.Header" xml:space="preserve">
+    <value>快捷键</value>
+  </data>
+  <data name="LightSwitch_ThemeToggle_Shortcut.Header" xml:space="preserve">
+    <value>主题切换快捷键</value>
+  </data>
+  <data name="LightSwitch_ThemeToggle_Shortcut.Description" xml:space="preserve">
+    <value>在浅色与深色模式之间切换</value>
+  </data>
+  <data name="General_SettingsBackupAndRestore_CredentialsSkipped" xml:space="preserve">
+    <value>设置已恢复。备份中的 AI 端点和凭据无法在此 Windows 账户解密，已保留本机现有端点和凭据并关闭 AI 服务。请重启 Kit 后检查 AI 配置。</value>
+  </data>
+  <data name="LightSwitch_ShortcutInput.PlaceholderText" xml:space="preserve">
+    <value>按下快捷键；按 Delete 清除</value>
+  </data>
+  <data name="AiHub_RetryConfigurationButton.Content" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="AiHub_ConfigurationLoading.AutomationProperties.Name" xml:space="preserve">
+    <value>正在加载 AI 服务设置</value>
+  </data>
 </root>

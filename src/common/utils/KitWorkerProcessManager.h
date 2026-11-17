@@ -132,6 +132,7 @@ public:
         if (result != WAIT_OBJECT_0)
         {
             Logger::warn(L"[{}] Worker shutdown could not be confirmed.", m_moduleTag);
+            return; // Keep identity and prevent a duplicate worker until termination is confirmed.
         }
 
         close_handle_locked();

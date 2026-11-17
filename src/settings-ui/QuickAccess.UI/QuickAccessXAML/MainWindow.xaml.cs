@@ -179,10 +179,8 @@ public sealed partial class MainWindow : WindowEx, IDisposable
 
     private void TrimMemory()
     {
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        SetProcessWorkingSetSize(System.Diagnostics.Process.GetCurrentProcess().Handle, -1, -1);
+        // Let the runtime manage its heap; forced full collections and working-set
+        // eviction on every hide add latency to the next flyout activation.
     }
 
     private void InitializeEventListeners()
@@ -397,6 +395,7 @@ public sealed partial class MainWindow : WindowEx, IDisposable
             RemoveGlobalMouseHook();
 
             _launcherViewModel.Dispose();
+            _allAppsViewModel.Dispose();
             _coordinator.Dispose();
         }
 

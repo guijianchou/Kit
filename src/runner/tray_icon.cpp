@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "module_hotkeys.h"
 #include "Generated files/resource.h"
 #include "settings_window.h"
 #include "tray_icon.h"
@@ -226,6 +227,12 @@ void click_timer_elapsed()
 
 LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
+    if (message == settings_activation_message())
+    {
+        if (lparam >= 0 && lparam <= static_cast<LPARAM>(ESettingsWindowNames::Winget))
+            handle_tray_command(window, ID_SETTINGS_MENU_COMMAND, lparam);
+        return 0;
+    }
     log_session_end_message(message, wparam, lparam);
 
     LRESULT session_end_result = 0;
@@ -236,6 +243,8 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
 
     switch (message)
     {
+    case WM_HOTKEY:
+        return dispatch_module_hotkey(wparam, lparam) ? 0 : DefWindowProc(window, message, wparam, lparam);
     case WM_CREATE:
         if (wm_taskbar_restart == 0)
         {
@@ -460,6 +469,7 @@ static void handle_theme_change()
     if (theme_adaptive_enabled)
     {
         tray_icon_data.hIcon = get_icon(ThemeHelpers::GetSystemTheme());
+        if (!tray_icon_data.hIcon) tray_icon_data.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
         Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
     }
 }
@@ -471,10 +481,10 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
 
     update_available = false;
 
-    HICON const icon = theme_adaptive
+    HICON icon = theme_adaptive
                            ? get_icon(ThemeHelpers::GetSystemTheme())
                            : LoadIcon(h_instance, MAKEINTRESOURCE(update_available ? APPICON_UPDATE : APPICON));
-    if (icon)
+    if (!icon) icon = LoadIcon(nullptr, IDI_APPLICATION);
     {
         UINT id_tray_icon = 1;
 
@@ -498,7 +508,7 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
                                   wc.hInstance,
                                   nullptr);
         Logger::info(L"start_tray_icon: CreateWindowW(class={}, name={}) returned hwnd={}", wc.lpszClassName, pt_tray_icon_window_class, (void*)hwnd);
-        WINRT_VERIFY(hwnd);
+        if (!hwnd) winrt::throw_last_error();
         tray_icon_hwnd = hwnd;
         memset(&tray_icon_data, 0, sizeof(tray_icon_data));
         tray_icon_data.cbSize = sizeof(tray_icon_data);
@@ -517,7 +527,7 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
         std::wstring pt_version_tooltip = pt_version_tooltip_stream.str();
         wcscpy_s(tray_icon_data.szTip, sizeof(tray_icon_data.szTip) / sizeof(WCHAR), pt_version_tooltip.c_str());
         tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-        ChangeWindowMessageFilterEx(hwnd, WM_COMMAND, MSGFLT_ALLOW, nullptr);
+        ChangeWindowMessageFilterEx(hwnd, settings_activation_message(), MSGFLT_ALLOW, nullptr);
 
         if (s_tray_icon_visible)
         {
@@ -561,6 +571,7 @@ void set_tray_icon_update_available(bool available)
     if (theme_adaptive_enabled)
     {
         tray_icon_data.hIcon = get_icon(ThemeHelpers::GetSystemTheme());
+        if (!tray_icon_data.hIcon) tray_icon_data.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
     }
     else
     {

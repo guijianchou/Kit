@@ -23,7 +23,7 @@ internal sealed class CliPipeClient
     private readonly TimeSpan _connectTimeout;
 
     internal CliPipeClient()
-        : this(CliProtocol.PipeName, pipe => ManagedCommon.PipeServerIdentity.IsTrustedServer(pipe, Path.Combine(AppContext.BaseDirectory, "LightSwitchService", "Kit.LightSwitchService.exe")), ConnectTimeout)
+        : this(CliProtocol.PipeName, PipeServerIdentity.IsTrustedServer, ConnectTimeout)
     {
     }
 

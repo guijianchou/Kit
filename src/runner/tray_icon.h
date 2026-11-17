@@ -2,6 +2,12 @@
 #include <optional>
 #include <string>
 
+inline UINT settings_activation_message()
+{
+    static const UINT message = RegisterWindowMessageW(L"Kit.ActivateSettings.1");
+    return message;
+}
+
 // Start the Tray Icon
 void start_tray_icon(bool isProcessElevated, bool theme_adaptive);
 // Change the Tray Icon visibility

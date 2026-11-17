@@ -126,6 +126,26 @@ public class AiServiceBackupTests
     }
 
     [TestMethod]
+    public void OrdinaryFileFailureDoesNotCommitTheAiHubSnapshot()
+    {
+        using var fixture = new BackupFixture();
+        var store = new AiHubSettingsStore(Path.Combine(fixture.Source, "AiHub"));
+        var config = AiHubConfig.CreateDefault();
+        config.Targets[0].Model = "backup-model";
+        store.Save(config);
+        var utility = SettingsBackupAndRestoreUtils.Instance;
+        Assert.IsTrue(utility.BackupSettings(fixture.Source, fixture.Backups, false).Success);
+        store.Update(current => current.Targets[0].Model = "current-model");
+        string ordinary = Path.Combine(fixture.Source, "settings.json");
+        File.WriteAllText(ordinary, "{\"fixture\":\"changed-current-value\"}");
+        using var locked = new FileStream(ordinary, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        Assert.AreEqual("Error", utility.RestoreSettings(fixture.Source, fixture.Backups).Severity);
+        Assert.AreEqual("current-model", store.Load().Targets[0].Model);
+        StringAssert.Contains(File.ReadAllText(ordinary), "changed-current-value");
+    }
+
+    [TestMethod]
     public void LegacyPlaintextBackupReplacesNewerProfilesAndIsImmediatelyEncrypted()
     {
         using var fixture = new BackupFixture();

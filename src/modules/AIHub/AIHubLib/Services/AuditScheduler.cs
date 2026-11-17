@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -20,7 +20,7 @@ using Kit.AIHubLib.Models;
 /// stay in one place and this type only owns the loop. It has no UI dependency, which
 /// is what lets a headless worker keep auditing after Settings closes.
 /// </remarks>
-public sealed class AuditScheduler : IDisposable
+public sealed partial class AuditScheduler : IDisposable, IAsyncDisposable
 {
     private readonly AuditPipeline _pipeline;
     private readonly TimeSpan _pollInterval;
@@ -28,10 +28,13 @@ public sealed class AuditScheduler : IDisposable
     private readonly int _fullRangeDays;
     private readonly Func<bool> _isEnabled;
     private readonly object _gate = new();
+    private readonly SemaphoreSlim _auditGate = new(1, 1);
+    private int _intervalHours;
 
     private EventLogService.AuditMode _mode;
     private CancellationTokenSource? _runCts;
     private Task? _loop;
+    private Task? _disposeTask;
     private DateTime? _lastCompletedUtc;
     private DateTime? _lastScanEndUtc;
     private bool _disposed;
@@ -47,7 +50,7 @@ public sealed class AuditScheduler : IDisposable
         DateTime? lastScanEndUtc = null)
     {
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
-        IntervalHours = AuditSchedule.NormalizeIntervalHours(intervalHours);
+        _intervalHours = AuditSchedule.NormalizeIntervalHours(intervalHours);
         _isEnabled = isEnabled ?? (() => true);
         _pollInterval = pollInterval ?? TimeSpan.FromMinutes(1);
         _fullRange = fullRange ?? TimeSpan.FromDays(1);
@@ -58,7 +61,7 @@ public sealed class AuditScheduler : IDisposable
     }
 
     /// <summary>Configured cadence in hours (0 disables scheduling).</summary>
-    public int IntervalHours { get; private set; }
+    public int IntervalHours { get { lock (_gate) { return _intervalHours; } } }
 
     /// <summary>When the last audit completed, or null when none has run.</summary>
     public DateTime? LastCompletedUtc
@@ -72,21 +75,27 @@ public sealed class AuditScheduler : IDisposable
         get { lock (_gate) { return _lastScanEndUtc; } }
     }
 
-    public bool IsRunning => _loop is { IsCompleted: false };
+    public bool IsRunning { get { lock (_gate) { return _loop is { IsCompleted: false }; } } }
 
     /// <summary>Audit mode applied to subsequent runs.</summary>
-    public EventLogService.AuditMode Mode => _mode;
+    public EventLogService.AuditMode Mode { get { lock (_gate) { return _mode; } } }
 
     /// <summary>Applies a new cadence; 0 stops scheduling at the next tick.</summary>
     public void UpdateInterval(int intervalHours)
     {
-        IntervalHours = AuditSchedule.NormalizeIntervalHours(intervalHours);
+        lock (_gate)
+        {
+            _intervalHours = AuditSchedule.NormalizeIntervalHours(intervalHours);
+        }
     }
 
     /// <summary>Applies a new audit mode for subsequent runs.</summary>
     public void UpdateMode(EventLogService.AuditMode mode)
     {
-        _mode = mode;
+        lock (_gate)
+        {
+            _mode = mode;
+        }
     }
 
     /// <summary>True when a run is due right now.</summary>
@@ -101,27 +110,36 @@ public sealed class AuditScheduler : IDisposable
     /// <summary>Runs one audit immediately, regardless of the cadence.</summary>
     public async Task<AuditResult?> RunOnceAsync(CancellationToken cancellationToken = default)
     {
-        if (!_isEnabled())
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!_isEnabled() || !await _auditGate.WaitAsync(0, cancellationToken).ConfigureAwait(false))
         {
             return null;
         }
 
-        DateTime nowUtc = DateTime.UtcNow;
-        // Scheduled runs may continue from the previous scan; manual scans never do.
-        (DateTime fromUtc, DateTime toUtc) = AuditSchedule.ComputeWindow(
-            ScanIntent.Scheduled, LastScanEndUtc, nowUtc, _fullRangeDays);
-
-        AuditResult result = await _pipeline
-            .RunAsync(fromUtc, toUtc, _mode, persist: true, cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
-
-        lock (_gate)
+        try
         {
-            _lastCompletedUtc = DateTime.UtcNow;
-            _lastScanEndUtc = result.ScanEnd;
-        }
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            DateTime nowUtc = DateTime.UtcNow;
+            // Scheduled runs may continue from the previous scan; manual scans never do.
+            (DateTime fromUtc, DateTime toUtc) = AuditSchedule.ComputeWindow(
+                ScanIntent.Scheduled, LastScanEndUtc, nowUtc, _fullRangeDays);
 
-        return result;
+            AuditResult result = await _pipeline
+                .RunAsync(fromUtc, toUtc, Mode, persist: true, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            lock (_gate)
+            {
+                _lastCompletedUtc = DateTime.UtcNow;
+                _lastScanEndUtc = result.ScanEnd;
+            }
+
+            return result;
+        }
+        finally
+        {
+            _auditGate.Release();
+        }
     }
 
     /// <summary>Starts the background loop. Calling it twice is a no-op.</summary>
@@ -131,6 +149,7 @@ public sealed class AuditScheduler : IDisposable
 
         lock (_gate)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
             // Guard under the lock: checking IsRunning first would let two concurrent
             // callers both observe a null/complete loop and start a second one.
             if (_loop is { IsCompleted: false })
@@ -153,8 +172,7 @@ public sealed class AuditScheduler : IDisposable
         {
             loop = _loop;
             cts = _runCts;
-            _loop = null;
-            _runCts = null;
+            cts?.Cancel();
         }
 
         if (cts is null)
@@ -164,7 +182,6 @@ public sealed class AuditScheduler : IDisposable
 
         try
         {
-            cts.Cancel();
             if (loop is not null)
             {
                 await loop.ConfigureAwait(false);
@@ -176,7 +193,16 @@ public sealed class AuditScheduler : IDisposable
         }
         finally
         {
-            cts.Dispose();
+            lock (_gate)
+            {
+                if (ReferenceEquals(_runCts, cts))
+                {
+                    _runCts = null;
+                    _loop = null;
+                }
+
+                cts.Dispose();
+            }
         }
     }
 
@@ -214,14 +240,28 @@ public sealed class AuditScheduler : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
 
-        _disposed = true;
-        _runCts?.Cancel();
-        _runCts?.Dispose();
-        _runCts = null;
+    public ValueTask DisposeAsync()
+    {
+        lock (_gate)
+        {
+            if (_disposeTask is null)
+            {
+                _disposed = true;
+                _disposeTask = DisposeCoreAsync();
+            }
+
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        await StopAsync().ConfigureAwait(false);
+        // Also wait for a manual run; do not dispose the gate while a waiter can still enter it.
+        await _auditGate.WaitAsync().ConfigureAwait(false);
+        _auditGate.Dispose();
     }
 }

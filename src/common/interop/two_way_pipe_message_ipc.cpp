@@ -2,6 +2,7 @@
 #include "two_way_pipe_message_ipc_impl.h"
 
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <system_error>
 #include <wil/resource.h>
@@ -311,13 +312,23 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::start_threads(HANDLE token)
     inject_thread_start_failure();
     output_queue_thread = std::thread(&TwoWayPipeMessageIPCImpl::consume_output_queue_thread, this);
     inject_thread_start_failure();
+    auto consumer_ready = input_consumer_ready.get_future();
     input_queue_thread = std::thread(&TwoWayPipeMessageIPCImpl::consume_input_queue_thread, this);
+    consumer_ready.get();
     inject_thread_start_failure();
+    auto ready = listener_ready.get_future();
     input_pipe_thread = std::thread(&TwoWayPipeMessageIPCImpl::start_named_pipe_server, this, token);
+    ready.get(); // Report pipe binding failure synchronously to the launcher.
 }
 
 void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::stop_started_threads()
 {
+    {
+        // Synchronize notification with the listener's capacity wait so end()
+        // cannot strand it after the closed flag changes.
+        std::scoped_lock lock(connection_handlers_mutex);
+        connection_handlers_changed.notify_all();
+    }
     input_queue.interrupt();
     if (input_queue_thread.joinable())
     {
@@ -364,6 +375,7 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
     const wchar_t* message_send = message.c_str();
     const wchar_t* lpszPipename = output_pipe_name.c_str();
     OwnedPipeHandle output_pipe;
+    const ULONGLONG missing_server_deadline = GetTickCount64() + 5'000;
 
     // Try to open a named pipe; wait for it, if necessary.
 
@@ -383,9 +395,8 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
         if (output_pipe.valid())
             break;
 
-        // Exit if an error other than ERROR_PIPE_BUSY occurs.
-        DWORD curr_error = 0;
-        if ((curr_error = GetLastError()) != ERROR_PIPE_BUSY)
+        const DWORD curr_error = GetLastError();
+        if (curr_error != ERROR_PIPE_BUSY && curr_error != ERROR_FILE_NOT_FOUND)
         {
             return;
         }
@@ -398,9 +409,18 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
             SetEvent(event);
         }
 #endif
-        if (!WaitNamedPipe(lpszPipename, PipeWaitIntervalMs) && GetLastError() != ERROR_SEM_TIMEOUT)
+        if (curr_error == ERROR_FILE_NOT_FOUND)
         {
-            return;
+            // Keep the message at the head of the output queue while its child
+            // creates the listener. Missing pipes otherwise fail immediately.
+            if (GetTickCount64() >= missing_server_deadline) return;
+            Sleep(PipeWaitIntervalMs);
+        }
+        else if (!WaitNamedPipe(lpszPipename, PipeWaitIntervalMs))
+        {
+            const DWORD wait_error = GetLastError();
+            if (wait_error != ERROR_SEM_TIMEOUT && wait_error != ERROR_FILE_NOT_FOUND)
+                return;
         }
     }
     if (closed.load() || !output_pipe.valid())
@@ -468,7 +488,41 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::send_pipe_message(std::wstr
             SetEvent(pending_event);
         }
 #endif
-        GetOverlappedResult(output_pipe_handle, &write_overlapped, &bytes_written, TRUE);
+        write_succeeded = GetOverlappedResult(output_pipe_handle, &write_overlapped, &bytes_written, TRUE);
+    }
+
+    if (write_succeeded && bytes_written == bytes_to_write)
+    {
+        // Keep this connection alive until the server finishes reading and
+        // disconnects it. Closing immediately after a buffered short write can
+        // make ConnectNamedPipe report ERROR_NO_DATA before the server accepts.
+        // No new wire acknowledgement is required: the existing server closes
+        // each connection in finish_connection_handler(), before handler reaping.
+        ResetEvent(write_complete_event.get());
+        OVERLAPPED disconnect_overlapped{};
+        disconnect_overlapped.hEvent = write_complete_event.get();
+        BYTE unexpected_reply = 0;
+        DWORD bytes_read = 0;
+        BOOL read_completed = FALSE;
+        DWORD read_error = ERROR_OPERATION_ABORTED;
+        {
+            std::scoped_lock lock(output_pipe_mutex);
+            if (!closed.load())
+            {
+                read_completed = ReadFile(output_pipe_handle, &unexpected_reply, sizeof(unexpected_reply),
+                                          &bytes_read, &disconnect_overlapped);
+                read_error = read_completed ? ERROR_SUCCESS : GetLastError();
+            }
+        }
+        if (!read_completed && read_error == ERROR_IO_PENDING)
+        {
+            // The normal server disconnects immediately after the read. Allow
+            // its five-second stalled-client deadline plus admission delay;
+            // shutdown cancels this same handle through active_output_pipe_handle.
+            if (WaitForSingleObject(write_complete_event.get(), 10'000) != WAIT_OBJECT_0)
+                CancelIoEx(output_pipe_handle, &disconnect_overlapped);
+            GetOverlappedResult(output_pipe_handle, &disconnect_overlapped, &bytes_read, TRUE);
+        }
     }
 
     clear_active_output_pipe();
@@ -745,69 +799,92 @@ HANDLE TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::create_medium_integrity_t
 
 void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::handle_pipe_connection(const std::shared_ptr<ConnectionHandler>& handler)
 {
-    const HANDLE input_pipe_handle = handler->pipe_handle.get();
-    if (input_pipe_handle == INVALID_HANDLE_VALUE)
+    std::wstring received_message;
+    try
     {
-        finish_connection_handler(handler);
-        return;
-    }
-
-    bool accepted = !closed.load();
-
-    // Authenticate the connecting client before reading/queuing anything. Fail-closed: an unauthenticated
-    // caller gets no dispatch. When the policy is disabled (managed server / tests) this is a no-op.
-    if (accepted && caller_policy.enabled)
-    {
-        const interop_auth::AuthResult auth = interop_auth::AuthenticateClient(input_pipe_handle, caller_policy, caller_cache);
-        if (!auth.accepted)
+        const HANDLE input_pipe_handle = handler->pipe_handle.get();
+        if (input_pipe_handle == INVALID_HANDLE_VALUE)
         {
-            accepted = false;
+            finish_connection_handler(handler);
+            return;
+        }
+
+        bool accepted = !closed.load();
+
+        // Authenticate the connecting client before reading/queuing anything. Fail-closed: an unauthenticated
+        // caller gets no dispatch. When the policy is disabled (managed server / tests) this is a no-op.
+        if (accepted && caller_policy.enabled)
+        {
+            const interop_auth::AuthResult auth = interop_auth::AuthenticateClient(input_pipe_handle, caller_policy, caller_cache);
+            if (!auth.accepted)
+            {
+                accepted = false;
+            }
+        }
+
+        if (accepted && !closed.load())
+        {
+            constexpr size_t maxMessageChars = 1024 * 1024;
+            // Clients may include a terminating NUL; it is not payload.
+            constexpr size_t maxWireChars = maxMessageChars + 1;
+            std::array<wchar_t, BUFSIZE / sizeof(wchar_t)> read_buffer{};
+            std::wstring message;
+            message.reserve(BUFSIZE);
+            bool message_read = false;
+            const auto deadline = GetTickCount64() + 5000;
+            do
+            {
+                if (message.size() >= maxWireChars || closed.load()) break;
+                DWORD available = 0;
+                bool readable = false;
+                while (!closed.load() && GetTickCount64() < deadline)
+                {
+                    if (!PeekNamedPipe(input_pipe_handle, nullptr, 0, nullptr, &available, nullptr)) break;
+                    if (available != 0) { readable = true; break; }
+                    Sleep(10);
+                }
+                if (!readable) break;
+                const DWORD readBlockBytes = static_cast<DWORD>((std::min)(read_buffer.size(), maxWireChars - message.size()) * sizeof(wchar_t));
+                DWORD bytesRead = 0;
+                message_read = ReadFile(
+                    input_pipe_handle,
+                    read_buffer.data(),
+                    readBlockBytes,
+                    &bytesRead,
+                    nullptr);
+
+                if (!message_read && GetLastError() != ERROR_MORE_DATA)
+                {
+                    break;
+                }
+                if (bytesRead % sizeof(wchar_t) != 0)
+                {
+                    message_read = false;
+                    break;
+                }
+                message.append(read_buffer.data(), bytesRead / sizeof(wchar_t));
+            } while (!message_read);
+
+            if (message_read && !closed.load())
+            {
+                if (!message.empty() && message.back() == L'\0')
+                {
+                    message.pop_back();
+                }
+                if (!message.empty() && message.size() <= maxMessageChars)
+                {
+                    received_message = std::move(message);
+                }
+            }
         }
     }
-
-    if (accepted && !closed.load())
+    catch (...)
     {
-        constexpr DWORD readBlockBytes = BUFSIZE;
-        std::wstring message;
-        size_t iBlock = 0;
-        message.reserve(BUFSIZE);
-        bool message_read = false;
-        do
-        {
-            constexpr size_t charsPerBlock = readBlockBytes / sizeof(message[0]);
-            message.resize(message.size() + charsPerBlock);
-            DWORD bytesRead = 0;
-            message_read = ReadFile(
-                input_pipe_handle,
-                // Read the message directly into the string block by block while resizing it.
-                message.data() + iBlock * charsPerBlock,
-                readBlockBytes,
-                &bytesRead,
-                nullptr);
-
-            if (!message_read && GetLastError() != ERROR_MORE_DATA)
-            {
-                break;
-            }
-            iBlock++;
-        } while (!message_read);
-
-        if (message_read && !closed.load())
-        {
-            // Trim the message's buffer.
-            const auto nullCharPos = message.find_last_not_of(L'\0');
-            if (nullCharPos != std::wstring::npos)
-            {
-                message.resize(nullCharPos + 1);
-            }
-
-            input_queue.queue_message(std::move(message));
-
-            // Flush the pipe to allow the client to read the pipe's contents before disconnecting.
-            FlushFileBuffers(input_pipe_handle);
-        }
+        // A failed authentication/read/allocation still completes its ordering
+        // slot, so later valid connections can make progress.
+        received_message.clear();
     }
-    finish_connection_handler(handler);
+    finish_connection_handler(handler, std::move(received_message));
 #ifdef TWO_WAY_PIPE_MESSAGE_IPC_TESTS
     if (const HANDLE completed_event = handler_completed_event.load())
     {
@@ -820,23 +897,33 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::handle_pipe_connection(cons
 #endif
 }
 
-void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::finish_connection_handler(const std::shared_ptr<ConnectionHandler>& handler)
+void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::finish_connection_handler(const std::shared_ptr<ConnectionHandler>& handler, std::wstring message)
 {
-    HANDLE pipe_handle = INVALID_HANDLE_VALUE;
     {
         std::scoped_lock lock(connection_handlers_mutex);
-        pipe_handle = handler->pipe_handle.get();
+        const HANDLE pipe_handle = handler->pipe_handle.get();
         if (pipe_handle != INVALID_HANDLE_VALUE)
         {
             DisconnectNamedPipe(pipe_handle);
         }
         handler->pipe_handle.reset();
-    }
-
-    {
-        std::scoped_lock lock(connection_handlers_mutex);
+        handler->message = std::move(message);
         handler->completed = true;
+        // The vector is in accept order. Retain later results in their bounded
+        // handler slots until every earlier connection completed or was rejected.
+        for (const auto& ready_handler : connection_handlers)
+        {
+            if (!ready_handler->completed) break;
+            if (!ready_handler->published)
+            {
+                if (!closed.load() && !ready_handler->message.empty())
+                    input_queue.queue_message(std::move(ready_handler->message));
+                ready_handler->message.clear();
+                ready_handler->published = true;
+            }
+        }
     }
+    connection_handlers_changed.notify_one();
 }
 
 bool TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::start_connection_handler(OwnedPipeHandle&& pipe_handle)
@@ -870,7 +957,7 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::reap_finished_connection_ha
         std::scoped_lock lock(connection_handlers_mutex);
         for (auto it = connection_handlers.begin(); it != connection_handlers.end();)
         {
-            if ((*it)->completed)
+            if ((*it)->completed && (*it)->published)
             {
                 completed_handlers.emplace_back(*it);
                 it = connection_handlers.erase(it);
@@ -968,11 +1055,28 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::start_named_pipe_server(HAN
     OwnedPipeHandle listener{ create_listener(true) };
     if (!listener.valid())
     {
+        listener_ready.set_exception(std::make_exception_ptr(std::runtime_error("Could not bind IPC listener")));
         return;
     }
+    listener_ready.set_value();
 
     while (!closed.load())
     {
+        // Apply backpressure before accepting: a full server keeps its secured
+        // listener alive and lets clients wait, instead of accepting then dropping.
+        reap_finished_connection_handlers();
+        for (;;)
+        {
+            {
+                std::unique_lock lock(connection_handlers_mutex);
+                if (closed.load() || connection_handlers.size() < 16) break;
+                connection_handlers_changed.wait(lock, [this] {
+                    return closed.load() || std::any_of(connection_handlers.begin(), connection_handlers.end(),
+                                                        [](const auto& handler) { return handler->published; });
+                });
+            }
+            reap_finished_connection_handlers();
+        }
         {
             std::unique_lock lock(pipe_connect_handle_mutex);
             if (closed.load())
@@ -1027,9 +1131,11 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::start_named_pipe_server(HAN
             break;
         }
 
+        // Completed handlers must not consume the admission limit when the next
+        // client arrives after all previously accepted connections timed out.
+        reap_finished_connection_handlers();
         start_connection_handler(std::move(listener));
         listener = std::move(replacement);
-        reap_finished_connection_handlers();
     }
 
     if (listener.valid())
@@ -1041,6 +1147,20 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::start_named_pipe_server(HAN
 
 void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::consume_input_queue_thread()
 {
+    // Native callbacks parse WinRT JSON on this dedicated thread. Initialize its
+    // apartment before advertising a usable transport, and report failures to start().
+    try
+    {
+        winrt::init_apartment(winrt::apartment_type::multi_threaded);
+    }
+    catch (...)
+    {
+        input_consumer_ready.set_exception(std::current_exception());
+        return;
+    }
+    auto apartment_cleanup = wil::scope_exit([] { winrt::uninit_apartment(); });
+    input_consumer_ready.set_value();
+
     while (!closed.load())
     {
         outgoing_message = L"";
@@ -1054,7 +1174,8 @@ void TwoWayPipeMessageIPC::TwoWayPipeMessageIPCImpl::consume_input_queue_thread(
         // otherwise just store the response message in a variable.
         if (dispatch_inc_message_function != nullptr)
         {
-            dispatch_inc_message_function(message);
+            try { dispatch_inc_message_function(message); }
+            catch (...) { /* Invalid input must not terminate the transport thread. */ }
         }
         outgoing_message = message;
     }

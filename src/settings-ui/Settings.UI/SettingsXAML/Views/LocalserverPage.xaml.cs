@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -133,9 +133,16 @@ namespace Kit.Settings.UI.Views
 
         private async void OpenServiceUrl_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is FrameworkElement fe && fe.DataContext is LineRowViewModel row && row.OpenUrl != null)
+            try
             {
-                await global::Windows.System.Launcher.LaunchUriAsync(row.OpenUrl);
+                if (sender is FrameworkElement fe && fe.DataContext is LineRowViewModel row && row.OpenUrl != null)
+                {
+                    await global::Windows.System.Launcher.LaunchUriAsync(row.OpenUrl);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                ManagedCommon.Logger.LogError("Settings action OpenServiceUrl_Click failed.", ex);
             }
         }
 
@@ -256,16 +263,23 @@ namespace Kit.Settings.UI.Views
 
         private async void ForceKillLine_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is FrameworkElement fe && fe.DataContext is LineRowViewModel row && row.CanForceKill)
+            try
             {
-                string message = LocalserverViewModel.FormatMessage(
-                    "Localserver_ForceKillConfirmMessage",
-                    "Force stop {0}? Unsaved data may be lost.",
-                    row.Name);
-                if (await ConfirmTerminationAsync("Localserver_ForceKillTitle".GetLocalized(), message))
+                if (sender is FrameworkElement fe && fe.DataContext is LineRowViewModel row && row.CanForceKill)
                 {
-                    await ViewModel.ForceKillLineAsync(row);
+                    string message = LocalserverViewModel.FormatMessage(
+                        "Localserver_ForceKillConfirmMessage",
+                        "Force stop {0}? Unsaved data may be lost.",
+                        row.Name);
+                    if (await ConfirmTerminationAsync("Localserver_ForceKillTitle".GetLocalized(), message))
+                    {
+                        await ViewModel.ForceKillLineAsync(row);
+                    }
                 }
+            }
+            catch (System.Exception ex)
+            {
+                ManagedCommon.Logger.LogError("Settings action ForceKillLine_Click failed.", ex);
             }
         }
 
@@ -326,19 +340,26 @@ namespace Kit.Settings.UI.Views
 
         private async void ReleasePort_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is FrameworkElement fe && fe.DataContext is EnvironmentCheckChipModel chip && chip.CanReleasePort)
+            try
             {
-                var fix = chip.Fix!;
-                string message = LocalserverViewModel.FormatMessage(
-                    "Localserver_ReleasePortConfirmMessage",
-                    "Release port {0} by terminating {1} (PID {2})? Unsaved data may be lost.",
-                    fix.Port,
-                    fix.ProcessName,
-                    fix.ProcessId);
-                if (await ConfirmTerminationAsync("Localserver_ReleasePortTitle".GetLocalized(), message))
+                if (sender is FrameworkElement fe && fe.DataContext is EnvironmentCheckChipModel chip && chip.CanReleasePort)
                 {
-                    await ViewModel.ReleasePortAsync(fix);
+                    var fix = chip.Fix!;
+                    string message = LocalserverViewModel.FormatMessage(
+                        "Localserver_ReleasePortConfirmMessage",
+                        "Release port {0} by terminating {1} (PID {2})? Unsaved data may be lost.",
+                        fix.Port,
+                        fix.ProcessName,
+                        fix.ProcessId);
+                    if (await ConfirmTerminationAsync("Localserver_ReleasePortTitle".GetLocalized(), message))
+                    {
+                        await ViewModel.ReleasePortAsync(fix);
+                    }
                 }
+            }
+            catch (System.Exception ex)
+            {
+                ManagedCommon.Logger.LogError("Settings action ReleasePort_Click failed.", ex);
             }
         }
 

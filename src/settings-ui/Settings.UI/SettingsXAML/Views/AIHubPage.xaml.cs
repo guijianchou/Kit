@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -31,6 +31,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     private int _scrollRestoreVersion;
     private bool _disposed;
     private bool _currentPage;
+    private bool _updatingTabSelection;
     private ContentDialog _activeDialog;
 
     public AIHubPageViewModel ViewModel { get; }
@@ -60,10 +61,6 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         _settingsWindow.Closed += OnWindowClosed;
         Loaded += OnLoaded;
     }
-
-    public Visibility IsAuditTab(int index) => index == 0 ? Visibility.Visible : Visibility.Collapsed;
-
-    public Visibility IsOptTab(int index) => index == 1 ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility TaskRunningVisibility(bool scanning, bool analyzing) => scanning || analyzing ? Visibility.Visible : Visibility.Collapsed;
 
@@ -104,7 +101,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     {
         UpdateHeaderLayout();
         ViewModel.RefreshEnabledState();
-        UpdateTaskPolicyPanel();
+        UpdateActiveTabContent();
         RestoreTabScroll();
     }
 
@@ -136,17 +133,47 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
         _tabOffsets[_visibleTab] = AiHubContentScroll.VerticalOffset;
         _visibleTab = Math.Clamp(ViewModel.ActiveTabIndex, 0, 2);
-        UpdateTaskPolicyPanel();
+        UpdateActiveTabContent();
         RestoreTabScroll();
     }
 
-    private void UpdateTaskPolicyPanel()
+    private void OnAiHubSectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ViewModel.ActiveTabIndex == 2)
+        // Segmented can have no selected container while its template is being built.
+        // Loaded publishes the persisted model choice after that initialization.
+        if (_disposed || _updatingTabSelection || !IsLoaded)
         {
-            // Materialize the deferred editor before making it visible. Keep these two
-            // steps together instead of relying on a function binding's cached value
-            // while ActiveTabIndex notifications are still being dispatched.
+            return;
+        }
+
+        int selectedTab = AiHubSections.SelectedIndex;
+        if (selectedTab is >= 0 and <= 2)
+        {
+            ViewModel.ActiveTabIndex = selectedTab;
+        }
+
+        UpdateActiveTabContent();
+    }
+
+    private void UpdateActiveTabContent()
+    {
+        int activeTab = ViewModel.ActiveTabIndex;
+        _updatingTabSelection = true;
+        try
+        {
+            AiHubSections.SelectedIndex = activeTab;
+            AuditPanel.Visibility = activeTab == 0 ? Visibility.Visible : Visibility.Collapsed;
+            OptimizationPanel.Visibility = activeTab == 1 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        finally
+        {
+            _updatingTabSelection = false;
+        }
+
+        if (activeTab == 2)
+        {
+            // Materialize the deferred editor before making it visible, using the
+            // same model choice that controls the selector and the other panels.
             var panel = (FrameworkElement)FindName(nameof(TaskPolicyPanel));
             panel.Visibility = Visibility.Visible;
             ViewModel.AiHub.EnsurePoliciesLoaded();
@@ -342,7 +369,14 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     /// </summary>
     private async void OnRecheckAiReadinessClick(object sender, RoutedEventArgs e)
     {
-        await ViewModel.RefreshAiReadinessAsync();
+        try
+        {
+            await ViewModel.RefreshAiReadinessAsync();
+        }
+        catch (System.Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Settings action OnRecheckAiReadinessClick failed.", ex);
+        }
     }
 
     private void OnRequestJumpToAiReport(object sender, EventArgs e) => JumpToAiReport();

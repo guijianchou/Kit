@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -261,6 +261,14 @@ namespace Kit.Settings.UI.Library
         /// </returns>
         public (bool Success, string Message, string Severity) RestoreSettings(string appBasePath, string settingsBackupAndRestoreDir)
         {
+            lock (backupSettingsInternalLock)
+            {
+                return RestoreSettingsCore(appBasePath, settingsBackupAndRestoreDir);
+            }
+        }
+
+        private (bool Success, string Message, string Severity) RestoreSettingsCore(string appBasePath, string settingsBackupAndRestoreDir)
+        {
             try
             {
                 // verify inputs
@@ -290,8 +298,9 @@ namespace Kit.Settings.UI.Library
                 var backupRestoreSettings = JsonNode.Parse(GetBackupRestoreSettingsJson());
 
                 // Validate the complete DPAPI snapshot before any ordinary setting is changed.
+                bool credentialsSkipped = false;
                 var aiHubBackup = IncludesAiHubService(backupRestoreSettings, latestSettingsFolder)
-                    ? AiHubSettingsStore.ReadBackup(Path.Combine(latestSettingsFolder, "AiHub"))
+                    ? AiHubSettingsStore.ReadBackup(Path.Combine(latestSettingsFolder, "AiHub"), skipUnreadableCredentials: true, out credentialsSkipped)
                     : null;
                 var currentSettingsFiles = GetSettingsFiles(backupRestoreSettings, appBasePath).ToList().ToDictionary(x => x.Substring(appBasePath.Length));
                 var backupSettingsFiles = GetSettingsFiles(backupRestoreSettings, latestSettingsFolder).ToList().ToDictionary(x => x.Substring(latestSettingsFolder.Length));
@@ -301,78 +310,87 @@ namespace Kit.Settings.UI.Library
                     return (false, $"General_SettingsBackupAndRestore_NoBackupsFound", "Warning");
                 }
 
-                var anyFilesUpdated = false;
-                if (aiHubBackup != null)
+                var pendingWrites = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var backupFile in backupSettingsFiles)
                 {
-                    var aiHubStore = new AiHubSettingsStore(Path.Combine(appBasePath, "AiHub"));
-                    AiHubSettingsBackup currentAiHub = null;
-                    try
+                    string settingsToRestoreJson = GetExportVersion(backupRestoreSettings, backupFile.Key, backupFile.Value);
+                    string destination = Path.Combine(appBasePath, backupFile.Key.Substring(1));
+                    if (currentSettingsFiles.TryGetValue(backupFile.Key, out string currentPath))
                     {
-                        currentAiHub = aiHubStore.ExportBackup();
-                    }
-                    catch (Exception exception) when (exception is IOException or InvalidDataException)
-                    {
-                        // A validated encrypted backup can repair a broken current snapshot.
-                    }
-
-                    if (!AiHubSettingsStore.BackupContentEquals(currentAiHub, aiHubBackup))
-                    {
-                        aiHubStore.ImportBackup(aiHubBackup);
-                        anyFilesUpdated = true;
-                    }
-                }
-
-                foreach (var currentFile in backupSettingsFiles)
-                {
-                    var relativePath = currentFile.Value.Substring(latestSettingsFolder.Length + 1);
-                    var restoreFullPath = Path.Combine(appBasePath, relativePath);
-                    var settingsToRestoreJson = GetExportVersion(backupRestoreSettings, currentFile.Key, currentFile.Value);
-
-                    if (currentSettingsFiles.TryGetValue(currentFile.Key, out string value))
-                    {
-                        // we have a setting file to restore to
-                        var currentSettingsFileJson = GetExportVersion(backupRestoreSettings, currentFile.Key, value);
-
-                        if (JsonNormalizer.Normalize(settingsToRestoreJson) != JsonNormalizer.Normalize(currentSettingsFileJson))
+                        string currentJson = GetExportVersion(backupRestoreSettings, backupFile.Key, currentPath);
+                        if (JsonNormalizer.Normalize(settingsToRestoreJson) == JsonNormalizer.Normalize(currentJson))
                         {
-                            // the settings file needs to be updated, update the real one with non-excluded stuff...
-                            Logger.LogInfo($"Settings file {currentFile.Key} is different and is getting updated from backup");
+                            continue;
+                        }
 
-                            // we needed a new "CustomRestoreSettings" for now, to overwrite because some settings don't merge well (like KBM shortcuts)
-                            var overwrite = false;
-                            if (backupRestoreSettings["CustomRestoreSettings"] != null && backupRestoreSettings["CustomRestoreSettings"][currentFile.Key] != null)
-                            {
-                                var customRestoreSettings = backupRestoreSettings["CustomRestoreSettings"][currentFile.Key];
-                                overwrite = customRestoreSettings["overwrite"] != null && (bool)customRestoreSettings["overwrite"];
-                            }
-
-                            if (overwrite)
-                            {
-                                File.WriteAllText(currentSettingsFiles[currentFile.Key], settingsToRestoreJson);
-                            }
-                            else
-                            {
-                                var newCurrentSettingsFile = JsonMergeHelper.Merge(File.ReadAllText(currentSettingsFiles[currentFile.Key]), settingsToRestoreJson);
-                                File.WriteAllText(currentSettingsFiles[currentFile.Key], newCurrentSettingsFile);
-                            }
-
-                            anyFilesUpdated = true;
+                        var custom = backupRestoreSettings["CustomRestoreSettings"]?[backupFile.Key];
+                        bool overwrite = custom?["overwrite"] is JsonNode overwriteNode && (bool)overwriteNode;
+                        destination = currentPath;
+                        if (!overwrite)
+                        {
+                            settingsToRestoreJson = JsonMergeHelper.Merge(File.ReadAllText(currentPath), settingsToRestoreJson);
                         }
                     }
-                    else
-                    {
-                        // we don't have anything to merge this into, we need to use it as is
-                        Logger.LogInfo($"Settings file {currentFile.Key} is in the backup but does not exist for restore");
 
-                        var thisPathToRestore = Path.Combine(appBasePath, currentFile.Key.Substring(1));
-                        TryCreateDirectory(Path.GetDirectoryName(thisPathToRestore));
-                        File.WriteAllText(thisPathToRestore, settingsToRestoreJson);
-                        anyFilesUpdated = true;
+                    // Validate every JSON payload before changing any live file.
+                    using var validated = JsonDocument.Parse(settingsToRestoreJson);
+                    pendingWrites[destination] = settingsToRestoreJson;
+                }
+
+                AiHubSettingsStore aiHubStore = aiHubBackup is null ? null : new AiHubSettingsStore(Path.Combine(appBasePath, "AiHub"));
+                AiHubSettingsBackup currentAiHub = null;
+                try
+                {
+                    currentAiHub = aiHubStore?.ExportBackup();
+                }
+                catch (Exception exception) when (exception is IOException or InvalidDataException)
+                {
+                    // A validated backup can repair an unreadable current service snapshot.
+                }
+
+                bool aiHubChanged = aiHubBackup != null && (credentialsSkipped || !AiHubSettingsStore.BackupContentEquals(currentAiHub, aiHubBackup));
+                var originals = pendingWrites.Keys.ToDictionary(path => path, path => File.Exists(path) ? File.ReadAllBytes(path) : null, StringComparer.OrdinalIgnoreCase);
+                var applied = new List<string>();
+                try
+                {
+                    foreach (var write in pendingWrites)
+                    {
+                        WriteRestoreFile(write.Key, Encoding.UTF8.GetBytes(write.Value));
+                        applied.Add(write.Key);
+                    }
+
+                    // AI Hub commits its own settings/secrets transaction only after ordinary files succeeded.
+                    if (aiHubChanged)
+                    {
+                        aiHubStore.ImportBackup(aiHubBackup);
                     }
                 }
+                catch
+                {
+                    foreach (string path in applied.AsEnumerable().Reverse())
+                    {
+                        if (originals[path] is byte[] original)
+                        {
+                            WriteRestoreFile(path, original);
+                        }
+                        else
+                        {
+                            File.Delete(path);
+                        }
+                    }
+
+                    throw;
+                }
+
+                bool anyFilesUpdated = pendingWrites.Count > 0 || aiHubChanged;
 
                 if (anyFilesUpdated)
                 {
+                    if (credentialsSkipped)
+                    {
+                        return (false, "General_SettingsBackupAndRestore_CredentialsSkipped", "Warning");
+                    }
+
                     // something was changed do we need to return true to indicate a restart is needed.
                     var restartAfterRestore = (bool?)backupRestoreSettings!["RestartAfterRestore"];
                     if (!restartAfterRestore.HasValue || restartAfterRestore.Value)
@@ -393,6 +411,21 @@ namespace Kit.Settings.UI.Library
             {
                 Logger.LogError("Error in RestoreSettings, " + ex2.ToString());
                 return (false, $"General_SettingsBackupAndRestore_BackupError", "Error");
+            }
+        }
+
+        private static void WriteRestoreFile(string destination, byte[] content)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            string temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllBytes(temporary, content);
+                File.Move(temporary, destination, overwrite: true);
+            }
+            finally
+            {
+                File.Delete(temporary);
             }
         }
 
@@ -575,7 +608,7 @@ namespace Kit.Settings.UI.Library
                                 {
                                     try
                                     {
-                                        RemoveOldBackups(tempPath, 1, TimeSpan.FromDays(7));
+                                        RemoveOldBackups(tempPath, 1, TimeSpan.FromDays(7), fullBackupDir);
                                     }
                                     catch
                                     {
@@ -1129,7 +1162,7 @@ namespace Kit.Settings.UI.Library
         /// Method <c>RemoveOldBackups</c> cleans up excess backups and temporary directories.
         /// Retains the newest minNumberToKeep backups (default N=2 for corruption fallback) and prunes older ones.
         /// </summary>
-        private static void RemoveOldBackups(string location, int minNumberToKeep, TimeSpan deleteIfOlderThanTs)
+        private static void RemoveOldBackups(string location, int minNumberToKeep, TimeSpan deleteIfOlderThanTs, string activeDirectory = null)
         {
             if (!removeOldBackupsLock.TryEnter(1000))
             {
@@ -1152,6 +1185,11 @@ namespace Kit.Settings.UI.Library
 
                 foreach (var dir in tempDirs)
                 {
+                    if (string.Equals(dir, activeDirectory, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     try
                     {
                         var dirInfo = new DirectoryInfo(dir);

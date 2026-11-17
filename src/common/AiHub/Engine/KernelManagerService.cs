@@ -173,6 +173,7 @@ public sealed partial class KernelManagerService : IDisposable
         string releaseVersion = string.Empty;
         string[] expectedDigests;
         bool bundled = false;
+        bool preserveBackup = false;
         try
         {
             try
@@ -237,6 +238,7 @@ public sealed partial class KernelManagerService : IDisposable
             if (hadInstallation)
             {
                 EnsureSafeTree(target);
+                preserveBackup = true;
                 await MoveOrCopyDirectoryAsync(target, backup, cancellationToken).ConfigureAwait(false);
             }
 
@@ -250,16 +252,17 @@ public sealed partial class KernelManagerService : IDisposable
                 {
                     if (Directory.Exists(target) || File.Exists(target))
                     {
-                        throw new IOException("The kernel update failed; the previous installation is preserved in its backup directory.");
+                        throw new IOException($"The kernel update failed; the previous installation is preserved at '{backup}'.");
                     }
 
                     try
                     {
                         await MoveOrCopyDirectoryAsync(backup, target, CancellationToken.None).ConfigureAwait(false);
+                        preserveBackup = false;
                     }
                     catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
                     {
-                        throw new IOException("The kernel update could not be rolled back; the previous installation is preserved in its backup directory.");
+                        throw new IOException($"The kernel update could not be rolled back; the previous installation is preserved at '{backup}'.", exception);
                     }
                 }
 
@@ -268,6 +271,7 @@ public sealed partial class KernelManagerService : IDisposable
 
             string executable = Path.Combine(target, ExecutableName(kernel));
             CacheVersion(executable, version);
+            preserveBackup = false;
             TryDeleteDirectory(backup);
             progress?.Report(1);
             return new AiKernelUpdateResult(new AiKernelStatus(kernel, true, version, executable), releaseVersion, Changed: true, UsedBundledArchive: bundled);
@@ -275,7 +279,10 @@ public sealed partial class KernelManagerService : IDisposable
         finally
         {
             TryDeleteDirectory(tempRoot);
-            TryDeleteDirectory(backup);
+            if (!preserveBackup)
+            {
+                TryDeleteDirectory(backup);
+            }
         }
     }
 

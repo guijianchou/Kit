@@ -29,6 +29,7 @@ namespace Kit.Settings.UI.Library
             SunriseOffset = new IntProperty(DefaultSunriseOffset);
             SunsetOffset = new IntProperty(DefaultSunsetOffset);
             ScheduleMode = new StringProperty(DefaultScheduleMode);
+            ToggleThemeHotkey = new LightSwitchHotkeyProperty();
         }
 
         [JsonPropertyName("changeSystem")]
@@ -57,5 +58,8 @@ namespace Kit.Settings.UI.Library
 
         [JsonPropertyName("scheduleMode")]
         public StringProperty ScheduleMode { get; set; }
+
+        [JsonPropertyName("toggle-theme-hotkey")]
+        public LightSwitchHotkeyProperty ToggleThemeHotkey { get; set; }
     }
 }

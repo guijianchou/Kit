@@ -262,7 +262,9 @@ namespace Kit.Settings.UI.Views
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (this.disposed || this.suppressViewModelUpdates || this.ViewModel.IsRefreshingModuleSettings)
+            if (this.disposed || this.suppressViewModelUpdates || this.ViewModel.IsRefreshingModuleSettings ||
+                e.PropertyName == nameof(LightSwitchViewModel.ToggleThemeActivationShortcut) ||
+                e.PropertyName == nameof(LightSwitchViewModel.ToggleThemeShortcutText))
             {
                 return;
             }
@@ -375,26 +377,70 @@ namespace Kit.Settings.UI.Views
             ViewModel.RefreshEnabledState();
         }
 
+        private void ThemeShortcut_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+        {
+            if (e.Key == Windows.System.VirtualKey.Tab)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            if (e.Key is Windows.System.VirtualKey.Delete or Windows.System.VirtualKey.Back)
+            {
+                ViewModel.ToggleThemeActivationShortcut = new LightSwitchHotkey { Code = 0, Win = false, Ctrl = false, Shift = false };
+                return;
+            }
+
+            if (e.Key is Windows.System.VirtualKey.Control or Windows.System.VirtualKey.Shift or
+                Windows.System.VirtualKey.Menu or Windows.System.VirtualKey.LeftWindows or Windows.System.VirtualKey.RightWindows)
+            {
+                return;
+            }
+
+            static bool IsDown(Windows.System.VirtualKey key) =>
+                (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key) & Windows.UI.Core.CoreVirtualKeyStates.Down) != 0;
+
+            var hotkey = new LightSwitchHotkey
+            {
+                Win = IsDown(Windows.System.VirtualKey.LeftWindows) || IsDown(Windows.System.VirtualKey.RightWindows),
+                Ctrl = IsDown(Windows.System.VirtualKey.Control),
+                Alt = IsDown(Windows.System.VirtualKey.Menu),
+                Shift = IsDown(Windows.System.VirtualKey.Shift),
+                Code = (int)e.Key,
+            };
+            if (hotkey.Win || hotkey.Ctrl || hotkey.Alt)
+            {
+                ViewModel.ToggleThemeActivationShortcut = hotkey;
+            }
+        }
+
         private async void SyncLocationButton_Click(object sender, RoutedEventArgs e)
         {
-            this.LocationDialog.IsPrimaryButtonEnabled = false;
-            this.LocationResultPanel.Visibility = Visibility.Collapsed;
-            this.LocationErrorText.Visibility = Visibility.Collapsed;
-
-            // Pre-check location services availability
-            var accessStatus = await Geolocator.RequestAccessAsync();
-            if (accessStatus != GeolocationAccessStatus.Allowed)
+            try
             {
-                this.SyncButton.IsEnabled = false;
-                this.LocationErrorText.Text = ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_LocationError_Unavailable");
-                this.LocationErrorText.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                this.SyncButton.IsEnabled = true;
-            }
+                this.LocationDialog.IsPrimaryButtonEnabled = false;
+                this.LocationResultPanel.Visibility = Visibility.Collapsed;
+                this.LocationErrorText.Visibility = Visibility.Collapsed;
 
-            await this.LocationDialog.ShowAsync();
+                // Pre-check location services availability
+                var accessStatus = await Geolocator.RequestAccessAsync();
+                if (accessStatus != GeolocationAccessStatus.Allowed)
+                {
+                    this.SyncButton.IsEnabled = false;
+                    this.LocationErrorText.Text = ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_LocationError_Unavailable");
+                    this.LocationErrorText.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    this.SyncButton.IsEnabled = true;
+                }
+
+                await this.LocationDialog.ShowAsync();
+            }
+            catch (Exception error)
+            {
+                Logger.LogError("Could not open the Light Switch location dialog.", error);
+            }
         }
 
         private void ModeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)

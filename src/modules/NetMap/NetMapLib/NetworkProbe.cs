@@ -19,9 +19,19 @@ public sealed class NetworkProbe : IDisposable
     private const int BodyLimit = 65536;
 
     private readonly object clientGate = new();
-    private readonly Dictionary<string, HttpClient> reusedClients = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PooledClient> reusedClients = new(StringComparer.Ordinal);
     private readonly Func<string, Uri, HttpClient>? clientFactory;
     private long clientGeneration = long.MinValue;
+    private bool disposed;
+
+    private sealed class PooledClient(HttpClient client)
+    {
+        internal HttpClient Client { get; } = client;
+
+        internal int Borrowers { get; set; }
+
+        internal bool Retired { get; set; }
+    }
 
     public NetworkProbe()
     {
@@ -34,17 +44,16 @@ public sealed class NetworkProbe : IDisposable
 
     public void Dispose()
     {
-        HttpClient[] clients;
         lock (clientGate)
         {
-            clients = reusedClients.Values.ToArray();
+            disposed = true;
+            foreach (var client in reusedClients.Values)
+            {
+                RetireClient(client);
+            }
+
             reusedClients.Clear();
             clientGeneration = long.MinValue;
-        }
-
-        foreach (var client in clients)
-        {
-            client.Dispose();
         }
     }
 
@@ -98,17 +107,27 @@ public sealed class NetworkProbe : IDisposable
         {
             var uri = ServiceEndpoint(name);
             var pooled = AcquirePooledClient(name, uri, generation, options);
-            using var requestClient = pooled == null ? CreateServiceClient(name, uri, options) : null;
-            var result = await CheckServiceAsync(name, uri, true, options, cancellationToken, pooled ?? requestClient).ConfigureAwait(false);
-            if (pooled != null && result.Error is ProbeError.Connection or ProbeError.Timeout or ProbeError.Dns or ProbeError.Tls)
+            try
             {
-                // A stale pooled connection must reconnect instead of repeating the failure.
-                DropPooledClient(name, pooled);
-            }
+                using var requestClient = pooled == null ? CreateServiceClient(name, uri, options) : null;
+                var result = await CheckServiceAsync(name, uri, true, options, cancellationToken, pooled?.Client ?? requestClient).ConfigureAwait(false);
+                if (pooled != null && result.Error is ProbeError.Connection or ProbeError.Timeout or ProbeError.Dns or ProbeError.Tls)
+                {
+                    // Retire failed connections; existing borrowers retain their lease.
+                    DropPooledClient(name, pooled);
+                }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            progress(result);
-            return result;
+                cancellationToken.ThrowIfCancellationRequested();
+                progress(result);
+                return result;
+            }
+            finally
+            {
+                if (pooled != null)
+                {
+                    ReleasePooledClient(pooled);
+                }
+            }
         }
 
         return await Task.WhenAll(endpoints.Select(CheckAsync)).ConfigureAwait(false);
@@ -121,7 +140,7 @@ public sealed class NetworkProbe : IDisposable
             ? clientFactory(name, uri)
             : CreateClient(uri, true, options, out _, followRedirects: KeepsAConnectionPerRequest(name));
 
-    private HttpClient? AcquirePooledClient(string name, Uri uri, long generation, NetMapOptions options)
+    private PooledClient? AcquirePooledClient(string name, Uri uri, long generation, NetMapOptions options)
     {
         if (KeepsAConnectionPerRequest(name))
         {
@@ -130,12 +149,13 @@ public sealed class NetworkProbe : IDisposable
 
         lock (clientGate)
         {
+            ObjectDisposedException.ThrowIf(disposed, this);
             if (generation != clientGeneration)
             {
                 // A proxy may bind a connection to the exit that was current when it opened.
                 foreach (var retired in reusedClients.Values)
                 {
-                    retired.Dispose();
+                    RetireClient(retired);
                 }
 
                 reusedClients.Clear();
@@ -144,15 +164,16 @@ public sealed class NetworkProbe : IDisposable
 
             if (!reusedClients.TryGetValue(name, out var client))
             {
-                client = CreateServiceClient(name, uri, options);
+                client = new PooledClient(CreateServiceClient(name, uri, options));
                 reusedClients[name] = client;
             }
 
+            client.Borrowers++;
             return client;
         }
     }
 
-    private void DropPooledClient(string name, HttpClient client)
+    private void DropPooledClient(string name, PooledClient client)
     {
         lock (clientGate)
         {
@@ -162,9 +183,30 @@ public sealed class NetworkProbe : IDisposable
             }
 
             reusedClients.Remove(name);
+            RetireClient(client);
         }
+    }
 
-        client.Dispose();
+    // All lease accounting runs under clientGate, including pool disposal.
+    private static void RetireClient(PooledClient client)
+    {
+        client.Retired = true;
+        if (client.Borrowers == 0)
+        {
+            client.Client.Dispose();
+        }
+    }
+
+    private void ReleasePooledClient(PooledClient client)
+    {
+        lock (clientGate)
+        {
+            client.Borrowers--;
+            if (client.Retired && client.Borrowers == 0)
+            {
+                client.Client.Dispose();
+            }
+        }
     }
 
     public static ProbeError Classify(Exception exception) => exception switch

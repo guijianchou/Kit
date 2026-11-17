@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <condition_variable>
+#include <future>
 #include <memory>
 #include <utility>
 #include <Windows.h>
@@ -84,6 +85,8 @@ private:
         OwnedPipeHandle pipe_handle;
         std::thread thread;
         bool completed = false;
+        bool published = false;
+        std::wstring message;
     };
 
     enum class LifecycleState
@@ -125,12 +128,15 @@ private:
     std::thread input_queue_thread;
     std::thread output_queue_thread;
     std::thread input_pipe_thread;
+    std::promise<void> input_consumer_ready;
+    std::promise<void> listener_ready;
     std::mutex lifecycle_mutex;
     std::condition_variable lifecycle_stopped;
     LifecycleState lifecycle_state = LifecycleState::NotStarted;
     std::mutex pipe_connect_handle_mutex; // For manipulating the current_connect_pipe
     std::mutex output_pipe_mutex;
     std::mutex connection_handlers_mutex;
+    std::condition_variable connection_handlers_changed;
     std::vector<std::shared_ptr<ConnectionHandler>> connection_handlers;
     std::wstring outgoing_message; // Store the updated json settings.
 
@@ -152,7 +158,7 @@ private:
     void cancel_active_output_io();
     HANDLE create_medium_integrity_token();
     void handle_pipe_connection(const std::shared_ptr<ConnectionHandler>& handler);
-    void finish_connection_handler(const std::shared_ptr<ConnectionHandler>& handler);
+    void finish_connection_handler(const std::shared_ptr<ConnectionHandler>& handler, std::wstring message = {});
     bool start_connection_handler(OwnedPipeHandle&& pipe_handle);
     void reap_finished_connection_handlers();
     void cancel_and_wait_for_connection_handlers();

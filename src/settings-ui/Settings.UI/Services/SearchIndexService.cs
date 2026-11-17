@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -207,6 +207,11 @@ namespace Kit.Settings.UI.Services
             }
 
             var normalizedQuery = NormalizeString(query);
+            if (string.IsNullOrWhiteSpace(normalizedQuery))
+            {
+                return [];
+            }
+
             var bag = new ConcurrentBag<(SettingEntry Hit, double Score)>();
             var po = new ParallelOptions
             {

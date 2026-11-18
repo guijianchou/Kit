@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
+using MaxMind.Db;
 using MaxMind.GeoIP2;
 
 namespace NetMapLib;
@@ -189,7 +190,7 @@ public sealed class GeoDatabase : IDisposable
         try
         {
             var locales = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh" ? new[] { "zh-CN", "en" } : new[] { "en" };
-            var reader = new DatabaseReader(path, locales);
+            var reader = new DatabaseReader(path, locales, FileAccessMode.Memory);
             if (reader.Metadata.DatabaseType.EndsWith(type, StringComparison.Ordinal))
             {
                 return reader;

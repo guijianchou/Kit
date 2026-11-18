@@ -79,6 +79,23 @@ public sealed class DataUpdateTests
     }
 
     [TestMethod]
+    public async Task MatchingLocalHashStillRejectsAndUnlocksInvalidMmdb()
+    {
+        string path = ExistingDatabase();
+        byte[] contents = File.ReadAllBytes(path);
+        string digest = "sha256:" + Convert.ToHexString(SHA256.HashData(contents));
+        var updater = Create(uri =>
+        {
+            Assert.AreEqual("api.github.com", uri.Host, "A matching file must be validated without downloading it again.");
+            return JsonResponse(Release(digest, contents.Length));
+        });
+
+        await Assert.ThrowsExceptionAsync<MaxMind.Db.InvalidDatabaseException>(() => updater.UpdateAsync(null, CancellationToken.None));
+        AssertPreserved(path);
+        File.WriteAllText(path, "replacement data");
+    }
+
+    [TestMethod]
     public async Task OversizedDownloadRetainsOldFile()
     {
         string path = ExistingDatabase();

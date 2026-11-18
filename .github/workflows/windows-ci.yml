@@ -185,7 +185,7 @@ jobs:
           & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/NetMap/NetMap.UnitTests.exe') `
             --report-trx `
             --results-directory $reportDirectory `
-            --minimum-expected-tests 116
+            --minimum-expected-tests 117
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

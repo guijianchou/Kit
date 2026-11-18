@@ -94,6 +94,7 @@ public sealed class IdentityTests
             using var database = new GeoDatabase(new(AsnDatabase: path, CityDatabase: path + ".missing"));
             Assert.AreEqual("00", database.Status);
             Assert.IsNull(database.Lookup("203.0.113.1").Asn);
+            File.WriteAllText(path, "replacement data");
         }
         finally
         {

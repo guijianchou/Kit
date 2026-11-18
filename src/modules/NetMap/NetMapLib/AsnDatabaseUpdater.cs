@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
+using MaxMind.Db;
 using MaxMind.GeoIP2;
 
 namespace NetMapLib;
@@ -159,7 +160,7 @@ public sealed class AsnDatabaseUpdater
 
     private static void ValidateContent(string path)
     {
-        using var reader = new DatabaseReader(path);
+        using var reader = new DatabaseReader(path, FileAccessMode.Memory);
         if (reader.Metadata.DatabaseType != "GeoLite2-ASN")
         {
             throw new InvalidDataException("InvalidData");

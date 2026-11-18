@@ -24,23 +24,23 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Visual Studio MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Set up .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~\.nuget\packages
             packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.config', '**/*.csproj', 'Directory.Packages.props') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.config', '**/*.csproj', '**/*.vcxproj', 'Directory.Build.props', 'Directory.Packages.props') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
 
@@ -80,15 +80,48 @@ jobs:
             exit $buildExitCode
           }
 
-      - name: Run AI Hub core tests
+      - name: Verify runtime layout and WinGet assets
         shell: pwsh
         run: |
-          $reportDirectory = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/AiHub'
-          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
-          & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/AiHub/Kit.AiHub.UnitTests.exe') `
-            --report-trx `
-            --results-directory $reportDirectory `
-            --minimum-expected-tests 524
+          $ErrorActionPreference = 'Stop'
+          $runtimeRoot = Join-Path $env:GITHUB_WORKSPACE 'x64/Debug'
+          $requiredPaths = @(
+            'Kit.exe',
+            'Kit.ActionRunner.exe',
+            'Kit.WingetService.exe',
+            'Kit.WingetService.deps.json',
+            'Kit.WingetService.runtimeconfig.json',
+            'Assets/Winget.png',
+            'Microsoft.Management.Deployment.dll',
+            'Kit.AIHubWorker.exe',
+            'Kit.NetMapService.exe',
+            'Kit.Awake.exe',
+            'Kit.LocalserverWorker.exe',
+            'Kit.UDPtestService.exe',
+            'Kit.LightSwitch.Cli.exe',
+            'LightSwitchService/Kit.LightSwitchService.exe',
+            'WinUI3Apps/Kit.Settings.exe',
+            'WinUI3Apps/Kit.QuickAccess.exe'
+          )
+          foreach ($relative in $requiredPaths) {
+            $full = Join-Path $runtimeRoot $relative
+            if (-not (Test-Path -LiteralPath $full -PathType Leaf)) {
+              throw "Required runtime file missing from x64/Debug: $relative"
+            }
+          }
+          foreach ($unexpectedRoot in @(
+            'Kit.Settings.exe',
+            'Kit.Settings.deps.json',
+            'Kit.Settings.runtimeconfig.json',
+            'Kit.QuickAccess.exe',
+            'Kit.QuickAccess.deps.json',
+            'Kit.QuickAccess.runtimeconfig.json'
+          )) {
+            if (Test-Path -LiteralPath (Join-Path $runtimeRoot $unexpectedRoot) -PathType Leaf) {
+              throw "Unexpected duplicate WinUI artifact in output root: $unexpectedRoot"
+            }
+          }
+          & python (Join-Path $env:GITHUB_WORKSPACE 'tools/tests/Winget/Verify-WingetIcons.py') --runtime-root $runtimeRoot
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -96,9 +129,63 @@ jobs:
       - name: Run Settings UI unit tests
         shell: pwsh
         run: |
+          $reportDir = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/Settings'
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/tests/SettingsUI/Invoke-SettingsUnitTests.ps1 `
-            -MinimumExpectedTests 321 `
-            -ReportRoot TestResults/GitHubActions/Settings
+            -MinimumExpectedTests 322 `
+            -ReportRoot $reportDir
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) {
+            Write-Host '::group::Settings UI test failure diagnostics'
+            foreach ($logFile in @('settings-tests.stderr.log', 'settings-tests.stdout.log')) {
+              $logPath = Join-Path $reportDir $logFile
+              if (Test-Path -LiteralPath $logPath) {
+                Write-Output "--- $logFile ---"
+                Get-Content -LiteralPath $logPath -Tail 120
+              }
+            }
+            $trxFiles = @(Get-ChildItem -LiteralPath $reportDir -Filter '*.trx' -File -Recurse -ErrorAction SilentlyContinue)
+            foreach ($trxFile in $trxFiles) {
+              try {
+                [xml]$doc = Get-Content -LiteralPath $trxFile.FullName -Raw
+                $failedResults = @($doc.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -eq 'Failed' })
+                foreach ($failed in $failedResults) {
+                  $msg = if ($failed.Output -and $failed.Output.ErrorInfo) { $failed.Output.ErrorInfo.Message } else { '' }
+                  Write-Output "FAILED: $($failed.testName) - $msg"
+                  if ($env:GITHUB_STEP_SUMMARY) {
+                    Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value "- **Settings UI failed**: ``$($failed.testName)`` - $msg"
+                  }
+                }
+              }
+              catch {
+                Write-Warning "Failed to parse TRX report '$($trxFile.FullName)': $_"
+              }
+            }
+            Write-Host '::endgroup::'
+            exit $exitCode
+          }
+
+      - name: Run WinGet unit tests
+        shell: pwsh
+        run: |
+          $reportDirectory = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/Winget'
+          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/Winget/Winget.UnitTests.exe') `
+            --report-trx `
+            --results-directory $reportDirectory `
+            --minimum-expected-tests 131
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run NetMap unit tests
+        shell: pwsh
+        run: |
+          $reportDirectory = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/NetMap'
+          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/NetMap/NetMap.UnitTests.exe') `
+            --report-trx `
+            --results-directory $reportDirectory `
+            --minimum-expected-tests 116
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -116,14 +203,60 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      - name: Run Awake and LightSwitch CLI unit tests
+        shell: pwsh
+        run: |
+          $suites = @(
+            @{ Name = 'Awake'; Path = 'x64/Debug/tests/Awake.UnitTests/Awake.UnitTests.exe'; Min = 9 },
+            @{ Name = 'AwakeModuleServices'; Path = 'x64/Debug/tests/Awake.ModuleServices.UnitTests/Awake.ModuleServices.UnitTests.exe'; Min = 3 },
+            @{ Name = 'LightSwitchCli'; Path = 'x64/Debug/tests/LightSwitch.Cli.UnitTests/LightSwitch.Cli.UnitTests.exe'; Min = 221 }
+          )
+          foreach ($suite in $suites) {
+            $reportDirectory = Join-Path $env:GITHUB_WORKSPACE ("TestResults/GitHubActions/$($suite.Name)")
+            New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+            & (Join-Path $env:GITHUB_WORKSPACE $suite.Path) `
+              --report-trx `
+              --results-directory $reportDirectory `
+              --minimum-expected-tests $suite.Min
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
+
+      - name: Run Localserver unit tests
+        shell: pwsh
+        run: |
+          $reportDirectory = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/Localserver'
+          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/Localserver/Localserver.UnitTests.exe') `
+            --report-trx `
+            --results-directory $reportDirectory `
+            --minimum-expected-tests 36
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run AI Hub core tests
+        shell: pwsh
+        run: |
+          $reportDirectory = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/AiHub'
+          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/AiHub/Kit.AiHub.UnitTests.exe') `
+            --report-trx `
+            --results-directory $reportDirectory `
+            --minimum-expected-tests 524
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       - name: Upload build and test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-ci-reports
           if-no-files-found: warn
           path: |
-            TestResults/GitHubActions/**/*.trx
+            TestResults/GitHubActions/**/*
             build.debug.x64.all.log
             build.debug.x64.errors.log
             build.debug.x64.warnings.log

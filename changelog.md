@@ -4,6 +4,12 @@
 
 ## English
 
+### 3.5.2 (2026-11-17)
+
+- Disabled synthetic solution-dependency project references (`AddSyntheticProjectReferencesForSolutionDependencies=false`) in [Directory.Build.props](Directory.Build.props) and made `IncrementalClean` a no-op for shared runtime output builds in [Kit.vcxproj](src/runner/Kit.vcxproj) and [src/modules/Directory.Build.targets](src/modules/Directory.Build.targets), matching [src/settings-ui/Directory.Build.targets](src/settings-ui/Directory.Build.targets). This prevents Visual Studio IDE builds from deleting `.NET` worker executables, runtime configurations and assets (`Kit.WingetService.exe`, `Kit.AIHubWorker.exe`, `Kit.NetMapService.exe`, `Kit.Awake.exe`, etc.) previously recorded in `Kit.vcxproj.FileListAbsolute.txt` by CLI `MSBuild Kit.slnx` builds, and stops CLI builds from copying duplicate WinUI binaries into the output root.
+- Fixed GitHub Actions Windows CI checkout compatibility and expanded workflow validation in [.github/workflows/windows-ci.yml](.github/workflows/windows-ci.yml) and [BuildCompatibility.cs](src/settings-ui/Settings.UI.UnitTests/ViewModelTests/BuildCompatibility.cs): added fallback checks when gitignored reference sources are absent, upgraded workflow actions to Node 24 (`checkout@v7`, `setup-msbuild@v3`, `setup-dotnet@v6`, `cache@v6`, `upload-artifact@v7`), enforced runtime artifact/icon checks, and added module unit test gates (`Winget`, `NetMap`, `UDPtest`, `Awake`, `LightSwitch`, `Localserver`, `AiHub`).
+- Aligned source and sparse-package identity versions at `3.5.2` / `3.5.2.0`.
+
 ### 3.5.1 local follow-up (2026-11-17)
 
 - Preserve UDP Test TCP/UDP row containers, selection, editor drafts and scroll position on cached navigation; remove repeated entry transitions and unchanged activation notifications.
@@ -961,6 +967,12 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.2（2026-11-17）
+
+- 在 [Directory.Build.props](Directory.Build.props) 中关闭解决方案依赖的虚拟项目引用提升（`AddSyntheticProjectReferencesForSolutionDependencies=false`），并在 [Kit.vcxproj](src/runner/Kit.vcxproj) 与 [src/modules/Directory.Build.targets](src/modules/Directory.Build.targets) 中对齐 [src/settings-ui/Directory.Build.targets](src/settings-ui/Directory.Build.targets) 禁用 `IncrementalClean`。修复命令行 `MSBuild Kit.slnx` 将模块服务可执行文件与资源记入 `Kit.vcxproj.FileListAbsolute.txt` 后、再于 Visual Studio 中构建时将 `Kit.WingetService.exe`、`Kit.AIHubWorker.exe`、`Kit.NetMapService.exe`、`Kit.Awake.exe` 等共享运行目录产物误删的问题，同时避免 CLI 构建把 WinUI 重复产物复制到根目录。
+- 修复 GitHub Actions Windows CI 干净检出兼容性并扩展流水线门禁（[.github/workflows/windows-ci.yml](.github/workflows/windows-ci.yml)、[BuildCompatibility.cs](src/settings-ui/Settings.UI.UnitTests/ViewModelTests/BuildCompatibility.cs)）：无 `Source/` 参考目录时回退校验当前仓库 `.NET 10+` 与包版本固定项，升级工作流动作至 Node 24（`checkout@v7`、`setup-msbuild@v3`、`setup-dotnet@v6`、`cache@v6`、`upload-artifact@v7`），新增运行时产物布局/WinGet 图标校验及模块单元测试（`Winget`、`NetMap`、`UDPtest`、`Awake`、`LightSwitch`、`Localserver`、`AiHub`）。
+- 源码与稀疏包版本统一升至 `3.5.2` / `3.5.2.0`。
 
 ### 3.5.1 本地跟进（2026-11-17）
 

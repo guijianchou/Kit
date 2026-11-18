@@ -1,0 +1,8 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Module workers share the root OutDir; disable IncrementalClean like settings-ui
+       so overlapping runtime/content files are never deleted across sibling builds. -->
+  <Target Name="IncrementalClean" />
+
+</Project>

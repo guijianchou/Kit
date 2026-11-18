@@ -174,4 +174,7 @@
       </ClCompile>
     </ItemGroup>
   </Target>
+  <!-- Kit shares OutDir with independent module workers; keep IncrementalClean a no-op
+       like settings-ui so pre-existing FileListAbsolute entries never prune sibling workers. -->
+  <Target Name="IncrementalClean" />
 </Project>

@@ -42,9 +42,9 @@ namespace ViewModelTests
             return false;
         }
 
-        private static string FindPowerToysReferenceFile(params string[] relativePathParts)
+        private static bool TryFindPowerToysReferenceFile(out string sourceFile, params string[] relativePathParts)
         {
-            return FindSourceFile(["Source", "PowerToys-0.102.3101", .. relativePathParts]);
+            return TryFindSourceFile(out sourceFile, ["Source", "PowerToys-0.102.3101", .. relativePathParts]);
         }
 
         [TestMethod]
@@ -2515,13 +2515,10 @@ namespace ViewModelTests
             }
 
             var packages = File.ReadAllText(FindSourceFile("Directory.Packages.props"));
-            var stablePackages = System.Xml.Linq.XDocument.Load(FindPowerToysReferenceFile("Directory.Packages.props"));
             var kitPackages = System.Xml.Linq.XDocument.Parse(packages);
-            string runtimeVersion = stablePackages.Descendants("DotNetRuntimePackageVersion").Single().Value;
-            string[] packageNames =
+            string[] runtimePackageNames =
             {
                 "Microsoft.Bcl.AsyncInterfaces",
-                "Microsoft.CodeAnalysis.NetAnalyzers",
                 "Microsoft.Extensions.Caching.Abstractions",
                 "Microsoft.Extensions.Caching.Memory",
                 "Microsoft.Extensions.DependencyInjection",
@@ -2529,14 +2526,8 @@ namespace ViewModelTests
                 "Microsoft.Extensions.Hosting.WindowsServices",
                 "Microsoft.Extensions.Logging",
                 "Microsoft.Extensions.Logging.Abstractions",
-                "Microsoft.Web.WebView2",
                 "Microsoft.Win32.SystemEvents",
                 "Microsoft.Windows.Compatibility",
-                "Microsoft.Windows.CsWin32",
-                "Microsoft.WindowsAppSDK",
-                "Microsoft.WindowsAppSDK.Foundation",
-                "Microsoft.WindowsAppSDK.Runtime",
-                "Newtonsoft.Json",
                 "System.CodeDom",
                 "System.ComponentModel.Composition",
                 "System.Configuration.ConfigurationManager",
@@ -2550,14 +2541,46 @@ namespace ViewModelTests
                 "System.Text.Encoding.CodePages",
                 "System.Text.Json",
             };
-            foreach (string name in packageNames)
+            string[] pinnedPackageNames =
             {
-                var kitPin = kitPackages.Descendants("PackageVersion").Single(element => (string)element.Attribute("Include") == name);
-                var stablePin = stablePackages.Descendants("PackageVersion").SingleOrDefault(element => (string)element.Attribute("Include") == name);
-                string expected = stablePin is null
-                    ? runtimeVersion
-                    : ((string)stablePin.Attribute("Version")).Replace("$(DotNetRuntimePackageVersion)", runtimeVersion, StringComparison.Ordinal);
-                Assert.AreEqual(expected, (string)kitPin.Attribute("Version"), $"{name} must follow the stable source package baseline.");
+                "Microsoft.CodeAnalysis.NetAnalyzers",
+                "Microsoft.Web.WebView2",
+                "Microsoft.Windows.CsWin32",
+                "Microsoft.WindowsAppSDK",
+                "Microsoft.WindowsAppSDK.Foundation",
+                "Microsoft.WindowsAppSDK.Runtime",
+                "Newtonsoft.Json",
+            };
+            if (TryFindPowerToysReferenceFile(out var stablePackagesPath, "Directory.Packages.props"))
+            {
+                var stablePackages = System.Xml.Linq.XDocument.Load(stablePackagesPath);
+                string runtimeVersion = stablePackages.Descendants("DotNetRuntimePackageVersion").Single().Value;
+                foreach (string name in runtimePackageNames.Concat(pinnedPackageNames))
+                {
+                    var kitPin = kitPackages.Descendants("PackageVersion").Single(element => (string)element.Attribute("Include") == name);
+                    var stablePin = stablePackages.Descendants("PackageVersion").SingleOrDefault(element => (string)element.Attribute("Include") == name);
+                    string expected = stablePin is null
+                        ? runtimeVersion
+                        : ((string)stablePin.Attribute("Version")).Replace("$(DotNetRuntimePackageVersion)", runtimeVersion, StringComparison.Ordinal);
+                    Assert.AreEqual(expected, (string)kitPin.Attribute("Version"), $"{name} must follow the stable source package baseline.");
+                }
+            }
+            else
+            {
+                // Verify Kit's .NET 10 package baseline directly on clean checkouts where gitignored Source/ is absent.
+                foreach (string name in runtimePackageNames)
+                {
+                    var kitPin = kitPackages.Descendants("PackageVersion").Single(element => (string)element.Attribute("Include") == name);
+                    string version = (string)kitPin.Attribute("Version")!;
+                    Assert.IsTrue(Version.TryParse(version, out var parsed) && parsed.Major >= 10, $"{name} must stay on a .NET 10+ runtime package version, found {version}.");
+                }
+
+                foreach (string name in pinnedPackageNames)
+                {
+                    var kitPin = kitPackages.Descendants("PackageVersion").Single(element => (string)element.Attribute("Include") == name);
+                    string version = (string)kitPin.Attribute("Version")!;
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(version), $"{name} must keep an explicit central package pin.");
+                }
             }
 
             Assert.IsFalse(packages.Contains(@"<PackageVersion Include=""System.Collections.Immutable""", StringComparison.Ordinal), "The stable PowerToys baseline does not pin System.Collections.Immutable centrally.");
@@ -2577,22 +2600,28 @@ namespace ViewModelTests
             Assert.IsFalse(xamlIndexBuilderProject.Contains(@"<PackageReference Include=""System.Text.Json""", StringComparison.Ordinal));
             Assert.IsFalse(uiTestAutomationProject.Contains(@"<PackageReference Include=""System.Text.RegularExpressions""", StringComparison.Ordinal));
 
-            var buildTemplatePath = FindPowerToysReferenceFile(".pipelines", "v2", "templates", "job-build-project.yml");
-            var buildTemplate = File.ReadAllText(buildTemplatePath);
-            StringAssert.Contains(buildTemplate, "TargetFramework=net10.0-windows10.0.26100.0");
-            Assert.IsFalse(buildTemplate.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
+            if (TryFindPowerToysReferenceFile(out var buildTemplatePath, ".pipelines", "v2", "templates", "job-build-project.yml"))
+            {
+                var buildTemplate = File.ReadAllText(buildTemplatePath);
+                StringAssert.Contains(buildTemplate, "TargetFramework=net10.0-windows10.0.26100.0");
+                Assert.IsFalse(buildTemplate.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
+            }
 
-            var publishScriptPath = FindPowerToysReferenceFile("installer", "PowerToysSetupVNext", "publish.cmd");
-            var publishScript = File.ReadAllText(publishScriptPath);
-            StringAssert.Contains(publishScript, "TargetFramework=net10.0-windows10.0.26100.0");
-            Assert.IsFalse(publishScript.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
+            if (TryFindPowerToysReferenceFile(out var publishScriptPath, "installer", "PowerToysSetupVNext", "publish.cmd"))
+            {
+                var publishScript = File.ReadAllText(publishScriptPath);
+                StringAssert.Contains(publishScript, "TargetFramework=net10.0-windows10.0.26100.0");
+                Assert.IsFalse(publishScript.Contains("net9.0-windows10.0.26100.0", StringComparison.Ordinal));
+            }
 
-            var devDocsPluginChecklistPath = FindPowerToysReferenceFile("doc", "devdocs", "modules", "launcher", "new-plugin-checklist.md");
-            var devDocsPluginChecklist = File.ReadAllText(devDocsPluginChecklistPath);
-            StringAssert.Contains(devDocsPluginChecklist, "net10.0-windows10.0.22621.0");
-            StringAssert.Contains(devDocsPluginChecklist, ".NET 10");
-            Assert.IsFalse(devDocsPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
-            Assert.IsFalse(devDocsPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
+            if (TryFindPowerToysReferenceFile(out var devDocsPluginChecklistPath, "doc", "devdocs", "modules", "launcher", "new-plugin-checklist.md"))
+            {
+                var devDocsPluginChecklist = File.ReadAllText(devDocsPluginChecklistPath);
+                StringAssert.Contains(devDocsPluginChecklist, "net10.0-windows10.0.22621.0");
+                StringAssert.Contains(devDocsPluginChecklist, ".NET 10");
+                Assert.IsFalse(devDocsPluginChecklist.Contains(".NET 9", StringComparison.Ordinal));
+                Assert.IsFalse(devDocsPluginChecklist.Contains("net9.0-windows10.0.22621.0", StringComparison.Ordinal));
+            }
         }
 
         [TestMethod]
@@ -3651,6 +3680,18 @@ namespace ViewModelTests
             // 4. The hero master card resolves its surface from the shared style rather than inline attributes.
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
             Assert.IsFalse(pageXaml.Contains("Background=\"{ThemeResource CardBackgroundFillColorDefaultBrush}\"", StringComparison.Ordinal), "The hero card should take its surface from KitHeroSurfaceStyle.");
+        }
+
+        [TestMethod]
+        public void SharedOutputDirectoryBuildsShouldPreserveWorkerExecutablesAcrossCliAndVs()
+        {
+            var rootProps = File.ReadAllText(FindSourceFile("Directory.Build.props"));
+            var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
+            var modulesTargets = File.ReadAllText(FindSourceFile("src", "modules", "Directory.Build.targets"));
+
+            StringAssert.Contains(rootProps, "<AddSyntheticProjectReferencesForSolutionDependencies>false</AddSyntheticProjectReferencesForSolutionDependencies>");
+            StringAssert.Contains(runnerProject, "<Target Name=\"IncrementalClean\" />");
+            StringAssert.Contains(modulesTargets, "<Target Name=\"IncrementalClean\" />");
         }
     }
 }

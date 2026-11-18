@@ -28,6 +28,12 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>    <!-- Don't add source revision hash to the product version of binaries. -->
     <PlatformTarget>$(Platform)</PlatformTarget>
     <RestoreEnablePackagePruning Condition=" '$(VisualStudioVersion)' == '17.0'">false </RestoreEnablePackagePruning>
+    <!-- Kit.slnx <BuildDependency> entries express solution build order across
+         independent runtime surfaces. Promoting them into synthetic MSBuild
+         project references during CLI solution builds causes Kit.vcxproj to
+         copy sibling worker/WinUI outputs into root and clean them when built
+         inside Visual Studio, where VS handles solution dependencies itself. -->
+    <AddSyntheticProjectReferencesForSolutionDependencies>false</AddSyntheticProjectReferencesForSolutionDependencies>
 
     <!-- Enable Microsoft.Testing.Platform -->
     <EnableMSTestRunner>true</EnableMSTestRunner>

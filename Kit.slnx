@@ -4,34 +4,34 @@
   </Configurations>
   <Folder Name="/common/">
     <Project Path="src/common/AiHub/Kit.AiHub.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/AiHub.UnitTests/Kit.AiHub.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/Common.Search/Common.Search.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/Common.UI/Common.UI.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/Common.UI.Controls/Common.UI.Controls.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/COMUtils/COMUtils.vcxproj" Id="7319089e-46d6-4400-bc65-e39bdf1416ee" />
     <Project Path="src/common/Display/Display.vcxproj" Id="caba8dfb-823b-4bf2-93ac-3f31984150d9" />
     <Project Path="src/common/GPOWrapper/GPOWrapper.vcxproj" Id="e599c30b-9dc8-4e5a-bf27-93d4ccede788" />
     <Project Path="src/common/ManagedCommon/ManagedCommon.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/ManagedCsWin32/ManagedCsWin32.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/Kit.ModuleContracts/Kit.ModuleContracts.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/UITestAutomation/UITestAutomation.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/SettingsAPI/SettingsAPI.vcxproj" Id="6955446d-23f7-4023-9bb3-8657f904af99" />
     <Project Path="src/common/Themes/Themes.vcxproj" Id="98537082-0fdb-40de-abd8-0dc5a4269bab" />
@@ -41,7 +41,7 @@
   </Folder>
   <Folder Name="/common/interop/">
     <Project Path="src/common/interop/interop-tests/Common.Interop.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/common/interop/Kit.Interop.vcxproj" Id="f055103b-f80b-4d0c-bf48-057c55620033" />
   </Folder>
@@ -103,64 +103,64 @@
   </Folder>
   <Folder Name="/modules/Localserver/">
     <Project Path="src/modules/Localserver/Localserver.UnitTests/Localserver.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/Localserver/LocalserverLib/LocalserverLib.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/Localserver/LocalserverWorker/LocalserverWorker.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/Localserver/LocalserverModuleInterface/LocalserverModuleInterface.vcxproj" Id="b749d21c-4b53-4318-9719-f5383a15dc01" />
   </Folder>
   <Folder Name="/modules/UDPtest/">
     <Project Path="src/modules/UDPtest/UDPtest.UnitTests/UDPtest.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/UDPtest/UDPtestLib/UDPtestLib.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/UDPtest/UDPtestService/UDPtestService.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/UDPtest/UDPtestModuleInterface/UDPtestModuleInterface.vcxproj" Id="d36a8e32-1549-417b-8914-7e8e569528be" />
   </Folder>
   <Folder Name="/modules/NetMap/">
     <Project Path="src/modules/NetMap/NetMap.UnitTests/NetMap.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/NetMap/NetMapLib/NetMapLib.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/NetMap/NetMapService/NetMapService.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/NetMap/NetMapModuleInterface/NetMapModuleInterface.vcxproj" Id="08715d85-f96d-44ab-a674-d353105282bf" />
   </Folder>
   <Folder Name="/modules/AIHub/">
     <Project Path="src/modules/AIHub/AIHubLib/Kit.AIHubLib.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/AIHub/AIHubWorker/AIHubWorker.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/AIHub/AIHubModuleInterface/AIHubModuleInterface.vcxproj" Id="e47b9f55-263a-4c8d-9015-8f9e67a639cf" />
   </Folder>
   <Folder Name="/modules/Winget/">
     <Project Path="src/modules/Winget/Winget.UnitTests/Winget.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/Winget/WingetLib/WingetLib.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/Winget/WingetService/WingetService.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/Winget/WingetModuleInterface/WingetModuleInterface.vcxproj" Id="89d7963c-5a94-473e-8c03-4f9306b512e8" />
   </Folder>
   <Folder Name="/modules/LightSwitch/">
     <Project Path="src/modules/LightSwitch/LightSwitch.Cli/LightSwitch.Cli.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/LightSwitch/LightSwitchLib/LightSwitchLib.vcxproj" Id="79267138-2895-4346-9021-21408d65379f" />
     <Project Path="src/modules/LightSwitch/LightSwitchModuleInterface/LightSwitchModuleInterface.vcxproj" Id="38177d56-6ad1-4adf-88c9-2843a7932166" />
@@ -168,47 +168,47 @@
   </Folder>
   <Folder Name="/modules/LightSwitch/Tests/">
     <Project Path="src/modules/LightSwitch/Tests/LightSwitch.UITests/LightSwitch.UITests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
       <Deploy />
     </Project>
   </Folder>
   <Folder Name="/modules/awake/">
     <Project Path="src/modules/awake/Awake.ModuleServices/Awake.ModuleServices.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/awake/Awake/Awake.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/awake/AwakeModuleInterface/AwakeModuleInterface.vcxproj" Id="5e7360a8-d048-4ed3-8f09-0bfd64c5529a" />
   </Folder>
   <Folder Name="/modules/awake/Tests/">
     <Project Path="src/modules/awake/Awake.UnitTests/Awake.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/modules/awake/Awake.ModuleServices.UnitTests/Awake.ModuleServices.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
   </Folder>
   <Folder Name="/settings-ui/">
     <Project Path="src/settings-ui/QuickAccess.UI/Kit.QuickAccess.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/settings-ui/Settings.UI.Controls/Settings.UI.Controls.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/settings-ui/Settings.UI.Library/Settings.UI.Library.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/settings-ui/Settings.UI.XamlIndexBuilder/Settings.UI.XamlIndexBuilder.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
     <Project Path="src/settings-ui/Settings.UI/Kit.Settings.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
   </Folder>
   <Folder Name="/settings-ui/Tests/">
     <Project Path="src/settings-ui/Settings.UI.UnitTests/Settings.UI.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="x64" />
+      <Platform Project="x64" />
     </Project>
   </Folder>
   <Folder Name="/Solution Items/">
@@ -251,8 +251,8 @@
   <Project Path="src/ActionRunner/ActionRunner.vcxproj" Id="d29ddd63-e2cf-4657-9fd5-2aede4257e5d" />
   <Project Path="tools/project_template/ModuleTemplate/ModuleTemplateCompileTest.vcxproj" Id="64a80062-4d8b-4229-8a38-dfa1d7497749" />
   <Project Path="src/modules/LightSwitch/Tests/LightSwitch.Cli.UnitTests/LightSwitch.Cli.UnitTests.csproj">
-    <Platform Solution="*|x64" Project="x64" />
+    <Platform Project="x64" />
   </Project>
-  <Project Path="src/modules/LightSwitch/Tests/LightSwitchService.UnitTests/LightSwitchService.UnitTests.vcxproj" />
-  <Project Path="src/common/interop/native-tests/Common.Interop.NativeTests.vcxproj" />
+  <Project Path="src/modules/LightSwitch/Tests/LightSwitchService.UnitTests/LightSwitchService.UnitTests.vcxproj" Id="6b4bc04d-59a7-44b2-9ab5-4ed9a5607ab9" />
+  <Project Path="src/common/interop/native-tests/Common.Interop.NativeTests.vcxproj" Id="b187e4a8-f1f3-4a81-b872-a3f257267b34" />
 </Solution>

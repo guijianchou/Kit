@@ -62,7 +62,7 @@ jobs:
         id: release
         shell: pwsh
         env:
-          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
           [xml]$versionProps = Get-Content -LiteralPath 'src/Version.props' -Raw
@@ -93,7 +93,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          SKIP_CI_GATE: ${{ inputs.skip_ci_gate }}
+          SKIP_CI_GATE: ${{ github.event.inputs.skip_ci_gate }}
         run: |
           if ($env:SKIP_CI_GATE -eq 'true') {
             Write-Warning 'Bypassing the Windows CI gate by workflow_dispatch input.'
@@ -247,7 +247,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          PRERELEASE: ${{ inputs.prerelease }}
+          PRERELEASE: ${{ github.event.inputs.prerelease }}
         run: |
           $ErrorActionPreference = 'Stop'
           $version = '${{ steps.release.outputs.version }}'

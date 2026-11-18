@@ -281,6 +281,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete 
 
 [Stage-Release.ps1](tools/build/Stage-Release.ps1) reads the version file and creates `bin/release/<version>/` plus a SHA-256 verification manifest, not a ZIP. It selects runtime files from the existing shared-runtime build layout, excludes tests and build intermediates, and checks versions, dependencies and copied file hashes. PDB files with a matching executable or DLL are retained; package size depends on the current build. [Stage-Debug.ps1](tools/build/Stage-Debug.ps1) stages Debug output under `bin/debug/<version>/`. Distribute the whole directory, rather than only `Kit.exe` or a plugin DLL.
 
+**Automated GitHub Release**: Pushing a version tag (for example `3.5.2` or `v3.5.2`) runs [.github/workflows/release.yml](.github/workflows/release.yml). The workflow verifies that Windows CI passed for the tagged commit, builds x64 Release, checks the runtime layout, stages the delivery, packages `kit_<version>_Portable.zip` plus its SHA-256 checksum with [New-ReleasePackage.ps1](tools/build/New-ReleasePackage.ps1), and publishes the GitHub Release using the matching [changelog.md](changelog.md) section as release notes. Use `workflow_dispatch` with the same version to retry a failed publish, create the tag from the current default branch, or mark the release as a pre-release.
+
 ### 4.3 Validation and real-machine testing
 
 The commands above skip tests; a successful build is not functional validation. Unit tests live in `*.UnitTests` projects in the source tree and run through VS Test Explorer or `vstest.console.exe`. Automated WinUI smoke tests and native module checks live in [tools/tests](tools/tests):

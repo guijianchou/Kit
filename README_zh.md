@@ -281,6 +281,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed; do not stage incomplete 
 
 [Stage-Release.ps1](tools/build/Stage-Release.ps1) 从版本文件取值，生成 `bin/release/<版本>/` 和 SHA-256 校验清单，不生成 ZIP。脚本从已有的共享运行时构建目录筛选运行文件，排除测试和编译中间产物，并校验版本、依赖及复制文件的哈希；有同名可执行文件或 DLL 的 PDB 会保留，包大小取决于当前构建。Debug 可用 [Stage-Debug.ps1](tools/build/Stage-Debug.ps1) 整理到 `bin/debug/<版本>/`。需要交付整个目录，不能只复制 `Kit.exe` 或某个插件 DLL。
 
+**自动化 GitHub Release**：推送版本标签（如 `3.5.2` 或 `v3.5.2`）会运行 [.github/workflows/release.yml](.github/workflows/release.yml)。工作流先确认该标签提交的 Windows CI 已通过，再构建 x64 Release、校验运行时布局、生成交付目录，并由 [New-ReleasePackage.ps1](tools/build/New-ReleasePackage.ps1) 打包 `kit_<version>_Portable.zip` 及 SHA-256 校验文件，最后以 [changelog.md](changelog.md) 对应章节作为发布说明发布 GitHub Release。可用 `workflow_dispatch` 指定相同版本重试发布、从当前默认分支创建标签，或将版本标记为预发布。
+
 ### 4.3 验证与实机测试
 
 上面的命令跳过测试；编译成功不等于功能验证通过。单元测试位于源码中的 `*.UnitTests` 工程，使用 VS Test Explorer 或 `vstest.console.exe` 运行；WinUI 自动化冒烟测试与原生模块检查位于 [tools/tests](tools/tests)：

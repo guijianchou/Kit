@@ -1,0 +1,310 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]*'
+      - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version; must match src/Version.props
+        required: true
+        type: string
+      prerelease:
+        description: Publish as a pre-release
+        required: false
+        type: boolean
+        default: false
+      skip_ci_gate:
+        description: Bypass the successful Windows CI check (not recommended)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: x64 Release build and GitHub Release
+    runs-on: windows-2022
+    timeout-minutes: 240
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Visual Studio MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~\.nuget\packages
+            packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.config', '**/*.csproj', '**/*.vcxproj', 'Directory.Build.props', 'Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Resolve release version
+        id: release
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [xml]$versionProps = Get-Content -LiteralPath 'src/Version.props' -Raw
+          $version = [string]$versionProps.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "src/Version.props contains an unsupported version '$version'; expected x.y.z."
+          }
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $tag = $env:GITHUB_REF_NAME
+          } elseif (-not [string]::IsNullOrWhiteSpace($env:INPUT_VERSION)) {
+            $tag = $env:INPUT_VERSION.Trim()
+          } else {
+            throw 'workflow_dispatch requires the version input (for example 3.5.2).'
+          }
+          if ($tag -match '^v?(\d+\.\d+\.\d+)$') {
+            $requested = $Matches[1]
+          } else {
+            throw "Release tag '$tag' is not a v?x.y.z tag."
+          }
+          if ($requested -ne $version) {
+            throw "Release '$tag' does not match src/Version.props ($version). Bump src/Version.props or dispatch the matching version."
+          }
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "version=$version"
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "tag=$tag"
+          Write-Host "Releasing Kit $version from '$tag' ($($env:GITHUB_REF_TYPE))."
+
+      - name: Verify Windows CI passed for this commit
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SKIP_CI_GATE: ${{ inputs.skip_ci_gate }}
+        run: |
+          if ($env:SKIP_CI_GATE -eq 'true') {
+            Write-Warning 'Bypassing the Windows CI gate by workflow_dispatch input.'
+            return
+          }
+          $sha = $env:GITHUB_SHA
+          $response = gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/windows-ci.yml/runs?head_sha=$sha&per_page=20"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to query the Windows CI workflow runs for $sha."
+          }
+          $runs = @(($response | ConvertFrom-Json).workflow_runs | Where-Object { $_.head_sha -eq $sha })
+          $successful = @($runs | Where-Object { $_.conclusion -eq 'success' })
+          if ($successful.Count -eq 0) {
+            $latest = $runs | Select-Object -First 1
+            $reason = if ($latest) { "latest Windows CI run for $sha completed with '$($latest.conclusion)'" } else { "no Windows CI run exists for $sha" }
+            throw "Cannot release: $reason. Wait for https://github.com/$env:GITHUB_REPOSITORY/actions/workflows/windows-ci.yml to pass on this commit, or dispatch with skip_ci_gate=true."
+          }
+          Write-Host "Windows CI passed for $sha ($($successful[0].html_url))."
+
+      - name: Restore and build the x64 Release solution
+        shell: pwsh
+        run: |
+          $buildArguments = @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/build/build.ps1',
+            '-Platform', 'x64',
+            '-Configuration', 'Release',
+            '-Path', '.',
+            '/restore',
+            '/m:1',
+            '/p:BuildTests=false',
+            '/p:CIBuild=true',
+            '/p:PowerToysSkipCopyOnWriteSdk=true',
+            '/p:PowerToysSkipRunVSTestSdk=true'
+          )
+          & pwsh @buildArguments
+          $buildExitCode = $LASTEXITCODE
+          if ($buildExitCode -ne 0) {
+            Write-Host '::group::MSBuild failure diagnostics'
+            $errorLines = @()
+            foreach ($logName in @('build.release.x64.errors.log', 'build.release.x64.all.log')) {
+              $logPath = Join-Path $env:GITHUB_WORKSPACE $logName
+              if (-not (Test-Path -LiteralPath $logPath)) { continue }
+              $errorLines = @(Select-String -LiteralPath $logPath -Pattern 'error [A-Z]+[0-9]+:|error MSB[0-9]+' -ErrorAction SilentlyContinue | ForEach-Object { $_.Line })
+              if ($errorLines.Count -gt 0) { break }
+            }
+            foreach ($line in ($errorLines | Select-Object -Last 60)) {
+              Write-Output $line
+            }
+            Write-Host '::endgroup::'
+            foreach ($line in ($errorLines | Where-Object { $_ -match 'error [A-Z]+[0-9]+:|error MSB[0-9]+' } | Select-Object -Last 10)) {
+              $annotation = $line.Replace('%', '%25').Replace([string][char]13, '%0D').Replace([string][char]10, '%0A')
+              Write-Host "::error title=MSBuild diagnostic::$annotation"
+            }
+            exit $buildExitCode
+          }
+
+      - name: Verify runtime layout and WinGet assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runtimeRoot = Join-Path $env:GITHUB_WORKSPACE 'x64/Release'
+          $requiredPaths = @(
+            'Kit.exe',
+            'Kit.ActionRunner.exe',
+            'Kit.WingetService.exe',
+            'Kit.WingetService.deps.json',
+            'Kit.WingetService.runtimeconfig.json',
+            'Assets/Winget.png',
+            'Microsoft.Management.Deployment.dll',
+            'Kit.AIHubWorker.exe',
+            'Kit.NetMapService.exe',
+            'Kit.Awake.exe',
+            'Kit.LocalserverWorker.exe',
+            'Kit.UDPtestService.exe',
+            'Kit.LightSwitch.Cli.exe',
+            'LightSwitchService/Kit.LightSwitchService.exe',
+            'WinUI3Apps/Kit.Settings.exe',
+            'WinUI3Apps/Kit.QuickAccess.exe'
+          )
+          foreach ($relative in $requiredPaths) {
+            if (-not (Test-Path -LiteralPath (Join-Path $runtimeRoot $relative) -PathType Leaf)) {
+              throw "Required runtime file missing from x64/Release: $relative"
+            }
+          }
+          foreach ($unexpectedRoot in @(
+            'Kit.Settings.exe',
+            'Kit.Settings.deps.json',
+            'Kit.Settings.runtimeconfig.json',
+            'Kit.QuickAccess.exe',
+            'Kit.QuickAccess.deps.json',
+            'Kit.QuickAccess.runtimeconfig.json'
+          )) {
+            if (Test-Path -LiteralPath (Join-Path $runtimeRoot $unexpectedRoot) -PathType Leaf) {
+              throw "Unexpected duplicate WinUI artifact in output root: $unexpectedRoot"
+            }
+          }
+
+      - name: Stage the Release delivery
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/build/Stage-Release.ps1 -Version '${{ steps.release.outputs.version }}'
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Package the portable archive
+        shell: pwsh
+        run: |
+          $packageArguments = @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools/build/New-ReleasePackage.ps1',
+            '-Version', '${{ steps.release.outputs.version }}',
+            '-Tag', '${{ steps.release.outputs.tag }}',
+            '-CommitSha', $env:GITHUB_SHA,
+            '-Repository', $env:GITHUB_REPOSITORY,
+            '-OutputDirectory', 'bin/release-artifacts'
+          )
+          & pwsh @packageArguments
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Summarize the release package
+        shell: pwsh
+        run: |
+          $metadata = Get-Content -LiteralPath 'bin/release-artifacts/release-metadata.json' -Raw | ConvertFrom-Json
+          $sizeMiB = [math]::Round($metadata.archiveBytes / 1MB, 1)
+          $lines = @(
+            "### Kit $($metadata.version) release package",
+            '',
+            '| Asset | Files | Size | SHA-256 |',
+            '| --- | --- | --- | --- |',
+            "| $($metadata.archive) | $($metadata.fileCount) | $sizeMiB MiB | $($metadata.archiveSha256) |",
+            '',
+            "Commit: $($metadata.commit)"
+          )
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value (($lines) -join ([string][char]10))
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: kit-release-${{ steps.release.outputs.version }}
+          if-no-files-found: error
+          path: |
+            bin/release-artifacts/kit_*.zip
+            bin/release-artifacts/kit_*.zip.sha256
+            bin/release-artifacts/release-notes.md
+            bin/release-artifacts/release-metadata.json
+            TestResults/FrameworkReview/Release-*.manifest.json
+
+      - name: Publish the GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.release.outputs.version }}'
+          $tag = '${{ steps.release.outputs.tag }}'
+          $archive = 'bin/release-artifacts/kit_' + $version + '_Portable.zip'
+          $checksum = $archive + '.sha256'
+          $notes = 'bin/release-artifacts/release-notes.md'
+          foreach ($path in @($archive, $checksum, $notes)) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Release asset is missing: $path"
+            }
+          }
+          $viewOutput = gh release view $tag --repo $env:GITHUB_REPOSITORY --json tagName 2>$null
+          $releaseExists = ($LASTEXITCODE -eq 0)
+          if ($releaseExists) {
+            Write-Host "Release $tag already exists; refreshing its verified assets and notes."
+            $editArguments = @('release', 'edit', $tag, '--repo', $env:GITHUB_REPOSITORY, '--title', $version, '--notes-file', $notes)
+            if ($env:PRERELEASE -eq 'true') { $editArguments += '--prerelease' } else { $editArguments += '--latest' }
+            gh @editArguments
+            if ($LASTEXITCODE -ne 0) {
+              throw "gh release edit failed with exit code $LASTEXITCODE."
+            }
+            gh release upload $tag $archive $checksum --repo $env:GITHUB_REPOSITORY --clobber
+            if ($LASTEXITCODE -ne 0) {
+              throw "gh release upload failed with exit code $LASTEXITCODE."
+            }
+          } else {
+            $createArguments = @('release', 'create', $tag, $archive, $checksum, '--repo', $env:GITHUB_REPOSITORY, '--title', $version, '--notes-file', $notes)
+            if ($env:GITHUB_REF_TYPE -ne 'tag') {
+              $createArguments += @('--target', $env:GITHUB_SHA)
+            }
+            if ($env:PRERELEASE -eq 'true') { $createArguments += '--prerelease' } else { $createArguments += '--latest' }
+            gh @createArguments
+            if ($LASTEXITCODE -ne 0) {
+              throw "gh release create failed with exit code $LASTEXITCODE."
+            }
+          }
+          $releaseJson = gh release view $tag --repo $env:GITHUB_REPOSITORY --json assets,url,tagName,isDraft,isPrerelease
+          if ($LASTEXITCODE -ne 0) {
+            throw "gh release view failed with exit code $LASTEXITCODE."
+          }
+          $release = $releaseJson | ConvertFrom-Json
+          if ($release.isDraft) {
+            throw "Release $tag is still a draft."
+          }
+          $assetNames = @($release.assets | ForEach-Object { $_.name })
+          foreach ($expected in @((Split-Path -Leaf $archive), (Split-Path -Leaf $checksum))) {
+            if ($expected -notin $assetNames) {
+              throw "The release is missing the '$expected' asset."
+            }
+          }
+          Write-Host "::notice::Published https://github.com/$env:GITHUB_REPOSITORY/releases/tag/$tag"
+          $summary = @(
+            "### Published Kit $version",
+            '',
+            ("Release: " + $release.url),
+            '',
+            ("Assets: " + ($assetNames -join ', '))
+          )
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value (($summary) -join ([string][char]10))

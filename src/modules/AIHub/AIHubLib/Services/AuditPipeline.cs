@@ -8,6 +8,7 @@ namespace Kit.AIHubLib.Services;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AIHubLib.Models;
@@ -74,6 +75,9 @@ public sealed class AuditPipeline
             ScanStart = fromUtc,
             ScanEnd = toUtc,
             EventsScanned = events.Count,
+            SkippedChannels = _eventLogService.SkippedChannels.ToList(),
+            LimitedChannels = _eventLogService.LimitedChannels.ToList(),
+            AnalysisOutcome = "skipped",
             Findings = findings,
         };
 

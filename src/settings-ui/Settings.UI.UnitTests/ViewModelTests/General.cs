@@ -418,20 +418,18 @@ namespace ViewModelTests
             StringAssert.Contains(shellPage, "CheckForUpdatesMsgCallback?.Invoke(msg);");
             StringAssert.Contains(settingsWindow, "action == L\"check_for_updates\"");
             StringAssert.Contains(settingsWindow, "isUpdateCheckThreadRunning.compare_exchange_strong");
-            StringAssert.Contains(settingsWindow, "CheckForUpdatesCallback();");
-            StringAssert.Contains(updateUtils, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
-            StringAssert.Contains(updateUtils, "https://github.com/guijianchou/Kit/releases");
+            StringAssert.Contains(settingsWindow, "RunPortableUpdate(updateAction.c_str());");
+            var releaseClient = File.ReadAllText(FindSourceFile("src", "Update", "Kit.Updater", "ReleaseClient.cs"));
+            StringAssert.Contains(releaseClient, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
+            StringAssert.Contains(releaseClient, "https://github.com/guijianchou/Kit");
             StringAssert.Contains(commonUpdating, "https://api.github.com/repos/guijianchou/Kit/releases/latest");
             StringAssert.Contains(commonUpdating, "https://api.github.com/repos/guijianchou/Kit/releases");
-            StringAssert.Contains(updateUtils, "HttpCacheReadBehavior::NoCache");
-            StringAssert.Contains(updateUtils, "HttpCacheWriteBehavior::NoCache");
-            StringAssert.Contains(updateUtils, "Cache-Control");
-            StringAssert.Contains(updateUtils, "response.IsSuccessStatusCode()");
+            StringAssert.Contains(releaseClient, "NoCache = true, NoStore = true");
             StringAssert.Contains(updateUtils, "#include <common/updating/updateState.h>");
             StringAssert.Contains(updateUtils, "UpdateState::read()");
             StringAssert.Contains(updateUtils, "UpdateState::store");
             StringAssert.Contains(updateUtils, "void CheckForUpdatesCallback()");
-            StringAssert.Contains(updateUtils, "check_for_updates();");
+            StringAssert.Contains(updateUtils, "RunPortableUpdate(L\"check\");");
             StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp");
             StringAssert.Contains(generalViewModel, "Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile");
             StringAssert.Contains(generalViewModel, "UpdatingSettings.LoadSettings()");
@@ -441,11 +439,53 @@ namespace ViewModelTests
             StringAssert.Contains(updatingSettings, "FileShare.ReadWrite | FileShare.Delete");
             Assert.IsFalse(updateUtils.Contains("download_new_version_async", StringComparison.Ordinal), "Kit release checks must not download installers.");
             Assert.IsFalse(updateUtils.Contains("PowerToys.Update.exe", StringComparison.Ordinal), "Kit release checks must not launch the updater executable.");
-            Assert.IsFalse(updateUtils.Contains("ShellExecuteEx", StringComparison.Ordinal), "Kit release checks must not launch external updater processes.");
             Assert.IsFalse(updateUtils.Contains("#include <common/updating/updating.h>", StringComparison.Ordinal), "Kit should reuse only the update-state file model, not the full updater library.");
             Assert.IsFalse(updateUtils.Contains("EnsureSuccessStatusCode", StringComparison.Ordinal), "Kit release checks should not throw first-chance WinRT exceptions for expected GitHub HTTP errors such as 403.");
             Assert.IsFalse(generalViewModel.Contains("QueueUpdateCheckResultRefresh", StringComparison.Ordinal), "Settings should rely on the existing UpdateState.json watcher instead of a manual polling loop.");
             Assert.IsFalse(generalViewModel.Contains("UpdateCheckMinimumDisplayMs", StringComparison.Ordinal), "Settings should not add artificial update-check timing.");
+        }
+
+        [TestMethod]
+        public void PortableUpdateActionsFollowDownloadAndRestartState()
+        {
+            string sent = null;
+            var viewModel = CreateViewModel(sendCheckForUpdatesIPCMessage: message =>
+            {
+                sent = message;
+                return 0;
+            });
+            viewModel.RefreshUpdatingState(new UpdatingSettings { State = UpdatingSettings.UpdatingState.ReadyToDownload, ReleasePageLink = "https://github.com/guijianchou/Kit/releases/tag/9.0.0" });
+            Assert.IsTrue(viewModel.CanDownloadPortableUpdate);
+            viewModel.DownloadUpdateCommand.Execute(null);
+            StringAssert.Contains(sent, "download_update");
+            Assert.IsFalse(viewModel.CanDownloadPortableUpdate);
+            Assert.IsFalse(viewModel.IsCheckForUpdatesButtonEnabled);
+            viewModel.RefreshUpdatingState(new UpdatingSettings { State = UpdatingSettings.UpdatingState.Downloading, DownloadedBytes = 25, TotalBytes = 100 });
+            Assert.AreEqual(25, viewModel.UpdateDownloadPercent);
+            Assert.IsTrue(viewModel.CanCancelUpdateDownload);
+            Assert.IsTrue(viewModel.IsNewVersionDownloading);
+            viewModel.CancelUpdateDownloadCommand.Execute(null);
+            StringAssert.Contains(sent, "cancel_update_download");
+            viewModel.RefreshUpdatingState(new UpdatingSettings { State = UpdatingSettings.UpdatingState.ReadyToInstall });
+            Assert.IsTrue(viewModel.CanRestartToUpdate);
+            Assert.IsFalse(viewModel.IsNewVersionDownloading);
+            viewModel.RestartToUpdateCommand.Execute(null);
+            StringAssert.Contains(sent, "restart_to_update");
+        }
+
+        [TestMethod]
+        public void InterruptedUpdateRequiresRecoveryBeforeAnotherDownload()
+        {
+            var viewModel = CreateViewModel();
+            viewModel.RefreshUpdatingState(new UpdatingSettings
+            {
+                State = UpdatingSettings.UpdatingState.ErrorDownloading,
+                ErrorCode = "recoveryRequired",
+                ReleasePageLink = "https://github.com/guijianchou/Kit/releases/tag/9.0.0",
+            });
+            Assert.IsFalse(viewModel.CanDownloadPortableUpdate);
+            Assert.IsTrue(viewModel.CanRestartToUpdate);
+            Assert.AreEqual("Error", viewModel.UpdateCheckMessageSeverity);
         }
 
         [TestMethod]

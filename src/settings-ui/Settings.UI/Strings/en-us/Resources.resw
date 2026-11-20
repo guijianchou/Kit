@@ -3108,13 +3108,13 @@
     <value>Select a time range and refresh local findings</value>
   </data>
   <data name="AIHub_RangeOption1DayLabel" xml:space="preserve">
-    <value>2d</value>
+    <value>2D · 2 days</value>
   </data>
   <data name="AIHub_RangeOption2DaysLabel" xml:space="preserve">
-    <value>1w</value>
+    <value>1W · 1 week</value>
   </data>
   <data name="AIHub_RangeOption1WeekLabel" xml:space="preserve">
-    <value>1mo</value>
+    <value>1M · 30 days</value>
   </data>
   <data name="AIHub_ScanOptionsLabel" xml:space="preserve">
     <value>Scan options</value>
@@ -4230,6 +4230,12 @@
   <data name="Winget_RestoreSelected" xml:space="preserve"><value>Restore selection</value></data>
   <data name="Winget_QueueTitle" xml:space="preserve"><value>Current queue</value></data>
   <data name="Winget_HistoryTitle" xml:space="preserve"><value>Recent history</value></data>
+  <data name="Winget_HistorySearch" xml:space="preserve"><value>Filter history by package name or ID</value></data>
+  <data name="Winget_HistoryAttentionOnly" xml:space="preserve"><value>Only failed operations or those needing verification</value></data>
+  <data name="Winget_HistoryNoMatches" xml:space="preserve"><value>No history entries match these filters.</value></data>
+  <data name="Winget_HistoryMatches" xml:space="preserve"><value>Showing {0} of {1} history entries</value></data>
+  <data name="Winget_HistoryCompletedAt" xml:space="preserve"><value>Finished {0:g}</value></data>
+  <data name="Winget_HistoryStartedAt" xml:space="preserve"><value>Started {0:g}</value></data>
   <data name="Winget_ClearOldHistory" xml:space="preserve"><value>Clear history older than 7 days</value></data>
   <data name="Winget_HistoryClearWorking" xml:space="preserve"><value>Clearing history older than 7 days…</value></data>
   <data name="Winget_HistoryClearResult" xml:space="preserve"><value>Removed {0} history entries older than 7 days.</value></data>
@@ -4364,6 +4370,21 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_FullChannels.Content" xml:space="preserve"><value>Include Security and Firewall logs (requires administrator)</value></data>
   <data name="AIHub_Fluent_NextScanHint.Text" xml:space="preserve"><value>Applies to the next scan only.</value></data>
   <data name="AIHub_Fluent_AuditHistory.Content" xml:space="preserve"><value>Audit history</value></data>
+  <data name="AIHub_WeeklyReport.Content" xml:space="preserve"><value>Weekly audit report</value></data>
+  <data name="AIHub_WeeklyLoading" xml:space="preserve"><value>Reading audit history…</value></data>
+  <data name="AIHub_Inventory_Growth" xml:space="preserve"><value>Up {0} since the previous scan</value></data>
+  <data name="AIHub_Inventory_Shrink" xml:space="preserve"><value>Down {0} since the previous scan</value></data>
+  <data name="AIHub_Inventory_Unchanged" xml:space="preserve"><value>Same size as the previous scan</value></data>
+  <data name="AIHub_WeeklyClose" xml:space="preserve"><value>Close</value></data>
+  <data name="AIHub_WeeklyReadFailed" xml:space="preserve"><value>Audit history could not be read. Reopen the report to retry.</value></data>
+  <data name="AIHub_WeeklyRange" xml:space="preserve"><value>{0:d} – {1:d}</value></data>
+  <data name="AIHub_WeeklyEmpty" xml:space="preserve"><value>No saved audits for these seven days.</value></data>
+  <data name="AIHub_WeeklyCoverage" xml:space="preserve"><value>{0} audits across {1} of 7 days. Each day uses its latest saved audit.</value></data>
+  <data name="AIHub_WeeklyScore" xml:space="preserve"><value>Average health score {0:0.#}/100</value></data>
+  <data name="AIHub_WeeklyNoBaseline" xml:space="preserve"><value>The preceding seven days have no saved audits to compare.</value></data>
+  <data name="AIHub_WeeklyTrend" xml:space="preserve"><value>Change from the preceding seven days ({0} days observed): {1:+0.#;-0.#;0} points</value></data>
+  <data name="AIHub_WeeklyDaily" xml:space="preserve"><value>Daily findings</value></data>
+  <data name="AIHub_WeeklyDay" xml:space="preserve"><value>{0:d} · score {1} · {2} high, {3} medium, {4} low</value></data>
   <data name="AIHub_Fluent_AiSummary.Text" xml:space="preserve"><value>AI analysis summary</value></data>
   <data name="AIHub_Fluent_FullReport.Content" xml:space="preserve"><value>Read full analysis →</value></data>
   <data name="AIHub_Fluent_ReportExpander.Header" xml:space="preserve"><value>Full AI analysis</value></data>
@@ -4461,4 +4482,78 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AiHub_ConfigurationLoading.AutomationProperties.Name" xml:space="preserve">
     <value>Loading AI service settings</value>
   </data>
+  <data name="Winget_ChooseVersion" xml:space="preserve"><value>Version to install</value></data>
+  <data name="Winget_ApplyVersion" xml:space="preserve"><value>Use this version</value></data>
+  <data name="Winget_VersionExplanation" xml:space="preserve"><value>Choose a catalog version, then select the package and review the operation. Updates require a newer version; downgrade is not supported.</value></data>
+  <data name="Winget_InstallLocation" xml:space="preserve"><value>Installation folder</value></data>
+  <data name="Winget_InstallLocationHint" xml:space="preserve"><value>Optional absolute folder. Installer support varies; this changes the installation destination, not the download cache. Applies to the selected batch.</value></data>
+  <data name="Winget_IgnoreScope" xml:space="preserve"><value>Ignore updates</value></data>
+  <data name="Winget_IgnoreThisVersion" xml:space="preserve"><value>Only this available version</value></data>
+  <data name="Winget_IgnoreAllVersions" xml:space="preserve"><value>All future versions</value></data>
+  <data name="Winget_HistoryRetention" xml:space="preserve"><value>Records to remove</value></data>
+  <data name="Winget_HistoryOlder7" xml:space="preserve"><value>Completed more than 7 days ago</value></data>
+  <data name="Winget_HistoryOlder30" xml:space="preserve"><value>Completed more than 30 days ago</value></data>
+  <data name="Winget_HistoryAllCompleted" xml:space="preserve"><value>All completed records</value></data>
+  <data name="Winget_ClearHistory" xml:space="preserve"><value>Clear these records</value></data>
+  <data name="Winget_HistoryCleanupHint" xml:space="preserve"><value>Removes saved installation, update and uninstall history. Keeps the current queue and records awaiting verification. Installed applications are unchanged.</value></data>
+  <data name="Winget_ActiveFilterSummary" xml:space="preserve"><value>{0} active filters · showing {1} of {2} packages</value></data>
+  <data name="Winget_ResetFilters" xml:space="preserve"><value>Clear filters</value></data>
+  <data name="AIHub_AuditOverviewHeading" xml:space="preserve"><value>System issue overview · {0}</value></data>
+  <data name="AIHub_AuditOverviewEvidence" xml:space="preserve"><value>{0} events checked · {1} issues found</value></data>
+  <data name="AIHub_AuditOverviewHighLabel" xml:space="preserve"><value>High risk</value></data>
+  <data name="AIHub_AuditOverviewMediumLabel" xml:space="preserve"><value>Medium risk</value></data>
+  <data name="AIHub_AuditOverviewLowLabel" xml:space="preserve"><value>Low risk</value></data>
+  <data name="AIHub_AuditOverviewHelpLabel" xml:space="preserve"><value>About these counts</value></data>
+  <data name="AIHub_AuditCategoryReliability" xml:space="preserve"><value>System reliability</value></data>
+  <data name="AIHub_AuditCategoryStability" xml:space="preserve"><value>Crashes &amp; restarts</value></data>
+  <data name="AIHub_AuditCategoryConfiguration" xml:space="preserve"><value>Configuration</value></data>
+  <data name="AIHub_AuditCategoryNetwork" xml:space="preserve"><value>Network</value></data>
+  <data name="AIHub_AuditCategoryApplication" xml:space="preserve"><value>Applications</value></data>
+  <data name="AIHub_AuditCategorySystem" xml:space="preserve"><value>System components</value></data>
+  <data name="AIHub_AuditCategorySingleIssue" xml:space="preserve"><value>1 issue</value></data>
+  <data name="AIHub_AuditCategoryIssueCount" xml:space="preserve"><value>{0} issues</value></data>
+  <data name="AIHub_AuditCategoryOccurrences" xml:space="preserve"><value>{0} occurrences</value></data>
+  <data name="AIHub_AuditCategorySingleOccurrence" xml:space="preserve"><value>Occurred once</value></data>
+  <data name="AIHub_AuditPrioritySingle" xml:space="preserve"><value>1 issue needs priority attention</value></data>
+  <data name="AIHub_AuditPriorityMultiple" xml:space="preserve"><value>{0} issues need priority attention</value></data>
+  <data name="AIHub_AuditCategoryReview" xml:space="preserve"><value>Review priority issue</value></data>
+  <data name="AIHub_AuditOverviewRecordedRange" xml:space="preserve"><value>Recorded period</value></data>
+  <data name="AIHub_AuditOverviewWindow" xml:space="preserve"><value>{0:g} – {1:g} · local time</value></data>
+  <data name="AIHub_AuditOverviewUnknownRange" xml:space="preserve"><value>This snapshot has no recorded scan range. Run a full scan to create a period overview.</value></data>
+  <data name="AIHub_AuditOverviewScore" xml:space="preserve"><value>Health score {0}/100</value></data>
+  <data name="AIHub_AuditOverviewHigh" xml:space="preserve"><value>{0} high-priority issue(s) need attention</value></data>
+  <data name="AIHub_AuditOverviewWarnings" xml:space="preserve"><value>Review the issues recorded during this period</value></data>
+  <data name="AIHub_AuditOverviewNoIssues" xml:space="preserve"><value>No issues found in the collected events</value></data>
+  <data name="AIHub_AuditOverviewDescription" xml:space="preserve"><value>{0} events examined · {1} findings across {2} categories · {3} recorded occurrences</value></data>
+  <data name="AIHub_AuditOverviewSkipped" xml:space="preserve"><value>Unreadable channels: {0}.</value></data>
+  <data name="AIHub_AuditOverviewLimited" xml:space="preserve"><value>Event limit reached: {0}. This period may contain more events.</value></data>
+  <data name="AIHub_AuditOverviewPartialAi" xml:space="preserve"><value>AI analysis was incomplete; this overview retains local findings and any validated AI findings.</value></data>
+  <data name="AIHub_AuditOverviewNextScan" xml:space="preserve"><value>Next full scan: {0}. This overview will update after that scan finishes.</value></data>
+  <data name="AIHub_AuditOverviewRecommendation.Text" xml:space="preserve"><value>Suggested action</value></data>
+  <data name="AIHub_AuditCategoryCounts" xml:space="preserve"><value>{0} findings · {1} occurrences · {2} high / {3} medium / {4} low</value></data>
+  <data name="AIHub_AuditTotals" xml:space="preserve"><value>{0} categories · {1} findings · {2} high / {3} medium / {4} low</value></data>
+  <data name="AIHub_AuditOccurrencesHint" xml:space="preserve"><value>Occurrences are counted per finding; multiple findings can refer to the same event. Findings filters only change the detail list.</value></data>
+  <data name="AIHub_WorkspaceOverview" xml:space="preserve"><value>System overview</value></data>
+  <data name="AIHub_WorkspaceFindings" xml:space="preserve"><value>Findings ({0})</value></data>
+  <data name="AIHub_WorkspaceViewAll" xml:space="preserve"><value>View all {0} issues</value></data>
+  <data name="AIHub_WorkspaceBack" xml:space="preserve"><value>Back to overview</value></data>
+  <data name="AIHub_WorkspaceAllIssues" xml:space="preserve"><value>All issues</value></data>
+  <data name="AIHub_WorkspaceSortHint" xml:space="preserve"><value>All issues · sorted by risk and occurrences</value></data>
+  <data name="AIHub_WorkspaceCategoryAction" xml:space="preserve"><value>View all issues in this category</value></data>
+  <data name="General_UpdateDownload.Content" xml:space="preserve"><value>Download update</value></data>
+  <data name="General_UpdateRestart.Content" xml:space="preserve"><value>Restart to update</value></data>
+  <data name="General_UpdateRecover.Content" xml:space="preserve"><value>Restore and restart</value></data>
+  <data name="General_UpdateCancel.Content" xml:space="preserve"><value>Cancel download</value></data>
+  <data name="General_UpdateReady.Text" xml:space="preserve"><value>Update downloaded and verified. Restart Kit to install it. Your settings will be kept.</value></data>
+  <data name="General_UpdateDownloading.Text" xml:space="preserve"><value>Downloading Portable update… You can continue using Kit.</value></data>
+  <data name="General_UpdateVerifying.Text" xml:space="preserve"><value>Verifying the update…</value></data>
+  <data name="General_UpdateInstalling.Text" xml:space="preserve"><value>Kit is closing and will restart after the update.</value></data>
+  <data name="General_UpdateError.Text" xml:space="preserve"><value>The update could not be completed. Check your connection and free disk space, then try again.</value></data>
+  <data name="General_UpdateInvalid.Text" xml:space="preserve"><value>The update package could not be verified. Download it again.</value></data>
+  <data name="General_UpdateAccess.Text" xml:space="preserve"><value>Kit cannot update this folder. Move the Portable folder to a writable location and try again.</value></data>
+  <data name="General_UpdateCloseFailed.Text" xml:space="preserve"><value>Some Kit processes are still running. Close them, reopen Kit, and try again.</value></data>
+  <data name="General_UpdateRecoveryRequired.Text" xml:space="preserve"><value>An interrupted update needs recovery. Restore the previous version and restart Kit.</value></data>
+  <data name="General_UpdateRecovered.Text" xml:space="preserve"><value>The previous version was restored. You can download the update again.</value></data>
+  <data name="General_UpdateInterrupted.Text" xml:space="preserve"><value>The update was interrupted. Download it again to continue.</value></data>
+  <data name="General_UpdateHelperMissing.Text" xml:space="preserve"><value>The update component is missing or cannot start. Extract the complete Portable package and try again.</value></data>
 </root>

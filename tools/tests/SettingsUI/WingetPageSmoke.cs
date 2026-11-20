@@ -134,6 +134,7 @@ internal static class WingetPageSmoke
             await VerifyLatestOperationOutput(page);
             await VerifyHistoryCleanupDialog(page, general);
             await VerifyDetailsDialog(page);
+            await VerifyInstallOptionsDialog(page);
             await VerifyCancelledConfirmation(page);
             Require(ipcMessages == 0, "Synthetic layout and cancelled dialogs must not send settings.");
             EnsureNoWorker();
@@ -574,6 +575,9 @@ internal static class WingetPageSmoke
         vm.IncludeUnknown = true;
         Require(!vm.PreparedSelectionMatches(prepared), "Changing unknown-version handling must invalidate prepared review.");
         vm.IncludeUnknown = false;
+        vm.InstallLocation = @"C:\Apps\Fixture";
+        Require(!vm.PreparedSelectionMatches(prepared), "Changing the destination folder must invalidate prepared review.");
+        vm.InstallLocation = string.Empty;
         Require(vm.PreparedSelectionMatches(prepared), "Restoring all options must recover the unchanged review identity.");
         Require(!vm.PreparedSelectionMatches(prepared with { CreatedUtc = DateTimeOffset.UtcNow.AddMinutes(-11) }), "Expired prepared operations must not authorize a submission.");
         Apply(vm, Snapshot() with { Packages = new[] { LongPackage with { AvailableVersion = "999.0.0" }, NormalPackage, UnknownPackage } });
@@ -673,6 +677,15 @@ internal static class WingetPageSmoke
             await Settle();
             Require(host.Visibility == Visibility.Collapsed && Math.Abs(table.ActualWidth - fullWidth) <= 1 && vm.FilterText == "Fixture.Terminal" && vm.DisplayPackages.Count == 1,
                 "Collapsing must restore the actual list width without clearing its filter.");
+            Require(vm.HasActiveFilters && vm.ActiveFilterCount == 1 && Descendants(page).OfType<TextBlock>().Any(text =>
+                AutomationProperties.GetAutomationId(text) == "Winget_ActiveFilters" && text.Text == vm.ActiveFilterSummary && text.ActualWidth > 0),
+                "Hidden filters must keep a visible summary of the active filter and result count.");
+            var reset = Descendants(page).OfType<HyperlinkButton>().Single(button => AutomationProperties.GetAutomationId(button) == "Winget_ResetFilters");
+            ((IInvokeProvider)new HyperlinkButtonAutomationPeer(reset).GetPattern(PatternInterface.Invoke)).Invoke();
+            await Settle();
+            Require(!vm.HasActiveFilters && filter.Text.Length == 0 && host.Visibility == Visibility.Collapsed,
+                "Clear filters must restore the list without expanding the sidebar.");
+            vm.FilterText = "Fixture.Terminal";
             vm.ActiveTabIndex = (int)WingetWorkspace.Installed;
             vm.FilterText = LocalPackage.Id;
             vm.ExactMatch = true;
@@ -1275,9 +1288,56 @@ internal static class WingetPageSmoke
             Apply(vm, CloneSnapshot(Snapshot()));
             await Settle();
             Require(!row.IsIgnored && label.Text == WingetViewModel.L("UpdateAvailableState"), "Restoring an ignored package must update the same visible label back to update available.");
+            Apply(vm, Snapshot() with { IgnoredPackages = new[] { identity with { IgnoreOnlyThisVersion = true } } });
+            Require(row.IsIgnored, "A version-specific ignore must hide that exact update.");
+            Apply(vm, Snapshot() with
+            {
+                Packages = new[] { LongPackage, NormalPackage with { AvailableVersion = "999.0" }, UnknownPackage },
+                IgnoredPackages = new[] { identity with { IgnoreOnlyThisVersion = true } },
+            });
+            Require(!row.IsIgnored, "A newer update must become visible without removing the version-specific ignore.");
         }
         finally { vm.ShowIgnored = false; Apply(vm, Snapshot()); }
         Log("Displayed ignored-state changes update the same package state label in both directions PASS");
+    }
+
+    private static async Task VerifyInstallOptionsDialog(WingetPage page)
+    {
+        var vm = page.ViewModel;
+        vm.ActiveTabIndex = (int)WingetWorkspace.Updates;
+        var field = typeof(WingetPage).GetField("activeDialog", PrivateInstance);
+        var currentPageField = typeof(WingetPage).GetField("currentPage", PrivateInstance);
+        bool wasCurrent = (bool)currentPageField.GetValue(page);
+        string originalLocation = vm.InstallLocation;
+        try
+        {
+            currentPageField.SetValue(page, true);
+            typeof(WingetPage).GetMethod("Options_Click", PrivateInstance).Invoke(page, new object[] { null, new RoutedEventArgs() });
+            await Settle();
+            var dialog = (ContentDialog)field.GetValue(page);
+            Require(dialog != null, "Installation options must open in the real dialog.");
+            var location = Descendants(dialog).OfType<TextBox>().Single(control => AutomationProperties.GetAutomationId(control) == "Winget_InstallLocation");
+            location.Text = "relative-folder";
+            await Settle();
+            Require(!dialog.IsPrimaryButtonEnabled, "Relative installation folders cannot be applied.");
+            location.Text = @"C:\Apps\Fixture Software";
+            await Settle();
+            Require(dialog.IsPrimaryButtonEnabled, "An absolute installation folder must be accepted.");
+            await CaptureShell("winget-install-options.png");
+            var apply = Descendants(dialog).OfType<Button>().Single(button => button.Name == "PrimaryButton");
+            ((IInvokeProvider)new ButtonAutomationPeer(apply).GetPattern(PatternInterface.Invoke)).Invoke();
+            var applied = Stopwatch.StartNew();
+            while ((bool)typeof(WingetPage).GetField("confirmationOpen", PrivateInstance).GetValue(page) && applied.Elapsed < TimeSpan.FromSeconds(5))
+                await Task.Delay(25);
+            Require(vm.InstallLocation == location.Text, "The chosen folder must reach the view-model options.");
+            Log("Installation options dialog validates and applies an absolute destination without starting an operation PASS");
+        }
+        finally
+        {
+            ((ContentDialog)field.GetValue(page))?.Hide();
+            currentPageField.SetValue(page, wasCurrent);
+            vm.InstallLocation = originalLocation;
+        }
     }
 
     private static async Task VerifyLatestOperationOutput(WingetPage page)
@@ -1445,8 +1505,8 @@ internal static class WingetPageSmoke
         bool wasEnabled = general.SettingsConfig.Enabled.Winget;
         var now = DateTimeOffset.UtcNow;
         var old = new WingetQueueItem("fixture-old-history", NormalPackage, "upgrade", "Succeeded", CompletedUtc: now.AddDays(-8));
-        var recent = old with { Id = "fixture-recent-history", CompletedUtc = now.AddDays(-1) };
-        var unknown = old with { Id = "fixture-undated-history", CompletedUtc = null };
+        var recent = old with { Id = "fixture-recent-history", State = "Failed", CompletedUtc = now.AddDays(-1) };
+        var unknown = old with { Id = "fixture-undated-history", Package = NormalPackage with { Id = "Fixture.Legacy.Tools", Name = null }, State = "NeedsVerification", CompletedUtc = null };
         var queued = old with { Id = "fixture-current-queue", CompletedUtc = now.AddDays(-20) };
         var snapshot = Snapshot() with { History = new[] { old, recent, unknown }, Queue = new[] { queued } };
         var requestEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1455,10 +1515,12 @@ internal static class WingetPageSmoke
         string moduleKey = "WingetHistoryPage_" + Guid.NewGuid().ToString("N");
         await using var server = new KitServicePipeServer(moduleKey, async (request, token) =>
         {
-            Require(request.Version == 1 && request.PayloadJson == null, "History UI must send a parameter-free command to its isolated pipe.");
+            Require(request.Version == 1, "History UI must use the supported protocol.");
             if (request.Command == "get-status")
                 return KitPipeResponse.Ok(JsonSerializer.Serialize(snapshot, WingetServiceJsonContext.Default.WingetServiceStatus));
-            Require(request.Command == "clear-old-history", "The history fixture must not submit a package operation.");
+            Require(request.Command == "clear-history", "The history fixture must not submit a package operation.");
+            var cleanup = JsonSerializer.Deserialize(request.PayloadJson, WingetServiceJsonContext.Default.WingetServiceRequest);
+            Require(cleanup.HistoryRetentionDays == 7, "The selected retention must reach the service.");
             Interlocked.Increment(ref cleanupRequests);
             requestEntered.TrySetResult(true);
             await requestRelease.Task.WaitAsync(token);
@@ -1483,8 +1545,44 @@ internal static class WingetPageSmoke
             var button = Descendants(dialog).OfType<Button>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_ClearOldHistory");
             var result = Descendants(dialog).OfType<TextBlock>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryClearResult");
             var history = Descendants(dialog).OfType<ItemsControl>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryItems");
-            Require(button.IsEnabled && Equals(button.Content, WingetViewModel.L("ClearOldHistory")) &&
-                AutomationProperties.GetName(button) == WingetViewModel.L("ClearOldHistory"), "The history action needs a localized label and accessible name.");
+            var search = Descendants(dialog).OfType<TextBox>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistorySearch");
+            var attention = Descendants(dialog).OfType<CheckBox>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryAttention");
+            var originalQueueRow = vm.QueueItems.Single();
+            var selectedPackage = vm.ActiveSelection;
+            var legacyRow = vm.HistoryItems.Single(row => row.Item.Id == unknown.Id);
+            Require(legacyRow.Name == unknown.Package.Id && !legacyRow.HasTimestamp && legacyRow.WhenText.Length == 0, "Legacy history must show its package ID without inventing a time.");
+            search.Text = "  WINDOWS ter  ";
+            await Settle();
+            Require(history.Items.Count == 2, "Package-name search must ignore case and surrounding whitespace.");
+            attention.IsChecked = true;
+            await Settle();
+            Require(history.Items.Count == 1 && ((WingetQueueRow)history.Items[0]).Item.Id == recent.Id, "Combined filters must retain only the matching failure.");
+            search.Text = "LEGACY.TOOLS";
+            await Settle();
+            Require(history.Items.Count == 1 && ReferenceEquals(legacyRow, history.Items[0]), "The package ID must be searchable when no name was saved.");
+            Apply(vm, snapshot with { History = new[] { old, recent, unknown with { State = "Succeeded" } } });
+            await Settle();
+            Require(history.Items.Count == 0 && Descendants(dialog).OfType<TextBlock>().Any(text => text.Text == WingetViewModel.L("HistoryNoMatches")), "A service refresh must update the filtered list and render the empty-match message.");
+            Apply(vm, snapshot);
+            Apply(vm, CloneSnapshot(snapshot));
+            await Settle();
+            Require(history.Items.Count == 1 && ReferenceEquals(legacyRow, history.Items[0]) && ReferenceEquals(originalQueueRow, vm.QueueItems.Single()) && ReferenceEquals(selectedPackage, vm.ActiveSelection), "Filtered refreshes must preserve history, current queue and workspace selection.");
+            search.Text = string.Empty;
+            attention.IsChecked = false;
+            await Settle();
+            Require(history.Items.Count == 3, "Clearing filters must reveal every history row.");
+            Log("History dialog name and ID search, attention filter, live refresh, legacy rows and empty matches PASS");
+            var retention = Descendants(dialog).OfType<ComboBox>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryRetention");
+            retention.SelectedIndex = 1;
+            await Settle();
+            Require(!button.IsEnabled, "No completed records are older than 30 days.");
+            retention.SelectedIndex = 2;
+            await Settle();
+            Require(button.IsEnabled, "Clear all includes recently completed records.");
+            retention.SelectedIndex = 0;
+            await Settle();
+            Require(button.IsEnabled && Equals(button.Content, WingetViewModel.L("ClearHistory")) &&
+                AutomationProperties.GetName(button) == WingetViewModel.L("ClearHistory"), "The history action needs a localized label and accessible name.");
             Apply(vm, snapshot with { IsBusy = true });
             await Settle();
             Require(!button.IsEnabled, "History cleanup must be disabled while a package action is busy.");
@@ -1507,7 +1605,7 @@ internal static class WingetPageSmoke
             await requestEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
             await Settle();
             Require(!button.IsEnabled && result.Text == WingetViewModel.L("HistoryClearWorking"), "Pending history cleanup must disable duplicate submissions and show progress.");
-            await vm.ClearOldHistoryAsync();
+            await vm.ClearHistoryAsync();
             Require(cleanupRequests == 1, "Repeated cleanup during an active request must not dispatch twice.");
             requestRelease.TrySetResult(true);
             for (int attempt = 0; attempt < 120 && GetField<bool>(vm, "requestPending"); attempt++) await Task.Delay(25);
@@ -1557,6 +1655,21 @@ internal static class WingetPageSmoke
             var dialog = (ContentDialog)field.GetValue(page);
             Require(dialog != null, "Selected package details must open in a dialog.");
             await WaitForDialogText(dialog, new[] { LongPackage.Id, LongPackage.ReleaseNotes, Details(LongPackage).Description });
+            Apply(vm, Snapshot() with { SelectedDetails = Details(LongPackage) with { AvailableVersions = new[] { LongPackage.AvailableVersion, "fixture-older" } } });
+            await Settle();
+            var versions = Descendants(dialog).OfType<ComboBox>().Single(control => AutomationProperties.GetAutomationId(control) == "Winget_VersionChoice");
+            Require(versions.Items.Count == 2 && Equals(versions.SelectedItem, LongPackage.AvailableVersion), "Version choices must come from the loaded package details.");
+            versions.SelectedItem = "fixture-older";
+            Apply(vm, CloneSnapshot(Snapshot() with { SelectedDetails = Details(LongPackage) with { AvailableVersions = new[] { LongPackage.AvailableVersion, "fixture-older" } } }));
+            await Settle();
+            Require(Equals(versions.SelectedItem, "fixture-older"), "Unchanged status polling must preserve an unapplied version choice.");
+            typeof(WingetViewModel).GetField("detailsRequestRow", PrivateInstance).SetValue(vm, vm.ActiveSelection);
+            typeof(WingetViewModel).GetField("detailsError", PrivateInstance).SetValue(vm, "Fixture version unavailable");
+            typeof(WingetViewModel).GetMethod("NotifyState", PrivateInstance).Invoke(vm, Array.Empty<object>());
+            await Settle();
+            Require(vm.HasDetails && vm.HasDetailsError && Descendants(dialog).OfType<StackPanel>().Single(panel => panel.Name == "DetailsErrorPanel").Visibility == Visibility.Visible,
+                "A failed version change must display its error while preserving the previous package details.");
+            Require(await vm.LoadDetailsAsync() && !vm.HasDetailsError, "Returning to the preserved details must clear the obsolete version error.");
             Require(Descendants(dialog).OfType<HyperlinkButton>().Any(link => link.NavigateUri?.AbsoluteUri == Details(LongPackage).PackageUrl) &&
                 Descendants(dialog).OfType<TextBlock>().Any(block => block.Text.Contains("MIT", StringComparison.Ordinal)), "Package details must include its safe homepage and license.");
             Require(Descendants(dialog).OfType<TextBlock>().Where(block => block.Text == LongPackage.ReleaseNotes).All(block => block.TextWrapping == TextWrapping.Wrap && block.IsTextSelectionEnabled), "Release notes must remain selectable wrapping plain text.");

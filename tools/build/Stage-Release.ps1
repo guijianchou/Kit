@@ -67,6 +67,7 @@ $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Where-O
 if ($sourceFiles.Count -eq 0) { throw 'No runtime files were selected.' }
 
 $versionedFiles = @(
+    'Updater\Kit.Updater.exe',
     'Kit.exe', 'Kit.Awake.exe', 'Kit.Awake.dll',
     'Kit.ManagedCommon.dll', 'Kit.Interop.dll', 'Kit.GPOWrapper.dll', 'Kit.Settings.UI.Lib.dll',
     'Kit.BackgroundActivatorDLL.dll', 'Kit.ActionRunner.exe',
@@ -221,6 +222,14 @@ if (Test-Path -LiteralPath $sparsePackagePath) {
     }
     finally { $archive.Dispose() }
 }
+
+$portableManifest = [ordered]@{
+    version = $Version
+    files = @($manifest | ForEach-Object { [ordered]@{ path = $_.Path.Replace('\', '/'); sha256 = $_.Sha256.ToLowerInvariant() } })
+}
+$portableManifestPath = Join-Path $destinationRoot 'portable-manifest.json'
+[IO.File]::WriteAllText($portableManifestPath, ($portableManifest | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+$manifest.Add([ordered]@{ Path = 'portable-manifest.json'; Bytes = (Get-Item -LiteralPath $portableManifestPath).Length; Sha256 = (Get-FileHash -LiteralPath $portableManifestPath -Algorithm SHA256).Hash })
 
 $report = [ordered]@{
     Version = $Version

@@ -26,6 +26,11 @@ internal static class WingetSafetyPolicy
             throw new ArgumentException("WinGet uninstall does not support an architecture option.", nameof(options));
         }
 
+        if (!WingetPackageOptions.IsValidInstallLocation(options.InstallLocation) || (uninstall && options.InstallLocation is not null))
+        {
+            throw new ArgumentException("Choose an absolute installation folder; it does not apply to uninstallation.", nameof(options));
+        }
+
         return options with { Scope = scope, Architecture = architecture };
     }
 

@@ -31,6 +31,21 @@ public sealed class AuditHistoryStorage
 
     public List<AuditResult> LoadHistory()
     {
+        try
+        {
+            return ReadLockedHistory();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return new List<AuditResult>();
+        }
+    }
+
+    public Task<WeeklyAuditReport> LoadWeeklyReportAsync(DateOnly endDate, TimeZoneInfo zone) =>
+        Task.Run(() => WeeklyAuditReport.From(ReadLockedHistory(), endDate, zone));
+
+    private List<AuditResult> ReadLockedHistory()
+    {
         lock (_lock)
         {
             using var mutex = new Mutex(false, _mutexName);
@@ -38,11 +53,6 @@ public sealed class AuditHistoryStorage
             try
             {
                 return ReadHistory();
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-            {
-                // UI reads can degrade gracefully. The writer always uses strict ReadHistory.
-                return new List<AuditResult>();
             }
             finally
             {
@@ -53,13 +63,17 @@ public sealed class AuditHistoryStorage
 
     private List<AuditResult> ReadHistory()
     {
-        if (!File.Exists(_storagePath))
+        string json;
+        try
+        {
+            json = File.ReadAllText(_storagePath);
+        }
+        catch (IOException exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
         {
             return new List<AuditResult>();
         }
 
         // A damaged/unreadable history must never become an empty history on the next save.
-        string json = File.ReadAllText(_storagePath);
         return JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.ListAuditResult)
             ?? throw new InvalidDataException("The audit history does not contain a valid list.");
     }

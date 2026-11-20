@@ -304,7 +304,7 @@ public sealed partial class WingetViewModel : PageViewModelBase
     public bool CanDownload => CanActOnPackage && SelectedDetails != null;
 
     public bool CanInstall => CanDownload && ActiveSelection?.IsMetadataResolved == true && SelectedDetails?.Package.IsMetadataResolved == true && SelectedDetails.Package.InstallEligibility is WingetInstallEligibility.UserWithoutElevation or WingetInstallEligibility.RequiresElevation
-        && (ActiveTabIndex == (int)WingetWorkspace.Updates || ActiveSelection?.IsInstalled == false);
+        && (ActiveTabIndex == (int)WingetWorkspace.Updates ? SelectedDetails.Package.IsUpdateAvailable : ActiveSelection?.IsInstalled == false);
 
     public bool HasSelection => ActiveSelection != null;
 
@@ -365,6 +365,7 @@ public sealed partial class WingetViewModel : PageViewModelBase
     public string PackageDescription => SelectedDetails?.Description ?? L("LoadDetailsHint");
 
     public string InstallExplanation => ActiveTabIndex == (int)WingetWorkspace.Installed ? L("UninstallExplanation") : SelectedDetails == null ? L("LoadDetailsHint") : ActiveTabIndex == (int)WingetWorkspace.Discover && ActiveSelection?.IsInstalled == true ? L("InstalledHint") :
+        ActiveTabIndex == (int)WingetWorkspace.Updates && !SelectedDetails.Package.IsUpdateAvailable ? L("VersionExplanation") :
         SelectedDetails.Package.InstallEligibility switch
         {
             WingetInstallEligibility.UserWithoutElevation => L("UserInstall"),
@@ -593,7 +594,13 @@ public sealed partial class WingetViewModel : PageViewModelBase
                 RefreshWorkspace();
             }
 
-            RefreshOperationRows();
+            RefreshOperationRows(previous);
+            if (SelectedDetails != null && (previous.SelectedDetails is null
+                || (status.LastResult is { Kind: "details", Succeeded: true } detailsResult && visibleResultId != detailsResult.OperationId)))
+            {
+                detailsError = null;
+            }
+
             if (status.LastResult is { } result && visibleResultId != result.OperationId)
             {
                 visibleResultId = result.OperationId;

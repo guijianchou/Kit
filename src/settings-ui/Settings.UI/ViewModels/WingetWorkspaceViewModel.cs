@@ -92,8 +92,9 @@ public sealed class WingetQueueRow(WingetQueueItem item) : Observable
         }
 
         var previous = Item;
+        string previousName = Name;
         Item = item;
-        if (previous.Package.Name != item.Package.Name)
+        if (previousName != Name)
         {
             OnPropertyChanged(nameof(Name));
         }
@@ -122,9 +123,15 @@ public sealed class WingetQueueRow(WingetQueueItem item) : Observable
         {
             OnPropertyChanged(nameof(Output));
         }
+
+        if (previous.StartedUtc != item.StartedUtc || previous.CompletedUtc != item.CompletedUtc)
+        {
+            OnPropertyChanged(nameof(WhenText));
+            OnPropertyChanged(nameof(HasTimestamp));
+        }
     }
 
-    public string Name => Item.Package.Name;
+    public string Name => string.IsNullOrWhiteSpace(Item.Package.Name) ? Item.Package.Id : Item.Package.Name;
 
     public string Identity => Item.Package.Id + " · " + WingetSourceFilter.Label(Item.Package.Source);
 
@@ -135,6 +142,12 @@ public sealed class WingetQueueRow(WingetQueueItem item) : Observable
     public string Message => Item.Message ?? string.Empty;
 
     public string Output => Item.Result?.Output ?? string.Empty;
+
+    public bool HasTimestamp => Item.CompletedUtc.HasValue || Item.StartedUtc.HasValue;
+
+    public string WhenText => (Item.CompletedUtc ?? Item.StartedUtc) is { } time
+        ? string.Format(CultureInfo.CurrentCulture, WingetViewModel.L(Item.CompletedUtc.HasValue ? "HistoryCompletedAt" : "HistoryStartedAt"), time.ToLocalTime())
+        : string.Empty;
 }
 
 public sealed partial class WingetViewModel
@@ -149,6 +162,10 @@ public sealed partial class WingetViewModel
     private bool includeUnknown;
     private bool showIgnored;
     private string historyClearMessage = string.Empty;
+    private string historySearchText = string.Empty;
+    private bool historyAttentionOnly;
+    private int historyRetentionIndex;
+    private string installLocation = string.Empty;
     private bool sortDescending;
     private bool silentInstall;
     private bool refreshingWorkspace;
@@ -190,9 +207,85 @@ public sealed partial class WingetViewModel
 
     public ObservableCollection<WingetQueueRow> HistoryItems { get; } = new();
 
+    public ObservableCollection<WingetQueueRow> VisibleHistory { get; } = new();
+
+    public string HistorySearchText
+    {
+        get => historySearchText;
+        set
+        {
+            if (Set(ref historySearchText, value ?? string.Empty))
+            {
+                RefreshVisibleHistory();
+            }
+        }
+    }
+
+    public bool HistoryAttentionOnly
+    {
+        get => historyAttentionOnly;
+        set
+        {
+            if (Set(ref historyAttentionOnly, value))
+            {
+                RefreshVisibleHistory();
+            }
+        }
+    }
+
+    public string HistoryFilterSummary => HistoryItems.Count == 0 ? L("HistoryEmpty/Text") :
+        VisibleHistory.Count == 0 ? L("HistoryNoMatches") : string.Format(CultureInfo.CurrentCulture, L("HistoryMatches"), VisibleHistory.Count, HistoryItems.Count);
+
     public bool CanClearOldHistory => CanCheck && status.History.Any(item => item.CompletedUtc is { } completed && completed < DateTimeOffset.UtcNow.AddDays(-7));
 
     public string HistoryClearMessage => historyClearMessage;
+
+    public int HistoryRetentionIndex
+    {
+        get => historyRetentionIndex;
+        set
+        {
+            if (Set(ref historyRetentionIndex, Math.Clamp(value, 0, 2)))
+            {
+                OnPropertyChanged(nameof(CanClearHistory));
+            }
+        }
+    }
+
+    private int HistoryRetentionDays => HistoryRetentionIndex switch { 1 => 30, 2 => 0, _ => 7 };
+
+    public bool CanClearHistory => CanCheck && status.History.Any(item => item.State is "Succeeded" or "Failed" or "Cancelled"
+        && item.CompletedUtc is { } completed && (HistoryRetentionDays == 0 || completed < DateTimeOffset.UtcNow.AddDays(-HistoryRetentionDays)));
+
+    public string InstallLocation
+    {
+        get => installLocation;
+        set
+        {
+            if (Set(ref installLocation, value ?? string.Empty))
+            {
+                NotifyState();
+            }
+        }
+    }
+
+    public int ActiveFilterCount => (string.IsNullOrWhiteSpace(FilterText) ? 0 : 1) + (ExactMatch ? 1 : 0)
+        + SourceFilters.Count(source => !source.IsSelected)
+        + (ActiveTabIndex == (int)WingetWorkspace.Updates ? (IncludeUnknown ? 1 : 0) + (ShowIgnored ? 1 : 0) : 0);
+
+    public bool HasActiveFilters => ActiveFilterCount > 0;
+
+    public string ActiveFilterSummary => string.Format(CultureInfo.CurrentCulture, L("ActiveFilterSummary"), ActiveFilterCount, DisplayPackages.Count, CurrentRows.Count);
+
+    public void ResetFilters()
+    {
+        filterText = string.Empty;
+        exactMatch = false;
+        includeUnknown = false;
+        showIgnored = false;
+        sourceSelection.Clear();
+        RefreshWorkspace();
+    }
 
     public IReadOnlyList<WingetPackageIdentity> IgnoredPackages => status.IgnoredPackages;
 
@@ -327,7 +420,7 @@ public sealed partial class WingetViewModel
         {
             (int)WingetWorkspace.Discover => (!row.IsMetadataResolved || !row.IsInstalled) && row.Source.Equals("winget", StringComparison.OrdinalIgnoreCase),
             (int)WingetWorkspace.Installed => row.Package.CanUninstall,
-            _ => row.IsInstalled && !row.IsIgnored,
+            _ => row.IsInstalled && row.Package.IsUpdateAvailable && !row.IsIgnored,
         });
 
     public bool CanReload => RecoveryRequired ? CanCheck : ActiveTabIndex == (int)WingetWorkspace.Discover ? CanSearch : CanCheck;
@@ -386,10 +479,62 @@ public sealed partial class WingetViewModel
         return cleared;
     });
 
+    public Task ClearHistoryAsync() => RunOnUiContextAsync(async () =>
+    {
+        if (!CanClearHistory)
+        {
+            return false;
+        }
+
+        historyClearMessage = L("HistoryClearWorking");
+        NotifyState();
+        int? removed = null;
+        bool cleared = await SendWorkspaceRequestAsync(new WingetServiceRequest { Command = "clear-history", HistoryRetentionDays = HistoryRetentionDays }, onAccepted: ack => removed = ack.RemovedHistoryCount);
+        historyClearMessage = removed is >= 0
+            ? string.Format(CultureInfo.CurrentCulture, L(cleared ? "HistoryClearResult" : "HistoryClearRefreshFailed"), removed.Value)
+            : L("HistoryClearFailed");
+        NotifyState();
+        return cleared;
+    });
+
+    public Task<bool> SelectVersionAsync(string version) => RunOnUiContextAsync(async () =>
+    {
+        if (!CanActOnPackage || ActiveSelection is not { } row || SelectedDetails is not { } details
+            || !details.AvailableVersions.Contains(version, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        loadingDetails = true;
+        detailsError = null;
+        detailsRequestRow = row;
+        NotifyState();
+        try
+        {
+            bool completed = await SendWorkspaceRequestAsync(new WingetServiceRequest
+            {
+                Command = "details", Packages = [IdentityOf(row.Package)], RequestedVersion = version, Options = CurrentOptions,
+            }, waitForCompletion: true);
+            if (!completed)
+            {
+                detailsError = string.IsNullOrWhiteSpace(ErrorText) ? L("DetailsUnavailable") : ErrorText;
+            }
+
+            return completed;
+        }
+        finally
+        {
+            loadingDetails = false;
+            NotifyState();
+        }
+    });
+
     public Task<bool> LoadDetailsAsync() => RunOnUiContextAsync(async () =>
     {
         if (SelectedDetails != null)
         {
+            detailsError = null;
+            NotifyState();
             return true;
         }
 
@@ -487,9 +632,9 @@ public sealed partial class WingetViewModel
         });
     });
 
-    public Task IgnoreSelectedAsync() => SetIgnoredAsync(SelectedIdentities(), true);
+    public Task IgnoreSelectedAsync(bool onlyThisVersion = false) => SetIgnoredAsync(SelectedIdentities(), true, onlyThisVersion);
 
-    public Task SetIgnoredAsync(IEnumerable<WingetPackageIdentity> packages, bool ignore) => RunOnUiContextAsync(async () =>
+    public Task SetIgnoredAsync(IEnumerable<WingetPackageIdentity> packages, bool ignore, bool onlyThisVersion = false) => RunOnUiContextAsync(async () =>
     {
         var identities = packages.ToArray();
         if (!CanCheck || identities.Length == 0)
@@ -497,7 +642,7 @@ public sealed partial class WingetViewModel
             return false;
         }
 
-        return await SendWorkspaceRequestAsync(new WingetServiceRequest { Command = ignore ? "ignore" : "unignore", Packages = identities });
+        return await SendWorkspaceRequestAsync(new WingetServiceRequest { Command = ignore ? "ignore" : "unignore", Packages = identities, IgnoreOnlyThisVersion = onlyThisVersion });
     });
 
     public Task CancelQueueAsync() => RunOnUiContextAsync(() => SendWorkspaceRequestAsync(new WingetServiceRequest
@@ -570,6 +715,7 @@ public sealed partial class WingetViewModel
         Scope = InstallScopeIndex switch { 1 => "user", 2 => "machine", _ => null },
         Architecture = ActiveTabIndex == (int)WingetWorkspace.Installed ? null : InstallArchitectureIndex switch { 1 => "x64", 2 => "x86", 3 => "arm64", _ => null },
         IncludeUnknown = ActiveTabIndex == (int)WingetWorkspace.Updates && IncludeUnknown,
+        InstallLocation = ActiveTabIndex == (int)WingetWorkspace.Installed || string.IsNullOrWhiteSpace(InstallLocation) ? null : InstallLocation.Trim(),
     };
 
     private static WingetPackageIdentity IdentityOf(WingetPackageUpdate package) => new(package.Id, package.Source, package.InstalledVersion, package.AvailableVersion);
@@ -615,7 +761,7 @@ public sealed partial class WingetViewModel
                     row.PropertyChanged += OnWorkspaceRowChanged;
                 }
 
-                row.IsIgnored = status.IgnoredPackages.Any(identity => identity.Id.Equals(row.Id, StringComparison.OrdinalIgnoreCase) && identity.Source.Equals(row.Source, StringComparison.OrdinalIgnoreCase));
+                row.IsIgnored = status.IgnoredPackages.Any(identity => identity.Ignores(row.Package));
             }
 
             var groups = CurrentRows.GroupBy(row => row.Source, StringComparer.OrdinalIgnoreCase).OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -694,7 +840,16 @@ public sealed partial class WingetViewModel
         }
     }
 
-    private void RefreshOperationRows()
+    private void RefreshVisibleHistory()
+    {
+        string query = HistorySearchText.Trim();
+        var matches = HistoryItems.Where(row => (!HistoryAttentionOnly || row.Item.State is "Failed" or "NeedsVerification") &&
+            (row.Name.Contains(query, StringComparison.OrdinalIgnoreCase) || row.Item.Package.Id.Contains(query, StringComparison.OrdinalIgnoreCase)));
+        Reconcile(VisibleHistory, matches.ToArray());
+        OnPropertyChanged(nameof(HistoryFilterSummary));
+    }
+
+    private void RefreshOperationRows(WingetServiceStatus previous)
     {
         static void Sync(ObservableCollection<WingetQueueRow> rows, IReadOnlyList<WingetQueueItem> items)
         {
@@ -712,9 +867,17 @@ public sealed partial class WingetViewModel
             Reconcile(rows, desired);
         }
 
-        Sync(QueueItems, status.Queue);
-        Sync(HistoryItems, status.History);
-        restartRequired |= status.Queue.Any(item => item.Result?.RebootRequired == true);
+        if (!previous.Queue.SequenceEqual(status.Queue))
+        {
+            Sync(QueueItems, status.Queue);
+            restartRequired |= status.Queue.Any(item => item.Result?.RebootRequired == true);
+        }
+
+        if (!previous.History.SequenceEqual(status.History))
+        {
+            Sync(HistoryItems, status.History);
+            RefreshVisibleHistory();
+        }
     }
 
     private static void Reconcile<T>(ObservableCollection<T> rows, IReadOnlyList<T> desired)
@@ -804,7 +967,7 @@ public sealed partial class WingetViewModel
             onAccepted?.Invoke(ack);
             do
             {
-                if (request.Command == "clear-old-history")
+                if (request.Command is "clear-old-history" or "clear-history")
                 {
                     // Drain an older status request before fetching the durable
                     // cleanup result, so it cannot republish the removed rows.
@@ -820,7 +983,7 @@ public sealed partial class WingetViewModel
                     return false;
                 }
 
-                if (request.Command == "clear-old-history" && !connected)
+                if ((request.Command is "clear-old-history" or "clear-history") && !connected)
                 {
                     return false;
                 }

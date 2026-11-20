@@ -115,7 +115,7 @@ internal static class WingetServicePolicy
 
     private static bool IsDefaultVisibleUpdate(WingetPersistentState state, WingetPackageUpdate package)
         => !string.Equals(package.InstalledVersion, "Unknown", StringComparison.OrdinalIgnoreCase)
-            && !state.IgnoredPackages.Any(ignored => SameIdentity(package.Source, package.Id, ignored.Source, ignored.Id));
+            && !state.IgnoredPackages.Any(ignored => ignored.Ignores(package));
 
     internal static WingetPersistentState BeginAttempt(WingetPersistentState state, DateTimeOffset now)
         => state with { LastAttemptUtc = now, RetryAfterUtc = now.Add(InitialRetryDelay) };

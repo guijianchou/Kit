@@ -218,6 +218,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private static readonly string[] ServiceNames = ["Claude", "ChatGPT", "Gemini", "Google"];
     private readonly ISettingsRepository<GeneralSettings> general;
     private readonly DispatcherQueue dispatcher;
+    private readonly TaskProgressClock aiCheckClock;
     private readonly Func<CancellationToken, Task<NetMapAiAnalysisResponse>> analyzeRoute;
     private readonly NetMapSession session = new();
     private NetMapOptions options;
@@ -231,7 +232,6 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private CancellationTokenSource? updateCancellation;
     private CancellationTokenSource? aiCheckCancellation;
     private IProgress<AiTaskProgress>? aiCheckProgress;
-    private AiTaskProgress? aiProgress;
     private bool isUpdating;
     private double updateProgress;
     private string updateStatus = string.Empty;
@@ -248,6 +248,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         Func<CancellationToken, Task<NetMapAiAnalysisResponse>>? analyzeRoute = null)
     {
         dispatcher = DispatcherQueue.GetForCurrentThread();
+        aiCheckClock = new TaskProgressClock(dispatcher, () => OnPropertyChanged(nameof(Proxy)));
         this.analyzeRoute = analyzeRoute ?? (token => NetMapAiService.AnalyzeRouteAsync(aiCheckProgress, token));
         var settingsUtils = SettingsUtils.Default;
         general = generalSettingsRepository ?? SettingsRepository<GeneralSettings>.GetInstance(settingsUtils);
@@ -274,9 +275,10 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         get
         {
             bool isChinese = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            var progress = aiCheckClock.Progress;
             return new("Proxy", snapshot.Proxy, snapshot.Running,
-                isAiChecking ? (aiProgress is null ? Text("AiAnalyzing") : AiTaskProgressText.Compact(aiProgress, isChinese)) : aiRoute,
-                isAiChecking ? (aiProgress is null ? null : AiTaskProgressText.Summary(aiProgress, isChinese)) : aiRouteSummary,
+                isAiChecking ? AiTaskProgressText.Compact(progress, isChinese) : aiRoute,
+                isAiChecking ? AiTaskProgressText.Summary(progress, isChinese) : aiRouteSummary,
                 isAiChecking ? null : aiRouteDetails);
         }
     }
@@ -557,7 +559,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         var source = aiCheckCancellation;
         aiCheckCancellation = null;
         aiCheckProgress = null;
-        aiProgress = null;
+        aiCheckClock.Stop();
         try
         {
             source?.Cancel();
@@ -595,12 +597,12 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         aiCheckCancellation = source;
         var token = source.Token;
         long generation = snapshot.Generation;
-        aiProgress = null;
+        aiCheckClock.Start();
         aiCheckProgress = new Progress<AiTaskProgress>(update => dispatcher.TryEnqueue(() =>
         {
             if (CanPublishAiResult(source, generation, token))
             {
-                aiProgress = update;
+                aiCheckClock.Report(update);
                 OnPropertyChanged(nameof(Proxy));
             }
         }));
@@ -659,7 +661,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
                 aiCheckCancellation = null;
                 aiCheckProgress = null;
-                aiProgress = null;
+                aiCheckClock.Stop();
                 isAiChecking = false;
                 OnPropertyChanged(nameof(IsAiChecking));
                 OnPropertyChanged(nameof(CanAiCheck));
@@ -753,6 +755,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             CancelDataUpdate();
             CancelAiCheck();
             disposed = true;
+            aiCheckClock.Dispose();
             general.SettingsChanged -= OnGeneralChanged;
             session.Changed -= OnSnapshot;
             session.Dispose();

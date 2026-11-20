@@ -479,6 +479,29 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         overview.Children.Add(BoundParagraph(nameof(ViewModel.SelectionPublisher)));
         overview.Children.Add(BoundParagraph(nameof(ViewModel.PackageDescription)));
         detailsContent.Children.Add(DetailSurface(overview));
+        var versionChoice = new ComboBox { Header = Text("ChooseVersion"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        AutomationProperties.SetAutomationId(versionChoice, "Winget_VersionChoice");
+        var applyVersion = new Button { Content = Text("ApplyVersion") };
+        AutomationProperties.SetAutomationId(applyVersion, "Winget_ApplyVersion");
+        applyVersion.Click += async (_, _) =>
+        {
+            if (currentPage && ReferenceEquals(selected, ViewModel.ActiveSelection) && versionChoice.SelectedItem is string version)
+            {
+                try
+                {
+                    await ViewModel.SelectVersionAsync(version);
+                }
+                catch (Exception exception)
+                {
+                    ViewModel.ReportActionError(exception);
+                }
+            }
+        };
+        var versionOptions = new StackPanel { Spacing = 8 };
+        versionOptions.Children.Add(versionChoice);
+        versionOptions.Children.Add(applyVersion);
+        versionOptions.Children.Add(Paragraph(Text("VersionExplanation")));
+        detailsContent.Children.Add(versionOptions);
         detailsContent.Children.Add(DetailSurface(BoundParagraph(nameof(ViewModel.InstallExplanation))));
         var homepage = new HyperlinkButton { Content = Text("PackageHomepage"), Padding = new Thickness(0) };
         var license = Paragraph(string.Empty);
@@ -500,6 +523,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         content.Children.Add(detailsContent);
         var dialog = MakeDialog(selected.Name, ScrollContent(content));
         dialog.CloseButtonText = Text("CloseDetails");
+        string appliedVersion = null;
 
         void UpdateDetailsState()
         {
@@ -515,6 +539,16 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             error.Visibility = ViewModel.HasDetailsError ? Visibility.Visible : Visibility.Collapsed;
             retry.IsEnabled = ViewModel.CanRetryDetails;
             detailsContent.Visibility = ViewModel.HasDetails ? Visibility.Visible : Visibility.Collapsed;
+            versionOptions.Visibility = ViewModel.ActiveTabIndex != (int)WingetWorkspace.Installed && ViewModel.SelectedDetails?.AvailableVersions.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (!versionChoice.Items.Cast<string>().SequenceEqual(ViewModel.SelectedDetails?.AvailableVersions ?? Array.Empty<string>(), StringComparer.Ordinal)
+                || appliedVersion != ViewModel.SelectedDetails?.Package.AvailableVersion)
+            {
+                versionChoice.ItemsSource = ViewModel.SelectedDetails?.AvailableVersions;
+                versionChoice.SelectedItem = ViewModel.SelectedDetails?.Package.AvailableVersion;
+                appliedVersion = ViewModel.SelectedDetails?.Package.AvailableVersion;
+            }
+
+            applyVersion.IsEnabled = ViewModel.CanActOnPackage;
             homepage.NavigateUri = WingetViewModel.SafeWebUri(ViewModel.SelectedDetails?.PackageUrl);
             homepage.Visibility = homepage.NavigateUri != null ? Visibility.Visible : Visibility.Collapsed;
             license.Text = string.IsNullOrWhiteSpace(ViewModel.SelectedDetails?.License) ? string.Empty : Text("LicenseLabel") + ": " + ViewModel.SelectedDetails.License;
@@ -639,16 +673,28 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             },
             SelectedIndex = ViewModel.InstallArchitectureIndex,
         };
+        var location = new TextBox
+        {
+            Header = Text("InstallLocation"), Text = ViewModel.InstallLocation, MaxLength = 1024,
+            PlaceholderText = Text("OptionDefault"), HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        AutomationProperties.SetAutomationId(location, "Winget_InstallLocation");
         content.Children.Add(silent);
         content.Children.Add(scope);
         if (tab != (int)WingetWorkspace.Installed)
         {
             content.Children.Add(architecture);
+            content.Children.Add(location);
+            content.Children.Add(Paragraph(Text("InstallLocationHint")));
         }
 
         content.Children.Add(Paragraph(Text("OptionsExplanation")));
-        var dialog = MakeDialog(Text("OptionsTitle"), content);
+        var dialog = MakeDialog(Text("OptionsTitle"), ScrollContent(content));
         dialog.PrimaryButtonText = Text("ApplyOptions");
+        void ValidateLocation() => dialog.IsPrimaryButtonEnabled = tab == (int)WingetWorkspace.Installed
+            || WingetPackageOptions.IsValidInstallLocation(string.IsNullOrWhiteSpace(location.Text) ? null : location.Text.Trim());
+        location.TextChanged += (_, _) => ValidateLocation();
+        ValidateLocation();
         if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary && currentPage && tab == ViewModel.ActiveTabIndex)
         {
             ViewModel.SilentInstall = silent.IsChecked == true;
@@ -656,26 +702,32 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             if (tab != (int)WingetWorkspace.Installed)
             {
                 ViewModel.InstallArchitectureIndex = architecture.SelectedIndex;
+                ViewModel.InstallLocation = location.Text.Trim();
             }
         }
     });
 
-    private async void Ignore_Click(object sender, RoutedEventArgs e)
+    private async void Ignore_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(async () =>
     {
         if (ViewModel.ActiveTabIndex != (int)WingetWorkspace.Updates)
         {
             return;
         }
 
-        try
+        var selectedPackages = ViewModel.DisplayPackages.Where(row => row.IsSelected)
+            .Select(row => new WingetPackageIdentity(row.Id, row.Source, row.Package.InstalledVersion, row.Package.AvailableVersion)).ToArray();
+        var mode = new ComboBox
         {
-            await ViewModel.IgnoreSelectedAsync();
-        }
-        catch (Exception ex)
+            Header = Text("IgnoreScope"), ItemsSource = new[] { Text("IgnoreThisVersion"), Text("IgnoreAllVersions") },
+            SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        var dialog = MakeDialog(Text("IgnoreScope"), mode);
+        dialog.PrimaryButtonText = Text("ApplyOptions");
+        if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary && currentPage)
         {
-            ViewModel.ReportActionError(ex);
+            await ViewModel.SetIgnoredAsync(selectedPackages, true, mode.SelectedIndex == 0);
         }
-    }
+    });
 
     private async void ManageIgnored_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(async () =>
     {
@@ -689,7 +741,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         {
             var box = new CheckBox
             {
-                Content = Paragraph(item.Id + " · " + item.Source),
+                Content = Paragraph(item.Id + " · " + item.Source + " · " + (item.IgnoreOnlyThisVersion ? item.AvailableVersion : Text("IgnoreAllVersions"))),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
             choices.Add((box, item));
@@ -726,17 +778,38 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         content.Children.Add(Paragraph(Text("QueueTitle"), true));
         content.Children.Add(new ItemsControl { ItemsSource = ViewModel.QueueItems, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] });
         content.Children.Add(Paragraph(Text("HistoryTitle"), true));
-        var clearHistory = new Button { Content = Text("ClearOldHistory"), HorizontalAlignment = HorizontalAlignment.Left };
+        var retention = new ComboBox
+        {
+            Header = Text("HistoryRetention"), ItemsSource = new[] { Text("HistoryOlder7"), Text("HistoryOlder30"), Text("HistoryAllCompleted") },
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        retention.SetBinding(ComboBox.SelectedIndexProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.HistoryRetentionIndex)), Mode = BindingMode.TwoWay });
+        AutomationProperties.SetAutomationId(retention, "Winget_HistoryRetention");
+        content.Children.Add(retention);
+        content.Children.Add(Paragraph(Text("HistoryCleanupHint")));
+        var clearHistory = new Button { Content = Text("ClearHistory"), HorizontalAlignment = HorizontalAlignment.Left };
         AutomationProperties.SetAutomationId(clearHistory, "Winget_ClearOldHistory");
-        AutomationProperties.SetName(clearHistory, Text("ClearOldHistory"));
-        clearHistory.SetBinding(IsEnabledProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.CanClearOldHistory)), Mode = BindingMode.OneWay });
+        AutomationProperties.SetName(clearHistory, Text("ClearHistory"));
+        clearHistory.SetBinding(IsEnabledProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.CanClearHistory)), Mode = BindingMode.OneWay });
         clearHistory.Click += ClearOldHistory_Click;
         content.Children.Add(clearHistory);
         var clearResult = BoundParagraph(nameof(ViewModel.HistoryClearMessage));
         AutomationProperties.SetAutomationId(clearResult, "Winget_HistoryClearResult");
         AutomationProperties.SetLiveSetting(clearResult, AutomationLiveSetting.Polite);
         content.Children.Add(clearResult);
-        var history = new ItemsControl { ItemsSource = ViewModel.HistoryItems, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] };
+        var search = new TextBox { PlaceholderText = Text("HistorySearch"), MaxLength = 200 };
+        AutomationProperties.SetName(search, search.PlaceholderText);
+        AutomationProperties.SetAutomationId(search, "Winget_HistorySearch");
+        search.SetBinding(TextBox.TextProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.HistorySearchText)), Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+        content.Children.Add(search);
+        var attention = new CheckBox { Content = Text("HistoryAttentionOnly") };
+        AutomationProperties.SetAutomationId(attention, "Winget_HistoryAttention");
+        attention.SetBinding(CheckBox.IsCheckedProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.HistoryAttentionOnly)), Mode = BindingMode.TwoWay });
+        content.Children.Add(attention);
+        var summary = BoundParagraph(nameof(ViewModel.HistoryFilterSummary));
+        AutomationProperties.SetLiveSetting(summary, AutomationLiveSetting.Polite);
+        content.Children.Add(summary);
+        var history = new ItemsControl { ItemsSource = ViewModel.VisibleHistory, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] };
         AutomationProperties.SetAutomationId(history, "Winget_HistoryItems");
         content.Children.Add(history);
         content.Children.Add(BoundParagraph(nameof(ViewModel.Activity)));
@@ -749,7 +822,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     {
         try
         {
-            await ViewModel.ClearOldHistoryAsync();
+            await ViewModel.ClearHistoryAsync();
         }
         catch (Exception exception)
         {
@@ -886,5 +959,8 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         HorizontalContentAlignment = HorizontalAlignment.Stretch,
     };
 
-    private string DescribeOptions(WingetPackageOptions options) => Text("ScopeOption") + ": " + (options.Scope ?? Text("OptionDefault")) + " · " + Text("ArchitectureOption") + ": " + (options.Architecture ?? Text("OptionDefault")) + " · " + Text("SilentOption") + ": " + (options.Silent ? Text("OptionOn") : Text("OptionOff"));
+    private string DescribeOptions(WingetPackageOptions options) => Text("ScopeOption") + ": " + (options.Scope ?? Text("OptionDefault")) + " · " + Text("ArchitectureOption") + ": " + (options.Architecture ?? Text("OptionDefault")) + " · " + Text("SilentOption") + ": " + (options.Silent ? Text("OptionOn") : Text("OptionOff"))
+        + (options.InstallLocation is null ? string.Empty : " · " + Text("InstallLocation") + ": " + options.InstallLocation);
+
+    private void ResetFilters_Click(object sender, RoutedEventArgs e) => ViewModel.ResetFilters();
 }

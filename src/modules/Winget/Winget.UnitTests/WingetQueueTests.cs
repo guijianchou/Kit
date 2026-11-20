@@ -640,6 +640,74 @@ public sealed class WingetQueueTests
         Assert.AreEqual(First, store.Load().Packages.Single());
     }
 
+    [TestMethod]
+    public async Task IgnoringOneVersionAllowsTheNextVersionAfterRestart()
+    {
+        Seed(First);
+        await using (var runtime = Create(new()))
+        {
+            Assert.IsTrue((await Send(runtime, "ignore", new() { Packages = [WingetServicePolicy.Identity(First)], IgnoreOnlyThisVersion = true })).Accepted);
+        }
+
+        var persisted = new WingetStateStore(_directory).Load();
+        Assert.IsTrue(persisted.IgnoredPackages.Single().IgnoreOnlyThisVersion);
+        Assert.AreEqual(0, WingetServicePolicy.VisibleUpdates(persisted).Count);
+        var next = First with { AvailableVersion = "3.0" };
+        Assert.AreEqual(next, WingetServicePolicy.VisibleUpdates(persisted with { Packages = [next] }).Single());
+        await using var restarted = Create(new());
+        Assert.IsTrue((await Send(restarted, "unignore", new() { Packages = [WingetServicePolicy.Identity(next)] })).Accepted);
+        Assert.AreEqual(0, restarted.GetStatus().IgnoredPackages.Count);
+    }
+
+    [TestMethod]
+    public async Task VersionSelectionRequiresLoadedCatalogChoicesAndBindsTheConfirmedQueue()
+    {
+        Seed(First);
+        var client = new FakeClient
+        {
+            DetailsOperation = (package, options, token) => Task.FromResult(new WingetPackageDetails(package, null, null, null, null, null, [])
+            {
+                AvailableVersions = ["2.0", "1.5"],
+            }),
+        };
+        await using var runtime = Create(client);
+        var select = new WingetServiceRequest { Packages = [WingetServicePolicy.Identity(First)], RequestedVersion = "1.5" };
+        Assert.IsFalse((await Send(runtime, "details", select)).Accepted);
+        Assert.IsTrue((await Send(runtime, "details", select with { RequestedVersion = null })).Accepted);
+        await Idle(runtime);
+        Assert.IsFalse((await Send(runtime, "details", select with { RequestedVersion = "9.0" })).Accepted);
+        Assert.IsTrue((await Send(runtime, "details", select)).Accepted);
+        await Idle(runtime);
+        Assert.AreEqual("1.5", runtime.GetStatus().Packages.Single().AvailableVersion);
+        var chosen = First with { AvailableVersion = "1.5" };
+        var prepared = await Prepare(runtime, "upgrade", [chosen], new() { InstallLocation = @"C:\Apps\Example One" });
+        Assert.AreEqual("1.5", prepared.Packages.Single().Package.AvailableVersion);
+        Assert.IsFalse((await Send(runtime, "enqueue", new() { PreparationId = prepared.Id, Options = prepared.Options with { InstallLocation = @"C:\Changed" } })).Accepted);
+        Assert.IsTrue((await Send(runtime, "enqueue", new() { PreparationId = prepared.Id })).Accepted);
+        await Idle(runtime);
+        Assert.AreEqual("1.5", client.ActionCalls.Single().Package.AvailableVersion);
+        Assert.AreEqual(@"C:\Apps\Example One", client.ActionCalls.Single().Options!.InstallLocation);
+    }
+
+    [TestMethod]
+    public async Task ClearAllHistoryPreservesUnverifiedRecordsAndTheCurrentQueue()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var completed = new WingetQueueItem("complete", First, "install", "Succeeded", CompletedUtc: now);
+        var failed = completed with { Id = "failed", State = "Failed" };
+        var unverified = completed with { Id = "unverified", State = "NeedsVerification" };
+        var running = completed with { Id = "running", State = "Running", CompletedUtc = null };
+        new WingetStateStore(_directory).Save(new() { History = [completed, failed, unverified, running], Queue = [completed] });
+        await using var runtime = Create(new());
+        Assert.IsFalse((await Send(runtime, "clear-history", new() { HistoryRetentionDays = -1 })).Accepted);
+        Assert.IsFalse((await Send(runtime, "clear-history")).Accepted);
+        var ack = await Send(runtime, "clear-history", new() { HistoryRetentionDays = 0 });
+        Assert.AreEqual(2, ack.RemovedHistoryCount);
+        CollectionAssert.AreEqual(new[] { unverified, running }, runtime.GetStatus().History.ToArray());
+        CollectionAssert.AreEqual(new[] { completed }, runtime.GetStatus().Queue.ToArray());
+        CollectionAssert.AreEqual(runtime.GetStatus().History.ToArray(), new WingetStateStore(_directory).Load().History.ToArray());
+    }
+
     private void Seed(params WingetPackageUpdate[] packages)
         => new WingetStateStore(_directory).Save(WingetServicePolicy.CompleteCheck(new(), DateTimeOffset.UtcNow, packages));
 

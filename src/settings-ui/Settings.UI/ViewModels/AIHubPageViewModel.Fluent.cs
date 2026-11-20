@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -17,12 +18,175 @@ using Microsoft.UI.Xaml;
 
 namespace Kit.Settings.UI.ViewModels;
 
+public sealed class AuditCategoryRow(AuditCategorySummary summary)
+{
+    public string Category => summary.Category;
+
+    public string Title => summary.Category.ToLowerInvariant() switch
+    {
+        "reliability" => "AIHub_AuditCategoryReliability".GetLocalizedOrFallback("System reliability"),
+        "stability" => "AIHub_AuditCategoryStability".GetLocalizedOrFallback("Crashes & restarts"),
+        "configuration" => "AIHub_AuditCategoryConfiguration".GetLocalizedOrFallback("Configuration"),
+        "network" => "AIHub_AuditCategoryNetwork".GetLocalizedOrFallback("Network"),
+        "application" => "AIHub_AuditCategoryApplication".GetLocalizedOrFallback("Applications"),
+        "system" => "AIHub_AuditCategorySystem".GetLocalizedOrFallback("System components"),
+        _ => summary.Priority.CategoryLabel,
+    };
+
+    public string Counts => summary.Findings == 1
+        ? "AIHub_AuditCategorySingleIssue".GetLocalizedOrFallback("1 issue")
+        : "AIHub_AuditCategoryIssueCount".FormatLocalized("{0} issues", summary.Findings);
+
+    public string Occurrences => summary.Occurrences == 1
+        ? "AIHub_AuditCategorySingleOccurrence".GetLocalizedOrFallback("Occurred once")
+        : "AIHub_AuditCategoryOccurrences".FormatLocalized("{0} occurrences", summary.Occurrences);
+
+    public AuditIssueEnhanced PriorityIssue => summary.Priority;
+
+    public bool IsHigh => summary.High > 0;
+
+    public bool IsMedium => !IsHigh && summary.Medium > 0;
+
+    public bool IsLow => !IsHigh && !IsMedium;
+
+    public string Severity => summary.Priority.RiskBadgeText;
+
+    public string ActionLabel => "AIHub_WorkspaceCategoryAction".GetLocalizedOrFallback("View all issues in this category");
+
+    public string AccessibleSummary => $"{Title} · {Counts} · {Severity} · {Priority} · {ActionLabel}";
+
+    public string Priority => summary.Priority.DisplayTitle;
+
+    public string Recommendation => summary.Priority.PriorityActionText;
+}
+
 public sealed partial class AIHubPageViewModel
 {
+    public ObservableCollection<AuditCategoryRow> AuditCategories { get; } = new();
+
+    private string _auditTotals = string.Empty;
+    private AuditCategorySummary[] _auditCategorySnapshot = [];
+    private AuditResult _auditOverviewSnapshot;
+    private AuditSummary _auditOverview = AuditSummary.From(Array.Empty<AuditIssueEnhanced>());
+
+    public string AuditTotals
+    {
+        get => _auditTotals;
+        private set => Set(ref _auditTotals, value);
+    }
+
+    public string AuditSummaryHeading => "AIHub_AuditOverviewHeading".FormatLocalized("System issue overview · {0}", AuditOverviewRange);
+
+    public string AuditOverviewRange => _auditOverview.RangeDays switch
+    {
+        2 => "2D", 7 => "1W", 30 => "1M",
+        _ => "AIHub_AuditOverviewRecordedRange".GetLocalizedOrFallback("Recorded period"),
+    };
+
+    public string AuditOverviewWindow => _auditOverview.ScanStart is { } start && _auditOverview.ScanEnd is { } end && start <= end
+        ? "AIHub_AuditOverviewWindow".FormatLocalized("{0:g} – {1:g} · local time", start.ToLocalTime(), end.ToLocalTime())
+        : "AIHub_AuditOverviewUnknownRange".GetLocalizedOrFallback("This snapshot has no recorded scan range. Run a full scan to create a period overview.");
+
+    public string AuditOverviewScore => "AIHub_AuditOverviewScore".FormatLocalized("Health score {0}/100", _auditOverview.HealthScore);
+
+    public int AuditOverviewHighCount => _auditOverview.High;
+
+    public int AuditOverviewMediumCount => _auditOverview.Medium;
+
+    public int AuditOverviewLowCount => _auditOverview.Low;
+
+    public bool HasNoAuditOverviewIssues => _auditOverview.Findings == 0;
+
+    public string AuditOverviewEvidence => "AIHub_AuditOverviewEvidence".FormatLocalized("{0} events checked · {1} issues found", _auditOverview.EventsScanned, _auditOverview.Findings);
+
+    public string AuditOverviewHighLabel => "AIHub_AuditOverviewHighLabel".GetLocalizedOrFallback("High risk");
+
+    public string AuditOverviewMediumLabel => "AIHub_AuditOverviewMediumLabel".GetLocalizedOrFallback("Medium risk");
+
+    public string AuditOverviewLowLabel => "AIHub_AuditOverviewLowLabel".GetLocalizedOrFallback("Low risk");
+
+    public string AuditOverviewHelpLabel => "AIHub_AuditOverviewHelpLabel".GetLocalizedOrFallback("About these counts");
+
+    public string AuditOverviewStatus => _auditOverview.High > 0
+        ? "AIHub_AuditOverviewHigh".FormatLocalized("{0} high-priority issue(s) need attention", _auditOverview.High)
+        : _auditOverview.Findings > 0
+            ? "AIHub_AuditOverviewWarnings".GetLocalizedOrFallback("Review the issues recorded during this period")
+            : "AIHub_AuditOverviewNoIssues".GetLocalizedOrFallback("No issues found in the collected events");
+
+    public string AuditOverviewDescription => "AIHub_AuditOverviewDescription".FormatLocalized(
+        "{0} events examined · {1} findings across {2} categories · {3} recorded occurrences",
+        _auditOverview.EventsScanned, _auditOverview.Findings, _auditOverview.Categories.Count, _auditOverview.Occurrences);
+
+    public string AuditOverviewCoverage
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (_auditOverviewSnapshot?.SkippedChannels is { Count: > 0 } skipped)
+            {
+                parts.Add("AIHub_AuditOverviewSkipped".FormatLocalized("Unreadable channels: {0}.", string.Join(", ", skipped)));
+            }
+
+            if (_auditOverviewSnapshot?.LimitedChannels is { Count: > 0 } limited)
+            {
+                parts.Add("AIHub_AuditOverviewLimited".FormatLocalized("Event limit reached: {0}. This period may contain more events.", string.Join(", ", limited)));
+            }
+
+            if (_auditOverviewSnapshot?.AnalysisOutcome is "partial" or "failed")
+            {
+                parts.Add("AIHub_AuditOverviewPartialAi".GetLocalizedOrFallback("AI analysis was incomplete; this overview retains local findings and any validated AI findings."));
+            }
+
+            return string.Join(" ", parts);
+        }
+    }
+
+    public bool HasAuditOverviewCoverage => !string.IsNullOrEmpty(AuditOverviewCoverage);
+
+    public bool HasAuditOverviewScopeChange => _auditOverviewSnapshot != null && IsFullScanSelected
+        && _auditOverview.RangeDays != _selectedScopeIndex switch { 1 => 7, 2 => 30, _ => 2 };
+
+    public string AuditOverviewNextScanHint => "AIHub_AuditOverviewNextScan".FormatLocalized(
+        "Next full scan: {0}. This overview will update after that scan finishes.", ScanRangeDescription);
+
+    public string AuditOccurrencesHint => "AIHub_AuditOccurrencesHint".GetLocalizedOrFallback("Occurrences are counted per finding; multiple findings can refer to the same event. Findings filters only change the detail list.");
+
+    private void RefreshAuditSummary()
+    {
+        var summary = _auditOverviewSnapshot is null ? AuditSummary.From(AllIssues) : AuditSummary.From(_auditOverviewSnapshot);
+        _auditOverview = summary;
+        AuditTotals = "AIHub_AuditTotals".FormatLocalized("{0} categories · {1} findings · {2} high / {3} medium / {4} low",
+            summary.Categories.Count, summary.Findings, summary.High, summary.Medium, summary.Low);
+        if (!_auditCategorySnapshot.SequenceEqual(summary.Categories))
+        {
+            _auditCategorySnapshot = summary.Categories.ToArray();
+            AuditCategories.Clear();
+            foreach (var category in summary.Categories)
+            {
+                AuditCategories.Add(new(category));
+            }
+        }
+
+        OnPropertyChanged(nameof(AuditSummaryHeading));
+        OnPropertyChanged(nameof(AuditOverviewRange));
+        OnPropertyChanged(nameof(AuditOverviewWindow));
+        OnPropertyChanged(nameof(AuditOverviewScore));
+        OnPropertyChanged(nameof(AuditOverviewHighCount));
+        OnPropertyChanged(nameof(AuditOverviewMediumCount));
+        OnPropertyChanged(nameof(AuditOverviewLowCount));
+        OnPropertyChanged(nameof(AuditOverviewEvidence));
+        OnPropertyChanged(nameof(HasNoAuditOverviewIssues));
+        OnPropertyChanged(nameof(AuditOverviewStatus));
+        OnPropertyChanged(nameof(AuditOverviewDescription));
+        OnPropertyChanged(nameof(AuditOverviewCoverage));
+        OnPropertyChanged(nameof(HasAuditOverviewCoverage));
+        OnPropertyChanged(nameof(HasAuditOverviewScopeChange));
+        RefreshAuditWorkspace();
+    }
+
     private int _selectedScanModeIndex = 1;
     private bool _fluentAiReportPartial;
     private RelayCommand _startSelectedScanCommand;
-    private RelayCommand _toggleOverviewFindingsCommand;
 
     /// <summary>Next scan mode: 0 is quick, 1 is full. Existing results are not changed.</summary>
     public int SelectedScanModeIndex
@@ -35,6 +199,7 @@ public sealed partial class AIHubPageViewModel
                 OnPropertyChanged(nameof(IsFullScanSelected));
                 OnPropertyChanged(nameof(SelectedScanLabel));
                 OnPropertyChanged(nameof(SelectedScanRangeText));
+                OnPropertyChanged(nameof(HasAuditOverviewScopeChange));
             }
         }
     }
@@ -66,27 +231,13 @@ public sealed partial class AIHubPageViewModel
 
     public bool HasRelatedEvidence => HasAiReport && HasAuditData && RelatedEvidenceFindings.Count > 0;
 
-    public bool CanToggleOverviewFindings => !HasFindingFilters && FilteredIssues.Count > 3;
-
-    public string OverviewFindingsToggleLabel => ShowAllFindings
-        ? "AIHub_Fluent_ShowPriority".GetLocalizedOrFallback("Show priority findings")
-        : "AIHub_Fluent_ShowAll".GetLocalizedOrFallback("Show all findings");
-
-    public string OverviewFindingsToggleChevron => ShowAllFindings ? "\uE70E" : "\uE70D";
-
-    public string OverviewFindingsSummary => HasFindingFilters
-        ? "AIHub_Fluent_MatchingFindings".FormatLocalized("{0} matching / {1} total", FilteredIssues.Count, TotalFindings)
-        : "AIHub_Fluent_VisibleFindings".FormatLocalized("Showing {0} / {1} findings", OverviewFindings.Count, TotalFindings);
+    public string OverviewFindingsSummary => "AIHub_Fluent_MatchingFindings".FormatLocalized("{0} matching / {1} total", FilteredIssues.Count, TotalFindings);
 
     public string FindingsCardHeading => HasAuditData && TotalFindings > 0
         ? $"{FindingsHeading} · {TotalFindings}"
         : FindingsHeading;
 
     public string AuditHistoryLabel => "AIHub_Fluent_AuditHistory/Content".GetLocalizedOrFallback("Audit history");
-
-    public ICommand ToggleOverviewFindingsCommand => _toggleOverviewFindingsCommand ??= new RelayCommand(
-        () => SetViewMode(ShowAllFindings ? "Priority" : "All"),
-        () => CanToggleOverviewFindings);
 
     public string OverviewAuditTimestampText => !HasAuditData
         ? SelectedAuditLabel
@@ -97,14 +248,12 @@ public sealed partial class AIHubPageViewModel
     public string OverviewHeadline => !HasAuditData
         ? "AIHub_Fluent_FirstAudit".GetLocalizedOrFallback("Start with your first security audit")
         : HighCount > 0
-            ? "AIHub_Fluent_PriorityHeadline".FormatLocalized("{0} finding(s) need your attention first", HighCount)
+            ? HighCount == 1
+                ? "AIHub_AuditPrioritySingle".GetLocalizedOrFallback("1 issue needs priority attention")
+                : "AIHub_AuditPriorityMultiple".FormatLocalized("{0} issues need priority attention", HighCount)
             : HealthVerdict;
 
-    public string OverviewDescription => HasAuditData && HighCount > 0 && HasAuditPriority
-        ? (!string.IsNullOrWhiteSpace(AuditPriorityFinding?.PriorityReasonText)
-            ? $"{AuditPriorityTitle} — {AuditPriorityFinding.PriorityReasonText}"
-            : AuditPriorityTitle)
-        : HealthSummaryText;
+    public string OverviewDescription => HasAuditData ? AuditOverviewEvidence : HealthSummaryText;
 
     public string AiReadinessCompactText => !IsEnabled
         ? "AIHub_Fluent_ModuleDisabled".GetLocalizedOrFallback("Module disabled")
@@ -372,6 +521,8 @@ public sealed partial class AIHubPageViewModel
         {
             case nameof(ScanRangeDescription):
                 OnPropertyChanged(nameof(SelectedScanRangeText));
+                OnPropertyChanged(nameof(HasAuditOverviewScopeChange));
+                OnPropertyChanged(nameof(AuditOverviewNextScanHint));
                 break;
             case nameof(SelectedAuditLabel):
             case nameof(FinishedText):
@@ -454,9 +605,8 @@ public sealed partial class AIHubPageViewModel
             .ThenByDescending(issue => issue.IsMedium)
             .ThenByDescending(issue => issue.Occurrences)
             .ToList();
-        var visible = ShowAllFindings || HasFindingFilters ? ordered.AsEnumerable() : ordered.Take(3);
         OverviewFindings.Clear();
-        foreach (var issue in visible)
+        foreach (var issue in ordered)
         {
             OverviewFindings.Add(issue);
         }
@@ -464,13 +614,10 @@ public sealed partial class AIHubPageViewModel
         RebuildRelatedEvidence();
 
         OnPropertyChanged(nameof(OverviewFindingsSummary));
-        OnPropertyChanged(nameof(CanToggleOverviewFindings));
-        OnPropertyChanged(nameof(OverviewFindingsToggleLabel));
-        OnPropertyChanged(nameof(OverviewFindingsToggleChevron));
         OnPropertyChanged(nameof(FindingsCardHeading));
         OnPropertyChanged(nameof(HasRelatedEvidence));
         RefreshAiSummary();
-        _toggleOverviewFindingsCommand?.OnCanExecuteChanged();
+        RefreshAuditWorkspace();
     }
 
     private void RebuildRelatedEvidence()

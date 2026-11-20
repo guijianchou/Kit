@@ -128,6 +128,7 @@ public sealed class EventLogService
         cancellationToken.ThrowIfCancellationRequested();
         var results = new List<SecurityEvent>();
         var skippedChannels = new List<string>();
+        var limitedChannels = new List<string>();
         int completedChannels = 0;
         int totalChannels = mode == AuditMode.Full ? 6 : 4;
 
@@ -176,6 +177,7 @@ public sealed class EventLogService
 
                     if (count >= maxEventsPerChannel)
                     {
+                        limitedChannels.Add(channelName);
                         break;
                     }
                 }
@@ -220,6 +222,7 @@ public sealed class EventLogService
         }
 
         SkippedChannels = skippedChannels;
+        LimitedChannels = limitedChannels;
         return results;
     }
 
@@ -228,6 +231,8 @@ public sealed class EventLogService
     /// Empty when every requested channel was read successfully.
     /// </summary>
     public IReadOnlyList<string> SkippedChannels { get; private set; } = Array.Empty<string>();
+
+    public IReadOnlyList<string> LimitedChannels { get; private set; } = Array.Empty<string>();
 
     private static async IAsyncEnumerable<SecurityEvent> ReadEventsFromLogAsync(
         string logName,

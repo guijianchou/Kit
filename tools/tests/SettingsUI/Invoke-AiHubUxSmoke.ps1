@@ -5,7 +5,9 @@ param(
     [string]$Language = 'en-us',
     [string]$RuntimeRoot,
     [switch]$ShellOnly,
-    [switch]$NavigationPersistence
+    [switch]$NavigationPersistence,
+    [ValidateRange(1, 600)]
+    [int]$TimeoutSeconds = 60
 )
 
 $ErrorActionPreference = 'Stop'
@@ -74,7 +76,7 @@ try {
     [IO.File]::WriteAllText($generalPath, ($general | ConvertTo-Json -Depth 100), [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $env:LOCALAPPDATA 'Kit\language.json'), (@{ language = $Language } | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
     $aiServicePath = Join-Path $env:LOCALAPPDATA 'Kit\AiHub\service-settings.json'
-    $aiService = if ($backups[$aiServicePath]) { [Text.Encoding]::UTF8.GetString($backups[$aiServicePath]) | ConvertFrom-Json -AsHashtable } else { @{} }
+    $aiService = if ($backups[$aiServicePath]) { [Text.Encoding]::UTF8.GetString($backups[$aiServicePath]) | ConvertFrom-Json -AsHashtable } else { @{ targets = @(@{ name = 'Main' }, @{ name = 'Fallback' }) } }
     if ($aiService -isnot [Collections.IDictionary]) { throw 'AI service settings must be a JSON object.' }
     $aiService['isEnabled'] = $false
     [IO.Directory]::CreateDirectory((Split-Path -Parent $aiServicePath)) | Out-Null
@@ -131,9 +133,9 @@ try {
         if ($navigationPhase) { $startInfo.Environment['KIT_NAVIGATION_PERSISTENCE_PHASE'] = $navigationPhase }
         $testProcess = [Diagnostics.Process]::Start($startInfo)
         $harnessLog = Join-Path $reportRoot 'aihub-ux-smoke.log'
-        if (-not $testProcess.WaitForExit(60000)) {
+        if (-not $testProcess.WaitForExit($TimeoutSeconds * 1000)) {
             if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 10 }
-            throw 'AI Hub UI smoke timed out after 60 seconds.'
+            throw "AI Hub UI smoke timed out after $TimeoutSeconds seconds."
         }
         Get-Content -LiteralPath $harnessLog
         if ($testProcess.ExitCode -ne 0) { throw "AI Hub UI smoke failed: $($testProcess.ExitCode)" }

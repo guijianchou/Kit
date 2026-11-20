@@ -21,7 +21,14 @@ public sealed record WingetPackageOptions
 
     public string? Architecture { get; init; }
 
+    public string? InstallLocation { get; init; }
+
     public bool IncludeUnknown { get; init; }
+
+    public static bool IsValidInstallLocation(string? location) => location is null ||
+        (!string.IsNullOrWhiteSpace(location) && location.Length <= 1024 && Path.IsPathFullyQualified(location)
+            && !location.Any(character => char.IsControl(character) || "\"<>|?*".Contains(character))
+            && !location.StartsWith(@"\\.\", StringComparison.Ordinal));
 }
 
 // Empty discovery versions remain unknown until details are resolved. Keep the
@@ -51,7 +58,10 @@ public sealed record WingetPackageDetails(
     string? PackageUrl,
     string? License,
     string? LicenseUrl,
-    IReadOnlyList<WingetPackageAgreement> Agreements);
+    IReadOnlyList<WingetPackageAgreement> Agreements)
+{
+    public IReadOnlyList<string> AvailableVersions { get; init; } = [];
+}
 
 public sealed record WingetPackageAgreement(string Label, string Text, string? Url);
 

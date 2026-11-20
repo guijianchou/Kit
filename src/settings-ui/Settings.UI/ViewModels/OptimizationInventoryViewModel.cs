@@ -78,13 +78,19 @@ public sealed class OptimizationInventoryViewModel : Observable
     public void Apply(OptimizationInventoryReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
+        if (ReferenceEquals(report, _report))
+        {
+            return;
+        }
+
+        var changes = report.ChangesSince(_report);
         var expanded = _rows.Where(row => row.IsExpanded).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
         _report = report;
         var measured = report.Scopes.Where(scope => scope.ObservedBytes.HasValue).ToArray();
         _observedBytes = measured.Length == 0 ? null : SumSizes(measured.Select(scope => scope.ObservedBytes!.Value));
         _recentBytes = SumSizes(measured.Select(scope => scope.RecentBytes));
         _olderBytes = SumSizes(measured.Select(scope => scope.OlderBytes));
-        _rows = report.Scopes.Select(scope => new OptimizationInventoryScopeViewModel(scope, _observedBytes ?? 0)
+        _rows = report.Scopes.Select(scope => new OptimizationInventoryScopeViewModel(scope, _observedBytes ?? 0, changes.TryGetValue(scope.RootPath, out long change) ? change : null)
         {
             IsExpanded = expanded.Contains(scope.Id),
         }).OrderByDescending(row => row.ObservedBytes.HasValue).ThenByDescending(row => row.ObservedBytes)
@@ -130,9 +136,10 @@ public sealed class OptimizationInventoryScopeViewModel : Observable
 {
     private bool _isExpanded;
 
-    public OptimizationInventoryScopeViewModel(OptimizationInventoryScope scope, long totalBytes)
+    public OptimizationInventoryScopeViewModel(OptimizationInventoryScope scope, long totalBytes, long? changeBytes = null)
     {
         Scope = scope;
+        ChangeBytes = changeBytes;
         SharePercent = scope.ObservedBytes.HasValue && totalBytes > 0 ? Math.Clamp(100.0 * scope.ObservedBytes.Value / totalBytes, 0, 100) : 0;
         TopFiles = scope.TopFiles.OrderByDescending(file => file.SizeInBytes).Take(5)
             .Select(file => new OptimizationInventoryFileViewModel(file)).ToArray();
@@ -143,6 +150,15 @@ public sealed class OptimizationInventoryScopeViewModel : Observable
     public string Name => PreferChinese ? Scope.NameZh : Scope.NameEn;
     public string Path => Scope.RootPath;
     public long? ObservedBytes => Scope.ObservedBytes;
+    public long? ChangeBytes { get; }
+    public bool HasComparison => ChangeBytes.HasValue;
+    public string ChangeText => ChangeBytes switch
+    {
+        > 0 => "AIHub_Inventory_Growth".FormatLocalized("Up {0} since the previous scan", OptimizationInventoryViewModel.FormatSize(ChangeBytes)),
+        < 0 => "AIHub_Inventory_Shrink".FormatLocalized("Down {0} since the previous scan", OptimizationInventoryViewModel.FormatSize(-ChangeBytes)),
+        0 => "AIHub_Inventory_Unchanged".GetLocalizedOrFallback("Same size as the previous scan"),
+        _ => string.Empty,
+    };
     public bool HasMeasuredSize => Scope.ObservedBytes.HasValue;
     public string SizeText => OptimizationInventoryViewModel.FormatSize(Scope.ObservedBytes);
     public string FileSummary => HasMeasuredSize

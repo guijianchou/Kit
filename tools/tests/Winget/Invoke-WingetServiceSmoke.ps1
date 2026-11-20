@@ -285,6 +285,29 @@ function Test-SearchAndDetails([bool]$expectInstalled, [string[]]$candidates, [s
         if (-not $selected.manualUpgradeCommand.StartsWith($expectedCommand, [StringComparison]::Ordinal)) { throw 'The manual command used the wrong install/upgrade operation.' }
         if (-not $expectInstalled -and -not $selected.manualUpgradeCommand.EndsWith(' --no-upgrade', [StringComparison]::Ordinal)) { throw 'New installation must not implicitly upgrade an existing package.' }
         Write-Result "PASS search/details: id=$($selected.id); installed=$($selected.installedVersion); available=$($selected.availableVersion); eligibility=$($selected.installEligibility); expectedInstalled=$expectInstalled. No installer was started." | Out-Host
+        $versions = @($detail.selectedDetails.availableVersions)
+        if ($versions.Count -eq 0 -or $versions.Count -gt 200 -or $selected.availableVersion -notin $versions) {
+            throw 'Resolved details must expose a bounded version list containing the selected version.'
+        }
+        if (-not $expectInstalled) {
+            $alternate = @($versions | Where-Object { $_ -cne $selected.availableVersion } | Select-Object -First 1)
+            if ($alternate.Count) {
+                $versionDetail = Invoke-ReadOnlyQuery 'details' @{
+                    packages = @(Get-PackageIdentity $selected)
+                    requestedVersion = $alternate[0]
+                } "$reportPrefix-selected-version"
+                if ($versionDetail.selectedDetails.package.availableVersion -cne $alternate[0] -or
+                    $versionDetail.selectedDetails.package.id -cne $selected.id) {
+                    throw 'Selecting a catalog version did not resolve that exact version.'
+                }
+                Write-Result "PASS exact catalog version selection: $($selected.id) $($selected.availableVersion) -> $($alternate[0]); read-only." | Out-Host
+                $detail = Invoke-ReadOnlyQuery 'details' @{
+                    packages = @(Get-PackageIdentity $versionDetail.selectedDetails.package)
+                    requestedVersion = $selected.availableVersion
+                } "$reportPrefix-restored-version"
+                $selected = $detail.selectedDetails.package
+            }
+        }
         return Test-InstallPreparation $selected $expectInstalled $reportPrefix
     }
     throw "No known catalog candidate matched installed=$expectInstalled; search/details coverage was not completed."

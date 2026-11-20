@@ -110,7 +110,7 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
         }
 
         if (command is not ("check" or "search" or "list-installed" or "details" or "download" or "install" or "upgrade" or "cancel"
-            or "prepare" or "enqueue" or "cancel-queue" or "ignore" or "unignore" or "clear-old-history"))
+            or "prepare" or "enqueue" or "cancel-queue" or "ignore" or "unignore" or "clear-old-history" or "clear-history"))
         {
             return Task.FromResult(KitPipeResponse.Fail("UNKNOWN_COMMAND", "Unknown Winget command."));
         }
@@ -142,7 +142,8 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                 "cancel-queue" => CancelQueue(request.OperationId),
                 "enqueue" => Enqueue(request),
                 "ignore" or "unignore" => SetIgnored(command == "ignore", request),
-                "clear-old-history" => ClearOldHistory(),
+                "clear-old-history" => ClearHistory(7),
+                "clear-history" => ClearHistory(request.HistoryRetentionDays),
                 _ => StartOperation(command, request),
             };
             return Task.FromResult(KitPipeResponse.Ok(JsonSerializer.Serialize(response, WingetServiceJsonContext.Default.WingetServiceAck)));
@@ -157,8 +158,13 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
         }
     }
 
-    private WingetServiceAck ClearOldHistory()
+    private WingetServiceAck ClearHistory(int? retentionDays)
     {
+        if (retentionDays is not (0 or 7 or 30))
+        {
+            return new(false, Error: "Choose all completed history, 7 days, or 30 days.");
+        }
+
         // Match PersistState's lock order. Keep the current queue and recovery
         // marker in the same durable snapshot, and publish only after Save works.
         lock (_stateWriteGate)
@@ -170,8 +176,9 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                     return new(false, Error: "The Winget service is stopping.");
                 }
 
-                DateTimeOffset cutoff = _utcNow().AddDays(-7);
-                var retained = _state.History.Where(item => item.CompletedUtc is not { } completed || completed >= cutoff).ToArray();
+                DateTimeOffset cutoff = _utcNow().AddDays(-retentionDays.Value);
+                var retained = _state.History.Where(item => item.State is not ("Succeeded" or "Failed" or "Cancelled")
+                    || item.CompletedUtc is not { } completed || (retentionDays != 0 && completed >= cutoff)).ToArray();
                 int removed = _state.History.Count - retained.Length;
                 if (removed > 0)
                 {
@@ -275,6 +282,16 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                 if (package is null)
                 {
                     return new(false, Error: "This package is no longer in the current results. Search or check for updates again.");
+                }
+
+                if (request.RequestedVersion is not null)
+                {
+                    if (command != "details" || _status.SelectedDetails is not { } currentDetails
+                        || !WingetServicePolicy.Matches(currentDetails.Package, WingetServicePolicy.Identity(package))
+                        || !currentDetails.AvailableVersions.Contains(request.RequestedVersion, StringComparer.Ordinal))
+                    {
+                        return new(false, Error: "Load this package's available versions and choose one from that list.");
+                    }
                 }
 
                 if (command is "download" or "install" or "upgrade")
@@ -418,16 +435,18 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                     NotifyUpdates(packages);
                     break;
                 case "details":
-                    var details = await _client.GetDetailsAsync(package!, token).ConfigureAwait(false);
+                    var requestedPackage = request.RequestedVersion is { } selectedVersion
+                        ? package! with { AvailableVersion = selectedVersion } : package!;
+                    var details = await _client.GetDetailsAsync(requestedPackage, request.Options, token).ConfigureAwait(false);
                     token.ThrowIfCancellationRequested();
-                    if (!WingetServicePolicy.IsValidResolution(package!, details.Package))
+                    if (!WingetServicePolicy.IsValidResolution(requestedPackage, details.Package))
                     {
                         throw new WingetOperationException("The package details changed. Check for updates again.");
                     }
 
                     lock (_gate)
                     {
-                        UpdateReviewedPackage(details.Package);
+                        UpdateReviewedPackage(details.Package, package);
                         _status = _status with { SelectedDetails = details };
                     }
 

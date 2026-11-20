@@ -270,6 +270,12 @@ internal sealed class WingetCliInstaller(IWingetCliProcessRunner? runner = null)
             start.ArgumentList.Add("--architecture");
             start.ArgumentList.Add(options.Architecture);
         }
+
+        if (options.InstallLocation is not null)
+        {
+            start.ArgumentList.Add("--location");
+            start.ArgumentList.Add(options.InstallLocation);
+        }
     }
 
     private static void Report(IProgress<WingetOperationProgress>? progress, string stage, string? output = null)

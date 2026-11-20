@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace Kit.AIHubLib.Models;
 
@@ -11,6 +13,36 @@ public sealed record OptimizationInventoryReport
     public IReadOnlyList<OptimizationInventoryScope> Scopes { get; init; } = Array.Empty<OptimizationInventoryScope>();
     public int ExaminedEntries { get; init; }
     public bool IsPartial { get; init; }
+
+    public IReadOnlyDictionary<string, long> ChangesSince(OptimizationInventoryReport? previous)
+    {
+        var changes = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        if (previous is null || CompletedUtc <= previous.CompletedUtc)
+        {
+            return changes;
+        }
+
+        static HashSet<string> NestedRoots(OptimizationInventoryReport report, string root)
+        {
+            string prefix = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
+            return report.Scopes.Select(scope => scope.RootPath)
+                .Where(path => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var baseline = previous.Scopes.ToDictionary(scope => scope.RootPath, StringComparer.OrdinalIgnoreCase);
+        foreach (var scope in Scopes)
+        {
+            if (scope.State == "complete" && scope.ObservedBytes is long current && current >= 0 &&
+                baseline.TryGetValue(scope.RootPath, out var old) && old.State == "complete" && old.ObservedBytes is long before && before >= 0 &&
+                NestedRoots(this, scope.RootPath).SetEquals(NestedRoots(previous, scope.RootPath)))
+            {
+                changes.Add(scope.RootPath, current - before);
+            }
+        }
+
+        return changes;
+    }
 }
 
 /// <summary>Observed space in one location, kept separate from reviewed cleanup candidates.</summary>

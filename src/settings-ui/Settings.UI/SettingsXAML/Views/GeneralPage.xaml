@@ -909,13 +909,27 @@
                         IsTabStop="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay}"
                         Severity="{x:Bind ViewModel.UpdateCheckMessageSeverity, Converter={StaticResource StringToInfoBarSeverityConverter}, Mode=OneWay}"
                         Visibility="{x:Bind ViewModel.UpdateCheckMessageVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <InfoBar.ActionButton>
-                            <HyperlinkButton
-                                x:Uid="GeneralPage_ViewRelease"
-                                AutomationProperties.AutomationId="GeneralPage_ViewReleaseButton"
-                                NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
-                                Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
-                        </InfoBar.ActionButton>
+                        <StackPanel Spacing="12" HorizontalAlignment="Stretch">
+                            <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.IsPortableUpdateBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ProgressBar Minimum="0" Maximum="100" Value="{x:Bind ViewModel.UpdateDownloadPercent, Mode=OneWay}"
+                                             IsIndeterminate="{x:Bind ViewModel.IsUpdateProgressIndeterminate, Mode=OneWay}" />
+                                <TextBlock Text="{x:Bind ViewModel.UpdateDownloadSummary, Mode=OneWay}" Style="{StaticResource SecondaryTextStyle}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Uid="General_UpdateDownload" AutomationProperties.AutomationId="GeneralPage_DownloadUpdate"
+                                        Command="{x:Bind ViewModel.DownloadUpdateCommand}" Style="{StaticResource KitPrimaryActionButtonStyle}"
+                                        Visibility="{x:Bind ViewModel.CanDownloadPortableUpdate, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Button Content="{x:Bind ViewModel.RestartUpdateLabel, Mode=OneWay}" AutomationProperties.AutomationId="GeneralPage_RestartUpdate"
+                                        Command="{x:Bind ViewModel.RestartToUpdateCommand}" Style="{StaticResource KitPrimaryActionButtonStyle}"
+                                        Visibility="{x:Bind ViewModel.CanRestartToUpdate, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Button x:Uid="General_UpdateCancel" AutomationProperties.AutomationId="GeneralPage_CancelUpdate"
+                                        Command="{x:Bind ViewModel.CancelUpdateDownloadCommand}"
+                                        Visibility="{x:Bind ViewModel.CanCancelUpdateDownload, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <HyperlinkButton x:Uid="GeneralPage_ViewRelease" AutomationProperties.AutomationId="GeneralPage_ViewReleaseButton"
+                                                 NavigateUri="{x:Bind ViewModel.PowerToysNewAvailableVersionUri, Mode=OneWay}"
+                                                 Visibility="{x:Bind ViewModel.IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+                            </StackPanel>
+                        </StackPanel>
                     </InfoBar>
                 </controls:SettingsGroup>
             </StackPanel>

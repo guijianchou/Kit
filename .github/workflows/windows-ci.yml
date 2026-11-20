@@ -87,6 +87,7 @@ jobs:
           $runtimeRoot = Join-Path $env:GITHUB_WORKSPACE 'x64/Debug'
           $requiredPaths = @(
             'Kit.exe',
+            'Updater/Kit.Updater.exe',
             'Kit.ActionRunner.exe',
             'Kit.WingetService.exe',
             'Kit.WingetService.deps.json',
@@ -125,6 +126,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
+
+      - name: Run Portable updater regression tests
+        shell: pwsh
+        run: |
+          & ./x64/Debug/tests/Updater/Kit.Updater.Tests.exe --report-trx --results-directory TestResults/GitHubActions/Updater --minimum-expected-tests 32
+          if ($LASTEXITCODE -ne 0) { throw 'Portable updater regression tests failed.' }
 
       - name: Run Settings UI unit tests
         shell: pwsh
@@ -172,7 +179,7 @@ jobs:
           & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/Winget/Winget.UnitTests.exe') `
             --report-trx `
             --results-directory $reportDirectory `
-            --minimum-expected-tests 131
+            --minimum-expected-tests 135
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -244,7 +251,7 @@ jobs:
           & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/AiHub/Kit.AiHub.UnitTests.exe') `
             --report-trx `
             --results-directory $reportDirectory `
-            --minimum-expected-tests 524
+            --minimum-expected-tests 537
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

@@ -19,6 +19,16 @@
 
     <local:NavigablePage.Resources>
 
+        <Style x:Key="AiHubSectionSurfaceStyle" TargetType="Border" BasedOn="{StaticResource KitCardSurfaceStyle}">
+            <Setter Property="Padding" Value="16" />
+        </Style>
+        <Style x:Key="AiHubSectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
+        </Style>
+
         <!-- Readiness / health styles per level: bound via AiReadinessStyle and HealthScore*Style, locked by AiHubSettingsTests + ModulePageSmoke contrast assertions -->
         <Style x:Key="ReadinessReadyStyle" TargetType="FontIcon">
             <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
@@ -75,6 +85,40 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
 
+        <DataTemplate x:Key="AuditCategoryCardTemplate" x:DataType="viewModels:AuditCategoryRow">
+            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                    Padding="16,12" Tag="{x:Bind Category}" Click="OnAuditCategoryClick"
+                    AutomationProperties.AutomationId="AIHub_AuditCategoryCard" AutomationProperties.Name="{x:Bind AccessibleSummary}"
+                    ToolTipService.ToolTip="{x:Bind ActionLabel}">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" MinHeight="90">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <TextBlock Text="{x:Bind Title}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind Counts}" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Grid.Row="1" Text="{x:Bind Priority}" FontSize="13" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                               ToolTipService.ToolTip="{x:Bind Priority}" VerticalAlignment="Top" />
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                        <Grid>
+                            <Border Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}" Padding="8,3" CornerRadius="4"
+                                    Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{x:Bind Severity}" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                            </Border>
+                            <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}" Padding="8,3" CornerRadius="4"
+                                    Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{x:Bind Severity}" FontSize="12" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                            </Border>
+                            <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" Padding="8,3" CornerRadius="4"
+                                    Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{x:Bind Severity}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </Border>
+                        </Grid>
+                        <TextBlock Grid.Column="1" Text="{x:Bind Occurrences}" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+            </Button>
+        </DataTemplate>
+
         <DataTemplate x:Key="OptimizationInventoryScopeTemplate" x:DataType="viewModels:OptimizationInventoryScopeViewModel">
             <Border Margin="0,0,0,8" CornerRadius="{StaticResource OverlayCornerRadius}"
                     Background="{ThemeResource SubtleFillColorSecondaryBrush}"
@@ -108,6 +152,7 @@
                         </Grid>
                     </Expander.Header>
                     <StackPanel x:Name="InventoryScopeDetails" x:Load="{x:Bind HasBeenExpanded, Mode=OneWay}" Spacing="10" Padding="8,6">
+                        <TextBlock Text="{x:Bind ChangeText}" TextWrapping="Wrap" Visibility="{x:Bind HasComparison, Converter={StaticResource BoolToVisibilityConverter}}" />
                         <TextBlock Text="{x:Bind Reason}" TextWrapping="Wrap" FontWeight="SemiBold" IsTextSelectionEnabled="True" />
                         <TextBlock Text="{x:Bind Guidance}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="{x:Bind AgeSummary}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -309,19 +354,16 @@
     <Grid>
         <VisualStateManager.VisualStateGroups>
                 <VisualStateGroup>
-                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditResultsGrid}" MinWidth="700" /></VisualState.StateTriggers></VisualState>
-                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditResultsGrid}" MaxWidth="700" /></VisualState.StateTriggers>
+                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditPeriodOverview}" MinWidth="620" /></VisualState.StateTriggers></VisualState>
+                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditPeriodOverview}" MaxWidth="620" /></VisualState.StateTriggers>
                         <VisualState.Setters>
-                            <Setter Target="AuditFindingsCard.(Grid.ColumnSpan)" Value="2" />
-                            <Setter Target="AuditSummaryCard.(Grid.Row)" Value="1" />
-                            <Setter Target="AuditSummaryCard.(Grid.Column)" Value="0" />
-                            <Setter Target="AuditSummaryCard.(Grid.ColumnSpan)" Value="2" />
+                            <Setter Target="AuditCategoryLayout.MaximumRowsOrColumns" Value="1" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
                 <VisualStateGroup>
-                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditOverviewGrid}" MinWidth="480" /></VisualState.StateTriggers></VisualState>
-                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditOverviewGrid}" MaxWidth="480" /></VisualState.StateTriggers>
+                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditOverviewGrid}" MinWidth="360" /></VisualState.StateTriggers></VisualState>
+                    <VisualState><VisualState.StateTriggers><ui:ControlSizeTrigger TargetElement="{Binding ElementName=AuditOverviewGrid}" MaxWidth="360" /></VisualState.StateTriggers>
                         <VisualState.Setters>
                             <Setter Target="AuditScoreCard.(Grid.ColumnSpan)" Value="2" />
                             <Setter Target="AuditScoreCard.HorizontalAlignment" Value="Left" />
@@ -497,38 +539,26 @@
             <SplitView.Pane>
                 <views:FindingDetailsPane x:Name="AiHubFindingDetails" />
             </SplitView.Pane>
-            <Grid x:Name="AIHubRoot" RowDefinitions="Auto,Auto,*" RowSpacing="12" Padding="24,0,0,0" SizeChanged="OnHeaderLayoutChanged">
+            <Grid x:Name="AIHubRoot" RowDefinitions="Auto,Auto,*" RowSpacing="12" Padding="24,0,0,0">
 
-            <Grid MaxWidth="1000" HorizontalAlignment="Stretch" Margin="0,0,24,0">
-                <TextBlock x:Name="AiHubPageTitle" x:Uid="AIHub_PageTitle" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1" SizeChanged="OnHeaderLayoutChanged" />
+            <Grid x:Name="AiHubPageHeader" MaxWidth="1000" HorizontalAlignment="Stretch" Margin="0,0,24,0"
+                  ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="6">
+                <TextBlock x:Name="AiHubPageTitle" x:Uid="AIHub_PageTitle" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1" />
+                <controls:GPOInfoControl x:Name="AiHubModuleGate" Grid.Column="1" VerticalAlignment="Center"
+                                         MaxWidth="220" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                    <ToggleSwitch x:Name="AiHubEnableSwitch" x:Uid="AIHub_EnableToggleSwitch" AutomationProperties.AutomationId="Toggle_AIHub"
+                                  MinWidth="0" HorizontalAlignment="Right"
+                                  IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
+                                  IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}" />
+                </controls:GPOInfoControl>
+                <TextBlock x:Name="AiHubDescription" Grid.Row="1" Grid.ColumnSpan="2" Text="{x:Bind ModuleDescription}"
+                           FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                           ToolTipService.ToolTip="{x:Bind ModuleDescription}" />
             </Grid>
 
             <Grid x:Name="AiHubFixedHeader" Grid.Row="1" Padding="0,0,24,0">
                 <StackPanel MaxWidth="1000" HorizontalAlignment="Stretch" Spacing="12">
-                    <ScrollViewer x:Name="AiHubIntroScroll" MaxHeight="240" HorizontalContentAlignment="Stretch"
-                                  HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                        <StackPanel Spacing="18">
-                            <controls:SettingsPageIntro x:Name="AiHubIntroduction"
-                                                       ModuleDescription="{x:Bind ModuleDescription}"
-                                                       ModuleImageSource="ms-appx:///Assets/Settings/Modules/AiHub.png" />
-                    <Border x:Name="AiHubEnableCardSurface" Style="{StaticResource KitHeroSurfaceStyle}">
-                        <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                            <tkcontrols:SettingsCard
-                                x:Name="AiHubEnableSettingsCard"
-                                x:Uid="AIHub_EnableSettingsCard"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/AiHub.png}"
-                                IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
-                                <ToggleSwitch x:Uid="AIHub_EnableToggleSwitch" AutomationProperties.AutomationId="Toggle_AIHub"
-                                              IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
-                            </tkcontrols:SettingsCard>
-                        </controls:GPOInfoControl>
-                    </Border>
-                        </StackPanel>
-                    </ScrollViewer>
-                    <StackPanel x:Name="AiHubHeaderTail" Spacing="12" SizeChanged="OnHeaderLayoutChanged">
-                    <Border x:Name="AiHubMasterCardSurface" Background="Transparent">
+                    <Border x:Name="AiHubMasterCardSurface" Style="{StaticResource AiHubSectionSurfaceStyle}" Padding="12,8">
                         <Grid x:Name="AiReadinessBar" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="9" RowSpacing="8">
                             <FontIcon x:Name="AiReadinessIcon" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}" FontSize="13"
                                       Style="{x:Bind AiReadinessStyle(ViewModel.AiReadinessLevel), Mode=OneWay}" VerticalAlignment="Center" />
@@ -539,7 +569,8 @@
                                 <TextBlock Text="·" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                 <TextBlock Text="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}" FontSize="12"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" MaxWidth="280"
+                                           ToolTipService.ToolTip="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}"
                                            Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                             </tkcontrols:WrapPanel>
                             <tkcontrols:WrapPanel x:Name="AiReadinessActions" Grid.Column="2" HorizontalSpacing="6" VerticalSpacing="4" VerticalAlignment="Center">
@@ -564,8 +595,6 @@
                         <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.OptimizationTabLabel}" Icon="{ui:FontIcon Glyph=&#xE9F5;}" />
                         <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.TaskPoliciesTabLabel}" Icon="{ui:FontIcon Glyph=&#xE8A5;}" />
                     </tkcontrols:Segmented>
-                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" HorizontalAlignment="Stretch" />
-                    </StackPanel>
                 </StackPanel>
             </Grid>
 
@@ -580,7 +609,7 @@
                         <!-- TAB 0: SECURITY AUDIT -->
                         <StackPanel x:Name="AuditPanel" Spacing="16">
                             <Border x:Name="AuditWorkflowCard"
-                                    Style="{StaticResource KitCardSurfaceStyle}"
+                                    Style="{StaticResource AiHubSectionSurfaceStyle}"
                                     Visibility="{x:Bind ViewModel.SidebarWorkflowVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <StackPanel Spacing="10">
                                     <Grid ColumnSpacing="10">
@@ -600,6 +629,10 @@
                                             Visibility="{x:Bind TaskRunningVisibility(ViewModel.IsAuditing, ViewModel.IsAiAnalyzing), Mode=OneWay}"
                                             Style="{StaticResource KitActionButtonStyle}" AutomationProperties.AutomationId="AIHub_CancelAuditButton" />
                                 </Grid>
+                                <TextBlock x:Name="AuditElapsedText" Text="{x:Bind ViewModel.AuditElapsedText, Mode=OneWay}"
+                                           FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Visibility="{x:Bind ViewModel.AuditElapsedText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
                                 <ProgressBar x:Name="AuditWorkflowProgress" Value="{x:Bind ViewModel.SidebarWorkflowPercent, Mode=OneWay}" Minimum="0" Maximum="100"
                                              IsIndeterminate="{x:Bind ViewModel.IsAuditProgressIndeterminate, Mode=OneWay}"
                                              Style="{StaticResource KitProgressBarStyle}"
@@ -625,320 +658,382 @@
                             </StackPanel>
                         </Border>
 
-                            <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="24,22"
-                                    Background="{ThemeResource KitHeroGradientBrush}">
-                                <Grid x:Name="AuditOverviewGrid" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="14">
-                                    <Grid x:Name="AuditScoreCard" Width="96" Height="96" VerticalAlignment="Center">
-                                        <Ellipse Stroke="{ThemeResource ControlStrokeColorDefaultBrush}" StrokeThickness="6" />
-                                        <ProgressRing IsIndeterminate="False" Value="{x:Bind HealthScoreToDouble(ViewModel.HealthScore), Mode=OneWay}" Maximum="100"
-                                                      Width="96" Height="96" Style="{x:Bind HealthScoreRingStyle(ViewModel.HealthScore), Mode=OneWay}"
-                                                      Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
-                                            <TextBlock x:Name="AuditScoreText" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" FontSize="30" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind ViewModel.HealthScoreLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Grid>
-                                    <StackPanel x:Name="AuditScoreSummary" Grid.Column="1" Spacing="6" VerticalAlignment="Center">
-                                        <TextBlock Text="{x:Bind ViewModel.OverviewAuditTimestampText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                        <TextBlock Text="{x:Bind ViewModel.OverviewHeadline, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" />
-                                        <TextBlock Text="{x:Bind ViewModel.OverviewDescription, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                        <tkcontrols:WrapPanel HorizontalSpacing="10" VerticalSpacing="6" Margin="0,2,0,0">
-                                            <HyperlinkButton x:Uid="AIHub_Fluent_PriorityButton" Click="OnPriorityFindingClick" Padding="0" FontSize="12"
-                                                             AutomationProperties.Name="{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}"
-                                                             Visibility="{x:Bind ViewModel.HasAuditPriority, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                            <TextBlock Text="{x:Bind ViewModel.WindowText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                            <TextBlock Text="·" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"
-                                                       Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                            <TextBlock Text="{x:Bind ViewModel.EventCountText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                        </tkcontrols:WrapPanel>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <Grid x:Name="AuditCommandHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
-                                <tkcontrols:WrapPanel x:Name="AuditPrimaryCommands" HorizontalSpacing="10" VerticalSpacing="10" VerticalAlignment="Center">
-                                    <SplitButton x:Name="AuditScanButton" Click="OnSelectedScanClick" IsEnabledChanged="OnScanButtonIsEnabledChanged" IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
-                                                 Background="{ThemeResource SplitButtonBackground}"
-                                                 Foreground="{ThemeResource SplitButtonForeground}"
-                                                 AutomationProperties.AutomationId="AIHub_ScanButton">
-                                        <!-- SplitButton paints its inner buttons from state resources. Separate
-                                             theme dictionaries prevent cached brush aliases during theme changes. -->
-                                        <SplitButton.Resources>
-                                            <ResourceDictionary>
-                                                <ResourceDictionary.ThemeDictionaries>
-                                                    <ResourceDictionary x:Key="Default">
-                                                        <SolidColorBrush x:Key="SplitButtonBackground" Color="{ThemeResource SystemAccentColorLight2}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="{ThemeResource SystemAccentColorLight2}" Opacity="0.9" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="{ThemeResource SystemAccentColorLight2}" Opacity="0.8" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{ThemeResource ControlFillColorDisabled}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForeground" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{ThemeResource TextFillColorSecondary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundSecondary" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundSecondaryPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushDivider" Color="{ThemeResource ControlStrokeColorOnAccentTertiary}" />
+                            <Border x:Name="AuditDashboard" Style="{StaticResource AiHubSectionSurfaceStyle}">
+                                <StackPanel Spacing="16">
+                                    <Grid x:Name="AuditCommandHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+                                        <tkcontrols:WrapPanel x:Name="AuditPrimaryCommands" HorizontalSpacing="10" VerticalSpacing="10" VerticalAlignment="Center">
+                                            <SplitButton x:Name="AuditScanButton" Click="OnSelectedScanClick" IsEnabledChanged="OnScanButtonIsEnabledChanged" IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
+                                                Background="{ThemeResource SplitButtonBackground}"
+                                                Foreground="{ThemeResource SplitButtonForeground}"
+                                                AutomationProperties.AutomationId="AIHub_ScanButton">
+                                                <!-- SplitButton paints its inner buttons from state resources. Separate
+                                                    theme dictionaries prevent cached brush aliases during theme changes. -->
+                                                <SplitButton.Resources>
+                                                    <ResourceDictionary>
+                                                        <ResourceDictionary.ThemeDictionaries>
+                                                            <ResourceDictionary x:Key="Default">
+                                                                <SolidColorBrush x:Key="SplitButtonBackground" Color="{ThemeResource SystemAccentColorLight2}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="{ThemeResource SystemAccentColorLight2}" Opacity="0.9" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="{ThemeResource SystemAccentColorLight2}" Opacity="0.8" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{ThemeResource ControlFillColorDisabled}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForeground" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{ThemeResource TextFillColorSecondary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundSecondary" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundSecondaryPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushDivider" Color="{ThemeResource ControlStrokeColorOnAccentTertiary}" />
+                                                            </ResourceDictionary>
+                                                            <ResourceDictionary x:Key="Light">
+                                                                <SolidColorBrush x:Key="SplitButtonBackground" Color="{ThemeResource SystemAccentColorDark1}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="{ThemeResource SystemAccentColorDark1}" Opacity="0.9" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="{ThemeResource SystemAccentColorDark2}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{ThemeResource ControlFillColorDisabled}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForeground" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{ThemeResource TextFillColorSecondary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundSecondary" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundSecondaryPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushDivider" Color="{ThemeResource ControlStrokeColorOnAccentTertiary}" />
+                                                            </ResourceDictionary>
+                                                            <ResourceDictionary x:Key="HighContrast">
+                                                                <SolidColorBrush x:Key="SplitButtonBackground" Color="{ThemeResource SystemColorHighlightColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="{ThemeResource SystemColorHighlightColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="{ThemeResource SystemColorHighlightColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{ThemeResource SystemColorButtonFaceColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForeground" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{ThemeResource SystemColorGrayTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundSecondary" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonForegroundSecondaryPressed" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorButtonTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{ThemeResource SystemColorButtonTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{ThemeResource SystemColorButtonTextColor}" />
+                                                                <SolidColorBrush x:Key="SplitButtonBorderBrushDivider" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                                                            </ResourceDictionary>
+                                                        </ResourceDictionary.ThemeDictionaries>
                                                     </ResourceDictionary>
-                                                    <ResourceDictionary x:Key="Light">
-                                                        <SolidColorBrush x:Key="SplitButtonBackground" Color="{ThemeResource SystemAccentColorDark1}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="{ThemeResource SystemAccentColorDark1}" Opacity="0.9" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="{ThemeResource SystemAccentColorDark2}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{ThemeResource ControlFillColorDisabled}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForeground" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{ThemeResource TextFillColorSecondary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundSecondary" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundSecondaryPressed" Color="{ThemeResource TextOnAccentFillColorPrimary}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{ThemeResource ControlStrokeColorOnAccentDefault}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushDivider" Color="{ThemeResource ControlStrokeColorOnAccentTertiary}" />
-                                                    </ResourceDictionary>
-                                                    <ResourceDictionary x:Key="HighContrast">
-                                                        <SolidColorBrush x:Key="SplitButtonBackground" Color="{ThemeResource SystemColorHighlightColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="{ThemeResource SystemColorHighlightColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="{ThemeResource SystemColorHighlightColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{ThemeResource SystemColorButtonFaceColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForeground" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{ThemeResource SystemColorGrayTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundSecondary" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonForegroundSecondaryPressed" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{ThemeResource SystemColorButtonTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{ThemeResource SystemColorButtonTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{ThemeResource SystemColorButtonTextColor}" />
-                                                        <SolidColorBrush x:Key="SplitButtonBorderBrushDivider" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                                                    </ResourceDictionary>
-                                                </ResourceDictionary.ThemeDictionaries>
-                                            </ResourceDictionary>
-                                        </SplitButton.Resources>
-                                        <SplitButton.Content>
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <FontIcon Glyph="&#xE721;" FontSize="13" />
-                                                <TextBlock Text="{x:Bind ViewModel.SelectedScanLabel, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" />
-                                            </StackPanel>
-                                        </SplitButton.Content>
-                                        <SplitButton.Flyout>
-                                            <Flyout>
-                                                <StackPanel Spacing="14" Width="270">
-                                                    <TextBlock Text="{x:Bind ViewModel.ScanOptionsLabel}" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                                    <ComboBox x:Uid="AIHub_Fluent_ScanMode" SelectedIndex="{x:Bind ViewModel.SelectedScanModeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
-                                                        <ComboBoxItem Content="{x:Bind ViewModel.FastScanLabel}" />
-                                                        <ComboBoxItem Content="{x:Bind ViewModel.FullScanLabel}" />
-                                                    </ComboBox>
-                                                    <ComboBox x:Uid="AIHub_Fluent_ScanRange" SelectedIndex="{x:Bind ViewModel.FullScanRangeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch" IsEnabled="{x:Bind ViewModel.IsFullScanSelected, Mode=OneWay}">
-                                                        <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1DayLabel}" />
-                                                        <ComboBoxItem Content="{x:Bind ViewModel.RangeOption2DaysLabel}" />
-                                                        <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1WeekLabel}" />
-                                                    </ComboBox>
-                                                    <CheckBox x:Uid="AIHub_Fluent_FullChannels" IsChecked="{x:Bind ViewModel.IsFullAuditMode, Mode=OneWay}" Click="OnFullAuditCheckClick" IsEnabled="{x:Bind ViewModel.CanUseFullAuditMode}" />
-                                                    <TextBlock Text="{x:Bind ViewModel.ScopeHint, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                    <TextBlock x:Uid="AIHub_Fluent_NextScanHint" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                </StackPanel>
-                                            </Flyout>
-                                        </SplitButton.Flyout>
-                                    </SplitButton>
-                                    <TextBlock Text="{x:Bind ViewModel.SelectedScanRangeText, Mode=OneWay}" FontSize="12"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="2,0,2,0" />
-                                    <Button Command="{x:Bind ViewModel.DeepAnalyzeCommand}" AutomationProperties.AutomationId="AIHub_DeepAnalyzeButton"
-                                            ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint}" Style="{StaticResource KitActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="7">
-                                            <FontIcon Glyph="&#xE9D9;" FontSize="13" />
-                                            <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel}" />
-                                        </StackPanel>
-                                    </Button>
-                                </tkcontrols:WrapPanel>
-                                <DropDownButton x:Name="AuditHistoryDropDown" Grid.Column="1"
-                                                IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
-                                                VerticalAlignment="Center"
-                                                AutomationProperties.Name="{x:Bind ViewModel.AuditHistoryLabel, Mode=OneWay}"
-                                                AutomationProperties.AutomationId="AIHub_AuditHistoryButton">
-                                    <DropDownButton.Content>
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon Glyph="&#xE81C;" FontSize="13" />
-                                            <TextBlock Text="{x:Bind ViewModel.AuditHistoryLabel, Mode=OneWay}" FontSize="13" />
-                                        </StackPanel>
-                                    </DropDownButton.Content>
-                                    <DropDownButton.Flyout>
-                                        <Flyout>
-                                            <StackPanel Spacing="12">
-                                                <CalendarDatePicker x:Uid="AIHub_AuditDatePicker" Date="{x:Bind ViewModel.SelectedAuditDate, Mode=OneWay}" MaxDate="{x:Bind ViewModel.LatestSelectableAuditDate}" DateChanged="OnAuditDateChanged" />
-                                                <Button Content="{x:Bind ViewModel.LatestAuditLabel}" Command="{x:Bind ViewModel.SelectLatestCommand}" AutomationProperties.AutomationId="AIHub_SelectLatestButton" />
-                                            </StackPanel>
-                                        </Flyout>
-                                    </DropDownButton.Flyout>
-                                </DropDownButton>
-                            </Grid>
-
-                            <Grid x:Name="AuditResultsGrid" ColumnDefinitions="3*,2*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="16">
-                                <Border x:Name="AuditFindingsCard" Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18" VerticalAlignment="Top">
-                                    <StackPanel Spacing="12">
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                            <TextBlock Text="{x:Bind ViewModel.FindingsCardHeading, Mode=OneWay}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                            <ToggleButton x:Name="FindingSearchToggle" Grid.Column="1" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                          Click="OnFindingSearchToggleClick" AutomationProperties.Name="{x:Bind ViewModel.SearchPlaceholder}"
-                                                          ToolTipService.ToolTip="{x:Bind ViewModel.SearchPlaceholder}">
-                                                <FontIcon Glyph="&#xE71C;" FontSize="14" />
-                                            </ToggleButton>
-                                        </Grid>
-                                        <tkcontrols:WrapPanel HorizontalSpacing="6" VerticalSpacing="6">
-                                            <ToggleButton Tag="All" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                          AutomationProperties.AutomationId="AIHub_FilterAllButton"
-                                                          AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.FilterAllLabel, ViewModel.TotalFindings), Mode=OneWay}"
-                                                          ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.FilterAllLabel, ViewModel.TotalFindings), Mode=OneWay}"
-                                                          Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterAll, Mode=OneWay}">
-                                                <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.FilterAllLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.TotalFindings, Mode=OneWay}" /></TextBlock>
-                                            </ToggleButton>
-                                            <ToggleButton Tag="High" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                          AutomationProperties.AutomationId="AIHub_FilterHighButton"
-                                                          AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.HighLabel, ViewModel.HighCount), Mode=OneWay}"
-                                                          ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.HighLabel, ViewModel.HighCount), Mode=OneWay}"
-                                                          Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterHigh, Mode=OneWay}">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center" />
-                                                    <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.HighLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.HighCount, Mode=OneWay}" /></TextBlock>
-                                                </StackPanel>
-                                            </ToggleButton>
-                                            <ToggleButton Tag="Medium" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                          AutomationProperties.AutomationId="AIHub_FilterMediumButton"
-                                                          AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.MediumLabel, ViewModel.MediumCount), Mode=OneWay}"
-                                                          ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.MediumLabel, ViewModel.MediumCount), Mode=OneWay}"
-                                                          Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterMedium, Mode=OneWay}">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Center" />
-                                                    <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.MediumLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.MediumCount, Mode=OneWay}" /></TextBlock>
-                                                </StackPanel>
-                                            </ToggleButton>
-                                            <ToggleButton Tag="Low" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                          AutomationProperties.AutomationId="AIHub_FilterLowButton"
-                                                          AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.LowLabel, ViewModel.LowCount), Mode=OneWay}"
-                                                          ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.LowLabel, ViewModel.LowCount), Mode=OneWay}"
-                                                          Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterLow, Mode=OneWay}">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Ellipse Width="7" Height="7" Fill="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                                                    <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.LowLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.LowCount, Mode=OneWay}" /></TextBlock>
-                                                </StackPanel>
-                                            </ToggleButton>
-                                        </tkcontrols:WrapPanel>
-                                        <StackPanel x:Name="FindingSearchPanel" Spacing="10" Visibility="Collapsed">
-                                            <TextBox x:Name="FindingSearchBox" Text="{x:Bind ViewModel.FindingSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{x:Bind ViewModel.SearchPlaceholder}" AutomationProperties.Name="{x:Bind ViewModel.SearchPlaceholder}" />
-                                            <tkcontrols:WrapPanel HorizontalSpacing="6" VerticalSpacing="6">
-                                                <ToggleButton Tag="All" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                              AutomationProperties.Name="{x:Bind ViewModel.OverviewLabel, Mode=OneWay}"
-                                                              Content="{x:Bind ViewModel.OverviewLabel, Mode=OneWay}"
-                                                              IsChecked="{x:Bind ViewModel.IsSourceAll, Mode=OneWay}" Click="OnSourceFilterClick" />
-                                                <ToggleButton Tag="Application" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                              AutomationProperties.Name="{x:Bind ViewModel.ApplicationLabel, Mode=OneWay}"
-                                                              Content="{x:Bind ViewModel.ApplicationLabel, Mode=OneWay}"
-                                                              IsChecked="{x:Bind ViewModel.IsSourceApplication, Mode=OneWay}" Click="OnSourceFilterClick" />
-                                                <ToggleButton Tag="Security" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                              AutomationProperties.Name="{x:Bind ViewModel.SecurityLabel, Mode=OneWay}"
-                                                              Content="{x:Bind ViewModel.SecurityLabel, Mode=OneWay}"
-                                                              IsChecked="{x:Bind ViewModel.IsSourceSecurity, Mode=OneWay}" Click="OnSourceFilterClick" />
-                                                <ToggleButton Tag="System" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                              AutomationProperties.Name="{x:Bind ViewModel.SystemLabel, Mode=OneWay}"
-                                                              Content="{x:Bind ViewModel.SystemLabel, Mode=OneWay}"
-                                                              IsChecked="{x:Bind ViewModel.IsSourceSystem, Mode=OneWay}" Click="OnSourceFilterClick" />
-                                                <ToggleButton Tag="Setup" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                              AutomationProperties.Name="{x:Bind ViewModel.SetupLabel, Mode=OneWay}"
-                                                              Content="{x:Bind ViewModel.SetupLabel, Mode=OneWay}"
-                                                              IsChecked="{x:Bind ViewModel.IsSourceSetup, Mode=OneWay}" Click="OnSourceFilterClick" />
-                                                <ToggleButton Tag="ForwardedEvents" Style="{StaticResource KitFilterPillToggleStyle}"
-                                                              AutomationProperties.Name="{x:Bind ViewModel.ForwardedLabel, Mode=OneWay}"
-                                                              Content="{x:Bind ViewModel.ForwardedLabel, Mode=OneWay}"
-                                                              IsChecked="{x:Bind ViewModel.IsSourceForwarded, Mode=OneWay}" Click="OnSourceFilterClick" />
-                                            </tkcontrols:WrapPanel>
-                                            <HyperlinkButton Content="{x:Bind ViewModel.ResetFindingFiltersLabel}" Command="{x:Bind ViewModel.ResetFindingFiltersCommand}" HorizontalAlignment="Left" Padding="0" />
-                                        </StackPanel>
-                                        <ItemsControl x:Name="OverviewFindingsList" ItemsSource="{x:Bind ViewModel.OverviewFindings, Mode=OneWay}" ItemTemplate="{StaticResource FindingPreviewTemplate}" />
-                                        <StackPanel Padding="0,32" Spacing="8" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoAudit, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Center">
-                                                <FontIcon Glyph="&#xE9D9;" FontSize="22" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-                                            <TextBlock Text="{x:Bind ViewModel.HealthVerdict, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" HorizontalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind ViewModel.HealthSummaryText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" MaxWidth="420" />
-                                        </StackPanel>
-                                        <StackPanel Padding="0,32" Spacing="8" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowEmptyIssues, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource BadgeSuccessBackgroundBrush}" HorizontalAlignment="Center">
-                                                <FontIcon Glyph="&#xE73E;" FontSize="22" Foreground="{ThemeResource SystemFillColorSuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-                                            <TextBlock Text="{x:Bind ViewModel.EmptyFindingsTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind ViewModel.EmptyFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" MaxWidth="420" />
-                                        </StackPanel>
-                                        <StackPanel Padding="0,32" Spacing="10" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoFilterMatches, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <Border Width="52" Height="52" CornerRadius="26"
-                                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
-                                                    HorizontalAlignment="Center">
-                                                <FontIcon Glyph="&#xE721;" FontSize="22" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-                                            <TextBlock Text="{x:Bind ViewModel.NoMatchingFindingsTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" HorizontalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind ViewModel.NoMatchingFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" MaxWidth="380" />
-                                            <Button Style="{StaticResource KitActionButtonStyle}"
-                                                    AutomationProperties.AutomationId="AIHub_ResetFindingFiltersButton"
-                                                    Command="{x:Bind ViewModel.ResetFindingFiltersCommand}"
-                                                    HorizontalAlignment="Center" Margin="0,4,0,0">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <FontIcon Glyph="&#xE711;" FontSize="11" />
-                                                    <TextBlock Text="{x:Bind ViewModel.ResetFindingFiltersLabel}" FontSize="12" />
+                                                </SplitButton.Resources>
+                                                <SplitButton.Content>
+                                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                                        <FontIcon Glyph="&#xE721;" FontSize="13" />
+                                                        <TextBlock Text="{x:Bind ViewModel.SelectedScanLabel, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" />
+                                                    </StackPanel>
+                                                </SplitButton.Content>
+                                                <SplitButton.Flyout>
+                                                    <Flyout>
+                                                        <StackPanel Spacing="14" Width="270">
+                                                            <TextBlock Text="{x:Bind ViewModel.ScanOptionsLabel}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                            <ComboBox x:Uid="AIHub_Fluent_ScanMode" SelectedIndex="{x:Bind ViewModel.SelectedScanModeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                                                                <ComboBoxItem Content="{x:Bind ViewModel.FastScanLabel}" />
+                                                                <ComboBoxItem Content="{x:Bind ViewModel.FullScanLabel}" />
+                                                            </ComboBox>
+                                                            <ComboBox x:Uid="AIHub_Fluent_ScanRange" SelectedIndex="{x:Bind ViewModel.FullScanRangeIndex, Mode=TwoWay}" HorizontalAlignment="Stretch" IsEnabled="{x:Bind ViewModel.IsFullScanSelected, Mode=OneWay}">
+                                                                <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1DayLabel}" />
+                                                                <ComboBoxItem Content="{x:Bind ViewModel.RangeOption2DaysLabel}" />
+                                                                <ComboBoxItem Content="{x:Bind ViewModel.RangeOption1WeekLabel}" />
+                                                            </ComboBox>
+                                                            <CheckBox x:Uid="AIHub_Fluent_FullChannels" IsChecked="{x:Bind ViewModel.IsFullAuditMode, Mode=OneWay}" Click="OnFullAuditCheckClick" IsEnabled="{x:Bind ViewModel.CanUseFullAuditMode}" />
+                                                            <TextBlock Text="{x:Bind ViewModel.ScopeHint, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                            <TextBlock x:Uid="AIHub_Fluent_NextScanHint" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </SplitButton.Flyout>
+                                            </SplitButton>
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedScanRangeText, Mode=OneWay}" FontSize="12"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="2,0,2,0" />
+                                            <Button Command="{x:Bind ViewModel.DeepAnalyzeCommand}" AutomationProperties.AutomationId="AIHub_DeepAnalyzeButton"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint}" Style="{StaticResource KitActionButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                                    <FontIcon Glyph="&#xE9D9;" FontSize="13" />
+                                                    <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel}" />
                                                 </StackPanel>
                                             </Button>
-                                        </StackPanel>
-                                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                                <TextBlock Text="{x:Bind ViewModel.OverviewFindingsSummary, Mode=OneWay}" FontSize="12"
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                                                <HyperlinkButton Grid.Column="1" Command="{x:Bind ViewModel.ToggleOverviewFindingsCommand}" Padding="0" FontSize="12"
-                                                                 HorizontalAlignment="Right"
-                                                                 Visibility="{x:Bind ViewModel.CanToggleOverviewFindings, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <TextBlock Text="{x:Bind ViewModel.OverviewFindingsToggleLabel, Mode=OneWay}" FontSize="12" />
-                                                        <FontIcon Glyph="{x:Bind ViewModel.OverviewFindingsToggleChevron, Mode=OneWay}" FontSize="10" VerticalAlignment="Center" />
+                                        </tkcontrols:WrapPanel>
+                                        <DropDownButton x:Name="AuditHistoryDropDown" Grid.Column="1"
+                                            IsEnabled="{x:Bind ViewModel.CanConfigureAudit, Mode=OneWay}"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.Name="{x:Bind ViewModel.AuditHistoryLabel, Mode=OneWay}"
+                                            AutomationProperties.AutomationId="AIHub_AuditHistoryButton">
+                                            <DropDownButton.Content>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE81C;" FontSize="13" />
+                                                    <TextBlock Text="{x:Bind ViewModel.AuditHistoryLabel, Mode=OneWay}" FontSize="13" />
+                                                </StackPanel>
+                                            </DropDownButton.Content>
+                                            <DropDownButton.Flyout>
+                                                <Flyout>
+                                                    <StackPanel Spacing="12">
+                                                        <CalendarDatePicker x:Uid="AIHub_AuditDatePicker" Date="{x:Bind ViewModel.SelectedAuditDate, Mode=OneWay}" MaxDate="{x:Bind ViewModel.LatestSelectableAuditDate}" DateChanged="OnAuditDateChanged" />
+                                                        <Button Content="{x:Bind ViewModel.LatestAuditLabel}" Command="{x:Bind ViewModel.SelectLatestCommand}" AutomationProperties.AutomationId="AIHub_SelectLatestButton" />
+                                                        <Button x:Uid="AIHub_WeeklyReport" Click="OnWeeklyReportClick" AutomationProperties.AutomationId="AIHub_WeeklyReportButton" />
                                                     </StackPanel>
-                                                </HyperlinkButton>
+                                                </Flyout>
+                                            </DropDownButton.Flyout>
+                                        </DropDownButton>
+                                    </Grid>
+                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                    <Border x:Name="AuditHealthSummary" Padding="0,4"
+                                        Background="Transparent">
+                                        <Grid x:Name="AuditOverviewGrid" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="20" RowSpacing="14">
+                                            <Grid x:Name="AuditScoreCard" Width="96" Height="96" VerticalAlignment="Center">
+                                                <Ellipse Stroke="{ThemeResource ControlStrokeColorDefaultBrush}" StrokeThickness="6" />
+                                                <ProgressRing IsIndeterminate="False" Value="{x:Bind HealthScoreToDouble(ViewModel.HealthScore), Mode=OneWay}" Maximum="100"
+                                                    Width="96" Height="96" Style="{x:Bind HealthScoreRingStyle(ViewModel.HealthScore), Mode=OneWay}"
+                                                    Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+                                                    <TextBlock x:Name="AuditScoreText" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" FontSize="30" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                                    <TextBlock Text="{x:Bind ViewModel.HealthScoreLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                                                </StackPanel>
                                             </Grid>
-                                        </Border>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border x:Name="AuditSummaryCard" Grid.Column="1" Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18" VerticalAlignment="Top"
-                                        Background="{ThemeResource SectionAiTintBrush}">
-                                    <StackPanel Spacing="14">
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{ThemeResource SectionAiForegroundBrush}" />
-                                                <TextBlock x:Uid="AIHub_Fluent_AiSummary" Foreground="{ThemeResource SectionAiForegroundBrush}" FontWeight="SemiBold" FontSize="15" />
+                                            <StackPanel x:Name="AuditScoreSummary" Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Bind ViewModel.OverviewAuditTimestampText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{x:Bind ViewModel.OverviewHeadline, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="20" TextWrapping="Wrap" />
+                                                <TextBlock Text="{x:Bind ViewModel.OverviewDescription, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                <tkcontrols:WrapPanel HorizontalSpacing="10" VerticalSpacing="6" Margin="0,2,0,0">
+                                                    <HyperlinkButton x:Uid="AIHub_Fluent_PriorityButton" Click="OnPriorityFindingClick" Padding="0" FontSize="12"
+                                                        AutomationProperties.Name="{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}"
+                                                        Visibility="{x:Bind ViewModel.HasAuditPriority, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                </tkcontrols:WrapPanel>
                                             </StackPanel>
-                                            <Grid Grid.Column="1" VerticalAlignment="Center">
+                                        </Grid>
+                                    </Border>
+                                    <tkcontrols:Segmented x:Name="AuditResultViews" HorizontalAlignment="Left"
+                                        SelectedIndex="{x:Bind ViewModel.AuditResultViewIndex, Mode=TwoWay}"
+                                        Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        SelectionChanged="OnAuditResultViewChanged" AutomationProperties.AutomationId="AIHub_ResultViews">
+                                        <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.AuditOverviewTabLabel}" Icon="{ui:FontIcon Glyph=&#xE80F;}" />
+                                        <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.AuditFindingsTabLabel, Mode=OneWay}" Icon="{ui:FontIcon Glyph=&#xEA37;}" />
+                                    </tkcontrols:Segmented>
+                                    <Border x:Name="AuditPeriodOverview" Padding="0"
+                                        Visibility="{x:Bind ViewModel.ShowAuditOverview, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                        AutomationProperties.AutomationId="AIHub_AuditSummary">
+                                        <StackPanel Spacing="16">
+                                            <tkcontrols:WrapPanel HorizontalSpacing="16" VerticalSpacing="8">
+                                                <TextBlock x:Name="AuditPeriodHeading" Text="{x:Bind ViewModel.AuditSummaryHeading, Mode=OneWay}" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
+                                                <HyperlinkButton x:Name="AuditViewAllButton" Content="{x:Bind ViewModel.AuditViewAllLabel, Mode=OneWay}"
+                                                    Click="OnAuditViewAllClick" Padding="0" AutomationProperties.AutomationId="AIHub_ViewAllIssues" />
+                                            </tkcontrols:WrapPanel>
+                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewWindow, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" AutomationProperties.AutomationId="AIHub_AuditOverviewWindow" />
+                                            <Grid x:Name="AuditRiskMetrics" ColumnDefinitions="*,*,*" ColumnSpacing="10" AutomationProperties.Name="{x:Bind ViewModel.AuditTotals, Mode=OneWay}">
+                                                <Button Background="Transparent" CornerRadius="6" Padding="0" BorderThickness="0"
+                                                    Tag="High" Click="OnAuditRiskClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.AuditOverviewHighLabel, ViewModel.AuditOverviewHighCount), Mode=OneWay}">
+                                                    <Border Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}" CornerRadius="6" Padding="14,10">
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="{x:Bind ViewModel.AuditOverviewHighCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.AuditOverviewHighLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                                    </StackPanel>
+                                                    </Border>
+                                                </Button>
+                                                <Button Grid.Column="1" Background="Transparent" CornerRadius="6" Padding="0" BorderThickness="0"
+                                                    Tag="Medium" Click="OnAuditRiskClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.AuditOverviewMediumLabel, ViewModel.AuditOverviewMediumCount), Mode=OneWay}">
+                                                    <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}" CornerRadius="6" Padding="14,10">
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="{x:Bind ViewModel.AuditOverviewMediumCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.AuditOverviewMediumLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                                    </StackPanel>
+                                                    </Border>
+                                                </Button>
+                                                <Button Grid.Column="2" Background="Transparent" CornerRadius="6" Padding="0" BorderThickness="0"
+                                                    Tag="Low" Click="OnAuditRiskClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.AuditOverviewLowLabel, ViewModel.AuditOverviewLowCount), Mode=OneWay}">
+                                                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="14,10">
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="{x:Bind ViewModel.AuditOverviewLowCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.AuditOverviewLowLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    </StackPanel>
+                                                    </Border>
+                                                </Button>
+                                            </Grid>
+                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewCoverage, Mode=OneWay}" TextWrapping="Wrap" FontSize="12"
+                                                Visibility="{x:Bind ViewModel.HasAuditOverviewCoverage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                            <ItemsRepeater x:Name="AuditCategoryCards" ItemsSource="{x:Bind ViewModel.AuditCategories}" ItemTemplate="{StaticResource AuditCategoryCardTemplate}">
+                                                <ItemsRepeater.Layout>
+                                                    <UniformGridLayout x:Name="AuditCategoryLayout" MaximumRowsOrColumns="2" MinItemWidth="240" MinColumnSpacing="10" MinRowSpacing="10" ItemsStretch="Fill" />
+                                                </ItemsRepeater.Layout>
+                                            </ItemsRepeater>
+                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewStatus, Mode=OneWay}" TextWrapping="Wrap"
+                                                Visibility="{x:Bind ViewModel.HasNoAuditOverviewIssues, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                <TextBlock Text="{x:Bind ViewModel.AuditOverviewEvidence, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                <Button Grid.Column="1" Style="{StaticResource KitActionButtonStyle}" AutomationProperties.Name="{x:Bind ViewModel.AuditOverviewHelpLabel}" ToolTipService.ToolTip="{x:Bind ViewModel.AuditOverviewHelpLabel}">
+                                                    <FontIcon Glyph="&#xE946;" FontSize="14" />
+                                                    <Button.Flyout>
+                                                        <Flyout>
+                                                            <TextBlock Text="{x:Bind ViewModel.AuditOccurrencesHint}" MaxWidth="320" TextWrapping="Wrap" />
+                                                        </Flyout>
+                                                    </Button.Flyout>
+                                                </Button>
+                                            </Grid>
+                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewNextScanHint, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Visibility="{x:Bind ViewModel.HasAuditOverviewScopeChange, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border x:Name="AuditFindingsCard" Padding="0" VerticalAlignment="Top"
+                                        Visibility="{x:Bind ViewModel.ShowAuditFindings, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <StackPanel Spacing="12">
+                                            <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="8">
+                                                <Button x:Name="AuditBackButton" Click="OnAuditBackClick" Style="{StaticResource KitIconButtonStyle}"
+                                                    AutomationProperties.Name="{x:Bind ViewModel.AuditBackToOverviewLabel}" ToolTipService.ToolTip="{x:Bind ViewModel.AuditBackToOverviewLabel}">
+                                                    <FontIcon Glyph="&#xE72B;" FontSize="14" />
+                                                </Button>
+                                                <TextBlock Text="{x:Bind ViewModel.AuditFindingsTitle, Mode=OneWay}" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind ViewModel.OverviewFindingsSummary, Mode=OneWay}" VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" AutomationProperties.LiveSetting="Polite" />
+                                            </tkcontrols:WrapPanel>
+                                            <tkcontrols:WrapPanel HorizontalSpacing="6" VerticalSpacing="6">
+                                                <ToggleButton Tag="All" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                              AutomationProperties.AutomationId="AIHub_FilterAllButton"
+                                                              AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.FilterAllLabel, ViewModel.TotalFindings), Mode=OneWay}"
+                                                              ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.FilterAllLabel, ViewModel.TotalFindings), Mode=OneWay}"
+                                                              Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterAll, Mode=OneWay}">
+                                                    <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.FilterAllLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.TotalFindings, Mode=OneWay}" /></TextBlock>
+                                                </ToggleButton>
+                                                <ToggleButton Tag="High" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                              AutomationProperties.AutomationId="AIHub_FilterHighButton"
+                                                              AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.HighLabel, ViewModel.HighCount), Mode=OneWay}"
+                                                              ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.HighLabel, ViewModel.HighCount), Mode=OneWay}"
+                                                              Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterHigh, Mode=OneWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.HighLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.HighCount, Mode=OneWay}" /></TextBlock>
+                                                    </StackPanel>
+                                                </ToggleButton>
+                                                <ToggleButton Tag="Medium" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                              AutomationProperties.AutomationId="AIHub_FilterMediumButton"
+                                                              AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.MediumLabel, ViewModel.MediumCount), Mode=OneWay}"
+                                                              ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.MediumLabel, ViewModel.MediumCount), Mode=OneWay}"
+                                                              Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterMedium, Mode=OneWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Ellipse Width="7" Height="7" Fill="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.MediumLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.MediumCount, Mode=OneWay}" /></TextBlock>
+                                                    </StackPanel>
+                                                </ToggleButton>
+                                                <ToggleButton Tag="Low" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                              AutomationProperties.AutomationId="AIHub_FilterLowButton"
+                                                              AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.LowLabel, ViewModel.LowCount), Mode=OneWay}"
+                                                              ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.LowLabel, ViewModel.LowCount), Mode=OneWay}"
+                                                              Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterLow, Mode=OneWay}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Ellipse Width="7" Height="7" Fill="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.LowLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.LowCount, Mode=OneWay}" /></TextBlock>
+                                                    </StackPanel>
+                                                </ToggleButton>
+                                            </tkcontrols:WrapPanel>
+                                            <StackPanel x:Name="FindingSearchPanel" Spacing="10">
+                                                <TextBox x:Name="FindingSearchBox" Text="{x:Bind ViewModel.FindingSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{x:Bind ViewModel.SearchPlaceholder}" AutomationProperties.Name="{x:Bind ViewModel.SearchPlaceholder}" />
+                                                <tkcontrols:WrapPanel HorizontalSpacing="6" VerticalSpacing="6">
+                                                    <ToggleButton Tag="All" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                                  AutomationProperties.Name="{x:Bind ViewModel.OverviewLabel, Mode=OneWay}"
+                                                                  Content="{x:Bind ViewModel.OverviewLabel, Mode=OneWay}"
+                                                                  IsChecked="{x:Bind ViewModel.IsSourceAll, Mode=OneWay}" Click="OnSourceFilterClick" />
+                                                    <ToggleButton Tag="Application" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                                  AutomationProperties.Name="{x:Bind ViewModel.ApplicationLabel, Mode=OneWay}"
+                                                                  Content="{x:Bind ViewModel.ApplicationLabel, Mode=OneWay}"
+                                                                  IsChecked="{x:Bind ViewModel.IsSourceApplication, Mode=OneWay}" Click="OnSourceFilterClick" />
+                                                    <ToggleButton Tag="Security" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                                  AutomationProperties.Name="{x:Bind ViewModel.SecurityLabel, Mode=OneWay}"
+                                                                  Content="{x:Bind ViewModel.SecurityLabel, Mode=OneWay}"
+                                                                  IsChecked="{x:Bind ViewModel.IsSourceSecurity, Mode=OneWay}" Click="OnSourceFilterClick" />
+                                                    <ToggleButton Tag="System" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                                  AutomationProperties.Name="{x:Bind ViewModel.SystemLabel, Mode=OneWay}"
+                                                                  Content="{x:Bind ViewModel.SystemLabel, Mode=OneWay}"
+                                                                  IsChecked="{x:Bind ViewModel.IsSourceSystem, Mode=OneWay}" Click="OnSourceFilterClick" />
+                                                    <ToggleButton Tag="Setup" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                                  AutomationProperties.Name="{x:Bind ViewModel.SetupLabel, Mode=OneWay}"
+                                                                  Content="{x:Bind ViewModel.SetupLabel, Mode=OneWay}"
+                                                                  IsChecked="{x:Bind ViewModel.IsSourceSetup, Mode=OneWay}" Click="OnSourceFilterClick" />
+                                                    <ToggleButton Tag="ForwardedEvents" Style="{StaticResource KitFilterPillToggleStyle}"
+                                                                  AutomationProperties.Name="{x:Bind ViewModel.ForwardedLabel, Mode=OneWay}"
+                                                                  Content="{x:Bind ViewModel.ForwardedLabel, Mode=OneWay}"
+                                                                  IsChecked="{x:Bind ViewModel.IsSourceForwarded, Mode=OneWay}" Click="OnSourceFilterClick" />
+                                                </tkcontrols:WrapPanel>
+                                                <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="6">
+                                                    <TextBlock Text="{x:Bind ViewModel.AuditFindingContext, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    <HyperlinkButton Content="{x:Bind ViewModel.ResetFindingFiltersLabel}" Command="{x:Bind ViewModel.ResetFindingFiltersCommand}" Padding="0"
+                                                        Visibility="{x:Bind ViewModel.HasFindingFilters, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                </tkcontrols:WrapPanel>
+                                            </StackPanel>
+                                            <ItemsControl x:Name="OverviewFindingsList" ItemsSource="{x:Bind ViewModel.OverviewFindings, Mode=OneWay}" ItemTemplate="{StaticResource FindingPreviewTemplate}" />
+                                            <StackPanel Padding="0,32" Spacing="8" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoAudit, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE9D9;" FontSize="22" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+                                                <TextBlock Text="{x:Bind ViewModel.HealthVerdict, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind ViewModel.HealthSummaryText, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" MaxWidth="420" />
+                                            </StackPanel>
+                                            <StackPanel Padding="0,32" Spacing="8" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowEmptyIssues, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource BadgeSuccessBackgroundBrush}" HorizontalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE73E;" FontSize="22" Foreground="{ThemeResource SystemFillColorSuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+                                                <TextBlock Text="{x:Bind ViewModel.EmptyFindingsTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind ViewModel.EmptyFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" MaxWidth="420" />
+                                            </StackPanel>
+                                            <StackPanel Padding="0,32" Spacing="10" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoFilterMatches, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Border Width="52" Height="52" CornerRadius="26"
+                                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                        HorizontalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE721;" FontSize="22" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                </Border>
+                                                <TextBlock Text="{x:Bind ViewModel.NoMatchingFindingsTitle, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="15" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind ViewModel.NoMatchingFindingsDescription, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" MaxWidth="380" />
+                                                <Button Style="{StaticResource KitActionButtonStyle}"
+                                                        AutomationProperties.AutomationId="AIHub_ResetFindingFiltersButton"
+                                                        Command="{x:Bind ViewModel.ResetFindingFiltersCommand}"
+                                                        HorizontalAlignment="Center" Margin="0,4,0,0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <FontIcon Glyph="&#xE711;" FontSize="11" />
+                                                        <TextBlock Text="{x:Bind ViewModel.ResetFindingFiltersLabel}" FontSize="12" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                            <Grid x:Name="AuditResultsGrid">
+                                <Border x:Name="AuditSummaryCard" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
+                                    <StackPanel Spacing="14">
+                                        <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                                <TextBlock x:Uid="AIHub_Fluent_AiSummary" Style="{StaticResource AiHubSectionTitleStyle}" />
+                                            </StackPanel>
+                                            <Grid Grid.Row="1" HorizontalAlignment="Left">
                                                 <Border CornerRadius="4" Padding="8,2" Background="{ThemeResource BadgeSuccessBackgroundBrush}"
                                                         Visibility="{x:Bind ViewModel.IsAiSummaryCompleted, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"
+                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="11" FontWeight="SemiBold"
                                                                Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
                                                 </Border>
                                                 <Border CornerRadius="4" Padding="8,2" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
                                                         Visibility="{x:Bind ViewModel.IsAiSummaryCaution, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" FontSize="11" FontWeight="SemiBold"
+                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="11" FontWeight="SemiBold"
                                                                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                                 </Border>
                                                 <Border CornerRadius="4" Padding="8,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                         Visibility="{x:Bind ViewModel.IsAiSummaryNeutral, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" FontSize="11"
+                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="11"
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                 </Border>
                                             </Grid>
                                         </Grid>
 
-                                        <Border BorderBrush="{ThemeResource SectionAiForegroundBrush}" BorderThickness="2,0,0,0" Padding="12,2,0,2">
+                                        <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="12">
                                             <TextBlock Text="{x:Bind ViewModel.AiSummaryText, Mode=OneWay}" TextWrapping="Wrap" FontSize="13" MaxLines="8" TextTrimming="CharacterEllipsis" />
                                         </Border>
 
@@ -979,14 +1074,15 @@
                                                 Style="{StaticResource KitActionButtonStyle}" HorizontalAlignment="Left"
                                                 Visibility="{x:Bind ViewModel.ShowAiSummaryAction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0">
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0"
+                                                Visibility="{x:Bind ShowAiSummaryFooter(ViewModel.HasAiReport, ViewModel.HasAiSummaryFooterMeta), Mode=OneWay}">
+                                            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
                                                 <HyperlinkButton x:Uid="AIHub_Fluent_FullReport" Click="OnJumpToAiReportClick" Padding="0"
                                                                  HorizontalAlignment="Left" FontSize="12"
                                                                  Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AiSummaryFooterMetaText, Mode=OneWay}"
+                                                <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.AiSummaryFooterMetaText, Mode=OneWay}"
                                                            TextWrapping="Wrap" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}"
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" />
                                             </Grid>
                                         </Border>
                                     </StackPanel>
@@ -996,7 +1092,7 @@
                             <Border x:Name="AuditAiReport"
                                     Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <Expander x:Name="AuditReportExpander" x:Uid="AIHub_Fluent_ReportExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                                    <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="18,16">
+                                    <Border Style="{StaticResource AiHubSectionSurfaceStyle}">
                                         <StackPanel Spacing="14">
                                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                                                 <Border Style="{StaticResource KitIconBadgeSmallStyle}">
@@ -1103,7 +1199,7 @@
                         <!-- TAB 1: SPACE OPTIMIZATION -->
                         <StackPanel x:Name="OptimizationPanel" Spacing="16" HorizontalAlignment="Stretch" Visibility="Collapsed">
                             <Border x:Name="OptimizationWorkflowCard"
-                                    Style="{StaticResource KitCardSurfaceStyle}"
+                                    Style="{StaticResource AiHubSectionSurfaceStyle}"
                                     Visibility="{x:Bind ViewModel.IsWorkflowVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <StackPanel Spacing="10">
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12" VerticalAlignment="Center">
@@ -1115,6 +1211,10 @@
                                                 Visibility="{x:Bind ViewModel.IsOptimizing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                                 Style="{StaticResource KitActionButtonStyle}" />
                                     </Grid>
+                                    <TextBlock x:Name="OptimizationElapsedText" Text="{x:Bind ViewModel.OptimizationElapsedText, Mode=OneWay}"
+                                               FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Visibility="{x:Bind ViewModel.OptimizationElapsedText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
                                     <ProgressBar x:Name="OptimizationWorkflowProgress"
                                                  Style="{StaticResource KitProgressBarStyle}"
                                                  Minimum="0" Maximum="100"
@@ -1127,12 +1227,12 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="18,18" Background="{ThemeResource SectionBackupTintBrush}">
+                            <Border x:Name="OptimizationOverviewCard" Style="{StaticResource AiHubSectionSurfaceStyle}">
                                 <StackPanel Spacing="16">
                                     <Grid x:Name="OptimizationCommandHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="14">
                                         <StackPanel x:Name="OptimizationCommandTitle" Spacing="6">
                                             <TextBlock Text="{x:Bind ViewModel.CleanableCapacityLabel}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock x:Name="OptimizationCleanableCapacityText" Text="{x:Bind ViewModel.CleanableCapacityText, Mode=OneWay}" FontSize="32" FontWeight="SemiBold" Foreground="{ThemeResource SectionBackupForegroundBrush}" />
+                                            <TextBlock x:Name="OptimizationCleanableCapacityText" Text="{x:Bind ViewModel.CleanableCapacityText, Mode=OneWay}" FontSize="32" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                             <TextBlock x:Uid="AIHub_Fluent_StorageCapacityHint" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             <tkcontrols:WrapPanel HorizontalSpacing="16" VerticalSpacing="4">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1192,7 +1292,7 @@
                                 <TextBlock x:Uid="AIHub_Fluent_OptimizationSteps" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
                             </StackPanel>
 
-                            <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18"
+                            <Border Style="{StaticResource AiHubSectionSurfaceStyle}"
                                     Visibility="{x:Bind ViewModel.HasOptimizationResults, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <StackPanel Spacing="14">
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -1265,14 +1365,14 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border x:Name="OptimizationNoResults" Style="{StaticResource KitCardSurfaceStyle}" Padding="20"
+                            <Border x:Name="OptimizationNoResults" Style="{StaticResource AiHubSectionSurfaceStyle}" Padding="20"
                                     Visibility="{x:Bind ViewModel.HasOptimizationResults, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}">
                                 <StackPanel Spacing="6">
                                     <TextBlock x:Uid="AIHub_OptimizationNoResultsTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                     <TextBlock x:Uid="AIHub_OptimizationNoResultsDescription" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
                             </Border>
-                            <Border x:Name="OptimizationNoFilterMatches" Style="{StaticResource KitCardSurfaceStyle}" Padding="20"
+                            <Border x:Name="OptimizationNoFilterMatches" Style="{StaticResource AiHubSectionSurfaceStyle}" Padding="20"
                                     Visibility="{x:Bind ShowOptimizationNoMatches(ViewModel.HasOptimizationResults, ViewModel.HasFilteredOptimizationResults), Mode=OneWay}">
                                 <StackPanel Spacing="6">
                                     <TextBlock x:Uid="AIHub_OptimizationNoFilterMatchesTitle" Style="{StaticResource BodyStrongTextBlockStyle}" />
@@ -1281,7 +1381,7 @@
                             </Border>
 
                             <!-- Downloads Management Section Card -->
-                            <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18">
+                            <Border Style="{StaticResource AiHubSectionSurfaceStyle}">
                                 <StackPanel Spacing="14">
                                     <Grid x:Name="DownloadsCommandHeader" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="10">
                                         <Grid.ColumnDefinitions>
@@ -1336,7 +1436,7 @@
                             </Border>
 
                             <!-- Caches & Temporary Files Section Card -->
-                            <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18">
+                            <Border Style="{StaticResource AiHubSectionSurfaceStyle}">
                                 <StackPanel Spacing="14">
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
@@ -1440,7 +1540,7 @@
                             </Border>
 
                             <Expander x:Name="OptimizationHistoryExpander" x:Uid="AIHub_Fluent_HistoryExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                                <Border Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18">
+                                <Border Style="{StaticResource AiHubSectionSurfaceStyle}">
                                     <StackPanel Spacing="12">
                                         <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="8">
                                             <TextBlock x:Uid="AIHub_OptimizationHistoryTitle" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="16"
@@ -1490,7 +1590,7 @@
 
                             <Expander x:Name="InventoryExpander" x:Uid="AIHub_Fluent_InventoryExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                 <Border x:Name="InventoryPanel" AutomationProperties.AutomationId="InventoryPanel"
-                                        Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18">
+                                        Style="{StaticResource AiHubSectionSurfaceStyle}">
                                     <StackPanel Spacing="14">
                                         <Grid x:Name="InventoryHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="12">
                                             <StackPanel x:Name="InventoryTitle" Spacing="5">
@@ -1584,39 +1684,43 @@
                                      Message="{x:Bind ViewModel.AiHub.StatusMessage, Mode=OneWay}"
                                      Severity="{x:Bind ViewModel.AiHub.StatusSeverity, Mode=OneWay}" />
 
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="{x:Bind ViewModel.TaskPolicyTitle, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="20" AutomationProperties.HeadingLevel="Level2" />
-                                    <TextBlock Text="{x:Bind ViewModel.TaskPolicyDescription, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Grid Grid.Column="1" VerticalAlignment="Top">
-                                    <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource BadgeSuccessBackgroundBrush}"
-                                            Visibility="{x:Bind ViewModel.IsTaskPolicyClean, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <TextBlock Text="{x:Bind ViewModel.AiHub.CurrentPolicyStatusText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
-                                                   Foreground="{ThemeResource SystemFillColorSuccessBrush}" AutomationProperties.LiveSetting="Polite" />
-                                    </Border>
-                                    <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
-                                            Visibility="{x:Bind ViewModel.AiHub.IsCurrentPolicyDirty, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <TextBlock Text="{x:Bind ViewModel.AiHub.CurrentPolicyStatusText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
-                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}" AutomationProperties.LiveSetting="Polite" />
-                                    </Border>
-                                </Grid>
-                            </Grid>
+                            <Border x:Name="TaskPolicyOverviewCard" Style="{StaticResource AiHubSectionSurfaceStyle}">
+                                <StackPanel Spacing="16">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{x:Bind ViewModel.TaskPolicyTitle, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="20" AutomationProperties.HeadingLevel="Level2" />
+                                            <TextBlock Text="{x:Bind ViewModel.TaskPolicyDescription, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Grid Grid.Column="1" VerticalAlignment="Top">
+                                            <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource BadgeSuccessBackgroundBrush}"
+                                                Visibility="{x:Bind ViewModel.IsTaskPolicyClean, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="{x:Bind ViewModel.AiHub.CurrentPolicyStatusText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
+                                                    Foreground="{ThemeResource SystemFillColorSuccessBrush}" AutomationProperties.LiveSetting="Polite" />
+                                            </Border>
+                                            <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                                Visibility="{x:Bind ViewModel.AiHub.IsCurrentPolicyDirty, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="{x:Bind ViewModel.AiHub.CurrentPolicyStatusText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
+                                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" AutomationProperties.LiveSetting="Polite" />
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
 
-                            <!-- Each chain keeps its own draft until explicitly saved. -->
-                            <tkcontrols:Segmented
-                                x:Name="AiTaskPolicySegmented"
-                                SelectedIndex="{x:Bind ViewModel.AiHub.TaskPolicyIndex, Mode=TwoWay}"
-                                HorizontalAlignment="Left">
-                                <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_SecurityAudit" Content="Security audit" Icon="{ui:FontIcon Glyph=&#xE72E;}" />
-                                <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_Optimization" Content="Optimization" Icon="{ui:FontIcon Glyph=&#xE9F5;}" />
-                            </tkcontrols:Segmented>
+                                    <!-- Each chain keeps its own draft until explicitly saved. -->
+                                    <tkcontrols:Segmented
+                                        x:Name="AiTaskPolicySegmented"
+                                        SelectedIndex="{x:Bind ViewModel.AiHub.TaskPolicyIndex, Mode=TwoWay}"
+                                        HorizontalAlignment="Left">
+                                        <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_SecurityAudit" Content="Security audit" Icon="{ui:FontIcon Glyph=&#xE72E;}" />
+                                        <tkcontrols:SegmentedItem x:Uid="AIHub_Segment_Optimization" Content="Optimization" Icon="{ui:FontIcon Glyph=&#xE9F5;}" />
+                                    </tkcontrols:Segmented>
+                                </StackPanel>
+                            </Border>
 
                             <Grid x:Name="TaskPolicyColumnsGrid" ColumnDefinitions="*,260" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="16" SizeChanged="OnTaskPolicyColumnsSizeChanged">
-                                <Border x:Name="TaskPolicyEditorCard" Style="{StaticResource KitCardSurfaceStyle}" Padding="20,18" VerticalAlignment="Top">
+                                <Border x:Name="TaskPolicyEditorCard" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
                                     <StackPanel Spacing="14">
                                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                            <TextBlock Text="{x:Bind ViewModel.TaskPolicyEditorHeading, Mode=OneWay}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind ViewModel.TaskPolicyEditorHeading, Mode=OneWay}" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TaskPolicyCharCountText, Mode=OneWay}" FontSize="12"
                                                        FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                         </Grid>
@@ -1683,10 +1787,9 @@
                                     </StackPanel>
                                 </Border>
 
-                                <Border x:Name="TaskPolicyScopeCard" Grid.Column="1" Style="{StaticResource KitCardSurfaceStyle}" Padding="18,16" VerticalAlignment="Top"
-                                        Background="{ThemeResource SectionAppearanceTintBrush}">
+                                <Border x:Name="TaskPolicyScopeCard" Grid.Column="1" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
                                     <StackPanel Spacing="12">
-                                        <TextBlock x:Uid="AIHub_Fluent_PolicyScopeTitle" FontSize="15" FontWeight="SemiBold" />
+                                        <TextBlock x:Uid="AIHub_Fluent_PolicyScopeTitle" Style="{StaticResource AiHubSectionTitleStyle}" />
                                         <TextBlock Text="{x:Bind ViewModel.TaskPolicyScopePrimaryText, Mode=OneWay}" FontSize="12"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                         <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">

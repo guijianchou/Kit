@@ -14,6 +14,29 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class OptimizationInventoryTests
 {
     [TestMethod]
+    public void SizeChangesRequireComparableCompleteMeasurementsOfTheSameSubtree()
+    {
+        static OptimizationInventoryScope Scope(string path, long bytes) => new() { RootPath = path, State = "complete", ObservedBytes = bytes };
+        var before = new OptimizationInventoryReport
+        {
+            CompletedUtc = DateTimeOffset.UtcNow,
+            Scopes = [Scope(@"C:\Cache", 100), Scope(@"C:\Other", 30), Scope(@"C:\Partial", 10), Scope(@"C:\Split", 50)],
+        };
+        var after = before with
+        {
+            CompletedUtc = before.CompletedUtc.AddMinutes(1),
+            Scopes = [Scope(@"c:\cache", 120), Scope(@"C:\Other", 0), Scope(@"C:\Partial", 8) with { State = "partial" }, Scope(@"C:\Split", 30), Scope(@"C:\Split\Nested", 20)],
+        };
+
+        var changes = after.ChangesSince(before);
+        Assert.AreEqual(2, changes.Count);
+        Assert.AreEqual(20L, changes[@"C:\Cache"]);
+        Assert.AreEqual(-30L, changes[@"C:\Other"]);
+        Assert.AreEqual(0, after.ChangesSince(null).Count);
+        Assert.AreEqual(0, before.ChangesSince(after).Count);
+    }
+
+    [TestMethod]
     public async Task MetadataInventoryCountsRecentOldAndLockedFilesWithoutChangingThem()
     {
         using var fixture = new FixtureDirectory();

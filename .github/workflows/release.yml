@@ -157,6 +157,7 @@ jobs:
           $runtimeRoot = Join-Path $env:GITHUB_WORKSPACE 'x64/Release'
           $requiredPaths = @(
             'Kit.exe',
+            'Updater/Kit.Updater.exe',
             'Kit.ActionRunner.exe',
             'Kit.WingetService.exe',
             'Kit.WingetService.deps.json',

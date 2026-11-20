@@ -70,9 +70,7 @@ public static class AiServiceSelfTest
 
         // Report readiness first: when the service is off or unconfigured this is the real
         // answer, and it costs nothing because the verdict is cached.
-        AiReadiness readiness = engine is TaskAiEngine concrete
-            ? concrete.GetReadiness()
-            : new AiReadiness(engine.IsEnabled ? AiReadinessLevel.Unverified : AiReadinessLevel.Disabled, engine.ActiveKernel, string.Empty);
+        AiReadiness readiness = engine.GetReadiness();
 
         if (!readiness.CanAttempt)
         {

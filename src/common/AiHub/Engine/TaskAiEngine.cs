@@ -56,11 +56,14 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
     /// each time.
     /// </summary>
     private static readonly TimeSpan ReadinessCacheLifetime = TimeSpan.FromMinutes(5);
+    private static readonly AiReadiness StoppedReadiness = new(AiReadinessLevel.Disabled, string.Empty, string.Empty, "The AI service has stopped.");
 
     private readonly object _readinessLock = new();
     private AiReadiness? _cachedReadiness;
     private DateTimeOffset _readinessCachedAtUtc;
     private long _stateVersion;
+    private Task<AiReadiness>? _pendingReadinessProbe;
+    private long _pendingProbeVersion;
 
     public bool IsEnabled => !_disposed && ReadState().IsEnabled;
 
@@ -70,6 +73,11 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     public AiReadiness GetReadiness()
     {
+        if (_disposed)
+        {
+            return StoppedReadiness;
+        }
+
         AiHubConfig config = ReadState();
         if (!config.IsEnabled)
         {
@@ -92,6 +100,50 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     public async Task<AiReadiness> ProbeReadinessAsync(CancellationToken cancellationToken = default)
     {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Task<AiReadiness> probe;
+            lock (_lifecycleLock)
+            {
+                if (_disposed)
+                {
+                    return StoppedReadiness;
+                }
+
+                long version = Interlocked.Read(ref _stateVersion);
+                if (_pendingReadinessProbe is not { IsCompleted: false } || _pendingProbeVersion != version)
+                {
+                    _pendingProbeVersion = version;
+                    _pendingReadinessProbe = ProbeReadinessCoreAsync();
+                }
+
+                probe = _pendingReadinessProbe;
+            }
+
+            return await probe.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return _disposed ? StoppedReadiness : GetReadiness() with { Detail = "The readiness probe was cancelled." };
+        }
+    }
+
+    private async Task<AiReadiness> ProbeReadinessCoreAsync()
+    {
+        CancellationTokenSource probeLifetime;
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+            {
+                return StoppedReadiness;
+            }
+
+            probeLifetime = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        }
+
+        using var lifetime = probeLifetime;
+        CancellationToken token = lifetime.Token;
         long version = Interlocked.Read(ref _stateVersion);
         AiHubConfig config = ReadState();
         if (!config.IsEnabled)
@@ -109,11 +161,13 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         var stopwatch = Stopwatch.StartNew();
         try
         {
+            token.ThrowIfCancellationRequested();
             AiTargetSettings? main = config.GetMainTarget();
             string kernel = config.SelectedKernel;
             (bool success, string message) = await _dispatcher
-                .TestConnectionAsync(main!, kernel, cancellationToken)
+                .TestConnectionAsync(main!, kernel, token)
                 .ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
 
             if (success)
             {
@@ -135,8 +189,9 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             if (fallback is { IsActive: true } && RouteDispatcher.IsTargetCompatible(kernel, fallback))
             {
                 (bool fallbackSuccess, _) = await _dispatcher
-                    .TestConnectionAsync(fallback, kernel, cancellationToken)
+                    .TestConnectionAsync(fallback, kernel, token)
                     .ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
                 fallbackUsable = fallbackSuccess;
             }
 
@@ -153,7 +208,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         }
         catch (OperationCanceledException)
         {
-            return validation with { Detail = "The readiness probe was cancelled." };
+            return _disposed ? StoppedReadiness : GetReadiness() with { Detail = "The readiness probe was cancelled." };
         }
         catch (Exception)
         {
@@ -221,14 +276,15 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
     {
         lock (_readinessLock)
         {
-            if (Interlocked.Read(ref _stateVersion) == version)
+            if (!_disposed && Interlocked.Read(ref _stateVersion) == version)
             {
                 _cachedReadiness = readiness;
                 _readinessCachedAtUtc = DateTimeOffset.UtcNow;
+                return readiness;
             }
         }
 
-        return readiness;
+        return GetReadiness();
     }
 
     public TaskAiEngine(AiHubSettingsStore settingsStore, KernelManagerService kernelManager, SecurityPolicyService securityService)

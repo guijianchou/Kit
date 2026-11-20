@@ -20,6 +20,9 @@ namespace Kit.Settings.UI.Library
             ReadyToDownload,
             ReadyToInstall,
             NetworkError,
+            Downloading,
+            Verifying,
+            Installing,
         }
 
         // Gets or sets a value of the updating state
@@ -37,6 +40,15 @@ namespace Kit.Settings.UI.Library
         // Gets or sets a value of the updating state
         [JsonPropertyName("downloadedInstallerFilename")]
         public string DownloadedInstallerFilename { get; set; }
+
+        [JsonPropertyName("downloadedBytes")]
+        public long DownloadedBytes { get; set; }
+
+        [JsonPropertyName("totalBytes")]
+        public long TotalBytes { get; set; }
+
+        [JsonPropertyName("errorCode")]
+        public string ErrorCode { get; set; }
 
         // Non-localizable strings: Files
         public const string SettingsFilePath = "\\Kit\\";

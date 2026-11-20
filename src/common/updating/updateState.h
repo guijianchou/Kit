@@ -13,11 +13,15 @@ struct UpdateState
         errorDownloading = 1,
         readyToDownload = 2,
         readyToInstall = 3,
-        networkError = 4
+        networkError = 4,
+        downloading = 5,
+        verifying = 6,
+        installing = 7
     } state = upToDate;
     std::wstring releasePageUrl;
     std::optional<std::time_t> githubUpdateLastCheckedDate;
     std::wstring downloadedInstallerFilename;
+    std::wstring errorCode;
 
     // To prevent concurrent modification of the file, we enforce this interface, which locks the file while
     // the state_modifier is active.

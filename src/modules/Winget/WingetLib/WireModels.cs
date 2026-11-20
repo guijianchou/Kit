@@ -99,6 +99,12 @@ public sealed record WingetServiceRequest
     public WingetPackageOptions? Options { get; init; }
 
     public string? PreparationId { get; init; }
+
+    public string? RequestedVersion { get; init; }
+
+    public bool IgnoreOnlyThisVersion { get; init; }
+
+    public int? HistoryRetentionDays { get; init; }
 }
 
 public sealed record WingetServiceAck(bool Accepted, string? OperationId = null, string? Error = null)
@@ -106,7 +112,15 @@ public sealed record WingetServiceAck(bool Accepted, string? OperationId = null,
     public int? RemovedHistoryCount { get; init; }
 }
 
-public sealed record WingetPackageIdentity(string Id, string Source, string InstalledVersion, string AvailableVersion);
+public sealed record WingetPackageIdentity(string Id, string Source, string InstalledVersion, string AvailableVersion)
+{
+    public bool IgnoreOnlyThisVersion { get; init; }
+
+    public bool Ignores(WingetPackageUpdate package) =>
+        string.Equals(Id, package.Id, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(Source, package.Source, StringComparison.OrdinalIgnoreCase)
+        && (!IgnoreOnlyThisVersion || AvailableVersion == package.AvailableVersion);
+}
 
 public sealed record WingetPreparedOperation(
     string Id,

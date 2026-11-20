@@ -70,6 +70,8 @@ public sealed partial class AIHubPage
         RemoveHandler(KeyDownEvent, new KeyEventHandler(OnDetailsKeyDown));
         _detailsFinding = null;
         _detailsFocusOrigin = null;
+        _auditOverviewOrigin = null;
+        _auditOverviewCategory = null;
     }
 
     private void OpenFinding(AuditIssueEnhanced issue, FrameworkElement trigger = null)
@@ -79,7 +81,14 @@ public sealed partial class AIHubPage
             return;
         }
 
-        if (!AiHubDetailsHost.IsPaneOpen)
+        if (ViewModel.ShowAuditFindings && ViewModel.AllIssues.Contains(issue) && !ViewModel.FilteredIssues.Contains(issue))
+        {
+            // Evidence links in the AI summary belong to the complete snapshot.
+            // Make the linked issue part of the list before opening its details.
+            ViewModel.ResetFindingFilters();
+        }
+
+        if (trigger is Control || !AiHubDetailsHost.IsPaneOpen)
         {
             _detailsFocusOrigin = trigger as Control;
         }
@@ -90,7 +99,7 @@ public sealed partial class AIHubPage
         RenderFindingDetails();
         if (DetailsBackdropScrim != null)
         {
-            DetailsBackdropScrim.Visibility = Visibility.Visible;
+            DetailsBackdropScrim.Visibility = AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Overlay ? Visibility.Visible : Visibility.Collapsed;
         }
 
         AiHubDetailsHost.IsPaneOpen = true;
@@ -128,7 +137,7 @@ public sealed partial class AIHubPage
     {
         if (DetailsBackdropScrim != null)
         {
-            DetailsBackdropScrim.Visibility = Visibility.Visible;
+            DetailsBackdropScrim.Visibility = AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Overlay ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
@@ -177,9 +186,13 @@ public sealed partial class AIHubPage
     {
         if (AiHubDetailsHost.ActualWidth > 0)
         {
-            // A narrow window uses the whole content width; the regular desktop view
-            // leaves the overview visible behind this temporary detail surface.
-            AiHubDetailsHost.OpenPaneLength = Math.Min(464, AiHubDetailsHost.ActualWidth);
+            // Keep the list available beside details on desktop. Narrow windows
+            // use a dismissible overlay so neither surface becomes unreadable.
+            AiHubDetailsHost.DisplayMode = AiHubDetailsHost.ActualWidth >= 900
+                ? SplitViewDisplayMode.Inline : SplitViewDisplayMode.Overlay;
+            AiHubDetailsHost.OpenPaneLength = Math.Min(400, AiHubDetailsHost.ActualWidth);
+            DetailsBackdropScrim.Visibility = AiHubDetailsHost.IsPaneOpen && AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Overlay
+                ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
@@ -261,8 +274,9 @@ public sealed partial class AIHubPage
 
             // Filtering and snapshot loads rebuild observable collections with Clear
             // followed by Add. Resolve once the dispatcher has applied that batch.
-            var current = ViewModel.AllIssues.FirstOrDefault(issue => ReferenceEquals(issue, _detailsFinding))
-                ?? ViewModel.AllIssues.FirstOrDefault(issue => SameEvidence(issue, _detailsFinding));
+            var candidates = ViewModel.ShowAuditFindings ? ViewModel.FilteredIssues : ViewModel.AllIssues;
+            var current = candidates.FirstOrDefault(issue => ReferenceEquals(issue, _detailsFinding))
+                ?? candidates.FirstOrDefault(issue => SameEvidence(issue, _detailsFinding));
             if (current == null)
             {
                 CloseFluentDetails();
@@ -283,7 +297,7 @@ public sealed partial class AIHubPage
         && string.Equals(left.EventRef, right.EventRef, StringComparison.Ordinal)
         && string.Equals(left.EventTimestamp, right.EventTimestamp, StringComparison.Ordinal);
 
-    private List<AuditIssueEnhanced> MatchingFindings() => ViewModel.FilteredIssues
+    private List<AuditIssueEnhanced> MatchingFindings() => (ViewModel.ShowAuditFindings ? ViewModel.FilteredIssues : ViewModel.AllIssues)
         .OrderByDescending(issue => issue.IsHigh)
         .ThenByDescending(issue => issue.IsMedium)
         .ThenByDescending(issue => issue.Occurrences)

@@ -3,6 +3,8 @@
 #include <Windows.h>
 
 void CheckForUpdatesCallback();
+void RunPortableUpdate(const wchar_t* action);
+void CancelPortableUpdate();
 
 namespace cmdArg
 {

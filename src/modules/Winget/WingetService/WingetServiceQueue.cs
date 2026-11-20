@@ -41,6 +41,11 @@ internal sealed partial class WingetServiceRuntime
             return "WinGet does not support selecting an architecture for uninstallation.";
         }
 
+        if (!WingetPackageOptions.IsValidInstallLocation(options.InstallLocation) || (kind == "uninstall" && options.InstallLocation is not null))
+        {
+            return "Choose an absolute installation folder; it does not apply to uninstallation.";
+        }
+
         return options.IncludeUnknown && kind != "upgrade" ? "Include unknown versions applies only to upgrades." : null;
     }
 
@@ -118,6 +123,11 @@ internal sealed partial class WingetServiceRuntime
             return "A selected package is already installed. Use software updates instead.";
         }
 
+        if (kind == "upgrade" && requireDetails && !package.IsUpdateAvailable)
+        {
+            return "Choose a version newer than the installed version. Downgrades are not supported.";
+        }
+
         return kind == "upgrade" && string.IsNullOrEmpty(package.InstalledVersion)
             ? "A selected package is not installed. Use software discovery instead." : null;
     }
@@ -189,10 +199,11 @@ internal sealed partial class WingetServiceRuntime
         }
     }
 
-    private void UpdateReviewedPackage(WingetPackageUpdate reviewed)
+    private void UpdateReviewedPackage(WingetPackageUpdate reviewed, WingetPackageUpdate? original = null)
     {
-        static WingetPackageUpdate[] Replace(IReadOnlyList<WingetPackageUpdate> rows, WingetPackageUpdate replacement, bool preserveInstalledCapability = false)
+        WingetPackageUpdate[] Replace(IReadOnlyList<WingetPackageUpdate> rows, WingetPackageUpdate replacement, bool preserveInstalledCapability = false)
             => rows.Select(row => WingetServicePolicy.Matches(row, WingetServicePolicy.Identity(replacement))
+                || (original is not null && WingetServicePolicy.Matches(row, WingetServicePolicy.Identity(original)))
                 || (!row.IsMetadataResolved && WingetServicePolicy.IsValidResolution(row, replacement))
                 ? preserveInstalledCapability ? replacement with { CanUninstall = row.CanUninstall } : replacement : row).ToArray();
         var updates = Replace(_status.Packages, reviewed);
@@ -288,7 +299,12 @@ internal sealed partial class WingetServiceRuntime
                         return new(false, Error: "The update changed. Refresh before ignoring it.");
                     }
 
-                    identities.Add(identity);
+                    if (request.IgnoreOnlyThisVersion && string.IsNullOrWhiteSpace(identity.AvailableVersion))
+                    {
+                        return new(false, Error: "Load the available version before ignoring this update.");
+                    }
+
+                    identities.Add(identity with { IgnoreOnlyThisVersion = request.IgnoreOnlyThisVersion });
                 }
             }
 

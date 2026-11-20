@@ -2760,13 +2760,13 @@
     <value>选择时间范围并更新本地发现</value>
   </data>
   <data name="AIHub_RangeOption1DayLabel" xml:space="preserve">
-    <value>2 天</value>
+    <value>2D · 2 天</value>
   </data>
   <data name="AIHub_RangeOption2DaysLabel" xml:space="preserve">
-    <value>1 周</value>
+    <value>1W · 1 周</value>
   </data>
   <data name="AIHub_RangeOption1WeekLabel" xml:space="preserve">
-    <value>1 个月</value>
+    <value>1M · 30 天</value>
   </data>
   <data name="AIHub_ScanOptionsLabel" xml:space="preserve">
     <value>扫描选项</value>
@@ -3882,6 +3882,12 @@
   <data name="Winget_RestoreSelected" xml:space="preserve"><value>恢复所选更新</value></data>
   <data name="Winget_QueueTitle" xml:space="preserve"><value>当前队列</value></data>
   <data name="Winget_HistoryTitle" xml:space="preserve"><value>近期历史</value></data>
+  <data name="Winget_HistorySearch" xml:space="preserve"><value>按软件名称或包 ID 筛选历史</value></data>
+  <data name="Winget_HistoryAttentionOnly" xml:space="preserve"><value>仅显示失败或需要核实的操作</value></data>
+  <data name="Winget_HistoryNoMatches" xml:space="preserve"><value>没有符合筛选条件的历史记录。</value></data>
+  <data name="Winget_HistoryMatches" xml:space="preserve"><value>显示 {0} 条，共 {1} 条历史记录</value></data>
+  <data name="Winget_HistoryCompletedAt" xml:space="preserve"><value>结束于 {0:g}</value></data>
+  <data name="Winget_HistoryStartedAt" xml:space="preserve"><value>开始于 {0:g}</value></data>
   <data name="Winget_ClearOldHistory" xml:space="preserve"><value>清除超过 7 天的历史记录</value></data>
   <data name="Winget_HistoryClearWorking" xml:space="preserve"><value>正在清除超过 7 天的历史记录…</value></data>
   <data name="Winget_HistoryClearResult" xml:space="preserve"><value>已清除 {0} 条超过 7 天的历史记录。</value></data>
@@ -4113,4 +4119,93 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AiHub_ConfigurationLoading.AutomationProperties.Name" xml:space="preserve">
     <value>正在加载 AI 服务设置</value>
   </data>
+  <data name="AIHub_WeeklyReport.Content" xml:space="preserve"><value>审计周报</value></data>
+  <data name="AIHub_WeeklyLoading" xml:space="preserve"><value>正在读取审计历史…</value></data>
+  <data name="AIHub_Inventory_Growth" xml:space="preserve"><value>比上次扫描增加 {0}</value></data>
+  <data name="AIHub_Inventory_Shrink" xml:space="preserve"><value>比上次扫描减少 {0}</value></data>
+  <data name="AIHub_Inventory_Unchanged" xml:space="preserve"><value>与上次扫描的占用相同</value></data>
+  <data name="AIHub_WeeklyClose" xml:space="preserve"><value>关闭</value></data>
+  <data name="AIHub_WeeklyReadFailed" xml:space="preserve"><value>无法读取审计历史，请重新打开周报再试。</value></data>
+  <data name="AIHub_WeeklyRange" xml:space="preserve"><value>{0:d} 至 {1:d}</value></data>
+  <data name="AIHub_WeeklyEmpty" xml:space="preserve"><value>这七天没有已保存的审计记录。</value></data>
+  <data name="AIHub_WeeklyCoverage" xml:space="preserve"><value>七天中有 {1} 天保存了审计，共 {0} 次。每天取最后一次审计结果。</value></data>
+  <data name="AIHub_WeeklyScore" xml:space="preserve"><value>平均健康评分 {0:0.#}/100</value></data>
+  <data name="AIHub_WeeklyNoBaseline" xml:space="preserve"><value>此前七天没有可比较的审计记录。</value></data>
+  <data name="AIHub_WeeklyTrend" xml:space="preserve"><value>比此前七天（有 {0} 天记录）的平均评分变化 {1:+0.#;-0.#;0} 分</value></data>
+  <data name="AIHub_WeeklyDaily" xml:space="preserve"><value>每日发现</value></data>
+  <data name="AIHub_WeeklyDay" xml:space="preserve"><value>{0:d} · 评分 {1} · 高风险 {2}，中风险 {3}，低风险 {4}</value></data>
+  <data name="Winget_ChooseVersion" xml:space="preserve"><value>要安装的版本</value></data>
+  <data name="Winget_ApplyVersion" xml:space="preserve"><value>使用此版本</value></data>
+  <data name="Winget_VersionExplanation" xml:space="preserve"><value>选择目录中的版本，再勾选软件并确认操作。更新要求选择较新版本，不支持降级。</value></data>
+  <data name="Winget_InstallLocation" xml:space="preserve"><value>安装目录</value></data>
+  <data name="Winget_InstallLocationHint" xml:space="preserve"><value>可选的绝对路径，是否支持由安装程序决定。此项修改安装位置，不是下载缓存，适用于所选批次。</value></data>
+  <data name="Winget_IgnoreScope" xml:space="preserve"><value>忽略更新</value></data>
+  <data name="Winget_IgnoreThisVersion" xml:space="preserve"><value>仅忽略当前可用版本</value></data>
+  <data name="Winget_IgnoreAllVersions" xml:space="preserve"><value>忽略所有后续版本</value></data>
+  <data name="Winget_HistoryRetention" xml:space="preserve"><value>要清理的记录</value></data>
+  <data name="Winget_HistoryOlder7" xml:space="preserve"><value>七天前已结束的记录</value></data>
+  <data name="Winget_HistoryOlder30" xml:space="preserve"><value>三十天前已结束的记录</value></data>
+  <data name="Winget_HistoryAllCompleted" xml:space="preserve"><value>所有已结束的记录</value></data>
+  <data name="Winget_ClearHistory" xml:space="preserve"><value>清理这些记录</value></data>
+  <data name="Winget_HistoryCleanupHint" xml:space="preserve"><value>清理已保存的安装、更新和卸载历史，保留当前队列及待验证记录，不影响已安装的软件。</value></data>
+  <data name="Winget_ActiveFilterSummary" xml:space="preserve"><value>{0} 项筛选生效 · 显示 {1} / {2} 个软件</value></data>
+  <data name="Winget_ResetFilters" xml:space="preserve"><value>清除筛选</value></data>
+  <data name="AIHub_AuditOverviewHeading" xml:space="preserve"><value>系统问题概况 · {0}</value></data>
+  <data name="AIHub_AuditOverviewEvidence" xml:space="preserve"><value>已检查 {0} 条事件 · 发现 {1} 项问题</value></data>
+  <data name="AIHub_AuditOverviewHighLabel" xml:space="preserve"><value>高风险</value></data>
+  <data name="AIHub_AuditOverviewMediumLabel" xml:space="preserve"><value>中风险</value></data>
+  <data name="AIHub_AuditOverviewLowLabel" xml:space="preserve"><value>低风险</value></data>
+  <data name="AIHub_AuditOverviewHelpLabel" xml:space="preserve"><value>统计说明</value></data>
+  <data name="AIHub_AuditCategoryReliability" xml:space="preserve"><value>系统可靠性</value></data>
+  <data name="AIHub_AuditCategoryStability" xml:space="preserve"><value>崩溃与异常重启</value></data>
+  <data name="AIHub_AuditCategoryConfiguration" xml:space="preserve"><value>系统配置</value></data>
+  <data name="AIHub_AuditCategoryNetwork" xml:space="preserve"><value>网络连接</value></data>
+  <data name="AIHub_AuditCategoryApplication" xml:space="preserve"><value>应用程序</value></data>
+  <data name="AIHub_AuditCategorySystem" xml:space="preserve"><value>系统组件</value></data>
+  <data name="AIHub_AuditCategorySingleIssue" xml:space="preserve"><value>1 项问题</value></data>
+  <data name="AIHub_AuditCategoryIssueCount" xml:space="preserve"><value>{0} 项问题</value></data>
+  <data name="AIHub_AuditCategoryOccurrences" xml:space="preserve"><value>发生 {0} 次</value></data>
+  <data name="AIHub_AuditCategorySingleOccurrence" xml:space="preserve"><value>发生 1 次</value></data>
+  <data name="AIHub_AuditPrioritySingle" xml:space="preserve"><value>1 项问题需要优先处理</value></data>
+  <data name="AIHub_AuditPriorityMultiple" xml:space="preserve"><value>{0} 项问题需要优先处理</value></data>
+  <data name="AIHub_AuditCategoryReview" xml:space="preserve"><value>查看优先问题</value></data>
+  <data name="AIHub_AuditOverviewRecordedRange" xml:space="preserve"><value>已记录时段</value></data>
+  <data name="AIHub_AuditOverviewWindow" xml:space="preserve"><value>{0:g} – {1:g} · 本地时间</value></data>
+  <data name="AIHub_AuditOverviewUnknownRange" xml:space="preserve"><value>此快照未记录扫描范围。运行全量扫描后可查看对应时段的系统概况。</value></data>
+  <data name="AIHub_AuditOverviewScore" xml:space="preserve"><value>健康评分 {0}/100</value></data>
+  <data name="AIHub_AuditOverviewHigh" xml:space="preserve"><value>{0} 项高风险问题需要优先处理</value></data>
+  <data name="AIHub_AuditOverviewWarnings" xml:space="preserve"><value>建议检查此时段记录到的问题</value></data>
+  <data name="AIHub_AuditOverviewNoIssues" xml:space="preserve"><value>已采集事件中未发现问题</value></data>
+  <data name="AIHub_AuditOverviewDescription" xml:space="preserve"><value>已检查 {0} 条事件 · 发现 {1} 项问题，涉及 {2} 个类别 · 问题累计发生 {3} 次</value></data>
+  <data name="AIHub_AuditOverviewSkipped" xml:space="preserve"><value>未能读取的日志通道：{0}。</value></data>
+  <data name="AIHub_AuditOverviewLimited" xml:space="preserve"><value>已达到事件数量上限：{0}。此时段可能还有其他事件。</value></data>
+  <data name="AIHub_AuditOverviewPartialAi" xml:space="preserve"><value>AI 分析未全部完成；此概况保留本地发现及已验证的 AI 发现。</value></data>
+  <data name="AIHub_AuditOverviewNextScan" xml:space="preserve"><value>下次全量扫描：{0}。扫描完成后更新此概况。</value></data>
+  <data name="AIHub_AuditOverviewRecommendation.Text" xml:space="preserve"><value>处理建议</value></data>
+  <data name="AIHub_AuditCategoryCounts" xml:space="preserve"><value>{0} 项问题 · {1} 次发生 · 高 {2} / 中 {3} / 低 {4}</value></data>
+  <data name="AIHub_AuditTotals" xml:space="preserve"><value>{0} 类问题 · {1} 项发现 · 高 {2} / 中 {3} / 低 {4}</value></data>
+  <data name="AIHub_AuditOccurrencesHint" xml:space="preserve"><value>发生次数按问题分别统计，不同问题可能引用同一事件。下方筛选仅影响明细列表。</value></data>
+  <data name="AIHub_WorkspaceOverview" xml:space="preserve"><value>系统概况</value></data>
+  <data name="AIHub_WorkspaceFindings" xml:space="preserve"><value>问题清单 ({0})</value></data>
+  <data name="AIHub_WorkspaceViewAll" xml:space="preserve"><value>查看全部 {0} 项问题</value></data>
+  <data name="AIHub_WorkspaceBack" xml:space="preserve"><value>返回系统概况</value></data>
+  <data name="AIHub_WorkspaceAllIssues" xml:space="preserve"><value>全部问题</value></data>
+  <data name="AIHub_WorkspaceSortHint" xml:space="preserve"><value>全部问题 · 按风险与发生次数排序</value></data>
+  <data name="AIHub_WorkspaceCategoryAction" xml:space="preserve"><value>查看该类别的全部问题</value></data>
+  <data name="General_UpdateDownload.Content" xml:space="preserve"><value>下载更新</value></data>
+  <data name="General_UpdateRestart.Content" xml:space="preserve"><value>重启更新</value></data>
+  <data name="General_UpdateRecover.Content" xml:space="preserve"><value>恢复并重启</value></data>
+  <data name="General_UpdateCancel.Content" xml:space="preserve"><value>取消下载</value></data>
+  <data name="General_UpdateReady.Text" xml:space="preserve"><value>更新已下载并通过校验。重启 Kit 即可安装，你的设置会保留。</value></data>
+  <data name="General_UpdateDownloading.Text" xml:space="preserve"><value>正在下载 Portable 更新… 你可以继续使用 Kit。</value></data>
+  <data name="General_UpdateVerifying.Text" xml:space="preserve"><value>正在校验更新…</value></data>
+  <data name="General_UpdateInstalling.Text" xml:space="preserve"><value>Kit 正在关闭，更新完成后会自动重启。</value></data>
+  <data name="General_UpdateError.Text" xml:space="preserve"><value>更新未能完成。请检查网络连接和磁盘剩余空间后重试。</value></data>
+  <data name="General_UpdateInvalid.Text" xml:space="preserve"><value>更新包未通过校验，请重新下载。</value></data>
+  <data name="General_UpdateAccess.Text" xml:space="preserve"><value>Kit 无法更新当前文件夹。请将 Portable 文件夹移至可写入的位置后重试。</value></data>
+  <data name="General_UpdateCloseFailed.Text" xml:space="preserve"><value>部分 Kit 进程仍在运行。请关闭这些进程，重新打开 Kit 后重试。</value></data>
+  <data name="General_UpdateRecoveryRequired.Text" xml:space="preserve"><value>上次更新中断，需要先恢复。恢复原版本并重启 Kit 后即可继续。</value></data>
+  <data name="General_UpdateRecovered.Text" xml:space="preserve"><value>已恢复原版本，可以重新下载更新。</value></data>
+  <data name="General_UpdateInterrupted.Text" xml:space="preserve"><value>上次更新已中断，请重新下载后继续。</value></data>
+  <data name="General_UpdateHelperMissing.Text" xml:space="preserve"><value>更新组件缺失或无法启动。请完整解压 Portable 安装包后重试。</value></data>
 </root>

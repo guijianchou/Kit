@@ -91,6 +91,7 @@ namespace Kit.Settings.UI.ViewModels
         public GeneralViewModel(ISettingsRepository<GeneralSettings> settingsRepository, string runAsAdminText, string runAsUserText, bool isElevated, bool isAdmin, Func<string, int> ipcMSGCallBackFunc, Func<string, int> ipcMSGRestartAsAdminMSGCallBackFunc, Func<string, int> ipcMSGCheckForUpdatesCallBackFunc, string configFileSubfolder = "", Action dispatcherAction = null, Action hideBackupAndRestoreMessageAreaAction = null, Action<int> doBackupAndRestoreDryRun = null, Func<Task<string>> pickSingleFolderDialog = null, Microsoft.Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = null)
         {
             CheckForUpdatesEventHandler = new ButtonClickCommand(CheckForUpdatesClick);
+            InitializePortableUpdateCommands();
             RestartElevatedButtonEventHandler = new ButtonClickCommand(RestartElevated);
             BackupConfigsEventHandler = new AsyncCommand(BackupConfigsAsync, CanRunBackupRestoreOperation);
             SelectSettingBackupDirEventHandler = new AsyncCommand(SelectSettingBackupDirAsync, CanRunBackupRestoreOperation);
@@ -184,6 +185,11 @@ namespace Kit.Settings.UI.ViewModels
             if (dispatcherAction != null)
             {
                 _fileWatcher = Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile, dispatcherAction);
+
+                // The updater atomically renames a flushed state file into place.
+                _fileWatcher.NotifyFilter |= NotifyFilters.FileName;
+                _fileWatcher.Renamed += (_, _) => dispatcherAction();
+                _fileWatcher.Created += (_, _) => dispatcherAction();
             }
 
             InitializeLanguages();
@@ -771,13 +777,14 @@ namespace Kit.Settings.UI.ViewModels
                     _isCheckingForUpdates = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(IsCheckForUpdatesButtonEnabled));
+                    NotifyPortableUpdateProperties();
                 }
             }
         }
 
         public bool IsCheckForUpdatesButtonEnabled
         {
-            get => !IsCheckingForUpdates;
+            get => !IsCheckingForUpdates && !IsPortableUpdateBusy;
         }
 
         public string LastSettingsBackupDate
@@ -1010,7 +1017,7 @@ namespace Kit.Settings.UI.ViewModels
         {
             get
             {
-                return false;
+                return _isNewVersionDownloading;
             }
 
             set
@@ -1273,7 +1280,7 @@ namespace Kit.Settings.UI.ViewModels
 
         private void CheckForUpdatesClick()
         {
-            if (IsCheckingForUpdates)
+            if (!IsCheckForUpdatesButtonEnabled)
             {
                 return;
             }
@@ -1397,8 +1404,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RequestUpdateCheckedDate()
         {
-            // Periodic IPC refresh is owned by the runner; the view model reloads UpdateState.json
-            // on demand (via Check for updates) and on page load.
+            SendPortableUpdateAction("refresh_update_state", false);
         }
 
         public void RestartElevated()
@@ -1448,13 +1454,20 @@ namespace Kit.Settings.UI.ViewModels
 
         private async Task RefreshUpdatingStateFromDiskAsync()
         {
+            var request = Interlocked.Increment(ref _updateRefreshRequest);
             var updateSettings = await Task.Run(LoadUpdatingSettingsWithRetry).ConfigureAwait(false);
             if (updateSettings == null)
             {
                 return;
             }
 
-            RunOnViewModelThread(() => RefreshUpdatingState(updateSettings));
+            RunOnViewModelThread(() =>
+            {
+                if (request == _updateRefreshRequest)
+                {
+                    RefreshUpdatingState(updateSettings);
+                }
+            });
         }
 
         private static UpdatingSettings LoadUpdatingSettingsWithRetry()
@@ -1481,13 +1494,13 @@ namespace Kit.Settings.UI.ViewModels
             PowerToysNewAvailableVersion = updateSettings.NewVersion;
             PowerToysNewAvailableVersionLink = updateSettings.ReleasePageLink ?? string.Empty;
             UpdateCheckedDate = updateSettings.LastCheckedDateLocalized;
+            RefreshPortableUpdateProperties(updateSettings);
             var isManualCheckResult = IsCheckingForUpdates && IsResultNewerThanBaseline(updateSettings, _manualUpdateCheckBaselineLastChecked);
             var canShowCachedUpdate = !IsCheckingForUpdates || isManualCheckResult;
 
             switch (updateSettings.State)
             {
                 case UpdatingSettings.UpdatingState.ReadyToDownload:
-                case UpdatingSettings.UpdatingState.ReadyToInstall:
                     if (canShowCachedUpdate)
                     {
                         var version = string.IsNullOrEmpty(updateSettings.NewVersion) ? string.Empty : $" {updateSettings.NewVersion}";
@@ -1496,13 +1509,32 @@ namespace Kit.Settings.UI.ViewModels
 
                     break;
 
+                case UpdatingSettings.UpdatingState.ReadyToInstall:
+                    ShowUpdateCheckMessage(GetResourceString("General_UpdateReady/Text"), "Success", true);
+                    break;
+
+                case UpdatingSettings.UpdatingState.Downloading:
+                    ShowUpdateCheckMessage(GetResourceString("General_UpdateDownloading/Text"), "Informational", true);
+                    break;
+
+                case UpdatingSettings.UpdatingState.Verifying:
+                    ShowUpdateCheckMessage(GetResourceString("General_UpdateVerifying/Text"), "Informational", true);
+                    break;
+
+                case UpdatingSettings.UpdatingState.Installing:
+                    ShowUpdateCheckMessage(GetResourceString("General_UpdateInstalling/Text"), "Informational", true);
+                    break;
+
                 case UpdatingSettings.UpdatingState.NetworkError:
-                case UpdatingSettings.UpdatingState.ErrorDownloading:
-                    if (isManualCheckResult)
+                    if (canShowCachedUpdate)
                     {
                         ShowUpdateCheckMessage(GetResourceString("General_CantCheck/Title"), "Error", true);
                     }
 
+                    break;
+
+                case UpdatingSettings.UpdatingState.ErrorDownloading:
+                    ShowUpdateCheckMessage(PortableUpdateErrorMessage(updateSettings.ErrorCode), "Error", true);
                     break;
 
                 case UpdatingSettings.UpdatingState.UpToDate:
@@ -1538,6 +1570,7 @@ namespace Kit.Settings.UI.ViewModels
             base.OnPageLoaded();
 
             RefreshUpdatingState();
+            RequestUpdateCheckedDate();
 
             RunDeferredStartupMaintenance();
         }

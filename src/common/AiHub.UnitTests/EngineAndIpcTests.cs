@@ -601,6 +601,59 @@ public sealed class EngineAndIpcTests
         }
     }
 
+    [TestMethod]
+    public async Task CancelledReadinessProbePreservesTheLastVerifiedRoute()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, fallback: true);
+        await fixture.SetResponseAsync("{\"issues\":[]}");
+        var verified = await engine.ProbeReadinessAsync();
+        Assert.AreEqual(AiReadinessLevel.Ready, verified.Level);
+
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var cancelled = await engine.ProbeReadinessAsync(cancellation.Token);
+
+        Assert.AreEqual(verified.Level, cancelled.Level);
+        Assert.AreEqual(verified with { FromCache = true }, engine.GetReadiness());
+        Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
+    public async Task StoppingTheEngineDrainsAnActiveReadinessProbeWithoutTryingFallback()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, scenario: "timeout", fallback: true);
+        var pending = engine.ProbeReadinessAsync();
+        await WaitForCaptureAsync(fixture);
+        engine.Dispose();
+
+        Assert.AreEqual(AiReadinessLevel.Disabled, (await pending.WaitAsync(TimeSpan.FromSeconds(10))).Level);
+        Assert.AreEqual(AiReadinessLevel.Disabled, engine.GetReadiness().Level);
+        Assert.AreEqual(AiReadinessLevel.Disabled, (await engine.ProbeReadinessAsync()).Level);
+        Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
+    [TestMethod]
+    public async Task ConcurrentReadinessCallersShareOneProbeAndCancelIndependently()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var engine = await CreateEngineAsync(fixture, scenario: "timeout");
+        var first = engine.ProbeReadinessAsync();
+        await WaitForCaptureAsync(fixture);
+        using var callerCancellation = new CancellationTokenSource();
+        var cancelled = engine.ProbeReadinessAsync(callerCancellation.Token);
+        var remaining = engine.ProbeReadinessAsync();
+        callerCancellation.Cancel();
+        await cancelled.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.IsFalse(first.IsCompleted);
+        Assert.IsFalse(remaining.IsCompleted);
+        engine.Dispose();
+        Assert.AreEqual(AiReadinessLevel.Disabled, (await first.WaitAsync(TimeSpan.FromSeconds(10))).Level);
+        Assert.AreEqual(AiReadinessLevel.Disabled, (await remaining.WaitAsync(TimeSpan.FromSeconds(10))).Level);
+        Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+    }
+
     private sealed class SynchronousProgress(Action<AiTaskProgress> report) : IProgress<AiTaskProgress>
     {
         public void Report(AiTaskProgress value) => report(value);

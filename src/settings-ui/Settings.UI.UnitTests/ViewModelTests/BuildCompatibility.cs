@@ -3524,8 +3524,8 @@ namespace ViewModelTests
             var paneXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "FindingDetailsPane.xaml"));
             StringAssert.Contains(pageXaml, "PaneBackground=\"{ThemeResource SolidBackgroundFillColorQuarternaryBrush}\"");
             StringAssert.Contains(paneXaml, "Background=\"{ThemeResource SolidBackgroundFillColorQuarternaryBrush}\"");
-            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"20,18\"");
-            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,16\"");
+            StringAssert.Contains(pageXaml, "BasedOn=\"{StaticResource KitCardSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource AiHubSectionSurfaceStyle}\"");
             Assert.IsTrue(pageXaml.Split("KitIconBadgeStyle").Length - 1 >= 3, "Section icon badges should use the shared badge style.");
             Assert.IsTrue(pageXaml.Split("KitIconBadgeSmallStyle").Length - 1 >= 1, "The AI report badge should use the shared small badge style.");
             Assert.IsTrue(pageXaml.Split("KitMetricTileValueStyle").Length - 1 >= 7, "Metric numbers should use the shared value style.");
@@ -3534,7 +3534,7 @@ namespace ViewModelTests
             Assert.IsFalse(pageXaml.Contains("Opacity=\"0.25\"", StringComparison.Ordinal), "The fake-track ProgressRing hack should be gone.");
             Assert.AreEqual(1, pageXaml.Split("<ProgressRing").Length - 1, "The health gauge should render a single value ring.");
 
-            // 2. Static sections keep declarative width states. Measured header height,
+            // 2. Static sections keep declarative width states. The compact header,
             // lazy policy content and the detail pane also adapt to their actual space.
             // AiHubUxSmoke checks the rendered bounds across themes and window sizes;
             // do not prohibit SizeChanged, which those measured layouts legitimately use.

@@ -122,6 +122,8 @@
                     </Grid>
                 </Expander.Header>
                 <StackPanel Spacing="8">
+                    <TextBlock Text="{x:Bind WhenText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Visibility="{x:Bind HasTimestamp, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                     <TextBlock Text="{x:Bind Message, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                     <Border Style="{StaticResource WingetOutputSurfaceStyle}">
                         <ScrollViewer MaxHeight="140" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
@@ -231,6 +233,10 @@
                 </CommandBar.SecondaryCommands>
             </CommandBar>
             <StackPanel Grid.Row="2" Spacing="6">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Visibility="{x:Bind ViewModel.HasActiveFilters, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="{x:Bind ViewModel.ActiveFilterSummary, Mode=OneWay}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" AutomationProperties.AutomationId="Winget_ActiveFilters" />
+                    <HyperlinkButton Grid.Column="1" Content="{x:Bind Text('ResetFilters')}" Click="ResetFilters_Click" AutomationProperties.AutomationId="Winget_ResetFilters" />
+                </Grid>
                 <InfoBar IsOpen="{x:Bind ViewModel.RecoveryRequired, Mode=OneWay}" Visibility="{x:Bind ViewModel.RecoveryRequired, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" Message="{x:Bind Text('RecoveryHint')}" Severity="Warning" IsClosable="False" />
                 <InfoBar IsOpen="{x:Bind ExceedsBatchLimit(ViewModel.SelectedCount), Mode=OneWay}" Visibility="{x:Bind ShowBatchLimit(ViewModel.SelectedCount), Mode=OneWay}" Message="{x:Bind Text('BatchLimitHint')}" Severity="Informational" IsClosable="False" />
                 <InfoBar x:Uid="Winget_Error" IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" Visibility="{x:Bind ViewModel.HasError, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" Message="{x:Bind ViewModel.ErrorText, Mode=OneWay}" Severity="Warning" IsClosable="False" />

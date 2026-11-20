@@ -488,18 +488,36 @@ internal static class NetMapPageSmoke
         {
             pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var successful = vm.CheckRouteWithAiAsync();
-            Require(vm.IsAiChecking && !button.IsEnabled && vm.Proxy.AiRoute == NetMapViewModel.Text("AiAnalyzing"), "AI check exposes its busy state and prevents another request.");
+            Require(vm.IsAiChecking && !button.IsEnabled && vm.Proxy.AiRoute.EndsWith("0:00"), "AI check immediately exposes its timer and prevents another request.");
             await CheckLayout("busy");
             var liveProgress = (IProgress<AiTaskProgress>)typeof(NetMapViewModel).GetField("aiCheckProgress", PrivateInstance).GetValue(vm);
+            string RouteText() => ((TextBlock)FindNamed(proxyCard, "AiRouteLabel")).Text;
+            string preparing = RouteText();
+            await Task.Delay(1200);
+            Require(RouteText() != preparing && !RouteText().EndsWith("0:00"),
+                "The bound AI badge must tick even before its first progress report.");
+            liveProgress.Report(new AiTaskProgress("Execute", string.Empty, 0, 1) { Activity = "waiting", ActiveBatches = 1 });
+            await Task.Delay(100);
+            string waiting = RouteText();
+            await Task.Delay(1200);
+            Require(RouteText() != waiting && (RouteText().Contains("Waiting") || RouteText().Contains("等待响应")),
+                "Waiting must tick without further provider events while preserving the actual activity.");
             liveProgress.Report(new AiTaskProgress("Queue", "private-provider-text", 0, 1)
             {
-                Activity = "queued", QueuedBatches = 1, ElapsedMilliseconds = 293717, QueueElapsedMilliseconds = 293717,
+                Activity = "queued", QueuedBatches = 1, ElapsedMilliseconds = 293000, QueueElapsedMilliseconds = 293000,
             });
             await Task.Delay(100);
             Require(vm.Proxy.AiRoute.Contains("4:53") && (vm.Proxy.AiRoute.Contains("Queued") || vm.Proxy.AiRoute.Contains("排队中")) &&
                 vm.Proxy.AiRouteSummary.Contains("4:53") && !vm.Proxy.AiRouteSummary.Contains("private-provider-text"),
                 "Live queued progress reaches the existing Proxy row and full summary without provider text.");
             await CheckLayout("queued-progress");
+            string queued = RouteText();
+            await Task.Delay(1200);
+            Require(RouteText() != queued && !vm.Proxy.AiRouteSummary.Contains("Time queued 4:53") && !vm.Proxy.AiRouteSummary.Contains("排队用时 4:53"),
+                "Both elapsed and queued durations advance between queue progress messages.");
+            liveProgress.Report(new AiTaskProgress("Execute", string.Empty, 0, 1) { Activity = "waiting", ElapsedMilliseconds = 1 });
+            await Task.Delay(100);
+            Require(!RouteText().EndsWith("0:00"), "A delayed progress report must not reset the elapsed timer.");
             liveProgress.Report(new AiTaskProgress("Route", string.Empty, 0, 1)
             {
                 Activity = "retrying", Route = "Fallback", RetryCount = 2, ActiveBatches = 1,
@@ -516,6 +534,9 @@ internal static class NetMapPageSmoke
             pending.SetResult(NetMapAiAnalysisResponse.Successful("Fixture route", "Fixture summary", "Fixture details"));
             await SettleResult(successful);
             Require(vm.AiRoute == "Fixture route" && vm.Proxy.AiRouteSummary == "Fixture summary" && vm.AiRouteDetails == "Fixture details" && string.IsNullOrEmpty(vm.Message), "Successful AI analysis publishes all route fields and clears its notice.");
+            var clock = typeof(NetMapViewModel).GetField("aiCheckClock", PrivateInstance).GetValue(vm);
+            var timer = (DispatcherQueueTimer)clock.GetType().GetField("timer", PrivateInstance).GetValue(clock);
+            Require(!timer.IsRunning, "The AI clock must stop when the request completes.");
             await CheckLayout("success");
 
             var ipv6 = fixture.Proxy.LastSuccess with { Identity = fixture.Proxy.LastSuccess.Identity with { Ip = "2001:db8:1234:5678:abcd:ef01:2345:6789" } };
@@ -603,15 +624,34 @@ internal static class NetMapPageSmoke
             pending.SetResult(NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiTimeout")));
             await SettleResult(failed);
             Require(notice != null && notice.Visibility == Visibility.Visible && notice.Message == NetMapViewModel.Text("AiTimeout") && button.IsEnabled, "AI failure remains visible in the page notice and restores retry.");
+            Require(!timer.IsRunning, "AI failure stops the clock.");
+
+            pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var oldCompletion = pending;
+            var oldRequest = vm.CheckRouteWithAiAsync();
+            var oldProgress = (IProgress<AiTaskProgress>)typeof(NetMapViewModel).GetField("aiCheckProgress", PrivateInstance).GetValue(vm);
+            vm.CancelAiCheck();
+            Require(!timer.IsRunning, "Explicit cancellation stops the clock immediately.");
+            pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            var restarted = vm.CheckRouteWithAiAsync();
+            oldProgress.Report(new AiTaskProgress("Execute", string.Empty, 0, 1) { ElapsedMilliseconds = 3600000 });
+            oldCompletion.SetResult(NetMapAiAnalysisResponse.Successful("Old route", "Old summary", "Old details"));
+            await oldRequest.WaitAsync(TimeSpan.FromSeconds(2));
+            await Task.Delay(100);
+            Require(vm.IsAiChecking && timer.IsRunning && vm.Proxy.AiRoute.EndsWith("0:00"),
+                "A previous request's late progress and completion cannot advance or stop a restarted timer.");
+            pending.SetResult(NetMapAiAnalysisResponse.Failed(NetMapViewModel.Text("AiTimeout")));
+            await SettleResult(restarted);
 
             pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
             var cancelled = vm.CheckRouteWithAiAsync();
             var staleProgress = (IProgress<AiTaskProgress>)typeof(NetMapViewModel).GetField("aiCheckProgress", PrivateInstance).GetValue(vm);
-            Require(string.IsNullOrEmpty(vm.Message), "Retry clears the previous AI failure while analyzing.");
+            Require(string.IsNullOrEmpty(vm.Message) && vm.Proxy.AiRoute.EndsWith("0:00"), "Retry clears the previous AI failure and starts a fresh clock.");
             var changed = fixture with { Generation = fixture.Generation + 1, Hops = Array.Empty<HopResult>() };
             Apply(changed);
             await Task.Delay(50);
             Require(requestToken.IsCancellationRequested && !vm.IsAiChecking && vm.AiRoute == null && notice.Visibility == Visibility.Visible && notice.Message == NetMapViewModel.Text("AiRouteChanged"), "Changing route cancels active AI analysis with a visible reason and clears stale results.");
+            Require(!timer.IsRunning, "Changing route stops the AI clock.");
             staleProgress.Report(new AiTaskProgress("Route", string.Empty, 0, 1) { Activity = "retrying", RetryCount = 99 });
             await Task.Delay(50);
             Require(vm.Proxy.AiRoute == null && vm.Proxy.AiRouteSummary == null,
@@ -634,6 +674,8 @@ internal static class NetMapPageSmoke
             Require(vm.AiRoute == null && vm.Message == NetMapViewModel.Text("AiRouteChanged"), "A result arriving before the changed-route UI snapshot is rejected with a visible reason.");
             Apply(changed);
             Require(vm.Message == NetMapViewModel.Text("AiRouteChanged"), "Applying the pending route snapshot preserves the completion cancellation notice.");
+            File.AppendAllText(Path.Combine(Output, "page-smoke.log"),
+                "AI timers: initial display, silent prepare/wait/queue ticks, monotonic elapsed time, completion/failure/cancellation and stale-request isolation PASS.\n");
         }
         finally
         {

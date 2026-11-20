@@ -148,6 +148,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     private readonly ISettingsRepository<AIHubSettings> _moduleSettingsRepository;
     private readonly Func<string, int> _ipcSendMethod;
     private readonly DispatcherQueue _dispatcherQueue;
+    private readonly TaskProgressClock _auditClock;
+    private readonly TaskProgressClock _optimizationClock;
     private readonly GpoRuleConfigured _gpoConfiguration;
     private readonly CacheCleanupService _cacheCleanupService = new();
     private readonly OptimizationAnalysisService _optimizationAnalysisService = new();
@@ -250,6 +252,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         _moduleSettingsRepository = moduleSettingsRepository ?? throw new ArgumentNullException(nameof(moduleSettingsRepository));
         _ipcSendMethod = ipcSendMethod ?? throw new ArgumentNullException(nameof(ipcSendMethod));
         _dispatcherQueue = dispatcherQueue ?? DispatcherQueue.GetForCurrentThread();
+        _auditClock = new TaskProgressClock(_dispatcherQueue, RefreshAuditElapsed);
+        _optimizationClock = new TaskProgressClock(_dispatcherQueue, () => OnPropertyChanged(nameof(OptimizationElapsedText)));
 
         _gpoConfiguration = ModuleGpoHelper.GetModuleGpoConfiguration(ModuleType.AIHub);
 
@@ -490,6 +494,9 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
     public DateTimeOffset LatestSelectableAuditDate => DateTimeOffset.Now;
 
+    internal Task<WeeklyAuditReport> LoadWeeklyReportAsync() => _auditHistoryStorage.LoadWeeklyReportAsync(
+        DateOnly.FromDateTime(SelectedAuditDate?.Date ?? DateTime.Today), TimeZoneInfo.Local);
+
     public int HighCount
     {
         get => _highCount;
@@ -637,7 +644,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
     private string GetSourceFilterLabel(string channel, string displayName)
     {
-        int count = AllIssues.Count(i => i.LogName.Equals(channel, StringComparison.OrdinalIgnoreCase) || i.Category.Contains(channel, StringComparison.OrdinalIgnoreCase));
+        int count = AllIssues.Count(i => string.Equals(i.LogName, channel, StringComparison.OrdinalIgnoreCase));
         return $"{displayName} ({count})";
     }
 
@@ -707,7 +714,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     public string NoMatchingFindingsTitle => "AIHub_NoMatchingFindingsTitle".GetLocalizedOrFallback("No matching findings");
     public string NoMatchingFindingsDescription => "AIHub_NoMatchingFindingsDescription".GetLocalizedOrFallback("Try a different search keyword, channel, or severity filter.");
     public string ResetFindingFiltersLabel => "AIHub_ResetFindingFiltersLabel".GetLocalizedOrFallback("Clear filters");
-    public bool HasFindingFilters => _severityFilter != "All" || _sourceFilter != "All" || !string.IsNullOrWhiteSpace(_findingSearchText);
+    public bool HasFindingFilters => _findingCategory != null || _severityFilter != "All" || _sourceFilter != "All" || !string.IsNullOrWhiteSpace(_findingSearchText);
     public ICommand ResetFindingFiltersCommand { get; }
 
     // Optimization Tab Labels
@@ -821,6 +828,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
     public void ResetFindingFilters()
     {
+        _findingCategory = null;
         _severityFilter = "All";
         _sourceFilter = "All";
         _findingSearchText = string.Empty;
@@ -921,6 +929,16 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         {
             if (Set(ref _isOptimizing, value))
             {
+                if (value)
+                {
+                    _optimizationClock.Start();
+                }
+                else
+                {
+                    _optimizationClock.Stop();
+                }
+                OnPropertyChanged(nameof(OptimizationElapsedText));
+
                 foreach (var group in OptimizationCategories)
                 {
                     group.IsEnabled = IsEnabled && !value && group.ApprovedCount > 0;
@@ -981,6 +999,9 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     public string ScanProgressPercentText => _scanProgress.PercentText;
 
     public string ScanStageCountText => _scanProgress.StageCountText;
+
+    public string OptimizationElapsedText => _optimizationClock.HasStarted
+        ? AiTaskProgressText.Elapsed(_optimizationClock.ElapsedMilliseconds, PreferChinese()) : string.Empty;
 
     public double OptimizationWorkflowPercent => ScanPhase == ScanPhase.ExecutionPending ? OptimizationProgress : ScanProgressPercent;
 
@@ -1212,6 +1233,15 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         {
             if (Set(ref _auditPhase, value))
             {
+                if (value == ScanPhase.Scanning)
+                {
+                    _auditClock.Start();
+                }
+                else
+                {
+                    _auditClock.Stop();
+                }
+                OnPropertyChanged(nameof(AuditElapsedText));
                 PublishScanProgress();
             }
         }
@@ -1224,6 +1254,23 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         "Finish" => "AIHub_CurrentStage_FinalizeResults".GetLocalizedOrFallback("Finalize results"),
         _ => string.Empty,
     };
+
+    public string AuditElapsedText => _auditClock.HasStarted && AuditPhase != ScanPhase.Idle
+        ? AiTaskProgressText.Elapsed(_auditClock.ElapsedMilliseconds, PreferChinese()) : string.Empty;
+
+    private void RefreshAuditElapsed()
+    {
+        OnPropertyChanged(nameof(AuditElapsedText));
+        if (_auditClock.HasProgress && AuditPhase == ScanPhase.Scanning)
+        {
+            AuditStatusText = AiTaskProgressText.Summary(_auditClock.Progress, PreferChinese());
+            if (_auditWasDeepAnalysis)
+            {
+                AiStatusText = AuditStatusText;
+            }
+        }
+        PublishScanProgress();
+    }
 
     private void BeginStage(string title, bool audit = false)
     {
@@ -1264,15 +1311,16 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
     private void ApplyAuditAiProgress(AiTaskProgress progress)
     {
+        _auditClock.Report(progress);
         if (progress.TotalBatches > 0)
         {
             double percent = (_auditWasDeepAnalysis ? 0 : 30) + (_auditWasDeepAnalysis ? 95.0 : 65.0) * Math.Clamp((double)progress.CompletedBatches / progress.TotalBatches, 0, 1);
             _auditDetailedPercent = Math.Max(_auditDetailedPercent ?? 0, percent);
         }
-        AuditStatusText = progress.StatusMessage;
+        AuditStatusText = AiTaskProgressText.Summary(_auditClock.Progress, PreferChinese());
         if (_auditWasDeepAnalysis)
         {
-            AiStatusText = progress.StatusMessage;
+            AiStatusText = AuditStatusText;
         }
 
         PublishScanProgress();
@@ -1331,7 +1379,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         ? "AIHub_Sidebar_Analyzing".GetLocalizedOrFallback("Analyzing")
         : SidebarWorkflowPercent.ToString("0'%'", CultureInfo.InvariantCulture);
 
-    public string SidebarWorkflowCountText => _auditProgress.StageCountText;
+    public string SidebarWorkflowCountText => string.IsNullOrEmpty(AuditElapsedText)
+        ? _auditProgress.StageCountText : $"{_auditProgress.StageCountText} · {AuditElapsedText}";
 
     public string SidebarWorkflowTitle => AuditPhase switch
     {
@@ -2219,21 +2268,25 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
                         _suppressAuditDateLoad = false;
                     }
 
+                    _auditOverviewSnapshot = new AuditResult
+                    {
+                        Timestamp = DateTime.UtcNow,
+                        HealthScore = score,
+                        Findings = issues,
+                        EventsScanned = events.Count,
+                        ScanStart = windowFrom,
+                        ScanEnd = windowTo,
+                        SkippedChannels = eventLogService.SkippedChannels.ToList(),
+                        LimitedChannels = eventLogService.LimitedChannels.ToList(),
+                        AnalysisOutcome = aiOutcome,
+                    };
                     RebuildSections();
 
                     // Save history, then derive the activity counters from what is stored
                     // so scan/active-day/average figures reflect the real history.
                     if (!rangeRefresh)
                     {
-                        _ = SaveHistoryAndRefreshStatisticsAsync(new AuditResult
-                        {
-                            Timestamp = DateTime.UtcNow,
-                            HealthScore = score,
-                            Findings = issues,
-                            EventsScanned = events.Count,
-                            ScanStart = windowFrom,
-                            ScanEnd = windowTo,
-                        });
+                        _ = SaveHistoryAndRefreshStatisticsAsync(_auditOverviewSnapshot);
                     }
 
                     FinishAuditStatus(score, issues.Count, aiOutcome, eventLogService.SkippedChannels);
@@ -2420,15 +2473,13 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
     private void RebuildSections(bool expandMatches = false)
     {
+        RefreshAuditSummary();
         var previousState = FindingSections.ToDictionary(section => section.Name, section => section.IsExpanded);
 
-        // 1. Source filter
-        var sourceIssues = _sourceFilter == "All"
-            ? AllIssues.ToList()
-            : AllIssues.Where(issue =>
-                string.Equals(issue.LogName, _sourceFilter, StringComparison.OrdinalIgnoreCase) ||
-                issue.Category.Contains(_sourceFilter, StringComparison.OrdinalIgnoreCase) ||
-                issue.CategoryLabel.Contains(_sourceFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+        // Category and event-log source describe different dimensions of a finding.
+        var sourceIssues = AllIssues.Where(issue =>
+            (_findingCategory == null || string.Equals(issue.Category ?? string.Empty, _findingCategory, StringComparison.OrdinalIgnoreCase)) &&
+            (_sourceFilter == "All" || string.Equals(issue.LogName, _sourceFilter, StringComparison.OrdinalIgnoreCase))).ToList();
 
         // 2. Severity filter
         var visibleIssues = _severityFilter switch
@@ -2569,6 +2620,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
     private void ApplyHistoricalAudit(AuditResult history)
     {
         ClearAuditSnapshot();
+        _auditOverviewSnapshot = history;
         AllIssues.Clear();
         foreach (var issue in history.Findings)
         {
@@ -2611,6 +2663,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
 
     private void ClearAuditSnapshot()
     {
+        _auditOverviewSnapshot = null;
         AllIssues.Clear();
         _hasAuditResult = false;
         _auditIncomplete = false;
@@ -3415,6 +3468,8 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable
         if (!_disposed)
         {
             _disposed = true;
+            _auditClock.Dispose();
+            _optimizationClock.Dispose();
             DisposeFluentView();
             Inventory.PropertyChanged -= OnInventoryChanged;
             _readinessCts?.Cancel();

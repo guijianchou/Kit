@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AIHubLib.Models;
+using Kit.AIHubLib.Storage;
 using Kit.Settings.UI;
 using Kit.Settings.UI.Controls;
 using Kit.Settings.UI.Helpers;
@@ -111,6 +112,8 @@ internal static class AiHubUxSmoke
         Require(vm.IsEnabled && !vm.AiHub.IsEnabled, "Synthetic selection needs only the local module gate.");
         await CheckScanButtonBoundState(page, "module-enabled");
         await CheckEnableCardAndHealthLayout(page, "module-enabled");
+        await CheckWeeklyReport(page);
+        await CheckWorkflowTimers(page);
         vm.SelectedScanModeIndex = 0;
         await CheckScanButtonBoundState(page, "fast-scan-selected");
         vm.SelectedScanModeIndex = 1;
@@ -129,6 +132,9 @@ internal static class AiHubUxSmoke
         await CheckConfirmation(page);
         await CheckAuditSnapshotIsolation(page);
         await CheckAuditFailureLayout(page);
+        await CheckPeriodOverview(page);
+        await CheckReadableOverview(page);
+        await CheckAuditWorkspace(page);
         await CheckFluentOverviewAndDetails(page);
         await CheckAuditSemanticStates(page);
         await CheckSplitButtonPalette(page);
@@ -139,6 +145,55 @@ internal static class AiHubUxSmoke
         Log("Shell module palettes, native interaction states, Light/Dark/Light restoration, contrast, keyboard focus and responsive pane renders PASS");
         EnsureNoWorker();
         Require(!vm.IsOptimizing && !vm.IsInventoryScanning && !vm.IsAuditing && !vm.IsAiAnalyzing, "The smoke must finish with no work running.");
+    }
+
+    private static async Task CheckWeeklyReport(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var storeField = typeof(AIHubPageViewModel).GetField("_auditHistoryStorage", PrivateInstance);
+        var original = storeField.GetValue(vm);
+        var directory = Directory.CreateTempSubdirectory("KitWeeklyReport-").FullName;
+        var store = new AuditHistoryStorage(directory);
+        var end = (vm.SelectedAuditDate?.Date ?? DateTime.Today).AddHours(12);
+        bool chinese = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh";
+        string title = chinese ? "审计周报" : "Weekly audit report";
+        var history = (DropDownButton)page.FindName("AuditHistoryDropDown");
+        var flyout = (Flyout)history.Flyout;
+        async Task Inspect(string expected, bool canCopy)
+        {
+            flyout.ShowAt(history);
+            await NextRendering();
+            var button = Descendants((FrameworkElement)flyout.Content).OfType<Button>().Single(item => AutomationProperties.GetAutomationId(item) == "AIHub_WeeklyReportButton");
+            Require(Equals(button.Content, title), "The weekly report action must use the selected language.");
+            ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
+            await WaitUntil(() => Field<ContentDialog>(page, "_activeDialog")?.IsLoaded == true);
+            var dialog = Field<ContentDialog>(page, "_activeDialog");
+            var body = (TextBlock)((ScrollViewer)dialog.Content).Content;
+            await WaitUntil(() => body.Text.Contains(expected, StringComparison.Ordinal));
+            Require(Equals(dialog.Title, title) && dialog.PrimaryButtonText == vm.CopyReportLabel && dialog.IsPrimaryButtonEnabled == canCopy && body.IsTextSelectionEnabled,
+                "Copy readiness and the localized dialog must follow the loaded report.");
+            dialog.Hide();
+            await WaitUntil(() => Field<ContentDialog>(page, "_activeDialog") == null);
+        }
+
+        try
+        {
+            storeField.SetValue(vm, store);
+            await Inspect(chinese ? "没有已保存的审计" : "No saved audits", false);
+            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddDays(-7).ToUniversalTime(), HealthScore = 55 });
+            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.ToUniversalTime(), HealthScore = 80 });
+            await Inspect("+25", true);
+            File.WriteAllText(Path.Combine(directory, "audit_history.json"), "invalid");
+            await Inspect(chinese ? "无法读取审计历史" : "Audit history could not be read", false);
+        }
+        finally
+        {
+            Field<ContentDialog>(page, "_activeDialog")?.Hide();
+            storeField.SetValue(vm, original);
+            File.Delete(Path.Combine(directory, "audit_history.json"));
+            Directory.Delete(directory);
+        }
+        Log("Weekly report action, empty history, trend, read error and copy-button readiness rendered PASS");
     }
 
     private static async Task CheckPoliciesRequestedDuringInitialization()
@@ -540,6 +595,27 @@ internal static class AiHubUxSmoke
         await WaitUntil(() => !vm.IsInventoryScanning && !vm.IsOptimizing && !ReferenceEquals(originalRows, vm.Inventory.Rows));
         Require(vm.HasInventory && vm.CanAnalyzeStorage && vm.Inventory.Rows.Count == report.Scopes.Count,
             "A completed synthetic inventory must replace the report and recover controls.");
+        bool chinese = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh";
+        var cache = report.Scopes.Single(scope => scope.Id == "cache");
+        foreach (var sample in new[] { (0L, chinese ? "与上次扫描的占用相同" : "Same size"), (2048L, chinese ? "增加" : "Up "), (0L, chinese ? "减少" : "Down ") })
+        {
+            updated = updated with
+            {
+                CompletedUtc = updated.CompletedUtc.AddMinutes(1),
+                Scopes = report.Scopes.Select(scope => scope.Id == cache.Id ? cache with { ObservedBytes = cache.ObservedBytes + sample.Item1 } : scope).ToArray(),
+            };
+            Invoke(vm, "ApplyInventoryReport", updated);
+            var row = vm.Inventory.Rows.Single(item => item.Id == "cache");
+            row.IsExpanded = true;
+            ((ListView)page.FindName("InventoryScopeList")).ScrollIntoView(row, ScrollIntoViewAlignment.Leading);
+            await NextRendering();
+            page.UpdateLayout();
+            Require(row.ChangeText.Contains(sample.Item2, StringComparison.Ordinal) && Descendants(page).OfType<TextBlock>().Any(block => block.Text == row.ChangeText && block.ActualHeight > 0),
+                "An expanded comparable location must render its localized size change.");
+            row.IsExpanded = false;
+        }
+        Require(!vm.Inventory.Rows.Single(item => item.Id == "diagnostics").HasComparison, "Partial measurements must have no size-change label.");
+        Log("Expanded storage row rendered unchanged, growth and shrinkage labels PASS");
         Log("Inventory cancellation/failure retention, duplicate exclusion, cleanup busy gate and successful refresh PASS");
     }
 
@@ -575,6 +651,73 @@ internal static class AiHubUxSmoke
         await NextRendering();
         Require(vm.AllIssues.Count == 0 && !vm.HasAuditData && vm.HealthScoreText == "—", "A date without a snapshot must clear old findings and score.");
         Log("Historical report/evidence isolation and empty-date reset PASS");
+    }
+
+    private static async Task CheckWorkflowTimers(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var auditPhase = typeof(AIHubPageViewModel).GetProperty(nameof(vm.AuditPhase));
+        var optimizing = typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsOptimizing));
+        var scanPhase = typeof(AIHubPageViewModel).GetProperty(nameof(vm.ScanPhase));
+        var status = typeof(AIHubPageViewModel).GetProperty(nameof(vm.AuditStatusText));
+        var elapsed = (TextBlock)page.FindName("AuditElapsedText");
+        var optimizationElapsed = (TextBlock)page.FindName("OptimizationElapsedText");
+        int originalTab = vm.ActiveTabIndex;
+        string originalStatus = vm.AuditStatusText;
+        try
+        {
+            vm.ActiveTabIndex = 0;
+            auditPhase.SetValue(vm, ScanPhase.Scanning);
+            status.SetValue(vm, "Collecting fixture logs");
+            await NextRendering();
+            Require(elapsed.Visibility == Visibility.Visible && elapsed.Text.EndsWith("0:00"),
+                "A scan must show its timer immediately, before any collection or AI progress.");
+            string first = elapsed.Text;
+            await WaitUntil(() => elapsed.Text != first);
+            Require(vm.AuditStatusText == "Collecting fixture logs" && vm.SidebarWorkflowCountText.Contains(elapsed.Text),
+                "A silent local scan must refresh page/sidebar elapsed time without changing its stage.");
+
+            optimizing.SetValue(vm, true);
+            scanPhase.SetValue(vm, ScanPhase.Scanning);
+            Require(vm.OptimizationElapsedText.EndsWith("0:00") && !vm.AuditElapsedText.EndsWith("0:00"),
+                "Optimization and audit scans must keep independent clocks.");
+            Invoke(vm, "ApplyAuditAiProgress", new Kit.AiHub.Contract.AiTaskProgress("Execute", "private-provider-text", 0, 1)
+            {
+                Activity = "waiting", ActiveBatches = 1,
+            });
+            string waiting = vm.AuditStatusText;
+            await WaitUntil(() => vm.AuditStatusText != waiting && !optimizationElapsed.Text.EndsWith("0:00"));
+            Require(!vm.AuditStatusText.Contains("private-provider-text") && vm.SidebarWorkflowPercent == 30,
+                "Silent AI waiting advances elapsed time without fabricating work or exposing provider text.");
+            await Capture(page, "aihub-running-timer.png");
+
+            auditPhase.SetValue(vm, ScanPhase.SelectingTargets);
+            status.SetValue(vm, "Completed fixture scan");
+            optimizing.SetValue(vm, false);
+            scanPhase.SetValue(vm, ScanPhase.SelectingTargets);
+            string completed = elapsed.Text;
+            string optimized = optimizationElapsed.Text;
+            await Task.Delay(1100);
+            Require(elapsed.Text == completed && optimizationElapsed.Text == optimized && vm.AuditStatusText == "Completed fixture scan",
+                "Completed workflows must freeze their timers and retain their final status.");
+
+            auditPhase.SetValue(vm, ScanPhase.Scanning);
+            Require(vm.AuditElapsedText.EndsWith("0:00"), "A new audit must reset elapsed time.");
+            auditPhase.SetValue(vm, ScanPhase.Failed);
+            status.SetValue(vm, "Cancelled fixture scan");
+            await Task.Delay(1100);
+            Require(vm.AuditElapsedText.EndsWith("0:00") && vm.AuditStatusText == "Cancelled fixture scan",
+                "A stopped scan must not be refreshed by a late timer tick.");
+            Log("Scan timers: immediate display, silent local/AI progress, independent clocks, completion, cancellation and restart PASS");
+        }
+        finally
+        {
+            optimizing.SetValue(vm, false);
+            scanPhase.SetValue(vm, ScanPhase.Idle);
+            auditPhase.SetValue(vm, ScanPhase.Idle);
+            status.SetValue(vm, originalStatus);
+            vm.ActiveTabIndex = originalTab;
+        }
     }
 
     private static async Task CheckAuditFailureLayout(AIHubPage page)
@@ -697,15 +840,266 @@ internal static class AiHubUxSmoke
         };
     }
 
+    private static async Task CheckPeriodOverview(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        vm.ActiveTabIndex = 0;
+        vm.AuditResultViewIndex = 0;
+        vm.ResetFindingFilters();
+        int originalRange = vm.FullScanRangeIndex;
+        int originalMode = vm.SelectedScanModeIndex;
+        var lifetime = Field<CancellationTokenSource>(vm, "_auditCts");
+        vm.SelectedScanModeIndex = 1;
+        foreach (var range in new[] { (Days: 2, Label: "2D", Index: 0), (Days: 7, Label: "1W", Index: 1), (Days: 30, Label: "1M", Index: 2) })
+        {
+            var fixture = FluentAuditFixture();
+            fixture.ScanStart = fixture.ScanEnd.Value.AddDays(-range.Days);
+            fixture.SkippedChannels = new List<string>();
+            fixture.LimitedChannels = new List<string>();
+            fixture.AnalysisOutcome = "ok";
+            vm.FullScanRangeIndex = range.Index;
+            Invoke(vm, "ApplyHistoricalAudit", fixture);
+            await NextRendering();
+            var overview = (Border)page.FindName("AuditPeriodOverview");
+            Require(vm.AuditOverviewRange == range.Label && ((TextBlock)page.FindName("AuditPeriodHeading")).Text == vm.AuditSummaryHeading && vm.AuditSummaryHeading.Contains(range.Label),
+                "Overview heading must identify the completed scan's 2D/1W/1M range.");
+            Require(vm.AuditOverviewWindow.Contains(fixture.ScanStart.Value.ToLocalTime().ToString("g")) && vm.AuditOverviewDescription.Contains("238") && vm.AuditOverviewScore.Contains("76/100"),
+                "The period, event count and score must come from the same completed snapshot.");
+            Require(!vm.HasAuditOverviewScopeChange && !vm.HasAuditOverviewCoverage, "A matching scan range without collection limitations must have no mismatch or coverage notice.");
+            string window = vm.AuditOverviewWindow;
+            string counts = vm.AuditTotals;
+            vm.FullScanRangeIndex = (range.Index + 1) % 3;
+            vm.FindingSearchText = "no matching issue";
+            await NextRendering();
+            Require(vm.HasAuditOverviewScopeChange && vm.AuditOverviewRange == range.Label && vm.AuditOverviewWindow == window && vm.AuditTotals == counts &&
+                ReferenceEquals(lifetime, Field<CancellationTokenSource>(vm, "_auditCts")) && !vm.IsAuditing,
+                "Changing the next scan or filtering details must retain the completed period overview and start no work.");
+            vm.ResetFindingFilters();
+            vm.FullScanRangeIndex = range.Index;
+            App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1000));
+            overview.StartBringIntoView();
+            await NextRendering();
+            await Capture(page, "aihub-period-overview-" + range.Label + ".png");
+        }
+
+        var limited = FluentAuditFixture();
+        limited.SkippedChannels = new List<string> { "Security" };
+        limited.LimitedChannels = new List<string> { "System" };
+        limited.AnalysisOutcome = "partial";
+        Invoke(vm, "ApplyHistoricalAudit", limited);
+        Require(vm.HasAuditOverviewCoverage && vm.AuditOverviewCoverage.Contains("Security") && vm.AuditOverviewCoverage.Contains("System"),
+            "Stored partial collection and AI results must remain visible after reopening a snapshot.");
+        var legacy = new AuditResult { Findings = limited.Findings };
+        Invoke(vm, "ApplyHistoricalAudit", legacy);
+        Require(vm.AuditOverviewRange != "2D" && vm.AuditOverviewRange != "1W" && vm.AuditOverviewRange != "1M" && !string.IsNullOrWhiteSpace(vm.AuditOverviewWindow),
+            "A legacy snapshot with no time bounds cannot inherit the next full scan range.");
+        vm.FullScanRangeIndex = originalRange;
+        vm.SelectedScanModeIndex = originalMode;
+        EnsureNoWorker();
+        Log("Completed 2D/1W/1M overview, unchanged next-scan draft, independent filters, persisted coverage and legacy-range fallback PASS");
+    }
+
+    private static async Task CheckReadableOverview(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        vm.AuditResultViewIndex = 0;
+        var fixture = FluentAuditFixture();
+        fixture.HealthScore = 9;
+        fixture.EventsScanned = 85;
+        fixture.Findings.Clear();
+        var groups = new[]
+        {
+            (Category: "Reliability", High: 4, Medium: 0, Low: 0, Occurrences: 6, Title: "Critical Error: .NET Runtime (1026)", Chinese: ".NET Runtime 严重错误 (1026)"),
+            (Category: "Stability", High: 1, Medium: 0, Low: 0, Occurrences: 1, Title: "Unexpected kernel shutdown", Chinese: "系统内核异常关闭"),
+            (Category: "Configuration", High: 0, Medium: 4, Low: 0, Occurrences: 27, Title: "Warning: Microsoft-Windows-FilterManager (11)", Chinese: "Microsoft-Windows-FilterManager 配置警告 (11)"),
+            (Category: "Network", High: 0, Medium: 3, Low: 1, Occurrences: 6, Title: "TCP and UDP temporary ports exhausted", Chinese: "TCP 和 UDP 临时端口耗尽"),
+            (Category: "Application", High: 0, Medium: 3, Low: 0, Occurrences: 5, Title: "CoworkVMService repeatedly fails to set SCM recovery actions", Chinese: "CoworkVMService 反复无法设置 SCM 恢复操作"),
+            (Category: "System", High: 0, Medium: 2, Low: 3, Occurrences: 14, Title: "Kernel-Power recorded an unexpected shutdown", Chinese: "Kernel-Power 记录到意外关机"),
+        };
+        foreach (var group in groups)
+        {
+            int count = group.High + group.Medium + group.Low;
+            for (int index = 0; index < count; index++)
+                fixture.Findings.Add(new AuditIssueEnhanced
+                {
+                    Key = group.Category + index, Category = group.Category, LogName = "System",
+                    Title = group.Title, TitleZh = group.Chinese,
+                    Severity = index < group.High ? "High" : index < group.High + group.Medium ? "Medium" : "Low",
+                    Occurrences = index == 0 ? group.Occurrences - count + 1 : 1,
+                    Recommendation = "Review the recorded event before changing system settings.", RecommendationZh = "调整系统设置前，先查看事件证据。",
+                });
+        }
+
+        Invoke(vm, "ApplyHistoricalAudit", fixture);
+        Require(vm.AuditOverviewHighCount == 5 && vm.AuditOverviewMediumCount == 12 && vm.AuditOverviewLowCount == 4 && vm.AuditCategories.Count == 6,
+            "The screenshot-sized fixture must retain all 21 issues and the 5/12/4 risk distribution.");
+        var overview = (Border)page.FindName("AuditPeriodOverview");
+        var cards = (ItemsRepeater)page.FindName("AuditCategoryCards");
+        foreach (var theme in new[] { ElementTheme.Dark, ElementTheme.Light })
+        foreach (int width in new[] { 1280, 760, 480 })
+        {
+            page.RequestedTheme = theme;
+            App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 1100));
+            ((ScrollViewer)page.FindName("AiHubContentScroll")).ChangeView(null, 0, null, true);
+            await NextRendering();
+            await NextRendering();
+            var first = (Button)cards.GetOrCreateElement(0);
+            var second = (Button)cards.GetOrCreateElement(1);
+            await NextRendering();
+            var firstBounds = first.TransformToVisual(cards).TransformBounds(new Windows.Foundation.Rect(0, 0, first.ActualWidth, first.ActualHeight));
+            var secondBounds = second.TransformToVisual(cards).TransformBounds(new Windows.Foundation.Rect(0, 0, second.ActualWidth, second.ActualHeight));
+            Require(first.ActualWidth > 200 && firstBounds.Right <= cards.ActualWidth + 1 && secondBounds.Right <= cards.ActualWidth + 1,
+                "Category cards must fit the content width in " + theme + "/" + width);
+            Require(overview.ActualWidth >= 620 ? Math.Abs(firstBounds.Top - secondBounds.Top) < 1 && secondBounds.Left > firstBounds.Left
+                : Math.Abs(firstBounds.Left - secondBounds.Left) < 1 && secondBounds.Top > firstBounds.Top,
+                "Categories must use two columns in wide layouts and one column in narrow layouts.");
+            Require(Descendants(overview).OfType<Expander>().Count() == 0 && !Descendants(overview).OfType<TextBlock>().Any(text => text.Text == vm.AuditOverviewScore || text.Text == vm.AuditTotals),
+                "The period overview must avoid nested expanders and duplicate score/count paragraphs.");
+            var metrics = (Grid)page.FindName("AuditRiskMetrics");
+            Require(Descendants(metrics).OfType<TextBlock>().All(text => !text.IsTextTrimmed && text.ActualWidth > 0),
+                "Every risk count and text label must remain readable.");
+            var dashboard = (Border)page.FindName("AuditDashboard");
+            foreach (var risk in Descendants(metrics).OfType<Button>())
+            {
+                foreach (string state in new[] { "Normal", "PointerOver", "Pressed", "Normal" })
+                {
+                    VisualStateManager.GoToState(risk, state, false);
+                    await NextRendering();
+                    var surface = (Border)risk.Content;
+                    var backdrop = CompositeBrush(dashboard.Background, theme == ElementTheme.Dark ? Windows.UI.Color.FromArgb(255, 32, 32, 32) : Windows.UI.Color.FromArgb(255, 243, 243, 243));
+                    var fill = CompositeBrush(surface.Background, backdrop);
+                    Require(Descendants(surface).OfType<TextBlock>().All(text => Contrast(BrushColor(text.Foreground), fill) >= 4.5),
+                        $"Risk card text must retain 4.5:1 contrast after theme switching at {theme}/{width}/{risk.Tag}/{state}.");
+                }
+            }
+
+            var score = (FrameworkElement)page.FindName("AuditHealthSummary");
+            var commands = (FrameworkElement)page.FindName("AuditCommandHeader");
+            Require(IsDescendantOf(overview, dashboard) && IsDescendantOf(score, dashboard) && IsDescendantOf(commands, dashboard),
+                "Scan actions, health score and period overview must share one dashboard surface.");
+            Require(HeaderBounds(commands, dashboard).Bottom <= HeaderBounds(score, dashboard).Top + 2 &&
+                HeaderBounds(score, dashboard).Bottom <= HeaderBounds(overview, dashboard).Top + 2 &&
+                HeaderInside(HeaderBounds(commands, dashboard), dashboard) && HeaderInside(HeaderBounds(overview, dashboard), dashboard),
+                "Dashboard sections must keep a single reading order and fit within the same surface.");
+            await Capture(page, "aihub-unified-dashboard-" + theme + "-" + width + ".png");
+            overview.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
+            await NextRendering();
+            await NextRendering();
+            await Capture(page, "aihub-readable-overview-" + theme + "-" + width + ".png");
+            var results = (FrameworkElement)page.FindName("AuditResultsGrid");
+            results.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
+            await NextRendering();
+            await NextRendering();
+            var findings = (Border)page.FindName("AuditFindingsCard");
+            var analysis = (Border)page.FindName("AuditSummaryCard");
+            Require(findings.Visibility == Visibility.Collapsed && HeaderInside(HeaderBounds(analysis, results), results),
+                "Overview must hide the findings list while keeping the AI summary readable.");
+            Require(IsDescendantOf(findings, dashboard) && ReferenceEquals(dashboard.Style, analysis.Style),
+                "Findings must share the dashboard workspace; AI analysis retains its own surface.");
+            await Capture(page, "aihub-unified-results-" + theme + "-" + width + ".png");
+        }
+
+        var trigger = (Button)cards.GetOrCreateElement(0);
+        ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new ButtonAutomationPeer(trigger).GetPattern(PatternInterface.Invoke)).Invoke();
+        await WaitUntil(() => vm.ShowAuditFindings);
+        await NextRendering();
+        Require(vm.FilteredIssues.Count == fixture.Findings.Count(issue => issue.Category == vm.AuditCategories[0].Category) &&
+            !((SplitView)page.FindName("AiHubDetailsHost")).IsPaneOpen && overview.Visibility == Visibility.Collapsed,
+            "A category card must open every issue in that category without also showing Overview or details.");
+        Invoke(page, "OnAuditBackClick", page.FindName("AuditBackButton"), new RoutedEventArgs());
+        await NextRendering();
+        page.RequestedTheme = ElementTheme.Default;
+        App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1000));
+        Log("Six-category overview with 21 issues: risk metrics, two/one-column cards, light/dark layouts and category navigation PASS");
+    }
+
+    private static async Task CheckAuditWorkspace(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var fixture = FluentAuditFixture();
+        // Deliberately separate category from log source; the old source predicate
+        // incorrectly included an Application-category finding from System logs.
+        fixture.Findings[0].Category = "Application";
+        Invoke(vm, "ApplyHistoricalAudit", fixture);
+        vm.AuditResultViewIndex = 0;
+        vm.ResetFindingFilters();
+        await NextRendering();
+        var overview = (Border)page.FindName("AuditPeriodOverview");
+        var findings = (Border)page.FindName("AuditFindingsCard");
+        var cards = (ItemsRepeater)page.FindName("AuditCategoryCards");
+        var categoryIndex = vm.AuditCategories.ToList().FindIndex(category => category.Category == "Application");
+        var categoryButton = (Button)cards.GetOrCreateElement(categoryIndex);
+        ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new ButtonAutomationPeer(categoryButton).GetPattern(PatternInterface.Invoke)).Invoke();
+        await NextRendering();
+        Require(vm.ShowAuditFindings && overview.Visibility == Visibility.Collapsed && findings.Visibility == Visibility.Visible && vm.OverviewFindings.Count == 3,
+            "Category navigation must replace Overview with all category matches, including low-risk issues.");
+        vm.SetSourceFilter("System");
+        Require(vm.OverviewFindings.Count == 1 && vm.OverviewFindings[0].EventId == "1000", "Category and source must intersect independently.");
+        vm.SetSeverityFilter("High");
+        Require(vm.ShowNoFilterMatches && vm.OverviewFindings.Count == 0 && vm.AuditCategories.Count == 2, "Empty intersections must preserve the overview snapshot.");
+        vm.ResetFindingFilters();
+        Require(vm.OverviewFindings.Count == 6 && !vm.HasFindingFilters, "Clear filters must remove category, source and risk restrictions.");
+        vm.SetSourceFilter("Application");
+        Require(vm.OverviewFindings.Count == 2 && vm.ApplicationLabel.EndsWith("(2)", StringComparison.Ordinal), "Source counts and results must use LogName only.");
+        Invoke(page, "OnAuditBackClick", page.FindName("AuditBackButton"), new RoutedEventArgs());
+        await NextRendering();
+        await NextRendering();
+        categoryButton = (Button)cards.GetOrCreateElement(categoryIndex);
+        await WaitUntil(() => categoryButton.FocusState != FocusState.Unfocused);
+        Require(vm.ShowAuditOverview && findings.Visibility == Visibility.Collapsed && categoryButton.FocusState != FocusState.Unfocused,
+            "Back must restore the overview and focus to the originating category.");
+        var risk = Descendants((Grid)page.FindName("AuditRiskMetrics")).OfType<Button>().Single(button => Equals(button.Tag, "High"));
+        ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new ButtonAutomationPeer(risk).GetPattern(PatternInterface.Invoke)).Invoke();
+        await NextRendering();
+        Require(vm.IsFilterHigh && vm.IsSourceAll && vm.OverviewFindings.Count == 2 && vm.OverviewFindings.All(issue => issue.IsHigh), "Risk tiles must open a fresh risk filter.");
+        foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+        foreach (int width in new[] { 1280, 760, 480 })
+        {
+            page.RequestedTheme = theme;
+            App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 1000));
+            findings.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
+            await NextRendering();
+            await NextRendering();
+            var dashboard = (Border)page.FindName("AuditDashboard");
+            Require(HeaderInside(HeaderBounds(findings, dashboard), dashboard) && overview.Visibility == Visibility.Collapsed,
+                "The findings view must fit its workspace without simultaneously rendering Overview.");
+            await Capture(page, $"aihub-workspace-findings-{theme}-{width}.png");
+        }
+
+        page.RequestedTheme = ElementTheme.Default;
+        App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1000));
+        vm.OpenAuditFindings();
+        await NextRendering();
+        Require(vm.OverviewFindings.Count == 6 && !vm.HasFindingFilters, "View all must show the complete result without the old top-three cap.");
+        var host = (SplitView)page.FindName("AiHubDetailsHost");
+        Invoke(page, "OpenFinding", fixture.Findings[4], page.FindName("AuditBackButton"));
+        await WaitUntil(() => host.IsPaneOpen);
+        vm.SetSourceFilter("System");
+        await WaitUntil(() => !host.IsPaneOpen);
+        Require(vm.OverviewFindings.Count == 4, "Filtering out the selected finding must close stale details.");
+        vm.AuditResultViewIndex = 0;
+        vm.ResetFindingFilters();
+        EnsureNoWorker();
+        Log("Overview/findings navigation, origin focus, uncapped list, independent category/source/risk filters, empty state and stale-detail dismissal PASS");
+    }
+
     private static async Task CheckFluentOverviewAndDetails(AIHubPage page)
     {
         var vm = page.ViewModel;
         vm.ActiveTabIndex = 0;
         vm.ResetFindingFilters();
-        vm.SetViewMode("Priority");
+        vm.AuditResultViewIndex = 1;
         var fixture = FluentAuditFixture();
         Invoke(vm, "ApplyHistoricalAudit", fixture);
         await NextRendering();
+        Require(vm.AuditCategories.Count == 2 && !string.IsNullOrWhiteSpace(vm.AuditTotals), "The complete audit must be summarized into its two problem categories.");
+        string totals = vm.AuditTotals;
+        var categoryRows = vm.AuditCategories.ToArray();
+        vm.FindingSearchText = "no matching issue";
+        await NextRendering();
+        Require(vm.AuditTotals == totals && vm.AuditCategories.Count == 2, "Filtering the detail list must not change the complete audit summary.");
+        Require(vm.AuditCategories.SequenceEqual(categoryRows), "Filtering details must preserve category rows and their expansion state.");
+        vm.ResetFindingFilters();
         var originalRange = vm.WindowText;
         var originalLifetime = Field<CancellationTokenSource>(vm, "_auditCts");
         int originalScope = vm.FullScanRangeIndex;
@@ -727,13 +1121,10 @@ internal static class AiHubUxSmoke
         Require(vm.FullScanRangeIndex == 1 && vm.SelectedScanModeIndex == 0, "Invalid scan drafts must be rejected.");
         vm.FullScanRangeIndex = originalScope;
         vm.SelectedScanModeIndex = originalMode;
-        Require(vm.OverviewFindings.Select(issue => issue.Key).SequenceEqual(new[] { "synthetic-finding-4", "synthetic-finding-1", "synthetic-finding-3" }) && vm.CanToggleOverviewFindings,
-            "The default overview must show three findings ordered by severity and frequency.");
-        vm.ToggleOverviewFindingsCommand.Execute(null);
-        Require(vm.OverviewFindings.Count == 6 && vm.ShowAllFindings, "Show all must expose the complete current result.");
-        vm.ToggleOverviewFindingsCommand.Execute(null);
+        Require(vm.OverviewFindings.Count == 6 && vm.OverviewFindings.Take(3).Select(issue => issue.Key).SequenceEqual(new[] { "synthetic-finding-4", "synthetic-finding-1", "synthetic-finding-3" }),
+            "The findings view must show every issue ordered by severity and frequency.");
         vm.SetSourceFilter("System");
-        Require(vm.OverviewFindings.Count == 4 && !vm.CanToggleOverviewFindings, "Active filters must show all matches, including matches beyond the priority preview.");
+        Require(vm.OverviewFindings.Count == 4, "Active filters must show all matching issues.");
         vm.SetSeverityFilter("Low");
         Require(vm.OverviewFindings.Count == 1 && vm.OverviewFindings[0].EventId == "1002", "Source and severity filters must compose.");
         vm.ResetFindingFilters();
@@ -1298,95 +1689,46 @@ internal static class AiHubUxSmoke
             Require(sawNarrowPolicyLayout && sawWidePolicyLayout, "Policy layout verification must exercise both sides of its content-width breakpoint.");
         }
         finally { root.RequestedTheme = themeBefore; }
-        Log("Independent tab scroll, shared introduction, ordered reachable enable card/fixed service status/navigation, unique module toggle, localized 96-DIP health label, readable content viewport, shared page margins, stretched optimization groups, responsive policy columns, cached page and 18 theme/width/tab renders PASS");
+        Log("Independent tab scroll, compact module header, fixed service status/navigation, accessible module toggle, localized 96-DIP score, readable content viewport, shared page margins, responsive policy columns, cached page and 18 theme/width/tab renders PASS");
     }
 
     private static async Task CheckEnableCardAndHealthLayout(AIHubPage page, string context)
     {
-        var introduction = page.FindName("AiHubIntroduction") as SettingsPageIntro;
-        var introScroll = page.FindName("AiHubIntroScroll") as ScrollViewer;
-        Require(introduction != null && introScroll != null && IsDescendantOf(introduction, introScroll),
-            context + ": the shared introduction must use its own bounded header scroll region.");
-        introScroll.ChangeView(null, 0, null, true);
         await NextRendering();
-        await NextRendering();
-        await CheckIntroduction(introduction, "AiHub.png", context);
         page.UpdateLayout();
-        var surface = page.FindName("AiHubEnableCardSurface") as Border;
-        var card = page.FindName("AiHubEnableSettingsCard") as CommunityToolkit.WinUI.Controls.SettingsCard;
-        Require(surface != null && card != null && IsDescendantOf(card, surface) &&
-            ReferenceEquals(surface.Style, Application.Current.Resources["KitHeroSurfaceStyle"]) && card.Template != null,
-            context + ": the enable surface must render the shared hero style and a real SettingsCard.");
-        Require(card.HeaderIcon != null && !string.IsNullOrWhiteSpace(Convert.ToString(card.Header)) &&
-            Descendants(card).OfType<TextBlock>().Any(block => block.Text == Convert.ToString(card.Header) && block.ActualWidth > 0),
-            context + ": the enable SettingsCard must render its localized header and module icon.");
-        var toggles = Descendants(page).OfType<ToggleSwitch>()
-            .Where(toggle => AutomationProperties.GetAutomationId(toggle) == "Toggle_AIHub").ToArray();
-        Require(toggles.Length == 1 && ReferenceEquals(card.Content, toggles[0]) && IsDescendantOf(toggles[0], card) &&
-            toggles[0].IsOn == page.ViewModel.IsEnabled,
-            context + ": exactly one module toggle must live in the enable SettingsCard and reflect the actual module gate.");
-
+        var header = (FrameworkElement)page.FindName("AiHubPageHeader");
         var title = (TextBlock)page.FindName("AiHubPageTitle");
-        Require(!string.IsNullOrWhiteSpace(title.Text) && ReferenceEquals(title.Style, Application.Current.Resources["TitleTextBlockStyle"]) &&
-            AutomationProperties.GetHeadingLevel(title) == AutomationHeadingLevel.Level1,
-            context + ": the module title must retain the shared title style and heading semantics.");
+        var description = (TextBlock)page.FindName("AiHubDescription");
+        var gate = (FrameworkElement)page.FindName("AiHubModuleGate");
         var master = (FrameworkElement)page.FindName("AiHubMasterCardSurface");
         var tabs = (FrameworkElement)page.FindName("AiHubSections");
         var scroll = (ScrollViewer)page.FindName("AiHubContentScroll");
-        var introBounds = HeaderBounds(introduction, page);
-        var introScrollBounds = HeaderBounds(introScroll, page);
-        var enableBounds = HeaderBounds(surface, page);
+        var toggles = Descendants(page).OfType<ToggleSwitch>()
+            .Where(toggle => AutomationProperties.GetAutomationId(toggle) == "Toggle_AIHub").ToArray();
+        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], gate) && IsDescendantOf(gate, header) &&
+            toggles[0].IsOn == page.ViewModel.IsEnabled && toggles[0].IsEnabled == !page.ViewModel.IsEnabledGpoConfigured &&
+            !string.IsNullOrWhiteSpace(AutomationProperties.GetName(toggles[0])),
+            context + ": the single labeled module switch must reflect the module and policy gates.");
+        Require(!string.IsNullOrWhiteSpace(title.Text) && ReferenceEquals(title.Style, Application.Current.Resources["TitleTextBlockStyle"]) &&
+            AutomationProperties.GetHeadingLevel(title) == AutomationHeadingLevel.Level1 && description.Text == page.ModuleDescription,
+            context + ": the compact header must retain the localized title, description and heading semantics.");
+        var headerBounds = HeaderBounds(header, page);
         var readinessBounds = HeaderBounds(master, page);
         var tabBounds = HeaderBounds(tabs, page);
         var scrollBounds = HeaderBounds(scroll, page);
-        Log($"HEADER {context}: page={page.ActualWidth:F1}x{page.ActualHeight:F1}, intro={introBounds}, introViewport={introScrollBounds}, introExtent={introScroll.ExtentHeight:F1}, enable={enableBounds}, readiness={readinessBounds}, tabs={tabBounds}, content={scrollBounds}, viewport={scroll.ViewportWidth:F1}x{scroll.ViewportHeight:F1}");
-        Require(surface.Visibility == Visibility.Visible && surface.ActualHeight > 0 && card.ActualHeight > 0 &&
-            IsDescendantOf(surface, introScroll) && !IsDescendantOf(surface, scroll) &&
-            !IsDescendantOf(master, introScroll) && !IsDescendantOf(tabs, introScroll) &&
-            HeaderBounds(title, page).Bottom <= introScrollBounds.Top + 2 && introBounds.Bottom <= enableBounds.Top + 2 &&
-            introScrollBounds.Bottom <= readinessBounds.Top + 2 && readinessBounds.Bottom <= tabBounds.Top + 2 &&
-            tabBounds.Bottom <= scrollBounds.Top + 2,
-            context + ": title, introduction/enable viewport, fixed readiness and navigation must stay in their order without overlapping.");
-        Require(HeaderInside(introScrollBounds, page) && HeaderInside(readinessBounds, page) && HeaderInside(tabBounds, page) &&
-            HeaderInside(HeaderBounds(toggles[0], surface), surface) && Math.Abs(surface.ActualWidth - master.ActualWidth) < 2 &&
-            introScroll.ViewportHeight >= 64 && introScroll.ScrollableWidth <= 1,
-            context + ": the bounded introduction and fixed navigation must fit the shared content column without horizontal scrolling.");
-        Require(scroll.ViewportHeight >= 80 && HeaderInside(scrollBounds, page),
-            context + ": the fixed header must leave at least 80 DIPs of visible tab content, including at a 480-pixel window height.");
-        if (introScroll.ScrollableHeight <= 1)
-        {
-            Require(HeaderInside(HeaderBounds(introduction, introScroll), introScroll) && HeaderInside(HeaderBounds(surface, introScroll), introScroll),
-                context + ": a normal-height window must display the complete introduction and enable card.");
-        }
-        else
-        {
-            introScroll.ChangeView(null, introScroll.ScrollableHeight, null, true);
-            await WaitUntil(() => Math.Abs(introScroll.VerticalOffset - introScroll.ScrollableHeight) <= 1);
-            await NextRendering();
-            Require(HeaderInside(HeaderBounds(toggles[0], introScroll), introScroll) && HeaderInside(HeaderBounds(toggles[0], page), page),
-                context + ": scrolling the short header must reveal the entire enable switch.");
-            await Capture(page, $"aihub-header-scroll-{context.Replace('/', '-')}.png");
-
-            // Move focus outside the header before returning to the top so this
-            // tests automatic keyboard bring-into-view rather than an existing focus.
-            var focusAnchor = Descendants(master).OfType<HyperlinkButton>().Single();
-            Require(focusAnchor.Focus(FocusState.Keyboard), context + ": fixed service settings must accept keyboard focus.");
-            introScroll.ChangeView(null, 0, null, true);
-            await WaitUntil(() => introScroll.VerticalOffset <= 1);
-            await NextRendering();
-            Require(toggles[0].Focus(FocusState.Keyboard), context + ": the enable switch must accept keyboard focus.");
-            await WaitUntil(() => HeaderInside(HeaderBounds(toggles[0], introScroll), introScroll));
-            Require(HeaderInside(HeaderBounds(toggles[0], page), page), context + ": keyboard focus must bring the enable switch into the page viewport.");
-            await Capture(page, $"aihub-header-focus-{context.Replace('/', '-')}.png");
-            Require(Math.Abs(HeaderBounds(master, page).Top - readinessBounds.Top) < 2 &&
-                Math.Abs(HeaderBounds(tabs, page).Top - tabBounds.Top) < 2 &&
-                Math.Abs(HeaderBounds(scroll, page).Top - scrollBounds.Top) < 2 && scroll.ViewportHeight >= 80,
-                context + ": scrolling or focusing the introduction must not move fixed navigation or shrink the reading viewport.");
-            Require(focusAnchor.Focus(FocusState.Programmatic), context + ": focus must return outside the introduction before restoring its offset.");
-            introScroll.ChangeView(null, 0, null, true);
-            await WaitUntil(() => introScroll.VerticalOffset <= 1);
-            await NextRendering();
-        }
+        Log($"HEADER {context}: page={page.ActualWidth:F1}x{page.ActualHeight:F1}, header={headerBounds}, readiness={readinessBounds}, tabs={tabBounds}, content={scrollBounds}, viewport={scroll.ViewportWidth:F1}x{scroll.ViewportHeight:F1}");
+        Require(HeaderInside(headerBounds, page) && HeaderInside(readinessBounds, page) && HeaderInside(tabBounds, page) &&
+            HeaderInside(HeaderBounds(toggles[0], header), header) && HeaderInside(HeaderBounds(description, header), header) &&
+            HeaderBounds(title, header).Right <= HeaderBounds(gate, header).Left + 2 &&
+            headerBounds.Bottom <= readinessBounds.Top + 2 && readinessBounds.Bottom <= tabBounds.Top + 2 && tabBounds.Bottom <= scrollBounds.Top + 2,
+            context + ": header, module switch, service status and tabs must remain visible without overlap.");
+        Require(!IsDescendantOf(header, scroll) && !IsDescendantOf(master, scroll) && !IsDescendantOf(tabs, scroll) &&
+            scroll.ViewportHeight >= 120 && HeaderInside(scrollBounds, page),
+            context + ": the fixed compact header must leave at least 120 DIPs of reading space, including in short windows.");
+        Require(toggles[0].Focus(FocusState.Keyboard) && HeaderInside(HeaderBounds(toggles[0], page), page),
+            context + ": keyboard focus must reach the module switch without a second scroll region.");
+        var settings = Descendants(master).OfType<HyperlinkButton>().Single();
+        Require(settings.Focus(FocusState.Programmatic), context + ": service settings must remain keyboard accessible.");
 
         if (page.ViewModel.ActiveTabIndex == 0)
         {

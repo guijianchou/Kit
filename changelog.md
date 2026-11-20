@@ -4,6 +4,14 @@
 
 ## English
 
+### 3.5.3 (2026-11-19)
+
+- Added in-app Portable updates: check GitHub Releases, download with progress and cancellation, verify SHA-256 and package contents, then restart Kit to install. A standalone updater backs up replaced files, rolls back failures, and preserves settings and user-added files. Release packages now include a managed-file manifest.
+- Separated AI Hub Overview and Findings into focused views, with category/risk navigation, complete filtered results, responsive details, and restored focus when returning to Overview. Fixed AI Hub scan and NetMap AI waiting timers.
+- Added AI Hub weekly audit summaries, system issue aggregation, inventory change summaries, and more reliable audit history and AI task scheduling.
+- Improved WinGet history filtering and details, queue state, installer diagnostics, and safe service operation handling.
+- Added Portable updater regression coverage and expanded existing AI Hub, WinGet, and Settings checks in Windows CI.
+
 ### 3.5.2 (2026-11-17)
 
 - Disabled synthetic solution-dependency project references (`AddSyntheticProjectReferencesForSolutionDependencies=false`) in [Directory.Build.props](Directory.Build.props) and made `IncrementalClean` a no-op for shared runtime output builds in [Kit.vcxproj](src/runner/Kit.vcxproj) and [src/modules/Directory.Build.targets](src/modules/Directory.Build.targets), matching [src/settings-ui/Directory.Build.targets](src/settings-ui/Directory.Build.targets). This prevents Visual Studio IDE builds from deleting `.NET` worker executables, runtime configurations and assets (`Kit.WingetService.exe`, `Kit.AIHubWorker.exe`, `Kit.NetMapService.exe`, `Kit.Awake.exe`, etc.) previously recorded in `Kit.vcxproj.FileListAbsolute.txt` by CLI `MSBuild Kit.slnx` builds, and stops CLI builds from copying duplicate WinUI binaries into the output root.
@@ -969,6 +977,14 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.3（2026-11-19）
+
+- 新增应用内 Portable 更新：检查 GitHub Release、显示下载进度并支持取消、校验 SHA-256 与包内容，然后重启安装。独立更新程序在替换前备份，失败时回滚，保留用户设置和额外文件；发布包新增文件清单。
+- AI Hub Overview 与 Findings 分开呈现，支持分类与风险导航、完整筛选结果、响应式详情和返回时恢复焦点。修复 AI Hub 扫描和 NetMap AI 等待计时器。
+- 增加 AI Hub 每周审计报告、系统问题汇总和清单变化摘要，改进审计历史与 AI 任务调度。
+- 改进 WinGet 历史筛选和详情、队列状态、安装诊断及服务操作处理。
+- 增加 Portable 更新器回归测试，并扩展 Windows CI 中的 AI Hub、WinGet 和设置页检查。
 
 ### 3.5.2（2026-11-17）
 

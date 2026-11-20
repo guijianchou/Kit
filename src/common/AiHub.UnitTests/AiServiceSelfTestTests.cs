@@ -99,6 +99,19 @@ public sealed class AiServiceSelfTestTests
 
     private static AiTaskReport Report(AiFinding? finding = null) => new() { Findings = [finding ?? Finding()], Actions = [] };
 
+    [TestMethod]
+    public async Task SelfTestHonorsTheReadinessOfTheSuppliedEngine()
+    {
+        var readiness = new AiReadiness(AiReadinessLevel.NotConfigured, "fixture", string.Empty, "Choose an endpoint.");
+        var engine = new FakeEngine(Report()) { Readiness = readiness };
+
+        SelfTestResult result = await AiServiceSelfTest.RunAsync(engine);
+
+        Assert.AreEqual(readiness, result.Readiness);
+        Assert.AreEqual(readiness.Detail, result.ErrorMessage);
+        Assert.AreEqual(0, engine.Calls);
+    }
+
     private static AiFinding Finding(string itemId = "item-000001", string key = "self-test", string severity = "low", string titleZh = "自检响应", string description = "The probe was received.") => new()
     {
         ItemId = itemId,
@@ -127,7 +140,8 @@ public sealed class AiServiceSelfTestTests
         public IReadOnlyList<SelfTestInput> Inputs { get; private set; } = [];
         public AiTaskOptions? Options { get; private set; }
         public AiTaskSchema<SelfTestInput, AiTaskReport>? Schema { get; private set; }
-        public AiReadiness GetReadiness() => new(IsEnabled ? AiReadinessLevel.Unverified : AiReadinessLevel.Disabled, ActiveKernel, string.Empty);
+        public AiReadiness? Readiness { get; init; }
+        public AiReadiness GetReadiness() => Readiness ?? new(IsEnabled ? AiReadinessLevel.Unverified : AiReadinessLevel.Disabled, ActiveKernel, string.Empty);
         public Task<AiReadiness> ProbeReadinessAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public void Dispose()
         {

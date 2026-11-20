@@ -130,15 +130,24 @@ std::optional<std::wstring> dispatch_json_action_to_module(const json::JsonObjec
                         PostQuitMessage(1);
                     }
                 }
-                else if (action == L"check_for_updates")
+                else if (action == L"cancel_update_download")
+                {
+                    CancelPortableUpdate();
+                }
+                else if (action == L"refresh_update_state")
+                {
+                    std::thread([]() { RunPortableUpdate(L"status"); }).detach();
+                }
+                else if (action == L"check_for_updates" || action == L"download_update" || action == L"restart_to_update")
                 {
                     bool expected_isUpdateCheckThreadRunning = false;
                     if (isUpdateCheckThreadRunning.compare_exchange_strong(expected_isUpdateCheckThreadRunning, true))
                     {
-                        std::thread([]() {
+                        const std::wstring updateAction = action == L"download_update" ? L"download" : action == L"restart_to_update" ? L"apply" : L"check";
+                        std::thread([updateAction]() {
                             try
                             {
-                                CheckForUpdatesCallback();
+                                RunPortableUpdate(updateAction.c_str());
                             }
                             catch (...)
                             {

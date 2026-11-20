@@ -64,6 +64,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility TaskRunningVisibility(bool scanning, bool analyzing) => scanning || analyzing ? Visibility.Visible : Visibility.Collapsed;
 
+    public Visibility ShowAiSummaryFooter(bool hasReport, bool hasMetadata) => hasReport || hasMetadata ? Visibility.Visible : Visibility.Collapsed;
+
     public Visibility ShowOptimizationNoMatches(bool hasResults, bool hasMatches) => hasResults && !hasMatches ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility HasSelectedRun(OptimizationRunViewModel run) => run != null ? Visibility.Visible : Visibility.Collapsed;
@@ -99,29 +101,9 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        UpdateHeaderLayout();
         ViewModel.RefreshEnabledState();
         UpdateActiveTabContent();
         RestoreTabScroll();
-    }
-
-    private void OnHeaderLayoutChanged(object sender, SizeChangedEventArgs e) => UpdateHeaderLayout();
-
-    private void UpdateHeaderLayout()
-    {
-        if (AiHubIntroScroll == null || AiHubHeaderTail == null || AIHubRoot.ActualHeight <= 0)
-        {
-            return;
-        }
-
-        // Keep readiness, tab navigation and at least 80 DIPs of tab content
-        // available. The introduction and module gate remain scrollable and
-        // keyboard reachable when the window cannot show the whole header.
-        const double minimumContentHeight = 80;
-        const double roundingAllowance = 2;
-        AiHubIntroScroll.MaxHeight = Math.Max(64, Math.Floor(
-            AIHubRoot.ActualHeight - AiHubPageTitle.ActualHeight - AiHubHeaderTail.ActualHeight
-            - 36 - minimumContentHeight - roundingAllowance));
     }
 
     private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -297,21 +279,6 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         }
     }
 
-    private void OnFindingSearchToggleClick(object sender, RoutedEventArgs e)
-    {
-        bool show = FindingSearchToggle.IsChecked == true;
-        FindingSearchPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        if (show)
-        {
-            FindingSearchBox.Focus(FocusState.Programmatic);
-        }
-        else
-        {
-            ViewModel.FindingSearchText = string.Empty;
-            ViewModel.SetSourceFilter("All");
-        }
-    }
-
     private void OnShowOptimizationHistoryClick(object sender, RoutedEventArgs e)
     {
         OptimizationHistoryExpander.IsExpanded = true;
@@ -456,6 +423,87 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         {
             ViewModel.PostStatusNotification("AIHub_CopyReportFailed".FormatLocalized("Copy failed: {0}", ex.Message), InfoBarSeverity.Error);
         }
+    }
+
+    private async void OnWeeklyReportClick(object sender, RoutedEventArgs args)
+    {
+        if (_activeDialog != null || !ViewModel.CanConfigureAudit || !_currentPage || _disposed)
+        {
+            return;
+        }
+
+        AuditHistoryDropDown.Flyout.Hide();
+        var body = new TextBlock
+        {
+            Text = "AIHub_WeeklyLoading".GetLocalizedOrFallback("Reading audit history…"),
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true,
+        };
+        var dialog = new ContentDialog
+        {
+            Title = "AIHub_WeeklyReport/Content".GetLocalizedOrFallback("Weekly audit report"),
+            Content = new ScrollViewer { Content = body, MaxHeight = 420 },
+            PrimaryButtonText = ViewModel.CopyReportLabel,
+            IsPrimaryButtonEnabled = false,
+            CloseButtonText = "AIHub_WeeklyClose".GetLocalizedOrFallback("Close"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        Task<ContentDialogResult> closing = ShowDialogAsync(dialog);
+        try
+        {
+            var report = await ViewModel.LoadWeeklyReportAsync();
+            if (_activeDialog == dialog)
+            {
+                body.Text = FormatWeeklyReport(report);
+                dialog.IsPrimaryButtonEnabled = report.Days.Count > 0;
+            }
+        }
+        catch (Exception)
+        {
+            body.Text = "AIHub_WeeklyReadFailed".GetLocalizedOrFallback("Audit history could not be read. Reopen the report to retry.");
+        }
+
+        if (await closing == ContentDialogResult.Primary)
+        {
+            try
+            {
+                var data = new DataPackage();
+                data.SetText(body.Text);
+                Clipboard.SetContent(data);
+            }
+            catch (Exception exception)
+            {
+                ViewModel.PostStatusNotification("AIHub_CopyReportFailed".FormatLocalized("Copy failed: {0}", exception.Message), InfoBarSeverity.Error);
+            }
+        }
+    }
+
+    internal static string FormatWeeklyReport(WeeklyAuditReport report)
+    {
+        var lines = new List<string>
+        {
+            "AIHub_WeeklyRange".FormatLocalized("{0:d} – {1:d}", report.EndDate.AddDays(-6), report.EndDate),
+        };
+        if (report.Days.Count == 0)
+        {
+            lines.Add("AIHub_WeeklyEmpty".GetLocalizedOrFallback("No saved audits for these seven days."));
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        double score = report.Days.Average(day => day.HealthScore);
+        lines.Add("AIHub_WeeklyCoverage".FormatLocalized("{0} audits across {1} of 7 days. Each day uses its latest saved audit.", report.Days.Sum(day => day.Audits), report.Days.Count));
+        lines.Add("AIHub_WeeklyScore".FormatLocalized("Average health score {0:0.#}/100", score));
+        lines.Add(report.PreviousDays.Count == 0
+            ? "AIHub_WeeklyNoBaseline".GetLocalizedOrFallback("The preceding seven days have no saved audits to compare.")
+            : "AIHub_WeeklyTrend".FormatLocalized("Change from the preceding seven days ({0} days observed): {1:+0.#;-0.#;0} points", report.PreviousDays.Count, score - report.PreviousDays.Average(day => day.HealthScore)));
+        lines.Add(string.Empty);
+        lines.Add("AIHub_WeeklyDaily".GetLocalizedOrFallback("Daily findings"));
+        foreach (var day in report.Days)
+        {
+            lines.Add("AIHub_WeeklyDay".FormatLocalized("{0:d} · score {1} · {2} high, {3} medium, {4} low", day.Date, day.HealthScore, day.High, day.Medium, day.Low));
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)

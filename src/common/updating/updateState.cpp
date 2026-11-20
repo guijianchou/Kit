@@ -24,6 +24,7 @@ UpdateState deserialize(const json::JsonObject& json)
     result.releasePageUrl = json.GetNamedString(L"releasePageUrl", L"");
     result.githubUpdateLastCheckedDate = timeutil::from_string(json.GetNamedString(L"githubUpdateLastCheckedDate", L"invalid").c_str());
     result.downloadedInstallerFilename = json.GetNamedString(L"downloadedInstallerFilename", L"");
+    result.errorCode = json.GetNamedString(L"errorCode", L"");
     return result;
 }
 
@@ -38,6 +39,7 @@ json::JsonObject serialize(const UpdateState& state)
     json.SetNamedValue(L"releasePageUrl", json::value(state.releasePageUrl));
     json.SetNamedValue(L"state", json::value(static_cast<double>(state.state)));
     json.SetNamedValue(L"downloadedInstallerFilename", json::value(state.downloadedInstallerFilename));
+    json.SetNamedValue(L"errorCode", json::value(state.errorCode));
 
     json.SetNamedValue(L"updateStateFileVersion", json::value(CURRENT_VERSION.toWstring()));
 
@@ -93,7 +95,16 @@ void UpdateState::store(std::function<void(UpdateState&)> stateModifier)
             state = deserialize(*json);
         }
         stateModifier(state);
-        json.emplace(serialize(state));
+        // The Portable updater owns additional download/transaction metadata. Preserve it.
+        auto updated = serialize(state);
+        if (json)
+        {
+            for (const auto& field : *json)
+            {
+                if (!updated.HasKey(field.Key())) { updated.SetNamedValue(field.Key(), field.Value()); }
+            }
+        }
+        json.emplace(std::move(updated));
         json::to_file(filename, *json);
     }
 }

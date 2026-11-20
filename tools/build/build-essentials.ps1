@@ -72,6 +72,7 @@ RestoreThenBuild -Solution 'Kit.slnx' -ExtraArgs $DefaultExtraArgs -Platform $Pl
 
 # Build the runner, settings, and Quick Access surfaces that the runner expects at runtime.
 $ProjectsToBuild = @(
+    ".\src\Update\Kit.Updater\Kit.Updater.csproj",
     ".\src\runner\Kit.vcxproj",
     ".\src\settings-ui\Settings.UI\Kit.Settings.csproj",
     ".\src\settings-ui\QuickAccess.UI\Kit.QuickAccess.csproj"

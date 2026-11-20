@@ -28,7 +28,7 @@ public sealed partial class WingetViewModel
 
     public bool IsLoadingDetails => (loadingDetails && ReferenceEquals(detailsRequestRow, ActiveSelection)) || (IsBusy && status.OperationKind == "details");
 
-    public bool HasDetailsError => !IsLoadingDetails && !HasDetails;
+    public bool HasDetailsError => !IsLoadingDetails && (!HasDetails || (ReferenceEquals(detailsRequestRow, ActiveSelection) && !string.IsNullOrWhiteSpace(detailsError)));
 
     public string DetailsErrorText => ReferenceEquals(detailsRequestRow, ActiveSelection) && !string.IsNullOrWhiteSpace(detailsError) ? detailsError : L("DetailsUnavailable");
 
@@ -141,6 +141,9 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(DailyCheckEnabled), DailyCheckEnabled);
         PublishValue(nameof(NotifyUpdates), NotifyUpdates);
         PublishValue(nameof(FilterText), FilterText);
+        PublishValue(nameof(ActiveFilterCount), ActiveFilterCount);
+        PublishValue(nameof(HasActiveFilters), HasActiveFilters);
+        PublishValue(nameof(ActiveFilterSummary), ActiveFilterSummary);
         PublishValue(nameof(ExactMatch), ExactMatch);
         PublishValue(nameof(IncludeUnknown), IncludeUnknown);
         PublishValue(nameof(ShowIgnored), ShowIgnored);
@@ -158,6 +161,7 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(CanPrepareSelection), CanPrepareSelection);
         PublishValue(nameof(CanReload), CanReload);
         PublishValue(nameof(CanClearOldHistory), CanClearOldHistory);
+        PublishValue(nameof(CanClearHistory), CanClearHistory);
         PublishValue(nameof(HistoryClearMessage), HistoryClearMessage);
         PublishValue(nameof(HasRows), HasRows);
         PublishValue(nameof(HasSearchResults), HasSearchResults);

@@ -43,6 +43,19 @@ public sealed class WingetCliInstallerTests
     }
 
     [TestMethod]
+    public void InstallationLocationIsOneArgumentAndNeverAppliedToUninstall()
+    {
+        var options = new WingetPackageOptions { InstallLocation = @"C:\Apps\Some App" };
+        var start = WingetCliInstaller.CreateStartInfo(WingetCliInstaller.ExecutablePath, Package, false, false, options);
+        Assert.AreEqual(options.InstallLocation, start.ArgumentList[start.ArgumentList.IndexOf("--location") + 1]);
+        Assert.ThrowsExactly<ArgumentException>(() => WingetCliInstaller.CreateUninstallStartInfo(WingetCliInstaller.ExecutablePath, Package with { CanUninstall = true }, options));
+        foreach (string invalid in new[] { "relative", "--force", "C:\\Apps\nBad", @"\\.\pipe\test" })
+        {
+            Assert.ThrowsExactly<ArgumentException>(() => WingetCliInstaller.CreateStartInfo(WingetCliInstaller.ExecutablePath, Package, false, false, options with { InstallLocation = invalid }));
+        }
+    }
+
+    [TestMethod]
     public void UntrustedExecutableOrSourceIsRejectedWithoutLaunching()
     {
         Assert.ThrowsExactly<WingetOperationException>(() => WingetCliInstaller.CreateStartInfo("winget.exe", Package, false, false));

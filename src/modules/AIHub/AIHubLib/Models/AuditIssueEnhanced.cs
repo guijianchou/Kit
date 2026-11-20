@@ -180,6 +180,8 @@ public sealed class AuditIssueEnhanced : AuditIssue
                     "Setup" => "设置",
                     "ForwardedEvents" => "转发事件",
                     "Reliability" => "系统稳定性",
+                    "Stability" => "系统崩溃与异常重启",
+                    "Network" => "网络连接",
                     "Configuration" => "系统配置",
                     "Authentication" => "登录与认证",
                     "Authorization" => "权限与特权",

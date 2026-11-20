@@ -27,7 +27,7 @@ internal static class AiTaskProgressText
         }
 
         parts.Add(Activity(progress, isChinese));
-        parts.Add(isChinese ? $"已用 {Duration(progress.ElapsedMilliseconds)}" : $"Elapsed {Duration(progress.ElapsedMilliseconds)}");
+        parts.Add(Elapsed(progress.ElapsedMilliseconds, isChinese));
         if (progress.QueueElapsedMilliseconds is > 0)
         {
             parts.Add(isChinese
@@ -106,6 +106,9 @@ internal static class AiTaskProgressText
 
         return activity;
     }
+
+    internal static string Elapsed(long milliseconds, bool isChinese) =>
+        isChinese ? $"已用 {Duration(milliseconds)}" : $"Elapsed {Duration(milliseconds)}";
 
     private static string Duration(long milliseconds)
     {

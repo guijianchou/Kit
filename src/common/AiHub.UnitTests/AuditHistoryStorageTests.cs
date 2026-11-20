@@ -67,6 +67,28 @@ public sealed class AuditHistoryStorageTests
     }
 
     [TestMethod]
+    public void PeriodOverviewAndCollectionLimitsSurviveHistoryReload()
+    {
+        var storage = new AuditHistoryStorage(_directory);
+        DateTime now = DateTime.UtcNow;
+        storage.SaveResult(new AuditResult
+        {
+            Timestamp = now, ScanStart = now.AddDays(-30), ScanEnd = now, HealthScore = 68, EventsScanned = 5000,
+            Findings = [new() { Severity = "High", Category = "Stability", Occurrences = 100 }],
+            SkippedChannels = ["Security"], LimitedChannels = ["System"], AnalysisOutcome = "partial",
+        });
+        var restored = new AuditHistoryStorage(_directory).LoadHistory().Single();
+        var summary = AuditSummary.From(restored);
+        Assert.AreEqual((int?)30, summary.RangeDays);
+        Assert.AreEqual(68, summary.HealthScore);
+        Assert.AreEqual(5000, summary.EventsScanned);
+        Assert.AreEqual(100L, summary.Occurrences);
+        CollectionAssert.AreEqual(new[] { "Security" }, restored.SkippedChannels);
+        CollectionAssert.AreEqual(new[] { "System" }, restored.LimitedChannels);
+        Assert.AreEqual("partial", restored.AnalysisOutcome);
+    }
+
+    [TestMethod]
     public void RetentionDropsExpiredSnapshots()
     {
         var storage = new AuditHistoryStorage(_directory);

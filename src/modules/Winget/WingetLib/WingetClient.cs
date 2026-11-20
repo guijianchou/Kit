@@ -171,7 +171,13 @@ public sealed class WingetClient : IWingetClient
                 HttpUrl(metadata.PackageUrl),
                 NullIfEmpty(metadata.License),
                 HttpUrl(metadata.LicenseUrl),
-                Snapshot(metadata.Agreements).Select(agreement => new WingetPackageAgreement(agreement.Label, agreement.Text, HttpUrl(agreement.Url))).ToArray());
+                Snapshot(metadata.Agreements).Select(agreement => new WingetPackageAgreement(agreement.Label, agreement.Text, HttpUrl(agreement.Url))).ToArray())
+            {
+                AvailableVersions = Snapshot(resolved.Package.AvailableVersions)
+                    .Where(version => string.Equals(version.PackageCatalogId, resolved.VersionId.PackageCatalogId, StringComparison.OrdinalIgnoreCase))
+                    .Select(version => version.Version).Where(version => !string.IsNullOrWhiteSpace(version))
+                    .Distinct(StringComparer.Ordinal).Take(200).ToArray(),
+            };
         },
         cancellationToken);
 
@@ -673,6 +679,8 @@ public sealed class WingetClient : IWingetClient
             ReleaseNotesUrl = HttpUrl(metadata.ReleaseNotesUrl),
             InstallEligibility = eligibility.Eligibility,
             InstallEligibilityReason = eligibility.Reason,
+            IsUpdateAvailable = package.InstalledVersion is { } installed &&
+                (WingetSafetyPolicy.IsUnknownVersion(installed.Version) || version.CompareToVersion(installed.Version) == CompareResult.Greater),
         };
     }
 

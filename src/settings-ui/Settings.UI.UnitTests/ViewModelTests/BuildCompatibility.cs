@@ -3539,7 +3539,7 @@ namespace ViewModelTests
             // AiHubUxSmoke checks the rendered bounds across themes and window sizes;
             // do not prohibit SizeChanged, which those measured layouts legitimately use.
             Assert.IsTrue(pageXaml.Split("ui:ControlSizeTrigger").Length - 1 >= 16, "Readiness, audit overview, action headers, download actions, candidate search and inventory should have responsive layout triggers.");
-            StringAssert.Contains(pageXaml, "Target=\"AiReadinessActions.(Grid.Row)\"");
+            StringAssert.Contains(pageXaml, "Target=\"AiReadinessModelInfo.Visibility\" Value=\"Collapsed\"");
             StringAssert.Contains(pageXaml, "Target=\"AuditScoreSummary.(Grid.Row)\"");
             StringAssert.Contains(pageXaml, "Target=\"OptimizationCommandActions.(Grid.Row)\"");
             StringAssert.Contains(pageXaml, "Target=\"InventoryActions.(Grid.Row)\"");

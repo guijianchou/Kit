@@ -222,7 +222,7 @@ namespace ManagedCommon
         }
 
         /// <summary>
-        /// Deletes old version log folders, keeping only the current version's folder.
+        /// Retains the current and most recently used previous version, plus fourteen days of logs.
         /// </summary>
         /// <param name="basePath">The base path to the log files folder.</param>
         /// <param name="currentVersionPath">The path to the current version's log folder.</param>
@@ -235,18 +235,41 @@ namespace ManagedCommon
                     return;
                 }
 
+                if ((File.GetAttributes(basePath) & FileAttributes.ReparsePoint) != 0)
+                {
+                    return;
+                }
+
+                var cutoff = DateTime.UtcNow.AddDays(-14);
                 var dirs = Directory.GetDirectories(basePath)
                     .Select(d => new DirectoryInfo(d))
-                    .OrderBy(d => d.CreationTime)
                     .Where(d => !string.Equals(d.FullName, currentVersionPath, StringComparison.OrdinalIgnoreCase))
-                    .Take(3)
+                    .Select(d => new { Directory = d, LastWriteUtc = GetLogFolderLastWriteUtc(d) })
+                    .Where(d => d.LastWriteUtc.HasValue)
+                    .OrderByDescending(d => d.LastWriteUtc)
+                    .ThenByDescending(d => d.Directory.Name, StringComparer.OrdinalIgnoreCase)
+                    .Skip(1)
+                    .Where(d => d.LastWriteUtc < cutoff)
                     .ToList();
 
-                foreach (var directory in dirs)
+                foreach (var candidate in dirs)
                 {
+                    var directory = candidate.Directory;
                     try
                     {
-                        Directory.Delete(directory.FullName, true);
+                        // Recheck after enumeration. Only ordinary log files are eligible;
+                        // never recursively remove unknown content or redirected directories.
+                        if (GetLogFolderLastWriteUtc(directory) is not DateTime lastWrite || lastWrite >= cutoff)
+                        {
+                            continue;
+                        }
+
+                        foreach (var file in directory.GetFiles("*.log", SearchOption.TopDirectoryOnly))
+                        {
+                            file.Delete();
+                        }
+
+                        directory.Delete();
                         LogInfo($"Deleted old log directory: {directory.FullName}");
                     }
                     catch (Exception ex)
@@ -259,6 +282,25 @@ namespace ManagedCommon
             {
                 LogError("Error cleaning up old log folders", ex);
             }
+        }
+
+        private static DateTime? GetLogFolderLastWriteUtc(DirectoryInfo directory)
+        {
+            directory.Refresh();
+            string version = directory.Name.StartsWith('v') ? directory.Name[1..] : directory.Name;
+            if (!directory.Exists || (directory.Attributes & FileAttributes.ReparsePoint) != 0 || !System.Version.TryParse(version, out _))
+            {
+                return null;
+            }
+
+            var entries = directory.GetFileSystemInfos();
+            if (entries.Any(entry => (entry.Attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0 ||
+                !string.Equals(entry.Extension, ".log", StringComparison.OrdinalIgnoreCase)))
+            {
+                return null;
+            }
+
+            return entries.Select(entry => entry.LastWriteTimeUtc).Append(directory.LastWriteTimeUtc).Max();
         }
 
         public static void LogError(string message, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "", [System.Runtime.CompilerServices.CallerFilePath] string sourceFilePath = "", [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = 0)

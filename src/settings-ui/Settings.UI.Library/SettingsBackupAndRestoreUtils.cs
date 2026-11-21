@@ -721,6 +721,7 @@ namespace Kit.Settings.UI.Library
             var files = new List<string>();
             var pending = new Stack<string>();
             string backupDirectory = Path.Combine(Path.GetFullPath(path), "Backup");
+            string updateDirectory = Path.Combine(Path.GetFullPath(path), "Updates");
             pending.Push(path);
             while (pending.Count > 0)
             {
@@ -731,6 +732,7 @@ namespace Kit.Settings.UI.Library
                 foreach (string child in Directory.EnumerateDirectories(directory))
                 {
                     if (!string.Equals(Path.GetFullPath(child), backupDirectory, StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(Path.GetFullPath(child), updateDirectory, StringComparison.OrdinalIgnoreCase)
                         && (File.GetAttributes(child) & FileAttributes.ReparsePoint) == 0)
                     {
                         pending.Push(child);

@@ -38,6 +38,10 @@ public sealed partial class AIHubPageViewModel
 
     public string AuditBackToOverviewLabel => "AIHub_WorkspaceBack".GetLocalizedOrFallback("Back to overview");
 
+    public string FindingSourceFilterLabel => "AIHub_Fluent_EventSource".GetLocalizedOrFallback("Event source");
+
+    public string TaskDetailsLabel => "AIHub_WorkspaceTaskDetails".GetLocalizedOrFallback("Task details");
+
     public string AuditFindingsTitle => _findingCategory != null
         ? AuditCategories.FirstOrDefault(category => string.Equals(category.Category, _findingCategory, StringComparison.OrdinalIgnoreCase))?.Title ?? _findingCategory
         : "AIHub_WorkspaceAllIssues".GetLocalizedOrFallback("All issues");

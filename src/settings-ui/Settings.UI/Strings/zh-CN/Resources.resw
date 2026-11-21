@@ -4208,4 +4208,5 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="General_UpdateRecovered.Text" xml:space="preserve"><value>已恢复原版本，可以重新下载更新。</value></data>
   <data name="General_UpdateInterrupted.Text" xml:space="preserve"><value>上次更新已中断，请重新下载后继续。</value></data>
   <data name="General_UpdateHelperMissing.Text" xml:space="preserve"><value>更新组件缺失或无法启动。请完整解压 Portable 安装包后重试。</value></data>
+  <data name="AIHub_WorkspaceTaskDetails" xml:space="preserve"><value>任务详情</value></data>
 </root>

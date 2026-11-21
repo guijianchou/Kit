@@ -4,6 +4,12 @@
 
 ## English
 
+### 3.5.4 (2026-11-20)
+
+- Improved AI Hub on narrow windows with a compact readiness header, a pinned running-task status, and full task details on demand. Refined the findings workspace and responsive detail pane.
+- Kept Portable update transaction files out of settings backups, including when restoring legacy archives. Made log cleanup retain the current and previous version plus recent logs, while preserving unknown folders and non-log data.
+- Added regression coverage for update-cache backup isolation, log retention, and AI Hub layouts and task status.
+
 ### 3.5.3 (2026-11-19)
 
 - Added in-app Portable updates: check GitHub Releases, download with progress and cancellation, verify SHA-256 and package contents, then restart Kit to install. A standalone updater backs up replaced files, rolls back failures, and preserves settings and user-added files. Release packages now include a managed-file manifest.
@@ -977,6 +983,12 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.4（2026-11-20）
+
+- 改进 AI Hub 窄窗口布局，精简服务状态栏，将运行任务状态固定显示，并可按需查看完整任务详情；优化发现项工作区和响应式详情面板。
+- 设置备份会排除 Portable 更新事务文件，恢复旧备份时也会忽略其中的更新缓存。日志清理保留当前版、上一版和近期日志，并保护未知目录及非日志数据。
+- 增加更新缓存备份隔离、日志保留以及 AI Hub 布局和任务状态回归覆盖。
 
 ### 3.5.3（2026-11-19）
 

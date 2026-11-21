@@ -190,7 +190,8 @@ public sealed partial class AIHubPage
             // use a dismissible overlay so neither surface becomes unreadable.
             AiHubDetailsHost.DisplayMode = AiHubDetailsHost.ActualWidth >= 900
                 ? SplitViewDisplayMode.Inline : SplitViewDisplayMode.Overlay;
-            AiHubDetailsHost.OpenPaneLength = Math.Min(400, AiHubDetailsHost.ActualWidth);
+            AiHubDetailsHost.OpenPaneLength = AiHubDetailsHost.ActualWidth < 640
+                ? AiHubDetailsHost.ActualWidth : 400;
             DetailsBackdropScrim.Visibility = AiHubDetailsHost.IsPaneOpen && AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Overlay
                 ? Visibility.Visible : Visibility.Collapsed;
         }

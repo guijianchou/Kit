@@ -64,6 +64,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility TaskRunningVisibility(bool scanning, bool analyzing) => scanning || analyzing ? Visibility.Visible : Visibility.Collapsed;
 
+    public Visibility AuditResultStatusVisibility(bool visible, bool scanning, bool analyzing) => visible && !scanning && !analyzing ? Visibility.Visible : Visibility.Collapsed;
+
     public Visibility ShowAiSummaryFooter(bool hasReport, bool hasMetadata) => hasReport || hasMetadata ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility ShowOptimizationNoMatches(bool hasResults, bool hasMatches) => hasResults && !hasMatches ? Visibility.Visible : Visibility.Collapsed;

@@ -657,16 +657,20 @@ internal static class AiHubUxSmoke
     {
         var vm = page.ViewModel;
         var auditPhase = typeof(AIHubPageViewModel).GetProperty(nameof(vm.AuditPhase));
+        var auditing = typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsAuditing));
         var optimizing = typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsOptimizing));
         var scanPhase = typeof(AIHubPageViewModel).GetProperty(nameof(vm.ScanPhase));
         var status = typeof(AIHubPageViewModel).GetProperty(nameof(vm.AuditStatusText));
         var elapsed = (TextBlock)page.FindName("AuditElapsedText");
+        var pinned = (FrameworkElement)page.FindName("AuditPinnedStatus");
+        var pinnedElapsed = (TextBlock)page.FindName("AuditPinnedElapsed");
         var optimizationElapsed = (TextBlock)page.FindName("OptimizationElapsedText");
         int originalTab = vm.ActiveTabIndex;
         string originalStatus = vm.AuditStatusText;
         try
         {
             vm.ActiveTabIndex = 0;
+            auditing.SetValue(vm, true);
             auditPhase.SetValue(vm, ScanPhase.Scanning);
             status.SetValue(vm, "Collecting fixture logs");
             await NextRendering();
@@ -676,6 +680,17 @@ internal static class AiHubUxSmoke
             await WaitUntil(() => elapsed.Text != first);
             Require(vm.AuditStatusText == "Collecting fixture logs" && vm.SidebarWorkflowCountText.Contains(elapsed.Text),
                 "A silent local scan must refresh page/sidebar elapsed time without changing its stage.");
+            Require(pinned.Visibility == Visibility.Visible && pinnedElapsed.Text == elapsed.Text &&
+                !IsDescendantOf(pinned, (ScrollViewer)page.FindName("AiHubContentScroll")),
+                "The running task must keep its existing clock visible outside the scrolling results.");
+            Require(((FrameworkElement)page.FindName("AuditWorkflowCard")).Visibility == Visibility.Collapsed,
+                "The running task must not repeat the fixed progress strip in a second workflow card.");
+            var taskDetails = (Button)page.FindName("AuditTaskDetailsButton");
+            taskDetails.Flyout.ShowAt(taskDetails);
+            await NextRendering();
+            Require(Descendants(((Flyout)taskDetails.Flyout).Content).OfType<TextBlock>().Any(text => text.Text == vm.AuditStatusText),
+                "Task details must retain the full current status while the compact strip is shown.");
+            taskDetails.Flyout.Hide();
 
             optimizing.SetValue(vm, true);
             scanPhase.SetValue(vm, ScanPhase.Scanning);
@@ -692,6 +707,7 @@ internal static class AiHubUxSmoke
             await Capture(page, "aihub-running-timer.png");
 
             auditPhase.SetValue(vm, ScanPhase.SelectingTargets);
+            auditing.SetValue(vm, false);
             status.SetValue(vm, "Completed fixture scan");
             optimizing.SetValue(vm, false);
             scanPhase.SetValue(vm, ScanPhase.SelectingTargets);
@@ -700,6 +716,7 @@ internal static class AiHubUxSmoke
             await Task.Delay(1100);
             Require(elapsed.Text == completed && optimizationElapsed.Text == optimized && vm.AuditStatusText == "Completed fixture scan",
                 "Completed workflows must freeze their timers and retain their final status.");
+            Require(pinned.Visibility == Visibility.Collapsed, "Finished tasks must release the fixed reading space.");
 
             auditPhase.SetValue(vm, ScanPhase.Scanning);
             Require(vm.AuditElapsedText.EndsWith("0:00"), "A new audit must reset elapsed time.");
@@ -712,6 +729,7 @@ internal static class AiHubUxSmoke
         }
         finally
         {
+            auditing.SetValue(vm, false);
             optimizing.SetValue(vm, false);
             scanPhase.SetValue(vm, ScanPhase.Idle);
             auditPhase.SetValue(vm, ScanPhase.Idle);
@@ -994,8 +1012,9 @@ internal static class AiHubUxSmoke
             var analysis = (Border)page.FindName("AuditSummaryCard");
             Require(findings.Visibility == Visibility.Collapsed && HeaderInside(HeaderBounds(analysis, results), results),
                 "Overview must hide the findings list while keeping the AI summary readable.");
-            Require(IsDescendantOf(findings, dashboard) && ReferenceEquals(dashboard.Style, analysis.Style),
-                "Findings must share the dashboard workspace; AI analysis retains its own surface.");
+            Require(IsDescendantOf(findings, dashboard) && dashboard.Padding == new Thickness(0) && dashboard.BorderThickness == new Thickness(0) &&
+                BrushColor(dashboard.Background).A == 0 && BrushColor(analysis.Background).A > 0,
+                "The results workspace must use the native reading layer; AI analysis retains its own surface.");
             await Capture(page, "aihub-unified-results-" + theme + "-" + width + ".png");
         }
 
@@ -1188,6 +1207,8 @@ internal static class AiHubUxSmoke
                 var paneBounds = Bounds(pane, host);
                 Require(host.IsPaneOpen && host.OpenPaneLength <= host.ActualWidth + 1 && pane.ActualWidth > 0 && pane.ActualWidth <= host.ActualWidth + 1,
                     $"Finding details must fit the available content width at {theme}/{width}.");
+                Require(host.ActualWidth >= 640 || Math.Abs(host.OpenPaneLength - host.ActualWidth) < 1,
+                    $"Narrow details must use the complete reading width at {theme}/{width}.");
                 Require(Inside(paneBounds, host.ActualWidth, host.ActualHeight),
                     $"The open detail surface must be fully visible inside its host at {theme}/{width}.");
                 Require(detailScroll.ViewportHeight >= 80 && detailScroll.ViewportHeight <= host.ActualHeight + 2 &&
@@ -1718,13 +1739,16 @@ internal static class AiHubUxSmoke
         var scrollBounds = HeaderBounds(scroll, page);
         Log($"HEADER {context}: page={page.ActualWidth:F1}x{page.ActualHeight:F1}, header={headerBounds}, readiness={readinessBounds}, tabs={tabBounds}, content={scrollBounds}, viewport={scroll.ViewportWidth:F1}x{scroll.ViewportHeight:F1}");
         Require(HeaderInside(headerBounds, page) && HeaderInside(readinessBounds, page) && HeaderInside(tabBounds, page) &&
-            HeaderInside(HeaderBounds(toggles[0], header), header) && HeaderInside(HeaderBounds(description, header), header) &&
+            HeaderInside(HeaderBounds(toggles[0], header), header) &&
+            (description.Visibility == Visibility.Collapsed || HeaderInside(HeaderBounds(description, header), header)) &&
             HeaderBounds(title, header).Right <= HeaderBounds(gate, header).Left + 2 &&
             headerBounds.Bottom <= readinessBounds.Top + 2 && readinessBounds.Bottom <= tabBounds.Top + 2 && tabBounds.Bottom <= scrollBounds.Top + 2,
             context + ": header, module switch, service status and tabs must remain visible without overlap.");
         Require(!IsDescendantOf(header, scroll) && !IsDescendantOf(master, scroll) && !IsDescendantOf(tabs, scroll) &&
             scroll.ViewportHeight >= 120 && HeaderInside(scrollBounds, page),
             context + ": the fixed compact header must leave at least 120 DIPs of reading space, including in short windows.");
+        Require(page.ActualWidth >= 640 || (readinessBounds.Height <= 36 && scrollBounds.Top <= 150),
+            context + ": narrow headers must keep readiness on one line and leave most of the window for results.");
         Require(toggles[0].Focus(FocusState.Keyboard) && HeaderInside(HeaderBounds(toggles[0], page), page),
             context + ": keyboard focus must reach the module switch without a second scroll region.");
         var settings = Descendants(master).OfType<HyperlinkButton>().Single();

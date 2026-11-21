@@ -20,6 +20,49 @@ namespace ModelsTests;
 public class AiServiceBackupTests
 {
     [TestMethod]
+    public void PortableUpdateCacheIsExcludedFromBackupAndChangeDetection()
+    {
+        using var fixture = new BackupFixture();
+        string cache = Path.Combine(fixture.Source, "uPdAtEs", "install", "transaction");
+        foreach (string folder in new[] { "payload", "backup" })
+        {
+            string directory = Path.Combine(cache, folder, "WinUI3Apps");
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "backup_restore_settings.json"), "{\"fixture\":\"cached-package\"}");
+        }
+
+        var utility = SettingsBackupAndRestoreUtils.Instance;
+        Assert.IsTrue(utility.BackupSettings(fixture.Source, fixture.Backups, false).Success);
+        using (var archive = ZipFile.OpenRead(Directory.GetFiles(fixture.Backups, "*.ptb").Single()))
+        {
+            Assert.IsTrue(archive.Entries.Any(entry => entry.FullName == "settings.json"));
+            Assert.IsFalse(archive.Entries.Any(entry => entry.FullName.Replace('\\', '/').StartsWith("Updates/", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        File.WriteAllText(Path.Combine(cache, "payload", "WinUI3Apps", "backup_restore_settings.json"), "{\"fixture\":\"next-package\"}");
+        Assert.AreEqual("General_SettingsBackupAndRestore_NothingToBackup", utility.BackupSettings(fixture.Source, fixture.Backups, true).Message);
+    }
+
+    [TestMethod]
+    public void RestoreIgnoresUpdateCacheEntriesInLegacyArchives()
+    {
+        using var fixture = new BackupFixture();
+        string relativeCache = Path.Combine("Updates", "install", "transaction", "payload", "settings.json");
+        string currentCache = Path.Combine(fixture.Source, relativeCache);
+        string archivedCache = Path.Combine(fixture.ArchiveSource, relativeCache);
+        Directory.CreateDirectory(Path.GetDirectoryName(currentCache));
+        Directory.CreateDirectory(Path.GetDirectoryName(archivedCache));
+        File.WriteAllText(currentCache, "{\"fixture\":\"keep-current-cache\"}");
+        File.WriteAllText(archivedCache, "{\"fixture\":\"old-cache\"}");
+        File.WriteAllText(Path.Combine(fixture.ArchiveSource, "settings.json"), "{\"fixture\":\"restored-settings\"}");
+        fixture.WriteArchive();
+
+        Assert.AreEqual("Success", SettingsBackupAndRestoreUtils.Instance.RestoreSettings(fixture.Source, fixture.Backups).Severity);
+        StringAssert.Contains(File.ReadAllText(Path.Combine(fixture.Source, "settings.json")), "restored-settings");
+        StringAssert.Contains(File.ReadAllText(currentCache), "keep-current-cache");
+    }
+
+    [TestMethod]
     public void LegacyOnlyServiceDryRunIsReadOnlyAndTheArchiveContainsOnlyEncryptedProfiles()
     {
         using var fixture = new BackupFixture();

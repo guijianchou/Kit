@@ -56,7 +56,8 @@
                 AutomationProperties.HeadingLevel="Level2"
                 FontSize="16"
                 FontWeight="SemiBold"
-                Text="{x:Bind Title, Mode=OneWay}" />
+                Text="{x:Bind Title, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis" />
             <ContentPresenter
                 Grid.Column="2"
                 Margin="8,0,0,0"
@@ -84,6 +85,7 @@
                 <VisualState x:Name="TitleGridCollapsed">
                     <VisualState.Setters>
                         <Setter Target="TitleGrid.Visibility" Value="Collapsed" />
+                        <Setter Target="Divider.Visibility" Value="Collapsed" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>

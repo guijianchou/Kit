@@ -7,7 +7,8 @@
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="VerticalAlignment" Value="Stretch" />
         <Setter Property="MinWidth" Value="96" />
-        <Setter Property="Height" Value="84" />
+        <Setter Property="MinHeight" Value="84" />
+        <Setter Property="Padding" Value="8,10" />
         <Setter Property="FontFamily" Value="{ThemeResource ContentControlThemeFontFamily}" />
         <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="FontSize" Value="{ThemeResource ControlContentThemeFontSize}" />
@@ -20,46 +21,51 @@
                     <Grid
                         x:Name="RootGrid"
                         MinWidth="{TemplateBinding MinWidth}"
-                        Height="{TemplateBinding Height}"
+                        MinHeight="{TemplateBinding MinHeight}"
+                        Padding="{TemplateBinding Padding}"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
                         Background="{ThemeResource SubtleFillColorTransparentBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderBrush="Transparent"
                         BorderThickness="1"
                         BackgroundSizing="InnerBorderEdge"
                         CornerRadius="{TemplateBinding CornerRadius}">
                         <Grid.BackgroundTransition>
                             <BrushTransition Duration="0:0:0.083" />
                         </Grid.BackgroundTransition>
-                        <ContentPresenter
-                            x:Name="ContentPresenter"
-                            Margin="0,52,0,0"
+                        <StackPanel
                             HorizontalAlignment="Center"
-                            VerticalAlignment="Top"
-                            Content="{TemplateBinding Content}" />
-
-                        <ContentPresenter
-                            x:Name="IconPresenter"
-                            Width="32"
-                            Margin="0,12,0,0"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Top"
-                            Content="{TemplateBinding Icon}"
-                            RenderTransformOrigin="0.5, 0.5">
-                            <ContentPresenter.RenderTransform>
-                                <CompositeTransform />
-                            </ContentPresenter.RenderTransform>
-                        </ContentPresenter>
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="8">
+                            <ContentPresenter
+                                x:Name="IconPresenter"
+                                Width="32"
+                                Height="32"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Icon}"
+                                RenderTransformOrigin="0.5, 0.5">
+                                <ContentPresenter.RenderTransform>
+                                    <CompositeTransform />
+                                </ContentPresenter.RenderTransform>
+                            </ContentPresenter>
+                            <ContentPresenter
+                                x:Name="ContentPresenter"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Top"
+                                Content="{TemplateBinding Content}" />
+                        </StackPanel>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal" />
                                 <VisualState x:Name="PointerOver">
                                     <Storyboard>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="Background">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource ControlFillColorDefaultBrush}" />
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
                                         </ObjectAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="BorderBrush">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
                                         </ObjectAnimationUsingKeyFrames>
                                         <DoubleAnimationUsingKeyFrames Storyboard.TargetName="IconPresenter" Storyboard.TargetProperty="(UIElement.RenderTransform).(CompositeTransform.ScaleX)">
                                             <SplineDoubleKeyFrame
@@ -91,7 +97,10 @@
                                                 Value="0.92" />
                                         </DoubleAnimationUsingKeyFrames>
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="Background">
-                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource ControlFillColorSecondaryBrush}" />
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="BorderBrush">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
                                         </ObjectAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </VisualState>
@@ -101,7 +110,7 @@
                                         <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
                                             <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource ButtonForegroundDisabled}" />
                                         </ObjectAnimationUsingKeyFrames>
-                                        <DoubleAnimation Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="Opacity" To="0.4" Duration="0" />
+                                        <DoubleAnimation Storyboard.TargetName="IconPresenter" Storyboard.TargetProperty="Opacity" To="0.45" Duration="0" />
                                     </Storyboard>
                                 </VisualState>
                             </VisualStateGroup>

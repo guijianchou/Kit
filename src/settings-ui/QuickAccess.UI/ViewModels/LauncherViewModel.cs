@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using global::Kit.GPOWrapper;
 using ManagedCommon;
 using Kit.QuickAccess.Services;
@@ -26,6 +27,8 @@ public sealed class LauncherViewModel : Observable, IDisposable
 
     public ObservableCollection<QuickAccessItem> FlyoutMenuItems => _quickAccessViewModel.Items;
 
+    public bool HasVisibleItems => _quickAccessViewModel.VisibleItemCount > 0;
+
     public bool IsUpdateAvailable { get; private set; }
 
     public LauncherViewModel(IQuickAccessCoordinator coordinator)
@@ -44,7 +47,16 @@ public sealed class LauncherViewModel : Observable, IDisposable
             moduleType => Helpers.ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Enabled,
             _resourceLoader,
             fallbackLauncher: OpenModuleSettings);
+        _quickAccessViewModel.PropertyChanged += OnQuickAccessViewModelPropertyChanged;
         RefreshUpdateStatus();
+    }
+
+    private void OnQuickAccessViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(QuickAccessViewModel.VisibleItemCount))
+        {
+            OnPropertyChanged(nameof(HasVisibleItems));
+        }
     }
 
     internal void RefreshUpdateStatus()
@@ -62,6 +74,7 @@ public sealed class LauncherViewModel : Observable, IDisposable
 
     public void Dispose()
     {
+        _quickAccessViewModel.PropertyChanged -= OnQuickAccessViewModelPropertyChanged;
         _quickAccessViewModel.Dispose();
         GC.SuppressFinalize(this);
     }

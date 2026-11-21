@@ -17,7 +17,7 @@
             </Setter.Value>
         </Setter>
         <Setter Property="IsTabStop" Value="False" />
-        <Setter Property="Padding" Value="1,32,0,0" />
+        <Setter Property="Padding" Value="0,28,0,0" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
@@ -34,18 +34,17 @@
                             Grid.Row="0"
                             Margin="{TemplateBinding Padding}"
                             AutomationProperties.HeadingLevel="Level2"
-                            CharacterSpacing="10"
-                            FontSize="15"
                             Style="{ThemeResource BodyStrongTextBlockStyle}"
                             Text="{TemplateBinding Header}" />
 
                         <ContentPresenter
                             x:Name="DescriptionPresenter"
                             Grid.Row="1"
-                            Margin="1,0,0,0"
+                            Margin="0,2,0,0"
                             Content="{TemplateBinding Description}"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="WrapWholeWords">
+                            TextWrapping="WrapWholeWords"
+                            Visibility="Collapsed">
                             <ContentPresenter.Resources>
                                 <Style BasedOn="{StaticResource CaptionTextBlockStyle}" TargetType="TextBlock">
                                     <Style.Setters>
@@ -59,7 +58,7 @@
                                 </Style>
                             </ContentPresenter.Resources>
                         </ContentPresenter>
-                        <ItemsPresenter Grid.Row="2" Margin="0,10,0,0" />
+                        <ItemsPresenter Grid.Row="2" Margin="0,8,0,0" />
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualState x:Name="Normal" />

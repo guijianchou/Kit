@@ -5,14 +5,16 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
-using ManagedCommon;
 using Kit.Common.UI.Controls.Flyout;
 using Kit.QuickAccess.Services;
 using Kit.QuickAccess.ViewModels;
+using Kit.Settings.UI.Library;
+using ManagedCommon;
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Input;
 using WinRT.Interop;
 using WinUIEx;
 
@@ -44,12 +46,13 @@ public sealed partial class MainWindow : WindowEx, IDisposable
     private bool _initialActivationHandled;
     private bool _isPrimed;
 
+    private const int FlyoutEdgeMarginDip = 12;
+
     // Prevent auto-hide until the window actually gained focus once.
     private bool _hasSeenInteractiveActivation;
     private bool _isVisible;
     private IntPtr _mouseHook;
     private LowLevelMouseProc? _mouseHookDelegate;
-    private CancellationTokenSource? _trimCts;
 
     private const int DwmWaCloak = 13;
     private const int GwlStyle = -16;
@@ -89,7 +92,10 @@ public sealed partial class MainWindow : WindowEx, IDisposable
         _launcherViewModel = new LauncherViewModel(_coordinator);
         _allAppsViewModel = new AllAppsViewModel(_coordinator);
         ShellHost.Initialize(_coordinator, _launcherViewModel, _allAppsViewModel);
+        ShellHost.KeyDown += OnShellHostKeyDown;
 
+        EnsureSupportedBackdrop();
+        ApplyConfiguredTheme();
         CustomizeWindowChrome();
         HideFromTaskbar();
         HideWindow();
@@ -97,6 +103,34 @@ public sealed partial class MainWindow : WindowEx, IDisposable
         InitializeEventListeners();
         Closed += OnClosed;
         Activated += OnActivated;
+    }
+
+    private void EnsureSupportedBackdrop()
+    {
+        if (!DesktopAcrylicController.IsSupported())
+        {
+            SystemBackdrop = null;
+        }
+    }
+
+    private void ApplyConfiguredTheme()
+    {
+        var themeSetting = SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Theme;
+        ShellHost.RequestedTheme = (themeSetting ?? string.Empty).ToUpperInvariant() switch
+        {
+            "LIGHT" => ElementTheme.Light,
+            "DARK" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
+    }
+
+    private void OnShellHostKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            e.Handled = true;
+            RequestHide();
+        }
     }
 
     private AppWindow? InitializeAppWindow(IntPtr hwnd)
@@ -132,8 +166,6 @@ public sealed partial class MainWindow : WindowEx, IDisposable
 
         _isVisible = false;
         RemoveGlobalMouseHook();
-
-        ScheduleMemoryTrim();
     }
 
     internal void RequestHide()
@@ -146,41 +178,6 @@ public sealed partial class MainWindow : WindowEx, IDisposable
         {
             _dispatcherQueue.TryEnqueue(HideWindow);
         }
-    }
-
-    private void ScheduleMemoryTrim()
-    {
-        CancelMemoryTrim();
-        _trimCts = new CancellationTokenSource();
-        var token = _trimCts.Token;
-
-        // Delay the trim to avoid aggressive GC during quick toggles
-        Task.Delay(2000, token).ContinueWith(
-            _ =>
-        {
-            if (token.IsCancellationRequested)
-            {
-                return;
-            }
-
-            TrimMemory();
-        },
-            token,
-            TaskContinuationOptions.None,
-            TaskScheduler.Default);
-    }
-
-    private void CancelMemoryTrim()
-    {
-        _trimCts?.Cancel();
-        _trimCts?.Dispose();
-        _trimCts = null;
-    }
-
-    private void TrimMemory()
-    {
-        // Let the runtime manage its heap; forced full collections and working-set
-        // eviction on every hide add latency to the next flyout activation.
     }
 
     private void InitializeEventListeners()
@@ -214,7 +211,7 @@ public sealed partial class MainWindow : WindowEx, IDisposable
 
     private void ShowWindow()
     {
-        CancelMemoryTrim();
+        ApplyConfiguredTheme();
 
         if (_hwnd != IntPtr.Zero)
         {
@@ -223,14 +220,13 @@ public sealed partial class MainWindow : WindowEx, IDisposable
             ShowWindowNative(_hwnd, SwShow);
 
             // Use shared FlyoutWindowHelper to size the window in DIPs against the target
-            // monitor's effective DPI. Internally uses a 1×1 teleport into the target
-            // display first to avoid WM_DPICHANGED double-scaling on cross-monitor moves.
-            // Use the cached XAML design size — this.Width/Height are runtime values that
-            // can drift through DPI transitions and must NOT be used as the source of truth.
+            // monitor's effective DPI with standard Windows 11 floating flyout margins.
             FlyoutWindowHelper.PositionWindowBottomRight(
                 this,
                 _designWidthDip,
-                _designHeightDip);
+                _designHeightDip,
+                rightMarginDip: FlyoutEdgeMarginDip,
+                bottomMarginDip: FlyoutEdgeMarginDip);
 
             // Ensure the flyout is brought to the top of the Z-order. MoveAndResize does not
             // change Z-order, so explicitly raise the window after positioning.
@@ -293,7 +289,9 @@ public sealed partial class MainWindow : WindowEx, IDisposable
             FlyoutWindowHelper.PositionWindowBottomRight(
                 this,
                 _designWidthDip,
-                _designHeightDip);
+                _designHeightDip,
+                rightMarginDip: FlyoutEdgeMarginDip,
+                bottomMarginDip: FlyoutEdgeMarginDip);
         }
 
         // Warm up the window while cloaked so the first summon does not pay XAML initialization cost.
@@ -378,7 +376,7 @@ public sealed partial class MainWindow : WindowEx, IDisposable
 
         if (disposing)
         {
-            CancelMemoryTrim();
+            ShellHost.KeyDown -= OnShellHostKeyDown;
             StopEventListeners();
 
             _showEvent?.Dispose();
@@ -417,18 +415,6 @@ public sealed partial class MainWindow : WindowEx, IDisposable
 
     [DllImport("user32.dll", EntryPoint = "SetWindowPos", SetLastError = true)]
     private static extern bool SetWindowPosNative(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
-
-    [DllImport("user32.dll", EntryPoint = "SetForegroundWindow", SetLastError = true)]
-    private static extern bool SetForegroundWindowNative(IntPtr hWnd);
-
-    [DllImport("user32.dll", EntryPoint = "GetForegroundWindow", SetLastError = true)]
-    private static extern IntPtr GetForegroundWindowNative();
-
-    [DllImport("user32.dll", EntryPoint = "GetWindowThreadProcessId", SetLastError = true)]
-    private static extern uint GetWindowThreadProcessIdNative(IntPtr hWnd, IntPtr lpdwProcessId);
-
-    [DllImport("user32.dll", EntryPoint = "AttachThreadInput", SetLastError = true)]
-    private static extern bool AttachThreadInputNative(uint idAttach, uint idAttachTo, bool fAttach);
 
     [DllImport("dwmapi.dll", EntryPoint = "DwmSetWindowAttribute", SetLastError = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
@@ -699,13 +685,6 @@ public sealed partial class MainWindow : WindowEx, IDisposable
     private const int WmLbuttondown = 0x0201;
     private const int WmRbuttondown = 0x0204;
     private const int WmMbuttondown = 0x0207;
-
-    [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out NativePoint lpPoint);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool SetProcessWorkingSetSize(IntPtr hProcess, int dwMinimumWorkingSetSize, int dwMaximumWorkingSetSize);
-
     private const int WmXbuttondown = 0x020B;
 
     private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);

@@ -20,9 +20,11 @@ using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.Data.Json;
 using WinRT.Interop;
 
@@ -93,7 +95,7 @@ namespace Kit.Settings.UI.Views
 
         public static bool IsUserAnAdmin { get; set; }
 
-        public Controls.TitleBar TitleBar => AppTitleBar;
+        public TitleBar TitleBar => AppTitleBar;
 
         private readonly NavigationPaneState _navigationPaneState = new(SettingsUtils.Default);
         private CancellationTokenSource _searchDebounceCts;
@@ -345,9 +347,62 @@ namespace Kit.Settings.UI.Views
             AppTitleBar.Title = App.IsElevated ? loader.GetString("SettingsWindow_AdminTitle") : loader.GetString("SettingsWindow_Title");
         }
 
+        private void AppTitleBar_Loaded(object sender, RoutedEventArgs e)
+        {
+            var loader = ResourceLoaderInstance.ResourceLoader;
+            if (FindVisualChildByName(AppTitleBar, "PART_PaneToggleButton") is Button paneButton)
+            {
+                var paneTip = loader.GetString("TitleBar_PaneButton_ToolTip");
+                AutomationProperties.SetAutomationId(paneButton, "TitleBar_PaneToggleButton");
+                if (!string.IsNullOrEmpty(paneTip))
+                {
+                    ToolTipService.SetToolTip(paneButton, paneTip);
+                    AutomationProperties.SetName(paneButton, paneTip);
+                }
+            }
+
+            if (FindVisualChildByName(AppTitleBar, "PART_BackButton") is Button backButton)
+            {
+                var backTip = loader.GetString("TitleBar_BackButton_ToolTip");
+                AutomationProperties.SetAutomationId(backButton, "TitleBar_BackButton");
+                if (!string.IsNullOrEmpty(backTip))
+                {
+                    ToolTipService.SetToolTip(backButton, backTip);
+                    AutomationProperties.SetName(backButton, backTip);
+                }
+            }
+        }
+
+        private static FrameworkElement FindVisualChildByName(DependencyObject root, string name)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            var queue = new Queue<DependencyObject>();
+            queue.Enqueue(root);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                if (current is FrameworkElement element && string.Equals(element.Name, name, StringComparison.Ordinal))
+                {
+                    return element;
+                }
+
+                int count = VisualTreeHelper.GetChildrenCount(current);
+                for (int i = 0; i < count; i++)
+                {
+                    queue.Enqueue(VisualTreeHelper.GetChild(current, i));
+                }
+            }
+
+            return null;
+        }
+
         private void NavigationView_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
         {
-            AppTitleBar.IsPaneButtonVisible = true;
+            AppTitleBar.IsPaneToggleButtonVisible = true;
             QueueNavigationPaneRestore();
         }
 
@@ -380,7 +435,7 @@ namespace Kit.Settings.UI.Views
             }
         }
 
-        private void PaneToggleBtn_Click(object sender, RoutedEventArgs e)
+        private void AppTitleBar_PaneToggleRequested(TitleBar sender, object args)
         {
             navigationView.IsPaneOpen = !navigationView.IsPaneOpen;
             _navigationPaneState.SetUserPreference(navigationView.IsPaneOpen);

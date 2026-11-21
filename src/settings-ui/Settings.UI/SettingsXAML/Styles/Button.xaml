@@ -666,9 +666,64 @@
         <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
     </Style>
 
-    <!-- 危险操作按钮（用于删除/清理二次确认） -->
+    <!-- 危险操作按钮（用于删除/清理二次确认；完整保留悬停/按下语义红与系统焦点） -->
     <Style x:Key="KitDangerActionButtonStyle" TargetType="Button" BasedOn="{StaticResource KitActionButtonStyle}">
         <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+        <Setter Property="BorderThickness" Value="{ThemeResource ButtonBorderThemeThickness}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter
+                        x:Name="ContentPresenter"
+                        Padding="{TemplateBinding Padding}"
+                        HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                        AnimatedIcon.State="Normal"
+                        AutomationProperties.AccessibilityView="Raw"
+                        Background="{TemplateBinding Background}"
+                        BackgroundSizing="{TemplateBinding BackgroundSizing}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        Content="{TemplateBinding Content}"
+                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                        ContentTransitions="{TemplateBinding ContentTransitions}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Foreground="{TemplateBinding Foreground}">
+                        <ContentPresenter.BackgroundTransition>
+                            <BrushTransition Duration="0:0:0.083" />
+                        </ContentPresenter.BackgroundTransition>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}" />
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+                                        <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="{ThemeResource ControlFillColorTertiaryBrush}" />
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+                                        <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="{ThemeResource ControlFillColorDisabledBrush}" />
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                                        <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource TextFillColorDisabledBrush}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- 紧凑切换按钮 28 高（日志自动滚动等） -->

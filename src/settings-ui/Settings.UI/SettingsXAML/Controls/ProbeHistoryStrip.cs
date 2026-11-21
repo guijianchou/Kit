@@ -104,6 +104,11 @@ namespace Kit.Settings.UI.Controls
 
         private void OnUnloaded(object sender, RoutedEventArgs args)
         {
+            if (IsLoaded)
+            {
+                return;
+            }
+
             ((FrameworkElement)Content).ActualThemeChanged -= OnContentThemeChanged;
             Unsubscribe();
             _toolTip.IsOpen = false;

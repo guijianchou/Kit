@@ -23,7 +23,9 @@
         <tkconverters:BoolNegationConverter x:Key="BoolNegationConverter" />
 
         <Style x:Key="NewInfoBadgeStyle" TargetType="InfoBadge">
-            <Setter Property="Padding" Value="5,1,5,2" />
+            <Setter Property="Padding" Value="6,1,6,2" />
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="InfoBadge">
@@ -36,7 +38,9 @@
                                 x:Uid="NewInfoBadge"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                FontSize="10" />
+                                FontSize="10"
+                                FontWeight="SemiBold"
+                                Foreground="{TemplateBinding Foreground}" />
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -45,37 +49,38 @@
     </UserControl.Resources>
     <ItemsRepeater x:Name="DashboardView" ItemsSource="{x:Bind ItemsSource, Mode=OneWay}">
         <ItemsRepeater.Layout>
-            <StackLayout Orientation="Vertical" Spacing="0" />
+            <StackLayout Orientation="Vertical" Spacing="2" />
         </ItemsRepeater.Layout>
         <ItemsRepeater.ItemTemplate>
             <DataTemplate x:DataType="controls:ModuleListItem">
                 <tkcontrols:SettingsCard
                     MinWidth="0"
                     MinHeight="48"
-                    Padding="16,6,16,6"
+                    Margin="6,0"
+                    Padding="12,6,12,6"
                     tk:FrameworkElementExtensions.AncestorType="controls:ModuleList"
                     Background="Transparent"
                     BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                     BorderThickness="{Binding (tk:FrameworkElementExtensions.Ancestor).DividerThickness, RelativeSource={RelativeSource Self}}"
                     Click="OnSettingsCardClick"
-                    CornerRadius="0"
+                    CornerRadius="{StaticResource ControlCornerRadius}"
                     IsClickEnabled="{Binding (tk:FrameworkElementExtensions.Ancestor).IsItemClickable, RelativeSource={RelativeSource Self}}"
                     Tag="{x:Bind}">
                     <tkcontrols:SettingsCard.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{x:Bind Label, Mode=OneWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock VerticalAlignment="Center" Text="{x:Bind Label, Mode=OneWay}" />
                             <!--  InfoBadge  -->
                             <InfoBadge
                                 x:Name="NewInfoBadge"
-                                Margin="4,0,0,0"
+                                VerticalAlignment="Center"
                                 Style="{StaticResource NewInfoBadgeStyle}"
                                 Visibility="{x:Bind IsNew, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                             <FontIcon
                                 Width="20"
-                                Margin="4,0,0,0"
+                                VerticalAlignment="Center"
                                 FontSize="16"
                                 Glyph="&#xE72E;"
-                                Visibility="{x:Bind IsLocked, Converter={StaticResource ReverseBoolToVisibilityConverter}, ConverterParameter=True}">
+                                Visibility="{x:Bind IsLocked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <ToolTipService.ToolTip>
                                     <TextBlock x:Uid="GPOWarning" TextWrapping="WrapWholeWords" />
                                 </ToolTipService.ToolTip>
@@ -84,17 +89,18 @@
                     </tkcontrols:SettingsCard.Header>
 
                     <tkcontrols:SettingsCard.HeaderIcon>
-                        <ImageIcon>
+                        <ImageIcon Width="20" Height="20">
                             <ImageIcon.Source>
-                                <BitmapImage UriSource="{x:Bind Icon, Mode=OneWay}" />
+                                <BitmapImage DecodePixelWidth="40" UriSource="{x:Bind Icon, Mode=OneWay}" />
                             </ImageIcon.Source>
                         </ImageIcon>
                     </tkcontrols:SettingsCard.HeaderIcon>
 
                     <ToggleSwitch
+                        MinWidth="0"
                         HorizontalAlignment="Right"
                         AutomationProperties.Name="{x:Bind Label, Mode=OneWay}"
-                        IsEnabled="{x:Bind IsLocked, Converter={StaticResource BoolNegationConverter}, ConverterParameter=True, Mode=OneWay}"
+                        IsEnabled="{x:Bind IsLocked, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
                         IsOn="{x:Bind IsEnabled, Mode=TwoWay}"
                         OffContent=""
                         OnContent="" />

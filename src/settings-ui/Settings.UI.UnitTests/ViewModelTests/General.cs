@@ -767,16 +767,15 @@ namespace ViewModelTests
             var dashboardViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.cs"));
             var quickAccessViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessViewModel.cs"));
             var quickAccessListXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessList.xaml"));
-            var quickAccessGridPanelCs = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Controls", "QuickAccess", "QuickAccessGridPanel.cs"));
 
             StringAssert.Contains(quickAccessViewModel, "public int VisibleItemCount");
             StringAssert.Contains(quickAccessViewModel, "SyncVisibleItems()");
             StringAssert.Contains(dashboardViewModel, "public int VisibleQuickAccessItemsCount");
             StringAssert.Contains(dashboard, "ViewModel.VisibleQuickAccessItemsCount");
             Assert.IsFalse(dashboard.Contains("ViewModel.QuickAccessItems.Count", StringComparison.Ordinal));
-            StringAssert.Contains(quickAccessListXaml, "<local:QuickAccessGridPanel");
-            StringAssert.Contains(quickAccessGridPanelCs, "public sealed partial class QuickAccessGridPanel : Panel");
-            StringAssert.Contains(quickAccessGridPanelCs, "public int Columns { get; set; } = 3;");
+            StringAssert.Contains(quickAccessListXaml, "<ItemsRepeater");
+            StringAssert.Contains(quickAccessListXaml, "<UniformGridLayout");
+            StringAssert.Contains(quickAccessListXaml, "MaximumRowsOrColumns=\"3\"");
         }
 
         [TestMethod]

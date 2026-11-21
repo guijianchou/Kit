@@ -38,12 +38,21 @@ public sealed partial class AppsListPage : Page
 
     private void BackButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_context == null || Frame == null)
+        if (Frame == null)
         {
             return;
         }
 
-        Frame.Navigate(typeof(LaunchPage), _context, new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromLeft });
+        if (Frame.CanGoBack)
+        {
+            Frame.GoBack(new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromLeft });
+            return;
+        }
+
+        if (_context != null)
+        {
+            Frame.Navigate(typeof(LaunchPage), _context, new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromLeft });
+        }
     }
 
     private void SortAlphabetical_Click(object sender, RoutedEventArgs e)
@@ -51,7 +60,6 @@ public sealed partial class AppsListPage : Page
         if (ViewModel != null)
         {
             ViewModel.DashboardSortOrder = DashboardSortOrder.Alphabetical;
-            ((ToggleMenuFlyoutItem)sender).IsChecked = true;
         }
     }
 
@@ -60,7 +68,6 @@ public sealed partial class AppsListPage : Page
         if (ViewModel != null)
         {
             ViewModel.DashboardSortOrder = DashboardSortOrder.ByStatus;
-            ((ToggleMenuFlyoutItem)sender).IsChecked = true;
         }
     }
 }

@@ -20,7 +20,6 @@ namespace Kit.Settings.UI.Controls
     {
         private const string PartDescriptionPresenter = "DescriptionPresenter";
         private ContentPresenter _descriptionPresenter;
-        private SettingsGroup _settingsGroup;
 
         public SettingsGroup()
         {
@@ -56,9 +55,9 @@ namespace Kit.Settings.UI.Controls
         protected override void OnApplyTemplate()
         {
             IsEnabledChanged -= SettingsGroup_IsEnabledChanged;
-            _settingsGroup = (SettingsGroup)this;
-            _descriptionPresenter = (ContentPresenter)_settingsGroup.GetTemplateChild(PartDescriptionPresenter);
+            _descriptionPresenter = (ContentPresenter)GetTemplateChild(PartDescriptionPresenter);
             SetEnabledState();
+            Update();
             IsEnabledChanged += SettingsGroup_IsEnabledChanged;
             base.OnApplyTemplate();
         }
@@ -80,19 +79,12 @@ namespace Kit.Settings.UI.Controls
 
         private void Update()
         {
-            if (_settingsGroup == null)
+            if (_descriptionPresenter == null)
             {
                 return;
             }
 
-            if (_settingsGroup.Description == null)
-            {
-                _settingsGroup._descriptionPresenter.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                _settingsGroup._descriptionPresenter.Visibility = Visibility.Visible;
-            }
+            _descriptionPresenter.Visibility = Description == null ? Visibility.Collapsed : Visibility.Visible;
         }
 
         protected override AutomationPeer OnCreateAutomationPeer()

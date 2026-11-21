@@ -6,25 +6,75 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
-    Loaded="UserControl_Loaded"
     mc:Ignorable="d">
-    <UserControl.Resources>
-        <x:Double x:Key="PageMaxWidth">1000</x:Double>
-    </UserControl.Resources>
     <Grid Padding="24,0,0,0" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TextBlock
-            x:Name="Header"
+        <Grid
+            x:Name="PageHeaderGrid"
             MaxWidth="{StaticResource PageMaxWidth}"
             Margin="0,0,24,0"
             HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch"
-            AutomationProperties.HeadingLevel="1"
-            Style="{StaticResource TitleTextBlockStyle}"
-            Text="{x:Bind ModuleTitle}" />
+            ColumnDefinitions="*,Auto"
+            RowDefinitions="Auto,Auto"
+            ColumnSpacing="16"
+            RowSpacing="6">
+            <TextBlock
+                x:Name="Header"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                AutomationProperties.HeadingLevel="1"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="{x:Bind ModuleTitle, Mode=OneWay}"
+                ToolTipService.ToolTip="{x:Bind ModuleDescription, Mode=OneWay}" />
+            <ContentPresenter
+                x:Name="HeaderActionPresenter"
+                Grid.Column="1"
+                VerticalAlignment="Center"
+                Content="{x:Bind HeaderAction, Mode=OneWay}" />
+            <StackPanel
+                x:Name="CompactHeaderSubtitlePanel"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Orientation="Vertical"
+                Spacing="4"
+                Visibility="{x:Bind CompactHeader, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock
+                    x:Name="CompactDescriptionText"
+                    FontSize="13"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    MaxLines="2"
+                    Text="{x:Bind ModuleDescription, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis"
+                    TextWrapping="Wrap"
+                    ToolTipService.ToolTip="{x:Bind ModuleDescription, Mode=OneWay}"
+                    Visibility="{x:Bind ModuleDescription, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                <ItemsControl
+                    x:Name="CompactPrimaryLinksControl"
+                    IsTabStop="False"
+                    ItemsSource="{x:Bind PrimaryLinks, Mode=OneWay}"
+                    Visibility="{x:Bind PrimaryLinks.Count, Mode=OneWay, Converter={StaticResource DoubleToVisibilityConverter}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="controls:PageLink">
+                            <HyperlinkButton
+                                Padding="0"
+                                FontSize="12"
+                                NavigateUri="{x:Bind Link}"
+                                Style="{StaticResource TextButtonStyle}">
+                                <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" />
+                            </HyperlinkButton>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <tkcontrols:WrapPanel HorizontalSpacing="16" Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </Grid>
 
         <ScrollViewer Grid.Row="1" AutomationProperties.AutomationId="PageScrollViewer">
             <Grid
@@ -36,21 +86,22 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!--  Top panel  -->
+                <!--  Top panel (shown only when not using compact Fluent header)  -->
                 <controls:SettingsPageIntro
                     x:Name="PageIntro"
                     MaxWidth="{StaticResource PageMaxWidth}"
                     Margin="0,0,0,18"
                     ModuleDescription="{x:Bind ModuleDescription, Mode=OneWay}"
                     ModuleImageSource="{x:Bind ModuleImageSource, Mode=OneWay}"
-                    PrimaryLinks="{x:Bind PrimaryLinks, Mode=OneWay}" />
+                    PrimaryLinks="{x:Bind PrimaryLinks, Mode=OneWay}"
+                    Visibility="{x:Bind GetLegacyIntroVisibility(CompactHeader, ModuleImageSource, ModuleDescription), Mode=OneWay}" />
 
                 <!--  Content panel  -->
                 <ContentPresenter
                     x:Name="ModuleContentPresenter"
                     Grid.Row="1"
                     MaxWidth="{StaticResource PageMaxWidth}"
-                    Content="{x:Bind ModuleContent}" />
+                    Content="{x:Bind ModuleContent, Mode=OneWay}" />
 
                 <!--  Bottom panel  -->
                 <StackPanel
@@ -58,19 +109,22 @@
                     Grid.Row="2"
                     MaxWidth="{StaticResource PageMaxWidth}"
                     Margin="0,24,0,0"
-                    AutomationProperties.Name="{x:Bind SecondaryLinksHeader}"
+                    AutomationProperties.Name="{x:Bind SecondaryLinksHeader, Mode=OneWay}"
                     Orientation="Vertical"
-                    Visibility="{x:Bind SecondaryLinks.Count, Converter={StaticResource DoubleToVisibilityConverter}}">
+                    Spacing="8"
+                    Visibility="{x:Bind SecondaryLinks.Count, Mode=OneWay, Converter={StaticResource DoubleToVisibilityConverter}}">
+                    <Rectangle
+                        Height="1"
+                        HorizontalAlignment="Stretch"
+                        Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                     <TextBlock
-                        Margin="2,8,0,0"
                         AutomationProperties.HeadingLevel="Level2"
                         Style="{ThemeResource BodyStrongTextBlockStyle}"
-                        Text="{x:Bind SecondaryLinksHeader}" />
+                        Text="{x:Bind SecondaryLinksHeader, Mode=OneWay}" />
                     <ItemsControl
                         x:Name="SecondaryLinksItemControl"
-                        Margin="2,0,0,0"
                         IsTabStop="False"
-                        ItemsSource="{x:Bind SecondaryLinks}">
+                        ItemsSource="{x:Bind SecondaryLinks, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="controls:PageLink">
                                 <HyperlinkButton NavigateUri="{x:Bind Link}" Style="{StaticResource TextButtonStyle}">

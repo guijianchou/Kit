@@ -53,6 +53,12 @@ namespace Kit.Settings.UI.XamlIndexBuilder
                             }
                         }
                     }
+
+                    var moduleImageSource = pageControl.Attribute("ModuleImageSource")?.Value;
+                    if (!string.IsNullOrWhiteSpace(moduleImageSource))
+                    {
+                        return moduleImageSource.Replace("ms-appx://", string.Empty, System.StringComparison.OrdinalIgnoreCase);
+                    }
                 }
 
                 return null;

@@ -15,6 +15,8 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.Data.Json;
+using Windows.UI;
+using Windows.UI.ViewManagement;
 using WinRT.Interop;
 using WinUIEx;
 
@@ -174,11 +176,63 @@ namespace Kit.Settings.UI
 
         private void SetTitleBar()
         {
-            // We need to assign the window here so it can configure the custom title bar area correctly.
-            shellPage.TitleBar.Window = this;
             this.ExtendsContentIntoTitleBar = true;
+            this.AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+            this.SetTitleBar(shellPage.TitleBar);
+            shellPage.ActualThemeChanged -= OnShellActualThemeChanged;
+            shellPage.ActualThemeChanged += OnShellActualThemeChanged;
+            UpdateTitleBarCaptionButtons(shellPage.ActualTheme);
             WindowHelpers.ForceTopBorder1PixelInsetOnWindows10(WindowNative.GetWindowHandle(this));
             EnsureSupportedBackdrop();
+        }
+
+        private void OnShellActualThemeChanged(FrameworkElement sender, object args)
+        {
+            UpdateTitleBarCaptionButtons(sender.ActualTheme);
+        }
+
+        private void UpdateTitleBarCaptionButtons(ElementTheme actualTheme)
+        {
+            var titleBar = this.AppWindow?.TitleBar;
+            if (titleBar == null)
+            {
+                return;
+            }
+
+            var accessibilitySettings = new AccessibilitySettings();
+            if (accessibilitySettings.HighContrast)
+            {
+                titleBar.ButtonBackgroundColor = null;
+                titleBar.ButtonForegroundColor = null;
+                titleBar.ButtonHoverBackgroundColor = null;
+                titleBar.ButtonHoverForegroundColor = null;
+                titleBar.ButtonPressedBackgroundColor = null;
+                titleBar.ButtonPressedForegroundColor = null;
+                titleBar.ButtonInactiveBackgroundColor = null;
+                titleBar.ButtonInactiveForegroundColor = null;
+                return;
+            }
+
+            titleBar.ButtonBackgroundColor = Colors.Transparent;
+            titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+            if (actualTheme == ElementTheme.Dark)
+            {
+                titleBar.ButtonForegroundColor = Colors.White;
+                titleBar.ButtonHoverForegroundColor = Colors.White;
+                titleBar.ButtonPressedForegroundColor = Color.FromArgb(0xC5, 0xFF, 0xFF, 0xFF);
+                titleBar.ButtonHoverBackgroundColor = Color.FromArgb(0x0F, 0xFF, 0xFF, 0xFF);
+                titleBar.ButtonPressedBackgroundColor = Color.FromArgb(0x0A, 0xFF, 0xFF, 0xFF);
+                titleBar.ButtonInactiveForegroundColor = Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF);
+            }
+            else
+            {
+                titleBar.ButtonForegroundColor = Color.FromArgb(0xE4, 0x00, 0x00, 0x00);
+                titleBar.ButtonHoverForegroundColor = Colors.Black;
+                titleBar.ButtonPressedForegroundColor = Color.FromArgb(0x9E, 0x00, 0x00, 0x00);
+                titleBar.ButtonHoverBackgroundColor = Color.FromArgb(0x09, 0x00, 0x00, 0x00);
+                titleBar.ButtonPressedBackgroundColor = Color.FromArgb(0x06, 0x00, 0x00, 0x00);
+                titleBar.ButtonInactiveForegroundColor = Color.FromArgb(0x5C, 0x00, 0x00, 0x00);
+            }
         }
 
         // Mica requires Windows 11. On older systems fall back to desktop acrylic so the
@@ -232,6 +286,7 @@ namespace Kit.Settings.UI
             {
                 this.AppWindow.Changed -= OnAppWindowChanged;
                 App.ThemeService.ThemeChanged -= OnThemeChanged;
+                shellPage.ActualThemeChanged -= OnShellActualThemeChanged;
                 App.IPCMessageReceivedCallback = null;
                 shellPage.Dispose();
                 App.ClearSettingsWindow();

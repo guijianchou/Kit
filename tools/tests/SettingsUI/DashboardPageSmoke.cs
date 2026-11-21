@@ -655,7 +655,7 @@ internal static class DashboardPageSmoke
                 foreach (var module in modules)
                 {
                     var item = (NavigationViewItem)root.FindName(module + "NavigationItem");
-                    Require(item.Icon is FontIcon, $"Sidebar {module} uses a theme-aware FontIcon instead of a fixed bitmap.");
+                    Require(item.Icon is ImageIcon, $"Sidebar {module} uses its colorful module ImageIcon.");
                     await VerifyIconPixels(item.Icon, root, frame, $"Sidebar {module} ({theme}, transition {transition})", verifyContrast: false);
                 }
 

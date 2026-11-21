@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
+using Windows.UI.ViewManagement;
 
 namespace Kit.Settings.UI.Helpers;
 
@@ -18,8 +19,11 @@ public abstract partial class NavigablePage : Page
 {
     private const int ExpandWaitDuration = 500;
     private const int AnimationDuration = 1850;
+    private static readonly UISettings UiSettings = new();
+    private static bool _hasCompletedInitialNavigation;
 
     private NavigationParams _pendingNavigationParams;
+    private bool _pendingEntranceAnimation;
 
     public NavigablePage()
     {
@@ -30,6 +34,15 @@ public abstract partial class NavigablePage : Page
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+
+        if (_hasCompletedInitialNavigation && UiSettings.AnimationsEnabled)
+        {
+            _pendingEntranceAnimation = true;
+        }
+        else
+        {
+            _hasCompletedInitialNavigation = true;
+        }
 
         // Handle both old string parameter and new NavigationParams
         if (e.Parameter is NavigationParams navParams)
@@ -44,6 +57,12 @@ public abstract partial class NavigablePage : Page
 
     private async void OnPageLoaded(object sender, RoutedEventArgs e)
     {
+        if (_pendingEntranceAnimation)
+        {
+            _pendingEntranceAnimation = false;
+            PlayFluentEntranceAnimation();
+        }
+
         if (_pendingNavigationParams != null && !string.IsNullOrEmpty(_pendingNavigationParams.ElementName))
         {
             // First, expand parent if specified
@@ -71,6 +90,38 @@ public abstract partial class NavigablePage : Page
             await OnTargetElementNavigatedAsync(target, _pendingNavigationParams.ElementName);
 
             _pendingNavigationParams = null;
+        }
+    }
+
+    private void PlayFluentEntranceAnimation()
+    {
+        if (Content is not UIElement root)
+        {
+            return;
+        }
+
+        try
+        {
+            ElementCompositionPreview.SetIsTranslationEnabled(root, true);
+            var visual = ElementCompositionPreview.GetElementVisual(root);
+            var compositor = visual.Compositor;
+            var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.1f, 0.9f), new Vector2(0.2f, 1.0f));
+
+            var translateAnim = compositor.CreateVector3KeyFrameAnimation();
+            translateAnim.InsertKeyFrame(0f, new Vector3(0f, 14f, 0f));
+            translateAnim.InsertKeyFrame(1f, Vector3.Zero, easing);
+            translateAnim.Duration = TimeSpan.FromMilliseconds(167);
+            visual.StartAnimation("Translation", translateAnim);
+
+            var opacityAnim = compositor.CreateScalarKeyFrameAnimation();
+            opacityAnim.InsertKeyFrame(0f, 0.85f);
+            opacityAnim.InsertKeyFrame(1f, 1f, easing);
+            opacityAnim.Duration = TimeSpan.FromMilliseconds(120);
+            visual.StartAnimation("Opacity", opacityAnim);
+        }
+        catch
+        {
+            // Entrance motion is purely decorative; ignore compositor errors.
         }
     }
 

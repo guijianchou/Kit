@@ -69,7 +69,6 @@ namespace Kit.Settings.UI.Controls
             if (string.IsNullOrEmpty(Title) && TitleContent == null && string.IsNullOrEmpty(HeaderGlyph))
             {
                 VisualStateManager.GoToState(this, "TitleGridCollapsed", true);
-                DividerVisibility = Visibility.Collapsed;
             }
             else
             {

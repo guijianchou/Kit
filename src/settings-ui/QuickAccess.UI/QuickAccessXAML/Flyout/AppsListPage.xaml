@@ -5,9 +5,8 @@
     xmlns:controls="using:Kit.Settings.UI.Controls"
     xmlns:converters="using:Kit.Settings.UI.Controls.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:Kit.QuickAccess.Flyout"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="using:Kit.QuickAccess.ViewModels"
+    NavigationCacheMode="Required"
     mc:Ignorable="d">
     <Page.Resources>
         <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
@@ -17,63 +16,55 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Grid Padding="24,32,24,0">
+        <Grid Padding="16,20,24,0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Button
+                x:Uid="BackBtn"
+                AutomationProperties.AutomationId="QuickAccess_BackButton"
+                VerticalAlignment="Center"
+                Click="BackButton_Click"
+                Style="{StaticResource KitSubtleIconButtonStyle}">
+                <ToolTipService.ToolTip>
+                    <TextBlock x:Uid="BackLabel" />
+                </ToolTipService.ToolTip>
+                <FontIcon FontSize="14" Glyph="&#xE72B;" />
+            </Button>
             <TextBlock
                 x:Uid="AllAppsTxt"
+                Grid.Column="1"
                 VerticalAlignment="Center"
                 Style="{StaticResource BodyStrongTextBlockStyle}" />
-            <StackPanel
-                HorizontalAlignment="Right"
-                Orientation="Horizontal"
-                Spacing="8">
-                <Button
-                    x:Uid="Dashboard_SortBy"
-                    AutomationProperties.AutomationId="QuickAccess_SortButton"
-                    VerticalAlignment="Center"
-                    Style="{StaticResource KitSubtleIconButtonStyle}">
-                    <ToolTipService.ToolTip>
-                        <TextBlock x:Uid="Dashboard_SortBy_ToolTip" />
-                    </ToolTipService.ToolTip>
-                    <Button.Content>
-                        <FontIcon FontSize="14" Glyph="&#xE8CB;" />
-                    </Button.Content>
-                    <Button.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                            <ToggleMenuFlyoutItem
-                                x:Uid="Dashboard_SortAlphabetical"
-                                Click="SortAlphabetical_Click"
-                                IsChecked="{x:Bind ViewModel.DashboardSortOrder, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Alphabetical}" />
-                            <ToggleMenuFlyoutItem
-                                x:Uid="Dashboard_SortByStatus"
-                                Click="SortByStatus_Click"
-                                IsChecked="{x:Bind ViewModel.DashboardSortOrder, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=ByStatus}" />
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
-                <Button
-                    x:Uid="BackBtn"
-                    AutomationProperties.AutomationId="QuickAccess_BackButton"
-                    VerticalAlignment="Center"
-                    Style="{StaticResource KitActionButtonStyle}"
-                    Click="BackButton_Click">
-                    <Button.Content>
-                        <StackPanel
-                            VerticalAlignment="Center"
-                            Orientation="Horizontal"
-                            Spacing="8">
-                            <FontIcon
-                                FontSize="12"
-                                Glyph="&#xe76b;" />
-                            <TextBlock x:Uid="BackLabel" Style="{StaticResource CaptionTextBlockStyle}" />
-                        </StackPanel>
-                    </Button.Content>
-                </Button>
-            </StackPanel>
+            <Button
+                x:Uid="Dashboard_SortBy"
+                Grid.Column="2"
+                AutomationProperties.AutomationId="QuickAccess_SortButton"
+                VerticalAlignment="Center"
+                Style="{StaticResource KitSubtleIconButtonStyle}">
+                <ToolTipService.ToolTip>
+                    <TextBlock x:Uid="Dashboard_SortBy_ToolTip" />
+                </ToolTipService.ToolTip>
+                <Button.Content>
+                    <FontIcon FontSize="14" Glyph="&#xE8CB;" />
+                </Button.Content>
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <RadioMenuFlyoutItem
+                            x:Uid="Dashboard_SortAlphabetical"
+                            Click="SortAlphabetical_Click"
+                            GroupName="QuickAccessSortGroup"
+                            IsChecked="{x:Bind ViewModel.DashboardSortOrder, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Alphabetical}" />
+                        <RadioMenuFlyoutItem
+                            x:Uid="Dashboard_SortByStatus"
+                            Click="SortByStatus_Click"
+                            GroupName="QuickAccessSortGroup"
+                            IsChecked="{x:Bind ViewModel.DashboardSortOrder, Mode=OneWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=ByStatus}" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
         </Grid>
         <Grid Grid.Row="1">
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <controls:ModuleList
-                    Margin="8,12,12,12"
+                    Margin="12,12,12,12"
                     DividerThickness="0,0,0,0"
                     IsItemClickable="True"
                     ItemsSource="{x:Bind ViewModel.FlyoutMenuItems, Mode=OneWay}" />

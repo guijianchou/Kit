@@ -47,17 +47,6 @@ public sealed partial class ShellPage : Page
         ContentFrame.Navigate(typeof(LaunchPage), context, new SuppressNavigationTransitionInfo());
     }
 
-    internal void NavigateToLaunch()
-    {
-        if (_launcherViewModel == null || _allAppsViewModel == null || _coordinator == null)
-        {
-            return;
-        }
-
-        var context = new FlyoutNavigationContext(_launcherViewModel, _allAppsViewModel, _coordinator);
-        ContentFrame.Navigate(typeof(LaunchPage), context, new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromLeft });
-    }
-
     internal void RefreshIfAppsList()
     {
         _allAppsViewModel?.RefreshSettings();

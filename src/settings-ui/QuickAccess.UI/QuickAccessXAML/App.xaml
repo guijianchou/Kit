@@ -13,30 +13,6 @@
                 <ResourceDictionary Source="/Resources/Themes/Colors.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush
-                        x:Key="LayerOnAcrylicFillColorDefaultBrush"
-                        Opacity="0.7"
-                        Color="#FFFFFFFF" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush
-                        x:Key="LayerOnAcrylicFillColorDefaultBrush"
-                        Opacity="0.7"
-                        Color="#FFFFFFFF" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush
-                        x:Key="LayerOnAcrylicFillColorDefaultBrush"
-                        Opacity="0.6"
-                        Color="#FF000000" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="HighContrast">
-                    <SolidColorBrush x:Key="LayerOnAcrylicFillColorDefaultBrush" Color="{ThemeResource SystemColorWindowColor}" />
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
-
             <tkconverters:BoolToVisibilityConverter
                 x:Key="ReverseBoolToVisibilityConverter"
                 FalseValue="Visible"

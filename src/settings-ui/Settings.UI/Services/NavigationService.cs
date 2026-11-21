@@ -205,7 +205,7 @@ namespace Kit.Settings.UI.Services
         {
             if (Frame.Content == null)
             {
-                Frame.Navigate(pageType);
+                Frame.Navigate(pageType, null, new SuppressNavigationTransitionInfo());
             }
         }
     }

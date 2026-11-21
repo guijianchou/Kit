@@ -59,6 +59,8 @@ namespace Kit.Settings.UI.ViewModels
         /// </summary>
         public Helpers.AuditProgressState AuditProgress => Helpers.AuditProgressState.Current;
 
+        public Helpers.ShellNavigationBadges Badges => Helpers.ShellNavigationBadges.Current;
+
         public ICommand ItemInvokedCommand => itemInvokedCommand ?? (itemInvokedCommand = new RelayCommand<NavigationViewItemInvokedEventArgs>(OnItemInvoked));
 
         public ShellViewModel(ISettingsRepository<GeneralSettings> settingsRepository)

@@ -123,6 +123,39 @@
         </Setter>
     </Style>
 
+    <!-- 卡内无边框二级瓦片（消除边框套娃，保留 Mica 轻盈层次） -->
+    <Style x:Key="KitSubtleSurfaceStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="12,10" />
+    </Style>
+
+    <!-- 卡内凹槽表面（地图画布 / 终端输出等，替代倒置的 LayerFill） -->
+    <Style x:Key="KitRecessedSurfaceStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+        <Setter Property="Padding" Value="12,10" />
+    </Style>
+
+    <!-- 共享严重级别徽章（High / Medium / Low，统一语义底色 + 语义前景） -->
+    <Style x:Key="KitSeverityHighBadgeStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource BadgeCriticalBackgroundBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="8,3" />
+    </Style>
+
+    <Style x:Key="KitSeverityMediumBadgeStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource BadgeWarningBackgroundBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="8,3" />
+    </Style>
+
+    <Style x:Key="KitSeverityLowBadgeStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource BadgeInfoBackgroundBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="8,3" />
+    </Style>
+
     <!-- 出口状态着色（Unknown / Good / Error；Dashboard 经 EgressTextStyle 类型化映射取用；NetMap 页内自持 NetMapHealthStyles 字典） -->
     <ResourceDictionary x:Key="KitEgressStatusStyles">
         <Style x:Key="UnknownText" TargetType="TextBlock">

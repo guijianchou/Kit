@@ -72,4 +72,24 @@ public sealed partial class LaunchPage : Page
     {
         _coordinator?.OpenGeneralSettingsForUpdates();
     }
+
+    private void UpdateActionButton_Click(object sender, RoutedEventArgs e)
+    {
+        _coordinator?.OpenGeneralSettingsForUpdates();
+    }
+
+    private void SettingsBtn_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        AnimatedIcon.SetState(SettingsAnimatedIcon, "PointerOver");
+    }
+
+    private void SettingsBtn_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        AnimatedIcon.SetState(SettingsAnimatedIcon, "Normal");
+    }
+
+    private void SettingsBtn_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        AnimatedIcon.SetState(SettingsAnimatedIcon, "Pressed");
+    }
 }

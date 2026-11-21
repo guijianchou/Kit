@@ -85,31 +85,28 @@
     </UserControl.Resources>
     <Grid x:Name="RootGrid" Background="Transparent">
         <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <controls:TitleBar
+        <TitleBar
             x:Name="AppTitleBar"
-            AutoConfigureCustomTitleBar="True"
-            DisplayMode="Tall"
-            IsPaneButtonVisible="True"
+            IsBackButtonVisible="False"
+            IsPaneToggleButtonVisible="True"
             IsTabStop="False"
-            Background="Transparent"
-            PaneButtonClick="PaneToggleBtn_Click">
-            <controls:TitleBar.Resources>
-                <x:Double x:Key="TitleBarContentMinWidth">516</x:Double>
-            </controls:TitleBar.Resources>
-            <controls:TitleBar.Icon>
-                <BitmapIcon ShowAsMonochrome="False" UriSource="ms-appx:///Assets/Settings/icon.ico" />
-            </controls:TitleBar.Icon>
-            <controls:TitleBar.Content>
+            Loaded="AppTitleBar_Loaded"
+            PaneToggleRequested="AppTitleBar_PaneToggleRequested">
+            <TitleBar.IconSource>
+                <BitmapIconSource ShowAsMonochrome="False" UriSource="ms-appx:///Assets/Settings/icon.ico" />
+            </TitleBar.IconSource>
+            <TitleBar.Content>
                 <AutoSuggestBox
                     x:Name="SearchBox"
                     x:Uid="Shell_SearchBox"
+                    MinWidth="200"
                     MaxWidth="480"
                     MinHeight="32"
-                    CornerRadius="4"
+                    CornerRadius="{StaticResource ControlCornerRadius}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Center"
                     GotFocus="SearchBox_GotFocus"
@@ -119,10 +116,9 @@
                     SuggestionChosen="SearchBox_SuggestionChosen"
                     TextChanged="SearchBox_TextChanged"
                     TextMemberPath="Header"
-                    UpdateTextOnSelect="False">
-                </AutoSuggestBox>
-            </controls:TitleBar.Content>
-        </controls:TitleBar>
+                    UpdateTextOnSelect="False" />
+            </TitleBar.Content>
+        </TitleBar>
         <NavigationView
             x:Name="navigationView"
             Grid.Row="1"
@@ -166,6 +162,11 @@
                     <NavigationViewItem.Icon>
                         <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/AiHub.png" />
                     </NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge
+                            Style="{StaticResource AttentionDotInfoBadgeStyle}"
+                            Visibility="{x:Bind ViewModel.AuditProgress.IsVisible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
 
                 <NavigationViewItem
@@ -175,6 +176,11 @@
                     <NavigationViewItem.Icon>
                         <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/Awake.png" />
                     </NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge
+                            Style="{StaticResource SuccessDotInfoBadgeStyle}"
+                            Visibility="{x:Bind ViewModel.Badges.IsAwakeActive, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
 
                 <NavigationViewItem
@@ -193,6 +199,12 @@
                     <NavigationViewItem.Icon>
                         <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/Localserver.png" />
                     </NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge
+                            Style="{StaticResource SuccessValueInfoBadgeStyle}"
+                            Value="{x:Bind ViewModel.Badges.RunningLocalserverCount, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.Badges.HasRunningLocalservers, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
 
                 <NavigationViewItem
@@ -202,6 +214,11 @@
                     <NavigationViewItem.Icon>
                         <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/NetMap.png" />
                     </NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge
+                            Style="{StaticResource SuccessDotInfoBadgeStyle}"
+                            Visibility="{x:Bind ViewModel.Badges.IsNetMapDetecting, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
 
                 <NavigationViewItem
@@ -211,6 +228,11 @@
                     <NavigationViewItem.Icon>
                         <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/UDPtest.png" />
                     </NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge
+                            Style="{StaticResource SuccessDotInfoBadgeStyle}"
+                            Visibility="{x:Bind ViewModel.Badges.IsUdpMonitoring, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
 
                 <NavigationViewItem
@@ -220,6 +242,12 @@
                     <NavigationViewItem.Icon>
                         <ImageIcon Width="20" Height="20" Source="ms-appx:///Assets/Settings/Navigation/Winget.png" />
                     </NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge
+                            Style="{StaticResource AttentionValueInfoBadgeStyle}"
+                            Value="{x:Bind ViewModel.Badges.WingetUpdateCount, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.Badges.HasWingetUpdates, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
 
             </NavigationView.MenuItems>
@@ -238,6 +266,11 @@
                             </AnimatedIcon.FallbackIconSource>
                         </AnimatedIcon>
                     </NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge
+                            Style="{StaticResource UpdateInfoBadgeStyle}"
+                            Visibility="{x:Bind ViewModel.Badges.IsKitUpdateAvailable, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
             <i:Interaction.Behaviors>

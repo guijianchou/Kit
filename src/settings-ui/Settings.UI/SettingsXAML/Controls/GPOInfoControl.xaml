@@ -8,7 +8,13 @@
             <Setter.Value>
                 <ControlTemplate TargetType="local:GPOInfoControl">
                     <StackPanel Orientation="Vertical">
-                        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+                        <ContentControl
+                            x:Name="PART_ContentHost"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            IsTabStop="False" />
                         <InfoBar
                             x:Uid="GPO_SettingIsManaged"
                             Margin="0,4,0,0"
@@ -17,7 +23,7 @@
                             IsTabStop="{TemplateBinding ShowWarning}"
                             Severity="Informational">
                             <InfoBar.IconSource>
-                                <FontIconSource FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE72E;" />
+                                <FontIconSource FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE72E;" />
                             </InfoBar.IconSource>
                         </InfoBar>
                     </StackPanel>

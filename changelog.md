@@ -4,6 +4,12 @@
 
 ## English
 
+### 3.5.5 (2026-11-21)
+
+- Unified the Windows 11 Mica and WinUI 3 Fluent Design language across the Settings shell, Quick Access flyout, Dashboard, General settings, Search Results, and all seven plugins (Awake, Light Switch, Localserver, UDPtest, NetMap, AI Hub, and WinGet).
+- Placed every plugin's enable switch inside a consistent top `SettingsCard` with its module icon and GPO indicator, and aligned Dashboard's `System overview` card with the Windows 11 `Device specifications` layout (tabular numerals, single-line Windows build/UBR, and rounded CPU base clock).
+- Upgraded WinGet and AI Hub workspaces with non-modal `SplitView` detail panes, declarative XAML dialogs, `SettingsExpander` configuration, and responsive spacing across desktop and compact viewports.
+
 ### 3.5.4 (2026-11-20)
 
 - Improved AI Hub on narrow windows with a compact readiness header, a pinned running-task status, and full task details on demand. Refined the findings workspace and responsive detail pane.
@@ -983,6 +989,12 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.5（2026-11-21）
+
+- 全面重构并统一 Settings 主框架、Quick Access 悬浮面板、Dashboard、General、搜索结果及全部 7 个插件（Awake、Light Switch、Localserver、UDPtest、NetMap、AI Hub、WinGet）的 Windows 11 Mica 与 WinUI 3 Fluent Design 视觉与交互体验。
+- 将所有插件的启用开关统一收敛至内容区顶部的标准 `SettingsCard`（含模块图标与策略状态），并将主页 `System overview` 对齐 Windows 11 系统“设备规格”排版（等宽表格数字、单行 Windows 版本与处理器主频显示）。
+- 升级 WinGet 与 AI Hub 工作区，引入非模态 `SplitView` 详情抽屉、声明式 XAML 对话框、`SettingsExpander` 折叠设置与多尺寸响应式布局。
 
 ### 3.5.4（2026-11-20）
 

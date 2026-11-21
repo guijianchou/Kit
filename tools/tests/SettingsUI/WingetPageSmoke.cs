@@ -831,28 +831,21 @@ internal static class WingetPageSmoke
         var vm = page.ViewModel;
         var originalTheme = shell.RequestedTheme;
         var originalSize = window.AppWindow.Size;
+        var header = page.FindName("WingetPageHeader") as Grid;
         var title = page.FindName("WingetPageTitle") as TextBlock;
-        var introduction = page.FindName("WingetIntroduction") as SettingsPageIntro;
-        var introScroll = page.FindName("WingetIntroScroll") as ScrollViewer;
-        var enable = (FrameworkElement)page.FindName("WingetEnableCard");
-        var expander = (Expander)page.FindName("WingetSettingsExpander");
+        var description = page.FindName("WingetDescription") as TextBlock;
+        var expander = (CommunityToolkit.WinUI.Controls.SettingsExpander)page.FindName("WingetSettingsExpander");
         var tabs = (FrameworkElement)page.FindName("WingetSections");
         var workspace = (FrameworkElement)page.FindName("PackageWorkspaceGrid");
-        Require(title != null && introduction != null && introScroll != null,
-            "WinGet must expose a page title and the shared SettingsPageIntro inside its bounded header scroll.");
-        var iconSurface = introduction.FindName("ModuleIconSurface") as Border;
-        var icon = introduction.FindName("ModuleIcon") as Image;
-        var description = introduction.FindName("AboutDescription") as TextBlock;
-        Require(iconSurface != null && icon != null && description != null,
-            "WinGet must use the shared introduction's image and body-text controls.");
-        double originalIntroOffset = introScroll.VerticalOffset;
+        Require(header != null && title != null && description != null,
+            "WinGet must expose a unified compact Fluent header with title, description and toggle.");
         bool originalExpanded = expander.IsExpanded;
         var navigationItem = Descendants(tabs).OfType<CommunityToolkit.WinUI.Controls.SegmentedItem>().FirstOrDefault();
         Require(navigationItem != null, "WinGet must expose a focusable fixed navigation item.");
         var toggles = Descendants(page).OfType<ToggleSwitch>()
             .Where(toggle => AutomationProperties.GetAutomationId(toggle) == "Toggle_Winget").ToArray();
-        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], enable),
-            "Exactly one WinGet enable switch must remain inside the enable card.");
+        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], header),
+            "Exactly one WinGet enable switch must remain inside the compact header.");
         var toggle = toggles[0];
         try
         {
@@ -870,76 +863,43 @@ internal static class WingetPageSmoke
                 vm.ViewModeIndex = 0;
                 vm.FilterText = string.Empty;
                 Apply(vm, Snapshot());
-                introScroll.ChangeView(null, 0, null, true);
                 await Settle();
-                for (int attempt = 0; attempt < 20 && (icon.Source is not BitmapImage image || image.PixelWidth == 0); attempt++)
-                    await Settle();
 
                 string context = $"{theme}-{size.Item1}x{size.Item2}-module-header";
                 await CaptureShell($"winget-{context}-top-full-shell.png");
-                Require(title.Text == "WinGet" && ReferenceEquals(title.Style, Application.Current.Resources["TitleTextBlockStyle"]),
-                    context + ": the page must render its localized WinGet heading with the shared title style.");
-                Require(!string.IsNullOrWhiteSpace(introduction.ModuleDescription) && description.Text == introduction.ModuleDescription &&
-                    description.FontSize == 14 && description.TextWrapping == TextWrapping.Wrap && description.ActualHeight > 0,
-                    context + ": the shared introduction must render the full localized body description.");
-                Require(introduction.ModuleImageSource?.AbsoluteUri == "ms-appx:///Assets/Settings/Modules/Winget.png" &&
-                    icon.Source is BitmapImage { PixelWidth: 256, PixelHeight: 256 } bitmap &&
-                    bitmap.UriSource == introduction.ModuleImageSource && icon.ActualWidth > 0 && icon.ActualHeight > 0 &&
-                    Math.Abs(iconSurface.ActualWidth - 64) < 1 && Math.Abs(iconSurface.ActualHeight - 64) < 1,
-                    context + ": the 64-DIP shared icon surface must load the actual 256-pixel WinGet asset.");
-                Require(IsDescendantOf(introduction, introScroll) && IsDescendantOf(enable, introScroll) &&
-                    !IsDescendantOf(title, introScroll) && !IsDescendantOf(tabs, introScroll) && !IsDescendantOf(workspace, introScroll),
-                    context + ": only the introduction and enable card may scroll within the module header.");
+                Require(title.Text == "WinGet" && ReferenceEquals(title.Style, Application.Current.Resources["TitleTextBlockStyle"]) &&
+                    AutomationProperties.GetHeadingLevel(title) == AutomationHeadingLevel.Level1,
+                    context + ": the compact header must render its localized WinGet heading with the shared title style.");
+                Require(!string.IsNullOrWhiteSpace(page.ModuleDescription) && description.Text == page.ModuleDescription,
+                    context + ": the compact header must retain the localized description.");
+                Require(!string.IsNullOrWhiteSpace(AutomationProperties.GetName(toggle)),
+                    context + ": the module toggle must expose a localized automation name.");
 
+                Rect headerRect = Bounds(header, shell);
                 Rect titleRect = Bounds(title, shell);
-                Rect introRect = Bounds(introduction, shell);
-                Rect scrollRect = Bounds(introScroll, shell);
-                Rect enableRect = Bounds(enable, shell);
+                Rect toggleRect = Bounds(toggle, shell);
                 Rect expanderRect = Bounds(expander, shell);
                 Rect tabsBefore = Bounds(tabs, shell);
                 Rect workspaceBefore = Bounds(workspace, shell);
-                Require(titleRect.Bottom <= scrollRect.Top + 1 && introRect.Bottom <= enableRect.Top + 1 &&
-                    scrollRect.Bottom <= expanderRect.Top + 1 && expanderRect.Bottom <= tabsBefore.Top + 1 &&
-                    tabsBefore.Bottom <= workspaceBefore.Top + 1,
-                    context + ": title, introduction, enable card, settings and fixed navigation must retain their visual order.");
-                Require(Math.Abs(titleRect.Left - enableRect.Left) <= 1 && Math.Abs(introRect.Left - enableRect.Left) <= 1 &&
-                    Math.Abs(introRect.Right - enableRect.Right) <= 1 && introScroll.ScrollableWidth <= 1 && introScroll.ViewportHeight >= 48,
-                    context + ": title, introduction and enable card must share the existing content gutters without horizontal overflow.");
+                Require(titleRect.Right <= toggleRect.Left + 2 &&
+                    headerRect.Bottom <= expanderRect.Top + 2 && expanderRect.Bottom <= tabsBefore.Top + 2 &&
+                    tabsBefore.Bottom <= workspaceBefore.Top + 2,
+                    context + ": compact header, settings expander, tabs and workspace must retain non-overlapping visual order.");
+                Require(Math.Abs(headerRect.Left - expanderRect.Left) <= 1 && Math.Abs(headerRect.Right - expanderRect.Right) <= 1,
+                    context + ": compact header and settings expander must share the exact content gutters.");
                 AssertWorkspaceBounds(page, context);
-                if (size.Item2 == 985)
-                {
-                    Require(introScroll.ScrollableHeight <= 1 && Contains(scrollRect, introRect) && Contains(scrollRect, enableRect),
-                        context + ": a normal-height page must show the complete introduction and enable card together.");
-                }
-                else
-                {
-                    Require(introScroll.ScrollableHeight > 1,
-                        context + ": a short window must scroll the introduction region while retaining useful package rows.");
-                }
 
-                introScroll.ChangeView(null, introScroll.ScrollableHeight, null, true);
-                await Settle();
-                Require(Contains(Bounds(introScroll, shell), Bounds(toggle, shell)),
-                    context + ": scrolling the introductory region must reveal the entire enable switch.");
                 Require(navigationItem.Focus(FocusState.Keyboard), context + ": fixed navigation must be focusable before the keyboard reachability check.");
-                introScroll.ChangeView(null, 0, null, true);
-                await Settle();
-                Require(toggle.Focus(FocusState.Keyboard), context + ": the enable switch must remain keyboard reachable.");
-                for (int attempt = 0; attempt < 12; attempt++)
-                {
-                    await Settle();
-                    if (Contains(Bounds(introScroll, shell), Bounds(toggle, shell))) break;
-                }
-                Require(Contains(Bounds(introScroll, shell), Bounds(toggle, shell)),
-                    context + ": keyboard focus must bring the whole enable switch into the header viewport.");
+                Require(toggle.Focus(FocusState.Keyboard) && Contains(headerRect, Bounds(toggle, shell)),
+                    context + ": the compact header enable switch must be directly keyboard reachable without scrolling.");
                 Require(SameBounds(tabsBefore, Bounds(tabs, shell)) && SameBounds(workspaceBefore, Bounds(workspace, shell)),
-                    context + ": scrolling or focusing the header must not move fixed navigation or the package workspace.");
+                    context + ": focusing the header must not move fixed navigation or the package workspace.");
                 Require(toggle.IsOn == vm.IsEnabled && GetField<CancellationTokenSource>(vm, "pageLifetime") == null &&
                     !GetField<DispatcherTimer>(vm, "timer").IsEnabled,
                     context + ": header reachability must preserve the module gate and suspended fixture lifecycle.");
                 AssertWorkspaceBounds(page, context + "-toggle-focused");
                 await CaptureShell($"winget-{context}-toggle-focused-full-shell.png");
-                Log($"HEADER {context}: intro={introScroll.ViewportWidth:F1}x{introScroll.ViewportHeight:F1}, scroll={introScroll.ScrollableHeight:F1}, toggle={Bounds(toggle, shell)}, list={((ListView)page.FindName("PackagesList")).ActualHeight:F1}");
+                Log($"HEADER {context}: header={header.ActualWidth:F1}x{header.ActualHeight:F1}, toggle={Bounds(toggle, shell)}, list={((ListView)page.FindName("PackagesList")).ActualHeight:F1}");
                 EnsureNoWorker();
             }
         }
@@ -951,12 +911,10 @@ internal static class WingetPageSmoke
             shell.RequestedTheme = originalTheme;
             window.AppWindow.Resize(originalSize);
             await Settle();
-            introScroll.ChangeView(null, originalIntroOffset, null, true);
-            await Settle();
             general.SettingsConfig.Enabled.Winget = true;
             Apply(vm, Snapshot());
         }
-        Log("Shared WinGet title, localized introduction, decoded logo, normal-height presentation, short-height header scrolling and keyboard-reachable enable switch with fixed navigation and package rows PASS");
+        Log("Unified compact Fluent WinGet header, localized description, keyboard-reachable toggle, fixed navigation and generous package viewport PASS");
     }
 
     private static async Task VerifyExpandedSettings(WingetPage page, SettingsRepository<GeneralSettings> general)
@@ -965,11 +923,10 @@ internal static class WingetPageSmoke
         var shell = (FrameworkElement)window.Content;
         var vm = page.ViewModel;
         var originalTheme = shell.RequestedTheme;
-        var expander = (Expander)page.FindName("WingetSettingsExpander");
-        var scroll = (ScrollViewer)page.FindName("AutomaticSettingsScroll");
+        var expander = (CommunityToolkit.WinUI.Controls.SettingsExpander)page.FindName("WingetSettingsExpander");
         var dailyCard = (FrameworkElement)page.FindName("DailySettingsCard");
         var notifyCard = (FrameworkElement)page.FindName("NotifySettingsCard");
-        var footer = (FrameworkElement)page.FindName("AutomaticSettingsFooter");
+        var scheduleCard = (FrameworkElement)page.FindName("ScheduleSettingsCard");
         var help = (HyperlinkButton)page.FindName("WingetHelpLink");
         var details = (AppBarButton)page.FindName("DetailsButton");
         Require(details.Icon is SymbolIcon { Symbol: Symbol.Document }, "Package details must use the document icon instead of the help question mark.");
@@ -995,37 +952,30 @@ internal static class WingetPageSmoke
                     expander.IsExpanded = true;
                     await Task.Delay(220);
                     await Settle();
-                    scroll.ChangeView(null, 0, null, true);
-                    await Settle();
                     string context = $"{theme}-{size.Item1}x{size.Item2}-settings-expanded";
                     await CaptureShell($"winget-{context}-full-shell.png");
                     try { AssertWorkspaceBounds(page, context); }
                     catch { LogExpandedLayout(page, context); throw; }
                     Rect expanderRect = Bounds(expander, shell);
-                    Rect scrollRect = Bounds(scroll, shell);
                     Rect dailyRect = Bounds(dailyCard, shell);
                     Rect notifyRect = Bounds(notifyCard, shell);
-                    Require(scrollRect.Left >= expanderRect.Left + 12 && scrollRect.Right <= expanderRect.Right - 12,
-                        context + ": expanded content must have real horizontal padding.");
-                    Require(dailyRect.Top >= scrollRect.Top - 1 && dailyRect.Top <= scrollRect.Top + 16,
-                        context + ": settings content must start at the top of its scroll viewport.");
-                    Require(scroll.ScrollableWidth <= 1 && scroll.ActualHeight > 80 && scroll.ActualHeight <= scroll.MaxHeight + 1,
-                        context + ": settings must use a finite vertical scroll viewport without horizontal overflow.");
+                    Rect scheduleRect = Bounds(scheduleCard, shell);
                     foreach (var card in new[] { dailyCard, notifyCard })
                     {
                         Rect cardRect = Bounds(card, shell);
-                        Require(card.ActualHeight >= 48 && cardRect.Left >= scrollRect.Left - 1 && cardRect.Right <= scrollRect.Right + 1,
-                            context + ": settings card collapsed or extends outside the scroll viewport.");
+                        Require(card.ActualHeight >= 48 && cardRect.Left >= expanderRect.Left - 1 && cardRect.Right <= expanderRect.Right + 1,
+                            context + ": settings card collapsed or extends outside the SettingsExpander.");
                         var toggle = Descendants(card).OfType<ToggleSwitch>().Single();
                         Rect toggleRect = Bounds(toggle, shell);
                         Require(toggleRect.Left >= cardRect.Left + 8 && toggleRect.Right <= cardRect.Right - 8 &&
                             toggleRect.Top >= cardRect.Top && toggleRect.Bottom <= cardRect.Bottom + 1,
                             context + ": settings toggle must be inset and contained by its card.");
-                        Require(toggle.IsEnabled, context + ": enabled plugin must expose usable automatic settings switches.");
+                        Require(toggle.IsEnabled && !string.IsNullOrWhiteSpace(AutomationProperties.GetName(toggle)),
+                            context + ": enabled plugin must expose usable localized automatic settings switches.");
                     }
                     Require(Math.Abs(dailyRect.Left - notifyRect.Left) <= 1 && Math.Abs(dailyRect.Right - notifyRect.Right) <= 1 &&
-                        notifyRect.Top >= dailyRect.Bottom + 8,
-                        context + ": automatic settings must always stack Check daily above Windows notifications at matching left and right edges.");
+                        notifyRect.Top >= dailyRect.Bottom - 1 && scheduleRect.Top >= notifyRect.Bottom - 1,
+                        context + ": SettingsExpander items must stack Check daily, Windows notifications, and Schedule cleanly.");
                     Require(((TextBlock)page.FindName("LastCheckText")).Text == vm.LastCheckText &&
                         ((TextBlock)page.FindName("NextCheckText")).Text == vm.NextCheckText,
                         context + ": schedule summary must retain localized check times.");
@@ -1033,20 +983,10 @@ internal static class WingetPageSmoke
                     Require(list.ActualHeight >= 40, context + ": expanded settings must leave a usable package list.");
                     Require(help.NavigateUri?.AbsoluteUri == "https://learn.microsoft.com/en-us/windows/package-manager/winget/",
                         context + ": help must retain the official WinGet documentation target.");
-                    scroll.ChangeView(null, scroll.ScrollableHeight, null, true);
-                    await Settle();
                     Require(help.Focus(FocusState.Keyboard), context + ": help must remain keyboard reachable.");
-                    await Settle();
-                    Rect footerRect = Bounds(footer, shell);
-                    scrollRect = Bounds(scroll, shell);
-                    Require(footerRect.Top >= scrollRect.Top - 1 && footerRect.Bottom <= scrollRect.Bottom + 1 &&
-                        footerRect.Left >= scrollRect.Left - 1 && footerRect.Right <= scrollRect.Right + 1,
-                        context + ": schedule and help must be fully reachable within the inner scroll viewport.");
-                    if (scroll.ScrollableHeight > 1)
-                        await CaptureShell($"winget-{context}-footer-full-shell.png");
                     Require(GetField<CancellationTokenSource>(vm, "pageLifetime") == null && !GetField<DispatcherTimer>(vm, "timer").IsEnabled,
-                        context + ": expanding and scrolling settings must not resume service polling.");
-                    Log($"EXPANDED {context}: content={scroll.ActualWidth:F1}x{scroll.ActualHeight:F1}, scroll={scroll.ScrollableHeight:F1}, listHeight={list.ActualHeight:F1}");
+                        context + ": expanding settings must not resume service polling.");
+                    Log($"EXPANDED {context}: expander={expander.ActualWidth:F1}x{expander.ActualHeight:F1}, listHeight={list.ActualHeight:F1}");
                     EnsureNoWorker();
                 }
             }
@@ -1063,23 +1003,23 @@ internal static class WingetPageSmoke
             general.SettingsConfig.Enabled.Winget = true;
             Apply(vm, Snapshot());
         }
-        Log("Expanded automatic settings light/dark wide/narrow/short centered layout, vertically stacked options, padding, localized schedule, keyboard-reachable help and document details icon PASS");
+        Log("Expanded native SettingsExpander light/dark wide/narrow/short layout, stacked cards, localized schedule, keyboard-reachable help and document details icon PASS");
     }
 
     private static void LogExpandedLayout(WingetPage page, string context)
     {
         page.UpdateLayout();
         var shell = (FrameworkElement)App.GetSettingsWindow().Content;
-        foreach (string name in new[] { "WingetViewport", "WingetPageTitle", "WingetIntroduction", "WingetIntroScroll", "WingetEnableCard", "WingetSettingsExpander", "AutomaticSettingsScroll", "DailySettingsCard", "NotifySettingsCard", "AutomaticSettingsFooter", "WingetSections", "PackageWorkspaceGrid", "WorkspaceCommands", "WingetOperationCard", "WorkspaceBody", "PackageTableViewport", "WingetPackageListCard", "PackageTableHeader", "PackagesList", "WorkspaceFooter" })
+        foreach (string name in new[] { "WingetViewport", "WingetPageHeader", "WingetPageTitle", "WingetSettingsExpander", "DailySettingsCard", "NotifySettingsCard", "ScheduleSettingsCard", "WingetSections", "PackageWorkspaceGrid", "WorkspaceCommands", "WingetOperationCard", "WorkspaceBody", "PackageTableViewport", "WingetPackageListCard", "PackageTableHeader", "PackagesList", "WorkspaceFooter" })
         {
-            var element = (FrameworkElement)page.FindName(name);
+            var element = page.FindName(name) as FrameworkElement;
+            if (element == null) continue;
             Rect rect = Bounds(element, shell);
             string rows = element is Grid grid ? "; rows=" + string.Join(",", grid.RowDefinitions.Select(row => row.ActualHeight.ToString("F1", CultureInfo.InvariantCulture))) : string.Empty;
             Log($"LAYOUT {context} {name}: x={rect.Left:F1}..{rect.Right:F1}, y={rect.Top:F1}..{rect.Bottom:F1}, size={element.ActualWidth:F1}x{element.ActualHeight:F1}, visibility={element.Visibility}{rows}");
         }
         var list = (ListView)page.FindName("PackagesList");
-        var scroll = (ScrollViewer)page.FindName("AutomaticSettingsScroll");
-        Log($"LAYOUT {context}: settingsMaxHeight={scroll.MaxHeight:F1}, settingsOffset={scroll.VerticalOffset:F1}/{scroll.ScrollableHeight:F1}, packageCount={list.Items.Count}, activeTab={page.ViewModel.ActiveTabIndex}, error={page.ViewModel.HasError}, notificationError={page.ViewModel.HasNotificationError}, recovery={page.ViewModel.RecoveryRequired}, operation={page.ViewModel.HasOperationFeedback}");
+        Log($"LAYOUT {context}: packageCount={list.Items.Count}, activeTab={page.ViewModel.ActiveTabIndex}, error={page.ViewModel.HasError}, notificationError={page.ViewModel.HasNotificationError}, recovery={page.ViewModel.RecoveryRequired}, operation={page.ViewModel.ShowOperationCard}");
         foreach (var listScroll in Descendants(list).OfType<ScrollViewer>())
             Log($"LAYOUT {context} package scroll: viewport={listScroll.ViewportWidth:F1}x{listScroll.ViewportHeight:F1}, extent={listScroll.ExtentHeight:F1}, offset={listScroll.VerticalOffset:F1}/{listScroll.ScrollableHeight:F1}");
         foreach (var bar in Descendants(page).OfType<InfoBar>().Where(bar => bar.IsOpen && bar.Visibility == Visibility.Visible))
@@ -1380,36 +1320,36 @@ internal static class WingetPageSmoke
     {
         page.UpdateLayout();
         var shell = (FrameworkElement)App.GetSettingsWindow().Content;
-        var enable = (FrameworkElement)page.FindName("WingetEnableCard");
+        var header = (FrameworkElement)page.FindName("WingetPageHeader");
         var workspace = (FrameworkElement)page.FindName("PackageWorkspaceGrid");
         var table = (FrameworkElement)page.FindName("WingetPackageListCard");
         Rect pageRect = Bounds(page, shell);
-        Rect enableRect = Bounds(enable, shell);
+        Rect headerRect = Bounds(header, shell);
         Rect workspaceRect = Bounds(workspace, shell);
-        double leftGutter = enableRect.Left - pageRect.Left;
-        double rightGutter = pageRect.Right - enableRect.Right;
+        double leftGutter = headerRect.Left - pageRect.Left;
+        double rightGutter = pageRect.Right - headerRect.Right;
         double expectedContentWidth = Math.Min(1000, page.ActualWidth - 48);
-        Require(enable.ActualWidth <= 1001 && Math.Abs(enable.ActualWidth - expectedContentWidth) <= 1,
-            $"{context}: content width {enable.ActualWidth:F1} must fill the available page width up to the shared 1000 DIP maximum; expected {expectedContentWidth:F1}.");
+        Require(header.ActualWidth <= 1001 && Math.Abs(header.ActualWidth - expectedContentWidth) <= 1,
+            $"{context}: content width {header.ActualWidth:F1} must fill the available page width up to the shared 1000 DIP maximum; expected {expectedContentWidth:F1}.");
         Require(leftGutter >= 23 && rightGutter >= 23 && Math.Abs(leftGutter - rightGutter) <= 1,
             $"{context}: content must retain equal left/right page gutters of at least 24 DIPs; actual {leftGutter:F1}/{rightGutter:F1}.");
         Rect expanderRect = Bounds((FrameworkElement)page.FindName("WingetSettingsExpander"), shell);
-        Require(Math.Abs(expanderRect.Left - enableRect.Left) <= 1 && Math.Abs(expanderRect.Right - enableRect.Right) <= 1,
-            $"{context}: automatic settings [{expanderRect.Left:F1},{expanderRect.Right:F1}] must align with EnableCard [{enableRect.Left:F1},{enableRect.Right:F1}].");
-        Require(Math.Abs(workspaceRect.Left - enableRect.Left) <= 1, $"{context}: workspace left {workspaceRect.Left:F1} differs from EnableCard {enableRect.Left:F1}.");
-        Require(Math.Abs(workspaceRect.Right - enableRect.Right) <= 1, $"{context}: workspace right {workspaceRect.Right:F1} differs from EnableCard {enableRect.Right:F1}.");
+        Require(Math.Abs(expanderRect.Left - headerRect.Left) <= 1 && Math.Abs(expanderRect.Right - headerRect.Right) <= 1,
+            $"{context}: automatic settings [{expanderRect.Left:F1},{expanderRect.Right:F1}] must align with Header [{headerRect.Left:F1},{headerRect.Right:F1}].");
+        Require(Math.Abs(workspaceRect.Left - headerRect.Left) <= 1, $"{context}: workspace left {workspaceRect.Left:F1} differs from Header {headerRect.Left:F1}.");
+        Require(Math.Abs(workspaceRect.Right - headerRect.Right) <= 1, $"{context}: workspace right {workspaceRect.Right:F1} differs from Header {headerRect.Right:F1}.");
         Require(workspace.ActualWidth > 300 && table.ActualWidth > 250, $"{context}: workspace/table collapsed.");
         foreach (string name in new[] { "WingetSettingsExpander", "PackageWorkspaceGrid", "WorkspaceCommands", "WorkspaceBody", "PackageTableViewport", "WingetPackageListCard", "WorkspaceFooter" })
         {
             var element = (FrameworkElement)page.FindName(name);
             Rect rect = Bounds(element, shell);
-            Require(rect.Left >= enableRect.Left - 1 && rect.Right <= enableRect.Right + 1 && rect.Right <= shell.ActualWidth + 1,
-                $"{context}: {name} bounds [{rect.Left:F1},{rect.Right:F1}] exceed content [{enableRect.Left:F1},{enableRect.Right:F1}] / shell {shell.ActualWidth:F1}.");
+            Require(rect.Left >= headerRect.Left - 1 && rect.Right <= headerRect.Right + 1 && rect.Right <= shell.ActualWidth + 1,
+                $"{context}: {name} bounds [{rect.Left:F1},{rect.Right:F1}] exceed content [{headerRect.Left:F1},{headerRect.Right:F1}] / shell {shell.ActualWidth:F1}.");
         }
         Require(workspaceRect.Left >= pageRect.Left && workspaceRect.Bottom <= pageRect.Bottom + 1, $"{context}: workspace extends outside the page.");
         var list = page.ViewModel.ViewModeIndex == 2 ? (ListViewBase)page.FindName("PackageTiles") : (ListViewBase)page.FindName("PackagesList");
         Rect listRect = Bounds(list, shell);
-        Require(listRect.Left >= enableRect.Left - 1 && listRect.Right <= enableRect.Right + 1, $"{context}: package list escapes viewport.");
+        Require(listRect.Left >= headerRect.Left - 1 && listRect.Right <= headerRect.Right + 1, $"{context}: package list escapes viewport.");
         if (list.Items.Count > 0)
             Require(list.ActualHeight >= 40 && Contains(pageRect, listRect), $"{context}: a populated package list must retain at least 40 DIPs inside the page.");
         int checkedRows = 0;
@@ -1452,7 +1392,7 @@ internal static class WingetPageSmoke
             $"{context}: sidebar visibility must follow the wide toggle state.");
         Require(Math.Abs(((FrameworkElement)page.FindName("PackageTableViewport")).ActualWidth - workspace.ActualWidth + (sidebarVisible ? 202 : 0)) <= 1,
             $"{context}: package viewport must use the entire width released by collapsed filters.");
-        Log($"BOUNDS {context}: shell={shell.ActualWidth:F1}, page=[{pageRect.Left:F1},{pageRect.Right:F1}], enable=[{enableRect.Left:F1},{enableRect.Right:F1}], gutters={leftGutter:F1}/{rightGutter:F1}, workspace=[{workspaceRect.Left:F1},{workspaceRect.Right:F1}], table={table.ActualWidth:F1}, visibleRows={checkedRows}/{list.Items.Count}");
+        Log($"BOUNDS {context}: shell={shell.ActualWidth:F1}, page=[{pageRect.Left:F1},{pageRect.Right:F1}], header=[{headerRect.Left:F1},{headerRect.Right:F1}], gutters={leftGutter:F1}/{rightGutter:F1}, workspace=[{workspaceRect.Left:F1},{workspaceRect.Right:F1}], table={table.ActualWidth:F1}, visibleRows={checkedRows}/{list.Items.Count}");
     }
 
     private static async Task VerifyCancelledConfirmation(WingetPage page)
@@ -1645,19 +1585,25 @@ internal static class WingetPageSmoke
         vm.ShowIgnored = false;
         Apply(vm, Snapshot());
         vm.ActiveSelection = vm.DisplayPackages.Single(item => item.Id == LongPackage.Id);
-        var field = typeof(WingetPage).GetField("activeDialog", PrivateInstance);
-        var method = typeof(WingetPage).GetMethod("ShowDetailsAsync", PrivateInstance);
+        var host = (SplitView)page.FindName("WingetDetailsHost");
+        var pane = (WingetPackageDetailsPane)page.FindName("WingetDetailsPane");
+        var openMethod = typeof(WingetPage).GetMethod("OpenDetailsPane", PrivateInstance);
+        var closeMethod = typeof(WingetPage).GetMethod("CloseDetailsPane", PrivateInstance);
         try
         {
-            Task showing = (Task)method.Invoke(page, Array.Empty<object>());
-            var timer = Stopwatch.StartNew();
-            while (field.GetValue(page) == null && timer.Elapsed < TimeSpan.FromSeconds(3)) await Task.Delay(25);
-            var dialog = (ContentDialog)field.GetValue(page);
-            Require(dialog != null, "Selected package details must open in a dialog.");
-            await WaitForDialogText(dialog, new[] { LongPackage.Id, LongPackage.ReleaseNotes, Details(LongPackage).Description });
+            openMethod.Invoke(page, Array.Empty<object>());
+            await Settle();
+            Require(host.IsPaneOpen, "Selected package details must open in the non-modal SplitView pane.");
+            var identityText = (TextBlock)pane.FindName("IdentityText");
+            var descriptionText = (TextBlock)pane.FindName("DescriptionText");
+            var releaseNotes = (CommunityToolkit.WinUI.Controls.MarkdownTextBlock)pane.FindName("ReleaseNotesMarkdown");
+            Require(identityText.Text.Contains(LongPackage.Id, StringComparison.Ordinal) &&
+                descriptionText.Text == Details(LongPackage).Description &&
+                releaseNotes.Text == LongPackage.ReleaseNotes && releaseNotes.DisableHtml && releaseNotes.IsTextSelectionEnabled,
+                "Details pane must display package identity, description, and selectable HTML-safe Markdown release notes.");
             Apply(vm, Snapshot() with { SelectedDetails = Details(LongPackage) with { AvailableVersions = new[] { LongPackage.AvailableVersion, "fixture-older" } } });
             await Settle();
-            var versions = Descendants(dialog).OfType<ComboBox>().Single(control => AutomationProperties.GetAutomationId(control) == "Winget_VersionChoice");
+            var versions = Descendants(pane).OfType<ComboBox>().Single(control => AutomationProperties.GetAutomationId(control) == "Winget_VersionChoice");
             Require(versions.Items.Count == 2 && Equals(versions.SelectedItem, LongPackage.AvailableVersion), "Version choices must come from the loaded package details.");
             versions.SelectedItem = "fixture-older";
             Apply(vm, CloneSnapshot(Snapshot() with { SelectedDetails = Details(LongPackage) with { AvailableVersions = new[] { LongPackage.AvailableVersion, "fixture-older" } } }));
@@ -1667,15 +1613,17 @@ internal static class WingetPageSmoke
             typeof(WingetViewModel).GetField("detailsError", PrivateInstance).SetValue(vm, "Fixture version unavailable");
             typeof(WingetViewModel).GetMethod("NotifyState", PrivateInstance).Invoke(vm, Array.Empty<object>());
             await Settle();
-            Require(vm.HasDetails && vm.HasDetailsError && Descendants(dialog).OfType<StackPanel>().Single(panel => panel.Name == "DetailsErrorPanel").Visibility == Visibility.Visible,
+            Require(vm.HasDetails && vm.HasDetailsError && ((StackPanel)pane.FindName("DetailsErrorPanel")).Visibility == Visibility.Visible,
                 "A failed version change must display its error while preserving the previous package details.");
             Require(await vm.LoadDetailsAsync() && !vm.HasDetailsError, "Returning to the preserved details must clear the obsolete version error.");
-            Require(Descendants(dialog).OfType<HyperlinkButton>().Any(link => link.NavigateUri?.AbsoluteUri == Details(LongPackage).PackageUrl) &&
-                Descendants(dialog).OfType<TextBlock>().Any(block => block.Text.Contains("MIT", StringComparison.Ordinal)), "Package details must include its safe homepage and license.");
-            Require(Descendants(dialog).OfType<TextBlock>().Where(block => block.Text == LongPackage.ReleaseNotes).All(block => block.TextWrapping == TextWrapping.Wrap && block.IsTextSelectionEnabled), "Release notes must remain selectable wrapping plain text.");
-            dialog.Hide();
-            await showing;
+            Require(Descendants(pane).OfType<HyperlinkButton>().Any(link => link.NavigateUri?.AbsoluteUri == Details(LongPackage).PackageUrl) &&
+                Descendants(pane).OfType<TextBlock>().Any(block => block.Text.Contains("MIT", StringComparison.Ordinal)), "Package details must include its safe homepage and license.");
+            await CaptureShell("winget-details-pane-open.png");
+            closeMethod.Invoke(page, Array.Empty<object>());
+            await Settle();
+            Require(!host.IsPaneOpen, "Closing details pane must dismiss the SplitView.");
             AssertWorkspaceBounds(page, "details-closed");
+
             vm.ActiveTabIndex = (int)WingetWorkspace.Discover;
             vm.FilterText = string.Empty;
             vm.ExactMatch = false;
@@ -1685,38 +1633,38 @@ internal static class WingetPageSmoke
                 OperationId = "fixture-details", OperationKind = "details", Phase = "LoadingDetails" };
             Apply(vm, loading);
             vm.ActiveSelection = vm.DisplayPackages.Single();
-            Task loadingDialog = (Task)method.Invoke(page, Array.Empty<object>());
-            var liveDialog = (ContentDialog)field.GetValue(page);
-            Require(liveDialog != null, "Details must open immediately while metadata is still loading.");
-            await WaitForDialogText(liveDialog, new[] { WingetViewModel.L("Phase_LoadingDetails") });
-            var loadingPanel = Descendants(liveDialog).OfType<StackPanel>().Single(panel => panel.Name == "DetailsLoadingPanel");
-            var errorPanel = Descendants(liveDialog).OfType<StackPanel>().Single(panel => panel.Name == "DetailsErrorPanel");
-            var detailsPanel = Descendants(liveDialog).OfType<StackPanel>().Single(panel => panel.Name == "DetailsContentPanel");
-            var retry = Descendants(liveDialog).OfType<Button>().Single(button => button.Name == "DetailsRetryButton");
-            var cancel = Descendants(liveDialog).OfType<Button>().Single(button => button.Name == "DetailsCancelButton");
+            openMethod.Invoke(page, Array.Empty<object>());
+            await Settle();
+            Require(host.IsPaneOpen, "Details pane must open immediately while metadata is still loading.");
+            var loadingPanel = (StackPanel)pane.FindName("DetailsLoadingPanel");
+            var errorPanel = (StackPanel)pane.FindName("DetailsErrorPanel");
+            var detailsPanel = (StackPanel)pane.FindName("DetailsContentPanel");
+            var retry = (Button)pane.FindName("DetailsRetryButton");
+            var cancel = (Button)pane.FindName("DetailsCancelButton");
             Require(loadingPanel.Visibility == Visibility.Visible && cancel.IsEnabled && detailsPanel.Visibility == Visibility.Collapsed,
                 "Loading details must display progress and cancellation while resolved content is hidden.");
             Apply(vm, loading with { IsBusy = false, Phase = "Cancelled", LastResult = new WingetServiceOperationResult("fixture-details", "details", false, "Fixture details cancelled") });
             await Settle();
-            Require(ReferenceEquals(liveDialog, field.GetValue(page)) && errorPanel.Visibility == Visibility.Visible && retry.IsEnabled && loadingPanel.Visibility == Visibility.Collapsed,
-                "A failed/cancelled detail request must keep its dialog open and expose retry.");
+            Require(host.IsPaneOpen && errorPanel.Visibility == Visibility.Visible && retry.IsEnabled && loadingPanel.Visibility == Visibility.Collapsed,
+                "A failed/cancelled detail request must keep its pane open and expose retry.");
             Require(!await vm.LoadDetailsAsync(), "Inactive synthetic details retry must not contact a service.");
             Apply(vm, loading with { OperationId = "fixture-details-retry" });
             await Settle();
             Require(loadingPanel.Visibility == Visibility.Visible && errorPanel.Visibility == Visibility.Collapsed && !retry.IsEnabled,
-                "Retry must restore the existing loading controls without recreating the dialog.");
+                "Retry must restore the existing loading controls without recreating the pane.");
             var resolved = SearchPackage with { IsMetadataResolved = true };
             Apply(vm, Snapshot() with { SearchResults = new[] { resolved }, SelectedDetails = Details(resolved) });
-            await WaitForDialogText(liveDialog, new[] { resolved.AvailableVersion, Details(resolved).Description });
-            Require(ReferenceEquals(liveDialog, field.GetValue(page)) && detailsPanel.Visibility == Visibility.Visible && loadingPanel.Visibility == Visibility.Collapsed && errorPanel.Visibility == Visibility.Collapsed,
-                "Resolved metadata must fill the same dialog and replace loading/error state.");
-            liveDialog.Hide();
-            await loadingDialog;
+            await Settle();
+            Require(host.IsPaneOpen && detailsPanel.Visibility == Visibility.Visible && loadingPanel.Visibility == Visibility.Collapsed && errorPanel.Visibility == Visibility.Collapsed &&
+                descriptionText.Text == Details(resolved).Description,
+                "Resolved metadata must fill the same pane and replace loading/error state.");
+            closeMethod.Invoke(page, Array.Empty<object>());
+            await Settle();
             Require(GetField<CancellationTokenSource>(vm, "pageLifetime") == null, "Details fixture must not resume service polling.");
             EnsureNoWorker();
         }
-        finally { ((ContentDialog)field.GetValue(page))?.Hide(); }
-        Log("Details open immediately; progress/cancel/error/retry/resolved states share one dialog, with safe homepage/license and selectable notes PASS");
+        finally { closeMethod.Invoke(page, Array.Empty<object>()); }
+        Log("Non-modal SplitView details pane: progress/cancel/error/retry/resolved states, safe homepage/license and Markdown release notes PASS");
     }
 
     private static async Task WaitForDialogText(ContentDialog dialog, string[] expected)

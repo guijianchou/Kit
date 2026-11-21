@@ -3674,7 +3674,7 @@
   <data name="Winget_EnableCard.Description" xml:space="preserve">
     <value>Install software and check app updates. Daily checks continue while Kit is in the tray.</value>
   </data>
-  <data name="Winget_EnableToggle.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_EnableToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Enable WinGet plugin</value>
   </data>
   <data name="Winget_Help.Content" xml:space="preserve">
@@ -3689,7 +3689,7 @@
   <data name="Winget_DailyCard.Description" xml:space="preserve">
     <value>Check when first enabled, then every 24 hours while Kit is running. You choose when to install updates.</value>
   </data>
-  <data name="Winget_DailyToggle.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_DailyToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Check app updates daily</value>
   </data>
   <data name="Winget_NotifyCard.Header" xml:space="preserve">
@@ -3698,7 +3698,7 @@
   <data name="Winget_NotifyCard.Description" xml:space="preserve">
     <value>Notify when a new set of app updates is available.</value>
   </data>
-  <data name="Winget_NotifyToggle.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_NotifyToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Notify about app updates</value>
   </data>
   <data name="Winget_Check.Content" xml:space="preserve">
@@ -3707,7 +3707,7 @@
   <data name="Winget_Cancel.Content" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="Winget_UpdatesList.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_UpdatesList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Available app updates, installed version to new version</value>
   </data>
   <data name="Winget_Details.Content" xml:space="preserve">
@@ -4195,7 +4195,19 @@
   <data name="Winget_SortAvailable.Content" xml:space="preserve"><value>New version</value></data>
   <data name="Winget_SortSource.Content" xml:space="preserve"><value>Source</value></data>
   <data name="Winget_SortDescending.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sort descending</value></data>
-  <data name="Winget_SortDescending.ToolTipService.ToolTip" xml:space="preserve"><value>Sort descending</value></data>
+  <data name="Winget_SortDescending.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sort descending</value></data>
+  <data name="Winget_SortDescendingToolTip" xml:space="preserve"><value>Sort descending</value></data>
+  <data name="Winget_SortAscendingToolTip" xml:space="preserve"><value>Sort ascending</value></data>
+  <data name="Winget_DetailsResizeHandle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Resize package details pane</value></data>
+  <data name="Winget_DetailsPaneTitle" xml:space="preserve"><value>Package details</value></data>
+  <data name="Winget_CopyIdAction" xml:space="preserve"><value>Copy package ID</value></data>
+  <data name="Winget_CopyManualCommandAction" xml:space="preserve"><value>Copy WinGet command</value></data>
+  <data name="Winget_SelectPackageAction" xml:space="preserve"><value>Toggle selection</value></data>
+  <data name="Winget_CopiedToClipboard" xml:space="preserve"><value>Copied to clipboard.</value></data>
+  <data name="Winget_ActivityToolbarButton.Label" xml:space="preserve"><value>Activity</value></data>
+  <data name="Winget_ActivityToolbarButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Open queue and operation history</value></data>
+  <data name="Winget_ScheduleCard.Header" xml:space="preserve"><value>Schedule and documentation</value></data>
+  <data name="Winget_InvalidInstallLocation" xml:space="preserve"><value>Enter an absolute folder path on a local drive.</value></data>
   <data name="Winget_ViewMode.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Package view</value></data>
   <data name="Winget_DetailedView.Content" xml:space="preserve"><value>Details</value></data>
   <data name="Winget_CompactView.Content" xml:space="preserve"><value>Compact</value></data>

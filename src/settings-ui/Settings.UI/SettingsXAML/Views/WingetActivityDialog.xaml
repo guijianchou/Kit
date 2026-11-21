@@ -1,0 +1,114 @@
+<!-- Copyright (c) Microsoft Corporation -->
+<!-- The Microsoft Corporation licenses this file to you under the MIT license. -->
+<!-- See the LICENSE file in the project root for more information. -->
+
+<ContentDialog
+    x:Class="Kit.Settings.UI.Views.WingetActivityDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Kit.Settings.UI.ViewModels"
+    DefaultButton="Close">
+
+    <ContentDialog.Resources>
+        <DataTemplate x:Key="ActivityQueueTemplate" x:DataType="vm:WingetQueueRow">
+            <Expander x:Name="QueueRowExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,4">
+                <Expander.Header>
+                    <Grid Padding="4,2" ColumnDefinitions="2*,*,*" ColumnSpacing="12">
+                        <StackPanel MinWidth="0">
+                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{x:Bind Identity, Mode=OneWay}" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{x:Bind KindText, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{x:Bind StateText, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </Grid>
+                </Expander.Header>
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        Text="{x:Bind WhenText, Mode=OneWay}"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Visibility="{x:Bind HasTimestamp, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <TextBlock Text="{x:Bind Message, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                    <Border Style="{StaticResource KitRecessedSurfaceStyle}">
+                        <ScrollViewer MaxHeight="140" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                            <TextBlock Text="{x:Bind Output, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+            </Expander>
+        </DataTemplate>
+    </ContentDialog.Resources>
+
+    <ScrollViewer
+        MaxHeight="520"
+        MaxWidth="640"
+        HorizontalScrollMode="Disabled"
+        HorizontalScrollBarVisibility="Disabled"
+        HorizontalContentAlignment="Stretch"
+        VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="12">
+            <TextBlock x:Name="QueueHeadingText" FontWeight="SemiBold" />
+            <ItemsControl
+                x:Name="QueueItemsList"
+                ItemsSource="{x:Bind ViewModel.QueueItems}"
+                ItemTemplate="{StaticResource ActivityQueueTemplate}" />
+
+            <TextBlock x:Name="HistoryHeadingText" FontWeight="SemiBold" Margin="0,4,0,0" />
+            <ComboBox
+                x:Name="HistoryRetentionComboBox"
+                HorizontalAlignment="Stretch"
+                SelectedIndex="{x:Bind ViewModel.HistoryRetentionIndex, Mode=TwoWay}"
+                AutomationProperties.AutomationId="Winget_HistoryRetention" />
+            <TextBlock
+                x:Name="HistoryCleanupHintText"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap" />
+            <Button
+                x:Name="ClearHistoryButton"
+                HorizontalAlignment="Left"
+                IsEnabled="{x:Bind ViewModel.CanClearHistory, Mode=OneWay}"
+                Click="OnClearHistoryClick"
+                Style="{StaticResource KitActionButtonStyle}"
+                AutomationProperties.AutomationId="Winget_ClearOldHistory" />
+            <TextBlock
+                x:Name="HistoryClearResultText"
+                Text="{x:Bind ViewModel.HistoryClearMessage, Mode=OneWay}"
+                FontSize="12"
+                TextWrapping="Wrap"
+                IsTextSelectionEnabled="True"
+                AutomationProperties.AutomationId="Winget_HistoryClearResult"
+                AutomationProperties.LiveSetting="Polite" />
+
+            <TextBox
+                x:Name="HistorySearchBox"
+                MaxLength="200"
+                Text="{x:Bind ViewModel.HistorySearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                AutomationProperties.AutomationId="Winget_HistorySearch" />
+            <CheckBox
+                x:Name="HistoryAttentionCheckBox"
+                IsChecked="{x:Bind ViewModel.HistoryAttentionOnly, Mode=TwoWay}"
+                AutomationProperties.AutomationId="Winget_HistoryAttention" />
+            <TextBlock
+                x:Name="HistorySummaryText"
+                Text="{x:Bind ViewModel.HistoryFilterSummary, Mode=OneWay}"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap"
+                AutomationProperties.LiveSetting="Polite" />
+            <ItemsControl
+                x:Name="HistoryItemsList"
+                ItemsSource="{x:Bind ViewModel.VisibleHistory}"
+                ItemTemplate="{StaticResource ActivityQueueTemplate}"
+                AutomationProperties.AutomationId="Winget_HistoryItems" />
+            <Border Style="{StaticResource KitRecessedSurfaceStyle}" Padding="10,8">
+                <TextBlock
+                    Text="{x:Bind ViewModel.Activity, Mode=OneWay}"
+                    FontFamily="{StaticResource KitMonoFontFamily}"
+                    FontSize="12"
+                    TextWrapping="Wrap"
+                    IsTextSelectionEnabled="True" />
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

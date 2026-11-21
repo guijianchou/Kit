@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,9 +17,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
@@ -35,14 +34,22 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     private bool confirmationOpen;
     private bool compactFilters;
     private bool filtersExpanded;
+    private bool narrowTableColumns;
+    private bool resizingDetailsPane;
+    private double inlinePaneLength = 420;
+    private long openPaneLengthCallbackToken;
     private ContentDialog activeDialog;
+    private WingetPackageRow detailsRow;
     private WingetWorkspace visibleWorkspace = WingetWorkspace.Updates;
     private PackageViewMode appliedListViewMode = PackageViewMode.Details;
     private double appliedWorkspaceWidth = double.NaN;
 
     public WingetPage()
     {
-        ViewModel = new WingetViewModel(SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default), SettingsRepository<WingetSettings>.GetInstance(SettingsUtils.Default), ShellPage.SendDefaultIPCMessage);
+        ViewModel = new WingetViewModel(
+            SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default),
+            SettingsRepository<WingetSettings>.GetInstance(SettingsUtils.Default),
+            ShellPage.SendDefaultIPCMessage);
         InitializeComponent();
         DataContext = ViewModel;
         settingsWindow = App.GetSettingsWindow();
@@ -51,6 +58,17 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         settingsWindow.Closed += OnWindowClosed;
         settingsWindow.AppWindow.Changed += OnWindowChanged;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+        WingetDetailsPane.CloseRequested += OnDetailsCloseRequested;
+        WingetDetailsPane.CancelRequested += OnDetailsCancelRequested;
+        WingetDetailsPane.RetryRequested += OnDetailsRetryRequested;
+        WingetDetailsPane.ApplyVersionRequested += OnDetailsApplyVersionRequested;
+        WingetDetailsHost.PaneClosed += OnDetailsPaneClosed;
+        WingetDetailsHost.SizeChanged += OnDetailsHostSizeChanged;
+        openPaneLengthCallbackToken = WingetDetailsHost.RegisterPropertyChangedCallback(
+            SplitView.OpenPaneLengthProperty,
+            OnDetailsOpenPaneLengthChanged);
+        AddHandler(KeyDownEvent, new KeyEventHandler(OnPageKeyDown), handledEventsToo: true);
     }
 
     private enum PackageViewMode
@@ -101,8 +119,6 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
     public Visibility ShowNoItems(int count) => count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-    public double ProgressOpacity(bool busy) => busy ? 1 : 0;
-
     public bool HasSelectionCount(int count) => count > 0;
 
     public bool CanShowManualCommand(bool hasSelection, string command) => hasSelection && !string.IsNullOrWhiteSpace(command);
@@ -125,6 +141,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     {
         currentPage = false;
         activeDialog?.Hide();
+        CloseDetailsPane();
         FiltersFlyout.Hide();
         ViewModel.SetPageActive(false);
         base.OnNavigatedFrom(e);
@@ -134,6 +151,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     {
         UpdateVisibility();
         UpdateWorkspaceLayout();
+        ResizeDetailsPane();
     }
 
     private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -148,6 +166,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         {
             visibleWorkspace = workspace;
             activeDialog?.Hide();
+            CloseDetailsPane();
             FiltersFlyout.Hide();
             PrimaryActionButton.Icon = new SymbolIcon(workspace switch
             {
@@ -157,58 +176,77 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             });
         }
 
-        var viewMode = (PackageViewMode)ViewModel.ViewModeIndex;
-        if (viewMode != PackageViewMode.Grid && viewMode != appliedListViewMode)
-        {
-            var template = (DataTemplate)Resources[viewMode == PackageViewMode.Compact ? "CompactPackageTemplate" : "DetailedPackageTemplate"];
-            if (!ReferenceEquals(PackagesList.ItemTemplate, template))
-            {
-                PackagesList.ItemTemplate = template;
-            }
+        ApplyListItemTemplate();
 
-            appliedListViewMode = viewMode;
+        if (WingetDetailsHost.IsPaneOpen)
+        {
+            if (ViewModel.ActiveSelection == null || !ReferenceEquals(detailsRow, ViewModel.ActiveSelection))
+            {
+                CloseDetailsPane();
+            }
+            else
+            {
+                WingetDetailsPane.UpdateFromViewModel(ViewModel);
+            }
         }
+    }
+
+    private void ApplyListItemTemplate()
+    {
+        var viewMode = (PackageViewMode)ViewModel.ViewModeIndex;
+        if (viewMode == PackageViewMode.Grid)
+        {
+            return;
+        }
+
+        string key = (viewMode, narrowTableColumns) switch
+        {
+            (PackageViewMode.Compact, true) => "NarrowCompactPackageTemplate",
+            (PackageViewMode.Compact, false) => "CompactPackageTemplate",
+            (_, true) => "NarrowDetailedPackageTemplate",
+            _ => "DetailedPackageTemplate",
+        };
+        var template = (DataTemplate)Resources[key];
+        if (!ReferenceEquals(PackagesList.ItemTemplate, template))
+        {
+            PackagesList.ItemTemplate = template;
+        }
+
+        appliedListViewMode = viewMode;
     }
 
     private void Viewport_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateWorkspaceLayout();
 
     private void UpdateWorkspaceLayout()
     {
-        if (WorkspaceBody == null || WingetEnableCard == null || WingetSections == null)
+        if (WorkspaceBody == null || WingetSettingsExpander == null || WingetSections == null)
         {
             return;
         }
 
-        // The enable card and workspace share the same finite Grid cell. Explicit
-        // child constraints also prevent long IDs or CommandBar overflow from
-        // feeding a larger DesiredSize back into that cell.
+        // The header, settings expander and workspace share the same finite Grid width.
+        // Explicit child widths prevent long IDs or CommandBar overflow from inflating DesiredSize.
         double width = Math.Max(0, WingetViewport.ActualWidth - WingetViewport.Padding.Left - WingetViewport.Padding.Right);
-
-        // Budget the two optional scroll regions separately so an expanded
-        // preferences card cannot push package rows below the window edge.
-        // The module gate remains keyboard reachable inside the intro scroll.
-        double headerSpace = WingetViewport.ActualHeight - WingetPageTitle.ActualHeight
-            - WingetSections.ActualHeight - WingetViewport.Padding.Bottom - (4 * WingetViewport.RowSpacing);
-        AutomaticSettingsScroll.MaxHeight = Math.Clamp(headerSpace - 540, 84, 280);
-        WingetIntroScroll.MaxHeight = Math.Max(64, headerSpace - WingetSettingsExpander.ActualHeight - 300);
         if (width <= 0 || Math.Abs(width - appliedWorkspaceWidth) < 0.5)
         {
             return;
         }
 
         PackageWorkspaceGrid.Width = width;
-        WingetEnableCard.Width = width;
         WingetSettingsExpander.Width = width;
         appliedWorkspaceWidth = width;
         UpdateFiltersLayout(width);
-        AutomaticSettingsLabel.Visibility = width < 650 ? Visibility.Collapsed : Visibility.Visible;
 
-        bool stackedFooter = width < 650;
-        AutomaticSettingsFooter.ColumnDefinitions[1].Width = stackedFooter ? new GridLength(0) : GridLength.Auto;
-        AutomaticSettingsFooter.ColumnSpacing = stackedFooter ? 0 : 16;
-        AutomaticSettingsFooter.RowSpacing = stackedFooter ? 8 : 0;
-        Grid.SetColumn(WingetHelpLink, stackedFooter ? 0 : 1);
-        Grid.SetRow(WingetHelpLink, stackedFooter ? 1 : 0);
+        bool narrow = width < 760;
+        if (narrow != narrowTableColumns)
+        {
+            narrowTableColumns = narrow;
+            HeaderIdColumn.Width = narrow ? new GridLength(0) : new GridLength(2, GridUnitType.Star);
+            HeaderSourceColumn.Width = narrow ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+            HeaderIdButton.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+            HeaderSourceButton.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+            ApplyListItemTemplate();
+        }
     }
 
     private void FiltersToggle_Changed(object sender, RoutedEventArgs e)
@@ -253,6 +291,88 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         AutomationProperties.SetName(FiltersToggleButton, label);
     }
 
+    private void OnDetailsHostSizeChanged(object sender, SizeChangedEventArgs e) => ResizeDetailsPane();
+
+    private void OnDetailsOpenPaneLengthChanged(DependencyObject sender, DependencyProperty dp)
+    {
+        if (!resizingDetailsPane && WingetDetailsHost.DisplayMode == SplitViewDisplayMode.Inline && WingetDetailsHost.OpenPaneLength >= 340)
+        {
+            inlinePaneLength = Math.Clamp(WingetDetailsHost.OpenPaneLength, 340, 620);
+        }
+    }
+
+    private void ResizeDetailsPane()
+    {
+        if (WingetDetailsHost.ActualWidth <= 0)
+        {
+            return;
+        }
+
+        resizingDetailsPane = true;
+        try
+        {
+            bool isInline = WingetDetailsHost.ActualWidth >= 1080;
+            WingetDetailsHost.DisplayMode = isInline ? SplitViewDisplayMode.Inline : SplitViewDisplayMode.Overlay;
+            WingetDetailsHost.OpenPaneLength = WingetDetailsHost.ActualWidth < 640
+                ? WingetDetailsHost.ActualWidth
+                : isInline
+                    ? Math.Clamp(inlinePaneLength, 340, Math.Min(620, WingetDetailsHost.ActualWidth * 0.42))
+                    : 420;
+            VisualStateManager.GoToState(this, isInline ? "DetailsPaneInline" : "DetailsPaneOverlay", useTransitions: false);
+        }
+        finally
+        {
+            resizingDetailsPane = false;
+        }
+    }
+
+    private void OnPageKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == VirtualKey.Escape && WingetDetailsHost.IsPaneOpen)
+        {
+            e.Handled = true;
+            CloseDetailsPane();
+        }
+    }
+
+    private void OnDetailsCloseRequested(object sender, EventArgs e) => CloseDetailsPane();
+
+    private void OnDetailsCancelRequested(object sender, EventArgs e) => Cancel_Click(sender, null);
+
+    private void OnDetailsPaneClosed(SplitView sender, object args)
+    {
+        detailsRow = null;
+        WingetDetailsPane.ClearBoundRow();
+    }
+
+    private async void OnDetailsRetryRequested(object sender, EventArgs e) => await LoadDialogDetailsAsync();
+
+    private async void OnDetailsApplyVersionRequested(object sender, string version)
+    {
+        if (currentPage && detailsRow != null && ReferenceEquals(detailsRow, ViewModel.ActiveSelection) && !string.IsNullOrWhiteSpace(version))
+        {
+            try
+            {
+                await ViewModel.SelectVersionAsync(version);
+            }
+            catch (Exception exception)
+            {
+                ViewModel.ReportActionError(exception);
+            }
+        }
+    }
+
+    private void CloseDetailsPane()
+    {
+        if (WingetDetailsHost.IsPaneOpen)
+        {
+            WingetDetailsHost.IsPaneOpen = false;
+        }
+
+        detailsRow = null;
+        WingetDetailsPane.ClearBoundRow();
+    }
+
     private void OnUnloaded(object sender, RoutedEventArgs e) => ViewModel.SetPageActive(false);
 
     private void OnWindowChanged(AppWindow sender, AppWindowChangedEventArgs e) => UpdateVisibility();
@@ -279,7 +399,21 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         disposed = true;
         currentPage = false;
         activeDialog?.Hide();
+        CloseDetailsPane();
         FiltersFlyout.Hide();
+        if (openPaneLengthCallbackToken != 0)
+        {
+            WingetDetailsHost.UnregisterPropertyChangedCallback(SplitView.OpenPaneLengthProperty, openPaneLengthCallbackToken);
+            openPaneLengthCallbackToken = 0;
+        }
+
+        WingetDetailsPane.CloseRequested -= OnDetailsCloseRequested;
+        WingetDetailsPane.CancelRequested -= OnDetailsCancelRequested;
+        WingetDetailsPane.RetryRequested -= OnDetailsRetryRequested;
+        WingetDetailsPane.ApplyVersionRequested -= OnDetailsApplyVersionRequested;
+        WingetDetailsHost.PaneClosed -= OnDetailsPaneClosed;
+        WingetDetailsHost.SizeChanged -= OnDetailsHostSizeChanged;
+        RemoveHandler(KeyDownEvent, new KeyEventHandler(OnPageKeyDown));
         settingsWindow.Closed -= OnWindowClosed;
         settingsWindow.AppWindow.Changed -= OnWindowChanged;
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -292,7 +426,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         {
             await ViewModel.ReloadAsync();
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             ManagedCommon.Logger.LogError("Settings action Reload_Click failed.", ex);
         }
@@ -311,7 +445,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
                 await ViewModel.RequestAsync("cancel");
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             ManagedCommon.Logger.LogError("Settings action Cancel_Click failed.", ex);
         }
@@ -326,7 +460,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
                 await ViewModel.RequestAsync("search");
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             ManagedCommon.Logger.LogError("Settings action Search_Click failed.", ex);
         }
@@ -342,9 +476,18 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
                 await ViewModel.RequestAsync("search");
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             ManagedCommon.Logger.LogError("Settings action SearchBox_KeyDown failed.", ex);
+        }
+    }
+
+    private void SortColumn_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string tag }
+            && int.TryParse(tag, NumberStyles.Integer, CultureInfo.InvariantCulture, out int columnIndex))
+        {
+            ViewModel.ToggleSortColumn(columnIndex);
         }
     }
 
@@ -353,14 +496,112 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         if (e.ClickedItem is WingetPackageRow row)
         {
             ViewModel.ActiveSelection = row;
+            if (WingetDetailsHost.IsPaneOpen)
+            {
+                OpenDetailsPane();
+            }
+        }
+    }
+
+    private void PackageRow_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: WingetPackageRow row } element)
+        {
+            return;
+        }
+
+        ViewModel.ActiveSelection = row;
+        var flyout = new MenuFlyout();
+
+        var detailsItem = new MenuFlyoutItem
+        {
+            Text = Text("DetailsAction/Label"),
+            Icon = new SymbolIcon(Symbol.Document),
+            IsEnabled = ViewModel.CanOpenDetails,
+        };
+        detailsItem.Click += (_, _) => OpenDetailsPane();
+        flyout.Items.Add(detailsItem);
+
+        var toggleItem = new MenuFlyoutItem
+        {
+            Text = Text("SelectPackageAction"),
+            Icon = new SymbolIcon(Symbol.Accept),
+        };
+        toggleItem.Click += (_, _) => row.IsSelected = !row.IsSelected;
+        flyout.Items.Add(toggleItem);
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        var copyIdItem = new MenuFlyoutItem
+        {
+            Text = Text("CopyIdAction"),
+            Icon = new SymbolIcon(Symbol.Copy),
+        };
+        copyIdItem.Click += (_, _) => CopyTextToClipboard(row.Id);
+        flyout.Items.Add(copyIdItem);
+
+        string command = ViewModel.ManualCommand;
+        if (!string.IsNullOrWhiteSpace(command))
+        {
+            var copyCommandItem = new MenuFlyoutItem
+            {
+                Text = Text("CopyManualCommandAction"),
+                Icon = new FontIcon { Glyph = "\uE756" },
+            };
+            copyCommandItem.Click += (_, _) => CopyTextToClipboard(command);
+            flyout.Items.Add(copyCommandItem);
+        }
+
+        flyout.ShowAt(element, e.GetPosition(element));
+        e.Handled = true;
+    }
+
+    private static void CopyTextToClipboard(string value)
+    {
+        try
+        {
+            var data = new DataPackage();
+            data.SetText(value);
+            Clipboard.SetContent(data);
+        }
+        catch (Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Clipboard copy failed on WingetPage.", ex);
         }
     }
 
     private void SelectAllPackages_Click(object sender, RoutedEventArgs e) => ViewModel.SelectAllVisible(ViewModel.IsAllVisibleSelected != true);
 
-    private async void Package_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) => await RunDialogActionAsync(ShowDetailsAsync);
+    private void Package_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) => OpenDetailsPane();
 
-    private async void Details_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(ShowDetailsAsync);
+    private void Details_Click(object sender, RoutedEventArgs e) => OpenDetailsPane();
+
+    private void OpenDetailsPane()
+    {
+        var selected = ViewModel.ActiveSelection;
+        if (selected == null || disposed)
+        {
+            return;
+        }
+
+        detailsRow = selected;
+        ResizeDetailsPane();
+        WingetDetailsPane.UpdateFromViewModel(ViewModel);
+        WingetDetailsHost.IsPaneOpen = true;
+
+        if (!ViewModel.HasDetails && ViewModel.CanActOnPackage)
+        {
+            _ = LoadDialogDetailsAsync();
+        }
+
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            if (!disposed && WingetDetailsHost.IsPaneOpen)
+            {
+                WingetDetailsPane.FocusCloseButton();
+            }
+        });
+    }
 
     private async void PrimaryAction_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(async () =>
     {
@@ -381,38 +622,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
     private async Task ShowPreparedConfirmationAsync(WingetPreparedOperation prepared)
     {
-        var content = new StackPanel
-        {
-            Spacing = 14,
-            MaxWidth = 640,
-        };
-        content.Children.Add(Paragraph(Text(prepared.Kind == "uninstall" ? "BatchUninstallExplanation" : "BatchInstallExplanation")));
-        content.Children.Add(Paragraph(Text("ElevationConfirmation")));
-        content.Children.Add(Paragraph(DescribeOptions(prepared.Options)));
-        foreach (var details in prepared.Packages)
-        {
-            var item = new StackPanel
-            {
-                Spacing = 5,
-            };
-            item.Children.Add(Paragraph(details.Package.Name, true));
-            item.Children.Add(Paragraph(details.Package.Id + " · " + details.Package.Source));
-            item.Children.Add(Paragraph(details.Package.InstalledVersion + (prepared.Kind == "uninstall" ? string.Empty : "  →  " + details.Package.AvailableVersion)));
-            if (!string.IsNullOrWhiteSpace(details.License))
-            {
-                item.Children.Add(Paragraph(Text("LicenseLabel") + ": " + details.License));
-            }
-
-            foreach (var agreement in details.Agreements)
-            {
-                item.Children.Add(Paragraph(agreement.Label + Environment.NewLine + agreement.Text + Environment.NewLine + agreement.Url));
-            }
-
-            content.Children.Add(new Border { BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"], BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(0, 0, 0, 12), Child = item });
-        }
-
-        var dialog = MakeDialog(Text(prepared.Kind == "uninstall" ? "BatchUninstallTitle" : prepared.Kind == "upgrade" ? "BatchUpgradeTitle" : "BatchInstallTitle"), ScrollContent(content));
-        dialog.PrimaryButtonText = Text(prepared.Packages.Any(item => item.Agreements.Count > 0) ? "AcceptContinue" : "Continue");
+        var dialog = new WingetConfirmationDialog(prepared, DescribeOptions(prepared.Options));
         if (await ShowDialogAsync(dialog) != ContentDialogResult.Primary || disposed || !currentPage)
         {
             return;
@@ -426,167 +636,6 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
         await ViewModel.SubmitPreparedAsync(prepared);
     }
-
-    private async Task ShowDetailsAsync()
-    {
-        var selected = ViewModel.ActiveSelection;
-        if (selected == null)
-        {
-            return;
-        }
-
-        var content = new StackPanel
-        {
-            Spacing = 12,
-            MaxWidth = 640,
-        };
-        var identity = new Grid { ColumnSpacing = 12 };
-        identity.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        identity.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        identity.Children.Add(new Border
-        {
-            Style = BadgeStyle("Accent"),
-            Child = new FontIcon { Glyph = "\uE7B8", Style = GlyphStyle("Accent") },
-        });
-        var identityText = BoundParagraph(nameof(ViewModel.SelectionIdentity));
-        identityText.VerticalAlignment = VerticalAlignment.Center;
-        identityText.FontSize = 12;
-        Grid.SetColumn(identityText, 1);
-        identity.Children.Add(identityText);
-        content.Children.Add(identity);
-        var loading = new StackPanel { Name = "DetailsLoadingPanel", Spacing = 10 };
-        var progress = new ProgressRing { Width = 28, Height = 28, HorizontalAlignment = HorizontalAlignment.Left };
-        loading.Children.Add(progress);
-        loading.Children.Add(Paragraph(Text("Phase_LoadingDetails")));
-        var cancel = new Button { Name = "DetailsCancelButton", Content = Text("Cancel/Content") };
-        cancel.Click += Cancel_Click;
-        loading.Children.Add(cancel);
-        content.Children.Add(loading);
-
-        var error = new StackPanel { Name = "DetailsErrorPanel", Spacing = 10 };
-        error.Children.Add(BoundParagraph(nameof(ViewModel.DetailsErrorText)));
-        var retry = new Button { Name = "DetailsRetryButton", Content = Text("RetryDetails") };
-        retry.Click += async (_, _) => await LoadDialogDetailsAsync();
-        error.Children.Add(retry);
-        content.Children.Add(error);
-
-        var detailsContent = new StackPanel { Name = "DetailsContentPanel", Spacing = 12 };
-        var versions = BoundParagraph(nameof(ViewModel.SelectionVersions));
-        versions.ClearValue(TextBlock.FontWeightProperty);
-        versions.Style = (Style)Resources["WingetVersionTextStyle"];
-        var overview = new StackPanel { Spacing = 8 };
-        overview.Children.Add(versions);
-        overview.Children.Add(BoundParagraph(nameof(ViewModel.SelectionPublisher)));
-        overview.Children.Add(BoundParagraph(nameof(ViewModel.PackageDescription)));
-        detailsContent.Children.Add(DetailSurface(overview));
-        var versionChoice = new ComboBox { Header = Text("ChooseVersion"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        AutomationProperties.SetAutomationId(versionChoice, "Winget_VersionChoice");
-        var applyVersion = new Button { Content = Text("ApplyVersion") };
-        AutomationProperties.SetAutomationId(applyVersion, "Winget_ApplyVersion");
-        applyVersion.Click += async (_, _) =>
-        {
-            if (currentPage && ReferenceEquals(selected, ViewModel.ActiveSelection) && versionChoice.SelectedItem is string version)
-            {
-                try
-                {
-                    await ViewModel.SelectVersionAsync(version);
-                }
-                catch (Exception exception)
-                {
-                    ViewModel.ReportActionError(exception);
-                }
-            }
-        };
-        var versionOptions = new StackPanel { Spacing = 8 };
-        versionOptions.Children.Add(versionChoice);
-        versionOptions.Children.Add(applyVersion);
-        versionOptions.Children.Add(Paragraph(Text("VersionExplanation")));
-        detailsContent.Children.Add(versionOptions);
-        detailsContent.Children.Add(DetailSurface(BoundParagraph(nameof(ViewModel.InstallExplanation))));
-        var homepage = new HyperlinkButton { Content = Text("PackageHomepage"), Padding = new Thickness(0) };
-        var license = Paragraph(string.Empty);
-        var licenseLink = new HyperlinkButton { Content = Text("LicenseLink"), Padding = new Thickness(0) };
-        var metadata = new StackPanel { Spacing = 6 };
-        metadata.Children.Add(homepage);
-        metadata.Children.Add(license);
-        metadata.Children.Add(licenseLink);
-        detailsContent.Children.Add(metadata);
-        var releaseNotes = new StackPanel { Spacing = 8 };
-        var releaseHeading = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        releaseHeading.Children.Add(new FontIcon { Glyph = "\uE8A5", Style = GlyphStyle("Accent") });
-        releaseHeading.Children.Add(Paragraph(Text("ReleaseNotesExpander/Header"), true));
-        releaseNotes.Children.Add(releaseHeading);
-        releaseNotes.Children.Add(BoundParagraph(nameof(ViewModel.ReleaseNotes)));
-        var link = new HyperlinkButton { Content = Text("ReleaseLink/Content"), Padding = new Thickness(0) };
-        releaseNotes.Children.Add(link);
-        detailsContent.Children.Add(DetailSurface(releaseNotes));
-        content.Children.Add(detailsContent);
-        var dialog = MakeDialog(selected.Name, ScrollContent(content));
-        dialog.CloseButtonText = Text("CloseDetails");
-        string appliedVersion = null;
-
-        void UpdateDetailsState()
-        {
-            if (!ReferenceEquals(selected, ViewModel.ActiveSelection))
-            {
-                dialog.Hide();
-                return;
-            }
-
-            loading.Visibility = ViewModel.IsLoadingDetails ? Visibility.Visible : Visibility.Collapsed;
-            progress.IsActive = ViewModel.IsLoadingDetails;
-            cancel.IsEnabled = ViewModel.CanCancelOperation;
-            error.Visibility = ViewModel.HasDetailsError ? Visibility.Visible : Visibility.Collapsed;
-            retry.IsEnabled = ViewModel.CanRetryDetails;
-            detailsContent.Visibility = ViewModel.HasDetails ? Visibility.Visible : Visibility.Collapsed;
-            versionOptions.Visibility = ViewModel.ActiveTabIndex != (int)WingetWorkspace.Installed && ViewModel.SelectedDetails?.AvailableVersions.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-            if (!versionChoice.Items.Cast<string>().SequenceEqual(ViewModel.SelectedDetails?.AvailableVersions ?? Array.Empty<string>(), StringComparer.Ordinal)
-                || appliedVersion != ViewModel.SelectedDetails?.Package.AvailableVersion)
-            {
-                versionChoice.ItemsSource = ViewModel.SelectedDetails?.AvailableVersions;
-                versionChoice.SelectedItem = ViewModel.SelectedDetails?.Package.AvailableVersion;
-                appliedVersion = ViewModel.SelectedDetails?.Package.AvailableVersion;
-            }
-
-            applyVersion.IsEnabled = ViewModel.CanActOnPackage;
-            homepage.NavigateUri = WingetViewModel.SafeWebUri(ViewModel.SelectedDetails?.PackageUrl);
-            homepage.Visibility = homepage.NavigateUri != null ? Visibility.Visible : Visibility.Collapsed;
-            license.Text = string.IsNullOrWhiteSpace(ViewModel.SelectedDetails?.License) ? string.Empty : Text("LicenseLabel") + ": " + ViewModel.SelectedDetails.License;
-            license.Visibility = string.IsNullOrEmpty(license.Text) ? Visibility.Collapsed : Visibility.Visible;
-            licenseLink.NavigateUri = WingetViewModel.SafeWebUri(ViewModel.SelectedDetails?.LicenseUrl);
-            licenseLink.Visibility = licenseLink.NavigateUri != null ? Visibility.Visible : Visibility.Collapsed;
-            link.NavigateUri = WingetViewModel.SafeWebUri(ViewModel.SelectedDetails?.Package.ReleaseNotesUrl);
-            link.Visibility = link.NavigateUri != null ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        PropertyChangedEventHandler changed = (_, _) => UpdateDetailsState();
-        ViewModel.PropertyChanged += changed;
-        try
-        {
-            UpdateDetailsState();
-            var showing = ShowDialogAsync(dialog);
-
-            // Open immediately. Bindings update this same dialog when metadata
-            // arrives; closing it does not hold the page's dialog-action guard.
-            if (!ViewModel.HasDetails && ViewModel.CanActOnPackage)
-            {
-                _ = LoadDialogDetailsAsync();
-            }
-
-            await showing;
-        }
-        finally
-        {
-            ViewModel.PropertyChanged -= changed;
-            cancel.Click -= Cancel_Click;
-        }
-    }
-
-    private Border DetailSurface(UIElement child) => new()
-    {
-        Style = (Style)Resources["WingetDetailSurfaceStyle"],
-        Child = child,
-    };
 
     private async Task LoadDialogDetailsAsync()
     {
@@ -619,18 +668,14 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             IsReadOnly = true,
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
+            FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["KitMonoFontFamily"],
         };
         content.Children.Add(command);
         var copy = new Button
         {
             Content = Text("CopyCommand/Content"),
         };
-        copy.Click += (_, _) =>
-        {
-            var data = new DataPackage();
-            data.SetText(command.Text);
-            Clipboard.SetContent(data);
-        };
+        copy.Click += (_, _) => CopyTextToClipboard(command.Text);
         content.Children.Add(copy);
         await ShowDialogAsync(MakeDialog(Text("AdvancedExpander/Header"), ScrollContent(content)));
     });
@@ -638,71 +683,15 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     private async void Options_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(async () =>
     {
         int tab = ViewModel.ActiveTabIndex;
-        var content = new StackPanel
-        {
-            Spacing = 12,
-            MaxWidth = 480,
-        };
-        var silent = new CheckBox
-        {
-            Content = Text("SilentOption"),
-            IsChecked = ViewModel.SilentInstall,
-        };
-        var scope = new ComboBox
-        {
-            Header = Text("ScopeOption"),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            ItemsSource = new[]
-            {
-                Text("OptionDefault"),
-                Text("ScopeUser"),
-                Text("ScopeMachine"),
-            },
-            SelectedIndex = ViewModel.InstallScopeIndex,
-        };
-        var architecture = new ComboBox
-        {
-            Header = Text("ArchitectureOption"),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            ItemsSource = new[]
-            {
-                Text("OptionDefault"),
-                "x64",
-                "x86",
-                "ARM64",
-            },
-            SelectedIndex = ViewModel.InstallArchitectureIndex,
-        };
-        var location = new TextBox
-        {
-            Header = Text("InstallLocation"), Text = ViewModel.InstallLocation, MaxLength = 1024,
-            PlaceholderText = Text("OptionDefault"), HorizontalAlignment = HorizontalAlignment.Stretch,
-        };
-        AutomationProperties.SetAutomationId(location, "Winget_InstallLocation");
-        content.Children.Add(silent);
-        content.Children.Add(scope);
-        if (tab != (int)WingetWorkspace.Installed)
-        {
-            content.Children.Add(architecture);
-            content.Children.Add(location);
-            content.Children.Add(Paragraph(Text("InstallLocationHint")));
-        }
-
-        content.Children.Add(Paragraph(Text("OptionsExplanation")));
-        var dialog = MakeDialog(Text("OptionsTitle"), ScrollContent(content));
-        dialog.PrimaryButtonText = Text("ApplyOptions");
-        void ValidateLocation() => dialog.IsPrimaryButtonEnabled = tab == (int)WingetWorkspace.Installed
-            || WingetPackageOptions.IsValidInstallLocation(string.IsNullOrWhiteSpace(location.Text) ? null : location.Text.Trim());
-        location.TextChanged += (_, _) => ValidateLocation();
-        ValidateLocation();
+        var dialog = new WingetOptionsDialog(ViewModel, tab == (int)WingetWorkspace.Installed);
         if (await ShowDialogAsync(dialog) == ContentDialogResult.Primary && currentPage && tab == ViewModel.ActiveTabIndex)
         {
-            ViewModel.SilentInstall = silent.IsChecked == true;
-            ViewModel.InstallScopeIndex = scope.SelectedIndex;
+            ViewModel.SilentInstall = dialog.SilentInstall;
+            ViewModel.InstallScopeIndex = dialog.ScopeIndex;
             if (tab != (int)WingetWorkspace.Installed)
             {
-                ViewModel.InstallArchitectureIndex = architecture.SelectedIndex;
-                ViewModel.InstallLocation = location.Text.Trim();
+                ViewModel.InstallArchitectureIndex = dialog.ArchitectureIndex;
+                ViewModel.InstallLocation = dialog.InstallLocation;
             }
         }
     });
@@ -718,8 +707,10 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             .Select(row => new WingetPackageIdentity(row.Id, row.Source, row.Package.InstalledVersion, row.Package.AvailableVersion)).ToArray();
         var mode = new ComboBox
         {
-            Header = Text("IgnoreScope"), ItemsSource = new[] { Text("IgnoreThisVersion"), Text("IgnoreAllVersions") },
-            SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch,
+            Header = Text("IgnoreScope"),
+            ItemsSource = new[] { Text("IgnoreThisVersion"), Text("IgnoreAllVersions") },
+            SelectedIndex = 0,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
         };
         var dialog = MakeDialog(Text("IgnoreScope"), mode);
         dialog.PrimaryButtonText = Text("ApplyOptions");
@@ -770,65 +761,11 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
     private async void Activity_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(async () =>
     {
-        var content = new StackPanel
-        {
-            Spacing = 12,
-            MaxWidth = 640,
-        };
-        content.Children.Add(Paragraph(Text("QueueTitle"), true));
-        content.Children.Add(new ItemsControl { ItemsSource = ViewModel.QueueItems, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] });
-        content.Children.Add(Paragraph(Text("HistoryTitle"), true));
-        var retention = new ComboBox
-        {
-            Header = Text("HistoryRetention"), ItemsSource = new[] { Text("HistoryOlder7"), Text("HistoryOlder30"), Text("HistoryAllCompleted") },
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-        };
-        retention.SetBinding(ComboBox.SelectedIndexProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.HistoryRetentionIndex)), Mode = BindingMode.TwoWay });
-        AutomationProperties.SetAutomationId(retention, "Winget_HistoryRetention");
-        content.Children.Add(retention);
-        content.Children.Add(Paragraph(Text("HistoryCleanupHint")));
-        var clearHistory = new Button { Content = Text("ClearHistory"), HorizontalAlignment = HorizontalAlignment.Left };
-        AutomationProperties.SetAutomationId(clearHistory, "Winget_ClearOldHistory");
-        AutomationProperties.SetName(clearHistory, Text("ClearHistory"));
-        clearHistory.SetBinding(IsEnabledProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.CanClearHistory)), Mode = BindingMode.OneWay });
-        clearHistory.Click += ClearOldHistory_Click;
-        content.Children.Add(clearHistory);
-        var clearResult = BoundParagraph(nameof(ViewModel.HistoryClearMessage));
-        AutomationProperties.SetAutomationId(clearResult, "Winget_HistoryClearResult");
-        AutomationProperties.SetLiveSetting(clearResult, AutomationLiveSetting.Polite);
-        content.Children.Add(clearResult);
-        var search = new TextBox { PlaceholderText = Text("HistorySearch"), MaxLength = 200 };
-        AutomationProperties.SetName(search, search.PlaceholderText);
-        AutomationProperties.SetAutomationId(search, "Winget_HistorySearch");
-        search.SetBinding(TextBox.TextProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.HistorySearchText)), Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-        content.Children.Add(search);
-        var attention = new CheckBox { Content = Text("HistoryAttentionOnly") };
-        AutomationProperties.SetAutomationId(attention, "Winget_HistoryAttention");
-        attention.SetBinding(CheckBox.IsCheckedProperty, new Binding { Source = ViewModel, Path = new PropertyPath(nameof(ViewModel.HistoryAttentionOnly)), Mode = BindingMode.TwoWay });
-        content.Children.Add(attention);
-        var summary = BoundParagraph(nameof(ViewModel.HistoryFilterSummary));
-        AutomationProperties.SetLiveSetting(summary, AutomationLiveSetting.Polite);
-        content.Children.Add(summary);
-        var history = new ItemsControl { ItemsSource = ViewModel.VisibleHistory, ItemTemplate = (DataTemplate)Resources["QueueTemplate"] };
-        AutomationProperties.SetAutomationId(history, "Winget_HistoryItems");
-        content.Children.Add(history);
-        content.Children.Add(BoundParagraph(nameof(ViewModel.Activity)));
-        await ShowDialogAsync(MakeDialog(Text("Activity/Header"), ScrollContent(content)));
+        var dialog = new WingetActivityDialog(ViewModel);
+        await ShowDialogAsync(dialog);
     });
 
     private async void ExportCsv_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(() => ExportAsync(false));
-
-    private async void ClearOldHistory_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await ViewModel.ClearHistoryAsync();
-        }
-        catch (Exception exception)
-        {
-            ViewModel.ReportActionError(exception);
-        }
-    }
 
     private async void ExportBundle_Click(object sender, RoutedEventArgs e) => await RunDialogActionAsync(() => ExportAsync(true));
 
@@ -903,6 +840,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     private ContentDialog MakeDialog(string title, object content) => new()
     {
         XamlRoot = XamlRoot,
+        RequestedTheme = ActualTheme,
         Title = title,
         Content = content,
         CloseButtonText = Text("CancelText"),
@@ -916,6 +854,8 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             return ContentDialogResult.None;
         }
 
+        dialog.XamlRoot = XamlRoot;
+        dialog.RequestedTheme = ActualTheme;
         activeDialog = dialog;
         try
         {
@@ -937,18 +877,6 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         IsTextSelectionEnabled = true,
         FontWeight = strong ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal,
     };
-
-    private TextBlock BoundParagraph(string propertyName)
-    {
-        var paragraph = Paragraph(string.Empty);
-        paragraph.SetBinding(TextBlock.TextProperty, new Binding
-        {
-            Source = ViewModel,
-            Path = new PropertyPath(propertyName),
-            Mode = BindingMode.OneWay,
-        });
-        return paragraph;
-    }
 
     private static ScrollViewer ScrollContent(UIElement content) => new()
     {

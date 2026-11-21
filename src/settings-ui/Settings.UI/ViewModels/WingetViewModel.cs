@@ -815,6 +815,7 @@ public sealed partial class WingetViewModel : PageViewModelBase
         timer.Tick -= OnTimerTick;
         generalRepository.SettingsChanged -= OnGeneralSettingsChanged;
         DisposeWorkspace();
+        ShellNavigationBadges.Current.WingetUpdateCount = 0;
         base.Dispose();
     }
 }

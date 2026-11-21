@@ -6,6 +6,7 @@
 
 using System.Globalization;
 using System.Linq;
+using Kit.Settings.UI.Helpers;
 using Kit.WingetLib;
 
 namespace Kit.Settings.UI.ViewModels;
@@ -37,6 +38,35 @@ public sealed partial class WingetViewModel
     public bool CanRetryDetails => !IsLoadingDetails && CanActOnPackage;
 
     public bool HasOperationFeedback => IsBusy || requestPending || status.Queue.Count > 0 || status.History.Count > 0 || lastPackageResult != null;
+
+    public bool ShowOperationCard => IsBusy || requestPending || status.Queue.Count > 0 || lastPackageResult != null;
+
+    public int UpdatesCount => Packages.Count;
+
+    public bool HasUpdatesBadge => IsEnabled && Packages.Count > 0;
+
+    public int ActivityBadgeCount => status.Queue.Count;
+
+    public bool HasActivityBadge => IsBusy || status.Queue.Count > 0;
+
+    public bool IsLoadingList => IsBusy && (status.OperationKind is "check" or "list-installed" or "search") && !HasRows;
+
+    public string SortDirectionGlyph => SortDescending ? "\uE74B" : "\uE74A";
+
+    public string SortDirectionToolTip => L(SortDescending ? "SortDescendingToolTip" : "SortAscendingToolTip");
+
+    public void ToggleSortColumn(int columnIndex)
+    {
+        if (SortIndex == columnIndex)
+        {
+            SortDescending = !SortDescending;
+        }
+        else
+        {
+            SortIndex = columnIndex;
+            SortDescending = false;
+        }
+    }
 
     public bool CanCancelOperation => IsBusy && !cancellationPending && status.Phase != "Cancelling";
 
@@ -149,6 +179,8 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(ShowIgnored), ShowIgnored);
         PublishValue(nameof(SortIndex), SortIndex);
         PublishValue(nameof(SortDescending), SortDescending);
+        PublishValue(nameof(SortDirectionGlyph), SortDirectionGlyph);
+        PublishValue(nameof(SortDirectionToolTip), SortDirectionToolTip);
         PublishValue(nameof(ViewModeIndex), ViewModeIndex);
         PublishValue(nameof(ActiveSelection), ActiveSelection);
         PublishValue(nameof(HasSelection), HasSelection);
@@ -201,6 +233,12 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(IsProgressIndeterminate), IsProgressIndeterminate);
         PublishValue(nameof(OperationText), OperationText);
         PublishValue(nameof(HasOperationFeedback), HasOperationFeedback);
+        PublishValue(nameof(ShowOperationCard), ShowOperationCard);
+        PublishValue(nameof(UpdatesCount), UpdatesCount);
+        PublishValue(nameof(HasUpdatesBadge), HasUpdatesBadge);
+        PublishValue(nameof(ActivityBadgeCount), ActivityBadgeCount);
+        PublishValue(nameof(HasActivityBadge), HasActivityBadge);
+        PublishValue(nameof(IsLoadingList), IsLoadingList);
         PublishValue(nameof(CanCancelOperation), CanCancelOperation);
         PublishValue(nameof(OperationTone), OperationTone);
         PublishValue(nameof(OperationGlyph), OperationGlyph);
@@ -220,5 +258,6 @@ public sealed partial class WingetViewModel
         PublishValue(nameof(HasDownload), HasDownload);
         PublishValue(nameof(DownloadDirectory), DownloadDirectory);
         PublishValue(nameof(Activity), Activity);
+        ShellNavigationBadges.Current.WingetUpdateCount = IsEnabled ? Packages.Count : 0;
     }
 }

@@ -3326,7 +3326,7 @@
   <data name="Winget_EnableCard.Description" xml:space="preserve">
     <value>安装软件并检查软件更新。Kit 在托盘运行期间可每日自动检查。</value>
   </data>
-  <data name="Winget_EnableToggle.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_EnableToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>启用 WinGet 插件</value>
   </data>
   <data name="Winget_Help.Content" xml:space="preserve">
@@ -3341,7 +3341,7 @@
   <data name="Winget_DailyCard.Description" xml:space="preserve">
     <value>启用后立即检查，此后 Kit 运行期间每 24 小时检查一次。由你决定何时安装更新。</value>
   </data>
-  <data name="Winget_DailyToggle.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_DailyToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>每日检查软件更新</value>
   </data>
   <data name="Winget_NotifyCard.Header" xml:space="preserve">
@@ -3350,7 +3350,7 @@
   <data name="Winget_NotifyCard.Description" xml:space="preserve">
     <value>发现新的可更新软件时发送通知。</value>
   </data>
-  <data name="Winget_NotifyToggle.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_NotifyToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>通知软件更新</value>
   </data>
   <data name="Winget_Check.Content" xml:space="preserve">
@@ -3359,7 +3359,7 @@
   <data name="Winget_Cancel.Content" xml:space="preserve">
     <value>取消</value>
   </data>
-  <data name="Winget_UpdatesList.AutomationProperties.Name" xml:space="preserve">
+  <data name="Winget_UpdatesList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>可更新应用，当前版本到新版本</value>
   </data>
   <data name="Winget_Details.Content" xml:space="preserve">
@@ -3847,7 +3847,19 @@
   <data name="Winget_SortAvailable.Content" xml:space="preserve"><value>新版本</value></data>
   <data name="Winget_SortSource.Content" xml:space="preserve"><value>来源</value></data>
   <data name="Winget_SortDescending.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>降序排列</value></data>
-  <data name="Winget_SortDescending.ToolTipService.ToolTip" xml:space="preserve"><value>降序排列</value></data>
+  <data name="Winget_SortDescending.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>降序排列</value></data>
+  <data name="Winget_SortDescendingToolTip" xml:space="preserve"><value>降序排列</value></data>
+  <data name="Winget_SortAscendingToolTip" xml:space="preserve"><value>升序排列</value></data>
+  <data name="Winget_DetailsResizeHandle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>调整软件包详情面板宽度</value></data>
+  <data name="Winget_DetailsPaneTitle" xml:space="preserve"><value>软件包详情</value></data>
+  <data name="Winget_CopyIdAction" xml:space="preserve"><value>复制软件包 ID</value></data>
+  <data name="Winget_CopyManualCommandAction" xml:space="preserve"><value>复制 WinGet 命令</value></data>
+  <data name="Winget_SelectPackageAction" xml:space="preserve"><value>切换勾选</value></data>
+  <data name="Winget_CopiedToClipboard" xml:space="preserve"><value>已复制到剪贴板。</value></data>
+  <data name="Winget_ActivityToolbarButton.Label" xml:space="preserve"><value>活动记录</value></data>
+  <data name="Winget_ActivityToolbarButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>打开队列与操作历史</value></data>
+  <data name="Winget_ScheduleCard.Header" xml:space="preserve"><value>检查计划与帮助文档</value></data>
+  <data name="Winget_InvalidInstallLocation" xml:space="preserve"><value>请输入本地磁盘上的绝对文件夹路径。</value></data>
   <data name="Winget_ViewMode.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>软件显示方式</value></data>
   <data name="Winget_DetailedView.Content" xml:space="preserve"><value>详细</value></data>
   <data name="Winget_CompactView.Content" xml:space="preserve"><value>紧凑</value></data>

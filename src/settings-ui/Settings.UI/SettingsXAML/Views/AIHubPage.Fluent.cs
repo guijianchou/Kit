@@ -24,6 +24,9 @@ public sealed partial class AIHubPage
     private bool _detailsInitialized;
     private bool _detailsRefreshQueued;
     private bool _restoreDetailsFocus;
+    private bool _resizingDetailsPane;
+    private double _inlinePaneLength = 420;
+    private long _openPaneLengthCallbackToken;
 
     private void InitializeFluentDetails()
     {
@@ -37,10 +40,11 @@ public sealed partial class AIHubPage
         AiHubFindingDetails.PreviousRequested += OnDetailsPreviousRequested;
         AiHubFindingDetails.NextRequested += OnDetailsNextRequested;
         AiHubFindingDetails.AnalyzeRequested += OnDetailsAnalyzeRequested;
-        AiHubDetailsHost.PaneOpening += OnDetailsPaneOpening;
-        AiHubDetailsHost.PaneClosing += OnDetailsPaneClosing;
         AiHubDetailsHost.PaneClosed += OnDetailsPaneClosed;
         AiHubDetailsHost.SizeChanged += OnDetailsHostSizeChanged;
+        _openPaneLengthCallbackToken = AiHubDetailsHost.RegisterPropertyChangedCallback(
+            SplitView.OpenPaneLengthProperty,
+            OnDetailsOpenPaneLengthChanged);
         ViewModel.PropertyChanged += OnFluentDetailsPropertyChanged;
         ViewModel.AllIssues.CollectionChanged += OnDetailsFindingsChanged;
         ViewModel.FilteredIssues.CollectionChanged += OnDetailsFindingsChanged;
@@ -60,10 +64,14 @@ public sealed partial class AIHubPage
         AiHubFindingDetails.PreviousRequested -= OnDetailsPreviousRequested;
         AiHubFindingDetails.NextRequested -= OnDetailsNextRequested;
         AiHubFindingDetails.AnalyzeRequested -= OnDetailsAnalyzeRequested;
-        AiHubDetailsHost.PaneOpening -= OnDetailsPaneOpening;
-        AiHubDetailsHost.PaneClosing -= OnDetailsPaneClosing;
         AiHubDetailsHost.PaneClosed -= OnDetailsPaneClosed;
         AiHubDetailsHost.SizeChanged -= OnDetailsHostSizeChanged;
+        if (_openPaneLengthCallbackToken != 0)
+        {
+            AiHubDetailsHost.UnregisterPropertyChangedCallback(SplitView.OpenPaneLengthProperty, _openPaneLengthCallbackToken);
+            _openPaneLengthCallbackToken = 0;
+        }
+
         ViewModel.PropertyChanged -= OnFluentDetailsPropertyChanged;
         ViewModel.AllIssues.CollectionChanged -= OnDetailsFindingsChanged;
         ViewModel.FilteredIssues.CollectionChanged -= OnDetailsFindingsChanged;
@@ -97,11 +105,6 @@ public sealed partial class AIHubPage
         _detailsFinding = issue;
         ResizeDetailsPane();
         RenderFindingDetails();
-        if (DetailsBackdropScrim != null)
-        {
-            DetailsBackdropScrim.Visibility = AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Overlay ? Visibility.Visible : Visibility.Collapsed;
-        }
-
         AiHubDetailsHost.IsPaneOpen = true;
         DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
@@ -120,11 +123,6 @@ public sealed partial class AIHubPage
         }
 
         _restoreDetailsFocus = restoreFocus;
-        if (DetailsBackdropScrim != null)
-        {
-            DetailsBackdropScrim.Visibility = Visibility.Collapsed;
-        }
-
         AiHubDetailsHost.IsPaneOpen = false;
         if (!restoreFocus)
         {
@@ -133,31 +131,8 @@ public sealed partial class AIHubPage
         }
     }
 
-    private void OnDetailsPaneOpening(SplitView sender, object args)
-    {
-        if (DetailsBackdropScrim != null)
-        {
-            DetailsBackdropScrim.Visibility = AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Overlay ? Visibility.Visible : Visibility.Collapsed;
-        }
-    }
-
-    private void OnDetailsPaneClosing(SplitView sender, SplitViewPaneClosingEventArgs args)
-    {
-        if (DetailsBackdropScrim != null)
-        {
-            DetailsBackdropScrim.Visibility = Visibility.Collapsed;
-        }
-    }
-
-    private void OnDetailsBackdropTapped(object sender, TappedRoutedEventArgs e) => CloseFluentDetails();
-
     private void OnDetailsPaneClosed(SplitView sender, object args)
     {
-        if (DetailsBackdropScrim != null)
-        {
-            DetailsBackdropScrim.Visibility = Visibility.Collapsed;
-        }
-
         var origin = _detailsFocusOrigin;
         bool restore = _restoreDetailsFocus;
         _detailsFocusOrigin = null;
@@ -180,20 +155,40 @@ public sealed partial class AIHubPage
         }
     }
 
+    private void OnDetailsOpenPaneLengthChanged(DependencyObject sender, DependencyProperty dp)
+    {
+        if (!_resizingDetailsPane && AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Inline && AiHubDetailsHost.OpenPaneLength >= 340)
+        {
+            _inlinePaneLength = Math.Clamp(AiHubDetailsHost.OpenPaneLength, 340, 620);
+        }
+    }
+
     private void OnDetailsHostSizeChanged(object sender, SizeChangedEventArgs e) => ResizeDetailsPane();
 
     private void ResizeDetailsPane()
     {
-        if (AiHubDetailsHost.ActualWidth > 0)
+        if (AiHubDetailsHost.ActualWidth <= 0)
+        {
+            return;
+        }
+
+        _resizingDetailsPane = true;
+        try
         {
             // Keep the list available beside details on desktop. Narrow windows
-            // use a dismissible overlay so neither surface becomes unreadable.
-            AiHubDetailsHost.DisplayMode = AiHubDetailsHost.ActualWidth >= 900
-                ? SplitViewDisplayMode.Inline : SplitViewDisplayMode.Overlay;
+            // use a dismissible Acrylic overlay so neither surface becomes unreadable.
+            bool isInline = AiHubDetailsHost.ActualWidth >= 900;
+            AiHubDetailsHost.DisplayMode = isInline ? SplitViewDisplayMode.Inline : SplitViewDisplayMode.Overlay;
             AiHubDetailsHost.OpenPaneLength = AiHubDetailsHost.ActualWidth < 640
-                ? AiHubDetailsHost.ActualWidth : 400;
-            DetailsBackdropScrim.Visibility = AiHubDetailsHost.IsPaneOpen && AiHubDetailsHost.DisplayMode == SplitViewDisplayMode.Overlay
-                ? Visibility.Visible : Visibility.Collapsed;
+                ? AiHubDetailsHost.ActualWidth
+                : isInline
+                    ? Math.Clamp(_inlinePaneLength, 340, Math.Min(620, AiHubDetailsHost.ActualWidth * 0.55))
+                    : 400;
+            VisualStateManager.GoToState(this, isInline ? "DetailsPaneInline" : "DetailsPaneOverlay", useTransitions: false);
+        }
+        finally
+        {
+            _resizingDetailsPane = false;
         }
     }
 

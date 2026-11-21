@@ -1112,15 +1112,6 @@
   <data name="AIHub_KernelPiItem.Content" xml:space="preserve">
     <value>Pi CLI</value>
   </data>
-  <data name="FindingDetailsDialog.Title" xml:space="preserve">
-    <value>发现详情</value>
-  </data>
-  <data name="FindingDetailsDialog.PrimaryButtonText" xml:space="preserve">
-    <value>复制摘要</value>
-  </data>
-  <data name="FindingDetailsDialog.CloseButtonText" xml:space="preserve">
-    <value>关闭</value>
-  </data>
   <data name="FindingDetails_Facts.Text" xml:space="preserve">
     <value>检测事实</value>
   </data>
@@ -4052,6 +4043,12 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AIHub_Fluent_Affected" xml:space="preserve"><value>受影响对象</value></data>
   <data name="AIHub_Fluent_IssueKey" xml:space="preserve"><value>问题标识</value></data>
   <data name="AIHub_Fluent_CopyFinding" xml:space="preserve"><value>复制摘要</value></data>
+  <data name="AIHub_CopyEvidenceLabel" xml:space="preserve"><value>复制依据</value></data>
+  <data name="AIHub_FindingSummaryCopied" xml:space="preserve"><value>发现摘要已复制到剪贴板。</value></data>
+  <data name="AIHub_EvidenceCopied" xml:space="preserve"><value>事件依据已复制到剪贴板。</value></data>
+  <data name="AIHub_PolicyEditor_Edit.Content" xml:space="preserve"><value>编辑</value></data>
+  <data name="AIHub_PolicyEditor_Preview.Content" xml:space="preserve"><value>预览</value></data>
+  <data name="AIHub_DetailsResizeHandle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>调整发现详情面板宽度</value></data>
   <data name="AIHub_Fluent_AnalyzeRange" xml:space="preserve"><value>分析当前范围</value></data>
   <data name="AIHub_Fluent_ShowPriority" xml:space="preserve"><value>仅看优先事项</value></data>
   <data name="AIHub_Fluent_ShowAll" xml:space="preserve"><value>查看全部发现</value></data>

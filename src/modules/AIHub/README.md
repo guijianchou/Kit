@@ -31,7 +31,7 @@
 │                        Kit Settings UI (WinUI 3)                       │
 │  - AIHubPage.xaml (Optimization 选项卡 & Security Audit 选项卡)         │
 │  - AIHubPageViewModel (双模式扫描、响应式状态绑定、防重入调度)              │
-│  - FindingDetailsDialog.xaml (审计事件详情与建议交互弹窗)                │
+│  - FindingDetailsPane.xaml (非阻塞审计事件详情与依据侧边抽屉)            │
 │  - Settings -> AI Services -> Essential Policy 策略配置面板            │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │ Managed Ref / In-process

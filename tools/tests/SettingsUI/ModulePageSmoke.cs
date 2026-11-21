@@ -1583,13 +1583,30 @@ internal static class ModulePageSmoke
             AssertContrast(BrushColor(score.Foreground), background, 4.5, "health score");
         var findingsBackgrounds = SampleBrushBackgrounds(findingsSurface.Background, backdrop).ToArray();
         var palette = new List<Windows.UI.Color>(backgrounds.Concat(findingsBackgrounds));
-        foreach (string label in new[] { vm.HighLabel, vm.MediumLabel, vm.LowLabel })
+        var previousFindingsVisibility = findingsSurface.Visibility;
+        if (previousFindingsVisibility != Visibility.Visible)
         {
-            var text = Descendants(summary).OfType<TextBlock>().First(item => item.Text.StartsWith(label + " ", StringComparison.Ordinal));
-            var color = BrushColor(text.Foreground);
-            foreach (var background in backgrounds.Concat(findingsBackgrounds))
-                AssertContrast(color, background, 4.5, "severity label");
-            palette.Add(color);
+            findingsSurface.Visibility = Visibility.Visible;
+            page.UpdateLayout();
+            await Task.Delay(30);
+        }
+        try
+        {
+            foreach (string label in new[] { vm.HighLabel, vm.MediumLabel, vm.LowLabel })
+            {
+                var text = Descendants(summary).OfType<TextBlock>().First(item => item.Text.StartsWith(label + " ", StringComparison.Ordinal));
+                var color = BrushColor(text.Foreground);
+                foreach (var background in backgrounds.Concat(findingsBackgrounds))
+                    AssertContrast(color, background, 4.5, "severity label");
+                palette.Add(color);
+            }
+        }
+        finally
+        {
+            if (previousFindingsVisibility != Visibility.Visible)
+            {
+                findingsSurface.Visibility = previousFindingsVisibility;
+            }
         }
 
         var readiness = (FontIcon)page.FindName("AiReadinessIcon");
@@ -1657,6 +1674,11 @@ internal static class ModulePageSmoke
 
     private static IEnumerable<Windows.UI.Color> SampleBrushBackgrounds(Brush brush, Windows.UI.Color backdrop)
     {
+        if (brush == null)
+        {
+            yield return backdrop;
+            yield break;
+        }
         if (brush is SolidColorBrush)
         {
             yield return Composite(BrushColor(brush), backdrop);

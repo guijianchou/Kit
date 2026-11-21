@@ -494,7 +494,7 @@ internal static class AiHubUxSmoke
             protectedRow.SizeText != "0 B", "Unknown and protected sizes must not be presented as zero bytes.");
         Require(vm.Inventory.Rows.Single(row => row.Id == "cache").TopFiles.Count == 5, "Largest-file detail must stay bounded.");
         Require(vm.Inventory.Rows.All(row => !row.HasBeenExpanded), "Inventory file details must remain unloaded until expansion.");
-        var search = (TextBox)page.FindName("InventorySearchBox");
+        var search = (AutoSuggestBox)page.FindName("InventorySearchBox");
         var filter = (ComboBox)page.FindName("InventoryFilterComboBox");
         Require(search != null && filter != null, "Inventory needs its own search and disposition filter controls.");
         search.Text = "AccessDenied";

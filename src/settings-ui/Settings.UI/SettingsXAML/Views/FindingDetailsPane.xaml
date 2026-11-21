@@ -12,30 +12,36 @@
     VerticalContentAlignment="Stretch"
     IsTabStop="False">
     <UserControl.Resources>
-        <Style x:Key="HighSeverityBadgeStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}" />
+        <Style x:Key="SeverityHighTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{ThemeResource BadgeCriticalForegroundBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style x:Key="MediumSeverityBadgeStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}" />
+        <Style x:Key="SeverityMediumTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{ThemeResource BadgeWarningForegroundBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style x:Key="LowSeverityBadgeStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorAttentionBackgroundBrush}" />
+        <Style x:Key="SeverityLowTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{ThemeResource BadgeInfoForegroundBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </UserControl.Resources>
 
-    <Border Background="{ThemeResource SolidBackgroundFillColorQuarternaryBrush}"
+    <Border Background="Transparent"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1,0,0,0">
         <Grid Padding="20" RowSpacing="16" RowDefinitions="Auto,*,Auto" TabFocusNavigation="Cycle">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                 <StackPanel Spacing="4" VerticalAlignment="Center">
-                    <TextBlock Text="AI Hub" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Uid="AIHub_PageTitle" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock x:Name="PaneTitleText" Style="{StaticResource BodyStrongTextBlockStyle}"
                                AutomationProperties.HeadingLevel="Level2" TextWrapping="Wrap" />
                 </StackPanel>
                 <Button x:Name="CloseDetailsButton" Grid.Column="1" VerticalAlignment="Center"
                         Style="{StaticResource KitIconButtonStyle}" Click="OnCloseClick"
                         AutomationProperties.AutomationId="AIHub_CloseFindingDetails">
-                    <FontIcon Glyph="&#xE711;" FontSize="14" />
+                    <FontIcon Glyph="&#xE711;" FontSize="14" AutomationProperties.AccessibilityView="Raw" />
                 </Button>
             </Grid>
 
@@ -44,15 +50,15 @@
                           HorizontalContentAlignment="Stretch">
                 <StackPanel Spacing="18" Padding="0,0,4,4">
                     <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="6">
-                        <Border x:Name="SeverityBadge" CornerRadius="4" Padding="8,3">
-                            <TextBlock x:Name="SeverityText" Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                                       FontSize="12" FontWeight="SemiBold" />
+                        <Border x:Name="SeverityBadge" Style="{StaticResource KitSeverityLowBadgeStyle}">
+                            <TextBlock x:Name="SeverityText" Style="{StaticResource SeverityLowTextStyle}" />
                         </Border>
-                        <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                        <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                             <TextBlock x:Name="CategoryText" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </Border>
-                        <Border x:Name="OccurrencesBadge" CornerRadius="4" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
-                            <TextBlock x:Name="OccurrencesText" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Border x:Name="OccurrencesBadge" CornerRadius="{StaticResource ControlCornerRadius}" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                            <TextBlock x:Name="OccurrencesText" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" />
                         </Border>
                     </tkcontrols:WrapPanel>
 
@@ -63,14 +69,16 @@
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
 
-                    <Border CornerRadius="6" Padding="12" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    <Border Style="{StaticResource KitSubtleSurfaceStyle}" Padding="12">
                         <Grid RowSpacing="8" ColumnSpacing="12" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
                             <TextBlock x:Name="EventIdLabel" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
-                            <TextBlock x:Name="EventIdText" Grid.Column="1" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            <TextBlock x:Name="EventIdText" Grid.Column="1" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}"
+                                       Typography.NumeralAlignment="Tabular" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                             <TextBlock x:Name="SourceLabel" Grid.Row="1" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
                             <TextBlock x:Name="SourceText" Grid.Row="1" Grid.Column="1" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                            <TextBlock x:Uid="FindingDetails_Timestamp" Grid.Row="2" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
-                            <TextBlock x:Name="TimestampText" Grid.Row="2" Grid.Column="1" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            <TextBlock x:Name="TimestampLabel" Grid.Row="2" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
+                            <TextBlock x:Name="TimestampText" Grid.Row="2" Grid.Column="1" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}"
+                                       Typography.NumeralAlignment="Tabular" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                             <TextBlock x:Name="RangeLabel" Grid.Row="3" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
                             <TextBlock x:Name="RangeText" Grid.Row="3" Grid.Column="1" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         </Grid>
@@ -84,7 +92,8 @@
 
                     <StackPanel Spacing="6">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                      AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock x:Uid="FindingDetails_Recommendation" Style="{StaticResource BodyStrongTextBlockStyle}"
                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
@@ -92,11 +101,23 @@
                     </StackPanel>
 
                     <Expander x:Name="EvidenceExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                        <StackPanel Spacing="12">
-                            <TextBlock x:Name="EvidenceDescriptionText" FontSize="12" TextWrapping="Wrap"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="EvidenceText" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12"
-                                       TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBlock x:Name="EvidenceDescriptionText" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button x:Name="CopyEvidenceButton" Grid.Column="1" Click="OnCopyEvidenceClick"
+                                        Style="{StaticResource SubtleButtonStyle}" Padding="8,4" VerticalAlignment="Top"
+                                        AutomationProperties.AutomationId="AIHub_CopyFindingEvidence">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE8C8;" FontSize="12" AutomationProperties.AccessibilityView="Raw" />
+                                        <TextBlock x:Name="CopyEvidenceLabel" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <Border Style="{StaticResource KitRecessedSurfaceStyle}" Padding="10,8">
+                                <TextBlock x:Name="EvidenceText" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12"
+                                           TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            </Border>
                         </StackPanel>
                     </Expander>
                 </StackPanel>
@@ -109,22 +130,34 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                         <Button x:Name="PreviousButton" Style="{StaticResource KitIconButtonStyle}" Click="OnPreviousClick"
                                 AutomationProperties.AutomationId="AIHub_PreviousFinding">
-                            <FontIcon Glyph="&#xE76B;" FontSize="14" />
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Menu" Key="Up" />
+                            </Button.KeyboardAccelerators>
+                            <FontIcon Glyph="&#xE76B;" FontSize="14" AutomationProperties.AccessibilityView="Raw" />
                         </Button>
                         <Button x:Name="NextButton" Style="{StaticResource KitIconButtonStyle}" Click="OnNextClick"
                                 AutomationProperties.AutomationId="AIHub_NextFinding">
-                            <FontIcon Glyph="&#xE76C;" FontSize="14" />
+                            <Button.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Menu" Key="Down" />
+                            </Button.KeyboardAccelerators>
+                            <FontIcon Glyph="&#xE76C;" FontSize="14" AutomationProperties.AccessibilityView="Raw" />
                         </Button>
                     </StackPanel>
                 </Grid>
                 <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                     <Button x:Name="CopyButton" Click="OnCopyClick" Style="{StaticResource KitActionButtonStyle}"
                             AutomationProperties.AutomationId="AIHub_CopyFindingSummary">
-                        <StackPanel Orientation="Horizontal" Spacing="7"><FontIcon Glyph="&#xE8C8;" FontSize="13" /><TextBlock x:Name="CopyLabel" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <FontIcon Glyph="&#xE8C8;" FontSize="13" AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock x:Name="CopyLabel" />
+                        </StackPanel>
                     </Button>
                     <Button x:Name="AnalyzeButton" Click="OnAnalyzeClick" Style="{StaticResource KitPrimaryActionButtonStyle}"
                             AutomationProperties.AutomationId="AIHub_AnalyzeFindingRange">
-                        <StackPanel Orientation="Horizontal" Spacing="7"><FontIcon Glyph="&#xE9D9;" FontSize="13" /><TextBlock x:Name="AnalyzeLabel" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <FontIcon Glyph="&#xE9D9;" FontSize="13" AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock x:Name="AnalyzeLabel" />
+                        </StackPanel>
                     </Button>
                 </tkcontrols:WrapPanel>
                 <TextBlock x:Name="ActionHintText" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />

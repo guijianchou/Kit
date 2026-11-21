@@ -3517,14 +3517,16 @@ namespace ViewModelTests
         {
             var pageXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml"));
             var pageCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AIHubPage.xaml.cs"));
-            var dialogCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "FindingDetailsDialog.xaml.cs"));
+            var paneCode = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "FindingDetailsPane.xaml.cs"));
             var viewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "AIHubPageViewModel.cs"));
             var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
 
             // 1. Surfaces, badges, metric tiles and filter sizing converge on shared Kit styles.
             var paneXaml = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "FindingDetailsPane.xaml"));
-            StringAssert.Contains(pageXaml, "PaneBackground=\"{ThemeResource SolidBackgroundFillColorQuarternaryBrush}\"");
-            StringAssert.Contains(paneXaml, "Background=\"{ThemeResource SolidBackgroundFillColorQuarternaryBrush}\"");
+            StringAssert.Contains(pageXaml, "PaneBackground=\"{ThemeResource LayerFillColorDefaultBrush}\"");
+            StringAssert.Contains(pageXaml, "AcrylicBackgroundFillColorDefaultBrush");
+            StringAssert.Contains(pageXaml, "LightDismissOverlayMode=\"On\"");
+            StringAssert.Contains(paneXaml, "Background=\"Transparent\"");
             StringAssert.Contains(pageXaml, "BasedOn=\"{StaticResource KitCardSurfaceStyle}\"");
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource AiHubSectionSurfaceStyle}\"");
             Assert.IsTrue(pageXaml.Split("KitIconBadgeStyle").Length - 1 >= 3, "Section icon badges should use the shared badge style.");
@@ -3566,9 +3568,9 @@ namespace ViewModelTests
 
             // 4. Both code-behinds and the touched view-model labels resolve through resw.
             Assert.IsFalse(pageCode.Contains("IsChinese", StringComparison.Ordinal), "AIHub code-behind should not branch on culture.");
-            Assert.IsFalse(dialogCode.Contains("IsChinese", StringComparison.Ordinal), "Finding details dialog should not branch on culture.");
+            Assert.IsFalse(paneCode.Contains("IsChinese", StringComparison.Ordinal), "Finding details pane should not branch on culture.");
             StringAssert.Contains(pageCode, "AIHub_CopyReportTitle");
-            StringAssert.Contains(dialogCode, "FindingDetails_CopyHeader");
+            StringAssert.Contains(paneCode, "FindingDetails_CopyHeader");
             StringAssert.Contains(viewModel, "AIHub_FastScanLabel");
             StringAssert.Contains(viewModel, "AIHub_FullScanLabel");
         }

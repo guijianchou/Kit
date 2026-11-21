@@ -90,8 +90,6 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         _ => "ReadinessDisabledStyle",
     }];
 
-    public Style HealthScoreStyle(int score) => (Style)Resources[score >= 80 ? "HealthGoodStyle" : score >= 60 ? "HealthWarningStyle" : "HealthCriticalStyle"];
-
     public Style HealthScoreRingStyle(int score) => (Style)Resources[score >= 80 ? "HealthRingGoodStyle" : score >= 60 ? "HealthRingWarningStyle" : "HealthRingCriticalStyle"];
 
     public double HealthScoreToDouble(int score) => Math.Clamp(score, 0, 100);
@@ -290,25 +288,37 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     private void OnFilterClick(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: string tag })
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton { Tag: string tag } pill)
         {
             ViewModel.SetSeverityFilter(tag);
+
+            // Severity pills act as a radio group; re-clicking the active pill must not visually uncheck it.
+            pill.IsChecked = tag switch
+            {
+                "High" => ViewModel.IsFilterHigh,
+                "Medium" => ViewModel.IsFilterMedium,
+                "Low" => ViewModel.IsFilterLow,
+                _ => ViewModel.IsFilterAll,
+            };
         }
     }
 
     private void OnSourceFilterClick(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: string tag })
+        if (sender is Microsoft.UI.Xaml.Controls.Primitives.ToggleButton { Tag: string tag } pill)
         {
             ViewModel.SetSourceFilter(tag);
-        }
-    }
 
-    private void OnFindingsViewClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: string tag })
-        {
-            ViewModel.SetViewMode(tag);
+            // Source pills act as a radio group; re-clicking the active pill must not visually uncheck it.
+            pill.IsChecked = tag switch
+            {
+                "Application" => ViewModel.IsSourceApplication,
+                "Security" => ViewModel.IsSourceSecurity,
+                "System" => ViewModel.IsSourceSystem,
+                "Setup" => ViewModel.IsSourceSetup,
+                "ForwardedEvents" => ViewModel.IsSourceForwarded,
+                _ => ViewModel.IsSourceAll,
+            };
         }
     }
 
@@ -320,16 +330,16 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         }
     }
 
-    /// <summary>
-    /// Persists the audit mode selection. Full mode additionally reads the Security and
-    /// Firewall channels and requires elevation, so it is rejected when not elevated.
-    /// </summary>
-    private void OnFullAuditModeToggleClick(object sender, RoutedEventArgs e)
+    private void OnTaskPolicyEditorModeChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (sender is ToggleMenuFlyoutItem item)
+        if (AiTaskPolicyContentBox == null || AiTaskPolicyPreviewHost == null || sender is not CommunityToolkit.WinUI.Controls.Segmented segmented)
         {
-            ViewModel.AuditModeIndex = item.IsChecked ? 1 : 0;
+            return;
         }
+
+        bool isPreview = segmented.SelectedIndex == 1;
+        AiTaskPolicyContentBox.Visibility = isPreview ? Visibility.Collapsed : Visibility.Visible;
+        AiTaskPolicyPreviewHost.Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>

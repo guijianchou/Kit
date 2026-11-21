@@ -33,15 +33,18 @@ public sealed partial class FindingDetailsPane : UserControl
         PaneTitleText.Text = "AIHub_Fluent_DetailsTitle".GetLocalizedOrFallback("Finding details");
         EventIdLabel.Text = "AIHub_Fluent_EventId".GetLocalizedOrFallback("Event ID");
         SourceLabel.Text = "AIHub_Fluent_EventSource".GetLocalizedOrFallback("Source");
+        TimestampLabel.Text = "AIHub_Fluent_EventTime".GetLocalizedOrFallback("Timestamp");
         RangeLabel.Text = "AIHub_Fluent_ResultRange".GetLocalizedOrFallback("Audit range");
         ReasonLabel.Text = "AIHub_Fluent_Assessment".GetLocalizedOrFallback("Assessment");
         EvidenceExpander.Header = "AIHub_Fluent_EventEvidence".GetLocalizedOrFallback("Event evidence and references");
         EvidenceDescriptionText.Text = "AIHub_Fluent_EventEvidenceDescription".GetLocalizedOrFallback("Evidence recorded with this finding. Event references identify the underlying records.");
         CopyLabel.Text = "AIHub_Fluent_CopyFinding".GetLocalizedOrFallback("Copy summary");
+        CopyEvidenceLabel.Text = "AIHub_CopyEvidenceLabel".GetLocalizedOrFallback("Copy evidence");
         AnalyzeLabel.Text = "AIHub_Fluent_AnalyzeRange".GetLocalizedOrFallback("Analyze current range");
         SetButtonLabel(CloseDetailsButton, "AIHub_Fluent_CloseDetails".GetLocalizedOrFallback("Close details"));
         SetButtonLabel(PreviousButton, "AIHub_Fluent_PreviousFinding".GetLocalizedOrFallback("Previous finding"));
         SetButtonLabel(NextButton, "AIHub_Fluent_NextFinding".GetLocalizedOrFallback("Next finding"));
+        AutomationProperties.SetName(CopyEvidenceButton, CopyEvidenceLabel.Text);
     }
 
     public void SetFinding(AuditIssueEnhanced finding, string range, int index, int count, bool canAnalyze, string analysisHint)
@@ -53,7 +56,18 @@ public sealed partial class FindingDetailsPane : UserControl
         FindingTitleText.Text = finding.DisplayTitle;
         DescriptionText.Text = finding.EvidenceSummaryText;
         SeverityText.Text = finding.SeverityText;
-        SeverityBadge.Style = (Style)Resources[finding.IsHigh ? "HighSeverityBadgeStyle" : finding.IsMedium ? "MediumSeverityBadgeStyle" : "LowSeverityBadgeStyle"];
+        string badgeKey = finding.IsHigh
+            ? "KitSeverityHighBadgeStyle"
+            : finding.IsMedium
+                ? "KitSeverityMediumBadgeStyle"
+                : "KitSeverityLowBadgeStyle";
+        string textKey = finding.IsHigh
+            ? "SeverityHighTextStyle"
+            : finding.IsMedium
+                ? "SeverityMediumTextStyle"
+                : "SeverityLowTextStyle";
+        SeverityBadge.Style = (Style)Application.Current.Resources[badgeKey];
+        SeverityText.Style = (Style)Resources[textKey];
         CategoryText.Text = finding.CategoryLabel;
         OccurrencesBadge.Visibility = finding.HasOccurrences ? Visibility.Visible : Visibility.Collapsed;
         OccurrencesText.Text = finding.OccurrencesLabel;
@@ -145,6 +159,28 @@ public sealed partial class FindingDetailsPane : UserControl
 
     private void OnAnalyzeClick(object sender, RoutedEventArgs e) => AnalyzeRequested?.Invoke(this, EventArgs.Empty);
 
+    private void OnCopyEvidenceClick(object sender, RoutedEventArgs e)
+    {
+        if (_finding == null || string.IsNullOrWhiteSpace(EvidenceText.Text))
+        {
+            return;
+        }
+
+        try
+        {
+            var data = new DataPackage();
+            data.SetText(EvidenceText.Text);
+            Clipboard.SetContent(data);
+            CopyFeedbackText.Text = "AIHub_EvidenceCopied".GetLocalizedOrFallback("Event evidence copied to clipboard.");
+        }
+        catch (Exception ex)
+        {
+            CopyFeedbackText.Text = "AIHub_CopyReportFailed".FormatLocalized("Copy failed: {0}", ex.Message);
+        }
+
+        CopyFeedbackText.Visibility = Visibility.Visible;
+    }
+
     private void OnCopyClick(object sender, RoutedEventArgs e)
     {
         if (_finding == null)
@@ -166,7 +202,7 @@ public sealed partial class FindingDetailsPane : UserControl
             var data = new DataPackage();
             data.SetText(summary.ToString());
             Clipboard.SetContent(data);
-            CopyFeedbackText.Text = "AIHub_ReportCopied".GetLocalizedOrFallback("Audit report copied to clipboard.");
+            CopyFeedbackText.Text = "AIHub_FindingSummaryCopied".GetLocalizedOrFallback("Finding summary copied to clipboard.");
         }
         catch (Exception ex)
         {

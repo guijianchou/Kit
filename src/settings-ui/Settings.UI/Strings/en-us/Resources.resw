@@ -1526,15 +1526,6 @@
   <data name="AIHub_KernelPiItem.Content" xml:space="preserve">
     <value>Pi CLI</value>
   </data>
-  <data name="FindingDetailsDialog.Title" xml:space="preserve">
-    <value>Finding Details</value>
-  </data>
-  <data name="FindingDetailsDialog.PrimaryButtonText" xml:space="preserve">
-    <value>Copy Summary</value>
-  </data>
-  <data name="FindingDetailsDialog.CloseButtonText" xml:space="preserve">
-    <value>Close</value>
-  </data>
   <data name="FindingDetails_Facts.Text" xml:space="preserve">
     <value>Detection Facts</value>
   </data>
@@ -4415,6 +4406,12 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_Affected" xml:space="preserve"><value>Affected</value></data>
   <data name="AIHub_Fluent_IssueKey" xml:space="preserve"><value>Issue key</value></data>
   <data name="AIHub_Fluent_CopyFinding" xml:space="preserve"><value>Copy summary</value></data>
+  <data name="AIHub_CopyEvidenceLabel" xml:space="preserve"><value>Copy evidence</value></data>
+  <data name="AIHub_FindingSummaryCopied" xml:space="preserve"><value>Finding summary copied to clipboard.</value></data>
+  <data name="AIHub_EvidenceCopied" xml:space="preserve"><value>Event evidence copied to clipboard.</value></data>
+  <data name="AIHub_PolicyEditor_Edit.Content" xml:space="preserve"><value>Edit</value></data>
+  <data name="AIHub_PolicyEditor_Preview.Content" xml:space="preserve"><value>Preview</value></data>
+  <data name="AIHub_DetailsResizeHandle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Resize finding details pane</value></data>
   <data name="AIHub_Fluent_AnalyzeRange" xml:space="preserve"><value>Analyze current range</value></data>
   <data name="AIHub_Fluent_ShowPriority" xml:space="preserve"><value>Show priority findings</value></data>
   <data name="AIHub_Fluent_ShowAll" xml:space="preserve"><value>Show all findings</value></data>

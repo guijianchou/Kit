@@ -1770,36 +1770,6 @@ internal static class AiHubUxSmoke
         }
     }
 
-    private static async Task CheckIntroduction(SettingsPageIntro introduction, string assetName, string context, int expectedPixels = 0)
-    {
-        var iconSurface = introduction.FindName("ModuleIconSurface") as Border;
-        var image = introduction.FindName("ModuleIcon") as Image;
-        var description = introduction.FindName("AboutDescription") as TextBlock;
-        var links = introduction.FindName("PrimaryLinksControl") as ItemsControl;
-        Require(iconSurface != null && image != null && description != null && links != null,
-            context + ": shared introduction elements must exist in its own namescope.");
-        await WaitUntil(() => image.Source is BitmapImage { PixelWidth: > 0, PixelHeight: > 0 });
-        var bitmap = (BitmapImage)image.Source;
-        Require(introduction.ModuleImageSource != null && bitmap.UriSource == introduction.ModuleImageSource &&
-            bitmap.UriSource.AbsolutePath.EndsWith("/Assets/Settings/Modules/" + assetName, StringComparison.OrdinalIgnoreCase),
-            context + ": the visible module image must load from the expected packaged module asset.");
-        if (expectedPixels > 0)
-            Require(bitmap.PixelWidth == expectedPixels && bitmap.PixelHeight == expectedPixels,
-                context + ": the visible logo must load the replacement square asset, not the old settings screenshot.");
-        Require(Math.Abs(iconSurface.ActualWidth - 64) < 1 && Math.Abs(iconSurface.ActualHeight - 64) < 1 &&
-            image.ActualWidth > 0 && image.ActualHeight > 0 && HeaderInside(HeaderBounds(image, iconSurface), iconSurface),
-            context + ": the loaded image must fit the shared 64-DIP logo surface.");
-        Require(!string.IsNullOrWhiteSpace(introduction.ModuleDescription) && description.Text == introduction.ModuleDescription &&
-            description.FontSize >= 14 && description.TextWrapping == TextWrapping.Wrap && !description.IsTextTrimmed &&
-            description.Foreground is SolidColorBrush { Color: { A: > 0 } } &&
-            description.ActualWidth > 0 && description.ActualHeight > 0,
-            context + ": the full module introduction must use readable wrapping body text and the shared secondary foreground.");
-        Require(ReferenceEquals(links.ItemsSource, introduction.PrimaryLinks) &&
-            links.Visibility == (introduction.PrimaryLinks.Count > 0 ? Visibility.Visible : Visibility.Collapsed),
-            context + ": optional primary links must reflect this introduction's collection without an empty link strip.");
-        Log($"INTRO {context}: image={bitmap.UriSource}, pixels={bitmap.PixelWidth}x{bitmap.PixelHeight}, icon={iconSurface.ActualWidth:F1}x{iconSurface.ActualHeight:F1}, description={description.ActualWidth:F1}x{description.ActualHeight:F1}, font={description.FontSize:F1}, links={introduction.PrimaryLinks.Count}");
-    }
-
     private static async Task CheckSharedModuleHeaders(AIHubPage originalPage)
     {
         var window = App.GetSettingsWindow();
@@ -1817,31 +1787,43 @@ internal static class AiHubUxSmoke
                 await NextRendering();
                 var page = (Page)NavigationService.Frame.Content;
                 var shared = Descendants(page).OfType<SettingsPageControl>().Single();
+                var headerGrid = shared.FindName("PageHeaderGrid") as Grid;
                 var introduction = shared.FindName("PageIntro") as SettingsPageIntro;
                 var title = shared.FindName("Header") as TextBlock;
+                var description = shared.FindName("CompactDescriptionText") as TextBlock;
+                var links = shared.FindName("CompactPrimaryLinksControl") as ItemsControl;
                 var content = (FrameworkElement)shared.FindName("ModuleContentPresenter");
                 var scroll = Descendants(shared).OfType<ScrollViewer>().Single(item => AutomationProperties.GetAutomationId(item) == "PageScrollViewer");
                 scroll.ChangeView(null, 0, null, true);
                 await NextRendering();
                 await NextRendering();
                 string context = module.Key + "/" + theme;
-                Require(introduction != null && title != null && !string.IsNullOrWhiteSpace(title.Text) &&
+                Require(shared.CompactHeader && headerGrid != null && introduction != null &&
+                    introduction.Visibility == Visibility.Collapsed,
+                    context + ": the unified module page must use the compact Fluent header and collapse the legacy banner.");
+                Require(title != null && !string.IsNullOrWhiteSpace(title.Text) &&
                     title.Text == shared.ModuleTitle && ReferenceEquals(title.Style, Application.Current.Resources["TitleTextBlockStyle"]) &&
                     AutomationProperties.GetHeadingLevel(title) == AutomationHeadingLevel.Level1,
-                    context + ": the standard module header must retain its localized title and heading style.");
-                await CheckIntroduction(introduction, module.Key + ".png", context, expectedPixels: 192);
-                Require(introduction.ModuleDescription == shared.ModuleDescription && ReferenceEquals(introduction.PrimaryLinks, shared.PrimaryLinks),
-                    context + ": the standard page must forward its real description and primary links to the shared introduction.");
+                    context + ": the compact module header must retain its localized title and heading style.");
+                Require(description != null && !string.IsNullOrWhiteSpace(shared.ModuleDescription) &&
+                    description.Text == shared.ModuleDescription && description.TextWrapping == TextWrapping.Wrap &&
+                    description.Foreground is SolidColorBrush { Color: { A: > 0 } } &&
+                    description.ActualWidth > 0 && description.ActualHeight > 0,
+                    context + ": the compact module header must show readable secondary description text.");
+                Require(links != null && ReferenceEquals(links.ItemsSource, shared.PrimaryLinks) &&
+                    links.Visibility == (shared.PrimaryLinks.Count > 0 ? Visibility.Visible : Visibility.Collapsed),
+                    context + ": compact primary links must reflect this page's collection without an empty link strip.");
                 var toggle = Descendants(page).OfType<ToggleSwitch>().Single(item => AutomationProperties.GetAutomationId(item) == "Toggle_" + module.Key);
-                var enableCard = Descendants(content).OfType<CommunityToolkit.WinUI.Controls.SettingsCard>().Single(item => ReferenceEquals(item.Content, toggle));
-                var introBounds = HeaderBounds(introduction, page);
+                var headerBounds = HeaderBounds(headerGrid, page);
+                var toggleBounds = HeaderBounds(toggle, page);
                 var contentBounds = HeaderBounds(content, page);
-                Require(!toggle.IsOn && HeaderBounds(title, page).Bottom <= introBounds.Top + 2 &&
-                    introBounds.Bottom <= HeaderBounds(enableCard, page).Top + 2 &&
-                    HeaderInside(introBounds, page) && HeaderInside(HeaderBounds(enableCard, page), page) &&
-                    Math.Abs(introBounds.Left - contentBounds.Left) < 2 && Math.Abs(introduction.ActualWidth - content.ActualWidth) < 2 &&
-                    !IsDescendantOf(title, scroll) && IsDescendantOf(introduction, scroll),
-                    context + ": the normal page must show title, logo/description and disabled enable card in the shared column while preserving original scrolling behavior.");
+                Require(!toggle.IsOn && IsDescendantOf(toggle, headerGrid) &&
+                    !IsDescendantOf(title, scroll) && !IsDescendantOf(toggle, scroll) &&
+                    HeaderInside(headerBounds, page) && HeaderInside(toggleBounds, page) &&
+                    headerBounds.Bottom <= contentBounds.Top + 2 &&
+                    Math.Abs(headerBounds.Left - contentBounds.Left) < 2,
+                    context + ": the compact header must pin the title, description, and module toggle above the scroll area in the shared column.");
+                Log($"COMPACT HEADER {context}: header={headerBounds.Width:F1}x{headerBounds.Height:F1}, description={description.ActualWidth:F1}x{description.ActualHeight:F1}, toggle={toggleBounds.Left:F1},{toggleBounds.Top:F1}");
                 await Capture(page, $"module-header-{module.Key}-{theme}.png");
                 EnsureNoWorker();
             }
@@ -1853,9 +1835,8 @@ internal static class AiHubUxSmoke
             await Navigate(typeof(AIHubPage));
             Require(ReferenceEquals(originalPage, NavigationService.Frame.Content), "Header asset navigation must retain the cached AI Hub page and its fixtures.");
         }
-        Log("Awake and LightSwitch shared title/introduction layout, real 192x192 replacement logo loading, primary links and normal header renders in both themes PASS");
+        Log("Awake and LightSwitch unified compact Fluent header, description, primary links, and header toggle renders in both themes PASS");
     }
-
     private static Windows.Foundation.Rect HeaderBounds(FrameworkElement element, UIElement relativeTo) =>
         element.TransformToVisual(relativeTo).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
 

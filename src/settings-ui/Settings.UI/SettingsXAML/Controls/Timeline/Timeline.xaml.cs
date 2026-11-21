@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 
@@ -17,6 +18,10 @@ namespace Kit.Settings.UI.Controls
 {
     public sealed partial class Timeline : UserControl
     {
+        private const int TickHourStep = 2; // every 2 hours
+        private const double MinBandIconWidth = 28.0;
+        private const double EdgeLabelPadding = 6.0;
+
         public TimeSpan StartTime
         {
             get => (TimeSpan)GetValue(StartTimeProperty);
@@ -39,7 +44,7 @@ namespace Kit.Settings.UI.Controls
             set => SetValue(SunriseProperty, value);
         }
 
-        public static readonly DependencyProperty SunriseProperty = DependencyProperty.Register(nameof(Sunrise), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(defaultValue: null, OnTimeChanged));
+        public static readonly DependencyProperty SunriseProperty = DependencyProperty.Register(nameof(Sunrise), typeof(TimeSpan?), typeof(Timeline), new PropertyMetadata(defaultValue: null, OnTimeChanged));
 
         public TimeSpan? Sunset
         {
@@ -47,35 +52,34 @@ namespace Kit.Settings.UI.Controls
             set => SetValue(SunsetProperty, value);
         }
 
-        public static readonly DependencyProperty SunsetProperty = DependencyProperty.Register(nameof(Sunset), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(defaultValue: null, OnTimeChanged));
+        public static readonly DependencyProperty SunsetProperty = DependencyProperty.Register(nameof(Sunset), typeof(TimeSpan?), typeof(Timeline), new PropertyMetadata(defaultValue: null, OnTimeChanged));
 
         private readonly List<int> _tickHours = new();
-
-        // Locale 24h/12h
-        private readonly bool _is24h = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern.Contains('H');
+        private readonly RectangleGeometry _canvasClip = new();
 
         // Visuals
         private readonly List<Line> _ticks = new();
         private readonly List<TextBlock> _majorTickBottomLabels = new(); // 00,06,12,18,24 (below)
 
-        private readonly List<Border> _darkRects = new(); // up to 2 (wrap)
-        private readonly List<Border> _lightRects = new(); // up to 2 (complement)
+        private readonly List<Border> _dayRects = new(); // Light mode window (StartTime -> EndTime, up to 2 if wrapped)
+        private readonly List<Border> _nightRects = new(); // Dark mode window (complement, up to 2)
 
         private TextBlock _startEdgeLabel; // top-of-chart
         private TextBlock _endEdgeLabel;
 
         private Line _sunriseTick;
         private Line _sunsetTick;
-
-        // Add/replace these constants (top of your class)
-        private const int TickHourStep = 2; // <-- every 2 hours
+        private Line _currentTimeTick;
 
         private StackPanel _sunrisePanel;  // icon + time (below chart)
         private StackPanel _sunsetPanel;
 
+        private bool _sizeEventsSubscribed;
+
         public Timeline()
         {
             this.InitializeComponent();
+            TimelineCanvas.Clip = _canvasClip;
             this.Loaded += Timeline_Loaded;
             this.IsEnabledChanged += Timeline_IsEnabledChanged;
         }
@@ -97,14 +101,7 @@ namespace Kit.Settings.UI.Controls
 
         private void CheckEnabledState()
         {
-            if (IsEnabled)
-            {
-                this.Opacity = 1.0;
-            }
-            else
-            {
-                this.Opacity = 0.4;
-            }
+            this.Opacity = IsEnabled ? 1.0 : 0.4;
         }
 
         private static void OnTimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -118,6 +115,7 @@ namespace Kit.Settings.UI.Controls
             EnsureTicks();
             EnsureStartEndEdgeLabels();
             EnsureSunriseSunsetTicks();
+            EnsureCurrentTimeIndicator();
             EnsureSunPanels();
             EnsureMajorTickLabels();
             UpdateAll();
@@ -125,11 +123,31 @@ namespace Kit.Settings.UI.Controls
 
         private void TimelineCanvas_Loaded(object sender, RoutedEventArgs e)
         {
-            // SizeChanged wiring here (as requested)
-            HeaderCanvas.SizeChanged += (_, __) => UpdateAll();
-            TimelineCanvas.SizeChanged += (_, __) => UpdateAll();
-            AnnotationCanvas.SizeChanged += (_, __) => UpdateAll();
+            if (!_sizeEventsSubscribed)
+            {
+                HeaderCanvas.SizeChanged += OnCanvasSizeChanged;
+                TimelineCanvas.SizeChanged += OnCanvasSizeChanged;
+                AnnotationCanvas.SizeChanged += OnCanvasSizeChanged;
+                _sizeEventsSubscribed = true;
+            }
+
             Setup();
+        }
+
+        private void TimelineCanvas_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (_sizeEventsSubscribed)
+            {
+                HeaderCanvas.SizeChanged -= OnCanvasSizeChanged;
+                TimelineCanvas.SizeChanged -= OnCanvasSizeChanged;
+                AnnotationCanvas.SizeChanged -= OnCanvasSizeChanged;
+                _sizeEventsSubscribed = false;
+            }
+        }
+
+        private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateAll();
         }
 
         private void UpdateAll()
@@ -138,6 +156,7 @@ namespace Kit.Settings.UI.Controls
             UpdateTicksLayout();
             UpdateStartEndEdgeLabelsLayout();
             UpdateSunriseSunsetTicksLayout();
+            UpdateCurrentTimeIndicatorLayout();
             UpdateSunPanelsLayout();
             UpdateMajorTickLabelsLayout();
             AutomationProperties.SetHelpText(
@@ -169,20 +188,19 @@ namespace Kit.Settings.UI.Controls
                     Style = (Style)this.Resources[isMajor ? "MajorHourTickStyle" : "HourTickStyle"],
                 };
 
-                Canvas.SetZIndex(line, 0); // above bands (adjust if needed)
+                Canvas.SetZIndex(line, 0);
 
                 _ticks.Add(line);
                 _tickHours.Add(hour);
 
-                // If you actually want these IN the chart, use TimelineCanvas instead:
-                AnnotationCanvas.Children.Add(line); // or TimelineCanvas.Children.Add(line);
+                AnnotationCanvas.Children.Add(line);
             }
         }
 
         private void UpdateTicksLayout()
         {
             double w = TimelineCanvas.ActualWidth;
-            double h = TimelineCanvas.ActualHeight; // keeping your offset
+            double h = TimelineCanvas.ActualHeight;
             if (w <= 0 || h <= 0)
             {
                 return;
@@ -206,37 +224,38 @@ namespace Kit.Settings.UI.Controls
             }
         }
 
-        // ===== Bands (Dark + Light) =====
+        // ===== Bands (Light + Dark) =====
         private void EnsureBands()
         {
-            if (_darkRects.Count == 0)
+            if (_dayRects.Count == 0)
             {
-                _darkRects.Add(MakeBandRect(isDark: false));
-                _darkRects.Add(MakeBandRect(isDark: false));
+                _dayRects.Add(MakeBandRect(isDark: false));
+                _dayRects.Add(MakeBandRect(isDark: false));
             }
 
-            if (_lightRects.Count == 0)
+            if (_nightRects.Count == 0)
             {
-                _lightRects.Add(MakeBandRect(isDark: true));
-                _lightRects.Add(MakeBandRect(isDark: true));
+                _nightRects.Add(MakeBandRect(isDark: true));
+                _nightRects.Add(MakeBandRect(isDark: true));
             }
         }
 
         private Border MakeBandRect(bool isDark)
         {
             var r = new Border();
+            var icon = new FontIcon();
             if (isDark)
             {
                 r.Style = (Style)this.Resources["DarkBandStyle"];
-                FontIcon icon = new FontIcon();
                 icon.Style = (Style)this.Resources["DarkBandIconStyle"];
-                r.Child = icon;
             }
             else
             {
                 r.Style = (Style)this.Resources["LightBandStyle"];
+                icon.Style = (Style)this.Resources["LightBandIconStyle"];
             }
 
+            r.Child = icon;
             ToolTipService.SetToolTip(r, ResourceLoaderInstance.ResourceLoader.GetString(isDark ? "LightSwitch_Timeline_DarkBandToolTip" : "LightSwitch_Timeline_LightBandToolTip"));
             Canvas.SetZIndex(r, 5); // below ticks/labels
             TimelineCanvas.Children.Add(r);
@@ -252,23 +271,25 @@ namespace Kit.Settings.UI.Controls
                 return;
             }
 
-            foreach (var r in _darkRects)
+            _canvasClip.Rect = new Rect(0, 0, w, h);
+
+            foreach (var r in _dayRects)
             {
                 r.Height = h;
                 Canvas.SetTop(r, 0);
             }
 
-            foreach (var r in _lightRects)
+            foreach (var r in _nightRects)
             {
                 r.Height = h;
                 Canvas.SetTop(r, 0);
             }
 
-            var darkRanges = ToRanges(StartTime, EndTime);       // 1 or 2 segments
-            var lightRanges = ComplementRanges(darkRanges);       // 0..2
+            var dayRanges = ToRanges(StartTime, EndTime);       // 1 or 2 segments (Light mode window)
+            var nightRanges = ComplementRanges(dayRanges);      // 0..2 segments (Dark mode window)
 
-            LayoutRangeRects(_darkRects, darkRanges, w);
-            LayoutRangeRects(_lightRects, lightRanges, w);
+            LayoutRangeRects(_dayRects, dayRanges, w);
+            LayoutRangeRects(_nightRects, nightRanges, w);
         }
 
         private static void LayoutRangeRects(List<Border> rects, List<(TimeSpan Start, TimeSpan End)> ranges, double width)
@@ -280,11 +301,17 @@ namespace Kit.Settings.UI.Controls
                     var (start, end) = ranges[i];
                     double x = Math.Round((start.TotalHours / 24.0) * width);
                     double x2 = Math.Round((end.TotalHours / 24.0) * width);
+                    double bandWidth = Math.Max(0, x2 - x);
 
                     var r = rects[i];
                     Canvas.SetLeft(r, x);
-                    r.Width = Math.Max(0, x2 - x);
+                    r.Width = bandWidth;
                     r.Visibility = Visibility.Visible;
+
+                    if (r.Child is UIElement icon)
+                    {
+                        icon.Visibility = bandWidth >= MinBandIconWidth ? Visibility.Visible : Visibility.Collapsed;
+                    }
                 }
                 else
                 {
@@ -308,25 +335,25 @@ namespace Kit.Settings.UI.Controls
 
             // Wraps midnight
             return new()
-        {
-            (start, TimeSpan.FromHours(24)),
-            (TimeSpan.Zero, end),
-        };
+            {
+                (start, TimeSpan.FromHours(24)),
+                (TimeSpan.Zero, end),
+            };
         }
 
-        private static List<(TimeSpan Start, TimeSpan End)> ComplementRanges(List<(TimeSpan Start, TimeSpan End)> dark)
+        private static List<(TimeSpan Start, TimeSpan End)> ComplementRanges(List<(TimeSpan Start, TimeSpan End)> primary)
         {
             var res = new List<(TimeSpan, TimeSpan)>();
 
-            // If dark covers the full day, there is no light
-            if (dark.Count == 1 && dark[0].Start == TimeSpan.Zero && dark[0].End == TimeSpan.FromHours(24))
+            // If primary covers the full day, there is no complement
+            if (primary.Count == 1 && primary[0].Start == TimeSpan.Zero && primary[0].End == TimeSpan.FromHours(24))
             {
                 return res;
             }
 
-            if (dark.Count == 1)
+            if (primary.Count == 1)
             {
-                var (ds, de) = dark[0];
+                var (ds, de) = primary[0];
                 if (ds > TimeSpan.Zero)
                 {
                     res.Add((TimeSpan.Zero, ds));
@@ -339,9 +366,9 @@ namespace Kit.Settings.UI.Controls
             }
             else
             {
-                // dark[0] = [a,24), dark[1] = [0,b) => single light [b,a)
-                var a = dark[0].Start;
-                var b = dark[1].End;
+                // primary[0] = [a,24), primary[1] = [0,b) => single complement [b,a)
+                var a = primary[0].Start;
+                var b = primary[1].End;
                 res.Add((b, a));
             }
 
@@ -377,19 +404,58 @@ namespace Kit.Settings.UI.Controls
             _startEdgeLabel.Text = TimeSpanHelper.Convert(StartTime);
             _endEdgeLabel.Text = TimeSpanHelper.Convert(EndTime);
 
-            PlaceTopLabelAtTime(_startEdgeLabel, StartTime, w);
-            PlaceTopLabelAtTime(_endEdgeLabel, EndTime, w);
-        }
+            double startW = MeasureTextWidth(_startEdgeLabel);
+            double startX = Math.Round((StartTime.TotalHours / 24.0) * w);
+            double startLeft = Clamp(startX - (startW / 2.0), 0, Math.Max(0, w - startW));
 
-        private void PlaceTopLabelAtTime(TextBlock tb, TimeSpan t, double timelineWidth)
-        {
-            double x = Math.Round((t.TotalHours / 24.0) * timelineWidth);
-            double textW = MeasureTextWidth(tb);
-            double desiredLeft = x - (textW / 2.0);
+            Canvas.SetTop(_startEdgeLabel, 0);
+            _startEdgeLabel.Visibility = Visibility.Visible;
 
-            Canvas.SetLeft(tb, Clamp(desiredLeft, 0, timelineWidth - textW));
-            Canvas.SetTop(tb, 0);
-            tb.Visibility = Visibility.Visible;
+            if (StartTime == EndTime)
+            {
+                Canvas.SetLeft(_startEdgeLabel, startLeft);
+                _endEdgeLabel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            double endW = MeasureTextWidth(_endEdgeLabel);
+            double endX = Math.Round((EndTime.TotalHours / 24.0) * w);
+            double endLeft = Clamp(endX - (endW / 2.0), 0, Math.Max(0, w - endW));
+
+            // Nudge horizontally if the two labels overlap
+            if (startLeft <= endLeft)
+            {
+                double overlap = (startLeft + startW + EdgeLabelPadding) - endLeft;
+                if (overlap > 0)
+                {
+                    double half = overlap / 2.0;
+                    startLeft = Clamp(startLeft - half, 0, Math.Max(0, w - startW));
+                    endLeft = Clamp(Math.Max(endLeft + half, startLeft + startW + EdgeLabelPadding), 0, Math.Max(0, w - endW));
+                    if (startLeft + startW + EdgeLabelPadding > endLeft)
+                    {
+                        startLeft = Clamp(endLeft - startW - EdgeLabelPadding, 0, Math.Max(0, w - startW));
+                    }
+                }
+            }
+            else
+            {
+                double overlap = (endLeft + endW + EdgeLabelPadding) - startLeft;
+                if (overlap > 0)
+                {
+                    double half = overlap / 2.0;
+                    endLeft = Clamp(endLeft - half, 0, Math.Max(0, w - endW));
+                    startLeft = Clamp(Math.Max(startLeft + half, endLeft + endW + EdgeLabelPadding), 0, Math.Max(0, w - startW));
+                    if (endLeft + endW + EdgeLabelPadding > startLeft)
+                    {
+                        endLeft = Clamp(startLeft - endW - EdgeLabelPadding, 0, Math.Max(0, w - endW));
+                    }
+                }
+            }
+
+            Canvas.SetLeft(_startEdgeLabel, startLeft);
+            Canvas.SetLeft(_endEdgeLabel, endLeft);
+            Canvas.SetTop(_endEdgeLabel, 0);
+            _endEdgeLabel.Visibility = Visibility.Visible;
         }
 
         // ===== Sunrise/Sunset ticks on chart =====
@@ -413,7 +479,7 @@ namespace Kit.Settings.UI.Controls
         private void UpdateSunriseSunsetTicksLayout()
         {
             double w = TimelineCanvas.ActualWidth;
-            double h = TimelineCanvas.ActualHeight + 24;
+            double h = TimelineCanvas.ActualHeight;
             if (w <= 0 || h <= 0)
             {
                 return;
@@ -453,6 +519,40 @@ namespace Kit.Settings.UI.Controls
                     _sunsetTick.Visibility = Visibility.Collapsed;
                 }
             }
+        }
+
+        // ===== Current-time indicator =====
+        private void EnsureCurrentTimeIndicator()
+        {
+            if (_currentTimeTick == null)
+            {
+                _currentTimeTick = new Line { Style = (Style)this.Resources["CurrentTimeIndicatorStyle"] };
+                TimelineCanvas.Children.Add(_currentTimeTick);
+                Canvas.SetZIndex(_currentTimeTick, 15);
+            }
+        }
+
+        private void UpdateCurrentTimeIndicatorLayout()
+        {
+            if (_currentTimeTick == null)
+            {
+                return;
+            }
+
+            double w = TimelineCanvas.ActualWidth;
+            double h = TimelineCanvas.ActualHeight;
+            if (w <= 0 || h <= 0)
+            {
+                _currentTimeTick.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            double x = Clamp(Math.Round((DateTime.Now.TimeOfDay.TotalHours / 24.0) * w), 1, Math.Max(1, w - 1));
+            _currentTimeTick.X1 = x;
+            _currentTimeTick.X2 = x;
+            _currentTimeTick.Y1 = 2;
+            _currentTimeTick.Y2 = Math.Max(2, h - 2);
+            _currentTimeTick.Visibility = Visibility.Visible;
         }
 
         // ===== Sunrise/Sunset panels (below chart) =====
@@ -497,7 +597,7 @@ namespace Kit.Settings.UI.Controls
             {
                 double panelW = MeasureElementWidth(sp);
                 double xTimeline = Math.Round((t.TotalHours / 24.0) * timelineW);
-                double left = Clamp(xTimeline - (panelW / 2.0), 0, annotationW - panelW);
+                double left = Clamp(xTimeline - (panelW / 2.0), 0, Math.Max(0, annotationW - panelW));
                 Canvas.SetLeft(sp, left);
                 Canvas.SetTop(sp, 8);
             }
@@ -578,17 +678,9 @@ namespace Kit.Settings.UI.Controls
                 double textW = MeasureTextWidth(tb);
                 double left = xTimeline - (textW / 2.0);
 
-                // Middle ones (06, 12) exact center; edges clamp inside canvas
-                if (i == 1 || i == 2)
-                {
-                    Canvas.SetLeft(tb, left);
-                }
-                else
-                {
-                    Canvas.SetLeft(tb, Clamp(left, 0, annotationW - textW));
-                }
-
-                Canvas.SetTop(tb, 8); // your existing baseline below chart
+                // Center interior ticks (06, 12, 18) and clamp all labels inside the canvas bounds
+                Canvas.SetLeft(tb, Clamp(left, 0, Math.Max(0, annotationW - textW)));
+                Canvas.SetTop(tb, 8);
                 tb.Visibility = Visibility.Visible;
             }
 
@@ -606,7 +698,8 @@ namespace Kit.Settings.UI.Controls
                 sunsetBounds = GetAnnotationBoundsForTime(Sunset.Value, timelineW, annotationW, _sunsetPanel);
             }
 
-            // 3) Hide any label that intersects the sunrise/sunset panel bounds
+            // 3) Hide any label that intersects the sunrise/sunset panel bounds or overlaps a neighbor on narrow widths
+            (double Left, double Right)? lastVisibleBounds = null;
             for (int i = 0; i < hours.Length; i++)
             {
                 var tb = _majorTickBottomLabels[i];
@@ -619,9 +712,18 @@ namespace Kit.Settings.UI.Controls
 
                 bool hide =
                     (sunriseBounds.HasValue && Intersects(lbl, sunriseBounds.Value)) ||
-                    (sunsetBounds.HasValue && Intersects(lbl, sunsetBounds.Value)); // include sunset too; remove if you only want sunrise
+                    (sunsetBounds.HasValue && Intersects(lbl, sunsetBounds.Value)) ||
+                    (lastVisibleBounds.HasValue && Intersects(lastVisibleBounds.Value, lbl));
 
-                tb.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
+                if (hide)
+                {
+                    tb.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    tb.Visibility = Visibility.Visible;
+                    lastVisibleBounds = lbl;
+                }
             }
         }
 
@@ -651,7 +753,7 @@ namespace Kit.Settings.UI.Controls
             // Compute the *actual* left/right the panel will occupy in AnnotationCanvas
             double panelW = MeasureElementWidth(element);
             double xTimeline = Math.Round((t.TotalHours / 24.0) * timelineW);
-            double left = Clamp(xTimeline - (panelW / 2.0), 0, annotationW - panelW);
+            double left = Clamp(xTimeline - (panelW / 2.0), 0, Math.Max(0, annotationW - panelW));
             return (left, left + panelW);
         }
 

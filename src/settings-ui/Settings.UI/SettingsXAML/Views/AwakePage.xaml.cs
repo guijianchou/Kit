@@ -102,6 +102,7 @@ namespace Kit.Settings.UI.Views
         {
             if (!_disposed && _sendConfigMsg != null)
             {
+                SyncNavigationBadge();
                 if (e.PropertyName == "IsEnabled")
                 {
                     if (ViewModel.IsEnabled != _generalSettingsRepository.SettingsConfig.Enabled.Awake)
@@ -221,6 +222,14 @@ namespace Kit.Settings.UI.Views
         {
             UpdateEnabledState(_generalSettingsRepository.SettingsConfig.Enabled.Awake);
             ViewModel.RefreshEnabledState();
+            SyncNavigationBadge();
+        }
+
+        private void SyncNavigationBadge()
+        {
+            ShellNavigationBadges.Current.IsAwakeActive =
+                ViewModel.IsEnabled &&
+                ViewModel.ModuleSettings?.Properties?.Mode != AwakeMode.PASSIVE;
         }
     }
 }

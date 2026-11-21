@@ -31,13 +31,15 @@
         <!--  Timeline (bands + ticks + labels)  -->
         <Border
             Grid.Row="1"
+            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1"
             CornerRadius="{ThemeResource OverlayCornerRadius}">
             <Canvas
                 x:Name="TimelineCanvas"
                 Height="36"
-                Loaded="TimelineCanvas_Loaded" />
+                Loaded="TimelineCanvas_Loaded"
+                Unloaded="TimelineCanvas_Unloaded" />
         </Border>
 
         <!--  Below-chart annotations (sunrise/sunset panels + major labels)  -->

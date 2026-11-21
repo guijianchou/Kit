@@ -21,25 +21,24 @@
 
     <controls:SettingsPageControl
         x:Uid="Awake"
+        CompactHeader="True"
         IsTabStop="False"
         ModuleImageSource="ms-appx:///Assets/Settings/Modules/Awake.png">
+        <controls:SettingsPageControl.HeaderAction>
+            <controls:GPOInfoControl MaxWidth="220" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                <ToggleSwitch
+                    x:Name="AwakeEnableToggleSwitch"
+                    x:Uid="Awake_EnableSettingsCard"
+                    MinWidth="0"
+                    HorizontalAlignment="Right"
+                    AutomationProperties.AutomationId="Toggle_Awake"
+                    IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
+                    IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+            </controls:GPOInfoControl>
+        </controls:SettingsPageControl.HeaderAction>
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
-                <Border Style="{StaticResource KitHeroSurfaceStyle}">
-                    <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                        <tkcontrols:SettingsCard
-                            x:Name="AwakeEnableSettingsCard"
-                            x:Uid="Awake_EnableSettingsCard"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Awake.png}"
-                            IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
-                            <ToggleSwitch AutomationProperties.AutomationId="Toggle_Awake" IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
-                        </tkcontrols:SettingsCard>
-                    </controls:GPOInfoControl>
-                </Border>
-
-                <controls:SettingsGroup x:Uid="Awake_BehaviorSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
+                <controls:SettingsGroup x:Uid="Awake_BehaviorSettingsGroup" Padding="0,8,0,0" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
                     <tkcontrols:SettingsCard
                         x:Name="AwakeModeSettingsCard"
                         x:Uid="Awake_ModeSettingsCard"
@@ -57,13 +56,21 @@
                         x:Uid="Awake_ExpirationSettingsExpander"
                         HeaderIcon="{ui:FontIcon Glyph=&#xEC92;}"
                         IsExpanded="True"
-                        Visibility="{x:Bind ViewModel.IsExpirationConfigurationEnabled, Mode=OneWay}">
+                        Visibility="{x:Bind ViewModel.IsExpirationConfigurationEnabled, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                         <tkcontrols:SettingsExpander.Items>
                             <tkcontrols:SettingsCard x:Name="AwakeExpirationSettingsExpanderDate" x:Uid="Awake_ExpirationSettingsExpander_Date">
-                                <DatePicker x:Uid="Awake_ExpirationDatePicker" AutomationProperties.AutomationId="ExpirationDate_Awake" Date="{x:Bind ViewModel.ExpirationDateTime, Mode=TwoWay}" />
+                                <CalendarDatePicker
+                                    x:Uid="Awake_ExpirationDatePicker"
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    AutomationProperties.AutomationId="ExpirationDate_Awake"
+                                    Date="{x:Bind ViewModel.ExpirationDateTimeNullable, Mode=TwoWay}" />
                             </tkcontrols:SettingsCard>
                             <tkcontrols:SettingsCard x:Name="AwakeExpirationSettingsExpanderTime" x:Uid="Awake_ExpirationSettingsExpander_Time">
-                                <TimePicker x:Uid="Awake_ExpirationTimePicker" AutomationProperties.AutomationId="ExpirationTime_Awake" ClockIdentifier="24HourClock" Time="{x:Bind ViewModel.ExpirationTime, Mode=TwoWay}" />
+                                <TimePicker
+                                    x:Uid="Awake_ExpirationTimePicker"
+                                    MinWidth="{StaticResource SettingActionControlMinWidth}"
+                                    AutomationProperties.AutomationId="ExpirationTime_Awake"
+                                    Time="{x:Bind ViewModel.ExpirationTime, Mode=TwoWay}" />
                             </tkcontrols:SettingsCard>
                         </tkcontrols:SettingsExpander.Items>
                     </tkcontrols:SettingsExpander>
@@ -72,29 +79,30 @@
                         x:Name="AwakeIntervalSettingsCard"
                         x:Uid="Awake_IntervalSettingsCard"
                         HeaderIcon="{ui:FontIcon Glyph=&#xE916;}"
-                        Visibility="{x:Bind ViewModel.IsTimeConfigurationEnabled, Mode=OneWay}">
+                        Visibility="{x:Bind ViewModel.IsTimeConfigurationEnabled, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
 
-                        <StackPanel MinWidth="{StaticResource SettingActionControlMinWidth}" Orientation="Horizontal" Spacing="8">
+                        <tkcontrols:WrapPanel MinWidth="{StaticResource SettingActionControlMinWidth}" HorizontalSpacing="8" VerticalSpacing="8">
                             <NumberBox
                                 AutomationProperties.AutomationId="IntervalHours_Awake" x:Uid="Awake_IntervalHoursInput"
-                                Width="96"
+                                Width="116"
                                 HorizontalAlignment="Left"
                                 LargeChange="5"
+                                Maximum="999"
                                 Minimum="0"
                                 SmallChange="1"
                                 SpinButtonPlacementMode="Compact"
                                 Value="{x:Bind ViewModel.IntervalHours, Mode=TwoWay}" />
                             <NumberBox
                                 AutomationProperties.AutomationId="IntervalMinutes_Awake" x:Uid="Awake_IntervalMinutesInput"
-                                Width="96"
+                                Width="116"
                                 HorizontalAlignment="Left"
                                 LargeChange="5"
-                                Maximum="60"
+                                Maximum="59"
                                 Minimum="0"
                                 SmallChange="1"
                                 SpinButtonPlacementMode="Compact"
                                 Value="{x:Bind ViewModel.IntervalMinutes, Mode=TwoWay}" />
-                        </StackPanel>
+                        </tkcontrols:WrapPanel>
                     </tkcontrols:SettingsCard>
 
                     <tkcontrols:SettingsCard

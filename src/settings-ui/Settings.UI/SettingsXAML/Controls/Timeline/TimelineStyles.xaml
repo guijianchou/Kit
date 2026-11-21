@@ -27,6 +27,14 @@
         <Setter Property="StrokeDashArray" Value="2,2" />
     </Style>
 
+    <Style x:Key="CurrentTimeIndicatorStyle" TargetType="Line">
+        <Setter Property="Stroke" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+        <Setter Property="StrokeThickness" Value="2" />
+        <Setter Property="StrokeStartLineCap" Value="Round" />
+        <Setter Property="StrokeEndLineCap" Value="Round" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+
     <!--  ===== Text / Labels =====  -->
     <Style x:Key="EdgeLabelStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="14" />
@@ -51,18 +59,14 @@
 
     <!--  ===== Bands =====  -->
     <Style x:Key="DarkBandStyle" TargetType="Border">
-        <!--<Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Opacity="0.6" Color="{ThemeResource SystemAccentColorDark1}"/>
-            </Setter.Value>
-        </Setter>-->
         <Setter Property="Background" Value="{ThemeResource AccentFillColorTertiaryBrush}" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Padding" Value="4" />
     </Style>
 
     <Style x:Key="LightBandStyle" TargetType="Border">
         <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="Padding" Value="4" />
     </Style>
 
     <Style x:Key="DarkBandIconStyle" TargetType="FontIcon">

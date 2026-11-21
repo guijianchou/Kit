@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Abstractions;
 using System.Threading;
@@ -435,6 +436,7 @@ namespace Kit.Settings.UI.Views
                     this.SyncButton.IsEnabled = true;
                 }
 
+                this.LocationDialog.RequestedTheme = this.ActualTheme;
                 await this.LocationDialog.ShowAsync();
             }
             catch (Exception error)
@@ -450,6 +452,7 @@ namespace Kit.Settings.UI.Views
                 case "FixedHours":
                     VisualStateManager.GoToState(this, "ManualState", true);
                     this.TimelineCard.Visibility = Visibility.Visible;
+                    this.LocationWarningBar.Visibility = Visibility.Collapsed;
                     break;
                 case "SunsetToSunrise":
                     VisualStateManager.GoToState(this, "SunsetToSunriseState", true);
@@ -457,11 +460,13 @@ namespace Kit.Settings.UI.Views
                     break;
                 case "FollowNightLight":
                     VisualStateManager.GoToState(this, "FollowNightLightState", true);
-                    TimelineCard.Visibility = Visibility.Collapsed;
+                    this.TimelineCard.Visibility = Visibility.Collapsed;
+                    this.LocationWarningBar.Visibility = Visibility.Collapsed;
                     break;
                 default:
                     VisualStateManager.GoToState(this, "OffState", true);
                     this.TimelineCard.Visibility = Visibility.Collapsed;
+                    this.LocationWarningBar.Visibility = Visibility.Collapsed;
                     break;
             }
         }
@@ -480,7 +485,11 @@ namespace Kit.Settings.UI.Views
 
         private void SunriseModeChartState()
         {
-            if (this.ViewModel.Latitude != "0.0" && this.ViewModel.Longitude != "0.0")
+            bool hasLocation = TryParseCoordinate(this.ViewModel.Latitude, out double lat) &&
+                TryParseCoordinate(this.ViewModel.Longitude, out double lon) &&
+                (Math.Abs(lat) > 0.0001 || Math.Abs(lon) > 0.0001);
+
+            if (hasLocation)
             {
                 this.TimelineCard.Visibility = Visibility.Visible;
                 this.LocationWarningBar.Visibility = Visibility.Collapsed;
@@ -490,6 +499,22 @@ namespace Kit.Settings.UI.Views
                 this.TimelineCard.Visibility = Visibility.Collapsed;
                 this.LocationWarningBar.Visibility = Visibility.Visible;
             }
+        }
+
+        private static bool TryParseCoordinate(string value, out double parsed)
+        {
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsed))
+            {
+                return !double.IsNaN(parsed) && !double.IsInfinity(parsed);
+            }
+
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out parsed))
+            {
+                return !double.IsNaN(parsed) && !double.IsInfinity(parsed);
+            }
+
+            parsed = 0;
+            return false;
         }
     }
 }

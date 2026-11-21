@@ -3132,7 +3132,7 @@ namespace ViewModelTests
             var awakePage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "AwakePage.xaml"));
             var generalPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
 
-            AssertUsesXName(awakePage, "AwakeEnableSettingsCard");
+            AssertUsesXName(awakePage, "AwakeEnableToggleSwitch");
             AssertUsesXName(awakePage, "AwakeModeSettingsCard");
             AssertUsesXName(awakePage, "AwakeExpirationSettingsExpander");
             AssertUsesXName(awakePage, "AwakeIntervalSettingsCard");

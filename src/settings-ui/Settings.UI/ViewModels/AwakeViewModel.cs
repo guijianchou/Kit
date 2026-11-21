@@ -181,6 +181,28 @@ namespace Kit.Settings.UI.ViewModels
                 {
                     ModuleSettings.Properties.ExpirationDateTime = value;
                     NotifyPropertyChanged();
+                    OnPropertyChanged(nameof(ExpirationDateTimeNullable));
+                }
+            }
+        }
+
+        public DateTimeOffset? ExpirationDateTimeNullable
+        {
+            get => ExpirationDateTime;
+            set
+            {
+                if (value.HasValue)
+                {
+                    var current = ExpirationDateTime;
+                    var picked = value.Value;
+                    ExpirationDateTime = new DateTimeOffset(
+                        picked.Year,
+                        picked.Month,
+                        picked.Day,
+                        current.Hour,
+                        current.Minute,
+                        current.Second,
+                        picked.Offset);
                 }
             }
         }
@@ -218,6 +240,7 @@ namespace Kit.Settings.UI.ViewModels
             OnPropertyChanged(nameof(IntervalHours));
             OnPropertyChanged(nameof(IntervalMinutes));
             OnPropertyChanged(nameof(ExpirationDateTime));
+            OnPropertyChanged(nameof(ExpirationDateTimeNullable));
         }
 
         private bool _enabledStateIsGPOConfigured;

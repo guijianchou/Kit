@@ -3366,7 +3366,7 @@ namespace ViewModelTests
             var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
 
             // 1. Shared surfaces, converged sizing and the row toggle style on the Localserver page.
-            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroPanelStyle}\"");
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"0\"");
             Assert.IsFalse(pageXaml.Contains("Width=\"30\"", StringComparison.Ordinal), "Log toggle should inherit the 28px compact style instead of a 30px override.");
             Assert.IsFalse(pageXaml.Contains("Height=\"22\"", StringComparison.Ordinal), "Fix chip button should converge to the 28px compact tier.");
@@ -3437,11 +3437,12 @@ namespace ViewModelTests
             var settingsResources = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Strings", "en-us", "Resources.resw"));
 
             // 1. Surfaces, sizing and responsive fallback.
-            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroPanelStyle}\"");
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"0\"");
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,16\"");
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,12\"");
-            Assert.AreEqual(4, pageXaml.Split("KitFilterPillToggleStyle").Length - 1, "Period selector should use four filter pill toggles.");
+            StringAssert.Contains(pageXaml, "tkcontrols:Segmented");
+            Assert.AreEqual(4, pageXaml.Split("tkcontrols:SegmentedItem").Length - 1, "Period selector should use four SegmentedItem entries.");
             Assert.AreEqual(2, pageXaml.Split("RightAlignedCompactToggleSwitchStyle").Length - 1, "Both row toggles should use the shared compact toggle style.");
             Assert.IsFalse(pageXaml.Contains("AccentHealthButtonStyle", StringComparison.Ordinal), "The code-swapped accent period styles should be removed.");
             Assert.IsFalse(pageXaml.Contains("KitPeriodButtonStyle", StringComparison.Ordinal), "The UDP-only period button style should be retired.");
@@ -3449,8 +3450,8 @@ namespace ViewModelTests
             StringAssert.Contains(pageXaml, "ControlSizeTrigger");
             StringAssert.Contains(pageXaml, "UdpAssessmentCard");
             StringAssert.Contains(pageXaml, "Stroke=\"{ThemeResource SystemFillColorCriticalBrush}\"");
-            StringAssert.Contains(pageCode, "SyncHealthPeriodChecks");
-            Assert.IsFalse(pageCode.Contains("UpdateHealthPeriodButtons", StringComparison.Ordinal), "Period pill state should sync via IsChecked, not style swapping.");
+            StringAssert.Contains(viewModel, "SelectedPeriodIndex");
+            Assert.IsFalse(pageCode.Contains("UpdateHealthPeriodButtons", StringComparison.Ordinal), "Period selection should bind via SelectedPeriodIndex, not style swapping.");
 
             int comboIndex = pageXaml.IndexOf("UDPtest_SelectedLineCombo", StringComparison.Ordinal);
             int comboEnd = pageXaml.IndexOf("/>", comboIndex, StringComparison.Ordinal);
@@ -3602,10 +3603,10 @@ namespace ViewModelTests
             StringAssert.Contains(dashboardCode, "public Style EgressTextStyle(ProbeHealth health)");
             StringAssert.Contains(dashboardCode, "KitEgressStatusStyles");
 
-            // 2. Map drawing uses named tokens and the shared style values.
-            StringAssert.Contains(pageCode, "private const double MapBodyTableWidth = 440;");
+            // 2. Map drawing uses named tokens and declarative responsive VSM layout.
+            StringAssert.Contains(pageXaml, "x:Name=\"MapRouteColumn\" Width=\"440\"");
+            StringAssert.Contains(pageXaml, "Target=\"MapRouteColumn.Width\"");
             StringAssert.Contains(pageCode, "private const double MapFitMaxWidth = 800;");
-            StringAssert.Contains(pageCode, "MapBody.ColumnDefinitions[1].Width = new GridLength(narrow ? 0 : MapBodyTableWidth);");
             StringAssert.Contains(pageCode, "MapFitMaxWidth / Math.Max(width, 40)");
             Assert.IsFalse(pageCode.Contains("StrokeThickness = 3", StringComparison.Ordinal), "Route lines should take their width from NetMapRouteLineStyle.");
             Assert.IsFalse(pageCode.Contains("FontSize = 28", StringComparison.Ordinal), "The selected-label size should live in NetMapMapLabelStyle.");
@@ -3678,7 +3679,7 @@ namespace ViewModelTests
             }
 
             // 4. The hero master card resolves its surface from the shared style rather than inline attributes.
-            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroSurfaceStyle}\"");
+            StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitHeroPanelStyle}\"");
             Assert.IsFalse(pageXaml.Contains("Background=\"{ThemeResource CardBackgroundFillColorDefaultBrush}\"", StringComparison.Ordinal), "The hero card should take its surface from KitHeroSurfaceStyle.");
         }
 

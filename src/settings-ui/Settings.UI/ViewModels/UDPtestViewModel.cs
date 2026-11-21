@@ -225,12 +225,14 @@ namespace Kit.Settings.UI.ViewModels
                 CanClear = false;
                 RunStateText = "UDPtest_RunStateStopped".GetLocalizedOrFallback("Stopped");
                 RunStateBrush = ThemeBrushHelper.SecondaryTextBrush;
+                ShellNavigationBadges.Current.IsUdpMonitoring = false;
             }
             else
             {
                 CanStart = _state == MonitorRunState.Stopped;
                 CanStop = _state == MonitorRunState.Running;
                 CanClear = _state == MonitorRunState.Stopped;
+                ShellNavigationBadges.Current.IsUdpMonitoring = _state == MonitorRunState.Running;
                 if (!previousEnabled && _isPageActive)
                 {
                     SignalPoll();
@@ -349,6 +351,7 @@ namespace Kit.Settings.UI.ViewModels
             {
                 if (Set(ref _refreshInterval, value))
                 {
+                    OnPropertyChanged(nameof(RefreshIntervalText));
                     _settings.Properties.ProbeIntervalMilliseconds.Value = value;
                     _settingsUtils.SaveSettings(_settings.ToJsonString(), UDPtestSettings.ModuleName);
                     _sendConfigMsg(new SndModuleSettings<SndUDPtestSettings>(new SndUDPtestSettings(_settings)).ToJsonString());
@@ -360,13 +363,26 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
+        public string RefreshIntervalText => $"{RefreshInterval} ms";
+
         public UDPtestLineRowViewModel? SelectedLine
         {
             get => _selectedLine;
             set
             {
+                var previous = _selectedLine;
                 if (Set(ref _selectedLine, value))
                 {
+                    if (previous is not null)
+                    {
+                        previous.IsSelectedForChart = false;
+                    }
+
+                    if (value is not null)
+                    {
+                        value.IsSelectedForChart = true;
+                    }
+
                     UpdateHealthCard();
                     HealthChartNeedsRedraw?.Invoke();
                 }
@@ -435,10 +451,52 @@ namespace Kit.Settings.UI.ViewModels
             {
                 if (Set(ref _selectedPeriodSeconds, value))
                 {
+                    OnPropertyChanged(nameof(SelectedPeriodIndex));
                     UpdateHealthCard();
                     HealthChartNeedsRedraw?.Invoke();
                 }
             }
+        }
+
+        public int SelectedPeriodIndex
+        {
+            get => _selectedPeriodSeconds switch
+            {
+                300 => 1,
+                1800 => 2,
+                3600 => 3,
+                _ => 0,
+            };
+            set
+            {
+                int seconds = value switch
+                {
+                    1 => 300,
+                    2 => 1800,
+                    3 => 3600,
+                    _ => 60,
+                };
+                SelectedPeriodSeconds = seconds;
+            }
+        }
+
+        public void RefreshThemeBrushes(ElementTheme theme)
+        {
+            RunStateBrush = _state switch
+            {
+                MonitorRunState.Running => ThemeBrushHelper.GetBrush("SystemFillColorSuccessBrush", ThemeBrushHelper.SuccessBrush, theme),
+                MonitorRunState.Starting or MonitorRunState.Stopping => ThemeBrushHelper.GetBrush("SystemFillColorCautionBrush", ThemeBrushHelper.CautionBrush, theme),
+                _ => ThemeBrushHelper.GetBrush("TextFillColorSecondaryBrush", ThemeBrushHelper.SecondaryTextBrush, theme),
+            };
+            foreach (var row in Lines)
+            {
+                row.RefreshThemeBrushes(theme);
+            }
+
+            HealthRingBrush = SelectedLine is not null
+                ? SelectedLine.StatusBrush
+                : ThemeBrushHelper.GetBrush("ControlStrongStrokeColorDefaultBrush", ThemeBrushHelper.StrokeDefaultBrush, theme);
+            UpdateNodeVerification();
         }
 
         public string UdpAssessmentText
@@ -886,6 +944,7 @@ namespace Kit.Settings.UI.ViewModels
                 CanStart = IsEnabled && state == MonitorRunState.Stopped;
                 CanStop = IsEnabled && state == MonitorRunState.Running;
                 CanClear = IsEnabled && state == MonitorRunState.Stopped;
+                ShellNavigationBadges.Current.IsUdpMonitoring = IsEnabled && state == MonitorRunState.Running;
 
                 foreach (var line in Lines)
                 {

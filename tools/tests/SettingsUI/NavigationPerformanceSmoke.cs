@@ -59,6 +59,7 @@ internal static class NavigationPerformanceSmoke
                 SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread()));
                 Log("START App constructor with GeneralPage");
                 var app = new App { StartupPage = typeof(GeneralPage) };
+                app.UnhandledException += (_, e) => Log("APP UNHANDLED: " + e.Message + "\n" + e.Exception);
                 Log("START App constructed");
                 DispatcherQueue.GetForCurrentThread().TryEnqueue(async () =>
                 {

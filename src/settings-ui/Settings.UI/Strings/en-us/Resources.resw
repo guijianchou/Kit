@@ -4557,4 +4557,14 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="General_UpdateInterrupted.Text" xml:space="preserve"><value>The update was interrupted. Download it again to continue.</value></data>
   <data name="General_UpdateHelperMissing.Text" xml:space="preserve"><value>The update component is missing or cannot start. Extract the complete Portable package and try again.</value></data>
   <data name="AIHub_WorkspaceTaskDetails" xml:space="preserve"><value>Task details</value></data>
+  <data name="NetMap_CopyIpButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Copy IP address</value></data>
+  <data name="NetMap_CopyIpButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Copy IP address</value></data>
+  <data name="NetMap_MapZoomIn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Zoom in map</value></data>
+  <data name="NetMap_MapZoomIn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Zoom in</value></data>
+  <data name="NetMap_MapZoomOut.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Zoom out map</value></data>
+  <data name="NetMap_MapZoomOut.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Zoom out</value></data>
+  <data name="NetMap_MapZoomReset.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Reset map view</value></data>
+  <data name="NetMap_MapZoomReset.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Reset view</value></data>
+  <data name="NetMap_LegendObserved.Text" xml:space="preserve"><value>Observed</value></data>
+  <data name="NetMap_LegendApprox.Text" xml:space="preserve"><value>Approximate</value></data>
 </root>

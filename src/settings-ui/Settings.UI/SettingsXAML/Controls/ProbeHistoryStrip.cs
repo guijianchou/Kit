@@ -23,15 +23,18 @@ using Windows.System;
 namespace Kit.Settings.UI.Controls
 {
     /// <summary>
-    /// Draws probe history with three paths and one tooltip instead of a visual
-    /// and tooltip for every sample. Samples outside the visible slots have no geometry.
+    /// Draws probe/service history with three (or optionally four with neutral/idle)
+    /// pooled paths and one tooltip instead of a visual and tooltip for every sample.
+    /// Samples outside the visible slots have no geometry.
     /// </summary>
     public sealed partial class ProbeHistoryStrip : UserControl
     {
         private const double BarWidth = 5;
         private const double Spacing = 2;
+        private readonly Canvas _canvas;
         private readonly Path[] _paths = [CreatePath(), CreatePath(), CreatePath()];
         private readonly ToolTip _toolTip = new();
+        private Path? _neutralPath;
         private INotifyCollectionChanged? _observedSource;
         private int _firstVisible;
         private int _visibleCount;
@@ -41,19 +44,23 @@ namespace Kit.Settings.UI.Controls
         private long _renderedRevision = -1;
         private Size _renderedSize;
         private ElementTheme _renderedTheme;
+        private bool _renderedIncludeNeutral;
 
         public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
             nameof(ItemsSource), typeof(object), typeof(ProbeHistoryStrip), new PropertyMetadata(null, OnItemsSourceChanged));
 
+        public static readonly DependencyProperty IncludeNeutralPathProperty = DependencyProperty.Register(
+            nameof(IncludeNeutralPath), typeof(bool), typeof(ProbeHistoryStrip), new PropertyMetadata(false, OnIncludeNeutralPathChanged));
+
         public ProbeHistoryStrip()
         {
-            var canvas = new Canvas { Background = new SolidColorBrush(Colors.Transparent) };
+            _canvas = new Canvas { Background = new SolidColorBrush(Colors.Transparent) };
             foreach (var path in _paths)
             {
-                canvas.Children.Add(path);
+                _canvas.Children.Add(path);
             }
 
-            Content = canvas;
+            Content = _canvas;
             IsTabStop = true;
             UseSystemFocusVisuals = true;
             ToolTipService.SetToolTip(this, _toolTip);
@@ -71,6 +78,12 @@ namespace Kit.Settings.UI.Controls
         {
             get => GetValue(ItemsSourceProperty);
             set => SetValue(ItemsSourceProperty, value);
+        }
+
+        public bool IncludeNeutralPath
+        {
+            get => (bool)GetValue(IncludeNeutralPathProperty);
+            set => SetValue(IncludeNeutralPathProperty, value);
         }
 
         private IList<StatusBarViewModel>? Samples => ItemsSource as IList<StatusBarViewModel>;
@@ -92,12 +105,37 @@ namespace Kit.Settings.UI.Controls
             strip.Redraw();
         }
 
+        private static void OnIncludeNeutralPathChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+        {
+            var strip = (ProbeHistoryStrip)sender;
+            strip.EnsureNeutralPath();
+            strip.Redraw();
+        }
+
+        private void EnsureNeutralPath()
+        {
+            if (IncludeNeutralPath)
+            {
+                if (_neutralPath is null)
+                {
+                    _neutralPath = CreatePath();
+                    _canvas.Children.Add(_neutralPath);
+                }
+            }
+            else if (_neutralPath is not null)
+            {
+                _canvas.Children.Remove(_neutralPath);
+                _neutralPath = null;
+            }
+        }
+
         private void OnLoaded(object sender, RoutedEventArgs args)
         {
             // Refresh the native event registration when a cached page is reattached.
             // Keeping an ActualThemeChanged subscription across unloads can leave it inactive.
             ((FrameworkElement)Content).ActualThemeChanged -= OnContentThemeChanged;
             ((FrameworkElement)Content).ActualThemeChanged += OnContentThemeChanged;
+            EnsureNeutralPath();
             UpdateSourceSubscription();
             Redraw();
         }
@@ -144,11 +182,13 @@ namespace Kit.Settings.UI.Controls
                 return;
             }
 
+            bool includeNeutral = IncludeNeutralPath;
             var samples = Samples;
             long revision = samples is BoundedObservableCollection<StatusBarViewModel> bounded ? bounded.Revision : -1;
             var size = new Size(ActualWidth, ActualHeight);
             if (revision >= 0 && ReferenceEquals(_renderedSource, samples) &&
-                _renderedRevision == revision && _renderedSize == size && _renderedTheme == ActualTheme)
+                _renderedRevision == revision && _renderedSize == size && _renderedTheme == ActualTheme &&
+                _renderedIncludeNeutral == includeNeutral)
             {
                 return;
             }
@@ -159,10 +199,16 @@ namespace Kit.Settings.UI.Controls
             _renderedRevision = revision;
             _renderedSize = size;
             _renderedTheme = ActualTheme;
+            _renderedIncludeNeutral = includeNeutral;
             _visibleCount = 0;
             foreach (var path in _paths)
             {
                 path.Data = null;
+            }
+
+            if (_neutralPath is not null)
+            {
+                _neutralPath.Data = null;
             }
 
             if (samples is null || samples.Count == 0 || ActualWidth < BarWidth || ActualHeight < BarWidth)
@@ -181,7 +227,7 @@ namespace Kit.Settings.UI.Controls
 
             // Fill from the left as samples arrive. Once full, discard the oldest
             // visible sample and keep the newest sample at the right edge.
-            PathGeometry[] geometries = [new(), new(), new()];
+            PathGeometry[] geometries = includeNeutral ? [new(), new(), new(), new()] : [new(), new(), new()];
             for (int offset = 0; offset < _visibleCount; offset++)
             {
                 var sample = samples[_firstVisible + offset];
@@ -195,9 +241,15 @@ namespace Kit.Settings.UI.Controls
                 };
                 figure.Segments.Add(new LineSegment { Point = new Point(x, ActualHeight - (BarWidth / 2)) });
 
-                // FromProbeResult uses 16 / 11 / 6 for success / slow / failed samples.
-                int severity = sample.BarHeight > 11 ? 0 : sample.BarHeight > 6 ? 1 : 2;
-                geometries[severity].Figures.Add(figure);
+                int bucket = sample.Severity switch
+                {
+                    StatusBarSeverity.Success => 0,
+                    StatusBarSeverity.Caution => 1,
+                    StatusBarSeverity.Critical => 2,
+                    StatusBarSeverity.Neutral => includeNeutral ? 3 : 2,
+                    _ => 2,
+                };
+                geometries[bucket].Figures.Add(figure);
             }
 
             _paths[0].Stroke = ThemeBrushHelper.GetBrush("SystemFillColorSuccessBrush", ThemeBrushHelper.SuccessBrush, ActualTheme);
@@ -206,6 +258,12 @@ namespace Kit.Settings.UI.Controls
             for (int index = 0; index < _paths.Length; index++)
             {
                 _paths[index].Data = geometries[index];
+            }
+
+            if (includeNeutral && _neutralPath is not null)
+            {
+                _neutralPath.Stroke = ThemeBrushHelper.GetBrush("ControlStrongStrokeColorDefaultBrush", ThemeBrushHelper.StrokeDefaultBrush, ActualTheme);
+                _neutralPath.Data = geometries[3];
             }
 
             SelectSample(samples.Count - 1);

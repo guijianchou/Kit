@@ -413,8 +413,7 @@ internal static class NetMapPageSmoke
         Require(ReferenceEquals(stableRow, vm.Hops[18]) && vm.Hops[18].Location.Contains(chinese ? "南京" : "Nanjing") && Math.Abs(innerScroll.VerticalOffset - innerOffset) < 1, "Delayed location enrichment updates the existing row without moving the scroll position.");
         await Capture(page, "netmap-winui-scrolled-mtr.png");
         window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 900));
-        ((Expander)page.FindName("SettingsExpander")).IsExpanded = true;
-        ((Expander)page.FindName("DataUpdateExpander")).IsExpanded = true;
+        ((CommunityToolkit.WinUI.Controls.SettingsExpander)page.FindName("SettingsExpander")).IsExpanded = true;
         await Task.Delay(250);
         (FindChild<ScrollViewer>(page) ?? (ScrollViewer)page.Content).ChangeView(null, double.MaxValue, null, true);
         await Task.Delay(250);
@@ -577,7 +576,7 @@ internal static class NetMapPageSmoke
                 await CheckLayout("ipv6-success-" + width);
                 Require((string)ToolTipService.GetToolTip(FindNamed(proxyCard, "EgressIpText")) == ipv6.Identity.Ip,
                     "Truncated IPv6 preserves the complete address in its tooltip.");
-                var detailsButton = FindChild<Button>(proxyCard);
+                var detailsButton = FindButtonByAutomationId(proxyCard, "NetMap_CardDetailsButton") ?? FindChild<Button>(proxyCard);
                 var details = (Flyout)detailsButton.Flyout;
                 var opened = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -694,6 +693,19 @@ internal static class NetMapPageSmoke
             var child = VisualTreeHelper.GetChild(parent, index);
             if (child is T match) return match;
             var nested = FindChild<T>(child);
+            if (nested != null) return nested;
+        }
+
+        return null;
+    }
+
+    private static Button FindButtonByAutomationId(DependencyObject parent, string automationId)
+    {
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is Button btn && Microsoft.UI.Xaml.Automation.AutomationProperties.GetAutomationId(btn) == automationId) return btn;
+            var nested = FindButtonByAutomationId(child, automationId);
             if (nested != null) return nested;
         }
 

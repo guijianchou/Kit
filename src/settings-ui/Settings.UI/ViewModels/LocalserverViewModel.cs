@@ -36,6 +36,7 @@ namespace Kit.Settings.UI.ViewModels
 {
     public sealed class EnvironmentCheckChipModel
     {
+        public EnvironmentCheckItem Item { get; }
         public string Label { get; }
         public Brush Brush { get; }
         public Brush BackgroundBrush { get; }
@@ -49,9 +50,10 @@ namespace Kit.Settings.UI.ViewModels
         public Visibility FixCommandVisibility => HasCommand ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ReleasePortVisibility => CanReleasePort ? Visibility.Visible : Visibility.Collapsed;
 
-        public EnvironmentCheckChipModel(EnvironmentCheckItem item, Brush brush)
+        public EnvironmentCheckChipModel(EnvironmentCheckItem item, Brush brush, ElementTheme? theme = null)
         {
             ArgumentNullException.ThrowIfNull(item);
+            Item = item;
             string title = item.Name switch
             {
                 "Working directory" => "Localserver_CheckWorkingDirectory".GetLocalized(),
@@ -69,20 +71,22 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             Brush = brush;
-            BackgroundBrush = (Brush)Application.Current.Resources[item.Status switch
+            string bgKey = item.Status switch
             {
                 EnvironmentCheckStatus.Success => "BadgeSuccessBackgroundBrush",
                 EnvironmentCheckStatus.Warning => "BadgeWarningBackgroundBrush",
-                EnvironmentCheckStatus.Error => "BadgeWarningBackgroundBrush",
+                EnvironmentCheckStatus.Error => "BadgeCriticalBackgroundBrush",
                 _ => "SubtleFillColorSecondaryBrush",
-            }];
-            ForegroundBrush = (Brush)Application.Current.Resources[item.Status switch
+            };
+            string fgKey = item.Status switch
             {
                 EnvironmentCheckStatus.Success => "BadgeSuccessForegroundBrush",
                 EnvironmentCheckStatus.Warning => "BadgeWarningForegroundBrush",
-                EnvironmentCheckStatus.Error => "SystemFillColorCriticalBrush",
+                EnvironmentCheckStatus.Error => "BadgeCriticalForegroundBrush",
                 _ => "TextFillColorSecondaryBrush",
-            }];
+            };
+            BackgroundBrush = ThemeBrushHelper.GetBrush(bgKey, ThemeBrushHelper.StrokeDefaultBrush, theme);
+            ForegroundBrush = ThemeBrushHelper.GetBrush(fgKey, ThemeBrushHelper.SecondaryTextBrush, theme);
             StatusGlyph = item.Status switch
             {
                 EnvironmentCheckStatus.Success => "\uE73E",
@@ -150,9 +154,19 @@ namespace Kit.Settings.UI.ViewModels
         public string ExpandGlyph => _isConfigExpanded ? "\uE70E" : "\uE70D";
         public Visibility ConfigVisibility => _isConfigExpanded ? Visibility.Visible : Visibility.Collapsed;
         public Visibility StatusVisibility => State.IsActive() || State.IsFaulted() ? Visibility.Visible : Visibility.Collapsed;
-        public Brush UptimeBrush => (Brush)Application.Current.Resources[State.IsActive() ? "SystemFillColorSuccessBrush" : "TextFillColorSecondaryBrush"];
+        public Brush UptimeBrush => ThemeBrushHelper.GetBrush(
+            State.IsActive() ? "SystemFillColorSuccessBrush" : "TextFillColorSecondaryBrush",
+            State.IsActive() ? ThemeBrushHelper.SuccessBrush : ThemeBrushHelper.SecondaryTextBrush);
         public string LockTooltip => "Localserver_LineLockedRunning".GetLocalized();
         public string PortHintText => PortValue > 0 ? string.Empty : "Localserver_PortNoneHint".GetLocalized();
+
+        public void RefreshThemeBrushes()
+        {
+            OnPropertyChanged(nameof(StateBrush));
+            OnPropertyChanged(nameof(UptimeBrush));
+            OnPropertyChanged(nameof(TagBrush));
+            OnPropertyChanged(nameof(TagBackgroundBrush));
+        }
 
         public void ToggleConfigExpanded() => IsConfigExpanded = !IsConfigExpanded;
 
@@ -273,38 +287,42 @@ namespace Kit.Settings.UI.ViewModels
         public Visibility AdoptedVisibility => IsAdopted ? Visibility.Visible : Visibility.Collapsed;
         public string AdoptedTooltip => "Localserver_AdoptedTooltip".GetLocalized();
 
-        public Brush TagBrush => (Brush)Application.Current.Resources[Definition.Tags.Count > 0
-            ? Definition.Tags[0].ToLowerInvariant() switch
-            {
-                "web" => "BadgeInfoForegroundBrush",
-                "ai" or "gpu" => "BadgeWarningForegroundBrush",
-                "db" or "database" => "BadgeSuccessForegroundBrush",
-                _ => "TextFillColorSecondaryBrush",
-            }
-            : "TextFillColorSecondaryBrush"];
+        public Brush TagBrush => ThemeBrushHelper.GetBrush(
+            Definition.Tags.Count > 0
+                ? Definition.Tags[0].ToLowerInvariant() switch
+                {
+                    "web" => "BadgeInfoForegroundBrush",
+                    "ai" or "gpu" => "BadgeWarningForegroundBrush",
+                    "db" or "database" => "BadgeSuccessForegroundBrush",
+                    _ => "TextFillColorSecondaryBrush",
+                }
+                : "TextFillColorSecondaryBrush",
+            ThemeBrushHelper.SecondaryTextBrush);
 
-        public Brush TagBackgroundBrush => (Brush)Application.Current.Resources[Definition.Tags.Count > 0
-            ? Definition.Tags[0].ToLowerInvariant() switch
-            {
-                "web" => "BadgeInfoBackgroundBrush",
-                "ai" or "gpu" => "BadgeWarningBackgroundBrush",
-                "db" or "database" => "BadgeSuccessBackgroundBrush",
-                _ => "SubtleFillColorSecondaryBrush",
-            }
-            : "SubtleFillColorSecondaryBrush"];
+        public Brush TagBackgroundBrush => ThemeBrushHelper.GetBrush(
+            Definition.Tags.Count > 0
+                ? Definition.Tags[0].ToLowerInvariant() switch
+                {
+                    "web" => "BadgeInfoBackgroundBrush",
+                    "ai" or "gpu" => "BadgeWarningBackgroundBrush",
+                    "db" or "database" => "BadgeSuccessBackgroundBrush",
+                    _ => "SubtleFillColorSecondaryBrush",
+                }
+                : "SubtleFillColorSecondaryBrush",
+            ThemeBrushHelper.StrokeDefaultBrush);
 
         public string PortText => (_runner.Port ?? Definition.DefaultPort)?.ToString(CultureInfo.InvariantCulture) ?? "—";
 
         public ServiceState State => _runner.State;
         public string StateLabel => LocalserverViewModel.GetStateLabel(State, _runner.HealthProbePassed);
 
-        public Brush StateBrush => (Brush)Application.Current.Resources[State.ToSeverity(_runner.HealthProbePassed) switch
+        public Brush StateBrush => State.ToSeverity(_runner.HealthProbePassed) switch
         {
-            ServiceSeverity.Success => "SystemFillColorSuccessBrush",
-            ServiceSeverity.Caution => "SystemFillColorCautionBrush",
-            ServiceSeverity.Critical => "SystemFillColorCriticalBrush",
-            _ => "ControlStrongStrokeColorDefaultBrush",
-        }];
+            ServiceSeverity.Success => ThemeBrushHelper.SuccessBrush,
+            ServiceSeverity.Caution => ThemeBrushHelper.CautionBrush,
+            ServiceSeverity.Critical => ThemeBrushHelper.CriticalBrush,
+            _ => ThemeBrushHelper.StrokeDefaultBrush,
+        };
 
         public string UptimeText
         {
@@ -936,10 +954,13 @@ namespace Kit.Settings.UI.ViewModels
                 _ = StopAllLinesAsync();
 
                 EnvHealthText = "Localserver_HealthDisabled".GetLocalized();
-                EnvHealthBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
+                _envHealthBrushKey = "ControlStrongStrokeColorDefaultBrush";
+                EnvHealthBrush = ThemeBrushHelper.GetBrush(_envHealthBrushKey, ThemeBrushHelper.StrokeDefaultBrush);
                 EnvSummaryText = "Localserver_ServiceDisabled".GetLocalized();
-                EnvSummaryBrush = (Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
+                _envSummaryBrushKey = "TextFillColorDisabledBrush";
+                EnvSummaryBrush = ThemeBrushHelper.GetBrush(_envSummaryBrushKey, ThemeBrushHelper.SecondaryTextBrush);
                 EnvironmentCheckChips.Clear();
+                ShellNavigationBadges.Current.RunningLocalserverCount = 0;
 
                 OnPropertyChanged(nameof(EnvHealthText));
                 OnPropertyChanged(nameof(EnvHealthBrush));
@@ -1241,13 +1262,13 @@ namespace Kit.Settings.UI.ViewModels
         public string SessionUptimeText { get; private set; } = "—";
         public string SessionRegisteredText => Lines.Count.ToString(CultureInfo.InvariantCulture);
         public string SessionRunningText => Lines.Count(l => l.State.IsActive()).ToString(CultureInfo.InvariantCulture);
-        public Brush SessionRunningBrush => (Brush)Application.Current.Resources[(_isEnabled && Lines.Any(l => l.State.IsActive()))
-            ? "SystemFillColorSuccessBrush"
-            : "TextFillColorPrimaryBrush"];
+        public Brush SessionRunningBrush => ThemeBrushHelper.GetBrush(
+            (_isEnabled && Lines.Any(l => l.State.IsActive())) ? "SystemFillColorSuccessBrush" : "TextFillColorPrimaryBrush",
+            ThemeBrushHelper.SecondaryTextBrush);
         public string SessionFaultedText => Lines.Count(l => l.State.IsFaulted()).ToString(CultureInfo.InvariantCulture);
-        public Brush SessionFaultedBrush => (Brush)Application.Current.Resources[(_isEnabled && Lines.Any(l => l.State.IsFaulted()))
-            ? "SystemFillColorCriticalBrush"
-            : "TextFillColorPrimaryBrush"];
+        public Brush SessionFaultedBrush => ThemeBrushHelper.GetBrush(
+            (_isEnabled && Lines.Any(l => l.State.IsFaulted())) ? "SystemFillColorCriticalBrush" : "TextFillColorPrimaryBrush",
+            ThemeBrushHelper.SecondaryTextBrush);
 
         public Brush HealthRingBrush => EnvHealthBrush;
         public string HealthStateText => EnvHealthText;
@@ -1255,9 +1276,58 @@ namespace Kit.Settings.UI.ViewModels
             ? Visibility.Visible
             : Visibility.Collapsed;
 
+        private string _envHealthBrushKey = "ControlStrongStrokeColorDefaultBrush";
+        private string _envSummaryBrushKey = "SystemFillColorSuccessBrush";
+
+        public void RefreshThemeBrushes(ElementTheme theme)
+        {
+            EnvHealthBrush = SelectedLine != null && _isEnabled
+                ? SelectedLine.State.ToSeverity(SelectedLine.Runner.HealthProbePassed) switch
+                {
+                    ServiceSeverity.Success => ThemeBrushHelper.GetBrush("SystemFillColorSuccessBrush", ThemeBrushHelper.SuccessBrush, theme),
+                    ServiceSeverity.Caution => ThemeBrushHelper.GetBrush("SystemFillColorCautionBrush", ThemeBrushHelper.CautionBrush, theme),
+                    ServiceSeverity.Critical => ThemeBrushHelper.GetBrush("SystemFillColorCriticalBrush", ThemeBrushHelper.CriticalBrush, theme),
+                    _ => ThemeBrushHelper.GetBrush("ControlStrongStrokeColorDefaultBrush", ThemeBrushHelper.StrokeDefaultBrush, theme),
+                }
+                : ThemeBrushHelper.GetBrush(_envHealthBrushKey, ThemeBrushHelper.StrokeDefaultBrush, theme);
+            EnvSummaryBrush = ThemeBrushHelper.GetBrush(_envSummaryBrushKey, ThemeBrushHelper.SecondaryTextBrush, theme);
+
+            if (EnvironmentCheckChips.Count > 0)
+            {
+                var items = EnvironmentCheckChips.Select(c => c.Item).ToList();
+                EnvironmentCheckChips.Clear();
+                foreach (var item in items)
+                {
+                    string brushKey = item.Status switch
+                    {
+                        EnvironmentCheckStatus.Success => "SystemFillColorSuccessBrush",
+                        EnvironmentCheckStatus.Warning => "SystemFillColorCautionBrush",
+                        EnvironmentCheckStatus.Error => "SystemFillColorCriticalBrush",
+                        _ => "ControlStrongStrokeColorDefaultBrush",
+                    };
+                    EnvironmentCheckChips.Add(new EnvironmentCheckChipModel(item, ThemeBrushHelper.GetBrush(brushKey, ThemeBrushHelper.StrokeDefaultBrush, theme), theme));
+                }
+            }
+
+            foreach (var row in Lines)
+            {
+                row.RefreshThemeBrushes();
+            }
+
+            OnPropertyChanged(nameof(EnvHealthBrush));
+            OnPropertyChanged(nameof(HealthRingBrush));
+            OnPropertyChanged(nameof(EnvStateBrush));
+            OnPropertyChanged(nameof(EnvSummaryBrush));
+            OnPropertyChanged(nameof(SessionRunningBrush));
+            OnPropertyChanged(nameof(SessionFaultedBrush));
+        }
+
         public void UpdateSessionMetrics()
         {
-            if (Lines.Any(l => l.State.IsActive()))
+            int runningCount = Lines.Count(l => l.State.IsActive());
+            ShellNavigationBadges.Current.RunningLocalserverCount = _isEnabled ? runningCount : 0;
+
+            if (runningCount > 0)
             {
                 _sessionStartTimeUtc ??= DateTimeOffset.UtcNow;
                 TimeSpan elapsed = DateTimeOffset.UtcNow - _sessionStartTimeUtc.Value;
@@ -1286,7 +1356,7 @@ namespace Kit.Settings.UI.ViewModels
         public string EnvPidText => SelectedLine?.PidText ?? "—";
         public string EnvPidTooltip => SelectedLine?.PidTooltip ?? string.Empty;
         public string EnvStateText => SelectedLine?.StateLabel ?? "—";
-        public Brush EnvStateBrush => SelectedLine?.StateBrush ?? (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        public Brush EnvStateBrush => SelectedLine?.StateBrush ?? ThemeBrushHelper.SecondaryTextBrush;
         public string EnvRuntimesText { get; private set; } = "—";
         public string EnvSummaryText { get; private set; } = "Localserver_NoLineSelected".GetLocalized();
         public Brush EnvSummaryBrush { get; private set; } = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
@@ -1843,10 +1913,12 @@ namespace Kit.Settings.UI.ViewModels
             if (!_isEnabled)
             {
                 EnvHealthText = "Localserver_HealthDisabled".GetLocalized();
-                EnvHealthBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
+                _envHealthBrushKey = "ControlStrongStrokeColorDefaultBrush";
+                EnvHealthBrush = ThemeBrushHelper.GetBrush(_envHealthBrushKey, ThemeBrushHelper.StrokeDefaultBrush);
                 EnvRuntimesText = "—";
                 EnvSummaryText = "Localserver_ServiceDisabled".GetLocalized();
-                EnvSummaryBrush = (Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
+                _envSummaryBrushKey = "TextFillColorDisabledBrush";
+                EnvSummaryBrush = ThemeBrushHelper.GetBrush(_envSummaryBrushKey, ThemeBrushHelper.SecondaryTextBrush);
                 EnvironmentCheckChips.Clear();
 
                 OnPropertyChanged(nameof(EnvHealthText));
@@ -1874,10 +1946,12 @@ namespace Kit.Settings.UI.ViewModels
             if (line == null)
             {
                 EnvHealthText = "Localserver_HealthIdle".GetLocalized();
-                EnvHealthBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
+                _envHealthBrushKey = "ControlStrongStrokeColorDefaultBrush";
+                EnvHealthBrush = ThemeBrushHelper.GetBrush(_envHealthBrushKey, ThemeBrushHelper.StrokeDefaultBrush);
                 EnvRuntimesText = "—";
                 EnvSummaryText = "Localserver_NoLineSelected".GetLocalized();
-                EnvSummaryBrush = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+                _envSummaryBrushKey = "TextFillColorSecondaryBrush";
+                EnvSummaryBrush = ThemeBrushHelper.GetBrush(_envSummaryBrushKey, ThemeBrushHelper.SecondaryTextBrush);
                 EnvironmentCheckChips.Clear();
                 _environmentCheckLine = null;
             }
@@ -1990,7 +2064,8 @@ namespace Kit.Settings.UI.ViewModels
                     EnvironmentCheckStatus.Error => "SystemFillColorCriticalBrush",
                     _ => "TextFillColorSecondaryBrush",
                 };
-                EnvSummaryBrush = (Brush)Application.Current.Resources[summaryBrushKey];
+                _envSummaryBrushKey = summaryBrushKey;
+                EnvSummaryBrush = ThemeBrushHelper.GetBrush(summaryBrushKey, ThemeBrushHelper.SecondaryTextBrush);
                 OnPropertyChanged(nameof(EnvSummaryBrush));
 
                 EnvironmentCheckChips.Clear();
@@ -2003,7 +2078,7 @@ namespace Kit.Settings.UI.ViewModels
                         EnvironmentCheckStatus.Error => "SystemFillColorCriticalBrush",
                         _ => "ControlStrongStrokeColorDefaultBrush",
                     };
-                    EnvironmentCheckChips.Add(new EnvironmentCheckChipModel(item, (Brush)Application.Current.Resources[brushKey]));
+                    EnvironmentCheckChips.Add(new EnvironmentCheckChipModel(item, ThemeBrushHelper.GetBrush(brushKey, ThemeBrushHelper.StrokeDefaultBrush)));
                 }
 
                 OnPropertyChanged(nameof(EnvSummaryText));
@@ -2017,7 +2092,8 @@ namespace Kit.Settings.UI.ViewModels
                 if (IsCurrent())
                 {
                     EnvSummaryText = "Localserver_EnvironmentCheckFailed".GetLocalized();
-                    EnvSummaryBrush = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
+                    _envSummaryBrushKey = "SystemFillColorCriticalBrush";
+                    EnvSummaryBrush = ThemeBrushHelper.GetBrush(_envSummaryBrushKey, ThemeBrushHelper.CriticalBrush);
                     EnvironmentCheckChips.Clear();
                     OnPropertyChanged(nameof(EnvSummaryText));
                     OnPropertyChanged(nameof(EnvSummaryBrush));

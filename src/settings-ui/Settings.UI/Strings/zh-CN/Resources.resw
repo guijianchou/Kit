@@ -4209,4 +4209,14 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="General_UpdateInterrupted.Text" xml:space="preserve"><value>上次更新已中断，请重新下载后继续。</value></data>
   <data name="General_UpdateHelperMissing.Text" xml:space="preserve"><value>更新组件缺失或无法启动。请完整解压 Portable 安装包后重试。</value></data>
   <data name="AIHub_WorkspaceTaskDetails" xml:space="preserve"><value>任务详情</value></data>
+  <data name="NetMap_CopyIpButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>复制 IP 地址</value></data>
+  <data name="NetMap_CopyIpButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>复制 IP 地址</value></data>
+  <data name="NetMap_MapZoomIn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>放大地图</value></data>
+  <data name="NetMap_MapZoomIn.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>放大</value></data>
+  <data name="NetMap_MapZoomOut.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>缩小地图</value></data>
+  <data name="NetMap_MapZoomOut.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>缩小</value></data>
+  <data name="NetMap_MapZoomReset.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>重置地图视图</value></data>
+  <data name="NetMap_MapZoomReset.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>重置视图</value></data>
+  <data name="NetMap_LegendObserved.Text" xml:space="preserve"><value>实测路径</value></data>
+  <data name="NetMap_LegendApprox.Text" xml:space="preserve"><value>推测路径</value></data>
 </root>

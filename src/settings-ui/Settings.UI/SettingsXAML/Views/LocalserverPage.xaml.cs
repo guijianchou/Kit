@@ -20,6 +20,7 @@ namespace Kit.Settings.UI.Views
     {
         private readonly MainWindow _settingsWindow;
         private bool _confirmationOpen;
+        private ElementTheme _lastAppliedTheme = ElementTheme.Default;
 
         public LocalserverViewModel ViewModel { get; }
 
@@ -47,12 +48,16 @@ namespace Kit.Settings.UI.Views
             _settingsWindow.Activated += OnSettingsWindowActivated;
             Loaded += OnLocalserverLoaded;
             Unloaded += OnLocalserverUnloaded;
+            ActualThemeChanged += OnLocalserverActualThemeChanged;
         }
 
         public static Visibility GetEmptyVisibility(int count) => count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        public static Visibility GetNonEmptyVisibility(int count) => count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
         private void OnLocalserverLoaded(object sender, RoutedEventArgs e)
         {
+            _lastAppliedTheme = ActualTheme;
             ViewModel.RefreshEnabledState();
             ViewModel.SetPageActive(true);
         }
@@ -61,6 +66,15 @@ namespace Kit.Settings.UI.Views
         {
             ViewModel.SetPageActive(false);
             _ = ViewModel.FlushPendingSaveAsync();
+        }
+
+        private void OnLocalserverActualThemeChanged(FrameworkElement sender, object args)
+        {
+            if (ActualTheme != _lastAppliedTheme)
+            {
+                _lastAppliedTheme = ActualTheme;
+                ViewModel.RefreshThemeBrushes(ActualTheme);
+            }
         }
 
         private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
@@ -77,6 +91,7 @@ namespace Kit.Settings.UI.Views
 
             _settingsWindow.Closed -= OnSettingsWindowClosed;
             _settingsWindow.Activated -= OnSettingsWindowActivated;
+            ActualThemeChanged -= OnLocalserverActualThemeChanged;
             if (_settingsWindow.FlushPendingSettingsAsync == ViewModel.FlushPendingSaveAsync)
             {
                 _settingsWindow.FlushPendingSettingsAsync = null;
@@ -104,6 +119,7 @@ namespace Kit.Settings.UI.Views
         {
             ViewModel.RefreshEnabledState();
         }
+
         private void OnStatusChartSizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (e.NewSize.Width > 0 && e.NewSize.Height > 0)
@@ -116,9 +132,9 @@ namespace Kit.Settings.UI.Views
         {
             DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
             {
-                if (LogScroller != null && ViewModel.IsLogFollowEnabled)
+                if (LogListView != null && ViewModel.IsLogFollowEnabled && ViewModel.LogLines.Count > 0)
                 {
-                    LogScroller.ChangeView(null, LogScroller.ScrollableHeight, null, disableAnimation: true);
+                    LogListView.ScrollIntoView(ViewModel.LogLines[^1]);
                 }
             });
         }
@@ -144,11 +160,6 @@ namespace Kit.Settings.UI.Views
             {
                 ManagedCommon.Logger.LogError("Settings action OpenServiceUrl_Click failed.", ex);
             }
-        }
-
-        private void ToggleLogPanel_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.ToggleLogPanel();
         }
 
         private void ClearLogs_Click(object sender, RoutedEventArgs e)
@@ -280,22 +291,6 @@ namespace Kit.Settings.UI.Views
             catch (System.Exception ex)
             {
                 ManagedCommon.Logger.LogError("Settings action ForceKillLine_Click failed.", ex);
-            }
-        }
-
-        private void MoveLineUp_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is FrameworkElement fe && fe.DataContext is LineRowViewModel row)
-            {
-                ViewModel.MoveLineUp(row);
-            }
-        }
-
-        private void MoveLineDown_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is FrameworkElement fe && fe.DataContext is LineRowViewModel row)
-            {
-                ViewModel.MoveLineDown(row);
             }
         }
 

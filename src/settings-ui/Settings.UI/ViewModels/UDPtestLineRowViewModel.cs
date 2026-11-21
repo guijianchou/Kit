@@ -36,6 +36,7 @@ namespace Kit.Settings.UI.ViewModels
         private string _status = "Idle";
         private Brush? _statusBrush;
         private Visibility _statusVisibility = Visibility.Collapsed;
+        private bool _isSelectedForChart;
 
         // Folded config fields
         private bool _isConfigExpanded;
@@ -252,6 +253,40 @@ namespace Kit.Settings.UI.ViewModels
             {
                 _statusVisibility = value;
                 OnPropertyChanged();
+            }
+        }
+
+        public bool IsSelectedForChart
+        {
+            get => _isSelectedForChart;
+            set
+            {
+                if (_isSelectedForChart != value)
+                {
+                    _isSelectedForChart = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(SelectedRowBackgroundBrush));
+                }
+            }
+        }
+
+        public Brush SelectedRowBackgroundBrush => _isSelectedForChart
+            ? ThemeBrushHelper.GetBrush("SubtleFillColorSecondaryBrush", ThemeBrushHelper.StrokeDefaultBrush)
+            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+
+        public void RefreshThemeBrushes(ElementTheme theme)
+        {
+            StatusBrush = Status switch
+            {
+                "OK" => ThemeBrushHelper.GetBrush("SystemFillColorSuccessBrush", ThemeBrushHelper.SuccessBrush, theme),
+                "DEGRADED" => ThemeBrushHelper.GetBrush("SystemFillColorCautionBrush", ThemeBrushHelper.CautionBrush, theme),
+                "DOWN" => ThemeBrushHelper.GetBrush("SystemFillColorCriticalBrush", ThemeBrushHelper.CriticalBrush, theme),
+                "Warming" => ThemeBrushHelper.GetBrush("SystemFillColorAttentionBrush", ThemeBrushHelper.AttentionBrush, theme),
+                _ => ThemeBrushHelper.GetBrush("TextFillColorSecondaryBrush", ThemeBrushHelper.SecondaryTextBrush, theme),
+            };
+            if (_isSelectedForChart)
+            {
+                OnPropertyChanged(nameof(SelectedRowBackgroundBrush));
             }
         }
 

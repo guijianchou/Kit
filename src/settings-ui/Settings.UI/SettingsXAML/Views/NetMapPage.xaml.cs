@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.ViewModels;
@@ -15,6 +16,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using NetMapLib;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Storage.Pickers;
 
@@ -29,11 +31,12 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     private bool mapLoaded;
     private NetMapSnapshot renderedSnapshot;
     private int renderedSelection = -1;
-    private const double MapBodyTableWidth = 440;
+    private double renderedUserZoom = 1;
     private const double MapFitMaxWidth = 800;
     private const double MapFitMaxHeight = 340;
     private const double MapFitMinScale = 1;
     private const double MapFitMaxScale = 4;
+    private double userZoomFactor = 1;
     private double mapScale = 1;
     private double mapCenterX = 480;
     private double mapOffsetX;
@@ -180,6 +183,53 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void Start_Click(object sender, RoutedEventArgs e) => ViewModel.IsDetectionOn = true;
 
+    private async void CopyIp_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string ip || string.IsNullOrWhiteSpace(ip) || ip == "—" || ip == "N/A")
+        {
+            return;
+        }
+
+        try
+        {
+            var dataPackage = new DataPackage();
+            dataPackage.SetText(ip);
+            Clipboard.SetContent(dataPackage);
+
+            if (btn.Content is FontIcon icon)
+            {
+                icon.Glyph = "\uE73E";
+                await Task.Delay(1500);
+                if (IsLoaded)
+                {
+                    icon.Glyph = "\uE8C8";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ManagedCommon.Logger.LogError("Settings action CopyIp_Click failed.", ex);
+        }
+    }
+
+    private void MapZoomIn_Click(object sender, RoutedEventArgs e)
+    {
+        userZoomFactor = Math.Clamp(userZoomFactor * 1.35, 1.0, 4.0);
+        DrawPoints();
+    }
+
+    private void MapZoomOut_Click(object sender, RoutedEventArgs e)
+    {
+        userZoomFactor = Math.Clamp(userZoomFactor / 1.35, 1.0, 4.0);
+        DrawPoints();
+    }
+
+    private void MapZoomReset_Click(object sender, RoutedEventArgs e)
+    {
+        userZoomFactor = 1.0;
+        DrawPoints();
+    }
+
     private async void AiCheck_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -231,31 +281,11 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         catch (Exception)
         {
             // The editable path field remains available if the system picker fails.
-            MapDescription.Text = NetMapViewModel.Text("PickerFailed");
+            ViewModel.ReportMessage(NetMapViewModel.Text("PickerFailed"), InfoBarSeverity.Error);
         }
     }
 
-    private void EgressGrid_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        bool narrow = e.NewSize.Width < 650;
-        Grid.SetColumn(ProxyCard, narrow ? 0 : 1);
-        Grid.SetRow(ProxyCard, narrow ? 1 : 0);
-        EgressGrid.RowSpacing = narrow ? 12 : 0;
-        EgressGrid.ColumnSpacing = narrow ? 0 : 12;
-        EgressGrid.ColumnDefinitions[1].Width = narrow ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-    }
-
     private void Page_ActualThemeChanged(FrameworkElement sender, object args) => DispatcherQueue.TryEnqueue(DrawPoints);
-
-    private void MapBody_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        bool narrow = e.NewSize.Width < 860;
-        Grid.SetColumn(RoutePanel, narrow ? 0 : 1);
-        Grid.SetRow(RoutePanel, narrow ? 1 : 0);
-        MapBody.ColumnSpacing = narrow ? 0 : 12;
-        MapBody.RowSpacing = narrow ? 12 : 0;
-        MapBody.ColumnDefinitions[1].Width = new GridLength(narrow ? 0 : MapBodyTableWidth);
-    }
 
     private void HopList_SelectionChanged(object sender, SelectionChangedEventArgs e) => DispatcherQueue.TryEnqueue(DrawPoints);
 
@@ -280,7 +310,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
         var snapshot = ViewModel.Snapshot;
         int selected = HopList.SelectedIndex;
-        bool redraw = renderedSnapshot == null || renderedSelection != selected || renderedSnapshot.Generation != snapshot.Generation || renderedSnapshot.Running != snapshot.Running ||
+        bool redraw = renderedSnapshot == null || renderedSelection != selected || Math.Abs(renderedUserZoom - userZoomFactor) > 0.001 ||
+            renderedSnapshot.Generation != snapshot.Generation || renderedSnapshot.Running != snapshot.Running ||
             renderedSnapshot.Direct.LastSuccess?.Identity != snapshot.Direct.LastSuccess?.Identity || renderedSnapshot.Proxy.LastSuccess?.Identity != snapshot.Proxy.LastSuccess?.Identity ||
             renderedSnapshot.Direct.Geography != snapshot.Direct.Geography || renderedSnapshot.Proxy.Geography != snapshot.Proxy.Geography ||
             renderedSnapshot.Direct.Latest?.Success != snapshot.Direct.Latest?.Success || renderedSnapshot.Proxy.Latest?.Success != snapshot.Proxy.Latest?.Success ||
@@ -312,6 +343,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         hopMarkers.Clear();
         renderedSnapshot = snapshot;
         renderedSelection = selected;
+        renderedUserZoom = userZoomFactor;
         var origin = EgressPosition(snapshot.Direct);
         var target = EgressPosition(snapshot.Proxy);
         var positions = snapshot.Hops.Where(hop => hop.Geography is { Latitude: not null, Longitude: not null }).Select(hop => WorldMap.Locate(string.Empty, hop.Geography)).ToList();
@@ -360,7 +392,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             if (i < ViewModel.Hops.Count)
             {
                 int index = i;
-                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 44 : 34, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health);
+                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 42 : 32, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health);
                 marker.Tapped += (_, _) => HopList.SelectedIndex = HopList.SelectedIndex == index ? -1 : index;
                 hopMarkers[i] = marker;
             }
@@ -389,9 +421,9 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void FitMap(IReadOnlyList<MapCoordinate> coordinates)
     {
-        mapScale = 1;
+        double baseScale = 1;
+        double centerY = 240;
         mapCenterX = 480;
-        mapOffsetX = mapOffsetY = 0;
         if (coordinates.Count >= 2)
         {
             var points = coordinates.Select(Project).ToArray();
@@ -415,10 +447,13 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             mapCenterX = (left + (width / 2)) % 960;
             double top = points.Min(point => point.Y);
             double height = points.Max(point => point.Y) - top;
-            mapScale = Math.Clamp(Math.Min(MapFitMaxWidth / Math.Max(width, 40), MapFitMaxHeight / Math.Max(height, 30)), MapFitMinScale, MapFitMaxScale);
-            mapOffsetX = 480 - (mapCenterX * mapScale);
-            mapOffsetY = Math.Clamp(240 - ((top + (height / 2)) * mapScale), 480 - (480 * mapScale), 0);
+            centerY = top + (height / 2);
+            baseScale = Math.Clamp(Math.Min(MapFitMaxWidth / Math.Max(width, 40), MapFitMaxHeight / Math.Max(height, 30)), MapFitMinScale, MapFitMaxScale);
         }
+
+        mapScale = Math.Clamp(baseScale * userZoomFactor, MapFitMinScale, MapFitMaxScale * 2);
+        mapOffsetX = 480 - (mapCenterX * mapScale);
+        mapOffsetY = Math.Clamp(240 - (centerY * mapScale), 480 - (480 * mapScale), 0);
 
         WorldOutline.RenderTransform = new MatrixTransform { Matrix = new Matrix(mapScale, 0, 0, mapScale, mapOffsetX, mapOffsetY) };
     }
@@ -492,7 +527,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         container.Children.Add(mark);
         if (number != null)
         {
-            container.Children.Add(new TextBlock { Text = number, FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Style = (Style)Resources["NetMapHopNumberStyle"], HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            container.Children.Add(new TextBlock { Text = number, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Style = (Style)Resources["NetMapHopNumberStyle"], HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
         }
 
         ToolTipService.SetToolTip(container, label);

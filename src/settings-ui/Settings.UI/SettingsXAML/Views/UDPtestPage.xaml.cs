@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Kit.Settings.UI.Helpers;
@@ -14,6 +15,8 @@ using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 
@@ -41,24 +44,36 @@ namespace Kit.Settings.UI.Views
             _settingsWindow.Activated += OnSettingsWindowActivated;
             Loaded += OnUDPtestLoaded;
             Unloaded += OnUDPtestUnloaded;
+            ActualThemeChanged += OnUDPtestActualThemeChanged;
 
             ViewModel.HealthChartNeedsRedraw += OnHealthChartNeedsRedraw;
-            SyncHealthPeriodChecks();
         }
 
         private readonly MainWindow _settingsWindow;
         private int _chartRedrawQueued;
+        private ElementTheme _lastAppliedTheme = ElementTheme.Default;
         private (long Version, string? LineId, int Period, double Width, double Height, long WindowSecond)? _lastChartKey;
 
         private void OnUDPtestLoaded(object sender, RoutedEventArgs e)
         {
+            _lastAppliedTheme = ActualTheme;
             RefreshEnabledState();
             ViewModel.SetPageActive(true);
         }
 
         private void OnUDPtestUnloaded(object sender, RoutedEventArgs e)
         {
+            InfoTeachingTip.IsOpen = false;
             ViewModel.SetPageActive(false);
+        }
+
+        private void OnUDPtestActualThemeChanged(FrameworkElement sender, object args)
+        {
+            if (ActualTheme != _lastAppliedTheme)
+            {
+                _lastAppliedTheme = ActualTheme;
+                ViewModel.RefreshThemeBrushes(ActualTheme);
+            }
         }
 
         private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
@@ -75,6 +90,7 @@ namespace Kit.Settings.UI.Views
 
             _settingsWindow.Closed -= OnSettingsWindowClosed;
             _settingsWindow.Activated -= OnSettingsWindowActivated;
+            ActualThemeChanged -= OnUDPtestActualThemeChanged;
             ViewModel.HealthChartNeedsRedraw -= OnHealthChartNeedsRedraw;
             ViewModel.Dispose();
         }
@@ -133,46 +149,64 @@ namespace Kit.Settings.UI.Views
             ViewModel.AddUdpLine();
         }
 
-        private void OnRefreshIntervalLoaded(object sender, RoutedEventArgs e)
+        private void OnIntervalMenuOpening(object sender, object e)
         {
-            if (sender is ComboBox cb)
-            {
-                int current = ViewModel.RefreshInterval;
-                foreach (ComboBoxItem item in cb.Items)
-                {
-                    if (int.TryParse(item.Tag?.ToString(), out int val) && val == current)
-                    {
-                        cb.SelectedItem = item;
-                        break;
-                    }
-                }
-            }
+            int current = ViewModel.RefreshInterval;
+            Interval500Item.IsChecked = current == 500;
+            Interval1000Item.IsChecked = current == 1000;
+            Interval2000Item.IsChecked = current == 2000;
+            Interval5000Item.IsChecked = current == 5000;
         }
 
-        private void OnRefreshIntervalChanged(object sender, SelectionChangedEventArgs e)
+        private void OnIntervalItemClick(object sender, RoutedEventArgs e)
         {
-            if (sender is ComboBox cb && cb.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag?.ToString(), out int val))
+            if (sender is FrameworkElement element && element.Tag is string tag && int.TryParse(tag, out int val))
             {
                 ViewModel.RefreshInterval = val;
             }
         }
 
-        private void OnPeriodClicked(object sender, RoutedEventArgs e)
+        private void OnInfoButtonClick(object sender, RoutedEventArgs e)
         {
-            if (sender is FrameworkElement element && element.Tag is string tagStr && int.TryParse(tagStr, out int seconds))
+            if (sender is FrameworkElement target)
             {
-                ViewModel.SelectedPeriodSeconds = seconds;
+                string? tipText = ToolTipService.GetToolTip(target)?.ToString();
+                if (!string.IsNullOrWhiteSpace(tipText))
+                {
+                    InfoTeachingTip.Target = target;
+                    InfoTeachingTip.Subtitle = tipText;
+                    InfoTeachingTip.IsOpen = true;
+                }
             }
-
-            SyncHealthPeriodChecks();
         }
 
-        private void SyncHealthPeriodChecks()
+        private void OnProbeRowTapped(object sender, TappedRoutedEventArgs e)
         {
-            HealthPeriod1mButton.IsChecked = ViewModel.SelectedPeriodSeconds == 60;
-            HealthPeriod5mButton.IsChecked = ViewModel.SelectedPeriodSeconds == 300;
-            HealthPeriod30mButton.IsChecked = ViewModel.SelectedPeriodSeconds == 1800;
-            HealthPeriod1hButton.IsChecked = ViewModel.SelectedPeriodSeconds == 3600;
+            if (IsInsideInteractiveChild(e.OriginalSource as DependencyObject, sender as DependencyObject))
+            {
+                return;
+            }
+
+            if (sender is FrameworkElement element && element.Tag is UDPtestLineRowViewModel row)
+            {
+                ViewModel.SelectedLine = row;
+            }
+        }
+
+        private static bool IsInsideInteractiveChild(DependencyObject? source, DependencyObject? stopAt)
+        {
+            DependencyObject? current = source;
+            while (current != null && !ReferenceEquals(current, stopAt))
+            {
+                if (current is ButtonBase or ToggleSwitch or TextBox or ComboBox or Controls.ProbeHistoryStrip)
+                {
+                    return true;
+                }
+
+                current = VisualTreeHelper.GetParent(current);
+            }
+
+            return false;
         }
 
         private void ToggleConfigExpanded_Click(object sender, RoutedEventArgs e)
@@ -219,13 +253,13 @@ namespace Kit.Settings.UI.Views
             DependencyObject? current = sender as DependencyObject;
             while (current != null)
             {
-                if (current is FlyoutPresenter && Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current) is Microsoft.UI.Xaml.Controls.Primitives.Popup popup)
+                if (current is FlyoutPresenter && VisualTreeHelper.GetParent(current) is Popup popup)
                 {
                     popup.IsOpen = false;
                     return;
                 }
 
-                current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current);
+                current = VisualTreeHelper.GetParent(current);
             }
         }
 
@@ -279,7 +313,9 @@ namespace Kit.Settings.UI.Views
             var points = ViewModel.GetCurrentChartPoints(now);
             _lastChartKey = key;
             HealthCurvePath.Data = null;
+            HealthCurveFillPath.Data = null;
             HealthFailuresPath.Data = null;
+            HealthChartMaxLabel.Visibility = Visibility.Collapsed;
 
             if (points.Count == 0)
             {
@@ -379,7 +415,11 @@ namespace Kit.Settings.UI.Views
                     double y = plotBottom - normalized * (plotBottom - plotTop);
                     chartPoints.Add(new Point(x, y));
                 }
+
                 HealthCurvePath.Data = CreateSmoothHealthPath(chartPoints);
+                HealthCurveFillPath.Data = CreateSmoothFillPath(chartPoints, plotBottom);
+                HealthChartMaxLabel.Text = string.Create(CultureInfo.InvariantCulture, $"{upperBound:0} ms");
+                HealthChartMaxLabel.Visibility = Visibility.Visible;
             }
 
             PathGeometry failureGeometry = new();
@@ -432,22 +472,34 @@ namespace Kit.Settings.UI.Views
         private static PathGeometry CreateSmoothHealthPath(IReadOnlyList<Point> points)
         {
             PathGeometry geometry = new();
-            AppendSmoothFigure(geometry, points);
+            AppendSmoothFigure(geometry, points, closeToBottomY: null);
             return geometry;
         }
 
-        private static void AppendSmoothFigure(PathGeometry geometry, IReadOnlyList<Point> points)
+        private static PathGeometry CreateSmoothFillPath(IReadOnlyList<Point> points, double bottomY)
+        {
+            PathGeometry geometry = new();
+            if (points.Count >= 2)
+            {
+                AppendSmoothFigure(geometry, points, closeToBottomY: bottomY);
+            }
+
+            return geometry;
+        }
+
+        private static void AppendSmoothFigure(PathGeometry geometry, IReadOnlyList<Point> points, double? closeToBottomY)
         {
             if (points.Count == 0)
             {
                 return;
             }
 
+            bool filled = closeToBottomY.HasValue;
             PathFigure figure = new()
             {
                 StartPoint = points[0],
-                IsClosed = false,
-                IsFilled = false,
+                IsClosed = filled,
+                IsFilled = filled,
             };
             if (points.Count == 1)
             {
@@ -473,12 +525,19 @@ namespace Kit.Settings.UI.Views
                         Point2 = midpoint,
                     });
                 }
+
                 Point last = points[^1];
                 figure.Segments.Add(new QuadraticBezierSegment
                 {
                     Point1 = last,
                     Point2 = last,
                 });
+            }
+
+            if (closeToBottomY is double bottomY)
+            {
+                figure.Segments.Add(new LineSegment { Point = new Point(points[^1].X, bottomY) });
+                figure.Segments.Add(new LineSegment { Point = new Point(points[0].X, bottomY) });
             }
 
             geometry.Figures.Add(figure);

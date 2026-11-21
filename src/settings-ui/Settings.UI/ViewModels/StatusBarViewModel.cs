@@ -10,19 +10,28 @@ using Microsoft.UI.Xaml.Media;
 
 namespace Kit.Settings.UI.ViewModels
 {
+    public enum StatusBarSeverity
+    {
+        Success = 0,
+        Caution = 1,
+        Critical = 2,
+        Neutral = 3,
+    }
+
     /// <summary>
     /// Shared micro-bar sample for the recent-activity strips on the Localserver and
-    /// UDPtest pages (rendered via <c>controls:StatusBarsPanel</c>). Single home for the
+    /// UDPtest pages (rendered via <c>controls:ProbeHistoryStrip</c>). Single home for the
     /// severity to brush / height ladders that were previously duplicated as
     /// <c>RecentBarViewModel</c> (Localserver) and <c>RecentProbeBarViewModel</c> (UDPtest).
     /// </summary>
     public sealed class StatusBarViewModel
     {
-        private StatusBarViewModel(Brush brush, double barHeight, string description)
+        private StatusBarViewModel(Brush brush, double barHeight, string description, StatusBarSeverity severity)
         {
             Brush = brush;
             BarHeight = barHeight;
             Description = description;
+            Severity = severity;
         }
 
         public Brush Brush { get; }
@@ -30,6 +39,8 @@ namespace Kit.Settings.UI.ViewModels
         public double BarHeight { get; }
 
         public string Description { get; }
+
+        public StatusBarSeverity Severity { get; }
 
         /// <summary>Localserver ladder: state severity to 16 / 16 / 8 / 6.</summary>
         public static StatusBarViewModel FromServiceState(ServiceState state, bool? healthProbePassed, string description)
@@ -49,7 +60,14 @@ namespace Kit.Settings.UI.ViewModels
                 ServiceSeverity.Critical => 8d,
                 _ => 6d,
             };
-            return new StatusBarViewModel(brush, barHeight, description);
+            StatusBarSeverity barSeverity = severity switch
+            {
+                ServiceSeverity.Success => StatusBarSeverity.Success,
+                ServiceSeverity.Caution => StatusBarSeverity.Caution,
+                ServiceSeverity.Critical => StatusBarSeverity.Critical,
+                _ => StatusBarSeverity.Neutral,
+            };
+            return new StatusBarViewModel(brush, barHeight, description, barSeverity);
         }
 
         /// <summary>UDPtest ladder: probe outcome to success 16 / slow-warn 11 / fail 6.</summary>
@@ -57,12 +75,12 @@ namespace Kit.Settings.UI.ViewModels
         {
             if (!isSuccess)
             {
-                return new StatusBarViewModel(ThemeBrushHelper.CriticalBrush, 6.0, description);
+                return new StatusBarViewModel(ThemeBrushHelper.CriticalBrush, 6.0, description, StatusBarSeverity.Critical);
             }
 
             return isWarning || durationMilliseconds > 250
-                ? new StatusBarViewModel(ThemeBrushHelper.CautionBrush, 11.0, description)
-                : new StatusBarViewModel(ThemeBrushHelper.SuccessBrush, 16.0, description);
+                ? new StatusBarViewModel(ThemeBrushHelper.CautionBrush, 11.0, description, StatusBarSeverity.Caution)
+                : new StatusBarViewModel(ThemeBrushHelper.SuccessBrush, 16.0, description, StatusBarSeverity.Success);
         }
     }
 }

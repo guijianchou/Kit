@@ -23,6 +23,7 @@ using Kit.Settings.UI.Views;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using NetMapLib;
 
 namespace Kit.Settings.UI.ViewModels;
@@ -226,6 +227,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private bool pageActive;
     private bool disposed;
     private string message = string.Empty;
+    private InfoBarSeverity messageSeverity = InfoBarSeverity.Informational;
     private string asnDatabase = string.Empty;
     private string cityDatabase = string.Empty;
     private bool onlineLookup;
@@ -400,7 +402,39 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     public string Message
     {
         get => message;
-        private set => Set(ref message, value);
+        private set
+        {
+            if (Set(ref message, value))
+            {
+                OnPropertyChanged(nameof(IsMessageOpen));
+            }
+        }
+    }
+
+    public InfoBarSeverity MessageSeverity
+    {
+        get => messageSeverity;
+        private set => Set(ref messageSeverity, value);
+    }
+
+    public bool IsMessageOpen
+    {
+        get => !string.IsNullOrEmpty(message);
+        set
+        {
+            if (!value && !string.IsNullOrEmpty(message))
+            {
+                Message = string.Empty;
+            }
+        }
+    }
+
+    public Visibility HopsEmptyVisibility => Hops.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    public void ReportMessage(string text, InfoBarSeverity severity = InfoBarSeverity.Informational)
+    {
+        MessageSeverity = severity;
+        Message = text;
     }
 
     public static string Text(string key)
@@ -589,7 +623,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
         if (!File.Exists(NetMapAiService.MtrTempFilePath))
         {
-            Message = Text("AiNoMtrData");
+            ReportMessage(Text("AiNoMtrData"), InfoBarSeverity.Warning);
             return;
         }
 
@@ -631,7 +665,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
                 }
                 else
                 {
-                    Message = response.ErrorMessage ?? Text("AiCheckFailed");
+                    ReportMessage(response.ErrorMessage ?? Text("AiCheckFailed"), InfoBarSeverity.Error);
                 }
             });
         }
@@ -646,7 +680,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             {
                 if (CanPublishAiResult(source, generation, token))
                 {
-                    Message = Text("AiCheckFailed") + ": " + ex.Message;
+                    ReportMessage(Text("AiCheckFailed") + ": " + ex.Message, InfoBarSeverity.Error);
                 }
             });
         }
@@ -691,7 +725,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     private void NotifyAiRouteChanged(long previousGeneration, long currentGeneration)
     {
-        Message = Text("AiRouteChanged");
+        ReportMessage(Text("AiRouteChanged"), InfoBarSeverity.Warning);
         Logger.LogInfo($"NetMap AI cancelled: reason=route-generation-changed, previousGeneration={previousGeneration}, currentGeneration={currentGeneration}");
     }
 
@@ -700,7 +734,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         var draft = DraftOptions();
         if (!draft.IsValid)
         {
-            Message = Text("InvalidProxy");
+            ReportMessage(Text("InvalidProxy"), InfoBarSeverity.Error);
             return;
         }
 
@@ -718,7 +752,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         _moduleSettingsRepository.SettingsConfig = settings;
         var outgoing = new SndModuleSettings<SndNetMapSettings>(new SndNetMapSettings { Settings = settings });
         _sendConfigMsg(JsonSerializer.Serialize(outgoing, SettingsSerializationContext.Default.SndModuleSettingsSndNetMapSettings));
-        Message = Text("SettingsApplied");
+        ReportMessage(Text("SettingsApplied"), InfoBarSeverity.Success);
     }
 
     public void SetPageActive(bool active)
@@ -816,6 +850,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         }
 
         OnPropertyChanged(nameof(IsDetectionOn));
+        ShellNavigationBadges.Current.IsNetMapDetecting = IsEnabled && value.Running;
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(CanAiCheck));
         OnPropertyChanged(nameof(RunStatus));
@@ -868,6 +903,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             Hops.RemoveAt(Hops.Count - 1);
         }
 
+        OnPropertyChanged(nameof(HopsEmptyVisibility));
         OnPropertyChanged(nameof(TargetLatency));
         OnPropertyChanged(nameof(TargetHealth));
         MapChanged?.Invoke();

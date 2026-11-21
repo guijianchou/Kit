@@ -33,13 +33,44 @@ namespace Kit.Settings.UI.Views
             if (e.Parameter is SearchResultsNavigationParams searchParams)
             {
                 ViewModel.SetSearchResults(searchParams.Query, searchParams.Results);
-                PageControl.ModuleDescription = $"{ResourceLoaderInstance.ResourceLoader.GetString("Search_ResultsFor")} '{searchParams.Query}'";
+                var loader = ResourceLoaderInstance.ResourceLoader;
+                var resultsFor = loader.GetString("Search_ResultsFor");
+                PageControl.ModuleDescription = ViewModel.TotalResultsCount > 0
+                    ? $"{resultsFor} '{searchParams.Query}' ({ViewModel.TotalResultsCount})"
+                    : $"{resultsFor} '{searchParams.Query}'";
+
+                var allLabel = loader.GetString("AIHub_Filter_All/Content");
+                if (string.IsNullOrWhiteSpace(allLabel))
+                {
+                    allLabel = "All";
+                }
+
+                var modulesLabel = loader.GetString("SearchResults_ModulesTitle/Header");
+                if (string.IsNullOrWhiteSpace(modulesLabel))
+                {
+                    modulesLabel = "Modules";
+                }
+
+                var settingsLabel = loader.GetString("Shell_Settings/Content");
+                if (string.IsNullOrWhiteSpace(settingsLabel))
+                {
+                    settingsLabel = "Settings";
+                }
+
+                FilterAllItem.Text = $"{allLabel} ({ViewModel.TotalResultsCount})";
+                FilterModulesItem.Text = $"{modulesLabel} ({ViewModel.ModuleResults.Count})";
+                FilterSettingsItem.Text = $"{settingsLabel} ({ViewModel.SettingsResultsCount})";
+                ResultsFilterBar.SelectedItem = FilterAllItem;
             }
         }
 
-        public void RefreshEnabledState()
+        private void ResultsFilterBar_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
         {
-            // Implementation if needed for IRefreshablePage
+            if (sender.SelectedItem is SelectorBarItem item &&
+                int.TryParse(item.Tag?.ToString(), out int filterIndex))
+            {
+                ViewModel.SelectedFilterIndex = filterIndex;
+            }
         }
 
         private void ModuleButton_Click(object sender, RoutedEventArgs e)

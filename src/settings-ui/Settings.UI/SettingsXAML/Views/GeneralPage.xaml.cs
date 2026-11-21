@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
@@ -37,6 +36,10 @@ namespace Kit.Settings.UI.Views
         /// </summary>
         public GeneralViewModel ViewModel { get; set; }
 
+        public string UnsavedEndpointsTitle { get; }
+
+        public string UnsavedEndpointsMessage { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="GeneralPage"/> class.
         /// General Settings page constructor.
@@ -45,6 +48,8 @@ namespace Kit.Settings.UI.Views
         {
             // Load string resources
             var loader = Helpers.ResourceLoaderInstance.ResourceLoader;
+            UnsavedEndpointsTitle = loader.GetString("AiHub_UnsavedEndpointsCard/Header");
+            UnsavedEndpointsMessage = loader.GetString("AiHub_UnsavedEndpointsCard/Description");
             var settingsUtils = SettingsUtils.Default;
 
             Action stateUpdatingAction = () =>
@@ -52,6 +57,7 @@ namespace Kit.Settings.UI.Views
                 this.DispatcherQueue.TryEnqueue(() =>
                 {
                     ViewModel.RefreshUpdatingState();
+                    ShellNavigationBadges.Current.IsKitUpdateAvailable = ViewModel.IsUpdateAvailable;
                 });
             };
 
@@ -233,7 +239,9 @@ namespace Kit.Settings.UI.Views
             _initialContentPresented = true;
             GeneralSettingsSurface.Opacity = 1;
             GeneralSettingsSurface.IsHitTestVisible = true;
+            GeneralSettingsLoadingRing.IsActive = false;
             GeneralSettingsLoading.Visibility = Visibility.Collapsed;
+            ShellNavigationBadges.Current.IsKitUpdateAvailable = ViewModel.IsUpdateAvailable;
             foreach (var (panel, transitions) in _initialTransitions)
             {
                 panel.ChildrenTransitions = transitions;
@@ -252,17 +260,17 @@ namespace Kit.Settings.UI.Views
         {
             if (sender is Button { Tag: string sectionName } && FindName(sectionName) is FrameworkElement section)
             {
-                if (FocusManager.FindFirstFocusableElement(section) is Control control)
-                {
-                    control.Focus(FocusState.Programmatic);
-                }
-
                 section.StartBringIntoView(new BringIntoViewOptions
                 {
                     AnimationDesired = true,
                     VerticalAlignmentRatio = 0,
                     VerticalOffset = 8,
                 });
+
+                if (FocusManager.FindFirstFocusableElement(section) is Control control)
+                {
+                    control.Focus(FocusState.Programmatic);
+                }
             }
         }
 
@@ -280,15 +288,15 @@ namespace Kit.Settings.UI.Views
 
         private void RefreshBackupRestoreStatus(int delayMs = 0)
         {
-            Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 if (delayMs > 0)
                 {
-                    Thread.Sleep(delayMs);
+                    await Task.Delay(delayMs).ConfigureAwait(false);
                 }
 
                 var settingsBackupAndRestoreUtils = SettingsBackupAndRestoreUtils.Instance;
-                var results = settingsBackupAndRestoreUtils.DryRunBackup();
+                _ = settingsBackupAndRestoreUtils.DryRunBackup();
                 this.DispatcherQueue.TryEnqueue(() =>
                 {
                     ViewModel.NotifyAllBackupAndRestoreProperties();

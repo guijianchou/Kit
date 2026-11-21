@@ -626,7 +626,7 @@ internal static class DashboardPageSmoke
     {
         var root = window.Content as ShellPage ?? Descendants(window.Content).OfType<ShellPage>().Single();
         var quick = (QuickAccessList)page.FindName("QuickAccessItemsControl");
-        var emptyState = ((Grid)quick.Parent).Children.OfType<TextBlock>().Single();
+        var emptyState = ((Grid)quick.Parent).Children.OfType<FrameworkElement>().Single(child => !ReferenceEquals(child, quick));
         var originalItems = quick.ItemsSource;
         var originalVisibility = quick.Visibility;
         var originalEmptyVisibility = emptyState.Visibility;

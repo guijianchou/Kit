@@ -17,6 +17,9 @@ namespace Kit.Settings.UI.ViewModels
         private ObservableCollection<SettingEntry> _moduleResults = new();
         private ObservableCollection<SettingsGroup> _groupedSettingsResults = new();
         private bool _hasNoResults;
+        private int _totalResultsCount;
+        private int _settingsResultsCount;
+        private int _selectedFilterIndex;
 
         public ObservableCollection<SettingEntry> ModuleResults
         {
@@ -48,13 +51,58 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
+        public int TotalResultsCount
+        {
+            get => _totalResultsCount;
+            private set
+            {
+                _totalResultsCount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int SettingsResultsCount
+        {
+            get => _settingsResultsCount;
+            private set
+            {
+                _settingsResultsCount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int SelectedFilterIndex
+        {
+            get => _selectedFilterIndex;
+            set
+            {
+                if (_selectedFilterIndex != value)
+                {
+                    _selectedFilterIndex = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ShowModulesSection));
+                    OnPropertyChanged(nameof(ShowSettingsSection));
+                }
+            }
+        }
+
+        public bool ShowFilterBar => !HasNoResults && ModuleResults.Count > 0 && GroupedSettingsResults.Count > 0;
+
+        public bool ShowModulesSection => ModuleResults.Count > 0 && SelectedFilterIndex != 2;
+
+        public bool ShowSettingsSection => GroupedSettingsResults.Count > 0 && SelectedFilterIndex != 1;
+
         public void SetSearchResults(string query, List<SettingEntry> results)
         {
+            _selectedFilterIndex = 0;
             if (results == null || results.Count == 0)
             {
                 HasNoResults = true;
+                TotalResultsCount = 0;
+                SettingsResultsCount = 0;
                 ModuleResults.Clear();
                 GroupedSettingsResults.Clear();
+                NotifyFilterProperties();
                 return;
             }
 
@@ -86,6 +134,18 @@ namespace Kit.Settings.UI.ViewModels
             {
                 GroupedSettingsResults.Add(group);
             }
+
+            SettingsResultsCount = settings.Count;
+            TotalResultsCount = modules.Count + settings.Count;
+            NotifyFilterProperties();
+        }
+
+        private void NotifyFilterProperties()
+        {
+            OnPropertyChanged(nameof(SelectedFilterIndex));
+            OnPropertyChanged(nameof(ShowFilterBar));
+            OnPropertyChanged(nameof(ShowModulesSection));
+            OnPropertyChanged(nameof(ShowSettingsSection));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

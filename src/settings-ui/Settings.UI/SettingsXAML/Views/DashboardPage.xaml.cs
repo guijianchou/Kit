@@ -92,6 +92,9 @@ namespace Kit.Settings.UI.Views
             _ => "UnknownText",
         }];
 
+        public Visibility EgressStatusVisibility(NetMapCard card) =>
+            string.IsNullOrWhiteSpace(DashboardViewModel.EgressStatus(card)) ? Visibility.Collapsed : Visibility.Visible;
+
         private void Window_Closed(object sender, WindowEventArgs args)
         {
             if (args.Handled)
@@ -124,19 +127,11 @@ namespace Kit.Settings.UI.Views
         private void SortAlphabetical_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.DashboardSortOrder = DashboardSortOrder.Alphabetical;
-            if (sender is ToggleMenuFlyoutItem item)
-            {
-                item.IsChecked = true;
-            }
         }
 
         private void SortByStatus_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.DashboardSortOrder = DashboardSortOrder.ByStatus;
-            if (sender is ToggleMenuFlyoutItem item)
-            {
-                item.IsChecked = true;
-            }
         }
     }
 }

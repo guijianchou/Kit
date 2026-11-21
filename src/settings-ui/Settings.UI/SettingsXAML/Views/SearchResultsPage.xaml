@@ -21,71 +21,89 @@
         <tkconverters:CollectionVisibilityConverter x:Key="CollectionVisibilityConverter" />
     </local:NavigablePage.Resources>
 
-    <controls:SettingsPageControl x:Name="PageControl" x:Uid="SearchResults_Title">
+    <controls:SettingsPageControl x:Name="PageControl" x:Uid="SearchResults_Title" CompactHeader="True">
         <controls:SettingsPageControl.ModuleContent>
-            <StackPanel Orientation="Vertical" AutomationProperties.LiveSetting="Polite">
+            <StackPanel
+                AutomationProperties.LiveSetting="Polite"
+                ChildrenTransitions="{StaticResource SettingsCardsAnimations}"
+                Orientation="Vertical"
+                Spacing="8">
+                <SelectorBar
+                    x:Name="ResultsFilterBar"
+                    SelectionChanged="ResultsFilterBar_SelectionChanged"
+                    Visibility="{x:Bind ViewModel.ShowFilterBar, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <SelectorBarItem x:Name="FilterAllItem" IsSelected="True" Tag="0" />
+                    <SelectorBarItem x:Name="FilterModulesItem" Tag="1" />
+                    <SelectorBarItem x:Name="FilterSettingsItem" Tag="2" />
+                </SelectorBar>
+
                 <controls:SettingsGroup
+                    x:Name="ModulesGroup"
                     x:Uid="SearchResults_ModulesTitle"
-                    Visibility="{x:Bind ViewModel.ModuleResults, Mode=OneWay, Converter={StaticResource CollectionVisibilityConverter}}">
-                    <ItemsControl
-                        x:Name="ModulesItemsControl"
-                        IsTabStop="False"
-                        ItemsSource="{x:Bind ViewModel.ModuleResults, Mode=OneWay}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:SettingEntry">
-                                <tkcontrols:SettingsCard
-                                    Margin="0,0,0,2"
-                                    Click="ModuleButton_Click"
-                                    Header="{x:Bind Header}"
-                                    HeaderIcon="{x:Bind Icon, Converter={StaticResource IconConverter}, ConverterParameter=&#xE8B7;}"
-                                    IsClickEnabled="True" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    Padding="0,12,0,0"
+                    ItemsSource="{x:Bind ViewModel.ModuleResults, Mode=OneWay}"
+                    Visibility="{x:Bind ViewModel.ShowModulesSection, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <controls:SettingsGroup.ItemTemplate>
+                        <DataTemplate x:DataType="models:SettingEntry">
+                            <tkcontrols:SettingsCard
+                                Click="ModuleButton_Click"
+                                Description="{x:Bind Description}"
+                                Header="{x:Bind Header}"
+                                HeaderIcon="{x:Bind Icon, Converter={StaticResource IconConverter}, ConverterParameter=&#xE8B7;}"
+                                IsClickEnabled="True" />
+                        </DataTemplate>
+                    </controls:SettingsGroup.ItemTemplate>
                 </controls:SettingsGroup>
 
                 <!--  Settings Groups  -->
-                <ItemsControl
+                <ItemsRepeater
                     x:Name="SettingsGroupsItemsControl"
-                    IsTabStop="False"
-                    ItemsSource="{x:Bind ViewModel.GroupedSettingsResults, Mode=OneWay}">
-                    <ItemsControl.ItemTemplate>
+                    ItemsSource="{x:Bind ViewModel.GroupedSettingsResults, Mode=OneWay}"
+                    Visibility="{x:Bind ViewModel.ShowSettingsSection, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
                         <DataTemplate x:DataType="vm:SettingsGroup">
-                            <controls:SettingsGroup Header="{x:Bind GroupName}">
-                                <ItemsControl IsTabStop="False" ItemsSource="{x:Bind Settings}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="models:SettingEntry">
-                                            <tkcontrols:SettingsCard
-                                                Margin="0,0,0,2"
-                                                Click="SettingButton_Click"
-                                                Description="{x:Bind Description}"
-                                                Header="{x:Bind Header}"
-                                                HeaderIcon="{x:Bind Icon, Converter={StaticResource IconConverter}, ConverterParameter=&#xE713;}"
-                                                IsClickEnabled="True" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                            <controls:SettingsGroup Header="{x:Bind GroupName}" ItemsSource="{x:Bind Settings}">
+                                <controls:SettingsGroup.ItemTemplate>
+                                    <DataTemplate x:DataType="models:SettingEntry">
+                                        <tkcontrols:SettingsCard
+                                            Click="SettingButton_Click"
+                                            Description="{x:Bind Description}"
+                                            Header="{x:Bind Header}"
+                                            HeaderIcon="{x:Bind Icon, Converter={StaticResource IconConverter}, ConverterParameter=&#xE713;}"
+                                            IsClickEnabled="True" />
+                                    </DataTemplate>
+                                </controls:SettingsGroup.ItemTemplate>
                             </controls:SettingsGroup>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
 
                 <!--  No Results Message  -->
                 <StackPanel
                     x:Name="NoResultsPanel"
+                    Margin="0,48,0,0"
                     HorizontalAlignment="Center"
-                    Spacing="16"
+                    Spacing="12"
                     Visibility="{x:Bind ViewModel.HasNoResults, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                     <FontIcon
                         AutomationProperties.AccessibilityView="Raw"
-                        FontSize="48"
+                        FontSize="40"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                        Glyph="&#xE721;" />
+                    <TextBlock
+                        x:Uid="SearchResults_NoResultsHeader"
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        TextAlignment="Center" />
+                    <TextBlock
+                        x:Uid="SearchResults_NoResultsDescription"
+                        HorizontalAlignment="Center"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Glyph="&#xE71C;" />
-                    <TextBlock HorizontalAlignment="Center" TextAlignment="Center">
-                        <Run x:Uid="SearchResults_NoResultsHeader" FontWeight="SemiBold" />
-                        <LineBreak />
-                        <Run x:Uid="SearchResults_NoResultsDescription" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </TextBlock>
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        TextAlignment="Center" />
                 </StackPanel>
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>

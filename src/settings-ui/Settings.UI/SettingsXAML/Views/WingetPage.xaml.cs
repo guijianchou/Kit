@@ -236,6 +236,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         }
 
         PackageWorkspaceGrid.Width = width;
+        WingetEnableCard.Width = width;
         WingetSettingsExpander.Width = width;
         appliedWorkspaceWidth = width;
         UpdateFiltersLayout(width);
@@ -267,10 +268,11 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         }
 
         appliedCompactHeight = compact;
-        WingetViewport.Padding = compact ? new Thickness(24, 0, 24, 12) : new Thickness(24, 0, 24, 16);
-        WingetViewport.RowSpacing = compact ? 10 : 18;
-        WingetPageHeader.RowSpacing = compact ? 4 : 8;
-        WingetSettingsExpander.Margin = compact ? new Thickness(0, 2, 0, 0) : new Thickness(0, 4, 0, 0);
+        WingetViewport.Padding = compact ? new Thickness(24, 0, 24, 8) : new Thickness(24, 0, 24, 16);
+        WingetViewport.RowSpacing = compact ? 6 : 12;
+        WingetPageHeader.RowSpacing = compact ? 2 : 6;
+        WingetEnableCard.Padding = compact ? new Thickness(14, 6, 14, 6) : new Thickness(16, 12, 16, 12);
+        WingetEnableCard.MinHeight = compact ? 44 : 68;
 
         Thickness cardPadding = compact ? new Thickness(14, 6, 14, 6) : new Thickness(16, 12, 16, 12);
         double cardMinHeight = compact ? 48 : 58;
@@ -281,12 +283,12 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         ScheduleSettingsCard.Padding = cardPadding;
         ScheduleSettingsCard.MinHeight = cardMinHeight;
 
-        WorkspaceHeaderGrid.Margin = compact ? new Thickness(0, 0, 0, 2) : new Thickness(0, 4, 0, 8);
+        WorkspaceHeaderGrid.Margin = compact ? new Thickness(0) : new Thickness(0, 4, 0, 8);
         WorkspaceCommands.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 0, 6);
-        WingetOperationCard.Margin = compact ? new Thickness(0, 4, 0, 6) : new Thickness(0, 4, 0, 10);
-        WingetOperationCard.Padding = compact ? new Thickness(12, 8, 12, 8) : new Thickness(14, 12, 14, 12);
-        WingetOperationCardGrid.RowSpacing = compact ? 6 : 10;
-        WorkspaceBody.Margin = compact ? new Thickness(0, 4, 0, 0) : new Thickness(0, 6, 0, 0);
+        WingetOperationCard.Margin = compact ? new Thickness(0, 2, 0, 4) : new Thickness(0, 4, 0, 10);
+        WingetOperationCard.Padding = compact ? new Thickness(12, 6, 12, 6) : new Thickness(14, 12, 14, 12);
+        WingetOperationCardGrid.RowSpacing = compact ? 4 : 10;
+        WorkspaceBody.Margin = compact ? new Thickness(0, 2, 0, 0) : new Thickness(0, 6, 0, 0);
     }
 
     private void FiltersToggle_Changed(object sender, RoutedEventArgs e)

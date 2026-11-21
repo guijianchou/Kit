@@ -26,21 +26,22 @@
             CompactHeader="True"
             IsTabStop="False"
             ModuleImageSource="ms-appx:///Assets/Settings/Modules/LightSwitch.png">
-            <controls:SettingsPageControl.HeaderAction>
-                <controls:GPOInfoControl MaxWidth="220" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                    <ToggleSwitch
-                        x:Name="LightSwitchEnableToggleSwitch"
-                        x:Uid="LightSwitch_EnableSettingsCard"
-                        MinWidth="0"
-                        HorizontalAlignment="Right"
-                        AutomationProperties.AutomationId="Toggle_LightSwitch"
-                        IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
-                        IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
-                </controls:GPOInfoControl>
-            </controls:SettingsPageControl.HeaderAction>
             <controls:SettingsPageControl.ModuleContent>
                 <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
-                    <controls:SettingsGroup x:Uid="LightSwitch_ShortcutsSettingsGroup" Padding="0,8,0,0" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
+                    <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                        <tkcontrols:SettingsCard
+                            x:Name="LightSwitchEnableSettingsCard"
+                            x:Uid="LightSwitch_EnableSettingsCard"
+                            HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/LightSwitch.png}"
+                            IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                            <ToggleSwitch
+                                x:Name="LightSwitchEnableToggleSwitch"
+                                AutomationProperties.AutomationId="Toggle_LightSwitch"
+                                IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                        </tkcontrols:SettingsCard>
+                    </controls:GPOInfoControl>
+
+                    <controls:SettingsGroup x:Uid="LightSwitch_ShortcutsSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
                         <tkcontrols:SettingsCard x:Uid="LightSwitch_ThemeToggle_Shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE708;}">
                             <TextBox
                                 x:Uid="LightSwitch_ShortcutInput"

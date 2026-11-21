@@ -80,20 +80,21 @@
             IsTabStop="False"
             ModuleImageSource="ms-appx:///Assets/Settings/Modules/Localserver.png"
             ModuleTitle="Local Server">
-            <controls:SettingsPageControl.HeaderAction>
-                <controls:GPOInfoControl HorizontalAlignment="Right" VerticalAlignment="Center" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                    <ToggleSwitch
-                        x:Name="LocalserverEnableToggleSwitch"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        AutomationProperties.AutomationId="Toggle_Localserver"
-                        IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
-                        IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                        Style="{StaticResource RightAlignedCompactToggleSwitchStyle}" />
-                </controls:GPOInfoControl>
-            </controls:SettingsPageControl.HeaderAction>
             <controls:SettingsPageControl.ModuleContent>
-                <StackPanel Margin="0,8,0,0" Spacing="16">
+                <StackPanel Spacing="16">
+                    <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                        <tkcontrols:SettingsCard
+                            x:Name="LocalserverEnableSettingsCard"
+                            x:Uid="Localserver_EnableSettingsCard"
+                            HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Localserver.png}"
+                            IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                            <ToggleSwitch
+                                x:Name="LocalserverEnableToggleSwitch"
+                                AutomationProperties.AutomationId="Toggle_Localserver"
+                                IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                        </tkcontrols:SettingsCard>
+                    </controls:GPOInfoControl>
+
                     <!-- ============================================================== -->
                     <!-- 1. LIVE SESSION TELEMETRY BAR (Unified Mica Hero Panel)        -->
                     <!-- ============================================================== -->

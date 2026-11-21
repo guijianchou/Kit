@@ -268,17 +268,15 @@
                 MaxWidth="1048"
                 HorizontalAlignment="Stretch"
                 Padding="24,0,24,16"
-                RowDefinitions="Auto,Auto,Auto,*"
-                RowSpacing="18"
+                RowDefinitions="Auto,Auto,Auto,Auto,*"
+                RowSpacing="12"
                 SizeChanged="Viewport_SizeChanged">
 
-                <!-- Row 0: Unified compact Fluent header (title + toggle + concise description) -->
+                <!-- Row 0: Unified compact Fluent header (title + concise description) -->
                 <Grid
                     x:Name="WingetPageHeader"
-                    ColumnDefinitions="*,Auto"
                     RowDefinitions="Auto,Auto"
-                    ColumnSpacing="16"
-                    RowSpacing="8">
+                    RowSpacing="6">
                     <TextBlock
                         x:Name="WingetPageTitle"
                         VerticalAlignment="Center"
@@ -286,19 +284,9 @@
                         Style="{StaticResource TitleTextBlockStyle}"
                         AutomationProperties.HeadingLevel="Level1"
                         ToolTipService.ToolTip="{x:Bind ModuleDescription}" />
-                    <ToggleSwitch
-                        x:Name="WingetEnableToggle"
-                        Grid.Column="1"
-                        x:Uid="Winget_EnableToggle"
-                        AutomationProperties.AutomationId="Toggle_Winget"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Style="{StaticResource RightAlignedCompactToggleSwitchStyle}"
-                        IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
                     <TextBlock
                         x:Name="WingetDescription"
                         Grid.Row="1"
-                        Grid.ColumnSpan="2"
                         Text="{x:Bind ModuleDescription}"
                         FontSize="13"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -308,11 +296,24 @@
                         ToolTipService.ToolTip="{x:Bind ModuleDescription}" />
                 </Grid>
 
-                <!-- Row 1: Native Win11 SettingsExpander for status, version, automatic checks, and documentation -->
+                <!-- Row 1: Module Enable SettingsCard -->
+                <tk:SettingsCard
+                    x:Name="WingetEnableCard"
+                    Grid.Row="1"
+                    x:Uid="Winget_EnableCard"
+                    HorizontalAlignment="Stretch"
+                    HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Winget.png}">
+                    <ToggleSwitch
+                        x:Name="WingetEnableToggle"
+                        x:Uid="Winget_EnableToggle"
+                        AutomationProperties.AutomationId="Toggle_Winget"
+                        IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                </tk:SettingsCard>
+
+                <!-- Row 2: Native Win11 SettingsExpander for status, version, automatic checks, and documentation -->
                 <tk:SettingsExpander
                     x:Name="WingetSettingsExpander"
-                    Grid.Row="1"
-                    Margin="0,4,0,0"
+                    Grid.Row="2"
                     HorizontalAlignment="Stretch"
                     IsExpanded="False">
                     <tk:SettingsExpander.Header>
@@ -387,8 +388,8 @@
                     </tk:SettingsExpander.Items>
                 </tk:SettingsExpander>
 
-                <!-- Row 2: Workspace tabs with Updates InfoBadge + inline local AutoSuggestBox -->
-                <Grid x:Name="WingetNavBar" Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <!-- Row 3: Workspace tabs with Updates InfoBadge + inline local AutoSuggestBox -->
+                <Grid x:Name="WingetNavBar" Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="12">
                     <tk:Segmented x:Name="WingetSections" SelectedIndex="{x:Bind ViewModel.ActiveTabIndex, Mode=TwoWay}" HorizontalAlignment="Left">
                         <tk:SegmentedItem Icon="{ui:FontIcon Glyph=&#xE895;}">
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -416,8 +417,8 @@
                         Text="{x:Bind ViewModel.FilterText, Mode=TwoWay}" />
                 </Grid>
 
-                <!-- Row 3: Package Workspace -->
-                <Grid x:Name="PackageWorkspaceGrid" Grid.Row="3" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                <!-- Row 4: Package Workspace -->
+                <Grid x:Name="PackageWorkspaceGrid" Grid.Row="4" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                     <Grid x:Name="WorkspaceHeaderGrid" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,4,0,8">
                         <Border x:Name="WorkspaceBadge" Style="{x:Bind WorkspaceBadgeStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" Width="32" Height="32" CornerRadius="8">
                             <FontIcon Glyph="{x:Bind WorkspaceGlyph(ViewModel.ActiveTabIndex), Mode=OneWay}" Style="{x:Bind WorkspaceGlyphStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" FontSize="16" AutomationProperties.AccessibilityView="Raw" />

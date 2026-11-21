@@ -345,20 +345,21 @@
             IsTabStop="False"
             ModuleImageSource="ms-appx:///Assets/Settings/Modules/UDPtest.png"
             ModuleTitle="UDP Test">
-            <controls:SettingsPageControl.HeaderAction>
-                <controls:GPOInfoControl HorizontalAlignment="Right" VerticalAlignment="Center" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                    <ToggleSwitch
-                        x:Name="UdpEnableToggleSwitch"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        AutomationProperties.AutomationId="Toggle_UDPtest"
-                        IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
-                        IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                        Style="{StaticResource RightAlignedCompactToggleSwitchStyle}" />
-                </controls:GPOInfoControl>
-            </controls:SettingsPageControl.HeaderAction>
             <controls:SettingsPageControl.ModuleContent>
-                <StackPanel Margin="0,8,0,0" Spacing="16">
+                <StackPanel Spacing="16">
+                    <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                        <tkcontrols:SettingsCard
+                            x:Name="UdpEnableSettingsCard"
+                            x:Uid="UDPtest_EnableSettingsCard"
+                            HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/UDPtest.png}"
+                            IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                            <ToggleSwitch
+                                x:Name="UdpEnableToggleSwitch"
+                                AutomationProperties.AutomationId="Toggle_UDPtest"
+                                IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                        </tkcontrols:SettingsCard>
+                    </controls:GPOInfoControl>
+
                     <!-- ============================================================== -->
                     <!-- 1. LIVE TELEMETRY & CONTROL BAR (Unified Mica Hero Panel)      -->
                     <!-- ============================================================== -->

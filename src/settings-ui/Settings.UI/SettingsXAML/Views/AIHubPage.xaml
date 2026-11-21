@@ -474,9 +474,11 @@
                         <VisualState.Setters>
                             <Setter Target="AiReadinessModelInfo.Visibility" Value="Collapsed" />
                             <Setter Target="AiHubDescription.Visibility" Value="Collapsed" />
-                            <Setter Target="AIHubRoot.RowSpacing" Value="10" />
+                            <Setter Target="AIHubRoot.RowSpacing" Value="6" />
                             <Setter Target="AiHubPageHeader.RowSpacing" Value="4" />
-                            <Setter Target="AiHubFixedHeaderStack.Spacing" Value="8" />
+                            <Setter Target="AiHubFixedHeaderStack.Spacing" Value="6" />
+                            <Setter Target="AiHubEnableSettingsCard.Padding" Value="12,4" />
+                            <Setter Target="AiHubEnableSettingsCard.MinHeight" Value="44" />
                             <Setter Target="AiHubMasterCardSurface.Padding" Value="12,4" />
                             <Setter Target="AiHubRecheckButton.Padding" Value="6,3" />
                             <Setter Target="AiHubScrollGrid.Padding" Value="0,2,24,32" />
@@ -641,27 +643,32 @@
                         Visibility="Collapsed" />
                 </Grid>
             </SplitView.Pane>
-            <Grid x:Name="AIHubRoot" RowDefinitions="Auto,Auto,*" RowSpacing="18" Padding="24,0,0,0">
+            <Grid x:Name="AIHubRoot" RowDefinitions="Auto,Auto,*" RowSpacing="12" Padding="24,0,0,0">
 
             <Grid x:Name="AiHubPageHeader" MaxWidth="1000" HorizontalAlignment="Stretch" Margin="0,0,24,0"
-                  ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                  RowDefinitions="Auto,Auto" RowSpacing="6">
                 <TextBlock x:Name="AiHubPageTitle" x:Uid="AIHub_PageTitle" VerticalAlignment="Center" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"
                            ToolTipService.ToolTip="{x:Bind ModuleDescription}" />
-                <controls:GPOInfoControl x:Name="AiHubModuleGate" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                         MaxWidth="220" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                    <ToggleSwitch x:Name="AiHubEnableSwitch" x:Uid="AIHub_EnableToggleSwitch" AutomationProperties.AutomationId="Toggle_AIHub"
-                                  HorizontalAlignment="Right" VerticalAlignment="Center"
-                                  Style="{StaticResource RightAlignedCompactToggleSwitchStyle}"
-                                  IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                                  IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}" />
-                </controls:GPOInfoControl>
-                <TextBlock x:Name="AiHubDescription" Grid.Row="1" Grid.ColumnSpan="2" Text="{x:Bind ModuleDescription}"
+                <TextBlock x:Name="AiHubDescription" Grid.Row="1" Text="{x:Bind ModuleDescription}"
                            FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"
                            ToolTipService.ToolTip="{x:Bind ModuleDescription}" />
             </Grid>
 
             <Grid x:Name="AiHubFixedHeader" Grid.Row="1" Padding="0,0,24,0">
-                <StackPanel x:Name="AiHubFixedHeaderStack" MaxWidth="1000" HorizontalAlignment="Stretch" Spacing="16">
+                <StackPanel x:Name="AiHubFixedHeaderStack" MaxWidth="1000" HorizontalAlignment="Stretch" Spacing="12">
+                    <controls:GPOInfoControl x:Name="AiHubModuleGate" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                        <tkcontrols:SettingsCard
+                            x:Name="AiHubEnableSettingsCard"
+                            x:Uid="AIHub_EnableSettingsCard"
+                            HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/AiHub.png}"
+                            IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                            <ToggleSwitch
+                                x:Name="AiHubEnableSwitch"
+                                x:Uid="AIHub_EnableToggleSwitch"
+                                AutomationProperties.AutomationId="Toggle_AIHub"
+                                IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                        </tkcontrols:SettingsCard>
+                    </controls:GPOInfoControl>
                     <Border x:Name="AiHubMasterCardSurface" Padding="16,10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
                         <Grid x:Name="AiReadinessBar" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">

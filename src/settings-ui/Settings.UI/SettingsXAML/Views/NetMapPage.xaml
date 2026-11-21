@@ -330,18 +330,19 @@
             CompactHeader="True"
             IsTabStop="False"
             ModuleImageSource="ms-appx:///Assets/Settings/Modules/NetMap.png">
-            <controls:SettingsPageControl.HeaderAction>
-                <ToggleSwitch
-                    x:Name="EnableSwitch"
-                    x:Uid="NetMap_Enable"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    AutomationProperties.AutomationId="Toggle_NetMap"
-                    IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                    Style="{StaticResource RightAlignedCompactToggleSwitchStyle}" />
-            </controls:SettingsPageControl.HeaderAction>
             <controls:SettingsPageControl.ModuleContent>
-                <StackPanel MaxWidth="1000" Margin="0,8,0,0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Spacing="16">
+                <StackPanel MaxWidth="1000" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Spacing="16">
+                    <tk:SettingsCard
+                        x:Name="NetMapEnableCard"
+                        x:Uid="NetMap_EnableCard"
+                        AutomationProperties.AutomationId="NetMapEnableCard"
+                        HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/NetMap.png}">
+                        <ToggleSwitch
+                            x:Name="EnableSwitch"
+                            x:Uid="NetMap_Enable"
+                            AutomationProperties.AutomationId="Toggle_NetMap"
+                            IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                    </tk:SettingsCard>
 
                     <!-- ============================================================== -->
                     <!-- 1. LIVE TELEMETRY & MASTER CONTROL BAR (Unified Mica Hero)     -->

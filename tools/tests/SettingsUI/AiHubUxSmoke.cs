@@ -1721,12 +1721,14 @@ internal static class AiHubUxSmoke
         var title = (TextBlock)page.FindName("AiHubPageTitle");
         var description = (TextBlock)page.FindName("AiHubDescription");
         var gate = (FrameworkElement)page.FindName("AiHubModuleGate");
+        var enableCard = (FrameworkElement)page.FindName("AiHubEnableSettingsCard");
+        var fixedHeader = (FrameworkElement)page.FindName("AiHubFixedHeader");
         var master = (FrameworkElement)page.FindName("AiHubMasterCardSurface");
         var tabs = (FrameworkElement)page.FindName("AiHubSections");
         var scroll = (ScrollViewer)page.FindName("AiHubContentScroll");
         var toggles = Descendants(page).OfType<ToggleSwitch>()
             .Where(toggle => AutomationProperties.GetAutomationId(toggle) == "Toggle_AIHub").ToArray();
-        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], gate) && IsDescendantOf(gate, header) &&
+        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], enableCard) && IsDescendantOf(enableCard, gate) && IsDescendantOf(gate, fixedHeader) &&
             toggles[0].IsOn == page.ViewModel.IsEnabled && toggles[0].IsEnabled == !page.ViewModel.IsEnabledGpoConfigured &&
             !string.IsNullOrWhiteSpace(AutomationProperties.GetName(toggles[0])),
             context + ": the single labeled module switch must reflect the module and policy gates.");
@@ -1734,20 +1736,21 @@ internal static class AiHubUxSmoke
             AutomationProperties.GetHeadingLevel(title) == AutomationHeadingLevel.Level1 && description.Text == page.ModuleDescription,
             context + ": the compact header must retain the localized title, description and heading semantics.");
         var headerBounds = HeaderBounds(header, page);
+        var enableCardBounds = HeaderBounds(enableCard, page);
         var readinessBounds = HeaderBounds(master, page);
         var tabBounds = HeaderBounds(tabs, page);
         var scrollBounds = HeaderBounds(scroll, page);
-        Log($"HEADER {context}: page={page.ActualWidth:F1}x{page.ActualHeight:F1}, header={headerBounds}, readiness={readinessBounds}, tabs={tabBounds}, content={scrollBounds}, viewport={scroll.ViewportWidth:F1}x{scroll.ViewportHeight:F1}");
-        Require(HeaderInside(headerBounds, page) && HeaderInside(readinessBounds, page) && HeaderInside(tabBounds, page) &&
-            HeaderInside(HeaderBounds(toggles[0], header), header) &&
+        Log($"HEADER {context}: page={page.ActualWidth:F1}x{page.ActualHeight:F1}, header={headerBounds}, enableCard={enableCardBounds}, readiness={readinessBounds}, tabs={tabBounds}, content={scrollBounds}, viewport={scroll.ViewportWidth:F1}x{scroll.ViewportHeight:F1}");
+        Require(HeaderInside(headerBounds, page) && HeaderInside(enableCardBounds, page) && HeaderInside(readinessBounds, page) && HeaderInside(tabBounds, page) &&
+            HeaderInside(HeaderBounds(toggles[0], enableCard), enableCard) &&
             (description.Visibility == Visibility.Collapsed || HeaderInside(HeaderBounds(description, header), header)) &&
-            HeaderBounds(title, header).Right <= HeaderBounds(gate, header).Left + 2 &&
-            headerBounds.Bottom <= readinessBounds.Top + 2 && readinessBounds.Bottom <= tabBounds.Top + 2 && tabBounds.Bottom <= scrollBounds.Top + 2,
-            context + ": header, module switch, service status and tabs must remain visible without overlap.");
-        Require(!IsDescendantOf(header, scroll) && !IsDescendantOf(master, scroll) && !IsDescendantOf(tabs, scroll) &&
+            headerBounds.Bottom <= enableCardBounds.Top + 2 &&
+            enableCardBounds.Bottom <= readinessBounds.Top + 2 && readinessBounds.Bottom <= tabBounds.Top + 2 && tabBounds.Bottom <= scrollBounds.Top + 2,
+            context + ": header, module switch card, service status and tabs must remain visible without overlap.");
+        Require(!IsDescendantOf(header, scroll) && !IsDescendantOf(enableCard, scroll) && !IsDescendantOf(master, scroll) && !IsDescendantOf(tabs, scroll) &&
             scroll.ViewportHeight >= 120 && HeaderInside(scrollBounds, page),
             context + ": the fixed compact header must leave at least 120 DIPs of reading space, including in short windows.");
-        Require(page.ActualWidth >= 640 || (readinessBounds.Height <= 36 && scrollBounds.Top <= 150),
+        Require(page.ActualWidth >= 640 || (readinessBounds.Height <= 36 && scrollBounds.Top <= 215),
             context + ": narrow headers must keep readiness on one line and leave most of the window for results.");
         Require(toggles[0].Focus(FocusState.Keyboard) && HeaderInside(HeaderBounds(toggles[0], page), page),
             context + ": keyboard focus must reach the module switch without a second scroll region.");
@@ -1814,15 +1817,18 @@ internal static class AiHubUxSmoke
                     links.Visibility == (shared.PrimaryLinks.Count > 0 ? Visibility.Visible : Visibility.Collapsed),
                     context + ": compact primary links must reflect this page's collection without an empty link strip.");
                 var toggle = Descendants(page).OfType<ToggleSwitch>().Single(item => AutomationProperties.GetAutomationId(item) == "Toggle_" + module.Key);
+                var enableCard = (FrameworkElement)page.FindName(module.Key + "EnableSettingsCard");
                 var headerBounds = HeaderBounds(headerGrid, page);
+                var enableCardBounds = HeaderBounds(enableCard, page);
                 var toggleBounds = HeaderBounds(toggle, page);
                 var contentBounds = HeaderBounds(content, page);
-                Require(!toggle.IsOn && IsDescendantOf(toggle, headerGrid) &&
-                    !IsDescendantOf(title, scroll) && !IsDescendantOf(toggle, scroll) &&
-                    HeaderInside(headerBounds, page) && HeaderInside(toggleBounds, page) &&
-                    headerBounds.Bottom <= contentBounds.Top + 2 &&
-                    Math.Abs(headerBounds.Left - contentBounds.Left) < 2,
-                    context + ": the compact header must pin the title, description, and module toggle above the scroll area in the shared column.");
+                Require(!toggle.IsOn && IsDescendantOf(toggle, enableCard) && IsDescendantOf(enableCard, content) &&
+                    !IsDescendantOf(title, scroll) &&
+                    HeaderInside(headerBounds, page) && HeaderInside(enableCardBounds, page) && HeaderInside(toggleBounds, page) &&
+                    headerBounds.Bottom <= enableCardBounds.Top + 2 &&
+                    Math.Abs(headerBounds.Left - contentBounds.Left) < 2 &&
+                    Math.Abs(enableCardBounds.Left - contentBounds.Left) < 2,
+                    context + ": the compact header must sit cleanly above the top enable SettingsCard in the shared column.");
                 Log($"COMPACT HEADER {context}: header={headerBounds.Width:F1}x{headerBounds.Height:F1}, description={description.ActualWidth:F1}x{description.ActualHeight:F1}, toggle={toggleBounds.Left:F1},{toggleBounds.Top:F1}");
                 await Capture(page, $"module-header-{module.Key}-{theme}.png");
                 EnsureNoWorker();

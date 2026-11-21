@@ -834,18 +834,19 @@ internal static class WingetPageSmoke
         var header = page.FindName("WingetPageHeader") as Grid;
         var title = page.FindName("WingetPageTitle") as TextBlock;
         var description = page.FindName("WingetDescription") as TextBlock;
+        var enableCard = page.FindName("WingetEnableCard") as CommunityToolkit.WinUI.Controls.SettingsCard;
         var expander = (CommunityToolkit.WinUI.Controls.SettingsExpander)page.FindName("WingetSettingsExpander");
         var tabs = (FrameworkElement)page.FindName("WingetSections");
         var workspace = (FrameworkElement)page.FindName("PackageWorkspaceGrid");
-        Require(header != null && title != null && description != null,
-            "WinGet must expose a unified compact Fluent header with title, description and toggle.");
+        Require(header != null && title != null && description != null && enableCard != null,
+            "WinGet must expose a unified compact Fluent header with title, description and top enable SettingsCard.");
         bool originalExpanded = expander.IsExpanded;
         var navigationItem = Descendants(tabs).OfType<CommunityToolkit.WinUI.Controls.SegmentedItem>().FirstOrDefault();
         Require(navigationItem != null, "WinGet must expose a focusable fixed navigation item.");
         var toggles = Descendants(page).OfType<ToggleSwitch>()
             .Where(toggle => AutomationProperties.GetAutomationId(toggle) == "Toggle_Winget").ToArray();
-        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], header),
-            "Exactly one WinGet enable switch must remain inside the compact header.");
+        Require(toggles.Length == 1 && IsDescendantOf(toggles[0], enableCard),
+            "Exactly one WinGet enable switch must remain inside the top enable SettingsCard.");
         var toggle = toggles[0];
         try
         {
@@ -876,22 +877,23 @@ internal static class WingetPageSmoke
                     context + ": the module toggle must expose a localized automation name.");
 
                 Rect headerRect = Bounds(header, shell);
-                Rect titleRect = Bounds(title, shell);
+                Rect enableCardRect = Bounds(enableCard, shell);
                 Rect toggleRect = Bounds(toggle, shell);
                 Rect expanderRect = Bounds(expander, shell);
                 Rect tabsBefore = Bounds(tabs, shell);
                 Rect workspaceBefore = Bounds(workspace, shell);
-                Require(titleRect.Right <= toggleRect.Left + 2 &&
-                    headerRect.Bottom <= expanderRect.Top + 2 && expanderRect.Bottom <= tabsBefore.Top + 2 &&
-                    tabsBefore.Bottom <= workspaceBefore.Top + 2,
-                    context + ": compact header, settings expander, tabs and workspace must retain non-overlapping visual order.");
-                Require(Math.Abs(headerRect.Left - expanderRect.Left) <= 1 && Math.Abs(headerRect.Right - expanderRect.Right) <= 1,
-                    context + ": compact header and settings expander must share the exact content gutters.");
+                Require(Contains(enableCardRect, toggleRect) &&
+                    headerRect.Bottom <= enableCardRect.Top + 2 && enableCardRect.Bottom <= expanderRect.Top + 2 &&
+                    expanderRect.Bottom <= tabsBefore.Top + 2 && tabsBefore.Bottom <= workspaceBefore.Top + 2,
+                    context + ": compact header, enable card, settings expander, tabs and workspace must retain non-overlapping visual order.");
+                Require(Math.Abs(headerRect.Left - enableCardRect.Left) <= 1 && Math.Abs(headerRect.Right - enableCardRect.Right) <= 1 &&
+                    Math.Abs(headerRect.Left - expanderRect.Left) <= 1 && Math.Abs(headerRect.Right - expanderRect.Right) <= 1,
+                    context + ": compact header, enable card and settings expander must share the exact content gutters.");
                 AssertWorkspaceBounds(page, context);
 
                 Require(navigationItem.Focus(FocusState.Keyboard), context + ": fixed navigation must be focusable before the keyboard reachability check.");
-                Require(toggle.Focus(FocusState.Keyboard) && Contains(headerRect, Bounds(toggle, shell)),
-                    context + ": the compact header enable switch must be directly keyboard reachable without scrolling.");
+                Require(toggle.Focus(FocusState.Keyboard) && Contains(enableCardRect, Bounds(toggle, shell)),
+                    context + ": the enable card switch must be directly keyboard reachable without scrolling.");
                 Require(SameBounds(tabsBefore, Bounds(tabs, shell)) && SameBounds(workspaceBefore, Bounds(workspace, shell)),
                     context + ": focusing the header must not move fixed navigation or the package workspace.");
                 Require(toggle.IsOn == vm.IsEnabled && GetField<CancellationTokenSource>(vm, "pageLifetime") == null &&

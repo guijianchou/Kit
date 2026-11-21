@@ -24,21 +24,22 @@
         CompactHeader="True"
         IsTabStop="False"
         ModuleImageSource="ms-appx:///Assets/Settings/Modules/Awake.png">
-        <controls:SettingsPageControl.HeaderAction>
-            <controls:GPOInfoControl MaxWidth="220" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
-                <ToggleSwitch
-                    x:Name="AwakeEnableToggleSwitch"
-                    x:Uid="Awake_EnableSettingsCard"
-                    MinWidth="0"
-                    HorizontalAlignment="Right"
-                    AutomationProperties.AutomationId="Toggle_Awake"
-                    IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
-                    IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
-            </controls:GPOInfoControl>
-        </controls:SettingsPageControl.HeaderAction>
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Orientation="Vertical">
-                <controls:SettingsGroup x:Uid="Awake_BehaviorSettingsGroup" Padding="0,8,0,0" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
+                <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                    <tkcontrols:SettingsCard
+                        x:Name="AwakeEnableSettingsCard"
+                        x:Uid="Awake_EnableSettingsCard"
+                        HeaderIcon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Awake.png}"
+                        IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}">
+                        <ToggleSwitch
+                            x:Name="AwakeEnableToggleSwitch"
+                            AutomationProperties.AutomationId="Toggle_Awake"
+                            IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
+                    </tkcontrols:SettingsCard>
+                </controls:GPOInfoControl>
+
+                <controls:SettingsGroup x:Uid="Awake_BehaviorSettingsGroup" IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}">
                     <tkcontrols:SettingsCard
                         x:Name="AwakeModeSettingsCard"
                         x:Uid="Awake_ModeSettingsCard"

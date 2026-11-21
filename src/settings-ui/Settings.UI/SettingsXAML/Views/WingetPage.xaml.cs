@@ -43,6 +43,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     private WingetWorkspace visibleWorkspace = WingetWorkspace.Updates;
     private PackageViewMode appliedListViewMode = PackageViewMode.Details;
     private double appliedWorkspaceWidth = double.NaN;
+    private bool? appliedCompactHeight;
 
     public WingetPage()
     {
@@ -224,6 +225,8 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             return;
         }
 
+        UpdateVerticalDensity();
+
         // The header, settings expander and workspace share the same finite Grid width.
         // Explicit child widths prevent long IDs or CommandBar overflow from inflating DesiredSize.
         double width = Math.Max(0, WingetViewport.ActualWidth - WingetViewport.Padding.Left - WingetViewport.Padding.Right);
@@ -247,6 +250,43 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
             HeaderSourceButton.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
             ApplyListItemTemplate();
         }
+    }
+
+    private void UpdateVerticalDensity()
+    {
+        double height = WingetViewport.ActualHeight;
+        if (height <= 0)
+        {
+            return;
+        }
+
+        bool compact = height < 680;
+        if (appliedCompactHeight == compact)
+        {
+            return;
+        }
+
+        appliedCompactHeight = compact;
+        WingetViewport.Padding = compact ? new Thickness(24, 0, 24, 12) : new Thickness(24, 0, 24, 16);
+        WingetViewport.RowSpacing = compact ? 10 : 18;
+        WingetPageHeader.RowSpacing = compact ? 4 : 8;
+        WingetSettingsExpander.Margin = compact ? new Thickness(0, 2, 0, 0) : new Thickness(0, 4, 0, 0);
+
+        Thickness cardPadding = compact ? new Thickness(14, 6, 14, 6) : new Thickness(16, 12, 16, 12);
+        double cardMinHeight = compact ? 48 : 58;
+        DailySettingsCard.Padding = cardPadding;
+        DailySettingsCard.MinHeight = cardMinHeight;
+        NotifySettingsCard.Padding = cardPadding;
+        NotifySettingsCard.MinHeight = cardMinHeight;
+        ScheduleSettingsCard.Padding = cardPadding;
+        ScheduleSettingsCard.MinHeight = cardMinHeight;
+
+        WorkspaceHeaderGrid.Margin = compact ? new Thickness(0, 0, 0, 2) : new Thickness(0, 4, 0, 8);
+        WorkspaceCommands.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 0, 6);
+        WingetOperationCard.Margin = compact ? new Thickness(0, 4, 0, 6) : new Thickness(0, 4, 0, 10);
+        WingetOperationCard.Padding = compact ? new Thickness(12, 8, 12, 8) : new Thickness(14, 12, 14, 12);
+        WingetOperationCardGrid.RowSpacing = compact ? 6 : 10;
+        WorkspaceBody.Margin = compact ? new Thickness(0, 4, 0, 0) : new Thickness(0, 6, 0, 0);
     }
 
     private void FiltersToggle_Changed(object sender, RoutedEventArgs e)

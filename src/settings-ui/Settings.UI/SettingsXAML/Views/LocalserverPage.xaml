@@ -122,24 +122,24 @@
                                         Fill="{x:Bind ViewModel.EnvStateBrush, Mode=OneWay}" />
                                 </Border>
                                 <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="6" VerticalAlignment="Center">
-                                    <Border Padding="10,4" VerticalAlignment="Center" Background="{ThemeResource BadgeSuccessBackgroundBrush}" CornerRadius="12">
+                                    <Border Height="28" Padding="10,0" VerticalAlignment="Center" Background="{ThemeResource BadgeSuccessBackgroundBrush}" CornerRadius="14">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Glyph="&#xE768;" />
-                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="{x:Bind ViewModel.SessionRunningText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_RunningBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="Running" />
+                                            <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="SemiBold" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="{x:Bind ViewModel.SessionRunningText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_RunningBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="Running" />
                                         </StackPanel>
                                     </Border>
-                                    <Border Padding="10,4" VerticalAlignment="Center" Background="{ThemeResource BadgeCriticalBackgroundBrush}" CornerRadius="12">
+                                    <Border Height="28" Padding="10,0" VerticalAlignment="Center" Background="{ThemeResource BadgeCriticalBackgroundBrush}" CornerRadius="14">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Glyph="&#xE783;" />
-                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="{x:Bind ViewModel.SessionFaultedText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_FaultedBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="Faulted" />
+                                            <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="SemiBold" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="{x:Bind ViewModel.SessionFaultedText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_FaultedBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="Faulted" />
                                         </StackPanel>
                                     </Border>
-                                    <Border Padding="10,4" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="12">
+                                    <Border Height="28" Padding="10,0" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="14">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionRegisteredText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_TotalBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Total" />
+                                            <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionRegisteredText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_TotalBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Total" />
                                         </StackPanel>
                                     </Border>
                                 </tkcontrols:WrapPanel>
@@ -154,8 +154,8 @@
                                 Orientation="Horizontal"
                                 Spacing="6">
                                 <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE823;" />
-                                <TextBlock x:Uid="Localserver_TelemetryUptimeLabel" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Uptime:" />
-                                <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionUptimeText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                <TextBlock x:Uid="Localserver_TelemetryUptimeLabel" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Uptime:" />
+                                <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionUptimeText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
                             </StackPanel>
 
                             <!-- Quick Refresh Action -->
@@ -169,7 +169,7 @@
                                 Style="{StaticResource KitCompactToolbarButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                     <FontIcon VerticalAlignment="Center" FontSize="11" Glyph="&#xE72C;" />
-                                    <TextBlock x:Uid="Localserver_RefreshButtonText" VerticalAlignment="Center" FontSize="12" LineHeight="16" Text="Refresh" />
+                                    <TextBlock x:Uid="Localserver_RefreshButtonText" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Text="Refresh" />
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -202,10 +202,10 @@
                                         AutomationProperties.HeadingLevel="Level2"
                                         Style="{StaticResource SubtitleTextBlockStyle}"
                                         Text="Services" />
-                                    <Border Padding="10,3" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="12">
+                                    <Border Height="24" Padding="10,0" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="12">
                                         <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.Lines.Count, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_ConfiguredBadge" VerticalAlignment="Center" FontSize="11" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="configured" />
+                                            <TextBlock VerticalAlignment="Center" FontSize="11" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="SemiBold" Text="{x:Bind ViewModel.Lines.Count, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_ConfiguredBadge" VerticalAlignment="Center" FontSize="11" LineHeight="16" LineStackingStrategy="BlockLineHeight" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="configured" />
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>

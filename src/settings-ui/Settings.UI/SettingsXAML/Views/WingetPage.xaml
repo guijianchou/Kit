@@ -267,9 +267,9 @@
                 x:Name="WingetViewport"
                 MaxWidth="1048"
                 HorizontalAlignment="Stretch"
-                Padding="24,0,24,12"
+                Padding="24,0,24,16"
                 RowDefinitions="Auto,Auto,Auto,*"
-                RowSpacing="12"
+                RowSpacing="18"
                 SizeChanged="Viewport_SizeChanged">
 
                 <!-- Row 0: Unified compact Fluent header (title + toggle + concise description) -->
@@ -278,7 +278,7 @@
                     ColumnDefinitions="*,Auto"
                     RowDefinitions="Auto,Auto"
                     ColumnSpacing="16"
-                    RowSpacing="6">
+                    RowSpacing="8">
                     <TextBlock
                         x:Name="WingetPageTitle"
                         VerticalAlignment="Center"
@@ -341,7 +341,7 @@
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </Border>
                     <tk:SettingsExpander.Items>
-                        <tk:SettingsCard x:Name="DailySettingsCard" x:Uid="Winget_DailyCard" Padding="14,6" MinHeight="48">
+                        <tk:SettingsCard x:Name="DailySettingsCard" x:Uid="Winget_DailyCard" Padding="16,12" MinHeight="58">
                             <tk:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="&#xE787;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" AutomationProperties.AccessibilityView="Raw" />
                             </tk:SettingsCard.HeaderIcon>
@@ -354,7 +354,7 @@
                                 IsOn="{x:Bind ViewModel.DailyCheckEnabled, Mode=TwoWay}"
                                 IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}" />
                         </tk:SettingsCard>
-                        <tk:SettingsCard x:Name="NotifySettingsCard" x:Uid="Winget_NotifyCard" Padding="14,6" MinHeight="48">
+                        <tk:SettingsCard x:Name="NotifySettingsCard" x:Uid="Winget_NotifyCard" Padding="16,12" MinHeight="58">
                             <tk:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="&#xEA8F;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" AutomationProperties.AccessibilityView="Raw" />
                             </tk:SettingsCard.HeaderIcon>
@@ -367,7 +367,7 @@
                                 IsOn="{x:Bind ViewModel.NotifyUpdates, Mode=TwoWay}"
                                 IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}" />
                         </tk:SettingsCard>
-                        <tk:SettingsCard x:Name="ScheduleSettingsCard" x:Uid="Winget_ScheduleCard" Padding="14,6" MinHeight="48">
+                        <tk:SettingsCard x:Name="ScheduleSettingsCard" x:Uid="Winget_ScheduleCard" Padding="16,12" MinHeight="58">
                             <tk:SettingsCard.HeaderIcon>
                                 <FontIcon Glyph="&#xE823;" Foreground="{ThemeResource TextFillColorSecondaryBrush}" AutomationProperties.AccessibilityView="Raw" />
                             </tk:SettingsCard.HeaderIcon>
@@ -418,7 +418,7 @@
 
                 <!-- Row 3: Package Workspace -->
                 <Grid x:Name="PackageWorkspaceGrid" Grid.Row="3" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="0,2,0,4">
+                    <Grid x:Name="WorkspaceHeaderGrid" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,4,0,8">
                         <Border x:Name="WorkspaceBadge" Style="{x:Bind WorkspaceBadgeStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" Width="32" Height="32" CornerRadius="8">
                             <FontIcon Glyph="{x:Bind WorkspaceGlyph(ViewModel.ActiveTabIndex), Mode=OneWay}" Style="{x:Bind WorkspaceGlyphStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" FontSize="16" AutomationProperties.AccessibilityView="Raw" />
                         </Border>
@@ -462,6 +462,7 @@
                     <CommandBar
                         x:Name="WorkspaceCommands"
                         Grid.Row="1"
+                        Margin="0,0,0,6"
                         Background="Transparent"
                         DefaultLabelPosition="Right"
                         IsDynamicOverflowEnabled="True"
@@ -508,11 +509,11 @@
                     <Border
                         x:Name="WingetOperationCard"
                         Grid.Row="3"
-                        Margin="0,4,0,6"
+                        Margin="0,4,0,10"
                         Style="{StaticResource KitCardSurfaceStyle}"
-                        Padding="12,8"
+                        Padding="14,12"
                         Visibility="{x:Bind ViewModel.ShowOperationCard, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
+                        <Grid x:Name="WingetOperationCardGrid" RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                 <Border x:Name="OperationBadge" Style="{x:Bind BadgeStyle(ViewModel.OperationTone), Mode=OneWay}">
                                     <FontIcon x:Name="OperationGlyph" Glyph="{x:Bind ViewModel.OperationGlyph, Mode=OneWay}" Style="{x:Bind GlyphStyle(ViewModel.OperationTone), Mode=OneWay}" AutomationProperties.AccessibilityView="Raw" />
@@ -557,7 +558,7 @@
                     </Border>
 
                     <!-- Main package workspace body -->
-                    <Grid x:Name="WorkspaceBody" Grid.Row="4" Margin="0,4,0,0" MinWidth="0">
+                    <Grid x:Name="WorkspaceBody" Grid.Row="4" Margin="0,6,0,0" MinWidth="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition x:Name="FilterColumn" Width="0" />
                             <ColumnDefinition Width="*" />

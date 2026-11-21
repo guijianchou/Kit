@@ -373,17 +373,18 @@
                             <!-- Live Status Pill with Running Dot & Elapsed Timer -->
                             <Border
                                 x:Name="UdpStatusPill"
-                                Padding="12,5"
+                                Height="32"
+                                Padding="12,0"
                                 VerticalAlignment="Center"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                CornerRadius="14">
+                                CornerRadius="16">
                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
                                     <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{x:Bind ViewModel.RunStateBrush, Mode=OneWay}" />
-                                    <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.RunStateText, Mode=OneWay}" />
+                                    <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="SemiBold" Text="{x:Bind ViewModel.RunStateText, Mode=OneWay}" />
                                     <Border Width="1" Height="12" Margin="2,0" VerticalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="5">
                                         <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE823;" />
-                                        <TextBlock x:Uid="UDPtest_SessionDurationText" VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.SessionDurationText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                        <TextBlock x:Uid="UDPtest_SessionDurationText" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.SessionDurationText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -399,13 +400,13 @@
                                 <Button x:Uid="UDPtest_StartMonitoringButton" AutomationProperties.AutomationId="UDPtest_StartMonitoringButton" Click="OnStartClicked" IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}" Style="{StaticResource KitPrimaryActionButtonStyle}">
                                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
                                         <FontIcon VerticalAlignment="Center" FontSize="12" Glyph="&#xE768;" />
-                                        <TextBlock x:Uid="UDPtest_StartButtonText" VerticalAlignment="Center" FontSize="13" Text="Start" />
+                                        <TextBlock x:Uid="UDPtest_StartButtonText" VerticalAlignment="Center" FontSize="13" LineHeight="16" LineStackingStrategy="BlockLineHeight" Text="Start" />
                                     </StackPanel>
                                 </Button>
                                 <Button x:Uid="UDPtest_StopMonitoringButton" AutomationProperties.AutomationId="UDPtest_StopMonitoringButton" Click="OnStopClicked" IsEnabled="{x:Bind ViewModel.CanStop, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
                                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
                                         <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE71A;" />
-                                        <TextBlock x:Uid="UDPtest_StopButtonText" VerticalAlignment="Center" FontSize="13" Text="Stop" />
+                                        <TextBlock x:Uid="UDPtest_StopButtonText" VerticalAlignment="Center" FontSize="13" LineHeight="16" LineStackingStrategy="BlockLineHeight" Text="Stop" />
                                     </StackPanel>
                                 </Button>
                                 <Border Width="1" Height="20" Margin="2,0" VerticalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -420,7 +421,7 @@
                                     AutomationProperties.AutomationId="UDPtest_IntervalButton">
                                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="6">
                                         <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE916;" />
-                                        <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" Text="{x:Bind ViewModel.RefreshIntervalText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Text="{x:Bind ViewModel.RefreshIntervalText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
                                     </StackPanel>
                                     <DropDownButton.Flyout>
                                         <MenuFlyout Opening="OnIntervalMenuOpening">

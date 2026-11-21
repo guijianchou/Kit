@@ -250,10 +250,11 @@
                         <ui:ControlSizeTrigger TargetElement="{Binding ElementName=HeroTelemetryBar}" MaxWidth="680" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
+                        <Setter Target="HeroTelemetryStatus.(Grid.ColumnSpan)" Value="3" />
                         <Setter Target="HeroTelemetryActions.(Grid.Row)" Value="1" />
                         <Setter Target="HeroTelemetryActions.(Grid.Column)" Value="0" />
                         <Setter Target="HeroTelemetryActions.(Grid.ColumnSpan)" Value="3" />
-                        <Setter Target="HeroTelemetryActions.Margin" Value="0,8,0,0" />
+                        <Setter Target="HeroTelemetryActions.Margin" Value="0,10,0,0" />
                         <Setter Target="HeroTelemetryActions.HorizontalAlignment" Value="Left" />
                     </VisualState.Setters>
                 </VisualState>
@@ -333,12 +334,14 @@
                 <ToggleSwitch
                     x:Name="EnableSwitch"
                     x:Uid="NetMap_Enable"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
                     AutomationProperties.AutomationId="Toggle_NetMap"
                     IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                    MinWidth="0" />
+                    Style="{StaticResource RightAlignedCompactToggleSwitchStyle}" />
             </controls:SettingsPageControl.HeaderAction>
             <controls:SettingsPageControl.ModuleContent>
-                <StackPanel MaxWidth="1000" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Spacing="16">
+                <StackPanel MaxWidth="1000" Margin="0,8,0,0" ChildrenTransitions="{StaticResource SettingsCardsAnimations}" Spacing="16">
 
                     <!-- ============================================================== -->
                     <!-- 1. LIVE TELEMETRY & MASTER CONTROL BAR (Unified Mica Hero)     -->
@@ -346,11 +349,11 @@
                     <ContentControl Style="{StaticResource KitHeroPanelStyle}">
                         <Grid
                             x:Name="HeroTelemetryBar"
-                            Padding="16,10"
+                            Padding="16,12"
                             ColumnDefinitions="Auto,*,Auto"
                             ColumnSpacing="14"
                             RowDefinitions="Auto,Auto">
-                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                            <StackPanel x:Name="HeroTelemetryStatus" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
                                 <Border
                                     Width="26"
                                     Height="26"
@@ -366,16 +369,16 @@
 
                                 <Border VerticalAlignment="Center" Style="{StaticResource KitStatusPillStyle}">
                                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="5">
-                                        <TextBlock x:Uid="NetMap_DetectionBadge" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock x:Uid="NetMap_Colon" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock AutomationProperties.LiveSetting="Polite" FontSize="11" FontWeight="SemiBold" Text="{x:Bind ViewModel.RunStatus, Mode=OneWay}" />
+                                        <TextBlock x:Uid="NetMap_DetectionBadge" VerticalAlignment="Center" FontSize="11" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock x:Uid="NetMap_Colon" VerticalAlignment="Center" FontSize="11" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" FontSize="11" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.RunStatus, Mode=OneWay}" />
                                     </StackPanel>
                                 </Border>
 
                                 <Border VerticalAlignment="Center" Style="{StaticResource KitStatusPillStyle}" Visibility="{x:Bind ViewModel.EvidenceNote, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
                                     <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="5">
-                                        <FontIcon FontSize="10" Foreground="{ThemeResource AccentFillColorDefaultBrush}" Glyph="&#xE946;" />
-                                        <TextBlock MaxWidth="280" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.EvidenceNote, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind ViewModel.EvidenceNote, Mode=OneWay}" />
+                                        <FontIcon VerticalAlignment="Center" FontSize="10" Foreground="{ThemeResource AccentFillColorDefaultBrush}" Glyph="&#xE946;" />
+                                        <TextBlock MaxWidth="280" VerticalAlignment="Center" FontSize="11" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.EvidenceNote, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind ViewModel.EvidenceNote, Mode=OneWay}" />
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -394,9 +397,9 @@
                                     Click="Start_Click"
                                     IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}"
                                     Style="{StaticResource KitPrimaryActionButtonStyle}">
-                                    <StackPanel Orientation="Horizontal" Spacing="7">
-                                        <FontIcon FontSize="12" Glyph="&#xE768;" />
-                                        <TextBlock x:Uid="NetMap_StartButtonText" FontSize="13" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
+                                        <FontIcon VerticalAlignment="Center" FontSize="12" Glyph="&#xE768;" />
+                                        <TextBlock x:Uid="NetMap_StartButtonText" VerticalAlignment="Center" FontSize="13" />
                                     </StackPanel>
                                 </Button>
                                 <Button
@@ -406,9 +409,9 @@
                                     Click="Stop_Click"
                                     IsEnabled="{x:Bind ViewModel.IsDetectionOn, Mode=OneWay}"
                                     Style="{StaticResource KitActionButtonStyle}">
-                                    <StackPanel Orientation="Horizontal" Spacing="7">
-                                        <FontIcon FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE71A;" />
-                                        <TextBlock x:Uid="NetMap_StopButtonText" FontSize="13" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
+                                        <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE71A;" />
+                                        <TextBlock x:Uid="NetMap_StopButtonText" VerticalAlignment="Center" FontSize="13" />
                                     </StackPanel>
                                 </Button>
                                 <Button
@@ -418,10 +421,10 @@
                                     Click="AiCheck_Click"
                                     IsEnabled="{x:Bind ViewModel.CanAiCheck, Mode=OneWay}"
                                     Style="{StaticResource KitActionButtonStyle}">
-                                    <StackPanel Orientation="Horizontal" Spacing="7">
-                                        <ProgressRing Width="14" Height="14" IsActive="{x:Bind ViewModel.IsAiChecking, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                        <FontIcon FontSize="12" Foreground="{ThemeResource AccentFillColorDefaultBrush}" Glyph="&#xE9D9;" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}" />
-                                        <TextBlock x:Uid="NetMap_AiCheckButtonText" FontSize="13" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
+                                        <ProgressRing Width="14" Height="14" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.IsAiChecking, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource AccentFillColorDefaultBrush}" Glyph="&#xE9D9;" Visibility="{x:Bind ViewModel.IsAiChecking, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}" />
+                                        <TextBlock x:Uid="NetMap_AiCheckButtonText" VerticalAlignment="Center" FontSize="13" />
                                     </StackPanel>
                                 </Button>
                             </tk:WrapPanel>

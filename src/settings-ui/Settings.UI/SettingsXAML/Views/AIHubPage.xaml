@@ -635,16 +635,17 @@
                         Visibility="Collapsed" />
                 </Grid>
             </SplitView.Pane>
-            <Grid x:Name="AIHubRoot" RowDefinitions="Auto,Auto,*" RowSpacing="8" Padding="24,0,0,0">
+            <Grid x:Name="AIHubRoot" RowDefinitions="Auto,Auto,*" RowSpacing="12" Padding="24,0,0,0">
 
             <Grid x:Name="AiHubPageHeader" MaxWidth="1000" HorizontalAlignment="Stretch" Margin="0,0,24,0"
                   ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="6">
-                <TextBlock x:Name="AiHubPageTitle" x:Uid="AIHub_PageTitle" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"
+                <TextBlock x:Name="AiHubPageTitle" x:Uid="AIHub_PageTitle" VerticalAlignment="Center" Style="{StaticResource TitleTextBlockStyle}" AutomationProperties.HeadingLevel="Level1"
                            ToolTipService.ToolTip="{x:Bind ModuleDescription}" />
-                <controls:GPOInfoControl x:Name="AiHubModuleGate" Grid.Column="1" VerticalAlignment="Center"
+                <controls:GPOInfoControl x:Name="AiHubModuleGate" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
                                          MaxWidth="220" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
                     <ToggleSwitch x:Name="AiHubEnableSwitch" x:Uid="AIHub_EnableToggleSwitch" AutomationProperties.AutomationId="Toggle_AIHub"
-                                  MinWidth="0" HorizontalAlignment="Right"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Style="{StaticResource RightAlignedCompactToggleSwitchStyle}"
                                   IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
                                   IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}" />
                 </controls:GPOInfoControl>
@@ -654,38 +655,39 @@
             </Grid>
 
             <Grid x:Name="AiHubFixedHeader" Grid.Row="1" Padding="0,0,24,0">
-                <StackPanel MaxWidth="1000" HorizontalAlignment="Stretch" Spacing="8">
-                    <Border x:Name="AiHubMasterCardSurface" Padding="0" Background="Transparent">
+                <StackPanel MaxWidth="1000" HorizontalAlignment="Stretch" Spacing="10">
+                    <Border x:Name="AiHubMasterCardSurface" Padding="12,4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
                         <Grid x:Name="AiReadinessBar" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
                             <FontIcon x:Name="AiReadinessIcon" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}" FontSize="13"
                                       Style="{x:Bind AiReadinessStyle(ViewModel.AiReadinessLevel), Mode=OneWay}" VerticalAlignment="Center" />
                             <tkcontrols:WrapPanel Grid.Column="1" HorizontalSpacing="6" VerticalSpacing="4" VerticalAlignment="Center">
-                                <TextBlock Text="{x:Bind ViewModel.AiReadinessCompactText, Mode=OneWay}" FontSize="12" FontWeight="Medium"
+                                <TextBlock Text="{x:Bind ViewModel.AiReadinessCompactText, Mode=OneWay}" VerticalAlignment="Center" FontSize="12" LineHeight="16" FontWeight="Medium"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"
                                            ToolTipService.ToolTip="{x:Bind ViewModel.AiReadinessText, Mode=OneWay}" />
-                                <StackPanel x:Name="AiReadinessModelInfo" Orientation="Horizontal" Spacing="6"
+                                <StackPanel x:Name="AiReadinessModelInfo" VerticalAlignment="Center" Orientation="Horizontal" Spacing="6"
                                             Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="·" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                <TextBlock Text="·" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                <TextBlock Text="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}" FontSize="12"
+                                <TextBlock Text="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}" VerticalAlignment="Center" FontSize="12" LineHeight="16"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" MaxWidth="280"
                                            ToolTipService.ToolTip="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}"
                                            Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                 </StackPanel>
                             </tkcontrols:WrapPanel>
                             <tkcontrols:WrapPanel x:Name="AiReadinessActions" Grid.Column="2" HorizontalSpacing="6" VerticalSpacing="4" VerticalAlignment="Center">
-                                <HyperlinkButton Click="OnAiServiceSettingsClick" FontSize="12" Padding="6,2"
+                                <HyperlinkButton Click="OnAiServiceSettingsClick" VerticalAlignment="Center" FontSize="12" Padding="6,2"
                                                  AutomationProperties.AutomationId="AIHub_OpenServiceSettingsButton"
                                                  AutomationProperties.Name="{x:Bind ViewModel.AiServiceSettingsLabel}">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <TextBlock Text="{x:Bind ViewModel.AiServiceSettingsLabel}" FontSize="12" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{x:Bind ViewModel.AiServiceSettingsLabel}" VerticalAlignment="Center" FontSize="12" LineHeight="16" />
                                         <FontIcon Glyph="&#xE76C;" FontSize="10" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </HyperlinkButton>
-                                <Button Click="OnRecheckAiReadinessClick" IsEnabled="{x:Bind ViewModel.CanRecheckAiReadiness, Mode=OneWay}"
-                                        Style="{StaticResource SubtleButtonStyle}" Padding="7,4" AutomationProperties.AutomationId="AIHub_RecheckAiButton"
+                                <Button Click="OnRecheckAiReadinessClick" VerticalAlignment="Center" IsEnabled="{x:Bind ViewModel.CanRecheckAiReadiness, Mode=OneWay}"
+                                        Style="{StaticResource SubtleButtonStyle}" Padding="6,3" AutomationProperties.AutomationId="AIHub_RecheckAiButton"
                                         AutomationProperties.Name="{x:Bind ViewModel.RecheckAiLabel, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind ViewModel.RecheckAiLabel, Mode=OneWay}">
-                                    <FontIcon Glyph="&#xE72C;" FontSize="13" />
+                                    <FontIcon VerticalAlignment="Center" Glyph="&#xE72C;" FontSize="13" />
                                 </Button>
                             </tkcontrols:WrapPanel>
                         </Grid>
@@ -733,7 +735,7 @@
 
             <ScrollViewer x:Name="AiHubContentScroll" Grid.Row="2" AutomationProperties.AutomationId="PageScrollViewer"
                           HorizontalContentAlignment="Stretch" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled">
-                <Grid Padding="0,0,24,32">
+                <Grid Padding="0,2,24,32">
                     <StackPanel x:Name="AiHubTabContent" MaxWidth="1000" HorizontalAlignment="Stretch" Spacing="16">
                         <InfoBar IsOpen="{x:Bind ViewModel.IsStatusOpen, Mode=TwoWay}" IsClosable="True" Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                                  Visibility="{x:Bind ViewModel.IsStatusOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"

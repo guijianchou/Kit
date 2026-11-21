@@ -3443,7 +3443,7 @@ namespace ViewModelTests
             StringAssert.Contains(pageXaml, "Style=\"{StaticResource KitCardSurfaceStyle}\" Padding=\"18,12\"");
             StringAssert.Contains(pageXaml, "tkcontrols:Segmented");
             Assert.AreEqual(4, pageXaml.Split("tkcontrols:SegmentedItem").Length - 1, "Period selector should use four SegmentedItem entries.");
-            Assert.AreEqual(2, pageXaml.Split("RightAlignedCompactToggleSwitchStyle").Length - 1, "Both row toggles should use the shared compact toggle style.");
+            Assert.AreEqual(3, pageXaml.Split("RightAlignedCompactToggleSwitchStyle").Length - 1, "Header and both row toggles should use the shared compact toggle style.");
             Assert.IsFalse(pageXaml.Contains("AccentHealthButtonStyle", StringComparison.Ordinal), "The code-swapped accent period styles should be removed.");
             Assert.IsFalse(pageXaml.Contains("KitPeriodButtonStyle", StringComparison.Ordinal), "The UDP-only period button style should be retired.");
             Assert.IsFalse(appStyles.Contains("KitPeriodButtonStyle", StringComparison.Ordinal), "The retired period button style should be deleted from the shared style dictionary.");

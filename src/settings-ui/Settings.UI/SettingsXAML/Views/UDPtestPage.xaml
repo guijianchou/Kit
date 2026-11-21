@@ -253,6 +253,8 @@
                         <ui:ControlSizeTrigger TargetElement="{Binding ElementName=UdpHeroBar}" MaxWidth="620" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
+                        <Setter Target="UdpHeroGrid.RowSpacing" Value="10" />
+                        <Setter Target="UdpStatusPill.(Grid.ColumnSpan)" Value="3" />
                         <Setter Target="UdpHeroActions.(Grid.Row)" Value="1" />
                         <Setter Target="UdpHeroActions.(Grid.Column)" Value="0" />
                         <Setter Target="UdpHeroActions.(Grid.ColumnSpan)" Value="3" />
@@ -344,40 +346,44 @@
             ModuleImageSource="ms-appx:///Assets/Settings/Modules/UDPtest.png"
             ModuleTitle="UDP Test">
             <controls:SettingsPageControl.HeaderAction>
-                <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                <controls:GPOInfoControl HorizontalAlignment="Right" VerticalAlignment="Center" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
                     <ToggleSwitch
                         x:Name="UdpEnableToggleSwitch"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
                         AutomationProperties.AutomationId="Toggle_UDPtest"
                         IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
                         IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                        MinWidth="0" />
+                        Style="{StaticResource RightAlignedCompactToggleSwitchStyle}" />
                 </controls:GPOInfoControl>
             </controls:SettingsPageControl.HeaderAction>
             <controls:SettingsPageControl.ModuleContent>
-                <StackPanel Spacing="16">
+                <StackPanel Margin="0,8,0,0" Spacing="16">
                     <!-- ============================================================== -->
                     <!-- 1. LIVE TELEMETRY & CONTROL BAR (Unified Mica Hero Panel)      -->
                     <!-- ============================================================== -->
                     <ContentControl x:Name="UdpHeroBar" Style="{StaticResource KitHeroPanelStyle}">
                         <Grid
-                            Padding="16,12"
+                            x:Name="UdpHeroGrid"
+                            Padding="16,14"
                             ColumnDefinitions="Auto,*,Auto"
                             ColumnSpacing="12"
                             RowDefinitions="Auto,Auto"
-                            RowSpacing="8">
+                            RowSpacing="0">
                             <!-- Live Status Pill with Running Dot & Elapsed Timer -->
                             <Border
-                                Padding="10,4,12,4"
+                                x:Name="UdpStatusPill"
+                                Padding="12,5"
                                 VerticalAlignment="Center"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                 CornerRadius="14">
                                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
-                                    <Ellipse Width="8" Height="8" Fill="{x:Bind ViewModel.RunStateBrush, Mode=OneWay}" />
-                                    <TextBlock FontSize="12" FontWeight="SemiBold" Text="{x:Bind ViewModel.RunStateText, Mode=OneWay}" />
-                                    <Border Width="1" Height="12" Margin="2,0" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <FontIcon FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE823;" />
-                                        <TextBlock x:Uid="UDPtest_SessionDurationText" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.SessionDurationText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                    <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{x:Bind ViewModel.RunStateBrush, Mode=OneWay}" />
+                                    <TextBlock VerticalAlignment="Center" FontSize="12" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.RunStateText, Mode=OneWay}" />
+                                    <Border Width="1" Height="12" Margin="2,0" VerticalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="5">
+                                        <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE823;" />
+                                        <TextBlock x:Uid="UDPtest_SessionDurationText" VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.SessionDurationText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -391,29 +397,30 @@
                                 HorizontalSpacing="8"
                                 VerticalSpacing="6">
                                 <Button x:Uid="UDPtest_StartMonitoringButton" AutomationProperties.AutomationId="UDPtest_StartMonitoringButton" Click="OnStartClicked" IsEnabled="{x:Bind ViewModel.CanStart, Mode=OneWay}" Style="{StaticResource KitPrimaryActionButtonStyle}">
-                                    <StackPanel Orientation="Horizontal" Spacing="7">
-                                        <FontIcon FontSize="12" Glyph="&#xE768;" />
-                                        <TextBlock x:Uid="UDPtest_StartButtonText" FontSize="13" Text="Start" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
+                                        <FontIcon VerticalAlignment="Center" FontSize="12" Glyph="&#xE768;" />
+                                        <TextBlock x:Uid="UDPtest_StartButtonText" VerticalAlignment="Center" FontSize="13" Text="Start" />
                                     </StackPanel>
                                 </Button>
                                 <Button x:Uid="UDPtest_StopMonitoringButton" AutomationProperties.AutomationId="UDPtest_StopMonitoringButton" Click="OnStopClicked" IsEnabled="{x:Bind ViewModel.CanStop, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
-                                    <StackPanel Orientation="Horizontal" Spacing="7">
-                                        <FontIcon FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE71A;" />
-                                        <TextBlock x:Uid="UDPtest_StopButtonText" FontSize="13" Text="Stop" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="7">
+                                        <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE71A;" />
+                                        <TextBlock x:Uid="UDPtest_StopButtonText" VerticalAlignment="Center" FontSize="13" Text="Stop" />
                                     </StackPanel>
                                 </Button>
                                 <Border Width="1" Height="20" Margin="2,0" VerticalAlignment="Center" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                 <Button x:Uid="UDPtest_ClearHistoryButton" AutomationProperties.AutomationId="UDPtest_ClearHistoryButton" Click="OnClearClicked" IsEnabled="{x:Bind ViewModel.CanClear, Mode=OneWay}" Style="{StaticResource KitIconButtonStyle}">
-                                    <FontIcon FontSize="13" Glyph="&#xE74D;" />
+                                    <FontIcon VerticalAlignment="Center" FontSize="13" Glyph="&#xE74D;" />
                                 </Button>
                                 <DropDownButton
                                     x:Uid="UDPtest_IntervalButton"
                                     Height="32"
                                     Padding="10,0"
+                                    VerticalAlignment="Center"
                                     AutomationProperties.AutomationId="UDPtest_IntervalButton">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE916;" />
-                                        <TextBlock FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" Text="{x:Bind ViewModel.RefreshIntervalText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="6">
+                                        <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE916;" />
+                                        <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" Text="{x:Bind ViewModel.RefreshIntervalText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
                                     </StackPanel>
                                     <DropDownButton.Flyout>
                                         <MenuFlyout Opening="OnIntervalMenuOpening">
@@ -433,7 +440,8 @@
                         IsClosable="True"
                         IsOpen="{x:Bind ViewModel.IsErrorOpen, Mode=TwoWay}"
                         Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}" />
+                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.IsErrorOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
                     <!-- All module settings disabled when master switch is OFF -->
                     <ContentControl

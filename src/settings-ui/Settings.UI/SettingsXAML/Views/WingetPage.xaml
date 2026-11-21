@@ -269,7 +269,7 @@
                 HorizontalAlignment="Stretch"
                 Padding="24,0,24,12"
                 RowDefinitions="Auto,Auto,Auto,*"
-                RowSpacing="8"
+                RowSpacing="12"
                 SizeChanged="Viewport_SizeChanged">
 
                 <!-- Row 0: Unified compact Fluent header (title + toggle + concise description) -->
@@ -278,9 +278,10 @@
                     ColumnDefinitions="*,Auto"
                     RowDefinitions="Auto,Auto"
                     ColumnSpacing="16"
-                    RowSpacing="4">
+                    RowSpacing="6">
                     <TextBlock
                         x:Name="WingetPageTitle"
+                        VerticalAlignment="Center"
                         Text="{x:Bind ModuleTitle}"
                         Style="{StaticResource TitleTextBlockStyle}"
                         AutomationProperties.HeadingLevel="Level1"
@@ -290,9 +291,9 @@
                         Grid.Column="1"
                         x:Uid="Winget_EnableToggle"
                         AutomationProperties.AutomationId="Toggle_Winget"
-                        MinWidth="0"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
+                        Style="{StaticResource RightAlignedCompactToggleSwitchStyle}"
                         IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}" />
                     <TextBlock
                         x:Name="WingetDescription"
@@ -311,6 +312,7 @@
                 <tk:SettingsExpander
                     x:Name="WingetSettingsExpander"
                     Grid.Row="1"
+                    Margin="0,4,0,0"
                     HorizontalAlignment="Stretch"
                     IsExpanded="False">
                     <tk:SettingsExpander.Header>
@@ -329,10 +331,12 @@
                             </StackPanel>
                         </Grid>
                     </tk:SettingsExpander.Header>
-                    <Border Style="{StaticResource KitStatusPillStyle}">
+                    <Border VerticalAlignment="Center" Style="{StaticResource KitStatusPillStyle}">
                         <TextBlock
+                            VerticalAlignment="Center"
                             Text="{x:Bind ViewModel.VersionText, Mode=OneWay}"
                             FontSize="11"
+                            LineHeight="16"
                             FontFamily="{StaticResource KitMonoFontFamily}"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </Border>
@@ -344,7 +348,9 @@
                             <ToggleSwitch
                                 x:Name="DailyCheckToggle"
                                 x:Uid="Winget_DailyToggle"
-                                MinWidth="0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource RightAlignedCompactToggleSwitchStyle}"
                                 IsOn="{x:Bind ViewModel.DailyCheckEnabled, Mode=TwoWay}"
                                 IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}" />
                         </tk:SettingsCard>
@@ -355,7 +361,9 @@
                             <ToggleSwitch
                                 x:Name="NotifyUpdatesToggle"
                                 x:Uid="Winget_NotifyToggle"
-                                MinWidth="0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource RightAlignedCompactToggleSwitchStyle}"
                                 IsOn="{x:Bind ViewModel.NotifyUpdates, Mode=TwoWay}"
                                 IsEnabled="{x:Bind ViewModel.IsEnabled, Mode=OneWay}" />
                         </tk:SettingsCard>
@@ -410,7 +418,7 @@
 
                 <!-- Row 3: Package Workspace -->
                 <Grid x:Name="PackageWorkspaceGrid" Grid.Row="3" MinWidth="0" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="0,0,0,2">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="0,2,0,4">
                         <Border x:Name="WorkspaceBadge" Style="{x:Bind WorkspaceBadgeStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" Width="32" Height="32" CornerRadius="8">
                             <FontIcon Glyph="{x:Bind WorkspaceGlyph(ViewModel.ActiveTabIndex), Mode=OneWay}" Style="{x:Bind WorkspaceGlyphStyle(ViewModel.ActiveTabIndex), Mode=OneWay}" FontSize="16" AutomationProperties.AccessibilityView="Raw" />
                         </Border>

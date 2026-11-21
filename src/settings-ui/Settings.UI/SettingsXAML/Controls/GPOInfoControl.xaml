@@ -16,12 +16,14 @@
                             ContentTemplate="{TemplateBinding ContentTemplate}"
                             IsTabStop="False" />
                         <InfoBar
+                            x:Name="PART_WarningBar"
                             x:Uid="GPO_SettingIsManaged"
                             Margin="0,4,0,0"
                             IsClosable="False"
                             IsOpen="{TemplateBinding ShowWarning}"
                             IsTabStop="{TemplateBinding ShowWarning}"
-                            Severity="Informational">
+                            Severity="Informational"
+                            Visibility="Collapsed">
                             <InfoBar.IconSource>
                                 <FontIconSource FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE72E;" />
                             </InfoBar.IconSource>

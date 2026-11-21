@@ -8,10 +8,13 @@ using Microsoft.UI.Xaml.Controls;
 namespace Kit.Settings.UI.Controls;
 
 [TemplatePart(Name = PartContentHost, Type = typeof(ContentControl))]
+[TemplatePart(Name = PartWarningBar, Type = typeof(InfoBar))]
 public sealed partial class GPOInfoControl : ContentControl
 {
     private const string PartContentHost = "PART_ContentHost";
+    private const string PartWarningBar = "PART_WarningBar";
     private ContentControl _contentHost;
+    private InfoBar _warningBar;
 
     public static readonly DependencyProperty ShowWarningProperty =
       DependencyProperty.Register(
@@ -43,6 +46,7 @@ public sealed partial class GPOInfoControl : ContentControl
     {
         base.OnApplyTemplate();
         _contentHost = GetTemplateChild(PartContentHost) as ContentControl;
+        _warningBar = GetTemplateChild(PartWarningBar) as InfoBar;
         UpdateContentEnabledState();
     }
 
@@ -51,6 +55,11 @@ public sealed partial class GPOInfoControl : ContentControl
         if (_contentHost != null)
         {
             _contentHost.IsEnabled = !ShowWarning;
+        }
+
+        if (_warningBar != null)
+        {
+            _warningBar.Visibility = ShowWarning ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 }

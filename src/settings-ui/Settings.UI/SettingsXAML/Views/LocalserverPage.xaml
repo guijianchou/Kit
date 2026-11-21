@@ -29,6 +29,8 @@
                         <ui:ControlSizeTrigger TargetElement="{Binding ElementName=LocalserverHeroBar}" MaxWidth="640" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
+                        <Setter Target="LocalserverHeroGrid.RowSpacing" Value="10" />
+                        <Setter Target="HeroStatusGroup.(Grid.ColumnSpan)" Value="3" />
                         <Setter Target="HeroUptimeStack.(Grid.Row)" Value="1" />
                         <Setter Target="HeroUptimeStack.(Grid.Column)" Value="0" />
                         <Setter Target="HeroUptimeStack.HorizontalAlignment" Value="Left" />
@@ -79,29 +81,32 @@
             ModuleImageSource="ms-appx:///Assets/Settings/Modules/Localserver.png"
             ModuleTitle="Local Server">
             <controls:SettingsPageControl.HeaderAction>
-                <controls:GPOInfoControl ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
+                <controls:GPOInfoControl HorizontalAlignment="Right" VerticalAlignment="Center" ShowWarning="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay}">
                     <ToggleSwitch
                         x:Name="LocalserverEnableToggleSwitch"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
                         AutomationProperties.AutomationId="Toggle_Localserver"
                         IsEnabled="{x:Bind ViewModel.IsEnabledGpoConfigured, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
                         IsOn="{x:Bind ViewModel.IsEnabled, Mode=TwoWay}"
-                        MinWidth="0" />
+                        Style="{StaticResource RightAlignedCompactToggleSwitchStyle}" />
                 </controls:GPOInfoControl>
             </controls:SettingsPageControl.HeaderAction>
             <controls:SettingsPageControl.ModuleContent>
-                <StackPanel Spacing="16">
+                <StackPanel Margin="0,8,0,0" Spacing="16">
                     <!-- ============================================================== -->
                     <!-- 1. LIVE SESSION TELEMETRY BAR (Unified Mica Hero Panel)        -->
                     <!-- ============================================================== -->
                     <ContentControl x:Name="LocalserverHeroBar" Style="{StaticResource KitHeroPanelStyle}">
                         <Grid
-                            Padding="16,12"
+                            x:Name="LocalserverHeroGrid"
+                            Padding="16,14"
                             ColumnDefinitions="Auto,*,Auto"
                             ColumnSpacing="14"
                             RowDefinitions="Auto,Auto"
-                            RowSpacing="8">
+                            RowSpacing="0">
                             <!-- Live Status Dot & Quick Session Summary -->
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <StackPanel x:Name="HeroStatusGroup" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <Border
                                     Width="26"
                                     Height="26"
@@ -116,25 +121,25 @@
                                         VerticalAlignment="Center"
                                         Fill="{x:Bind ViewModel.EnvStateBrush, Mode=OneWay}" />
                                 </Border>
-                                <tkcontrols:WrapPanel HorizontalSpacing="6" VerticalSpacing="4" VerticalAlignment="Center">
-                                    <Border Padding="8,3" Background="{ThemeResource BadgeSuccessBackgroundBrush}" CornerRadius="4">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <FontIcon FontSize="10" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Glyph="&#xE768;" />
-                                            <TextBlock FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="{x:Bind ViewModel.SessionRunningText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_RunningBadge" FontSize="11" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="Running" />
+                                <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="6" VerticalAlignment="Center">
+                                    <Border Padding="10,4" VerticalAlignment="Center" Background="{ThemeResource BadgeSuccessBackgroundBrush}" CornerRadius="12">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Glyph="&#xE768;" />
+                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="{x:Bind ViewModel.SessionRunningText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_RunningBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" Text="Running" />
                                         </StackPanel>
                                     </Border>
-                                    <Border Padding="8,3" Background="{ThemeResource BadgeCriticalBackgroundBrush}" CornerRadius="4">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <FontIcon FontSize="10" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Glyph="&#xE783;" />
-                                            <TextBlock FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="{x:Bind ViewModel.SessionFaultedText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_FaultedBadge" FontSize="11" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="Faulted" />
+                                    <Border Padding="10,4" VerticalAlignment="Center" Background="{ThemeResource BadgeCriticalBackgroundBrush}" CornerRadius="12">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Glyph="&#xE783;" />
+                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="{x:Bind ViewModel.SessionFaultedText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_FaultedBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" Text="Faulted" />
                                         </StackPanel>
                                     </Border>
-                                    <Border Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <TextBlock FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionRegisteredText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_TotalBadge" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Total" />
+                                    <Border Padding="10,4" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="12">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionRegisteredText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_TotalBadge" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Total" />
                                         </StackPanel>
                                     </Border>
                                 </tkcontrols:WrapPanel>
@@ -144,13 +149,13 @@
                             <StackPanel
                                 x:Name="HeroUptimeStack"
                                 Grid.Column="1"
-                                HorizontalAlignment="Center"
+                                HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Orientation="Horizontal"
                                 Spacing="6">
-                                <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE823;" />
-                                <TextBlock x:Uid="Localserver_TelemetryUptimeLabel" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Uptime:" />
-                                <TextBlock FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionUptimeText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE823;" />
+                                <TextBlock x:Uid="Localserver_TelemetryUptimeLabel" VerticalAlignment="Center" FontSize="12" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Uptime:" />
+                                <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.SessionUptimeText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
                             </StackPanel>
 
                             <!-- Quick Refresh Action -->
@@ -158,12 +163,13 @@
                                 x:Name="HeroRefreshButton"
                                 x:Uid="Localserver_RefreshButton"
                                 Grid.Column="2"
+                                VerticalAlignment="Center"
                                 Click="RefreshTelemetry_Click"
                                 IsEnabled="{x:Bind ViewModel.CanRefreshTelemetry, Mode=OneWay}"
                                 Style="{StaticResource KitCompactToolbarButtonStyle}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon FontSize="11" Glyph="&#xE72C;" />
-                                    <TextBlock x:Uid="Localserver_RefreshButtonText" FontSize="12" Text="Refresh" />
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <FontIcon VerticalAlignment="Center" FontSize="11" Glyph="&#xE72C;" />
+                                    <TextBlock x:Uid="Localserver_RefreshButtonText" VerticalAlignment="Center" FontSize="12" LineHeight="16" Text="Refresh" />
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -174,7 +180,8 @@
                         IsClosable="True"
                         IsOpen="{x:Bind ViewModel.IsErrorOpen, Mode=TwoWay}"
                         Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}" />
+                        Severity="{x:Bind ViewModel.MessageSeverity, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.IsErrorOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
                     <!-- All module settings disabled when master switch is OFF -->
                     <ContentControl
@@ -195,29 +202,29 @@
                                         AutomationProperties.HeadingLevel="Level2"
                                         Style="{StaticResource SubtitleTextBlockStyle}"
                                         Text="Services" />
-                                    <Border Padding="8,3" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <TextBlock FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" FontWeight="SemiBold" Text="{x:Bind ViewModel.Lines.Count, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
-                                            <TextBlock x:Uid="Localserver_ConfiguredBadge" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="configured" />
+                                    <Border Padding="10,3" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="12">
+                                        <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="11" LineHeight="16" FontWeight="SemiBold" Text="{x:Bind ViewModel.Lines.Count, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
+                                            <TextBlock x:Uid="Localserver_ConfiguredBadge" VerticalAlignment="Center" FontSize="11" LineHeight="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="configured" />
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
-                                <tkcontrols:WrapPanel Grid.Column="1" HorizontalSpacing="8" VerticalSpacing="6" VerticalAlignment="Center">
+                                <tkcontrols:WrapPanel Grid.Column="1" HorizontalAlignment="Right" HorizontalSpacing="8" VerticalSpacing="6" VerticalAlignment="Center">
                                     <Button x:Uid="Localserver_AddServiceButton" Click="AddLine_Click" IsEnabled="{x:Bind ViewModel.CanAddLine, Mode=OneWay}" Style="{StaticResource KitPrimaryActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon FontSize="12" Glyph="&#xE710;" />
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon VerticalAlignment="Center" FontSize="12" Glyph="&#xE710;" />
                                             <TextBlock x:Uid="Localserver_AddLineButtonText" VerticalAlignment="Center" FontSize="13" Text="Add service" />
                                         </StackPanel>
                                     </Button>
                                     <Button x:Uid="Localserver_StartAllServicesButton" Click="StartAll_Click" IsEnabled="{x:Bind ViewModel.CanStartAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon FontSize="12" Foreground="{ThemeResource SystemFillColorSuccessBrush}" Glyph="&#xE768;" />
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource SystemFillColorSuccessBrush}" Glyph="&#xE768;" />
                                             <TextBlock x:Uid="Localserver_StartAllButtonText" VerticalAlignment="Center" FontSize="13" Text="Start all" />
                                         </StackPanel>
                                     </Button>
                                     <Button x:Uid="Localserver_StopAllServicesButton" Click="StopAll_Click" IsEnabled="{x:Bind ViewModel.CanStopAll, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE71A;" />
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Glyph="&#xE71A;" />
                                             <TextBlock x:Uid="Localserver_StopAllButtonText" VerticalAlignment="Center" FontSize="13" Text="Stop all" />
                                         </StackPanel>
                                     </Button>

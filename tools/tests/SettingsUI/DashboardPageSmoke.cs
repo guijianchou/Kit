@@ -224,7 +224,7 @@ internal static class DashboardPageSmoke
                 var labels = Descendants((DependencyObject)page.FindName("SystemOverviewCard")).OfType<TextBlock>().Where(text => text.Name == "DetailLabel").ToArray();
                 var labelX = labels[0].TransformToVisual(page).TransformPoint(new()).X;
                 Require(labels.All(label => Math.Abs(label.TransformToVisual(page).TransformPoint(new()).X - labelX) < 1), "All system, disk, and GPU labels share a left edge at " + width);
-                Require(Descendants((DependencyObject)page.FindName("SystemOverviewCard")).OfType<TextBlock>().Where(text => text.IsTextSelectionEnabled).All(text => text.FontSize == 13 && text.FontWeight.Weight == 600), "System overview values share one font size and weight.");
+                Require(Descendants((DependencyObject)page.FindName("SystemOverviewCard")).OfType<TextBlock>().Where(text => text.IsTextSelectionEnabled).All(text => text.FontSize == 13 && text.FontWeight.Weight == 400), "System overview values share one font size and weight.");
                 var temperatureLabels = Descendants((DependencyObject)page.FindName("GraphicsCardsList")).OfType<TextBlock>().Where(text => text.Name == "DetailLabel" && text.Text == (chinese ? "温度" : "Temperature")).ToArray();
                 Require(temperatureLabels.Length == 2 && temperatureLabels.All(text => text.ActualHeight <= 24), "Temperature labels stay on one line in each GPU group.");
                 Require(Descendants((DependencyObject)page.FindName("SystemOverviewCard")).OfType<Grid>().Where(grid => grid.Name == "UsageRow" && grid.Visibility == Visibility.Visible).All(grid => grid.ActualHeight >= 16), "Usage rows leave room for readable values at " + width);

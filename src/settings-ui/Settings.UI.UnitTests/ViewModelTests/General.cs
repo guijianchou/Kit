@@ -785,7 +785,7 @@ namespace ViewModelTests
             var overviewVm = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.Overview.cs"));
             var usageBar = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "UsageProgressBar.cs"));
 
-            StringAssert.Contains(dashboard, "<Grid Margin=\"0,1\" ColumnSpacing=\"12\" MinHeight=\"21\">");
+            StringAssert.Contains(dashboard, "<Grid Margin=\"44,2,0,2\" ColumnSpacing=\"12\" MinHeight=\"24\">");
             StringAssert.Contains(overviewVm, "sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null");
             StringAssert.Contains(usageBar, "UsageCategory.Temperature");
         }

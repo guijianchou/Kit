@@ -496,8 +496,25 @@ internal static class DashboardSystemInfo
                 edition = "Windows 11" + edition[10..];
             }
 
-            details["Windows"] = $"{edition} {ReadRegistry(windowsKey, "DisplayVersion")}\n{build}.{ReadRegistry(windowsKey, "UBR")}";
-            details["Processor"] = ReadRegistry(@"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0", "ProcessorNameString");
+            string displayVersion = ReadRegistry(windowsKey, "DisplayVersion");
+            string ubr = ReadRegistry(windowsKey, "UBR");
+            string buildFull = string.IsNullOrEmpty(ubr) ? build : $"{build}.{ubr}";
+            string editionAndVersion = string.IsNullOrEmpty(displayVersion) ? edition : $"{edition} {displayVersion}";
+            details["Windows"] = string.IsNullOrEmpty(buildFull)
+                ? editionAndVersion
+                : $"{editionAndVersion} ({buildFull})";
+
+            const string processorKey = @"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0";
+            string processorName = ReadRegistry(processorKey, "ProcessorNameString");
+            if (!string.IsNullOrEmpty(processorName) &&
+                !processorName.Contains("GHz", StringComparison.OrdinalIgnoreCase) &&
+                Registry.GetValue(processorKey, "~MHz", null) is int mhz && mhz > 0)
+            {
+                double ghz = Math.Round(mhz / 100d, MidpointRounding.AwayFromZero) / 10d;
+                processorName = string.Create(CultureInfo.InvariantCulture, $"{processorName} ({ghz:F2}\u00A0GHz)");
+            }
+
+            details["Processor"] = processorName;
         }
         catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
         {

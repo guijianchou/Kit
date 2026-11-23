@@ -4,7 +4,7 @@
 
 Kit 是基于 [Microsoft PowerToys](https://github.com/microsoft/PowerToys) 的 Windows 11 本地工具集（同步对齐上游 PowerToys **v0.102.3101** 代码）。它复用 Runner、原生模块接口和 WinUI 3 设置框架，整合系统工具、本地服务管理、网络诊断与 AI 辅助维护。
 
-当前源码版本：**3.5.5**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
+当前源码版本：**3.5.9**，以 [src/Version.props](src/Version.props) 为准。Kit 使用独立的配置目录、窗口标识和备份路径，可与官方 PowerToys 区分使用；不包含上游的自动更新与遥测流程。
 
 [功能概览](#1-功能概览) · [主框架](#2-主框架) · [插件](#3-插件) · [构建与发布](#4-构建与发布) · [数据与日志](#5-数据与日志) · [开发与扩展](#6-开发与扩展)
 
@@ -68,6 +68,8 @@ Settings 通过现有 IPC 提交设置和模块开关；Runner 调用模块接�
 | **AIHubWorker** | 按计划执行本地规则审计并保存历史，不调用 AI 内核 |
 
 共享 `Kit.AiHub` 服务供 AI Hub 和 NetMap AI Check 使用。模型调用始终通过原生 **Codex CLI 或 Pi CLI**，Kit 负责策略、分批、取消和结果校验。Main 与 Fallback 分别设置上下文窗口，默认均为 **256,000 tokens**。API 模式和推理强度可填写原生标识，是否支持由已安装的 CLI 与端点决定；能保存不代表模型支持该配置。
+
+两种内核均支持[宿主管理的分析 worker](doc/devdoc/ai-service-native.md)：Kit 在 Settings 引擎会话内公平分配有界并发，AI Hub 先显示本地扫描发现，再增量显示通过校验的 AI 结果；未启用内核自主委派。
 
 原生重试结束后，符合条件的失败才会进入已配置的 Fallback；Kit 不另套同路由重试循环。常规页展示当前进程的任务/路由计数、重试结果及已报告的 token 用量，缺失用量标为未知。安全诊断区分鉴权、超时、取消和输出错误。配置归属、协议兼容及诊断边界见[原生执行与设置说明](doc/devdoc/ai-service-native.md)。
 

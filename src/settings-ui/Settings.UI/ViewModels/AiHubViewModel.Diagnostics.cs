@@ -41,7 +41,12 @@ public sealed partial class AiHubViewModel
                 .Where(record => record.Kind == "task" && record.Outcome is "failed" or "timeout" or "partial")
                 .Take(3)
                 .Select(record => $"{record.TimestampUtc.ToLocalTime():HH:mm:ss} · {record.PluginId}/{record.TaskId} · {record.Route} · {record.ErrorCode}\n{AiDiagnosticText.Format(record.Diagnostics)}"));
-            return string.IsNullOrEmpty(recent) ? summary : summary + Environment.NewLine + Environment.NewLine + recent;
+            string workers = string.Join(Environment.NewLine, snapshot.RecentRecords
+                .Where(record => record.Kind == "route" && record.AgentId != Guid.Empty)
+                .Take(4)
+                .Select(record => $"{record.TimestampUtc.ToLocalTime():HH:mm:ss} · {record.Kernel} · {record.AgentId.ToString("N")[..8]} · {record.BatchIndex}/{record.TotalBatches} · {record.Outcome} · {record.ElapsedMilliseconds / 1000.0:F1}s"));
+            return string.Join(Environment.NewLine + Environment.NewLine,
+                new[] { summary, recent, workers }.Where(value => !string.IsNullOrEmpty(value)));
         }
     }
 

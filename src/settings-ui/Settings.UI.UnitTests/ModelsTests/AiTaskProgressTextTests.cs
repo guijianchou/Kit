@@ -18,6 +18,112 @@ public class AiTaskProgressTextTests
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
+    public void BatchSummaryShowsTaskTotalsWithoutTheLatestBatchActivity(bool chinese)
+    {
+        var progress = new AiTaskProgress("Execute", "private-provider-text", 0, 2)
+        {
+            ActiveBatches = 2, BatchIndex = 1, Activity = "waiting", Route = "Main",
+            ElapsedMilliseconds = 180000, QueueElapsedMilliseconds = 2000,
+        };
+
+        Assert.AreEqual(
+            chinese ? "已验证 0/2 批 · 运行中 2 · 排队 0" : "Validated 0/2 batches · Running 2 · Queued 0",
+            AiTaskProgressText.BatchSummary(progress, chinese));
+        Assert.AreEqual(
+            chinese ? "已验证 1/2 批 · 运行中 0 · 排队 0 · 失败 1" : "Validated 1/2 batches · Running 0 · Queued 0 · Failed 1",
+            AiTaskProgressText.BatchSummary(progress with { CompletedBatches = 1, ActiveBatches = 0, FailedBatches = 1 }, chinese));
+        Assert.AreEqual(string.Empty, AiTaskProgressText.BatchSummary(progress with { TotalBatches = 0 }, chinese));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void BatchActivityLabelsTheLatestBatchWithoutClaimingTaskWideActivity(bool chinese)
+    {
+        var progress = new AiTaskProgress("Execute", "private-provider-text", 0, 2)
+        {
+            ActiveBatches = 2, BatchIndex = 1, Activity = "waiting", Route = "Main",
+            AgentId = Guid.NewGuid(), Role = "analysis-worker", ElapsedMilliseconds = 180000,
+        };
+
+        Assert.AreEqual(
+            chinese ? "最新进展：第 1 批 · 主服务 · 等待服务响应" : "Latest update: Batch 1 · Main service · Waiting for response",
+            AiTaskProgressText.BatchActivity(progress, chinese));
+        Assert.AreEqual(
+            chinese ? "最新进展：正在验证结果" : "Latest update: Validating results",
+            AiTaskProgressText.BatchActivity(progress with { BatchIndex = null, Activity = "validating", Route = string.Empty }, chinese));
+        Assert.AreEqual(
+            AiTaskProgressText.BatchActivity(progress, chinese),
+            AiTaskProgressText.BatchActivity(progress with { TotalBatches = 0 }, chinese));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void BatchDetailsNeverExposeProviderTextRolesOrUnknownRoutes(bool chinese)
+    {
+        const string untrusted = "https://fixture.invalid/private-token-and-prompt";
+        var progress = new AiTaskProgress(untrusted, untrusted, 0, 2)
+        {
+            Activity = untrusted, Route = untrusted, Role = untrusted, AgentId = Guid.NewGuid(),
+            BatchIndex = 1, QueueElapsedMilliseconds = 2000, ElapsedMilliseconds = 180000,
+        };
+
+        Assert.AreEqual(
+            chinese ? "最新进展：第 1 批 · 正在准备分析" : "Latest update: Batch 1 · Preparing analysis",
+            AiTaskProgressText.BatchActivity(progress, chinese));
+        foreach (string text in new[]
+        {
+            AiTaskProgressText.BatchSummary(progress, chinese),
+            AiTaskProgressText.BatchActivity(progress, chinese),
+            AiTaskProgressText.QueueDetail(progress, chinese),
+        })
+        {
+            Assert.IsFalse(text.Contains(untrusted, StringComparison.Ordinal));
+            Assert.IsFalse(text.Contains(progress.AgentId.ToString(), StringComparison.Ordinal));
+            Assert.IsFalse(text.Contains("3:00", StringComparison.Ordinal));
+        }
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void QueueDetailIdentifiesTheBatchInsteadOfReportingTaskElapsedTime(bool chinese)
+    {
+        var progress = new AiTaskProgress("Queue", string.Empty, 0, 2)
+        {
+            BatchIndex = 1, Activity = "queued", QueueElapsedMilliseconds = 2000, ElapsedMilliseconds = 180000,
+        };
+
+        Assert.AreEqual(
+            chinese ? "第 1 批排队用时 0:02" : "Batch 1 queued for 0:02",
+            AiTaskProgressText.QueueDetail(progress, chinese));
+        Assert.AreEqual(
+            chinese ? "排队用时 0:02" : "Time queued 0:02",
+            AiTaskProgressText.QueueDetail(progress with { BatchIndex = null }, chinese));
+        Assert.AreEqual(
+            chinese ? "第 1 批排队用时 0:01" : "Batch 1 queued for 0:01",
+            AiTaskProgressText.QueueDetail(progress with { QueueElapsedMilliseconds = 1000 }, chinese));
+        Assert.AreEqual(
+            AiTaskProgressText.QueueDetail(progress, chinese),
+            AiTaskProgressText.QueueDetail(progress with { TotalBatches = 0 }, chinese));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void QueueDetailHidesMissingOrSubsecondDurations(bool chinese)
+    {
+        var progress = new AiTaskProgress("Queue", string.Empty, 0, 2) { BatchIndex = 1, Activity = "queued" };
+        foreach (long? duration in new long?[] { null, -1, 0, 999 })
+        {
+            Assert.AreEqual(string.Empty, AiTaskProgressText.QueueDetail(progress with { QueueElapsedMilliseconds = duration }, chinese));
+        }
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
     public void QueuedWorkShowsWaitAndElapsedTimeWithoutClaimingModelActivity(bool chinese)
     {
         var progress = new AiTaskProgress("Queue", "private-provider-text", 0, 1)
@@ -84,6 +190,23 @@ public class AiTaskProgressTextTests
         };
         Assert.IsFalse(AiTaskProgressText.Summary(progress, chinese).Contains(untrusted, StringComparison.Ordinal));
         Assert.IsFalse(AiTaskProgressText.Compact(progress, chinese).Contains(untrusted, StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void WorkerProgressUsesOnlyKnownRolesAndPreservesTaskTotals()
+    {
+        var progress = new AiTaskProgress("Route", "secret-provider-output", 2, 5)
+        {
+            RunId = Guid.NewGuid(), AgentId = Guid.NewGuid(), ParentAgentId = Guid.NewGuid(),
+            Role = "analysis-worker", BatchIndex = 3, ActiveBatches = 2, Activity = "reasoning",
+        };
+        string text = AiTaskProgressText.Summary(progress, false);
+        StringAssert.Contains(text, "Succeeded 2/5 batches");
+        StringAssert.Contains(text, "Analysis worker");
+        StringAssert.Contains(text, "Batch 3");
+        Assert.IsFalse(text.Contains("secret-provider-output", StringComparison.Ordinal));
+        Assert.IsFalse(AiTaskProgressText.Summary(progress with { Role = "private-role-text" }, false)
+            .Contains("private-role-text", StringComparison.Ordinal));
     }
 
     [TestMethod]

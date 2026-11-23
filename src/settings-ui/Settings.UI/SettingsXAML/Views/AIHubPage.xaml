@@ -711,36 +711,42 @@
                         <tkcontrols:SegmentedItem Content="{x:Bind ViewModel.TaskPoliciesTabLabel}" Icon="{ui:FontIcon Glyph=&#xE8A5;}" />
                     </tkcontrols:Segmented>
                     <Border x:Name="AuditPinnedStatus" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="10,6"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="10,4"
                             Visibility="{x:Bind TaskRunningVisibility(ViewModel.IsAuditing, ViewModel.IsAiAnalyzing), Mode=OneWay}">
-                        <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4">
-                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                            <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="2" VerticalAlignment="Center">
                                 <TextBlock Text="{x:Bind ViewModel.SidebarWorkflowTitle, Mode=OneWay}" FontSize="12" FontWeight="SemiBold"
                                            TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind ViewModel.SidebarWorkflowTooltip, Mode=OneWay}" />
                                 <TextBlock x:Name="AuditPinnedElapsed" Text="{x:Bind ViewModel.AuditElapsedText, Mode=OneWay}"
                                            FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
-                            <Button x:Name="AuditTaskDetailsButton" Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource KitIconButtonStyle}"
-                                    AutomationProperties.Name="{x:Bind ViewModel.TaskDetailsLabel}" ToolTipService.ToolTip="{x:Bind ViewModel.TaskDetailsLabel}">
-                                <FontIcon Glyph="&#xE946;" FontSize="14" />
-                                <Button.Flyout>
-                                    <Flyout>
-                                        <ScrollViewer MaxHeight="240" MaxWidth="340" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-                                            <StackPanel Spacing="8">
-                                                <TextBlock Text="{x:Bind ViewModel.TaskDetailsLabel}" FontWeight="SemiBold" />
-                                                <TextBlock Text="{x:Bind ViewModel.AuditStatusText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                                                <TextBlock Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True"
-                                                           Visibility="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </Flyout>
-                                </Button.Flyout>
-                            </Button>
-                            <Button Grid.Column="2" Content="{x:Bind ViewModel.CancelTaskLabel}" Command="{x:Bind ViewModel.CancelAuditCommand}"
+                            </tkcontrols:WrapPanel>
+                            <Button Grid.Column="1" Content="{x:Bind ViewModel.CancelTaskLabel}" Command="{x:Bind ViewModel.CancelAuditCommand}"
                                     VerticalAlignment="Center" AutomationProperties.AutomationId="AIHub_CancelPinnedAuditButton" />
-                            <ProgressBar Grid.Row="1" Grid.ColumnSpan="3" Value="{x:Bind ViewModel.SidebarWorkflowPercent, Mode=OneWay}"
+                            <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Value="{x:Bind ViewModel.SidebarWorkflowPercent, Mode=OneWay}"
                                          IsIndeterminate="{x:Bind ViewModel.IsAuditProgressIndeterminate, Mode=OneWay}"
                                          Minimum="0" Maximum="100" Height="3" AutomationProperties.Name="{x:Bind ViewModel.SidebarWorkflowTooltip, Mode=OneWay}" />
+                            <ScrollViewer x:Name="AuditTaskDetails" Grid.Row="2" Grid.ColumnSpan="2" MaxHeight="112"
+                                          HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
+                                          HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto"
+                                          AutomationProperties.Name="{x:Bind ViewModel.TaskDetailsLabel}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock x:Name="AuditPinnedBatchSummary" Text="{x:Bind ViewModel.AuditProgressSummaryText, Mode=OneWay}"
+                                               FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                               Visibility="{x:Bind ViewModel.HasAuditBatchProgress, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    <TextBlock x:Name="AuditPinnedTaskStatus" Text="{x:Bind ViewModel.AuditProgressActivityText, Mode=OneWay}"
+                                               FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Visibility="{x:Bind ViewModel.AuditProgressActivityText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                                    <TextBlock x:Name="AuditPinnedQueueStatus" Text="{x:Bind ViewModel.AuditProgressQueueText, Mode=OneWay}"
+                                               FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Visibility="{x:Bind ViewModel.AuditProgressQueueText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                                    <TextBlock x:Name="AuditPinnedAiResult" Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}"
+                                               FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Visibility="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                                </StackPanel>
+                            </ScrollViewer>
                         </Grid>
                     </Border>
                 </StackPanel>
@@ -781,7 +787,7 @@
                                            Visibility="{x:Bind ViewModel.AuditElapsedText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
                                 <ProgressBar x:Name="AuditWorkflowProgress" Value="{x:Bind ViewModel.SidebarWorkflowPercent, Mode=OneWay}" Minimum="0" Maximum="100"
                                              IsIndeterminate="{x:Bind ViewModel.IsAuditProgressIndeterminate, Mode=OneWay}"
-                                             Style="{StaticResource KitProgressBarStyle}"
+                                             Style="{StaticResource KitProgressBarStyle}" Margin="0"
                                              AutomationProperties.Name="{x:Bind ViewModel.SidebarWorkflowTooltip, Mode=OneWay}" />
                                 <!-- Both messages can contain a complete native failure.
                                      An Auto column would take the available width away
@@ -791,12 +797,14 @@
                                               HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto">
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="{x:Bind ViewModel.CurrentStageText, Mode=OneWay}" FontSize="12"
-                                                   FontWeight="Medium" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock x:Name="AuditWorkflowStatus" Text="{x:Bind ViewModel.AuditStatusText, Mode=OneWay}"
+                                                   FontWeight="Medium" TextTrimming="CharacterEllipsis"
+                                                   Visibility="{x:Bind ViewModel.CurrentStageText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                                        <TextBlock x:Name="AuditWorkflowStatus" Text="{x:Bind ViewModel.AuditResultDetailText, Mode=OneWay}"
                                                    FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock x:Name="AuditWorkflowAiResult" Text="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay}"
-                                                   Visibility="{x:Bind ViewModel.AiAnalysisRanText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   Visibility="{x:Bind ViewModel.AuditResultDetailText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                                        <TextBlock x:Name="AuditWorkflowAiResult" Text="{x:Bind ViewModel.AuditResultSupplementText, Mode=OneWay}"
+                                                   Visibility="{x:Bind ViewModel.AuditResultSupplementText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}"
                                                    FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
@@ -1388,8 +1396,14 @@
                                                  IsIndeterminate="{x:Bind ViewModel.IsScanning, Mode=OneWay}"
                                                  AutomationProperties.Name="{x:Bind ViewModel.OptimizationWorkflowTitle}"
                                                  AutomationProperties.HelpText="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}" />
-                                    <TextBlock x:Name="OptimizationWorkflowStatus" Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}"
-                                               FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <ScrollViewer x:Name="OptimizationTaskDetails" MaxHeight="112"
+                                                  HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
+                                                  HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto"
+                                                  AutomationProperties.Name="{x:Bind ViewModel.TaskDetailsLabel}">
+                                        <TextBlock x:Name="OptimizationWorkflowStatus" Text="{x:Bind ViewModel.OptimizationWorkflowStatus, Mode=OneWay}"
+                                                   FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </ScrollViewer>
                                 </StackPanel>
                             </Border>
 

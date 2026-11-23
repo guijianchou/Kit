@@ -3191,6 +3191,15 @@
   <data name="AIHub_EventCountFormat" xml:space="preserve">
     <value>{0} 事件</value>
   </data>
+  <data name="AIHub_FinishAudit_Pending" xml:space="preserve">
+    <value>本地发现已就绪；AI 分析仍在进行。</value>
+  </data>
+  <data name="AIHub_AuditMergedSummaryFormat" xml:space="preserve">
+    <value>本地规则 {0} 项 · AI 发现 {1} 项 · 合并后 {2} 项</value>
+  </data>
+  <data name="AIHub_RunAudit_AiUnavailableSkipped" xml:space="preserve">
+    <value>AI 分析未能启动；本地发现仍可查看。</value>
+  </data>
   <data name="AIHub_FinishAudit_Partial" xml:space="preserve">
     <value>审计部分完成，已保留验证通过的 AI 结果。</value>
   </data>
@@ -4228,4 +4237,15 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="NetMap_MapZoomReset.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>重置视图</value></data>
   <data name="NetMap_LegendObserved.Text" xml:space="preserve"><value>实测路径</value></data>
   <data name="NetMap_LegendApprox.Text" xml:space="preserve"><value>推测路径</value></data>
+  <data name="AiHub_SubagentsExpander.Header" xml:space="preserve"><value>并行分析</value></data>
+  <data name="AiHub_SubagentsCard.Header" xml:space="preserve"><value>分析子代理</value></data>
+  <data name="AiHub_SubagentsCard.Description" xml:space="preserve"><value>Kit 将独立证据分组交给隔离的分析子代理，Codex 和 Pi 均支持。</value></data>
+  <data name="AiHub_SubagentsToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>启用分析子代理</value></data>
+  <data name="AiHub_ServiceConcurrencyCard.Header" xml:space="preserve"><value>服务并发上限</value></data>
+  <data name="AiHub_ServiceConcurrencyCard.Description" xml:space="preserve"><value>本次设置窗口会话中，所有任务同时运行的分析数量上限。</value></data>
+  <data name="AiHub_ServiceConcurrencyBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>服务并发上限</value></data>
+  <data name="AiHub_TaskAgentsCard.Header" xml:space="preserve"><value>每任务子代理上限</value></data>
+  <data name="AiHub_TaskAgentsCard.Description" xml:space="preserve"><value>单个任务可在此上限内利用空闲容量，等待中的任务公平共享容量。</value></data>
+  <data name="AiHub_TaskAgentsBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>每任务子代理上限</value></data>
+  <data name="AiHub_SubagentsSummaryFormat" xml:space="preserve"><value>{0}：每任务最多 {1} 路分析，会话共 {2} 路</value></data>
 </root>

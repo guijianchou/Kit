@@ -62,8 +62,106 @@ public sealed class AuditAccelerationTests
         Assert.IsTrue(mainExitedBeforeFallback, "Fallback must not start while the timed-out main process tree survives.");
         Assert.AreEqual(1, capturesAtFailover);
         Assert.AreEqual(2, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
+        AiAgentResult agent = result.Agents.Single();
+        Assert.AreEqual(2, agent.AttemptCount);
+        Assert.IsTrue(agent.IsValidated);
+        var attempts = engine.Diagnostics.GetSnapshot().RecentRecords.Where(record => record.Kind == "route").ToArray();
+        Assert.AreEqual(2, attempts.Select(record => record.AttemptId).Distinct().Count());
+        Assert.IsTrue(attempts.All(record => record.AgentId == agent.AgentId && record.ParentAgentId == result.CoordinatorId));
+        Assert.AreEqual(attempts.Single(record => record.Route == "fallback").AttemptId, agent.AttemptId);
         fixture.AssertChildrenExited();
         Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task ValidatedWorkerObserversCannotChangeAcceptedResultsOrSeeRejectedBatches(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using TaskAiEngine engine = await CreateEngineAsync(fixture, "mixed-batches", kernel: kernel);
+        var acceptedIds = new ConcurrentQueue<string>();
+        AiTaskSchema<TestInput, AiTaskReport> baseSchema = Schema();
+        var schema = new AiTaskSchema<TestInput, AiTaskReport>
+        {
+            InputTypeInfo = baseSchema.InputTypeInfo,
+            OutputTypeInfo = baseSchema.OutputTypeInfo,
+            ValidateOutput = baseSchema.ValidateOutput,
+            MergeBatches = baseSchema.MergeBatches,
+            AllowedActions = baseSchema.AllowedActions,
+            ReportValidatedBatch = report =>
+            {
+                acceptedIds.Enqueue(report.Findings.Single().ItemId);
+                report.Findings.Clear();
+                throw new InvalidOperationException("Synthetic observer failure after modifying its copy.");
+            },
+        };
+
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(37), schema,
+            new AiTaskOptions { AllowPartialResults = true });
+        Assert.IsTrue(result.HasPartialResult);
+        Assert.AreEqual(AiErrorCode.PolicyViolation, result.ErrorCode);
+        CollectionAssert.AreEquivalent(new[] { "item-000001", "item-000031" }, acceptedIds.ToArray());
+        CollectionAssert.AreEqual(new[] { "item-000001", "item-000031" }, result.Payload!.Findings.Select(item => item.ItemId).ToArray());
+        Assert.AreEqual(2, result.Agents.Count(agent => agent.IsValidated));
+        Assert.AreEqual(AiErrorCode.PolicyViolation, result.Agents.Single(agent => agent.BatchIndex == 2).ErrorCode);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task PlanningFailureClosesEveryWorkerWithoutLeavingQueuedTerminalMetadata(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using TaskAiEngine engine = await CreateEngineAsync(fixture, kernel: kernel);
+        AiTaskSchema<TestInput, AiTaskReport> shared = Schema();
+        var schema = new AiTaskSchema<TestInput, AiTaskReport>
+        {
+            InputTypeInfo = shared.InputTypeInfo,
+            OutputTypeInfo = shared.OutputTypeInfo,
+            ValidateOutput = shared.ValidateOutput,
+        };
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(2), schema, new AiTaskOptions { BatchSize = 1 });
+        Assert.AreEqual(AiErrorCode.InvalidPayload, result.ErrorCode);
+        Assert.AreEqual(2, result.Agents.Count);
+        Assert.IsTrue(result.Agents.All(agent => agent.State == "not-started" && agent.AttemptCount == 0
+            && !agent.IsValidated && agent.ErrorCode == AiErrorCode.InvalidPayload));
+        Assert.AreNotEqual(Guid.Empty, result.RunId);
+        Assert.AreNotEqual(Guid.Empty, result.CoordinatorId);
+        Assert.IsFalse(Directory.Exists(fixture.RequestRoot) && Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length != 0);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task CancellationFromValidatedProgressDoesNotPublishAWorkerPayload(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using TaskAiEngine engine = await CreateEngineAsync(fixture, kernel: kernel);
+        using var cancellation = new CancellationTokenSource();
+        int published = 0;
+        AiTaskSchema<TestInput, AiTaskReport> shared = Schema();
+        var schema = new AiTaskSchema<TestInput, AiTaskReport>
+        {
+            InputTypeInfo = shared.InputTypeInfo,
+            OutputTypeInfo = shared.OutputTypeInfo,
+            ValidateOutput = shared.ValidateOutput,
+            ReportValidatedBatch = _ => Interlocked.Increment(ref published),
+        };
+        var result = await engine.ExecuteTaskAsync("Sample", "diagnostic", Input(1), schema, new AiTaskOptions
+        {
+            Progress = new ImmediateProgress(value =>
+            {
+                if (value.Stage == "Validate")
+                {
+                    cancellation.Cancel();
+                }
+            }),
+        }, cancellation.Token);
+        Assert.AreEqual(AiErrorCode.Cancelled, result.ErrorCode);
+        Assert.IsFalse(result.HasPartialResult);
+        Assert.IsNull(result.Payload);
+        Assert.AreEqual(0, published);
     }
 
     [TestMethod]

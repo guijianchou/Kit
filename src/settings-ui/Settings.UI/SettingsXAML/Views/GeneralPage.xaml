@@ -550,6 +550,39 @@
                     </StackPanel>
 
                     <tkcontrols:SettingsExpander
+                        x:Uid="AiHub_SubagentsExpander"
+                        AutomationProperties.AutomationId="AiHub_SubagentsExpander"
+                        Header="Parallel analysis"
+                        HeaderIcon="{ui:FontIcon Glyph=&#xE8FD;}"
+                        Description="{x:Bind ViewModel.AiServices.SubagentSettingsSummary, Mode=OneWay}">
+                        <tkcontrols:SettingsExpander.Items>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_SubagentsCard" Header="Analysis subagents"
+                                Description="Kit assigns independent evidence groups to isolated analysis workers. Available with Codex and Pi.">
+                                <ToggleSwitch x:Uid="AiHub_SubagentsToggle"
+                                    AutomationProperties.AutomationId="AiHub_SubagentsToggle"
+                                    IsEnabled="{x:Bind ViewModel.AiServices.CanEdit, Mode=OneWay}"
+                                    IsOn="{x:Bind ViewModel.AiServices.EnableSubagents, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_ServiceConcurrencyCard" Header="Service concurrency"
+                                Description="Maximum analyses running at once across tasks in this Settings session.">
+                                <NumberBox x:Uid="AiHub_ServiceConcurrencyBox"
+                                    AutomationProperties.AutomationId="AiHub_ServiceConcurrencyBox"
+                                    Width="140" Minimum="1" Maximum="4" SmallChange="1" SpinButtonPlacementMode="Compact"
+                                    IsEnabled="{x:Bind ViewModel.AiServices.CanEdit, Mode=OneWay}"
+                                    Value="{x:Bind ViewModel.AiServices.MaxConcurrentAnalysis, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard x:Uid="AiHub_TaskAgentsCard" Header="Subagents per task"
+                                Description="Each task can use available capacity up to this limit. Waiting tasks share capacity fairly.">
+                                <NumberBox x:Uid="AiHub_TaskAgentsBox"
+                                    AutomationProperties.AutomationId="AiHub_TaskAgentsBox"
+                                    Width="140" Minimum="1" Maximum="4" SmallChange="1" SpinButtonPlacementMode="Compact"
+                                    IsEnabled="{x:Bind ViewModel.AiServices.CanEditSubagentLimit, Mode=OneWay}"
+                                    Value="{x:Bind ViewModel.AiServices.MaxAgentsPerTask, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                        </tkcontrols:SettingsExpander.Items>
+                    </tkcontrols:SettingsExpander>
+
+                    <tkcontrols:SettingsExpander
                         x:Uid="AiHub_DiagnosticsExpander"
                         AutomationProperties.AutomationId="AiHub_DiagnosticsExpander"
                         Header="Runtime statistics"

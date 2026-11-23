@@ -12,6 +12,8 @@ public sealed partial class AiHubConfig : ObservableObject
     private bool _isEnabled;
     private string _selectedKernel = AiKernelCatalog.Codex;
     private int _maxConcurrentAnalysis = 2;
+    private bool _enableSubagents = true;
+    private int _maxAgentsPerTask = 3;
     private int _scanIntervalHours;
     private int _auditModeIndex;
     private int _retentionDays = 30;
@@ -33,6 +35,20 @@ public sealed partial class AiHubConfig : ObservableObject
     {
         get => _maxConcurrentAnalysis;
         set => SetProperty(ref _maxConcurrentAnalysis, value);
+    }
+
+    /// <summary>Allow Kit to dispatch independent analysis workers through either kernel.</summary>
+    public bool EnableSubagents
+    {
+        get => _enableSubagents;
+        set => SetProperty(ref _enableSubagents, value);
+    }
+
+    /// <summary>Maximum simultaneous workers belonging to one task, within the service limit.</summary>
+    public int MaxAgentsPerTask
+    {
+        get => _maxAgentsPerTask;
+        set => SetProperty(ref _maxAgentsPerTask, value);
     }
 
     /// <summary>
@@ -84,6 +100,8 @@ public sealed partial class AiHubConfig : ObservableObject
             IsEnabled = false,
             SelectedKernel = AiKernelCatalog.Codex,
             MaxConcurrentAnalysis = 2,
+            EnableSubagents = true,
+            MaxAgentsPerTask = 3,
             ScanIntervalHours = 0,
             AuditModeIndex = 0,
             RetentionDays = 30,

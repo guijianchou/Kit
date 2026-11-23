@@ -61,11 +61,19 @@ public sealed class RouteDispatcher
 
     private readonly KernelManagerService _kernelManager;
     private readonly string _requestRoot;
+    private readonly Func<string, string, CancellationToken, Task> _cleanupRequest;
 
     public RouteDispatcher(KernelManagerService kernelManager, string? requestRoot = null)
+        : this(kernelManager, requestRoot, static (root, path, _) => DeleteRequestDirectoryAsync(root, path))
+    {
+    }
+
+    internal RouteDispatcher(KernelManagerService kernelManager, string? requestRoot,
+        Func<string, string, CancellationToken, Task> cleanupRequest)
     {
         _kernelManager = kernelManager ?? throw new ArgumentNullException(nameof(kernelManager));
         _requestRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(requestRoot ?? Path.Combine(Path.GetDirectoryName(kernelManager.KernelRoot)!, "requests")));
+        _cleanupRequest = cleanupRequest ?? throw new ArgumentNullException(nameof(cleanupRequest));
         _ = Task.Run(() => CleanupStaleRequestsAsync(_requestRoot));
     }
 
@@ -167,11 +175,13 @@ public sealed class RouteDispatcher
 
         string normalized = AiKernelCatalog.Normalize(kernel);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
-        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        using var policyViolation = new CancellationTokenSource();
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token, policyViolation.Token);
         string? requestDirectory = null;
         FileStream? requestLease = null;
         IDisposable? executionLease = null;
         KernelExecutionResult result = Failure(AiErrorCode.ExecutionFailed);
+        bool routeDeadlineExpiredBeforeCleanup = false;
         var elapsed = Stopwatch.StartNew();
         KernelProcessFailure processFailure = KernelProcessFailure.None;
         int? exitCode = null;
@@ -220,7 +230,11 @@ public sealed class RouteDispatcher
                 exitCode = process.ExitCode;
                 // Full captured lines also cover native events larger than the live diagnostic line limit.
                 telemetry.ObserveOutput(normalized, process.StandardOutput, process.StandardError);
-                if (process.Failure != KernelProcessFailure.None)
+                if (policyViolation.IsCancellationRequested && process.Failure != KernelProcessFailure.CleanupFailed)
+                {
+                    result = Failure(AiErrorCode.PolicyViolation);
+                }
+                else if (process.Failure != KernelProcessFailure.None)
                 {
                     result = ProcessFailure(process.Failure);
                 }
@@ -267,7 +281,8 @@ public sealed class RouteDispatcher
         }
         catch (OperationCanceledException)
         {
-            result = Failure(cancellationToken.IsCancellationRequested ? AiErrorCode.Cancelled : AiErrorCode.Timeout);
+            result = Failure(cancellationToken.IsCancellationRequested ? AiErrorCode.Cancelled
+                : policyViolation.IsCancellationRequested ? AiErrorCode.PolicyViolation : AiErrorCode.Timeout);
         }
         catch (FileNotFoundException)
         {
@@ -287,12 +302,15 @@ public sealed class RouteDispatcher
         }
         finally
         {
+            // A response confirmed inside its budget remains valid while mandatory
+            // cleanup finishes. A caller cancellation still takes precedence below.
+            routeDeadlineExpiredBeforeCleanup = deadline.IsCancellationRequested;
             requestLease?.Dispose();
             if (requestDirectory is not null)
             {
                 try
                 {
-                    await DeleteRequestDirectoryAsync(_requestRoot, requestDirectory).ConfigureAwait(false);
+                    await _cleanupRequest(_requestRoot, requestDirectory, deadline.Token).ConfigureAwait(false);
                 }
                 catch (DirectoryNotFoundException)
                 {
@@ -315,10 +333,10 @@ public sealed class RouteDispatcher
 
         // Cleanup and validation failures must not become timeout-based permission to fail over.
         result = cancellationToken.IsCancellationRequested ? Failure(AiErrorCode.Cancelled)
-            : deadline.IsCancellationRequested && (result.IsSuccess || result.ErrorCode is AiErrorCode.Cancelled or AiErrorCode.Timeout)
+            : routeDeadlineExpiredBeforeCleanup && (result.IsSuccess || result.ErrorCode is AiErrorCode.Cancelled or AiErrorCode.Timeout)
                 ? Failure(AiErrorCode.Timeout) : result;
         string cancellationSource = cancellationToken.IsCancellationRequested ? "upstream"
-            : deadline.IsCancellationRequested ? "routeDeadline"
+            : routeDeadlineExpiredBeforeCleanup ? "routeDeadline"
             : processFailure == KernelProcessFailure.Timeout || result.Diagnostics?.ProcessFailure == KernelProcessFailure.Timeout.ToString() ? "processDeadline" : "none";
         AiRouteDiagnostics? failureDiagnostics = result.Diagnostics;
         var diagnostics = new AiRouteDiagnostics
@@ -378,6 +396,13 @@ public sealed class RouteDispatcher
             if (diagnostic is null)
             {
                 return;
+            }
+
+            if (diagnostic.StartsWith("event=tool,", StringComparison.Ordinal))
+            {
+                // Workers may not create hidden agents or execute other tools. Stop
+                // their entire process tree as soon as the native stream reveals one.
+                policyViolation.Cancel();
             }
 
             if (diagnostic.StartsWith("event=activity,", StringComparison.Ordinal) &&
@@ -536,7 +561,8 @@ public sealed class RouteDispatcher
                 "model_provider = \"kit\"\napproval_policy = \"never\"\nweb_search = \"disabled\"\n" +
                 "project_doc_max_bytes = 0\ncheck_for_update_on_startup = false\ncli_auth_credentials_store = \"ephemeral\"\n" +
                 $"model_instructions_file = {TomlString(instructionsPath)}\n" +
-                "[features]\nshell_tool = false\nunified_exec = false\napps = false\n" +
+                "[agents]\nenabled = false\n" +
+                "[features]\nshell_tool = false\nunified_exec = false\napps = false\nmulti_agent = false\nmulti_agent_v2 = false\n" +
                 "[tools]\nview_image = false\n[analytics]\nenabled = false\n[feedback]\nenabled = false\n" +
                 "[model_providers.kit]\nname = \"Kit\"\n" +
                 $"base_url = {TomlString(baseUrl)}\nwire_api = {TomlString(target.Mode)}\nrequires_openai_auth = false\n";
@@ -746,7 +772,7 @@ public sealed class RouteDispatcher
                 if ((type is "item.started" or "item.completed") && root.TryGetProperty("item", out JsonElement item) && item.ValueKind == JsonValueKind.Object)
                 {
                     string itemType = GetString(item, "type");
-                    if (itemType is "command_execution" or "mcp_tool_call" or "web_search" or "file_change")
+                    if (itemType is "command_execution" or "mcp_tool_call" or "web_search" or "file_change" or "collab_tool_call")
                     {
                         response.Failure = Failure(AiErrorCode.PolicyViolation);
                     }
@@ -877,7 +903,7 @@ public sealed class RouteDispatcher
                 if ((type is "item.started" or "item.updated" or "item.completed") && root.TryGetProperty("item", out JsonElement item) && item.ValueKind == JsonValueKind.Object)
                 {
                     string itemType = GetString(item, "type");
-                    if (itemType is "command_execution" or "mcp_tool_call" or "web_search" or "file_change")
+                    if (itemType is "command_execution" or "mcp_tool_call" or "web_search" or "file_change" or "collab_tool_call")
                     {
                         return DescribeTool(itemType);
                     }

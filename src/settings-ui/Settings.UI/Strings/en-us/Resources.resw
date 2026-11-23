@@ -3539,6 +3539,15 @@
   <data name="AIHub_EventCountFormat" xml:space="preserve">
     <value>{0} events</value>
   </data>
+  <data name="AIHub_FinishAudit_Pending" xml:space="preserve">
+    <value>Local findings are ready; AI analysis is still running.</value>
+  </data>
+  <data name="AIHub_AuditMergedSummaryFormat" xml:space="preserve">
+    <value>Local rules: {0} · AI findings: {1} · After merging: {2}</value>
+  </data>
+  <data name="AIHub_RunAudit_AiUnavailableSkipped" xml:space="preserve">
+    <value>AI analysis could not start; local findings are available.</value>
+  </data>
   <data name="AIHub_FinishAudit_Partial" xml:space="preserve">
     <value>Audit partially completed; validated AI results were retained.</value>
   </data>
@@ -4576,4 +4585,15 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="NetMap_MapZoomReset.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Reset view</value></data>
   <data name="NetMap_LegendObserved.Text" xml:space="preserve"><value>Observed</value></data>
   <data name="NetMap_LegendApprox.Text" xml:space="preserve"><value>Approximate</value></data>
+  <data name="AiHub_SubagentsExpander.Header" xml:space="preserve"><value>Parallel analysis</value></data>
+  <data name="AiHub_SubagentsCard.Header" xml:space="preserve"><value>Analysis subagents</value></data>
+  <data name="AiHub_SubagentsCard.Description" xml:space="preserve"><value>Kit assigns independent evidence groups to isolated analysis workers. Available with Codex and Pi.</value></data>
+  <data name="AiHub_SubagentsToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Enable analysis subagents</value></data>
+  <data name="AiHub_ServiceConcurrencyCard.Header" xml:space="preserve"><value>Service concurrency</value></data>
+  <data name="AiHub_ServiceConcurrencyCard.Description" xml:space="preserve"><value>Maximum analyses running at once across tasks in this Settings session.</value></data>
+  <data name="AiHub_ServiceConcurrencyBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Service concurrency</value></data>
+  <data name="AiHub_TaskAgentsCard.Header" xml:space="preserve"><value>Subagents per task</value></data>
+  <data name="AiHub_TaskAgentsCard.Description" xml:space="preserve"><value>Each task can use available capacity up to this limit. Waiting tasks share capacity fairly.</value></data>
+  <data name="AiHub_TaskAgentsBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Subagents per task</value></data>
+  <data name="AiHub_SubagentsSummaryFormat" xml:space="preserve"><value>{0}: up to {1} analyses per task, {2} across this session</value></data>
 </root>

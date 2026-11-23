@@ -119,6 +119,8 @@ public sealed class AiHubSettingsStore
             IsEnabled = source.IsEnabled,
             SelectedKernel = source.SelectedKernel,
             MaxConcurrentAnalysis = source.MaxConcurrentAnalysis,
+            EnableSubagents = source.EnableSubagents,
+            MaxAgentsPerTask = source.MaxAgentsPerTask,
             ScanIntervalHours = source.ScanIntervalHours,
             AuditModeIndex = source.AuditModeIndex,
             RetentionDays = source.RetentionDays,
@@ -532,6 +534,7 @@ public sealed class AiHubSettingsStore
     {
         if (config.SelectedKernel is not (AiKernelCatalog.Codex or AiKernelCatalog.Pi) ||
             config.MaxConcurrentAnalysis is < 1 or > 4 ||
+            config.MaxAgentsPerTask is < 1 or > 4 ||
             config.Targets is null || config.Targets.Count != 2 ||
             config.Targets[0]?.Name != "Main" || config.Targets[1]?.Name != "Fallback")
         {

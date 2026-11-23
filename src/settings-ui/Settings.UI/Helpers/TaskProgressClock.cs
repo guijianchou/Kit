@@ -80,6 +80,16 @@ internal sealed class TaskProgressClock : IDisposable
         stopwatch.Stop();
     }
 
+    internal void Reset()
+    {
+        Stop();
+        stopwatch.Reset();
+        progress = null;
+        progressAtMilliseconds = 0;
+        progressElapsedMilliseconds = 0;
+        HasStarted = false;
+    }
+
     private void OnTick(DispatcherQueueTimer sender, object args)
     {
         if (stopwatch.IsRunning)

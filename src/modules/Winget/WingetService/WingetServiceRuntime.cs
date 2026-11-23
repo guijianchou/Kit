@@ -432,7 +432,7 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
                     }
 
                     SaveState();
-                    NotifyUpdates(packages);
+                    NotifyUpdates();
                     break;
                 case "details":
                     var requestedPackage = request.RequestedVersion is { } selectedVersion
@@ -554,23 +554,40 @@ internal sealed partial class WingetServiceRuntime : IAsyncDisposable
 
     // Notification identity survives a restart. Shell calls and disk writes run outside
     // the status lock so get-status/cancel keep answering while Windows is busy.
-    private void NotifyUpdates(IReadOnlyList<WingetPackageUpdate> packages)
+    private void NotifyUpdates()
     {
+        // Settings can change while a query is running. Read the saved choice
+        // before delivery instead of waiting for the next 30-second scheduler tick.
+        ReloadSettings();
+        IReadOnlyList<WingetPackageUpdate> packages;
+        string fingerprint;
+        string? skipReason;
         lock (_gate)
         {
             packages = WingetServicePolicy.VisibleUpdates(_state);
+            fingerprint = WingetServicePolicy.Fingerprint(packages);
+            skipReason = _stopping ? "stopping"
+                : !_settings.NotifyUpdates ? "disabled"
+                : packages.Count == 0 ? "no-visible-updates"
+                : fingerprint == _state.NotificationFingerprint ? "unchanged-updates" : null;
         }
 
-        string fingerprint = WingetServicePolicy.Fingerprint(packages);
-        lock (_gate)
+        if (skipReason is not null)
         {
-            if (!_settings.NotifyUpdates || packages.Count == 0 || fingerprint == _state.NotificationFingerprint || _stopping)
-            {
-                return;
-            }
+            Logger.LogInfo($"[Winget] notification=skipped; reason={skipReason}; updates={packages.Count}");
+            return;
         }
 
         string? error = _notifier.Show(packages);
+        if (error is null)
+        {
+            Logger.LogInfo($"[Winget] notification=submitted; updates={packages.Count}");
+        }
+        else
+        {
+            Logger.LogWarning($"[Winget] notification=failed; updates={packages.Count}; error={error}");
+        }
+
         bool notified = false;
         lock (_gate)
         {

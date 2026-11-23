@@ -132,7 +132,8 @@ public sealed partial class AIHubPageViewModel
                 parts.Add("AIHub_AuditOverviewLimited".FormatLocalized("Event limit reached: {0}. This period may contain more events.", string.Join(", ", limited)));
             }
 
-            if (_auditOverviewSnapshot?.AnalysisOutcome is "partial" or "failed")
+            if (IsIncompleteAuditOutcome(_auditOverviewSnapshot?.AnalysisOutcome)
+                && (_auditOverviewSnapshot?.AnalysisOutcome != "pending" || !IsAiAnalyzing))
             {
                 parts.Add("AIHub_AuditOverviewPartialAi".GetLocalizedOrFallback("AI analysis was incomplete; this overview retains local findings and any validated AI findings."));
             }
@@ -212,7 +213,7 @@ public sealed partial class AIHubPageViewModel
         ? ScanRangeDescription
         : "AIHub_Window_Today".GetLocalizedOrFallback("Today");
 
-    public bool CanConfigureAudit => IsEnabled && !IsAuditing && !IsAiAnalyzing && !_disposed;
+    public bool CanConfigureAudit => IsEnabled && !IsAuditing && !_disposed;
 
     public ICommand StartSelectedScanCommand => _startSelectedScanCommand ??= new RelayCommand(
         () =>
@@ -560,9 +561,11 @@ public sealed partial class AIHubPageViewModel
             case nameof(AiReportMetaText):
             case nameof(AiStatusText):
             case nameof(AuditStatusText):
+            case nameof(AiAnalysisRanText):
             case nameof(AiReadinessText):
             case nameof(CanRunDeepAnalysis):
                 RefreshAiSummary();
+                RefreshAuditDetailText();
                 break;
             case nameof(OptimizationFilterIndex):
             case nameof(FilteredCandidatesSummary):

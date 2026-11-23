@@ -11,6 +11,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Kit.AiHub.Contract;
@@ -95,7 +98,10 @@ public static class AiHubAuditAnalysisService
     /// <summary>
     /// A single analysis result, including its own partial-completion and failure state.
     /// </summary>
-    public sealed record AuditAnalysisResult(IReadOnlyList<AuditIssue>? Issues, bool IsPartial, string? Failure);
+    public sealed record AuditAnalysisResult(IReadOnlyList<AuditIssue>? Issues, bool IsPartial, string? Failure)
+    {
+        public int ValidatedBatchCount { get; init; }
+    }
 
     /// <summary>
     /// Runs a sandboxed AI pass over the supplied audit events and returns the parsed
@@ -104,6 +110,7 @@ public static class AiHubAuditAnalysisService
     public static async Task<AuditAnalysisResult> AnalyzeEventsAsync(
         IReadOnlyList<SecurityEvent> events,
         IProgress<AiTaskProgress>? progress = null,
+        IProgress<AuditAnalysisResult>? partialResults = null,
         CancellationToken cancellationToken = default)
     {
         if (events is null || events.Count == 0)
@@ -120,11 +127,7 @@ public static class AiHubAuditAnalysisService
         // Prioritise what matters: errors and criticals first, then the most recent
         // remaining events. A plain Take() would analyse only the oldest events in the
         // window and silently ignore every later one.
-        List<SecurityEvent> selected = events
-            .OrderByDescending(e => e.Level is <= 2)
-            .ThenByDescending(e => e.TimeCreated ?? DateTime.MinValue)
-            .Take(MaxEventsPerRequest)
-            .ToList();
+        List<SecurityEvent> selected = SelectEvidence(events);
 
         List<EventAnalysisInput> items = selected
             .Select(ToInput)
@@ -144,6 +147,9 @@ public static class AiHubAuditAnalysisService
         var stopwatch = Stopwatch.StartNew();
         Logger.LogInfo($"AI audit started: id={analysisId}, collected={events.Count}, selected={items.Count}, timeoutSeconds={AnalysisTimeoutSeconds}, batchSize={AnalysisBatchSize}, routeTimeoutSeconds={AnalysisRouteTimeoutSeconds}");
         var batchProgress = new AuditProgress(analysisId, stopwatch, progress);
+        var validatedIssues = new List<AuditIssue>();
+        int validatedBatchCount = 0;
+        var partialLock = new object();
         string outcome = "failed";
         try
         {
@@ -151,7 +157,14 @@ public static class AiHubAuditAnalysisService
                 PluginId,
                 TaskId,
                 items,
-                CreateSchema(),
+                CreateSchema(batch =>
+                {
+                    lock (partialLock)
+                    {
+                        validatedIssues.AddRange(batch.Issues);
+                        partialResults?.Report(new(DeduplicateIssues(validatedIssues), true, null) { ValidatedBatchCount = ++validatedBatchCount });
+                    }
+                }),
                 new AiTaskOptions
                 {
                     Language = Language,
@@ -206,7 +219,7 @@ public static class AiHubAuditAnalysisService
             Logger.LogWarning($"AI audit incomplete: id={analysisId}, code={result.ErrorCode}, failureRoute={failureRoute}, partial={result.HasPartialResult}, batches={result.CompletedBatches}/{result.TotalBatches}{(diagnostic.Length > 0 ? ", " + diagnostic : string.Empty)}");
         }
 
-        return new(result.IsSuccess || result.HasPartialResult ? result.Payload?.Issues : null, result.HasPartialResult, failure);
+        return new(result.IsSuccess || result.HasPartialResult ? DeduplicateIssues(result.Payload?.Issues ?? []) : null, result.HasPartialResult, failure);
     }
 
     private static string SafeFailureRoute(string? route) => route?.ToLowerInvariant() switch
@@ -269,13 +282,14 @@ public static class AiHubAuditAnalysisService
     /// Schema for the built-in security-audit chain: source-generated JSON metadata for
     /// the input/output pair, plus semantic validation of the returned issues.
     /// </summary>
-    private static AiTaskSchema<EventAnalysisInput, AuditIssueContainer> CreateSchema()
+    internal static AiTaskSchema<EventAnalysisInput, AuditIssueContainer> CreateSchema(Action<AuditIssueContainer>? reportValidatedBatch = null)
     {
         return new AiTaskSchema<EventAnalysisInput, AuditIssueContainer>
         {
             InputTypeInfo = AIHubLibJsonContext.Default.EventAnalysisInput,
             OutputTypeInfo = AIHubLibJsonContext.Default.AuditIssueContainer,
             ValidateOutput = ValidateOutput,
+            ReportValidatedBatch = reportValidatedBatch,
 
             // Large event windows are split at the record and encoded-size limits,
             // and the engine rejects a multi-batch task whose schema cannot
@@ -283,7 +297,7 @@ public static class AiHubAuditAnalysisService
             // before any request left the machine.
             MergeBatches = containers => new AuditIssueContainer
             {
-                Issues = containers.SelectMany(container => container.Issues ?? new List<AuditIssue>()).ToList(),
+                Issues = DeduplicateIssues(containers.SelectMany(container => container.Issues ?? [])),
             },
         };
     }
@@ -361,6 +375,35 @@ public static class AiHubAuditAnalysisService
     {
         return severity is "High" or "Medium" or "Low";
     }
+
+    // Opaque references remain request-wide. Never sum occurrences reported by workers
+    // for the same evidence: that would count one event repeatedly and inflate severity.
+    internal static List<AuditIssue> DeduplicateIssues(IEnumerable<AuditIssue> issues) => issues
+        .GroupBy(issue => string.Join("\0", issue.RelatedEventRefs.Append(issue.EventRef)
+            .Distinct(StringComparer.Ordinal).OrderBy(reference => reference, StringComparer.Ordinal)), StringComparer.Ordinal)
+        .Select(group => group.OrderByDescending(issue => issue.Severity == "High" ? 3 : issue.Severity == "Medium" ? 2 : 1)
+            .ThenByDescending(issue => issue.Occurrences).First())
+        .ToList();
+
+    internal static string CreateEvidenceFingerprint(IReadOnlyList<SecurityEvent> events)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        hash.AppendData(Encoding.UTF8.GetBytes(Language));
+        foreach (var item in SelectEvidence(events).Select(ToInput))
+        {
+            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(item, AIHubLibJsonContext.Default.EventAnalysisInput);
+            hash.AppendData(BitConverter.GetBytes(bytes.Length));
+            hash.AppendData(bytes);
+        }
+
+        return Convert.ToHexString(hash.GetHashAndReset());
+    }
+
+    private static List<SecurityEvent> SelectEvidence(IReadOnlyList<SecurityEvent> events) => events
+        .OrderByDescending(e => e.Level is <= 2)
+        .ThenByDescending(e => e.TimeCreated ?? DateTime.MinValue)
+        .Take(MaxEventsPerRequest)
+        .ToList();
 
     private static bool RejectOutput(int issueIndex, string field, string reason)
     {

@@ -365,6 +365,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
             OnPropertyChanged(nameof(IsKernelSwitchPending));
             OnPropertyChanged(nameof(ActiveKernelName));
             OnPropertyChanged(nameof(MaxConcurrentAnalysis));
+            NotifyWorkerSettingsChanged();
             OnPropertyChanged(nameof(CanToggle));
             OnPropertyChanged(nameof(SecurityPolicyPath));
             OnPropertyChanged(nameof(SecurityAuditPolicyPath));
@@ -463,7 +464,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
         get => _config.MaxConcurrentAnalysis;
         set
         {
-            if (!CanEdit || double.IsNaN(value))
+            if (!CanEdit || !double.IsFinite(value) || value != Math.Truncate(value))
             {
                 return;
             }
@@ -474,6 +475,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
                 _settingsStore.Update(config => config.MaxConcurrentAnalysis = limit);
                 _config.MaxConcurrentAnalysis = limit;
                 OnPropertyChanged();
+                NotifyWorkerSettingsChanged();
                 AiHubEngine.RaiseStateChanged();
             }
             catch (Exception)
@@ -481,6 +483,66 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
                 ShowStatus(Text("AiHub_SaveFailed"), InfoBarSeverity.Error);
             }
         }
+    }
+
+    public bool EnableSubagents
+    {
+        get => _config.EnableSubagents;
+        set
+        {
+            if (CanEdit && value != _config.EnableSubagents)
+            {
+                SaveWorkerPreference(config => config.EnableSubagents = value);
+            }
+        }
+    }
+
+    public double MaxAgentsPerTask
+    {
+        get => _config.MaxAgentsPerTask;
+        set
+        {
+            if (CanEditSubagentLimit && double.IsFinite(value) && value == Math.Truncate(value))
+            {
+                int limit = Math.Clamp((int)value, 1, 4);
+                if (limit != _config.MaxAgentsPerTask)
+                {
+                    SaveWorkerPreference(config => config.MaxAgentsPerTask = limit);
+                }
+            }
+        }
+    }
+
+    public bool CanEditSubagentLimit => CanEdit && EnableSubagents;
+
+    public string SubagentSettingsSummary => string.Format(CultureInfo.CurrentCulture,
+        Text("AiHub_SubagentsSummaryFormat"), ActiveKernelName,
+        EnableSubagents ? Math.Min(_config.MaxAgentsPerTask, _config.MaxConcurrentAnalysis) : 1,
+        _config.MaxConcurrentAnalysis);
+
+    private void SaveWorkerPreference(Action<AiHubConfig> update)
+    {
+        try
+        {
+            _settingsStore.Update(update);
+            update(_config);
+            AiHubEngine.RaiseStateChanged();
+        }
+        catch (Exception)
+        {
+            ShowStatus(Text("AiHub_SaveFailed"), InfoBarSeverity.Error);
+        }
+
+        NotifyWorkerSettingsChanged();
+    }
+
+    private void NotifyWorkerSettingsChanged()
+    {
+        OnPropertyChanged(nameof(MaxConcurrentAnalysis));
+        OnPropertyChanged(nameof(EnableSubagents));
+        OnPropertyChanged(nameof(MaxAgentsPerTask));
+        OnPropertyChanged(nameof(CanEditSubagentLimit));
+        OnPropertyChanged(nameof(SubagentSettingsSummary));
     }
 
     public string KernelStatusText { get => _kernelStatusText; private set => Set(ref _kernelStatusText, value); }
@@ -685,6 +747,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
             {
                 OnPropertyChanged(nameof(CanEdit));
                 OnPropertyChanged(nameof(CanEditPolicies));
+                OnPropertyChanged(nameof(CanEditSubagentLimit));
                 OnPropertyChanged(nameof(CanRetryConfiguration));
                 RefreshCommands();
             }
@@ -1264,6 +1327,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
 
     private void NotifyEnabledChanged()
     {
+        NotifyWorkerSettingsChanged();
         OnPropertyChanged(nameof(IsEnabled));
         OnPropertyChanged(nameof(HubContentVisibility));
         OnPropertyChanged(nameof(CanEdit));

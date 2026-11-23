@@ -19,6 +19,42 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class AiDiagnosticsTests
 {
     [TestMethod]
+    public void WorkerIdentitySurvivesPersistenceWithoutDoubleCountingParentUsage()
+    {
+        using var fixture = new FixtureDirectory();
+        string preference = SetLogLevel(fixture, "info");
+        var store = new AiDiagnosticsStore(fixture.PathFor("data"), preference);
+        Guid runId = Guid.NewGuid();
+        Guid parentId = Guid.NewGuid();
+        Guid workerId = Guid.NewGuid();
+        Guid attemptId = Guid.NewGuid();
+        var usage = new AiRouteDiagnostics { InputTokens = 100, OutputTokens = 20 };
+        store.Record(RouteRecord() with
+        {
+            RequestId = runId,
+            AgentId = workerId,
+            ParentAgentId = parentId,
+            AttemptId = attemptId,
+            Role = "analysis-worker",
+            Diagnostics = usage,
+        });
+        store.Record(TaskRecord("succeeded") with { RequestId = runId, AgentId = parentId, Role = "coordinator", Diagnostics = usage });
+        var snapshot = store.GetSnapshot();
+        Assert.AreEqual(100L, snapshot.InputTokens);
+        Assert.AreEqual(20L, snapshot.OutputTokens);
+        Assert.AreEqual(1L, snapshot.RequestCount);
+        Assert.AreEqual(1L, snapshot.RouteAttempts);
+
+        var reopened = new AiDiagnosticsStore(fixture.PathFor("data"), preference);
+        var worker = reopened.LoadHistory().Single(record => record.Kind == "route");
+        Assert.AreEqual(runId, worker.RequestId);
+        Assert.AreEqual(parentId, worker.ParentAgentId);
+        Assert.AreEqual(workerId, worker.AgentId);
+        Assert.AreEqual(attemptId, worker.AttemptId);
+        Assert.AreEqual("analysis-worker", worker.Role);
+    }
+
+    [TestMethod]
     public void LoggingOffKeepsSessionStatisticsWithoutCreatingHistory()
     {
         using var fixture = new FixtureDirectory();
@@ -96,6 +132,7 @@ public sealed class AiDiagnosticsTests
             TaskId = secret,
             Kernel = secret,
             Route = secret,
+            Role = secret,
             ErrorCode = (AiErrorCode)int.MaxValue,
             Diagnostics = new AiRouteDiagnostics
             {
@@ -114,6 +151,7 @@ public sealed class AiDiagnosticsTests
         Assert.AreEqual("other", record.TaskId);
         Assert.AreEqual("unknown", record.Kernel);
         Assert.AreEqual(string.Empty, record.Route);
+        Assert.AreEqual(string.Empty, record.Role);
         Assert.AreEqual("Unknown", record.Diagnostics!.Reason);
         Assert.AreEqual(AiErrorCode.ExecutionFailed, record.ErrorCode);
         Assert.AreEqual(0L, reopened.GetSnapshot().RequestCount);

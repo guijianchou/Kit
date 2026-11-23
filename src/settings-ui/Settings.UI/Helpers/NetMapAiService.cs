@@ -270,6 +270,7 @@ public static class NetMapAiService
                 {
                     Language = isChinese ? "zh-CN" : "en-US",
                     TimeoutSeconds = AnalysisTimeoutSeconds,
+                    EnableSubagents = false,
                     RouteTimeoutSeconds = AnalysisRouteTimeoutSeconds,
                     InlineInstructions = GetRouteInstruction(isChinese),
                     Progress = new RouteAnalysisProgress(analysisId, stopwatch, progress),

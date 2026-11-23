@@ -4,6 +4,27 @@
 
 ## English
 
+### 3.5.9 (2026-11-23)
+
+- Apply the latest saved WinGet notification preference when an update query finishes, including changes made while the query is running. Record whether notifications were submitted, disabled, unchanged, or failed so missing notifications can be diagnosed.
+
+### 3.5.8 (2026-11-23)
+
+- Split AI Hub's running task details into batch totals, the latest batch activity, and meaningful queue time. Keep elapsed time in the header and hide sub-second queue durations and repeated local-ready text.
+- Explain the completed audit with local-rule, AI-finding and merged-result counts, preserving complete failure diagnostics while removing repeated success text.
+
+### 3.5.7 (2026-11-23)
+
+- Fixed AI Hub announcing a completed audit while AI analysis was still pending. Local results remain available with an in-progress notice; completion, partial results, failures and cancellation now replace that notice and stop the task clock at the terminal state.
+- Show audit and optimization task details directly in the running-task card, with wrapping and selectable text. Record interrupted AI analysis as cancelled instead of a model failure.
+
+### 3.5.6 (2026-11-23)
+
+- Show AI Hub's local scan findings before AI analysis finishes, then update the report as validated workers complete. Keep local findings and explicit incomplete status when AI is cancelled or times out.
+- Added bounded, host-managed analysis workers for both Codex and Pi, with configurable service and per-task concurrency, fair sharing of available slots, and correlated run/worker/attempt diagnostics. NetMap AI Check keeps a single worker. Native autonomous delegation is not enabled.
+- Apply reduced concurrency budgets to subsequent worker admissions without cancelling active attempts; stop publishing worker payloads after cancellation and preserve terminal worker metadata for incomplete runs.
+- Fixed successful native responses being reclassified as route timeouts solely because request-directory cleanup crossed the deadline. Cleanup failures still prevent fallback, and caller cancellation takes precedence.
+
 ### 3.5.5 (2026-11-21)
 
 - Unified the Windows 11 Mica and WinUI 3 Fluent Design language across the Settings shell, Quick Access flyout, Dashboard, General settings, Search Results, and all seven plugins (Awake, Light Switch, Localserver, UDPtest, NetMap, AI Hub, and WinGet).
@@ -989,6 +1010,27 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.9（2026-11-23）
+
+- WinGet 查询更新完成时立即读取最新通知开关，包括查询期间保存的设置；记录通知已提交、关闭、更新未变化或发送失败的原因，便于定位未收到通知的问题。
+
+### 3.5.8（2026-11-23）
+
+- AI Hub 运行详情拆分为批次总览、最新批次活动和有效排队时长；耗时只保留在标题下，隐藏不足一秒的排队记录和重复的本地结果提示。
+- 完成卡显示本地规则、AI 发现及合并后数量，保留完整失败诊断并去除重复成功文案。
+
+### 3.5.7（2026-11-23）
+
+- 修复 AI Hub 在 AI 分析仍为 pending 时提前提示审计完成：本地发现先展示并明确提示 AI 仍在运行，完成、部分结果、失败和取消均更新提示并在终态停止计时。
+- 审计与优化的运行任务详情直接显示在页面，支持换行和复制；中断的 AI 分析记录为取消，避免误报模型失败。
+
+### 3.5.6（2026-11-23）
+
+- AI Hub 扫描先显示本地规则发现，再随 AI worker 校验完成逐步更新报告；AI 取消或超时时保留本地结果并明确标记未完成。
+- Codex 与 Pi 均支持宿主管理的有界分析 worker，可配置服务总并发和单任务并发，公平共享空闲容量，并通过运行、worker、attempt 标识关联诊断。NetMap AI Check 保持单 worker；未启用内核自主委派。
+- 降低并发预算后，后续 worker 按新限制准入，已运行的 attempt 可正常结束；取消后停止发布 worker 结果，未完成任务保留节点终态元数据。
+- 修复原生响应已在期限内成功，却因请求目录清理跨过截止时间而误报路由超时的问题；清理失败仍阻止备用接续，调用方取消仍具有优先级。
 
 ### 3.5.5（2026-11-21）
 

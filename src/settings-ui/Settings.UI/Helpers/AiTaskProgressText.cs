@@ -11,6 +11,51 @@ using Kit.AiHub.Contract;
 /// <summary>Formats only structured progress; provider text never enters the status surface.</summary>
 internal static class AiTaskProgressText
 {
+    internal static string BatchSummary(AiTaskProgress progress, bool isChinese)
+    {
+        if (progress.TotalBatches <= 0)
+        {
+            return string.Empty;
+        }
+
+        string summary = isChinese
+            ? $"已验证 {progress.CompletedBatches}/{progress.TotalBatches} 批 · 运行中 {progress.ActiveBatches} · 排队 {progress.QueuedBatches}"
+            : $"Validated {progress.CompletedBatches}/{progress.TotalBatches} batches · Running {progress.ActiveBatches} · Queued {progress.QueuedBatches}";
+        if (progress.FailedBatches > 0)
+        {
+            summary += isChinese ? $" · 失败 {progress.FailedBatches}" : $" · Failed {progress.FailedBatches}";
+        }
+
+        return summary;
+    }
+
+    internal static string BatchActivity(AiTaskProgress progress, bool isChinese)
+    {
+        string latest = isChinese ? "最新进展：" : "Latest update: ";
+        if (progress.BatchIndex is > 0)
+        {
+            latest += isChinese ? $"第 {progress.BatchIndex} 批 · " : $"Batch {progress.BatchIndex} · ";
+        }
+
+        return latest + Activity(progress, isChinese);
+    }
+
+    internal static string QueueDetail(AiTaskProgress progress, bool isChinese)
+    {
+        if (progress.QueueElapsedMilliseconds is not >= 1000)
+        {
+            return string.Empty;
+        }
+
+        string duration = Duration(progress.QueueElapsedMilliseconds.Value);
+        if (progress.BatchIndex is > 0)
+        {
+            return isChinese ? $"第 {progress.BatchIndex} 批排队用时 {duration}" : $"Batch {progress.BatchIndex} queued for {duration}";
+        }
+
+        return isChinese ? $"排队用时 {duration}" : $"Time queued {duration}";
+    }
+
     internal static string Summary(AiTaskProgress progress, bool isChinese)
     {
         var parts = new List<string>();
@@ -24,6 +69,15 @@ internal static class AiTaskProgressText
         if (progress.BatchIndex is > 0 && progress.BatchIndex <= progress.TotalBatches)
         {
             parts.Add(isChinese ? $"第 {progress.BatchIndex} 批" : $"Batch {progress.BatchIndex}");
+        }
+
+        if (progress.Role == "analysis-worker" && progress.AgentId != Guid.Empty)
+        {
+            parts.Add(isChinese ? "分析代理" : "Analysis worker");
+        }
+        else if (progress.Role == "coordinator")
+        {
+            parts.Add(isChinese ? "协调分析" : "Coordinating analysis");
         }
 
         parts.Add(Activity(progress, isChinese));

@@ -70,6 +70,13 @@ public sealed class AiTaskOptions
     public int BatchSize { get; set; }
 
     /// <summary>
+    /// Allows host-managed analysis workers for this task. Null follows service settings;
+    /// false serializes its workers. A caller cannot override a disabled service policy.
+    /// Workers have one level, share this task's deadline, and cannot delegate further.
+    /// </summary>
+    public bool? EnableSubagents { get; set; }
+
+    /// <summary>
     /// Retains validated batches when an advisory task cannot complete every batch.
     /// Callers must explicitly handle a failed result containing a partial payload.
     /// </summary>
@@ -89,6 +96,11 @@ public sealed class AiTaskOptions
 /// </summary>
 public sealed record AiTaskProgress(string Stage, string StatusMessage, int CompletedBatches, int TotalBatches)
 {
+    public Guid RunId { get; init; }
+    public Guid AgentId { get; init; }
+    public Guid ParentAgentId { get; init; }
+    public Guid AttemptId { get; init; }
+    public string Role { get; init; } = string.Empty;
     public int FailedBatches { get; init; }
     public int ActiveBatches { get; init; }
     public int QueuedBatches { get; init; }
@@ -101,10 +113,33 @@ public sealed record AiTaskProgress(string Stage, string StatusMessage, int Comp
 }
 
 /// <summary>
+/// Terminal metadata for a host-managed worker. Only independently validated workers
+/// are marked successful; this contains neither model output nor the input records.
+/// </summary>
+public sealed record AiAgentResult
+{
+    public Guid RunId { get; init; }
+    public Guid AgentId { get; init; }
+    public Guid ParentAgentId { get; init; }
+    public Guid AttemptId { get; init; }
+    public string Role { get; init; } = "analysis-worker";
+    public int BatchIndex { get; init; }
+    public int InputItemCount { get; init; }
+    public int AttemptCount { get; init; }
+    public string State { get; init; } = "queued";
+    public bool IsValidated { get; init; }
+    public AiErrorCode ErrorCode { get; init; }
+    public string UsedRoute { get; init; } = string.Empty;
+}
+
+/// <summary>
 /// Result envelope returned by the AI Hub engine.
 /// </summary>
 public sealed class AiTaskResult<TOutput> where TOutput : class
 {
+    public Guid RunId { get; init; }
+    public Guid CoordinatorId { get; init; }
+    public IReadOnlyList<AiAgentResult> Agents { get; init; } = Array.Empty<AiAgentResult>();
     public bool IsSuccess { get; init; }
     public AiErrorCode ErrorCode { get; init; } = AiErrorCode.None;
     public string? ErrorMessage { get; init; }
@@ -162,6 +197,13 @@ public sealed class AiTaskSchema<TInput, TOutput> where TOutput : class
     /// Combines validated batches. Required when the task exceeds one batch.
     /// </summary>
     public Func<IReadOnlyList<TOutput>, TOutput>? MergeBatches { get; init; }
+
+    /// <summary>
+    /// Observes a worker output only after contract auditing and schema validation.
+    /// Callers marshal UI updates themselves and must still handle the final task
+    /// outcome. Observer exceptions do not fail or invalidate the task.
+    /// </summary>
+    public Action<TOutput>? ReportValidatedBatch { get; init; }
 
     /// <summary>
     /// Permitted advisory actions. The engine never executes a suggested action.

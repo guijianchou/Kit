@@ -27,6 +27,9 @@ using Kit.AiHub.Storage;
 [JsonSerializable(typeof(AiHubIpcResponse))]
 [JsonSerializable(typeof(SelfTestInput))]
 [JsonSerializable(typeof(List<AiDiagnosticRecord>))]
+[JsonSerializable(typeof(AiTaskProgress))]
+[JsonSerializable(typeof(AiAgentResult))]
+[JsonSerializable(typeof(List<AiAgentResult>))]
 public sealed partial class AiHubJsonContext : JsonSerializerContext
 {
 }

@@ -497,6 +497,9 @@ internal sealed class KernelFixture : IDisposable
                 if (codex)
                 {
                     if (model == "fixture-tool") Emit(new { type = "item.completed", item = new { type = "command_execution" } });
+                    if (model == "fixture-collab") Emit(new { type = "item.completed", item = new { type = "collab_tool_call",
+                        tool = "spawn_agent", sender_thread_id = "synthetic-parent", receiver_thread_ids = new[] { "synthetic-child" },
+                        prompt = "synthetic-private-content" } });
                     Emit(new { type = "item.completed", item = new { type = "agent_message", text = payload } });
                     File.WriteAllText(Arg(args, "--output-last-message"), model == "fixture-large-file" ? new string('x', 9000000) : payload);
                     if (model != "fixture-incomplete") Emit(new { type = "turn.completed", model = "fixture-actual",

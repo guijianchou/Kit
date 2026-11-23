@@ -453,6 +453,7 @@ public sealed class AiDiagnosticsStore
         TaskId = Known(record.TaskId, KnownTasks, "other"),
         Kernel = Known(record.Kernel, ["codex", "pi"]),
         Route = Known(record.Route, ["main", "fallback"], string.Empty),
+        Role = Known(record.Role, ["coordinator", "analysis-worker"], string.Empty),
         Outcome = Known(record.Outcome, ["succeeded", "failed", "cancelled", "timeout", "partial"]),
         ErrorCode = Enum.IsDefined(record.ErrorCode) ? record.ErrorCode : AiErrorCode.ExecutionFailed,
         TotalBatches = Math.Clamp(record.TotalBatches, 0, 2_000),

@@ -28,6 +28,10 @@ public sealed record AiDiagnosticRecord
 {
     public string Kind { get; init; } = "task";
     public Guid RequestId { get; init; }
+    public Guid AgentId { get; init; }
+    public Guid ParentAgentId { get; init; }
+    public Guid AttemptId { get; init; }
+    public string Role { get; init; } = string.Empty;
     public DateTimeOffset TimestampUtc { get; init; } = DateTimeOffset.UtcNow;
     public string PluginId { get; init; } = string.Empty;
     public string TaskId { get; init; } = string.Empty;

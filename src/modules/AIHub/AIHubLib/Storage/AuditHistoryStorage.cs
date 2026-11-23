@@ -110,8 +110,11 @@ public sealed class AuditHistoryStorage
             try
             {
                 var history = ReadHistory();
-                history.RemoveAll(r => r.Timestamp < DateTime.UtcNow.AddDays(-retentionDays));
+                // Local findings and later AI results share the scan's stable timestamp.
+                // Updating that snapshot must not manufacture a second scan in statistics.
+                history.RemoveAll(r => r.Timestamp == result.Timestamp || r.Timestamp < DateTime.UtcNow.AddDays(-retentionDays));
                 history.Insert(0, result);
+                history.Sort((left, right) => right.Timestamp.CompareTo(left.Timestamp));
 
                 if (history.Count > MaxRetainedAudits)
                 {

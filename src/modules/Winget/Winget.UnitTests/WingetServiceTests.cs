@@ -218,6 +218,34 @@ public sealed class WingetServiceTests
     }
 
     [TestMethod]
+    [DataRow(false, true, 1)]
+    [DataRow(true, false, 0)]
+    public async Task UpdateNotificationUsesSettingsSavedDuringTheCheck(bool initiallyEnabled, bool enabledAtCompletion, int expectedNotifications)
+    {
+        string settingsPath = Path.Combine(_directory, "settings.json");
+        void SaveNotificationSetting(bool enabled)
+            => File.WriteAllText(settingsPath, JsonSerializer.Serialize(new
+            {
+                properties = new { daily_check_enabled = new { value = false }, notify_updates = new { value = enabled } },
+            }));
+
+        SaveNotificationSetting(initiallyEnabled);
+        var client = new FakeClient { DelayChecksUntilReleased = true };
+        var notifier = new FakeNotifier();
+        await using var runtime = new WingetServiceRuntime(client, _directory, notifier);
+        var ack = ParseAck(await runtime.HandleRequestAsync(new KitPipeRequest { Command = "check" }, CancellationToken.None));
+        Assert.IsTrue(ack.Accepted);
+        await client.CheckStarted.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        SaveNotificationSetting(enabledAtCompletion);
+        client.CheckRelease.TrySetResult();
+        await WaitIdleAsync(runtime);
+        Assert.AreEqual(expectedNotifications, notifier.Count);
+        Assert.AreEqual(enabledAtCompletion, runtime.GetStatus().NotifyUpdates);
+        Assert.AreEqual(enabledAtCompletion, runtime.GetStatus().LastNotifiedUtc.HasValue);
+        Assert.AreEqual(1, runtime.GetStatus().Packages.Count, "Notification preference must not discard query results.");
+    }
+
+    [TestMethod]
     public async Task PersistedNotificationFingerprintSuppressesRepeatedCheckToasts()
     {
         var notifier = new FakeNotifier();

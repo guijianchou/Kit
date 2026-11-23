@@ -67,6 +67,24 @@ public sealed class AuditHistoryStorageTests
     }
 
     [TestMethod]
+    public void AiCompletionReplacesItsLocalSnapshotWithoutChangingOtherScanCounts()
+    {
+        var storage = new AuditHistoryStorage(_directory);
+        DateTime scan = DateTime.UtcNow.AddMinutes(-1);
+        storage.SaveResult(new AuditResult { Timestamp = scan, HealthScore = 90, AnalysisOutcome = "pending" });
+        storage.SaveResult(new AuditResult { Timestamp = scan.AddSeconds(1), HealthScore = 80 });
+        storage.SaveResult(new AuditResult { Timestamp = scan, HealthScore = 70, AnalysisOutcome = "partial" });
+        storage.SaveResult(new AuditResult { Timestamp = scan, HealthScore = 60, AnalysisOutcome = "ok" });
+
+        var history = storage.LoadHistory();
+        Assert.AreEqual(2, history.Count);
+        Assert.AreEqual(scan.AddSeconds(1), history[0].Timestamp, "Finishing old AI work must not make an older scan the newest.");
+        Assert.AreEqual(60, history[1].HealthScore);
+        Assert.AreEqual("ok", history[1].AnalysisOutcome);
+        Assert.AreEqual(2, AuditHistoryStatistics.From(history).AuditCount);
+    }
+
+    [TestMethod]
     public void PeriodOverviewAndCollectionLimitsSurviveHistoryReload()
     {
         var storage = new AuditHistoryStorage(_directory);

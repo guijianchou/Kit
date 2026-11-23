@@ -114,6 +114,7 @@ internal static class AiHubUxSmoke
         await CheckEnableCardAndHealthLayout(page, "module-enabled");
         await CheckWeeklyReport(page);
         await CheckWorkflowTimers(page);
+        await CheckAuditAnalysisLifecycle(page);
         vm.SelectedScanModeIndex = 0;
         await CheckScanButtonBoundState(page, "fast-scan-selected");
         vm.SelectedScanModeIndex = 1;
@@ -644,9 +645,14 @@ internal static class AiHubUxSmoke
         typeof(AIHubPageViewModel).GetProperty(nameof(vm.HasAiReport)).SetValue(vm, true);
         vm.AiReportFindings.Add(new AiReportFinding("Old report", "High", "Previous scan", "Previous recommendation", "1"));
         Field<List<SecurityEvent>>(vm, "_lastAuditEvents").Add(new SecurityEvent(1, "System", "Synthetic", 2, DateTime.UtcNow, "Previous scan fixture"));
+        var phase = typeof(AIHubPageViewModel).GetProperty(nameof(vm.AuditPhase));
+        phase.SetValue(vm, ScanPhase.Scanning);
+        phase.SetValue(vm, ScanPhase.SelectingTargets);
+        Require(!string.IsNullOrEmpty(vm.AuditElapsedText), "The historical reset fixture must begin with a previous scan clock.");
         var history = new AuditResult { HealthScore = 75, Timestamp = DateTime.UtcNow.AddDays(-2), Findings = new() { new AuditIssueEnhanced { Title = "Synthetic historical finding", Severity = "Medium", LogName = "System" } } };
         Invoke(vm, "ApplyHistoricalAudit", history);
         Require(vm.AllIssues.Count == 1 && !vm.HasAiReport && vm.AiReportFindings.Count == 0 && Field<List<SecurityEvent>>(vm, "_lastAuditEvents").Count == 0, "Historical snapshot must clear unrelated AI report and event evidence.");
+        Require(string.IsNullOrEmpty(vm.AuditElapsedText), "Historical snapshots must not display elapsed time from the previous scan.");
         await (Task)Invoke(vm, "LoadAuditForDateAsync", new DateTime(1901, 1, 1));
         await NextRendering();
         Require(vm.AllIssues.Count == 0 && !vm.HasAuditData && vm.HealthScoreText == "—", "A date without a snapshot must clear old findings and score.");
@@ -665,8 +671,10 @@ internal static class AiHubUxSmoke
         var pinned = (FrameworkElement)page.FindName("AuditPinnedStatus");
         var pinnedElapsed = (TextBlock)page.FindName("AuditPinnedElapsed");
         var optimizationElapsed = (TextBlock)page.FindName("OptimizationElapsedText");
+        var optimizationStatus = typeof(AIHubPageViewModel).GetProperty(nameof(vm.OptimizationWorkflowStatus));
         int originalTab = vm.ActiveTabIndex;
         string originalStatus = vm.AuditStatusText;
+        string originalOptimizationStatus = vm.OptimizationWorkflowStatus;
         try
         {
             vm.ActiveTabIndex = 0;
@@ -685,25 +693,49 @@ internal static class AiHubUxSmoke
                 "The running task must keep its existing clock visible outside the scrolling results.");
             Require(((FrameworkElement)page.FindName("AuditWorkflowCard")).Visibility == Visibility.Collapsed,
                 "The running task must not repeat the fixed progress strip in a second workflow card.");
-            var taskDetails = (Button)page.FindName("AuditTaskDetailsButton");
-            taskDetails.Flyout.ShowAt(taskDetails);
+            status.SetValue(vm, "Collecting fixture logs / 正在收集合成日志。 " + new string('x', 400));
             await NextRendering();
-            Require(Descendants(((Flyout)taskDetails.Flyout).Content).OfType<TextBlock>().Any(text => text.Text == vm.AuditStatusText),
-                "Task details must retain the full current status while the compact strip is shown.");
-            taskDetails.Flyout.Hide();
+            var taskDetails = (ScrollViewer)page.FindName("AuditTaskDetails");
+            var taskStatus = (TextBlock)page.FindName("AuditPinnedTaskStatus");
+            var taskAiResult = (TextBlock)page.FindName("AuditPinnedAiResult");
+            Require(taskDetails.Visibility == Visibility.Visible && taskDetails.ActualHeight > 0 &&
+                IsDescendantOf(taskDetails, pinned) && IsDescendantOf(taskStatus, taskDetails) && taskStatus.Text == vm.AuditProgressActivityText &&
+                taskStatus.Text == vm.AuditStatusText && !vm.HasAuditBatchProgress,
+                "The complete current task status must be visible inline inside the fixed running card.");
+            Require(taskStatus.TextWrapping == TextWrapping.Wrap && taskStatus.IsTextSelectionEnabled &&
+                taskAiResult.TextWrapping == TextWrapping.Wrap && taskAiResult.IsTextSelectionEnabled &&
+                taskDetails.ActualHeight <= 113 && taskDetails.ScrollableWidth <= 1 &&
+                HeaderInside(HeaderBounds(taskDetails, pinned), pinned),
+                "Inline audit details must remain selectable and wrap inside the bounded running card without width overflow.");
 
             optimizing.SetValue(vm, true);
             scanPhase.SetValue(vm, ScanPhase.Scanning);
             Require(vm.OptimizationElapsedText.EndsWith("0:00") && !vm.AuditElapsedText.EndsWith("0:00"),
                 "Optimization and audit scans must keep independent clocks.");
-            Invoke(vm, "ApplyAuditAiProgress", new Kit.AiHub.Contract.AiTaskProgress("Execute", "private-provider-text", 0, 1)
+            optimizationStatus.SetValue(vm, "Reviewing fixture files / 正在检查合成文件。 " + new string('x', 400));
+            vm.ActiveTabIndex = 1;
+            await NextRendering();
+            var optimizationDetails = (ScrollViewer)page.FindName("OptimizationTaskDetails");
+            var optimizationTaskStatus = (TextBlock)page.FindName("OptimizationWorkflowStatus");
+            var optimizationCard = (FrameworkElement)page.FindName("OptimizationWorkflowCard");
+            Require(optimizationDetails.Visibility == Visibility.Visible && optimizationDetails.ActualHeight > 0 &&
+                IsDescendantOf(optimizationDetails, optimizationCard) && IsDescendantOf(optimizationTaskStatus, optimizationDetails) &&
+                optimizationTaskStatus.Text == vm.OptimizationWorkflowStatus && optimizationTaskStatus.TextWrapping == TextWrapping.Wrap &&
+                optimizationTaskStatus.IsTextSelectionEnabled && optimizationDetails.ActualHeight <= 113 &&
+                optimizationDetails.ScrollableWidth <= 1 && HeaderInside(HeaderBounds(optimizationDetails, optimizationCard), optimizationCard),
+                "Optimization task details must be visible inline, selectable, wrapping and bounded without width overflow.");
+            vm.ActiveTabIndex = 0;
+            await NextRendering();
+            Invoke(vm, "ApplyAuditAiProgress", new Kit.AiHub.Contract.AiTaskProgress("Execute", "private-provider-text", 0, 2)
             {
-                Activity = "waiting", ActiveBatches = 1,
+                Activity = "waiting", ActiveBatches = 2, BatchIndex = 2, Route = "Main", QueueElapsedMilliseconds = 42,
             });
             string waiting = vm.AuditStatusText;
             await WaitUntil(() => vm.AuditStatusText != waiting && !optimizationElapsed.Text.EndsWith("0:00"));
             Require(!vm.AuditStatusText.Contains("private-provider-text") && vm.SidebarWorkflowPercent == 30,
                 "Silent AI waiting advances elapsed time without fabricating work or exposing provider text.");
+            await NextRendering();
+            CheckAuditProgressLines(page, "0/2");
             await Capture(page, "aihub-running-timer.png");
 
             auditPhase.SetValue(vm, ScanPhase.SelectingTargets);
@@ -734,8 +766,221 @@ internal static class AiHubUxSmoke
             scanPhase.SetValue(vm, ScanPhase.Idle);
             auditPhase.SetValue(vm, ScanPhase.Idle);
             status.SetValue(vm, originalStatus);
+            optimizationStatus.SetValue(vm, originalOptimizationStatus);
             vm.ActiveTabIndex = originalTab;
         }
+    }
+
+    private static async Task CheckAuditAnalysisLifecycle(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var auditPhase = typeof(AIHubPageViewModel).GetProperty(nameof(vm.AuditPhase));
+        var analyzing = typeof(AIHubPageViewModel).GetProperty(nameof(vm.IsAiAnalyzing));
+        var persistence = typeof(AIHubPageViewModel).GetField("_persistCurrentAudit", PrivateInstance);
+        var deepAnalysis = typeof(AIHubPageViewModel).GetField("_auditWasDeepAnalysis", PrivateInstance);
+        var percent = typeof(AIHubPageViewModel).GetField("_auditDetailedPercent", PrivateInstance);
+        var pinned = (FrameworkElement)page.FindName("AuditPinnedStatus");
+        int originalTab = vm.ActiveTabIndex;
+        string originalStatus = vm.AuditStatusText;
+        string originalBanner = Field<string>(vm, "_statusMessage");
+        var originalSeverity = Field<InfoBarSeverity>(vm, "_statusSeverity");
+        bool originalOpen = Field<bool>(vm, "_isStatusOpen");
+        bool originalPersistence = (bool)persistence.GetValue(vm);
+        object originalPercent = percent.GetValue(vm);
+        var originalSnapshot = Field<AuditResult>(vm, "_auditOverviewSnapshot");
+        var ruleIssues = new List<AuditIssueEnhanced>
+        {
+            new() { Title = "Local fixture finding", EventId = "1", LogName = "System", Severity = "Medium" },
+            new() { Title = "Local finding enhanced by AI", EventId = "2", LogName = "System", Severity = "Low" },
+        };
+        var aiIssues = new[]
+        {
+            new AuditIssue { Title = "Validated AI fixture finding", EventId = "2", LogName = "System", Severity = "Low", Description = "Synthetic validated evidence" },
+        };
+        try
+        {
+            vm.ActiveTabIndex = 0;
+            persistence.SetValue(vm, false);
+            Invoke(vm, "FinishAuditStatus", 100, 0, "ok", Array.Empty<string>());
+            string completedBanner = vm.StatusMessage;
+            foreach (string outcome in new[] { "ok", "partial", "failed", "cancelled" })
+            {
+                Invoke(vm, "ClearAuditSnapshot");
+                foreach (var issue in ruleIssues)
+                {
+                    vm.AllIssues.Add(issue);
+                }
+                typeof(AIHubPageViewModel).GetProperty(nameof(vm.HealthScore)).SetValue(vm, Kit.AIHubLib.Services.HealthScoreCalculator.Calculate(ruleIssues));
+                deepAnalysis.SetValue(vm, true);
+                percent.SetValue(vm, null);
+                analyzing.SetValue(vm, true);
+                auditPhase.SetValue(vm, ScanPhase.Scanning);
+                Invoke(vm, "FinishAuditStatus", vm.HealthScore, ruleIssues.Count, "pending", Array.Empty<string>());
+                await NextRendering();
+                Require(vm.IsStatusOpen && vm.StatusSeverity == InfoBarSeverity.Informational && vm.StatusMessage != completedBanner &&
+                    vm.AuditPhase == ScanPhase.Scanning && vm.IsAiAnalyzing && !vm.IsAiSummaryCompleted && pinned.Visibility == Visibility.Visible &&
+                    Descendants(page).OfType<InfoBar>().Any(bar => bar.IsOpen && bar.Message == vm.StatusMessage && bar.Severity == InfoBarSeverity.Informational),
+                    outcome + ": locally completed findings must show a running informational banner until AI analysis ends.");
+                Require(string.IsNullOrEmpty(vm.AiAnalysisRanText) && ((TextBlock)page.FindName("AuditPinnedAiResult")).Visibility == Visibility.Collapsed,
+                    outcome + ": pending AI work must not repeat the local-ready banner in an empty AI-result row.");
+                Invoke(vm, "ApplyAuditAiProgress", new Kit.AiHub.Contract.AiTaskProgress("Validate", "private-provider-text", 1, 2)
+                {
+                    Activity = "validating", ActiveBatches = 1, BatchIndex = 1, Route = "Main", QueueElapsedMilliseconds = 42,
+                });
+                string firstElapsed = vm.AuditElapsedText;
+                await WaitUntil(() => vm.AuditElapsedText != firstElapsed);
+                Require(vm.AuditPhase == ScanPhase.Scanning && vm.IsAiAnalyzing && !vm.IsAiSummaryCompleted &&
+                    vm.StatusSeverity != InfoBarSeverity.Success && vm.AuditStatusText == vm.AiStatusText,
+                    outcome + ": active AI progress must advance elapsed time without changing the banner to completed.");
+
+                var retained = new AiHubAuditAnalysisService.AuditAnalysisResult(aiIssues, true, "fixture partial");
+                Invoke(vm, "ApplyAiAnalysis", retained, ruleIssues, Array.Empty<SecurityEvent>(), null, true);
+                await NextRendering();
+                var inlineResult = (TextBlock)page.FindName("AuditPinnedAiResult");
+                Require(vm.HasAiReport && !vm.IsAiSummaryCompleted && vm.AuditPhase == ScanPhase.Scanning && vm.StatusSeverity != InfoBarSeverity.Success,
+                    outcome + ": an interim AI report must preserve the active scan and its pending banner.");
+                Require(inlineResult.Visibility == Visibility.Visible && inlineResult.Text == vm.AiAnalysisRanText && IsDescendantOf(inlineResult, pinned),
+                    outcome + ": retained interim AI results must appear inline with the running task details.");
+                CheckAuditProgressLines(page, "1/2");
+                if (outcome == "ok")
+                {
+                    await CheckAuditRunningLayout(page);
+                }
+                if (outcome == "cancelled")
+                {
+                    Invoke(vm, "CompleteAiInterruption", null, true);
+                }
+                else
+                {
+                    var result = new AiHubAuditAnalysisService.AuditAnalysisResult(
+                        outcome == "failed" ? null : aiIssues, outcome == "partial", outcome == "ok" ? null : "fixture incomplete");
+                    Invoke(vm, "ApplyAiAnalysis", result, ruleIssues, Array.Empty<SecurityEvent>(), null, false);
+                    analyzing.SetValue(vm, false);
+                }
+                await NextRendering();
+                var expectedSeverity = outcome == "ok" ? InfoBarSeverity.Success : outcome == "cancelled" ? InfoBarSeverity.Informational : InfoBarSeverity.Warning;
+                var expectedPhase = outcome == "failed" ? ScanPhase.Failed : ScanPhase.SelectingTargets;
+                Require(vm.IsStatusOpen && vm.StatusSeverity == expectedSeverity && vm.AuditPhase == expectedPhase && !vm.IsAiAnalyzing &&
+                    pinned.Visibility == Visibility.Collapsed && vm.IsAiSummaryCompleted == (outcome == "ok") &&
+                    vm.IsAiSummaryCaution == (outcome != "ok") && !string.IsNullOrWhiteSpace(vm.FinishedText) &&
+                    vm.StatusMessage == vm.AuditStatusText &&
+                    Descendants(page).OfType<InfoBar>().Any(bar => bar.IsOpen && bar.Message == vm.StatusMessage && bar.Severity == expectedSeverity),
+                    outcome + ": the final banner, report state, scan phase and fixed card must agree on the AI outcome.");
+                if (outcome == "ok")
+                {
+                    var resultDetail = (TextBlock)page.FindName("AuditWorkflowStatus");
+                    var resultSupplement = (TextBlock)page.FindName("AuditWorkflowAiResult");
+                    Require(resultDetail.Text == vm.AuditResultDetailText && resultDetail.Text != vm.StatusMessage &&
+                        System.Text.RegularExpressions.Regex.Matches(resultDetail.Text, "[0-9]+").Cast<System.Text.RegularExpressions.Match>()
+                            .Select(match => match.Value).SequenceEqual(new[] { "2", "1", "2" }) && vm.AllIssues.Count == 2 &&
+                        vm.AiReportFindings.Count == 1 && string.IsNullOrEmpty(vm.AuditResultSupplementText) && resultSupplement.Visibility == Visibility.Collapsed,
+                        "A successful result card must show local, AI and merged counts, without repeating the completed banner or AI summary.");
+                    var completedProgress = (ProgressBar)page.FindName("AuditWorkflowProgress");
+                    Require(completedProgress.Value == 100 && !completedProgress.IsIndeterminate,
+                        "A successful result card must have determinate 100 percent progress.");
+                }
+                string finishedElapsed = vm.AuditElapsedText;
+                string finishedStatus = vm.AuditStatusText;
+                string finishedBanner = vm.StatusMessage;
+                await Task.Delay(1100);
+                Require(vm.AuditElapsedText == finishedElapsed && vm.AuditStatusText == finishedStatus && vm.StatusMessage == finishedBanner,
+                    outcome + ": final elapsed time and status must remain frozen after late timer ticks.");
+                if (outcome == "ok")
+                {
+                    // Capture after the built-in ProgressBar transition has settled.
+                    await Capture(page, "aihub-audit-completed-merged-counts.png");
+                }
+            }
+        }
+        finally
+        {
+            analyzing.SetValue(vm, false);
+            Invoke(vm, "ClearAuditSnapshot");
+            if (originalSnapshot != null)
+            {
+                Invoke(vm, "ApplyHistoricalAudit", originalSnapshot);
+            }
+            persistence.SetValue(vm, originalPersistence);
+            percent.SetValue(vm, originalPercent);
+            typeof(AIHubPageViewModel).GetProperty(nameof(vm.AuditStatusText)).SetValue(vm, originalStatus);
+            Invoke(vm, "ShowStatus", originalBanner, originalSeverity, false);
+            vm.IsStatusOpen = originalOpen;
+            vm.ActiveTabIndex = originalTab;
+        }
+        EnsureNoWorker();
+        Log("Actual audit VM pending, interim, success, partial, failure and cancellation banners with frozen terminal timers PASS");
+    }
+
+    private static void CheckAuditProgressLines(AIHubPage page, string expectedCounts)
+    {
+        var vm = page.ViewModel;
+        var pinned = (FrameworkElement)page.FindName("AuditPinnedStatus");
+        var details = (ScrollViewer)page.FindName("AuditTaskDetails");
+        var summary = (TextBlock)page.FindName("AuditPinnedBatchSummary");
+        var activity = (TextBlock)page.FindName("AuditPinnedTaskStatus");
+        var queue = (TextBlock)page.FindName("AuditPinnedQueueStatus");
+        var elapsed = (TextBlock)page.FindName("AuditPinnedElapsed");
+        Require(vm.HasAuditBatchProgress && summary.Visibility == Visibility.Visible && summary.Text == vm.AuditProgressSummaryText &&
+            summary.Text.Contains(expectedCounts, StringComparison.Ordinal) && activity.Text == vm.AuditProgressActivityText &&
+            (activity.Text.StartsWith("Latest update:", StringComparison.Ordinal) || activity.Text.StartsWith("最新进展：", StringComparison.Ordinal)) &&
+            (activity.Text.Contains("Main service", StringComparison.Ordinal) || activity.Text.Contains("主服务", StringComparison.Ordinal)) &&
+            HeaderBounds(summary, details).Bottom <= HeaderBounds(activity, details).Y + 1,
+            "Batch totals and the latest per-batch main-service activity must render on distinct lines.");
+        Require(string.IsNullOrEmpty(vm.AuditProgressQueueText) && queue.Visibility == Visibility.Collapsed,
+            "A sub-second queue delay must not occupy a task-detail row.");
+        Require(elapsed.Visibility == Visibility.Visible && elapsed.Text == vm.AuditElapsedText &&
+            Descendants(pinned).OfType<TextBlock>().Count(text => text.Visibility == Visibility.Visible && text.Text == vm.AuditElapsedText) == 1 &&
+            !Descendants(details).OfType<TextBlock>().Any(text => text.Visibility == Visibility.Visible &&
+                (text.Text.Contains("Elapsed", StringComparison.OrdinalIgnoreCase) || text.Text.Contains("已用", StringComparison.Ordinal))),
+            "The running task must show total elapsed time only in its header, without repeating it in progress details.");
+    }
+
+    private static async Task CheckAuditRunningLayout(AIHubPage page)
+    {
+        var vm = page.ViewModel;
+        var window = App.GetSettingsWindow();
+        var root = (FrameworkElement)window.Content;
+        var originalTheme = root.RequestedTheme;
+        var originalSize = window.AppWindow.Size;
+        var pinned = (FrameworkElement)page.FindName("AuditPinnedStatus");
+        var details = (ScrollViewer)page.FindName("AuditTaskDetails");
+        var body = (ScrollViewer)page.FindName("AiHubContentScroll");
+        try
+        {
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            foreach (var size in new[] { new Windows.Graphics.SizeInt32(760, 1000), new Windows.Graphics.SizeInt32(760, 480), new Windows.Graphics.SizeInt32(480, 480) })
+            {
+                root.RequestedTheme = theme;
+                window.AppWindow.Resize(size);
+                await NextRendering();
+                await NextRendering();
+                body.ChangeView(null, 0, null, true);
+                details.ChangeView(null, 0, null, true);
+                await NextRendering();
+                page.UpdateLayout();
+                string context = $"{theme}-{size.Width}x{size.Height}";
+                var pinnedBounds = HeaderBounds(pinned, page);
+                var bodyBounds = HeaderBounds(body, page);
+                Log($"AUDIT RUNNING {context}: window={window.AppWindow.Size.Width}x{window.AppWindow.Size.Height}, page={page.ActualWidth:F1}x{page.ActualHeight:F1}; pinned={pinnedBounds}; details={details.ViewportWidth:F1}x{details.ViewportHeight:F1}; body={bodyBounds}, viewport={body.ViewportWidth:F1}x{body.ViewportHeight:F1}");
+                await Capture(page, $"aihub-audit-pending-with-results-{context}.png");
+                Require(vm.IsAiAnalyzing && vm.HasAiReport && vm.AllIssues.Count == 2 && vm.AiReportFindings.Count == 1 &&
+                    pinned.Visibility == Visibility.Visible && details.ViewportHeight > 0 && details.ActualHeight <= 113 &&
+                    HeaderInside(pinnedBounds, page) && HeaderInside(HeaderBounds(details, pinned), pinned),
+                    context + ": pending AI results must keep their running task card and bounded details inside the visible page.");
+                Require(body.ViewportHeight >= 80 && bodyBounds.Y >= pinnedBounds.Bottom - 2 && HeaderInside(bodyBounds, page) &&
+                    body.ExtentWidth <= body.ViewportWidth + 2 && details.ScrollableWidth <= 1,
+                    context + ": the running task must leave at least 80 DIPs of usable result reading area without horizontal overflow.");
+                CheckAuditProgressLines(page, "1/2");
+            }
+        }
+        finally
+        {
+            root.RequestedTheme = originalTheme;
+            window.AppWindow.Resize(originalSize);
+            await NextRendering();
+            await NextRendering();
+        }
+        Log("Pending AI results preserve separate progress lines and usable body space in narrow and short windows PASS");
     }
 
     private static async Task CheckAuditFailureLayout(AIHubPage page)
@@ -787,6 +1032,7 @@ internal static class AiHubUxSmoke
                 string context = $"{theme}/{width}/{phase}";
                 var statusSlot = LayoutInformation.GetLayoutSlot(status);
                 var aiResultSlot = LayoutInformation.GetLayoutSlot(aiResult);
+                var diagnostic = aiResult.Visibility == Visibility.Visible ? aiResult : status;
                 Log($"AUDIT FAILURE {context}: card={card.ActualWidth:F1}x{card.ActualHeight:F1}; details={detailScroll.ActualWidth:F1}x{detailScroll.ActualHeight:F1}, viewport={detailScroll.ViewportWidth:F1}x{detailScroll.ViewportHeight:F1}, extent={detailScroll.ExtentWidth:F1}x{detailScroll.ExtentHeight:F1}; status={status.ActualWidth:F1}x{status.ActualHeight:F1}, slot={statusSlot}@{status.TransformToVisual(card).TransformPoint(new(0, 0))}; aiResult={aiResult.ActualWidth:F1}x{aiResult.ActualHeight:F1}, slot={aiResultSlot}@{aiResult.TransformToVisual(card).TransformPoint(new(0, 0))}; outerViewport={scroll.ViewportWidth:F1}x{scroll.ViewportHeight:F1}");
                 await Capture(page, $"aihub-audit-failure-{theme}-{width}-{phase}.png");
                 Require(card.Visibility == Visibility.Visible && card.ActualHeight > 80 && card.ActualHeight <= 300,
@@ -794,9 +1040,10 @@ internal static class AiHubUxSmoke
                 // TextBlock.ActualWidth can describe only the rendered text;
                 // its allocated layout slot is the available wrapping width.
                 Require(detailScroll.ActualWidth >= card.ActualWidth - 50 && statusSlot.Width >= detailScroll.ViewportWidth - 4 &&
-                    aiResultSlot.Width >= detailScroll.ViewportWidth - 4 && statusSlot.Left >= -1 && aiResultSlot.Left >= -1 &&
-                    statusSlot.Right <= detailScroll.ViewportWidth + 1 && aiResultSlot.Right <= detailScroll.ViewportWidth + 1,
-                    context + ": both workflow messages must retain the full readable column width.");
+                    statusSlot.Left >= -1 && statusSlot.Right <= detailScroll.ViewportWidth + 1 &&
+                    (aiResult.Visibility == Visibility.Collapsed || (aiResultSlot.Width >= detailScroll.ViewportWidth - 4 &&
+                        aiResultSlot.Left >= -1 && aiResultSlot.Right <= detailScroll.ViewportWidth + 1)),
+                    context + ": every visible workflow message must retain the full readable column width.");
                 Require(scroll.ExtentWidth <= scroll.ViewportWidth + 2 && detailScroll.ScrollableWidth <= 1 && detailScroll.ActualHeight <= 145,
                     context + ": failure details must scroll vertically within their finite viewport without horizontal overflow.");
                 double cardTop = card.TransformToVisual(scroll).TransformPoint(new(0, 0)).Y;
@@ -805,21 +1052,23 @@ internal static class AiHubUxSmoke
                     context + ": the bounded workflow card must remain entirely visible in the initial viewport.");
                 Require(vm.SidebarWorkflowPercent == 30 && !vm.IsAuditProgressIndeterminate && vm.AllIssues.Count == 1 && vm.HasAuditData,
                     context + ": layout must preserve the partial progress and retained local findings.");
-                Require(aiResult.Text == failure && aiResult.IsTextSelectionEnabled && status.IsTextSelectionEnabled &&
-                    aiResult.TextWrapping == TextWrapping.Wrap && status.TextWrapping == TextWrapping.Wrap,
-                    context + ": complete diagnostics must remain wrapping selectable text.");
+                Require(status.Text == vm.AuditResultDetailText && aiResult.Text == vm.AuditResultSupplementText &&
+                    aiResult.Visibility == (string.IsNullOrEmpty(vm.AuditResultSupplementText) ? Visibility.Collapsed : Visibility.Visible) &&
+                    diagnostic.Text == failure && diagnostic.IsTextSelectionEnabled && diagnostic.TextWrapping == TextWrapping.Wrap &&
+                    new[] { status, aiResult }.Count(text => text.Visibility == Visibility.Visible && text.Text == failure) == 1,
+                    context + ": complete diagnostics must remain wrapping selectable text and appear only once.");
                 Require(detailScroll.ScrollableHeight > 0, context + ": long diagnostics must provide a bounded reading region.");
                 // Keyboard focus can queue BringIntoView on both nested viewers.
                 // Finish that movement before requesting the diagnostic tail.
                 await WaitForScrollSettled(new[] { detailScroll, scroll }, () =>
-                    Require(aiResult.Focus(FocusState.Keyboard) && ReferenceEquals(Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(page.XamlRoot), aiResult),
+                    Require(diagnostic.Focus(FocusState.Keyboard) && ReferenceEquals(Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(page.XamlRoot), diagnostic),
                         context + ": selectable native diagnostics must accept real keyboard focus."), context + "/focus");
                 double tailTarget = detailScroll.ScrollableHeight;
                 bool tailAccepted = false;
                 await WaitForScrollSettled(new[] { detailScroll, scroll }, () =>
                     tailAccepted = detailScroll.ChangeView(null, tailTarget, null, true), context + "/tail");
                 Log($"AUDIT FAILURE TAIL {context}: accepted={tailAccepted}, requested={tailTarget:F1}, offset={detailScroll.VerticalOffset:F1}, max={detailScroll.ScrollableHeight:F1}, viewport={detailScroll.ViewportHeight:F1}, extent={detailScroll.ExtentHeight:F1}, outerOffset={scroll.VerticalOffset:F1}");
-                Require(Math.Abs(detailScroll.VerticalOffset - detailScroll.ScrollableHeight) < 2 && aiResult.Text.EndsWith("END OF SYNTHETIC FAILURE", StringComparison.Ordinal),
+                Require(Math.Abs(detailScroll.VerticalOffset - detailScroll.ScrollableHeight) < 2 && diagnostic.Text.EndsWith("END OF SYNTHETIC FAILURE", StringComparison.Ordinal),
                     context + ": the complete native diagnostic tail must remain reachable without expanding the outer card.");
             }
         }

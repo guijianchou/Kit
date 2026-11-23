@@ -4,7 +4,7 @@
 
 Kit is a Windows 11 utility collection based on [Microsoft PowerToys](https://github.com/microsoft/PowerToys). Synchronized with PowerToys upstream **v0.102.3101**, it reuses the Runner, native module contract and WinUI 3 Settings framework to bring together system utilities, local service management, network diagnostics and AI-assisted maintenance.
 
-Current source version: **3.5.5**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
+Current source version: **3.5.9**, defined in [src/Version.props](src/Version.props). Kit uses separate configuration, window identity and backup paths to distinguish it from official PowerToys installations. Upstream automatic update and telemetry flows are excluded.
 
 [Overview](#1-overview) · [Framework](#2-framework) · [Plugins](#3-plugins) · [Build and Release](#4-build-and-release) · [Data and Logs](#5-data-and-logs) · [Development](#6-development-and-extension)
 
@@ -68,6 +68,8 @@ Settings sends configuration and module switches over the existing IPC channel. 
 | **AIHubWorker** | Run scheduled local rule-based audits and save history, without calling AI kernels |
 
 The shared `Kit.AiHub` service powers AI Hub and NetMap AI Check. Model calls always run through native **Codex CLI or Pi CLI**; Kit handles policies, batching, cancellation and validated results. Main and Fallback each have a context-window setting, defaulting to **256,000 tokens**. API mode and reasoning-effort fields accept native identifiers; the installed CLI and endpoint determine support. Saving a value does not guarantee that the model supports it.
+
+Both kernels support [host-managed analysis workers](doc/devdoc/ai-service-native.md): Kit shares bounded capacity fairly within the Settings engine session and displays AI Hub's local scan findings before adding validated AI results; native autonomous delegation is not enabled.
 
 Native retries finish before an eligible failure can use a configured Fallback; Kit does not add another same-route retry loop. General shows current-process request/route counts, retry outcomes and reported token usage, with missing usage marked unknown. Safe diagnostics distinguish authentication, timeout, cancellation and output failures. See [native execution and settings](doc/devdoc/ai-service-native.md) for settings ownership, protocol compatibility and diagnostic limits.
 

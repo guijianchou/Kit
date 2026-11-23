@@ -3557,6 +3557,10 @@ namespace ViewModelTests
             StringAssert.Contains(pageXaml, "AutomationProperties.AutomationId=\"AIHub_ScanButton\"");
             StringAssert.Contains(pageXaml, "AutomationProperties.AutomationId=\"AIHub_DeepAnalyzeButton\"");
             StringAssert.Contains(pageXaml, "AutomationProperties.AutomationId=\"AIHub_AuditHistoryButton\"");
+            StringAssert.Contains(pageXaml, "x:Name=\"AuditTaskDetails\"");
+            StringAssert.Contains(pageXaml, "x:Name=\"AuditPinnedTaskStatus\"");
+            StringAssert.Contains(pageXaml, "x:Name=\"OptimizationTaskDetails\"");
+            Assert.IsFalse(pageXaml.Contains("AuditTaskDetailsButton", StringComparison.Ordinal), "Running task details should be readable without opening a flyout.");
             StringAssert.Contains(pageXaml, "AutomationProperties.Name=\"{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}\"");
             Assert.AreEqual(2, pageXaml.Split("AutomationProperties.LiveSetting=\"Assertive\"").Length - 1, "Both InfoBars should announce updates.");
             StringAssert.Contains(settingsResources, "AIHub_Segment_Optimization.Content");

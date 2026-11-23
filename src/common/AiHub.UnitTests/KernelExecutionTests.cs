@@ -112,6 +112,9 @@ public sealed class KernelExecutionTests
                 Assert.IsTrue(config.Contains("model_reasoning_effort = \"max\"", StringComparison.Ordinal));
                 Assert.IsTrue(config.Contains("\nmodel_context_window = 256000\n", StringComparison.Ordinal));
                 Assert.IsTrue(config.Contains("shell_tool = false", StringComparison.Ordinal));
+                StringAssert.Contains(config, "[agents]\nenabled = false\n");
+                StringAssert.Contains(config, "multi_agent = false\n");
+                StringAssert.Contains(config, "multi_agent_v2 = false\n");
                 Assert.IsTrue(config.Contains("approval_policy = \"never\"", StringComparison.Ordinal));
                 using JsonDocument catalog = JsonDocument.Parse(capture.RootElement.GetProperty("Catalog").GetString()!);
                 Assert.IsFalse(catalog.RootElement.GetProperty("models")[0].GetProperty("use_responses_lite").GetBoolean());
@@ -314,7 +317,11 @@ public sealed class KernelExecutionTests
         var result = await fixture.Dispatcher.ExecuteAsync("pi", KernelFixture.Target("pi-native-" + scenario), "synthetic input", 10, diagnostics.Enqueue);
         Assert.AreEqual(expected, result.ErrorCode);
         Assert.AreEqual(expected == AiErrorCode.None, result.IsSuccess);
-        Assert.IsTrue(diagnostics.Any(value => value.Contains("event=retry, source=stdout", StringComparison.Ordinal)));
+        if (expected != AiErrorCode.PolicyViolation)
+        {
+            Assert.IsTrue(diagnostics.Any(value => value.Contains("event=retry, source=stdout", StringComparison.Ordinal)));
+        }
+
         Assert.IsFalse(string.Join('\n', diagnostics).Contains("synthetic-fixture-secret", StringComparison.Ordinal));
         Assert.AreEqual(1, Directory.GetFiles(fixture.RequestRoot, "capture-*.json").Length);
     }
@@ -450,6 +457,76 @@ public sealed class KernelExecutionTests
         KernelExecutionResult timeout = await fixture.Dispatcher.ExecuteAsync("pi", KernelFixture.Target("timeout"), "input", 1);
         Assert.AreEqual(AiErrorCode.Timeout, timeout.ErrorCode);
         Assert.IsFalse(timeout.CanFailover);
+        Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task SuccessfulResponseSurvivesRouteDeadlineDuringCleanup(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        bool cleanupCrossedDeadline = false;
+        var dispatcher = new RouteDispatcher(fixture.Manager, fixture.RequestRoot, async (root, path, deadline) =>
+        {
+            Assert.IsFalse(deadline.IsCancellationRequested, "The synthetic response must finish before cleanup starts.");
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, deadline);
+            }
+            catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+            {
+                cleanupCrossedDeadline = true;
+            }
+
+            await RouteDispatcher.DeleteRequestDirectoryAsync(root, path);
+        });
+
+        KernelExecutionResult result = await dispatcher.ExecuteAsync(kernel, KernelFixture.Target(), "input", 5);
+
+        Assert.IsTrue(cleanupCrossedDeadline);
+        Assert.IsTrue(result.IsSuccess, result.ErrorMessage);
+        Assert.AreEqual("{\"issues\":[]}", result.Output);
+        Assert.AreEqual("none", result.Diagnostics?.CancellationSource);
+        Assert.IsFalse(result.CanFailover);
+        Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
+    }
+
+    [TestMethod]
+    [DataRow("codex")]
+    [DataRow("pi")]
+    public async Task CallerCancellationDuringCleanupStillDiscardsACompletedResponse(string kernel)
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        using var cancellation = new CancellationTokenSource();
+        var dispatcher = new RouteDispatcher(fixture.Manager, fixture.RequestRoot, async (root, path, _) =>
+        {
+            cancellation.Cancel();
+            await RouteDispatcher.DeleteRequestDirectoryAsync(root, path);
+        });
+
+        KernelExecutionResult result = await dispatcher.ExecuteAsync(kernel, KernelFixture.Target(), "input", 10, cancellation.Token);
+
+        Assert.AreEqual(AiErrorCode.Cancelled, result.ErrorCode);
+        Assert.AreEqual(string.Empty, result.Output);
+        Assert.AreEqual("upstream", result.Diagnostics?.CancellationSource);
+        Assert.IsFalse(result.CanFailover);
+        Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
+    }
+
+    [TestMethod]
+    public async Task UntrackedNativeDelegationIsRejectedWithoutReturningPayload()
+    {
+        using KernelFixture fixture = await KernelFixture.CreateAsync();
+        var diagnostics = new ConcurrentQueue<string>();
+        KernelExecutionResult result = await fixture.Dispatcher.ExecuteAsync("codex", KernelFixture.Target("collab"),
+            "synthetic input", 10, diagnostics.Enqueue);
+
+        Assert.AreEqual(AiErrorCode.PolicyViolation, result.ErrorCode);
+        Assert.IsFalse(result.CanFailover);
+        Assert.AreEqual(string.Empty, result.Output);
+        Assert.IsTrue(diagnostics.Any(message => message.Contains("toolType=collab_tool_call", StringComparison.Ordinal)));
+        Assert.IsFalse(string.Join('\n', diagnostics).Contains("synthetic-private-content", StringComparison.Ordinal));
         Assert.AreEqual(0, Directory.GetDirectories(fixture.RequestRoot).Length);
     }
 

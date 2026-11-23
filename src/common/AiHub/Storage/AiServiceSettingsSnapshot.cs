@@ -10,6 +10,8 @@ public sealed class AiServiceSettingsSnapshot
     public bool IsEnabled { get; set; }
     public string SelectedKernel { get; set; } = AiKernelCatalog.Codex;
     public int MaxConcurrentAnalysis { get; set; } = 2;
+    public bool EnableSubagents { get; set; } = true;
+    public int MaxAgentsPerTask { get; set; } = 3;
     public int ScanIntervalHours { get; set; }
     public int AuditModeIndex { get; set; }
     public int RetentionDays { get; set; } = 30;
@@ -21,6 +23,8 @@ public sealed class AiServiceSettingsSnapshot
         IsEnabled = config.IsEnabled,
         SelectedKernel = config.SelectedKernel,
         MaxConcurrentAnalysis = config.MaxConcurrentAnalysis,
+        EnableSubagents = config.EnableSubagents,
+        MaxAgentsPerTask = config.MaxAgentsPerTask,
         ScanIntervalHours = config.ScanIntervalHours,
         AuditModeIndex = config.AuditModeIndex,
         RetentionDays = config.RetentionDays,
@@ -31,6 +35,8 @@ public sealed class AiServiceSettingsSnapshot
         IsEnabled = IsEnabled,
         SelectedKernel = SelectedKernel,
         MaxConcurrentAnalysis = MaxConcurrentAnalysis,
+        EnableSubagents = EnableSubagents,
+        MaxAgentsPerTask = MaxAgentsPerTask,
         ScanIntervalHours = ScanIntervalHours,
         AuditModeIndex = AuditModeIndex,
         RetentionDays = RetentionDays,

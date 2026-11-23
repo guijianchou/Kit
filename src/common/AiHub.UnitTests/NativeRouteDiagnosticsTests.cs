@@ -16,6 +16,25 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class NativeRouteDiagnosticsTests
 {
     [TestMethod]
+    [DataRow("codex", "0.169.0", true, true, AiKernelNativeProtocol.CodexAppServer)]
+    [DataRow("codex", "0.168.0", true, false, AiKernelNativeProtocol.CodexAppServer)]
+    [DataRow("codex", "0.169.0-alpha.1", true, false, AiKernelNativeProtocol.CodexAppServer)]
+    [DataRow("codex", "unknown", true, false, AiKernelNativeProtocol.CodexAppServer)]
+    [DataRow("pi", "1.5.2", true, true, AiKernelNativeProtocol.PiExtension)]
+    [DataRow("pi", "1.5.1", true, false, AiKernelNativeProtocol.PiExtension)]
+    [DataRow("pi", "1.5.2", false, false, AiKernelNativeProtocol.PiExtension)]
+    public void KernelCapabilitiesSeparateManagedWorkersFromUnimplementedNativeAdapters(
+        string kernel, string version, bool installed, bool baselineMet, AiKernelNativeProtocol protocol)
+    {
+        var status = new AiKernelStatus(kernel, installed, version, "unused");
+        Assert.AreEqual(installed, status.Capabilities.SupportsHostManagedWorkers);
+        Assert.AreEqual(baselineMet, status.Capabilities.MeetsNativeProtocolBaseline);
+        Assert.AreEqual(protocol, status.Capabilities.NativeProtocol);
+        Assert.IsFalse(status.Capabilities.SupportsNativeDelegation,
+            "A kernel version alone must never advertise an unimplemented native adapter.");
+    }
+
+    [TestMethod]
     [DataRow("codex", "responses-vNext", "ultra", "Main", 512000)]
     [DataRow("codex", "responses", "minimal", "Fallback", 64000)]
     [DataRow("pi", "openai-completions", "medium", "Main", 128000)]

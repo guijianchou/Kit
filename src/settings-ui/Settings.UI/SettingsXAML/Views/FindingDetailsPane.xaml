@@ -90,15 +90,21 @@
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
 
-                    <StackPanel Spacing="6">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                      AutomationProperties.AccessibilityView="Raw" />
-                            <TextBlock x:Uid="FindingDetails_Recommendation" Style="{StaticResource BodyStrongTextBlockStyle}"
-                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <TextBlock x:Name="RecommendationText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                    </StackPanel>
+                    <Border CornerRadius="8" Background="{ThemeResource KitAccentTintBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                        <Grid ColumnDefinitions="3,*">
+                            <Border Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="8,0,0,8" />
+                            <StackPanel Grid.Column="1" Spacing="6" Padding="12,10">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                              AutomationProperties.AccessibilityView="Raw" />
+                                    <TextBlock x:Uid="FindingDetails_Recommendation" Style="{StaticResource BodyStrongTextBlockStyle}"
+                                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <TextBlock x:Name="RecommendationText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
 
                     <Expander x:Name="EvidenceExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                         <StackPanel Spacing="10">

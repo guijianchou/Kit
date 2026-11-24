@@ -49,12 +49,17 @@ public static class NetMapHealthStylesStore
     public static Style? Dot(ProbeHealth health) => styles?[Key(health, "Dot")] as Style;
 
     public static Style? Box(ProbeHealth health) => styles?[Key(health, "Box")] as Style;
+
+    public static Style? Pill(ProbeHealth health) => styles?[Key(health, "Pill")] as Style;
+
+    public static Style? Bar(ProbeHealth health) => styles?[Key(health, "Bar")] as Style;
 }
 
 public sealed class NetMapCard
 {
     public NetMapCard(string title, ChannelState state, bool running, string? aiRoute = null, string? aiRouteSummary = null, string? aiRouteDetails = null)
     {
+        IsProxy = title == "Proxy";
         Title = NetMapViewModel.Text(title);
         var identity = state.LastSuccess?.Identity;
         Ip = state.ConsecutiveFailures >= 3 ? "N/A" : identity?.Ip ?? "—";
@@ -78,6 +83,10 @@ public sealed class NetMapCard
         AiRouteDetails = aiRouteDetails;
     }
 
+    public bool IsProxy { get; }
+
+    public bool IsDirect => !IsProxy;
+
     public string Title { get; }
 
     public ProbeHealth Health { get; }
@@ -85,6 +94,8 @@ public sealed class NetMapCard
     public Style? DotStyle => NetMapHealthStylesStore.Dot(Health);
 
     public Style? TextStyle => NetMapHealthStylesStore.Text(Health);
+
+    public Style? PillStyle => NetMapHealthStylesStore.Pill(Health);
 
     public string Ip { get; }
 
@@ -121,6 +132,14 @@ public sealed class NetMapServiceRow(string name) : Observable
 
     public string Name { get; } = name;
 
+    public string ServiceGlyph { get; } = name switch
+    {
+        "Claude" => "\uE8BD",
+        "ChatGPT" => "\uE9D9",
+        "Gemini" => "\uE734",
+        _ => "\uE774",
+    };
+
     public string Endpoint { get; } = NetworkProbe.ServiceEndpoint(name).AbsoluteUri;
 
     public string Proxy => NetMapViewModel.ServiceText(result);
@@ -130,6 +149,10 @@ public sealed class NetMapServiceRow(string name) : Observable
     public Style? DotStyle => NetMapHealthStylesStore.Dot(Health);
 
     public Style? TextStyle => NetMapHealthStylesStore.Text(Health);
+
+    public Style? PillStyle => NetMapHealthStylesStore.Pill(Health);
+
+    public Style? BarStyle => NetMapHealthStylesStore.Bar(Health);
 
     public string Status => NetMapViewModel.Text(!running ? "Stopped" : result == null ? (upstreamFailures > 0 ? "ProxyUnavailable" : "Waiting") : Health == ProbeHealth.Error ? "Disconnected" :
         Health == ProbeHealth.Good ? "Connected" : result.Outcome is "TraceResponded" or "PageResponded" && !result.BodyIncomplete ? "Slow" : "NeedsAttention");
@@ -151,6 +174,8 @@ public sealed class NetMapServiceRow(string name) : Observable
         OnPropertyChanged(nameof(Health));
         OnPropertyChanged(nameof(DotStyle));
         OnPropertyChanged(nameof(TextStyle));
+        OnPropertyChanged(nameof(PillStyle));
+        OnPropertyChanged(nameof(BarStyle));
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(Latency));
     }

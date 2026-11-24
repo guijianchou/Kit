@@ -3185,6 +3185,24 @@
   <data name="AIHub_DeepAnalyzeHint" xml:space="preserve">
     <value>Reviews up to 400 current events in batches under the security-audit policy. Findings are advisory; no action is executed automatically.</value>
   </data>
+  <data name="AIHub_DeepAnalyzeHint_ModuleDisabled" xml:space="preserve">
+    <value>Enable AI Hub to run AI deep analysis.</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint_Running" xml:space="preserve">
+    <value>An audit or AI deep analysis is already in progress.</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint_ServiceUnavailable" xml:space="preserve">
+    <value>Enable and configure the AI service in AI service settings before running deep analysis.</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint_ScanFirst" xml:space="preserve">
+    <value>Run a scan first to collect events for AI deep analysis.</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_Recollecting" xml:space="preserve">
+    <value>Collecting Windows events from this audit window for AI deep analysis...</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_NoEventsInWindow" xml:space="preserve">
+    <value>No Windows events remain in this audit window. Run a new scan first.</value>
+  </data>
   <data name="AIHub_HealthOverviewLabel" xml:space="preserve">
     <value>Health overview</value>
   </data>

@@ -19,6 +19,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -36,6 +37,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     private bool filtersExpanded;
     private bool narrowTableColumns;
     private bool resizingDetailsPane;
+    private bool operationPulseRunning;
     private double inlinePaneLength = 420;
     private long openPaneLengthCallbackToken;
     private ContentDialog activeDialog;
@@ -56,6 +58,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         settingsWindow = App.GetSettingsWindow();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        ActualThemeChanged += OnActualThemeChanged;
         settingsWindow.Closed += OnWindowClosed;
         settingsWindow.AppWindow.Changed += OnWindowChanged;
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -91,6 +94,8 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
     public Style GlyphStyle(string tone) => (Style)Resources["Winget" + tone + "GlyphStyle"];
 
+    public Style StripeStyle(string tone) => (Style)Resources["Winget" + tone + "StripeStyle"];
+
     public string WorkspaceGlyph(int tab) => tab switch
     {
         (int)WingetWorkspace.Installed => "\uE770",
@@ -98,9 +103,19 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         _ => "\uE895",
     };
 
-    public Style WorkspaceBadgeStyle(int tab) => BadgeStyle(tab == (int)WingetWorkspace.Installed ? "Success" : "Accent");
+    public Style WorkspaceBadgeStyle(int tab) => BadgeStyle(tab switch
+    {
+        (int)WingetWorkspace.Installed => "Success",
+        (int)WingetWorkspace.Discover => "Discover",
+        _ => "Accent",
+    });
 
-    public Style WorkspaceGlyphStyle(int tab) => GlyphStyle(tab == (int)WingetWorkspace.Installed ? "Success" : "Accent");
+    public Style WorkspaceGlyphStyle(int tab) => GlyphStyle(tab switch
+    {
+        (int)WingetWorkspace.Installed => "Success",
+        (int)WingetWorkspace.Discover => "Discover",
+        _ => "Accent",
+    });
 
     public Visibility IsUpdatesTab(int index) => index == (int)WingetWorkspace.Updates ? Visibility.Visible : Visibility.Collapsed;
 
@@ -136,11 +151,14 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         currentPage = true;
         RefreshEnabledState();
         UpdateVisibility();
+        ApplyPrimaryActionPalette((WingetWorkspace)ViewModel.ActiveTabIndex);
+        UpdateOperationPulse();
     }
 
     protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         currentPage = false;
+        StopOperationPulse();
         activeDialog?.Hide();
         CloseDetailsPane();
         FiltersFlyout.Hide();
@@ -153,7 +171,11 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         UpdateVisibility();
         UpdateWorkspaceLayout();
         ResizeDetailsPane();
+        ApplyPrimaryActionPalette((WingetWorkspace)ViewModel.ActiveTabIndex);
+        UpdateOperationPulse();
     }
+
+    private void OnActualThemeChanged(FrameworkElement sender, object args) => ApplyPrimaryActionPalette((WingetWorkspace)ViewModel.ActiveTabIndex);
 
     private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
     {
@@ -175,9 +197,20 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
                 WingetWorkspace.Discover => Symbol.Download,
                 _ => Symbol.Sync,
             });
+            ApplyPrimaryActionPalette(workspace);
+            if (IsLoaded)
+            {
+                KitMotionHelper.PlayBadgePop(WorkspaceBadge, 32d);
+                KitMotionHelper.PlayFadeIn(PackageTableViewport, 0.55f, 160);
+                if (workspace == WingetWorkspace.Discover && !ViewModel.HasSearchResults)
+                {
+                    KitMotionHelper.PlaySlideFadeIn(DiscoverHeroContent, 0f, 8f, 200);
+                }
+            }
         }
 
         ApplyListItemTemplate();
+        UpdateOperationPulse();
 
         if (WingetDetailsHost.IsPaneOpen)
         {
@@ -190,6 +223,75 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
                 WingetDetailsPane.UpdateFromViewModel(ViewModel);
             }
         }
+    }
+
+    private void ApplyPrimaryActionPalette(WingetWorkspace workspace)
+    {
+        if (PrimaryActionButton == null)
+        {
+            return;
+        }
+
+        if (workspace == WingetWorkspace.Installed)
+        {
+            PrimaryActionButton.Background = ResolveWingetBrush("WingetDestructiveTintBrush", "KitAccentTintBrush");
+            PrimaryActionButton.Foreground = ResolveWingetBrush("WingetDestructiveForegroundBrush", "AccentTextFillColorPrimaryBrush");
+        }
+        else
+        {
+            PrimaryActionButton.Background = ResolveWingetBrush("WingetPrimaryAccentTintBrush", "KitAccentTintBrush");
+            PrimaryActionButton.Foreground = ResolveWingetBrush("WingetPrimaryAccentForegroundBrush", "AccentTextFillColorPrimaryBrush");
+        }
+    }
+
+    private Brush ResolveWingetBrush(string pageKey, string fallbackAppKey)
+    {
+        bool highContrast = false;
+        try
+        {
+            highContrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
+        }
+        catch
+        {
+        }
+
+        string themeKey = highContrast
+            ? "HighContrast"
+            : ActualTheme == ElementTheme.Light ? "Light" : "Default";
+        if (Resources.ThemeDictionaries.TryGetValue(themeKey, out object dictObj) &&
+            dictObj is ResourceDictionary themeDict &&
+            themeDict.TryGetValue(pageKey, out object brushObj) &&
+            brushObj is Brush themedBrush)
+        {
+            return themedBrush;
+        }
+
+        return ThemeBrushHelper.GetBrush(fallbackAppKey, null, ActualTheme);
+    }
+
+    private void UpdateOperationPulse()
+    {
+        bool shouldPulse = IsLoaded && !disposed && ViewModel.IsBusy;
+        if (shouldPulse == operationPulseRunning)
+        {
+            return;
+        }
+
+        operationPulseRunning = shouldPulse;
+        if (shouldPulse)
+        {
+            KitMotionHelper.StartPulseRing(OperationPulseRing, 32d, maxScale: 1.48f, startOpacity: 0.34f, durationMs: 1700);
+        }
+        else
+        {
+            KitMotionHelper.StopPulseRing(OperationPulseRing);
+        }
+    }
+
+    private void StopOperationPulse()
+    {
+        operationPulseRunning = false;
+        KitMotionHelper.StopPulseRing(OperationPulseRing);
     }
 
     private void ApplyListItemTemplate()
@@ -286,7 +388,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         WorkspaceHeaderGrid.Margin = compact ? new Thickness(0) : new Thickness(0, 4, 0, 8);
         WorkspaceCommands.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 0, 6);
         WingetOperationCard.Margin = compact ? new Thickness(0, 2, 0, 4) : new Thickness(0, 4, 0, 10);
-        WingetOperationCard.Padding = compact ? new Thickness(12, 6, 12, 6) : new Thickness(14, 12, 14, 12);
+        WingetOperationCardGrid.Padding = compact ? new Thickness(12, 6, 12, 6) : new Thickness(14, 12, 14, 12);
         WingetOperationCardGrid.RowSpacing = compact ? 4 : 10;
         WorkspaceBody.Margin = compact ? new Thickness(0, 2, 0, 0) : new Thickness(0, 6, 0, 0);
     }
@@ -297,6 +399,10 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         if (appliedWorkspaceWidth > 0)
         {
             UpdateFiltersLayout(appliedWorkspaceWidth);
+            if (filtersExpanded && !compactFilters && IsLoaded)
+            {
+                KitMotionHelper.PlayFadeIn(FiltersHost, 0.35f, 160);
+            }
         }
     }
 
@@ -415,7 +521,11 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         WingetDetailsPane.ClearBoundRow();
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs e) => ViewModel.SetPageActive(false);
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        StopOperationPulse();
+        ViewModel.SetPageActive(false);
+    }
 
     private void OnWindowChanged(AppWindow sender, AppWindowChangedEventArgs e) => UpdateVisibility();
 
@@ -440,6 +550,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
 
         disposed = true;
         currentPage = false;
+        StopOperationPulse();
         activeDialog?.Hide();
         CloseDetailsPane();
         FiltersFlyout.Hide();
@@ -456,6 +567,7 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
         WingetDetailsHost.PaneClosed -= OnDetailsPaneClosed;
         WingetDetailsHost.SizeChanged -= OnDetailsHostSizeChanged;
         RemoveHandler(KeyDownEvent, new KeyEventHandler(OnPageKeyDown));
+        ActualThemeChanged -= OnActualThemeChanged;
         settingsWindow.Closed -= OnWindowClosed;
         settingsWindow.AppWindow.Changed -= OnWindowChanged;
         ViewModel.PropertyChanged -= OnViewModelPropertyChanged;

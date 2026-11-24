@@ -18,148 +18,235 @@
     mc:Ignorable="d">
 
     <local:NavigablePage.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="#FF2E1E20" />
+                    <SolidColorBrush x:Key="AiHubRiskHighBorderBrush" Color="#FF523035" />
+                    <SolidColorBrush x:Key="AiHubRiskHighAccentBrush" Color="#FFFF6B7A" />
+                    <SolidColorBrush x:Key="AiHubRiskHighIconBgBrush" Color="#28FF6B7A" />
+                    <SolidColorBrush x:Key="AiHubRiskHighForegroundBrush" Color="#FFFF99A4" />
 
-        <Style x:Key="AiHubSectionSurfaceStyle" TargetType="Border" BasedOn="{StaticResource KitCardSurfaceStyle}">
-            <Setter Property="Padding" Value="16" />
-        </Style>
-        <Style x:Key="AiHubSectionTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-            <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
-        </Style>
+                    <SolidColorBrush x:Key="AiHubRiskMediumSurfaceBrush" Color="#FF2D2618" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumBorderBrush" Color="#FF524426" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumAccentBrush" Color="#FFF2C94C" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumIconBgBrush" Color="#24F2C94C" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumForegroundBrush" Color="#FFFCE100" />
 
-        <!-- Readiness / health styles per level: bound via AiReadinessStyle and HealthScore*Style, locked by AiHubSettingsTests + ModulePageSmoke contrast assertions -->
-        <Style x:Key="ReadinessReadyStyle" TargetType="FontIcon">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
-        </Style>
-        <Style x:Key="ReadinessDegradedStyle" TargetType="FontIcon">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
-        </Style>
-        <Style x:Key="ReadinessUnverifiedStyle" TargetType="FontIcon">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorAttentionBrush}" />
-        </Style>
-        <Style x:Key="ReadinessNotConfiguredStyle" TargetType="FontIcon">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
-        </Style>
-        <Style x:Key="ReadinessDisabledStyle" TargetType="FontIcon">
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
-        </Style>
-        <Style x:Key="HealthRingGoodStyle" TargetType="ProgressRing">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
-        </Style>
-        <Style x:Key="HealthRingWarningStyle" TargetType="ProgressRing">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
-        </Style>
-        <Style x:Key="HealthRingCriticalStyle" TargetType="ProgressRing">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
-        </Style>
+                    <SolidColorBrush x:Key="AiHubRiskLowSurfaceBrush" Color="#FF1D2832" />
+                    <SolidColorBrush x:Key="AiHubRiskLowBorderBrush" Color="#FF2E4357" />
+                    <SolidColorBrush x:Key="AiHubRiskLowAccentBrush" Color="#FF60CDFF" />
+                    <SolidColorBrush x:Key="AiHubRiskLowIconBgBrush" Color="#2460CDFF" />
+                    <SolidColorBrush x:Key="AiHubRiskLowForegroundBrush" Color="#FF7CCBFF" />
 
-        <Style x:Key="AiHubRiskMetricButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Stretch" />
-            <Setter Property="UseSystemFocusVisuals" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Grid x:Name="RootGrid" CornerRadius="{TemplateBinding CornerRadius}">
-                            <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup x:Name="CommonStates">
-                                    <VisualState x:Name="Normal" />
-                                    <VisualState x:Name="PointerOver">
-                                        <VisualState.Setters>
-                                            <Setter Target="OutlineOverlay.BorderBrush" Value="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
-                                            <Setter Target="StateOverlay.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
-                                        </VisualState.Setters>
-                                    </VisualState>
-                                    <VisualState x:Name="Pressed">
-                                        <VisualState.Setters>
-                                            <Setter Target="OutlineOverlay.BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
-                                            <Setter Target="StateOverlay.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
-                                        </VisualState.Setters>
-                                    </VisualState>
-                                    <VisualState x:Name="Disabled">
-                                        <VisualState.Setters>
-                                            <Setter Target="RootGrid.Opacity" Value="0.6" />
-                                        </VisualState.Setters>
-                                    </VisualState>
-                                </VisualStateGroup>
-                            </VisualStateManager.VisualStateGroups>
-                            <ContentPresenter
-                                x:Name="ContentPresenter"
-                                Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                ContentTransitions="{TemplateBinding ContentTransitions}"
-                                Padding="{TemplateBinding Padding}"
-                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-                            <Border
-                                x:Name="StateOverlay"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Background="Transparent"
-                                IsHitTestVisible="False" />
-                            <Border
-                                x:Name="OutlineOverlay"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                IsHitTestVisible="False" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutSurfaceBrush" Color="#FF222A34" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutBorderBrush" Color="#FF334459" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="#FFFDF4F4" />
+                    <SolidColorBrush x:Key="AiHubRiskHighBorderBrush" Color="#FFF0CACA" />
+                    <SolidColorBrush x:Key="AiHubRiskHighAccentBrush" Color="#FFC42B1C" />
+                    <SolidColorBrush x:Key="AiHubRiskHighIconBgBrush" Color="#1AC42B1C" />
+                    <SolidColorBrush x:Key="AiHubRiskHighForegroundBrush" Color="#FFB3261E" />
+
+                    <SolidColorBrush x:Key="AiHubRiskMediumSurfaceBrush" Color="#FFFFFBF0" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumBorderBrush" Color="#FFECDA9E" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumAccentBrush" Color="#FFC17A00" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumIconBgBrush" Color="#1AC17A00" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumForegroundBrush" Color="#FF8F5200" />
+
+                    <SolidColorBrush x:Key="AiHubRiskLowSurfaceBrush" Color="#FFF3F8FD" />
+                    <SolidColorBrush x:Key="AiHubRiskLowBorderBrush" Color="#FFC5DCF2" />
+                    <SolidColorBrush x:Key="AiHubRiskLowAccentBrush" Color="#FF0067C0" />
+                    <SolidColorBrush x:Key="AiHubRiskLowIconBgBrush" Color="#180067C0" />
+                    <SolidColorBrush x:Key="AiHubRiskLowForegroundBrush" Color="#FF005A9E" />
+
+                    <SolidColorBrush x:Key="AiHubAiCalloutSurfaceBrush" Color="#FFF4F8FE" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutBorderBrush" Color="#FFD0E2F5" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskHighBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskHighAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskHighIconBgBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskHighForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+
+                    <SolidColorBrush x:Key="AiHubRiskMediumSurfaceBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumIconBgBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+
+                    <SolidColorBrush x:Key="AiHubRiskLowSurfaceBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskLowBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskLowAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskLowIconBgBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="AiHubRiskLowForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+
+                    <SolidColorBrush x:Key="AiHubAiCalloutSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <Style x:Key="AiHubSectionSurfaceStyle" TargetType="Border" BasedOn="{StaticResource KitCardSurfaceStyle}">
+                <Setter Property="Padding" Value="16" />
+            </Style>
+            <Style x:Key="AiHubSectionTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
+            </Style>
+
+            <!-- Readiness / health styles per level: bound via AiReadinessStyle and HealthScore*Style, locked by AiHubSettingsTests + ModulePageSmoke contrast assertions -->
+            <Style x:Key="ReadinessReadyStyle" TargetType="FontIcon">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+            </Style>
+            <Style x:Key="ReadinessDegradedStyle" TargetType="FontIcon">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
+            </Style>
+            <Style x:Key="ReadinessUnverifiedStyle" TargetType="FontIcon">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorAttentionBrush}" />
+            </Style>
+            <Style x:Key="ReadinessNotConfiguredStyle" TargetType="FontIcon">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+            </Style>
+            <Style x:Key="ReadinessDisabledStyle" TargetType="FontIcon">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <Style x:Key="HealthRingGoodStyle" TargetType="ProgressRing">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+            </Style>
+            <Style x:Key="HealthRingWarningStyle" TargetType="ProgressRing">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
+            </Style>
+            <Style x:Key="HealthRingCriticalStyle" TargetType="ProgressRing">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+            </Style>
+
+            <Style x:Key="AiHubRiskMetricButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid x:Name="RootGrid" CornerRadius="{TemplateBinding CornerRadius}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="OutlineOverlay.BorderBrush" Value="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
+                                                <Setter Target="StateOverlay.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="OutlineOverlay.BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                                                <Setter Target="StateOverlay.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Opacity" Value="0.6" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter
+                                    x:Name="ContentPresenter"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    ContentTransitions="{TemplateBinding ContentTransitions}"
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                <Border
+                                    x:Name="StateOverlay"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Background="Transparent"
+                                    IsHitTestVisible="False" />
+                                <Border
+                                    x:Name="OutlineOverlay"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    IsHitTestVisible="False" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="OptimizationItemContainerStyle" TargetType="ListViewItem">
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="IsTabStop" Value="False" />
+            </Style>
+            <Style x:Key="OptimizationPresenterStyle" TargetType="ContentPresenter">
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
+
+            <DataTemplate x:Key="AuditCategoryCardTemplate" x:DataType="viewModels:AuditCategoryRow">
+                <Button Style="{StaticResource AiHubRiskMetricButtonStyle}"
+                        Tag="{x:Bind Category}" Click="OnAuditCategoryClick"
+                        AutomationProperties.AutomationId="AIHub_AuditCategoryCard" AutomationProperties.Name="{x:Bind AccessibleSummary}"
+                        ToolTipService.ToolTip="{x:Bind ActionLabel}">
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8">
+                        <Grid ColumnDefinitions="3,*">
+                            <Grid>
+                                <Border CornerRadius="8,0,0,8" Background="{ThemeResource AiHubRiskHighAccentBrush}"
+                                        Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Border CornerRadius="8,0,0,8" Background="{ThemeResource AiHubRiskMediumAccentBrush}"
+                                        Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Border CornerRadius="8,0,0,8" Background="{ThemeResource AiHubRiskLowAccentBrush}"
+                                        Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            </Grid>
+                            <Grid Grid.Column="1" Padding="14,12,14,12" RowDefinitions="Auto,*,Auto" RowSpacing="8" MinHeight="94">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <FontIcon Glyph="{x:Bind CategoryGlyph}" FontSize="14" VerticalAlignment="Center"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                              AutomationProperties.AccessibilityView="Raw" />
+                                    <TextBlock Grid.Column="1" Text="{x:Bind Title}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Border Grid.Column="2" CornerRadius="4" Padding="7,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind Counts}" FontSize="11" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Grid.Row="1" Text="{x:Bind Priority}" FontSize="13" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           ToolTipService.ToolTip="{x:Bind Priority}" VerticalAlignment="Top" />
+                                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <Grid>
+                                        <Border Style="{StaticResource KitSeverityHighBadgeStyle}"
+                                                Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="{x:Bind Severity}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" />
+                                        </Border>
+                                        <Border Style="{StaticResource KitSeverityMediumBadgeStyle}"
+                                                Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="{x:Bind Severity}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource BadgeWarningForegroundBrush}" />
+                                        </Border>
+                                        <Border Style="{StaticResource KitSeverityLowBadgeStyle}"
+                                                Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="{x:Bind Severity}" FontSize="11" FontWeight="Medium" Foreground="{ThemeResource BadgeInfoForegroundBrush}" />
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Grid.Column="1" Text="{x:Bind Occurrences}" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                </Grid>
+                            </Grid>
                         </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="OptimizationItemContainerStyle" TargetType="ListViewItem">
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="IsTabStop" Value="False" />
-        </Style>
-        <Style x:Key="OptimizationPresenterStyle" TargetType="ContentPresenter">
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        </Style>
-
-        <DataTemplate x:Key="AuditCategoryCardTemplate" x:DataType="viewModels:AuditCategoryRow">
-            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                    Padding="16,12" Tag="{x:Bind Category}" Click="OnAuditCategoryClick"
-                    AutomationProperties.AutomationId="AIHub_AuditCategoryCard" AutomationProperties.Name="{x:Bind AccessibleSummary}"
-                    ToolTipService.ToolTip="{x:Bind ActionLabel}">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8" MinHeight="90">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <TextBlock Text="{x:Bind Title}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Grid.Column="1" Text="{x:Bind Counts}" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                    </Grid>
-                    <TextBlock Grid.Row="1" Text="{x:Bind Priority}" FontSize="13" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
-                               ToolTipService.ToolTip="{x:Bind Priority}" VerticalAlignment="Top" />
-                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                        <Grid>
-                            <Border Style="{StaticResource KitSeverityHighBadgeStyle}"
-                                    Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="{x:Bind Severity}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" />
-                            </Border>
-                            <Border Style="{StaticResource KitSeverityMediumBadgeStyle}"
-                                    Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="{x:Bind Severity}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource BadgeWarningForegroundBrush}" />
-                            </Border>
-                            <Border Style="{StaticResource KitSeverityLowBadgeStyle}"
-                                    Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="{x:Bind Severity}" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource BadgeInfoForegroundBrush}" />
-                            </Border>
-                        </Grid>
-                        <TextBlock Grid.Column="1" Text="{x:Bind Occurrences}" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
-                    </Grid>
-                </Grid>
-            </Button>
-        </DataTemplate>
+                    </Border>
+                </Button>
+            </DataTemplate>
 
         <DataTemplate x:Key="OptimizationInventoryScopeTemplate" x:DataType="viewModels:OptimizationInventoryScopeViewModel">
             <Border Margin="0,0,0,8" CornerRadius="{StaticResource OverlayCornerRadius}"
@@ -344,22 +431,22 @@
         <DataTemplate x:Key="FindingPreviewTemplate" x:DataType="models:AuditIssueEnhanced">
             <Button Tag="{x:Bind}" Click="OnFindingClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     Style="{StaticResource SubtleButtonStyle}" Padding="0" AutomationProperties.Name="{x:Bind DisplayTitle}">
-                <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="4,14">
+                <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="8,12">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
                         <Grid Width="32" Height="32" VerticalAlignment="Center">
-                            <Border CornerRadius="8" Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
+                            <Border CornerRadius="8" Background="{ThemeResource AiHubRiskHighIconBgBrush}"
                                     Visibility="{x:Bind IsHigh, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <FontIcon Glyph="&#xEA39;" FontSize="15" Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                <FontIcon Glyph="&#xEA39;" FontSize="15" Foreground="{ThemeResource AiHubRiskHighForegroundBrush}"
                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
-                            <Border CornerRadius="8" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                            <Border CornerRadius="8" Background="{ThemeResource AiHubRiskMediumIconBgBrush}"
                                     Visibility="{x:Bind IsMedium, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <FontIcon Glyph="&#xE7BA;" FontSize="15" Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                <FontIcon Glyph="&#xE7BA;" FontSize="15" Foreground="{ThemeResource AiHubRiskMediumForegroundBrush}"
                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
-                            <Border CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            <Border CornerRadius="8" Background="{ThemeResource AiHubRiskLowIconBgBrush}"
                                     Visibility="{x:Bind IsLow, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <FontIcon Glyph="&#xE946;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                <FontIcon Glyph="&#xE946;" FontSize="15" Foreground="{ThemeResource AiHubRiskLowForegroundBrush}"
                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                         </Grid>
@@ -391,6 +478,7 @@
                 </Border>
             </Button>
         </DataTemplate>
+        </ResourceDictionary>
     </local:NavigablePage.Resources>
 
     <Grid>
@@ -674,18 +762,19 @@
                         <Grid x:Name="AiReadinessBar" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                             <FontIcon x:Name="AiReadinessIcon" Glyph="{x:Bind ViewModel.AiReadinessGlyph, Mode=OneWay}" FontSize="14"
                                       Style="{x:Bind AiReadinessStyle(ViewModel.AiReadinessLevel), Mode=OneWay}" VerticalAlignment="Center" />
-                            <tkcontrols:WrapPanel Grid.Column="1" HorizontalSpacing="6" VerticalSpacing="4" VerticalAlignment="Center">
-                                <TextBlock Text="{x:Bind ViewModel.AiReadinessCompactText, Mode=OneWay}" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="Medium"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"
+                            <tkcontrols:WrapPanel Grid.Column="1" HorizontalSpacing="8" VerticalSpacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.AiReadinessCompactText, Mode=OneWay}" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"
                                            ToolTipService.ToolTip="{x:Bind ViewModel.AiReadinessText, Mode=OneWay}" />
                                 <StackPanel x:Name="AiReadinessModelInfo" VerticalAlignment="Center" Orientation="Horizontal" Spacing="6"
                                             Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="·" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                <TextBlock Text="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}" VerticalAlignment="Center" FontSize="12" LineHeight="16" LineStackingStrategy="BlockLineHeight"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" MaxWidth="280"
-                                           ToolTipService.ToolTip="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}"
-                                           Visibility="{x:Bind ViewModel.HasActiveModelInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    <Border CornerRadius="4" Padding="7,1" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}" VerticalAlignment="Center" FontSize="11" LineHeight="15" LineStackingStrategy="BlockLineHeight"
+                                                   FontFamily="{StaticResource KitMonoFontFamily}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" MaxWidth="280"
+                                                   ToolTipService.ToolTip="{x:Bind ViewModel.CurrentEngineAndModelLabel, Mode=OneWay}" />
+                                    </Border>
                                 </StackPanel>
                             </tkcontrols:WrapPanel>
                             <tkcontrols:WrapPanel x:Name="AiReadinessActions" Grid.Column="2" HorizontalSpacing="8" VerticalSpacing="4" VerticalAlignment="Center">
@@ -907,13 +996,19 @@
                                                     </Flyout>
                                                 </SplitButton.Flyout>
                                             </SplitButton>
-                                            <TextBlock Text="{x:Bind ViewModel.SelectedScanRangeText, Mode=OneWay}" FontSize="12"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="2,0,2,0" />
+                                            <Border CornerRadius="4" Padding="8,5" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE787;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                                    <TextBlock Text="{x:Bind ViewModel.SelectedScanRangeText, Mode=OneWay}" FontSize="12" FontWeight="Medium"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Border>
                                             <Button Command="{x:Bind ViewModel.DeepAnalyzeCommand}" AutomationProperties.AutomationId="AIHub_DeepAnalyzeButton"
-                                                ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint}" Style="{StaticResource KitActionButtonStyle}">
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint, Mode=OneWay}" Style="{StaticResource KitActionButtonStyle}">
                                                 <StackPanel Orientation="Horizontal" Spacing="7">
-                                                    <FontIcon Glyph="&#xE9D9;" FontSize="13" />
-                                                    <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel}" />
+                                                    <FontIcon Glyph="&#xE9D9;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                                    <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel}" FontWeight="Medium" />
                                                 </StackPanel>
                                             </Button>
                                         </tkcontrols:WrapPanel>
@@ -939,31 +1034,51 @@
                                             </DropDownButton.Flyout>
                                         </DropDownButton>
                                     </Grid>
-                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                    <Border x:Name="AuditHealthSummary" Padding="0,4"
-                                        Background="Transparent">
-                                        <Grid x:Name="AuditOverviewGrid" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="20" RowSpacing="14">
-                                            <Grid x:Name="AuditScoreCard" Width="96" Height="96" VerticalAlignment="Center">
-                                                <Ellipse Stroke="{ThemeResource ControlStrokeColorDefaultBrush}" StrokeThickness="6" />
-                                                <ProgressRing IsIndeterminate="False" Value="{x:Bind HealthScoreToDouble(ViewModel.HealthScore), Mode=OneWay}" Maximum="100"
-                                                    Width="96" Height="96" Style="{x:Bind HealthScoreRingStyle(ViewModel.HealthScore), Mode=OneWay}"
-                                                    Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
-                                                    <TextBlock x:Name="AuditScoreText" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" FontSize="30" FontWeight="SemiBold"
-                                                               FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" HorizontalAlignment="Center" />
-                                                    <TextBlock Text="{x:Bind ViewModel.HealthScoreLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                                    <Border x:Name="AuditHealthSummary"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1" CornerRadius="8">
+                                        <Grid>
+                                            <Border CornerRadius="8" Background="{ThemeResource KitHeroGradientBrush}" IsHitTestVisible="False" />
+                                            <Grid x:Name="AuditOverviewGrid" Padding="18,16" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="20" RowSpacing="14">
+                                                <Grid x:Name="AuditScoreCard" Width="96" Height="96" VerticalAlignment="Center">
+                                                    <Ellipse Stroke="{ThemeResource ControlStrokeColorDefaultBrush}" StrokeThickness="6" />
+                                                    <ProgressRing IsIndeterminate="False" Value="{x:Bind HealthScoreToDouble(ViewModel.HealthScore), Mode=OneWay}" Maximum="100"
+                                                        Width="96" Height="96" Style="{x:Bind HealthScoreRingStyle(ViewModel.HealthScore), Mode=OneWay}"
+                                                        Visibility="{x:Bind ViewModel.HasAuditData, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+                                                        <TextBlock x:Name="AuditScoreText" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" FontSize="30" FontWeight="SemiBold"
+                                                                   FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" HorizontalAlignment="Center" />
+                                                        <TextBlock Text="{x:Bind ViewModel.HealthScoreLabel}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <StackPanel x:Name="AuditScoreSummary" Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                                                    <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="4" VerticalAlignment="Center">
+                                                        <Grid VerticalAlignment="Center">
+                                                            <Border CornerRadius="4" Padding="7,2" Background="{ThemeResource BadgeSuccessBackgroundBrush}"
+                                                                    Visibility="{x:Bind ViewModel.IsHealthGood, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <TextBlock Text="{x:Bind ViewModel.HealthScoreGrade, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource BadgeSuccessForegroundBrush}" />
+                                                            </Border>
+                                                            <Border CornerRadius="4" Padding="7,2" Background="{ThemeResource BadgeWarningBackgroundBrush}"
+                                                                    Visibility="{x:Bind ViewModel.IsHealthWarning, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <TextBlock Text="{x:Bind ViewModel.HealthScoreGrade, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource BadgeWarningForegroundBrush}" />
+                                                            </Border>
+                                                            <Border CornerRadius="4" Padding="7,2" Background="{ThemeResource BadgeCriticalBackgroundBrush}"
+                                                                    Visibility="{x:Bind ViewModel.IsHealthCritical, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <TextBlock Text="{x:Bind ViewModel.HealthScoreGrade, Mode=OneWay}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource BadgeCriticalForegroundBrush}" />
+                                                            </Border>
+                                                        </Grid>
+                                                        <TextBlock Text="{x:Bind ViewModel.OverviewAuditTimestampText, Mode=OneWay}" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                                    </tkcontrols:WrapPanel>
+                                                    <TextBlock Text="{x:Bind ViewModel.OverviewHeadline, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="20" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{x:Bind ViewModel.OverviewDescription, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                    <tkcontrols:WrapPanel HorizontalSpacing="10" VerticalSpacing="6" Margin="0,2,0,0">
+                                                        <HyperlinkButton x:Uid="AIHub_Fluent_PriorityButton" Click="OnPriorityFindingClick" Padding="0" FontSize="12"
+                                                            AutomationProperties.Name="{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}"
+                                                            Visibility="{x:Bind ViewModel.HasAuditPriority, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                    </tkcontrols:WrapPanel>
                                                 </StackPanel>
                                             </Grid>
-                                            <StackPanel x:Name="AuditScoreSummary" Grid.Column="1" Spacing="6" VerticalAlignment="Center">
-                                                <TextBlock Text="{x:Bind ViewModel.OverviewAuditTimestampText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                                <TextBlock Text="{x:Bind ViewModel.OverviewHeadline, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="20" TextWrapping="Wrap" />
-                                                <TextBlock Text="{x:Bind ViewModel.OverviewDescription, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                                                <tkcontrols:WrapPanel HorizontalSpacing="10" VerticalSpacing="6" Margin="0,2,0,0">
-                                                    <HyperlinkButton x:Uid="AIHub_Fluent_PriorityButton" Click="OnPriorityFindingClick" Padding="0" FontSize="12"
-                                                        AutomationProperties.Name="{x:Bind ViewModel.AuditPriorityTitle, Mode=OneWay}"
-                                                        Visibility="{x:Bind ViewModel.HasAuditPriority, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                </tkcontrols:WrapPanel>
-                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                     <tkcontrols:Segmented x:Name="AuditResultViews" HorizontalAlignment="Left"
@@ -983,41 +1098,77 @@
                                                     Click="OnAuditViewAllClick" Padding="0" AutomationProperties.AutomationId="AIHub_ViewAllIssues" />
                                             </tkcontrols:WrapPanel>
                                             <TextBlock Text="{x:Bind ViewModel.AuditOverviewWindow, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" AutomationProperties.AutomationId="AIHub_AuditOverviewWindow" />
-                                            <Grid x:Name="AuditRiskMetrics" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8" AutomationProperties.Name="{x:Bind ViewModel.AuditTotals, Mode=OneWay}">
+                                            <Grid x:Name="AuditRiskMetrics" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10" AutomationProperties.Name="{x:Bind ViewModel.AuditTotals, Mode=OneWay}">
                                                 <Button x:Name="AuditRiskHighButton" Style="{StaticResource AiHubRiskMetricButtonStyle}"
+                                                    BorderBrush="{ThemeResource AiHubRiskHighBorderBrush}"
                                                     Tag="High" Click="OnAuditRiskClick"
                                                     AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.AuditOverviewHighLabel, ViewModel.AuditOverviewHighCount), Mode=OneWay}">
-                                                    <Border Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}" CornerRadius="6" Padding="14,10">
-                                                        <StackPanel Spacing="4">
-                                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewHighCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold"
-                                                                       FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
-                                                                       Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewHighLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
-                                                        </StackPanel>
+                                                    <Border Background="{ThemeResource AiHubRiskHighSurfaceBrush}" CornerRadius="8">
+                                                        <Grid ColumnDefinitions="3,*">
+                                                            <Border CornerRadius="8,0,0,8" Background="{ThemeResource AiHubRiskHighAccentBrush}" />
+                                                            <Grid Grid.Column="1" Padding="14,12" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+                                                                <TextBlock Text="{x:Bind ViewModel.AuditOverviewHighCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold"
+                                                                           FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
+                                                                           Foreground="{ThemeResource AiHubRiskHighForegroundBrush}" />
+                                                                <Border Grid.Column="1" Width="28" Height="28" CornerRadius="6" VerticalAlignment="Top"
+                                                                        Background="{ThemeResource AiHubRiskHighIconBgBrush}">
+                                                                    <FontIcon Glyph="&#xEA39;" FontSize="13" Foreground="{ThemeResource AiHubRiskHighForegroundBrush}"
+                                                                              HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                                                </Border>
+                                                                <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.AuditOverviewHighLabel}" FontSize="12" FontWeight="Medium"
+                                                                           TextWrapping="Wrap" Foreground="{ThemeResource AiHubRiskHighForegroundBrush}" VerticalAlignment="Center" />
+                                                                <FontIcon Grid.Row="1" Grid.Column="1" Glyph="&#xE76C;" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                          Foreground="{ThemeResource AiHubRiskHighForegroundBrush}" AutomationProperties.AccessibilityView="Raw" />
+                                                            </Grid>
+                                                        </Grid>
                                                     </Border>
                                                 </Button>
                                                 <Button x:Name="AuditRiskMediumButton" Grid.Column="1" Style="{StaticResource AiHubRiskMetricButtonStyle}"
+                                                    BorderBrush="{ThemeResource AiHubRiskMediumBorderBrush}"
                                                     Tag="Medium" Click="OnAuditRiskClick"
                                                     AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.AuditOverviewMediumLabel, ViewModel.AuditOverviewMediumCount), Mode=OneWay}">
-                                                    <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}" CornerRadius="6" Padding="14,10">
-                                                        <StackPanel Spacing="4">
-                                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewMediumCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold"
-                                                                       FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
-                                                                       Foreground="{ThemeResource SystemFillColorCautionBrush}" />
-                                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewMediumLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
-                                                        </StackPanel>
+                                                    <Border Background="{ThemeResource AiHubRiskMediumSurfaceBrush}" CornerRadius="8">
+                                                        <Grid ColumnDefinitions="3,*">
+                                                            <Border CornerRadius="8,0,0,8" Background="{ThemeResource AiHubRiskMediumAccentBrush}" />
+                                                            <Grid Grid.Column="1" Padding="14,12" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+                                                                <TextBlock Text="{x:Bind ViewModel.AuditOverviewMediumCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold"
+                                                                           FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
+                                                                           Foreground="{ThemeResource AiHubRiskMediumForegroundBrush}" />
+                                                                <Border Grid.Column="1" Width="28" Height="28" CornerRadius="6" VerticalAlignment="Top"
+                                                                        Background="{ThemeResource AiHubRiskMediumIconBgBrush}">
+                                                                    <FontIcon Glyph="&#xE7BA;" FontSize="13" Foreground="{ThemeResource AiHubRiskMediumForegroundBrush}"
+                                                                              HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                                                </Border>
+                                                                <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.AuditOverviewMediumLabel}" FontSize="12" FontWeight="Medium"
+                                                                           TextWrapping="Wrap" Foreground="{ThemeResource AiHubRiskMediumForegroundBrush}" VerticalAlignment="Center" />
+                                                                <FontIcon Grid.Row="1" Grid.Column="1" Glyph="&#xE76C;" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                          Foreground="{ThemeResource AiHubRiskMediumForegroundBrush}" AutomationProperties.AccessibilityView="Raw" />
+                                                            </Grid>
+                                                        </Grid>
                                                     </Border>
                                                 </Button>
                                                 <Button x:Name="AuditRiskLowButton" Grid.Column="2" Style="{StaticResource AiHubRiskMetricButtonStyle}"
+                                                    BorderBrush="{ThemeResource AiHubRiskLowBorderBrush}"
                                                     Tag="Low" Click="OnAuditRiskClick"
                                                     AutomationProperties.Name="{x:Bind FormatFilterCount(ViewModel.AuditOverviewLowLabel, ViewModel.AuditOverviewLowCount), Mode=OneWay}">
-                                                    <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="14,10">
-                                                        <StackPanel Spacing="4">
-                                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewLowCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold"
-                                                                       FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
-                                                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                                                            <TextBlock Text="{x:Bind ViewModel.AuditOverviewLowLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        </StackPanel>
+                                                    <Border Background="{ThemeResource AiHubRiskLowSurfaceBrush}" CornerRadius="8">
+                                                        <Grid ColumnDefinitions="3,*">
+                                                            <Border CornerRadius="8,0,0,8" Background="{ThemeResource AiHubRiskLowAccentBrush}" />
+                                                            <Grid Grid.Column="1" Padding="14,12" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+                                                                <TextBlock Text="{x:Bind ViewModel.AuditOverviewLowCount, Mode=OneWay}" FontSize="28" FontWeight="SemiBold"
+                                                                           FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
+                                                                           Foreground="{ThemeResource AiHubRiskLowForegroundBrush}" />
+                                                                <Border Grid.Column="1" Width="28" Height="28" CornerRadius="6" VerticalAlignment="Top"
+                                                                        Background="{ThemeResource AiHubRiskLowIconBgBrush}">
+                                                                    <FontIcon Glyph="&#xE946;" FontSize="13" Foreground="{ThemeResource AiHubRiskLowForegroundBrush}"
+                                                                              HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                                                </Border>
+                                                                <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.AuditOverviewLowLabel}" FontSize="12" FontWeight="Medium"
+                                                                           TextWrapping="Wrap" Foreground="{ThemeResource AiHubRiskLowForegroundBrush}" VerticalAlignment="Center" />
+                                                                <FontIcon Grid.Row="1" Grid.Column="1" Glyph="&#xE76C;" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                          Foreground="{ThemeResource AiHubRiskLowForegroundBrush}" AutomationProperties.AccessibilityView="Raw" />
+                                                            </Grid>
+                                                        </Grid>
                                                     </Border>
                                                 </Button>
                                             </Grid>
@@ -1025,7 +1176,7 @@
                                                 Visibility="{x:Bind ViewModel.HasAuditOverviewCoverage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                             <ItemsRepeater x:Name="AuditCategoryCards" ItemsSource="{x:Bind ViewModel.AuditCategories}" ItemTemplate="{StaticResource AuditCategoryCardTemplate}">
                                                 <ItemsRepeater.Layout>
-                                                    <UniformGridLayout x:Name="AuditCategoryLayout" MaximumRowsOrColumns="2" MinItemWidth="240" MinColumnSpacing="10" MinRowSpacing="10" ItemsStretch="Fill" />
+                                                    <UniformGridLayout x:Name="AuditCategoryLayout" MaximumRowsOrColumns="2" MinItemWidth="240" MinColumnSpacing="12" MinRowSpacing="12" ItemsStretch="Fill" />
                                                 </ItemsRepeater.Layout>
                                             </ItemsRepeater>
                                             <TextBlock Text="{x:Bind ViewModel.AuditOverviewStatus, Mode=OneWay}" TextWrapping="Wrap"
@@ -1043,6 +1194,73 @@
                                             </Grid>
                                             <TextBlock Text="{x:Bind ViewModel.AuditOverviewNextScanHint, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                 Visibility="{x:Bind ViewModel.HasAuditOverviewScopeChange, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                            <!-- Audit activity merged directly into System overview (always visible without extra click) -->
+                                            <Border x:Name="AuditActivityCard" Style="{StaticResource AiHubSectionSurfaceStyle}">
+                                                <StackPanel Spacing="14">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                                        <Border Style="{StaticResource KitIconBadgeSmallStyle}">
+                                                            <FontIcon Glyph="&#xE9D2;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                                      HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AuditActivityLabel, Mode=OneWay}"
+                                                                   Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="14" VerticalAlignment="Center" />
+                                                        <Border Grid.Column="2" CornerRadius="4" Padding="8,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" VerticalAlignment="Center"
+                                                                Visibility="{x:Bind ViewModel.ScanTypeText, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
+                                                            <TextBlock Text="{x:Bind ViewModel.ScanTypeText, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        </Border>
+                                                    </Grid>
+                                                    <Grid x:Name="AuditActivityMetricsGrid" ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                                        <Border x:Name="AuditActivityScansCell" Style="{StaticResource KitSubtleSurfaceStyle}">
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Text="{x:Bind ViewModel.AuditsLabel, Mode=OneWay}" Style="{StaticResource KitMetricTileLabelStyle}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.ActivityScansText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border x:Name="AuditActivityFindingsCell" Grid.Column="1" Style="{StaticResource KitSubtleSurfaceStyle}">
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Text="{x:Bind ViewModel.RecordedFindingsLabel, Mode=OneWay}" Style="{StaticResource KitMetricTileLabelStyle}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.ActivityFindingsText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border x:Name="AuditActivityDaysCell" Grid.Column="2" Style="{StaticResource KitSubtleSurfaceStyle}">
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Text="{x:Bind ViewModel.ActiveDaysLabel, Mode=OneWay}" Style="{StaticResource KitMetricTileLabelStyle}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.ActiveDaysText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border x:Name="AuditActivityHealthCell" Grid.Column="3" Style="{StaticResource KitSubtleSurfaceStyle}">
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Text="{x:Bind ViewModel.HealthAverageLabel, Mode=OneWay}" Style="{StaticResource KitMetricTileLabelStyle}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.HealthAverageText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </Grid>
+                                                    <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+                                                        <Grid x:Name="AuditActivityMetaGrid" ColumnDefinitions="*,*,2*,*" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="10">
+                                                            <StackPanel x:Name="AuditMetaScanCell" Spacing="3">
+                                                                <TextBlock Text="{x:Bind ViewModel.ScanLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.ScanTypeText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12" />
+                                                            </StackPanel>
+                                                            <StackPanel x:Name="AuditMetaFinishedCell" Grid.Column="1" Spacing="3">
+                                                                <TextBlock Text="{x:Bind ViewModel.FinishedLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.FinishedText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12"
+                                                                           FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" />
+                                                            </StackPanel>
+                                                            <StackPanel x:Name="AuditMetaWindowCell" Grid.Column="2" Spacing="3">
+                                                                <TextBlock Text="{x:Bind ViewModel.WindowLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.WindowText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12" TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                            <StackPanel x:Name="AuditMetaEventsCell" Grid.Column="3" Spacing="3">
+                                                                <TextBlock Text="{x:Bind ViewModel.EventsReadLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                <TextBlock Text="{x:Bind ViewModel.EventCountText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12"
+                                                                           FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </StackPanel>
+                                            </Border>
                                         </StackPanel>
                                     </Border>
                                     <Border x:Name="AuditFindingsCard" Padding="0" VerticalAlignment="Top"
@@ -1090,7 +1308,7 @@
                                                               ToolTipService.ToolTip="{x:Bind FormatFilterCount(ViewModel.LowLabel, ViewModel.LowCount), Mode=OneWay}"
                                                               Click="OnFilterClick" IsChecked="{x:Bind ViewModel.IsFilterLow, Mode=OneWay}">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Ellipse Width="7" Height="7" Fill="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                                        <Ellipse Width="7" Height="7" Fill="{ThemeResource AiHubRiskLowAccentBrush}" VerticalAlignment="Center" />
                                                         <TextBlock FontSize="12"><Run Text="{x:Bind ViewModel.LowLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.LowCount, Mode=OneWay}" /></TextBlock>
                                                     </StackPanel>
                                                 </ToggleButton>
@@ -1136,14 +1354,21 @@
                                                         Visibility="{x:Bind ViewModel.HasFindingFilters, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                 </tkcontrols:WrapPanel>
                                             </StackPanel>
-                                            <ListView x:Name="OverviewFindingsList"
-                                                      ItemsSource="{x:Bind ViewModel.OverviewFindings, Mode=OneWay}"
-                                                      ItemTemplate="{StaticResource FindingPreviewTemplate}"
-                                                      ItemContainerStyle="{StaticResource OptimizationItemContainerStyle}"
-                                                      SelectionMode="None"
-                                                      MaxHeight="640"
-                                                      HorizontalContentAlignment="Stretch"
-                                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                                            <Border Style="{StaticResource AiHubSectionSurfaceStyle}" Padding="8,6"
+                                                    Visibility="{x:Bind ViewModel.HasOverviewFindings, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <ListView x:Name="OverviewFindingsList"
+                                                          ItemsSource="{x:Bind ViewModel.OverviewFindings, Mode=OneWay}"
+                                                          ItemTemplate="{StaticResource FindingPreviewTemplate}"
+                                                          ItemContainerStyle="{StaticResource OptimizationItemContainerStyle}"
+                                                          SelectionMode="None"
+                                                          MaxHeight="640"
+                                                          HorizontalContentAlignment="Stretch"
+                                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <ListView.ItemContainerTransitions>
+                                                        <TransitionCollection />
+                                                    </ListView.ItemContainerTransitions>
+                                                </ListView>
+                                            </Border>
                                             <StackPanel Padding="0,32" Spacing="8" HorizontalAlignment="Center" Visibility="{x:Bind ViewModel.ShowNoAudit, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <Border Width="48" Height="48" CornerRadius="24" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Center">
@@ -1186,23 +1411,26 @@
                             <Grid x:Name="AuditResultsGrid">
                                 <Border x:Name="AuditSummaryCard" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
                                     <StackPanel Spacing="14">
-                                        <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
-                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                                <TextBlock x:Uid="AIHub_Fluent_AiSummary" Style="{StaticResource AiHubSectionTitleStyle}" />
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                <Border Style="{StaticResource KitIconBadgeStyle}">
+                                                    <FontIcon Glyph="&#xE9D9;" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                                </Border>
+                                                <TextBlock x:Uid="AIHub_Fluent_AiSummary" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
                                             </StackPanel>
-                                            <Grid Grid.Row="1" HorizontalAlignment="Left">
-                                                <Border CornerRadius="4" Padding="8,2" Background="{ThemeResource BadgeSuccessBackgroundBrush}"
+                                            <Grid Grid.Column="1" VerticalAlignment="Center">
+                                                <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource BadgeSuccessBackgroundBrush}"
                                                         Visibility="{x:Bind ViewModel.IsAiSummaryCompleted, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                     <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="11" FontWeight="SemiBold"
                                                                Foreground="{ThemeResource SystemFillColorSuccessBrush}" />
                                                 </Border>
-                                                <Border CornerRadius="4" Padding="8,2" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                                <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
                                                         Visibility="{x:Bind ViewModel.IsAiSummaryCaution, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                     <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="11" FontWeight="SemiBold"
                                                                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                                 </Border>
-                                                <Border CornerRadius="4" Padding="8,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                         Visibility="{x:Bind ViewModel.IsAiSummaryNeutral, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                     <TextBlock Text="{x:Bind ViewModel.AiSummaryStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="11"
                                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -1210,16 +1438,22 @@
                                             </Grid>
                                         </Grid>
 
-                                        <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="12">
+                                        <Border Background="{ThemeResource AiHubAiCalloutSurfaceBrush}"
+                                                BorderBrush="{ThemeResource AiHubAiCalloutBorderBrush}"
+                                                BorderThickness="1" CornerRadius="8" Padding="14,12">
                                             <TextBlock Text="{x:Bind ViewModel.AiSummaryText, Mode=OneWay}" TextWrapping="Wrap" FontSize="13" MaxLines="8" TextTrimming="CharacterEllipsis" />
                                         </Border>
 
                                         <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.HasAiSummaryPoint1, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <TextBlock Text="{x:Bind ViewModel.AiSummaryPoint1, Mode=OneWay}" FontSize="12"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{x:Bind ViewModel.AiSummaryPoint2, Mode=OneWay}" FontSize="12"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
-                                                       Visibility="{x:Bind ViewModel.HasAiSummaryPoint2, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                            <Border Style="{StaticResource KitSubtleSurfaceStyle}" Padding="12,8">
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryPoint1, Mode=OneWay}" FontSize="12"
+                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{x:Bind ViewModel.AiSummaryPoint2, Mode=OneWay}" FontSize="12"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                                                               Visibility="{x:Bind ViewModel.HasAiSummaryPoint2, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                </StackPanel>
+                                            </Border>
                                         </StackPanel>
 
                                         <StackPanel Spacing="6" Visibility="{x:Bind ViewModel.HasRelatedEvidence, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -1247,13 +1481,19 @@
                                             </ItemsControl>
                                         </StackPanel>
 
-                                        <Button Content="{x:Bind ViewModel.DeepAnalyzeLabel}" Command="{x:Bind ViewModel.DeepAnalyzeCommand}"
+                                        <Button Command="{x:Bind ViewModel.DeepAnalyzeCommand}"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.DeepAnalyzeHint, Mode=OneWay}"
                                                 Style="{StaticResource KitActionButtonStyle}" HorizontalAlignment="Left"
-                                                Visibility="{x:Bind ViewModel.ShowAiSummaryAction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                Visibility="{x:Bind ViewModel.ShowAiSummaryAction, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                                <FontIcon Glyph="&#xE9D9;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" AutomationProperties.AccessibilityView="Raw" />
+                                                <TextBlock Text="{x:Bind ViewModel.DeepAnalyzeLabel}" FontWeight="Medium" />
+                                            </StackPanel>
+                                        </Button>
 
                                         <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0"
                                                 Visibility="{x:Bind ShowAiSummaryFooter(ViewModel.HasAiReport, ViewModel.HasAiSummaryFooterMeta), Mode=OneWay}">
-                                            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
                                                 <HyperlinkButton x:Uid="AIHub_Fluent_FullReport" Click="OnJumpToAiReportClick" Padding="0"
                                                                  HorizontalAlignment="Left" FontSize="12"
                                                                  Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
@@ -1295,19 +1535,25 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="viewModels:AiReportFinding">
-                                                    <Border Margin="0,0,0,8" Style="{StaticResource KitSubtleSurfaceStyle}" Padding="14,10">
-                                                        <StackPanel Spacing="6">
+                                                    <Border Margin="0,0,0,8" CornerRadius="8" Padding="14,12"
+                                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                        <StackPanel Spacing="8">
                                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                                 <TextBlock Text="{x:Bind Title}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
-                                                                <Border Grid.Column="1" CornerRadius="4" Padding="6,1" Background="{ThemeResource ControlAltFillColorSecondaryBrush}">
-                                                                    <TextBlock Text="{x:Bind SeverityLabel}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                <Border Grid.Column="1" CornerRadius="4" Padding="7,2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" VerticalAlignment="Top">
+                                                                    <TextBlock Text="{x:Bind SeverityLabel}" Style="{StaticResource CaptionTextBlockStyle}" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                                 </Border>
                                                             </Grid>
                                                             <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}"
                                                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                                            <Border CornerRadius="6" Padding="10,6" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
-                                                                <TextBlock Text="{x:Bind Recommendation}" Style="{StaticResource CaptionTextBlockStyle}"
-                                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                                            <Border CornerRadius="6" Background="{ThemeResource AiHubAiCalloutSurfaceBrush}"
+                                                                    BorderBrush="{ThemeResource AiHubAiCalloutBorderBrush}" BorderThickness="1">
+                                                                <Grid ColumnDefinitions="3,*">
+                                                                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}" CornerRadius="6,0,0,6" />
+                                                                    <TextBlock Grid.Column="1" Margin="10,8" Text="{x:Bind Recommendation}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                               Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                                                                </Grid>
                                                             </Border>
                                                         </StackPanel>
                                                     </Border>
@@ -1317,52 +1563,6 @@
                                     </StackPanel>
                                 </Expander>
                             </Border>
-
-                            <Expander Header="{x:Bind ViewModel.AuditActivityLabel, Mode=OneWay}"
-                                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                                      Background="Transparent" BorderThickness="0">
-                                <StackPanel Spacing="14" Padding="4,8">
-                                    <Grid x:Name="AuditActivityMetricsGrid" ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="10">
-                                        <StackPanel x:Name="AuditActivityScansCell" Spacing="3">
-                                            <TextBlock Text="{x:Bind ViewModel.AuditsLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.ActivityScansText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
-                                        </StackPanel>
-                                        <StackPanel x:Name="AuditActivityFindingsCell" Grid.Column="1" Spacing="3">
-                                            <TextBlock Text="{x:Bind ViewModel.RecordedFindingsLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.ActivityFindingsText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
-                                        </StackPanel>
-                                        <StackPanel x:Name="AuditActivityDaysCell" Grid.Column="2" Spacing="3">
-                                            <TextBlock Text="{x:Bind ViewModel.ActiveDaysLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.ActiveDaysText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
-                                        </StackPanel>
-                                        <StackPanel x:Name="AuditActivityHealthCell" Grid.Column="3" Spacing="3">
-                                            <TextBlock Text="{x:Bind ViewModel.HealthAverageLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="{x:Bind ViewModel.HealthAverageText, Mode=OneWay}" Style="{StaticResource KitMetricTileValueStyle}" />
-                                        </StackPanel>
-                                    </Grid>
-                                    <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
-                                        <Grid x:Name="AuditActivityMetaGrid" ColumnDefinitions="*,*,2*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="10">
-                                            <StackPanel x:Name="AuditMetaScanCell" Spacing="3">
-                                                <TextBlock Text="{x:Bind ViewModel.ScanLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock Text="{x:Bind ViewModel.ScanTypeText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12" />
-                                            </StackPanel>
-                                            <StackPanel x:Name="AuditMetaFinishedCell" Grid.Column="1" Spacing="3">
-                                                <TextBlock Text="{x:Bind ViewModel.FinishedLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock Text="{x:Bind ViewModel.FinishedText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12" />
-                                            </StackPanel>
-                                            <StackPanel x:Name="AuditMetaWindowCell" Grid.Column="2" Spacing="3">
-                                                <TextBlock Text="{x:Bind ViewModel.WindowLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock Text="{x:Bind ViewModel.WindowText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <StackPanel x:Name="AuditMetaEventsCell" Grid.Column="3" Spacing="3">
-                                                <TextBlock Text="{x:Bind ViewModel.EventsReadLabel, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock Text="{x:Bind ViewModel.EventCountText, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" FontSize="12"
-                                                           FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </StackPanel>
-                            </Expander>
 
                             <StackPanel Orientation="Horizontal" Spacing="6" Padding="2,0">
                                 <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
@@ -1416,15 +1616,21 @@
                                                        FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
                                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                             <TextBlock x:Uid="AIHub_Fluent_StorageCapacityHint" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <tkcontrols:WrapPanel HorizontalSpacing="16" VerticalSpacing="4">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <TextBlock Text="{x:Bind ViewModel.ScannedCandidatesLabel}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                    <TextBlock x:Name="OptimizationScannedCandidatesText" Text="{x:Bind ViewModel.ScannedCandidatesText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" />
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <TextBlock Text="{x:Bind ViewModel.ApprovedCandidatesLabel}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                    <TextBlock x:Name="OptimizationApprovedCandidatesText" Text="{x:Bind ViewModel.ApprovedCandidatesText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" />
-                                                </StackPanel>
+                                            <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="6" Margin="0,2,0,0">
+                                                <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBlock Text="{x:Bind ViewModel.ScannedCandidatesLabel}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock x:Name="OptimizationScannedCandidatesText" Text="{x:Bind ViewModel.ScannedCandidatesText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBlock Text="{x:Bind ViewModel.ApprovedCandidatesLabel}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock x:Name="OptimizationApprovedCandidatesText" Text="{x:Bind ViewModel.ApprovedCandidatesText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" />
+                                                    </StackPanel>
+                                                </Border>
                                             </tkcontrols:WrapPanel>
                                         </StackPanel>
                                         <tkcontrols:WrapPanel x:Name="OptimizationCommandActions" Grid.Column="1" HorizontalSpacing="8" VerticalSpacing="8" VerticalAlignment="Center">
@@ -1439,16 +1645,16 @@
                                     </Grid>
 
                                     <StackPanel Spacing="10">
-                                        <Border Height="6" CornerRadius="3" Background="{ThemeResource ControlAltFillColorSecondaryBrush}">
+                                        <Border Height="8" CornerRadius="4" Background="{ThemeResource ControlAltFillColorSecondaryBrush}">
                                             <Grid ColumnSpacing="2">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="{x:Bind ViewModel.ActionableBarWidth, Mode=OneWay}" />
                                                     <ColumnDefinition Width="{x:Bind ViewModel.ReviewBarWidth, Mode=OneWay}" />
                                                     <ColumnDefinition Width="{x:Bind ViewModel.RetainedBarWidth, Mode=OneWay}" />
                                                 </Grid.ColumnDefinitions>
-                                                <Border CornerRadius="3,0,0,3" Background="{ThemeResource AccentFillColorDefaultBrush}" />
+                                                <Border CornerRadius="4,0,0,4" Background="{ThemeResource AccentFillColorDefaultBrush}" />
                                                 <Border Grid.Column="1" Background="{ThemeResource SystemFillColorCautionBrush}" />
-                                                <Border Grid.Column="2" CornerRadius="0,3,3,0" Background="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.45" />
+                                                <Border Grid.Column="2" CornerRadius="0,4,4,0" Background="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.45" />
                                             </Grid>
                                         </Border>
                                         <tkcontrols:WrapPanel HorizontalSpacing="18" VerticalSpacing="6">
@@ -1989,7 +2195,13 @@
 
                                 <Border x:Name="TaskPolicyScopeCard" Grid.Column="1" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
                                     <StackPanel Spacing="12">
-                                        <TextBlock x:Uid="AIHub_Fluent_PolicyScopeTitle" Style="{StaticResource AiHubSectionTitleStyle}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <Border Style="{StaticResource KitIconBadgeSmallStyle}">
+                                                <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                            </Border>
+                                            <TextBlock x:Uid="AIHub_Fluent_PolicyScopeTitle" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
+                                        </StackPanel>
                                         <TextBlock Text="{x:Bind ViewModel.TaskPolicyScopePrimaryText, Mode=OneWay}" FontSize="12"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                         <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">

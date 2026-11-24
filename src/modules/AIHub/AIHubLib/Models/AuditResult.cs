@@ -14,6 +14,8 @@ public sealed class AuditResult
     public List<string>? LimitedChannels { get; set; }
     public string? AnalysisOutcome { get; set; }
     public string UsedModel { get; set; } = string.Empty;
+    public string? AiReportSummary { get; set; }
+    public string? AiReportMeta { get; set; }
     public List<AuditIssueEnhanced> Findings { get; set; } = new();
 
     public int HighCount => Findings.FindAll(f => f.IsHigh).Count;

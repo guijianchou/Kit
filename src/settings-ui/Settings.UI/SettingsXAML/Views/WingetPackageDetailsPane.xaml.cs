@@ -4,6 +4,7 @@
 
 using System;
 using System.Linq;
+using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -82,7 +83,12 @@ public sealed partial class WingetPackageDetailsPane : UserControl
         DetailsErrorText.Text = vm.DetailsErrorText;
         DetailsRetryButton.IsEnabled = vm.CanRetryDetails;
 
+        bool wasDetailsVisible = DetailsContentPanel.Visibility == Visibility.Visible;
         DetailsContentPanel.Visibility = vm.HasDetails ? Visibility.Visible : Visibility.Collapsed;
+        if (vm.HasDetails && (changedRow || !wasDetailsVisible) && IsLoaded)
+        {
+            KitMotionHelper.PlaySlideFadeIn(DetailsContentPanel, 0f, 8f, 190);
+        }
         VersionsText.Text = vm.SelectionVersions;
         PublisherText.Text = vm.SelectionPublisher;
         PublisherText.Visibility = string.IsNullOrWhiteSpace(vm.SelectionPublisher) ? Visibility.Collapsed : Visibility.Visible;

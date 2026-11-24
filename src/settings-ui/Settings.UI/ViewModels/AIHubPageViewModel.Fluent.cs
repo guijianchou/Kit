@@ -33,6 +33,19 @@ public sealed class AuditCategoryRow(AuditCategorySummary summary)
         _ => summary.Priority.CategoryLabel,
     };
 
+    public string CategoryGlyph => summary.Category.ToLowerInvariant() switch
+    {
+        "reliability" => "\uE9D9",
+        "stability" => "\uE945",
+        "configuration" => "\uE713",
+        "network" => "\uE774",
+        "application" => "\uE74C",
+        "system" => "\uE7F4",
+        "firewall" => "\uE72E",
+        "privilege" or "authentication" or "security" => "\uE8D7",
+        _ => "\uE946",
+    };
+
     public string Counts => summary.Findings == 1
         ? "AIHub_AuditCategorySingleIssue".GetLocalizedOrFallback("1 issue")
         : "AIHub_AuditCategoryIssueCount".FormatLocalized("{0} issues", summary.Findings);
@@ -227,6 +240,14 @@ public sealed partial class AIHubPageViewModel
         () => CanConfigureAudit);
 
     public ObservableCollection<AuditIssueEnhanced> OverviewFindings { get; } = new();
+
+    public bool HasOverviewFindings => OverviewFindings.Count > 0;
+
+    public bool IsHealthGood => HasAuditData && HealthScore >= 80;
+
+    public bool IsHealthWarning => HasAuditData && HealthScore >= 60 && HealthScore < 80;
+
+    public bool IsHealthCritical => HasAuditData && HealthScore < 60;
 
     public ObservableCollection<AuditIssueEnhanced> RelatedEvidenceFindings { get; } = new();
 
@@ -531,6 +552,7 @@ public sealed partial class AIHubPageViewModel
                 break;
             case nameof(HealthVerdict):
             case nameof(HealthSummaryText):
+            case nameof(HealthScore):
             case nameof(HighCount):
             case nameof(HasAuditData):
             case nameof(AuditPriorityTitle):
@@ -540,6 +562,9 @@ public sealed partial class AIHubPageViewModel
                 OnPropertyChanged(nameof(OverviewDescription));
                 OnPropertyChanged(nameof(FindingsCardHeading));
                 OnPropertyChanged(nameof(HasRelatedEvidence));
+                OnPropertyChanged(nameof(IsHealthGood));
+                OnPropertyChanged(nameof(IsHealthWarning));
+                OnPropertyChanged(nameof(IsHealthCritical));
                 RefreshAiSummary();
                 break;
             case nameof(IsEnabled):
@@ -617,6 +642,7 @@ public sealed partial class AIHubPageViewModel
         RebuildRelatedEvidence();
 
         OnPropertyChanged(nameof(OverviewFindingsSummary));
+        OnPropertyChanged(nameof(HasOverviewFindings));
         OnPropertyChanged(nameof(FindingsCardHeading));
         OnPropertyChanged(nameof(HasRelatedEvidence));
         RefreshAiSummary();

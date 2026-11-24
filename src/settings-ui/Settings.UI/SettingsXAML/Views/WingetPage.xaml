@@ -16,156 +16,331 @@
     NavigationCacheMode="Required">
 
     <local:NavigablePage.Resources>
-        <!-- Semantic colors use WinUI theme resources, including high contrast.
-             The page itself stays transparent so the shell's Mica remains visible. -->
-        <Style x:Key="WingetNeutralBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
-            <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
-        </Style>
-        <Style x:Key="WingetAccentBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}" />
-        <Style x:Key="WingetSuccessBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBackgroundBrush}" />
-        </Style>
-        <Style x:Key="WingetWarningBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}" />
-        </Style>
-        <Style x:Key="WingetErrorBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
-            <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}" />
-        </Style>
-        <Style x:Key="WingetNeutralGlyphStyle" TargetType="FontIcon">
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
-        </Style>
-        <Style x:Key="WingetAccentGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
-            <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-        </Style>
-        <Style x:Key="WingetSuccessGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
-        </Style>
-        <Style x:Key="WingetWarningGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
-        </Style>
-        <Style x:Key="WingetErrorGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
-            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
-        </Style>
-        <Style x:Key="WingetVersionPillStyle" TargetType="Border" BasedOn="{StaticResource KitStatusPillStyle}">
-            <Setter Property="Background" Value="{ThemeResource KitAccentTintBrush}" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="Padding" Value="6,3" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style x:Key="WingetSortHeaderButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
-            <Setter Property="Padding" Value="4,4" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
-            <Setter Property="MinHeight" Value="28" />
-        </Style>
-        <Style x:Key="PackageItemStyle" TargetType="ListViewItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="8,0" />
-            <Setter Property="MinWidth" Value="0" />
-            <Setter Property="MinHeight" Value="36" />
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <!-- Semantic badge & operation card borders/stripes -->
+                    <SolidColorBrush x:Key="WingetNeutralBorderBrush" Color="#24FFFFFF" />
+                    <SolidColorBrush x:Key="WingetAccentBorderBrush" Color="#4860CDFF" />
+                    <SolidColorBrush x:Key="WingetSuccessBorderBrush" Color="#486CCB5F" />
+                    <SolidColorBrush x:Key="WingetWarningBorderBrush" Color="#48FCE100" />
+                    <SolidColorBrush x:Key="WingetErrorBorderBrush" Color="#48FF99A4" />
 
-        <DataTemplate x:Key="DetailedPackageTemplate" x:DataType="vm:WingetPackageRow">
-            <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,7" ColumnDefinitions="36,2*,2*,1.1*,1.1*,1*" ColumnSpacing="10">
-                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
-                <StackPanel Grid.Column="1" MinWidth="0" Spacing="2" VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
-                    <TextBlock Text="{x:Bind StateLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-                <TextBlock Grid.Column="2" Text="{x:Bind Id, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Id, Mode=OneWay}" />
-                <TextBlock Grid.Column="3" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
-                <Border Grid.Column="4" Style="{StaticResource WingetVersionPillStyle}">
-                    <TextBlock Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
-                </Border>
-                <TextBlock Grid.Column="5" Text="{x:Bind SourceLabel, Mode=OneWay}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind SourceLabel, Mode=OneWay}" />
-            </Grid>
-        </DataTemplate>
+                    <SolidColorBrush x:Key="WingetNeutralStripeBrush" Color="#55FFFFFF" />
+                    <SolidColorBrush x:Key="WingetAccentStripeBrush" Color="#FF60CDFF" />
+                    <SolidColorBrush x:Key="WingetSuccessStripeBrush" Color="#FF6CCB5F" />
+                    <SolidColorBrush x:Key="WingetWarningStripeBrush" Color="#FFFCE100" />
+                    <SolidColorBrush x:Key="WingetErrorStripeBrush" Color="#FFFF7A85" />
 
-        <DataTemplate x:Key="NarrowDetailedPackageTemplate" x:DataType="vm:WingetPackageRow">
-            <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,7" ColumnDefinitions="36,2*,1.1*,1.1*" ColumnSpacing="10">
-                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
-                <StackPanel Grid.Column="1" MinWidth="0" Spacing="2" VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
-                    <TextBlock Text="{x:Bind StateLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-                <TextBlock Grid.Column="2" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
-                <Border Grid.Column="3" Style="{StaticResource WingetVersionPillStyle}">
-                    <TextBlock Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
-                </Border>
-            </Grid>
-        </DataTemplate>
+                    <!-- Version upgrade pill & source tag -->
+                    <SolidColorBrush x:Key="WingetVersionPillBgBrush" Color="#2460CDFF" />
+                    <SolidColorBrush x:Key="WingetVersionPillBorderBrush" Color="#4A60CDFF" />
+                    <SolidColorBrush x:Key="WingetVersionPillForegroundBrush" Color="#FF7CCBFF" />
+                    <SolidColorBrush x:Key="WingetSourcePillBgBrush" Color="#14FFFFFF" />
+                    <SolidColorBrush x:Key="WingetSourcePillBorderBrush" Color="#22FFFFFF" />
 
-        <DataTemplate x:Key="CompactPackageTemplate" x:DataType="vm:WingetPackageRow">
-            <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,2" ColumnDefinitions="36,2*,2*,1.1*,1.1*,1*" ColumnSpacing="10">
-                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
-                <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
-                <TextBlock Grid.Column="2" Text="{x:Bind Id, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Id, Mode=OneWay}" />
-                <TextBlock Grid.Column="3" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
-                <TextBlock Grid.Column="4" Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
-                <TextBlock Grid.Column="5" Text="{x:Bind SourceLabel, Mode=OneWay}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-            </Grid>
-        </DataTemplate>
+                    <!-- Discover workspace accent & soft Mica hero wash -->
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBgBrush" Color="#269E8CFF" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBorderBrush" Color="#4A9E8CFF" />
+                    <SolidColorBrush x:Key="WingetDiscoverGlyphBrush" Color="#FFB8ACFF" />
+                    <LinearGradientBrush x:Key="WingetDiscoverHeroWashBrush" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#2460CDFF" />
+                        <GradientStop Offset="0.55" Color="#1A9E8CFF" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
 
-        <DataTemplate x:Key="NarrowCompactPackageTemplate" x:DataType="vm:WingetPackageRow">
-            <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,2" ColumnDefinitions="36,2*,1.1*,1.1*" ColumnSpacing="10">
-                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
-                <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
-                <TextBlock Grid.Column="2" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
-                <TextBlock Grid.Column="3" Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
-            </Grid>
-        </DataTemplate>
+                    <!-- Primary action button palettes (Accent & Destructive) -->
+                    <SolidColorBrush x:Key="WingetPrimaryAccentTintBrush" Color="#2860CDFF" />
+                    <SolidColorBrush x:Key="WingetPrimaryAccentForegroundBrush" Color="#FF8AD8FF" />
+                    <SolidColorBrush x:Key="WingetDestructiveTintBrush" Color="#28FF6B7A" />
+                    <SolidColorBrush x:Key="WingetDestructiveForegroundBrush" Color="#FFFF99A4" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WingetNeutralBorderBrush" Color="#1E000000" />
+                    <SolidColorBrush x:Key="WingetAccentBorderBrush" Color="#3C0067C0" />
+                    <SolidColorBrush x:Key="WingetSuccessBorderBrush" Color="#3A0F7B0F" />
+                    <SolidColorBrush x:Key="WingetWarningBorderBrush" Color="#449D5D00" />
+                    <SolidColorBrush x:Key="WingetErrorBorderBrush" Color="#3CC42B1C" />
 
-        <DataTemplate x:Key="TilePackageTemplate" x:DataType="vm:WingetPackageRow">
-            <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" Width="220" Padding="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="32,*" RowSpacing="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
-                <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
-                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{x:Bind Id, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Id, Mode=OneWay}" />
-                <Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource WingetVersionPillStyle}" HorizontalAlignment="Stretch">
-                    <TextBlock Text="{x:Bind Versions, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Versions, Mode=OneWay}" />
-                </Border>
-                <TextBlock Grid.Row="3" Grid.ColumnSpan="2" Text="{x:Bind StateLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Text="{x:Bind SourceLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-            </Grid>
-        </DataTemplate>
+                    <SolidColorBrush x:Key="WingetNeutralStripeBrush" Color="#44000000" />
+                    <SolidColorBrush x:Key="WingetAccentStripeBrush" Color="#FF0067C0" />
+                    <SolidColorBrush x:Key="WingetSuccessStripeBrush" Color="#FF0F7B0F" />
+                    <SolidColorBrush x:Key="WingetWarningStripeBrush" Color="#FFC17A00" />
+                    <SolidColorBrush x:Key="WingetErrorStripeBrush" Color="#FFC42B1C" />
 
-        <DataTemplate x:Key="SourceFilterTemplate" x:DataType="vm:WingetSourceFilter">
-            <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,2">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" Text="{x:Bind Count, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </Grid>
-            </CheckBox>
-        </DataTemplate>
+                    <SolidColorBrush x:Key="WingetVersionPillBgBrush" Color="#180067C0" />
+                    <SolidColorBrush x:Key="WingetVersionPillBorderBrush" Color="#3A0067C0" />
+                    <SolidColorBrush x:Key="WingetVersionPillForegroundBrush" Color="#FF005A9E" />
+                    <SolidColorBrush x:Key="WingetSourcePillBgBrush" Color="#0A000000" />
+                    <SolidColorBrush x:Key="WingetSourcePillBorderBrush" Color="#18000000" />
 
-        <DataTemplate x:Key="QueueTemplate" x:DataType="vm:WingetQueueRow">
-            <Expander x:Name="QueueRowExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,4">
-                <Expander.Header>
-                    <Grid Padding="4,2" ColumnDefinitions="2*,*,*" ColumnSpacing="12">
-                        <StackPanel MinWidth="0">
-                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{x:Bind Identity, Mode=OneWay}" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                        <TextBlock Grid.Column="1" Text="{x:Bind KindText, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="2" Text="{x:Bind StateText, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBgBrush" Color="#186246C8" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBorderBrush" Color="#386246C8" />
+                    <SolidColorBrush x:Key="WingetDiscoverGlyphBrush" Color="#FF5A3EC2" />
+                    <LinearGradientBrush x:Key="WingetDiscoverHeroWashBrush" StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Offset="0" Color="#200078D4" />
+                        <GradientStop Offset="0.55" Color="#166246C8" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+
+                    <SolidColorBrush x:Key="WingetPrimaryAccentTintBrush" Color="#1A0067C0" />
+                    <SolidColorBrush x:Key="WingetPrimaryAccentForegroundBrush" Color="#FF005A9E" />
+                    <SolidColorBrush x:Key="WingetDestructiveTintBrush" Color="#18C42B1C" />
+                    <SolidColorBrush x:Key="WingetDestructiveForegroundBrush" Color="#FFB3261E" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="WingetNeutralBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="WingetAccentBorderBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="WingetSuccessBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="WingetWarningBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="WingetErrorBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+
+                    <SolidColorBrush x:Key="WingetNeutralStripeBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="WingetAccentStripeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="WingetSuccessStripeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="WingetWarningStripeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="WingetErrorStripeBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+
+                    <SolidColorBrush x:Key="WingetVersionPillBgBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="WingetVersionPillBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="WingetVersionPillForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="WingetSourcePillBgBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="WingetSourcePillBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBgBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
+                    <SolidColorBrush x:Key="WingetDiscoverGlyphBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="WingetDiscoverHeroWashBrush" Color="{ThemeResource SystemColorWindowColor}" />
+
+                    <SolidColorBrush x:Key="WingetPrimaryAccentTintBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="WingetPrimaryAccentForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="WingetDestructiveTintBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="WingetDestructiveForegroundBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Semantic colors use WinUI theme resources, including high contrast.
+                 The page itself stays transparent so the shell's Mica remains visible. -->
+            <Style x:Key="WingetNeutralBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
+                <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetNeutralBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="WingetAccentBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetAccentBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="WingetDiscoverBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
+                <Setter Property="Background" Value="{ThemeResource WingetDiscoverBadgeBgBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetDiscoverBadgeBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="WingetSuccessBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
+                <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetSuccessBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="WingetWarningBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
+                <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetWarningBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="WingetErrorBadgeStyle" TargetType="Border" BasedOn="{StaticResource KitIconBadgeStyle}">
+                <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetErrorBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="WingetNeutralGlyphStyle" TargetType="FontIcon">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <Style x:Key="WingetAccentGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            </Style>
+            <Style x:Key="WingetDiscoverGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource WingetDiscoverGlyphBrush}" />
+            </Style>
+            <Style x:Key="WingetSuccessGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+            </Style>
+            <Style x:Key="WingetWarningGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
+            </Style>
+            <Style x:Key="WingetErrorGlyphStyle" TargetType="FontIcon" BasedOn="{StaticResource WingetNeutralGlyphStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+            </Style>
+            <Style x:Key="WingetNeutralStripeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource WingetNeutralStripeBrush}" />
+                <Setter Property="CornerRadius" Value="8,0,0,8" />
+            </Style>
+            <Style x:Key="WingetAccentStripeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource WingetAccentStripeBrush}" />
+                <Setter Property="CornerRadius" Value="8,0,0,8" />
+            </Style>
+            <Style x:Key="WingetSuccessStripeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource WingetSuccessStripeBrush}" />
+                <Setter Property="CornerRadius" Value="8,0,0,8" />
+            </Style>
+            <Style x:Key="WingetWarningStripeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource WingetWarningStripeBrush}" />
+                <Setter Property="CornerRadius" Value="8,0,0,8" />
+            </Style>
+            <Style x:Key="WingetErrorStripeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource WingetErrorStripeBrush}" />
+                <Setter Property="CornerRadius" Value="8,0,0,8" />
+            </Style>
+            <Style x:Key="WingetVersionPillStyle" TargetType="Border" BasedOn="{StaticResource KitStatusPillStyle}">
+                <Setter Property="Background" Value="{ThemeResource WingetVersionPillBgBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetVersionPillBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="5" />
+                <Setter Property="Padding" Value="7,2" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="WingetSourcePillStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource WingetSourcePillBgBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource WingetSourcePillBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Padding" Value="6,2" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="WingetSortHeaderButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+                <Setter Property="Padding" Value="4,4" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Setter Property="MinHeight" Value="28" />
+            </Style>
+            <Style x:Key="PackageItemStyle" TargetType="ListViewItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Padding" Value="10,0" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="36" />
+                <Setter Property="BorderBrush" Value="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="0,0,0,1" />
+                <Setter Property="CornerRadius" Value="4" />
+            </Style>
+
+            <DataTemplate x:Key="DetailedPackageTemplate" x:DataType="vm:WingetPackageRow">
+                <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,8" ColumnDefinitions="36,2*,2*,1.1*,1.1*,1*" ColumnSpacing="10">
+                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
+                    <StackPanel Grid.Column="1" MinWidth="0" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
+                        <TextBlock Text="{x:Bind StateLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{x:Bind Id, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Id, Mode=OneWay}" />
+                    <TextBlock Grid.Column="3" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
+                    <Grid Grid.Column="4" VerticalAlignment="Center">
+                        <Border Style="{StaticResource WingetVersionPillStyle}" Visibility="{x:Bind AvailableVersion, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
+                            <TextBlock Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource WingetVersionPillForegroundBrush}" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
+                        </Border>
                     </Grid>
-                </Expander.Header>
-                <StackPanel Spacing="8">
-                    <TextBlock Text="{x:Bind WhenText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Visibility="{x:Bind HasTimestamp, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                    <TextBlock Text="{x:Bind Message, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                    <Border Style="{StaticResource KitRecessedSurfaceStyle}">
-                        <ScrollViewer MaxHeight="140" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-                            <TextBlock Text="{x:Bind Output, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                        </ScrollViewer>
+                    <Border Grid.Column="5" Style="{StaticResource WingetSourcePillStyle}" Visibility="{x:Bind SourceLabel, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
+                        <TextBlock Text="{x:Bind SourceLabel, Mode=OneWay}" FontSize="11" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind SourceLabel, Mode=OneWay}" />
                     </Border>
-                </StackPanel>
-            </Expander>
-        </DataTemplate>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="NarrowDetailedPackageTemplate" x:DataType="vm:WingetPackageRow">
+                <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,8" ColumnDefinitions="36,2*,1.1*,1.1*" ColumnSpacing="10">
+                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
+                    <StackPanel Grid.Column="1" MinWidth="0" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
+                        <TextBlock Text="{x:Bind StateLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
+                    <Grid Grid.Column="3" VerticalAlignment="Center">
+                        <Border Style="{StaticResource WingetVersionPillStyle}" Visibility="{x:Bind AvailableVersion, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
+                            <TextBlock Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource WingetVersionPillForegroundBrush}" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
+                        </Border>
+                    </Grid>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="CompactPackageTemplate" x:DataType="vm:WingetPackageRow">
+                <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,2" ColumnDefinitions="36,2*,2*,1.1*,1.1*,1*" ColumnSpacing="10">
+                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
+                    <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
+                    <TextBlock Grid.Column="2" Text="{x:Bind Id, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Id, Mode=OneWay}" />
+                    <TextBlock Grid.Column="3" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
+                    <TextBlock Grid.Column="4" Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource WingetVersionPillForegroundBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
+                    <TextBlock Grid.Column="5" Text="{x:Bind SourceLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="NarrowCompactPackageTemplate" x:DataType="vm:WingetPackageRow">
+                <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" MinWidth="0" Padding="0,2" ColumnDefinitions="36,2*,1.1*,1.1*" ColumnSpacing="10">
+                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
+                    <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
+                    <TextBlock Grid.Column="2" Text="{x:Bind InstalledVersion, Mode=OneWay}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind InstalledVersion, Mode=OneWay}" />
+                    <TextBlock Grid.Column="3" Text="{x:Bind AvailableVersion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource WingetVersionPillForegroundBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind AvailableVersion, Mode=OneWay}" />
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="TilePackageTemplate" x:DataType="vm:WingetPackageRow">
+                <Grid x:Name="PackageRowBounds" Tag="{x:Bind}" RightTapped="PackageRow_RightTapped" Width="220" RowDefinitions="Auto,*" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                    <Border Margin="12,8,12,0" Height="3" CornerRadius="1.5" Background="{ThemeResource WingetAccentStripeBrush}" Opacity="0.82" />
+                    <Grid Grid.Row="1" Padding="12,8,12,12" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="32,*" RowSpacing="8">
+                        <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" MinWidth="0" VerticalAlignment="Center" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind Name, Mode=OneWay}" />
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{x:Bind Id, Mode=OneWay}" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Id, Mode=OneWay}" />
+                        <Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource WingetVersionPillStyle}" HorizontalAlignment="Stretch" Visibility="{x:Bind Versions, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
+                            <TextBlock Text="{x:Bind Versions, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource WingetVersionPillForegroundBrush}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Versions, Mode=OneWay}" />
+                        </Border>
+                        <Grid Grid.Row="3" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBlock Text="{x:Bind StateLabel, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <Border Grid.Column="1" Style="{StaticResource WingetSourcePillStyle}" Visibility="{x:Bind SourceLabel, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
+                                <TextBlock Text="{x:Bind SourceLabel, Mode=OneWay}" FontSize="10" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="SourceFilterTemplate" x:DataType="vm:WingetSourceFilter">
+                <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,2">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Style="{StaticResource WingetSourcePillStyle}">
+                            <TextBlock Text="{x:Bind Count, Mode=OneWay}" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </Border>
+                    </Grid>
+                </CheckBox>
+            </DataTemplate>
+
+            <DataTemplate x:Key="QueueTemplate" x:DataType="vm:WingetQueueRow">
+                <Expander x:Name="QueueRowExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,4">
+                    <Expander.Header>
+                        <Grid Padding="4,2" ColumnDefinitions="2*,*,*" ColumnSpacing="12">
+                            <StackPanel MinWidth="0">
+                                <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{x:Bind Identity, Mode=OneWay}" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <Border Grid.Column="1" Style="{StaticResource WingetSourcePillStyle}">
+                                <TextBlock Text="{x:Bind KindText, Mode=OneWay}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Grid.Column="2" Text="{x:Bind StateText, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </Grid>
+                    </Expander.Header>
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{x:Bind WhenText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Visibility="{x:Bind HasTimestamp, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        <TextBlock Text="{x:Bind Message, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        <Border Style="{StaticResource KitRecessedSurfaceStyle}">
+                            <ScrollViewer MaxHeight="140" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                                <TextBlock Text="{x:Bind Output, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
+                </Expander>
+            </DataTemplate>
+        </ResourceDictionary>
     </local:NavigablePage.Resources>
 
     <Grid>
@@ -473,8 +648,8 @@
                             x:Name="PrimaryActionButton"
                             Label="{x:Bind ViewModel.PrimaryActionLabel, Mode=OneWay}"
                             Icon="Sync"
-                            Background="{ThemeResource KitAccentTintBrush}"
-                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                            Background="{ThemeResource WingetPrimaryAccentTintBrush}"
+                            Foreground="{ThemeResource WingetPrimaryAccentForegroundBrush}"
                             CornerRadius="6"
                             IsEnabled="{x:Bind ViewModel.CanPrepareSelection, Mode=OneWay}"
                             Click="PrimaryAction_Click"
@@ -512,49 +687,62 @@
                         Grid.Row="3"
                         Margin="0,4,0,10"
                         Style="{StaticResource KitCardSurfaceStyle}"
-                        Padding="14,12"
+                        Padding="0"
                         Visibility="{x:Bind ViewModel.ShowOperationCard, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid x:Name="WingetOperationCardGrid" RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                                <Border x:Name="OperationBadge" Style="{x:Bind BadgeStyle(ViewModel.OperationTone), Mode=OneWay}">
-                                    <FontIcon x:Name="OperationGlyph" Glyph="{x:Bind ViewModel.OperationGlyph, Mode=OneWay}" Style="{x:Bind GlyphStyle(ViewModel.OperationTone), Mode=OneWay}" AutomationProperties.AccessibilityView="Raw" />
-                                </Border>
-                                <StackPanel Grid.Column="1" MinWidth="0" Spacing="3">
-                                    <TextBlock x:Name="OperationSummaryText" Text="{x:Bind ViewModel.OperationSummary, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind ViewModel.OperationSummary, Mode=OneWay}" AutomationProperties.LiveSetting="Polite" />
-                                    <TextBlock x:Name="OperationDescriptionText" Text="{x:Bind ViewModel.OperationDescription, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind ViewModel.OperationDescription, Mode=OneWay}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                    <Button x:Name="OperationHistoryButton" x:Uid="Winget_OperationHistory" Click="Activity_Click" VerticalAlignment="Center" />
-                                    <Button x:Name="OperationCancelButton" x:Uid="Winget_Cancel" Click="Cancel_Click" VerticalAlignment="Center" IsEnabled="{x:Bind ViewModel.CanCancelOperation, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                </StackPanel>
-                            </Grid>
-                            <ProgressBar
-                                Grid.Row="1"
-                                Style="{StaticResource KitProgressBarStyle}"
-                                Value="{x:Bind ViewModel.Progress, Mode=OneWay}"
-                                IsIndeterminate="{x:Bind ViewModel.IsProgressIndeterminate, Mode=OneWay}"
-                                Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                            <Expander x:Name="OperationDetailsExpander" Grid.Row="2" x:Uid="Winget_OperationDetails" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
-                                <ScrollViewer MaxHeight="180" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="{x:Bind ViewModel.OperationDescription, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                                        <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.HasOperationOutput, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <TextBlock Text="{x:Bind Text('InstallerOutput')}" FontWeight="SemiBold" />
-                                            <Border Style="{StaticResource KitRecessedSurfaceStyle}">
-                                                <ScrollViewer x:Name="OperationOutputScroll" MaxHeight="140" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-                                                    <TextBlock x:Name="OperationOutputText" Text="{x:Bind ViewModel.OperationOutput, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                                                </ScrollViewer>
+                        <Grid ColumnDefinitions="3,*">
+                            <Border x:Name="OperationAccentStripe" Style="{x:Bind StripeStyle(ViewModel.OperationTone), Mode=OneWay}" />
+                            <Grid Grid.Column="1">
+                                <Border
+                                    CornerRadius="0,8,8,0"
+                                    Background="{ThemeResource KitHeroGradientBrush}"
+                                    IsHitTestVisible="False"
+                                    Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Grid x:Name="WingetOperationCardGrid" Padding="14,12" RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                        <Grid Width="32" Height="32" VerticalAlignment="Center">
+                                            <Ellipse x:Name="OperationPulseRing" Width="32" Height="32" Fill="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0" IsHitTestVisible="False" />
+                                            <Border x:Name="OperationBadge" Style="{x:Bind BadgeStyle(ViewModel.OperationTone), Mode=OneWay}">
+                                                <FontIcon x:Name="OperationGlyph" Glyph="{x:Bind ViewModel.OperationGlyph, Mode=OneWay}" Style="{x:Bind GlyphStyle(ViewModel.OperationTone), Mode=OneWay}" AutomationProperties.AccessibilityView="Raw" />
                                             </Border>
+                                        </Grid>
+                                        <StackPanel Grid.Column="1" MinWidth="0" Spacing="3">
+                                            <TextBlock x:Name="OperationSummaryText" Text="{x:Bind ViewModel.OperationSummary, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind ViewModel.OperationSummary, Mode=OneWay}" AutomationProperties.LiveSetting="Polite" />
+                                            <TextBlock x:Name="OperationDescriptionText" Text="{x:Bind ViewModel.OperationDescription, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind ViewModel.OperationDescription, Mode=OneWay}" />
                                         </StackPanel>
-                                        <TextBlock Text="{x:Bind Text('QueueTitle')}" FontWeight="SemiBold" />
-                                        <ItemsControl x:Name="OperationQueueList" ItemsSource="{x:Bind ViewModel.QueueItems}" ItemTemplate="{StaticResource QueueTemplate}" />
-                                        <TextBlock x:Uid="Winget_QueueEmpty" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind ShowNoItems(ViewModel.QueueItems.Count), Mode=OneWay}" />
-                                        <TextBlock Text="{x:Bind Text('HistoryTitle')}" FontWeight="SemiBold" />
-                                        <ItemsControl x:Name="OperationHistoryList" ItemsSource="{x:Bind ViewModel.HistoryItems}" ItemTemplate="{StaticResource QueueTemplate}" />
-                                        <TextBlock x:Uid="Winget_HistoryEmpty" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind ShowNoItems(ViewModel.HistoryItems.Count), Mode=OneWay}" />
-                                    </StackPanel>
-                                </ScrollViewer>
-                            </Expander>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                            <Button x:Name="OperationHistoryButton" x:Uid="Winget_OperationHistory" Click="Activity_Click" VerticalAlignment="Center" />
+                                            <Button x:Name="OperationCancelButton" x:Uid="Winget_Cancel" Click="Cancel_Click" VerticalAlignment="Center" IsEnabled="{x:Bind ViewModel.CanCancelOperation, Mode=OneWay}" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <ProgressBar
+                                        Grid.Row="1"
+                                        Style="{StaticResource KitProgressBarStyle}"
+                                        Value="{x:Bind ViewModel.Progress, Mode=OneWay}"
+                                        IsIndeterminate="{x:Bind ViewModel.IsProgressIndeterminate, Mode=OneWay}"
+                                        Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    <Expander x:Name="OperationDetailsExpander" Grid.Row="2" x:Uid="Winget_OperationDetails" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
+                                        <ScrollViewer MaxHeight="180" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Text="{x:Bind ViewModel.OperationDescription, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                                <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.HasOperationOutput, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="{x:Bind Text('InstallerOutput')}" FontWeight="SemiBold" />
+                                                    <Border Style="{StaticResource KitRecessedSurfaceStyle}">
+                                                        <ScrollViewer x:Name="OperationOutputScroll" MaxHeight="140" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                                                            <TextBlock x:Name="OperationOutputText" Text="{x:Bind ViewModel.OperationOutput, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                                        </ScrollViewer>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{x:Bind Text('QueueTitle')}" FontWeight="SemiBold" />
+                                                <ItemsControl x:Name="OperationQueueList" ItemsSource="{x:Bind ViewModel.QueueItems}" ItemTemplate="{StaticResource QueueTemplate}" />
+                                                <TextBlock x:Uid="Winget_QueueEmpty" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind ShowNoItems(ViewModel.QueueItems.Count), Mode=OneWay}" />
+                                                <TextBlock Text="{x:Bind Text('HistoryTitle')}" FontWeight="SemiBold" />
+                                                <ItemsControl x:Name="OperationHistoryList" ItemsSource="{x:Bind ViewModel.HistoryItems}" ItemTemplate="{StaticResource QueueTemplate}" />
+                                                <TextBlock x:Uid="Winget_HistoryEmpty" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind ShowNoItems(ViewModel.HistoryItems.Count), Mode=OneWay}" />
+                                            </StackPanel>
+                                        </ScrollViewer>
+                                    </Expander>
+                                </Grid>
+                            </Grid>
                         </Grid>
                     </Border>
 
@@ -564,10 +752,20 @@
                             <ColumnDefinition x:Name="FilterColumn" Width="0" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Grid x:Name="FiltersHost" Visibility="Collapsed">
+                        <Grid
+                            x:Name="FiltersHost"
+                            Visibility="Collapsed"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="10">
                             <ScrollViewer x:Name="FiltersPanel" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
                                 <StackPanel Spacing="10">
-                                    <TextBlock x:Uid="Winget_FiltersHeading" FontWeight="SemiBold" />
+                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE71C;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                        <TextBlock x:Uid="Winget_FiltersHeading" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
                                     <TextBox x:Name="LocalFilterBox" x:Uid="Winget_LocalFilter" Text="{x:Bind ViewModel.FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     <Expander x:Uid="Winget_SourcesExpander" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                         <ItemsControl ItemsSource="{x:Bind ViewModel.SourceFilters}" ItemTemplate="{StaticResource SourceFilterTemplate}" />
@@ -592,7 +790,7 @@
                         <Grid x:Name="PackageTableViewport" Grid.Column="1" MinWidth="0" RowDefinitions="Auto,Auto,*">
                             <Grid x:Name="DiscoverSearchToolbar" Margin="0,0,0,8" ColumnDefinitions="*,Auto" ColumnSpacing="8" Visibility="{x:Bind ShowSearchToolbar(ViewModel.ActiveTabIndex, ViewModel.HasSearchResults), Mode=OneWay}">
                                 <TextBox x:Name="PackageSearchBox" x:Uid="Winget_SearchBox" Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="200" KeyDown="SearchBox_KeyDown" />
-                                <Button Grid.Column="1" x:Uid="Winget_SearchButton" IsEnabled="{x:Bind ViewModel.CanSearch, Mode=OneWay}" Click="Search_Click" />
+                                <Button Grid.Column="1" x:Uid="Winget_SearchButton" IsEnabled="{x:Bind ViewModel.CanSearch, Mode=OneWay}" Click="Search_Click" Style="{StaticResource AccentButtonStyle}" />
                             </Grid>
                             <StackPanel x:Name="DiscoverSearchFeedback" Grid.Row="1" Margin="0,0,0,8" Spacing="3" Visibility="{x:Bind IsDiscoverTab(ViewModel.ActiveTabIndex), Mode=OneWay}">
                                 <TextBlock x:Name="SearchStatusText" Text="{x:Bind ViewModel.SearchStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" AutomationProperties.LiveSetting="Polite" />
@@ -604,11 +802,12 @@
                                 <Grid MinWidth="0" RowDefinitions="Auto,*">
                                     <Grid
                                         x:Name="PackageTableHeader"
-                                        Padding="8,2"
+                                        Padding="10,3"
                                         ColumnSpacing="10"
                                         Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                                         BorderThickness="0,0,0,1"
+                                        CornerRadius="8,8,0,0"
                                         Visibility="{x:Bind ShowTable(ViewModel.ActiveTabIndex, ViewModel.HasSearchResults, ViewModel.ViewModeIndex), Mode=OneWay}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="36" />
@@ -651,11 +850,16 @@
                                         ScrollViewer.HorizontalScrollMode="Disabled"
                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                         Visibility="{x:Bind ShowList(ViewModel.ViewModeIndex), Mode=OneWay}"
-                                        AutomationProperties.AutomationId="Winget_Packages" />
+                                        AutomationProperties.AutomationId="Winget_Packages">
+                                        <ListView.ItemContainerTransitions>
+                                            <TransitionCollection />
+                                        </ListView.ItemContainerTransitions>
+                                    </ListView>
 
                                     <GridView
                                         x:Name="PackageTiles"
                                         Grid.Row="1"
+                                        Padding="10"
                                         ItemsSource="{x:Bind ViewModel.DisplayPackages}"
                                         SelectedItem="{x:Bind ViewModel.ActiveSelection, Mode=TwoWay}"
                                         ItemTemplate="{StaticResource TilePackageTemplate}"
@@ -683,10 +887,12 @@
                                             IsActive="{x:Bind ViewModel.IsLoadingList, Mode=OneWay}"
                                             Visibility="{x:Bind ViewModel.IsLoadingList, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                         <Border
-                                            Width="44"
-                                            Height="44"
-                                            CornerRadius="22"
+                                            Width="48"
+                                            Height="48"
+                                            CornerRadius="24"
                                             Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
                                             HorizontalAlignment="Center"
                                             Visibility="{x:Bind ViewModel.IsLoadingList, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}">
                                             <FontIcon Glyph="&#xE7B8;" FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
@@ -700,15 +906,23 @@
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
 
-                                    <Grid x:Name="DiscoverStartPanel" Grid.RowSpan="2" Margin="24" RowDefinitions="Auto,Auto,Auto" RowSpacing="12" VerticalAlignment="Center" Visibility="{x:Bind ShowDiscoveryStart(ViewModel.ActiveTabIndex, ViewModel.HasSearchResults), Mode=OneWay}">
-                                        <Border Style="{StaticResource WingetAccentBadgeStyle}" Width="64" Height="64" CornerRadius="18">
-                                            <FontIcon Glyph="&#xE774;" FontSize="32" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" AutomationProperties.AccessibilityView="Raw" />
-                                        </Border>
-                                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                            <TextBox x:Name="DiscoverSearchBox" x:Uid="Winget_SearchBox" FontSize="20" MinHeight="48" Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="200" KeyDown="SearchBox_KeyDown" />
-                                            <Button Grid.Column="1" x:Uid="Winget_SearchButton" IsEnabled="{x:Bind ViewModel.CanSearch, Mode=OneWay}" Click="Search_Click" Style="{StaticResource AccentButtonStyle}" />
+                                    <Grid x:Name="DiscoverStartPanel" Grid.RowSpan="2" Visibility="{x:Bind ShowDiscoveryStart(ViewModel.ActiveTabIndex, ViewModel.HasSearchResults), Mode=OneWay}">
+                                        <Border CornerRadius="8" Background="{ThemeResource WingetDiscoverHeroWashBrush}" IsHitTestVisible="False" />
+                                        <Grid x:Name="DiscoverHeroContent" Margin="28" MaxWidth="640" RowDefinitions="Auto,Auto,Auto" RowSpacing="14" VerticalAlignment="Center">
+                                            <Border
+                                                Style="{StaticResource WingetDiscoverBadgeStyle}"
+                                                Width="68"
+                                                Height="68"
+                                                CornerRadius="20"
+                                                HorizontalAlignment="Center">
+                                                <FontIcon Glyph="&#xE774;" FontSize="30" Foreground="{ThemeResource WingetDiscoverGlyphBrush}" AutomationProperties.AccessibilityView="Raw" />
+                                            </Border>
+                                            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <TextBox x:Name="DiscoverSearchBox" x:Uid="Winget_SearchBox" FontSize="18" MinHeight="46" CornerRadius="6" Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="200" KeyDown="SearchBox_KeyDown" />
+                                                <Button Grid.Column="1" x:Uid="Winget_SearchButton" MinHeight="46" Padding="18,0" CornerRadius="6" IsEnabled="{x:Bind ViewModel.CanSearch, Mode=OneWay}" Click="Search_Click" Style="{StaticResource AccentButtonStyle}" />
+                                            </Grid>
+                                            <TextBlock Grid.Row="2" Text="{x:Bind ViewModel.EmptyText, Mode=OneWay}" FontSize="13" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Grid>
-                                        <TextBlock Grid.Row="2" Text="{x:Bind ViewModel.EmptyText, Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </Grid>
                                 </Grid>
                             </Border>

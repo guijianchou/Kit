@@ -148,6 +148,14 @@ public sealed partial class AIHubPageViewModel
                 ? "AIHub_DeepAnalysis_SummaryPartialFormat".FormatLocalized("AI partially completed: retained {0} enhanced finding(s) ({1}).", issues.Count, result.Failure)
                 : "AIHub_DeepAnalysis_SummaryCompleteFormat".FormatLocalized("AI deep analysis completed: {0} enhanced finding(s).", issues.Count);
         AiReportMetaText = "AIHub_DeepAnalysis_MetaFormat".FormatLocalized("Kernel {0} · {1:HH:mm:ss}", AiHubEngine.Current.ActiveKernel, DateTime.Now);
+        if (snapshot is not null)
+        {
+            snapshot.UsedModel = !string.IsNullOrWhiteSpace(CurrentEngineAndModelLabel)
+                ? CurrentEngineAndModelLabel
+                : AiHubEngine.Current.ActiveKernel ?? string.Empty;
+            snapshot.AiReportSummary = AiReportSummaryText;
+            snapshot.AiReportMeta = AiReportMetaText;
+        }
         _fluentAiReportPartial = interim || result.IsPartial;
         HasAiReport = true;
         AiAnalysisRanText = AiReportSummaryText;
@@ -174,6 +182,75 @@ public sealed partial class AIHubPageViewModel
             FinishAuditStatus(HealthScore, merged.Count, "ok", snapshot?.SkippedChannels ?? []);
         }
         OnPropertyChanged(nameof(CanRunDeepAnalysis));
+        OnPropertyChanged(nameof(DeepAnalyzeHint));
+        ((RelayCommand)DeepAnalyzeCommand).OnCanExecuteChanged();
+    }
+
+    internal static bool IsPersistedAiFinding(AuditIssueEnhanced finding) =>
+        finding is not null
+        && !string.IsNullOrWhiteSpace(finding.EventRef)
+        && finding.EventRef.StartsWith("item-", StringComparison.Ordinal);
+
+    internal static bool HasPersistedAiAnalysis(AuditResult history) =>
+        history is not null
+        && (string.Equals(history.AnalysisOutcome, "ok", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(history.AnalysisOutcome, "partial", StringComparison.OrdinalIgnoreCase))
+        && (!string.IsNullOrWhiteSpace(history.AiReportSummary)
+            || (history.Findings is not null && history.Findings.Any(IsPersistedAiFinding)));
+
+    internal static bool ShouldReuseCompletedAiAnalysis(
+        bool forceReanalyze,
+        bool needsEventCollection,
+        AiHubAuditAnalysisService.AuditAnalysisResult cachedAnalysis,
+        string cachedEvidence,
+        string currentEvidence) =>
+        !forceReanalyze
+        && !needsEventCollection
+        && cachedAnalysis is not null
+        && !string.IsNullOrEmpty(currentEvidence)
+        && string.Equals(cachedEvidence, currentEvidence, StringComparison.Ordinal);
+
+    private void RestorePersistedAiReport(AuditResult history)
+    {
+        if (!HasPersistedAiAnalysis(history))
+        {
+            return;
+        }
+
+        var aiFindings = (history.Findings ?? [])
+            .Where(IsPersistedAiFinding)
+            .OrderByDescending(item => item.IsHigh)
+            .ThenByDescending(item => item.IsMedium)
+            .ThenByDescending(item => item.Occurrences)
+            .ToList();
+
+        _aiReportFindings.Clear();
+        foreach (var issue in aiFindings)
+        {
+            string details = string.Join(
+                Environment.NewLine,
+                new[] { issue.DisplayDescription, issue.PriorityReasonText }.Where(text => !string.IsNullOrWhiteSpace(text)));
+            _aiReportFindings.Add(new AiReportFinding(
+                issue.DisplayTitle,
+                issue.IsHigh ? HighLabel : issue.IsMedium ? MediumLabel : LowLabel,
+                details,
+                issue.PriorityActionText,
+                issue.EventId));
+        }
+
+        bool isPartial = string.Equals(history.AnalysisOutcome, "partial", StringComparison.OrdinalIgnoreCase);
+        AiReportSummaryText = !string.IsNullOrWhiteSpace(history.AiReportSummary)
+            ? history.AiReportSummary
+            : isPartial
+                ? "AIHub_DeepAnalysis_SummaryPartialFormat".FormatLocalized("AI partially completed: retained {0} enhanced finding(s) ({1}).", aiFindings.Count, "partial")
+                : "AIHub_DeepAnalysis_SummaryCompleteFormat".FormatLocalized("AI deep analysis completed: {0} enhanced finding(s).", aiFindings.Count);
+        AiReportMetaText = !string.IsNullOrWhiteSpace(history.AiReportMeta)
+            ? history.AiReportMeta
+            : !string.IsNullOrWhiteSpace(history.UsedModel)
+                ? $"{history.UsedModel} · {history.Timestamp.ToLocalTime():HH:mm:ss}"
+                : string.Empty;
+        _fluentAiReportPartial = isPartial;
+        HasAiReport = true;
     }
 
     private void CompleteAiInterruption(AuditResult snapshot, bool cancelled)
@@ -220,6 +297,8 @@ public sealed partial class AIHubPageViewModel
             LimitedChannels = snapshot.LimitedChannels?.ToList(),
             AnalysisOutcome = snapshot.AnalysisOutcome,
             UsedModel = snapshot.UsedModel,
+            AiReportSummary = snapshot.AiReportSummary,
+            AiReportMeta = snapshot.AiReportMeta,
         };
         _auditHistoryWriteTask = SaveAuditAfterAsync(_auditHistoryWriteTask, saved);
     }

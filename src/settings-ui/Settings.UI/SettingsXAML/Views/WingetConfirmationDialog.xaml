@@ -18,11 +18,18 @@
         VerticalScrollBarVisibility="Auto">
         <StackPanel Spacing="12">
             <TextBlock x:Name="ExplanationText" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-            <Border Style="{StaticResource KitSubtleSurfaceStyle}" Padding="12,8">
-                <StackPanel Spacing="4">
-                    <TextBlock x:Name="ElevationText" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                    <TextBlock x:Name="OptionsSummaryText" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                </StackPanel>
+            <Border
+                Background="{ThemeResource KitAccentTintBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid ColumnDefinitions="3,*">
+                    <Border CornerRadius="8,0,0,8" Background="{ThemeResource AccentFillColorDefaultBrush}" />
+                    <StackPanel Grid.Column="1" Padding="12,9" Spacing="4">
+                        <TextBlock x:Name="ElevationText" FontSize="12" FontWeight="Medium" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        <TextBlock x:Name="OptionsSummaryText" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                    </StackPanel>
+                </Grid>
             </Border>
             <ItemsControl x:Name="PackagesRepeater" HorizontalContentAlignment="Stretch">
                 <ItemsControl.ItemTemplate>
@@ -31,10 +38,18 @@
                             BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                             BorderThickness="0,0,0,1"
                             Padding="0,8,0,12">
-                            <StackPanel Spacing="4">
+                            <StackPanel Spacing="5">
                                 <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                 <TextBlock Text="{x:Bind Identity}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                                <TextBlock Text="{x:Bind VersionTransition}" FontSize="12" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <Border
+                                    HorizontalAlignment="Left"
+                                    Padding="7,2"
+                                    Background="{ThemeResource KitAccentTintBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="5">
+                                    <TextBlock Text="{x:Bind VersionTransition}" FontSize="12" FontWeight="SemiBold" FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </Border>
                                 <TextBlock Text="{x:Bind LicenseSummary}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" Visibility="{x:Bind LicenseVisibility}" />
                                 <TextBlock Text="{x:Bind AgreementsSummary}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" IsTextSelectionEnabled="True" Visibility="{x:Bind AgreementsVisibility}" />
                             </StackPanel>

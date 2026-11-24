@@ -15,11 +15,13 @@
                 <Expander.Header>
                     <Grid Padding="4,2" ColumnDefinitions="2*,*,*" ColumnSpacing="12">
                         <StackPanel MinWidth="0">
-                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{x:Bind Identity, Mode=OneWay}" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <TextBlock Grid.Column="1" Text="{x:Bind KindText, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="2" Text="{x:Bind StateText, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="7,2" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <TextBlock Text="{x:Bind KindText, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Grid.Column="2" Text="{x:Bind StateText, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     </Grid>
                 </Expander.Header>
                 <StackPanel Spacing="8">

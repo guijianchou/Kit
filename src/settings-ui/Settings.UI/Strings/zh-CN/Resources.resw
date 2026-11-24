@@ -2837,6 +2837,24 @@
   <data name="AIHub_DeepAnalyzeHint" xml:space="preserve">
     <value>按 security-audit 策略分批分析当前最多 400 条事件。结果仅供参考，不会自动执行操作。</value>
   </data>
+  <data name="AIHub_DeepAnalyzeHint_ModuleDisabled" xml:space="preserve">
+    <value>请先启用 AI Hub 以运行 AI 深度分析。</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint_Running" xml:space="preserve">
+    <value>当前已有审计或 AI 深度分析正在运行。</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint_ServiceUnavailable" xml:space="preserve">
+    <value>请先在 AI 服务设置中配置并启用 AI 服务后再运行深度分析。</value>
+  </data>
+  <data name="AIHub_DeepAnalyzeHint_ScanFirst" xml:space="preserve">
+    <value>请先运行扫描以采集事件，再执行 AI 深度分析。</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_Recollecting" xml:space="preserve">
+    <value>正在按该审计时间段重新采集 Windows 事件以执行 AI 深度分析…</value>
+  </data>
+  <data name="AIHub_DeepAnalysis_NoEventsInWindow" xml:space="preserve">
+    <value>该审计时间段内已无剩余 Windows 事件，请先重新扫描。</value>
+  </data>
   <data name="AIHub_HealthOverviewLabel" xml:space="preserve">
     <value>健康总览</value>
   </data>

@@ -4,6 +4,12 @@
 
 ## English
 
+### 3.5.10 (2026-11-23)
+
+- Fixed AI Hub's `AI deep analysis` button remaining unresponsive or disabled after scans and history restores by preserving the latest scanned raw event log snapshot on `AuditResult` and re-enabling on-demand deep analysis whenever scan events are available.
+- Merged AI Hub's Audit activity telemetry into the System overview panel and refined AI Hub's severity cards, action layout, and Mica visual hierarchy across light and dark themes.
+- Upgraded NetMap and WinGet with unified Fluent 2 / Mica surfaces, three-theme semantic palettes (Light, Dark, and High Contrast), GPU-composited micro-animations (`KitMotionHelper`), dual-channel Direct/Proxy map styling with graticule and live route flow, and polished WinGet workspace cards, detail panes, and dialogs.
+
 ### 3.5.9 (2026-11-23)
 
 - Apply the latest saved WinGet notification preference when an update query finishes, including changes made while the query is running. Record whether notifications were submitted, disabled, unchanged, or failed so missing notifications can be diagnosed.
@@ -1010,6 +1016,12 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.10（2026-11-23）
+
+- 修复 AI Hub 扫描完成或恢复历史快照后点击“AI 深度分析”无响应的问题：在 `AuditResult` 中保留本次扫描的原始事件日志快照，并在具备事件证据时正确启用按需深度分析。
+- 将 AI Hub 底部的审计活动统计合并至“系统问题概览”卡片，并优化 AI Hub 的风险卡片配色、操作栏层次与 Mica 质感。
+- 全面升级 NetMap 与 WinGet 的 UI/UX、三套主题调色（浅色、深色、高对比度）、Mica 表面层次及共享 Fluent 2 GPU 微动效（`KitMotionHelper`）：NetMap 新增直连/代理双色区分、地图经纬网、发光流动路径及目标跳点脉冲，WinGet 优化了三工作区配色、可用版本与来源标签、网格卡片、详情侧栏及弹窗视觉一致性。
 
 ### 3.5.9（2026-11-23）
 

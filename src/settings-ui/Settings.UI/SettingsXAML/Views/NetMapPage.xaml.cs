@@ -14,6 +14,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Shapes;
 using NetMapLib;
 using Windows.ApplicationModel.DataTransfer;
@@ -26,6 +27,9 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 {
     private readonly MainWindow settingsWindow;
     private readonly Dictionary<int, FrameworkElement> hopMarkers = new();
+    private readonly List<Storyboard> activeMapAnimations = new();
+    private readonly List<FrameworkElement> activePulseRings = new();
+    private bool heroPulseRunning;
     private bool windowSubscribed;
     private bool isCurrentPage;
     private bool mapLoaded;
@@ -53,6 +57,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         NetMapHealthStylesStore.Attach((ResourceDictionary)Resources["NetMapHealthStyles"]);
         DataContext = ViewModel;
         settingsWindow = App.GetSettingsWindow();
+        KitMotionHelper.AttachHoverLift(DirectCard, -1.5f);
+        KitMotionHelper.AttachHoverLift(ProxyCard, -1.5f);
         Loaded += Page_Loaded;
         Unloaded += Page_Unloaded;
         ActualThemeChanged += Page_ActualThemeChanged;
@@ -69,6 +75,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     public Style HealthBoxStyle(ProbeHealth health) => (Style)HealthStyles[NetMapHealthStylesStore.Key(health, "Box")];
 
+    public Style HealthPillStyle(ProbeHealth health) => (Style)HealthStyles[NetMapHealthStylesStore.Key(health, "Pill")];
+
     private ResourceDictionary HealthStyles => (ResourceDictionary)Resources["NetMapHealthStyles"];
 
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -79,6 +87,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         // Returning during a transition can reuse a page without another Loaded event.
         ViewModel.RefreshEnabledState();
         UpdateVisibility();
+        UpdateHeroPulse();
         DrawPoints();
     }
 
@@ -86,6 +95,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     {
         // Deactivate page-specific work while the cached page keeps its detection session.
         isCurrentPage = false;
+        StopHeroPulse();
+        StopMapAnimations();
         ViewModel.SetPageActive(false);
         base.OnNavigatedFrom(e);
     }
@@ -132,15 +143,19 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             }
 
             WorldOutline.Data = geometry;
+            WorldGraticule.Data = BuildGraticuleGeometry();
             mapLoaded = true;
         }
 
+        UpdateHeroPulse();
         DrawPoints();
     }
 
     private void Page_Unloaded(object sender, RoutedEventArgs e)
     {
         // Keep receiving window lifetime events while detection runs on another page.
+        StopHeroPulse();
+        StopMapAnimations();
         ViewModel.SetPageActive(false);
     }
 
@@ -169,6 +184,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private void Window_Closed(object sender, WindowEventArgs args)
     {
+        StopHeroPulse();
+        StopMapAnimations();
         ViewModel.SetPageActive(false);
         ViewModel.IsDetectionOn = false;
         if (!args.Handled)
@@ -285,7 +302,11 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         }
     }
 
-    private void Page_ActualThemeChanged(FrameworkElement sender, object args) => DispatcherQueue.TryEnqueue(DrawPoints);
+    private void Page_ActualThemeChanged(FrameworkElement sender, object args)
+    {
+        renderedSnapshot = null;
+        DispatcherQueue.TryEnqueue(DrawPoints);
+    }
 
     private void HopList_SelectionChanged(object sender, SelectionChangedEventArgs e) => DispatcherQueue.TryEnqueue(DrawPoints);
 
@@ -301,8 +322,103 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         }
     }
 
+    private void UpdateHeroPulse()
+    {
+        bool shouldPulse = isCurrentPage && IsLoaded && ViewModel.IsDetectionOn;
+        if (shouldPulse == heroPulseRunning)
+        {
+            return;
+        }
+
+        heroPulseRunning = shouldPulse;
+        if (shouldPulse)
+        {
+            KitMotionHelper.StartPulseRing(HeroPulseRing, 10d, maxScale: 2.35f, startOpacity: 0.55f, durationMs: 1700);
+        }
+        else
+        {
+            KitMotionHelper.StopPulseRing(HeroPulseRing);
+        }
+    }
+
+    private void StopHeroPulse()
+    {
+        heroPulseRunning = false;
+        KitMotionHelper.StopPulseRing(HeroPulseRing);
+    }
+
+    private void StopMapAnimations()
+    {
+        foreach (var storyboard in activeMapAnimations)
+        {
+            storyboard.Stop();
+        }
+
+        activeMapAnimations.Clear();
+
+        foreach (var ring in activePulseRings)
+        {
+            KitMotionHelper.StopPulseRing(ring);
+        }
+
+        activePulseRings.Clear();
+    }
+
+    private static PathGeometry BuildGraticuleGeometry()
+    {
+        var geometry = new PathGeometry();
+        foreach (double offset in new[] { -960.0, 0.0, 960.0 })
+        {
+            for (int lat = -60; lat <= 60; lat += 30)
+            {
+                double y = (90 - lat) * 480.0 / 180.0;
+                var fig = new PathFigure { StartPoint = new(offset, y), IsClosed = false, IsFilled = false };
+                fig.Segments.Add(new LineSegment { Point = new(offset + 960.0, y) });
+                geometry.Figures.Add(fig);
+            }
+
+            for (int lon = -135; lon <= 180; lon += 45)
+            {
+                double x = ((lon + 180) * 960.0 / 360.0) + offset;
+                var fig = new PathFigure { StartPoint = new(x, 0), IsClosed = false, IsFilled = false };
+                fig.Segments.Add(new LineSegment { Point = new(x, 480.0) });
+                geometry.Figures.Add(fig);
+            }
+        }
+
+        return geometry;
+    }
+
+    private Brush ResolvePageBrush(string resourceKey)
+    {
+        bool highContrast = false;
+        try
+        {
+            highContrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
+        }
+        catch
+        {
+        }
+
+        string themeKey = highContrast
+            ? "HighContrast"
+            : ActualTheme == ElementTheme.Light ? "Light" : "Default";
+        if (Resources.ThemeDictionaries.TryGetValue(themeKey, out object dictObj) &&
+            dictObj is ResourceDictionary themeDict &&
+            themeDict.TryGetValue(resourceKey, out object brushObj) &&
+            brushObj is Brush themedBrush)
+        {
+            return themedBrush;
+        }
+
+        return Resources.TryGetValue(resourceKey, out object fallback) && fallback is Brush b
+            ? b
+            : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+    }
+
     private void DrawPoints()
     {
+        UpdateHeroPulse();
         if (!isCurrentPage || !IsLoaded || MapPoints == null || MapDescription == null)
         {
             return;
@@ -338,7 +454,10 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             return;
         }
 
+        StopMapAnimations();
         MapPoints.Children.Clear();
+        MapPulseLayer.Children.Clear();
+        MapLinesGlow.Children.Clear();
         MapLines.Children.Clear();
         hopMarkers.Clear();
         renderedSnapshot = snapshot;
@@ -392,7 +511,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             if (i < ViewModel.Hops.Count)
             {
                 int index = i;
-                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 42 : 32, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health);
+                bool highlight = selected == i || (targetInRoute && selected < 0);
+                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 42 : 32, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health, pulse: snapshot.Running && highlight);
                 marker.Tapped += (_, _) => HopList.SelectedIndex = HopList.SelectedIndex == index ? -1 : index;
                 hopMarkers[i] = marker;
             }
@@ -408,9 +528,9 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             var position = Position(WorldMap.Locate(string.Empty, labelGeo));
             var text = new TextBlock { Style = (Style)Resources["NetMapMapLabelStyle"] };
             text.SetBinding(TextBlock.TextProperty, new Binding { Source = ViewModel.Hops[labelIndex], Path = new PropertyPath(nameof(NetMapHopRow.MapLabel)), Mode = BindingMode.OneWay });
-            var label = new Border { Child = text, Padding = new Thickness(8, 4, 8, 4), CornerRadius = new CornerRadius(4), Style = (Style)Resources["NetMapMapLabelBackgroundStyle"] };
+            var label = new Border { Child = text, Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(8), Style = (Style)Resources["NetMapMapLabelBackgroundStyle"] };
             Canvas.SetLeft(label, Math.Clamp(position.X - 100, 8, 620));
-            Canvas.SetTop(label, Math.Clamp(position.Y + 28, 8, 428));
+            Canvas.SetTop(label, Math.Clamp(position.Y + 28, 8, 424));
             MapPoints.Children.Add(label);
         }
 
@@ -455,7 +575,9 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         mapOffsetX = 480 - (mapCenterX * mapScale);
         mapOffsetY = Math.Clamp(240 - (centerY * mapScale), 480 - (480 * mapScale), 0);
 
-        WorldOutline.RenderTransform = new MatrixTransform { Matrix = new Matrix(mapScale, 0, 0, mapScale, mapOffsetX, mapOffsetY) };
+        var matrix = new Matrix(mapScale, 0, 0, mapScale, mapOffsetX, mapOffsetY);
+        WorldOutline.RenderTransform = new MatrixTransform { Matrix = matrix };
+        WorldGraticule.RenderTransform = new MatrixTransform { Matrix = matrix };
     }
 
     private void AddRouteLine(MapCoordinate from, MapCoordinate to, bool approximate)
@@ -476,6 +598,14 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
         void AddSegment(Point first, Point second)
         {
+            if (!approximate && ViewModel.IsDetectionOn)
+            {
+                var glow = new Polyline { Style = (Style)Resources["NetMapRouteGlowStyle"], Opacity = 0.75 };
+                glow.Points.Add(first);
+                glow.Points.Add(second);
+                MapLinesGlow.Children.Add(glow);
+            }
+
             var line = new Polyline { Style = (Style)Resources["NetMapRouteLineStyle"], Opacity = ViewModel.IsDetectionOn ? 0.95 : 0.4, Tag = approximate ? "Approximate" : "Observed" };
             if (approximate)
             {
@@ -485,6 +615,23 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             line.Points.Add(first);
             line.Points.Add(second);
             MapLines.Children.Add(line);
+
+            if (!approximate && ViewModel.IsDetectionOn)
+            {
+                var flow = new Polyline
+                {
+                    Style = (Style)Resources["NetMapRouteFlowStyle"],
+                    StrokeDashArray = new DoubleCollection { 4, 10 },
+                    Opacity = 0.72,
+                };
+                flow.Points.Add(first);
+                flow.Points.Add(second);
+                MapLinesGlow.Children.Add(flow);
+                if (KitMotionHelper.StartDashFlow(flow, cycleLength: 14d, durationSeconds: 1.7) is { } anim)
+                {
+                    activeMapAnimations.Add(anim);
+                }
+            }
         }
     }
 
@@ -511,23 +658,41 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         if (coordinate != null)
         {
             var health = !ViewModel.IsDetectionOn || channel.Latest == null ? ProbeHealth.Unknown : channel.Latest.Success ? ProbeHealth.Good : ProbeHealth.Error;
-            AddPoint(coordinate, caption, proxy, stale, proxy ? 16 : 20, health: health);
+            AddPoint(coordinate, caption, proxy, stale, proxy ? 18 : 20, health: health, pulse: !stale && proxy);
         }
     }
 
-    private FrameworkElement AddPoint(MapCoordinate coordinate, string label, bool proxy, bool stale, double size, string number = null, ProbeHealth? health = null)
+    private FrameworkElement AddPoint(MapCoordinate coordinate, string label, bool proxy, bool stale, double size, string number = null, ProbeHealth? health = null, bool pulse = false)
     {
         var position = Position(coordinate);
-        Shape mark = proxy ? new Ellipse() : new Rectangle { RadiusX = 3, RadiusY = 3 };
+        if (pulse && MapPulseLayer != null)
+        {
+            var halo = new Ellipse
+            {
+                Width = size,
+                Height = size,
+                Style = health.HasValue ? HealthDotStyle(health.Value) : (Style)Resources["NetMapProxyMarkerStyle"],
+                Opacity = 0,
+            };
+            Canvas.SetLeft(halo, position.X - (size / 2));
+            Canvas.SetTop(halo, position.Y - (size / 2));
+            MapPulseLayer.Children.Add(halo);
+            activePulseRings.Add(halo);
+            KitMotionHelper.StartPulseRing(halo, size, maxScale: 1.95f, startOpacity: 0.48f, durationMs: 1900);
+        }
+
+        Shape mark = proxy ? new Ellipse() : new Rectangle { RadiusX = 4, RadiusY = 4 };
         mark.Style = health.HasValue ? (proxy ? HealthDotStyle(health.Value) : HealthBoxStyle(health.Value)) : (Style)Resources[proxy ? "NetMapProxyMarkerStyle" : "NetMapDirectMarkerStyle"];
+        mark.Stroke = ResolvePageBrush("NetMapMarkerHaloStrokeBrush");
+        mark.StrokeThickness = 2.2;
         mark.Width = size;
         mark.Height = size;
-        mark.Opacity = stale ? 0.45 : 0.9;
+        mark.Opacity = stale ? 0.5 : 0.96;
         var container = new Grid { Width = size, Height = size };
         container.Children.Add(mark);
         if (number != null)
         {
-            container.Children.Add(new TextBlock { Text = number, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Style = (Style)Resources["NetMapHopNumberStyle"], HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            container.Children.Add(new TextBlock { Text = number, FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Style = (Style)Resources["NetMapHopNumberStyle"], HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
         }
 
         ToolTipService.SetToolTip(container, label);

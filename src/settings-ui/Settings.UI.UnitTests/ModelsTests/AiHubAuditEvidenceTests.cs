@@ -145,6 +145,77 @@ public sealed class AiHubAuditEvidenceTests
         Assert.AreNotEqual(initial, AiHubAuditAnalysisService.CreateEvidenceFingerprint([item, item with { TimeCreated = item.TimeCreated.Value.AddSeconds(1) }]));
     }
 
+    [TestMethod]
+    public void ManualDeepAnalysisBypassesCompletedEvidenceCacheWhileAutomaticPassCanReuseIt()
+    {
+        var cached = new AiHubAuditAnalysisService.AuditAnalysisResult([Finding("item-000001", "High", 1)], false, null);
+        const string evidence = "ABC123";
+
+        Assert.IsTrue(
+            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: false, needsEventCollection: false, cached, evidence, evidence),
+            "An automatic post-scan pass may reuse a completed result for identical evidence.");
+        Assert.IsFalse(
+            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: true, needsEventCollection: false, cached, evidence, evidence),
+            "An explicit click on AI deep analysis must bypass the completed evidence cache and re-run.");
+        Assert.IsFalse(
+            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: false, needsEventCollection: true, cached, evidence, evidence),
+            "A historical snapshot without in-memory events cannot reuse a cached analysis without collecting events.");
+        Assert.IsFalse(
+            AIHubPageViewModel.ShouldReuseCompletedAiAnalysis(forceReanalyze: false, needsEventCollection: false, cached, evidence, "DIFFERENT"));
+    }
+
+    [TestMethod]
+    public void PersistedCompletedAuditRestoresAiReportOnlyForRealAiOutcomes()
+    {
+        var persistedWithAiItem = new AuditResult
+        {
+            AnalysisOutcome = "ok",
+            Findings = [new AuditIssueEnhanced { EventRef = "item-000046", Title = "AI finding", Severity = "Medium" }],
+        };
+        var persistedWithSummary = new AuditResult
+        {
+            AnalysisOutcome = "partial",
+            AiReportSummary = "AI partially completed: retained 1 enhanced finding(s).",
+            Findings = [new AuditIssueEnhanced { EventRef = "1003", Title = "Local finding", Severity = "High" }],
+        };
+        var localOnlySnapshot = new AuditResult
+        {
+            AnalysisOutcome = "ok",
+            Findings = [new AuditIssueEnhanced { EventRef = "synthetic-event-0", Title = "Synthetic finding", Severity = "Medium" }],
+        };
+        var legacySnapshot = new AuditResult
+        {
+            Findings = [new AuditIssueEnhanced { EventRef = "item-000001", Title = "Unknown outcome", Severity = "Low" }],
+        };
+
+        Assert.IsTrue(AIHubPageViewModel.HasPersistedAiAnalysis(persistedWithAiItem));
+        Assert.IsTrue(AIHubPageViewModel.HasPersistedAiAnalysis(persistedWithSummary));
+        Assert.IsFalse(AIHubPageViewModel.HasPersistedAiAnalysis(localOnlySnapshot));
+        Assert.IsFalse(AIHubPageViewModel.HasPersistedAiAnalysis(legacySnapshot));
+    }
+
+    [TestMethod]
+    public void AuditResultSerializationPreservesPersistedAiReportFields()
+    {
+        var original = new AuditResult
+        {
+            HealthScore = 42,
+            EventsScanned = 47,
+            AnalysisOutcome = "ok",
+            UsedModel = "Codex CLI / deepseek-v4.1-flash",
+            AiReportSummary = "AI deep analysis completed: 4 enhanced finding(s).",
+            AiReportMeta = "Kernel codex · 19:23:07",
+        };
+
+        string json = System.Text.Json.JsonSerializer.Serialize(original, AIHubLibJsonContext.Default.AuditResult);
+        var restored = System.Text.Json.JsonSerializer.Deserialize(json, AIHubLibJsonContext.Default.AuditResult);
+
+        Assert.IsNotNull(restored);
+        Assert.AreEqual(original.UsedModel, restored.UsedModel);
+        Assert.AreEqual(original.AiReportSummary, restored.AiReportSummary);
+        Assert.AreEqual(original.AiReportMeta, restored.AiReportMeta);
+    }
+
     private static AuditIssue Finding(string reference, string severity, int occurrences, params string[] related) => new()
     {
         EventRef = reference,

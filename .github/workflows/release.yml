@@ -2,9 +2,10 @@ name: Release
 
 on:
   push:
-    tags:
-      - '[0-9]*'
-      - 'v[0-9]*'
+    branches:
+      - main
+    paths:
+      - 'src/Version.props'
   workflow_dispatch:
     inputs:
       version:
@@ -32,7 +33,7 @@ concurrency:
 
 jobs:
   release:
-    name: x64 Release build and GitHub Release
+    name: Publish Windows x64 release
     runs-on: windows-2022
     timeout-minutes: 240
 
@@ -70,10 +71,12 @@ jobs:
           if ($version -notmatch '^\d+\.\d+\.\d+$') {
             throw "src/Version.props contains an unsupported version '$version'; expected x.y.z."
           }
-          if ($env:GITHUB_REF_TYPE -eq 'tag') {
-            $tag = $env:GITHUB_REF_NAME
+          if ($env:GITHUB_EVENT_NAME -eq 'push' -and $env:GITHUB_REF_TYPE -eq 'branch') {
+            $tag = $version
           } elseif (-not [string]::IsNullOrWhiteSpace($env:INPUT_VERSION)) {
             $tag = $env:INPUT_VERSION.Trim()
+          } elseif ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $tag = $env:GITHUB_REF_NAME
           } else {
             throw 'workflow_dispatch requires the version input (for example 3.5.2).'
           }
@@ -88,30 +91,6 @@ jobs:
           Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "version=$version"
           Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "tag=$tag"
           Write-Host "Releasing Kit $version from '$tag' ($($env:GITHUB_REF_TYPE))."
-
-      - name: Verify Windows CI passed for this commit
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SKIP_CI_GATE: ${{ github.event.inputs.skip_ci_gate }}
-        run: |
-          if ($env:SKIP_CI_GATE -eq 'true') {
-            Write-Warning 'Bypassing the Windows CI gate by workflow_dispatch input.'
-            return
-          }
-          $sha = $env:GITHUB_SHA
-          $response = gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/windows-ci.yml/runs?head_sha=$sha&per_page=20"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Unable to query the Windows CI workflow runs for $sha."
-          }
-          $runs = @(($response | ConvertFrom-Json).workflow_runs | Where-Object { $_.head_sha -eq $sha })
-          $successful = @($runs | Where-Object { $_.conclusion -eq 'success' })
-          if ($successful.Count -eq 0) {
-            $latest = $runs | Select-Object -First 1
-            $reason = if ($latest) { "latest Windows CI run for $sha completed with '$($latest.conclusion)'" } else { "no Windows CI run exists for $sha" }
-            throw "Cannot release: $reason. Wait for https://github.com/$env:GITHUB_REPOSITORY/actions/workflows/windows-ci.yml to pass on this commit, or dispatch with skip_ci_gate=true."
-          }
-          Write-Host "Windows CI passed for $sha ($($successful[0].html_url))."
 
       - name: Restore and build the x64 Release solution
         shell: pwsh
@@ -231,6 +210,40 @@ jobs:
             "Commit: $($metadata.commit)"
           )
           Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value (($lines) -join ([string][char]10))
+
+      - name: Verify Windows CI passed for this commit
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SKIP_CI_GATE: ${{ github.event.inputs.skip_ci_gate }}
+        run: |
+          if ($env:SKIP_CI_GATE -eq 'true') {
+            Write-Warning 'Bypassing the Windows CI gate by workflow_dispatch input.'
+            return
+          }
+          $sha = $env:GITHUB_SHA
+          $deadline = (Get-Date).AddMinutes(210)
+          do {
+            $response = gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/windows-ci.yml/runs?head_sha=$sha&per_page=20"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to query the Windows CI workflow runs for $sha."
+            }
+            $runs = @(($response | ConvertFrom-Json).workflow_runs | Where-Object { $_.head_sha -eq $sha })
+            $successful = @($runs | Where-Object { $_.conclusion -eq 'success' })
+            if ($successful.Count -gt 0) {
+              Write-Host "Windows CI passed for $sha ($($successful[0].html_url))."
+              break
+            }
+            $failed = @($runs | Where-Object { $_.status -eq 'completed' -and $_.conclusion -notin @('success', 'neutral', 'skipped') })
+            if ($failed.Count -gt 0) {
+              throw "Windows CI for $sha completed with '$($failed[0].conclusion)'. Release publication is blocked."
+            }
+            if ((Get-Date) -ge $deadline) {
+              throw "Timed out waiting for Windows CI to pass for $sha."
+            }
+            Write-Host "Windows CI is still running for $sha; checking again in 30 seconds."
+            Start-Sleep -Seconds 30
+          } while ($true)
 
       - name: Upload release assets
         uses: actions/upload-artifact@v7

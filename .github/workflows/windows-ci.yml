@@ -1,4 +1,4 @@
-name: Windows CI
+name: CI
 
 on:
   push:
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: x64 Debug build and tests
+    name: Verify Windows x64
     runs-on: windows-2022
     timeout-minutes: 120
 

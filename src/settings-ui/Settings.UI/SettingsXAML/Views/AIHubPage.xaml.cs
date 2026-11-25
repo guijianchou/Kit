@@ -641,18 +641,4 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
             pill.IsChecked = ViewModel.OptimizationFilterIndex == index;
         }
     }
-
-    private void OnTaskPolicyColumnsSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        if (TaskPolicyEditorCard == null || TaskPolicyScopeCard == null)
-        {
-            return;
-        }
-
-        bool narrow = e.NewSize.Width < 720;
-        Grid.SetColumnSpan(TaskPolicyEditorCard, narrow ? 2 : 1);
-        Grid.SetRow(TaskPolicyScopeCard, narrow ? 1 : 0);
-        Grid.SetColumn(TaskPolicyScopeCard, narrow ? 0 : 1);
-        Grid.SetColumnSpan(TaskPolicyScopeCard, narrow ? 2 : 1);
-    }
 }

@@ -312,7 +312,7 @@
                                                                     <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{x:Bind TagBrush, Mode=OneWay}" Text="{x:Bind TagLabel, Mode=OneWay}" />
                                                                 </Border>
                                                                 <Border Padding="6,2" VerticalAlignment="Center" Background="{ThemeResource BadgeWarningBackgroundBrush}" CornerRadius="4" ToolTipService.ToolTip="{x:Bind AdoptedTooltip, Mode=OneWay}" Visibility="{x:Bind AdoptedVisibility, Mode=OneWay}">
-                                                                    <TextBlock x:Uid="Localserver_AdoptedBadge" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource BadgeWarningForegroundBrush}" Text="ADOPTED" />
+                                                                    <TextBlock x:Uid="Localserver_AdoptedBadge" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource BadgeWarningForegroundBrush}" Text="Adopted" />
                                                                 </Border>
                                                                 <FontIcon VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE72E;" ToolTipService.ToolTip="{x:Bind LockTooltip, Mode=OneWay}" Visibility="{x:Bind LockVisibility, Mode=OneWay}" />
                                                             </StackPanel>

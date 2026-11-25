@@ -25,9 +25,9 @@
                     <SolidColorBrush x:Key="NetMapProxyAccentBrush" Color="#FFB69EFF" />
                     <SolidColorBrush x:Key="NetMapProxyTintBrush" Color="#26B69EFF" />
 
-                    <!-- AI route inline pill (aligned with AI Hub) -->
-                    <SolidColorBrush x:Key="NetMapAiPillSurfaceBrush" Color="#FF222A34" />
-                    <SolidColorBrush x:Key="NetMapAiPillBorderBrush" Color="#FF39506B" />
+                    <!-- AI route inline pill (translucent over Mica) -->
+                    <SolidColorBrush x:Key="NetMapAiPillSurfaceBrush" Color="#1E60CDFF" />
+                    <SolidColorBrush x:Key="NetMapAiPillBorderBrush" Color="#4260CDFF" />
                     <SolidColorBrush x:Key="NetMapAiPillForegroundBrush" Color="#FF7CCBFF" />
 
                     <!-- Semantic pill borders -->
@@ -55,9 +55,9 @@
                     <SolidColorBrush x:Key="NetMapProxyAccentBrush" Color="#FF6246C8" />
                     <SolidColorBrush x:Key="NetMapProxyTintBrush" Color="#186246C8" />
 
-                    <SolidColorBrush x:Key="NetMapAiPillSurfaceBrush" Color="#FFF2F7FE" />
-                    <SolidColorBrush x:Key="NetMapAiPillBorderBrush" Color="#FFC6DDF6" />
-                    <SolidColorBrush x:Key="NetMapAiPillForegroundBrush" Color="#FF005A9E" />
+                    <SolidColorBrush x:Key="NetMapAiPillSurfaceBrush" Color="#140067C0" />
+                    <SolidColorBrush x:Key="NetMapAiPillBorderBrush" Color="#360067C0" />
+                    <SolidColorBrush x:Key="NetMapAiPillForegroundBrush" Color="#FF005396" />
 
                     <SolidColorBrush x:Key="NetMapHealthGoodBorderBrush" Color="#3A0F7B0F" />
                     <SolidColorBrush x:Key="NetMapHealthWarningBorderBrush" Color="#449D5D00" />
@@ -479,24 +479,6 @@
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
-            <VisualStateGroup>
-                <VisualState>
-                    <VisualState.StateTriggers>
-                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=MapNoticesGrid}" MinWidth="600" />
-                    </VisualState.StateTriggers>
-                </VisualState>
-                <VisualState>
-                    <VisualState.StateTriggers>
-                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=MapNoticesGrid}" MaxWidth="600" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="MapNoticeSecondCol.Width" Value="0" />
-                        <Setter Target="MapNoticesGrid.ColumnSpacing" Value="0" />
-                        <Setter Target="RouteNoticeGrid.(Grid.Column)" Value="0" />
-                        <Setter Target="RouteNoticeGrid.(Grid.Row)" Value="1" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
 
         <controls:SettingsPageControl
@@ -820,33 +802,13 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- Bottom: Map Description Pill & Responsive Wrapping Notices -->
-                                    <Border
-                                        Padding="12,8"
-                                        Background="{ThemeResource NetMapAiPillSurfaceBrush}"
-                                        BorderBrush="{ThemeResource NetMapAiPillBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="6">
+                                    <!-- Bottom: Selected Hop / Route Summary Bar -->
+                                    <Border Padding="12,8" Style="{StaticResource KitSubtleSurfaceStyle}">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                            <FontIcon VerticalAlignment="Center" FontSize="13" Foreground="{ThemeResource NetMapAiPillForegroundBrush}" Glyph="&#xE946;" />
+                                            <FontIcon VerticalAlignment="Center" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE946;" />
                                             <TextBlock x:Name="MapDescription" Grid.Column="1" MinHeight="18" VerticalAlignment="Center" FontSize="12" MaxLines="2" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" />
                                         </Grid>
                                     </Border>
-
-                                    <Grid x:Name="MapNoticesGrid" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition x:Name="MapNoticeSecondCol" Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
-                                            <FontIcon Margin="0,2,0,0" VerticalAlignment="Top" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE774;" />
-                                            <TextBlock x:Uid="NetMap_MapNotice" Grid.Column="1" Style="{StaticResource NetMapSecondary}" />
-                                        </Grid>
-                                        <Grid x:Name="RouteNoticeGrid" Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6">
-                                            <FontIcon Margin="0,2,0,0" VerticalAlignment="Top" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE7BA;" />
-                                            <TextBlock x:Uid="NetMap_RouteNotice" Grid.Column="1" Style="{StaticResource NetMapSecondary}" />
-                                        </Grid>
-                                    </Grid>
                                 </StackPanel>
                             </Border>
 
@@ -861,10 +823,7 @@
                                             <Border Style="{StaticResource KitIconBadgeStyle}">
                                                 <FontIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE753;" />
                                             </Border>
-                                            <StackPanel VerticalAlignment="Center" Spacing="2">
-                                                <TextBlock x:Uid="NetMap_ServicesTitle" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource SubtitleTextBlockStyle}" />
-                                                <TextBlock x:Uid="NetMap_ServicesSubtitle" FontSize="12" Style="{StaticResource NetMapSecondary}" />
-                                            </StackPanel>
+                                            <TextBlock x:Uid="NetMap_ServicesTitle" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource SubtitleTextBlockStyle}" />
                                         </StackPanel>
 
                                         <Border Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource KitStatusPillStyle}">
@@ -931,8 +890,6 @@
                                             </ItemsControl>
                                         </StackPanel>
                                     </Border>
-
-                                    <TextBlock x:Uid="NetMap_ServiceNotice" Style="{StaticResource NetMapSecondary}" />
                                 </StackPanel>
                             </Border>
 
@@ -945,13 +902,16 @@
                                 AutomationProperties.HeadingLevel="Level2"
                                 HeaderIcon="{ui:FontIcon Glyph=&#xE713;}">
                                 <tk:SettingsExpander.Items>
-                                    <tk:SettingsCard ContentAlignment="Left">
+                                    <tk:SettingsCard x:Uid="NetMap_OnlineLookupCard">
                                         <ToggleSwitch x:Uid="NetMap_OnlineLookup" IsOn="{x:Bind ViewModel.OnlineLookup, Mode=TwoWay}" />
                                     </tk:SettingsCard>
 
-                                    <tk:SettingsCard ContentAlignment="Vertical">
+                                    <tk:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
                                         <StackPanel Spacing="12">
-                                            <TextBlock x:Uid="NetMap_LocalGeoDatabases" AutomationProperties.HeadingLevel="Level3" FontSize="13" FontWeight="SemiBold" />
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                <TextBlock x:Uid="NetMap_LocalGeoDatabases" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level3" FontSize="13" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource NetMapSecondary}" Text="{x:Bind ViewModel.DatabaseStatus, Mode=OneWay}" />
+                                            </Grid>
 
                                             <Grid VerticalAlignment="Bottom" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                 <TextBox x:Uid="NetMap_AsnPath" CornerRadius="4" FontFamily="{StaticResource KitMonoFontFamily}" Text="{x:Bind ViewModel.AsnDatabase, Mode=TwoWay}" />
@@ -989,12 +949,11 @@
                                                 </Button>
                                             </Grid>
 
-                                            <TextBlock Style="{StaticResource NetMapSecondary}" Text="{x:Bind ViewModel.DatabaseStatus, Mode=OneWay}" />
                                             <TextBlock x:Uid="NetMap_DatabaseNotice" Style="{StaticResource NetMapSecondary}" />
                                         </StackPanel>
                                     </tk:SettingsCard>
 
-                                    <tk:SettingsCard x:Uid="NetMap_DataUpdates" ContentAlignment="Vertical">
+                                    <tk:SettingsCard x:Uid="NetMap_DataUpdates" HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
                                         <StackPanel Spacing="10">
                                             <TextBlock x:Uid="NetMap_UpdateNotice" Style="{StaticResource NetMapSecondary}" />
                                             <HyperlinkButton
@@ -1036,10 +995,9 @@
                                         </StackPanel>
                                     </tk:SettingsCard>
 
-                                    <tk:SettingsCard ContentAlignment="Left">
+                                    <tk:SettingsCard HorizontalContentAlignment="Right" ContentAlignment="Right">
                                         <Button
                                             x:Uid="NetMap_ApplyButton"
-                                            HorizontalAlignment="Left"
                                             AutomationProperties.AutomationId="NetMap_ApplyButton"
                                             Click="Apply_Click"
                                             IsEnabled="{x:Bind ViewModel.CanUpdate, Mode=OneWay}"

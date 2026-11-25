@@ -489,10 +489,6 @@ public sealed partial class AIHubPageViewModel
         "{0} / 64000",
         AiHub.CurrentPolicyContent?.Length ?? 0);
 
-    public string TaskPolicyScopePrimaryText => AiHub.IsOptimizationPolicyTab
-        ? "AIHub_Fluent_OptPolicyScopePrimary".GetLocalizedOrFallback("Governs how candidate files are categorized, cleanup suggestions are formed, and retention boundaries are applied.")
-        : "AIHub_Fluent_AuditPolicyScopePrimary".GetLocalizedOrFallback("Governs event analysis priorities, conclusion structure, and recommended action output.");
-
     public bool IsTaskPolicyClean => !AiHub.IsCurrentPolicyDirty;
 
     private void InitializeFluentView()
@@ -525,7 +521,6 @@ public sealed partial class AIHubPageViewModel
             case nameof(AiHubViewModel.IsSecurityAuditPolicyTab):
                 OnPropertyChanged(nameof(TaskPolicyEditorHeading));
                 OnPropertyChanged(nameof(TaskPolicyCharCountText));
-                OnPropertyChanged(nameof(TaskPolicyScopePrimaryText));
                 OnPropertyChanged(nameof(IsTaskPolicyClean));
                 break;
             case nameof(AiHubViewModel.CurrentPolicyContent):

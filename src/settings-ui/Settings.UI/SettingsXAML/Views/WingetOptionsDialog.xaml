@@ -40,11 +40,6 @@
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     TextWrapping="Wrap" />
             </StackPanel>
-            <TextBlock
-                x:Name="OptionsExplanationText"
-                FontSize="12"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                TextWrapping="Wrap" />
         </StackPanel>
     </ScrollViewer>
 </ContentDialog>

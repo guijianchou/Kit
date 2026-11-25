@@ -1899,8 +1899,6 @@ internal static class AiHubUxSmoke
         Require(ReferenceEquals(page, NavigationService.Frame.Content), "Navigation must retain the cached page.");
         var root = (FrameworkElement)App.GetSettingsWindow().Content;
         var themeBefore = root.RequestedTheme;
-        bool sawNarrowPolicyLayout = false;
-        bool sawWidePolicyLayout = false;
         try
         {
             foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
@@ -1940,23 +1938,13 @@ internal static class AiHubUxSmoke
                 }
                 if (tab == 2)
                 {
-                    var columns = (Grid)page.FindName("TaskPolicyColumnsGrid");
                     var editor = (FrameworkElement)page.FindName("TaskPolicyEditorCard");
-                    var scope = (FrameworkElement)page.FindName("TaskPolicyScopeCard");
-                    bool narrow = columns.ActualWidth < 720;
-                    sawNarrowPolicyLayout |= narrow;
-                    sawWidePolicyLayout |= !narrow;
-                    var editorBounds = HeaderBounds(editor, columns);
-                    var scopeBounds = HeaderBounds(scope, columns);
-                    Require(narrow
-                        ? scopeBounds.Top >= editorBounds.Bottom - 2 && Math.Abs(scopeBounds.Left - editorBounds.Left) < 2
-                        : scopeBounds.Left >= editorBounds.Right - 2 && Math.Abs(scopeBounds.Top - editorBounds.Top) < 2,
-                        $"Policy scope must move below the editor in narrow content and beside it in wide content at {theme}/{width}.");
+                    Require(Math.Abs(editor.ActualWidth - content.ActualWidth) < 2,
+                        $"Policy editor card must fill the content column at {theme}/{width}.");
                 }
                 await Capture(page, $"aihub-{theme}-{width}-tab{tab}.png");
                 if (tab == 1) await CheckInventoryLayout(page, theme, width);
             }
-            Require(sawNarrowPolicyLayout && sawWidePolicyLayout, "Policy layout verification must exercise both sides of its content-width breakpoint.");
         }
         finally { root.RequestedTheme = themeBefore; }
         Log("Independent tab scroll, compact module header, fixed service status/navigation, accessible module toggle, localized 96-DIP score, readable content viewport, shared page margins, responsive policy columns, cached page and 18 theme/width/tab renders PASS");

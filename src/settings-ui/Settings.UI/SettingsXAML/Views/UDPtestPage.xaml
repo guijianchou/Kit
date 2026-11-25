@@ -471,8 +471,8 @@
 
                                     <StackPanel Spacing="3">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE774;" />
-                                            <TextBlock x:Uid="UDPtest_PublicIpLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="PUBLIC IP" />
+                                            <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE774;" />
+                                            <TextBlock x:Uid="UDPtest_PublicIpLabel" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="Public IP" />
                                         </StackPanel>
                                         <TextBlock FontFamily="{StaticResource KitMonoFontFamily}" IsTextSelectionEnabled="True" Style="{StaticResource MetricSecondaryStyle}" Text="{x:Bind ViewModel.PublicIpText, Mode=OneWay}" Typography.NumeralAlignment="Tabular" />
                                     </StackPanel>
@@ -480,8 +480,8 @@
 
                                     <StackPanel Grid.Column="2" Spacing="3">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE707;" />
-                                            <TextBlock x:Uid="UDPtest_LocationLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="LOCATION" />
+                                            <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE707;" />
+                                            <TextBlock x:Uid="UDPtest_LocationLabel" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="Location" />
                                         </StackPanel>
                                         <TextBlock Style="{StaticResource MetricSecondaryStyle}" Text="{x:Bind ViewModel.LocationText, Mode=OneWay}" />
                                     </StackPanel>
@@ -489,8 +489,8 @@
 
                                     <StackPanel x:Name="IdentityNatCell" Grid.Column="4" Spacing="3">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE72E;" />
-                                            <TextBlock x:Uid="UDPtest_NatTypeLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="NAT TYPE" />
+                                            <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE72E;" />
+                                            <TextBlock x:Uid="UDPtest_NatTypeLabel" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="NAT type" />
                                         </StackPanel>
                                         <TextBlock x:Uid="UDPtest_NatTypeValue" Style="{StaticResource MetricSecondaryStyle}" Text="{x:Bind ViewModel.NatTypeText, Mode=OneWay}" />
                                     </StackPanel>
@@ -499,7 +499,7 @@
                                     <StackPanel x:Name="IdentityRouteCell" Grid.Column="6" Spacing="3">
                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                             <FontIcon VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE770;" />
-                                            <TextBlock x:Uid="UDPtest_LocalRouteLabel" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="LOCAL ROUTE" />
+                                            <TextBlock x:Uid="UDPtest_LocalRouteLabel" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="Local route" />
                                             <Button x:Uid="UDPtest_LocalRouteInfo" Click="OnInfoButtonClick" Style="{StaticResource InlineInfoButtonStyle}">
                                                 <FontIcon FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE946;" />
                                             </Button>
@@ -525,16 +525,17 @@
                                         <Grid Grid.Column="0">
                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                                                 <Grid Width="88" Height="88">
+                                                    <Ellipse Width="68" Height="68" Fill="{ThemeResource SubtleFillColorSecondaryBrush}" />
                                                     <Ellipse Width="84" Height="84" Stroke="{ThemeResource CardStrokeColorDefaultBrush}" StrokeThickness="6" />
                                                     <Ellipse Width="84" Height="84" Stroke="{x:Bind ViewModel.HealthRingBrush, Mode=OneWay}" StrokeThickness="6" />
-                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="0">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="1">
                                                         <TextBlock Width="72" HorizontalAlignment="Center" FontSize="{x:Bind ViewModel.HealthStateFontSize, Mode=OneWay}" FontWeight="SemiBold" Text="{x:Bind ViewModel.HealthStateText, Mode=OneWay}" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock x:Uid="UDPtest_HealthLabel" HorizontalAlignment="Center" FontSize="9" Style="{StaticResource KitMicroLabelTextStyle}" Text="HEALTH" />
+                                                        <TextBlock x:Uid="UDPtest_HealthLabel" HorizontalAlignment="Center" FontSize="11" Style="{StaticResource KitMicroLabelTextStyle}" Text="Health" />
                                                     </StackPanel>
                                                 </Grid>
                                                 <StackPanel Spacing="2">
                                                     <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="2">
-                                                        <TextBlock x:Uid="UDPtest_ConditionLabel" VerticalAlignment="Center" FontSize="9" Style="{StaticResource KitMicroLabelTextStyle}" Text="CONDITION" />
+                                                        <TextBlock x:Uid="UDPtest_ConditionLabel" VerticalAlignment="Center" FontSize="11" Style="{StaticResource KitMicroLabelTextStyle}" Text="Condition" />
                                                         <Button x:Uid="UDPtest_ConditionInfo" Click="OnInfoButtonClick" Style="{StaticResource InlineInfoButtonStyle}">
                                                             <FontIcon FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE946;" />
                                                         </Button>
@@ -548,9 +549,9 @@
                                         <!-- Realtime Details -->
                                         <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
                                             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                                                <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                                                <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="6">
                                                     <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{ThemeResource AccentFillColorDefaultBrush}" />
-                                                    <TextBlock x:Uid="UDPtest_RealtimeLabel" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" FontSize="11" Style="{StaticResource KitMicroLabelTextStyle}" Text="REALTIME" />
+                                                    <TextBlock x:Uid="UDPtest_RealtimeLabel" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Realtime" />
                                                     <Button x:Uid="UDPtest_RealtimeInfo" Click="OnInfoButtonClick" Style="{StaticResource InlineInfoButtonStyle}">
                                                         <FontIcon FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE946;" />
                                                     </Button>
@@ -561,19 +562,19 @@
                                             <!-- 4 Responsive Metrics Grid (4x1 wide, 2x2 narrow) -->
                                             <Grid x:Name="RealtimeMetricsGrid" Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="8">
                                                 <StackPanel x:Name="MetricQuality" Grid.Column="0" Spacing="1">
-                                                    <TextBlock x:Uid="UDPtest_QualityLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="QUALITY" />
+                                                    <TextBlock x:Uid="UDPtest_QualityLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="Quality" />
                                                     <TextBlock Style="{StaticResource KitMetricTextStyle}" Text="{x:Bind ViewModel.QualityText, Mode=OneWay}" />
                                                 </StackPanel>
                                                 <StackPanel x:Name="MetricAvgRtt" Grid.Column="1" Spacing="1">
-                                                    <TextBlock x:Uid="UDPtest_AvgRttLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="AVG RTT" />
+                                                    <TextBlock x:Uid="UDPtest_AvgRttLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="Avg RTT" />
                                                     <TextBlock Style="{StaticResource KitMetricTextStyle}" Text="{x:Bind ViewModel.AvgRttText, Mode=OneWay}" />
                                                 </StackPanel>
                                                 <StackPanel x:Name="MetricPeakRtt" Grid.Column="2" Spacing="1">
-                                                    <TextBlock x:Uid="UDPtest_PeakRttLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="PEAK RTT" />
+                                                    <TextBlock x:Uid="UDPtest_PeakRttLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="Peak RTT" />
                                                     <TextBlock FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource KitMetricTextStyle}" Text="{x:Bind ViewModel.PeakRttText, Mode=OneWay}" />
                                                 </StackPanel>
                                                 <StackPanel x:Name="MetricPeriodAvg" Grid.Column="3" Spacing="1">
-                                                    <TextBlock x:Uid="UDPtest_PeriodAvgLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="PERIOD AVG" />
+                                                    <TextBlock x:Uid="UDPtest_PeriodAvgLabel" Style="{StaticResource KitMicroLabelTextStyle}" Text="Period avg" />
                                                     <TextBlock FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource KitMetricTextStyle}" Text="{x:Bind ViewModel.PeriodAvgText, Mode=OneWay}" />
                                                 </StackPanel>
                                             </Grid>
@@ -583,7 +584,7 @@
                                             <!-- RTT TREND Chart and Native WinUI 3 Segmented Period Picker -->
                                             <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="6">
                                                 <Grid ColumnDefinitions="Auto,*,Auto">
-                                                    <TextBlock x:Uid="UDPtest_RttTrendLabel" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="RTT TREND" />
+                                                    <TextBlock x:Uid="UDPtest_RttTrendLabel" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="RTT trend" />
                                                     <tkcontrols:Segmented
                                                         x:Name="HealthPeriodSegmented"
                                                         Grid.Column="2"
@@ -631,13 +632,13 @@
                                 <Border x:Name="UdpAssessmentCard" Grid.Column="1" Style="{StaticResource KitCardSurfaceStyle}" Padding="18,16">
                                     <Grid RowDefinitions="Auto,Auto,1,Auto,Auto" RowSpacing="12">
                                         <StackPanel Spacing="3">
-                                            <TextBlock x:Uid="UDPtest_UdpAssessmentLabel" AutomationProperties.HeadingLevel="Level2" CharacterSpacing="60" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource UdpBrush}" Text="UDP ASSESSMENT" />
+                                            <TextBlock x:Uid="UDPtest_UdpAssessmentLabel" AutomationProperties.HeadingLevel="Level2" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource UdpBrush}" Text="UDP assessment" />
                                             <TextBlock FontSize="18" FontWeight="SemiBold" LineHeight="22" Text="{x:Bind ViewModel.UdpAssessmentText, Mode=OneWay}" TextWrapping="Wrap" />
                                             <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.UdpDetailText, Mode=OneWay}" />
                                         </StackPanel>
 
                                         <StackPanel Grid.Row="1" Spacing="2">
-                                            <TextBlock x:Uid="UDPtest_TcpBaselineLabel" AutomationProperties.HeadingLevel="Level2" CharacterSpacing="60" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource TcpBrush}" Text="TCP BASELINE" />
+                                            <TextBlock x:Uid="UDPtest_TcpBaselineLabel" AutomationProperties.HeadingLevel="Level2" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TcpBrush}" Text="TCP baseline" />
                                             <TextBlock FontSize="14" FontWeight="SemiBold" Text="{x:Bind ViewModel.TcpAssessmentText, Mode=OneWay}" TextWrapping="Wrap" />
                                             <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.TcpDetailText, Mode=OneWay}" />
                                         </StackPanel>
@@ -646,7 +647,7 @@
 
                                         <StackPanel Grid.Row="3" Spacing="3">
                                             <StackPanel Orientation="Horizontal" Spacing="2">
-                                                <TextBlock x:Uid="UDPtest_CurrentPathLabel" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource KitMicroLabelTextStyle}" Text="CURRENT PATH" />
+                                                <TextBlock x:Uid="UDPtest_CurrentPathLabel" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource KitMicroLabelTextStyle}" Text="Current path" />
                                                 <Button x:Uid="UDPtest_PathInfo" Click="OnInfoButtonClick" Style="{StaticResource InlineInfoButtonStyle}">
                                                     <FontIcon FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE946;" />
                                                 </Button>
@@ -670,7 +671,7 @@
                                 <StackPanel Spacing="0">
                                     <Grid Padding="16,11" ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="10">
                                         <Border Height="16" VerticalAlignment="Center" Background="{StaticResource TcpBrush}" CornerRadius="2" />
-                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" CharacterSpacing="40" FontSize="15" FontWeight="SemiBold" Text="TCP" />
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" FontSize="15" FontWeight="SemiBold" Text="TCP" />
                                         <TextBlock Grid.Column="3" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="{x:Bind ViewModel.TcpLinksSummaryText, Mode=OneWay}" />
                                     </Grid>
                                     <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto" VerticalScrollBarVisibility="Disabled" VerticalScrollMode="Disabled">
@@ -687,15 +688,15 @@
                                                     <ColumnDefinition Width="80" />
                                                     <ColumnDefinition Width="60" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock x:Uid="UDPtest_ColTarget" Grid.Column="0" Style="{StaticResource ColumnHeaderStyle}" Text="TARGET" />
-                                                <TextBlock x:Uid="UDPtest_ColPort" Grid.Column="1" Style="{StaticResource ColumnHeaderStyle}" Text="PORT" />
-                                                <TextBlock x:Uid="UDPtest_ColAvgRtt" Grid.Column="2" Style="{StaticResource ColumnHeaderStyle}" Text="AVG RTT" />
-                                                <TextBlock x:Uid="UDPtest_ColJitter" Grid.Column="3" Style="{StaticResource ColumnHeaderStyle}" Text="JITTER" />
-                                                <TextBlock x:Uid="UDPtest_ColQuality" Grid.Column="4" Style="{StaticResource ColumnHeaderStyle}" Text="QUALITY" />
-                                                <TextBlock x:Uid="UDPtest_ColOkFail" Grid.Column="5" Style="{StaticResource ColumnHeaderStyle}" Text="OK / FAIL" />
+                                                <TextBlock x:Uid="UDPtest_ColTarget" Grid.Column="0" Style="{StaticResource ColumnHeaderStyle}" Text="Target" />
+                                                <TextBlock x:Uid="UDPtest_ColPort" Grid.Column="1" Style="{StaticResource ColumnHeaderStyle}" Text="Port" />
+                                                <TextBlock x:Uid="UDPtest_ColAvgRtt" Grid.Column="2" Style="{StaticResource ColumnHeaderStyle}" Text="Avg RTT" />
+                                                <TextBlock x:Uid="UDPtest_ColJitter" Grid.Column="3" Style="{StaticResource ColumnHeaderStyle}" Text="Jitter" />
+                                                <TextBlock x:Uid="UDPtest_ColQuality" Grid.Column="4" Style="{StaticResource ColumnHeaderStyle}" Text="Quality" />
+                                                <TextBlock x:Uid="UDPtest_ColOkFail" Grid.Column="5" Style="{StaticResource ColumnHeaderStyle}" Text="OK / Fail" />
                                                 <TextBlock x:Uid="UDPtest_ColHttpIp" Grid.Column="6" Style="{StaticResource ColumnHeaderStyle}" Text="HTTP IP" />
-                                                <TextBlock x:Uid="UDPtest_ColLastError" Grid.Column="7" Style="{StaticResource ColumnHeaderStyle}" Text="LAST ERROR" />
-                                                <TextBlock x:Uid="UDPtest_ColOn" Grid.Column="8" HorizontalAlignment="Center" Style="{StaticResource ColumnHeaderStyle}" Text="ON" />
+                                                <TextBlock x:Uid="UDPtest_ColLastError" Grid.Column="7" Style="{StaticResource ColumnHeaderStyle}" Text="Last error" />
+                                                <TextBlock x:Uid="UDPtest_ColOn" Grid.Column="8" HorizontalAlignment="Center" Style="{StaticResource ColumnHeaderStyle}" Text="On" />
                                             </Grid>
                                             <ItemsControl x:Name="TcpRows" ItemTemplate="{StaticResource TcpLineTemplate}" ItemsSource="{x:Bind ViewModel.TcpLines, Mode=OneWay}">
                                                 <ItemsControl.ItemsPanel>
@@ -714,7 +715,7 @@
                                 <StackPanel Spacing="0">
                                     <Grid Padding="16,10" ColumnDefinitions="4,Auto,*,Auto,Auto" ColumnSpacing="10">
                                         <Border Height="16" VerticalAlignment="Center" Background="{StaticResource UdpBrush}" CornerRadius="2" />
-                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" CharacterSpacing="40" FontSize="15" FontWeight="SemiBold" Text="UDP" />
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" FontSize="15" FontWeight="SemiBold" Text="UDP" />
                                         <TextBlock Grid.Column="3" VerticalAlignment="Center" Style="{StaticResource KitMicroLabelTextStyle}" Text="{x:Bind ViewModel.UdpLinksSummaryText, Mode=OneWay}" />
                                         <Button x:Uid="UDPtest_AddUdpLineButton" Grid.Column="4" AutomationProperties.AutomationId="UDPtest_AddUdpLineButton" Click="OnAddUdpLineClicked" Style="{StaticResource KitCompactToolbarButtonStyle}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -737,15 +738,15 @@
                                                     <ColumnDefinition Width="80" />
                                                     <ColumnDefinition Width="80" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock x:Uid="UDPtest_ColTarget" Grid.Column="0" Style="{StaticResource ColumnHeaderStyle}" Text="TARGET" />
-                                                <TextBlock x:Uid="UDPtest_ColPort" Grid.Column="1" Style="{StaticResource ColumnHeaderStyle}" Text="PORT" />
-                                                <TextBlock x:Uid="UDPtest_ColAvgRtt" Grid.Column="2" Style="{StaticResource ColumnHeaderStyle}" Text="AVG RTT" />
-                                                <TextBlock x:Uid="UDPtest_ColJitter" Grid.Column="3" Style="{StaticResource ColumnHeaderStyle}" Text="JITTER" />
-                                                <TextBlock x:Uid="UDPtest_ColQuality" Grid.Column="4" Style="{StaticResource ColumnHeaderStyle}" Text="QUALITY" />
-                                                <TextBlock x:Uid="UDPtest_ColOkFail" Grid.Column="5" Style="{StaticResource ColumnHeaderStyle}" Text="OK / FAIL" />
+                                                <TextBlock x:Uid="UDPtest_ColTarget" Grid.Column="0" Style="{StaticResource ColumnHeaderStyle}" Text="Target" />
+                                                <TextBlock x:Uid="UDPtest_ColPort" Grid.Column="1" Style="{StaticResource ColumnHeaderStyle}" Text="Port" />
+                                                <TextBlock x:Uid="UDPtest_ColAvgRtt" Grid.Column="2" Style="{StaticResource ColumnHeaderStyle}" Text="Avg RTT" />
+                                                <TextBlock x:Uid="UDPtest_ColJitter" Grid.Column="3" Style="{StaticResource ColumnHeaderStyle}" Text="Jitter" />
+                                                <TextBlock x:Uid="UDPtest_ColQuality" Grid.Column="4" Style="{StaticResource ColumnHeaderStyle}" Text="Quality" />
+                                                <TextBlock x:Uid="UDPtest_ColOkFail" Grid.Column="5" Style="{StaticResource ColumnHeaderStyle}" Text="OK / Fail" />
                                                 <TextBlock x:Uid="UDPtest_ColUdpIp" Grid.Column="6" Style="{StaticResource ColumnHeaderStyle}" Text="UDP IP" />
-                                                <TextBlock x:Uid="UDPtest_ColLastError" Grid.Column="7" Style="{StaticResource ColumnHeaderStyle}" Text="LAST ERROR" />
-                                                <TextBlock x:Uid="UDPtest_ColActions" Grid.Column="8" HorizontalAlignment="Right" Style="{StaticResource ColumnHeaderStyle}" Text="ACTIONS" />
+                                                <TextBlock x:Uid="UDPtest_ColLastError" Grid.Column="7" Style="{StaticResource ColumnHeaderStyle}" Text="Last error" />
+                                                <TextBlock x:Uid="UDPtest_ColActions" Grid.Column="8" HorizontalAlignment="Right" Style="{StaticResource ColumnHeaderStyle}" Text="Actions" />
                                             </Grid>
                                             <ItemsControl x:Name="UdpRows" ItemTemplate="{StaticResource UdpLineTemplate}" ItemsSource="{x:Bind ViewModel.UdpLines, Mode=OneWay}">
                                                 <ItemsControl.ItemsPanel>

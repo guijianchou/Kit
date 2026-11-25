@@ -24,11 +24,10 @@
     <!-- 等宽字体唯一令牌（替代 4 份页面级 MonoFontFamily 与反序写法） -->
     <FontFamily x:Key="KitMonoFontFamily">Cascadia Code, Cascadia Mono, Consolas, Courier New</FontFamily>
 
-    <!-- 微标签（合并 MetaLabelStyle / MicroLabelStyle 三份重复定义） -->
+    <!-- 次级标签（统一字段标题与辅助列名，采用原生 WinUI 3 字距与字号） -->
     <Style x:Key="KitMicroLabelTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="10" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="CharacterSpacing" Value="60" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>

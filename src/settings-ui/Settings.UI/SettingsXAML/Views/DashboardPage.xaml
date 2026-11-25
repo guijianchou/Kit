@@ -84,16 +84,16 @@
 
                     <!-- Mica Hero Overview Banner（共享 KitHeroPanelStyle） -->
                     <ContentControl x:Name="DashboardHero" Grid.ColumnSpan="2" Style="{StaticResource KitHeroPanelStyle}">
-                        <Grid Padding="16,12" ColumnSpacing="14">
+                        <Grid Padding="14,10" ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource KitIconBadgeStyle}" Width="36" Height="36" CornerRadius="{StaticResource OverlayCornerRadius}">
+                            <Border Style="{StaticResource KitIconBadgeStyle}">
                                 <FontIcon
                                     AutomationProperties.AccessibilityView="Raw"
                                     Glyph="&#xE80F;"
-                                    FontSize="16"
+                                    FontSize="15"
                                     Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" />
@@ -257,9 +257,7 @@
                                     <TextBlock Grid.Column="1" x:Uid="Dashboard_NetworkCard" Style="{StaticResource KitCardTitleTextStyle}" AutomationProperties.HeadingLevel="Level2" />
                                 </Grid>
                                 <Rectangle Grid.Row="1" Height="1" HorizontalAlignment="Stretch" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                                <StackPanel Grid.Row="2" Padding="16,12,16,14" Spacing="12">
-                                    <TextBlock x:Uid="Dashboard_NetworkNote" Style="{StaticResource CaptionTextBlockStyle}"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                <StackPanel Grid.Row="2" Padding="16,14,16,14" Spacing="12">
                                     <Grid ColumnSpacing="16">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />

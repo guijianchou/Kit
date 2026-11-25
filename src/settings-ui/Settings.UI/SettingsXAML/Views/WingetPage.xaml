@@ -40,13 +40,12 @@
                     <SolidColorBrush x:Key="WingetSourcePillBorderBrush" Color="#22FFFFFF" />
 
                     <!-- Discover workspace accent & soft Mica hero wash -->
-                    <SolidColorBrush x:Key="WingetDiscoverBadgeBgBrush" Color="#269E8CFF" />
-                    <SolidColorBrush x:Key="WingetDiscoverBadgeBorderBrush" Color="#4A9E8CFF" />
-                    <SolidColorBrush x:Key="WingetDiscoverGlyphBrush" Color="#FFB8ACFF" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBgBrush" Color="#2060CDFF" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBorderBrush" Color="#4260CDFF" />
+                    <SolidColorBrush x:Key="WingetDiscoverGlyphBrush" Color="#FF7CCBFF" />
                     <LinearGradientBrush x:Key="WingetDiscoverHeroWashBrush" StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Offset="0" Color="#2460CDFF" />
-                        <GradientStop Offset="0.55" Color="#1A9E8CFF" />
-                        <GradientStop Offset="1" Color="Transparent" />
+                        <GradientStop Offset="0" Color="#1460CDFF" />
+                        <GradientStop Offset="0.7" Color="Transparent" />
                     </LinearGradientBrush>
 
                     <!-- Primary action button palettes (Accent & Destructive) -->
@@ -74,13 +73,12 @@
                     <SolidColorBrush x:Key="WingetSourcePillBgBrush" Color="#0A000000" />
                     <SolidColorBrush x:Key="WingetSourcePillBorderBrush" Color="#18000000" />
 
-                    <SolidColorBrush x:Key="WingetDiscoverBadgeBgBrush" Color="#186246C8" />
-                    <SolidColorBrush x:Key="WingetDiscoverBadgeBorderBrush" Color="#386246C8" />
-                    <SolidColorBrush x:Key="WingetDiscoverGlyphBrush" Color="#FF5A3EC2" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBgBrush" Color="#140067C0" />
+                    <SolidColorBrush x:Key="WingetDiscoverBadgeBorderBrush" Color="#340067C0" />
+                    <SolidColorBrush x:Key="WingetDiscoverGlyphBrush" Color="#FF005A9E" />
                     <LinearGradientBrush x:Key="WingetDiscoverHeroWashBrush" StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Offset="0" Color="#200078D4" />
-                        <GradientStop Offset="0.55" Color="#166246C8" />
-                        <GradientStop Offset="1" Color="Transparent" />
+                        <GradientStop Offset="0" Color="#120078D4" />
+                        <GradientStop Offset="0.7" Color="Transparent" />
                     </LinearGradientBrush>
 
                     <SolidColorBrush x:Key="WingetPrimaryAccentTintBrush" Color="#1A0067C0" />
@@ -691,13 +689,7 @@
                         Visibility="{x:Bind ViewModel.ShowOperationCard, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid ColumnDefinitions="3,*">
                             <Border x:Name="OperationAccentStripe" Style="{x:Bind StripeStyle(ViewModel.OperationTone), Mode=OneWay}" />
-                            <Grid Grid.Column="1">
-                                <Border
-                                    CornerRadius="0,8,8,0"
-                                    Background="{ThemeResource KitHeroGradientBrush}"
-                                    IsHitTestVisible="False"
-                                    Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                <Grid x:Name="WingetOperationCardGrid" Padding="14,12" RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+                            <Grid x:Name="WingetOperationCardGrid" Grid.Column="1" Padding="14,12" RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
                                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                         <Grid Width="32" Height="32" VerticalAlignment="Center">
                                             <Ellipse x:Name="OperationPulseRing" Width="32" Height="32" Fill="{ThemeResource AccentFillColorDefaultBrush}" Opacity="0" IsHitTestVisible="False" />
@@ -742,7 +734,6 @@
                                         </ScrollViewer>
                                     </Expander>
                                 </Grid>
-                            </Grid>
                         </Grid>
                     </Border>
 

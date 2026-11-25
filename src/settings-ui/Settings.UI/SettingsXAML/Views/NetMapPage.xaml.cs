@@ -57,8 +57,6 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         NetMapHealthStylesStore.Attach((ResourceDictionary)Resources["NetMapHealthStyles"]);
         DataContext = ViewModel;
         settingsWindow = App.GetSettingsWindow();
-        KitMotionHelper.AttachHoverLift(DirectCard, -1.5f);
-        KitMotionHelper.AttachHoverLift(ProxyCard, -1.5f);
         Loaded += Page_Loaded;
         Unloaded += Page_Unloaded;
         ActualThemeChanged += Page_ActualThemeChanged;

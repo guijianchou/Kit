@@ -1169,26 +1169,14 @@
   <data name="NetMap_MapTitle.Text" xml:space="preserve">
     <value>MTR 路径与地图</value>
   </data>
-  <data name="NetMap_MapNotice.Text" xml:space="preserve">
-    <value>Natural Earth · 实线：相邻已定位节点；虚线：跨未定位段或出口示意。位置均为近似值，选择节点查看延迟与丢包。</value>
-  </data>
   <data name="NetMap_ServicesTitle.Text" xml:space="preserve">
     <value>代理服务连通性</value>
-  </data>
-  <data name="NetMap_ServicesSubtitle.Text" xml:space="preserve">
-    <value>实时代理节点、响应延迟与出口追踪检查点</value>
   </data>
   <data name="NetMap_Endpoint.Text" xml:space="preserve">
     <value>服务</value>
   </data>
-  <data name="NetMap_ServiceNotice.Text" xml:space="preserve">
-    <value>仅使用 Proxy 配置。Claude 和 ChatGPT 校验 trace；Gemini 与 Google 检测网页。服务耗时为 HTTP 响应头耗时；检查点可达不代表完整聊天功能可用。</value>
-  </data>
   <data name="NetMap_Route.Header" xml:space="preserve">
     <value>本机路径观测</value>
-  </data>
-  <data name="NetMap_RouteNotice.Text" xml:space="preserve">
-    <value>探测至出口 IP 的系统 ICMP 路径，RTT 为本机到该跳。无回复标红，前两次保留上次 RTT，第三次显示 N/A；平均/丢包率继续累计，不等于业务丢包。</value>
   </data>
   <data name="NetMap_Settings.Header" xml:space="preserve">
     <value>地图设置</value>
@@ -1218,7 +1206,7 @@
     <value>本地城市数据库（可选）</value>
   </data>
   <data name="NetMap_DatabaseNotice.Text" xml:space="preserve">
-    <value>优先读取本地 MMDB。在线查询按所选代理方式将公网 IP 发送给 ipwho.is，本次会话缓存结果，跳过内网和保留地址。关闭上方开关可仅用本地数据；ASN 库可在下方手动下载。</value>
+    <value>优先使用本地 MMDB，缺失项可通过 ipwho.is 在线补齐（自动跳过内网地址）。</value>
   </data>
   <data name="NetMap_UnknownLocation" xml:space="preserve">
     <value>位置未知</value>
@@ -1388,7 +1376,7 @@
   <data name="NetMap_HttpError" xml:space="preserve">
     <value>HTTP 错误</value>
   </data>
-  <data name="NetMap_OnlineLookup.Header" xml:space="preserve">
+  <data name="NetMap_OnlineLookupCard.Header" xml:space="preserve">
     <value>在线补齐 ASN 和节点位置</value>
   </data>
   <data name="NetMap_GeoSource" xml:space="preserve">
@@ -1437,7 +1425,7 @@
     <value>ASN 数据库更新</value>
   </data>
   <data name="NetMap_UpdateNotice.Text" xml:space="preserve">
-    <value>手动下载 ASN 库使用已应用的代理配置，并停止检测。SHA-256 和 MMDB 格式校验通过后才替换旧文件。来源为 P3TERX 的 MaxMind GeoLite2 镜像，遵循其许可。自定义 ASN 路径为空时使用下载版本；更新后点击开始。</value>
+    <value>使用当前代理配置下载并校验 GeoLite2-ASN 数据库（SHA-256 校验通过后生效）。</value>
   </data>
   <data name="NetMap_UpdateWorking" xml:space="preserve">
     <value>正在下载并校验数据…</value>
@@ -1534,9 +1522,6 @@
   </data>
   <data name="Dashboard_RefreshOverview.AutomationProperties.Name" xml:space="preserve">
     <value>刷新网络出口</value>
-  </data>
-  <data name="Dashboard_NetworkNote.Text" xml:space="preserve">
-    <value>对比两种连接方式的出口公网 IP 与位置。</value>
   </data>
   <data name="Dashboard_StorageHeading.Text" xml:space="preserve">
     <value>磁盘 · 已用 / 总量</value>
@@ -3632,9 +3617,6 @@
   <data name="AIHub_DiscardTaskPolicyButton.Content" xml:space="preserve">
     <value>放弃修改</value>
   </data>
-  <data name="AIHub_TaskPolicyDraftHint.Text" xml:space="preserve">
-    <value>切换策略会保留各自的草稿。保存后，当前策略将用于后续任务。</value>
-  </data>
   <data name="AIHub_Category_SelectedSummary" xml:space="preserve">
     <value>已选 {0:N0}/{1:N0} 个审核通过文件</value>
   </data>
@@ -3712,9 +3694,6 @@
   </data>
   <data name="AiHub_PolicyDescriptionOptimization" xml:space="preserve">
     <value>审查本地已核验的候选项，不扩大路径、操作或范围。</value>
-  </data>
-  <data name="AiHub_GlobalPolicyDraftHint.Text" xml:space="preserve">
-    <value>编辑和恢复默认的内容均为草稿，保存后才生效。关闭 AI 时也可编辑策略。</value>
   </data>
   <data name="Winget_AlreadyInstalled" xml:space="preserve">
     <value>已安装</value>
@@ -3904,7 +3883,6 @@
   <data name="Winget_OptionDefault" xml:space="preserve"><value>软件默认</value></data>
   <data name="Winget_ScopeUser" xml:space="preserve"><value>当前用户</value></data>
   <data name="Winget_ScopeMachine" xml:space="preserve"><value>所有用户</value></data>
-  <data name="Winget_OptionsExplanation" xml:space="preserve"><value>选项应用于下一次确认的操作。需要管理员权限时，Windows 仍会显示权限请求。</value></data>
   <data name="Winget_OptionsTitle" xml:space="preserve"><value>操作选项</value></data>
   <data name="Winget_ApplyOptions" xml:space="preserve"><value>应用</value></data>
   <data name="Winget_NoIgnoredPackages" xml:space="preserve"><value>没有已忽略的更新。</value></data>
@@ -3979,19 +3957,19 @@
   <data name="Winget_SearchKeepsResults" xml:space="preserve"><value>搜索期间继续显示上次结果。</value></data>
   <data name="Winget_SearchRetryPrevious" xml:space="preserve"><value>搜索未完成，已保留上次结果，可再次搜索重试。</value></data>
   <data name="Winget_SearchRetry" xml:space="preserve"><value>搜索未完成，可再次搜索重试。</value></data>
-  <data name="Winget_SearchSourceScope" xml:space="preserve"><value>仅搜索 WinGet 官方 winget 源的社区目录，不包含 Microsoft Store 或自定义源。打开详情或审核安装时，再查询版本与安装状态。</value></data>
+  <data name="Winget_SearchSourceScope" xml:space="preserve"><value>搜索范围：WinGet 社区目录（winget 源）。</value></data>
   <data name="Winget_DetailsUnavailable" xml:space="preserve"><value>未能加载软件详情，请在 WinGet 就绪后重试。</value></data>
   <data name="Winget_RetryDetails" xml:space="preserve"><value>重试加载详情</value></data>
   <data name="Winget_CloseDetails" xml:space="preserve"><value>关闭</value></data>
   <data name="Winget_PackageHomepage" xml:space="preserve"><value>软件主页</value></data>
   <data name="Winget_LicenseLink" xml:space="preserve"><value>查看许可证</value></data>
   <data name="Winget_SearchElapsed" xml:space="preserve"><value>搜索耗时：{0:N2} 秒</value></data>
-  <data name="AiHub_MainEndpoint_ApiModeCard.Description" xml:space="preserve"><value>选择建议值或输入原生 API 标识，由当前内核校验是否支持。</value></data>
-  <data name="AiHub_FallbackEndpoint_ApiModeCard.Description" xml:space="preserve"><value>选择建议值或输入原生 API 标识，由当前内核校验是否支持。</value></data>
-  <data name="AiHub_MainEndpoint_ReasoningCard.Description" xml:space="preserve"><value>原样传递给当前内核，支持范围由内核和模型决定。</value></data>
-  <data name="AiHub_FallbackEndpoint_ReasoningCard.Description" xml:space="preserve"><value>原样传递给当前内核，支持范围由内核和模型决定。</value></data>
+  <data name="AiHub_MainEndpoint_ApiModeCard.Description" xml:space="preserve"><value>选择预设模式或输入自定义 API 标识。</value></data>
+  <data name="AiHub_FallbackEndpoint_ApiModeCard.Description" xml:space="preserve"><value>选择预设模式或输入自定义 API 标识。</value></data>
+  <data name="AiHub_MainEndpoint_ReasoningCard.Description" xml:space="preserve"><value>传递给受支持模型的思考强度。</value></data>
+  <data name="AiHub_FallbackEndpoint_ReasoningCard.Description" xml:space="preserve"><value>传递给受支持模型的思考强度。</value></data>
   <data name="AiHub_ContextWindowCard.Header" xml:space="preserve"><value>上下文窗口</value></data>
-  <data name="AiHub_ContextWindowCard.Description" xml:space="preserve"><value>此端点可用的 token 数，默认 256,000。请与模型支持的上下文大小保持一致。</value></data>
+  <data name="AiHub_ContextWindowCard.Description" xml:space="preserve"><value>端点最大上下文长度（默认 256,000 tokens）。</value></data>
   <data name="AiHub_ContextWindowBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>上下文窗口 token 数</value></data>
   <data name="AiHub_ContextWindowInvalid" xml:space="preserve"><value>请输入 1,024 到 2,147,483,647 之间的整数 token 数。</value></data>
   <data name="AiHub_EndpointInvalid" xml:space="preserve"><value>请检查端点地址、模型、原生 API 模式、推理强度和上下文窗口。</value></data>
@@ -4004,13 +3982,12 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AiHub_DiagnosticsPersistenceOnFormat" xml:space="preserve"><value>诊断历史遵循 Kit 日志等级，最多 256 条 / 256 KiB，不记录提示词、回复或凭据。持久化失败：{0}。</value></data>
   <data name="AiHub_DiagnosticsPersistenceOffFormat" xml:space="preserve"><value>Kit 日志已关闭。会话统计仅保留在内存中，不写入新的诊断历史。持久化失败：{0}。</value></data>
   <data name="AIHub_Inventory_Title.Text" xml:space="preserve"><value>空间构成</value></data>
-  <data name="AIHub_Inventory_Description.Text" xml:space="preserve"><value>查看缓存、诊断文件和系统管理存储的占用，无需 AI 即可在本机分析。</value></data>
+  <data name="AIHub_Inventory_Description.Text" xml:space="preserve"><value>查看缓存、诊断日志与系统管理目录的空间占用。</value></data>
   <data name="AIHub_Inventory_AnalyzeButton.Content" xml:space="preserve"><value>分析空间</value></data>
   <data name="AIHub_Inventory_StopButton.Content" xml:space="preserve"><value>取消</value></data>
   <data name="AIHub_Inventory_ObservedLabel.Text" xml:space="preserve"><value>已统计占用</value></data>
   <data name="AIHub_Inventory_RecentLabel.Text" xml:space="preserve"><value>7 天内修改</value></data>
   <data name="AIHub_Inventory_OldLabel.Text" xml:space="preserve"><value>30 天以上未修改</value></data>
-  <data name="AIHub_Inventory_SizeCaveat.Text" xml:space="preserve"><value>占用包含仍在使用的文件；只有下方另行审核通过的项目才能勾选清理。</value></data>
   <data name="AIHub_Inventory_PartialHint.Text" xml:space="preserve"><value>部分位置未能在扫描限制内完成统计，总量仅包含已观察到的文件。</value></data>
   <data name="AIHub_Inventory_SearchBox.PlaceholderText" xml:space="preserve"><value>搜索位置、路径或处理建议</value></data>
   <data name="AIHub_Inventory_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>搜索存储位置</value></data>
@@ -4050,14 +4027,11 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AIHub_Fluent_ScanMode.Header" xml:space="preserve"><value>扫描模式</value></data>
   <data name="AIHub_Fluent_ScanRange.Header" xml:space="preserve"><value>时间范围</value></data>
   <data name="AIHub_Fluent_FullChannels.Content" xml:space="preserve"><value>包含安全与防火墙日志（需要管理员权限）</value></data>
-  <data name="AIHub_Fluent_NextScanHint.Text" xml:space="preserve"><value>仅更改下一次扫描的参数。</value></data>
   <data name="AIHub_Fluent_AuditHistory.Content" xml:space="preserve"><value>历史结果</value></data>
   <data name="AIHub_Fluent_AiSummary.Text" xml:space="preserve"><value>AI 分析摘要</value></data>
   <data name="AIHub_Fluent_FullReport.Content" xml:space="preserve"><value>完整分析 →</value></data>
   <data name="AIHub_Fluent_ReportExpander.Header" xml:space="preserve"><value>完整 AI 分析</value></data>
-  <data name="AIHub_Fluent_StorageCapacityHint.Text" xml:space="preserve"><value>下载整理仅移动文件，不计入释放空间。</value></data>
   <data name="AIHub_Fluent_ExecutionHistory.Content" xml:space="preserve"><value>执行记录</value></data>
-  <data name="AIHub_Fluent_OptimizationSteps.Text" xml:space="preserve"><value>扫描候选 → 审核选择 → 确认执行</value></data>
   <data name="AIHub_Fluent_HistoryExpander.Header" xml:space="preserve"><value>执行记录与结果</value></data>
   <data name="AIHub_Fluent_InventoryExpander.Header" xml:space="preserve"><value>目录空间盘点</value></data>
   <data name="AIHub_Fluent_SelectedDeletes.Text" xml:space="preserve"><value>预计释放</value></data>
@@ -4075,7 +4049,6 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AIHub_Fluent_ResultRange" xml:space="preserve"><value>审计范围</value></data>
   <data name="AIHub_Fluent_Assessment" xml:space="preserve"><value>判断依据</value></data>
   <data name="AIHub_Fluent_EventEvidence" xml:space="preserve"><value>事件依据与引用</value></data>
-  <data name="AIHub_Fluent_EventEvidenceDescription" xml:space="preserve"><value>此发现记录的事件依据，可通过事件引用定位对应记录。</value></data>
   <data name="AIHub_Fluent_EventReferences" xml:space="preserve"><value>事件引用</value></data>
   <data name="AIHub_Fluent_EventChannel" xml:space="preserve"><value>日志通道</value></data>
   <data name="AIHub_Fluent_EventTime" xml:space="preserve"><value>发生时间</value></data>
@@ -4112,19 +4085,11 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AIHub_Fluent_AnalysisNeedsEvents" xml:space="preserve"><value>已有发现仍可查看。先扫描并采集事件，再进行深度分析。</value></data>
   <data name="AIHub_Fluent_LatestAuditFormat" xml:space="preserve"><value>安全审计 · {0}</value></data>
   <data name="AIHub_Fluent_RelatedEvidence.Text" xml:space="preserve"><value>关联依据</value></data>
-  <data name="AIHub_Fluent_AuditBoundaryFooter.Text" xml:space="preserve"><value>规则结果与 AI 建议分别呈现</value></data>
   <data name="AIHub_Fluent_LegendActionableFormat" xml:space="preserve"><value>可处理 {0}</value></data>
   <data name="AIHub_Fluent_LegendReviewFormat" xml:space="preserve"><value>待复核 {0}</value></data>
   <data name="AIHub_Fluent_LegendRetainedFormat" xml:space="preserve"><value>已保留 {0}</value></data>
-  <data name="AIHub_Fluent_SelectionFooterHint.Text" xml:space="preserve"><value>执行前查看操作与影响范围</value></data>
-  <data name="AIHub_Fluent_OptimizationBoundaryFooter.Text" xml:space="preserve"><value>受保护项目保留，下载内容按类型整理方案</value></data>
   <data name="AIHub_Fluent_AuditPolicyHeading" xml:space="preserve"><value>安全审计指令</value></data>
   <data name="AIHub_Fluent_OptPolicyHeading" xml:space="preserve"><value>空间优化指令</value></data>
-  <data name="AIHub_Fluent_PolicyScopeTitle.Text" xml:space="preserve"><value>生效范围</value></data>
-  <data name="AIHub_Fluent_AuditPolicyScopePrimary" xml:space="preserve"><value>影响事件分析的重点、结论组织与建议输出。</value></data>
-  <data name="AIHub_Fluent_OptPolicyScopePrimary" xml:space="preserve"><value>影响候选文件的分类方式、清理建议与保留边界。</value></data>
-  <data name="AIHub_Fluent_PolicyScopeBoundary.Text" xml:space="preserve"><value>执行前仍需审核具体项目。</value></data>
-  <data name="AIHub_Fluent_PolicyFooterHint.Text" xml:space="preserve"><value>更改保存后用于下一次任务，切换页签会保留草稿。</value></data>
   <data name="UDPtest_UdpAssessmentSingleTargetStable" xml:space="preserve">
     <value>支持 / 单目标稳定</value>
   </data>
@@ -4172,9 +4137,9 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="AIHub_WeeklyDay" xml:space="preserve"><value>{0:d} · 评分 {1} · 高风险 {2}，中风险 {3}，低风险 {4}</value></data>
   <data name="Winget_ChooseVersion" xml:space="preserve"><value>要安装的版本</value></data>
   <data name="Winget_ApplyVersion" xml:space="preserve"><value>使用此版本</value></data>
-  <data name="Winget_VersionExplanation" xml:space="preserve"><value>选择目录中的版本，再勾选软件并确认操作。更新要求选择较新版本，不支持降级。</value></data>
+  <data name="Winget_VersionExplanation" xml:space="preserve"><value>选择目标版本后应用（更新仅支持较新版本）。</value></data>
   <data name="Winget_InstallLocation" xml:space="preserve"><value>安装目录</value></data>
-  <data name="Winget_InstallLocationHint" xml:space="preserve"><value>可选的绝对路径，是否支持由安装程序决定。此项修改安装位置，不是下载缓存，适用于所选批次。</value></data>
+  <data name="Winget_InstallLocationHint" xml:space="preserve"><value>可选本地绝对路径（需软件安装程序支持）。</value></data>
   <data name="Winget_IgnoreScope" xml:space="preserve"><value>忽略更新</value></data>
   <data name="Winget_IgnoreThisVersion" xml:space="preserve"><value>仅忽略当前可用版本</value></data>
   <data name="Winget_IgnoreAllVersions" xml:space="preserve"><value>忽略所有后续版本</value></data>
@@ -4183,7 +4148,7 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="Winget_HistoryOlder30" xml:space="preserve"><value>三十天前已结束的记录</value></data>
   <data name="Winget_HistoryAllCompleted" xml:space="preserve"><value>所有已结束的记录</value></data>
   <data name="Winget_ClearHistory" xml:space="preserve"><value>清理这些记录</value></data>
-  <data name="Winget_HistoryCleanupHint" xml:space="preserve"><value>清理已保存的安装、更新和卸载历史，保留当前队列及待验证记录，不影响已安装的软件。</value></data>
+  <data name="Winget_HistoryCleanupHint" xml:space="preserve"><value>清理已完成的历史记录，不影响当前队列和已安装软件。</value></data>
   <data name="Winget_ActiveFilterSummary" xml:space="preserve"><value>{0} 项筛选生效 · 显示 {1} / {2} 个软件</value></data>
   <data name="Winget_ResetFilters" xml:space="preserve"><value>清除筛选</value></data>
   <data name="AIHub_AuditOverviewHeading" xml:space="preserve"><value>系统问题概况 · {0}</value></data>
@@ -4257,13 +4222,13 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="NetMap_LegendApprox.Text" xml:space="preserve"><value>推测路径</value></data>
   <data name="AiHub_SubagentsExpander.Header" xml:space="preserve"><value>并行分析</value></data>
   <data name="AiHub_SubagentsCard.Header" xml:space="preserve"><value>分析子代理</value></data>
-  <data name="AiHub_SubagentsCard.Description" xml:space="preserve"><value>Kit 将独立证据分组交给隔离的分析子代理，Codex 和 Pi 均支持。</value></data>
+  <data name="AiHub_SubagentsCard.Description" xml:space="preserve"><value>使用独立子代理并行分析不同证据组（支持 Codex 与 Pi）。</value></data>
   <data name="AiHub_SubagentsToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>启用分析子代理</value></data>
   <data name="AiHub_ServiceConcurrencyCard.Header" xml:space="preserve"><value>服务并发上限</value></data>
-  <data name="AiHub_ServiceConcurrencyCard.Description" xml:space="preserve"><value>本次设置窗口会话中，所有任务同时运行的分析数量上限。</value></data>
+  <data name="AiHub_ServiceConcurrencyCard.Description" xml:space="preserve"><value>所有任务同时运行的分析数量上限。</value></data>
   <data name="AiHub_ServiceConcurrencyBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>服务并发上限</value></data>
   <data name="AiHub_TaskAgentsCard.Header" xml:space="preserve"><value>每任务子代理上限</value></data>
-  <data name="AiHub_TaskAgentsCard.Description" xml:space="preserve"><value>单个任务可在此上限内利用空闲容量，等待中的任务公平共享容量。</value></data>
+  <data name="AiHub_TaskAgentsCard.Description" xml:space="preserve"><value>单个任务可分配的并行子代理上限。</value></data>
   <data name="AiHub_TaskAgentsBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>每任务子代理上限</value></data>
   <data name="AiHub_SubagentsSummaryFormat" xml:space="preserve"><value>{0}：每任务最多 {1} 路分析，会话共 {2} 路</value></data>
 </root>

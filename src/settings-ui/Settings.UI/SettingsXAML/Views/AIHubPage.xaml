@@ -21,48 +21,48 @@
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="#FF2E1E20" />
-                    <SolidColorBrush x:Key="AiHubRiskHighBorderBrush" Color="#FF523035" />
+                    <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="#1EFF5263" />
+                    <SolidColorBrush x:Key="AiHubRiskHighBorderBrush" Color="#42FF5263" />
                     <SolidColorBrush x:Key="AiHubRiskHighAccentBrush" Color="#FFFF6B7A" />
-                    <SolidColorBrush x:Key="AiHubRiskHighIconBgBrush" Color="#28FF6B7A" />
+                    <SolidColorBrush x:Key="AiHubRiskHighIconBgBrush" Color="#24FF6B7A" />
                     <SolidColorBrush x:Key="AiHubRiskHighForegroundBrush" Color="#FFFF99A4" />
 
-                    <SolidColorBrush x:Key="AiHubRiskMediumSurfaceBrush" Color="#FF2D2618" />
-                    <SolidColorBrush x:Key="AiHubRiskMediumBorderBrush" Color="#FF524426" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumSurfaceBrush" Color="#1EF2C94C" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumBorderBrush" Color="#42F2C94C" />
                     <SolidColorBrush x:Key="AiHubRiskMediumAccentBrush" Color="#FFF2C94C" />
-                    <SolidColorBrush x:Key="AiHubRiskMediumIconBgBrush" Color="#24F2C94C" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumIconBgBrush" Color="#22F2C94C" />
                     <SolidColorBrush x:Key="AiHubRiskMediumForegroundBrush" Color="#FFFCE100" />
 
-                    <SolidColorBrush x:Key="AiHubRiskLowSurfaceBrush" Color="#FF1D2832" />
-                    <SolidColorBrush x:Key="AiHubRiskLowBorderBrush" Color="#FF2E4357" />
+                    <SolidColorBrush x:Key="AiHubRiskLowSurfaceBrush" Color="#1E60CDFF" />
+                    <SolidColorBrush x:Key="AiHubRiskLowBorderBrush" Color="#4260CDFF" />
                     <SolidColorBrush x:Key="AiHubRiskLowAccentBrush" Color="#FF60CDFF" />
-                    <SolidColorBrush x:Key="AiHubRiskLowIconBgBrush" Color="#2460CDFF" />
+                    <SolidColorBrush x:Key="AiHubRiskLowIconBgBrush" Color="#2260CDFF" />
                     <SolidColorBrush x:Key="AiHubRiskLowForegroundBrush" Color="#FF7CCBFF" />
 
-                    <SolidColorBrush x:Key="AiHubAiCalloutSurfaceBrush" Color="#FF222A34" />
-                    <SolidColorBrush x:Key="AiHubAiCalloutBorderBrush" Color="#FF334459" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutSurfaceBrush" Color="#1660CDFF" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutBorderBrush" Color="#3460CDFF" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="#FFFDF4F4" />
-                    <SolidColorBrush x:Key="AiHubRiskHighBorderBrush" Color="#FFF0CACA" />
+                    <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="#12C42B1C" />
+                    <SolidColorBrush x:Key="AiHubRiskHighBorderBrush" Color="#36C42B1C" />
                     <SolidColorBrush x:Key="AiHubRiskHighAccentBrush" Color="#FFC42B1C" />
-                    <SolidColorBrush x:Key="AiHubRiskHighIconBgBrush" Color="#1AC42B1C" />
-                    <SolidColorBrush x:Key="AiHubRiskHighForegroundBrush" Color="#FFB3261E" />
+                    <SolidColorBrush x:Key="AiHubRiskHighIconBgBrush" Color="#18C42B1C" />
+                    <SolidColorBrush x:Key="AiHubRiskHighForegroundBrush" Color="#FFA41E15" />
 
-                    <SolidColorBrush x:Key="AiHubRiskMediumSurfaceBrush" Color="#FFFFFBF0" />
-                    <SolidColorBrush x:Key="AiHubRiskMediumBorderBrush" Color="#FFECDA9E" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumSurfaceBrush" Color="#14C17A00" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumBorderBrush" Color="#3BC17A00" />
                     <SolidColorBrush x:Key="AiHubRiskMediumAccentBrush" Color="#FFC17A00" />
                     <SolidColorBrush x:Key="AiHubRiskMediumIconBgBrush" Color="#1AC17A00" />
-                    <SolidColorBrush x:Key="AiHubRiskMediumForegroundBrush" Color="#FF8F5200" />
+                    <SolidColorBrush x:Key="AiHubRiskMediumForegroundBrush" Color="#FF834A00" />
 
-                    <SolidColorBrush x:Key="AiHubRiskLowSurfaceBrush" Color="#FFF3F8FD" />
-                    <SolidColorBrush x:Key="AiHubRiskLowBorderBrush" Color="#FFC5DCF2" />
+                    <SolidColorBrush x:Key="AiHubRiskLowSurfaceBrush" Color="#120067C0" />
+                    <SolidColorBrush x:Key="AiHubRiskLowBorderBrush" Color="#360067C0" />
                     <SolidColorBrush x:Key="AiHubRiskLowAccentBrush" Color="#FF0067C0" />
-                    <SolidColorBrush x:Key="AiHubRiskLowIconBgBrush" Color="#180067C0" />
-                    <SolidColorBrush x:Key="AiHubRiskLowForegroundBrush" Color="#FF005A9E" />
+                    <SolidColorBrush x:Key="AiHubRiskLowIconBgBrush" Color="#160067C0" />
+                    <SolidColorBrush x:Key="AiHubRiskLowForegroundBrush" Color="#FF005396" />
 
-                    <SolidColorBrush x:Key="AiHubAiCalloutSurfaceBrush" Color="#FFF4F8FE" />
-                    <SolidColorBrush x:Key="AiHubAiCalloutBorderBrush" Color="#FFD0E2F5" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutSurfaceBrush" Color="#100067C0" />
+                    <SolidColorBrush x:Key="AiHubAiCalloutBorderBrush" Color="#2E0067C0" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <SolidColorBrush x:Key="AiHubRiskHighSurfaceBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
@@ -991,7 +991,6 @@
                                                             </ComboBox>
                                                             <CheckBox x:Uid="AIHub_Fluent_FullChannels" IsChecked="{x:Bind ViewModel.IsFullAuditMode, Mode=OneWay}" Click="OnFullAuditCheckClick" IsEnabled="{x:Bind ViewModel.CanUseFullAuditMode}" />
                                                             <TextBlock Text="{x:Bind ViewModel.ScopeHint, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                            <TextBlock x:Uid="AIHub_Fluent_NextScanHint" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                         </StackPanel>
                                                     </Flyout>
                                                 </SplitButton.Flyout>
@@ -1508,7 +1507,11 @@
 
                             <Border x:Name="AuditAiReport"
                                     Visibility="{x:Bind ViewModel.HasAiReport, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <Expander x:Name="AuditReportExpander" x:Uid="AIHub_Fluent_ReportExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                <Expander x:Name="AuditReportExpander" x:Uid="AIHub_Fluent_ReportExpander"
+                                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                          CornerRadius="{StaticResource OverlayCornerRadius}"
+                                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                     <StackPanel Spacing="14" Padding="4,6">
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                                             <Border Style="{StaticResource KitIconBadgeSmallStyle}">
@@ -1563,11 +1566,6 @@
                                     </StackPanel>
                                 </Expander>
                             </Border>
-
-                            <StackPanel Orientation="Horizontal" Spacing="6" Padding="2,0">
-                                <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                <TextBlock x:Uid="AIHub_Fluent_AuditBoundaryFooter" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                            </StackPanel>
                         </StackPanel>
 
                         <!-- TAB 1: SPACE OPTIMIZATION -->
@@ -1615,7 +1613,6 @@
                                             <TextBlock x:Name="OptimizationCleanableCapacityText" Text="{x:Bind ViewModel.CleanableCapacityText, Mode=OneWay}" FontSize="32" FontWeight="SemiBold"
                                                        FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
                                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                                            <TextBlock x:Uid="AIHub_Fluent_StorageCapacityHint" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             <tkcontrols:WrapPanel HorizontalSpacing="8" VerticalSpacing="6" Margin="0,2,0,0">
                                                 <Border CornerRadius="4" Padding="8,3" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
@@ -1675,11 +1672,6 @@
                                 </StackPanel>
                             </Border>
 
-                            <StackPanel Orientation="Horizontal" Spacing="8" Padding="2,0">
-                                <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                                <TextBlock x:Uid="AIHub_Fluent_OptimizationSteps" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                            </StackPanel>
-
                             <Border Style="{StaticResource AiHubSectionSurfaceStyle}"
                                     Visibility="{x:Bind ViewModel.HasOptimizationResults, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <StackPanel Spacing="14">
@@ -1738,7 +1730,6 @@
                                                         <TextBlock Text="{x:Bind ViewModel.SelectedMoveSizeText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" />
                                                     </StackPanel>
                                                 </tkcontrols:WrapPanel>
-                                                <TextBlock x:Uid="AIHub_Fluent_SelectionFooterHint" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                             </StackPanel>
                                             <Button x:Name="OptimizationExecuteButton" Grid.Column="1" x:Uid="AIHub_ExecuteSelectedButton" Command="{x:Bind ViewModel.ExecuteOptimizationCommand}"
                                                     VerticalAlignment="Center"
@@ -1922,7 +1913,11 @@
                                 </StackPanel>
                             </Border>
 
-                            <Expander x:Name="OptimizationHistoryExpander" x:Uid="AIHub_Fluent_HistoryExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander x:Name="OptimizationHistoryExpander" x:Uid="AIHub_Fluent_HistoryExpander"
+                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                      CornerRadius="{StaticResource OverlayCornerRadius}"
+                                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                 <StackPanel Spacing="12" Padding="4,6">
                                     <tkcontrols:WrapPanel HorizontalSpacing="12" VerticalSpacing="8">
                                         <TextBlock x:Uid="AIHub_OptimizationHistoryTitle" Style="{StaticResource SubtitleTextBlockStyle}" FontSize="16"
@@ -1969,7 +1964,11 @@
                                 </StackPanel>
                             </Expander>
 
-                            <Expander x:Name="InventoryExpander" x:Uid="AIHub_Fluent_InventoryExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander x:Name="InventoryExpander" x:Uid="AIHub_Fluent_InventoryExpander"
+                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                      CornerRadius="{StaticResource OverlayCornerRadius}"
+                                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                                 <StackPanel x:Name="InventoryPanel" AutomationProperties.AutomationId="InventoryPanel" Spacing="14" Padding="4,6">
                                     <Grid x:Name="InventoryHeader" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="12">
                                         <StackPanel x:Name="InventoryTitle" Spacing="5">
@@ -2017,7 +2016,6 @@
                                                 </StackPanel>
                                             </Border>
                                         </Grid>
-                                        <TextBlock x:Uid="AIHub_Inventory_SizeCaveat" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         <TextBlock x:Name="InventoryCoverageText" Text="{x:Bind ViewModel.Inventory.CoverageSummary, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" />
                                         <TextBlock x:Uid="AIHub_Inventory_PartialHint" TextWrapping="Wrap" FontSize="12"
                                                    Foreground="{ThemeResource SystemFillColorCautionBrush}"
@@ -2046,11 +2044,6 @@
                                     </StackPanel>
                                 </StackPanel>
                             </Expander>
-
-                            <StackPanel Orientation="Horizontal" Spacing="6" Padding="2,0">
-                                <FontIcon Glyph="&#xE8B7;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                <TextBlock x:Uid="AIHub_Fluent_OptimizationBoundaryFooter" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                            </StackPanel>
                         </StackPanel>
 
                         <!-- TAB 2: TASK POLICIES -->
@@ -2095,122 +2088,96 @@
                                 </StackPanel>
                             </Border>
 
-                            <Grid x:Name="TaskPolicyColumnsGrid" ColumnDefinitions="*,260" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="16" SizeChanged="OnTaskPolicyColumnsSizeChanged">
-                                <Border x:Name="TaskPolicyEditorCard" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
-                                    <StackPanel Spacing="14">
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                            <TextBlock Text="{x:Bind ViewModel.TaskPolicyEditorHeading, Mode=OneWay}" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                                <TextBlock Text="{x:Bind ViewModel.TaskPolicyCharCountText, Mode=OneWay}" FontSize="12"
-                                                           FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                                <tkcontrols:Segmented x:Name="AiTaskPolicyModeSegmented" SelectedIndex="0" SelectionChanged="OnTaskPolicyEditorModeChanged">
-                                                    <tkcontrols:SegmentedItem x:Uid="AIHub_PolicyEditor_Edit" Content="Edit" Icon="{ui:FontIcon Glyph=&#xE70F;}" />
-                                                    <tkcontrols:SegmentedItem x:Uid="AIHub_PolicyEditor_Preview" Content="Preview" Icon="{ui:FontIcon Glyph=&#xE890;}" />
-                                                </tkcontrols:Segmented>
+                            <Border x:Name="TaskPolicyEditorCard" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Text="{x:Bind ViewModel.TaskPolicyEditorHeading, Mode=OneWay}" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <TextBlock Text="{x:Bind ViewModel.TaskPolicyCharCountText, Mode=OneWay}" FontSize="12"
+                                                       FontFamily="{StaticResource KitMonoFontFamily}" Typography.NumeralAlignment="Tabular"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                            <tkcontrols:Segmented x:Name="AiTaskPolicyModeSegmented" SelectedIndex="0" SelectionChanged="OnTaskPolicyEditorModeChanged">
+                                                <tkcontrols:SegmentedItem x:Uid="AIHub_PolicyEditor_Edit" Content="Edit" Icon="{ui:FontIcon Glyph=&#xE70F;}" />
+                                                <tkcontrols:SegmentedItem x:Uid="AIHub_PolicyEditor_Preview" Content="Preview" Icon="{ui:FontIcon Glyph=&#xE890;}" />
+                                            </tkcontrols:Segmented>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBox
+                                        x:Name="AiTaskPolicyContentBox"
+                                        x:Uid="AIHub_TaskPolicyContentBox"
+                                        Loaded="OnTaskPolicyContentLoaded"
+                                        Text="{x:Bind ViewModel.AiHub.CurrentPolicyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        IsReadOnly="{x:Bind ViewModel.AiHub.CanEditPolicies, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        MinHeight="320"
+                                        MaxHeight="540"
+                                        MaxLength="64000"
+                                        FontFamily="{StaticResource KitMonoFontFamily}"
+                                        FontSize="12"
+                                        CornerRadius="{StaticResource ControlCornerRadius}"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto" />
+
+                                    <Border
+                                        x:Name="AiTaskPolicyPreviewHost"
+                                        Style="{StaticResource KitRecessedSurfaceStyle}"
+                                        Padding="14,12"
+                                        Visibility="Collapsed">
+                                        <ScrollViewer
+                                            MinHeight="320"
+                                            MaxHeight="540"
+                                            HorizontalScrollMode="Disabled"
+                                            HorizontalScrollBarVisibility="Disabled"
+                                            VerticalScrollBarVisibility="Auto">
+                                            <tkcontrols:MarkdownTextBlock
+                                                x:Name="AiTaskPolicyPreview"
+                                                Text="{x:Bind ViewModel.AiHub.CurrentPolicyContent, Mode=OneWay}"
+                                                IsTextSelectionEnabled="True"
+                                                UsePipeTables="True"
+                                                UseTaskLists="True" />
+                                        </ScrollViewer>
+                                    </Border>
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <Button x:Uid="AiHub_ResetPolicyButton"
+                                                AutomationProperties.AutomationId="AIHub_ResetTaskPolicyButton"
+                                                Command="{x:Bind ViewModel.AiHub.ResetActivePolicyCommand}"
+                                                Style="{StaticResource SubtleButtonStyle}" Padding="8,5" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE777;" FontSize="12" />
+                                                <TextBlock x:Uid="AiHub_ResetPolicyButtonText" Text="Reset to default" FontSize="12" />
                                             </StackPanel>
-                                        </Grid>
-
-                                        <TextBlock x:Uid="AIHub_TaskPolicyDraftHint" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                   Visibility="{x:Bind ViewModel.AiHub.IsCurrentPolicyDirty, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-
-                                        <TextBox
-                                            x:Name="AiTaskPolicyContentBox"
-                                            x:Uid="AIHub_TaskPolicyContentBox"
-                                            Loaded="OnTaskPolicyContentLoaded"
-                                            Text="{x:Bind ViewModel.AiHub.CurrentPolicyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            IsReadOnly="{x:Bind ViewModel.AiHub.CanEditPolicies, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
-                                            AcceptsReturn="True"
-                                            TextWrapping="Wrap"
-                                            MinHeight="300"
-                                            MaxHeight="520"
-                                            MaxLength="64000"
-                                            FontFamily="{StaticResource KitMonoFontFamily}"
-                                            FontSize="12"
-                                            CornerRadius="{StaticResource ControlCornerRadius}"
-                                            ScrollViewer.VerticalScrollBarVisibility="Auto" />
-
-                                        <Border
-                                            x:Name="AiTaskPolicyPreviewHost"
-                                            Style="{StaticResource KitRecessedSurfaceStyle}"
-                                            Padding="14,12"
-                                            Visibility="Collapsed">
-                                            <ScrollViewer
-                                                MinHeight="300"
-                                                MaxHeight="520"
-                                                HorizontalScrollMode="Disabled"
-                                                HorizontalScrollBarVisibility="Disabled"
-                                                VerticalScrollBarVisibility="Auto">
-                                                <tkcontrols:MarkdownTextBlock
-                                                    x:Name="AiTaskPolicyPreview"
-                                                    Text="{x:Bind ViewModel.AiHub.CurrentPolicyContent, Mode=OneWay}"
-                                                    IsTextSelectionEnabled="True"
-                                                    UsePipeTables="True"
-                                                    UseTaskLists="True" />
-                                            </ScrollViewer>
-                                        </Border>
-
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                            <Button x:Uid="AiHub_ResetPolicyButton"
-                                                    AutomationProperties.AutomationId="AIHub_ResetTaskPolicyButton"
-                                                    Command="{x:Bind ViewModel.AiHub.ResetActivePolicyCommand}"
-                                                    Style="{StaticResource SubtleButtonStyle}" Padding="8,5" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        </Button>
+                                        <tkcontrols:WrapPanel Grid.Column="1" HorizontalSpacing="8" VerticalSpacing="8" HorizontalAlignment="Right">
+                                            <Button x:Uid="AIHub_DiscardTaskPolicyButton"
+                                                    Command="{x:Bind ViewModel.AiHub.DiscardActivePolicyCommand}"
+                                                    Style="{StaticResource KitActionButtonStyle}" />
+                                            <Button x:Uid="AiHub_SavePolicyButton"
+                                                    AutomationProperties.AutomationId="AIHub_SaveTaskPolicyButton"
+                                                    Style="{StaticResource KitPrimaryActionButtonStyle}"
+                                                    Command="{x:Bind ViewModel.AiHub.SaveActivePolicyCommand}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <FontIcon Glyph="&#xE777;" FontSize="12" />
-                                                    <TextBlock x:Uid="AiHub_ResetPolicyButtonText" Text="Reset to default" FontSize="12" />
+                                                    <FontIcon Glyph="&#xE73E;" FontSize="12" />
+                                                    <TextBlock x:Uid="AiHub_SavePolicyButtonText" Text="Save" FontSize="12" />
                                                 </StackPanel>
                                             </Button>
-                                            <tkcontrols:WrapPanel Grid.Column="1" HorizontalSpacing="8" VerticalSpacing="8" HorizontalAlignment="Right">
-                                                <Button x:Uid="AIHub_DiscardTaskPolicyButton"
-                                                        Command="{x:Bind ViewModel.AiHub.DiscardActivePolicyCommand}"
-                                                        Style="{StaticResource KitActionButtonStyle}" />
-                                                <Button x:Uid="AiHub_SavePolicyButton"
-                                                        AutomationProperties.AutomationId="AIHub_SaveTaskPolicyButton"
-                                                        Style="{StaticResource KitPrimaryActionButtonStyle}"
-                                                        Command="{x:Bind ViewModel.AiHub.SaveActivePolicyCommand}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <FontIcon Glyph="&#xE73E;" FontSize="12" />
-                                                        <TextBlock x:Uid="AiHub_SavePolicyButtonText" Text="Save" FontSize="12" />
-                                                    </StackPanel>
-                                                </Button>
-                                            </tkcontrols:WrapPanel>
-                                        </Grid>
+                                        </tkcontrols:WrapPanel>
+                                    </Grid>
 
-                                        <TextBlock x:Uid="AIHub_Fluent_PolicyFooterHint" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-
-                                        <Expander x:Uid="AIHub_Fluent_PolicyLocation" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                                                  Background="Transparent" BorderThickness="0">
-                                            <Border CornerRadius="{StaticResource ControlCornerRadius}" Padding="8,4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Left">
-                                                <TextBlock Text="{x:Bind ViewModel.AiHub.CurrentPolicyFilePath, Mode=OneWay}"
-                                                           Style="{StaticResource CaptionTextBlockStyle}"
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                           FontFamily="{StaticResource KitMonoFontFamily}"
-                                                           ToolTipService.ToolTip="{x:Bind ViewModel.AiHub.CurrentPolicyFilePath, Mode=OneWay}"
-                                                           VerticalAlignment="Center" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                                            </Border>
-                                        </Expander>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border x:Name="TaskPolicyScopeCard" Grid.Column="1" Style="{StaticResource AiHubSectionSurfaceStyle}" VerticalAlignment="Top">
-                                    <StackPanel Spacing="12">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <Border Style="{StaticResource KitIconBadgeSmallStyle}">
-                                                <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                                          HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
-                                            </Border>
-                                            <TextBlock x:Uid="AIHub_Fluent_PolicyScopeTitle" Style="{StaticResource AiHubSectionTitleStyle}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                        <TextBlock Text="{x:Bind ViewModel.TaskPolicyScopePrimaryText, Mode=OneWay}" FontSize="12"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                        <Border BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
-                                            <TextBlock x:Uid="AIHub_Fluent_PolicyScopeBoundary" FontSize="12"
-                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    <Expander x:Uid="AIHub_Fluent_PolicyLocation" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                              Background="Transparent" BorderThickness="0">
+                                        <Border Style="{StaticResource KitSubtleSurfaceStyle}" Padding="10,6" HorizontalAlignment="Left">
+                                            <TextBlock Text="{x:Bind ViewModel.AiHub.CurrentPolicyFilePath, Mode=OneWay}"
+                                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       FontFamily="{StaticResource KitMonoFontFamily}"
+                                                       ToolTipService.ToolTip="{x:Bind ViewModel.AiHub.CurrentPolicyFilePath, Mode=OneWay}"
+                                                       VerticalAlignment="Center" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                         </Border>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
+                                    </Expander>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </StackPanel>
                 </Grid>

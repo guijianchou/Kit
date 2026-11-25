@@ -68,10 +68,10 @@
             </Grid>
         </DataTemplate>
         <DataTemplate x:Key="ShowAllSearchResultTemplate" x:DataType="models:SuggestionItem">
-            <Grid>
+            <Grid Padding="8,6">
                 <Rectangle
                     Height="1"
-                    Margin="0,-12,0,0"
+                    Margin="0,-6,0,6"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Top"
                     Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
@@ -79,6 +79,7 @@
                     x:Uid="Shell_Search_ShowAll"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Center"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                     TextAlignment="Center" />
             </Grid>
         </DataTemplate>

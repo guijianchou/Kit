@@ -4,6 +4,11 @@
 
 ## English
 
+### 3.5.11 (2026-11-24)
+
+- Refined Windows 11 Mica and WinUI 3 surface layering across AI Hub, NetMap, WinGet, Dashboard, General, UDPtest, Localserver, and QuickAccess: replaced opaque risk/callout hex fills with translucent Mica-compatible semantic tints, toned down hero washes, enabled native rounded flyout chrome (`DWMWCP_ROUND`), and normalized micro-label typography without artificial letter-spacing or all-caps headers.
+- Removed AI-generated meta-explanatory UI copy, workflow slogans, and redundant boundary footers across AI Hub (including the audit/optimization boundary footers, step banners, and the side-column policy scope lecture card), NetMap, Dashboard, General, and WinGet, while keeping English and Chinese resources in sync.
+
 ### 3.5.10 (2026-11-23)
 
 - Fixed AI Hub's `AI deep analysis` button remaining unresponsive or disabled after scans and history restores by preserving the latest scanned raw event log snapshot on `AuditResult` and re-enabling on-demand deep analysis whenever scan events are available.
@@ -1016,6 +1021,11 @@
 ## 中文
 
 ## 更新日志
+
+### 3.5.11（2026-11-24）
+
+- 深化全程序 Windows 11 Mica 与 WinUI 3 原生视觉体验：将 AI Hub 与 NetMap 中遮挡云母材质的纯色底块重构为半透明语义微染画刷，收敛顶栏与卡片渐变遮罩，为 QuickAccess 浮出窗启用系统级圆角裁剪（`DWMWCP_ROUND`），并统一全程序标签字号、自然字距与大小写规范。
+- 清理 AI Hub、NetMap、主页、通用设置与 WinGet 中的 AI 设计残留文案与说教式说明（包括安全审计/空间优化底部边界说明、流程口号条、策略页右侧生效范围说明卡及地图底部大段注释），同步精简中英文资源描述。
 
 ### 3.5.10（2026-11-23）
 

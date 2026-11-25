@@ -41,25 +41,11 @@
             <SolidColorBrush x:Key="KitUsageTempHotBrush" Color="#FFFF5252" />
             <SolidColorBrush x:Key="KitUsageDefaultBrush" Color="#FF38B6FF" />
 
-            <!-- 设置导航标签色彩体系（外观/启动/AI/诊断/备份/更新） -->
-            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FFCE93D8" />
-            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#25CE93D8" />
-            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="#FF60CDFF" />
-            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="#2560CDFF" />
-            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="#FFFFA154" />
-            <SolidColorBrush x:Key="SectionAiTintBrush" Color="#25FFA154" />
-            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="#FF6CCB5F" />
-            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="#256CCB5F" />
-            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="#FF4DD0E1" />
-            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#254DD0E1" />
-            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FFFF77A9" />
-            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#25FF77A9" />
-
-            <!-- Mica 强调色微染：图标徽章底色 / 主页 Hero 渐变洗色（跟随系统强调色） -->
-            <SolidColorBrush x:Key="KitAccentTintBrush" Opacity="0.16" Color="{ThemeResource SystemAccentColorLight2}" />
-            <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.20" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Offset="0" Color="{ThemeResource SystemAccentColorLight1}" />
-                <GradientStop Offset="0.65" Color="Transparent" />
+            <!-- Mica 强调色微染：图标徽章底色 / 顶栏轻量微染（跟随系统强调色，保持 Mica 通透层次） -->
+            <SolidColorBrush x:Key="KitAccentTintBrush" Opacity="0.14" Color="{ThemeResource SystemAccentColorLight2}" />
+            <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.10" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="{ThemeResource SystemAccentColorLight2}" />
+                <GradientStop Offset="0.6" Color="Transparent" />
             </LinearGradientBrush>
         </ResourceDictionary>
 
@@ -93,23 +79,10 @@
             <SolidColorBrush x:Key="KitUsageTempHotBrush" Color="#FFC42B1C" />
             <SolidColorBrush x:Key="KitUsageDefaultBrush" Color="#FF0078D4" />
 
-            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FF6A1B9A" />
-            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#156A1B9A" />
-            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="#FF0066B4" />
-            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="#150066B4" />
-            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="#FFC43E00" />
-            <SolidColorBrush x:Key="SectionAiTintBrush" Color="#15C43E00" />
-            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="#FF0E703C" />
-            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="#150E703C" />
-            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="#FF006E7A" />
-            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#15006E7A" />
-            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FFA8226A" />
-            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#15A8226A" />
-
-            <SolidColorBrush x:Key="KitAccentTintBrush" Opacity="0.12" Color="{ThemeResource SystemAccentColorDark1}" />
-            <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.28" StartPoint="0,0" EndPoint="1,1">
+            <SolidColorBrush x:Key="KitAccentTintBrush" Opacity="0.10" Color="{ThemeResource SystemAccentColorDark1}" />
+            <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.12" StartPoint="0,0" EndPoint="1,1">
                 <GradientStop Offset="0" Color="{ThemeResource SystemAccentColorLight2}" />
-                <GradientStop Offset="0.65" Color="Transparent" />
+                <GradientStop Offset="0.6" Color="Transparent" />
             </LinearGradientBrush>
         </ResourceDictionary>
 
@@ -139,19 +112,6 @@
             <SolidColorBrush x:Key="KitUsageTempWarmBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="KitUsageTempHotBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="KitUsageDefaultBrush" Color="{StaticResource SystemColorWindowTextColor}" />
-
-            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
-            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="{StaticResource SystemColorWindowColor}" />
-            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
-            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="{StaticResource SystemColorWindowColor}" />
-            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
-            <SolidColorBrush x:Key="SectionAiTintBrush" Color="{StaticResource SystemColorWindowColor}" />
-            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
-            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="{StaticResource SystemColorWindowColor}" />
-            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
-            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="{StaticResource SystemColorWindowColor}" />
-            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
-            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="{StaticResource SystemColorWindowColor}" />
 
             <SolidColorBrush x:Key="KitAccentTintBrush" Color="{StaticResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="KitHeroGradientBrush" Color="{StaticResource SystemColorWindowColor}" />

@@ -23,7 +23,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <Grid Padding="24,20,24,0">
+            <Grid Padding="20,16,20,4">
                 <TextBlock
                     x:Uid="QuickAccessTxt"
                     VerticalAlignment="Center"

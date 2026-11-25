@@ -376,7 +376,7 @@
                                         PasswordChanged="AiMainApiKeyBox_PasswordChanged"
                                         PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode" Description="Choose a suggestion or enter a native API identifier. The selected kernel validates support.">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ApiModeCard" Header="API mode" Description="Select a preset or enter a custom API mode identifier.">
                                     <controls:EditableValueComboBox
                                         x:Uid="AiHub_MainEndpoint_ApiModeComboBox"
                                         AutomationProperties.AutomationId="AiHub_MainEndpoint_ApiModeComboBox"
@@ -393,7 +393,7 @@
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.MainEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort" Description="Passed unchanged to the selected kernel; support depends on the kernel and model.">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_MainEndpoint_ReasoningCard" Header="Reasoning effort" Description="Reasoning level passed to supported models.">
                                     <controls:EditableValueComboBox
                                         x:Uid="AiHub_MainEndpoint_EffortComboBox"
                                         AutomationProperties.AutomationId="AiHub_MainEndpoint_EffortComboBox"
@@ -402,7 +402,7 @@
                                         ItemsSource="{x:Bind ViewModel.AiServices.MainEndpoint.EffortSuggestions, Mode=OneWay}"
                                         Value="{x:Bind ViewModel.AiServices.MainEndpoint.Effort, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Maximum context size in tokens (default: 256,000).">
                                     <StackPanel Width="280" Spacing="6">
                                         <NumberBox
                                             x:Uid="AiHub_ContextWindowBox"
@@ -467,7 +467,7 @@
                                         PasswordChanged="AiFallbackApiKeyBox_PasswordChanged"
                                         PlaceholderText="Enter API key" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ApiModeCard" Header="API mode" Description="Choose a suggestion or enter a native API identifier. The selected kernel validates support.">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ApiModeCard" Header="API mode" Description="Select a preset or enter a custom API mode identifier.">
                                     <controls:EditableValueComboBox
                                         x:Uid="AiHub_FallbackEndpoint_ApiModeComboBox"
                                         AutomationProperties.AutomationId="AiHub_FallbackEndpoint_ApiModeComboBox"
@@ -484,7 +484,7 @@
                                         PlaceholderText="gpt-6-luna"
                                         Text="{x:Bind ViewModel.AiServices.FallbackEndpoint.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ReasoningCard" Header="Reasoning effort" Description="Passed unchanged to the selected kernel; support depends on the kernel and model.">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_FallbackEndpoint_ReasoningCard" Header="Reasoning effort" Description="Reasoning level passed to supported models.">
                                     <controls:EditableValueComboBox
                                         x:Uid="AiHub_FallbackEndpoint_EffortComboBox"
                                         AutomationProperties.AutomationId="AiHub_FallbackEndpoint_EffortComboBox"
@@ -493,7 +493,7 @@
                                         ItemsSource="{x:Bind ViewModel.AiServices.FallbackEndpoint.EffortSuggestions, Mode=OneWay}"
                                         Value="{x:Bind ViewModel.AiServices.FallbackEndpoint.Effort, Mode=TwoWay}" />
                                 </tkcontrols:SettingsCard>
-                                <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.">
+                                <tkcontrols:SettingsCard x:Uid="AiHub_ContextWindowCard" Header="Context window" Description="Maximum context size in tokens (default: 256,000).">
                                     <StackPanel Width="280" Spacing="6">
                                         <NumberBox
                                             x:Uid="AiHub_ContextWindowBox"
@@ -557,14 +557,14 @@
                         Description="{x:Bind ViewModel.AiServices.SubagentSettingsSummary, Mode=OneWay}">
                         <tkcontrols:SettingsExpander.Items>
                             <tkcontrols:SettingsCard x:Uid="AiHub_SubagentsCard" Header="Analysis subagents"
-                                Description="Kit assigns independent evidence groups to isolated analysis workers. Available with Codex and Pi.">
+                                Description="Process independent evidence groups in parallel with Codex or Pi.">
                                 <ToggleSwitch x:Uid="AiHub_SubagentsToggle"
                                     AutomationProperties.AutomationId="AiHub_SubagentsToggle"
                                     IsEnabled="{x:Bind ViewModel.AiServices.CanEdit, Mode=OneWay}"
                                     IsOn="{x:Bind ViewModel.AiServices.EnableSubagents, Mode=TwoWay}" />
                             </tkcontrols:SettingsCard>
                             <tkcontrols:SettingsCard x:Uid="AiHub_ServiceConcurrencyCard" Header="Service concurrency"
-                                Description="Maximum analyses running at once across tasks in this Settings session.">
+                                Description="Maximum concurrent analyses across all active tasks.">
                                 <NumberBox x:Uid="AiHub_ServiceConcurrencyBox"
                                     AutomationProperties.AutomationId="AiHub_ServiceConcurrencyBox"
                                     Width="140" Minimum="1" Maximum="4" SmallChange="1" SpinButtonPlacementMode="Compact"
@@ -572,7 +572,7 @@
                                     Value="{x:Bind ViewModel.AiServices.MaxConcurrentAnalysis, Mode=TwoWay}" />
                             </tkcontrols:SettingsCard>
                             <tkcontrols:SettingsCard x:Uid="AiHub_TaskAgentsCard" Header="Subagents per task"
-                                Description="Each task can use available capacity up to this limit. Waiting tasks share capacity fairly.">
+                                Description="Maximum parallel workers assigned to a single task.">
                                 <NumberBox x:Uid="AiHub_TaskAgentsBox"
                                     AutomationProperties.AutomationId="AiHub_TaskAgentsBox"
                                     Width="140" Minimum="1" Maximum="4" SmallChange="1" SpinButtonPlacementMode="Compact"
@@ -620,10 +620,6 @@
                                         FontWeight="SemiBold"
                                         AutomationProperties.LiveSetting="Polite"
                                         Text="{x:Bind ViewModel.AiServices.SecurityPolicyStatusText, Mode=OneWay}" />
-                                    <TextBlock
-                                        x:Uid="AiHub_GlobalPolicyDraftHint"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        TextWrapping="Wrap" />
                                     <TextBox
                                         x:Name="AiPolicyContentBox"
                                         x:Uid="AiHub_PolicyContentBox"

@@ -37,7 +37,6 @@ public sealed partial class FindingDetailsPane : UserControl
         RangeLabel.Text = "AIHub_Fluent_ResultRange".GetLocalizedOrFallback("Audit range");
         ReasonLabel.Text = "AIHub_Fluent_Assessment".GetLocalizedOrFallback("Assessment");
         EvidenceExpander.Header = "AIHub_Fluent_EventEvidence".GetLocalizedOrFallback("Event evidence and references");
-        EvidenceDescriptionText.Text = "AIHub_Fluent_EventEvidenceDescription".GetLocalizedOrFallback("Evidence recorded with this finding. Event references identify the underlying records.");
         CopyLabel.Text = "AIHub_Fluent_CopyFinding".GetLocalizedOrFallback("Copy summary");
         CopyEvidenceLabel.Text = "AIHub_CopyEvidenceLabel".GetLocalizedOrFallback("Copy evidence");
         AnalyzeLabel.Text = "AIHub_Fluent_AnalyzeRange".GetLocalizedOrFallback("Analyze current range");

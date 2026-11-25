@@ -111,31 +111,28 @@
                             CornerRadius="8">
                             <Grid ColumnDefinitions="3,*">
                                 <Border CornerRadius="8,0,0,8" Background="{ThemeResource AccentFillColorDefaultBrush}" />
-                                <Grid Grid.Column="1">
-                                    <Border CornerRadius="0,8,8,0" Background="{ThemeResource KitHeroGradientBrush}" IsHitTestVisible="False" />
-                                    <StackPanel Padding="14,12" Spacing="8">
-                                        <TextBlock
-                                            x:Name="VersionsText"
-                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                            FontFamily="{StaticResource KitMonoFontFamily}"
-                                            Typography.NumeralAlignment="Tabular"
-                                            FontSize="16"
-                                            FontWeight="SemiBold"
-                                            TextWrapping="Wrap"
-                                            IsTextSelectionEnabled="True" />
-                                        <TextBlock
-                                            x:Name="PublisherText"
-                                            FontSize="12"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            TextWrapping="Wrap"
-                                            IsTextSelectionEnabled="True" />
-                                        <TextBlock
-                                            x:Name="DescriptionText"
-                                            FontSize="13"
-                                            TextWrapping="Wrap"
-                                            IsTextSelectionEnabled="True" />
-                                    </StackPanel>
-                                </Grid>
+                                <StackPanel Grid.Column="1" Padding="14,12" Spacing="8">
+                                    <TextBlock
+                                        x:Name="VersionsText"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        FontFamily="{StaticResource KitMonoFontFamily}"
+                                        Typography.NumeralAlignment="Tabular"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"
+                                        TextWrapping="Wrap"
+                                        IsTextSelectionEnabled="True" />
+                                    <TextBlock
+                                        x:Name="PublisherText"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap"
+                                        IsTextSelectionEnabled="True" />
+                                    <TextBlock
+                                        x:Name="DescriptionText"
+                                        FontSize="13"
+                                        TextWrapping="Wrap"
+                                        IsTextSelectionEnabled="True" />
+                                </StackPanel>
                             </Grid>
                         </Border>
 

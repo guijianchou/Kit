@@ -824,10 +824,10 @@
     <value>Delete</value>
   </data>
       <data name="Localserver_ChecksLabel.Text" xml:space="preserve">
-    <value>CHECKS</value>
+    <value>Checks</value>
   </data>
   <data name="Localserver_CpuTrendLabel.Text" xml:space="preserve">
-    <value>CPU TREND</value>
+    <value>CPU trend</value>
   </data>
     <data name="Localserver_GpuLoadLabel.Text" xml:space="preserve">
     <value>GPU UTIL</value>
@@ -866,10 +866,10 @@
     <value>Faulted</value>
   </data>
           <data name="Localserver_StateLabel.Text" xml:space="preserve">
-    <value>STATE</value>
+    <value>State</value>
   </data>
   <data name="Localserver_RuntimesLabel.Text" xml:space="preserve">
-    <value>RUNTIMES</value>
+    <value>Runtimes</value>
   </data>
       <data name="Localserver_SelectedLineComboBox.PlaceholderText" xml:space="preserve">
     <value>Select a service</value>
@@ -1043,49 +1043,49 @@
     <value>Failed to force kill “{0}”.</value>
   </data>
   <data name="Localserver_SectionEnvironment.Text" xml:space="preserve">
-    <value>ENVIRONMENT</value>
+    <value>Environment</value>
   </data>
   <data name="Localserver_SectionSystem.Text" xml:space="preserve">
     <value>SYSTEM</value>
   </data>
   <data name="Localserver_SectionSession.Text" xml:space="preserve">
-    <value>SESSION</value>
+    <value>Session</value>
   </data>
     <data name="Localserver_RegisteredLabel.Text" xml:space="preserve">
-    <value>REGISTERED</value>
+    <value>Registered</value>
   </data>
   <data name="Localserver_RunningLabel.Text" xml:space="preserve">
-    <value>RUNNING</value>
+    <value>Running</value>
   </data>
   <data name="Localserver_FaultedLabel.Text" xml:space="preserve">
-    <value>FAULTED</value>
+    <value>Faulted</value>
   </data>
     <data name="Localserver_HostLabel.Text" xml:space="preserve">
-    <value>HOST</value>
+    <value>Host</value>
   </data>
   <data name="Localserver_CommandAndArgsLabel.Text" xml:space="preserve">
-    <value>COMMAND &amp; ARGS</value>
+    <value>Command &amp; args</value>
   </data>
   <data name="Localserver_WorkingDirLabel.Text" xml:space="preserve">
-    <value>WORKING DIR</value>
+    <value>Working directory</value>
   </data>
   <data name="Localserver_ColName.Text" xml:space="preserve">
-    <value>NAME</value>
+    <value>Name</value>
   </data>
   <data name="Localserver_ColPort.Text" xml:space="preserve">
-    <value>PORT</value>
+    <value>Port</value>
   </data>
   <data name="Localserver_ColState.Text" xml:space="preserve">
-    <value>STATE</value>
+    <value>State</value>
   </data>
   <data name="Localserver_ColUptime.Text" xml:space="preserve">
-    <value>UPTIME</value>
+    <value>Uptime</value>
   </data>
   <data name="Localserver_ColCpu.Text" xml:space="preserve">
     <value>CPU</value>
   </data>
   <data name="Localserver_ColMem.Text" xml:space="preserve">
-    <value>MEM</value>
+    <value>Memory</value>
   </data>
   <data name="Localserver_ColPid.Text" xml:space="preserve">
     <value>PID</value>
@@ -1094,25 +1094,25 @@
     <value>Status:</value>
   </data>
   <data name="Localserver_ConfigName.Text" xml:space="preserve">
-    <value>NAME</value>
+    <value>Name</value>
   </data>
   <data name="Localserver_ConfigCommand.Text" xml:space="preserve">
-    <value>COMMAND</value>
+    <value>Command</value>
   </data>
   <data name="Localserver_ConfigArguments.Text" xml:space="preserve">
-    <value>ARGUMENTS</value>
+    <value>Arguments</value>
   </data>
   <data name="Localserver_ConfigWorkingDir.Text" xml:space="preserve">
-    <value>WORKING DIR</value>
+    <value>Working directory</value>
   </data>
   <data name="Localserver_ConfigPort.Text" xml:space="preserve">
-    <value>PORT</value>
+    <value>Port</value>
   </data>
   <data name="Localserver_ConfigResolvedCommand.Text" xml:space="preserve">
-    <value>RESOLVED COMMAND</value>
+    <value>Resolved command</value>
   </data>
       <data name="Localserver_OutputHeader.Text" xml:space="preserve">
-    <value>OUTPUT</value>
+    <value>Output</value>
   </data>
   <data name="Localserver_LogFollowToggle.Content" xml:space="preserve">
     <value>Follow</value>
@@ -1507,7 +1507,7 @@
   <data name="General_OpenLogsFolderText.Text" xml:space="preserve">
     <value>Open folder</value>
   </data>
-<data name="AiHub_MainEndpoint_UrlCard.Header" xml:space="preserve"><value>Endpoint URL</value></data><data name="AiHub_MainEndpoint_ApiKeyCard.Header" xml:space="preserve"><value>API key</value></data><data name="AiHub_MainEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve"><value>Enter API key</value></data><data name="AiHub_MainEndpoint_ApiModeCard.Header" xml:space="preserve"><value>API mode</value></data><data name="AiHub_MainEndpoint_ModelCard.Header" xml:space="preserve"><value>Model</value></data><data name="AiHub_MainEndpoint_ReasoningCard.Header" xml:space="preserve"><value>Reasoning effort</value></data><data name="AiHub_ClearFallbackCard.Header" xml:space="preserve"><value>Clear fallback endpoint</value></data><data name="AiHub_PolicyFilePathCard.Header" xml:space="preserve"><value>Policy file path</value></data><data name="Localserver_AdoptedBadge.Text" xml:space="preserve"><value>ADOPTED</value></data><data name="General_LogLevelTrace.Content" xml:space="preserve"><value>Trace (Verbose)</value></data><data name="General_LogLevelDebug.Content" xml:space="preserve"><value>Debug</value></data><data name="General_LogLevelInfo.Content" xml:space="preserve"><value>Info</value></data><data name="General_LogLevelWarning.Content" xml:space="preserve"><value>Warning</value></data><data name="General_LogLevelError.Content" xml:space="preserve"><value>Error</value></data><data name="UDPtest_StatusLabel.Text" xml:space="preserve"><value>Status:</value></data><data name="UDPtest_ConfigNameLabel.Text" xml:space="preserve"><value>Target Name</value></data><data name="UDPtest_ConfigNameInput.PlaceholderText" xml:space="preserve"><value>e.g. Cloudflare, Singapore</value></data><data name="UDPtest_ConfigKindLabel.Text" xml:space="preserve"><value>Protocol Kind</value></data><data name="UDPtest_ConfigKindStun.Content" xml:space="preserve"><value>STUN (Binding Probe)</value></data><data name="UDPtest_ConfigKindEcho.Content" xml:space="preserve"><value>ECHO (UDP Reflection)</value></data><data name="UDPtest_ConfigEndpointLabel.Text" xml:space="preserve"><value>Endpoint</value></data><data name="UDPtest_ConfigPortLabel.Text" xml:space="preserve"><value>Parsed Port</value></data><data name="UDPtest_DeleteButtonText.Text" xml:space="preserve"><value>Delete</value></data><data name="UDPtest_DeleteDialogTitle.Text" xml:space="preserve"><value>Delete this UDP line?</value></data><data name="UDPtest_DeleteDialogMessage.Text" xml:space="preserve"><value>This link will be permanently removed from your target list.</value></data><data name="UDPtest_DeleteDialogConfirm.Content" xml:space="preserve"><value>Confirm Delete</value></data><data name="UDPtest_SaveButtonText.Text" xml:space="preserve"><value>Save</value></data><data name="UDPtest_StartButtonText.Text" xml:space="preserve"><value>Start</value></data><data name="UDPtest_StopButtonText.Text" xml:space="preserve"><value>Stop</value></data><data name="UDPtest_SamplingInterval.Text" xml:space="preserve"><value>Sampling Interval</value></data><data name="UDPtest_AddLinkButtonText.Text" xml:space="preserve"><value>Add UDP Link</value></data><data name="UDPtest_HealthLabel.Text" xml:space="preserve"><value>HEALTH</value></data><data name="UDPtest_ConditionLabel.Text" xml:space="preserve"><value>CONDITION</value></data><data name="UDPtest_RealtimeLabel.Text" xml:space="preserve"><value>REALTIME</value></data><data name="UDPtest_QualityLabel.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_AvgRttLabel.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_PeakRttLabel.Text" xml:space="preserve"><value>PEAK RTT</value></data><data name="UDPtest_PeriodAvgLabel.Text" xml:space="preserve"><value>PERIOD AVG</value></data><data name="UDPtest_RttTrendLabel.Text" xml:space="preserve"><value>RTT TREND</value></data><data name="UDPtest_NoSamplesLabel.Text" xml:space="preserve"><value>No samples in this period</value></data><data name="UDPtest_NoSuccessfulRttLabel" xml:space="preserve"><value>No successful RTT in this period</value></data><data name="UDPtest_UdpAssessmentLabel.Text" xml:space="preserve"><value>UDP ASSESSMENT</value></data><data name="UDPtest_TcpBaselineLabel.Text" xml:space="preserve"><value>TCP BASELINE</value></data><data name="UDPtest_CurrentPathLabel.Text" xml:space="preserve"><value>CURRENT PATH</value></data><data name="UDPtest_PublicIpLabel.Text" xml:space="preserve"><value>PUBLIC IP</value></data><data name="UDPtest_LocationLabel.Text" xml:space="preserve"><value>LOCATION</value></data><data name="UDPtest_NatTypeLabel.Text" xml:space="preserve"><value>NAT TYPE</value></data><data name="UDPtest_LocalRouteLabel.Text" xml:space="preserve"><value>LOCAL ROUTE</value></data><data name="UDPtest_ColTarget.Text" xml:space="preserve"><value>TARGET</value></data><data name="UDPtest_ColPort.Text" xml:space="preserve"><value>PORT</value></data><data name="UDPtest_ColAvgRtt.Text" xml:space="preserve"><value>AVG RTT</value></data><data name="UDPtest_ColJitter.Text" xml:space="preserve"><value>JITTER</value></data><data name="UDPtest_ColQuality.Text" xml:space="preserve"><value>QUALITY</value></data><data name="UDPtest_ColOkFail.Text" xml:space="preserve"><value>OK / FAIL</value></data><data name="UDPtest_ColHttpIp.Text" xml:space="preserve"><value>HTTP IP</value></data><data name="UDPtest_ColUdpIp.Text" xml:space="preserve"><value>UDP IP</value></data><data name="UDPtest_ColLastError.Text" xml:space="preserve"><value>LAST ERROR</value></data><data name="UDPtest_ColOn.Text" xml:space="preserve"><value>ON</value></data><data name="UDPtest_ColActions.Text" xml:space="preserve"><value>ACTIONS</value></data><data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Clear RTT sample history for the selected line</value></data><data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Configure line settings</value></data><data name="UDPtest_IntervalButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sampling interval</value></data><data name="UDPtest_IntervalButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sampling interval</value></data><data name="GPOWarning.Text" xml:space="preserve"><value>This setting is managed by your organization.</value></data><data name="General_OpenLogsFolderButton.Content" xml:space="preserve"><value>Open logs folder</value></data><data name="NewInfoBadge.Text" xml:space="preserve"><value>NEW</value></data>
+<data name="AiHub_MainEndpoint_UrlCard.Header" xml:space="preserve"><value>Endpoint URL</value></data><data name="AiHub_MainEndpoint_ApiKeyCard.Header" xml:space="preserve"><value>API key</value></data><data name="AiHub_MainEndpoint_ApiKeyBox.PlaceholderText" xml:space="preserve"><value>Enter API key</value></data><data name="AiHub_MainEndpoint_ApiModeCard.Header" xml:space="preserve"><value>API mode</value></data><data name="AiHub_MainEndpoint_ModelCard.Header" xml:space="preserve"><value>Model</value></data><data name="AiHub_MainEndpoint_ReasoningCard.Header" xml:space="preserve"><value>Reasoning effort</value></data><data name="AiHub_ClearFallbackCard.Header" xml:space="preserve"><value>Clear fallback endpoint</value></data><data name="AiHub_PolicyFilePathCard.Header" xml:space="preserve"><value>Policy file path</value></data><data name="Localserver_AdoptedBadge.Text" xml:space="preserve"><value>Adopted</value></data><data name="General_LogLevelTrace.Content" xml:space="preserve"><value>Trace (Verbose)</value></data><data name="General_LogLevelDebug.Content" xml:space="preserve"><value>Debug</value></data><data name="General_LogLevelInfo.Content" xml:space="preserve"><value>Info</value></data><data name="General_LogLevelWarning.Content" xml:space="preserve"><value>Warning</value></data><data name="General_LogLevelError.Content" xml:space="preserve"><value>Error</value></data><data name="UDPtest_StatusLabel.Text" xml:space="preserve"><value>Status:</value></data><data name="UDPtest_ConfigNameLabel.Text" xml:space="preserve"><value>Target name</value></data><data name="UDPtest_ConfigNameInput.PlaceholderText" xml:space="preserve"><value>e.g. Cloudflare, Singapore</value></data><data name="UDPtest_ConfigKindLabel.Text" xml:space="preserve"><value>Protocol kind</value></data><data name="UDPtest_ConfigKindStun.Content" xml:space="preserve"><value>STUN (Binding Probe)</value></data><data name="UDPtest_ConfigKindEcho.Content" xml:space="preserve"><value>ECHO (UDP Reflection)</value></data><data name="UDPtest_ConfigEndpointLabel.Text" xml:space="preserve"><value>Endpoint</value></data><data name="UDPtest_ConfigPortLabel.Text" xml:space="preserve"><value>Parsed port</value></data><data name="UDPtest_DeleteButtonText.Text" xml:space="preserve"><value>Delete</value></data><data name="UDPtest_DeleteDialogTitle.Text" xml:space="preserve"><value>Delete this UDP line?</value></data><data name="UDPtest_DeleteDialogMessage.Text" xml:space="preserve"><value>This link will be permanently removed from your target list.</value></data><data name="UDPtest_DeleteDialogConfirm.Content" xml:space="preserve"><value>Confirm Delete</value></data><data name="UDPtest_SaveButtonText.Text" xml:space="preserve"><value>Save</value></data><data name="UDPtest_StartButtonText.Text" xml:space="preserve"><value>Start</value></data><data name="UDPtest_StopButtonText.Text" xml:space="preserve"><value>Stop</value></data><data name="UDPtest_SamplingInterval.Text" xml:space="preserve"><value>Sampling interval</value></data><data name="UDPtest_AddLinkButtonText.Text" xml:space="preserve"><value>Add UDP link</value></data><data name="UDPtest_HealthLabel.Text" xml:space="preserve"><value>Health</value></data><data name="UDPtest_ConditionLabel.Text" xml:space="preserve"><value>Condition</value></data><data name="UDPtest_RealtimeLabel.Text" xml:space="preserve"><value>Realtime</value></data><data name="UDPtest_QualityLabel.Text" xml:space="preserve"><value>Quality</value></data><data name="UDPtest_AvgRttLabel.Text" xml:space="preserve"><value>Avg RTT</value></data><data name="UDPtest_PeakRttLabel.Text" xml:space="preserve"><value>Peak RTT</value></data><data name="UDPtest_PeriodAvgLabel.Text" xml:space="preserve"><value>Period avg</value></data><data name="UDPtest_RttTrendLabel.Text" xml:space="preserve"><value>RTT trend</value></data><data name="UDPtest_NoSamplesLabel.Text" xml:space="preserve"><value>No samples in this period</value></data><data name="UDPtest_NoSuccessfulRttLabel" xml:space="preserve"><value>No successful RTT in this period</value></data><data name="UDPtest_UdpAssessmentLabel.Text" xml:space="preserve"><value>UDP assessment</value></data><data name="UDPtest_TcpBaselineLabel.Text" xml:space="preserve"><value>TCP baseline</value></data><data name="UDPtest_CurrentPathLabel.Text" xml:space="preserve"><value>Current path</value></data><data name="UDPtest_PublicIpLabel.Text" xml:space="preserve"><value>Public IP</value></data><data name="UDPtest_LocationLabel.Text" xml:space="preserve"><value>Location</value></data><data name="UDPtest_NatTypeLabel.Text" xml:space="preserve"><value>NAT type</value></data><data name="UDPtest_LocalRouteLabel.Text" xml:space="preserve"><value>Local route</value></data><data name="UDPtest_ColTarget.Text" xml:space="preserve"><value>Target</value></data><data name="UDPtest_ColPort.Text" xml:space="preserve"><value>Port</value></data><data name="UDPtest_ColAvgRtt.Text" xml:space="preserve"><value>Avg RTT</value></data><data name="UDPtest_ColJitter.Text" xml:space="preserve"><value>Jitter</value></data><data name="UDPtest_ColQuality.Text" xml:space="preserve"><value>Quality</value></data><data name="UDPtest_ColOkFail.Text" xml:space="preserve"><value>OK / Fail</value></data><data name="UDPtest_ColHttpIp.Text" xml:space="preserve"><value>HTTP IP</value></data><data name="UDPtest_ColUdpIp.Text" xml:space="preserve"><value>UDP IP</value></data><data name="UDPtest_ColLastError.Text" xml:space="preserve"><value>Last error</value></data><data name="UDPtest_ColOn.Text" xml:space="preserve"><value>On</value></data><data name="UDPtest_ColActions.Text" xml:space="preserve"><value>Actions</value></data><data name="UDPtest_ClearHistoryButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Clear RTT sample history for the selected line</value></data><data name="UDPtest_ConfigureTooltip.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Configure line settings</value></data><data name="UDPtest_IntervalButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sampling interval</value></data><data name="UDPtest_IntervalButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sampling interval</value></data><data name="GPOWarning.Text" xml:space="preserve"><value>This setting is managed by your organization.</value></data><data name="General_OpenLogsFolderButton.Content" xml:space="preserve"><value>Open logs folder</value></data><data name="NewInfoBadge.Text" xml:space="preserve"><value>NEW</value></data>
             <data name="AiHub_PolicyRulesExpander.Header" xml:space="preserve">
     <value>Policy rules</value>
   </data>
@@ -1583,26 +1583,14 @@
   <data name="NetMap_MapTitle.Text" xml:space="preserve">
     <value>MTR route and map</value>
   </data>
-  <data name="NetMap_MapNotice.Text" xml:space="preserve">
-    <value>Natural Earth · solid: consecutive located hops; dashed: unlocated gaps / egress illustration. Positions are approximate. Select a hop for RTT and loss.</value>
-  </data>
   <data name="NetMap_ServicesTitle.Text" xml:space="preserve">
     <value>Proxy service connectivity</value>
-  </data>
-  <data name="NetMap_ServicesSubtitle.Text" xml:space="preserve">
-    <value>Live proxy endpoints, response latencies, and egress trace checkpoints</value>
   </data>
   <data name="NetMap_Endpoint.Text" xml:space="preserve">
     <value>Service</value>
   </data>
-  <data name="NetMap_ServiceNotice.Text" xml:space="preserve">
-    <value>Proxy configuration only. Claude and ChatGPT validate trace checkpoints; Gemini and Google check web pages. Timing measures HTTP response headers. Missing ICMP replies do not prove application packet loss.</value>
-  </data>
   <data name="NetMap_Route.Header" xml:space="preserve">
     <value>Local route observations</value>
-  </data>
-  <data name="NetMap_RouteNotice.Text" xml:space="preserve">
-    <value>System ICMP route to the egress IP. RTT is from this device to each hop. Red means no reply; the first two failures retain the last RTT, then N/A. Average/loss remain cumulative.</value>
   </data>
   <data name="NetMap_Settings.Header" xml:space="preserve">
     <value>Map settings</value>
@@ -1632,7 +1620,7 @@
     <value>Local City MMDB (optional)</value>
   </data>
   <data name="NetMap_DatabaseNotice.Text" xml:space="preserve">
-    <value>Local MMDB takes priority. Online lookup sends public IPs to ipwho.is via the selected proxy mode, caches results for this session and skips private/reserved addresses. Disable the switch to use only local data. ASN downloads are manual below.</value>
+    <value>Local MMDB files take priority over online ipwho.is lookups; private addresses are skipped.</value>
   </data>
   <data name="NetMap_UnknownLocation" xml:space="preserve">
     <value>Location unknown</value>
@@ -1802,7 +1790,7 @@
   <data name="NetMap_HttpError" xml:space="preserve">
     <value>HTTP error</value>
   </data>
-  <data name="NetMap_OnlineLookup.Header" xml:space="preserve">
+  <data name="NetMap_OnlineLookupCard.Header" xml:space="preserve">
     <value>Fill missing ASN and locations online</value>
   </data>
   <data name="NetMap_GeoSource" xml:space="preserve">
@@ -1851,7 +1839,7 @@
     <value>ASN database update</value>
   </data>
   <data name="NetMap_UpdateNotice.Text" xml:space="preserve">
-    <value>Manual ASN downloads use the applied proxy settings and stop detection. SHA-256 and MMDB validation must pass before replacement. Source: P3TERX mirror of MaxMind GeoLite2, subject to its license. Leave the custom ASN path empty to use the downloaded database; click Start after updating.</value>
+    <value>Downloads and SHA-256 verifies GeoLite2-ASN via the active proxy settings.</value>
   </data>
   <data name="NetMap_UpdateWorking" xml:space="preserve">
     <value>Downloading and verifying data…</value>
@@ -1948,9 +1936,6 @@
   </data>
   <data name="Dashboard_RefreshOverview.AutomationProperties.Name" xml:space="preserve">
     <value>Refresh network information</value>
-  </data>
-  <data name="Dashboard_NetworkNote.Text" xml:space="preserve">
-    <value>Compare the public IP and location of each connection.</value>
   </data>
   <data name="Dashboard_StorageHeading.Text" xml:space="preserve">
     <value>Storage · used / total</value>
@@ -3980,9 +3965,6 @@
   <data name="AIHub_DiscardTaskPolicyButton.Content" xml:space="preserve">
     <value>Discard changes</value>
   </data>
-  <data name="AIHub_TaskPolicyDraftHint.Text" xml:space="preserve">
-    <value>Drafts are kept when switching policies. Save applies the selected policy to future tasks.</value>
-  </data>
   <data name="AIHub_Category_SelectedSummary" xml:space="preserve">
     <value>{0:N0}/{1:N0} approved files selected</value>
   </data>
@@ -4060,9 +4042,6 @@
   </data>
   <data name="AiHub_PolicyDescriptionOptimization" xml:space="preserve">
     <value>Review locally verified candidates without expanding their paths, actions or scope.</value>
-  </data>
-  <data name="AiHub_GlobalPolicyDraftHint.Text" xml:space="preserve">
-    <value>Edits and restored defaults remain drafts until saved. Policies can be edited while AI is off.</value>
   </data>
   <data name="Winget_AlreadyInstalled" xml:space="preserve">
     <value>Installed</value>
@@ -4252,7 +4231,6 @@
   <data name="Winget_OptionDefault" xml:space="preserve"><value>Package default</value></data>
   <data name="Winget_ScopeUser" xml:space="preserve"><value>Current user</value></data>
   <data name="Winget_ScopeMachine" xml:space="preserve"><value>All users</value></data>
-  <data name="Winget_OptionsExplanation" xml:space="preserve"><value>Options apply to the next selection you confirm. Administrator permission is still requested by Windows when required.</value></data>
   <data name="Winget_OptionsTitle" xml:space="preserve"><value>Operation options</value></data>
   <data name="Winget_ApplyOptions" xml:space="preserve"><value>Apply</value></data>
   <data name="Winget_NoIgnoredPackages" xml:space="preserve"><value>No updates are ignored.</value></data>
@@ -4327,19 +4305,19 @@
   <data name="Winget_SearchKeepsResults" xml:space="preserve"><value>Previous results remain visible while searching.</value></data>
   <data name="Winget_SearchRetryPrevious" xml:space="preserve"><value>The search did not finish. Previous results are retained; search again to retry.</value></data>
   <data name="Winget_SearchRetry" xml:space="preserve"><value>The search did not finish. Search again to retry.</value></data>
-  <data name="Winget_SearchSourceScope" xml:space="preserve"><value>WinGet community catalog (winget source) only. Microsoft Store and custom sources are not searched. Versions and installation status are checked when you open details or review an installation.</value></data>
+  <data name="Winget_SearchSourceScope" xml:space="preserve"><value>Searches the WinGet community catalog (winget source).</value></data>
   <data name="Winget_DetailsUnavailable" xml:space="preserve"><value>Package details could not be loaded. Retry when WinGet is ready.</value></data>
   <data name="Winget_RetryDetails" xml:space="preserve"><value>Retry details</value></data>
   <data name="Winget_CloseDetails" xml:space="preserve"><value>Close</value></data>
   <data name="Winget_PackageHomepage" xml:space="preserve"><value>Package homepage</value></data>
   <data name="Winget_LicenseLink" xml:space="preserve"><value>View license</value></data>
   <data name="Winget_SearchElapsed" xml:space="preserve"><value>Search time: {0:N2} s</value></data>
-  <data name="AiHub_MainEndpoint_ApiModeCard.Description" xml:space="preserve"><value>Choose a suggestion or enter a native API identifier. The selected kernel validates support.</value></data>
-  <data name="AiHub_FallbackEndpoint_ApiModeCard.Description" xml:space="preserve"><value>Choose a suggestion or enter a native API identifier. The selected kernel validates support.</value></data>
-  <data name="AiHub_MainEndpoint_ReasoningCard.Description" xml:space="preserve"><value>Passed unchanged to the selected kernel; support depends on the kernel and model.</value></data>
-  <data name="AiHub_FallbackEndpoint_ReasoningCard.Description" xml:space="preserve"><value>Passed unchanged to the selected kernel; support depends on the kernel and model.</value></data>
+  <data name="AiHub_MainEndpoint_ApiModeCard.Description" xml:space="preserve"><value>Select a preset or enter a custom API mode identifier.</value></data>
+  <data name="AiHub_FallbackEndpoint_ApiModeCard.Description" xml:space="preserve"><value>Select a preset or enter a custom API mode identifier.</value></data>
+  <data name="AiHub_MainEndpoint_ReasoningCard.Description" xml:space="preserve"><value>Reasoning level passed to supported models.</value></data>
+  <data name="AiHub_FallbackEndpoint_ReasoningCard.Description" xml:space="preserve"><value>Reasoning level passed to supported models.</value></data>
   <data name="AiHub_ContextWindowCard.Header" xml:space="preserve"><value>Context window</value></data>
-  <data name="AiHub_ContextWindowCard.Description" xml:space="preserve"><value>Tokens available to this endpoint. Default: 256,000. Match the model's supported context size.</value></data>
+  <data name="AiHub_ContextWindowCard.Description" xml:space="preserve"><value>Maximum context size in tokens (default: 256,000).</value></data>
   <data name="AiHub_ContextWindowBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Context window in tokens</value></data>
   <data name="AiHub_ContextWindowInvalid" xml:space="preserve"><value>Enter a whole number of tokens between 1,024 and 2,147,483,647.</value></data>
   <data name="AiHub_EndpointInvalid" xml:space="preserve"><value>Check the endpoint URL, model, native API mode, reasoning effort, and context window.</value></data>
@@ -4352,13 +4330,12 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AiHub_DiagnosticsPersistenceOnFormat" xml:space="preserve"><value>Bounded diagnostic history follows the Kit log level (up to 256 records / 256 KiB). No prompts, replies or credentials are recorded. Persistence failures: {0}.</value></data>
   <data name="AiHub_DiagnosticsPersistenceOffFormat" xml:space="preserve"><value>Kit logging is off. These session counters stay in memory; no new diagnostic history is saved. Persistence failures: {0}.</value></data>
   <data name="AIHub_Inventory_Title.Text" xml:space="preserve"><value>Space composition</value></data>
-  <data name="AIHub_Inventory_Description.Text" xml:space="preserve"><value>Explore caches, diagnostics and managed storage. Analysis works locally without AI.</value></data>
+  <data name="AIHub_Inventory_Description.Text" xml:space="preserve"><value>Inspect disk usage across caches, diagnostic logs, and system-managed folders.</value></data>
   <data name="AIHub_Inventory_AnalyzeButton.Content" xml:space="preserve"><value>Analyze storage</value></data>
   <data name="AIHub_Inventory_StopButton.Content" xml:space="preserve"><value>Cancel</value></data>
   <data name="AIHub_Inventory_ObservedLabel.Text" xml:space="preserve"><value>Observed space</value></data>
   <data name="AIHub_Inventory_RecentLabel.Text" xml:space="preserve"><value>Modified within 7 days</value></data>
   <data name="AIHub_Inventory_OldLabel.Text" xml:space="preserve"><value>30 days or older</value></data>
-  <data name="AIHub_Inventory_SizeCaveat.Text" xml:space="preserve"><value>Observed space includes active files. Only separately reviewed items below can be selected for cleanup.</value></data>
   <data name="AIHub_Inventory_PartialHint.Text" xml:space="preserve"><value>Some locations could not be fully measured within the scan limits. Totals show only observed files.</value></data>
   <data name="AIHub_Inventory_SearchBox.PlaceholderText" xml:space="preserve"><value>Search locations, paths or guidance</value></data>
   <data name="AIHub_Inventory_SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Search storage locations</value></data>
@@ -4398,7 +4375,6 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_ScanMode.Header" xml:space="preserve"><value>Scan mode</value></data>
   <data name="AIHub_Fluent_ScanRange.Header" xml:space="preserve"><value>Time range</value></data>
   <data name="AIHub_Fluent_FullChannels.Content" xml:space="preserve"><value>Include Security and Firewall logs (requires administrator)</value></data>
-  <data name="AIHub_Fluent_NextScanHint.Text" xml:space="preserve"><value>Applies to the next scan only.</value></data>
   <data name="AIHub_Fluent_AuditHistory.Content" xml:space="preserve"><value>Audit history</value></data>
   <data name="AIHub_WeeklyReport.Content" xml:space="preserve"><value>Weekly audit report</value></data>
   <data name="AIHub_WeeklyLoading" xml:space="preserve"><value>Reading audit history…</value></data>
@@ -4418,9 +4394,7 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_AiSummary.Text" xml:space="preserve"><value>AI analysis summary</value></data>
   <data name="AIHub_Fluent_FullReport.Content" xml:space="preserve"><value>Read full analysis →</value></data>
   <data name="AIHub_Fluent_ReportExpander.Header" xml:space="preserve"><value>Full AI analysis</value></data>
-  <data name="AIHub_Fluent_StorageCapacityHint.Text" xml:space="preserve"><value>Organizing downloads moves files and does not free space.</value></data>
   <data name="AIHub_Fluent_ExecutionHistory.Content" xml:space="preserve"><value>Execution history</value></data>
-  <data name="AIHub_Fluent_OptimizationSteps.Text" xml:space="preserve"><value>Scan candidates → Review selection → Confirm operations</value></data>
   <data name="AIHub_Fluent_HistoryExpander.Header" xml:space="preserve"><value>Execution history and results</value></data>
   <data name="AIHub_Fluent_InventoryExpander.Header" xml:space="preserve"><value>Directory space inventory</value></data>
   <data name="AIHub_Fluent_SelectedDeletes.Text" xml:space="preserve"><value>To free</value></data>
@@ -4438,7 +4412,6 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_ResultRange" xml:space="preserve"><value>Audit range</value></data>
   <data name="AIHub_Fluent_Assessment" xml:space="preserve"><value>Assessment</value></data>
   <data name="AIHub_Fluent_EventEvidence" xml:space="preserve"><value>Event evidence and references</value></data>
-  <data name="AIHub_Fluent_EventEvidenceDescription" xml:space="preserve"><value>Evidence recorded with this finding. Event references identify the underlying records.</value></data>
   <data name="AIHub_Fluent_EventReferences" xml:space="preserve"><value>Event references</value></data>
   <data name="AIHub_Fluent_EventChannel" xml:space="preserve"><value>Channel</value></data>
   <data name="AIHub_Fluent_EventTime" xml:space="preserve"><value>Timestamp</value></data>
@@ -4475,19 +4448,11 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AIHub_Fluent_AnalysisNeedsEvents" xml:space="preserve"><value>Stored findings remain available. Run a scan to collect events for deep analysis.</value></data>
   <data name="AIHub_Fluent_LatestAuditFormat" xml:space="preserve"><value>Security audit · {0}</value></data>
   <data name="AIHub_Fluent_RelatedEvidence.Text" xml:space="preserve"><value>Related evidence</value></data>
-  <data name="AIHub_Fluent_AuditBoundaryFooter.Text" xml:space="preserve"><value>Rule-based results and AI suggestions are presented separately</value></data>
   <data name="AIHub_Fluent_LegendActionableFormat" xml:space="preserve"><value>Actionable {0}</value></data>
   <data name="AIHub_Fluent_LegendReviewFormat" xml:space="preserve"><value>Review {0}</value></data>
   <data name="AIHub_Fluent_LegendRetainedFormat" xml:space="preserve"><value>Retained {0}</value></data>
-  <data name="AIHub_Fluent_SelectionFooterHint.Text" xml:space="preserve"><value>Review operations and affected scope before execution</value></data>
-  <data name="AIHub_Fluent_OptimizationBoundaryFooter.Text" xml:space="preserve"><value>Protected items are retained; Downloads are organized by file type</value></data>
   <data name="AIHub_Fluent_AuditPolicyHeading" xml:space="preserve"><value>Security audit instructions</value></data>
   <data name="AIHub_Fluent_OptPolicyHeading" xml:space="preserve"><value>Optimization instructions</value></data>
-  <data name="AIHub_Fluent_PolicyScopeTitle.Text" xml:space="preserve"><value>Scope of effect</value></data>
-  <data name="AIHub_Fluent_AuditPolicyScopePrimary" xml:space="preserve"><value>Governs event analysis priorities, conclusion structure, and recommended action output.</value></data>
-  <data name="AIHub_Fluent_OptPolicyScopePrimary" xml:space="preserve"><value>Governs how candidate files are categorized, cleanup suggestions are formed, and retention boundaries are applied.</value></data>
-  <data name="AIHub_Fluent_PolicyScopeBoundary.Text" xml:space="preserve"><value>Specific items still require review before execution.</value></data>
-  <data name="AIHub_Fluent_PolicyFooterHint.Text" xml:space="preserve"><value>Saved changes apply to the next task; switching tabs preserves drafts.</value></data>
   <data name="UDPtest_UdpAssessmentSingleTargetStable" xml:space="preserve">
     <value>Supported / Single-Target Stable</value>
   </data>
@@ -4520,9 +4485,9 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   </data>
   <data name="Winget_ChooseVersion" xml:space="preserve"><value>Version to install</value></data>
   <data name="Winget_ApplyVersion" xml:space="preserve"><value>Use this version</value></data>
-  <data name="Winget_VersionExplanation" xml:space="preserve"><value>Choose a catalog version, then select the package and review the operation. Updates require a newer version; downgrade is not supported.</value></data>
+  <data name="Winget_VersionExplanation" xml:space="preserve"><value>Select a version to apply; updates require a newer version.</value></data>
   <data name="Winget_InstallLocation" xml:space="preserve"><value>Installation folder</value></data>
-  <data name="Winget_InstallLocationHint" xml:space="preserve"><value>Optional absolute folder. Installer support varies; this changes the installation destination, not the download cache. Applies to the selected batch.</value></data>
+  <data name="Winget_InstallLocationHint" xml:space="preserve"><value>Optional local folder path (if supported by the package installer).</value></data>
   <data name="Winget_IgnoreScope" xml:space="preserve"><value>Ignore updates</value></data>
   <data name="Winget_IgnoreThisVersion" xml:space="preserve"><value>Only this available version</value></data>
   <data name="Winget_IgnoreAllVersions" xml:space="preserve"><value>All future versions</value></data>
@@ -4531,7 +4496,7 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="Winget_HistoryOlder30" xml:space="preserve"><value>Completed more than 30 days ago</value></data>
   <data name="Winget_HistoryAllCompleted" xml:space="preserve"><value>All completed records</value></data>
   <data name="Winget_ClearHistory" xml:space="preserve"><value>Clear these records</value></data>
-  <data name="Winget_HistoryCleanupHint" xml:space="preserve"><value>Removes saved installation, update and uninstall history. Keeps the current queue and records awaiting verification. Installed applications are unchanged.</value></data>
+  <data name="Winget_HistoryCleanupHint" xml:space="preserve"><value>Clears completed operation records without affecting queued tasks or installed apps.</value></data>
   <data name="Winget_ActiveFilterSummary" xml:space="preserve"><value>{0} active filters · showing {1} of {2} packages</value></data>
   <data name="Winget_ResetFilters" xml:space="preserve"><value>Clear filters</value></data>
   <data name="AIHub_AuditOverviewHeading" xml:space="preserve"><value>System issue overview · {0}</value></data>
@@ -4605,13 +4570,13 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="NetMap_LegendApprox.Text" xml:space="preserve"><value>Approximate</value></data>
   <data name="AiHub_SubagentsExpander.Header" xml:space="preserve"><value>Parallel analysis</value></data>
   <data name="AiHub_SubagentsCard.Header" xml:space="preserve"><value>Analysis subagents</value></data>
-  <data name="AiHub_SubagentsCard.Description" xml:space="preserve"><value>Kit assigns independent evidence groups to isolated analysis workers. Available with Codex and Pi.</value></data>
+  <data name="AiHub_SubagentsCard.Description" xml:space="preserve"><value>Process independent evidence groups in parallel with Codex or Pi.</value></data>
   <data name="AiHub_SubagentsToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Enable analysis subagents</value></data>
   <data name="AiHub_ServiceConcurrencyCard.Header" xml:space="preserve"><value>Service concurrency</value></data>
-  <data name="AiHub_ServiceConcurrencyCard.Description" xml:space="preserve"><value>Maximum analyses running at once across tasks in this Settings session.</value></data>
+  <data name="AiHub_ServiceConcurrencyCard.Description" xml:space="preserve"><value>Maximum concurrent analyses across all active tasks.</value></data>
   <data name="AiHub_ServiceConcurrencyBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Service concurrency</value></data>
   <data name="AiHub_TaskAgentsCard.Header" xml:space="preserve"><value>Subagents per task</value></data>
-  <data name="AiHub_TaskAgentsCard.Description" xml:space="preserve"><value>Each task can use available capacity up to this limit. Waiting tasks share capacity fairly.</value></data>
+  <data name="AiHub_TaskAgentsCard.Description" xml:space="preserve"><value>Maximum parallel workers assigned to a single task.</value></data>
   <data name="AiHub_TaskAgentsBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Subagents per task</value></data>
   <data name="AiHub_SubagentsSummaryFormat" xml:space="preserve"><value>{0}: up to {1} analyses per task, {2} across this session</value></data>
 </root>

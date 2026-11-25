@@ -51,7 +51,6 @@ public sealed partial class WingetOptionsDialog : ContentDialog
         InstallLocationBox.Text = viewModel.InstallLocation ?? string.Empty;
         InvalidLocationText.Text = WingetViewModel.L("InvalidInstallLocation");
         InstallLocationHintText.Text = WingetViewModel.L("InstallLocationHint");
-        OptionsExplanationText.Text = WingetViewModel.L("OptionsExplanation");
 
         InstallOnlyOptionsPanel.Visibility = isInstalledTab ? Visibility.Collapsed : Visibility.Visible;
         ValidateLocation();

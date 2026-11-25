@@ -55,6 +55,8 @@ public sealed partial class MainWindow : WindowEx, IDisposable
     private LowLevelMouseProc? _mouseHookDelegate;
 
     private const int DwmWaCloak = 13;
+    private const int DwmWaWindowCornerPreference = 33;
+    private const int DwmWcpRound = 2;
     private const int GwlStyle = -16;
     private const int GwlExStyle = -20;
     private const int SwHide = 0;
@@ -679,6 +681,9 @@ public sealed partial class MainWindow : WindowEx, IDisposable
             // Apply the new chrome immediately so caption buttons disappear right away and the tool-window flag takes effect.
             SetWindowPosNative(_hwnd, IntPtr.Zero, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoZorder | SwpNoActivate | SwpFrameChanged);
         }
+
+        int cornerPreference = DwmWcpRound;
+        _ = DwmSetWindowAttribute(_hwnd, DwmWaWindowCornerPreference, ref cornerPreference, sizeof(int));
     }
 
     private const int WhMouseLl = 14;

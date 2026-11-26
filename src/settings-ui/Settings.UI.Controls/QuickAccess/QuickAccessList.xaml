@@ -28,11 +28,15 @@
                         MaxLines="2" />
                 </local:FlyoutMenuButton.Content>
                 <local:FlyoutMenuButton.Icon>
-                    <Image Width="32" Height="32">
-                        <Image.Source>
-                            <BitmapImage DecodePixelWidth="64" UriSource="{x:Bind Icon, Mode=OneWay}" />
-                        </Image.Source>
-                    </Image>
+                    <Image
+                        x:Name="QuickAccessTileIcon"
+                        Width="32"
+                        Height="32"
+                        Stretch="Uniform"
+                        Tag="{x:Bind Icon, Mode=OneWay}"
+                        Loaded="QuickAccessIcon_Loaded"
+                        Unloaded="QuickAccessIcon_Unloaded"
+                        DataContextChanged="QuickAccessIcon_DataContextChanged" />
                 </local:FlyoutMenuButton.Icon>
                 <ToolTipService.ToolTip>
                     <ToolTip Content="{x:Bind Description, Mode=OneWay}" Visibility="{x:Bind Description, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
@@ -54,11 +58,16 @@
                 VerticalContentAlignment="Center"
                 Style="{StaticResource SubtleButtonStyle}"
                 Visibility="{x:Bind Visible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Image x:Name="QuickAccessIcon" Width="32" Height="32" AutomationProperties.AccessibilityView="Raw">
-                    <Image.Source>
-                        <BitmapImage DecodePixelWidth="64" UriSource="{x:Bind Icon, Mode=OneWay}" />
-                    </Image.Source>
-                </Image>
+                <Image
+                    x:Name="QuickAccessIcon"
+                    Width="32"
+                    Height="32"
+                    Stretch="Uniform"
+                    AutomationProperties.AccessibilityView="Raw"
+                    Tag="{x:Bind Icon, Mode=OneWay}"
+                    Loaded="QuickAccessIcon_Loaded"
+                    Unloaded="QuickAccessIcon_Unloaded"
+                    DataContextChanged="QuickAccessIcon_DataContextChanged" />
                 <ToolTipService.ToolTip>
                     <ToolTip>
                         <StackPanel Spacing="4">

@@ -19,7 +19,7 @@
             Margin="0,0,24,0"
             HorizontalAlignment="Stretch"
             ColumnDefinitions="*,Auto"
-            RowDefinitions="Auto,Auto"
+            RowDefinitions="Auto,Auto,Auto"
             ColumnSpacing="16">
             <TextBlock
                 x:Name="Header"
@@ -76,6 +76,14 @@
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
             </StackPanel>
+            <ContentPresenter
+                x:Name="HeaderSubContentPresenter"
+                Grid.Row="2"
+                Grid.ColumnSpan="2"
+                Margin="0,12,0,0"
+                HorizontalAlignment="Stretch"
+                Content="{x:Bind HeaderSubContent, Mode=OneWay}"
+                Visibility="{x:Bind GetHeaderSubContentVisibility(HeaderSubContent), Mode=OneWay}" />
         </Grid>
 
         <ScrollViewer Grid.Row="1" AutomationProperties.AutomationId="PageScrollViewer">

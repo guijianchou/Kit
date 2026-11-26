@@ -4375,4 +4375,40 @@ Main 尝试 {3} · Fallback 尝试 {4} · 任务总耗时 {5:N1} 秒
   <data name="Dashboard_UpdateRecovery" xml:space="preserve">
     <value>更新需要恢复</value>
   </data>
+  <data name="Dashboard_UpdateChecking" xml:space="preserve">
+    <value>正在检查更新…</value>
+  </data>
+  <data name="Dashboard_UpdateCheckPrompt" xml:space="preserve">
+    <value>上次检查：未检查</value>
+  </data>
+  <data name="Dashboard_UpdateUpToDate" xml:space="preserve">
+    <value>已是最新版本</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedJustNow" xml:space="preserve">
+    <value>上次检查：刚刚</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedMinute" xml:space="preserve">
+    <value>上次检查：1 分钟前</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedMinutes" xml:space="preserve">
+    <value>上次检查：{0} 分钟前</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedHour" xml:space="preserve">
+    <value>上次检查：1 小时前</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedHours" xml:space="preserve">
+    <value>上次检查：{0} 小时前</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedDay" xml:space="preserve">
+    <value>上次检查：1 天前</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedDays" xml:space="preserve">
+    <value>上次检查：{0} 天前</value>
+  </data>
+  <data name="Dashboard_UpdateOpenSettingsHint" xml:space="preserve">
+    <value>打开版本与更新</value>
+  </data>
+  <data name="Dashboard_UpdateTitle.Text" xml:space="preserve">
+    <value>Kit Update</value>
+  </data>
 </root>

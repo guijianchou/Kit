@@ -328,7 +328,11 @@ public partial class DashboardViewModel
             {
                 overviewTimer = dispatcher.CreateTimer();
                 overviewTimer.Interval = TimeSpan.FromSeconds(10);
-                overviewTimer.Tick += async (_, _) => await RefreshOverviewAsync();
+                overviewTimer.Tick += async (_, _) =>
+                {
+                    RefreshUpdateRelativeTime();
+                    await RefreshOverviewAsync();
+                };
             }
 
             uptimeTimer.Start();

@@ -27,6 +27,7 @@ internal sealed class UpdateStateSource
     private readonly Func<Action, IFileSystemWatcher?> watch;
     private IFileSystemWatcher? watcher;
     private UpdatingSettings? snapshot;
+    private bool manualCheckInProgress;
     private bool refreshing;
     private long requestedVersion;
 
@@ -34,6 +35,39 @@ internal sealed class UpdateStateSource
     {
         this.read = read ?? UpdatingSettings.LoadSettings;
         this.watch = watch ?? CreateWatcher;
+    }
+
+    internal bool IsChecking
+    {
+        get
+        {
+            lock (gate)
+            {
+                return manualCheckInProgress;
+            }
+        }
+    }
+
+    internal void SetManualCheckInProgress(bool checking)
+    {
+        Subscription[] listeners;
+        UpdatingSettings? current;
+        lock (gate)
+        {
+            if (manualCheckInProgress == checking)
+            {
+                return;
+            }
+
+            manualCheckInProgress = checking;
+            current = Clone(snapshot);
+            listeners = subscriptions.ToArray();
+        }
+
+        foreach (Subscription listener in listeners)
+        {
+            listener.Notify(Clone(current));
+        }
     }
 
     internal UpdatingSettings? Snapshot

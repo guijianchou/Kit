@@ -1336,6 +1336,7 @@ namespace Kit.Settings.UI.ViewModels
             _manualUpdateCheckBaselineLastChecked = UpdatingSettings.LoadSettings()?.LastCheckedDateTime;
             var requestId = Interlocked.Increment(ref _manualUpdateCheckRequestId);
             IsCheckingForUpdates = true;
+            UpdateStateSource.Current.SetManualCheckInProgress(true);
             ShowUpdateCheckMessage(GetResourceString("General_CheckingForUpdates/Text"), "Informational", true);
 
             var dataToSend = JsonSerializer.Serialize(ActionMessage.Create("check_for_updates"), SourceGenerationContextContext.Default.ActionMessage);
@@ -1401,6 +1402,7 @@ namespace Kit.Settings.UI.ViewModels
         {
             _manualUpdateCheckBaselineLastChecked = null;
             IsCheckingForUpdates = false;
+            UpdateStateSource.Current.SetManualCheckInProgress(false);
         }
 
         private static bool IsResultNewerThanBaseline(UpdatingSettings updateSettings, DateTime? baselineLastChecked)

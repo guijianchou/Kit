@@ -31,6 +31,35 @@
             <!-- 更新可用徽章点（原 InfoBadge UpdateInfoBadgeStyle） -->
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="#F09A2A" />
 
+            <!-- 主页顶部 Kit Update 紧凑圆形图标（与 Windows 11 设置首页统一，贴合 Mica 底面） -->
+            <LinearGradientBrush x:Key="KitUpdateStatusNormalBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
+                <GradientStop Offset="0.0" Color="#FF29A8F2" />
+                <GradientStop Offset="1.0" Color="#FF0072C6" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="KitUpdateStatusAttentionBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
+                <GradientStop Offset="0.0" Color="#FFF2B035" />
+                <GradientStop Offset="1.0" Color="#FFD17408" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="KitUpdateStatusErrorBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
+                <GradientStop Offset="0.0" Color="#FFE86464" />
+                <GradientStop Offset="1.0" Color="#FFC42B1C" />
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="KitUpdateStatusGlyphBrush" Color="#FFFFFFFF" />
+
+            <!-- 设置导航标签柔和淡彩体系（低饱和度，兼容任意 Mica 壁纸底色） -->
+            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FFC7A6DB" />
+            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#18C7A6DB" />
+            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="#FF7DC2EB" />
+            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="#187DC2EB" />
+            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="#FFE0AA7A" />
+            <SolidColorBrush x:Key="SectionAiTintBrush" Color="#18E0AA7A" />
+            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="#FF86C78A" />
+            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="#1886C78A" />
+            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="#FF78C2CC" />
+            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#1878C2CC" />
+            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FFDE96B2" />
+            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#18DE96B2" />
+
             <!-- 使用率进度条调色（UsageProgressBar 类别令牌；数值与旧内联 ARGB 逐位一致） -->
             <SolidColorBrush x:Key="KitUsageCpuBrush" Color="#FF38B6FF" />
             <SolidColorBrush x:Key="KitUsageMemoryBrush" Color="#FFB146C2" />
@@ -46,6 +75,12 @@
             <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.10" StartPoint="0,0" EndPoint="1,1">
                 <GradientStop Offset="0" Color="{ThemeResource SystemAccentColorLight2}" />
                 <GradientStop Offset="0.6" Color="Transparent" />
+            </LinearGradientBrush>
+            <!-- 设置顶栏由左向右渐淡透底配色（跟随系统主题与 Mica 背景） -->
+            <LinearGradientBrush x:Key="KitSettingsSectionBarBrush" Opacity="0.22" StartPoint="0,0.5" EndPoint="1,0.5">
+                <GradientStop Offset="0.0" Color="{ThemeResource SystemAccentColorLight2}" />
+                <GradientStop Offset="0.48" Color="{ThemeResource SystemAccentColor}" />
+                <GradientStop Offset="1.0" Color="Transparent" />
             </LinearGradientBrush>
         </ResourceDictionary>
 
@@ -69,6 +104,35 @@
 
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="#F09A2A" />
 
+            <!-- 主页顶部 Kit Update 紧凑圆形图标（与 Windows 11 设置首页统一，贴合 Mica 底面） -->
+            <LinearGradientBrush x:Key="KitUpdateStatusNormalBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
+                <GradientStop Offset="0.0" Color="#FF1E9CEB" />
+                <GradientStop Offset="1.0" Color="#FF006CC1" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="KitUpdateStatusAttentionBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
+                <GradientStop Offset="0.0" Color="#FFE8A225" />
+                <GradientStop Offset="1.0" Color="#FFC76A00" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="KitUpdateStatusErrorBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
+                <GradientStop Offset="0.0" Color="#FFE05252" />
+                <GradientStop Offset="1.0" Color="#FFB82318" />
+            </LinearGradientBrush>
+            <SolidColorBrush x:Key="KitUpdateStatusGlyphBrush" Color="#FFFFFFFF" />
+
+            <!-- 设置导航标签柔和淡彩体系（低饱和度，兼容任意 Mica 壁纸底色） -->
+            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FF785596" />
+            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="#10785596" />
+            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="#FF2E6FA3" />
+            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="#102E6FA3" />
+            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="#FFA66436" />
+            <SolidColorBrush x:Key="SectionAiTintBrush" Color="#10A66436" />
+            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="#FF387A54" />
+            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="#10387A54" />
+            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="#FF2E747E" />
+            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="#102E747E" />
+            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="#FF994E70" />
+            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="#10994E70" />
+
             <!-- 使用率进度条调色（UsageProgressBar 类别令牌；数值与旧内联 ARGB 逐位一致） -->
             <SolidColorBrush x:Key="KitUsageCpuBrush" Color="#FF0078D4" />
             <SolidColorBrush x:Key="KitUsageMemoryBrush" Color="#FF744DA9" />
@@ -83,6 +147,11 @@
             <LinearGradientBrush x:Key="KitHeroGradientBrush" Opacity="0.12" StartPoint="0,0" EndPoint="1,1">
                 <GradientStop Offset="0" Color="{ThemeResource SystemAccentColorLight2}" />
                 <GradientStop Offset="0.6" Color="Transparent" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="KitSettingsSectionBarBrush" Opacity="0.18" StartPoint="0,0.5" EndPoint="1,0.5">
+                <GradientStop Offset="0.0" Color="{ThemeResource SystemAccentColor}" />
+                <GradientStop Offset="0.48" Color="{ThemeResource SystemAccentColorLight2}" />
+                <GradientStop Offset="1.0" Color="Transparent" />
             </LinearGradientBrush>
         </ResourceDictionary>
 
@@ -103,6 +172,24 @@
 
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="{StaticResource SystemColorWindowTextColor}" />
 
+            <SolidColorBrush x:Key="KitUpdateStatusNormalBadgeBrush" Color="{StaticResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionBadgeBrush" Color="{StaticResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorBadgeBrush" Color="{StaticResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusGlyphBrush" Color="{StaticResource SystemColorHighlightTextColor}" />
+
+            <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionStartupForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionStartupTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionAiForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionAiTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionDiagnosticsForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionDiagnosticsTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionBackupForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionBackupTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="SectionUpdatesForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="SectionUpdatesTintBrush" Color="{StaticResource SystemColorWindowColor}" />
+
             <!-- 使用率进度条调色（高对比：全部随窗口文本色，保证可达性） -->
             <SolidColorBrush x:Key="KitUsageCpuBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="KitUsageMemoryBrush" Color="{StaticResource SystemColorWindowTextColor}" />
@@ -115,6 +202,7 @@
 
             <SolidColorBrush x:Key="KitAccentTintBrush" Color="{StaticResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="KitHeroGradientBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="KitSettingsSectionBarBrush" Color="{StaticResource SystemColorWindowColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

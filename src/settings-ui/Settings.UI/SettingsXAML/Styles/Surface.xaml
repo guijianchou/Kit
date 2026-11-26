@@ -177,4 +177,34 @@
             <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
         </Style>
     </ResourceDictionary>
+
+    <!-- 主页顶部 Kit Update 圆形图标底色与副标题语义样式（响应运行时浅/深/高对比主题切换） -->
+    <ResourceDictionary x:Key="KitUpdateBadgeStyles">
+        <Style x:Key="NormalBadge" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource KitUpdateStatusNormalBadgeBrush}" />
+        </Style>
+        <Style x:Key="AttentionBadge" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource KitUpdateStatusAttentionBadgeBrush}" />
+        </Style>
+        <Style x:Key="ErrorBadge" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource KitUpdateStatusErrorBadgeBrush}" />
+        </Style>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="KitUpdateStatusTextStyles">
+        <Style x:Key="NormalText" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+            <Setter Property="FontFamily" Value="{ThemeResource KitUiFontFamily}" />
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style x:Key="AttentionText" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+            <Setter Property="FontFamily" Value="{ThemeResource KitUiFontFamily}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+        </Style>
+        <Style x:Key="ErrorText" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+            <Setter Property="FontFamily" Value="{ThemeResource KitUiFontFamily}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        </Style>
+    </ResourceDictionary>
 </ResourceDictionary>

@@ -87,7 +87,7 @@ namespace Kit.Settings.UI.Views
             DashboardSingleColumnTrigger.MaxWidth = TypographyResources.FontSize(720);
             DashboardHeaderWideTrigger.MinWidth = TypographyResources.FontSize(480);
             DashboardHeaderNarrowTrigger.MaxWidth = TypographyResources.FontSize(480);
-            DashboardVersionPanel.MaxWidth = TypographyResources.FontSize(280);
+            DashboardVersionPanel.MaxWidth = TypographyResources.FontSize(340);
             UpdateDetailRows(SystemOverviewCard);
         }
 
@@ -153,6 +153,22 @@ namespace Kit.Settings.UI.Views
 
         private void UpdateNotice_Click(object sender, RoutedEventArgs e) =>
             NavigationService.Navigate(typeof(GeneralPage), new NavigationParams("VersionAndUpdateGroup"));
+
+        /// <summary>Maps an update status kind to its themed icon badge style.</summary>
+        public Style UpdateBadgeStyle(DashboardUpdateStatusKind kind) => (Style)((ResourceDictionary)Application.Current.Resources["KitUpdateBadgeStyles"])[kind switch
+        {
+            DashboardUpdateStatusKind.Attention => "AttentionBadge",
+            DashboardUpdateStatusKind.Error => "ErrorBadge",
+            _ => "NormalBadge",
+        }];
+
+        /// <summary>Maps an update status kind to its themed subtitle text style.</summary>
+        public Style UpdateStatusTextStyle(DashboardUpdateStatusKind kind) => (Style)((ResourceDictionary)Application.Current.Resources["KitUpdateStatusTextStyles"])[kind switch
+        {
+            DashboardUpdateStatusKind.Attention => "AttentionText",
+            DashboardUpdateStatusKind.Error => "ErrorText",
+            _ => "NormalText",
+        }];
 
         /// <summary>Maps an egress health state to the shared text style (app-level KitEgressStatusStyles).</summary>
         public Style EgressTextStyle(ProbeHealth health) => (Style)((ResourceDictionary)Application.Current.Resources["KitEgressStatusStyles"])[health switch

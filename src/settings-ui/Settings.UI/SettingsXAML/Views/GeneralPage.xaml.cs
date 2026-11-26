@@ -11,10 +11,10 @@ using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Navigation;
 
 namespace Kit.Settings.UI.Views
 {
@@ -29,7 +29,7 @@ namespace Kit.Settings.UI.Views
         private bool _aiSettingsPresented;
         private bool _aiPresentationQueued;
         private bool _waitingForAiRender;
-        private string _pendingSettingsSection;
+        private string _pendingExternalSection;
 
         /// <summary>
         /// Gets or sets view model.
@@ -187,11 +187,33 @@ namespace Kit.Settings.UI.Views
             AiServiceSettingsSurface.IsHitTestVisible = true;
             AiServiceSettingsLoadingRing.IsActive = false;
             AiServiceSettingsLoading.Visibility = Visibility.Collapsed;
+
+            if (!string.IsNullOrEmpty(_pendingExternalSection))
+            {
+                string targetSection = _pendingExternalSection;
+                _pendingExternalSection = null;
+                DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => NavigateToSection(targetSection, animate: false));
+            }
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            string targetSection = e.Parameter switch
+            {
+                NavigationParams navParams => navParams.ElementName,
+                string sectionName => sectionName,
+                _ => null,
+            };
+
+            _pendingExternalSection = !_aiSettingsPresented && !string.IsNullOrEmpty(targetSection)
+                ? targetSection
+                : null;
         }
 
         private void OnPageUnloaded(object sender, RoutedEventArgs e)
         {
-            _pendingSettingsSection = null;
+            _pendingExternalSection = null;
             AiServiceSettingsLoadingRing.IsActive = false;
             CancelAiSettingsRendering();
         }
@@ -213,70 +235,42 @@ namespace Kit.Settings.UI.Views
 
         private void SettingsSection_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuFlyoutItem { Tag: string sectionName })
+            if (sender is Button { Tag: string sectionName })
             {
-                _pendingSettingsSection = sectionName;
+                _pendingExternalSection = null;
+                NavigateToSection(sectionName, animate: true);
             }
         }
 
-        private void SettingsSectionMenu_Opening(object sender, object e)
+        private void NavigateToSection(string sectionName, bool animate)
         {
-            if (sender is not MenuFlyout menu)
+            if (!IsLoaded || string.IsNullOrEmpty(sectionName) || FindName(sectionName) is not FrameworkElement section)
             {
                 return;
             }
 
-            foreach (var item in menu.Items)
+            Control focusTarget = sectionName switch
             {
-                if (item is MenuFlyoutItem { Tag: string sectionName } && FindName(sectionName) is Controls.SettingsGroup section)
-                {
-                    AutomationProperties.SetName(item, section.Header);
-                }
-            }
-        }
+                nameof(AppearanceAndBehaviorGroup) => ThemeSelector,
+                nameof(StartupAndPermissionsGroup) => StartupToggle,
+                nameof(AiServicesGroup) => AiServiceToggle,
+                nameof(DiagnosticsGroup) => DiagnosticsToggle,
+                nameof(BackupAndRestoreGroup) => BackupButton,
+                nameof(VersionAndUpdateGroup) => CheckForUpdatesButton,
+                _ => null,
+            };
 
-        private void SettingsSectionMenu_Closed(object sender, object e)
-        {
-            var sectionName = _pendingSettingsSection;
-            _pendingSettingsSection = null;
-            if (sectionName == null)
+            if (focusTarget?.Focus(FocusState.Programmatic) != true && FocusManager.FindFirstFocusableElement(section) is Control fallback)
             {
-                return;
+                fallback.Focus(FocusState.Programmatic);
             }
 
-            // The flyout restores focus to its owner when it closes. Move focus
-            // afterwards, then scroll the section heading into view so the focus
-            // change cannot replace the requested section position.
-            DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+            section.StartBringIntoView(new BringIntoViewOptions
             {
-                if (!IsLoaded || FindName(sectionName) is not FrameworkElement section)
-                {
-                    return;
-                }
-
-                Control focusTarget = sectionName switch
-                {
-                    nameof(AppearanceAndBehaviorGroup) => ThemeSelector,
-                    nameof(StartupAndPermissionsGroup) => StartupToggle,
-                    nameof(AiServicesGroup) => AiServiceToggle,
-                    nameof(DiagnosticsGroup) => DiagnosticsToggle,
-                    nameof(BackupAndRestoreGroup) => BackupButton,
-                    nameof(VersionAndUpdateGroup) => CheckForUpdatesButton,
-                    _ => null,
-                };
-
-                if (focusTarget?.Focus(FocusState.Keyboard) != true && FocusManager.FindFirstFocusableElement(section) is Control fallback)
-                {
-                    fallback.Focus(FocusState.Keyboard);
-                }
-
-                section.StartBringIntoView(new BringIntoViewOptions
-                {
-                    AnimationDesired = false,
-                    VerticalAlignmentRatio = 0,
-                    VerticalOffset = 8,
-                    TargetRect = new Windows.Foundation.Rect(0, 0, section.ActualWidth, Math.Min(section.ActualHeight, 96)),
-                });
+                AnimationDesired = animate,
+                VerticalAlignmentRatio = 0,
+                VerticalOffset = 8,
+                TargetRect = new Windows.Foundation.Rect(0, 0, section.ActualWidth, Math.Min(section.ActualHeight, 96)),
             });
         }
 

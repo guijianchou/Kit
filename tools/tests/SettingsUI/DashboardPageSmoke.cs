@@ -335,9 +335,9 @@ internal static class DashboardPageSmoke
         vm.Dispose();
         Require(new DashboardDetail("test", "0%", 0).HasUsage && new DashboardDetail("test", "100%", 150).UsageValue == 100 && !new DashboardDetail("test", "—", double.NaN).HasUsage, "Zero usage is available, out-of-range values are bounded, and invalid readings stay unavailable.");
 
-        var updateLink = (HyperlinkButton)page.FindName("DashboardUpdateNoticeButton");
-        Require(updateLink.Visibility == Visibility.Visible && updateLink.IsEnabled, "The Home update notice is actionable.");
-        var updatePeer = new Microsoft.UI.Xaml.Automation.Peers.HyperlinkButtonAutomationPeer(updateLink);
+        var updateLink = (Button)page.FindName("DashboardUpdateNoticeButton");
+        Require(updateLink.Visibility == Visibility.Visible && updateLink.IsEnabled, "The Home update status button is actionable.");
+        var updatePeer = new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(updateLink);
         ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)updatePeer.GetPattern(Microsoft.UI.Xaml.Automation.Peers.PatternInterface.Invoke)).Invoke();
         await Task.Delay(300);
         var general = (GeneralPage)NavigationService.Frame.Content;
@@ -348,21 +348,16 @@ internal static class DashboardPageSmoke
         {
             var targetBounds = Bounds(updateTarget, general);
             return targetBounds.Top >= -1 && targetBounds.Top < general.ActualHeight;
-        }, "The Home update notice navigates to the visible Version and updates group.");
+        }, "The Home update status button navigates to the visible Version and updates group.");
         var settingsSurface = (Control)general.FindName("GeneralSettingsSurface");
         Require(settingsSurface.IsEnabled && settingsSurface.IsHitTestVisible && settingsSurface.Opacity == 1,
             "Basic settings are available before the AI section finishes loading.");
-        var sectionNavigation = (DropDownButton)general.FindName("SettingsSectionNavigation");
-        var sectionMenu = (MenuFlyout)sectionNavigation.Flyout;
-        var sectionLinks = sectionMenu.Items.OfType<MenuFlyoutItem>().ToArray();
+        var sectionNavigation = (Grid)general.FindName("SettingsSectionNavigation");
+        var sectionLinks = sectionNavigation.Children.OfType<Button>().ToArray();
         string[] expectedLabels = chinese ? ["外观主题", "启动权限", "AI 服务", "诊断日志", "备份还原", "版本更新"] : ["Appearance", "Startup", "AI service", "Diagnostics", "Backup", "Updates"];
-        Require(sectionLinks.Length == 6 && sectionLinks.Select(link => link.Text).SequenceEqual(expectedLabels), "Settings section menu retains all six localized destinations.");
-        Require(sectionLinks.All(link => link.Icon is FontIcon && link.IsTabStop), "Each section menu item retains an icon and keyboard navigation.");
-        sectionMenu.ShowAt(sectionNavigation);
-        await Task.Delay(100);
+        Require(sectionLinks.Length == 6 && sectionLinks.Select(link => Descendants(link).OfType<TextBlock>().Single().Text).SequenceEqual(expectedLabels), "Settings section bar retains all six localized destinations.");
+        Require(sectionLinks.All(link => Descendants(link).OfType<FontIcon>().Any() && link.IsTabStop), "Each section pill retains a colored icon and keyboard navigation.");
         Require(sectionLinks.All(link => Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(link) == (string)general.FindName((string)link.Tag).GetType().GetProperty("Header").GetValue(general.FindName((string)link.Tag))), "Settings destinations retain full group names for accessibility.");
-        sectionMenu.Hide();
-        await Task.Delay(100);
         var search = (AutoSuggestBox)root.FindName("SearchBox");
         Require(search.Focus(FocusState.Keyboard), "Global search accepts keyboard focus.");
         var focusedSearch = FocusManager.GetFocusedElement(root.XamlRoot);
@@ -420,13 +415,18 @@ internal static class DashboardPageSmoke
                 var navigation = Descendants(root).OfType<NavigationView>().Single();
                 Require(width == 1280 ? navigation.DisplayMode == NavigationViewDisplayMode.Expanded : navigation.DisplayMode == NavigationViewDisplayMode.Minimal, $"Navigation adapts to available width: window={width}, content={navigation.ActualWidth}, mode={navigation.DisplayMode}, thresholds={navigation.CompactModeThresholdWidth}/{navigation.ExpandedModeThresholdWidth}.");
                 await Capture(root, $"settings-{theme}-{width}.png");
-                Require(sectionNavigation.ActualHeight >= 32 && sectionNavigation.ActualHeight <= 40 && sectionNavigation.ActualWidth < 180 && sectionNavigation.IsTabStop, $"Settings section navigation remains compact and keyboard accessible at {width}: theme={theme}, size={sectionNavigation.ActualWidth}x{sectionNavigation.ActualHeight}, tabStop={sectionNavigation.IsTabStop}.");
+                Require(sectionLinks.All(link => link.ActualHeight >= 32 && link.IsTabStop), $"Settings section chips remain touch-friendly and keyboard accessible at {width}: theme={theme}.");
+                if (width == 1280)
+                {
+                    double firstRowY = sectionLinks[0].TransformToVisual(sectionNavigation).TransformPoint(new()).Y;
+                    Require(sectionLinks.All(link => Math.Abs(link.TransformToVisual(sectionNavigation).TransformPoint(new()).Y - firstRowY) <= 1), $"All six Settings section chips stay on one horizontal row at {width}: theme={theme}.");
+                }
                 var navigationPosition = sectionNavigation.TransformToVisual(general).TransformPoint(new());
-                Require(navigationPosition.X >= 0 && navigationPosition.X + sectionNavigation.ActualWidth <= general.ActualWidth + 1, $"The section picker fits the page header at {width}: position={navigationPosition}, pickerWidth={sectionNavigation.ActualWidth}, pageWidth={general.ActualWidth}.");
+                Require(navigationPosition.X >= 0 && navigationPosition.X + sectionNavigation.ActualWidth <= general.ActualWidth + 1, $"The section bar fits the page header at {width}: position={navigationPosition}, barWidth={sectionNavigation.ActualWidth}, pageWidth={general.ActualWidth}.");
                 scroll.ChangeView(null, scroll.ScrollableHeight, null, true);
                 await Task.Delay(100);
                 var scrolledPosition = sectionNavigation.TransformToVisual(general).TransformPoint(new());
-                Require(Math.Abs(scrolledPosition.Y - navigationPosition.Y) < 1 && scrolledPosition.Y >= 0, $"Section navigation remains available after scrolling at {width}: before={navigationPosition}, after={scrolledPosition}, scrollOffset={scroll.VerticalOffset}.");
+                Require(Math.Abs(scrolledPosition.Y - navigationPosition.Y) < 1 && scrolledPosition.Y >= 0, $"Section navigation remains pinned and available after scrolling at {width}: before={navigationPosition}, after={scrolledPosition}, scrollOffset={scroll.VerticalOffset}.");
                 scroll.ChangeView(null, 0, null, true);
             }
         }
@@ -437,11 +437,8 @@ internal static class DashboardPageSmoke
         foreach (var name in new[] { "AiServicesGroup", "VersionAndUpdateGroup", "AppearanceAndBehaviorGroup" })
         {
             var link = sectionLinks.Single(item => (string)item.Tag == name);
-            sectionMenu.ShowAt(sectionNavigation);
-            await Task.Delay(100);
-            var peer = new Microsoft.UI.Xaml.Automation.Peers.MenuFlyoutItemAutomationPeer(link);
+            var peer = new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(link);
             ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)peer.GetPattern(Microsoft.UI.Xaml.Automation.Peers.PatternInterface.Invoke)).Invoke();
-            sectionMenu.Hide();
             var section = (FrameworkElement)general.FindName(name);
             double top = 0;
             double previousOffset = double.NaN;
@@ -456,7 +453,7 @@ internal static class DashboardPageSmoke
             }
             Require(top >= -1 && top < pageScroll.ViewportHeight, $"Settings shortcut reveals its section heading: {name}; top={top}, offset={pageScroll.VerticalOffset}");
             var focused = FocusManager.GetFocusedElement(general.XamlRoot);
-            Require(Descendants(section).Any(element => ReferenceEquals(element, focused)), $"Closing the section menu transfers keyboard focus into {name}: focused={(focused as FrameworkElement)?.Name}, type={focused?.GetType().Name}.");
+            Require(Descendants(section).Any(element => ReferenceEquals(element, focused)), $"Clicking the section chip transfers keyboard focus into {name}: focused={(focused as FrameworkElement)?.Name}, type={focused?.GetType().Name}.");
         }
     }
 
@@ -627,11 +624,12 @@ internal static class DashboardPageSmoke
     private static void VerifyUpdateNotices(DashboardPage page, bool chinese)
     {
         var vm = page.ViewModel;
-        var link = (HyperlinkButton)page.FindName("DashboardUpdateNoticeButton");
+        var link = (Button)page.FindName("DashboardUpdateNoticeButton");
         var label = (TextBlock)page.FindName("DashboardUpdateNoticeText");
         Require(!UpdateSubscribed(vm), "Disposing Home releases its update observer before synthetic display checks.");
-        Require(((TextBlock)page.FindName("DashboardVersionText")).Text == vm.KitVersionLabel
-            && vm.KitVersionLabel.StartsWith("Kit v", StringComparison.Ordinal), "Home shows the running Kit version.");
+        Require(((TextBlock)page.FindName("DashboardUpdateTitleText")).Text == "Kit Update"
+            && ((TextBlock)page.FindName("DashboardVersionText")).Text == vm.KitVersionShortLabel
+            && vm.KitVersionLabel.StartsWith("Kit v", StringComparison.Ordinal), "Home shows Kit Update and the running Kit version.");
 
         ApplyUpdateState(vm, new UpdatingSettings
         {
@@ -648,17 +646,24 @@ internal static class DashboardPageSmoke
             ReleasePageLink = "https://github.com/guijianchou/Kit/releases/tag/0.1.0",
         });
         page.UpdateLayout();
-        Require(link.Visibility == Visibility.Collapsed, "An older already-installed target cannot advertise a pending update.");
+        Require(link.Visibility == Visibility.Visible && !vm.HasKitUpdateNotice && label.Text == (chinese ? "上次检查：未检查" : "Last checked: Never"),
+            "An older already-installed target cannot advertise a pending update.");
         ApplyUpdateState(vm, null);
         page.UpdateLayout();
-        Require(link.Visibility == Visibility.Collapsed && string.IsNullOrEmpty(label.Text), "Unknown update state does not claim that Kit is up to date.");
+        Require(link.Visibility == Visibility.Visible && !vm.HasKitUpdateNotice && label.Text == (chinese ? "上次检查：未检查" : "Last checked: Never"),
+            "Unknown update state does not claim that Kit is up to date.");
         ApplyUpdateState(vm, new UpdatingSettings { State = UpdatingSettings.UpdatingState.NetworkError });
         page.UpdateLayout();
         Require(link.Visibility == Visibility.Visible && label.Text == (chinese ? "检查更新失败" : "Update check failed"),
             "An update-check failure has a short localized Settings entry.");
-        ApplyUpdateState(vm, new UpdatingSettings { State = UpdatingSettings.UpdatingState.UpToDate });
+        ApplyUpdateState(vm, new UpdatingSettings
+        {
+            State = UpdatingSettings.UpdatingState.UpToDate,
+            LastCheckedDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture),
+        });
         page.UpdateLayout();
-        Require(link.Visibility == Visibility.Collapsed, "A successful recheck clears the previous failure notice.");
+        Require(link.Visibility == Visibility.Visible && !vm.HasKitUpdateNotice && label.Text == (chinese ? "上次检查：刚刚" : "Last checked: Just now"),
+            "A successful recheck clears the previous failure notice and shows when updates were last checked.");
         ApplyUpdateState(vm, new UpdatingSettings
         {
             State = UpdatingSettings.UpdatingState.ReadyToDownload,
@@ -709,8 +714,8 @@ internal static class DashboardPageSmoke
                 window.AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 1100));
                 await Task.Delay(250);
                 page.UpdateLayout();
-                Require(((TextBlock)page.FindName("DashboardVersionText")).FontSize >= 20,
-                    "The Home version participates in live 20px typography.");
+                Require(((TextBlock)page.FindName("DashboardUpdateTitleText")).FontSize >= 20,
+                    "The Home Kit Update title participates in live 20px typography.");
                 VerifyUpdateHeaderLayout(page, width);
                 await Capture(page, $"dashboard-header-font20-{width}.png");
             }

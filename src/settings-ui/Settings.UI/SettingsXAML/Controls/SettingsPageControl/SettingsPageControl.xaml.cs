@@ -73,6 +73,12 @@ namespace Kit.Settings.UI.Controls
             set => SetValue(HeaderActionProperty, value);
         }
 
+        public object HeaderSubContent
+        {
+            get => GetValue(HeaderSubContentProperty);
+            set => SetValue(HeaderSubContentProperty, value);
+        }
+
         public static readonly DependencyProperty ModuleTitleProperty = DependencyProperty.Register(nameof(ModuleTitle), typeof(string), typeof(SettingsPageControl), new PropertyMetadata(defaultValue: null));
         public static readonly DependencyProperty ModuleDescriptionProperty = DependencyProperty.Register(nameof(ModuleDescription), typeof(string), typeof(SettingsPageControl), new PropertyMetadata(defaultValue: null));
         public static readonly DependencyProperty ModuleImageSourceProperty = DependencyProperty.Register(nameof(ModuleImageSource), typeof(Uri), typeof(SettingsPageControl), new PropertyMetadata(null));
@@ -82,6 +88,12 @@ namespace Kit.Settings.UI.Controls
         public static readonly DependencyProperty ModuleContentProperty = DependencyProperty.Register(nameof(ModuleContent), typeof(object), typeof(SettingsPageControl), new PropertyMetadata(null));
         public static readonly DependencyProperty CompactHeaderProperty = DependencyProperty.Register(nameof(CompactHeader), typeof(bool), typeof(SettingsPageControl), new PropertyMetadata(false));
         public static readonly DependencyProperty HeaderActionProperty = DependencyProperty.Register(nameof(HeaderAction), typeof(object), typeof(SettingsPageControl), new PropertyMetadata(null));
+        public static readonly DependencyProperty HeaderSubContentProperty = DependencyProperty.Register(nameof(HeaderSubContent), typeof(object), typeof(SettingsPageControl), new PropertyMetadata(null));
+
+        private Visibility GetHeaderSubContentVisibility(object content)
+        {
+            return content != null ? Visibility.Visible : Visibility.Collapsed;
+        }
 
         private Visibility GetCompactSubtitleVisibility(bool compactHeader, string description, int primaryLinkCount)
         {

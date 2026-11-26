@@ -4720,4 +4720,40 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="Dashboard_UpdateRecovery" xml:space="preserve">
     <value>Update needs recovery</value>
   </data>
+  <data name="Dashboard_UpdateChecking" xml:space="preserve">
+    <value>Checking for updates…</value>
+  </data>
+  <data name="Dashboard_UpdateCheckPrompt" xml:space="preserve">
+    <value>Last checked: Never</value>
+  </data>
+  <data name="Dashboard_UpdateUpToDate" xml:space="preserve">
+    <value>Up to date</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedJustNow" xml:space="preserve">
+    <value>Last checked: Just now</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedMinute" xml:space="preserve">
+    <value>Last checked: 1 minute ago</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedMinutes" xml:space="preserve">
+    <value>Last checked: {0} minutes ago</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedHour" xml:space="preserve">
+    <value>Last checked: 1 hour ago</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedHours" xml:space="preserve">
+    <value>Last checked: {0} hours ago</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedDay" xml:space="preserve">
+    <value>Last checked: 1 day ago</value>
+  </data>
+  <data name="Dashboard_UpdateLastCheckedDays" xml:space="preserve">
+    <value>Last checked: {0} days ago</value>
+  </data>
+  <data name="Dashboard_UpdateOpenSettingsHint" xml:space="preserve">
+    <value>Open Version &amp; updates</value>
+  </data>
+  <data name="Dashboard_UpdateTitle.Text" xml:space="preserve">
+    <value>Kit Update</value>
+  </data>
 </root>

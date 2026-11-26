@@ -4,6 +4,12 @@
 
 ## English
 
+### 3.6.2 (2026-11-26)
+
+- Restored a unified, divider-free full-width quick-jump bar below the Settings heading with low-saturation section icons and a left-to-right fading translucent Mica accent wash that adapts to Light, Dark, and High Contrast themes.
+- Redesigned the Home top-right `Kit Update` entry in native borderless Windows 11 style aligned with the Home header, showing live check status (`Last checked: ...`, `Checking for updates…`, `Update available`, `Restart to update`, or error states) with click feedback and direct navigation to Settings → Version & updates.
+- Fixed Quick Access icons becoming blank when returning to the cached Home page from Settings or another plugin by rebinding fresh `BitmapImage` instances on visual-tree re-entry and theme changes.
+
 ### 3.6.1 (2026-11-26)
 
 - Persisted Codex AI Usage history in SQLite (`winsqlite3.dll`, zero NuGet SQLite dependencies) with detailed v2 telemetry (model provenance `codex`/`config`/`legacy`, configured vs reported model, thread ID, API mode, reasoning effort, context window, batch/item counts, prompt/output sizes, queue/execution duration, retries, exit codes) and separated pre-SQLite legacy unattributed rows from real model shares.
@@ -1037,6 +1043,12 @@
 ## 中文
 
 ## 更新日志
+
+### 3.6.2（2026-11-26）
+
+- 恢复 Settings 标题下方的统一无隔断全宽快速跳转长条，搭配低饱和度柔和分区图标与跟随主题和 Mica 背景由左向右渐淡的透底渐变配色，兼容浅色、深色与高对比度模式。
+- 参照 Windows 11 设置首页重构主页右上角无框 `Kit Update` 入口并与左侧 `Home` 标题齐平对齐，实时显示检查状态（`上次检查：...`、检查中、有可用更新、重启更新或异常状态），点击提供反馈并直达设置 → 版本与更新。
+- 修复从 Settings 或其他插件返回缓存的 Home 页面时 Quick Access 启用插件图标因 DirectComposition 纹理回收而消失的问题，在重入可视化树与切换主题时重新绑定全新 `BitmapImage`。
 
 ### 3.6.1（2026-11-26）
 

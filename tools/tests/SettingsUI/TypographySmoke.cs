@@ -673,24 +673,22 @@ internal static partial class TypographySmoke
 
     private static async Task VerifyKeyboardAndAccessibility(GeneralPage page)
     {
-        foreach (string name in new[] { "Languages_ComboBox", "FontFamilySelector", "FontSizeSelector", "SettingsSectionNavigation" })
+        foreach (string name in new[] { "Languages_ComboBox", "FontFamilySelector", "FontSizeSelector", "SectionNavAppearanceButton" })
         {
             var control = Element<Control>(page, name);
             Require(control.IsEnabled && control.Focus(FocusState.Keyboard), "Keyboard can focus " + name);
             var peer = FrameworkElementAutomationPeer.CreatePeerForElement(control);
             Require(peer != null && !string.IsNullOrWhiteSpace(peer.GetName()), "Accessibility exposes a localized name for " + name);
         }
-        var navigation = Element<DropDownButton>(page, "SettingsSectionNavigation");
-        var navigationPeer = FrameworkElementAutomationPeer.CreatePeerForElement(navigation);
-        if (navigationPeer.GetPattern(PatternInterface.Invoke) is IInvokeProvider invoke)
-            invoke.Invoke();
-        else if (navigationPeer.GetPattern(PatternInterface.ExpandCollapse) is IExpandCollapseProvider expand)
-            expand.Expand();
-        else
-            throw new InvalidOperationException("Section navigation must expose an accessible invoke or expand action.");
-        await Settle();
-        Require(navigation.Flyout is MenuFlyout menu && menu.Items.Count > 0, "Keyboard-accessible section button opens its real section menu.");
-        navigation.Flyout.Hide();
+        var navigation = Element<Grid>(page, "SettingsSectionNavigation");
+        var sectionButtons = navigation.Children.OfType<Button>().ToArray();
+        Require(sectionButtons.Length == 6, "Section navigation exposes all six direct jump buttons.");
+        foreach (var button in sectionButtons)
+        {
+            var buttonPeer = FrameworkElementAutomationPeer.CreatePeerForElement(button);
+            Require(buttonPeer != null && !string.IsNullOrWhiteSpace(buttonPeer.GetName()) && buttonPeer.GetPattern(PatternInterface.Invoke) is IInvokeProvider,
+                "Each section jump button exposes a localized accessible name and invoke action.");
+        }
         await Settle();
     }
 

@@ -36,28 +36,171 @@
         </ResourceDictionary>
     </local:NavigablePage.Resources>
 
-    <controls:SettingsPageControl x:Name="GeneralSettingsSurface" x:Uid="General" services:RuntimeLocalization.Uid="General" CompactHeader="True">
-        <controls:SettingsPageControl.HeaderAction>
-            <DropDownButton
-                x:Name="SettingsSectionNavigation"
-                x:Uid="General_SectionNavigationButton" services:RuntimeLocalization.Uid="General_SectionNavigationButton"
-                AutomationProperties.AutomationId="GeneralSectionNavigation"
-                MinHeight="32">
-                <DropDownButton.Flyout>
-                    <MenuFlyout Opening="SettingsSectionMenu_Opening" Closed="SettingsSectionMenu_Closed">
-                        <MenuFlyoutItem x:Uid="General_SectionAppearance" services:RuntimeLocalization.Uid="General_SectionAppearance" Tag="AppearanceAndBehaviorGroup" Click="SettingsSection_Click" Icon="{ui:FontIcon Glyph=&#xE790;}" />
-                        <MenuFlyoutItem x:Uid="General_SectionStartup" services:RuntimeLocalization.Uid="General_SectionStartup" Tag="StartupAndPermissionsGroup" Click="SettingsSection_Click" Icon="{ui:FontIcon Glyph=&#xF71C;}" />
-                        <MenuFlyoutItem x:Uid="General_SectionAi" services:RuntimeLocalization.Uid="General_SectionAi" Tag="AiServicesGroup" Click="SettingsSection_Click" Icon="{ui:FontIcon Glyph=&#xEA80;}" />
-                        <MenuFlyoutItem x:Uid="General_SectionDiagnostics" services:RuntimeLocalization.Uid="General_SectionDiagnostics" Tag="DiagnosticsGroup" Click="SettingsSection_Click" Icon="{ui:FontIcon Glyph=&#xEC19;}" />
-                        <MenuFlyoutItem x:Uid="General_SectionBackup" services:RuntimeLocalization.Uid="General_SectionBackup" Tag="BackupAndRestoreGroup" Click="SettingsSection_Click" Icon="{ui:FontIcon Glyph=&#xE777;}" />
-                        <MenuFlyoutItem x:Uid="General_SectionUpdates" services:RuntimeLocalization.Uid="General_SectionUpdates" Tag="VersionAndUpdateGroup" Click="SettingsSection_Click" Icon="{ui:FontIcon Glyph=&#xE895;}" />
-                    </MenuFlyout>
-                </DropDownButton.Flyout>
-            </DropDownButton>
-        </controls:SettingsPageControl.HeaderAction>
-        <controls:SettingsPageControl.ModuleContent>
-            <StackPanel Orientation="Vertical" Spacing="8">
-                <controls:SettingsGroup x:Name="AppearanceAndBehaviorGroup" x:Uid="Appearance_Behavior" services:RuntimeLocalization.Uid="Appearance_Behavior" IsEnabled="True">
+    <Grid>
+        <controls:SettingsPageControl x:Name="GeneralSettingsSurface" x:Uid="General" services:RuntimeLocalization.Uid="General" CompactHeader="True">
+            <controls:SettingsPageControl.HeaderSubContent>
+                <Border
+                    x:Name="SettingsSectionBar"
+                    Background="{ThemeResource KitSettingsSectionBarBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource OverlayCornerRadius}"
+                    Padding="0">
+                    <Grid
+                        x:Name="SettingsSectionNavigation"
+                        ColumnSpacing="0"
+                        RowSpacing="0"
+                        AutomationProperties.AutomationId="GeneralSectionNavigation">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="SectionCol0" Width="*" />
+                            <ColumnDefinition x:Name="SectionCol1" Width="*" />
+                            <ColumnDefinition x:Name="SectionCol2" Width="*" />
+                            <ColumnDefinition x:Name="SectionCol3" Width="*" />
+                            <ColumnDefinition x:Name="SectionCol4" Width="*" />
+                            <ColumnDefinition x:Name="SectionCol5" Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Button
+                            x:Name="SectionNavAppearanceButton"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            AutomationProperties.AutomationId="GeneralSection_Appearance"
+                            AutomationProperties.Name="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Style="{StaticResource KitSectionChipButtonStyle}"
+                            Tag="AppearanceAndBehaviorGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=AppearanceAndBehaviorGroup, Path=Header}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="22" Height="22" CornerRadius="5" Background="{ThemeResource SectionAppearanceTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="12" Glyph="&#xE790;" Foreground="{ThemeResource SectionAppearanceForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock
+                                    x:Uid="General_SectionAppearance"
+                                    services:RuntimeLocalization.Uid="General_SectionAppearance"
+                                    FontSize="{ThemeResource KitFontSize13}"
+                                    services:TypographyResources.BaseFontSize="13"
+                                    VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="SectionNavStartupButton"
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            AutomationProperties.AutomationId="GeneralSection_Startup"
+                            AutomationProperties.Name="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Style="{StaticResource KitSectionChipButtonStyle}"
+                            Tag="StartupAndPermissionsGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=StartupAndPermissionsGroup, Path=Header}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="22" Height="22" CornerRadius="5" Background="{ThemeResource SectionStartupTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="12" Glyph="&#xF71C;" Foreground="{ThemeResource SectionStartupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock
+                                    x:Uid="General_SectionStartup"
+                                    services:RuntimeLocalization.Uid="General_SectionStartup"
+                                    FontSize="{ThemeResource KitFontSize13}"
+                                    services:TypographyResources.BaseFontSize="13"
+                                    VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="SectionNavAiButton"
+                            Grid.Row="0"
+                            Grid.Column="2"
+                            AutomationProperties.AutomationId="GeneralSection_Ai"
+                            AutomationProperties.Name="{Binding ElementName=AiServicesGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Style="{StaticResource KitSectionChipButtonStyle}"
+                            Tag="AiServicesGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=AiServicesGroup, Path=Header}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="22" Height="22" CornerRadius="5" Background="{ThemeResource SectionAiTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="12" Glyph="&#xEA80;" Foreground="{ThemeResource SectionAiForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock
+                                    x:Uid="General_SectionAi"
+                                    services:RuntimeLocalization.Uid="General_SectionAi"
+                                    FontSize="{ThemeResource KitFontSize13}"
+                                    services:TypographyResources.BaseFontSize="13"
+                                    VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="SectionNavDiagnosticsButton"
+                            Grid.Row="0"
+                            Grid.Column="3"
+                            AutomationProperties.AutomationId="GeneralSection_Diagnostics"
+                            AutomationProperties.Name="{Binding ElementName=DiagnosticsGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Style="{StaticResource KitSectionChipButtonStyle}"
+                            Tag="DiagnosticsGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=DiagnosticsGroup, Path=Header}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="22" Height="22" CornerRadius="5" Background="{ThemeResource SectionDiagnosticsTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="12" Glyph="&#xEC19;" Foreground="{ThemeResource SectionDiagnosticsForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock
+                                    x:Uid="General_SectionDiagnostics"
+                                    services:RuntimeLocalization.Uid="General_SectionDiagnostics"
+                                    FontSize="{ThemeResource KitFontSize13}"
+                                    services:TypographyResources.BaseFontSize="13"
+                                    VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="SectionNavBackupButton"
+                            Grid.Row="0"
+                            Grid.Column="4"
+                            AutomationProperties.AutomationId="GeneralSection_Backup"
+                            AutomationProperties.Name="{Binding ElementName=BackupAndRestoreGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Style="{StaticResource KitSectionChipButtonStyle}"
+                            Tag="BackupAndRestoreGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=BackupAndRestoreGroup, Path=Header}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="22" Height="22" CornerRadius="5" Background="{ThemeResource SectionBackupTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="12" Glyph="&#xE777;" Foreground="{ThemeResource SectionBackupForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock
+                                    x:Uid="General_SectionBackup"
+                                    services:RuntimeLocalization.Uid="General_SectionBackup"
+                                    FontSize="{ThemeResource KitFontSize13}"
+                                    services:TypographyResources.BaseFontSize="13"
+                                    VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="SectionNavUpdatesButton"
+                            Grid.Row="0"
+                            Grid.Column="5"
+                            AutomationProperties.AutomationId="GeneralSection_Updates"
+                            AutomationProperties.Name="{Binding ElementName=VersionAndUpdateGroup, Path=Header}"
+                            Click="SettingsSection_Click"
+                            Style="{StaticResource KitSectionChipButtonStyle}"
+                            Tag="VersionAndUpdateGroup"
+                            ToolTipService.ToolTip="{Binding ElementName=VersionAndUpdateGroup, Path=Header}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Width="22" Height="22" CornerRadius="5" Background="{ThemeResource SectionUpdatesTintBrush}" VerticalAlignment="Center">
+                                    <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="12" Glyph="&#xE895;" Foreground="{ThemeResource SectionUpdatesForegroundBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock
+                                    x:Uid="General_SectionUpdates"
+                                    services:RuntimeLocalization.Uid="General_SectionUpdates"
+                                    FontSize="{ThemeResource KitFontSize13}"
+                                    services:TypographyResources.BaseFontSize="13"
+                                    VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </controls:SettingsPageControl.HeaderSubContent>
+            <controls:SettingsPageControl.ModuleContent>
+                <StackPanel Orientation="Vertical" Spacing="8">
+                    <controls:SettingsGroup x:Name="AppearanceAndBehaviorGroup" x:Uid="Appearance_Behavior" services:RuntimeLocalization.Uid="Appearance_Behavior" Padding="0,0,0,0" IsEnabled="True">
                     <tkcontrols:SettingsCard
                         x:Name="ColorModeHeader"
                         x:Uid="ColorModeHeader" services:RuntimeLocalization.Uid="ColorModeHeader"
@@ -916,5 +1059,32 @@
                 </controls:SettingsGroup>
             </StackPanel>
         </controls:SettingsPageControl.ModuleContent>
-    </controls:SettingsPageControl>
+        </controls:SettingsPageControl>
+
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="SettingsSectionBarStates">
+                <VisualState x:Name="SettingsSectionBarSingleRow">
+                    <VisualState.StateTriggers>
+                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=SettingsSectionBar}" MinWidth="640" />
+                    </VisualState.StateTriggers>
+                </VisualState>
+                <VisualState x:Name="SettingsSectionBarTwoRows">
+                    <VisualState.StateTriggers>
+                        <ui:ControlSizeTrigger TargetElement="{Binding ElementName=SettingsSectionBar}" MaxWidth="640" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="SectionCol3.Width" Value="0" />
+                        <Setter Target="SectionCol4.Width" Value="0" />
+                        <Setter Target="SectionCol5.Width" Value="0" />
+                        <Setter Target="SectionNavDiagnosticsButton.(Grid.Row)" Value="1" />
+                        <Setter Target="SectionNavDiagnosticsButton.(Grid.Column)" Value="0" />
+                        <Setter Target="SectionNavBackupButton.(Grid.Row)" Value="1" />
+                        <Setter Target="SectionNavBackupButton.(Grid.Column)" Value="1" />
+                        <Setter Target="SectionNavUpdatesButton.(Grid.Row)" Value="1" />
+                        <Setter Target="SectionNavUpdatesButton.(Grid.Column)" Value="2" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+    </Grid>
 </local:NavigablePage>

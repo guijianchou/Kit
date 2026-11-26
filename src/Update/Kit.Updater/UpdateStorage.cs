@@ -84,7 +84,7 @@ internal sealed class UpdateStorage
 
     public void Log(Exception error)
     {
-        File.AppendAllText(Path.Combine(Cache, "updater.log"), $"{DateTimeOffset.Now:O} {error}\n");
+        UpdateFailure.WriteDiagnostics(error, this);
     }
 
     public static void WriteJson<T>(string path, T value, JsonTypeInfo<T> type)

@@ -6,6 +6,23 @@ This software incorporates material from third parties.
 - Measure tool
 - PowerDisplay
 - WinGet integration
+- Settings font
+
+## Settings font
+
+Kit Settings includes the unmodified Noto Sans SC variable font from Google Fonts, covering weights 100 through 900. The font is distributed as `Assets/Fonts/NotoSansSC-Variable.ttf` with its complete license at `Assets/Fonts/OFL.txt`.
+
+**Source**: <https://github.com/google/fonts/tree/83c62e30d87daa70216dab6b984d00d20d96d585/ofl/notosanssc>
+
+**Upstream font**: <https://raw.githubusercontent.com/google/fonts/83c62e30d87daa70216dab6b984d00d20d96d585/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf>
+
+**Upstream license**: <https://raw.githubusercontent.com/google/fonts/83c62e30d87daa70216dab6b984d00d20d96d585/ofl/notosanssc/OFL.txt>
+
+**License**: SIL Open Font License, Version 1.1. Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+
+**Font SHA-256**: `a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da`
+
+**OFL.txt SHA-256**: `1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9`
 
 ## WinGet integration
 

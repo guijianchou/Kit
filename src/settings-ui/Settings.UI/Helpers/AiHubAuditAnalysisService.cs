@@ -19,7 +19,10 @@ using System.Threading.Tasks;
 using Kit.AiHub.Contract;
 using Kit.AiHub.Engine;
 using Kit.AiHub.Models;
+using Kit.AiHub.Security;
+using Kit.AiHub.Storage;
 using Kit.AIHubLib.Models;
+using Kit.AIHubLib.Services;
 using ManagedCommon;
 
 /// <summary>
@@ -101,6 +104,8 @@ public static class AiHubAuditAnalysisService
     public sealed record AuditAnalysisResult(IReadOnlyList<AuditIssue>? Issues, bool IsPartial, string? Failure)
     {
         public int ValidatedBatchCount { get; init; }
+        public int ReusedEvents { get; init; }
+        public int AnalyzedEvents { get; init; }
     }
 
     /// <summary>
@@ -111,6 +116,8 @@ public static class AiHubAuditAnalysisService
         IReadOnlyList<SecurityEvent> events,
         IProgress<AiTaskProgress>? progress = null,
         IProgress<AuditAnalysisResult>? partialResults = null,
+        AuditAnalysisCache? cache = null,
+        bool forceReanalyze = false,
         CancellationToken cancellationToken = default)
     {
         if (events is null || events.Count == 0)
@@ -128,14 +135,16 @@ public static class AiHubAuditAnalysisService
         // remaining events. A plain Take() would analyse only the oldest events in the
         // window and silently ignore every later one.
         List<SecurityEvent> selected = SelectEvidence(events);
-
-        List<EventAnalysisInput> items = selected
-            .Select(ToInput)
-            .ToList();
+        var inputs = selected.Select(ToInput).ToArray();
+        string scope = await ReadAnalysisScopeAsync(cancellationToken).ConfigureAwait(false);
+        cache ??= new AuditAnalysisCache();
+        var (plan, items) = PrepareAnalysisRequest(cache, scope, inputs, forceReanalyze);
 
         if (items.Count == 0)
         {
-            return new(null, false, null);
+            cancellationToken.ThrowIfCancellationRequested();
+            cache.Commit(plan, plan.ReusedIssues);
+            return new(plan.ReusedIssues, false, null) { ReusedEvents = selected.Count };
         }
 
         string initialStatus = IsChinese
@@ -147,7 +156,7 @@ public static class AiHubAuditAnalysisService
         var stopwatch = Stopwatch.StartNew();
         Logger.LogInfo($"AI audit started: id={analysisId}, collected={events.Count}, selected={items.Count}, timeoutSeconds={AnalysisTimeoutSeconds}, batchSize={AnalysisBatchSize}, routeTimeoutSeconds={AnalysisRouteTimeoutSeconds}");
         var batchProgress = new AuditProgress(analysisId, stopwatch, progress);
-        var validatedIssues = new List<AuditIssue>();
+        var validatedIssues = new List<AuditIssue>(plan.ReusedIssues);
         int validatedBatchCount = 0;
         var partialLock = new object();
         string outcome = "failed";
@@ -161,7 +170,7 @@ public static class AiHubAuditAnalysisService
                 {
                     lock (partialLock)
                     {
-                        validatedIssues.AddRange(batch.Issues);
+                        validatedIssues.AddRange(batch.Issues.Select(plan.RestoreReference));
                         partialResults?.Report(new(DeduplicateIssues(validatedIssues), true, null) { ValidatedBatchCount = ++validatedBatchCount });
                     }
                 }),
@@ -177,7 +186,29 @@ public static class AiHubAuditAnalysisService
                 cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             outcome = result.IsSuccess ? "ok" : result.HasPartialResult ? "partial" : "failed";
-            return ReadAnalysisResult(result, analysisId);
+            var analysis = ReadAnalysisResult(result, analysisId);
+            if (analysis.Issues is not null)
+            {
+                analysis = analysis with
+                {
+                    Issues = DeduplicateIssues(plan.ReusedIssues.Concat(analysis.Issues.Select(plan.RestoreReference))),
+                    ReusedEvents = selected.Count - items.Count,
+                    AnalyzedEvents = items.Count,
+                };
+                if (!analysis.IsPartial && analysis.Failure is null)
+                {
+                    if (string.Equals(scope, await ReadAnalysisScopeAsync(cancellationToken).ConfigureAwait(false), StringComparison.Ordinal))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        cache.Commit(plan, analysis.Issues);
+                    }
+                }
+            }
+            else if (plan.ReusedIssues.Count > 0)
+            {
+                analysis = analysis with { Issues = plan.ReusedIssues, IsPartial = true, ReusedEvents = selected.Count - items.Count, AnalyzedEvents = items.Count };
+            }
+            return analysis;
         }
         catch (OperationCanceledException)
         {
@@ -366,6 +397,11 @@ public static class AiHubAuditAnalysisService
                     return RejectOutput(issueIndex, field.Name, "missing_or_too_long");
                 }
             }
+
+            if (AuditAnalysisCache.GetNarrativeReferences(issue).Any(reference => !itemIds.Contains(reference)))
+            {
+                return RejectOutput(issueIndex, "text", "unknown_input_reference");
+            }
         }
 
         return true;
@@ -379,11 +415,31 @@ public static class AiHubAuditAnalysisService
     // Opaque references remain request-wide. Never sum occurrences reported by workers
     // for the same evidence: that would count one event repeatedly and inflate severity.
     internal static List<AuditIssue> DeduplicateIssues(IEnumerable<AuditIssue> issues) => issues
-        .GroupBy(issue => string.Join("\0", issue.RelatedEventRefs.Append(issue.EventRef)
-            .Distinct(StringComparer.Ordinal).OrderBy(reference => reference, StringComparer.Ordinal)), StringComparer.Ordinal)
+        .GroupBy(issue => issue.Key + "\0" + string.Join("\0", IssueReferences(issue)
+            .OrderBy(reference => reference, StringComparer.Ordinal)), StringComparer.Ordinal)
         .Select(group => group.OrderByDescending(issue => issue.Severity == "High" ? 3 : issue.Severity == "Medium" ? 2 : 1)
             .ThenByDescending(issue => issue.Occurrences).First())
+        .GroupBy(issue => string.IsNullOrWhiteSpace(issue.Key) || string.IsNullOrWhiteSpace(issue.Affected)
+            ? issue.Key + "\0" + issue.EventRef
+            : string.Join("\0", issue.Key, issue.Category, issue.LogName, issue.Source, issue.Affected), StringComparer.OrdinalIgnoreCase)
+        .Select(group =>
+        {
+            var latest = group.OrderByDescending(issue => issue.Severity == "High" ? 3 : issue.Severity == "Medium" ? 2 : 1)
+                .ThenByDescending(issue => issue.EventTimestamp, StringComparer.Ordinal).First();
+            if (group.Count() == 1)
+            {
+                return latest;
+            }
+            return new AuditIssueEnhanced(latest)
+            {
+                RelatedEventRefs = group.SelectMany(IssueReferences).Distinct(StringComparer.Ordinal).ToList(),
+                Occurrences = group.SelectMany(IssueReferences).Distinct(StringComparer.Ordinal).Count(),
+            };
+        })
         .ToList();
+
+    private static IEnumerable<string> IssueReferences(AuditIssue issue) => issue.RelatedEventRefs.Append(issue.EventRef)
+        .Concat(AuditAnalysisCache.GetNarrativeReferences(issue)).Distinct(StringComparer.Ordinal);
 
     internal static string CreateEvidenceFingerprint(IReadOnlyList<SecurityEvent> events)
     {
@@ -397,6 +453,56 @@ public static class AiHubAuditAnalysisService
         }
 
         return Convert.ToHexString(hash.GetHashAndReset());
+    }
+
+    internal static string CreateConfigurationFingerprint(AiHubConfig configuration)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        void Append(string value)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+            hash.AppendData(BitConverter.GetBytes(bytes.Length));
+            hash.AppendData(bytes);
+            CryptographicOperations.ZeroMemory(bytes);
+        }
+        Append(configuration.SelectedKernel);
+        Append(configuration.EnableSubagents.ToString(CultureInfo.InvariantCulture));
+        Append(configuration.MaxAgentsPerTask.ToString(CultureInfo.InvariantCulture));
+        foreach (var target in configuration.Targets.OrderBy(target => target.Name, StringComparer.Ordinal))
+        {
+            Append(target.Name);
+            Append(target.IsActive.ToString(CultureInfo.InvariantCulture));
+            Append(target.BaseUrl);
+            Append(target.ApiKey);
+            Append(target.Mode);
+            Append(target.Model);
+            Append(target.Effort);
+            Append(target.ContextWindowTokens.ToString(CultureInfo.InvariantCulture));
+        }
+        return Convert.ToHexString(hash.GetHashAndReset());
+    }
+
+    internal static (AuditAnalysisPlan Plan, List<EventAnalysisInput> Items) PrepareAnalysisRequest(
+        AuditAnalysisCache cache, string scope, IReadOnlyList<EventAnalysisInput> inputs, bool forceReanalyze)
+    {
+        var plan = cache.Prepare(scope,
+            inputs.Select(input => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(input, AIHubLibJsonContext.Default.EventAnalysisInput)))).ToArray(),
+            inputs.Select(input => string.Join("\0", input.LogName, input.Provider).ToUpperInvariant()).ToArray(), forceReanalyze,
+            inputs.Select(input => DateTime.TryParse(input.TimeUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time)
+                ? (DateTime?)time : null).ToArray(),
+            inputs.Select(input => input.Summary).ToArray());
+        return (plan, plan.RequestedIndices.Select(index => inputs[index]).ToList());
+    }
+
+    private static async Task<string> ReadAnalysisScopeAsync(CancellationToken cancellationToken)
+    {
+        var policy = new SecurityPolicyService();
+        string globalPolicy = await policy.LoadGlobalPolicyAsync(cancellationToken).ConfigureAwait(false);
+        string taskPolicy = await policy.LoadTaskAgentsPolicyAsync(PluginId, TaskId, cancellationToken).ConfigureAwait(false);
+        string taskSecurity = await policy.LoadTaskSecurityPolicyAsync(PluginId, TaskId, cancellationToken).ConfigureAwait(false);
+        string configurationHash = CreateConfigurationFingerprint(new AiHubSettingsStore().Load());
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\0", "audit-v3", Language,
+            configurationHash, globalPolicy, taskPolicy, taskSecurity))));
     }
 
     private static List<SecurityEvent> SelectEvidence(IReadOnlyList<SecurityEvent> events) => events

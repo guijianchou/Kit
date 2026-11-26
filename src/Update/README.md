@@ -40,6 +40,14 @@ One completed backup is retained until the next installation attempt. Diagnostic
 the same cache directory's `updater.log`. A folder without write access or containing
 filesystem links is rejected; move the Portable installation to a normal writable folder.
 
+The published helper receives a Medium integrity label after every build/publish, including
+local Debug runs. A Low label inherited from a checkout prevents writes to normal AppData
+even when the user has full file permissions. Startup failures are also written to stderr
+and, when writable, `%LOCALAPPDATA%/Kit/updater-startup.log`. The runner records failed
+launches and nonzero exits and reports them to Settings immediately. Settings distinguishes
+missing/busy/failed helpers, access denial, and GitHub API rate limits. A rate-limited request
+is not automatically retried; wait for the GitHub limit to reset before checking again.
+
 Tests in `Kit.Updater.Tests` exercise release selection, checksums, cancellation, malicious
 archives, package inventory/version checks, locked files, partial-write rollback, durable
 recovery, retained user files, stale task state, and the full download/verification service.

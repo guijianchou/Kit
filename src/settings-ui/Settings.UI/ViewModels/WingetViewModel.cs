@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -17,6 +17,7 @@ using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
 using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Services;
 using Kit.WingetLib;
 using ManagedCommon.ServiceHost;
 using Microsoft.UI.Dispatching;
@@ -34,6 +35,8 @@ public enum WingetWorkspace
 public sealed partial class WingetPackageRow(WingetPackageUpdate package) : Observable
 {
     public WingetPackageUpdate Package { get; private set; } = package;
+
+    public void RefreshLocalization() => OnPropertyChanged(string.Empty);
 
     public void Update(WingetPackageUpdate package)
     {
@@ -68,7 +71,7 @@ public sealed partial class WingetPackageRow(WingetPackageUpdate package) : Obse
     public string InstallationLabel => !IsMetadataResolved ? WingetViewModel.L("InstallationUnknown") : IsInstalled ? WingetViewModel.L("AlreadyInstalled") : WingetViewModel.L("AvailableToInstall");
 }
 
-public sealed partial class WingetViewModel : PageViewModelBase
+public sealed partial class WingetViewModel : PageViewModelBase, ILiveLocalizable
 {
     private readonly ISettingsRepository<GeneralSettings> generalRepository;
     private readonly ISettingsRepository<WingetSettings> moduleRepository;
@@ -382,6 +385,18 @@ public sealed partial class WingetViewModel : PageViewModelBase
     internal bool ConfirmationMatches(WingetPackageDetails expected) => SelectedDetails is { } current &&
         current.Package == expected.Package && current.License == expected.License && current.LicenseUrl == expected.LicenseUrl &&
         current.Agreements.SequenceEqual(expected.Agreements);
+
+    public void RefreshLocalization()
+    {
+        presentedValues.Clear();
+        NotifyState();
+        foreach (var row in Packages.Concat(SearchResults).Distinct())
+        {
+            row.RefreshLocalization();
+        }
+
+        OnPropertyChanged(string.Empty);
+    }
 
     public static string L(string name)
     {

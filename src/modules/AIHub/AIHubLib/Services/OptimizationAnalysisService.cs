@@ -174,7 +174,7 @@ public sealed class OptimizationAnalysisService
             if (item.Action != input.AllowedAction || item.Action is not ("move" or "delete")) return false;
             if (item.Action == "delete" && item.TargetRelative is not null) return false;
             if (item.Action == "move" &&
-                (input.CategoryHint is not ("Documents" or "Compressed" or "Programs" or "Music" or "Video") ||
+                (input.CategoryHint is not ("Documents" or "Compressed" or "Programs" or "Music" or "Video" or "Pictures") ||
                  item.TargetRelative != input.CategoryHint)) return false;
         }
 

@@ -18,12 +18,13 @@ public sealed class DownloadOrganizerService
 
     static DownloadOrganizerService()
     {
-        // IDM-style categories; images and unrecognized extensions stay where they are.
+        // IDM-style categories with Pictures; unrecognized extensions stay where they are.
         AddCategory("Documents", ".doc .docx .xls .xlsx .ppt .pptx .pdf .txt .rtf .odt .ods .odp .csv .md .epub .mobi .azw .azw3 .chm .djvu");
         AddCategory("Compressed", ".zip .rar .7z .tar .gz .gzip .bz2 .xz .tgz .tbz .tbz2 .txz .z .lz .lzma .zst .cab .arj .ace");
         AddCategory("Programs", ".exe .msi .msix .msixbundle .appx .appxbundle .msu .msp .iso .img .com");
         AddCategory("Music", ".mp3 .mp2 .mpa .wav .wma .aac .m4a .flac .ogg .oga .opus .mid .midi .aif .aiff .ape .alac");
         AddCategory("Video", ".mp4 .m4v .mkv .avi .mov .wmv .mpg .mpeg .mpe .webm .flv .f4v .3gp .3g2 .vob .asf .rm .rmvb .m2ts .mts");
+        AddCategory("Pictures", ".jpg .jpeg .jpe .jfif .png .apng .gif .bmp .dib .tif .tiff .webp .avif .heic .heif .svg .ico");
     }
 
     public DownloadOrganizerService() { }

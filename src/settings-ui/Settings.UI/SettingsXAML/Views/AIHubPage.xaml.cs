@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -23,7 +23,7 @@ using Windows.ApplicationModel.DataTransfer;
 
 namespace Kit.Settings.UI.Views;
 
-public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
+public sealed partial class AIHubPage : NavigablePage, IRefreshablePage, ILiveLocalizable
 {
     private readonly MainWindow _settingsWindow;
     private readonly double[] _tabOffsets = new double[3];
@@ -72,14 +72,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
     public Visibility HasSelectedRun(OptimizationRunViewModel run) => run != null ? Visibility.Visible : Visibility.Collapsed;
 
-    public static string ExecutionItemSummary(string action, string state) => state switch
-    {
-        "deleted" => "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
-        "moved" => "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved"),
-        "succeeded" or "completed" => action == "move" ? "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved") : "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
-        "failed" => "AIHub_ExecutionItem_Failed".GetLocalizedOrFallback("Failed"),
-        _ => "AIHub_ExecutionItem_Pending".GetLocalizedOrFallback("Not completed"),
-    };
+    public static string ExecutionItemSummary(string action, string state) => OptimizationExecutionItemViewModel.DescribeState(action, state);
 
     public Style AiReadinessStyle(AiReadinessLevel level) => (Style)Resources[level switch
     {
@@ -93,6 +86,8 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
     public Style HealthScoreRingStyle(int score) => (Style)Resources[score >= 80 ? "HealthRingGoodStyle" : score >= 60 ? "HealthRingWarningStyle" : "HealthRingCriticalStyle"];
 
     public double HealthScoreToDouble(int score) => Math.Clamp(score, 0, 100);
+
+    public void RefreshLocalization() => Bindings.Update();
 
     public void RefreshEnabledState()
     {
@@ -154,6 +149,13 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
 
         if (activeTab == 2)
         {
+            // General edits the global draft directly and never changes this selection.
+            // On the first visit, select a task before connecting the deferred bindings.
+            if (ViewModel.AiHub.ActivePolicyIndex == 0)
+            {
+                ViewModel.AiHub.TaskPolicyIndex = 0;
+            }
+
             // Materialize the deferred editor before making it visible, using the
             // same model choice that controls the selector and the other panels.
             var panel = (FrameworkElement)FindName(nameof(TaskPolicyPanel));
@@ -437,7 +439,11 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         }
     }
 
-    private async void OnWeeklyReportClick(object sender, RoutedEventArgs args)
+    private async void OnWeeklyReportClick(object sender, RoutedEventArgs args) => await ShowPeriodReportAsync(monthly: false);
+
+    private async void OnMonthlyReportClick(object sender, RoutedEventArgs args) => await ShowPeriodReportAsync(monthly: true);
+
+    private async Task ShowPeriodReportAsync(bool monthly)
     {
         if (_activeDialog != null || !ViewModel.CanConfigureAudit || !_currentPage || _disposed)
         {
@@ -453,7 +459,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         };
         var dialog = new ContentDialog
         {
-            Title = "AIHub_WeeklyReport/Content".GetLocalizedOrFallback("Weekly audit report"),
+            Title = monthly ? ViewModel.MonthlyReportLabel : "AIHub_WeeklyReport/Content".GetLocalizedOrFallback("Weekly audit report"),
             Content = new ScrollViewer { Content = body, MaxHeight = 420 },
             PrimaryButtonText = ViewModel.CopyReportLabel,
             IsPrimaryButtonEnabled = false,
@@ -463,10 +469,10 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         Task<ContentDialogResult> closing = ShowDialogAsync(dialog);
         try
         {
-            var report = await ViewModel.LoadWeeklyReportAsync();
+            var report = await ViewModel.LoadPeriodReportAsync(monthly);
             if (_activeDialog == dialog)
             {
-                body.Text = FormatWeeklyReport(report);
+                body.Text = report.Format(CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
                 dialog.IsPrimaryButtonEnabled = report.Days.Count > 0;
             }
         }
@@ -593,7 +599,7 @@ public sealed partial class AIHubPage : NavigablePage, IRefreshablePage
         {
             MaxHeight = 300,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = new TextBlock { Text = preview, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, FontSize = 12 },
+            Content = new TextBlock { Text = preview, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, FontSize = TypographyResources.FontSize(12) },
         });
 
         var dialog = new ContentDialog

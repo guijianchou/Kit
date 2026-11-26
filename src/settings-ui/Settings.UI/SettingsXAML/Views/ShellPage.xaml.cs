@@ -33,7 +33,7 @@ namespace Kit.Settings.UI.Views
     /// <summary>
     /// Root page.
     /// </summary>
-    public sealed partial class ShellPage : UserControl, IDisposable
+    public sealed partial class ShellPage : UserControl, IDisposable, ILiveLocalizable
     {
         /// <summary>
         /// Declaration for the ipc callback function.
@@ -112,6 +112,7 @@ namespace Kit.Settings.UI.Views
         public ShellPage()
         {
             InitializeComponent();
+            Unloaded += ShellPage_AiUsageUnloaded;
             App.LogStartupTiming("ShellPage: InitializeComponent completed");
             NavHelper.SetNavigateTo(DashboardNavigationItem, typeof(DashboardPage));
             NavHelper.SetNavigateTo(GeneralNavigationItem, typeof(GeneralPage));
@@ -341,6 +342,19 @@ namespace Kit.Settings.UI.Views
             NavigationService.EnsurePageIsSelected(typeof(DashboardPage));
         }
 
+        public void RefreshLocalization()
+        {
+            RefreshAiUsageText();
+            _searchDebounceCts?.Cancel();
+            SearchIndexService.RefreshLanguage();
+            SetWindowTitle();
+            AppTitleBar_Loaded(AppTitleBar, null);
+            var query = SearchBox.Text?.Trim() ?? string.Empty;
+            _lastQueryText = query;
+            _lastSearchResults = string.IsNullOrEmpty(query) ? new List<SettingEntry>() : SearchIndexService.Search(query);
+            SearchBox.ItemsSource = string.IsNullOrEmpty(query) ? null : BuildSuggestionItems(query, _lastSearchResults);
+        }
+
         private void SetWindowTitle()
         {
             var loader = ResourceLoaderInstance.ResourceLoader;
@@ -560,6 +574,44 @@ namespace Kit.Settings.UI.Views
             return assembly.GetType($"Kit.Settings.UI.Views.{pageTypeName}");
         }
 
+        private void SearchBox_Loaded(object sender, RoutedEventArgs e) => RefreshSearchEditorLayout();
+
+        private void SearchBox_SizeChanged(object sender, SizeChangedEventArgs e) => RefreshSearchEditorLayout();
+
+        private void RefreshSearchEditorLayout()
+        {
+            // WinUI can resize the editor's columns without rearranging its query
+            // button. Remeasure after the title bar finishes assigning the new width.
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (SearchBox.IsLoaded && FindVisualChildByName(SearchBox, "TextBox") is TextBox editor &&
+                    VisualTreeHelper.GetChildrenCount(editor) > 0 && VisualTreeHelper.GetChild(editor, 0) is FrameworkElement layout)
+                {
+                    // Keep native editing, suggestions and visual states while matching
+                    // Windows Settings: search glyph on the left, clear action on the right.
+                    if (layout is Grid grid && grid.ColumnDefinitions.Count >= 3 &&
+                        FindVisualChildByName(editor, "QueryButton") is Button query &&
+                        FindVisualChildByName(editor, "ContentElement") is FrameworkElement content &&
+                        FindVisualChildByName(editor, "PlaceholderTextContentPresenter") is FrameworkElement placeholder &&
+                        FindVisualChildByName(editor, "DeleteButton") is Button clear)
+                    {
+                        grid.ColumnDefinitions[0].Width = GridLength.Auto;
+                        grid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+                        grid.ColumnDefinitions[2].Width = GridLength.Auto;
+                        Grid.SetColumn(query, 0);
+                        query.Margin = new Thickness(2, 0, 0, 0);
+                        Grid.SetColumn(content, 1);
+                        Grid.SetColumn(placeholder, 1);
+                        Grid.SetColumnSpan(placeholder, 1);
+                        Grid.SetColumn(clear, 2);
+                    }
+
+                    layout.InvalidateMeasure();
+                    layout.InvalidateArrange();
+                }
+            });
+        }
+
         private void SearchBox_GotFocus(object sender, RoutedEventArgs e)
         {
             var box = sender as AutoSuggestBox;
@@ -658,7 +710,6 @@ namespace Kit.Settings.UI.Views
                 var queryText = (args.QueryText ?? _lastQueryText)?.Trim();
                 if (string.IsNullOrWhiteSpace(queryText))
                 {
-                    NavigationService.Navigate<DashboardPage>();
                     return;
                 }
 
@@ -687,6 +738,9 @@ namespace Kit.Settings.UI.Views
             _searchDebounceCts?.Dispose();
             _searchDebounceCts = null;
             _disposed = true;
+            StopAiUsageObservation();
+            Unloaded -= ShellPage_AiUsageUnloaded;
+            AiUsageFlyout.Hide();
             GC.SuppressFinalize(this);
         }
     }

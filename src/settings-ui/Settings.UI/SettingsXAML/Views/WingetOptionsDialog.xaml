@@ -6,6 +6,7 @@
     x:Class="Kit.Settings.UI.Views.WingetOptionsDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:services="using:Kit.Settings.UI.Services"
     DefaultButton="Close">
 
     <ScrollViewer
@@ -29,14 +30,14 @@
                         TextChanged="OnInstallLocationTextChanged" />
                     <TextBlock
                         x:Name="InvalidLocationText"
-                        FontSize="12"
+                        FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
                         Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                         TextWrapping="Wrap"
                         Visibility="Collapsed" />
                 </StackPanel>
                 <TextBlock
                     x:Name="InstallLocationHintText"
-                    FontSize="12"
+                    FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     TextWrapping="Wrap" />
             </StackPanel>

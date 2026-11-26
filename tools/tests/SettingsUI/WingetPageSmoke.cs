@@ -1484,6 +1484,7 @@ internal static class WingetPageSmoke
             var dialog = (ContentDialog)dialogField.GetValue(page);
             Require(dialog != null, "Queue and history must open its real dialog.");
             await Settle();
+            await VerifyHistoryDialogMaterial(page, dialog);
             var button = Descendants(dialog).OfType<Button>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_ClearOldHistory");
             var result = Descendants(dialog).OfType<TextBlock>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryClearResult");
             var history = Descendants(dialog).OfType<ItemsControl>().Single(item => AutomationProperties.GetAutomationId(item) == "Winget_HistoryItems");
@@ -1575,6 +1576,139 @@ internal static class WingetPageSmoke
             Apply(vm, Snapshot());
         }
         Log("History dialog localized cleanup, disabled/busy/disconnected/pending guards, isolated IPC result refresh and unchanged queue PASS");
+    }
+
+    private static async Task VerifyHistoryDialogMaterial(WingetPage page, ContentDialog dialog)
+    {
+        var originalTheme = dialog.RequestedTheme;
+        bool highContrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
+        try
+        {
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            {
+                dialog.RequestedTheme = theme;
+                await Settle();
+                var background = Descendants(dialog).OfType<Border>().First(item => item.Name == "BackgroundElement");
+                var dialogSpace = (Grid)background.Child;
+                Require(dialogSpace.Name == "DialogSpace", "History material checks target the outer native dialog template.");
+                var commandSpace = dialogSpace.Children.OfType<Grid>().Single(item => item.Name == "CommandSpace");
+                var contentScroll = dialogSpace.Children.OfType<ScrollViewer>().Single(item => item.Name == "ContentScrollViewer");
+                Require(dialog.Style != null && Rounded(dialog.CornerRadius) && Rounded(background.CornerRadius) && Rounded(dialogSpace.CornerRadius),
+                    $"History dialog and its actual template surfaces retain four 8 DIP corners in {theme}.");
+                Require(AcrylicOrHighContrastFallback(dialog.Background) && AcrylicOrHighContrastFallback(background.Background),
+                    $"History dialog uses theme acrylic without forcing fallback in {theme}; high contrast={highContrast}.");
+                Require(contentScroll.Content is Grid contentOverlay && Transparent(contentOverlay.Background),
+                    $"History content overlay must leave the outer material visible in {theme}.");
+                Require(Transparent(commandSpace.Background),
+                    $"History command area must leave the outer material and bottom corners visible in {theme}.");
+                // This capture verifies popup geometry. Real-time acrylic is verified separately
+                // through the native window because RenderTargetBitmap omits composition backdrops.
+                await CaptureShell($"winget-history-material-{theme}.png", dialog);
+                await WaitForHistoryPreview(page, theme);
+            }
+        }
+        finally
+        {
+            dialog.RequestedTheme = originalTheme;
+            await Settle();
+        }
+        Log("History dialog Light/Dark template corners, theme acrylic and transparent overlay/command surfaces PASS; composition blur requires native capture.");
+
+        static bool Rounded(CornerRadius radius) => Math.Abs(radius.TopLeft - 8) < 0.01 && Math.Abs(radius.TopRight - 8) < 0.01 &&
+            Math.Abs(radius.BottomLeft - 8) < 0.01 && Math.Abs(radius.BottomRight - 8) < 0.01;
+        static bool Transparent(Brush brush) => brush == null || brush.Opacity == 0 || brush is SolidColorBrush solid && solid.Color.A == 0;
+        bool AcrylicOrHighContrastFallback(Brush brush) => brush is AcrylicBrush acrylic && !acrylic.AlwaysUseFallback ||
+            highContrast && brush is SolidColorBrush;
+    }
+
+    private static async Task WaitForHistoryPreview(WingetPage page, ElementTheme theme)
+    {
+        string requested = Environment.GetEnvironmentVariable("KIT_WINGET_HISTORY_PREVIEW");
+        if (string.IsNullOrWhiteSpace(requested) || requested == "0" || requested.Equals("false", StringComparison.OrdinalIgnoreCase)) return;
+        var previewTheme = requested.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? ElementTheme.Dark : ElementTheme.Light;
+        if (theme != previewTheme) return;
+
+        string continuePath = Path.Combine(Output, "history-preview.continue");
+        string shiftPath = Path.Combine(Output, "history-preview.shift");
+        string readyPath = Path.Combine(Output, "history-preview.ready.json");
+        var host = page.Content as Panel ?? throw new InvalidOperationException("History preview requires the page's root panel.");
+        var stripes = new Grid { IsHitTestVisible = false };
+        AutomationProperties.SetAccessibilityView(stripes, AccessibilityView.Raw);
+        Canvas.SetZIndex(stripes, 100);
+        if (host is Grid hostGrid)
+        {
+            Grid.SetRowSpan(stripes, Math.Max(1, hostGrid.RowDefinitions.Count));
+            Grid.SetColumnSpan(stripes, Math.Max(1, hostGrid.ColumnDefinitions.Count));
+        }
+        var colors = new[]
+        {
+            Microsoft.UI.ColorHelper.FromArgb(255, 255, 32, 32),
+            Microsoft.UI.ColorHelper.FromArgb(255, 16, 64, 255),
+            Microsoft.UI.ColorHelper.FromArgb(255, 255, 224, 0),
+            Microsoft.UI.ColorHelper.FromArgb(255, 0, 192, 64),
+            Microsoft.UI.ColorHelper.FromArgb(255, 224, 0, 224),
+            Microsoft.UI.ColorHelper.FromArgb(255, 0, 224, 224),
+            Microsoft.UI.ColorHelper.FromArgb(255, 255, 255, 255),
+            Microsoft.UI.ColorHelper.FromArgb(255, 0, 0, 0),
+        };
+        for (int index = 0; index < colors.Length; index++)
+        {
+            stripes.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var stripe = new Border();
+            Grid.SetColumn(stripe, index);
+            stripes.Children.Add(stripe);
+        }
+        bool shifted = File.Exists(shiftPath);
+        host.Children.Add(stripes);
+        try
+        {
+            PaintStripes();
+            await Settle();
+            WriteReady();
+            Log($"HISTORY PREVIEW READY ({theme}, state {(shifted ? "B" : "A")}); create/remove {shiftPath} to switch stripes. Create {continuePath} to continue; automatic continuation after 180 seconds.");
+            var elapsed = Stopwatch.StartNew();
+            int nextProgressSeconds = 30;
+            while (!File.Exists(continuePath) && elapsed.Elapsed < TimeSpan.FromSeconds(180))
+            {
+                await Task.Delay(250);
+                bool requestedShift = File.Exists(shiftPath);
+                if (requestedShift != shifted)
+                {
+                    shifted = requestedShift;
+                    PaintStripes();
+                    await Settle();
+                    WriteReady();
+                    Log($"HISTORY PREVIEW stripe state {(shifted ? "B" : "A")} rendered.");
+                }
+                if (elapsed.Elapsed.TotalSeconds >= nextProgressSeconds)
+                {
+                    Log($"HISTORY PREVIEW waiting: {nextProgressSeconds}/180 seconds.");
+                    nextProgressSeconds += 30;
+                }
+            }
+            Log(File.Exists(continuePath) ? "HISTORY PREVIEW continued by marker." : "HISTORY PREVIEW timed out; continuing functional smoke checks.");
+        }
+        finally
+        {
+            host.Children.Remove(stripes);
+            await Settle();
+        }
+
+        void PaintStripes()
+        {
+            for (int index = 0; index < colors.Length; index++)
+                ((Border)stripes.Children[index]).Background = new SolidColorBrush(colors[(index + (shifted ? 3 : 0)) % colors.Length]);
+        }
+
+        void WriteReady() => File.WriteAllText(readyPath, JsonSerializer.Serialize(new
+        {
+            Theme = theme.ToString(),
+            ProcessId = Environment.ProcessId,
+            State = shifted ? "B" : "A",
+            ShiftFile = shiftPath,
+            ContinueFile = continuePath,
+            MaximumWaitSeconds = 180,
+        }));
     }
 
     private static async Task VerifyDetailsDialog(WingetPage page)

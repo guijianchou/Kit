@@ -29,6 +29,7 @@ public sealed partial class MainWindow : WindowEx, IDisposable
     private readonly LauncherViewModel _launcherViewModel;
     private readonly AllAppsViewModel _allAppsViewModel;
     private readonly QuickAccessCoordinator _coordinator;
+    private readonly QuickAccessTypography _typography;
 
     // XAML-defined design size in DIPs. Captured once at construction so the value
     // isn't corrupted by later DPI transitions (WindowEx.Width/Height returns the
@@ -94,6 +95,8 @@ public sealed partial class MainWindow : WindowEx, IDisposable
         _launcherViewModel = new LauncherViewModel(_coordinator);
         _allAppsViewModel = new AllAppsViewModel(_coordinator);
         ShellHost.Initialize(_coordinator, _launcherViewModel, _allAppsViewModel);
+        _typography = new QuickAccessTypography(ShellHost);
+        ShellHost.ContentLoaded += _typography.RequestRefresh;
         ShellHost.KeyDown += OnShellHostKeyDown;
 
         EnsureSupportedBackdrop();
@@ -118,12 +121,18 @@ public sealed partial class MainWindow : WindowEx, IDisposable
     private void ApplyConfiguredTheme()
     {
         var themeSetting = SettingsRepository<GeneralSettings>.GetInstance(SettingsUtils.Default).SettingsConfig.Theme;
-        ShellHost.RequestedTheme = (themeSetting ?? string.Empty).ToUpperInvariant() switch
+        var resolvedTheme = (themeSetting ?? string.Empty).ToUpperInvariant() switch
         {
             "LIGHT" => ElementTheme.Light,
             "DARK" => ElementTheme.Dark,
             _ => ElementTheme.Default,
         };
+        if (Content is FrameworkElement rootElement)
+        {
+            rootElement.RequestedTheme = resolvedTheme;
+        }
+
+        ShellHost.RequestedTheme = resolvedTheme;
     }
 
     private void OnShellHostKeyDown(object sender, KeyRoutedEventArgs e)
@@ -379,6 +388,8 @@ public sealed partial class MainWindow : WindowEx, IDisposable
         if (disposing)
         {
             ShellHost.KeyDown -= OnShellHostKeyDown;
+            ShellHost.ContentLoaded -= _typography.RequestRefresh;
+            _typography.Dispose();
             StopEventListeners();
 
             _showEvent?.Dispose();

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Kit.WingetLib;
 using Microsoft.UI.Dispatching;
@@ -27,7 +28,7 @@ using Windows.System;
 
 namespace Kit.Settings.UI.Views;
 
-public sealed partial class WingetPage : NavigablePage, IRefreshablePage
+public sealed partial class WingetPage : NavigablePage, IRefreshablePage, ILiveLocalizable
 {
     private readonly MainWindow settingsWindow;
     private bool currentPage;
@@ -142,6 +143,8 @@ public sealed partial class WingetPage : NavigablePage, IRefreshablePage
     public bool ExceedsBatchLimit(int count) => count > 50;
 
     public Visibility ShowBatchLimit(int count) => count > 50 ? Visibility.Visible : Visibility.Collapsed;
+
+    public void RefreshLocalization() => Bindings.Update();
 
     public void RefreshEnabledState() => ViewModel.RefreshEnabledState();
 

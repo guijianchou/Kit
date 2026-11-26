@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -737,26 +738,43 @@ public sealed class StorageAndPolicyTests
     [TestMethod]
     public async Task ReparseDirectoriesCannotEscapeTaskOrStorageRoots()
     {
-        using var fixture = new FixtureDirectory();
-        string target = fixture.PathFor("outside-package");
-        WritePolicy(Path.Combine(target, "Chains", "task", "security.md"), "Outside policy");
-        string packageRoot = fixture.PathFor("modules");
-        Directory.CreateDirectory(packageRoot);
-        string link = Path.Combine(packageRoot, "Plugin");
+        var fixture = new FixtureDirectory();
+        Exception? bodyFailure = null;
         try
         {
-            Directory.CreateSymbolicLink(link, target);
+            string target = fixture.PathFor("outside-package");
+            WritePolicy(Path.Combine(target, "Chains", "task", "security.md"), "Outside policy");
+            string packageRoot = fixture.PathFor("modules");
+            Directory.CreateDirectory(packageRoot);
+            string link = Path.Combine(packageRoot, "Plugin");
+            fixture.CreateReparseDirectoryLink(link, target);
+            Assert.IsTrue((File.GetAttributes(link) & FileAttributes.ReparsePoint) != 0);
+            Assert.AreEqual("Outside policy", File.ReadAllText(Path.Combine(link, "Chains", "task", "security.md")));
+
+            var service = new SecurityPolicyService(fixture.PathFor("data"), packageRoot);
+            await Assert.ThrowsExactlyAsync<IOException>(() => service.LoadTaskSecurityPolicyAsync("Plugin", "task"));
+            Assert.ThrowsExactly<IOException>(() => { _ = new AiHubSettingsStore(link); });
+            Assert.IsFalse(File.Exists(Path.Combine(target, "settings.json")));
+            Assert.AreEqual("Outside policy", File.ReadAllText(Path.Combine(target, "Chains", "task", "security.md")));
         }
-        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+        catch (Exception exception)
         {
-            Assert.Inconclusive("Creating a directory link is unavailable in this test environment.");
+            bodyFailure = exception;
         }
 
-        var service = new SecurityPolicyService(fixture.PathFor("data"), packageRoot);
-        await Assert.ThrowsExactlyAsync<IOException>(() => service.LoadTaskSecurityPolicyAsync("Plugin", "task"));
-        Assert.ThrowsExactly<IOException>(() => { _ = new AiHubSettingsStore(link); });
-        Assert.IsFalse(File.Exists(Path.Combine(target, "settings.json")));
-        Assert.AreEqual("Outside policy", File.ReadAllText(Path.Combine(target, "Chains", "task", "security.md")));
+        try
+        {
+            fixture.Dispose();
+        }
+        catch (Exception cleanupFailure) when (bodyFailure is not null)
+        {
+            throw new AggregateException("The reparse-point test and fixture cleanup both failed.", bodyFailure, cleanupFailure);
+        }
+
+        if (bodyFailure is not null)
+        {
+            ExceptionDispatchInfo.Capture(bodyFailure).Throw();
+        }
     }
 
     [TestMethod]

@@ -56,6 +56,15 @@ namespace Kit.Settings.UI.Services
             }
         }
 
+        public static void RefreshLanguage()
+        {
+            lock (_lockObject)
+            {
+                _isIndexBuilt = false;
+                BuildIndex();
+            }
+        }
+
         public static void BuildIndex()
         {
             lock (_lockObject)

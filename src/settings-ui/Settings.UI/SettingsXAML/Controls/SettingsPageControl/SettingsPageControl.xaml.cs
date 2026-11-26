@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -82,6 +82,13 @@ namespace Kit.Settings.UI.Controls
         public static readonly DependencyProperty ModuleContentProperty = DependencyProperty.Register(nameof(ModuleContent), typeof(object), typeof(SettingsPageControl), new PropertyMetadata(null));
         public static readonly DependencyProperty CompactHeaderProperty = DependencyProperty.Register(nameof(CompactHeader), typeof(bool), typeof(SettingsPageControl), new PropertyMetadata(false));
         public static readonly DependencyProperty HeaderActionProperty = DependencyProperty.Register(nameof(HeaderAction), typeof(object), typeof(SettingsPageControl), new PropertyMetadata(null));
+
+        private Visibility GetCompactSubtitleVisibility(bool compactHeader, string description, int primaryLinkCount)
+        {
+            return compactHeader && (!string.IsNullOrWhiteSpace(description) || primaryLinkCount > 0)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
 
         private Visibility GetLegacyIntroVisibility(bool compactHeader, Uri imageSource, string description)
         {

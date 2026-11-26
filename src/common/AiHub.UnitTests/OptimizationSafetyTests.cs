@@ -14,7 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class OptimizationSafetyTests
 {
     [TestMethod]
-    public async Task DownloadsClassifyFiveGroupsAndLeaveUncertainFilesUntouched()
+    public async Task DownloadsClassifySixGroupsAndLeaveUncertainFilesUntouched()
     {
         using var fixture = new FixtureDirectory();
         string root = fixture.PathFor("Downloads");
@@ -34,7 +34,7 @@ public sealed class OptimizationSafetyTests
         using var held = File.Open(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
         var items = await new DownloadOrganizerService(root).ScanAsync();
-        CollectionAssert.AreEquivalent(new[] { "Documents", "Compressed", "Programs", "Music", "Video" }, items.Select(i => i.Category).ToArray());
+        CollectionAssert.AreEquivalent(new[] { "Documents", "Compressed", "Programs", "Music", "Video", "Pictures" }, items.Select(i => i.Category).ToArray());
         Assert.IsTrue(items.All(i => i.Action == "move"));
         Assert.IsTrue(File.Exists(Path.Combine(root, "photo.png")));
     }
@@ -166,6 +166,9 @@ public sealed class OptimizationSafetyTests
         service = new SecurityPolicyService(root);
         Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
         await service.SaveTaskPolicyAsync("system-optimization", TaskPolicyDefaults.ProjectSystemOptimizationInstructions);
+        service = new SecurityPolicyService(root);
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
+        await service.SaveTaskPolicyAsync("system-optimization", TaskPolicyDefaults.Version2SystemOptimizationInstructions);
         service = new SecurityPolicyService(root);
         Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization"));
         const string custom = "My custom optimization rules.";

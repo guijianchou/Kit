@@ -171,13 +171,6 @@ namespace
         values.add_property(L"longitude", defaults.longitude);
         values.add_property(L"sunrise_offset", defaults.sunrise_offset);
         values.add_property(L"sunset_offset", defaults.sunset_offset);
-        json::JsonObject hotkey;
-        hotkey.SetNamedValue(L"win", json::value(true));
-        hotkey.SetNamedValue(L"ctrl", json::value(true));
-        hotkey.SetNamedValue(L"alt", json::value(false));
-        hotkey.SetNamedValue(L"shift", json::value(true));
-        hotkey.SetNamedValue(L"code", json::value(static_cast<int>('D')));
-        values.add_property(L"toggle-theme-hotkey", hotkey);
         return winrt::to_string(values.serialize());
     }
 }

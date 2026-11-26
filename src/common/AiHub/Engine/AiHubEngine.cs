@@ -1,6 +1,7 @@
 namespace Kit.AiHub.Engine;
 
 using System;
+using System.Threading;
 using Kit.AiHub.Contract;
 using Kit.AiHub.Security;
 using Kit.AiHub.Storage;
@@ -12,6 +13,12 @@ public static class AiHubEngine
 {
     private static readonly object Gate = new();
     private static TaskAiEngine? _instance;
+
+    /// <summary>Observes an already initialized service without constructing it or waiting for initialization.</summary>
+    public static TaskAiEngine? ExistingEngine => Volatile.Read(ref _instance);
+
+    /// <summary>Signals publication or removal of the shared engine, outside the factory lock.</summary>
+    public static event EventHandler? InstanceChanged;
 
     /// <summary>
     /// Gets the shared singleton instance of IAiTaskEngine.
@@ -25,11 +32,21 @@ public static class AiHubEngine
     {
         get
         {
+            TaskAiEngine instance;
+            bool created;
             lock (Gate)
             {
                 // Failed construction is retryable, and shutdown never republishes a disposed engine.
-                return _instance ??= CreateDefaultEngine();
+                created = _instance is null;
+                instance = _instance ??= CreateDefaultEngine();
             }
+
+            if (created)
+            {
+                NotifyInstanceChanged();
+            }
+
+            return instance;
         }
     }
 
@@ -58,11 +75,38 @@ public static class AiHubEngine
 
     public static void Shutdown()
     {
+        bool removed;
         lock (Gate)
         {
             TaskAiEngine? instance = _instance;
+            removed = instance is not null;
             _instance = null;
             instance?.Dispose();
+        }
+
+        if (removed)
+        {
+            NotifyInstanceChanged();
+        }
+    }
+
+    private static void NotifyInstanceChanged()
+    {
+        if (InstanceChanged is not { } handlers)
+        {
+            return;
+        }
+
+        foreach (EventHandler handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(null, EventArgs.Empty);
+            }
+            catch (Exception)
+            {
+                // Observational UI listeners must not affect engine initialization or shutdown.
+            }
         }
     }
 

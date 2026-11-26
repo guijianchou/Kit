@@ -2,6 +2,7 @@
     x:Class="Kit.Settings.UI.Views.SearchResultsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:services="using:Kit.Settings.UI.Services"
     xmlns:controls="using:Kit.Settings.UI.Controls"
     xmlns:converters="using:Kit.Settings.UI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -14,14 +15,16 @@
     xmlns:vm="using:Kit.Settings.UI.ViewModels"
     x:Name="RootPage"
     AutomationProperties.LandmarkType="Main"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    FontFamily="{ThemeResource KitUiFontFamily}"
+    FontSize="{ThemeResource KitFontSize14}" services:TypographyResources.BaseFontSize="14">
 
     <local:NavigablePage.Resources>
         <converters:IconConverter x:Key="IconConverter" />
         <tkconverters:CollectionVisibilityConverter x:Key="CollectionVisibilityConverter" />
     </local:NavigablePage.Resources>
 
-    <controls:SettingsPageControl x:Name="PageControl" x:Uid="SearchResults_Title" CompactHeader="True">
+    <controls:SettingsPageControl x:Name="PageControl" x:Uid="SearchResults_Title" services:RuntimeLocalization.Uid="SearchResults_Title" CompactHeader="True">
         <controls:SettingsPageControl.ModuleContent>
             <StackPanel
                 AutomationProperties.LiveSetting="Polite"
@@ -39,7 +42,7 @@
 
                 <controls:SettingsGroup
                     x:Name="ModulesGroup"
-                    x:Uid="SearchResults_ModulesTitle"
+                    x:Uid="SearchResults_ModulesTitle" services:RuntimeLocalization.Uid="SearchResults_ModulesTitle"
                     Padding="0,12,0,0"
                     ItemsSource="{x:Bind ViewModel.ModuleResults, Mode=OneWay}"
                     Visibility="{x:Bind ViewModel.ShowModulesSection, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -94,12 +97,12 @@
                         Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                         Glyph="&#xE721;" />
                     <TextBlock
-                        x:Uid="SearchResults_NoResultsHeader"
+                        x:Uid="SearchResults_NoResultsHeader" services:RuntimeLocalization.Uid="SearchResults_NoResultsHeader"
                         HorizontalAlignment="Center"
                         Style="{StaticResource SubtitleTextBlockStyle}"
                         TextAlignment="Center" />
                     <TextBlock
-                        x:Uid="SearchResults_NoResultsDescription"
+                        x:Uid="SearchResults_NoResultsDescription" services:RuntimeLocalization.Uid="SearchResults_NoResultsDescription"
                         HorizontalAlignment="Center"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Style="{StaticResource BodyTextBlockStyle}"

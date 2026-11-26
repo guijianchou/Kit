@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using Kit.Settings.UI.Services;
 using Microsoft.UI.Xaml;
 
 namespace Kit.QuickAccess;
@@ -18,6 +19,7 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        TypographyResources.ApplyNativeTextStyles(Resources);
         var launchContext = QuickAccessLaunchContext.Parse(Environment.GetCommandLineArgs());
         _window = new MainWindow(launchContext);
         _window.Closed += OnWindowClosed;

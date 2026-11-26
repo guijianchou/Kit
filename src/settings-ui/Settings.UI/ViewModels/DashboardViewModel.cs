@@ -22,7 +22,7 @@ using Microsoft.UI.Dispatching;
 
 namespace Kit.Settings.UI.ViewModels
 {
-    public partial class DashboardViewModel : PageViewModelBase
+    public partial class DashboardViewModel : PageViewModelBase, ILiveLocalizable
     {
         private readonly object _sortLock = new object();
 
@@ -32,7 +32,6 @@ namespace Kit.Settings.UI.ViewModels
         private readonly ISettingsRepository<GeneralSettings> settingsRepository;
         private readonly QuickAccessViewModel quickAccessViewModel;
         private readonly List<DashboardListItem> moduleItems = new List<DashboardListItem>();
-        private readonly Microsoft.Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = ResourceLoaderInstance.ResourceLoader;
         private readonly Dictionary<ModuleType, (bool TargetState, long Timestamp)> _pendingTransitions = new();
         private static readonly long TransitionLockTicks = System.Diagnostics.Stopwatch.Frequency * 2; // 2.0s cold-start grace window
 
@@ -41,6 +40,8 @@ namespace Kit.Settings.UI.ViewModels
         private bool isUpdatingFromUI;
         private bool isSorting;
         private bool isDisposed;
+
+        private Microsoft.Windows.ApplicationModel.Resources.ResourceLoader ResourceLoader => ResourceLoaderInstance.ResourceLoader;
 
         public Func<string, int> SendConfigMSG { get; }
 
@@ -83,7 +84,7 @@ namespace Kit.Settings.UI.ViewModels
                 new QuickAccessLauncher(),
                 moduleType => ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Disabled,
                 moduleType => ModuleGpoHelper.GetModuleGpoConfiguration(moduleType) == GpoRuleConfigured.Enabled,
-                resourceLoader,
+                ResourceLoader,
                 moduleTypes: KitModuleCatalog.DashboardModules,
                 fallbackLauncher: OpenModuleSettingsFromQuickAccess);
             quickAccessViewModel.PropertyChanged += OnQuickAccessPropertyChanged;
@@ -104,6 +105,24 @@ namespace Kit.Settings.UI.ViewModels
         {
             NavigationService.Navigate(ModuleGpoHelper.GetModulePageType(moduleType));
             return true;
+        }
+
+        public void RefreshLocalization()
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            foreach (var item in moduleItems)
+            {
+                item.Label = ResourceLoader.GetString(ModuleHelper.GetModuleLabelResourceName(item.Tag));
+            }
+
+            quickAccessViewModel.RefreshLocalization(ResourceLoader);
+            RefreshOverviewLocalization();
+            RefreshUpdateLocalization();
+            SortModuleList();
         }
 
         private void OnSettingsChanged(GeneralSettings newSettings)
@@ -163,7 +182,7 @@ namespace Kit.Settings.UI.ViewModels
                 var newItem = new DashboardListItem()
                 {
                     Tag = moduleType,
-                    Label = resourceLoader.GetString(ModuleHelper.GetModuleLabelResourceName(moduleType)),
+                    Label = ResourceLoader.GetString(ModuleHelper.GetModuleLabelResourceName(moduleType)),
                     IsEnabled = gpo == GpoRuleConfigured.Enabled || (gpo != GpoRuleConfigured.Disabled && ModuleHelper.GetIsModuleEnabled(generalSettingsConfig, moduleType)),
                     IsLocked = gpo == GpoRuleConfigured.Enabled || gpo == GpoRuleConfigured.Disabled,
                     Icon = ModuleHelper.GetModuleTypeFluentIconName(moduleType),
@@ -345,6 +364,7 @@ namespace Kit.Settings.UI.ViewModels
 
             isDisposed = true;
             SetOverviewActive(false);
+            SetUpdateStatusActive(false);
             base.Dispose();
             quickAccessViewModel.PropertyChanged -= OnQuickAccessPropertyChanged;
             quickAccessViewModel.Dispose();

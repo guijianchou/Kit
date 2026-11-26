@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -23,7 +24,7 @@ using Windows.Storage.Pickers;
 
 namespace Kit.Settings.UI.Views;
 
-public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
+public sealed partial class NetMapPage : NavigablePage, IRefreshablePage, ILiveLocalizable
 {
     private readonly MainWindow settingsWindow;
     private readonly Dictionary<int, FrameworkElement> hopMarkers = new();
@@ -36,15 +37,9 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     private NetMapSnapshot renderedSnapshot;
     private int renderedSelection = -1;
     private double renderedUserZoom = 1;
-    private const double MapFitMaxWidth = 800;
-    private const double MapFitMaxHeight = 340;
-    private const double MapFitMinScale = 1;
-    private const double MapFitMaxScale = 4;
     private double userZoomFactor = 1;
-    private double mapScale = 1;
-    private double mapCenterX = 480;
-    private double mapOffsetX;
-    private double mapOffsetY;
+    private MapViewport mapViewport = MapViewport.Fit([], 960, 480);
+    private bool mapResizeQueued;
 
     public NetMapPage()
     {
@@ -66,6 +61,12 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     public NetMapViewModel ViewModel { get; }
 
     public void RefreshEnabledState() => ViewModel.RefreshEnabledState();
+
+    public void RefreshLocalization()
+    {
+        renderedSnapshot = null;
+        DrawPoints();
+    }
 
     public Style HealthDotStyle(ProbeHealth health) => (Style)HealthStyles[NetMapHealthStylesStore.Key(health, "Dot")];
 
@@ -245,6 +246,37 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         DrawPoints();
     }
 
+    private void MapView_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (MapViewportClip == null)
+        {
+            return;
+        }
+
+        MapViewportClip.Rect = new(0, 0, e.NewSize.Width, e.NewSize.Height);
+        foreach (var layer in new[] { MapLinesGlow, MapLines, MapPulseLayer, MapPoints })
+        {
+            layer.Width = e.NewSize.Width;
+            layer.Height = e.NewSize.Height;
+        }
+
+        // Several measurements can occur in the same layout pass at the stacking
+        // breakpoint. Redraw once after layout settles, using the current size.
+        renderedSnapshot = null;
+        if (!mapResizeQueued)
+        {
+            mapResizeQueued = true;
+            if (!DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                mapResizeQueued = false;
+                DrawPoints();
+            }))
+            {
+                mapResizeQueued = false;
+            }
+        }
+    }
+
     private async void AiCheck_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -296,7 +328,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         catch (Exception)
         {
             // The editable path field remains available if the system picker fails.
-            ViewModel.ReportMessage(NetMapViewModel.Text("PickerFailed"), InfoBarSeverity.Error);
+            ViewModel.ReportLocalizedMessage("PickerFailed", InfoBarSeverity.Error);
         }
     }
 
@@ -417,7 +449,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
     private void DrawPoints()
     {
         UpdateHeroPulse();
-        if (!isCurrentPage || !IsLoaded || MapPoints == null || MapDescription == null)
+        if (!isCurrentPage || !IsLoaded || MapPoints == null || MapDescription == null || MapView.ActualWidth <= 0 || MapView.ActualHeight <= 0)
         {
             return;
         }
@@ -463,7 +495,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         renderedUserZoom = userZoomFactor;
         var origin = EgressPosition(snapshot.Direct);
         var target = EgressPosition(snapshot.Proxy);
-        var positions = snapshot.Hops.Where(hop => hop.Geography is { Latitude: not null, Longitude: not null }).Select(hop => WorldMap.Locate(string.Empty, hop.Geography)).ToList();
+        var positions = snapshot.Hops.Where(hop => hop.Geography is { Latitude: not null, Longitude: not null }).Select(hop => WorldMap.Locate(string.Empty, hop.Geography)).Where(point => point != null).ToList();
         if (origin != null)
         {
             positions.Add(origin);
@@ -492,17 +524,17 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             }
 
             var point = WorldMap.Locate(string.Empty, geo);
+            if (point == null)
+            {
+                continue;
+            }
+
             if (previous != null)
             {
                 AddRouteLine(previous, point, previousIsOrigin || hop.Ttl != previousTtl + 1);
             }
 
             targetInRoute = hop.Ip == snapshot.Proxy.LastSuccess?.Identity?.Ip;
-            if (targetInRoute && selected < 0)
-            {
-                labelIndex = i;
-            }
-
             previous = point;
             previousTtl = hop.Ttl;
             previousIsOrigin = false;
@@ -510,7 +542,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             {
                 int index = i;
                 bool highlight = selected == i || (targetInRoute && selected < 0);
-                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 42 : 32, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health, pulse: snapshot.Running && highlight);
+                var marker = AddPoint(point, ViewModel.Hops[i].Detail, true, !snapshot.Running, selected == i ? 30 : 24, ViewModel.Hops[i].Ttl, ViewModel.Hops[i].Health, pulse: snapshot.Running && highlight);
                 marker.Tapped += (_, _) => HopList.SelectedIndex = HopList.SelectedIndex == index ? -1 : index;
                 hopMarkers[i] = marker;
             }
@@ -521,15 +553,71 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
             AddRouteLine(previous, target, true);
         }
 
-        if (labelIndex >= 0 && labelIndex < snapshot.Hops.Count && labelIndex < ViewModel.Hops.Count && snapshot.Hops[labelIndex].Geography is { Latitude: not null, Longitude: not null } labelGeo)
+        if (labelIndex >= 0 && labelIndex < snapshot.Hops.Count && labelIndex < ViewModel.Hops.Count &&
+            WorldMap.Locate(string.Empty, snapshot.Hops[labelIndex].Geography) is { } labelCoordinate)
         {
-            var position = Position(WorldMap.Locate(string.Empty, labelGeo));
-            var text = new TextBlock { Style = (Style)Resources["NetMapMapLabelStyle"] };
-            text.SetBinding(TextBlock.TextProperty, new Binding { Source = ViewModel.Hops[labelIndex], Path = new PropertyPath(nameof(NetMapHopRow.MapLabel)), Mode = BindingMode.OneWay });
-            var label = new Border { Child = text, Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(8), Style = (Style)Resources["NetMapMapLabelBackgroundStyle"] };
-            Canvas.SetLeft(label, Math.Clamp(position.X - 100, 8, 620));
-            Canvas.SetTop(label, Math.Clamp(position.Y + 28, 8, 424));
+            var position = Position(labelCoordinate);
+            var row = ViewModel.Hops[labelIndex];
+            var content = new StackPanel { Spacing = 3 };
+            var heading = new TextBlock { Style = (Style)Resources["NetMapMapLabelStyle"], Tag = nameof(NetMapHopRow.MapHeading), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+            heading.SetBinding(TextBlock.TextProperty, new Binding { Source = row, Path = new PropertyPath(nameof(NetMapHopRow.MapHeading)), Mode = BindingMode.OneWay });
+            var close = new Button
+            {
+                Content = new FontIcon { Glyph = "\uE711", FontSize = 10 },
+                Style = (Style)Application.Current.Resources["KitCompactIconButtonStyle"],
+                Width = 24,
+                Height = 24,
+                VerticalAlignment = VerticalAlignment.Top,
+                Tag = "CloseHopDetails",
+            };
+            string closeText = NetMapViewModel.Text("CloseDetails");
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(close, closeText);
+            ToolTipService.SetToolTip(close, closeText);
+            close.Click += (_, _) => HopList.SelectedIndex = -1;
+            var header = new Grid { ColumnSpacing = 8 };
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(close, 1);
+            header.Children.Add(heading);
+            header.Children.Add(close);
+            foreach (string property in new[] { nameof(NetMapHopRow.MapLocation), nameof(NetMapHopRow.MapAsn), nameof(NetMapHopRow.MapMetrics) })
+            {
+                var text = new TextBlock { Style = (Style)Resources["NetMapMapLabelStyle"], Tag = property };
+                text.SetBinding(TextBlock.TextProperty, new Binding { Source = row, Path = new PropertyPath(property), Mode = BindingMode.OneWay });
+                content.Children.Add(text);
+            }
+
+            // Keep all details reachable with large fonts or long ASN names, without
+            // allowing the card to extend beyond the map or cover its zoom controls.
+            var scroll = new ScrollViewer
+            {
+                Content = content,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                HorizontalScrollMode = ScrollMode.Disabled,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollMode = ScrollMode.Auto,
+            };
+            var details = new Grid { RowSpacing = 3 };
+            details.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            details.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            Grid.SetRow(scroll, 1);
+            details.Children.Add(header);
+            details.Children.Add(scroll);
+            var label = new Border
+            {
+                Child = details,
+                Tag = "HopDetails",
+                Width = Math.Max(1, Math.Min(320, mapViewport.Width - 16)),
+                MaxHeight = Math.Max(1, mapViewport.Height - 96),
+                Padding = new Thickness(10, 8, 10, 8),
+                CornerRadius = new CornerRadius(6),
+                Style = (Style)Resources["NetMapMapLabelBackgroundStyle"],
+            };
+            label.SetBinding(ToolTipService.ToolTipProperty, new Binding { Source = row, Path = new PropertyPath(nameof(NetMapHopRow.Detail)), Mode = BindingMode.OneWay });
+            label.SizeChanged += (_, _) => PlaceMapLabel(label, position);
             MapPoints.Children.Add(label);
+            label.Measure(new Size(label.Width, label.MaxHeight));
+            PlaceMapLabel(label, position);
         }
 
         MapDescription.Text = selected >= 0 && selected < ViewModel.Hops.Count ? ViewModel.Hops[selected].Detail : descriptions.Count == 0 ? NetMapViewModel.Text("MapEmpty") : string.Join("   /   ", descriptions);
@@ -537,52 +625,38 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private static MapCoordinate EgressPosition(ChannelState channel) => channel.LastSuccess?.Identity is { } identity ? WorldMap.Locate(string.IsNullOrEmpty(identity.CountryCode) ? channel.Geography?.CountryCode ?? string.Empty : identity.CountryCode, channel.Geography) : null;
 
-    private void FitMap(IReadOnlyList<MapCoordinate> coordinates)
+    private void PlaceMapLabel(FrameworkElement label, Point position)
     {
-        double baseScale = 1;
-        double centerY = 240;
-        mapCenterX = 480;
-        if (coordinates.Count >= 2)
+        double width = label.DesiredSize.Width;
+        double height = label.DesiredSize.Height;
+        double top = position.Y + 20;
+        if (top + height > mapViewport.Height - 40)
         {
-            var points = coordinates.Select(Project).ToArray();
-            var longitudes = points.Select(point => point.X).Order().ToArray();
-            double largestGap = -1;
-            double left = 0;
-
-            // Put the seam in the largest empty longitude interval, outside the occupied arc.
-            for (int i = 0; i < longitudes.Length; i++)
-            {
-                double next = i + 1 < longitudes.Length ? longitudes[i + 1] : longitudes[0] + 960;
-                double gap = next - longitudes[i];
-                if (gap > largestGap)
-                {
-                    largestGap = gap;
-                    left = next % 960;
-                }
-            }
-
-            double width = 960 - largestGap;
-            mapCenterX = (left + (width / 2)) % 960;
-            double top = points.Min(point => point.Y);
-            double height = points.Max(point => point.Y) - top;
-            centerY = top + (height / 2);
-            baseScale = Math.Clamp(Math.Min(MapFitMaxWidth / Math.Max(width, 40), MapFitMaxHeight / Math.Max(height, 30)), MapFitMinScale, MapFitMaxScale);
+            top = position.Y - height - 20;
         }
 
-        mapScale = Math.Clamp(baseScale * userZoomFactor, MapFitMinScale, MapFitMaxScale * 2);
-        mapOffsetX = 480 - (mapCenterX * mapScale);
-        mapOffsetY = Math.Clamp(240 - (centerY * mapScale), 480 - (480 * mapScale), 0);
+        Canvas.SetLeft(label, Math.Clamp(position.X - (width / 2), 8, Math.Max(8, mapViewport.Width - width - 8)));
+        Canvas.SetTop(label, Math.Clamp(top, 48, Math.Max(48, mapViewport.Height - height - 40)));
+    }
 
-        var matrix = new Matrix(mapScale, 0, 0, mapScale, mapOffsetX, mapOffsetY);
+    private void FitMap(IReadOnlyList<MapCoordinate> coordinates)
+    {
+        mapViewport = MapViewport.Fit(coordinates, MapView.ActualWidth, MapView.ActualHeight, userZoomFactor);
+        var matrix = new Matrix(mapViewport.Scale, 0, 0, mapViewport.Scale, mapViewport.OffsetX, mapViewport.OffsetY);
         WorldOutline.RenderTransform = new MatrixTransform { Matrix = matrix };
         WorldGraticule.RenderTransform = new MatrixTransform { Matrix = matrix };
+
+        // RenderTransform also scales strokes: compensate so coastlines remain
+        // crisp both at world scale and when a single region is enlarged.
+        WorldOutline.StrokeThickness = 1.0 / mapViewport.Scale;
+        WorldGraticule.StrokeThickness = 0.6 / mapViewport.Scale;
     }
 
     private void AddRouteLine(MapCoordinate from, MapCoordinate to, bool approximate)
     {
         var start = Position(from);
         var end = Position(to);
-        double worldWidth = 960 * mapScale;
+        double worldWidth = MapViewport.WorldWidth * mapViewport.Scale;
         if (Math.Abs(end.X - start.X) > worldWidth / 2)
         {
             double offset = end.X < start.X ? worldWidth : -worldWidth;
@@ -656,7 +730,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         if (coordinate != null)
         {
             var health = !ViewModel.IsDetectionOn || channel.Latest == null ? ProbeHealth.Unknown : channel.Latest.Success ? ProbeHealth.Good : ProbeHealth.Error;
-            AddPoint(coordinate, caption, proxy, stale, proxy ? 18 : 20, health: health, pulse: !stale && proxy);
+            AddPoint(coordinate, caption, proxy, stale, proxy ? 12 : 14, health: health, pulse: !stale && proxy);
         }
     }
 
@@ -690,7 +764,7 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
         container.Children.Add(mark);
         if (number != null)
         {
-            container.Children.Add(new TextBlock { Text = number, FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Style = (Style)Resources["NetMapHopNumberStyle"], HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            container.Children.Add(new TextBlock { Text = number, FontSize = TypographyResources.FontSize(12), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Style = (Style)Resources["NetMapHopNumberStyle"], HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
         }
 
         ToolTipService.SetToolTip(container, label);
@@ -702,9 +776,8 @@ public sealed partial class NetMapPage : NavigablePage, IRefreshablePage
 
     private Point Position(MapCoordinate coordinate)
     {
-        var point = Project(coordinate);
-        double x = mapCenterX + (((point.X - mapCenterX + 1440) % 960) - 480);
-        return new((x * mapScale) + mapOffsetX, (point.Y * mapScale) + mapOffsetY);
+        var point = mapViewport.Position(coordinate);
+        return new(point.X, point.Y);
     }
 
     private static Point Project(MapCoordinate coordinate) => new((coordinate.Longitude + 180) * 960 / 360, (90 - coordinate.Latitude) * 480 / 180);

@@ -19,6 +19,7 @@ using Kit.AiHub.Storage;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Services;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -29,15 +30,20 @@ namespace Kit.Settings.UI.ViewModels;
 /// <summary>
 /// Model wrapper for individual endpoint route settings in the AI Hub UI.
 /// </summary>
-public sealed class AiHubEndpointViewModel : Observable
+public sealed class AiHubEndpointViewModel : Observable, ILiveLocalizable
 {
+    private readonly bool _fallback;
     private double _contextWindowTokens;
 
     public AiTargetSettings Settings { get; }
 
-    public string Label { get; }
+    public string Label => _fallback
+        ? "AiHub_EndpointLabel_Fallback".GetLocalizedOrFallback("Fallback")
+        : "AiHub_EndpointLabel_Main".GetLocalizedOrFallback("Main");
 
-    public string Description { get; }
+    public string Description => _fallback
+        ? "AiHub_EndpointDesc_Fallback".GetLocalizedOrFallback("Optional backup for eligible network and endpoint failures.")
+        : "AiHub_EndpointDesc_Main".GetLocalizedOrFallback("Primary endpoint for new AI tasks.");
 
     public Visibility FallbackVisibility { get; }
 
@@ -190,21 +196,25 @@ public sealed class AiHubEndpointViewModel : Observable
         Settings = settings;
         _contextWindowTokens = settings.ContextWindowTokens;
         _owner = owner;
-        Label = fallback
-            ? "AiHub_EndpointLabel_Fallback".GetLocalizedOrFallback("Fallback")
-            : "AiHub_EndpointLabel_Main".GetLocalizedOrFallback("Main");
-        Description = fallback
-            ? "AiHub_EndpointDesc_Fallback".GetLocalizedOrFallback("Optional backup for eligible network and endpoint failures.")
-            : "AiHub_EndpointDesc_Main".GetLocalizedOrFallback("Primary endpoint for new AI tasks.");
+        _fallback = fallback;
         FallbackVisibility = fallback ? Visibility.Visible : Visibility.Collapsed;
         TestCommand = new RelayCommand(() => owner.TestTarget(settings), () => owner.CanEdit);
+    }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(Description));
+        OnPropertyChanged(nameof(ContextWindowError));
+        OnPropertyChanged(nameof(ModelSummary));
+        OnPropertyChanged(nameof(EndpointSummary));
     }
 }
 
 /// <summary>
 /// ViewModel managing AI Hub runtime, endpoints, and security policies within Kit Settings.
 /// </summary>
-public sealed partial class AiHubViewModel : Observable, IDisposable
+public sealed partial class AiHubViewModel : Observable, IDisposable, ILiveLocalizable
 {
     private static readonly object SharedGate = new();
     private static AiHubViewModel? _shared;
@@ -265,6 +275,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
     private bool _hasUnsavedEndpointChanges;
     private string _serviceStatusText = string.Empty;
     private string _serviceStatusGlyph = "\uE9CE";
+    private AiReadiness? _lastReadiness;
 
     public AiHubViewModel(DispatcherQueue? dispatcherQueue = null)
     {
@@ -289,13 +300,14 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
         ClearFallbackCommand = new RelayCommand(ClearFallback, () => CanEdit);
         SavePolicyCommand = new RelayCommand(() => StartPolicySave(0), () => CanSavePolicy(0));
         ResetPolicyCommand = new RelayCommand(() => StageDefaultPolicy(0), () => CanEditPolicies);
+        DiscardPolicyCommand = new RelayCommand(() => DiscardPolicy(0), () => CanEditPolicies && IsSecurityPolicyDirty);
         SaveSecurityAuditPolicyCommand = new RelayCommand(() => StartPolicySave(1), () => CanSavePolicy(1));
         ResetSecurityAuditPolicyCommand = new RelayCommand(() => StageDefaultPolicy(1), () => CanEditPolicies);
         SaveOptimizationPolicyCommand = new RelayCommand(() => StartPolicySave(2), () => CanSavePolicy(2));
         ResetOptimizationPolicyCommand = new RelayCommand(() => StageDefaultPolicy(2), () => CanEditPolicies);
         SaveActivePolicyCommand = new RelayCommand(() => StartPolicySave(ActivePolicyIndex), () => CanSavePolicy(ActivePolicyIndex));
         ResetActivePolicyCommand = new RelayCommand(() => StageDefaultPolicy(ActivePolicyIndex), () => CanEditPolicies);
-        DiscardActivePolicyCommand = new RelayCommand(DiscardActivePolicy, () => CanEditPolicies && IsCurrentPolicyDirty);
+        DiscardActivePolicyCommand = new RelayCommand(() => DiscardPolicy(ActivePolicyIndex), () => CanEditPolicies && IsCurrentPolicyDirty);
         RetryConfigurationCommand = new RelayCommand(RetryConfiguration, () => CanRetryConfiguration);
         CancelOperationCommand = new RelayCommand(
             () =>
@@ -628,6 +640,8 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
 
     public bool IsCurrentPolicyDirty => _policyDrafts[ActivePolicyIndex].IsDirty;
 
+    public bool IsSecurityPolicyDirty => _policyDrafts[0].IsDirty;
+
     public bool HasUnsavedPolicyChanges => _policyDrafts.Any(draft => draft.IsDirty);
 
     public string CurrentPolicyStatusText => GetPolicyStatusText(ActivePolicyIndex);
@@ -689,7 +703,12 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
 
     public string SecurityPolicyContent
     {
-        get => _policyDrafts[0].Content;
+        get
+        {
+            EnsurePoliciesLoaded();
+            return _policyDrafts[0].Content;
+        }
+
         set => UpdatePolicyDraft(0, value);
     }
 
@@ -710,6 +729,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
             _ => nameof(SecurityPolicyContent),
         });
         OnPropertyChanged(nameof(SecurityPolicyStatusText));
+        OnPropertyChanged(nameof(IsSecurityPolicyDirty));
         OnPropertyChanged(nameof(CurrentPolicyContent));
         OnPropertyChanged(nameof(IsCurrentPolicyDirty));
         OnPropertyChanged(nameof(HasUnsavedPolicyChanges));
@@ -813,21 +833,56 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
             {
                 return;
             }
-            string kernelModel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
-                ? readiness.ActiveKernel
-                : $"{readiness.ActiveKernel} · {readiness.ActiveModel}";
-            (ServiceStatusGlyph, ServiceStatusText) = readiness.Level switch
-            {
-                AiReadinessLevel.Ready => ("\uE73E", "AiHub_ServiceStatus_ReadyFormat".FormatLocalized("Ready · {0}", kernelModel)),
-                AiReadinessLevel.Degraded => ("\uE7BA", "AiHub_ServiceStatus_DegradedFormat".FormatLocalized("Main route unavailable, using fallback · {0}", readiness.Detail)),
-                AiReadinessLevel.Unverified => ("\uE9CE", "AiHub_ServiceStatus_UnverifiedFormat".FormatLocalized("Configured, not verified yet · {0}", kernelModel)),
-                AiReadinessLevel.NotConfigured => ("\uEA39", "AiHub_ServiceStatus_NotConfiguredFormat".FormatLocalized("Not configured: {0}", readiness.Detail)),
-                _ => ("\uE711", "AiHub_ServiceStatus_Off".GetLocalizedOrFallback("Off; plugins use rule-based checks only")),
-            };
+
+            _lastReadiness = readiness;
+            ApplyServiceStatus(readiness);
         }
         catch (Exception ex)
         {
             Logger.LogError("Could not read AI readiness state", ex);
+        }
+    }
+
+    private void ApplyServiceStatus(AiReadiness readiness)
+    {
+        string kernelModel = string.IsNullOrWhiteSpace(readiness.ActiveModel)
+            ? readiness.ActiveKernel
+            : $"{readiness.ActiveKernel} · {readiness.ActiveModel}";
+        (ServiceStatusGlyph, ServiceStatusText) = readiness.Level switch
+        {
+            AiReadinessLevel.Ready => ("\uE73E", "AiHub_ServiceStatus_ReadyFormat".FormatLocalized("Ready · {0}", kernelModel)),
+            AiReadinessLevel.Degraded => ("\uE7BA", "AiHub_ServiceStatus_DegradedFormat".FormatLocalized("Main route unavailable, using fallback · {0}", readiness.Detail)),
+            AiReadinessLevel.Unverified => ("\uE9CE", "AiHub_ServiceStatus_UnverifiedFormat".FormatLocalized("Configured, not verified yet · {0}", kernelModel)),
+            AiReadinessLevel.NotConfigured => ("\uEA39", "AiHub_ServiceStatus_NotConfiguredFormat".FormatLocalized("Not configured: {0}", readiness.Detail)),
+            _ => ("\uE711", "AiHub_ServiceStatus_Off".GetLocalizedOrFallback("Off; plugins use rule-based checks only")),
+        };
+    }
+
+    public void RefreshLocalization()
+    {
+        foreach (var endpoint in Endpoints)
+        {
+            endpoint.RefreshLocalization();
+        }
+
+        if (_lastReadiness != null)
+        {
+            ApplyServiceStatus(_lastReadiness);
+        }
+        else
+        {
+            ServiceStatusText = ServiceStatusText.Relocalize();
+        }
+
+        StatusMessage = StatusMessage.Relocalize();
+        foreach (string property in new[]
+        {
+            nameof(SubagentSettingsSummary), nameof(CurrentPolicyStatusText), nameof(SecurityPolicyStatusText),
+            nameof(CurrentPolicyDescription), nameof(DiagnosticsSummary), nameof(DiagnosticsDetails),
+            nameof(DiagnosticsPersistenceStatus),
+        })
+        {
+            OnPropertyChanged(property);
         }
     }
 
@@ -838,6 +893,8 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
     public ICommand SavePolicyCommand { get; }
 
     public ICommand ResetPolicyCommand { get; }
+
+    public ICommand DiscardPolicyCommand { get; }
 
     public ICommand SaveSecurityAuditPolicyCommand { get; }
 
@@ -1165,12 +1222,12 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
         }
     }
 
-    private void DiscardActivePolicy()
+    private void DiscardPolicy(int index)
     {
-        if (CanEditPolicies && IsCurrentPolicyDirty)
+        if (CanEditPolicies && _policyDrafts[index].IsDirty)
         {
-            _policyDrafts[ActivePolicyIndex].Discard();
-            NotifyPolicyDraftChanged(ActivePolicyIndex);
+            _policyDrafts[index].Discard();
+            NotifyPolicyDraftChanged(index);
             ShowStatus("AiHub_PolicyDraftDiscarded".GetLocalizedOrFallback("Draft discarded; saved policy restored."), InfoBarSeverity.Informational);
         }
     }
@@ -1337,7 +1394,7 @@ public sealed partial class AiHubViewModel : Observable, IDisposable
 
     private void RefreshCommands()
     {
-        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, DiscardActivePolicyCommand, RetryConfigurationCommand, CancelOperationCommand })
+        foreach (var command in new[] { ApplyKernelSwitchCommand, CheckKernelUpdatesCommand, DownloadKernelCommand, SaveCommand, SaveEndpointsCommand, DiscardEndpointChangesCommand, ClearFallbackCommand, SavePolicyCommand, ResetPolicyCommand, DiscardPolicyCommand, SaveSecurityAuditPolicyCommand, ResetSecurityAuditPolicyCommand, SaveOptimizationPolicyCommand, ResetOptimizationPolicyCommand, SaveActivePolicyCommand, ResetActivePolicyCommand, DiscardActivePolicyCommand, RetryConfigurationCommand, CancelOperationCommand })
         {
             ((RelayCommand)command).OnCanExecuteChanged();
         }

@@ -9,6 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'AiHubDerivedStateFixture.ps1')
 
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if ([string]::IsNullOrWhiteSpace($TestExecutable)) {
@@ -84,6 +85,8 @@ $fileNames = @(
     (Join-Path $aiHubRoot 'chains\security-audit\AGENTS.md'),
     (Join-Path $aiHubRoot 'chains\system-optimization\AGENTS.md'),
     (Join-Path $aiHubRoot 'chains\self-test\AGENTS.md'),
+    (Join-Path $aiHubRoot 'State\audit_history.json'),
+    (Join-Path $aiHubRoot 'State\optimization_history.json'),
     $journalPath
 )
 
@@ -97,6 +100,8 @@ foreach ($path in $fileNames) {
         $backups[$full] = [IO.File]::ReadAllBytes($full)
     }
 }
+
+$aiHubDerivedSnapshot = New-AiHubDerivedStateSnapshot (Join-Path $aiHubRoot 'State')
 
 Assert-NoReparsePoints $ReportRoot
 if (Test-Path -LiteralPath $ReportRoot) { throw 'Use a new report directory so an old TRX cannot be mistaken for this run.' }
@@ -139,6 +144,12 @@ try {
     # task policies are absent during the run, so constructors create isolated defaults.
     Assert-KitStopped
     $modifiedSharedFiles = $true
+    Clear-AiHubDerivedStateFixture $aiHubDerivedSnapshot
+    foreach ($name in @('audit_history.json', 'optimization_history.json')) {
+        $path = Join-Path $aiHubRoot "State\$name"
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $path)) | Out-Null
+        [IO.File]::WriteAllText($path, '[]', [Text.UTF8Encoding]::new($false))
+    }
     Write-SyntheticGeneralSettings (Join-Path $localKit 'settings.json')
     Write-SyntheticServiceSettings (Join-Path $aiHubRoot 'service-settings.json')
 
@@ -234,6 +245,8 @@ finally {
         }
         if ($null -ne $bytes) { [Array]::Clear($bytes, 0, $bytes.Length) }
     }
+    try { Restore-AiHubDerivedStateFixture $aiHubDerivedSnapshot }
+    catch { $restoreFailures.Add('AI Hub derived-state restoration failed: ' + $_.Exception.Message) }
     if ($testProcess) { $testProcess.Dispose() }
 }
 

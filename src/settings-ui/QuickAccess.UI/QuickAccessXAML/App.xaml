@@ -3,11 +3,13 @@
     x:Class="Kit.QuickAccess.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:services="using:Kit.Settings.UI.Services"
     xmlns:tkconverters="using:CommunityToolkit.WinUI.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <services:TypographyResources />
                 <ResourceDictionary Source="/Resources/Styles/Button.xaml" />
                 <ResourceDictionary Source="/Resources/Styles/TextBlock.xaml" />
                 <ResourceDictionary Source="/Resources/Themes/Colors.xaml" />

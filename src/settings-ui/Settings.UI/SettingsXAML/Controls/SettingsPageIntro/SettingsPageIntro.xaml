@@ -48,7 +48,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="controls:PageLink">
                         <HyperlinkButton NavigateUri="{x:Bind Link}" Style="{StaticResource TextButtonStyle}">
-                            <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" />
+                            <TextBlock Text="{x:Bind Text, Mode=OneWay}" TextWrapping="Wrap" />
                         </HyperlinkButton>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

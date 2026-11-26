@@ -16,9 +16,42 @@
 #include <common/version/version.h>
 
 #include <common/utils/resources.h>
+#include <cmath>
 
 namespace
 {
+    std::wstring parse_ui_font_family(const json::JsonObject& obj, const std::wstring& fallback)
+    {
+        if (!obj.HasKey(L"ui_font_family"))
+        {
+            return fallback;
+        }
+
+        return json::has(obj, L"ui_font_family", json::JsonValueType::String) &&
+                       obj.GetNamedString(L"ui_font_family") == L"Noto Sans SC"
+                   ? L"Noto Sans SC"
+                   : L"system";
+    }
+
+    int parse_ui_font_size(const json::JsonObject& obj, int fallback)
+    {
+        if (!obj.HasKey(L"ui_font_size"))
+        {
+            return fallback;
+        }
+
+        if (json::has(obj, L"ui_font_size", json::JsonValueType::Number))
+        {
+            const double size = obj.GetNamedNumber(L"ui_font_size");
+            if (size >= 12 && size <= 20 && size == std::trunc(size))
+            {
+                return static_cast<int>(size);
+            }
+        }
+
+        return 14;
+    }
+
     DashboardSortOrder parse_dashboard_sort_order(const json::JsonObject& obj, DashboardSortOrder fallback)
     {
         if (json::has(obj, L"dashboard_sort_order", json::JsonValueType::Number))
@@ -73,6 +106,8 @@ namespace
 
 // TODO: would be nice to get rid of these globals, since they're basically cached json settings
 static std::wstring settings_theme = L"system";
+static std::wstring ui_font_family = L"system";
+static int ui_font_size = 14;
 static bool show_tray_icon = true;
 static bool show_theme_adaptive_tray_icon = false;
 static bool run_as_elevated = false;
@@ -114,6 +149,8 @@ json::JsonObject GeneralSettings::to_json()
     result.SetNamedValue(L"enable_warnings_elevated_apps", json::value(enableWarningsElevatedApps));
     result.SetNamedValue(L"enable_quick_access", json::value(enableQuickAccess));
     result.SetNamedValue(L"theme", json::value(theme));
+    result.SetNamedValue(L"ui_font_family", json::value(uiFontFamily));
+    result.SetNamedValue(L"ui_font_size", json::value(uiFontSize));
     result.SetNamedValue(L"system_theme", json::value(systemTheme));
     result.SetNamedValue(L"kit_version", json::value(powerToysVersion));
     result.SetNamedValue(L"powertoys_version", json::value(powerToysVersion));
@@ -135,6 +172,8 @@ json::JsonObject load_general_settings()
     {
         settings_theme = L"system";
     }
+    ui_font_family = parse_ui_font_family(loaded, L"system");
+    ui_font_size = parse_ui_font_size(loaded, 14);
     show_tray_icon = loaded.GetNamedBoolean(L"show_tray_icon", true);
     show_theme_adaptive_tray_icon = loaded.GetNamedBoolean(L"show_theme_adaptive_tray_icon", false);
     run_as_elevated = loaded.GetNamedBoolean(L"run_elevated", false);
@@ -167,6 +206,8 @@ GeneralSettings get_general_settings()
         .enableExperimentation = enable_experimentation,
     .dashboardSortOrder = dashboard_sort_order,
         .theme = settings_theme,
+        .uiFontFamily = ui_font_family,
+        .uiFontSize = ui_font_size,
         .systemTheme = WindowsColors::is_dark_mode() ? L"dark" : L"light",
         .powerToysVersion = get_product_version()
     };
@@ -444,6 +485,9 @@ void apply_general_settings(const json::JsonObject& general_configs, bool save)
     {
         settings_theme = general_configs.GetNamedString(L"theme");
     }
+
+    ui_font_family = parse_ui_font_family(general_configs, ui_font_family);
+    ui_font_size = parse_ui_font_size(general_configs, ui_font_size);
 
     if (json::has(general_configs, L"show_tray_icon", json::JsonValueType::Boolean))
     {

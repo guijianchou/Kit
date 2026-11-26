@@ -30,6 +30,17 @@ For architecture details, module set, and stability direction, see the [project 
 - Do not re-enable automatic download/install or telemetry behavior.
 - Keep new modules split into a testable core library, worker process, native module interface, settings model, settings page, Home metadata, and static registration tests.
 
+## Stability and product behavior
+
+- Optimize repeat navigation and interaction latency before minimizing memory. Retain one page/view model per active module and useful analysis snapshots; pause visibility-dependent work while a page is hidden. Keep caches bounded, and invalidate them when their inputs change.
+- Settings follows the PowerToys hierarchy: section heading, then individual setting cards and expanders. Keep basic settings usable while AI Service initializes. Avoid nested whole-section layout animations and repeated visual-tree walks on each layout frame.
+- Preserve live font/language switching, keyboard focus, scroll position, entered configuration, and running plugin work. Remove redundant introductions and decorative status prose; retain errors, evidence, progress, and information needed to choose an action.
+- AI Service owns kernel execution, endpoint selection, concurrency and policy enforcement. AI Hub reuses those facilities and owns evidence collection, issue review and reports. Do not add a second independent Codex execution path in the UI.
+- Normal log analysis is incremental. Cache by evidence content and relevant configuration/policy/language, remap both structured and narrative evidence references for each snapshot, and revisit affected issue groups when evidence changes. Include bounded related context so new evidence can establish relationships that did not previously produce an issue. Failed, cancelled or partial analysis must not advance the complete-analysis cache. Keep an explicit full reanalysis action.
+- Each issue must distinguish observed facts from possible causes, cite its evidence, give concrete verification and remedy steps, and explain how to check the outcome. Group similar occurrences without merging unrelated causes merely because their provider or title matches.
+- Weekly reports cover the seven days ending on the selected local date. Monthly reports cover the selected calendar month through that date. Separate each day's last scan state from findings observed across all of its scans; an empty incremental scan must not erase earlier evidence. Revisions of the same scan replace its contribution without increasing audit counts. Show covered/missing days, partial analyses, recurring issues and actionable next steps. Absence in a later period means "not observed", not "resolved". Refresh and persist reports after scheduled/manual audit snapshots; preserve existing exports when retained evidence cannot fully reconstruct them, and do not fabricate history when retention or missed runs leave gaps.
+- NetMap fits geographic routes to the actual map viewport, including a single located hop and date-line crossings. Keep markers/labels readable as the window resizes. Map work must not alter MTR measurement behavior.
+
 ## Build
 
 ### Prerequisites

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -2799,6 +2799,18 @@ namespace ViewModelTests
             var shellPage = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "ShellPage.xaml.cs"));
 
             Assert.IsFalse(generalPage.Contains("doRefreshBackupRestoreStatus(100);", StringComparison.Ordinal), "Backup dry-run should not be scheduled from the GeneralPage constructor before the first frame.");
+            var generalXaml = System.Xml.Linq.XDocument.Load(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "GeneralPage.xaml"));
+            System.Xml.Linq.XNamespace xamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
+            var basicSettings = generalXaml.Descendants().Single(element => (string)element.Attribute(xamlNamespace + "Name") == "GeneralSettingsSurface");
+            Assert.IsNull(basicSettings.Attribute("Opacity"), "The whole Settings page must not wait behind an opacity gate for AI initialization.");
+            Assert.IsNull(basicSettings.Attribute("IsEnabled"), "Basic settings remain interactive during the AI configuration read.");
+            Assert.IsNull(basicSettings.Attribute("IsHitTestVisible"), "Basic settings must remain available to pointer input.");
+            var aiSettings = generalXaml.Descendants().Single(element => (string)element.Attribute(xamlNamespace + "Name") == "AiServiceSettingsSurface");
+            Assert.AreEqual("0", (string)aiSettings.Attribute("Opacity"), "Only provisional AI configuration is withheld until loaded.");
+            Assert.AreEqual("False", (string)aiSettings.Attribute("IsEnabled"), "Provisional AI settings must not accept edits before the saved configuration arrives.");
+            Assert.IsTrue(aiSettings.Ancestors().Any(element => (string)element.Attribute(xamlNamespace + "Name") == "AiServicesGroup"));
+            Assert.IsFalse(generalPage.Contains(".UpdateLayout()", StringComparison.Ordinal), "Settings initialization must not force repeated layout passes from Rendering callbacks.");
+            Assert.IsFalse(generalPage.Contains("SettingsExpander_Loaded", StringComparison.Ordinal), "Standard expander templates should not be traversed and restyled after loading.");
             StringAssert.Contains(generalViewModel, "RunDeferredStartupMaintenance");
             StringAssert.Contains(generalViewModel, "Task.Run(DeleteOldDiagnosticData)");
             Assert.IsFalse(shellPage.Contains("SearchIndexService.BuildIndex()", StringComparison.Ordinal), "Search indexing should be requested by a search, not by loading the shell.");
@@ -3065,7 +3077,8 @@ namespace ViewModelTests
             Assert.IsFalse(lightSwitchInterface.Contains("m_force_dark_event_handle", StringComparison.Ordinal), "LightSwitch should not keep unused force-dark event handles.");
             Assert.IsFalse(lightSwitchInterface.Contains("L\"forceLight\"", StringComparison.Ordinal), "LightSwitch module config should not advertise disabled force-light custom actions.");
             Assert.IsFalse(lightSwitchInterface.Contains("L\"forceDark\"", StringComparison.Ordinal), "LightSwitch module config should not advertise disabled force-dark custom actions.");
-            Assert.IsFalse(lightSwitchInterface.Contains("force dark mode shortcut", StringComparison.Ordinal), "LightSwitch settings parse errors should refer to the active toggle-theme shortcut, not the removed force-dark action.");
+            Assert.IsFalse(lightSwitchInterface.Contains("toggle-theme-hotkey", StringComparison.Ordinal), "LightSwitch should not advertise or parse retired shortcut settings.");
+            Assert.IsFalse(lightSwitchInterface.Contains("on_hotkey", StringComparison.Ordinal), "LightSwitch should inherit the module interface's rejection of unsupported shortcut actions.");
             Assert.IsFalse(lightSwitchViewModel.Contains("ForceLightCommand", StringComparison.Ordinal), "LightSwitch settings view model should not keep commands for a commented-out force-light UI.");
             Assert.IsFalse(lightSwitchViewModel.Contains("ForceDarkCommand", StringComparison.Ordinal), "LightSwitch settings view model should not keep commands for a commented-out force-dark UI.");
             Assert.IsFalse(lightSwitchViewModel.Contains("SendCustomAction(\"forceLight\")", StringComparison.Ordinal), "LightSwitch settings should not send an unreachable force-light custom action.");
@@ -3612,8 +3625,9 @@ namespace ViewModelTests
             // 2. Map drawing uses named tokens and declarative responsive VSM layout.
             StringAssert.Contains(pageXaml, "x:Name=\"MapRouteColumn\" Width=\"440\"");
             StringAssert.Contains(pageXaml, "Target=\"MapRouteColumn.Width\"");
-            StringAssert.Contains(pageCode, "private const double MapFitMaxWidth = 800;");
-            StringAssert.Contains(pageCode, "MapFitMaxWidth / Math.Max(width, 40)");
+            StringAssert.Contains(pageCode, "MapViewport.Fit(coordinates, MapView.ActualWidth, MapView.ActualHeight, userZoomFactor)");
+            Assert.IsFalse(pageXaml.Contains("<Viewbox x:Name=\"MapView\"", StringComparison.Ordinal), "Map markers must keep readable DIP sizes when the viewport resizes.");
+            StringAssert.Contains(pageXaml, "SizeChanged=\"MapView_SizeChanged\"");
             Assert.IsFalse(pageCode.Contains("StrokeThickness = 3", StringComparison.Ordinal), "Route lines should take their width from NetMapRouteLineStyle.");
             Assert.IsFalse(pageCode.Contains("FontSize = 28", StringComparison.Ordinal), "The selected-label size should live in NetMapMapLabelStyle.");
             StringAssert.Contains(pageCode, "NetMapHealthStylesStore.Key");

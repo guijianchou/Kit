@@ -25,6 +25,7 @@ using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
 using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Services;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -39,7 +40,7 @@ using UDPtestLib.Storage;
 
 namespace Kit.Settings.UI.ViewModels
 {
-    public sealed partial class UDPtestViewModel : PageViewModelBase, IDisposable
+    public sealed partial class UDPtestViewModel : PageViewModelBase, IDisposable, ILiveLocalizable
     {
         protected override string ModuleName => UDPtestSettings.ModuleName;
 
@@ -398,9 +399,17 @@ namespace Kit.Settings.UI.ViewModels
         private double _healthStateFontSize = 15;
         public double HealthStateFontSize
         {
-            get => _healthStateFontSize;
-            private set => Set(ref _healthStateFontSize, value);
+            get => TypographyResources.FontSize(_healthStateFontSize);
+            private set
+            {
+                if (Set(ref _healthStateFontSize, value))
+                {
+                    OnPropertyChanged(nameof(HealthStateBaseFontSize));
+                }
+            }
         }
+
+        public double HealthStateBaseFontSize => _healthStateFontSize;
 
         public Brush HealthRingBrush
         {
@@ -478,6 +487,29 @@ namespace Kit.Settings.UI.ViewModels
                 };
                 SelectedPeriodSeconds = seconds;
             }
+        }
+
+        public void RefreshLocalization()
+        {
+            RunStateText = RunStateText.Relocalize();
+            UdpAssessmentText = UdpAssessmentText.Relocalize();
+            TcpAssessmentText = TcpAssessmentText.Relocalize();
+            PathSummaryText = PathSummaryText.Relocalize();
+            NatTypeText = NatTypeText.Relocalize();
+            ErrorMessage = ErrorMessage.Relocalize();
+            foreach (var row in Lines)
+            {
+                row.RefreshLocalization();
+            }
+
+            UpdateLineCounts();
+            UpdateHealthCard();
+            UpdateNodeVerification();
+        }
+
+        public void RefreshTypography()
+        {
+            OnPropertyChanged(nameof(HealthStateFontSize));
         }
 
         public void RefreshThemeBrushes(ElementTheme theme)

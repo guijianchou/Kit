@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Kit.Settings.UI;
+using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.Services;
@@ -41,8 +44,13 @@ internal static class LocalserverRenderingChecks
         double originalOffset = scroll.VerticalOffset;
         int collectionChanges = 0;
         int rowNotifications = 0;
+        var changedRowProperties = new HashSet<string>(StringComparer.Ordinal);
         NotifyCollectionChangedEventHandler collectionChanged = (_, _) => collectionChanges++;
-        PropertyChangedEventHandler rowChanged = (_, _) => rowNotifications++;
+        PropertyChangedEventHandler rowChanged = (_, args) =>
+        {
+            rowNotifications++;
+            changedRowProperties.Add(args.PropertyName ?? "<all>");
+        };
         try
         {
             // Add only in-memory stopped rows. Do not start a process, save a catalog,
@@ -100,6 +108,7 @@ internal static class LocalserverRenderingChecks
             Require(selected.State == ServiceState.Failed && rowNotifications > 0,
                 $"A hidden runner state change did not update the existing row: state={selected.State}, notifications={rowNotifications}.");
             rowNotifications = 0;
+            changedRowProperties.Clear();
 
             Require(NavigationService.Navigate(typeof(LocalserverPage)), "Could not return to Localserver.");
             Require(ReferenceEquals(NavigationService.Frame.Content, page), "Navigation replaced the cached Localserver page.");
@@ -114,7 +123,8 @@ internal static class LocalserverRenderingChecks
                 "Returning to Localserver lost the selected service or expanded editor.");
             Require(Math.Abs(scroll.VerticalOffset - savedOffset) < 1,
                 "Returning to Localserver lost its scroll offset.");
-            Require(rowNotifications == 0, "Returning to an unchanged module republished every row property.");
+            Require(rowNotifications == 0,
+                $"Returning to an unchanged module republished row properties: notifications={rowNotifications}, properties=[{string.Join(",", changedRowProperties)}].");
             for (int index = 0; index < expectedRows.Length; index++)
             {
                 Require(ReferenceEquals(rows.ContainerFromItem(expectedRows[index]), containers[index]),
@@ -136,6 +146,7 @@ internal static class LocalserverRenderingChecks
                 Require(cancelled, "Leaving Localserver did not cancel and invalidate an incomplete environment check.");
             }
 
+            await CheckThemes(page, rows, scroll, selected, additions[0], expectedRows, containers, report);
             await CheckEnabledReturn(page, rows, scroll, selected, expectedRows, containers);
             File.AppendAllText(report,
                 "Localserver cached return: disabled and enabled, same page/VM/collection/rows/containers, selected editor and scroll retained, no activation reset, completed check retained, pending check cancelled, hidden runtime update visible on first frame, enabled telemetry resumes without launching services PASS\n");
@@ -153,6 +164,130 @@ internal static class LocalserverRenderingChecks
             viewModel.SelectedLine = originalSelection;
             SetField(viewModel, "_environmentCheckLine", originalEnvironmentLine);
             scroll.ChangeView(null, originalOffset, null, true);
+        }
+    }
+
+    private static async Task CheckThemes(LocalserverPage page, ItemsControl rows, ScrollViewer scroll,
+        LineRowViewModel selected, LineRowViewModel stopped, LineRowViewModel[] expectedRows,
+        DependencyObject[] containers, string report)
+    {
+        var viewModel = page.ViewModel;
+        var root = (FrameworkElement)App.GetSettingsWindow().Content;
+        var originalTheme = root.RequestedTheme;
+        var initialActualTheme = page.ActualTheme;
+        var alternateTheme = initialActualTheme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
+        var expectedCollection = rows.ItemsSource;
+        selected.RecentBars.Add(StatusBarViewModel.FromServiceState(ServiceState.Failed, false, selected.StateLabel));
+        await NextFrame(page);
+        var history = selected.RecentBars.ToArray();
+        double savedOffset = scroll.VerticalOffset;
+        int rowNotifications = 0;
+        int collectionChanges = 0;
+        var changedRows = new HashSet<LineRowViewModel>();
+        var changedProperties = new HashSet<string>(StringComparer.Ordinal);
+        var brushProperties = new HashSet<string>(StringComparer.Ordinal)
+        {
+            nameof(LineRowViewModel.StateBrush), nameof(LineRowViewModel.UptimeBrush),
+            nameof(LineRowViewModel.TagBrush), nameof(LineRowViewModel.TagBackgroundBrush),
+        };
+        PropertyChangedEventHandler rowChanged = (sender, args) =>
+        {
+            rowNotifications++;
+            changedProperties.Add(args.PropertyName ?? "<all>");
+            if (args.PropertyName == nameof(LineRowViewModel.StateBrush) && sender is LineRowViewModel row)
+                changedRows.Add(row);
+        };
+        NotifyCollectionChangedEventHandler collectionChanged = (_, _) => collectionChanges++;
+        Require(!viewModel.IsEnabled && selected.State == ServiceState.Failed && stopped.State == ServiceState.Stopped,
+            "Theme checks require disabled Localserver with synthetic failed and stopped rows.");
+        Require(page.RequestedTheme == ElementTheme.Default,
+            "The Localserver theme fixture must inherit the settings window theme.");
+        foreach (var row in expectedRows) row.PropertyChanged += rowChanged;
+        viewModel.Lines.CollectionChanged += collectionChanged;
+        try
+        {
+            // Localserver row brushes follow the settings window palette. Change it
+            // only in memory so the test exercises the same theme path as the UI.
+            LogTheme("visible-before-request");
+            root.RequestedTheme = alternateTheme;
+            await NextFrame(page);
+            await WaitForAppliedTheme(alternateTheme, "visible-theme");
+            await NextFrame(page);
+            CheckRetainedRowsAndPalette();
+
+            Require(NavigationService.Navigate(typeof(DashboardPage)), "Could not leave Localserver for a theme change.");
+            await WaitForLoaded((FrameworkElement)NavigationService.Frame.Content);
+            await DrainLowPriority();
+            rowNotifications = 0;
+            changedRows.Clear();
+            changedProperties.Clear();
+            LogTheme("hidden-before-request");
+            root.RequestedTheme = initialActualTheme;
+            await NextFrame((FrameworkElement)NavigationService.Frame.Content);
+            await DrainLowPriority();
+            LogTheme("hidden-after-request");
+            Require(!page.IsLoaded && rowNotifications == 0,
+                "Changing the hidden Localserver theme eagerly refreshed row bindings: " + ThemeState());
+
+            Require(NavigationService.Navigate(typeof(LocalserverPage)), "Could not return after a hidden Localserver theme change.");
+            await WaitForLoaded(page);
+            await NextFrame(page);
+            await WaitForAppliedTheme(initialActualTheme, "returned-theme");
+            await NextFrame(page);
+            CheckRetainedRowsAndPalette();
+            File.AppendAllText(report,
+                "Localserver cached themes: visible and deferred hidden changes refresh all retained row palettes without rebuilding rows, history, selection, expansion or scroll PASS\n");
+        }
+        finally
+        {
+            foreach (var row in expectedRows) row.PropertyChanged -= rowChanged;
+            viewModel.Lines.CollectionChanged -= collectionChanged;
+            root.RequestedTheme = originalTheme;
+            await NextFrame(root);
+        }
+
+        async Task WaitForAppliedTheme(ElementTheme expected, string stage)
+        {
+            var elapsed = Stopwatch.StartNew();
+            bool Applied() => page.IsLoaded && root.ActualTheme == expected && page.ActualTheme == expected &&
+                Equals(Field(page, "_lastAppliedTheme"), expected) && changedRows.Count == expectedRows.Length;
+            // ActualThemeChanged may arrive after the first rendering callback.
+            while (!Applied() && elapsed.Elapsed < TimeSpan.FromSeconds(5)) await Task.Delay(20);
+            LogTheme(stage + "-settled-" + elapsed.ElapsedMilliseconds + "ms");
+            Require(Applied(), stage + ": the inherited theme or retained row palettes did not update: " + ThemeState());
+        }
+
+        string ThemeState() =>
+            $"requested={root.RequestedTheme}, root={root.ActualTheme}, actual={page.ActualTheme}, applied={Field(page, "_lastAppliedTheme")}, loaded={page.IsLoaded}, rowNotifications={rowNotifications}, brushRows={changedRows.Count}/{expectedRows.Length}, properties=[{string.Join(",", changedProperties)}], failedColor={((SolidColorBrush)selected.StateBrush).Color}, stoppedColor={((SolidColorBrush)stopped.StateBrush).Color}";
+
+        void LogTheme(string stage) => File.AppendAllText(report, "Localserver theme " + stage + ": " + ThemeState() + "\n");
+
+        void CheckRetainedRowsAndPalette()
+        {
+            Require(changedProperties.IsSubsetOf(brushProperties),
+                "A theme change republished non-palette row properties: " + ThemeState());
+            var critical = (SolidColorBrush)ThemeBrushHelper.GetBrush("SystemFillColorCriticalBrush", ThemeBrushHelper.CriticalBrush, page.ActualTheme);
+            var stoppedBrush = (SolidColorBrush)ThemeBrushHelper.GetBrush("ControlStrongStrokeColorDefaultBrush", ThemeBrushHelper.StrokeDefaultBrush, page.ActualTheme);
+            Require(((SolidColorBrush)selected.StateBrush).Color.Equals(critical.Color) &&
+                ((SolidColorBrush)stopped.StateBrush).Color.Equals(stoppedBrush.Color),
+                "Retained Localserver rows resolved the wrong theme palette: " + ThemeState());
+            foreach (var (row, expectedBrush) in new[] { (selected, critical), (stopped, stoppedBrush) })
+            {
+                var indicator = Descendants((FrameworkElement)rows.ContainerFromItem(row))
+                    .OfType<Microsoft.UI.Xaml.Shapes.Ellipse>().Single(shape => shape.Width == 7 && shape.Height == 7);
+                Require(indicator.Fill is SolidColorBrush visibleBrush && visibleBrush.Color.Equals(expectedBrush.Color),
+                    "The visible Localserver state indicator retained an outdated palette: " + ThemeState());
+            }
+            Require(ReferenceEquals(NavigationService.Frame.Content, page) && ReferenceEquals(page.ViewModel, viewModel) &&
+                ReferenceEquals(rows.ItemsSource, expectedCollection) && viewModel.Lines.SequenceEqual(expectedRows) && collectionChanges == 0,
+                "A theme change replaced the cached Localserver page, ViewModel, collection or rows.");
+            Require(ReferenceEquals(viewModel.SelectedLine, selected) && selected.IsConfigExpanded &&
+                selected.State == ServiceState.Failed && selected.RecentBars.SequenceEqual(history) &&
+                Math.Abs(scroll.VerticalOffset - savedOffset) < 1,
+                "A theme change lost Localserver state, history, selection, expansion or scroll.");
+            for (int index = 0; index < expectedRows.Length; index++)
+                Require(ReferenceEquals(rows.ContainerFromItem(expectedRows[index]), containers[index]),
+                    "A theme change recreated a retained Localserver row container.");
         }
     }
 
@@ -249,6 +384,14 @@ internal static class LocalserverRenderingChecks
         for (int attempt = 0; attempt < 200 && (int)Field(viewModel, "_telemetryRefreshInFlight") != 0; attempt++)
             await Task.Delay(10);
         Require((int)Field(viewModel, "_telemetryRefreshInFlight") == 0, "Localserver telemetry did not settle.");
+    }
+
+    private static async Task DrainLowPriority()
+    {
+        var drained = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Require(DispatcherQueue.GetForCurrentThread().TryEnqueue(DispatcherQueuePriority.Low, () => drained.TrySetResult(true)),
+            "Could not enqueue the Localserver theme notification barrier.");
+        await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     private static async Task TransitionAndWaitForRowAsync(LineRowViewModel row, ServiceState next)

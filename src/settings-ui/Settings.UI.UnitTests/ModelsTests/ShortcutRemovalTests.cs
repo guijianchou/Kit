@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Linq;
 using System.Text.Json;
 using Kit.Settings.UI.Library;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -46,7 +45,7 @@ public class ShortcutRemovalTests
     }
 
     [TestMethod]
-    public void LightSwitchShouldPreserveLegacyShortcutAlongsideCurrentSchedule()
+    public void LightSwitchShouldIgnoreLegacyShortcutAndPreserveCurrentSchedule()
     {
         const string legacySettings = """
             {
@@ -66,16 +65,11 @@ public class ShortcutRemovalTests
         Assert.IsFalse(settings.Properties.ChangeSystem.Value);
         Assert.AreEqual(420, settings.Properties.LightTime.Value);
         Assert.AreEqual("FixedHours", settings.Properties.ScheduleMode.Value);
-        Assert.IsTrue(settings.Properties.ToggleThemeHotkey.Value.Win);
-        Assert.IsFalse(settings.Properties.ToggleThemeHotkey.Value.Ctrl);
-        Assert.IsFalse(settings.Properties.ToggleThemeHotkey.Value.Alt);
-        Assert.IsFalse(settings.Properties.ToggleThemeHotkey.Value.Shift);
-        Assert.AreEqual(68, settings.Properties.ToggleThemeHotkey.Value.Code);
 
         settings.Properties.DarkTime.Value = 1260;
         using var saved = JsonDocument.Parse(JsonSerializer.Serialize(settings, SettingsSerializationContext.Default.LightSwitchSettings));
         var properties = saved.RootElement.GetProperty("properties");
-        AssertHotkey(properties.GetProperty("toggle-theme-hotkey").GetProperty("value"), true, false, false, false, 68);
+        Assert.IsFalse(properties.TryGetProperty("toggle-theme-hotkey", out _));
         Assert.IsFalse(properties.GetProperty("changeSystem").GetProperty("value").GetBoolean());
         Assert.AreEqual(420, properties.GetProperty("lightTime").GetProperty("value").GetInt32());
         Assert.AreEqual(1260, properties.GetProperty("darkTime").GetProperty("value").GetInt32());
@@ -87,7 +81,7 @@ public class ShortcutRemovalTests
     }
 
     [TestMethod]
-    public void ActiveModulesShouldSerializeOnlySupportedLightSwitchShortcut()
+    public void ActiveModulesShouldNotSerializeShortcuts()
     {
         BasePTModuleSettings[] settings =
         {
@@ -103,56 +97,26 @@ public class ShortcutRemovalTests
         foreach (var module in settings)
         {
             var serialized = JsonSerializer.Serialize(module, module.GetType(), SettingsSerializationContext.Default);
-            if (module is LightSwitchSettings)
-            {
-                using var document = JsonDocument.Parse(serialized);
-                var properties = document.RootElement.GetProperty("properties");
-                AssertHotkey(properties.GetProperty("toggle-theme-hotkey").GetProperty("value"), true, true, false, true, 0x44);
-                foreach (var property in properties.EnumerateObject())
-                {
-                    if (property.Name != "toggle-theme-hotkey")
-                    {
-                        Assert.IsFalse(property.Name.Contains("hotkey", StringComparison.OrdinalIgnoreCase), property.Name);
-                    }
-                }
-            }
-            else
-            {
-                Assert.IsFalse(serialized.Contains("hotkey", StringComparison.OrdinalIgnoreCase), module.Name);
-            }
-
+            Assert.IsFalse(serialized.Contains("hotkey", StringComparison.OrdinalIgnoreCase), module.Name);
             Assert.IsFalse(serialized.Contains("shortcut", StringComparison.OrdinalIgnoreCase), module.Name);
         }
     }
 
     [TestMethod]
-    public void LightSwitchShouldUseDefaultOnlyWhenShortcutIsAbsentAndPreserveDisabledShortcut()
+    [DataRow(null)]
+    [DataRow("{\"value\":{\"win\":false,\"ctrl\":false,\"alt\":false,\"shift\":false,\"code\":0}}")]
+    [DataRow("\"retired legacy value\"")]
+    public void LightSwitchShouldNotReintroduceShortcutsOnRoundtrip(string legacyHotkey)
     {
-        const string withoutShortcut = """
-            { "name": "LightSwitch", "properties": { "lightTime": { "value": 420 } } }
-            """;
-        var settings = JsonSerializer.Deserialize(withoutShortcut, SettingsSerializationContext.Default.LightSwitchSettings);
+        string retiredProperty = legacyHotkey == null ? string.Empty : ",\"toggle-theme-hotkey\":" + legacyHotkey;
+        string input = "{\"name\":\"LightSwitch\",\"properties\":{\"lightTime\":{\"value\":420}" + retiredProperty + "}}";
+        var settings = JsonSerializer.Deserialize(input, SettingsSerializationContext.Default.LightSwitchSettings);
         Assert.IsNotNull(settings);
-        using var savedDefault = JsonDocument.Parse(settings.ToJsonString());
-        AssertHotkey(savedDefault.RootElement.GetProperty("properties").GetProperty("toggle-theme-hotkey").GetProperty("value"), true, true, false, true, 0x44);
-
-        settings.Properties.ToggleThemeHotkey.Value = new LightSwitchHotkey();
-        using var savedDisabled = JsonDocument.Parse(settings.ToJsonString());
-        AssertHotkey(savedDisabled.RootElement.GetProperty("properties").GetProperty("toggle-theme-hotkey").GetProperty("value"), false, false, false, false, 0);
-        var reloaded = JsonSerializer.Deserialize(savedDisabled.RootElement, SettingsSerializationContext.Default.LightSwitchSettings);
+        using var saved = JsonDocument.Parse(settings.ToJsonString());
+        Assert.IsFalse(saved.RootElement.GetProperty("properties").TryGetProperty("toggle-theme-hotkey", out _));
+        var reloaded = JsonSerializer.Deserialize(saved.RootElement, SettingsSerializationContext.Default.LightSwitchSettings);
         Assert.IsNotNull(reloaded);
-        Assert.AreEqual(0, reloaded.Properties.ToggleThemeHotkey.Value.Code);
         Assert.AreEqual(420, reloaded.Properties.LightTime.Value);
-    }
-
-    private static void AssertHotkey(JsonElement hotkey, bool win, bool ctrl, bool alt, bool shift, int code)
-    {
-        Assert.AreEqual(JsonValueKind.Object, hotkey.ValueKind);
-        Assert.AreEqual(5, hotkey.EnumerateObject().Count());
-        Assert.AreEqual(win, hotkey.GetProperty("win").GetBoolean());
-        Assert.AreEqual(ctrl, hotkey.GetProperty("ctrl").GetBoolean());
-        Assert.AreEqual(alt, hotkey.GetProperty("alt").GetBoolean());
-        Assert.AreEqual(shift, hotkey.GetProperty("shift").GetBoolean());
-        Assert.AreEqual(code, hotkey.GetProperty("code").GetInt32());
+        Assert.AreEqual(settings.ToJsonString(), reloaded.ToJsonString());
     }
 }

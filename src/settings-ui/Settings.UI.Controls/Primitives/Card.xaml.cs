@@ -25,6 +25,30 @@ namespace Kit.Settings.UI.Controls
             set => SetValue(TitleProperty, value);
         }
 
+        public static readonly DependencyProperty TitleFontSizeProperty = DependencyProperty.Register(nameof(TitleFontSize), typeof(double), typeof(Card), new PropertyMetadata(16d));
+
+        public double TitleFontSize
+        {
+            get => (double)GetValue(TitleFontSizeProperty);
+            set => SetValue(TitleFontSizeProperty, value);
+        }
+
+        public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register(nameof(Description), typeof(string), typeof(Card), new PropertyMetadata(defaultValue: null, OnVisualPropertyChanged));
+
+        public string? Description
+        {
+            get => (string?)GetValue(DescriptionProperty);
+            set => SetValue(DescriptionProperty, value);
+        }
+
+        public static readonly DependencyProperty DescriptionFontSizeProperty = DependencyProperty.Register(nameof(DescriptionFontSize), typeof(double), typeof(Card), new PropertyMetadata(13d));
+
+        public double DescriptionFontSize
+        {
+            get => (double)GetValue(DescriptionFontSizeProperty);
+            set => SetValue(DescriptionFontSizeProperty, value);
+        }
+
         public static readonly DependencyProperty HeaderGlyphProperty = DependencyProperty.Register(nameof(HeaderGlyph), typeof(string), typeof(Card), new PropertyMetadata(defaultValue: null, OnVisualPropertyChanged));
 
         public string? HeaderGlyph
@@ -66,7 +90,7 @@ namespace Kit.Settings.UI.Controls
 
         private void SetVisualStates()
         {
-            if (string.IsNullOrEmpty(Title) && TitleContent == null && string.IsNullOrEmpty(HeaderGlyph))
+            if (string.IsNullOrEmpty(Title) && string.IsNullOrEmpty(Description) && TitleContent == null && string.IsNullOrEmpty(HeaderGlyph))
             {
                 VisualStateManager.GoToState(this, "TitleGridCollapsed", true);
             }

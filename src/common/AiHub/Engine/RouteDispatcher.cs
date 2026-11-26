@@ -189,6 +189,8 @@ public sealed class RouteDispatcher
         int suppressedEvents = 0;
         string? lastActivity = null;
         string phase = "prepare";
+        string observedModel = string.Empty;
+        string observedThreadId = string.Empty;
         var telemetry = new NativeTelemetry();
         using var heartbeat = reportDiagnostic is null ? null : new Timer(
             _ => Report($"AI route waiting: request={Path.GetFileName(requestDirectory) ?? "pending"}, elapsedMs={elapsed.ElapsedMilliseconds}"),
@@ -241,20 +243,22 @@ public sealed class RouteDispatcher
                 else
                 {
                     KernelResponse response = ParseEvents(normalized, process.StandardOutput);
+                    observedModel = response.Model;
+                    observedThreadId = response.ThreadId;
                     if (response.Failure is not null)
                     {
-                        result = response.Failure;
+                        result = response.Failure with { UsedModel = response.Model };
                     }
                     else if (process.ExitCode != 0)
                     {
                         var stderrFailure = ClassifyEndpointFailure(process.StandardError);
-                        result = response.TransientFailure
+                        result = (response.TransientFailure
                             ?? (stderrFailure.ErrorCode != AiErrorCode.ExecutionFailed ? stderrFailure : null)
-                            ?? ClassifyEndpointFailure(process.StandardOutput);
+                            ?? ClassifyEndpointFailure(process.StandardOutput)) with { UsedModel = response.Model };
                     }
                     else if (!response.Completed)
                     {
-                        result = response.TransientFailure ?? Failure(AiErrorCode.InvalidPayload);
+                        result = (response.TransientFailure ?? Failure(AiErrorCode.InvalidPayload)) with { UsedModel = response.Model };
                     }
                     else
                     {
@@ -357,6 +361,8 @@ public sealed class RouteDispatcher
                 : string.IsNullOrEmpty(failureDiagnostics?.ProcessFailure) ? KernelProcessFailure.None.ToString() : failureDiagnostics.ProcessFailure,
             CancellationSource = cancellationSource,
             ContextWindowTokens = target.ContextWindowTokens,
+            CodexThreadId = normalized == AiKernelCatalog.Codex ? AiUsageStore.SanitizeIdentifier(observedThreadId) : string.Empty,
+            ReportedModel = AiUsageStore.SanitizeModelName(observedModel),
         };
         result = result with { Diagnostics = diagnostics };
         if (!result.IsSuccess)
@@ -769,6 +775,29 @@ public sealed class RouteDispatcher
 
             if (kernel == AiKernelCatalog.Codex)
             {
+                if (type == "thread.started")
+                {
+                    string threadId = GetString(root, "thread_id");
+                    if (!string.IsNullOrWhiteSpace(threadId))
+                    {
+                        response.ThreadId = threadId;
+                    }
+
+                    string startedModel = GetString(root, "model");
+                    if (!string.IsNullOrWhiteSpace(startedModel))
+                    {
+                        response.Model = startedModel;
+                    }
+                }
+                else if (type == "turn.started")
+                {
+                    string turnModel = GetString(root, "model");
+                    if (!string.IsNullOrWhiteSpace(turnModel))
+                    {
+                        response.Model = turnModel;
+                    }
+                }
+
                 if ((type is "item.started" or "item.completed") && root.TryGetProperty("item", out JsonElement item) && item.ValueKind == JsonValueKind.Object)
                 {
                     string itemType = GetString(item, "type");
@@ -785,7 +814,11 @@ public sealed class RouteDispatcher
                 if (type == "turn.completed")
                 {
                     response.Completed = true;
-                    response.Model = GetString(root, "model");
+                    string completedModel = GetString(root, "model");
+                    if (!string.IsNullOrWhiteSpace(completedModel))
+                    {
+                        response.Model = completedModel;
+                    }
                 }
             }
             else if (type == "message_end" && root.TryGetProperty("message", out JsonElement message))
@@ -1379,6 +1412,7 @@ public sealed class RouteDispatcher
     {
         internal string Text = string.Empty;
         internal string Model = string.Empty;
+        internal string ThreadId = string.Empty;
         internal bool Completed;
         internal KernelExecutionResult? Failure;
         internal KernelExecutionResult? TransientFailure;

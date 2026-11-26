@@ -74,6 +74,12 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
     public AiDiagnosticsStore Diagnostics { get; }
 
+    public AiUsageStore UsageStore { get; }
+
+    public AiSessionActivityTracker SessionActivity { get; }
+
+    public string SessionId => SessionActivity.SessionId;
+
     public AiReadiness GetReadiness()
     {
         if (_disposed)
@@ -295,6 +301,8 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
         _securityService = securityService ?? throw new ArgumentNullException(nameof(securityService));
         Diagnostics = new AiDiagnosticsStore(_settingsStore.DataDirectory);
+        UsageStore = new AiUsageStore(_settingsStore.DataDirectory);
+        SessionActivity = new AiSessionActivityTracker();
         _dispatcher = new RouteDispatcher(kernelManager ?? throw new ArgumentNullException(nameof(kernelManager)), Path.Combine(_settingsStore.DataDirectory, "requests"));
         _watcher = new FileSystemWatcher(_settingsStore.DataDirectory)
         {
@@ -376,8 +384,37 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
         Guid requestId = Guid.NewGuid();
         var run = new AnalysisRun(requestId);
         var config = ReadState();
+        bool trackCodex = !_disposed && config.IsEnabled && string.Equals(config.SelectedKernel, AiKernelCatalog.Codex, StringComparison.OrdinalIgnoreCase);
+        AiTargetSettings? initialTarget = config.GetMainTarget();
+        string initialModel = AiUsageStore.SanitizeModelName(initialTarget?.Model);
+        string initialEffort = initialTarget?.Effort ?? string.Empty;
+        if (trackCodex)
+        {
+            IReadOnlyList<TInput>? inputItems = items;
+            SessionActivity.TaskStarted(requestId, pluginId, taskId, initialModel, initialEffort, inputItems?.Count ?? 0);
+        }
+
         AiTaskResult<TOutput> result = await ExecuteTaskCoreAsync(run, config, pluginId, taskId, items, schema, options, cancellationToken).ConfigureAwait(false);
         result = WithRunMetadata(result, run);
+        string taskOutcome = GetOutcome(result.IsSuccess, result.ErrorCode, result.HasPartialResult);
+        string taskRoute = string.IsNullOrEmpty(result.FailureRoute) ? result.UsedRoute : result.FailureRoute;
+        string taskModel = ResolveTaskModel(result.UsedModel, initialModel);
+        long taskElapsedMs = (long)result.Elapsed.TotalMilliseconds;
+        if (trackCodex)
+        {
+            SessionActivity.TaskFinished(
+                requestId,
+                pluginId,
+                taskId,
+                taskModel,
+                taskRoute,
+                taskOutcome,
+                result.Diagnostics?.Reason ?? string.Empty,
+                result.CompletedBatches,
+                result.TotalBatches,
+                taskElapsedMs);
+        }
+
         await RecordDiagnosticAsync(new AiDiagnosticRecord
         {
             Kind = "task",
@@ -387,19 +424,47 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             PluginId = pluginId,
             TaskId = taskId,
             Kernel = config.SelectedKernel,
-            Route = string.IsNullOrEmpty(result.FailureRoute) ? result.UsedRoute : result.FailureRoute,
-            Outcome = GetOutcome(result.IsSuccess, result.ErrorCode, result.HasPartialResult),
+            Model = taskModel,
+            ConfiguredModel = initialModel,
+            ReportedModel = AiUsageStore.SanitizeModelName(result.Diagnostics?.ReportedModel),
+            ModelSource = !string.IsNullOrEmpty(result.Diagnostics?.ReportedModel)
+                ? "codex"
+                : (!string.IsNullOrEmpty(taskModel) ? "config" : string.Empty),
+            Route = taskRoute,
+            Effort = initialEffort,
+            ApiMode = initialTarget?.Mode ?? string.Empty,
+            Outcome = taskOutcome,
             ErrorCode = result.ErrorCode,
             CompletedBatches = result.CompletedBatches,
             TotalBatches = result.TotalBatches,
-            ElapsedMilliseconds = (long)result.Elapsed.TotalMilliseconds,
+            InputItemCount = items?.Count ?? 0,
+            ElapsedMilliseconds = taskElapsedMs,
             Diagnostics = result.Diagnostics,
         }).ConfigureAwait(false);
         return result;
     }
 
     // File persistence must stay off a caller's UI thread, including synchronous early failures.
-    private Task RecordDiagnosticAsync(AiDiagnosticRecord record) => Task.Run(() => Diagnostics.Record(record));
+    private Task RecordDiagnosticAsync(AiDiagnosticRecord record) => Task.Run(() =>
+    {
+        Diagnostics.Record(record);
+        UsageStore.Record(record, SessionId);
+    });
+
+    private static string ResolveTaskModel(string usedModel, string fallbackModel)
+    {
+        if (!string.IsNullOrWhiteSpace(usedModel))
+        {
+            string first = usedModel.Split(" + ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? usedModel;
+            string sanitized = AiUsageStore.SanitizeModelName(first);
+            if (!string.IsNullOrEmpty(sanitized))
+            {
+                return sanitized;
+            }
+        }
+
+        return fallbackModel;
+    }
 
     private async Task<AiTaskResult<TOutput>> ExecuteTaskCoreAsync<TInput, TOutput>(
         AnalysisRun run,
@@ -528,6 +593,12 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
             int batchSize = options.BatchSize > 0 ? options.BatchSize : DynamicBatcher.CalculateBatchSize(items.Count, main.Effort);
             var batches = DynamicBatcher.CreateBatches(prepared, batchSize, item => item.Size, 96_000).ToList();
+            bool trackCodex = string.Equals(config.SelectedKernel, AiKernelCatalog.Codex, StringComparison.OrdinalIgnoreCase);
+            if (trackCodex)
+            {
+                SessionActivity.TaskBatchPlanReady(requestId, batches.Count);
+            }
+
             var agentIds = Enumerable.Range(0, batches.Count).Select(_ => Guid.NewGuid()).ToArray();
             var attemptIds = new Guid[batches.Count];
             var attemptCounts = new int[batches.Count];
@@ -634,37 +705,89 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                 {
                     // These are the dispatcher's bounded, sanitized event descriptions,
                     // never raw model output. Hosts consume typed progress fields.
+                    string? trackedPhase = null;
+                    int? trackedRetryLimit = null;
+                    int? trackedHttpStatus = null;
+                    string trackedReason = string.Empty;
+                    int trackedRetryCount = 0;
                     lock (progressLock)
                     {
                         if (message.Contains("event=retry,", StringComparison.Ordinal))
                         {
                             activity = "retrying";
-                            const string marker = "retryAttempt=";
-                            int start = message.IndexOf(marker, StringComparison.Ordinal);
-                            if (start >= 0 && int.TryParse(message.AsSpan(start + marker.Length).ToString().Split(',')[0],
-                                NumberStyles.None, CultureInfo.InvariantCulture, out int attempt) && attempt > 0)
+                            trackedPhase = "retrying";
+                            if (TryParseIntMarker(message, "retryAttempt=", out int attempt) && attempt > 0)
                             {
                                 retryCount = Math.Max(retryCount ?? 0, attempt);
                             }
+
+                            if (TryParseIntMarker(message, "retryLimit=", out int limit) && limit > 0)
+                            {
+                                trackedRetryLimit = limit;
+                            }
+
+                            if (TryParseIntMarker(message, "httpStatus=", out int status) && status is >= 100 and <= 599)
+                            {
+                                trackedHttpStatus = status;
+                            }
+
+                            trackedReason = TryParseTextMarker(message, "reason=");
+                        }
+                        else if (message.Contains("phase=started,", StringComparison.Ordinal))
+                        {
+                            activity = "waiting";
+                            trackedPhase = "started";
                         }
                         else if (message.Contains("phase=reasoning,", StringComparison.Ordinal))
                         {
                             activity = "reasoning";
+                            trackedPhase = "reasoning";
                         }
                         else if (message.Contains("phase=responding,", StringComparison.Ordinal))
                         {
                             activity = "responding";
+                            trackedPhase = "responding";
                         }
                         else if (message.Contains("event=completed,", StringComparison.Ordinal))
                         {
                             activity = "validating";
+                            trackedPhase = "validating";
                         }
                         else if (message.Contains("event=turn.failed,", StringComparison.Ordinal))
                         {
                             activity = "failed";
+                            trackedPhase = "failed";
+                            if (TryParseIntMarker(message, "httpStatus=", out int status) && status is >= 100 and <= 599)
+                            {
+                                trackedHttpStatus = status;
+                            }
+
+                            trackedReason = TryParseTextMarker(message, "reason=");
                         }
 
+                        trackedRetryCount = retryCount ?? 0;
                         ReportBatch("Route", $"batch={batchIndex + 1}/{batches.Count}, {message}");
+                    }
+
+                    if (trackCodex && trackedPhase is not null)
+                    {
+                        SessionActivity.WorkerUpdated(
+                            requestId,
+                            agentIds[batchIndex],
+                            pluginId,
+                            taskId,
+                            AiUsageStore.SanitizeModelName(usedTarget.Model),
+                            route,
+                            usedTarget.Effort,
+                            batchIndex + 1,
+                            batches.Count,
+                            batch.Count,
+                            trackedPhase,
+                            trackedRetryCount,
+                            trackedRetryLimit,
+                            queueMilliseconds,
+                            trackedHttpStatus,
+                            trackedReason);
                     }
                 }
 
@@ -677,6 +800,23 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     {
                         queueMilliseconds = previousQueueMilliseconds + (long)Stopwatch.GetElapsedTime(queuedAt).TotalMilliseconds;
                         ReportBatch("Queue", active: false);
+                        if (trackCodex)
+                        {
+                            SessionActivity.WorkerUpdated(
+                                requestId,
+                                agentIds[batchIndex],
+                                pluginId,
+                                taskId,
+                                AiUsageStore.SanitizeModelName(usedTarget.Model),
+                                route,
+                                usedTarget.Effort,
+                                batchIndex + 1,
+                                batches.Count,
+                                batch.Count,
+                                "queued",
+                                retryCount ?? 0,
+                                queueMilliseconds: queueMilliseconds);
+                        }
                     }
 
                     await AcquireSlotAsync(requestId, options.EnableSubagents != false, token, Queued).ConfigureAwait(false);
@@ -686,6 +826,23 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     queueMilliseconds = previousQueueMilliseconds + (long)Stopwatch.GetElapsedTime(queuedAt).TotalMilliseconds;
                     activity = "waiting";
                     ReportBatch("Execute", active: true);
+                    if (trackCodex)
+                    {
+                        SessionActivity.WorkerUpdated(
+                            requestId,
+                            agentIds[batchIndex],
+                            pluginId,
+                            taskId,
+                            AiUsageStore.SanitizeModelName(usedTarget.Model),
+                            route,
+                            usedTarget.Effort,
+                            batchIndex + 1,
+                            batches.Count,
+                            batch.Count,
+                            "waiting",
+                            retryCount ?? 0,
+                            queueMilliseconds: queueMilliseconds);
+                    }
                 }
 
                 try
@@ -701,9 +858,10 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
 
                     ReportDiagnostic($"AI batch scheduled: records={batch.Count}, inputBytes={batch.Sum(item => item.Size)}, routeTimeoutSeconds={routeTimeoutSeconds}, fallbackAvailable={fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl)}");
                     string prompt = prefix + SerializeBatch(batch);
+                    int promptBytes = Encoding.UTF8.GetByteCount(prompt);
                     KernelExecutionResult execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, main, prompt, routeTimeoutSeconds,
                         ReportDiagnostic, token).ConfigureAwait(false);
-                    await RecordRouteAsync(execution, "Main").ConfigureAwait(false);
+                    await RecordRouteAsync(execution, "Main", main, promptBytes).ConfigureAwait(false);
                     if (!execution.IsSuccess && (execution.CanFailover || execution.ErrorCode == AiErrorCode.Timeout)
                         && fallback is { IsActive: true } && !string.IsNullOrWhiteSpace(fallback.BaseUrl))
                     {
@@ -720,10 +878,28 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         attemptIds[batchIndex] = Guid.Empty;
                         activity = "waiting";
                         ReportBatch("Failover", active: false);
+                        if (trackCodex)
+                        {
+                            SessionActivity.WorkerUpdated(
+                                requestId,
+                                agentIds[batchIndex],
+                                pluginId,
+                                taskId,
+                                AiUsageStore.SanitizeModelName(usedTarget.Model),
+                                route,
+                                usedTarget.Effort,
+                                batchIndex + 1,
+                                batches.Count,
+                                batch.Count,
+                                "failover",
+                                queueMilliseconds: queueMilliseconds,
+                                reason: execution.ErrorCode.ToString());
+                        }
+
                         await AcquireBatchSlotAsync().ConfigureAwait(false);
                         execution = await _dispatcher.ExecuteAsync(config.SelectedKernel, fallback, prompt, routeTimeoutSeconds,
                             ReportDiagnostic, token).ConfigureAwait(false);
-                        await RecordRouteAsync(execution, "Fallback").ConfigureAwait(false);
+                        await RecordRouteAsync(execution, "Fallback", fallback, promptBytes).ConfigureAwait(false);
                         route = "Fallback";
                         usedTarget = fallback;
                     }
@@ -830,7 +1006,7 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                     }
                 }
 
-                async Task RecordRouteAsync(KernelExecutionResult execution, string usedRoute)
+                async Task RecordRouteAsync(KernelExecutionResult execution, string usedRoute, AiTargetSettings routeTarget, int promptBytes)
                 {
                     routeDiagnostics = execution.Diagnostics;
                     AiErrorCode routeCode = execution.ErrorCode;
@@ -844,6 +1020,38 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         };
                     }
 
+                    string configuredModel = AiUsageStore.SanitizeModelName(routeTarget.Model);
+                    string reportedModel = AiUsageStore.SanitizeModelName(
+                        !string.IsNullOrWhiteSpace(execution.UsedModel) ? execution.UsedModel : routeDiagnostics?.ReportedModel);
+                    string resolvedModel = !string.IsNullOrEmpty(reportedModel) ? reportedModel : configuredModel;
+                    string modelSource = !string.IsNullOrEmpty(reportedModel)
+                        ? "codex"
+                        : (!string.IsNullOrEmpty(configuredModel) ? "config" : string.Empty);
+                    string routeOutcome = GetOutcome(execution.IsSuccess, routeCode);
+                    long routeElapsedMs = routeDiagnostics?.ElapsedMilliseconds ?? 0;
+
+                    if (trackCodex)
+                    {
+                        SessionActivity.WorkerFinished(
+                            requestId,
+                            agentIds[batchIndex],
+                            pluginId,
+                            taskId,
+                            resolvedModel,
+                            usedRoute,
+                            routeTarget.Effort,
+                            batchIndex + 1,
+                            batches.Count,
+                            routeOutcome,
+                            routeDiagnostics?.Reason ?? string.Empty,
+                            routeDiagnostics?.HttpStatusCode,
+                            routeDiagnostics?.NativeRetryCount ?? 0,
+                            routeDiagnostics?.InputTokens,
+                            routeDiagnostics?.CachedInputTokens,
+                            routeDiagnostics?.OutputTokens,
+                            routeElapsedMs);
+                    }
+
                     await RecordDiagnosticAsync(new AiDiagnosticRecord
                     {
                         Kind = "route",
@@ -855,13 +1063,23 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
                         PluginId = pluginId,
                         TaskId = taskId,
                         Kernel = config.SelectedKernel,
+                        Model = resolvedModel,
+                        ConfiguredModel = configuredModel,
+                        ReportedModel = reportedModel,
+                        ModelSource = modelSource,
                         Route = usedRoute,
-                        Outcome = GetOutcome(execution.IsSuccess, routeCode),
+                        Effort = routeTarget.Effort,
+                        ApiMode = routeTarget.Mode,
+                        Outcome = routeOutcome,
                         ErrorCode = routeCode,
                         BatchIndex = batchIndex + 1,
                         TotalBatches = batches.Count,
+                        InputItemCount = batch.Count,
+                        PromptBytes = promptBytes,
+                        OutputCharacters = execution.Output?.Length ?? 0,
                         Diagnostics = routeDiagnostics,
-                        ElapsedMilliseconds = routeDiagnostics?.ElapsedMilliseconds ?? 0,
+                        ElapsedMilliseconds = routeElapsedMs,
+                        QueueMilliseconds = queueMilliseconds,
                     }).ConfigureAwait(false);
                 }
             }
@@ -1167,6 +1385,43 @@ public sealed partial class TaskAiEngine : IAiTaskEngine
             _ => "The AI task could not be completed.",
         } : message,
     };
+
+    private static bool TryParseIntMarker(string message, string marker, out int value)
+    {
+        value = 0;
+        int start = message.IndexOf(marker, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> slice = message.AsSpan(start + marker.Length);
+        int comma = slice.IndexOf(',');
+        if (comma >= 0)
+        {
+            slice = slice[..comma];
+        }
+
+        return int.TryParse(slice.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static string TryParseTextMarker(string message, string marker)
+    {
+        int start = message.IndexOf(marker, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return string.Empty;
+        }
+
+        ReadOnlySpan<char> slice = message.AsSpan(start + marker.Length);
+        int comma = slice.IndexOf(',');
+        if (comma >= 0)
+        {
+            slice = slice[..comma];
+        }
+
+        return slice.Trim().ToString();
+    }
 
     private sealed record PreparedItem(string Id, JsonElement Payload, int Size);
 }

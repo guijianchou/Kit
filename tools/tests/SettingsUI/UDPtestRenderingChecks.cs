@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Kit.Settings.UI.Controls;
+using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Kit.Settings.UI.Views;
@@ -138,9 +140,17 @@ internal static class UDPtestRenderingChecks
         double originalOffset = scroll.VerticalOffset;
         int collectionChanges = 0;
         int rowNotifications = 0;
+        var changedRowProperties = new HashSet<string>();
+        var changedBrushRows = new HashSet<string>();
         int enabledNotifications = 0;
         NotifyCollectionChangedEventHandler collectionChanged = (_, _) => collectionChanges++;
-        PropertyChangedEventHandler rowChanged = (_, _) => rowNotifications++;
+        PropertyChangedEventHandler rowChanged = (sender, args) =>
+        {
+            rowNotifications++;
+            changedRowProperties.Add(args.PropertyName ?? "<all>");
+            if (args.PropertyName == nameof(UDPtestLineRowViewModel.StatusBrush) && sender is UDPtestLineRowViewModel row)
+                changedBrushRows.Add(row.Id);
+        };
         PropertyChangedEventHandler enabledChanged = (_, args) =>
         {
             if (args.PropertyName == nameof(UDPtestViewModel.IsEnabled)) enabledNotifications++;
@@ -212,7 +222,7 @@ internal static class UDPtestRenderingChecks
             await NextFrame(page);
             CheckRetainedRows();
             Require(rowNotifications == 0 && enabledNotifications == 0 && tcpLine.RecentBars.Count == 1 && udpLine.RecentBars.Count == 1,
-                "An unchanged cached return republished rows or reset measurement history.");
+                $"An unchanged cached return republished rows or reset measurement history: row notifications={rowNotifications} [{string.Join(", ", changedRowProperties)}], enabled={enabledNotifications}, TCP history={tcpLine.RecentBars.Count}, UDP history={udpLine.RecentBars.Count}.");
 
             Require(NavigationService.Navigate(typeof(DashboardPage)), "Could not leave UDPtest for background snapshots.");
             await WaitForLoaded((FrameworkElement)NavigationService.Frame.Content);
@@ -239,7 +249,86 @@ internal static class UDPtestRenderingChecks
             Require(Descendants((FrameworkElement)udpRows.ContainerFromItem(udpLine)).OfType<TextBox>()
                 .Any(editor => editor.Text == "Unsaved rendering draft" && editor.ActualHeight > 0),
                 "The returned UDP editor lost its unsaved draft.");
+            var originalTheme = page.RequestedTheme;
+            var initialActualTheme = page.ActualTheme;
+            var alternateTheme = initialActualTheme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
+            int themeEvents = 0;
+            void ThemeChanged(FrameworkElement sender, object args)
+            {
+                themeEvents++;
+                LogTheme("actual-theme-event");
+            }
+
+            page.ActualThemeChanged += ThemeChanged;
+            try
+            {
+                changedRowProperties.Clear();
+                changedBrushRows.Clear();
+                LogTheme("visible-before-request");
+                page.RequestedTheme = alternateTheme;
+                LogTheme("visible-after-request");
+                await NextFrame(page);
+                LogTheme("visible-first-render");
+                await WaitForAppliedTheme(alternateTheme, "visible-theme");
+                CheckThemeBrushes();
+                CheckRetainedRows();
+
+                Require(NavigationService.Navigate(typeof(DashboardPage)), "Could not leave UDPtest for a theme change.");
+                await WaitForLoaded((FrameworkElement)NavigationService.Frame.Content);
+                rowNotifications = 0;
+                changedRowProperties.Clear();
+                changedBrushRows.Clear();
+                LogTheme("hidden-before-request");
+                page.RequestedTheme = initialActualTheme;
+                await DrainLowPriority();
+                LogTheme("hidden-after-request");
+                Require(!page.IsLoaded && rowNotifications == 0,
+                    "Changing the hidden page theme eagerly refreshed row bindings: " + ThemeState());
+                Require(NavigationService.Navigate(typeof(UDPtestPage)), "Could not return after a hidden theme change.");
+                await WaitForLoaded(page);
+                await NextFrame(page);
+                LogTheme("returned-first-render");
+                await WaitForAppliedTheme(initialActualTheme, "returned-theme");
+                CheckThemeBrushes();
+                CheckRetainedRows();
+                Require(tcpLine.RecentBars.Count == 2 && udpLine.RecentBars.Count == 3,
+                    "Theme changes reset retained measurement history.");
+            }
+            finally
+            {
+                page.ActualThemeChanged -= ThemeChanged;
+                page.RequestedTheme = originalTheme;
+                await NextFrame(page);
+            }
+
             File.AppendAllText(report, "UDPtest cached return: same page/VM/collections/TCP+UDP rows/containers, selection/draft/scroll retained, no entrance transition or unchanged row refresh, pending background measurements and history applied without probes PASS\n");
+            File.AppendAllText(report, "UDPtest cached themes: visible changes and deferred hidden changes update brushes without rebuilding rows or measurement history PASS\n");
+
+            async Task WaitForAppliedTheme(ElementTheme expected, string stage)
+            {
+                var elapsed = Stopwatch.StartNew();
+                bool Applied() => page.IsLoaded && page.ActualTheme == expected &&
+                    Equals(Field(page, "_lastAppliedTheme"), expected) &&
+                    changedBrushRows.Contains(tcpLine.Id) && changedBrushRows.Contains(udpLine.Id);
+                // A Rendering callback is a frame boundary, not confirmation that
+                // WinUI has delivered ActualThemeChanged to the reattached page.
+                while (!Applied() && elapsed.Elapsed < TimeSpan.FromSeconds(5)) await Task.Delay(20);
+                LogTheme(stage + "-settled-" + elapsed.ElapsedMilliseconds + "ms");
+                Require(Applied(), stage + ": actual theme and both retained row brushes did not update: " + ThemeState());
+            }
+
+            string ThemeState() =>
+                $"requested={page.RequestedTheme}, actual={page.ActualTheme}, applied={Field(page, "_lastAppliedTheme")}, loaded={page.IsLoaded}, themeEvents={themeEvents}, rowNotifications={rowNotifications}, properties=[{string.Join(",", changedRowProperties)}], tcpBrushNotified={changedBrushRows.Contains(tcpLine.Id)}, udpBrushNotified={changedBrushRows.Contains(udpLine.Id)}, tcpStatus={tcpLine.Status}, udpStatus={udpLine.Status}, tcpColor={((SolidColorBrush)tcpLine.StatusBrush).Color}, udpColor={((SolidColorBrush)udpLine.StatusBrush).Color}";
+
+            void LogTheme(string stage) => File.AppendAllText(report, "UDPtest theme " + stage + ": " + ThemeState() + "\n");
+
+            void CheckThemeBrushes()
+            {
+                var expected = (SolidColorBrush)ThemeBrushHelper.GetBrush("SystemFillColorSuccessBrush", ThemeBrushHelper.SuccessBrush, page.ActualTheme);
+                Require(((SolidColorBrush)tcpLine.StatusBrush).Color.Equals(expected.Color) &&
+                    ((SolidColorBrush)udpLine.StatusBrush).Color.Equals(expected.Color),
+                    "Retained measurement rows resolved the wrong theme palette.");
+            }
 
             void CheckRetainedRows()
             {

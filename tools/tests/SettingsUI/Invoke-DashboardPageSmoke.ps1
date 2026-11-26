@@ -3,6 +3,8 @@ param(
     [string]$Configuration = 'Debug',
     [ValidateSet('en-US', 'zh-CN')]
     [string]$Language = 'en-US',
+    [ValidateRange(30, 600)]
+    [int]$TimeoutSeconds = 120,
     [switch]$LayoutOnly,
     [string]$RuntimeRoot = '',
     [string]$WorkingDirectory = ''
@@ -54,6 +56,8 @@ try {
     $compilerArgs.Add('/out:"' + (Join-Path $runtimeRoot "$testName.dll") + '"')
     $compilerArgs.Add('"' + (Join-Path $PSScriptRoot 'DashboardPageSmoke.cs') + '"')
     foreach ($file in Get-ChildItem -LiteralPath $runtimeRoot -Filter '*.dll' -File) {
+        # Both WinUI apps link typography helpers; this harness tests Settings.
+        if ($file.Name -eq 'Kit.QuickAccess.dll') { continue }
         try { $null = [Reflection.AssemblyName]::GetAssemblyName($file.FullName) } catch { continue }
         $compilerArgs.Add('/reference:"' + $file.FullName + '"')
     }
@@ -86,13 +90,14 @@ try {
     $testProcess = [Diagnostics.Process]::Start($startInfo)
     $testDeadline = [Diagnostics.Stopwatch]::StartNew()
     while (-not $testProcess.WaitForExit(1000)) {
-        if ($testDeadline.Elapsed.TotalSeconds -ge 120) {
-            Write-Host 'Page smoke test timed out after 120s; harness log tail:'
+        if ($testDeadline.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
+            Write-Host "Page smoke test timed out after ${TimeoutSeconds}s; harness log tail:"
             $harnessLog = Join-Path $reportRoot 'page-smoke.log'
             if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 5 }
             throw 'Page smoke test timed out.'
         }
     }
+    Write-Host ('Page smoke runtime: {0:F1}s (timeout {1}s)' -f $testDeadline.Elapsed.TotalSeconds, $TimeoutSeconds)
     $proxySettingsPath = Join-Path $env:LOCALAPPDATA 'Kit\NetMap\settings.json'
     $currentProxySettings = if (Test-Path -LiteralPath $proxySettingsPath) { [IO.File]::ReadAllBytes($proxySettingsPath) } else { $null }
     if ([Convert]::ToBase64String([byte[]]($backups[$proxySettingsPath] ?? @())) -ne [Convert]::ToBase64String([byte[]]($currentProxySettings ?? @()))) {

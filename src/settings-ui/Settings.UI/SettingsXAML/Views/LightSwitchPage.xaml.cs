@@ -14,6 +14,7 @@ using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
 using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
@@ -23,7 +24,7 @@ using Windows.Devices.Geolocation;
 
 namespace Kit.Settings.UI.Views
 {
-    public sealed partial class LightSwitchPage : NavigablePage, IRefreshablePage
+    public sealed partial class LightSwitchPage : NavigablePage, IRefreshablePage, ILiveLocalizable
     {
         private static readonly TimeSpan GeoLocationTimeout = TimeSpan.FromSeconds(10);
 
@@ -40,6 +41,7 @@ namespace Kit.Settings.UI.Views
         private readonly MainWindow settingsWindow;
         private bool suppressViewModelUpdates;
         private bool disposed;
+        private string locationErrorResourceKey;
 
         private LightSwitchViewModel ViewModel { get; set; }
 
@@ -98,6 +100,14 @@ namespace Kit.Settings.UI.Views
         public void RefreshEnabledState()
         {
             this.ViewModel.RefreshEnabledState();
+        }
+
+        public void RefreshLocalization()
+        {
+            if (!string.IsNullOrEmpty(this.locationErrorResourceKey))
+            {
+                this.LocationErrorText.Text = ResourceLoaderInstance.ResourceLoader.GetString(this.locationErrorResourceKey);
+            }
         }
 
         internal static (IFileSystemWatcher Watcher, LightSwitchSettings Settings) InitializeSettings(
@@ -169,7 +179,7 @@ namespace Kit.Settings.UI.Views
                 var accessStatus = await Geolocator.RequestAccessAsync();
                 if (accessStatus != GeolocationAccessStatus.Allowed)
                 {
-                    ShowLocationError(ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_LocationError_Unavailable"));
+                    ShowLocationError("LightSwitch_LocationError_Unavailable");
                     return;
                 }
 
@@ -203,16 +213,16 @@ namespace Kit.Settings.UI.Views
             }
             catch (OperationCanceledException)
             {
-                ShowLocationError(ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_LocationError_Timeout"));
+                ShowLocationError("LightSwitch_LocationError_Timeout");
             }
             catch (Exception ex)
             {
-                ShowLocationError(ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_LocationError_Timeout"));
+                ShowLocationError("LightSwitch_LocationError_Timeout");
                 Logger.LogInfo($"Location error: " + ex.Message);
             }
         }
 
-        private void ShowLocationError(string message)
+        private void ShowLocationError(string resourceKey)
         {
             this.SyncButton.IsEnabled = true;
             this.SyncLoader.IsActive = false;
@@ -220,7 +230,8 @@ namespace Kit.Settings.UI.Views
             this.LocationResultPanel.Visibility = Visibility.Collapsed;
             this.LatitudeBox.IsEnabled = true;
             this.LongitudeBox.IsEnabled = true;
-            this.LocationErrorText.Text = message;
+            this.locationErrorResourceKey = resourceKey;
+            this.LocationErrorText.Text = ResourceLoaderInstance.ResourceLoader.GetString(resourceKey);
             this.LocationErrorText.Visibility = Visibility.Visible;
         }
 
@@ -263,9 +274,7 @@ namespace Kit.Settings.UI.Views
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (this.disposed || this.suppressViewModelUpdates || this.ViewModel.IsRefreshingModuleSettings ||
-                e.PropertyName == nameof(LightSwitchViewModel.ToggleThemeActivationShortcut) ||
-                e.PropertyName == nameof(LightSwitchViewModel.ToggleThemeShortcutText))
+            if (this.disposed || this.suppressViewModelUpdates || this.ViewModel.IsRefreshingModuleSettings)
             {
                 return;
             }
@@ -378,43 +387,6 @@ namespace Kit.Settings.UI.Views
             ViewModel.RefreshEnabledState();
         }
 
-        private void ThemeShortcut_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
-        {
-            if (e.Key == Windows.System.VirtualKey.Tab)
-            {
-                return;
-            }
-
-            e.Handled = true;
-            if (e.Key is Windows.System.VirtualKey.Delete or Windows.System.VirtualKey.Back)
-            {
-                ViewModel.ToggleThemeActivationShortcut = new LightSwitchHotkey { Code = 0, Win = false, Ctrl = false, Shift = false };
-                return;
-            }
-
-            if (e.Key is Windows.System.VirtualKey.Control or Windows.System.VirtualKey.Shift or
-                Windows.System.VirtualKey.Menu or Windows.System.VirtualKey.LeftWindows or Windows.System.VirtualKey.RightWindows)
-            {
-                return;
-            }
-
-            static bool IsDown(Windows.System.VirtualKey key) =>
-                (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key) & Windows.UI.Core.CoreVirtualKeyStates.Down) != 0;
-
-            var hotkey = new LightSwitchHotkey
-            {
-                Win = IsDown(Windows.System.VirtualKey.LeftWindows) || IsDown(Windows.System.VirtualKey.RightWindows),
-                Ctrl = IsDown(Windows.System.VirtualKey.Control),
-                Alt = IsDown(Windows.System.VirtualKey.Menu),
-                Shift = IsDown(Windows.System.VirtualKey.Shift),
-                Code = (int)e.Key,
-            };
-            if (hotkey.Win || hotkey.Ctrl || hotkey.Alt)
-            {
-                ViewModel.ToggleThemeActivationShortcut = hotkey;
-            }
-        }
-
         private async void SyncLocationButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -428,6 +400,7 @@ namespace Kit.Settings.UI.Views
                 if (accessStatus != GeolocationAccessStatus.Allowed)
                 {
                     this.SyncButton.IsEnabled = false;
+                    this.locationErrorResourceKey = "LightSwitch_LocationError_Unavailable";
                     this.LocationErrorText.Text = ResourceLoaderInstance.ResourceLoader.GetString("LightSwitch_LocationError_Unavailable");
                     this.LocationErrorText.Visibility = Visibility.Visible;
                 }

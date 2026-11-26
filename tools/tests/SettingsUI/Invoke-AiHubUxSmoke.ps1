@@ -11,6 +11,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'AiHubDerivedStateFixture.ps1')
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 if (-not $RuntimeRoot) { $RuntimeRoot = Join-Path $repoRoot "x64\$Configuration\WinUI3Apps" }
 $RuntimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
@@ -58,8 +59,10 @@ $previousTmp = $env:TMP
 $previousOutput = $env:KIT_AI_HUB_UX_TEST_OUTPUT
 $previousShellOnly = $env:KIT_SHELL_PALETTE_ONLY
 $previousNavigationPhase = $env:KIT_NAVIGATION_PERSISTENCE_PHASE
+$aiHubDerivedSnapshot = New-AiHubDerivedStateSnapshot (Join-Path $env:LOCALAPPDATA 'Kit\AiHub\State')
 $testProcess = $null
 try {
+    Clear-AiHubDerivedStateFixture $aiHubDerivedSnapshot
     $env:TEMP = $testTemp
     $env:TMP = $testTemp
     $env:KIT_SHELL_PALETTE_ONLY = if ($ShellOnly) { '1' } else { $null }
@@ -159,6 +162,9 @@ try {
     $env:KIT_NAVIGATION_PERSISTENCE_PHASE = $previousNavigationPhase
     $env:TEMP = $previousTemp
     $env:TMP = $previousTmp
+    $derivedRestoreFailure = $null
+    try { Restore-AiHubDerivedStateFixture $aiHubDerivedSnapshot }
+    catch { $derivedRestoreFailure = $_ }
     foreach ($path in $backups.Keys) {
         if ($null -ne $backups[$path]) { [IO.File]::WriteAllBytes($path, $backups[$path]) }
         elseif (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }
@@ -171,4 +177,5 @@ try {
             throw "Original configuration was not restored: $path"
         }
     }
+    if ($derivedRestoreFailure) { throw $derivedRestoreFailure }
 }

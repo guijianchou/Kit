@@ -7,20 +7,28 @@ internal static class Program
     {
         if (args.Length != 3 || !int.TryParse(args[2], out var runnerPid) || args[0] is not ("check" or "download" or "apply" or "commit" or "status" or "recover"))
         {
+            UpdateFailure.WriteStandardError(new ArgumentException("Expected an update command, installation root and runner process ID."));
             return 2;
         }
 
         UpdateStorage? storage = null;
-        using var operation = new Mutex(false, UpdateStorage.OperationMutex);
-
-        // Commit is launched by a short-lived installed helper that still holds this mutex.
-        if (!UpdateStorage.Acquire(operation, args[0] == "commit" ? 30000 : args[0] == "status" ? 0 : 5000))
-        {
-            return 3;
-        }
+        Mutex? operation = null;
+        var operationAcquired = false;
+        var acquiringOperation = false;
 
         try
         {
+            operation = new Mutex(false, UpdateStorage.OperationMutex);
+            acquiringOperation = true;
+
+            // Commit is launched by a short-lived installed helper that still holds this mutex.
+            operationAcquired = UpdateStorage.Acquire(operation, args[0] == "commit" ? 30000 : args[0] == "status" ? 0 : 5000);
+            acquiringOperation = false;
+            if (!operationAcquired)
+            {
+                return 3;
+            }
+
             storage = new UpdateStorage(args[1]);
             var expected = args[0] is "commit" or "recover" ? Path.Combine(storage.Cache, "worker", "Kit.Updater.exe") : Path.Combine(storage.Root, "Updater", "Kit.Updater.exe");
             if (!string.Equals(Environment.ProcessPath, expected, StringComparison.OrdinalIgnoreCase))
@@ -60,21 +68,32 @@ internal static class Program
         }
         catch (Exception error)
         {
-            if (storage != null)
-            {
-                storage.Log(error);
-                var state = storage.Read();
-                state.State = args[0] == "check" ? UpdateStatus.NetworkError : UpdateStatus.ErrorDownloading;
-                state.ErrorCode = (error as UpdateException)?.Code ?? "updateFailed";
-                storage.Checked(state);
-                storage.Save(state);
-            }
-
-            return 1;
+            return UpdateFailure.Report(error, storage, args[0], operationBusy: acquiringOperation && error is TimeoutException);
         }
         finally
         {
-            operation.ReleaseMutex();
+            try
+            {
+                if (operationAcquired)
+                {
+                    operation!.ReleaseMutex();
+                }
+            }
+            catch (Exception error)
+            {
+                UpdateFailure.WriteDiagnostics(error, storage);
+            }
+            finally
+            {
+                try
+                {
+                    operation?.Dispose();
+                }
+                catch (Exception error)
+                {
+                    UpdateFailure.WriteDiagnostics(error, storage);
+                }
+            }
         }
     }
 }

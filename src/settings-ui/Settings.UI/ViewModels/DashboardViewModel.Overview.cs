@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -146,6 +147,8 @@ public sealed class DashboardGpuCard : INotifyPropertyChanged
         }
     }
 
+    public string StatusResourceKey { get; set; } = string.Empty;
+
     private void OnPropertyChanged(string propertyName) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
@@ -170,6 +173,13 @@ public partial class DashboardViewModel
     private DispatcherQueueTimer? storageTimer;
     private DispatcherQueueTimer? overviewTimer;
     private bool overviewActive;
+    private long activityGeneration;
+    private long lastOverviewRefresh;
+    private long lastSystemRefresh;
+    private DateTimeOffset?[]? systemSampleTimes;
+    private DateTime? overviewSampleTime;
+    private string systemStatusResourceKey = string.Empty;
+    private string overviewStatusResourceKey = string.Empty;
 
     public IReadOnlyList<DashboardDetail> SystemDetails { get; private set; } = [];
 
@@ -195,6 +205,72 @@ public partial class DashboardViewModel
         ? string.Empty
         : card.Status;
 
+    private void RefreshOverviewLocalization()
+    {
+        if (SystemDetails.Count == SystemDetailKeys.Length)
+        {
+            for (int index = 0; index < SystemDetailKeys.Length; index++)
+            {
+                SystemDetails[index].Label = ResourceLoader.GetString("Dashboard_" + SystemDetailKeys[index]);
+            }
+        }
+        else
+        {
+            foreach (var entry in systemDetailMap)
+            {
+                entry.Value.Label = ResourceLoader.GetString("Dashboard_" + entry.Key);
+            }
+        }
+
+        if (StorageDetails.Count == 1 && StorageDetails[0].Value == "—" && !StorageDetails[0].HasUsage)
+        {
+            StorageDetails[0].Label = ResourceLoader.GetString("Dashboard_Storage");
+        }
+
+        string[] graphicsKeys = ["Driver", "VideoMemory", "GpuLoad", "Temperature"];
+        foreach (var card in GraphicsCards)
+        {
+            if (card.Details.Count == 0)
+            {
+                card.Name = ResourceLoader.GetString("Dashboard_GpuNotDetected");
+            }
+
+            for (int index = 0; index < card.Details.Count && index < graphicsKeys.Length; index++)
+            {
+                card.Details[index].Label = ResourceLoader.GetString("Dashboard_" + graphicsKeys[index]);
+            }
+
+            if (!string.IsNullOrEmpty(card.StatusResourceKey))
+            {
+                card.Status = ResourceLoader.GetString(card.StatusResourceKey);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(systemStatusResourceKey))
+        {
+            SystemStatus = systemStatusResourceKey == "Dashboard_SystemSampleTimes" && systemSampleTimes != null
+                ? string.Format(CultureInfo.CurrentCulture, ResourceLoader.GetString(systemStatusResourceKey),
+                    systemSampleTimes[0]!.Value.ToString("T", CultureInfo.CurrentCulture),
+                    systemSampleTimes[1]!.Value.ToString("T", CultureInfo.CurrentCulture),
+                    systemSampleTimes[2]!.Value.ToString("T", CultureInfo.CurrentCulture))
+                : ResourceLoader.GetString(systemStatusResourceKey);
+            OnPropertyChanged(nameof(SystemStatus));
+        }
+
+        if (!string.IsNullOrEmpty(overviewStatusResourceKey))
+        {
+            OverviewStatus = overviewStatusResourceKey == "Dashboard_OverviewUpdated" && overviewSampleTime.HasValue
+                ? string.Format(CultureInfo.CurrentCulture, ResourceLoader.GetString(overviewStatusResourceKey), overviewSampleTime.Value.ToString("T", CultureInfo.CurrentCulture))
+                : ResourceLoader.GetString(overviewStatusResourceKey);
+            OnPropertyChanged(nameof(OverviewStatus));
+        }
+
+        DirectEgress = DirectEgress.Relocalize();
+        ProxyEgress = ProxyEgress.Relocalize();
+        OnPropertyChanged(nameof(DirectEgress));
+        OnPropertyChanged(nameof(ProxyEgress));
+    }
+
     public void SetOverviewActive(bool active)
     {
         active &= !isDisposed;
@@ -204,6 +280,7 @@ public partial class DashboardViewModel
         }
 
         overviewActive = active;
+        long generation = ++activityGeneration;
         if (!overviewActive)
         {
             uptimeTimer?.Stop();
@@ -259,8 +336,25 @@ public partial class DashboardViewModel
             storageTimer.Start();
             overviewTimer.Start();
 
-            _ = RefreshOverviewAsync();
-            _ = RefreshSystemAsync();
+            // Present the retained snapshot first. Short visits to another page
+            // should not restart network probes or rebuild GPU/storage cards.
+            dispatcher.TryEnqueue(DispatcherQueuePriority.Low, () =>
+            {
+                if (!overviewActive || generation != activityGeneration || isDisposed)
+                {
+                    return;
+                }
+
+                if (lastOverviewRefresh == 0 || Stopwatch.GetElapsedTime(lastOverviewRefresh) >= TimeSpan.FromSeconds(10))
+                {
+                    _ = RefreshOverviewAsync();
+                }
+
+                if (lastSystemRefresh == 0 || Stopwatch.GetElapsedTime(lastSystemRefresh) >= TimeSpan.FromMinutes(1))
+                {
+                    _ = RefreshSystemAsync();
+                }
+            });
         }
 
         OnPropertyChanged(nameof(CanRefreshOverview));
@@ -404,7 +498,7 @@ public partial class DashboardViewModel
     {
         if (values.Count == 0)
         {
-            StorageDetails = [new DashboardDetail(resourceLoader.GetString("Dashboard_Storage"), "—")];
+            StorageDetails = [new DashboardDetail(ResourceLoader.GetString("Dashboard_Storage"), "—")];
             OnPropertyChanged(nameof(StorageDetails));
             return;
         }
@@ -431,7 +525,7 @@ public partial class DashboardViewModel
     {
         if (values.Count == 0)
         {
-            GraphicsCards = [new DashboardGpuCard(resourceLoader.GetString("Dashboard_GpuNotDetected"), [], string.Empty)];
+            GraphicsCards = [new DashboardGpuCard(ResourceLoader.GetString("Dashboard_GpuNotDetected"), [], string.Empty)];
             OnPropertyChanged(nameof(GraphicsCards));
             return;
         }
@@ -478,9 +572,10 @@ public partial class DashboardViewModel
                     string tempText = sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—";
                     card.Details[3].Update(tempText, sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null);
 
-                    card.Status = sample != null
+                    card.StatusResourceKey = sample != null
                         ? string.Empty
-                        : resourceLoader.GetString(val.Adapter.Vendor == "NVIDIA" ? "Dashboard_GpuUnavailable" : "Dashboard_GpuUnsupported");
+                        : val.Adapter.Vendor == "NVIDIA" ? "Dashboard_GpuUnavailable" : "Dashboard_GpuUnsupported";
+                    card.Status = string.IsNullOrEmpty(card.StatusResourceKey) ? string.Empty : ResourceLoader.GetString(card.StatusResourceKey);
                 }
 
                 return;
@@ -490,15 +585,16 @@ public partial class DashboardViewModel
         GraphicsCards = values.Select((value, index) =>
         {
             var sample = value.Telemetry;
+            string statusKey = sample != null ? string.Empty : value.Adapter.Vendor == "NVIDIA" ? "Dashboard_GpuUnavailable" : "Dashboard_GpuUnsupported";
             return new DashboardGpuCard($"GPU {index + 1} · {value.Adapter.Name}", new[]
             {
-                new DashboardDetail(resourceLoader.GetString("Dashboard_Driver"), value.Adapter.Driver),
-                new DashboardDetail(resourceLoader.GetString("Dashboard_VideoMemory"),
+                new DashboardDetail(ResourceLoader.GetString("Dashboard_Driver"), value.Adapter.Driver),
+                new DashboardDetail(ResourceLoader.GetString("Dashboard_VideoMemory"),
                     sample?.TotalMemoryMiB > 0 && sample.UsedMemoryMiB.HasValue ? $"{sample.UsedMemoryMiB / 1024d:F1} / {sample.TotalMemoryMiB / 1024d:F1} GB" : "—",
                     sample?.TotalMemoryMiB > 0 ? sample.UsedMemoryMiB * 100d / sample.TotalMemoryMiB : null, UsageCategory.Gpu),
-                new DashboardDetail(resourceLoader.GetString("Dashboard_GpuLoad"), sample?.UtilizationPercent is { } load ? $"{load}%" : "—", sample?.UtilizationPercent, UsageCategory.Gpu),
-                new DashboardDetail(resourceLoader.GetString("Dashboard_Temperature"), sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—", sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null, UsageCategory.Temperature),
-            }, sample != null ? string.Empty : resourceLoader.GetString(value.Adapter.Vendor == "NVIDIA" ? "Dashboard_GpuUnavailable" : "Dashboard_GpuUnsupported"));
+                new DashboardDetail(ResourceLoader.GetString("Dashboard_GpuLoad"), sample?.UtilizationPercent is { } load ? $"{load}%" : "—", sample?.UtilizationPercent, UsageCategory.Gpu),
+                new DashboardDetail(ResourceLoader.GetString("Dashboard_Temperature"), sample?.TemperatureCelsius is { } temperature ? $"{temperature} °C" : "—", sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null, UsageCategory.Temperature),
+            }, string.IsNullOrEmpty(statusKey) ? string.Empty : ResourceLoader.GetString(statusKey)) { StatusResourceKey = statusKey };
         }).ToArray();
 
         OnPropertyChanged(nameof(GraphicsCards));
@@ -513,7 +609,8 @@ public partial class DashboardViewModel
 
         var cancellation = new CancellationTokenSource();
         systemCancellation = cancellation;
-        SystemStatus = resourceLoader.GetString("Dashboard_SystemLoading");
+        systemStatusResourceKey = "Dashboard_SystemLoading";
+        SystemStatus = ResourceLoader.GetString(systemStatusResourceKey);
         OnPropertyChanged(nameof(SystemStatus));
         OnPropertyChanged(nameof(CanRefreshSystem));
 
@@ -541,10 +638,16 @@ public partial class DashboardViewModel
 
             Publish(() =>
             {
+                systemSampleTimes = times;
+                if (times.All(time => time.HasValue))
+                {
+                    lastSystemRefresh = Stopwatch.GetTimestamp();
+                }
+                systemStatusResourceKey = times.All(time => time.HasValue) ? "Dashboard_SystemSampleTimes" : "Dashboard_SystemPartial";
                 SystemStatus = times.All(time => time.HasValue)
-                    ? string.Format(CultureInfo.CurrentCulture, resourceLoader.GetString("Dashboard_SystemSampleTimes"),
+                    ? string.Format(CultureInfo.CurrentCulture, ResourceLoader.GetString("Dashboard_SystemSampleTimes"),
                         times[0]!.Value.ToString("T", CultureInfo.CurrentCulture), times[1]!.Value.ToString("T", CultureInfo.CurrentCulture), times[2]!.Value.ToString("T", CultureInfo.CurrentCulture))
-                    : resourceLoader.GetString("Dashboard_SystemPartial");
+                    : ResourceLoader.GetString("Dashboard_SystemPartial");
                 OnPropertyChanged(nameof(SystemStatus));
             });
         }
@@ -623,7 +726,7 @@ public partial class DashboardViewModel
         {
             if (systemValues.TryGetValue(key, out var val))
             {
-                var detail = new DashboardDetail(resourceLoader.GetString("Dashboard_" + key), val.Text, val.Percent, GetSystemDetailCategory(key));
+                var detail = new DashboardDetail(ResourceLoader.GetString("Dashboard_" + key), val.Text, val.Percent, GetSystemDetailCategory(key));
                 list.Add(detail);
                 systemDetailMap[key] = detail;
             }
@@ -642,7 +745,8 @@ public partial class DashboardViewModel
 
         var cancellation = new CancellationTokenSource();
         overviewCancellation = cancellation;
-        OverviewStatus = resourceLoader.GetString("Dashboard_OverviewLoading");
+        overviewStatusResourceKey = "Dashboard_OverviewLoading";
+        OverviewStatus = ResourceLoader.GetString(overviewStatusResourceKey);
         OnPropertyChanged(nameof(CanRefreshOverview));
         OnPropertyChanged(nameof(OverviewStatus));
 
@@ -703,8 +807,14 @@ public partial class DashboardViewModel
         try
         {
             await network.ConfigureAwait(false);
-            Publish(() => OverviewStatus = string.Format(CultureInfo.CurrentCulture,
-                resourceLoader.GetString("Dashboard_OverviewUpdated"), DateTime.Now.ToString("T", CultureInfo.CurrentCulture)));
+            Publish(() =>
+            {
+                lastOverviewRefresh = Stopwatch.GetTimestamp();
+                overviewSampleTime = DateTime.Now;
+                overviewStatusResourceKey = "Dashboard_OverviewUpdated";
+                OverviewStatus = string.Format(CultureInfo.CurrentCulture,
+                    ResourceLoader.GetString(overviewStatusResourceKey), overviewSampleTime.Value.ToString("T", CultureInfo.CurrentCulture));
+            });
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -717,7 +827,8 @@ public partial class DashboardViewModel
                 ProxyEgress = new("Proxy", new(new(null, ProbeError.Connection, DateTimeOffset.Now, string.Empty)), true);
                 OnPropertyChanged(nameof(DirectEgress));
                 OnPropertyChanged(nameof(ProxyEgress));
-                OverviewStatus = resourceLoader.GetString("Dashboard_OverviewUnavailable");
+                overviewStatusResourceKey = "Dashboard_OverviewUnavailable";
+                OverviewStatus = ResourceLoader.GetString(overviewStatusResourceKey);
             });
         }
         finally

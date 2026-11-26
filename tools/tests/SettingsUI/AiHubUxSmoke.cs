@@ -157,15 +157,16 @@ internal static class AiHubUxSmoke
         var store = new AuditHistoryStorage(directory);
         var end = (vm.SelectedAuditDate?.Date ?? DateTime.Today).AddHours(12);
         bool chinese = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh";
-        string title = chinese ? "审计周报" : "Weekly audit report";
         var history = (DropDownButton)page.FindName("AuditHistoryDropDown");
         var flyout = (Flyout)history.Flyout;
-        async Task Inspect(string expected, bool canCopy)
+        async Task Inspect(bool monthly, string expected, bool canCopy, string coverage = null)
         {
+            string title = monthly ? vm.MonthlyReportLabel : chinese ? "审计周报" : "Weekly audit report";
+            string automationId = monthly ? "AIHub_MonthlyReportButton" : "AIHub_WeeklyReportButton";
             flyout.ShowAt(history);
             await NextRendering();
-            var button = Descendants((FrameworkElement)flyout.Content).OfType<Button>().Single(item => AutomationProperties.GetAutomationId(item) == "AIHub_WeeklyReportButton");
-            Require(Equals(button.Content, title), "The weekly report action must use the selected language.");
+            var button = Descendants((FrameworkElement)flyout.Content).OfType<Button>().Single(item => AutomationProperties.GetAutomationId(item) == automationId);
+            Require(Equals(button.Content, title), "The period report action must use the selected language.");
             ((Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
             await WaitUntil(() => Field<ContentDialog>(page, "_activeDialog")?.IsLoaded == true);
             var dialog = Field<ContentDialog>(page, "_activeDialog");
@@ -173,6 +174,14 @@ internal static class AiHubUxSmoke
             await WaitUntil(() => body.Text.Contains(expected, StringComparison.Ordinal));
             Require(Equals(dialog.Title, title) && dialog.PrimaryButtonText == vm.CopyReportLabel && dialog.IsPrimaryButtonEnabled == canCopy && body.IsTextSelectionEnabled,
                 "Copy readiness and the localized dialog must follow the loaded report.");
+            if (coverage != null)
+            {
+                Require(body.Text.Contains(coverage, StringComparison.Ordinal), "The report must state its actual calendar-day coverage.");
+            }
+            if (monthly && canCopy)
+            {
+                Require(body.Text.Contains(end.ToString("yyyy-MM-01"), StringComparison.Ordinal), "The monthly report must start on the first day of the selected month.");
+            }
             dialog.Hide();
             await WaitUntil(() => Field<ContentDialog>(page, "_activeDialog") == null);
         }
@@ -180,21 +189,31 @@ internal static class AiHubUxSmoke
         try
         {
             storeField.SetValue(vm, store);
-            await Inspect(chinese ? "没有已保存的审计" : "No saved audits", false);
-            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddDays(-7).ToUniversalTime(), HealthScore = 55 });
-            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.ToUniversalTime(), HealthScore = 80 });
-            await Inspect("+25", true);
+            await Inspect(false, chinese ? "此时段没有保存的审计记录" : "No saved audits in this period", false);
+            await Inspect(true, chinese ? "此时段没有保存的审计记录" : "No saved audits in this period", false);
+            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddMonths(-1).ToUniversalTime(), HealthScore = 60 }, retentionDays: 3650);
+            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.AddDays(-7).ToUniversalTime(), HealthScore = 55 }, retentionDays: 3650);
+            await store.SaveHistoryAsync(new AuditResult { Timestamp = end.ToUniversalTime(), HealthScore = 80 }, retentionDays: 3650);
+            await Inspect(false, "+25", true, "1/7");
+            int monthDaysObserved = end.AddDays(-7).Month == end.Month ? 2 : 1;
+            await Inspect(true, chinese ? "平均健康分" : "Average health score", true, $"{monthDaysObserved}/{end.Day}");
+            string monthlyExport = Path.Combine(store.ReportsDirectory, $"monthly-{end:yyyy-MM-dd}.md");
+            string savedExport = File.ReadAllText(monthlyExport);
+            File.WriteAllText(Path.Combine(store.ReportsDirectory, "daily-summary.json"), "invalid");
+            await Inspect(false, chinese ? "历史摘要存档无法读取" : "The daily archive could not be read", true, "1/7");
+            await Inspect(true, chinese ? "历史摘要存档无法读取" : "The daily archive could not be read", true, $"{monthDaysObserved}/{end.Day}");
+            Require(File.ReadAllText(monthlyExport) == savedExport, "An unavailable derived archive must preserve the previously saved monthly export.");
             File.WriteAllText(Path.Combine(directory, "audit_history.json"), "invalid");
-            await Inspect(chinese ? "无法读取审计历史" : "Audit history could not be read", false);
+            await Inspect(false, chinese ? "无法读取审计历史" : "Audit history could not be read", false);
+            await Inspect(true, chinese ? "无法读取审计历史" : "Audit history could not be read", false);
         }
         finally
         {
             Field<ContentDialog>(page, "_activeDialog")?.Hide();
             storeField.SetValue(vm, original);
-            File.Delete(Path.Combine(directory, "audit_history.json"));
-            Directory.Delete(directory);
+            Directory.Delete(directory, recursive: true);
         }
-        Log("Weekly report action, empty history, trend, read error and copy-button readiness rendered PASS");
+        Log("Weekly/monthly report actions, empty history, calendar coverage, weekly trend, unavailable archive, preserved export, read error and copy-button readiness rendered PASS");
     }
 
     private static async Task CheckPoliciesRequestedDuringInitialization()
@@ -735,7 +754,7 @@ internal static class AiHubUxSmoke
             Require(!vm.AuditStatusText.Contains("private-provider-text") && vm.SidebarWorkflowPercent == 30,
                 "Silent AI waiting advances elapsed time without fabricating work or exposing provider text.");
             await NextRendering();
-            CheckAuditProgressLines(page, "0/2");
+            await CheckAuditProgressLines(page, "0/2", "workflow-timers");
             await Capture(page, "aihub-running-timer.png");
 
             auditPhase.SetValue(vm, ScanPhase.SelectingTargets);
@@ -841,7 +860,7 @@ internal static class AiHubUxSmoke
                     outcome + ": an interim AI report must preserve the active scan and its pending banner.");
                 Require(inlineResult.Visibility == Visibility.Visible && inlineResult.Text == vm.AiAnalysisRanText && IsDescendantOf(inlineResult, pinned),
                     outcome + ": retained interim AI results must appear inline with the running task details.");
-                CheckAuditProgressLines(page, "1/2");
+                await CheckAuditProgressLines(page, "1/2", "interim-" + outcome);
                 if (outcome == "ok")
                 {
                     await CheckAuditRunningLayout(page);
@@ -911,7 +930,7 @@ internal static class AiHubUxSmoke
         Log("Actual audit VM pending, interim, success, partial, failure and cancellation banners with frozen terminal timers PASS");
     }
 
-    private static void CheckAuditProgressLines(AIHubPage page, string expectedCounts)
+    private static async Task CheckAuditProgressLines(AIHubPage page, string expectedCounts, string context)
     {
         var vm = page.ViewModel;
         var pinned = (FrameworkElement)page.FindName("AuditPinnedStatus");
@@ -920,6 +939,31 @@ internal static class AiHubUxSmoke
         var activity = (TextBlock)page.FindName("AuditPinnedTaskStatus");
         var queue = (TextBlock)page.FindName("AuditPinnedQueueStatus");
         var elapsed = (TextBlock)page.FindName("AuditPinnedElapsed");
+        // AuditElapsedText reads a live Stopwatch, while the UI receives its
+        // notification on the one-second dispatcher tick. A rendering event can
+        // occur between those two; wait for the bound text, not just the getter.
+        var bindingWait = Stopwatch.StartNew();
+        string expectedElapsed;
+        while (true)
+        {
+            await NextRendering();
+            expectedElapsed = vm.AuditElapsedText;
+            if (elapsed.Text == expectedElapsed && summary.Text == vm.AuditProgressSummaryText &&
+                activity.Text == vm.AuditProgressActivityText && queue.Text == vm.AuditProgressQueueText)
+            {
+                page.UpdateLayout();
+                break;
+            }
+            if (bindingWait.Elapsed > TimeSpan.FromSeconds(3))
+            {
+                throw new TimeoutException($"{context}: audit progress bindings did not catch up; " +
+                    $"elapsed='{elapsed.Text}'/'{expectedElapsed}', " +
+                    $"summary='{summary.Text}'/'{vm.AuditProgressSummaryText}', " +
+                    $"activity='{activity.Text}'/'{vm.AuditProgressActivityText}', " +
+                    $"queue='{queue.Text}'/'{vm.AuditProgressQueueText}'.");
+            }
+            await Task.Delay(25);
+        }
         Require(vm.HasAuditBatchProgress && summary.Visibility == Visibility.Visible && summary.Text == vm.AuditProgressSummaryText &&
             summary.Text.Contains(expectedCounts, StringComparison.Ordinal) && activity.Text == vm.AuditProgressActivityText &&
             (activity.Text.StartsWith("Latest update:", StringComparison.Ordinal) || activity.Text.StartsWith("最新进展：", StringComparison.Ordinal)) &&
@@ -928,11 +972,16 @@ internal static class AiHubUxSmoke
             "Batch totals and the latest per-batch main-service activity must render on distinct lines.");
         Require(string.IsNullOrEmpty(vm.AuditProgressQueueText) && queue.Visibility == Visibility.Collapsed,
             "A sub-second queue delay must not occupy a task-detail row.");
-        Require(elapsed.Visibility == Visibility.Visible && elapsed.Text == vm.AuditElapsedText &&
-            Descendants(pinned).OfType<TextBlock>().Count(text => text.Visibility == Visibility.Visible && text.Text == vm.AuditElapsedText) == 1 &&
+        Require(elapsed.Visibility == Visibility.Visible && elapsed.Text == expectedElapsed &&
+            Descendants(pinned).OfType<TextBlock>().Count(text => text.Visibility == Visibility.Visible && text.Text == expectedElapsed) == 1 &&
             !Descendants(details).OfType<TextBlock>().Any(text => text.Visibility == Visibility.Visible &&
                 (text.Text.Contains("Elapsed", StringComparison.OrdinalIgnoreCase) || text.Text.Contains("已用", StringComparison.Ordinal))),
-            "The running task must show total elapsed time only in its header, without repeating it in progress details.");
+            "The running task must show total elapsed time only in its header, without repeating it in progress details. " +
+            $"Context={context}; rendered='{elapsed.Text}' ({elapsed.Visibility}); VM snapshot='{expectedElapsed}'; " +
+            "pinned=[" + string.Join(" | ", Descendants(pinned).OfType<TextBlock>()
+                .Where(text => text.Visibility == Visibility.Visible).Select(text => $"{text.Name}='{text.Text}'")) + "]; " +
+            "details=[" + string.Join(" | ", Descendants(details).OfType<TextBlock>()
+                .Where(text => text.Visibility == Visibility.Visible).Select(text => $"{text.Name}='{text.Text}'")) + "]");
     }
 
     private static async Task CheckAuditRunningLayout(AIHubPage page)
@@ -970,7 +1019,7 @@ internal static class AiHubUxSmoke
                 Require(body.ViewportHeight >= 80 && bodyBounds.Y >= pinnedBounds.Bottom - 2 && HeaderInside(bodyBounds, page) &&
                     body.ExtentWidth <= body.ViewportWidth + 2 && details.ScrollableWidth <= 1,
                     context + ": the running task must leave at least 80 DIPs of usable result reading area without horizontal overflow.");
-                CheckAuditProgressLines(page, "1/2");
+                await CheckAuditProgressLines(page, "1/2", context);
             }
         }
         finally
@@ -1248,6 +1297,7 @@ internal static class AiHubUxSmoke
                 HeaderBounds(score, dashboard).Bottom <= HeaderBounds(overview, dashboard).Top + 2 &&
                 HeaderInside(HeaderBounds(commands, dashboard), dashboard) && HeaderInside(HeaderBounds(overview, dashboard), dashboard),
                 "Dashboard sections must keep a single reading order and fit within the same surface.");
+            CheckScoreActivityLayout(page, $"overview/{theme}/{width}");
             await Capture(page, "aihub-unified-dashboard-" + theme + "-" + width + ".png");
             overview.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
             await NextRendering();
@@ -1331,6 +1381,7 @@ internal static class AiHubUxSmoke
             var dashboard = (Border)page.FindName("AuditDashboard");
             Require(HeaderInside(HeaderBounds(findings, dashboard), dashboard) && overview.Visibility == Visibility.Collapsed,
                 "The findings view must fit its workspace without simultaneously rendering Overview.");
+            CheckScoreActivityLayout(page, $"findings/{theme}/{width}");
             await Capture(page, $"aihub-workspace-findings-{theme}-{width}.png");
         }
 
@@ -1970,8 +2021,9 @@ internal static class AiHubUxSmoke
             !string.IsNullOrWhiteSpace(AutomationProperties.GetName(toggles[0])),
             context + ": the single labeled module switch must reflect the module and policy gates.");
         Require(!string.IsNullOrWhiteSpace(title.Text) && ReferenceEquals(title.Style, Application.Current.Resources["TitleTextBlockStyle"]) &&
-            AutomationProperties.GetHeadingLevel(title) == AutomationHeadingLevel.Level1 && description.Text == page.ModuleDescription,
-            context + ": the compact header must retain the localized title, description and heading semantics.");
+            AutomationProperties.GetHeadingLevel(title) == AutomationHeadingLevel.Level1 && title.Visibility == Visibility.Visible &&
+            (description is null || description.Visibility == Visibility.Collapsed),
+            context + ": the compact header must retain the localized title and heading semantics while omitting the introductory description.");
         var headerBounds = HeaderBounds(header, page);
         var enableCardBounds = HeaderBounds(enableCard, page);
         var readinessBounds = HeaderBounds(master, page);
@@ -1980,7 +2032,7 @@ internal static class AiHubUxSmoke
         Log($"HEADER {context}: page={page.ActualWidth:F1}x{page.ActualHeight:F1}, header={headerBounds}, enableCard={enableCardBounds}, readiness={readinessBounds}, tabs={tabBounds}, content={scrollBounds}, viewport={scroll.ViewportWidth:F1}x{scroll.ViewportHeight:F1}");
         Require(HeaderInside(headerBounds, page) && HeaderInside(enableCardBounds, page) && HeaderInside(readinessBounds, page) && HeaderInside(tabBounds, page) &&
             HeaderInside(HeaderBounds(toggles[0], enableCard), enableCard) &&
-            (description.Visibility == Visibility.Collapsed || HeaderInside(HeaderBounds(description, header), header)) &&
+            (description is null || description.Visibility == Visibility.Collapsed) &&
             headerBounds.Bottom <= enableCardBounds.Top + 2 &&
             enableCardBounds.Bottom <= readinessBounds.Top + 2 && readinessBounds.Bottom <= tabBounds.Top + 2 && tabBounds.Bottom <= scrollBounds.Top + 2,
             context + ": header, module switch card, service status and tabs must remain visible without overlap.");
@@ -2007,6 +2059,66 @@ internal static class AiHubUxSmoke
                 label.ActualWidth > 0 && label.ActualHeight > 0 && label.ActualWidth <= 96 &&
                 !label.IsTextTrimmed && HeaderInside(HeaderBounds(label, score), score),
                 context + ": the complete health label must fit inside the 96-DIP score ring without clipping or trimming.");
+            CheckScoreActivityLayout(page, context);
+        }
+    }
+
+    private static void CheckScoreActivityLayout(AIHubPage page, string context)
+    {
+        var vm = page.ViewModel;
+        var health = (FrameworkElement)page.FindName("AuditHealthSummary");
+        var combined = (FrameworkElement)page.FindName("AuditScoreActivityGrid");
+        var score = (FrameworkElement)page.FindName("AuditOverviewGrid");
+        var activity = (FrameworkElement)page.FindName("AuditActivityCard");
+        var period = (FrameworkElement)page.FindName("AuditPeriodOverview");
+        Require(IsDescendantOf(score, combined) && IsDescendantOf(activity, combined) && IsDescendantOf(combined, health) &&
+            !IsDescendantOf(activity, period) && health.Visibility == Visibility.Visible && combined.Visibility == Visibility.Visible &&
+            activity.Visibility == Visibility.Visible && activity.ActualWidth > 0 && activity.ActualHeight > 0,
+            context + ": audit activity must remain with the health score in overview, findings and empty states.");
+        var scoreBounds = HeaderBounds(score, combined);
+        var activityBounds = HeaderBounds(activity, combined);
+        Require(HeaderInside(HeaderBounds(combined, health), health) && HeaderInside(scoreBounds, combined) && HeaderInside(activityBounds, combined),
+            context + ": score and activity must stay inside their shared health surface without overflow.");
+        Require((scoreBounds.Right <= activityBounds.Left - 1 && Math.Abs(scoreBounds.Top - activityBounds.Top) <= 2) ||
+                (scoreBounds.Bottom <= activityBounds.Top - 1 && Math.Abs(scoreBounds.Left - activityBounds.Left) <= 2),
+            $"{context}: score and activity must use aligned, non-overlapping columns or rows (content={combined.ActualWidth:F1}, score={scoreBounds}, activity={activityBounds}).");
+
+        foreach (var item in new[]
+        {
+            (Name: "AuditActivityScansCell", Label: vm.AuditsLabel, Value: vm.ActivityScansText),
+            (Name: "AuditActivityFindingsCell", Label: vm.RecordedFindingsLabel, Value: vm.ActivityFindingsText),
+            (Name: "AuditActivityDaysCell", Label: vm.ActiveDaysLabel, Value: vm.ActiveDaysText),
+            (Name: "AuditActivityHealthCell", Label: vm.HealthAverageLabel, Value: vm.HealthAverageText),
+            (Name: "AuditMetaScanCell", Label: vm.ScanLabel, Value: vm.ScanTypeText),
+            (Name: "AuditMetaFinishedCell", Label: vm.FinishedLabel, Value: vm.FinishedText),
+            (Name: "AuditMetaWindowCell", Label: vm.WindowLabel, Value: vm.WindowText),
+            (Name: "AuditMetaEventsCell", Label: vm.EventsReadLabel, Value: vm.EventCountText),
+        })
+        {
+            var cell = (FrameworkElement)page.FindName(item.Name);
+            var texts = Descendants(cell).OfType<TextBlock>().ToArray();
+            Require(IsDescendantOf(cell, activity) && cell.Visibility == Visibility.Visible && cell.ActualWidth > 0 &&
+                HeaderInside(HeaderBounds(cell, activity), activity) && texts.Length == 2 &&
+                texts[0].Text == item.Label && texts[1].Text == item.Value,
+                $"{context}: {item.Name} must retain its localized label and current activity value inside the activity area.");
+            foreach (var text in texts.Where(text => !string.IsNullOrEmpty(text.Text)))
+            {
+                Require(text.Visibility == Visibility.Visible && text.ActualWidth > 0 && text.ActualHeight > 0 &&
+                    !text.IsTextTrimmed && HeaderInside(HeaderBounds(text, cell), cell),
+                    $"{context}: {item.Name} text '{text.Text}' must remain visible and untrimmed within its cell.");
+                if (text.TextWrapping == TextWrapping.NoWrap)
+                {
+                    var fullText = new TextBlock
+                    {
+                        Text = text.Text, FontFamily = text.FontFamily, FontSize = text.FontSize,
+                        FontWeight = text.FontWeight, FontStyle = text.FontStyle, FontStretch = text.FontStretch,
+                        CharacterSpacing = text.CharacterSpacing, FlowDirection = text.FlowDirection,
+                    };
+                    fullText.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+                    Require(fullText.DesiredSize.Width <= text.ActualWidth + 2,
+                        $"{context}: {item.Name} text '{text.Text}' needs {fullText.DesiredSize.Width:F1} DIPs but only {text.ActualWidth:F1} are visible.");
+                }
+            }
         }
     }
 

@@ -2,12 +2,15 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using NetMapLib;
 
 namespace Kit.Settings.UI.Views
@@ -19,7 +22,9 @@ namespace Kit.Settings.UI.Views
     {
         private readonly MainWindow settingsWindow;
         private bool windowSubscribed;
+        private bool typographySubscribed;
         private bool isCurrentPage;
+        private int typographyFontSize = -1;
 
         public DashboardViewModel ViewModel { get; set; }
 
@@ -42,6 +47,16 @@ namespace Kit.Settings.UI.Views
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
+            if (!typographySubscribed)
+            {
+                TypographyResources.TypographyChanged += OnTypographyChanged;
+                typographySubscribed = true;
+            }
+
+            if (typographyFontSize != TypographyResources.AppliedFontSize)
+            {
+                ApplyTypographyLayout();
+            }
             if (!windowSubscribed)
             {
                 settingsWindow.AppWindow.Changed += Window_Changed;
@@ -55,9 +70,59 @@ namespace Kit.Settings.UI.Views
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
+            UnsubscribeTypography();
+
             // Keep the page, telemetry snapshot, and window lifetime subscription cached.
             // Only the work that needs a visible dashboard pauses between visits.
             ViewModel.SetOverviewActive(false);
+            ViewModel.SetUpdateStatusActive(false);
+        }
+
+        private void OnTypographyChanged(object sender, EventArgs e) => ApplyTypographyLayout();
+
+        private void ApplyTypographyLayout()
+        {
+            typographyFontSize = TypographyResources.AppliedFontSize;
+            DashboardTwoColumnsTrigger.MinWidth = TypographyResources.FontSize(720);
+            DashboardSingleColumnTrigger.MaxWidth = TypographyResources.FontSize(720);
+            DashboardHeaderWideTrigger.MinWidth = TypographyResources.FontSize(480);
+            DashboardHeaderNarrowTrigger.MaxWidth = TypographyResources.FontSize(480);
+            DashboardVersionPanel.MaxWidth = TypographyResources.FontSize(280);
+            UpdateDetailRows(SystemOverviewCard);
+        }
+
+        private void DetailRow_Loaded(object sender, RoutedEventArgs e) => ApplyDetailRowLayout((Grid)sender);
+
+        private static void ApplyDetailRowLayout(Grid row)
+        {
+            row.ColumnDefinitions[0].Width = new GridLength(TypographyResources.FontSize(92));
+            if (row.FindName("UsageRow") is Grid usageRow)
+            {
+                usageRow.ColumnDefinitions[0].Width = new GridLength(TypographyResources.FontSize(144));
+            }
+        }
+
+        private static void UpdateDetailRows(DependencyObject root)
+        {
+            if (root is Grid { Name: "DetailRow" } row)
+            {
+                ApplyDetailRowLayout(row);
+                return;
+            }
+
+            for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+            {
+                UpdateDetailRows(VisualTreeHelper.GetChild(root, index));
+            }
+        }
+
+        private void UnsubscribeTypography()
+        {
+            if (typographySubscribed)
+            {
+                TypographyResources.TypographyChanged -= OnTypographyChanged;
+                typographySubscribed = false;
+            }
         }
 
         protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -72,6 +137,7 @@ namespace Kit.Settings.UI.Views
         {
             isCurrentPage = false;
             ViewModel.SetOverviewActive(false);
+            ViewModel.SetUpdateStatusActive(false);
             base.OnNavigatedFrom(e);
         }
 
@@ -82,7 +148,11 @@ namespace Kit.Settings.UI.Views
             bool visible = isCurrentPage && IsLoaded && settingsWindow.AppWindow.IsVisible &&
                 !(settingsWindow.AppWindow.Presenter is OverlappedPresenter presenter && presenter.State == OverlappedPresenterState.Minimized);
             ViewModel.SetOverviewActive(visible);
+            ViewModel.SetUpdateStatusActive(visible);
         }
+
+        private void UpdateNotice_Click(object sender, RoutedEventArgs e) =>
+            NavigationService.Navigate(typeof(GeneralPage), new NavigationParams("VersionAndUpdateGroup"));
 
         /// <summary>Maps an egress health state to the shared text style (app-level KitEgressStatusStyles).</summary>
         public Style EgressTextStyle(ProbeHealth health) => (Style)((ResourceDictionary)Application.Current.Resources["KitEgressStatusStyles"])[health switch
@@ -105,6 +175,8 @@ namespace Kit.Settings.UI.Views
             }
 
             ViewModel.SetOverviewActive(false);
+            ViewModel.SetUpdateStatusActive(false);
+            UnsubscribeTypography();
             UnsubscribeWindow();
             ViewModel.Dispose();
         }

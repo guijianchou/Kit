@@ -78,7 +78,7 @@ public sealed class DownloadOrganizerServiceTests
 
         var knownCategories = new HashSet<string>(StringComparer.Ordinal)
         {
-            "Documents", "Compressed", "Programs", "Music", "Video",
+            "Documents", "Compressed", "Programs", "Music", "Video", "Pictures",
         };
 
         foreach (var item in items)
@@ -106,5 +106,79 @@ public sealed class DownloadOrganizerServiceTests
                 items.Select(item => item.ItemId).Distinct(StringComparer.Ordinal).Count(),
                 "Item ids must be unique: the AI contract references items by id.");
         }
+    }
+
+    [TestMethod]
+    public async Task PictureExtensionsAreClassifiedCaseInsensitivelyAndMovedWithoutOverwriting()
+    {
+        using var fixture = new FixtureDirectory();
+        string root = fixture.PathFor("Downloads");
+        Directory.CreateDirectory(root);
+        string[] extensions = ["jpg", "jpeg", "jpe", "jfif", "png", "apng", "gif", "bmp", "dib", "tif", "tiff", "webp", "avif", "heic", "heif", "svg", "ico"];
+        foreach (string extension in extensions)
+        {
+            foreach (string variant in new[] { extension, extension.ToUpperInvariant() })
+            {
+                string name = (variant == extension ? "lower." : "upper.") + variant;
+                WriteOld(Path.Combine(root, name), name);
+                WriteOld(Path.Combine(root, "Pictures", name), "existing " + name);
+            }
+        }
+
+        var service = new DownloadOrganizerService(root);
+        var items = await service.ScanAsync();
+        Assert.AreEqual(extensions.Length * 2, items.Count);
+        foreach (var item in items)
+        {
+            Assert.AreEqual("Pictures", item.Category);
+            Assert.AreEqual("Pictures", item.TargetRelativePath);
+            Assert.AreEqual("move", item.Action);
+            var result = service.OrganizeItemDetailed(item);
+            string expected = Path.Combine(root, "Pictures", Path.GetFileNameWithoutExtension(item.FileName) + "_1" + Path.GetExtension(item.FileName));
+            Assert.IsTrue(result.Success, result.Error);
+            Assert.AreEqual(expected, result.DestinationPath);
+            Assert.AreEqual(item.FileName, File.ReadAllText(expected));
+            Assert.AreEqual("existing " + item.FileName, File.ReadAllText(Path.Combine(root, "Pictures", item.FileName)));
+            Assert.IsFalse(File.Exists(item.FilePath));
+        }
+
+        Assert.AreEqual(0, (await service.ScanAsync()).Count, "Pictures subfolders must never be scanned recursively.");
+    }
+
+    [TestMethod]
+    public async Task PictureCandidatesKeepDownloadEligibilityAndExecutionRevalidation()
+    {
+        using var fixture = new FixtureDirectory();
+        string root = fixture.PathFor("Downloads");
+        foreach (string name in new[] { "ready.PnG", "hidden.jpg", "system.webp", "locked.gif", "partial.jpg.crdownload", "active.png", "unfinished.part.jpeg", "unknown.image" })
+        {
+            WriteOld(Path.Combine(root, name), name);
+        }
+
+        File.SetAttributes(Path.Combine(root, "hidden.jpg"), FileAttributes.Hidden);
+        File.SetAttributes(Path.Combine(root, "system.webp"), FileAttributes.System);
+        File.WriteAllText(Path.Combine(root, "active.png.aria2"), "downloading");
+        File.WriteAllText(Path.Combine(root, "recent.heic"), "recent");
+        WriteOld(Path.Combine(root, "nested", "photo.jpg"), "nested");
+        using var held = File.Open(Path.Combine(root, "locked.gif"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var service = new DownloadOrganizerService(root);
+        var item = (await service.ScanAsync()).Single();
+        Assert.AreEqual("ready.PnG", item.FileName);
+        item.TargetRelativePath = "Documents";
+        Assert.IsFalse(service.OrganizeItem(item));
+        item.TargetRelativePath = "../Pictures";
+        Assert.IsFalse(service.OrganizeItem(item));
+        item.TargetRelativePath = "Pictures";
+        File.AppendAllText(item.FilePath, "changed since scanning");
+        Assert.IsFalse(service.OrganizeItem(item));
+        Assert.IsTrue(File.Exists(item.FilePath));
+        Assert.IsFalse(Directory.Exists(Path.Combine(root, "Pictures")), "Rejected execution must not create the destination.");
+    }
+
+    private static void WriteOld(string path, string content)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+        File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddHours(-1));
     }
 }

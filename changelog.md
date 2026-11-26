@@ -4,6 +4,22 @@
 
 ## English
 
+### 3.6.1 (2026-11-26)
+
+- Persisted Codex AI Usage history in SQLite (`winsqlite3.dll`, zero NuGet SQLite dependencies) with detailed v2 telemetry (model provenance `codex`/`config`/`legacy`, configured vs reported model, thread ID, API mode, reasoning effort, context window, batch/item counts, prompt/output sizes, queue/execution duration, retries, exit codes) and separated pre-SQLite legacy unattributed rows from real model shares.
+- Upgraded the AI Usage flyout with uniform fixed dimensions across Overview, Models, and Activity, left-aligned placement directly above the AI usage footer item (`TopEdgeAlignedLeft`), a higher-clarity translucent thin-acrylic backdrop with glass cards and richer semantic colors, and removed the redundant `Runtime statistics` expander from General → AI services.
+- Fixed startup theme synchronization ordering in Settings and Quick Access windows.
+
+### 3.6.0 (2026-11-26)
+
+- Reuse plugin pages and view models during navigation, pause hidden-page work, and load AI Service independently from basic settings. Preserve cached rows and theme updates in UDPtest and Localserver.
+- Use section headings and individual setting cards in General, align the font-size selector with the other appearance controls, and preserve live font changes in Settings and Quick Access.
+- Add an AI session-usage flyout above Settings and show the installed version and available update status in the Home header without starting automatic update checks.
+- Keep the global AI policy editor independent from AI Hub task-policy selection, preserving each draft and its discard action across navigation.
+- Add incremental AI Hub log analysis with evidence-aware invalidation, issue grouping, and saved weekly/monthly reports. Keep incomplete coverage visible and preserve report evidence across raw-log retention.
+- Restore distinct sea, land and coastlines in NetMap, adapt route framing and headers to the viewport, and show location, ASN and measurements in selected-node details. Apply translucent acrylic surfaces to egress Details and map-node cards with accessible fallbacks.
+- Strengthen Windows CI test-count checks and Release dependency, shared-library, version and package-content verification.
+
 ### 3.5.11 (2026-11-24)
 
 - Refined Windows 11 Mica and WinUI 3 surface layering across AI Hub, NetMap, WinGet, Dashboard, General, UDPtest, Localserver, and QuickAccess: replaced opaque risk/callout hex fills with translucent Mica-compatible semantic tints, toned down hero washes, enabled native rounded flyout chrome (`DWMWCP_ROUND`), and normalized micro-label typography without artificial letter-spacing or all-caps headers.
@@ -1021,6 +1037,22 @@
 ## 中文
 
 ## 更新日志
+
+### 3.6.1（2026-11-26）
+
+- 基于 Windows 内置 `winsqlite3.dll`（零第三方 SQLite 依赖）持久化 Codex AI 用量历史至 SQLite（Schema v2），完整记录模型来源（Codex 上报 / 配置模型 / 旧日志）、配置模型与上报模型、Thread ID、API 模式、思考强度、上下文窗口、批次/条目数、提示词/输出体量、排队与执行耗时、重试及退出状态，并将升级前未记录模型的历史记录与真实模型统计清晰分离。
+- 统一 AI 用量弹窗在概览 / 模型 / 实时活动三页的固定尺寸（消除模型页收缩），将弹出位置调整为靠左侧紧贴 `AI 用量` 标签（`TopEdgeAlignedLeft`），改用通透感更明显的 Thin 亚克力半透明材质与玻璃层次卡片并丰富三页语义配色；同时移除设置页「AI 服务」中与 AI 用量重复的「运行统计」折叠项。
+- 修复设置窗口与 Quick Access 启动时的深/浅色主题初始化时序问题。
+
+### 3.6.0（2026-11-26）
+
+- 导航时复用插件页面与视图模型，隐藏页面暂停刷新，AI Service 独立于基础设置加载；修复 UDPtest、Localserver 缓存回访和主题更新。
+- 通用设置使用分区标题和独立设置卡片，字号选项与其他外观控件对齐；设置页与 Quick Access 保持字体实时切换。
+- 在 Settings 上方增加 AI 会话用量浮层，在 Home 标题栏显示当前版本与更新状态，不主动发起更新检查。
+- 全局 AI 策略编辑器与 AI Hub 任务策略选择分离，跨页保留各自草稿，丢弃操作只作用于对应策略。
+- AI Hub 增加日志增量分析、关联证据失效处理、问题归并和周报/月报存储；保留覆盖不足提示，原始日志清理后仍保留报告证据。
+- 恢复 NetMap 清晰的海陆和海岸线，路线视口与标题自适应窗口，节点详情显示地区、ASN 和测量值；出口 Details 与地图节点卡使用半透明亚克力材质，并保留无透明效果及高对比度回退。
+- 补强 Windows CI 测试数量检查，以及 Release 依赖、共享库、版本和发布包内容验证。
 
 ### 3.5.11（2026-11-24）
 

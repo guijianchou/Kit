@@ -28,41 +28,41 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Grid x:Name="TitleGrid" MinHeight="52" Padding="16,10,12,10">
+        <Grid x:Name="TitleGrid" MinHeight="64" Padding="16,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Border
-                Width="32"
-                Height="32"
-                Margin="0,0,10,0"
-                CornerRadius="8"
-                Background="{ThemeResource KitAccentTintBrush}"
+            <FontIcon
+                Width="20"
+                Height="20"
+                Margin="0,0,16,0"
+                FontSize="20"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                Glyph="{x:Bind HeaderGlyph, Mode=OneWay}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Visibility="{x:Bind HeaderGlyph, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}">
-                <FontIcon
-                    FontSize="15"
-                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                    Glyph="{x:Bind HeaderGlyph, Mode=OneWay}"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center" />
-            </Border>
-            <TextBlock
-                Grid.Column="1"
-                VerticalAlignment="Center"
-                AutomationProperties.HeadingLevel="Level2"
-                FontSize="16"
-                FontWeight="SemiBold"
-                Text="{x:Bind Title, Mode=OneWay}"
-                TextTrimming="CharacterEllipsis" />
+                Visibility="{x:Bind HeaderGlyph, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                <TextBlock
+                    AutomationProperties.HeadingLevel="Level2"
+                    FontSize="{x:Bind TitleFontSize, Mode=OneWay}"
+                    FontWeight="SemiBold"
+                    Text="{x:Bind Title, Mode=OneWay}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    FontSize="{x:Bind DescriptionFontSize, Mode=OneWay}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{x:Bind Description, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind Description, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+            </StackPanel>
             <ContentPresenter
                 Grid.Column="2"
-                Margin="8,0,0,0"
+                Margin="16,0,0,0"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Center"
+                VerticalAlignment="Top"
                 Content="{x:Bind TitleContent, Mode=OneWay}" />
         </Grid>
         <Rectangle

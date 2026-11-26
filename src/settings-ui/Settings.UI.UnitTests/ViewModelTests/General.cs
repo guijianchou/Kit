@@ -150,7 +150,7 @@ namespace ViewModelTests
             var appearanceIndex = xaml.IndexOf("x:Uid=\"Appearance_Behavior\"", StringComparison.Ordinal);
             var startupAndPermissionsIndex = xaml.IndexOf("x:Uid=\"StartupAndPermissions\"", StringComparison.Ordinal);
             var runAtStartupIndex = xaml.IndexOf("x:Uid=\"GeneralPage_RunAtStartUp\"", StringComparison.Ordinal);
-            var adminRunningAsIndex = xaml.IndexOf("x:Uid=\"Admin_Mode_Running_As\"", StringComparison.Ordinal);
+            var adminRunningAsIndex = xaml.IndexOf("x:Name=\"AdminModeRunningAs\"", StringComparison.Ordinal);
 
             Assert.IsTrue(appearanceIndex >= 0, "Appearance & behavior section should be present.");
             Assert.IsTrue(startupAndPermissionsIndex > appearanceIndex, "Startup & permissions should follow Appearance & behavior.");
@@ -206,9 +206,8 @@ namespace ViewModelTests
             StringAssert.Contains(app, "_ => typeof(DashboardPage)");
             StringAssert.Contains(shell, "shellFrame.Navigate(typeof(DashboardPage));");
             StringAssert.Contains(shell, "NavigationService.EnsurePageIsSelected(typeof(DashboardPage));");
-            StringAssert.Contains(shell, "NavigationService.Navigate<DashboardPage>();");
             Assert.IsFalse(shell.Contains("NavigationService.EnsurePageIsSelected(typeof(GeneralPage))", StringComparison.Ordinal), "Default page selection should not fall back to General.");
-            Assert.IsFalse(shell.Contains("NavigationService.Navigate<GeneralPage>();", StringComparison.Ordinal), "Empty search should return to Dashboard instead of General.");
+            Assert.IsFalse(shell.Contains("NavigationService.Navigate<GeneralPage>();", StringComparison.Ordinal), "Default navigation should not fall back to General. Empty-search behavior is verified by the real page smoke test.");
         }
 
         [TestMethod]
@@ -377,6 +376,93 @@ namespace ViewModelTests
             Assert.AreEqual("Informational", GetViewModelProperty<string>(viewModel, "UpdateCheckMessageSeverity"));
         }
 
+        [DataTestMethod]
+        [DataRow("helperMissing", "General_UpdateHelperMissing/Text")]
+        [DataRow("helperFailed", "General_UpdateHelperFailed/Text")]
+        [DataRow("helperBusy", "General_UpdateHelperBusy/Text")]
+        [DataRow("accessDenied", "General_UpdateAccessDenied/Text")]
+        [DataRow("rateLimited", "General_UpdateRateLimited/Text")]
+        public void FreshUpdateFailureShouldShowSpecificErrorAndCompleteManualCheck(string errorCode, string expectedMessage)
+        {
+            foreach (var state in new[] { UpdatingSettings.UpdatingState.NetworkError, UpdatingSettings.UpdatingState.ErrorDownloading, UpdatingSettings.UpdatingState.ReadyToInstall })
+            {
+                var viewModel = CreateViewModel();
+                viewModel.CheckForUpdatesEventHandler.Execute(null);
+                var baseline = DateTimeOffset.FromUnixTimeSeconds(1700000000);
+                SetViewModelField<DateTime?>(viewModel, "_manualUpdateCheckBaselineLastChecked", baseline.LocalDateTime);
+
+                var updateSettings = new UpdatingSettings
+                {
+                    State = state,
+                    ErrorCode = errorCode,
+                    LastCheckedDate = baseline.AddSeconds(1).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                    DownloadedInstallerFilename = "Kit-9.0.0-x64.zip",
+                };
+                viewModel.RefreshUpdatingState(updateSettings);
+
+                Assert.AreEqual(expectedMessage, viewModel.UpdateCheckMessage, $"{state}: {errorCode}");
+                Assert.AreEqual("Error", viewModel.UpdateCheckMessageSeverity);
+                Assert.IsTrue(viewModel.UpdateCheckMessageVisible);
+                Assert.IsFalse(viewModel.IsCheckingForUpdates);
+                Assert.IsTrue(viewModel.IsCheckForUpdatesButtonEnabled);
+                Assert.AreEqual(state == UpdatingSettings.UpdatingState.ReadyToInstall, viewModel.CanRestartToUpdate);
+                Assert.AreEqual("Kit-9.0.0-x64.zip", updateSettings.DownloadedInstallerFilename);
+            }
+        }
+
+        [DataTestMethod]
+        [DataRow(null)]
+        [DataRow("")]
+        [DataRow("networkError")]
+        [DataRow("unrecognizedError")]
+        public void UnknownUpdateFailureShouldKeepStateSpecificFallback(string errorCode)
+        {
+            var viewModel = CreateViewModel();
+
+            viewModel.RefreshUpdatingState(new UpdatingSettings
+            {
+                State = UpdatingSettings.UpdatingState.NetworkError,
+                ErrorCode = errorCode,
+            });
+            Assert.AreEqual("General_CantCheck/Title", viewModel.UpdateCheckMessage);
+
+            viewModel.RefreshUpdatingState(new UpdatingSettings
+            {
+                State = UpdatingSettings.UpdatingState.ErrorDownloading,
+                ErrorCode = errorCode,
+            });
+            Assert.AreEqual("General_UpdateError/Text", viewModel.UpdateCheckMessage);
+        }
+
+        [DataTestMethod]
+        [DataRow("helperMissing")]
+        [DataRow("helperFailed")]
+        [DataRow("helperBusy")]
+        [DataRow("accessDenied")]
+        [DataRow("rateLimited")]
+        public void StaleUpdateCheckFailureShouldNotReplaceActiveCheck(string errorCode)
+        {
+            foreach (var state in new[] { UpdatingSettings.UpdatingState.NetworkError, UpdatingSettings.UpdatingState.ReadyToInstall })
+            {
+                var viewModel = CreateViewModel();
+                viewModel.CheckForUpdatesEventHandler.Execute(null);
+                var baseline = DateTimeOffset.FromUnixTimeSeconds(1700000000);
+                SetViewModelField<DateTime?>(viewModel, "_manualUpdateCheckBaselineLastChecked", baseline.LocalDateTime);
+
+                viewModel.RefreshUpdatingState(new UpdatingSettings
+                {
+                    State = state,
+                    ErrorCode = errorCode,
+                    LastCheckedDate = baseline.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                });
+
+                Assert.IsTrue(viewModel.IsCheckingForUpdates);
+                Assert.IsFalse(viewModel.IsCheckForUpdatesButtonEnabled);
+                Assert.AreEqual("General_CheckingForUpdates/Text", viewModel.UpdateCheckMessage);
+                Assert.AreEqual("Informational", viewModel.UpdateCheckMessageSeverity);
+            }
+        }
+
         [TestMethod]
         public void RefreshUpdatingStateShouldShowKitReleaseCheckResult()
         {
@@ -414,6 +500,7 @@ namespace ViewModelTests
             var runnerProject = File.ReadAllText(FindSourceFile("src", "runner", "Kit.vcxproj"));
             var generalViewModel = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "GeneralViewModel.cs"));
             var updatingSettings = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI.Library", "UpdatingSettings.cs"));
+            var updateStateSource = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Services", "UpdateStateSource.cs"));
 
             StringAssert.Contains(shellPage, "CheckForUpdatesMsgCallback?.Invoke(msg);");
             StringAssert.Contains(settingsWindow, "action == L\"check_for_updates\"");
@@ -431,7 +518,8 @@ namespace ViewModelTests
             StringAssert.Contains(updateUtils, "void CheckForUpdatesCallback()");
             StringAssert.Contains(updateUtils, "RunPortableUpdate(L\"check\");");
             StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp");
-            StringAssert.Contains(generalViewModel, "Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile");
+            StringAssert.Contains(generalViewModel, "UpdateStateSource.Current.Subscribe");
+            StringAssert.Contains(updateStateSource, "Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile");
             StringAssert.Contains(generalViewModel, "UpdatingSettings.LoadSettings()");
             StringAssert.Contains(generalViewModel, "ManualUpdateCheckTimeoutMs");
             StringAssert.Contains(generalViewModel, "IsResultNewerThanBaseline");
@@ -469,6 +557,8 @@ namespace ViewModelTests
             viewModel.RefreshUpdatingState(new UpdatingSettings { State = UpdatingSettings.UpdatingState.ReadyToInstall });
             Assert.IsTrue(viewModel.CanRestartToUpdate);
             Assert.IsFalse(viewModel.IsNewVersionDownloading);
+            Assert.AreEqual("General_UpdateReady/Text", viewModel.UpdateCheckMessage);
+            Assert.AreEqual("Success", viewModel.UpdateCheckMessageSeverity);
             viewModel.RestartToUpdateCommand.Execute(null);
             StringAssert.Contains(sent, "restart_to_update");
         }
@@ -779,13 +869,11 @@ namespace ViewModelTests
         }
 
         [TestMethod]
-        public void KitDashboardSystemOverviewShouldUseCompactSpacingAndGpuTemperatureBar()
+        public void KitDashboardSystemOverviewShouldRetainGpuTemperatureBar()
         {
-            var dashboard = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "SettingsXAML", "Views", "DashboardPage.xaml"));
             var overviewVm = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "ViewModels", "DashboardViewModel.Overview.cs"));
             var usageBar = File.ReadAllText(FindSourceFile("src", "settings-ui", "Settings.UI", "Helpers", "UsageProgressBar.cs"));
 
-            StringAssert.Contains(dashboard, "<Grid Margin=\"44,2,0,2\" ColumnSpacing=\"12\" MinHeight=\"24\">");
             StringAssert.Contains(overviewVm, "sample?.TemperatureCelsius is { } tempVal ? Math.Clamp(tempVal, 0d, 100d) : null");
             StringAssert.Contains(usageBar, "UsageCategory.Temperature");
         }

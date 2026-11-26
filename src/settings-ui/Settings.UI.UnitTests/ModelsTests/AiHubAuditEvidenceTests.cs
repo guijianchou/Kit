@@ -6,7 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Kit.AiHub.Models;
 using Kit.AIHubLib.Models;
+using Kit.AIHubLib.Services;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml.Controls;
@@ -17,6 +19,11 @@ namespace ModelsTests;
 [TestClass]
 public sealed class AiHubAuditEvidenceTests
 {
+    private static readonly string[] GroupedReferences = ["item-000001", "item-000002"];
+    private static readonly string[] ThreeReferences = ["item-000001", "item-000002", "item-000003"];
+    private static readonly string[] PrimaryReference = ["item-000001"];
+    private static readonly string[] ShiftedReferences = ["item-000002", "item-000003"];
+
     [TestMethod]
     [DataRow("pending", false, InfoBarSeverity.Informational, "AIHub_FinishAudit_Pending")]
     [DataRow("pending", true, InfoBarSeverity.Warning, "AIHub_FinishAudit_Pending")]
@@ -93,6 +100,23 @@ public sealed class AiHubAuditEvidenceTests
     }
 
     [TestMethod]
+    public void BatchMergeRetainsNarrativeOnlyEvidenceBeforeReferenceProjection()
+    {
+        var first = Finding("item-000001", "Medium", 1);
+        first.Key = "app_failure";
+        first.Description = "item-000002 supports item-000001.";
+        var second = Finding("item-000001", "High", 1);
+        second.Key = "app_failure";
+        second.Description = "item-000003 supports item-000001.";
+
+        var merged = AiHubAuditAnalysisService.DeduplicateIssues([first, second]).Single();
+        CollectionAssert.AreEquivalent(ThreeReferences, merged.RelatedEventRefs);
+        Assert.AreEqual(3, merged.Occurrences);
+        Assert.AreEqual("High", merged.Severity);
+        CollectionAssert.AreEqual(PrimaryReference, first.RelatedEventRefs);
+    }
+
+    [TestMethod]
     public void DifferentEvidenceWithTheSameEventIdSurvivesAndCannotLowerRuleSeverity()
     {
         var now = DateTime.UtcNow;
@@ -132,6 +156,81 @@ public sealed class AiHubAuditEvidenceTests
         finding.RelatedEventRefs = ["item-000001"];
         finding.EventRef = "item-000002";
         Assert.IsFalse(schema.ValidateOutput(output, ids));
+    }
+
+    [TestMethod]
+    [DataRow("See item-000003.")]
+    [DataRow("See ITEM-000001.")]
+    [DataRow("See item-1.")]
+    public void NarrativeOnlyReferencesMustUseAssignedCanonicalIds(string invalidNarrative)
+    {
+        var issue = Finding("item-000001", "Medium", 1);
+        issue.Key = "app_failure";
+        issue.TitleZh = issue.Description = issue.DescriptionZh = "Evidence";
+        issue.RootCause = issue.RootCauseZh = issue.Recommendation = issue.RecommendationZh = "Review evidence";
+        issue.Description = "Compare item-000001 with item-000002.";
+        var schema = AiHubAuditAnalysisService.CreateSchema();
+        var output = new AuditIssueContainer { Issues = [issue] };
+        var ids = new HashSet<string>(StringComparer.Ordinal) { "item-000001", "item-000002" };
+
+        Assert.IsTrue(schema.ValidateOutput(output, ids), "A known narrative citation may add evidence omitted from the structured list.");
+        var projected = AuditAnalysisCache.Project(issue, reference => reference);
+        CollectionAssert.AreEquivalent(GroupedReferences, projected.RelatedEventRefs);
+        Assert.AreEqual(2, projected.Occurrences);
+        issue.RecommendationZh = invalidNarrative;
+        Assert.IsFalse(schema.ValidateOutput(output, ids), "Unknown citations must be rejected before partial results or caching.");
+    }
+
+    [TestMethod]
+    public void IncrementalRequestActuallySendsCrossProviderContextAndThenReusesCompletedResult()
+    {
+        var cache = new AuditAnalysisCache();
+        var app = new EventAnalysisInput { EventId = 1000, LogName = "Application", Provider = "Application Error", TimeUtc = "2026-11-25T08:00:00Z", Summary = "editor.exe stopped" };
+        var unrelated = new EventAnalysisInput { EventId = 4, LogName = "System", Provider = "Network", TimeUtc = "2026-11-25T06:00:00Z", Summary = "Network event" };
+        var first = AiHubAuditAnalysisService.PrepareAnalysisRequest(cache, "policy", [app, unrelated], false);
+        cache.Commit(first.Plan, []);
+
+        var disk = new EventAnalysisInput { EventId = 7, LogName = "System", Provider = "Disk", TimeUtc = "2026-11-25T08:01:00Z", Summary = "Storage failure" };
+        var next = AiHubAuditAnalysisService.PrepareAnalysisRequest(cache, "policy", [disk, app, unrelated], false);
+        CollectionAssert.AreEqual(
+            new[] { disk, app },
+            next.Items,
+            "The worker request must contain both the new disk evidence and the earlier app evidence, but exclude distant unrelated records.");
+        var issue = Finding("item-000001", "Medium", 1);
+        issue.Key = "storage_app_failure";
+        issue.TitleZh = issue.DescriptionZh = "证据";
+        issue.Description = "item-000001 and item-000002 need joint review.";
+        issue.RootCause = issue.RootCauseZh = issue.Recommendation = issue.RecommendationZh = "Review evidence";
+        var schema = AiHubAuditAnalysisService.CreateSchema();
+        Assert.IsTrue(schema.ValidateOutput(new AuditIssueContainer { Issues = [issue] }, new HashSet<string>(GroupedReferences, StringComparer.Ordinal)));
+        cache.Commit(next.Plan, [next.Plan.RestoreReference(issue)]);
+
+        var same = AiHubAuditAnalysisService.PrepareAnalysisRequest(cache, "policy", [disk, app, unrelated], false);
+        Assert.AreEqual(0, same.Items.Count);
+        Assert.AreEqual(1, same.Plan.ReusedIssues.Count);
+        CollectionAssert.AreEquivalent(GroupedReferences, same.Plan.ReusedIssues[0].RelatedEventRefs);
+    }
+
+    [TestMethod]
+    public void IncrementalRequestUsesAffectedIdentifierOutsideTimeWindowAndRestoresSparseIds()
+    {
+        var cache = new AuditAnalysisCache();
+        var unrelated = new EventAnalysisInput { EventId = 4, LogName = "System", Provider = "Network", TimeUtc = "2026-11-25T09:00:00Z" };
+        var app = new EventAnalysisInput { EventId = 1000, LogName = "Application", Provider = "Application Error", TimeUtc = "2026-11-25T06:00:00Z", Summary = "editor.exe stopped" };
+        var first = AiHubAuditAnalysisService.PrepareAnalysisRequest(cache, "policy", [unrelated, app], false);
+        var previous = Finding("item-000002", "Medium", 1);
+        previous.Affected = "editor.exe";
+        cache.Commit(first.Plan, [previous]);
+
+        var disk = new EventAnalysisInput { EventId = 7, LogName = "System", Provider = "Disk", TimeUtc = "2026-11-25T08:00:00Z", Summary = "Storage failure affecting editor.exe" };
+        var next = AiHubAuditAnalysisService.PrepareAnalysisRequest(cache, "policy", [unrelated, disk, app], false);
+        CollectionAssert.AreEqual(new[] { disk, app }, next.Items);
+        Assert.AreEqual(0, next.Plan.ReusedIssues.Count, "The superseded app finding must not survive beside its replacement.");
+        var replacement = Finding("item-000001", "Medium", 1);
+        replacement.Description = "Compare item-000001 and item-000002.";
+        var restored = next.Plan.RestoreReference(replacement);
+        Assert.AreEqual("Compare item-000002 and item-000003.", restored.Description);
+        CollectionAssert.AreEquivalent(ShiftedReferences, restored.RelatedEventRefs);
     }
 
     [TestMethod]
@@ -214,6 +313,47 @@ public sealed class AiHubAuditEvidenceTests
         Assert.AreEqual(original.UsedModel, restored.UsedModel);
         Assert.AreEqual(original.AiReportSummary, restored.AiReportSummary);
         Assert.AreEqual(original.AiReportMeta, restored.AiReportMeta);
+    }
+
+    [TestMethod]
+    public void SamePatternAcrossBatchesGroupsByAffectedComponentAndPreservesSeparateProblems()
+    {
+        var first = Finding("item-000001", "Medium", 1);
+        first.Key = "app_crash";
+        first.Affected = "editor.exe";
+        var second = Finding("item-000002", "Medium", 1);
+        second.Key = "app_crash";
+        second.Affected = "editor.exe";
+        var otherComponent = Finding("item-000003", "Medium", 1);
+        otherComponent.Key = "app_crash";
+        otherComponent.Affected = "browser.exe";
+        var otherProblem = Finding("item-000001", "Medium", 1);
+        otherProblem.Key = "missing_module";
+        otherProblem.Affected = "editor.exe";
+
+        var grouped = AiHubAuditAnalysisService.DeduplicateIssues([first, second, otherComponent, otherProblem]);
+        Assert.AreEqual(3, grouped.Count);
+        var editorCrashes = grouped.Single(issue => issue.Key == "app_crash" && issue.Affected == "editor.exe");
+        Assert.AreEqual(2, editorCrashes.Occurrences);
+        CollectionAssert.AreEquivalent(GroupedReferences, editorCrashes.RelatedEventRefs);
+        Assert.AreEqual(1, first.Occurrences, "Aggregation must not alter validated input objects.");
+    }
+
+    [TestMethod]
+    public void CacheConfigurationChangesForCredentialsAndModelButNotUiPreferences()
+    {
+        var configuration = new AiHubConfig();
+        var target = new AiTargetSettings { Name = "Main", IsActive = true, ApiKey = "test-key-a", Model = "model-a" };
+        configuration.Targets.Add(target);
+        string initial = AiHubAuditAnalysisService.CreateConfigurationFingerprint(configuration);
+        target.IsExpanded = true;
+        configuration.RetentionDays = 90;
+        Assert.AreEqual(initial, AiHubAuditAnalysisService.CreateConfigurationFingerprint(configuration));
+        target.ApiKey = "test-key-b";
+        Assert.AreNotEqual(initial, AiHubAuditAnalysisService.CreateConfigurationFingerprint(configuration));
+        target.ApiKey = "test-key-a";
+        target.Model = "model-b";
+        Assert.AreNotEqual(initial, AiHubAuditAnalysisService.CreateConfigurationFingerprint(configuration));
     }
 
     private static AuditIssue Finding(string reference, string severity, int occurrences, params string[] related) => new()

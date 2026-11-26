@@ -439,6 +439,12 @@ internal static class ModulePageSmoke
             var group = (FrameworkElement)page.FindName("AiServicesGroup");
             var diagnostics = (FrameworkElement)page.FindName("DiagnosticsGroup");
             initialSurfaceVisible = surface.Visibility == Visibility.Visible && surface.Opacity > 0;
+            var aiSurface = (FrameworkElement)page.FindName("AiServiceSettingsSurface");
+            var themeSelector = (ComboBox)page.FindName("ThemeSelector");
+            var startupToggle = (ToggleSwitch)page.FindName("StartupToggle");
+            if (!initialSurfaceVisible || !surface.IsHitTestVisible || !themeSelector.IsEnabled || !startupToggle.IsEnabled ||
+                aiSurface.Opacity > 0 || aiSurface.IsHitTestVisible)
+                throw new InvalidOperationException("Slow AI configuration must only hide the AI controls; appearance and startup settings remain usable.");
             firstGroupHeight = group.ActualHeight;
             firstDiagnosticsY = diagnostics.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point()).Y;
             var heartbeat = new TaskCompletionSource();
@@ -449,10 +455,10 @@ internal static class ModulePageSmoke
             await RenderPage(page, "general-cold-first-frame.png");
             if (service.Initialization.IsCompleted)
                 throw new InvalidOperationException("The cold General snapshot did not capture the pending initial configuration read.");
-            settingsSurface = surface;
-            presentationToken = surface.RegisterPropertyChangedCallback(UIElement.OpacityProperty, (sender, property) =>
+            settingsSurface = aiSurface;
+            presentationToken = aiSurface.RegisterPropertyChangedCallback(UIElement.OpacityProperty, (sender, property) =>
             {
-                if (surface.Opacity > 0 && !firstPresentation.Task.IsCompleted)
+                if (aiSurface.Opacity > 0 && !firstPresentation.Task.IsCompleted)
                 {
                     // Capture the actual reveal callback, without a polling delay or
                     // forcing another layout that could conceal the first-frame race.
@@ -473,7 +479,7 @@ internal static class ModulePageSmoke
         {
             await page.ViewModel.AiServices.Initialization;
             if (await Task.WhenAny(firstPresentation.Task, Task.Delay(2000)) != firstPresentation.Task)
-                throw new InvalidOperationException("General settings did not present its initialized content.");
+                throw new InvalidOperationException("The AI section did not present its initialized content.");
             presented = await firstPresentation.Task;
         }
         finally
@@ -496,10 +502,10 @@ internal static class ModulePageSmoke
         bool expanded = expanders.Any(expander => expander.IsExpanded);
         var actualService = page.ViewModel.AiServices;
         File.AppendAllText(Report, $"General cold loaded: enabled={actualService.IsEnabled}; canToggle={actualService.CanToggle}; canEdit={actualService.CanEdit}; groupHeight={displayedHeight:F1}->{stableHeight:F1}; diagnosticsY={displayedY:F1}->{stableY:F1}; initialHeightDelta={displayedHeight - firstGroupHeight:F1}; initialPositionDelta={displayedY - firstDiagnosticsY:F1}; anyExpanded={expanded}.\n");
-        if (initialSurfaceVisible || settingsSurface.Opacity <= 0 ||
+        if (!initialSurfaceVisible || settingsSurface.Opacity <= 0 ||
             (!failInitialLoad && (!actualService.CanToggle || actualService.IsEnabled != enabled)) ||
             expanded || displayedHeight <= 0 || Math.Abs(displayedHeight - stableHeight) > 1 || Math.Abs(displayedY - stableY) > 1)
-            throw new InvalidOperationException("General settings displayed a provisional configuration or moved after its first completed presentation.");
+            throw new InvalidOperationException("The AI section displayed a provisional configuration or moved after its first completed presentation.");
 
         if (failInitialLoad)
         {
@@ -531,7 +537,36 @@ internal static class ModulePageSmoke
                 expanders.Any(expander => expander.IsExpanded))
                 throw new InvalidOperationException("The AI service toggle or collapsed editor state changed after cold initialization.");
         }
-        File.AppendAllText(Report, "General cold first presentation stable; dispatcher remained responsive; real toggle preserved visibility and collapsed editors.\n");
+        File.AppendAllText(Report, "General settings were usable during the blocked AI read; the AI section presented stable content and real toggles preserved collapsed editors.\n");
+        await CheckGeneralExpansionLayout(page);
+    }
+
+    private static async Task CheckGeneralExpansionLayout(GeneralPage page)
+    {
+        var surface = (Kit.Settings.UI.Controls.SettingsPageControl)page.FindName("GeneralSettingsSurface");
+        var groups = Descendants(page).OfType<Kit.Settings.UI.Controls.SettingsGroup>().ToArray();
+        if (surface.ModuleContent is not Panel root || root.ChildrenTransitions?.Count > 0 ||
+            groups.Any(group => group.ItemsPanelRoot?.ChildrenTransitions?.Count > 0))
+            throw new InvalidOperationException("General settings must not reposition each section while an inner expander changes height.");
+        foreach (string name in new[] { "AiMainEndpointExpander", "AiFallbackEndpointExpander", "AiPolicyRulesExpander" })
+        {
+            var expander = (SettingsExpander)page.FindName(name);
+            var diagnostics = (FrameworkElement)page.FindName("DiagnosticsGroup");
+            for (int round = 0; round < 3; round++)
+            {
+                foreach (bool expanded in new[] { true, false })
+                {
+                    expander.IsExpanded = expanded;
+                    await Task.Delay(250);
+                    double position = diagnostics.TransformToVisual(page).TransformPoint(default).Y;
+                    await Task.Delay(100);
+                    double settled = diagnostics.TransformToVisual(page).TransformPoint(default).Y;
+                    if (Math.Abs(position - settled) > 1 || !surface.IsHitTestVisible || surface.Opacity != 1)
+                        throw new InvalidOperationException($"General layout continued moving after {name} expanded={expanded}: {position}->{settled}.");
+                }
+            }
+        }
+        File.AppendAllText(Report, "General repeated endpoint/policy expansion: no section reposition transitions or delayed layout movement.\n");
     }
 
     private static string CaptureGeneralColdLayout(GeneralPage page, string phase)
@@ -1134,7 +1169,17 @@ internal static class ModulePageSmoke
         await CheckSelectedAuditRange(page);
         await CheckAuditUxStates(page);
         await CheckOptimizationCleanup(page);
-        if (vm.AiHub.ActivePolicyIndex != 1) throw new InvalidOperationException("Task policy editor initially selects the global policy.");
+        var firstPolicySections = (Segmented)page.FindName("AiHubSections");
+        firstPolicySections.SelectedIndex = 2;
+        var firstTaskSelector = (Segmented)page.FindName("AiTaskPolicySegmented");
+        var firstPolicyEditor = (TextBox)page.FindName("AiTaskPolicyContentBox");
+        if (firstPolicyEditor == null) throw new InvalidOperationException("Selecting task policies did not materialize its editor.");
+        page.UpdateLayout();
+        for (int attempt = 0; attempt < 50 && (!vm.AiHub.PoliciesLoaded || vm.AiHub.IsBusy || !firstPolicyEditor.IsLoaded); attempt++) await Task.Delay(100);
+        if (vm.ActiveTabIndex != 2 || ((FrameworkElement)page.FindName("TaskPolicyPanel")).Visibility != Visibility.Visible ||
+            !firstPolicyEditor.IsLoaded || vm.AiHub.ActivePolicyIndex != 1 || firstTaskSelector.SelectedIndex != 0 ||
+            firstPolicyEditor.Text.ReplaceLineEndings("\n") != vm.AiHub.SecurityAuditPolicyContent.ReplaceLineEndings("\n"))
+            throw new InvalidOperationException("The displayed task policy editor did not initially select and display Security audit.");
 
         await CheckAiHubThemes(page);
 
@@ -1187,6 +1232,8 @@ internal static class ModulePageSmoke
             if (vm.AiHub.CurrentPolicyContent != savedAuditPolicy || vm.AiHub.IsCurrentPolicyDirty)
                 throw new InvalidOperationException("Security audit discard did not restore its saved policy.");
 
+            await CheckGlobalAndTaskPolicyIsolation(page);
+
             byte[] serviceSettingsAfter = File.ReadAllBytes(store.SettingsFilePath);
             byte[] secretsAfter = File.ReadAllBytes(Path.Combine(store.DataDirectory, "secrets.dat"));
             bool serviceUnchanged = serviceSettings.SequenceEqual(serviceSettingsAfter);
@@ -1213,6 +1260,78 @@ internal static class ModulePageSmoke
         if (NavigationService.Frame.Content is not GeneralPage general || !general.ViewModel.AiServices.CanEdit)
             throw new InvalidOperationException("AI service settings navigation did not open an editable service.");
         File.AppendAllText(Report, "AI Hub: native-style plugin writeback, policy selection/save feedback, disabled re-check, service navigation, and themed layout renders passed.\n");
+    }
+
+    private static async Task CheckGlobalAndTaskPolicyIsolation(AIHubPage page)
+    {
+        var service = page.ViewModel.AiHub;
+        string savedGlobal = service.SecurityPolicyContent;
+        for (int taskIndex = 0; taskIndex < 2; taskIndex++)
+        {
+            var selector = (Segmented)page.FindName("AiTaskPolicySegmented");
+            selector.SelectedIndex = taskIndex;
+            await Task.Delay(50);
+            var taskEditor = (TextBox)page.FindName("AiTaskPolicyContentBox");
+            string savedTask = service.CurrentPolicyContent;
+            string taskDraft = savedTask + "\nCross-page task draft " + taskIndex + ".";
+            taskEditor.Text = taskDraft;
+            if (service.ActivePolicyIndex != taskIndex + 1 || !service.IsCurrentPolicyDirty ||
+                service.CurrentPolicyContent.ReplaceLineEndings("\n") != taskDraft.ReplaceLineEndings("\n"))
+                throw new InvalidOperationException("The selected task editor did not update its own draft.");
+
+            if (!NavigationService.Navigate(typeof(GeneralPage))) throw new InvalidOperationException("Could not open General for policy isolation.");
+            await Task.Delay(100);
+            var general = (GeneralPage)NavigationService.Frame.Content;
+            var globalRules = (SettingsExpander)general.FindName("AiPolicyRulesExpander");
+            globalRules.IsExpanded = true;
+            globalRules.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+            await Task.Delay(100);
+            var globalEditor = (TextBox)general.FindName("AiPolicyContentBox");
+            var globalDiscard = Descendants(globalRules).OfType<Button>()
+                .Single(button => AutomationProperties.GetAutomationId(button) == "AiHub_DiscardPolicyButton");
+            if (!ReferenceEquals(general.ViewModel.AiServices, service) || globalEditor.IsReadOnly ||
+                globalEditor.Text.ReplaceLineEndings("\n") != savedGlobal.ReplaceLineEndings("\n") ||
+                service.ActivePolicyIndex != taskIndex + 1 || !service.IsCurrentPolicyDirty)
+                throw new InvalidOperationException("Opening General changed the task selection or displayed the task draft as the global policy.");
+
+            string globalDraft = savedGlobal + "\nCross-page global draft " + taskIndex + ".";
+            globalEditor.Text = globalDraft;
+            if (!service.IsSecurityPolicyDirty || !globalDiscard.IsEnabled ||
+                service.CurrentPolicyContent.ReplaceLineEndings("\n") != taskDraft.ReplaceLineEndings("\n"))
+                throw new InvalidOperationException("Editing General's global policy changed the selected task draft.");
+            new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(globalDiscard).Invoke();
+            if (service.SecurityPolicyContent != savedGlobal || service.IsSecurityPolicyDirty ||
+                service.CurrentPolicyContent.ReplaceLineEndings("\n") != taskDraft.ReplaceLineEndings("\n") || !service.IsCurrentPolicyDirty)
+                throw new InvalidOperationException("General's Discard action did not isolate the global draft.");
+
+            globalEditor.Text = globalDraft;
+            if (!NavigationService.Navigate(typeof(AIHubPage))) throw new InvalidOperationException("Could not return to the task policy editor.");
+            await Task.Delay(100);
+            if (!ReferenceEquals(page, NavigationService.Frame.Content) || page.ViewModel.ActiveTabIndex != 2 ||
+                selector.SelectedIndex != taskIndex || service.ActivePolicyIndex != taskIndex + 1 ||
+                taskEditor.Text.ReplaceLineEndings("\n") != taskDraft.ReplaceLineEndings("\n"))
+                throw new InvalidOperationException("Returning from General lost the selected task policy or its draft.");
+            var taskDiscard = Descendants(page).OfType<Button>()
+                .Single(button => ReferenceEquals(button.Command, service.DiscardActivePolicyCommand));
+            new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(taskDiscard).Invoke();
+            if (service.CurrentPolicyContent != savedTask || service.IsCurrentPolicyDirty ||
+                service.SecurityPolicyContent.ReplaceLineEndings("\n") != globalDraft.ReplaceLineEndings("\n") || !service.IsSecurityPolicyDirty)
+                throw new InvalidOperationException("The task Discard action changed General's global draft.");
+
+            if (!NavigationService.Navigate(typeof(GeneralPage))) throw new InvalidOperationException("Could not verify the retained global draft.");
+            await Task.Delay(100);
+            if (globalEditor.Text.ReplaceLineEndings("\n") != globalDraft.ReplaceLineEndings("\n") || !globalDiscard.IsEnabled)
+                throw new InvalidOperationException("Returning to General lost its independent global draft.");
+            new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(globalDiscard).Invoke();
+            if (service.SecurityPolicyContent != savedGlobal || service.HasUnsavedPolicyChanges)
+                throw new InvalidOperationException("Cross-page draft cleanup did not restore both saved policies.");
+            if (!NavigationService.Navigate(typeof(AIHubPage))) throw new InvalidOperationException("Could not restore the AI Hub page.");
+            await Task.Delay(100);
+            if (!ReferenceEquals(page, NavigationService.Frame.Content) || selector.SelectedIndex != taskIndex || service.ActivePolicyIndex != taskIndex + 1)
+                throw new InvalidOperationException("Global discard changed the last selected task policy.");
+        }
+
+        File.AppendAllText(Report, "AI policies: global and both task drafts remain independent across page navigation and bound Discard actions; task selection is preserved.\n");
     }
 
     private static async Task CheckOptimizationCleanup(AIHubPage page)
@@ -1458,8 +1577,50 @@ internal static class ModulePageSmoke
             var dialog = (ContentDialog)dialogField.GetValue(page);
             if (dialog == null || vm.IsOptimizing || vm.CanSelectOptimizationItems)
                 throw new InvalidOperationException("The requested fixture operation did not stop for review.");
-            await Task.Delay(100);
-            var accept = Descendants(dialog).OfType<Button>().Single(button => button.Name == "PrimaryButton");
+
+            // ContentDialog can move its template into a Popup when shown. Only
+            // inspect a popup that contains this exact dialog's content, so a
+            // different open dialog can never supply the confirmation button.
+            Button[] DialogButtons()
+            {
+                var roots = new List<DependencyObject> { dialog };
+                foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(page.XamlRoot))
+                {
+                    if (popup.Child != null && (ReferenceEquals(popup.Child, dialog.Content)
+                        || Descendants(popup.Child).Any(element => ReferenceEquals(element, dialog.Content))))
+                    {
+                        roots.Add(popup.Child);
+                    }
+                }
+
+                return roots.SelectMany(root => Descendants(root)).OfType<Button>().Distinct().ToArray();
+            }
+
+            string DescribeDialog() => $"title={dialog.Title}, primaryText={dialog.PrimaryButtonText}, loaded={dialog.IsLoaded}, directChildren={VisualTreeHelper.GetChildrenCount(dialog)}, buttons=[{string.Join("; ", DialogButtons().Select(button => $"{button.Name}: text={button.Content}, loaded={button.IsLoaded}, visible={button.Visibility}, enabled={button.IsEnabled}, size={button.ActualWidth:F1}x{button.ActualHeight:F1}"))}]";
+            Button accept = null;
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                var matches = DialogButtons().Where(button => button.Name == "PrimaryButton").ToArray();
+                if (matches.Length > 1) throw new InvalidOperationException("The fixture confirmation has multiple primary buttons: " + DescribeDialog());
+                accept = matches.SingleOrDefault();
+                if (accept?.IsLoaded == true && accept.Visibility == Visibility.Visible && accept.IsEnabled
+                    && accept.IsHitTestVisible && accept.ActualWidth > 0 && accept.ActualHeight > 0)
+                {
+                    break;
+                }
+
+                accept = null;
+                await Task.Delay(50);
+            }
+
+            File.AppendAllText(Report, "Fixture optimization confirmation: " + DescribeDialog() + "\n");
+            if (accept == null || !Equals(accept.Content, dialog.PrimaryButtonText)
+                || dialog.Content is not DependencyObject content
+                || !Descendants(content).OfType<TextBlock>().Any(text => text.Text.Contains(allowedRoot, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("The fixture review did not expose its own ready primary action and fixture paths: " + DescribeDialog());
+            }
+
             new Microsoft.UI.Xaml.Automation.Peers.ButtonAutomationPeer(accept).Invoke();
             for (int attempt = 0; attempt < 200 && ((bool)confirmingField.GetValue(vm) || vm.IsOptimizing); attempt++) await Task.Delay(50);
             if (!sawExecution || (bool)confirmingField.GetValue(vm) || vm.IsOptimizing)
@@ -1840,7 +2001,6 @@ internal static class ModulePageSmoke
         var main = (SettingsExpander)page.FindName("AiMainEndpointExpander");
         var fallback = (SettingsExpander)page.FindName("AiFallbackEndpointExpander");
         var policy = (SettingsExpander)page.FindName("AiPolicyRulesExpander");
-        var statistics = Descendants(page).OfType<SettingsExpander>().Single(control => AutomationProperties.GetAutomationId(control) == "AiHub_DiagnosticsExpander");
 
         // Do this before assigning Text or toggling the service: those actions can mask
         // a template-initialization bug that only blanks the visible editable TextBox.
@@ -1861,13 +2021,14 @@ internal static class ModulePageSmoke
             if (!service.CanEditPolicies || globalEditor == null || globalEditor.IsReadOnly ||
                 Ancestors(policy).OfType<UIElement>().Any(element => element.Visibility == Visibility.Collapsed))
                 throw new InvalidOperationException("Global policy must remain visible and editable while AI is off.");
-            service.ActivePolicyIndex = 0;
-            string savedPolicy = service.CurrentPolicyContent;
+            int selectedPolicy = service.ActivePolicyIndex;
+            string savedPolicy = service.SecurityPolicyContent;
             globalEditor.Text = savedPolicy + "\nSmoke draft without enabling AI.";
-            if (!service.IsCurrentPolicyDirty || !service.SavePolicyCommand.CanExecute(null) || !service.DiscardActivePolicyCommand.CanExecute(null))
+            if (!service.IsSecurityPolicyDirty || !service.SavePolicyCommand.CanExecute(null) || !service.DiscardPolicyCommand.CanExecute(null))
                 throw new InvalidOperationException("Offline global policy edits did not enable Save and Discard.");
-            service.DiscardActivePolicyCommand.Execute(null);
-            if (service.CurrentPolicyContent != savedPolicy || service.IsCurrentPolicyDirty || service.SavePolicyCommand.CanExecute(null))
+            service.DiscardPolicyCommand.Execute(null);
+            if (service.SecurityPolicyContent != savedPolicy || service.IsSecurityPolicyDirty || service.SavePolicyCommand.CanExecute(null) ||
+                service.ActivePolicyIndex != selectedPolicy)
                 throw new InvalidOperationException("Discard did not restore the global policy's saved state.");
             var toggled = new TaskCompletionSource();
             page.DispatcherQueue.TryEnqueue(() =>
@@ -1889,7 +2050,7 @@ internal static class ModulePageSmoke
             await toggled.Task;
             for (int attempt = 0; attempt < 50 && service.IsBusy; attempt++) await Task.Delay(100);
             await Task.Delay(200);
-            foreach (var expander in new[] { kernel, main, fallback, policy, statistics }) expander.IsExpanded = true;
+            foreach (var expander in new[] { kernel, main, fallback, policy }) expander.IsExpanded = true;
             await Task.Delay(200);
             File.AppendAllText(Report, $"AI service cycle={cycle} enabled={service.IsEnabled} busy={service.IsBusy} canEdit={service.CanEdit}\n");
             var required = new List<Control>();
@@ -1994,35 +2155,6 @@ internal static class ModulePageSmoke
             service.SaveEndpointsCommand.Execute(null);
             if (service.HasUnsavedEndpointChanges) throw new InvalidOperationException("Endpoint restore was not saved.");
 
-            var originalSize = App.GetSettingsWindow().AppWindow.Size;
-            try
-            {
-                foreach (int width in new[] { 1350, 850 })
-                {
-                    App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(width, 1000));
-                    statistics.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
-                    await Task.Delay(200);
-                    page.UpdateLayout();
-                    var textBlocks = Descendants(statistics).OfType<TextBlock>().Where(block =>
-                        block.Text == service.DiagnosticsDetails || block.Text == service.DiagnosticsPersistenceStatus).ToArray();
-                    if (statistics.ActualWidth <= 0 || statistics.Description?.ToString() != service.DiagnosticsSummary || textBlocks.Length != 2)
-                        throw new InvalidOperationException("AI runtime statistics are missing their bound summary or detail fields.");
-                    foreach (var block in textBlocks)
-                    {
-                        var origin = block.TransformToVisual(statistics).TransformPoint(new Windows.Foundation.Point());
-                        if (block.TextWrapping != TextWrapping.Wrap || block.ActualWidth <= 0 || origin.X < -1 ||
-                            origin.X + block.ActualWidth > statistics.ActualWidth + 1)
-                            throw new InvalidOperationException("AI runtime statistics overflow the expanded card.");
-                    }
-
-                    if (cycle == 0) await RenderPage(page, $"ai-service-statistics-{width}.png");
-                }
-            }
-            finally
-            {
-                App.GetSettingsWindow().AppWindow.Resize(originalSize);
-            }
-
             var completion = new TaskCompletionSource();
             Task operation;
             var operationContext = SynchronizationContext.Current;
@@ -2108,7 +2240,7 @@ internal static class ModulePageSmoke
 
     private static async Task CheckEndpointEditorPresentation(GeneralPage page, string phase, (string Mode, string Effort)[] expected)
     {
-        await WaitForGeneralPresentation(page, phase);
+        await WaitForAiSettingsPresentation(page, phase);
         var service = page.ViewModel.AiServices;
         var routes = new[]
         {
@@ -2179,14 +2311,14 @@ internal static class ModulePageSmoke
         }
     }
 
-    private static async Task WaitForGeneralPresentation(GeneralPage page, string phase)
+    private static async Task WaitForAiSettingsPresentation(GeneralPage page, string phase)
     {
-        var surface = (FrameworkElement)page.FindName("GeneralSettingsSurface");
+        var surface = (Control)page.FindName("AiServiceSettingsSurface");
         var presented = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         void Check()
         {
             if (page.IsLoaded && surface.Opacity > 0 && surface.IsHitTestVisible &&
-                surface.Visibility == Visibility.Visible && ReferenceEquals(NavigationService.Frame.Content, page))
+                surface.IsEnabled && surface.Visibility == Visibility.Visible && ReferenceEquals(NavigationService.Frame.Content, page))
                 presented.TrySetResult();
         }
         void Loaded(object sender, RoutedEventArgs args) => Check();
@@ -2197,9 +2329,9 @@ internal static class ModulePageSmoke
         {
             Check();
             if (await Task.WhenAny(presented.Task, Task.Delay(3000)) != presented.Task)
-                throw new InvalidOperationException($"General presentation timed out before {phase}: loaded={page.IsLoaded}, opacity={surface.Opacity}, hitTest={surface.IsHitTestVisible}, mounted={ReferenceEquals(NavigationService.Frame.Content, page)}.");
+                throw new InvalidOperationException($"AI settings presentation timed out before {phase}: loaded={page.IsLoaded}, opacity={surface.Opacity}, hitTest={surface.IsHitTestVisible}, mounted={ReferenceEquals(NavigationService.Frame.Content, page)}.");
             await presented.Task;
-            File.AppendAllText(Report, $"General presentation ready before {phase}: loaded=True, opacity={surface.Opacity}, hitTest={surface.IsHitTestVisible}.\n");
+            File.AppendAllText(Report, $"AI settings presentation ready before {phase}: loaded=True, opacity={surface.Opacity}, hitTest={surface.IsHitTestVisible}.\n");
         }
         finally
         {

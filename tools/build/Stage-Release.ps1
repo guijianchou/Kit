@@ -50,21 +50,38 @@ $excludedRootFiles = @(
     'Kit.Settings.exe', 'Kit.Settings.deps.json', 'Kit.Settings.runtimeconfig.json',
     'Kit.QuickAccess.exe', 'Kit.QuickAccess.deps.json', 'Kit.QuickAccess.runtimeconfig.json'
 )
-$excludedExtensions = @('.lib', '.exp', '.idb', '.ilk', '.obj', '.pch', '.tlog', '.lastcodeanalysissucceeded')
+$excludedExtensions = @('.pdb', '.lib', '.exp', '.idb', '.ilk', '.obj', '.pch', '.tlog', '.lastcodeanalysissucceeded')
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Where-Object {
     $relative = Get-RelativePathCompat $sourceRoot $_.FullName
     $include = $relative -notmatch '^(tests|LightSwitchLib)[\\/]'
+    # Isolated UI harnesses can leave files beside the app as well as under tests.
+    $include = $include -and $relative -notmatch '(?:^|[\\/])(?:[^\\/]*(?:Smoke|Harness)[^\\/]*|\.csc[^\\/]*)(?:[\\/]|$)'
     $include = $include -and ($_.Name -notlike 'PowerToys.*')
     $include = $include -and $_.Extension -notin $excludedExtensions
     $include = $include -and $_.Name -notin $excludedNames
     $include = $include -and $relative -notin $excludedRootFiles
-    if ($include -and $_.Extension -eq '.pdb') {
-        $include = (Test-Path -LiteralPath (Join-Path $_.DirectoryName ($_.BaseName + '.exe'))) -or
-            (Test-Path -LiteralPath (Join-Path $_.DirectoryName ($_.BaseName + '.dll')))
-    }
     $include
 })
 if ($sourceFiles.Count -eq 0) { throw 'No runtime files were selected.' }
+
+# Reject identifiable test outputs instead of deleting all names containing
+# "test": UDPtest and TestableIO/Testably are real production dependencies.
+$testArtifactOrigins = [ordered]@{
+    '^Microsoft\.Interop\.Tests(?:\.|$)' = 'src/common/interop/interop-tests/Common.Interop.UnitTests.csproj'
+    '^(?:MSTest|Microsoft\.(?:Testing|TestPlatform)|Microsoft\.VisualStudio\.(?:TestPlatform|TestTools|Coverage)|testhost)(?:\.|$)' = 'MSTest / Microsoft.Testing.Platform test infrastructure'
+    '^(?:UITestAutomation|UnitTests-[^.]+)(?:\.|$)|(?:^|\.)(?:UnitTests|UITests|Tests)(?:\.|$)' = 'unit/UI test project output'
+}
+$testArtifacts = @(foreach ($file in $sourceFiles) {
+    foreach ($pattern in $testArtifactOrigins.Keys) {
+        if ($file.Name -match $pattern) {
+            '{0} (source: {1})' -f (Get-RelativePathCompat $sourceRoot $file.FullName), $testArtifactOrigins[$pattern]
+            break
+        }
+    }
+})
+if ($testArtifacts.Count) {
+    throw ("Test artifacts remain outside the excluded harness/test directories; review their build output paths before staging: `n" + ($testArtifacts -join "`n"))
+}
 
 $versionedFiles = @(
     'Updater\Kit.Updater.exe',
@@ -83,28 +100,25 @@ $versionedFiles = @(
     'Kit.WingetService.exe',
     'WinUI3Apps\Kit.Settings.exe', 'WinUI3Apps\Kit.Settings.dll',
     'WinUI3Apps\Kit.QuickAccess.exe', 'WinUI3Apps\Kit.QuickAccess.dll',
-    'WinUI3Apps\Kit.AiHub.dll', 'WinUI3Apps\LocalserverLib.dll', 'WinUI3Apps\UDPtestLib.dll',
+    'WinUI3Apps\Kit.AIHubLib.dll', 'WinUI3Apps\Kit.AiHub.dll', 'WinUI3Apps\Kit.ManagedCommon.dll',
+    'WinUI3Apps\LocalserverLib.dll', 'WinUI3Apps\UDPtestLib.dll',
     'WinUI3Apps\Kit.NetMapLib.dll', 'WinUI3Apps\Kit.WingetLib.dll'
 )
 $expectedQuadVersion = "${Version}.0"
+$workerFallbacks = @{
+    'Kit.AIHubWorker.exe' = 'AIHubWorker\Kit.AIHubWorker.exe'
+    'Kit.LocalserverWorker.exe' = 'LocalserverWorker\Kit.LocalserverWorker.exe'
+    'Kit.NetMapService.exe' = 'NetMapService\Kit.NetMapService.exe'
+    'Kit.UDPtestService.exe' = 'UDPtestService\Kit.UDPtestService.exe'
+}
+$resolvedVersionedFiles = @{}
 foreach ($relative in $versionedFiles) {
     $fullPath = Join-Path $sourceRoot $relative
-    if (-not (Test-Path -LiteralPath $fullPath)) {
-        # Fallback between flat and worker subfolder layouts
-        $altRelative = switch ($relative) {
-            'Kit.AIHubWorker.exe'                         { 'AIHubWorker\Kit.AIHubWorker.exe' }
-            'Kit.LocalserverWorker.exe'                   { 'LocalserverWorker\Kit.LocalserverWorker.exe' }
-            'Kit.NetMapService.exe'                       { 'NetMapService\Kit.NetMapService.exe' }
-            'Kit.UDPtestService.exe'                      { 'UDPtestService\Kit.UDPtestService.exe' }
-            'AIHubWorker\Kit.AIHubWorker.exe'             { 'Kit.AIHubWorker.exe' }
-            'LocalserverWorker\Kit.LocalserverWorker.exe' { 'Kit.LocalserverWorker.exe' }
-            'NetMapService\Kit.NetMapService.exe'         { 'Kit.NetMapService.exe' }
-            'UDPtestService\Kit.UDPtestService.exe'       { 'Kit.UDPtestService.exe' }
-            'Kit.WingetService.exe'                       { 'WingetService\Kit.WingetService.exe' }
-            'WingetService\Kit.WingetService.exe'         { 'Kit.WingetService.exe' }
-            default { $null }
-        }
-        if ($altRelative -and (Test-Path -LiteralPath (Join-Path $sourceRoot $altRelative))) {
+    if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+        # Match native module launchers: prefer the flat executable, then the
+        # supported worker subfolder. Winget only supports the flat layout.
+        $altRelative = $workerFallbacks[$relative]
+        if ($altRelative -and (Test-Path -LiteralPath (Join-Path $sourceRoot $altRelative) -PathType Leaf)) {
             $fullPath = Join-Path $sourceRoot $altRelative
         } else {
             throw "Versioned file not found: $relative"
@@ -113,6 +127,7 @@ foreach ($relative in $versionedFiles) {
     $info = [Diagnostics.FileVersionInfo]::GetVersionInfo($fullPath)
     $binaryVersion = '{0}.{1}.{2}.{3}' -f $info.FileMajorPart, $info.FileMinorPart, $info.FileBuildPart, $info.FilePrivatePart
     if ($binaryVersion -ne $expectedQuadVersion) { throw "Unexpected binary version for ${relative}: $binaryVersion (expected $expectedQuadVersion)" }
+    $resolvedVersionedFiles[$relative] = Get-RelativePathCompat $sourceRoot $fullPath
 }
 
 [IO.Directory]::CreateDirectory($destinationRoot) | Out-Null
@@ -124,7 +139,7 @@ foreach ($file in $sourceFiles) {
     $relative = Get-RelativePathCompat $sourceRoot $file.FullName
     $targetPath = Join-Path $destinationRoot $relative
     [IO.Directory]::CreateDirectory((Split-Path -Parent $targetPath)) | Out-Null
-    [IO.File]::Copy($file.FullName, $targetPath, $true)
+    [IO.File]::Copy($file.FullName, $targetPath, $false)
     # Copied apphosts inherit the destination label; preserve normal-user integrity.
     if ($file.Extension -ieq '.exe') {
         & icacls.exe $targetPath /setintegritylevel M /L | Out-Null
@@ -137,18 +152,35 @@ foreach ($file in $sourceFiles) {
 }
 
 $dependencyResults = [Collections.Generic.List[object]]::new()
-foreach ($relative in @(
-    'Kit.Awake.deps.json',
-    'Kit.WingetService.deps.json',
-    'WinUI3Apps\Kit.Settings.deps.json',
-    'WinUI3Apps\Kit.QuickAccess.deps.json'
+$sharedLibraryDirectories = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+$null = $sharedLibraryDirectories.Add('')
+$null = $sharedLibraryDirectories.Add('WinUI3Apps')
+foreach ($executable in @(
+    'Kit.Awake.exe',
+    'Kit.AIHubWorker.exe',
+    'Kit.LocalserverWorker.exe',
+    'Kit.NetMapService.exe',
+    'Kit.UDPtestService.exe',
+    'Kit.WingetService.exe',
+    'WinUI3Apps\Kit.Settings.exe',
+    'WinUI3Apps\Kit.QuickAccess.exe'
 )) {
+    # Resolve dependencies beside the executable that the native launcher will
+    # actually start. A deps file in the unused layout must not mask a missing one.
+    $runtimeExecutable = $resolvedVersionedFiles[$executable]
+    $relative = [IO.Path]::ChangeExtension($runtimeExecutable, '.deps.json')
     $depsPath = Join-Path $destinationRoot $relative
-    if (-not (Test-Path -LiteralPath $depsPath)) { continue }
+    if (-not (Test-Path -LiteralPath $depsPath -PathType Leaf)) { throw "Required dependency manifest is missing: $relative" }
+    $runtimeConfig = [IO.Path]::ChangeExtension($runtimeExecutable, '.runtimeconfig.json')
+    if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot $runtimeConfig) -PathType Leaf)) {
+        throw "Required runtime configuration is missing: $runtimeConfig"
+    }
+    $null = $sharedLibraryDirectories.Add([IO.Path]::GetDirectoryName($relative))
     $depsText = [IO.File]::ReadAllText($depsPath)
     if ($depsText -match '(?i)sqlite') { throw "Unexpected SQLite dependency: $relative" }
     $deps = $depsText | ConvertFrom-Json -AsHashtable
     $target = $deps.targets[$deps.runtimeTarget.name]
+    if (-not $target -or $target.Count -eq 0) { throw "Dependency manifest has no active runtime target: $relative" }
     $assetCount = 0
     foreach ($library in $target.Values) {
         foreach ($kind in @('runtime', 'native', 'resources')) {
@@ -173,6 +205,27 @@ foreach ($relative in @(
     $dependencyResults.Add([ordered]@{ Path = $relative; RuntimeAssets = $assetCount; Missing = 0 })
 }
 
+$sharedLibraryResults = [Collections.Generic.List[object]]::new()
+foreach ($name in @('Kit.AIHubLib.dll', 'Kit.AiHub.dll', 'Kit.ManagedCommon.dll')) {
+    $referenceRelative = Join-Path 'WinUI3Apps' $name
+    $referencePath = Join-Path $destinationRoot $referenceRelative
+    if (-not (Test-Path -LiteralPath $referencePath -PathType Leaf)) { throw "Required shared library is missing: $referenceRelative" }
+    $referenceHash = (Get-FileHash -LiteralPath $referencePath -Algorithm SHA256).Hash
+    foreach ($directory in ($sharedLibraryDirectories | Sort-Object)) {
+        $relative = if ($directory) { Join-Path $directory $name } else { $name }
+        $path = Join-Path $destinationRoot $relative
+        # Each deps manifest already requires the libraries used by that process.
+        # Also check any root copy, even when a worker uses its subfolder layout.
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+        $info = [Diagnostics.FileVersionInfo]::GetVersionInfo($path)
+        $binaryVersion = '{0}.{1}.{2}.{3}' -f $info.FileMajorPart, $info.FileMinorPart, $info.FileBuildPart, $info.FilePrivatePart
+        if ($binaryVersion -ne $expectedQuadVersion) { throw "Unexpected shared library version for ${relative}: $binaryVersion (expected $expectedQuadVersion)" }
+        $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+        if ($hash -ne $referenceHash) { throw "Shared library differs between $relative and $referenceRelative" }
+        $sharedLibraryResults.Add([ordered]@{ Path = $relative; Version = $binaryVersion; Sha256 = $hash })
+    }
+}
+
 foreach ($relative in @(
     'Kit.pri', 'Kit.Interop.dll', 'Kit.GPOWrapper.dll',
     'Kit.BackgroundActivatorDLL.dll', 'hostfxr.dll', 'hostpolicy.dll', 'coreclr.dll',
@@ -190,38 +243,33 @@ foreach ($relative in @(
 if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot 'Kit.ActionRunner.exe') -PathType Leaf)) {
     throw "Required runtime asset is missing: Kit.ActionRunner.exe"
 }
-# WinUI translations are compiled into the required PRI files; managed satellite
-# assemblies are intentionally limited to en-US by Directory.Build.props.
+# WinUI translations are compiled into PRI files; Release trims managed satellites.
 foreach ($relative in @('svgs', 'WinUI3Apps\SettingsXAML', 'WinUI3Apps\QuickAccessXaml', 'WinUI3Apps\Assets')) {
     if (@(Get-ChildItem -LiteralPath (Join-Path $destinationRoot $relative) -Recurse -File).Count -eq 0) {
         throw "Required runtime resource directory is empty: $relative"
     }
 }
 
-$sparsePackagePath = Join-Path $destinationRoot 'KitSparse.msix'
-$logos = @()
-if (Test-Path -LiteralPath $sparsePackagePath) {
-    $archive = [IO.Compression.ZipFile]::OpenRead($sparsePackagePath)
-    try {
-        $entry = $archive.GetEntry('AppxManifest.xml')
-        if (-not $entry) { throw 'The sparse package manifest is missing.' }
-        $reader = [IO.StreamReader]::new($entry.Open())
-        try { [xml]$package = $reader.ReadToEnd() }
-        finally { $reader.Dispose() }
-        if ($package.Package.Identity.Version -ne $expectedQuadVersion) { throw "The sparse package version is stale ($($package.Package.Identity.Version) vs expected $expectedQuadVersion)." }
-        $logos = @($package.Package.Properties.Logo)
-        foreach ($app in $package.Package.Applications.Application) {
-            $logos += $app.VisualElements.Square150x150Logo
-            $logos += $app.VisualElements.Square44x44Logo
-        }
-        foreach ($logo in $logos) {
-            if (-not $logo -or -not $archive.GetEntry($logo.Replace('\', '/'))) {
-                throw "The sparse package references a missing logo: $logo"
-            }
+$archive = [IO.Compression.ZipFile]::OpenRead((Join-Path $destinationRoot 'KitSparse.msix'))
+try {
+    $entry = $archive.GetEntry('AppxManifest.xml')
+    if (-not $entry) { throw 'The sparse package manifest is missing.' }
+    $reader = [IO.StreamReader]::new($entry.Open())
+    try { [xml]$package = $reader.ReadToEnd() }
+    finally { $reader.Dispose() }
+    if ($package.Package.Identity.Version -ne $expectedQuadVersion) { throw "The sparse package version is stale ($($package.Package.Identity.Version) vs expected $expectedQuadVersion)." }
+    $logos = @($package.Package.Properties.Logo)
+    foreach ($app in $package.Package.Applications.Application) {
+        $logos += $app.VisualElements.Square150x150Logo
+        $logos += $app.VisualElements.Square44x44Logo
+    }
+    foreach ($logo in $logos) {
+        if (-not $logo -or -not $archive.GetEntry($logo.Replace('\', '/'))) {
+            throw "The sparse package references a missing logo: $logo"
         }
     }
-    finally { $archive.Dispose() }
 }
+finally { $archive.Dispose() }
 
 $portableManifest = [ordered]@{
     version = $Version
@@ -240,6 +288,7 @@ $report = [ordered]@{
     TotalBytes = ($manifest | ForEach-Object { $_.Bytes } | Measure-Object -Sum).Sum
     PdbCount = @($manifest | Where-Object { $_.Path.EndsWith('.pdb') }).Count
     DependencyChecks = @($dependencyResults)
+    SharedLibraryChecks = @($sharedLibraryResults)
     SparsePackageLogoReferences = $logos.Count
     Files = @($manifest)
 }

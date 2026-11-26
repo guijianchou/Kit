@@ -37,6 +37,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The linked styles use these attached typography properties and resource keys. -->
+    <Compile Include="..\Settings.UI\Services\TypographyResources.cs">
+      <Link>Services\TypographyResources.cs</Link>
+    </Compile>
     <Page Include="..\Settings.UI\SettingsXAML\Styles\Button.xaml">
       <Link>Resources\Styles\Button.xaml</Link>
     </Page>
@@ -58,6 +62,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\Settings.UI\Assets\Fonts\NotoSansSC-Variable.ttf;..\Settings.UI\Assets\Fonts\OFL.txt">
+      <Link>Assets\Fonts\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
     <Content Include="..\Settings.UI\Assets\Settings\Icons\Awake.png;..\Settings.UI\Assets\Settings\Icons\LightSwitch.png;..\Settings.UI\Assets\Settings\Icons\Localserver.png;..\Settings.UI\Assets\Settings\Icons\UDPtest.png;..\Settings.UI\Assets\Settings\Icons\NetMap.png;..\Settings.UI\Assets\Settings\Icons\Winget.png;..\Settings.UI\Assets\Settings\Icons\AiHub.png;..\Settings.UI\Assets\Settings\Icons\AIHub.png;..\Settings.UI\Assets\Settings\Icons\Kit.png">
       <Link>Assets\Settings\Icons\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

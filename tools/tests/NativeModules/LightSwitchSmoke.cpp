@@ -284,26 +284,24 @@ void RunLifecycle(const std::wstring& dllPath)
             module->enable();
         StableCount(fakePath, 1);
         KitModuleIface::Hotkey hotkey{};
-        Check(module->get_hotkeys(nullptr, 0) == 1 && module->get_hotkeys(&hotkey, 1) == 1,
-            "The stable LightSwitch shortcut was not exposed.");
-        Check(hotkey.win && hotkey.ctrl && hotkey.shift && !hotkey.alt && hotkey.key == 0x44,
-            "The default shortcut was not Win+Ctrl+Shift+D.");
+        Check(module->get_hotkeys(nullptr, 0) == 0 && module->get_hotkeys(&hotkey, 1) == 0,
+            "LightSwitch must not expose a removed shortcut.");
+        Check(loadedConfig.find(L"toggle-theme-hotkey") == std::wstring::npos,
+            "LightSwitch must not advertise removed shortcut settings.");
         {
             // The fake worker deliberately never consumes toggle requests. Read
-            // the semaphore here to prove each shortcut queues one action without
+            // the semaphore here to prove removed shortcuts queue no action without
             // invoking real theme APIs or changing the user's desktop theme.
             ScopedHandle toggles(OpenSemaphoreW(SYNCHRONIZE, FALSE, ToggleSemaphoreName));
             Check(static_cast<bool>(toggles), "Cannot inspect the fake-worker toggle semaphore.");
             Check(WaitForSingleObject(toggles.get(), 0) == WAIT_TIMEOUT, "Unexpected pending toggle before shortcut test.");
-            Check(module->on_hotkey(0) && module->on_hotkey(0), "Enabled Off mode rejected its manual shortcut.");
-            Check(!module->on_hotkey(1), "An invalid shortcut index was accepted.");
-            Check(WaitForSingleObject(toggles.get(), 0) == WAIT_OBJECT_0 &&
-                WaitForSingleObject(toggles.get(), 0) == WAIT_OBJECT_0 &&
-                WaitForSingleObject(toggles.get(), 0) == WAIT_TIMEOUT,
-                "Shortcut presses did not queue exactly one request each.");
+            Check(!module->on_hotkey(0) && !module->on_hotkey(0) && !module->on_hotkey(1),
+                "The enabled module still accepts removed shortcut actions.");
+            Check(WaitForSingleObject(toggles.get(), 0) == WAIT_TIMEOUT,
+                "A removed shortcut queued a theme request.");
         }
         StableCount(fakePath, 1);
-        std::cout << "PASS Off cold start and repeated enable: one worker; default shortcut queues each manual request.\n";
+        std::cout << "PASS Off cold start and repeated enable: one worker; no registered shortcut or shortcut requests.\n";
 
         SetMode(module, L"FixedHours");
         auto first = WaitForReadyWorker(fakePath);

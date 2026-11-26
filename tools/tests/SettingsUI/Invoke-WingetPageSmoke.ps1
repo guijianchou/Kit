@@ -3,7 +3,9 @@ param(
     [string]$Configuration = 'Debug',
     [ValidateSet('en-us', 'zh-CN')]
     [string]$Language = 'en-us',
-    [string]$RuntimeRoot
+    [string]$RuntimeRoot,
+    [ValidateSet('Light', 'Dark')]
+    [string]$HistoryPreview
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,6 +54,7 @@ $previousTemp = $env:TEMP
 $previousTmp = $env:TMP
 $previousOutput = $env:KIT_WINGET_PAGE_TEST_OUTPUT
 $previousLanguage = $env:KIT_WINGET_PAGE_TEST_LANGUAGE
+$previousHistoryPreview = $env:KIT_WINGET_HISTORY_PREVIEW
 $testProcess = $null
 try {
     $env:TEMP = $testTemp
@@ -100,6 +103,14 @@ try {
     }
     $env:KIT_WINGET_PAGE_TEST_OUTPUT = $reportRoot
     $env:KIT_WINGET_PAGE_TEST_LANGUAGE = $Language
+    if ($HistoryPreview) { $env:KIT_WINGET_HISTORY_PREVIEW = $HistoryPreview }
+    $historyPreviewEnabled = $env:KIT_WINGET_HISTORY_PREVIEW -and $env:KIT_WINGET_HISTORY_PREVIEW -notin @('0', 'false')
+    $timeoutSeconds = if ($historyPreviewEnabled) { 330 } else { 120 }
+    if ($historyPreviewEnabled) {
+        Write-Host "History preview ready marker: $(Join-Path $reportRoot 'history-preview.ready.json')"
+        Write-Host "Create/remove $(Join-Path $reportRoot 'history-preview.shift') to switch the temporary background between states B/A."
+        Write-Host "Create $(Join-Path $reportRoot 'history-preview.continue') after native capture to continue the smoke test."
+    }
     $pipeSuffix = [guid]::NewGuid().ToString('N')
     $launchArguments = @("\\.\pipe\KitWingetSmokeRunner-$pipeSuffix", "\\.\pipe\KitWingetSmokeSettings-$pipeSuffix", "$PID", 'system', 'false', 'false', 'false')
     $startInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $RuntimeRoot "$testName.exe"))
@@ -110,9 +121,17 @@ try {
     foreach ($argument in $launchArguments) { $startInfo.ArgumentList.Add($argument) }
     $testProcess = [Diagnostics.Process]::Start($startInfo)
     $harnessLog = Join-Path $reportRoot 'winget-pages-smoke.log'
-    if (-not $testProcess.WaitForExit(120000)) {
+    $runTimer = [Diagnostics.Stopwatch]::StartNew()
+    while (-not $testProcess.HasExited -and $runTimer.Elapsed.TotalSeconds -lt $timeoutSeconds) {
+        $remainingMilliseconds = [int][Math]::Max(1, ($timeoutSeconds * 1000) - $runTimer.Elapsed.TotalMilliseconds)
+        if ($testProcess.WaitForExit([Math]::Min(30000, $remainingMilliseconds))) { break }
+        if ($historyPreviewEnabled -and (Test-Path -LiteralPath (Join-Path $reportRoot 'history-preview.ready.json'))) {
+            Write-Host "History preview reached; see $harnessLog for the active pause state."
+        }
+    }
+    if (-not $testProcess.HasExited) {
         if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 10 }
-        throw 'Winget page smoke timed out after 120 seconds.'
+        throw "Winget page smoke timed out after $timeoutSeconds seconds."
     }
     Get-Content -LiteralPath $harnessLog
     if ($testProcess.ExitCode -ne 0) { throw "Winget page smoke failed: $($testProcess.ExitCode)" }
@@ -126,6 +145,7 @@ try {
     if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
     $env:KIT_WINGET_PAGE_TEST_OUTPUT = $previousOutput
     $env:KIT_WINGET_PAGE_TEST_LANGUAGE = $previousLanguage
+    $env:KIT_WINGET_HISTORY_PREVIEW = $previousHistoryPreview
     $env:TEMP = $previousTemp
     $env:TMP = $previousTmp
     foreach ($path in $backups.Keys) {

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -23,7 +24,7 @@ internal sealed class ReleaseClient(HttpClient client)
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(TimeSpan.FromSeconds(25));
         using var response = await client.GetAsync("https://api.github.com/repos/guijianchou/Kit/releases/latest", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-        response.EnsureSuccessStatusCode();
+        EnsureSuccess(response);
         await response.Content.LoadIntoBufferAsync(1024 * 1024, timeout.Token);
         return Parse(await response.Content.ReadAsStringAsync(timeout.Token));
     }
@@ -81,7 +82,7 @@ internal sealed class ReleaseClient(HttpClient client)
         using var checksumTimeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         checksumTimeout.CancelAfter(TimeSpan.FromSeconds(30));
         using var checksumResponse = await client.GetAsync(release.Checksum, HttpCompletionOption.ResponseHeadersRead, checksumTimeout.Token);
-        checksumResponse.EnsureSuccessStatusCode();
+        EnsureSuccess(checksumResponse);
         await checksumResponse.Content.LoadIntoBufferAsync(1024, checksumTimeout.Token);
         var checksum = ParseChecksum(await checksumResponse.Content.ReadAsStringAsync(checksumTimeout.Token), release.Name);
         if (release.Digest.Length != 0 && !checksum.Equals(release.Digest, StringComparison.OrdinalIgnoreCase))
@@ -90,7 +91,7 @@ internal sealed class ReleaseClient(HttpClient client)
         }
 
         using var response = await client.GetAsync(release.Download, HttpCompletionOption.ResponseHeadersRead, token);
-        response.EnsureSuccessStatusCode();
+        EnsureSuccess(response);
         if (response.Content.Headers.ContentLength is long contentLength && contentLength != release.Size)
         {
             throw new UpdateException("invalidPackage", "Download length differs from release metadata.");
@@ -130,6 +131,23 @@ internal sealed class ReleaseClient(HttpClient client)
         }
 
         return checksum;
+    }
+
+    private static void EnsureSuccess(HttpResponseMessage response)
+    {
+        // A normal 403 can have other causes; only report a GitHub limit when
+        // the response identifies one. Stop here without retrying or changing endpoints.
+        bool rateLimited = response.StatusCode == HttpStatusCode.TooManyRequests ||
+            (response.StatusCode == HttpStatusCode.Forbidden &&
+                (response.Headers.RetryAfter != null ||
+                    (response.Headers.TryGetValues("X-RateLimit-Remaining", out var remaining) &&
+                        remaining.Any(value => value.Trim() == "0"))));
+        if (rateLimited)
+        {
+            throw new UpdateException("rateLimited", "GitHub has temporarily limited update requests. Wait before checking again.");
+        }
+
+        response.EnsureSuccessStatusCode();
     }
 
     public static string ParseChecksum(string text, string name)

@@ -400,6 +400,10 @@ public sealed class AiDiagnosticsStore
                 FallbackAttempts = Add(_totals.FallbackAttempts, record.Route == "fallback" ? 1 : 0),
                 NativeRetryCount = Add(_totals.NativeRetryCount, details?.NativeRetryCount ?? 0),
                 KnownUsageRoutes = Add(_totals.KnownUsageRoutes, knownUsage ? 1 : 0),
+                ReportedInputRoutes = Add(_totals.ReportedInputRoutes, details?.InputTokens.HasValue == true ? 1 : 0),
+                ReportedCachedInputRoutes = Add(_totals.ReportedCachedInputRoutes, details?.CachedInputTokens.HasValue == true ? 1 : 0),
+                ReportedCacheWriteRoutes = Add(_totals.ReportedCacheWriteRoutes, details?.CacheWriteTokens.HasValue == true ? 1 : 0),
+                ReportedOutputRoutes = Add(_totals.ReportedOutputRoutes, details?.OutputTokens.HasValue == true ? 1 : 0),
                 InputTokens = Add(_totals.InputTokens, details?.InputTokens ?? 0),
                 CachedInputTokens = Add(_totals.CachedInputTokens, details?.CachedInputTokens ?? 0),
                 CacheWriteTokens = Add(_totals.CacheWriteTokens, details?.CacheWriteTokens ?? 0),
@@ -452,7 +456,13 @@ public sealed class AiDiagnosticsStore
         PluginId = Known(record.PluginId, KnownPlugins, "other"),
         TaskId = Known(record.TaskId, KnownTasks, "other"),
         Kernel = Known(record.Kernel, ["codex", "pi"]),
+        Model = AiUsageStore.SanitizeModelName(record.Model),
+        ConfiguredModel = AiUsageStore.SanitizeModelName(record.ConfiguredModel),
+        ReportedModel = AiUsageStore.SanitizeModelName(record.ReportedModel),
+        ModelSource = Known(record.ModelSource, ["codex", "config", "legacy"], string.Empty),
         Route = Known(record.Route, ["main", "fallback"], string.Empty),
+        Effort = AiTargetSettings.IsValidNativeIdentifier(record.Effort) ? record.Effort.Trim().ToLowerInvariant() : string.Empty,
+        ApiMode = AiTargetSettings.IsValidNativeIdentifier(record.ApiMode) ? record.ApiMode.Trim().ToLowerInvariant() : string.Empty,
         Role = Known(record.Role, ["coordinator", "analysis-worker"], string.Empty),
         Outcome = Known(record.Outcome, ["succeeded", "failed", "cancelled", "timeout", "partial"]),
         ErrorCode = Enum.IsDefined(record.ErrorCode) ? record.ErrorCode : AiErrorCode.ExecutionFailed,
@@ -460,7 +470,11 @@ public sealed class AiDiagnosticsStore
         BatchIndex = string.Equals(record.Kind, "route", StringComparison.OrdinalIgnoreCase)
             ? Math.Clamp(record.BatchIndex, 0, Math.Clamp(record.TotalBatches, 0, 2_000)) : 0,
         CompletedBatches = Math.Clamp(record.CompletedBatches, 0, Math.Clamp(record.TotalBatches, 0, 2_000)),
+        InputItemCount = Math.Clamp(record.InputItemCount, 0, 100_000),
+        PromptBytes = Math.Max(0, record.PromptBytes),
+        OutputCharacters = Math.Max(0, record.OutputCharacters),
         ElapsedMilliseconds = Math.Max(0, record.ElapsedMilliseconds),
+        QueueMilliseconds = Math.Max(0, record.QueueMilliseconds),
         Diagnostics = record.Diagnostics is { } details ? NormalizeDiagnostics(details) : null,
     };
 
@@ -480,5 +494,7 @@ public sealed class AiDiagnosticsStore
         ElapsedMilliseconds = Math.Max(0, details.ElapsedMilliseconds),
         ProcessFailure = Known(details.ProcessFailure, KnownProcessFailures),
         CancellationSource = Known(details.CancellationSource, KnownCancellationSources),
+        CodexThreadId = AiUsageStore.SanitizeIdentifier(details.CodexThreadId),
+        ReportedModel = AiUsageStore.SanitizeModelName(details.ReportedModel),
     };
 }

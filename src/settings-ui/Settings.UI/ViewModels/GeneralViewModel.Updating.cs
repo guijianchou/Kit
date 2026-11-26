@@ -134,16 +134,20 @@ namespace Kit.Settings.UI.ViewModels
             OnPropertyChanged(nameof(RestartUpdateLabel));
         }
 
-        private string PortableUpdateErrorMessage(string code) => GetResourceString(code switch
+        private string PortableUpdateErrorMessage(string code, string fallbackResource = "General_UpdateError/Text") => GetResourceString(code switch
         {
             "hashMismatch" or "invalidPackage" or "invalidRelease" => "General_UpdateInvalid/Text",
-            "accessDenied" or "unsafePath" => "General_UpdateAccess/Text",
+            "accessDenied" => "General_UpdateAccessDenied/Text",
+            "unsafePath" => "General_UpdateAccess/Text",
             "closeFailed" => "General_UpdateCloseFailed/Text",
             "recoveryRequired" => "General_UpdateRecoveryRequired/Text",
             "recovered" => "General_UpdateRecovered/Text",
             "interrupted" => "General_UpdateInterrupted/Text",
             "helperMissing" => "General_UpdateHelperMissing/Text",
-            _ => "General_UpdateError/Text",
+            "helperFailed" => "General_UpdateHelperFailed/Text",
+            "helperBusy" => "General_UpdateHelperBusy/Text",
+            "rateLimited" => "General_UpdateRateLimited/Text",
+            _ => fallbackResource,
         });
     }
 }

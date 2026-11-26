@@ -6,6 +6,7 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using CommunityToolkit.WinUI.Controls;
+using Kit.Settings.UI.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
@@ -24,6 +25,8 @@ public abstract partial class NavigablePage : Page
 
     private NavigationParams _pendingNavigationParams;
     private bool _pendingEntranceAnimation;
+    private bool _hasPresented;
+    private long _navigationGeneration;
 
     public NavigablePage()
     {
@@ -33,9 +36,18 @@ public abstract partial class NavigablePage : Page
 
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
+        _navigationGeneration++;
+        AppearanceService.RegisterRoot(this);
+
+        // Toolkit control dictionaries shadow application-level description sizes.
+        // Set the page override after XAML resources load, before templates render.
+        if (!Resources.ContainsKey("SettingsCardDescriptionFontSize"))
+        {
+            Resources["SettingsCardDescriptionFontSize"] = TypographyResources.FontSize(12);
+        }
         base.OnNavigatedTo(e);
 
-        if (_hasCompletedInitialNavigation && UiSettings.AnimationsEnabled)
+        if (!_hasPresented && _hasCompletedInitialNavigation && UiSettings.AnimationsEnabled)
         {
             _pendingEntranceAnimation = true;
         }
@@ -57,29 +69,37 @@ public abstract partial class NavigablePage : Page
 
     private async void OnPageLoaded(object sender, RoutedEventArgs e)
     {
+        _hasPresented = true;
+        long generation = _navigationGeneration;
+        var navigationParams = _pendingNavigationParams;
+        _pendingNavigationParams = null;
         if (_pendingEntranceAnimation)
         {
             _pendingEntranceAnimation = false;
             PlayFluentEntranceAnimation();
         }
 
-        if (_pendingNavigationParams != null && !string.IsNullOrEmpty(_pendingNavigationParams.ElementName))
+        if (navigationParams != null && !string.IsNullOrEmpty(navigationParams.ElementName))
         {
             // First, expand parent if specified
-            if (!string.IsNullOrEmpty(_pendingNavigationParams.ParentElementName))
+            if (!string.IsNullOrEmpty(navigationParams.ParentElementName))
             {
-                var parentElement = FindElementByName(_pendingNavigationParams.ParentElementName);
+                var parentElement = FindElementByName(navigationParams.ParentElementName);
                 if (parentElement is SettingsExpander expander)
                 {
                     expander.IsExpanded = true;
 
                     // Give time for the expander to animate
                     await Task.Delay(ExpandWaitDuration);
+                    if (generation != _navigationGeneration || !IsLoaded)
+                    {
+                        return;
+                    }
                 }
             }
 
             // Then find and navigate to the target element
-            var target = FindElementByName(_pendingNavigationParams.ElementName);
+            var target = FindElementByName(navigationParams.ElementName);
 
             target?.StartBringIntoView(new BringIntoViewOptions
             {
@@ -87,10 +107,16 @@ public abstract partial class NavigablePage : Page
                 AnimationDesired = true,
             });
 
-            await OnTargetElementNavigatedAsync(target, _pendingNavigationParams.ElementName);
-
-            _pendingNavigationParams = null;
+            await OnTargetElementNavigatedAsync(target, navigationParams.ElementName);
         }
+    }
+
+    protected override void OnNavigatedFrom(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        _navigationGeneration++;
+        _pendingNavigationParams = null;
+        _pendingEntranceAnimation = false;
+        base.OnNavigatedFrom(e);
     }
 
     private void PlayFluentEntranceAnimation()
@@ -165,7 +191,10 @@ public abstract partial class NavigablePage : Page
         await Task.Delay(AnimationDuration);
 
         // Clean up the shadow visual
-        ElementCompositionPreview.SetElementChildVisual(target, null);
+        if (ReferenceEquals(ElementCompositionPreview.GetElementChildVisual(target), spriteVisual))
+        {
+            ElementCompositionPreview.SetElementChildVisual(target, null);
+        }
     }
 
     private static void TrySetFocus(FrameworkElement target)

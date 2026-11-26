@@ -12,46 +12,101 @@
             FalseValue="Collapsed"
             TrueValue="Visible" />
         <tkconverters:StringVisibilityConverter x:Key="StringVisibilityConverter" />
+        <DataTemplate x:Key="TileEntryTemplate" x:DataType="local:QuickAccessItem">
+            <local:FlyoutMenuButton
+                AutomationProperties.Name="{x:Bind Title, Mode=OneWay}"
+                Command="{x:Bind Command}"
+                CommandParameter="{x:Bind CommandParameter}"
+                Visibility="{x:Bind Visible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <local:FlyoutMenuButton.Content>
+                    <TextBlock
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind Title, Mode=OneWay}"
+                        TextAlignment="Center"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="Wrap"
+                        MaxLines="2" />
+                </local:FlyoutMenuButton.Content>
+                <local:FlyoutMenuButton.Icon>
+                    <Image Width="32" Height="32">
+                        <Image.Source>
+                            <BitmapImage DecodePixelWidth="64" UriSource="{x:Bind Icon, Mode=OneWay}" />
+                        </Image.Source>
+                    </Image>
+                </local:FlyoutMenuButton.Icon>
+                <ToolTipService.ToolTip>
+                    <ToolTip Content="{x:Bind Description, Mode=OneWay}" Visibility="{x:Bind Description, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                </ToolTipService.ToolTip>
+            </local:FlyoutMenuButton>
+        </DataTemplate>
+        <DataTemplate x:Key="IconEntryTemplate" x:DataType="local:QuickAccessItem">
+            <Button
+                AutomationProperties.Name="{x:Bind Title, Mode=OneWay}"
+                Command="{x:Bind Command}"
+                CommandParameter="{x:Bind CommandParameter}"
+                Width="48"
+                Height="48"
+                MinWidth="48"
+                MinHeight="48"
+                Padding="7"
+                HorizontalAlignment="Left"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Style="{StaticResource SubtleButtonStyle}"
+                Visibility="{x:Bind Visible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Image x:Name="QuickAccessIcon" Width="32" Height="32" AutomationProperties.AccessibilityView="Raw">
+                    <Image.Source>
+                        <BitmapImage DecodePixelWidth="64" UriSource="{x:Bind Icon, Mode=OneWay}" />
+                    </Image.Source>
+                </Image>
+                <ToolTipService.ToolTip>
+                    <ToolTip>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{x:Bind Title, Mode=OneWay}" />
+                            <TextBlock
+                                Text="{x:Bind Description, Mode=OneWay}"
+                                MaxWidth="280"
+                                TextWrapping="Wrap"
+                                Visibility="{x:Bind Description, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
+                        </StackPanel>
+                    </ToolTip>
+                </ToolTipService.ToolTip>
+            </Button>
+        </DataTemplate>
     </UserControl.Resources>
 
-    <ItemsRepeater HorizontalAlignment="Stretch" ItemsSource="{x:Bind ItemsSource, Mode=OneWay}">
-        <ItemsRepeater.Layout>
-            <UniformGridLayout
-                ItemsStretch="Fill"
-                MaximumRowsOrColumns="3"
-                MinColumnSpacing="8"
-                MinItemHeight="84"
-                MinItemWidth="96"
-                MinRowSpacing="8" />
-        </ItemsRepeater.Layout>
-        <ItemsRepeater.ItemTemplate>
-            <DataTemplate x:DataType="local:QuickAccessItem">
-                <local:FlyoutMenuButton
-                    AutomationProperties.Name="{x:Bind Title, Mode=OneWay}"
-                    Command="{x:Bind Command}"
-                    CommandParameter="{x:Bind CommandParameter}"
-                    Visibility="{x:Bind Visible, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <local:FlyoutMenuButton.Content>
-                        <TextBlock
-                            Style="{StaticResource CaptionTextBlockStyle}"
-                            Text="{x:Bind Title, Mode=OneWay}"
-                            TextAlignment="Center"
-                            TextTrimming="CharacterEllipsis"
-                            TextWrapping="Wrap"
-                            MaxLines="2" />
-                    </local:FlyoutMenuButton.Content>
-                    <local:FlyoutMenuButton.Icon>
-                        <Image Width="32" Height="32">
-                            <Image.Source>
-                                <BitmapImage DecodePixelWidth="64" UriSource="{x:Bind Icon, Mode=OneWay}" />
-                            </Image.Source>
-                        </Image>
-                    </local:FlyoutMenuButton.Icon>
-                    <ToolTipService.ToolTip>
-                        <ToolTip Content="{x:Bind Description, Mode=OneWay}" Visibility="{x:Bind Description, Mode=OneWay, Converter={StaticResource StringVisibilityConverter}}" />
-                    </ToolTipService.ToolTip>
-                </local:FlyoutMenuButton>
-            </DataTemplate>
-        </ItemsRepeater.ItemTemplate>
-    </ItemsRepeater>
+    <Grid>
+        <!-- Home has at most seven actions. Keep their visuals across cached page
+             navigation instead of subjecting this small row to viewport recycling. -->
+        <ItemsControl
+            x:Name="IconEntries"
+            x:Load="{x:Bind IsCompact, Mode=OneWay}"
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            ItemsSource="{x:Bind ItemsSource, Mode=OneWay}"
+            ItemTemplate="{StaticResource IconEntryTemplate}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <tkcontrols:WrapPanel HorizontalAlignment="Stretch" HorizontalSpacing="8" VerticalSpacing="8" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+        <ItemsRepeater
+            x:Name="EntriesRepeater"
+            x:Load="{x:Bind IsTileMode(IsCompact), Mode=OneWay}"
+            HorizontalAlignment="Stretch"
+            ItemsSource="{x:Bind ItemsSource, Mode=OneWay}"
+            ItemTemplate="{StaticResource TileEntryTemplate}">
+            <ItemsRepeater.Layout>
+                <UniformGridLayout
+                    x:Name="EntriesLayout"
+                    ItemsStretch="Fill"
+                    MaximumRowsOrColumns="3"
+                    MinColumnSpacing="8"
+                    MinItemHeight="84"
+                    MinItemWidth="96"
+                    MinRowSpacing="8" />
+            </ItemsRepeater.Layout>
+        </ItemsRepeater>
+    </Grid>
 </UserControl>

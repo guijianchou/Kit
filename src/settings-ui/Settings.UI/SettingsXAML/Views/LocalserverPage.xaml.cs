@@ -20,7 +20,7 @@ namespace Kit.Settings.UI.Views
     {
         private readonly MainWindow _settingsWindow;
         private bool _confirmationOpen;
-        private ElementTheme _lastAppliedTheme = ElementTheme.Default;
+        private ElementTheme? _lastAppliedTheme;
 
         public LocalserverViewModel ViewModel { get; }
 
@@ -48,7 +48,6 @@ namespace Kit.Settings.UI.Views
             _settingsWindow.Activated += OnSettingsWindowActivated;
             Loaded += OnLocalserverLoaded;
             Unloaded += OnLocalserverUnloaded;
-            ActualThemeChanged += OnLocalserverActualThemeChanged;
         }
 
         public static Visibility GetEmptyVisibility(int count) => count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -57,24 +56,44 @@ namespace Kit.Settings.UI.Views
 
         private void OnLocalserverLoaded(object sender, RoutedEventArgs e)
         {
-            _lastAppliedTheme = ActualTheme;
+            // Reattach the native theme subscription when a cached page returns.
+            ActualThemeChanged -= OnLocalserverActualThemeChanged;
+            ActualThemeChanged += OnLocalserverActualThemeChanged;
             ViewModel.RefreshEnabledState();
+            ApplyCurrentTheme();
             ViewModel.SetPageActive(true);
         }
 
         private void OnLocalserverUnloaded(object sender, RoutedEventArgs e)
         {
+            if (IsLoaded)
+            {
+                return;
+            }
+
+            ActualThemeChanged -= OnLocalserverActualThemeChanged;
             ViewModel.SetPageActive(false);
             _ = ViewModel.FlushPendingSaveAsync();
         }
 
         private void OnLocalserverActualThemeChanged(FrameworkElement sender, object args)
         {
-            if (ActualTheme != _lastAppliedTheme)
+            if (IsLoaded)
             {
-                _lastAppliedTheme = ActualTheme;
-                ViewModel.RefreshThemeBrushes(ActualTheme);
+                ApplyCurrentTheme();
             }
+        }
+
+        private void ApplyCurrentTheme()
+        {
+            // Retained row bindings only need new brushes after a theme change.
+            if (_lastAppliedTheme == ActualTheme)
+            {
+                return;
+            }
+
+            _lastAppliedTheme = ActualTheme;
+            ViewModel.RefreshThemeBrushes(ActualTheme);
         }
 
         private void OnSettingsWindowClosed(object sender, WindowEventArgs args)

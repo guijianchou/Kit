@@ -30,6 +30,7 @@ namespace ViewModelTests
             Assert.IsNotNull(vm.ResetSecurityAuditPolicyCommand);
             Assert.IsNotNull(vm.ResetOptimizationPolicyCommand);
             Assert.IsNotNull(vm.DiscardActivePolicyCommand);
+            Assert.IsNotNull(vm.DiscardPolicyCommand);
 
             vm.ActivePolicyIndex = 1;
             Assert.AreEqual(1, vm.ActivePolicyIndex);
@@ -82,6 +83,46 @@ namespace ViewModelTests
             Assert.AreEqual("test security policy", vm.CurrentPolicyContent);
             Assert.AreEqual("updated opt policy", vm.OptimizationPolicyContent);
             Assert.AreEqual(vm.PoliciesLoaded && vm.CanToggle && !vm.IsBusy, vm.CanEditPolicies);
+        }
+
+        [TestMethod]
+        [DataRow(0)]
+        [DataRow(1)]
+        public async Task GlobalPolicyDiscardPreservesSelectedTaskDraft(int taskPolicyIndex)
+        {
+            using var vm = new AiHubViewModel();
+            await vm.InitializeAsync();
+            Assert.IsTrue(vm.CanEditPolicies);
+            vm.TaskPolicyIndex = taskPolicyIndex;
+            string savedGlobal = vm.SecurityPolicyContent;
+            string savedTask = vm.CurrentPolicyContent;
+            string taskDraft = savedTask + "\nIndependent task draft.";
+            string globalDraft = savedGlobal + "\nIndependent global draft.";
+
+            vm.CurrentPolicyContent = taskDraft;
+            Assert.IsFalse(vm.DiscardPolicyCommand.CanExecute(null), "A task draft must not enable global discard.");
+            vm.SecurityPolicyContent = globalDraft;
+            Assert.IsTrue(vm.IsSecurityPolicyDirty);
+            Assert.IsTrue(vm.DiscardPolicyCommand.CanExecute(null));
+            vm.DiscardPolicyCommand.Execute(null);
+
+            Assert.AreEqual(savedGlobal, vm.SecurityPolicyContent);
+            Assert.IsFalse(vm.IsSecurityPolicyDirty);
+            Assert.IsFalse(vm.SavePolicyCommand.CanExecute(null));
+            Assert.AreEqual(taskPolicyIndex, vm.TaskPolicyIndex);
+            Assert.AreEqual(taskPolicyIndex + 1, vm.ActivePolicyIndex);
+            Assert.AreEqual(taskDraft, vm.CurrentPolicyContent);
+            Assert.IsTrue(vm.IsCurrentPolicyDirty);
+
+            vm.SecurityPolicyContent = globalDraft;
+            vm.DiscardActivePolicyCommand.Execute(null);
+            Assert.AreEqual(savedTask, vm.CurrentPolicyContent);
+            Assert.IsFalse(vm.IsCurrentPolicyDirty);
+            Assert.AreEqual(globalDraft, vm.SecurityPolicyContent);
+            Assert.IsTrue(vm.IsSecurityPolicyDirty);
+            Assert.IsTrue(vm.SavePolicyCommand.CanExecute(null));
+            vm.DiscardPolicyCommand.Execute(null);
+            Assert.IsFalse(vm.HasUnsavedPolicyChanges);
         }
 
         [TestMethod]

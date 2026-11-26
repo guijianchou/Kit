@@ -5,6 +5,7 @@
 using System;
 using System.Linq;
 using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -13,11 +14,12 @@ using Windows.ApplicationModel.DataTransfer;
 
 namespace Kit.Settings.UI.Views;
 
-public sealed partial class WingetPackageDetailsPane : UserControl
+public sealed partial class WingetPackageDetailsPane : UserControl, ILiveLocalizable
 {
     private WingetPackageRow _boundRow;
     private string _appliedVersion;
     private string _manualCommand;
+    private WingetViewModel _viewModel;
 
     public event EventHandler CloseRequested;
 
@@ -30,6 +32,12 @@ public sealed partial class WingetPackageDetailsPane : UserControl
     public WingetPackageDetailsPane()
     {
         InitializeComponent();
+        RefreshLocalization();
+        Loaded += (_, _) => RefreshLocalization();
+    }
+
+    public void RefreshLocalization()
+    {
         PaneEyebrowText.Text = WingetViewModel.L("DetailsPaneTitle");
         LoadingLabelText.Text = WingetViewModel.L("Phase_LoadingDetails");
         DetailsCancelButton.Content = WingetViewModel.L("Cancel/Content");
@@ -50,11 +58,20 @@ public sealed partial class WingetPackageDetailsPane : UserControl
         string copyIdLabel = WingetViewModel.L("CopyIdAction");
         AutomationProperties.SetName(CopyIdButton, copyIdLabel);
         ToolTipService.SetToolTip(CopyIdButton, copyIdLabel);
+        FeedbackText.Text = FeedbackText.Text.Relocalize();
+        if (_viewModel?.ActiveSelection != null)
+        {
+            VersionsText.Text = _viewModel.SelectionVersions;
+            InstallExplanationText.Text = _viewModel.InstallExplanation;
+            LicenseText.Text = string.IsNullOrWhiteSpace(_viewModel.SelectedDetails?.License)
+                ? string.Empty : WingetViewModel.L("LicenseLabel") + ": " + _viewModel.SelectedDetails.License;
+        }
     }
 
     public void UpdateFromViewModel(WingetViewModel vm)
     {
         ArgumentNullException.ThrowIfNull(vm);
+        _viewModel = vm;
         var selected = vm.ActiveSelection;
         if (selected == null)
         {

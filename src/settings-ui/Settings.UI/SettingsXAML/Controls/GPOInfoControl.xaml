@@ -1,7 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:services="using:Kit.Settings.UI.Services"
     xmlns:local="using:Kit.Settings.UI.Controls">
     <Style TargetType="local:GPOInfoControl">
         <Setter Property="Template">
@@ -17,7 +18,7 @@
                             IsTabStop="False" />
                         <InfoBar
                             x:Name="PART_WarningBar"
-                            x:Uid="GPO_SettingIsManaged"
+                            x:Uid="GPO_SettingIsManaged" services:RuntimeLocalization.Uid="GPO_SettingIsManaged"
                             Margin="0,4,0,0"
                             IsClosable="False"
                             IsOpen="{TemplateBinding ShowWarning}"

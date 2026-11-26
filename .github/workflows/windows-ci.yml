@@ -51,6 +51,7 @@ jobs:
             -Platform x64 `
             -Configuration Debug `
             '/m:1' `
+            '/p:BuildTests=true' `
             '/p:CIBuild=true' `
             '/p:PowerToysSkipCopyOnWriteSdk=true' `
             '/p:PowerToysSkipRunVSTestSdk=true'
@@ -130,7 +131,7 @@ jobs:
       - name: Run Portable updater regression tests
         shell: pwsh
         run: |
-          & ./x64/Debug/tests/Updater/Kit.Updater.Tests.exe --report-trx --results-directory TestResults/GitHubActions/Updater --minimum-expected-tests 32
+          & ./x64/Debug/tests/Updater/Kit.Updater.Tests.exe --report-trx --results-directory TestResults/GitHubActions/Updater --minimum-expected-tests 53 --timeout 180s
           if ($LASTEXITCODE -ne 0) { throw 'Portable updater regression tests failed.' }
 
       - name: Run Settings UI unit tests
@@ -138,7 +139,8 @@ jobs:
         run: |
           $reportDir = Join-Path $env:GITHUB_WORKSPACE 'TestResults/GitHubActions/Settings'
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/tests/SettingsUI/Invoke-SettingsUnitTests.ps1 `
-            -MinimumExpectedTests 322 `
+            -MinimumExpectedTests 434 `
+            -TimeoutSeconds 300 `
             -ReportRoot $reportDir
           $exitCode = $LASTEXITCODE
           if ($exitCode -ne 0) {
@@ -179,7 +181,7 @@ jobs:
           & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/Winget/Winget.UnitTests.exe') `
             --report-trx `
             --results-directory $reportDirectory `
-            --minimum-expected-tests 135
+            --minimum-expected-tests 137
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -192,7 +194,7 @@ jobs:
           & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/NetMap/NetMap.UnitTests.exe') `
             --report-trx `
             --results-directory $reportDirectory `
-            --minimum-expected-tests 117
+            --minimum-expected-tests 127
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -251,10 +253,17 @@ jobs:
           & (Join-Path $env:GITHUB_WORKSPACE 'x64/Debug/tests/AiHub/Kit.AiHub.UnitTests.exe') `
             --report-trx `
             --results-directory $reportDirectory `
-            --minimum-expected-tests 537
+            --minimum-expected-tests 622 `
+            --timeout 900s
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
+
+      - name: Verify complete Debug delivery
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/build/Stage-Debug.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload build and test reports
         if: always()
@@ -264,6 +273,7 @@ jobs:
           if-no-files-found: warn
           path: |
             TestResults/GitHubActions/**/*
+            TestResults/FrameworkReview/Debug-*.manifest.json
             build.debug.x64.all.log
             build.debug.x64.errors.log
             build.debug.x64.warnings.log

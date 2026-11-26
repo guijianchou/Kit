@@ -28,6 +28,8 @@ struct GeneralSettings
     bool enableExperimentation;
     DashboardSortOrder dashboardSortOrder;
     std::wstring theme;
+    std::wstring uiFontFamily = L"system";
+    int uiFontSize = 14;
     std::wstring systemTheme;
     std::wstring powerToysVersion;
 

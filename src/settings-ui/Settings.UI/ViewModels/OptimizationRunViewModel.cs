@@ -4,25 +4,32 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using Kit.AIHubLib.Models;
 using Kit.AIHubLib.Storage;
 using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Services;
 
 namespace Kit.Settings.UI.ViewModels;
 
-public sealed class OptimizationRunViewModel
+public sealed class OptimizationRunViewModel : INotifyPropertyChanged, ILiveLocalizable
 {
     public OptimizationRunViewModel(OptimizationExecutionRecord record, string exportJson = null)
     {
         Record = record;
         _exportJson = exportJson;
+        DetailRows = record.Items.Select(item => new OptimizationExecutionItemViewModel(item)).ToArray();
     }
+
+    public event PropertyChangedEventHandler PropertyChanged;
 
     public OptimizationExecutionRecord Record { get; }
     private string _exportJson;
     public string ExportJson => _exportJson ??= OptimizationHistoryStorage.ExportRecordJson(Record);
     public IReadOnlyList<OptimizationExecutionItemRecord> Details => Record.Items;
+    public IReadOnlyList<OptimizationExecutionItemViewModel> DetailRows { get; }
     public string CompletedText => (Record.CompletedUtc ?? Record.StartedUtc).ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
     public string StateLabel => Record.State switch
     {
@@ -40,4 +47,45 @@ public sealed class OptimizationRunViewModel
         Record.FailureReason ?? string.Empty,
         Record.HistoryError ?? string.Empty,
     });
+
+    public void RefreshLocalization()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompletedText)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StateLabel)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Summary)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DetailsSummary)));
+        foreach (var row in DetailRows)
+        {
+            row.RefreshLocalization();
+        }
+    }
+}
+
+public sealed class OptimizationExecutionItemViewModel : INotifyPropertyChanged, ILiveLocalizable
+{
+    private readonly OptimizationExecutionItemRecord record;
+
+    public OptimizationExecutionItemViewModel(OptimizationExecutionItemRecord record)
+    {
+        this.record = record;
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    public string FileName => record.FileName;
+    public string SourcePath => record.SourcePath;
+    public string DestinationPath => record.DestinationPath;
+    public string Reason => record.Reason;
+    public string Summary => DescribeState(record.Action, record.State);
+
+    public static string DescribeState(string action, string state) => state switch
+    {
+        "deleted" => "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
+        "moved" => "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved"),
+        "succeeded" or "completed" => action == "move" ? "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved") : "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
+        "failed" => "AIHub_ExecutionItem_Failed".GetLocalizedOrFallback("Failed"),
+        _ => "AIHub_ExecutionItem_Pending".GetLocalizedOrFallback("Not completed"),
+    };
+
+    public void RefreshLocalization() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Summary)));
 }

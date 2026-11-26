@@ -306,14 +306,11 @@ internal static class NetMapPageSmoke
         Require(vm.Direct.Health == ProbeHealth.Good && vm.Direct.Ip == "192.0.2.16", "A successful observation restores the IP and green state.");
         var detectionCard = (FrameworkElement)page.FindName("HeroTelemetryBar") ?? (FrameworkElement)page.FindName("DetectionCard");
         var directCard = (FrameworkElement)page.FindName("DirectCard");
-        var mapCard = (FrameworkElement)page.FindName("MapCard");
         Require(detectionCard.ActualHeight <= 64, "Detection toolbar stays within 64 DIPs: " + detectionCard.ActualHeight);
         Require(directCard.ActualHeight <= 215, "Egress card stays within 215 DIPs: " + directCard.ActualHeight);
         var mapView = (FrameworkElement)page.FindName("MapView");
         var routePanel = (FrameworkElement)page.FindName("RoutePanel");
-        Require(mapView.ActualWidth >= 400 && routePanel.ActualWidth >= 400, "The map view and MTR table share horizontal space: map=" + mapView.ActualWidth + ", route=" + routePanel.ActualWidth);
-        var mapBottom = mapCard.TransformToVisual(page).TransformPoint(new Windows.Foundation.Point(0, mapCard.ActualHeight)).Y;
-        Require(mapBottom <= 950, "Full map layout positioned properly: bottom=" + mapBottom + ", viewport=" + page.ActualHeight);
+        await CheckMapLayout(page, "regular");
         await Capture(page, "netmap-winui-light.png");
         ((FrameworkElement)window.Content).RequestedTheme = ElementTheme.Dark;
         await Task.Delay(200);
@@ -342,11 +339,11 @@ internal static class NetMapPageSmoke
         var pacificLines = ((Canvas)page.FindName("MapLines")).Children.OfType<Microsoft.UI.Xaml.Shapes.Polyline>().ToArray();
         var observedPacificLines = pacificLines.Where(line => (string)line.Tag == "Observed").ToArray();
         Require(observedPacificLines.Length == 3, "China-US-Singapore uses one continuous segment per located hop, without date-line splitting.");
-        Require(pacificLines.SelectMany(line => line.Points).All(point => point.X >= 24 && point.X <= 936 && point.Y >= 24 && point.Y <= 456), "All Pacific route endpoints remain inside the visible map with marker padding.");
+        Require(pacificLines.SelectMany(line => line.Points).All(point => point.X >= 24 && point.X <= mapView.ActualWidth - 24 && point.Y >= 24 && point.Y <= mapView.ActualHeight - 24), "All Pacific route endpoints remain inside the actual viewport with marker padding.");
         Require(observedPacificLines.Zip(observedPacificLines.Skip(1), (first, next) => first.Points[1] == next.Points[0]).All(connected => connected), "Successive Pacific route segments share the exact same endpoint.");
         double chinaX = observedPacificLines[0].Points[0].X;
         double usX = observedPacificLines[0].Points[1].X;
-        Require(chinaX < usX && usX - chinaX < 800, "The Pacific-centered map places China west of the US without crossing the canvas edges.");
+        Require(chinaX < usX && usX - chinaX < mapView.ActualWidth - 48, "The Pacific-centered map places China west of the US without crossing the canvas edges.");
         await Capture(page, "netmap-winui-pacific-dark.png");
         ((FrameworkElement)window.Content).RequestedTheme = ElementTheme.Light;
         await Task.Delay(150);
@@ -377,6 +374,13 @@ internal static class NetMapPageSmoke
         var egressGrid = (Grid)page.FindName("EgressGrid");
         Require(Math.Abs(directCard.ActualWidth - egressGrid.ActualWidth) < 1 && Math.Abs(proxyCard.ActualWidth - egressGrid.ActualWidth) < 1, "Stacked cards use the full available width.");
         Require(Grid.GetRow(routePanel) == 1, "Narrow windows place the MTR table below the full-width map.");
+        var narrowLines = ((Canvas)page.FindName("MapLines")).Children.OfType<Microsoft.UI.Xaml.Shapes.Polyline>().ToArray();
+        Require(narrowLines.SelectMany(line => line.Points).All(point => point.X >= 24 && point.X <= mapView.ActualWidth - 24 && point.Y >= 24 && point.Y <= mapView.ActualHeight - 24),
+            "Resizing refits the existing route to the actual map viewport without another network snapshot.");
+        var markerLayer = (Canvas)page.FindName("MapPoints");
+        Require(markerLayer.Children.OfType<Grid>().All(marker => marker.Width >= 12 && marker.Width <= 30),
+            "Markers retain readable DIP sizes independently of map zoom and window width.");
+        await CheckMapLayout(page, "narrow");
         await Capture(page, "netmap-winui-narrow.png");
         window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 900));
         var hopList = (ListView)page.FindName("HopList");
@@ -592,6 +596,7 @@ internal static class NetMapPageSmoke
                     await opened.Task.WaitAsync(TimeSpan.FromSeconds(2));
                     var content = (FrameworkElement)details.Content;
                     for (int attempt = 0; attempt < 40 && (!content.IsLoaded || content.ActualWidth <= 0); attempt++) await Task.Delay(25);
+                    await CheckDetailsMaterial(content, width);
                     foreach (var field in new[] { ("EgressIpDetails", ipv6.Identity.Ip), ("AiRouteFullLabel", vm.Proxy.AiRoute),
                         ("AiRouteFullSummary", vm.Proxy.AiRouteSummary), ("AiRouteFullDetails", vm.Proxy.AiRouteDetails) })
                     {
@@ -684,6 +689,180 @@ internal static class NetMapPageSmoke
             Apply(fixture);
             messageProperty.SetValue(vm, string.Empty);
         }
+    }
+
+    private static async Task CheckDetailsMaterial(FrameworkElement content, int width)
+    {
+        DependencyObject ancestor = content;
+        while (ancestor != null && ancestor is not FlyoutPresenter) ancestor = VisualTreeHelper.GetParent(ancestor);
+        Require(ancestor is FlyoutPresenter, "The native NetMap Details presenter is realized.");
+        var presenter = (FlyoutPresenter)ancestor;
+        var originalTheme = presenter.RequestedTheme;
+        bool highContrast = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast;
+        try
+        {
+            foreach (var theme in new[] { ElementTheme.Light, ElementTheme.Dark })
+            {
+                presenter.RequestedTheme = theme;
+                for (int attempt = 0; attempt < 40 && presenter.ActualTheme != theme; attempt++) await Task.Delay(25);
+                presenter.UpdateLayout();
+                Require(presenter.ActualTheme == theme, "NetMap Details inherits the requested material theme.");
+                var surface = VisualTreeHelper.GetChild(presenter, 0) as Border;
+                Require(surface != null && HasDetailsMaterial(presenter.Background) && HasDetailsMaterial(surface.Background),
+                    $"NetMap Details {width}/{theme} applies translucent acrylic to the actual native surface with a solid accessibility fallback.");
+                foreach (var name in new[] { "EgressIpDetails", "AiRouteFullLabel", "AiRouteFullSummary", "AiRouteFullDetails" })
+                {
+                    bool fullyOpaque = true;
+                    for (DependencyObject current = FindNamed(content, name); current != null; current = VisualTreeHelper.GetParent(current))
+                    {
+                        if (current is UIElement element)
+                            fullyOpaque &= Math.Abs(element.Opacity - 1) < .001;
+                        if (ReferenceEquals(current, presenter)) break;
+                    }
+                    Require(fullyOpaque, $"NetMap Details {name} keeps foreground opacity at {width}/{theme}.");
+                }
+                if (presenter.Background is AcrylicBrush brush)
+                    File.AppendAllText(Path.Combine(Output, "page-smoke.log"),
+                        $"Details material {width}/{theme}: tint={brush.TintColor}, tintOpacity={brush.TintOpacity}, luminosity={brush.TintLuminosityOpacity}, fallback={brush.FallbackColor}. Native capture is required to judge composition blur.\n");
+            }
+        }
+        finally
+        {
+            presenter.RequestedTheme = originalTheme;
+        }
+
+        bool HasDetailsMaterial(Brush brush) => brush is AcrylicBrush acrylic && !acrylic.AlwaysUseFallback &&
+            acrylic.TintLuminosityOpacity is double luminosity && luminosity > 0 && luminosity < 1 && acrylic.FallbackColor.A == 255 ||
+            highContrast && brush is SolidColorBrush solid && solid.Color.A == 255;
+    }
+
+    private static async Task CheckMapLayout(NetMapPage page, string scenario)
+    {
+        var body = (Grid)page.FindName("MapBody");
+        var card = (FrameworkElement)page.FindName("MapCard");
+        var map = (FrameworkElement)page.FindName("MapView");
+        var route = (FrameworkElement)page.FindName("RoutePanel");
+        var description = (TextBlock)page.FindName("MapDescription");
+        CheckMapHeader(page, scenario);
+        ScrollViewer outerScroll = null;
+        for (DependencyObject ancestor = card; ancestor != null; ancestor = VisualTreeHelper.GetParent(ancestor))
+        {
+            if (ancestor is ScrollViewer scroll &&
+                Microsoft.UI.Xaml.Automation.AutomationProperties.GetAutomationId(scroll) == "PageScrollViewer")
+            {
+                outerScroll = scroll;
+                break;
+            }
+        }
+
+        Require(outerScroll != null && outerScroll.ViewportHeight > 0,
+            scenario + ": map, MTR and details belong to the page's bounded scrolling viewport.");
+        var mapBounds = Bounds(map, body);
+        var routeBounds = Bounds(route, body);
+        bool stacked = Grid.GetRow(route) == 1;
+        Require(mapBounds.Left >= -1 && mapBounds.Right <= body.ActualWidth + 1 &&
+            routeBounds.Left >= -1 && routeBounds.Right <= body.ActualWidth + 1,
+            scenario + ": map and MTR stay inside the available width.");
+        Require(map.ActualHeight >= 260 && map.ActualWidth >= 300 && route.ActualWidth >= 400,
+            scenario + $": map and MTR retain usable dimensions: map={map.ActualWidth:0.#}x{map.ActualHeight:0.#}, route={route.ActualWidth:0.#}.");
+        Require(body.ActualWidth <= 860 ? stacked : !stacked,
+            scenario + ": route layout follows the available content width, independently of the window and navigation rail.");
+        if (stacked)
+        {
+            Require(routeBounds.Top >= mapBounds.Bottom + 10 &&
+                Math.Abs(mapBounds.Left - routeBounds.Left) <= 2 && Math.Abs(map.ActualWidth - route.ActualWidth) <= 4,
+                scenario + ": the MTR table follows the full-width map without overlap.");
+        }
+        else
+        {
+            Require(routeBounds.Left >= mapBounds.Right + 10 && Math.Abs(mapBounds.Top - routeBounds.Top) <= 2,
+                scenario + ": the map and MTR table occupy separate columns without overlap.");
+        }
+
+        Require(description.TextWrapping == TextWrapping.Wrap && description.TextTrimming == TextTrimming.None &&
+            description.MaxLines == 0 && description.IsTextSelectionEnabled && !string.IsNullOrWhiteSpace(description.Text),
+            scenario + ": full node/route details remain wrapping, selectable and untruncated.");
+        // Below-the-fold content is expected in the stacked layout. Verify that
+        // users can reach it instead of constraining the card to a fixed page Y.
+        if (card.ActualHeight <= outerScroll.ViewportHeight)
+        {
+            await BringFullyIntoView(card, "complete map, MTR table and details card");
+        }
+        else
+        {
+            await BringFullyIntoView(map, "complete map viewport");
+            await Capture(page, "netmap-" + scenario + "-map-visible.png");
+            await BringFullyIntoView(route, "MTR table viewport");
+            await Capture(page, "netmap-" + scenario + "-mtr-visible.png");
+            await BringFullyIntoView(description, "full node/route details");
+            await Capture(page, "netmap-" + scenario + "-details-visible.png");
+            await BringFullyIntoView(map, "complete map viewport");
+        }
+
+        File.AppendAllText(Path.Combine(Output, "page-smoke.log"),
+            scenario + $": contentWidth={body.ActualWidth:0.#}, layout={(stacked ? "stacked" : "columns")}, cardHeight={card.ActualHeight:0.#}, viewport={outerScroll.ViewportWidth:0.#}x{outerScroll.ViewportHeight:0.#}, pageScroll={outerScroll.VerticalOffset:0.#}/{outerScroll.ScrollableHeight:0.#}.\n");
+
+        async Task BringFullyIntoView(FrameworkElement element, string label)
+        {
+            element.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0 });
+            await Task.Delay(100);
+            page.UpdateLayout();
+            var bounds = Bounds(element, outerScroll);
+            Require(bounds.Left >= -1 && bounds.Right <= outerScroll.ViewportWidth + 1 &&
+                bounds.Top >= -1 && bounds.Bottom <= outerScroll.ViewportHeight + 1,
+                scenario + $": {label} is reachable without clipping: bounds={bounds}, viewport={outerScroll.ViewportWidth:0.#}x{outerScroll.ViewportHeight:0.#}.");
+        }
+
+        static Windows.Foundation.Rect Bounds(FrameworkElement element, UIElement relativeTo) =>
+            element.TransformToVisual(relativeTo).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
+    }
+
+    private static void CheckMapHeader(NetMapPage page, string scenario)
+    {
+        var header = (Grid)page.FindName("MapHeader");
+        var title = (FrameworkElement)page.FindName("MapHeaderTitle");
+        var target = (FrameworkElement)page.FindName("RouteTargetPill");
+        var metrics = (FrameworkElement)page.FindName("TargetMetricsPill");
+        var states = VisualStateManager.GetVisualStateGroups((FrameworkElement)page.Content)
+            .Single(group => group.Name == "MapHeaderLayoutStates");
+        var trigger = states.States.Single(state => state.Name == "MapHeaderNarrow").StateTriggers[0];
+        var triggerTarget = trigger.GetType().GetProperty("TargetElement").GetValue(trigger) as FrameworkElement;
+        File.AppendAllText(Path.Combine(Output, "page-smoke.log"),
+            scenario + $": headerLayout page={page.ActualWidth:0.#}, header={header.ActualWidth:0.#}x{header.ActualHeight:0.#}, state={states.CurrentState?.Name ?? "none"}, triggerTarget={triggerTarget?.Name ?? "null"}/{triggerTarget?.ActualWidth:0.#}, title={Layout(title)}, target={Layout(target)}, metrics={Layout(metrics)}.\n");
+        Require(ReferenceEquals(triggerTarget, header), scenario + ": header trigger observes the actual header width.");
+        foreach (var name in new[] { "MapHeaderTitleText", "RouteTargetText", "TargetLatencyText" })
+        {
+            var text = (TextBlock)page.FindName(name);
+            var bounds = text.TransformToVisual(header).TransformBounds(new Windows.Foundation.Rect(0, 0, text.ActualWidth, text.ActualHeight));
+            Require(text.ActualWidth > 0 && text.ActualHeight > 0 && !text.IsTextTrimmed && text.TextWrapping == TextWrapping.Wrap &&
+                bounds.Left >= -1 && bounds.Right <= header.ActualWidth + 1 && bounds.Top >= -1 && bounds.Bottom <= header.ActualHeight + 1,
+                scenario + $": complete {name} remains visible within the responsive map header ({bounds}, header={header.ActualWidth:0.#}x{header.ActualHeight:0.#}).");
+        }
+
+        Require(((TextBlock)page.FindName("RouteTargetText")).Text == page.ViewModel.RouteTarget &&
+            ((TextBlock)page.FindName("TargetLatencyText")).Text == page.ViewModel.TargetLatency,
+            scenario + ": the header retains the full target address and measured statistics.");
+        double bottom = Math.Max(title.TransformToVisual(header).TransformPoint(new Windows.Foundation.Point(0, title.ActualHeight)).Y,
+            target.TransformToVisual(header).TransformPoint(new Windows.Foundation.Point(0, target.ActualHeight)).Y);
+        Require(metrics.TransformToVisual(header).TransformPoint(new()).Y >= bottom + 7,
+            scenario + ": target statistics occupy their own row without covering the title or address.");
+        if (header.ActualWidth <= 860)
+        {
+            Require(states.CurrentState?.Name == "MapHeaderNarrow" && Grid.GetColumnSpan(title) == 2 &&
+                Grid.GetRow(target) == 1 && Grid.GetColumn(target) == 0 && Grid.GetColumnSpan(target) == 2 && Grid.GetRow(metrics) == 2,
+                scenario + ": narrow header applies its full-width stacked grid positions.");
+            Require(target.TransformToVisual(header).TransformPoint(new()).Y >= title.TransformToVisual(header).TransformPoint(new(0, title.ActualHeight)).Y + 7,
+                scenario + ": a narrow header places the full target address below its title.");
+        }
+        else
+        {
+            Require(states.CurrentState?.Name == "MapHeaderWide" && Grid.GetColumnSpan(title) == 1 &&
+                Grid.GetRow(target) == 0 && Grid.GetColumn(target) == 1 && Grid.GetColumnSpan(target) == 1 && Grid.GetRow(metrics) == 1,
+                scenario + ": wide header restores its two-column title and address layout.");
+        }
+
+        string Layout(FrameworkElement element) =>
+            $"r{Grid.GetRow(element)}c{Grid.GetColumn(element)}s{Grid.GetColumnSpan(element)}:{element.TransformToVisual(header).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight))}";
     }
 
     private static T FindChild<T>(DependencyObject parent) where T : DependencyObject

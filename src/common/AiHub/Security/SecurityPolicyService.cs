@@ -15,7 +15,7 @@ using Kit.AiHub.Storage;
 public sealed class SecurityPolicyService
 {
     public const int MaximumPolicyBytes = 64 * 1024;
-    public const string CurrentTemplateVersion = "2";
+    public const string CurrentTemplateVersion = "3";
     private static readonly UTF8Encoding PolicyEncoding = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private readonly AiHubStorageFiles _files;
     private readonly string _pluginPackagesDirectory;
@@ -106,13 +106,15 @@ public sealed class SecurityPolicyService
             bool isLegacy = taskId switch
             {
                 "security-audit" => PolicyHash(content) == "25EBA8FF5CA6E01BC5F80D394729D84196469C9E2FE7B2BA41356F98C5C8C099"
-                    || content == NormalizePolicy(TaskPolicyDefaults.PreviousSecurityAuditInstructions),
+                    || content == NormalizePolicy(TaskPolicyDefaults.PreviousSecurityAuditInstructions)
+                    || content == NormalizePolicy(TaskPolicyDefaults.Version2SecurityAuditInstructions),
                 "system-optimization" => content == TaskPolicyDefaults.LegacySystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.PreviousSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.AiReviewedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.GroupedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.ProjectSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
-                    content == NormalizePolicy(TaskPolicyDefaults.SnapshotSystemOptimizationInstructions),
+                    content == NormalizePolicy(TaskPolicyDefaults.SnapshotSystemOptimizationInstructions) ||
+                    content == NormalizePolicy(TaskPolicyDefaults.Version2SystemOptimizationInstructions),
                 SelfTestPolicy.TaskId => content == NormalizePolicy(SelfTestPolicy.PreviousInstructions),
                 _ => false,
             };

@@ -20,6 +20,29 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public sealed class OptimizationAnalysisTests
 {
     [TestMethod]
+    [DataRow("Pictures", true)]
+    [DataRow("Documents", false)]
+    [DataRow("../Pictures", false)]
+    [DataRow("pictures", false)]
+    public async Task PictureRecommendationsMustKeepTheHostCategory(string target, bool expectedSuccess)
+    {
+        using var engine = new FakeEngine { Edit = output => output.Recommendations[0].TargetRelative = target };
+        var item = Candidate("move");
+        item.FilePath = @"C:\private-name\photo.JPG";
+        item.FileName = "photo.JPG";
+        item.Category = "Pictures";
+        item.TargetRelativePath = "Pictures";
+        var result = await new OptimizationAnalysisService(engine).AnalyzeAsync([item], "en-US");
+
+        Assert.AreEqual(expectedSuccess, result.IsSuccess);
+        Assert.AreEqual(expectedSuccess, item.IsSelected);
+        Assert.AreEqual("Pictures", engine.Inputs.Single().CategoryHint);
+        Assert.AreEqual("download-extension", engine.Inputs.Single().Evidence);
+        Assert.AreEqual(10, engine.Inputs.Single().MinimumAgeMinutes);
+        Assert.AreEqual("Pictures", item.TargetRelativePath, "AI must never redirect the host's picture destination.");
+    }
+
+    [TestMethod]
     public async Task CacheGroupsReviewOneScopeAndExpandOnlyItsOriginalSnapshot()
     {
         using var engine = new FakeEngine();

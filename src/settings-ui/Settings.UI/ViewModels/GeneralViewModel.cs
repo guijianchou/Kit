@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
-using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
@@ -21,13 +20,14 @@ using Kit.Settings.UI.Library.Interfaces;
 using Kit.Settings.UI.Library.Utilities;
 using Kit.Settings.UI.Library.ViewModels.Commands;
 using Kit.Settings.UI.SerializationContext;
+using Kit.Settings.UI.Services;
 using ManagedCommon;
 
 namespace Kit.Settings.UI.ViewModels
 {
     using GPOWrapper = global::Kit.GPOWrapper.GPOWrapper;
 
-    public partial class GeneralViewModel : PageViewModelBase
+    public partial class GeneralViewModel : PageViewModelBase, ILiveLocalizable
     {
         private const bool IsDataDiagnosticsEnabledInKit = false;
         private const int ManualUpdateCheckTimeoutMs = 30000;
@@ -41,6 +41,9 @@ namespace Kit.Settings.UI.ViewModels
         public ButtonClickCommand CheckForUpdatesEventHandler { get; set; }
 
         public Microsoft.Windows.ApplicationModel.Resources.ResourceLoader ResourceLoader { get; set; }
+
+        private readonly Action _applyAppearance;
+        private readonly Action<string> _applyLanguage;
 
         private AiHubViewModel _aiServices;
 
@@ -78,7 +81,8 @@ namespace Kit.Settings.UI.ViewModels
 
         private ISettingsRepository<GeneralSettings> _settingsRepository;
         private Microsoft.UI.Dispatching.DispatcherQueue _dispatcherQueue;
-        private IFileSystemWatcher _fileWatcher;
+        private IDisposable _updateStateSubscription;
+        private bool _updateStateDisposed;
         private bool _deferredStartupMaintenanceQueued;
         private bool _backupRestoreOperationInProgress;
         private int _manualUpdateCheckRequestId;
@@ -88,8 +92,10 @@ namespace Kit.Settings.UI.ViewModels
 
         private SettingsBackupAndRestoreUtils settingsBackupAndRestoreUtils = SettingsBackupAndRestoreUtils.Instance;
 
-        public GeneralViewModel(ISettingsRepository<GeneralSettings> settingsRepository, string runAsAdminText, string runAsUserText, bool isElevated, bool isAdmin, Func<string, int> ipcMSGCallBackFunc, Func<string, int> ipcMSGRestartAsAdminMSGCallBackFunc, Func<string, int> ipcMSGCheckForUpdatesCallBackFunc, string configFileSubfolder = "", Action dispatcherAction = null, Action hideBackupAndRestoreMessageAreaAction = null, Action<int> doBackupAndRestoreDryRun = null, Func<Task<string>> pickSingleFolderDialog = null, Microsoft.Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = null)
+        public GeneralViewModel(ISettingsRepository<GeneralSettings> settingsRepository, string runAsAdminText, string runAsUserText, bool isElevated, bool isAdmin, Func<string, int> ipcMSGCallBackFunc, Func<string, int> ipcMSGRestartAsAdminMSGCallBackFunc, Func<string, int> ipcMSGCheckForUpdatesCallBackFunc, string configFileSubfolder = "", Action dispatcherAction = null, Action hideBackupAndRestoreMessageAreaAction = null, Action<int> doBackupAndRestoreDryRun = null, Func<Task<string>> pickSingleFolderDialog = null, Microsoft.Windows.ApplicationModel.Resources.ResourceLoader resourceLoader = null, string appliedUiFontFamily = null, int? appliedUiFontSize = null, Action applyAppearance = null, Action<string> applyLanguage = null)
         {
+            _applyAppearance = applyAppearance ?? AppearanceService.RequestApply;
+            _applyLanguage = applyLanguage ?? AppearanceService.RequestLanguage;
             CheckForUpdatesEventHandler = new ButtonClickCommand(CheckForUpdatesClick);
             InitializePortableUpdateCommands();
             RestartElevatedButtonEventHandler = new ButtonClickCommand(RestartElevated);
@@ -166,6 +172,8 @@ namespace Kit.Settings.UI.ViewModels
             _runElevated = GeneralSettingsConfig.RunElevated;
             _enableWarningsElevatedApps = GeneralSettingsConfig.EnableWarningsElevatedApps;
             _enableQuickAccess = GeneralSettingsConfig.EnableQuickAccess;
+            _uiFontFamily = GeneralSettingsConfig.UiFontFamily;
+            _uiFontSize = GeneralSettingsConfig.UiFontSize;
 
             RunningAsUserDefaultText = runAsUserText;
             RunningAsAdminDefaultText = runAsAdminText;
@@ -184,12 +192,7 @@ namespace Kit.Settings.UI.ViewModels
 
             if (dispatcherAction != null)
             {
-                _fileWatcher = Helper.GetFileWatcher(string.Empty, UpdatingSettings.SettingsFile, dispatcherAction);
-
-                // The updater atomically renames a flushed state file into place.
-                _fileWatcher.NotifyFilter |= NotifyFilters.FileName;
-                _fileWatcher.Renamed += (_, _) => dispatcherAction();
-                _fileWatcher.Created += (_, _) => dispatcherAction();
+                _updateStateSubscription = UpdateStateSource.Current.Subscribe(_ => dispatcherAction());
             }
 
             InitializeLanguages();
@@ -219,6 +222,8 @@ namespace Kit.Settings.UI.ViewModels
         private bool _enableWarningsElevatedApps;
         private bool _enableQuickAccess;
         private int _themeIndex;
+        private string _uiFontFamily;
+        private int _uiFontSize;
 
         private bool _newUpdatesToastIsGpoDisabled;
         private bool _autoDownloadUpdatesIsGpoDisabled;
@@ -242,8 +247,7 @@ namespace Kit.Settings.UI.ViewModels
         private string _backupRestoreMessageSeverity;
 
         private int _languagesIndex;
-        private int _initLanguagesIndex;
-        private bool _languageChanged;
+        private bool _refreshingLanguages;
         private bool _enableLogging;
         private int _logLevelIndex;
 
@@ -1086,6 +1090,60 @@ namespace Kit.Settings.UI.ViewModels
             }
         }
 
+        public string UiFontFamily => _uiFontFamily;
+
+        public int FontFamilyIndex
+        {
+            get => _uiFontFamily == GeneralSettings.NotoSansScUiFontFamily ? 1 : 0;
+            set
+            {
+                if (value < 0 || value > 1 || value == FontFamilyIndex)
+                {
+                    return;
+                }
+
+                _uiFontFamily = value == 1 ? GeneralSettings.NotoSansScUiFontFamily : GeneralSettings.DefaultUiFontFamily;
+                GeneralSettingsConfig.UiFontFamily = _uiFontFamily;
+                OnPropertyChanged(nameof(UiFontFamily));
+                NotifyTypographyChanged();
+                NotifyPropertyChanged();
+                _applyAppearance();
+            }
+        }
+
+        public double UiFontSize
+        {
+            get => _uiFontSize;
+            set
+            {
+                if (!double.IsFinite(value) || value < GeneralSettings.MinimumUiFontSize ||
+                    value > GeneralSettings.MaximumUiFontSize || value != Math.Truncate(value))
+                {
+                    OnPropertyChanged(nameof(UiFontSize));
+                    return;
+                }
+
+                if (_uiFontSize != (int)value)
+                {
+                    _uiFontSize = (int)value;
+                    GeneralSettingsConfig.UiFontSize = _uiFontSize;
+                    NotifyTypographyChanged();
+                    NotifyPropertyChanged();
+                    _applyAppearance();
+                }
+            }
+        }
+
+        public bool TypographyChanged => false;
+
+        public bool AppearanceRestartRequired => false;
+
+        private void NotifyTypographyChanged()
+        {
+            OnPropertyChanged(nameof(TypographyChanged));
+            OnPropertyChanged(nameof(AppearanceRestartRequired));
+        }
+
         public ObservableCollection<LanguageModel> Languages { get; } = new ObservableCollection<LanguageModel>();
 
         public int LanguagesIndex
@@ -1097,19 +1155,12 @@ namespace Kit.Settings.UI.ViewModels
 
             set
             {
-                if (_languagesIndex != value)
+                if (!_refreshingLanguages && value >= 0 && value < Languages.Count && _languagesIndex != value)
                 {
                     _languagesIndex = value;
                     OnPropertyChanged(nameof(LanguagesIndex));
-                    if (value >= 0 && value < Languages.Count)
-                    {
-                        NotifyLanguageChanged();
-                        LanguageChanged = _initLanguagesIndex != value;
-                    }
-                    else
-                    {
-                        LanguageChanged = false;
-                    }
+                    NotifyLanguageChanged();
+                    _applyLanguage(Languages[value].Tag);
                 }
             }
         }
@@ -1118,16 +1169,13 @@ namespace Kit.Settings.UI.ViewModels
         {
             get
             {
-                return _languageChanged;
+                return false;
             }
 
             set
             {
-                if (_languageChanged != value)
-                {
-                    _languageChanged = value;
-                    OnPropertyChanged(nameof(LanguageChanged));
-                }
+                OnPropertyChanged(nameof(LanguageChanged));
+                OnPropertyChanged(nameof(AppearanceRestartRequired));
             }
         }
 
@@ -1449,6 +1497,19 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RefreshUpdatingState()
         {
+            if (_updateStateDisposed)
+            {
+                return;
+            }
+
+            // The file observer has already read the state off the dispatcher.
+            if (_updateStateSubscription != null && UpdateStateSource.Current.Snapshot is { } snapshot)
+            {
+                Interlocked.Increment(ref _updateRefreshRequest);
+                RefreshUpdatingState(snapshot);
+                return;
+            }
+
             _ = RefreshUpdatingStateFromDiskAsync();
         }
 
@@ -1463,7 +1524,7 @@ namespace Kit.Settings.UI.ViewModels
 
             RunOnViewModelThread(() =>
             {
-                if (request == _updateRefreshRequest)
+                if (!_updateStateDisposed && request == _updateRefreshRequest)
                 {
                     RefreshUpdatingState(updateSettings);
                 }
@@ -1484,7 +1545,7 @@ namespace Kit.Settings.UI.ViewModels
 
         public void RefreshUpdatingState(UpdatingSettings updateSettings)
         {
-            if (updateSettings == null)
+            if (_updateStateDisposed || updateSettings == null)
             {
                 return;
             }
@@ -1510,7 +1571,14 @@ namespace Kit.Settings.UI.ViewModels
                     break;
 
                 case UpdatingSettings.UpdatingState.ReadyToInstall:
-                    ShowUpdateCheckMessage(GetResourceString("General_UpdateReady/Text"), "Success", true);
+                    if (canShowCachedUpdate)
+                    {
+                        ShowUpdateCheckMessage(
+                            string.IsNullOrEmpty(updateSettings.ErrorCode) ? GetResourceString("General_UpdateReady/Text") : PortableUpdateErrorMessage(updateSettings.ErrorCode),
+                            string.IsNullOrEmpty(updateSettings.ErrorCode) ? "Success" : "Error",
+                            true);
+                    }
+
                     break;
 
                 case UpdatingSettings.UpdatingState.Downloading:
@@ -1528,7 +1596,7 @@ namespace Kit.Settings.UI.ViewModels
                 case UpdatingSettings.UpdatingState.NetworkError:
                     if (canShowCachedUpdate)
                     {
-                        ShowUpdateCheckMessage(GetResourceString("General_CantCheck/Title"), "Error", true);
+                        ShowUpdateCheckMessage(PortableUpdateErrorMessage(updateSettings.ErrorCode, "General_CantCheck/Title"), "Error", true);
                     }
 
                     break;
@@ -1570,6 +1638,10 @@ namespace Kit.Settings.UI.ViewModels
             base.OnPageLoaded();
 
             RefreshUpdatingState();
+            if (_updateStateSubscription != null)
+            {
+                UpdateStateSource.Current.Refresh();
+            }
             RequestUpdateCheckedDate();
 
             RunDeferredStartupMaintenance();
@@ -1621,7 +1693,6 @@ namespace Kit.Settings.UI.ViewModels
                 selectedLanguageIndex = 0;
             }
 
-            _initLanguagesIndex = selectedLanguageIndex;
             _languagesIndex = selectedLanguageIndex;
             OnPropertyChanged(nameof(LanguagesIndex));
         }
@@ -1707,8 +1778,9 @@ namespace Kit.Settings.UI.ViewModels
 
         private void OnSettingsChanged(GeneralSettings newSettings)
         {
-            _dispatcherQueue?.TryEnqueue(() =>
+            void ApplySettings()
             {
+                bool typographyChanged = _uiFontFamily != newSettings.UiFontFamily || _uiFontSize != newSettings.UiFontSize;
                 GeneralSettingsConfig = newSettings;
 
                 if (_enableQuickAccess != newSettings.EnableQuickAccess)
@@ -1716,7 +1788,76 @@ namespace Kit.Settings.UI.ViewModels
                     _enableQuickAccess = newSettings.EnableQuickAccess;
                     OnPropertyChanged(nameof(EnableQuickAccess));
                 }
-            });
+
+                if (_uiFontFamily != newSettings.UiFontFamily)
+                {
+                    _uiFontFamily = newSettings.UiFontFamily;
+                    OnPropertyChanged(nameof(FontFamilyIndex));
+                    OnPropertyChanged(nameof(UiFontFamily));
+                }
+
+                if (_uiFontSize != newSettings.UiFontSize)
+                {
+                    _uiFontSize = newSettings.UiFontSize;
+                    OnPropertyChanged(nameof(UiFontSize));
+                }
+
+                NotifyTypographyChanged();
+                if (typographyChanged)
+                {
+                    _applyAppearance();
+                }
+            }
+
+            if (_dispatcherQueue == null || _dispatcherQueue.HasThreadAccess)
+            {
+                ApplySettings();
+            }
+            else
+            {
+                _dispatcherQueue.TryEnqueue(ApplySettings);
+            }
+        }
+
+        public void RefreshLocalization()
+        {
+            ResourceLoader = ResourceLoaderInstance.ResourceLoader;
+            RunningAsUserDefaultText = GetResourceString("GeneralSettings_RunningAsUserText");
+            RunningAsAdminDefaultText = GetResourceString("GeneralSettings_RunningAsAdminText");
+            _refreshingLanguages = true;
+            try
+            {
+                int selected = _languagesIndex;
+                for (int index = 0; index < Languages.Count; index++)
+                {
+                    var language = Languages[index];
+                    Languages[index] = new LanguageModel
+                    {
+                        Tag = language.Tag,
+                        ResourceID = language.ResourceID,
+                        Language = GetResourceString(language.ResourceID),
+                    };
+                }
+
+                _languagesIndex = selected;
+                OnPropertyChanged(nameof(LanguagesIndex));
+            }
+            finally
+            {
+                _refreshingLanguages = false;
+            }
+
+            foreach (string property in new[]
+            {
+                nameof(RunningAsText), nameof(LastSettingsBackupDate), nameof(CurrentSettingMatchText),
+                nameof(LastSettingsBackupSource), nameof(LastSettingsBackupFileName), nameof(UpdateCheckedDate),
+                nameof(RestartUpdateLabel),
+            })
+            {
+                OnPropertyChanged(property);
+            }
+
+            _aiServices?.RefreshLocalization();
         }
 
         public override void Dispose()
@@ -1727,7 +1868,9 @@ namespace Kit.Settings.UI.ViewModels
                 _settingsRepository.SettingsChanged -= OnSettingsChanged;
             }
 
-            _fileWatcher?.Dispose();
+            _updateStateDisposed = true;
+            _updateStateSubscription?.Dispose();
+            _updateStateSubscription = null;
             AiHubViewModel.ReleaseShared(_aiServices);
             _aiServices = null;
 

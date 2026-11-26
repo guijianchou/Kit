@@ -79,6 +79,65 @@ function Resolve-AbsolutePath {
     return [IO.Path]::GetFullPath($candidate)
 }
 
+function ConvertTo-PackageRelativePath {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $relative = $Path.Replace('/', '\')
+    if ([string]::IsNullOrWhiteSpace($relative) -or [IO.Path]::IsPathRooted($relative)) {
+        throw "The package contains an invalid relative path: '$Path'."
+    }
+    foreach ($part in $relative.Split([char]'\')) {
+        if ([string]::IsNullOrWhiteSpace($part) -or $part -in @('.', '..') -or
+            $part.EndsWith('.') -or $part.EndsWith(' ') -or $part.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0) {
+            throw "The package contains an invalid relative path: '$Path'."
+        }
+    }
+    return $relative
+}
+
+function Assert-ReleaseArchiveMatchesManifest {
+    param(
+        [Parameter(Mandatory)][string]$ArchivePath,
+        [Parameter(Mandatory)][Collections.Generic.Dictionary[string, object]]$ExpectedFiles
+    )
+
+    $archive = [IO.Compression.ZipFile]::OpenRead($ArchivePath)
+    try {
+        if ($archive.Entries.Count -ne $ExpectedFiles.Count) {
+            throw "The portable archive contains $($archive.Entries.Count) entries but the manifest records $($ExpectedFiles.Count)."
+        }
+        $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($zipEntry in $archive.Entries) {
+            $relative = ConvertTo-PackageRelativePath -Path $zipEntry.FullName
+            if (-not $seen.Add($relative)) {
+                throw "The portable archive contains a duplicate entry: $relative"
+            }
+            $expected = $null
+            if (-not $ExpectedFiles.TryGetValue($relative, [ref]$expected)) {
+                throw "The portable archive contains an unexpected entry: $relative"
+            }
+            if ([long]$zipEntry.Length -ne [long]$expected.Bytes) {
+                throw "Archive entry '$relative' has $($zipEntry.Length) bytes but the manifest records $($expected.Bytes)."
+            }
+            $stream = $zipEntry.Open()
+            $sha256 = [Security.Cryptography.SHA256]::Create()
+            try {
+                $actualHash = [BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '')
+            }
+            finally {
+                $sha256.Dispose()
+                $stream.Dispose()
+            }
+            if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, [string]$expected.Sha256)) {
+                throw "Archive entry '$relative' SHA-256 does not match the staged manifest."
+            }
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 function Read-VersionFromProps {
     $versionPropsPath = Join-Path $repoRoot 'src\Version.props'
     if (-not (Test-Path -LiteralPath $versionPropsPath -PathType Leaf)) {
@@ -183,15 +242,24 @@ if ([int]$manifest.FileCount -ne $manifestFiles.Count) {
     throw "The staged manifest is inconsistent: FileCount is $($manifest.FileCount) but $($manifestFiles.Count) entries are listed."
 }
 
-$actualFiles = @(Get-ChildItem -LiteralPath $SourceDirectory -Recurse -File -ErrorAction Stop)
-if ($actualFiles.Count -ne $manifestFiles.Count) {
-    throw "The staged directory has $($actualFiles.Count) files but the manifest records $($manifestFiles.Count). Re-run tools/build/Stage-Release.ps1."
-}
+$expectedFiles = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($entry in $manifestFiles) {
-    $relative = [string]$entry.Path
-    if ([string]::IsNullOrWhiteSpace($relative)) {
-        throw 'The staged manifest contains an entry without a path.'
+    $relative = ConvertTo-PackageRelativePath -Path ([string]$entry.Path)
+    if ($expectedFiles.ContainsKey($relative)) {
+        throw "The staged manifest contains a duplicate path: $relative"
     }
+    if ([string]$entry.Sha256 -cnotmatch '\A[0-9a-fA-F]{64}\z') {
+        throw "The staged manifest contains an invalid SHA-256 for '$relative'."
+    }
+    $expectedFiles.Add($relative, $entry)
+}
+
+$actualFiles = @(Get-ChildItem -LiteralPath $SourceDirectory -Recurse -File -ErrorAction Stop)
+if ($actualFiles.Count -ne $expectedFiles.Count) {
+    throw "The staged directory has $($actualFiles.Count) files but the manifest records $($expectedFiles.Count). Re-run tools/build/Stage-Release.ps1."
+}
+foreach ($relative in $expectedFiles.Keys) {
+    $entry = $expectedFiles[$relative]
     $fullPath = Join-Path $SourceDirectory $relative
     if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
         throw "The staged manifest lists a missing file: $relative"
@@ -199,6 +267,10 @@ foreach ($entry in $manifestFiles) {
     $length = (Get-Item -LiteralPath $fullPath -Force).Length
     if ([long]$length -ne [long]$entry.Bytes) {
         throw "The staged file '$relative' has $length bytes but the manifest records $($entry.Bytes). Re-run tools/build/Stage-Release.ps1."
+    }
+    $actualHash = (Get-FileHash -LiteralPath $fullPath -Algorithm SHA256).Hash
+    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($actualHash, [string]$entry.Sha256)) {
+        throw "The staged file '$relative' SHA-256 does not match the staged manifest. Re-run tools/build/Stage-Release.ps1."
     }
 }
 
@@ -232,30 +304,8 @@ finally {
 }
 Write-Host ("Archive created in {0:N1}s: {1:N0} bytes" -f $stopwatch.Elapsed.TotalSeconds, (Get-Item -LiteralPath $archivePath).Length)
 
-$expectedSizes = [Collections.Generic.Dictionary[string, long]]::new([StringComparer]::Ordinal)
-foreach ($entry in $manifestFiles) {
-    $expectedSizes[[string]$entry.Path] = [long]$entry.Bytes
-}
-$archive = [IO.Compression.ZipFile]::OpenRead($archivePath)
-try {
-    if ($archive.Entries.Count -ne $expectedSizes.Count) {
-        throw "The portable archive contains $($archive.Entries.Count) entries but the manifest records $($expectedSizes.Count)."
-    }
-    foreach ($zipEntry in $archive.Entries) {
-        $relative = $zipEntry.FullName -replace '/', '\'
-        $expectedSize = [long]0
-        if (-not $expectedSizes.TryGetValue($relative, [ref]$expectedSize)) {
-            throw "The portable archive contains an unexpected entry: $relative"
-        }
-        if ([long]$zipEntry.Length -ne $expectedSize) {
-            throw "Archive entry '$relative' has $($zipEntry.Length) bytes but the manifest records $expectedSize."
-        }
-    }
-}
-finally {
-    $archive.Dispose()
-}
-Write-Host "Verified $($manifestFiles.Count) archive entries against the staged manifest."
+Assert-ReleaseArchiveMatchesManifest -ArchivePath $archivePath -ExpectedFiles $expectedFiles
+Write-Host "Verified $($manifestFiles.Count) archive entry sizes and SHA-256 hashes against the staged manifest."
 
 $archiveBytes = (Get-Item -LiteralPath $archivePath).Length
 $archiveSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()

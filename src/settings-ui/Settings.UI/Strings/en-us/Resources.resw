@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <root xmlns:ns1="urn:schemas-microsoft-com:xml-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:schema id="root">
     <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -74,6 +74,104 @@
     <value>Settings</value>
     <comment>Navigation view item name for Settings</comment>
   </data>
+  <data name="Shell_AiUsage.Content" xml:space="preserve"><value>AI usage</value></data>
+  <data name="Shell_AiUsageTitle.Text" xml:space="preserve"><value>AI usage</value></data>
+  <data name="Shell_AiUsageScope.Text" xml:space="preserve"><value>This Kit session</value></data>
+  <data name="Shell_AiUsageInput.Text" xml:space="preserve"><value>Input tokens</value></data>
+  <data name="Shell_AiUsageOutput.Text" xml:space="preserve"><value>Output tokens</value></data>
+  <data name="Shell_AiUsageCacheRead.Text" xml:space="preserve"><value>Cached input</value></data>
+  <data name="Shell_AiUsageCacheWrite.Text" xml:space="preserve"><value>Cache write</value></data>
+  <data name="Shell_AiUsageNotStarted" xml:space="preserve"><value>No Codex tasks in this session yet.</value></data>
+  <data name="Shell_AiUsageNotReported" xml:space="preserve"><value>Not reported</value></data>
+  <data name="Shell_AiUsageTasksFormat" xml:space="preserve"><value>{0:N0} completed tasks · {1:N0} succeeded · {2:N0} failed</value></data>
+  <data name="Shell_AiUsageOutcomesFormat" xml:space="preserve"><value>{0:N0} cancelled · {1:N0} timed out · {2:N0} partial · {3:N0} retries</value></data>
+  <data name="Shell_AiUsageCoverageFormat" xml:space="preserve"><value>Reported by {0:N0} of {1:N0} calls</value></data>
+  <data name="Shell_AiUsageCodexBadge.Text" xml:space="preserve"><value>Codex</value></data>
+  <data name="Shell_AiUsageCodexOnlyFooter.Text" xml:space="preserve"><value>Codex only</value></data>
+  <data name="Shell_AiUsagePiNotice.Text" xml:space="preserve"><value>Currently showing Codex usage only. Pi is not adapted yet.</value></data>
+  <data name="Shell_AiUsageIdle" xml:space="preserve"><value>Idle</value></data>
+  <data name="Shell_AiUsageLiveFormat" xml:space="preserve"><value>Active · {0:N0}</value></data>
+  <data name="Shell_AiUsageRefreshTooltip" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Shell_AiUsageClearTooltip" xml:space="preserve"><value>Clear saved history</value></data>
+  <data name="Shell_AiUsageClearConfirmPrompt.Text" xml:space="preserve"><value>Clear all saved Codex usage history?</value></data>
+  <data name="Shell_AiUsageClearConfirmButton.Content" xml:space="preserve"><value>Clear</value></data>
+  <data name="Shell_AiUsageClearCancelButton.Content" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Shell_AiUsageRangeAll.Content" xml:space="preserve"><value>All</value></data>
+  <data name="Shell_AiUsageRangeSession.Content" xml:space="preserve"><value>Session</value></data>
+  <data name="Shell_AiUsageRangeToday.Content" xml:space="preserve"><value>Today</value></data>
+  <data name="Shell_AiUsageRange7d.Content" xml:space="preserve"><value>7d</value></data>
+  <data name="Shell_AiUsageRange30d.Content" xml:space="preserve"><value>30d</value></data>
+  <data name="Shell_AiUsageTabOverview" xml:space="preserve"><value>Overview</value></data>
+  <data name="Shell_AiUsageTabModels" xml:space="preserve"><value>Models</value></data>
+  <data name="Shell_AiUsageTabModelsFormat" xml:space="preserve"><value>Models ({0:N0})</value></data>
+  <data name="Shell_AiUsageTabActivity" xml:space="preserve"><value>Activity</value></data>
+  <data name="Shell_AiUsageTabActivityFormat" xml:space="preserve"><value>Activity ({0:N0})</value></data>
+  <data name="Shell_AiUsageTotalTokensLabel.Text" xml:space="preserve"><value>Total tokens</value></data>
+  <data name="Shell_AiUsageCacheHitLabel.Text" xml:space="preserve"><value>Cache hit</value></data>
+  <data name="Shell_AiUsageTasksCallsLabel.Text" xml:space="preserve"><value>Tasks &amp; calls</value></data>
+  <data name="Shell_AiUsageAvgLatencyLabel.Text" xml:space="preserve"><value>Avg duration</value></data>
+  <data name="Shell_AiUsageTokenBreakdownTitle.Text" xml:space="preserve"><value>Codex token breakdown</value></data>
+  <data name="Shell_AiUsageUncachedLegend.Text" xml:space="preserve"><value>Uncached in</value></data>
+  <data name="Shell_AiUsageCachedLegend.Text" xml:space="preserve"><value>Cached in</value></data>
+  <data name="Shell_AiUsageOutputLegend.Text" xml:space="preserve"><value>Output</value></data>
+  <data name="Shell_AiUsageUncachedSubFormat" xml:space="preserve"><value>{0:N0} uncached</value></data>
+  <data name="Shell_AiUsageCachedSubFormat" xml:space="preserve"><value>{0:N0} cached</value></data>
+  <data name="Shell_AiUsageCallsSplitFormat" xml:space="preserve"><value>{0:N0} calls · Main {1:N0} · Fallback {2:N0}</value></data>
+  <data name="Shell_AiUsageDurationSubFormat" xml:space="preserve"><value>Total {0} · {1:N0} retries</value></data>
+  <data name="Shell_AiUsageNoUsageInRange" xml:space="preserve"><value>No Codex usage recorded in this range.</value></data>
+  <data name="Shell_AiUsageTopModelsTitle.Text" xml:space="preserve"><value>By model</value></data>
+  <data name="Shell_AiUsageViewAllModels.Content" xml:space="preserve"><value>All models</value></data>
+  <data name="Shell_AiUsageByTaskTitle.Text" xml:space="preserve"><value>By task</value></data>
+  <data name="Shell_AiUsageModelsHeader.Text" xml:space="preserve"><value>Codex token and call statistics grouped by model</value></data>
+  <data name="Shell_AiUsageUnknownModel" xml:space="preserve"><value>Legacy / unknown model</value></data>
+  <data name="Shell_AiUsageModelTokensFormat" xml:space="preserve"><value>In {0:N0} (Uncached {1:N0} · Cached {2}) · Out {3:N0}</value></data>
+  <data name="Shell_AiUsageModelMetaFormat" xml:space="preserve"><value>Calls {0:N0} (Main {1:N0} · Fallback {2:N0}) · {3:N0} ok / {4:N0} fail · Retries {5:N0}</value></data>
+  <data name="Shell_AiUsageModelDurationFormat" xml:space="preserve"><value>Avg {0} · Last {1}</value></data>
+  <data name="Shell_AiUsageLegacyModelsTitle" xml:space="preserve"><value>Legacy history (model not recorded)</value></data>
+  <data name="Shell_AiUsageLegacyModelsHint" xml:space="preserve"><value>Imported from logs created before SQLite model tracking. Excluded from model share percentages above; new Codex calls record full model and token details.</value></data>
+  <data name="Shell_AiUsageLegacyModelsStatsFormat" xml:space="preserve"><value>{0:N0} calls · {1:N0} tokens (In {2:N0} · Cached {3:N0} · Out {4:N0})</value></data>
+  <data name="Shell_AiUsageModelSourceCodex" xml:space="preserve"><value>Codex reported</value></data>
+  <data name="Shell_AiUsageModelSourceConfig" xml:space="preserve"><value>Configured</value></data>
+  <data name="Shell_AiUsageMetricInputShort" xml:space="preserve"><value>Input</value></data>
+  <data name="Shell_AiUsageMetricCachedShort" xml:space="preserve"><value>Cached</value></data>
+  <data name="Shell_AiUsageMetricOutputShort" xml:space="preserve"><value>Output</value></data>
+  <data name="Shell_AiUsageUncachedTinyFormat" xml:space="preserve"><value>Uncached {0:N0}</value></data>
+  <data name="Shell_AiUsageCacheHitTinyFormat" xml:space="preserve"><value>{0:F1}% hit</value></data>
+  <data name="Shell_AiUsageQueueShortFormat" xml:space="preserve"><value>Queue {0}</value></data>
+  <data name="Shell_AiUsageItemsShortFormat" xml:space="preserve"><value>{0:N0} items</value></data>
+  <data name="Shell_AiUsageCtxShortFormat" xml:space="preserve"><value>{0} ctx</value></data>
+  <data name="Shell_AiUsageActiveSectionTitle.Text" xml:space="preserve"><value>Active now</value></data>
+  <data name="Shell_AiUsageNoActiveSessions.Text" xml:space="preserve"><value>No active Codex tasks right now.</value></data>
+  <data name="Shell_AiUsageTimelineSectionTitle.Text" xml:space="preserve"><value>Session activity</value></data>
+  <data name="Shell_AiUsageNoSessionEvents.Text" xml:space="preserve"><value>No Codex activity in this session yet.</value></data>
+  <data name="Shell_AiUsageRecentCallsSectionTitle.Text" xml:space="preserve"><value>Recent Codex calls</value></data>
+  <data name="Shell_AiUsageNoRecentCalls.Text" xml:space="preserve"><value>No saved Codex calls in this range.</value></data>
+  <data name="Shell_AiUsageFooterFormat" xml:space="preserve"><value>SQLite · {0:N0} sessions · {1:N0} calls</value></data>
+  <data name="Shell_AiUsageFooterEmpty" xml:space="preserve"><value>SQLite · Ready</value></data>
+  <data name="Shell_AiUsageFooterUnavailable" xml:space="preserve"><value>SQLite unavailable</value></data>
+  <data name="Shell_AiUsageBatchFormat" xml:space="preserve"><value>Batch {0}/{1}</value></data>
+  <data name="Shell_AiUsageRetryFormat" xml:space="preserve"><value>Retry #{0}</value></data>
+  <data name="Shell_AiUsageRouteMain" xml:space="preserve"><value>Main</value></data>
+  <data name="Shell_AiUsageRouteFallback" xml:space="preserve"><value>Fallback</value></data>
+  <data name="Shell_AiUsagePhasePreparing" xml:space="preserve"><value>Preparing</value></data>
+  <data name="Shell_AiUsagePhaseQueued" xml:space="preserve"><value>Queued</value></data>
+  <data name="Shell_AiUsagePhaseWaiting" xml:space="preserve"><value>Starting</value></data>
+  <data name="Shell_AiUsagePhaseStarted" xml:space="preserve"><value>Running</value></data>
+  <data name="Shell_AiUsagePhaseReasoning" xml:space="preserve"><value>Reasoning</value></data>
+  <data name="Shell_AiUsagePhaseResponding" xml:space="preserve"><value>Responding</value></data>
+  <data name="Shell_AiUsagePhaseRetrying" xml:space="preserve"><value>Retrying</value></data>
+  <data name="Shell_AiUsagePhaseValidating" xml:space="preserve"><value>Validating</value></data>
+  <data name="Shell_AiUsagePhaseFailover" xml:space="preserve"><value>Failover</value></data>
+  <data name="Shell_AiUsagePhaseFailed" xml:space="preserve"><value>Failed</value></data>
+  <data name="Shell_AiUsageOutcomeSucceeded" xml:space="preserve"><value>Succeeded</value></data>
+  <data name="Shell_AiUsageOutcomeFailed" xml:space="preserve"><value>Failed</value></data>
+  <data name="Shell_AiUsageOutcomeCancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Shell_AiUsageOutcomeTimeout" xml:space="preserve"><value>Timed out</value></data>
+  <data name="Shell_AiUsageOutcomePartial" xml:space="preserve"><value>Partial</value></data>
+  <data name="Shell_AiUsageTaskSecurityAudit" xml:space="preserve"><value>AI Hub · Security audit</value></data>
+  <data name="Shell_AiUsageTaskSystemOptimization" xml:space="preserve"><value>AI Hub · System optimization</value></data>
+  <data name="Shell_AiUsageTaskRouteAnalysis" xml:space="preserve"><value>NetMap · Route analysis</value></data>
+  <data name="Shell_AiUsageTaskSelfTest" xml:space="preserve"><value>AI Hub · Self-test</value></data>
   <data name="Shell_Awake.Content" xml:space="preserve">
     <value>Awake</value>
     <comment>{Locked}</comment>
@@ -204,10 +302,7 @@
   <data name="General_VersionAndUpdate.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Version and updates</value>
   </data>
-  <data name="General.ModuleDescription" xml:space="preserve">
-    <value>Personalize Kit, manage startup and appearance, and configure shared services.</value>
-    <comment>Kit is the local project name. PowerToys is the upstream project name.</comment>
-  </data>
+
   <data name="General_About.Header" xml:space="preserve">
     <value>About</value>
   </data>
@@ -485,7 +580,7 @@
     <value>Kit matches your Windows language by default</value>
   </data>
   <data name="LanguageRestartInfo.Title" xml:space="preserve">
-    <value>Restart Kit to apply language changes</value>
+    <value>Restart Kit to apply these changes</value>
   </data>
   <data name="LanguageRestartInfoButton.Content" xml:space="preserve">
     <value>Restart</value>
@@ -1414,9 +1509,6 @@
     <data name="AiHub_KernelCard.Header" xml:space="preserve">
     <value>AI execution kernel</value>
   </data>
-  <data name="AiHub_KernelCard.Description" xml:space="preserve">
-    <value>Choose a kernel, install it if needed, then apply the switch. Running tasks keep their current kernel.</value>
-  </data>
   <data name="AiHub_ApplyKernelButton.Content" xml:space="preserve">
     <value>Apply</value>
   </data>
@@ -1514,11 +1606,8 @@
   <data name="AiHub_PolicyRulesExpander.Description" xml:space="preserve">
     <value>Global security policy and task instructions (security.md and AGENTS.md)</value>
   </data>
-  <data name="Admin_Mode_Running_As.Description" xml:space="preserve">
+  <data name="General_AdminModeDescription.Text" xml:space="preserve">
     <value>Kit runs tasks as the current user. Elevation is only requested for actions that need it.</value>
-  </data>
-  <data name="Admin_Mode_Running_As.Header" xml:space="preserve">
-    <value>Running as</value>
   </data>
     <data name="AIHub_KernelCodexItem.Content" xml:space="preserve">
     <value>Codex CLI</value>
@@ -1795,6 +1884,9 @@
   </data>
   <data name="NetMap_GeoSource" xml:space="preserve">
     <value>Geography source:</value>
+  </data>
+  <data name="NetMap_CloseDetails" xml:space="preserve">
+    <value>Close details</value>
   </data>
   <data name="NetMap_Asn_NotFound" xml:space="preserve">
     <value>ASN not returned by data source</value>
@@ -3285,7 +3377,7 @@
     <value>Downloads root only</value>
   </data>
   <data name="AIHub_DownloadsDescription" xml:space="preserve">
-    <value>Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music or Video. Leave images, unknown types and incomplete downloads in place.</value>
+    <value>Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music, Video or Pictures within Downloads. Leave unknown types and incomplete downloads in place.</value>
   </data>
   <data name="AIHub_TemporaryFilesLabel" xml:space="preserve">
     <value>Caches &amp; temporary files</value>
@@ -4462,20 +4554,8 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="UDPtest_UdpAssessmentInternalError" xml:space="preserve">
     <value>Unknown / Internal Error</value>
   </data>
-  <data name="LightSwitch_ShortcutsSettingsGroup.Header" xml:space="preserve">
-    <value>Shortcuts</value>
-  </data>
-  <data name="LightSwitch_ThemeToggle_Shortcut.Header" xml:space="preserve">
-    <value>Theme toggle shortcut</value>
-  </data>
-  <data name="LightSwitch_ThemeToggle_Shortcut.Description" xml:space="preserve">
-    <value>Switch between light and dark mode</value>
-  </data>
   <data name="General_SettingsBackupAndRestore_CredentialsSkipped" xml:space="preserve">
     <value>Settings were restored. AI endpoints and credentials in this backup could not be decrypted for this Windows account. Existing endpoints and credentials were preserved; AI services remain off. Restart Kit, then review the AI configuration.</value>
-  </data>
-  <data name="LightSwitch_ShortcutInput.PlaceholderText" xml:space="preserve">
-    <value>Press a shortcut; Delete clears it</value>
   </data>
   <data name="AiHub_RetryConfigurationButton.Content" xml:space="preserve">
     <value>Retry</value>
@@ -4552,11 +4632,15 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="General_UpdateError.Text" xml:space="preserve"><value>The update could not be completed. Check your connection and free disk space, then try again.</value></data>
   <data name="General_UpdateInvalid.Text" xml:space="preserve"><value>The update package could not be verified. Download it again.</value></data>
   <data name="General_UpdateAccess.Text" xml:space="preserve"><value>Kit cannot update this folder. Move the Portable folder to a writable location and try again.</value></data>
+  <data name="General_UpdateAccessDenied.Text" xml:space="preserve"><value>Access to the update component or its files was denied. Check the Portable folder permissions and try again.</value></data>
   <data name="General_UpdateCloseFailed.Text" xml:space="preserve"><value>Some Kit processes are still running. Close them, reopen Kit, and try again.</value></data>
   <data name="General_UpdateRecoveryRequired.Text" xml:space="preserve"><value>An interrupted update needs recovery. Restore the previous version and restart Kit.</value></data>
   <data name="General_UpdateRecovered.Text" xml:space="preserve"><value>The previous version was restored. You can download the update again.</value></data>
   <data name="General_UpdateInterrupted.Text" xml:space="preserve"><value>The update was interrupted. Download it again to continue.</value></data>
-  <data name="General_UpdateHelperMissing.Text" xml:space="preserve"><value>The update component is missing or cannot start. Extract the complete Portable package and try again.</value></data>
+  <data name="General_UpdateHelperMissing.Text" xml:space="preserve"><value>The update component is missing. Extract the complete Portable package and try again.</value></data>
+  <data name="General_UpdateHelperFailed.Text" xml:space="preserve"><value>The update component could not start or stopped unexpectedly. Restart Kit and try again. If the problem continues, extract the complete Portable package again.</value></data>
+  <data name="General_UpdateHelperBusy.Text" xml:space="preserve"><value>The update component is busy. Wait a moment and try again.</value></data>
+  <data name="General_UpdateRateLimited.Text" xml:space="preserve"><value>The GitHub request limit has been reached. Wait a while before checking for updates again.</value></data>
   <data name="AIHub_WorkspaceTaskDetails" xml:space="preserve"><value>Task details</value></data>
   <data name="NetMap_CopyIpButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Copy IP address</value></data>
   <data name="NetMap_CopyIpButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Copy IP address</value></data>
@@ -4579,4 +4663,61 @@ Usage reported for {10}/{11} route attempts. Unreported usage is excluded. Conne
   <data name="AiHub_TaskAgentsCard.Description" xml:space="preserve"><value>Maximum parallel workers assigned to a single task.</value></data>
   <data name="AiHub_TaskAgentsBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Subagents per task</value></data>
   <data name="AiHub_SubagentsSummaryFormat" xml:space="preserve"><value>{0}: up to {1} analyses per task, {2} across this session</value></data>
+  <data name="General_SectionNavigationButton.Content" xml:space="preserve"><value>Go to section</value></data>
+  <data name="General_SettingsLoading.Text" xml:space="preserve"><value>Loading settings…</value></data>
+  <data name="General_SettingsLoadingRing.AutomationProperties.Name" xml:space="preserve"><value>Loading settings…</value></data>
+  <data name="General_FontFamily.Header" xml:space="preserve">
+    <value>Font</value>
+  </data>
+  <data name="General_FontFamily.Description" xml:space="preserve">
+    <value>Choose the interface font for Chinese and English.</value>
+  </data>
+  <data name="General_FontSize.Header" xml:space="preserve">
+    <value>Font size</value>
+  </data>
+  <data name="General_FontSize.Description" xml:space="preserve">
+    <value>Default: 14 px. Range: 12–20 px.</value>
+  </data>
+
+  <data name="Dashboard_NetworkDescription.Text" xml:space="preserve">
+    <value>Your direct and proxy connections.</value>
+  </data>
+  <data name="Dashboard_SystemDescription.Text" xml:space="preserve">
+    <value>Device details and current resource usage.</value>
+  </data>
+
+
+
+
+  <data name="QuickAccessTitle.Description" xml:space="preserve">
+    <value>Open your frequently used tools.</value>
+  </data>
+
+  <data name="UtilitiesHeader.Description" xml:space="preserve">
+    <value>Manage Kit utilities and their settings.</value>
+  </data>
+  <data name="Dashboard_UpdateAvailable" xml:space="preserve">
+    <value>Update available</value>
+  </data>
+  <data name="Dashboard_UpdateReady" xml:space="preserve">
+    <value>Restart to update</value>
+  </data>
+  <data name="Dashboard_UpdateDownloading" xml:space="preserve">
+    <value>Downloading update</value>
+  </data>
+  <data name="Dashboard_UpdateVerifying" xml:space="preserve">
+    <value>Verifying update</value>
+  </data>
+  <data name="Dashboard_UpdateInstalling" xml:space="preserve">
+    <value>Installing update</value>
+  </data>
+  <data name="Dashboard_UpdateCheckFailed" xml:space="preserve">
+    <value>Update check failed</value>
+  </data>
+  <data name="Dashboard_UpdateFailed" xml:space="preserve">
+    <value>Update failed</value>
+  </data>
+  <data name="Dashboard_UpdateRecovery" xml:space="preserve">
+    <value>Update needs recovery</value>
+  </data>
 </root>

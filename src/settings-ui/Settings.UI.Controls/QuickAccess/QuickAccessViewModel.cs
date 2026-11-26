@@ -22,11 +22,11 @@ namespace Kit.Settings.UI.Controls
         private readonly IQuickAccessLauncher _launcher;
         private readonly Func<ModuleType, bool> _isModuleGpoDisabled;
         private readonly Func<ModuleType, bool> _isModuleGpoEnabled;
-        private readonly ResourceLoader _resourceLoader;
         private readonly IEnumerable<ModuleType> _moduleTypes;
         private readonly Func<ModuleType, bool>? _fallbackLauncher;
         private readonly DispatcherQueue _dispatcherQueue;
         private readonly List<QuickAccessItem> _allItems = new();
+        private ResourceLoader _resourceLoader;
         private GeneralSettings _generalSettings;
         private bool _disposed;
 
@@ -140,6 +140,24 @@ namespace Kit.Settings.UI.Controls
         private void ModuleEnabledChanged()
         {
             RefreshSettings(_settingsRepository.SettingsConfig);
+        }
+
+        public void RefreshLocalization(ResourceLoader resourceLoader)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _resourceLoader = resourceLoader;
+            foreach (var item in _allItems)
+            {
+                if (item.Tag is ModuleType moduleType)
+                {
+                    item.Title = _resourceLoader.GetString(ModuleHelper.GetModuleLabelResourceName(moduleType));
+                    item.Description = GetModuleToolTip(moduleType);
+                }
+            }
         }
 
         private void RefreshItemsVisibility()

@@ -49,26 +49,26 @@
     </UserControl.Resources>
     <ItemsRepeater x:Name="DashboardView" ItemsSource="{x:Bind ItemsSource, Mode=OneWay}">
         <ItemsRepeater.Layout>
-            <StackLayout Orientation="Vertical" Spacing="2" />
+            <StackLayout Orientation="Vertical" Spacing="0" />
         </ItemsRepeater.Layout>
         <ItemsRepeater.ItemTemplate>
             <DataTemplate x:DataType="controls:ModuleListItem">
                 <tkcontrols:SettingsCard
                     MinWidth="0"
                     MinHeight="48"
-                    Margin="6,0"
-                    Padding="12,6,12,6"
+                    Margin="0"
+                    Padding="16,6"
                     tk:FrameworkElementExtensions.AncestorType="controls:ModuleList"
                     Background="Transparent"
                     BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
                     BorderThickness="{Binding (tk:FrameworkElementExtensions.Ancestor).DividerThickness, RelativeSource={RelativeSource Self}}"
                     Click="OnSettingsCardClick"
-                    CornerRadius="{StaticResource ControlCornerRadius}"
+                    CornerRadius="0"
                     IsClickEnabled="{Binding (tk:FrameworkElementExtensions.Ancestor).IsItemClickable, RelativeSource={RelativeSource Self}}"
                     Tag="{x:Bind}">
                     <tkcontrols:SettingsCard.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock VerticalAlignment="Center" Text="{x:Bind Label, Mode=OneWay}" />
+                            <TextBlock VerticalAlignment="Center" Text="{x:Bind Label, Mode=OneWay}" TextWrapping="Wrap" />
                             <!--  InfoBadge  -->
                             <InfoBadge
                                 x:Name="NewInfoBadge"
@@ -89,11 +89,12 @@
                     </tkcontrols:SettingsCard.Header>
 
                     <tkcontrols:SettingsCard.HeaderIcon>
-                        <ImageIcon Width="20" Height="20">
-                            <ImageIcon.Source>
-                                <BitmapImage DecodePixelWidth="40" UriSource="{x:Bind Icon, Mode=OneWay}" />
-                            </ImageIcon.Source>
-                        </ImageIcon>
+                        <FontIcon
+                            Width="16"
+                            Height="16"
+                            FontSize="16"
+                            AutomationProperties.AccessibilityView="Raw"
+                            Glyph="{x:Bind controls:QuickAccessList.GetModuleGlyph(Tag), Mode=OneWay}" />
                     </tkcontrols:SettingsCard.HeaderIcon>
 
                     <ToggleSwitch

@@ -111,6 +111,10 @@ public sealed class AiDiagnosticsTests
         Assert.AreEqual(2L, snapshot.MainAttempts);
         Assert.AreEqual(1L, snapshot.FallbackAttempts);
         Assert.AreEqual(2L, snapshot.KnownUsageRoutes);
+        Assert.AreEqual(2L, snapshot.ReportedInputRoutes, "An explicitly reported zero is still known usage.");
+        Assert.AreEqual(1L, snapshot.ReportedCachedInputRoutes);
+        Assert.AreEqual(1L, snapshot.ReportedCacheWriteRoutes);
+        Assert.AreEqual(1L, snapshot.ReportedOutputRoutes, "Input-only reports do not turn missing output usage into a reported zero.");
         Assert.AreEqual(100L, snapshot.InputTokens);
         Assert.AreEqual(80L, snapshot.CachedInputTokens);
         Assert.AreEqual(10L, snapshot.CacheWriteTokens);
@@ -523,6 +527,8 @@ public sealed class AiDiagnosticsTests
         Assert.IsNull(safe.Diagnostics.NativeRetryLimit);
         Assert.AreEqual(0, safe.Diagnostics.NativeRetryCount);
         Assert.AreEqual(0L, store.GetSnapshot().KnownUsageRoutes);
+        Assert.AreEqual(0L, store.GetSnapshot().ReportedInputRoutes);
+        Assert.AreEqual(0L, store.GetSnapshot().ReportedOutputRoutes);
 
         store.Record(RouteRecord() with { TotalBatches = int.MaxValue, BatchIndex = int.MaxValue, CompletedBatches = int.MaxValue });
         AiDiagnosticRecord boundedBatch = store.GetSnapshot().RecentRecords[0];

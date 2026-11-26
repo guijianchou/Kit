@@ -136,7 +136,7 @@ namespace LightSwitchServiceUnitTests
             Assert::AreEqual<DWORD>(WAIT_OBJECT_0, WaitForSingleObject(changed.get(), 5000), L"The first settings write must notify its watcher.");
         }
 
-        TEST_METHOD (StartupDefaultsMatchSettingsUIAndAllowTheFirstHotkey)
+        TEST_METHOD (StartupDefaultsMatchSettingsUIAndAllowManualThemeToggle)
         {
             Apartment apartment;
             TemporarySettings file;
@@ -159,13 +159,8 @@ namespace LightSwitchServiceUnitTests
             Assert::AreEqual(L"LightSwitch", document->GetNamedString(L"name").c_str());
             Assert::IsFalse(document->GetNamedString(L"version").empty());
             const auto properties = document->GetNamedObject(L"properties");
-            Assert::AreEqual(10u, properties.Size());
-            const auto hotkey = properties.GetNamedObject(L"toggle-theme-hotkey").GetNamedObject(L"value");
-            Assert::IsTrue(hotkey.GetNamedBoolean(L"win"));
-            Assert::IsTrue(hotkey.GetNamedBoolean(L"ctrl"));
-            Assert::IsTrue(hotkey.GetNamedBoolean(L"shift"));
-            Assert::IsFalse(hotkey.GetNamedBoolean(L"alt"));
-            Assert::AreEqual(68.0, hotkey.GetNamedNumber(L"code"));
+            Assert::AreEqual(9u, properties.Size());
+            Assert::IsFalse(properties.HasKey(L"toggle-theme-hotkey"));
             Assert::IsFalse(properties.HasKey(L"enableDarkModeProfile"));
             Assert::IsFalse(properties.HasKey(L"enableLightModeProfile"));
             Assert::IsFalse(properties.HasKey(L"darkModeProfile"));

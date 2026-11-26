@@ -11,7 +11,9 @@ namespace Kit.Settings.UI.Helpers
 
         static ResourceLoaderInstance()
         {
-            ResourceLoader = new Microsoft.Windows.ApplicationModel.Resources.ResourceLoader("Kit.Settings.pri");
+            Refresh();
         }
+
+        internal static void Refresh() => ResourceLoader = new ResourceLoader("Kit.Settings.pri");
     }
 }

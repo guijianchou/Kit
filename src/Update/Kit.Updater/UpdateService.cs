@@ -41,7 +41,7 @@ internal sealed class UpdateService(UpdateStorage storage, ReleaseClient release
                 state.State = UpdateStatus.NetworkError;
             }
 
-            state.ErrorCode = "checkFailed";
+            state.ErrorCode = (error as UpdateException)?.Code ?? "checkFailed";
         }
 
         storage.Checked(state);

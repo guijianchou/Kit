@@ -97,7 +97,7 @@ internal static class NavigationPerformanceSmoke
         NavigationService.Frame.Navigated += (_, args) => PreparePage((Page)args.Content);
         App.GetSettingsWindow().AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 1000));
 
-        var pages = new[] { typeof(DashboardPage), typeof(AIHubPage), typeof(UDPtestPage) };
+        var pages = new[] { typeof(DashboardPage), typeof(AIHubPage), typeof(GeneralPage), typeof(UDPtestPage) };
         LogMemory("before-first-visits");
         foreach (var type in pages) await Navigate(type, warmup: true);
         var udp = (UDPtestPage)NavigationService.Frame.Content;
@@ -108,8 +108,8 @@ internal static class NavigationPerformanceSmoke
         VerifyHistoryVisuals(udp);
         LogMemory("after-warmup");
 
-        // Twenty-one visits exercise the sixteen-entry navigation journal bound.
-        for (int visit = 0; visit < 21; visit++)
+        // Six full cycles exercise Settings as well as the navigation journal bound.
+        for (int visit = 0; visit < pages.Length * 6; visit++)
         {
             await Navigate(pages[visit % pages.Length], warmup: false);
             await Task.Delay(75);

@@ -529,43 +529,6 @@ namespace Kit.Settings.UI.ViewModels
 
         public TimeSpan LocationPanelDarkTime => TimeSpan.FromMinutes(_locationPanelDarkTime);
 
-        public LightSwitchHotkey ToggleThemeActivationShortcut
-        {
-            get => ModuleSettings.Properties.ToggleThemeHotkey.Value;
-            set
-            {
-                if (!_refreshingModuleSettings && value != ModuleSettings.Properties.ToggleThemeHotkey.Value)
-                {
-                    ModuleSettings.Properties.ToggleThemeHotkey.Value = value ?? new LightSwitchHotkey();
-                    NotifyPropertyChanged();
-                    OnPropertyChanged(nameof(ToggleThemeShortcutText));
-                    SendConfigMSG(string.Format(
-                        CultureInfo.InvariantCulture,
-                        "{{ \"kit\": {{ \"{0}\": {1} }} }}",
-                        LightSwitchSettings.ModuleName,
-                        JsonSerializer.Serialize(_moduleSettings, SourceGenerationContextContext.Default.LightSwitchSettings)));
-                }
-            }
-        }
-
-        public string ToggleThemeShortcutText
-        {
-            get
-            {
-                var hotkey = ToggleThemeActivationShortcut;
-                if (hotkey.Code == 0)
-                {
-                    return string.Empty;
-                }
-
-                return (hotkey.Win ? "Win + " : string.Empty) +
-                    (hotkey.Ctrl ? "Ctrl + " : string.Empty) +
-                    (hotkey.Alt ? "Alt + " : string.Empty) +
-                    (hotkey.Shift ? "Shift + " : string.Empty) +
-                    ((Windows.System.VirtualKey)hotkey.Code).ToString();
-            }
-        }
-
         public void NotifyPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             Logger.LogInfo($"Changed the property {propertyName}");
@@ -598,8 +561,6 @@ namespace Kit.Settings.UI.ViewModels
                 }
 
                 OnPropertyChanged(nameof(ModuleSettings));
-                OnPropertyChanged(nameof(ToggleThemeActivationShortcut));
-                OnPropertyChanged(nameof(ToggleThemeShortcutText));
                 OnPropertyChanged(nameof(ChangeSystem));
                 OnPropertyChanged(nameof(ChangeApps));
                 OnPropertyChanged(nameof(LightTime));

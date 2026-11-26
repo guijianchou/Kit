@@ -104,7 +104,6 @@ private:
     std::mutex m_service_mutex;
     std::mutex m_settings_mutex;
     ModuleSettings g_settings;
-    Hotkey m_toggle_theme_hotkey = { .win = true, .ctrl = true, .shift = true, .alt = false, .key = 'D' };
     bool m_enabled = false;
 
     HANDLE m_process{ nullptr };
@@ -253,30 +252,7 @@ public:
             L"Your longitude in decimal degrees (e.g. -75.16).",
             g_settings.m_longitude);
 
-        json::JsonObject hotkey;
-        hotkey.SetNamedValue(L"win", json::value(m_toggle_theme_hotkey.win));
-        hotkey.SetNamedValue(L"ctrl", json::value(m_toggle_theme_hotkey.ctrl));
-        hotkey.SetNamedValue(L"alt", json::value(m_toggle_theme_hotkey.alt));
-        hotkey.SetNamedValue(L"shift", json::value(m_toggle_theme_hotkey.shift));
-        hotkey.SetNamedValue(L"code", json::value(static_cast<int>(m_toggle_theme_hotkey.key)));
-        json::JsonObject shortcut;
-        shortcut.SetNamedValue(L"value", hotkey);
-        shortcut.SetNamedValue(L"editor_type", json::value(L"hotkey"));
-        shortcut.SetNamedValue(L"display_name", json::value(L"Shortcut to toggle theme immediately"));
-        auto document = json::JsonObject::Parse(settings.serialize());
-        document.GetNamedObject(L"properties").SetNamedValue(L"toggle-theme-hotkey", shortcut);
-        const auto serialized = document.Stringify();
-        if (!buffer_size)
-            return false;
-        const auto required = static_cast<int>(serialized.size() + 1);
-        if (!buffer || *buffer_size < required)
-        {
-            *buffer_size = required;
-            return false;
-        }
-        wcscpy_s(buffer, *buffer_size, serialized.c_str());
-        *buffer_size = required;
-        return true;
+        return settings.serialize_to_buffer(buffer, buffer_size);
     }
 
     // Signal from the Settings editor to call a custom action.
@@ -293,7 +269,6 @@ public:
         try
         {
             auto values = KitSettings::PowerToyValues::from_json_string(config, get_key());
-            parse_hotkey(values);
             bool scheduleModeChanged = false;
 
             if (auto v = values.get_bool_value(L"changeSystem"))
@@ -453,45 +428,6 @@ public:
         return false;
     }
 
-    void parse_hotkey(KitSettings::PowerToyValues& settings)
-    {
-        const auto properties = settings.get_raw_json().GetNamedObject(L"properties", nullptr);
-        if (!properties || !properties.HasKey(L"toggle-theme-hotkey"))
-        {
-            return;
-        }
-
-        const auto hotkey = properties.GetNamedObject(L"toggle-theme-hotkey").GetNamedObject(L"value");
-        Hotkey parsed{};
-        parsed.win = hotkey.GetNamedBoolean(L"win", false);
-        parsed.alt = hotkey.GetNamedBoolean(L"alt", false);
-        parsed.ctrl = hotkey.GetNamedBoolean(L"ctrl", false);
-        parsed.shift = hotkey.GetNamedBoolean(L"shift", false);
-        const auto key = hotkey.GetNamedNumber(L"code", 0);
-        if (key < 0 || key > UCHAR_MAX || key != static_cast<unsigned char>(key))
-        {
-            throw std::invalid_argument("Invalid LightSwitch hotkey code");
-        }
-        parsed.key = static_cast<unsigned char>(key);
-        m_toggle_theme_hotkey = parsed;
-    }
-
-    size_t get_hotkeys(Hotkey* hotkeys, size_t buffer_size) override
-    {
-        std::lock_guard settings_lock(m_settings_mutex);
-        if (hotkeys && buffer_size >= 1)
-        {
-            hotkeys[0] = m_toggle_theme_hotkey;
-        }
-        return 1;
-    }
-
-    bool on_hotkey(size_t hotkeyId) override
-    {
-        std::lock_guard service_lock(m_service_mutex);
-        return hotkeyId == 0 && m_enabled && m_toggle_request_semaphore &&
-               ReleaseSemaphore(m_toggle_request_semaphore, 1, nullptr);
-    }
 };
 
 bool LightSwitchInterface::EnsureServiceRunningLocked()
@@ -690,7 +626,6 @@ void LightSwitchInterface::init_settings()
     {
         KitSettings::PowerToyValues settings =
             KitSettings::PowerToyValues::load_from_settings_file(get_name());
-        parse_hotkey(settings);
 
         if (auto v = settings.get_bool_value(L"changeSystem"))
             g_settings.m_changeSystem = *v;

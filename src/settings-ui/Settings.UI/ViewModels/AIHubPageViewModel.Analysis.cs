@@ -148,6 +148,12 @@ public sealed partial class AIHubPageViewModel
                 ? "AIHub_DeepAnalysis_SummaryPartialFormat".FormatLocalized("AI partially completed: retained {0} enhanced finding(s) ({1}).", issues.Count, result.Failure)
                 : "AIHub_DeepAnalysis_SummaryCompleteFormat".FormatLocalized("AI deep analysis completed: {0} enhanced finding(s).", issues.Count);
         AiReportMetaText = "AIHub_DeepAnalysis_MetaFormat".FormatLocalized("Kernel {0} · {1:HH:mm:ss}", AiHubEngine.Current.ActiveKernel, DateTime.Now);
+        if (!interim)
+        {
+            AiReportMetaText += PreferChinese()
+                ? $" · 复用 {result.ReusedEvents} 条 · 本次分析 {result.AnalyzedEvents} 条"
+                : $" · {result.ReusedEvents} reused · {result.AnalyzedEvents} analyzed";
+        }
         if (snapshot is not null)
         {
             snapshot.UsedModel = !string.IsNullOrWhiteSpace(CurrentEngineAndModelLabel)
@@ -184,6 +190,7 @@ public sealed partial class AIHubPageViewModel
         OnPropertyChanged(nameof(CanRunDeepAnalysis));
         OnPropertyChanged(nameof(DeepAnalyzeHint));
         ((RelayCommand)DeepAnalyzeCommand).OnCanExecuteChanged();
+        ((RelayCommand)FullDeepAnalyzeCommand).OnCanExecuteChanged();
     }
 
     internal static bool IsPersistedAiFinding(AuditIssueEnhanced finding) =>

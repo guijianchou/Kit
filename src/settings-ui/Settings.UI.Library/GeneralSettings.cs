@@ -20,6 +20,15 @@ namespace Kit.Settings.UI.Library
 
     public class GeneralSettings : ISettingsConfig
     {
+        public const string DefaultUiFontFamily = "system";
+        public const string NotoSansScUiFontFamily = "Noto Sans SC";
+        public const int DefaultUiFontSize = 14;
+        public const int MinimumUiFontSize = 12;
+        public const int MaximumUiFontSize = 20;
+
+        private string _uiFontFamily = DefaultUiFontFamily;
+        private int _uiFontSize = DefaultUiFontSize;
+
         // Gets or sets a value indicating whether run powertoys on start-up.
         [JsonPropertyName("startup")]
         public bool Startup { get; set; }
@@ -58,6 +67,22 @@ namespace Kit.Settings.UI.Library
         // Gets or sets theme Name.
         [JsonPropertyName("theme")]
         public string Theme { get; set; }
+
+        [JsonPropertyName("ui_font_family")]
+        [JsonConverter(typeof(UiFontFamilyJsonConverter))]
+        public string UiFontFamily
+        {
+            get => _uiFontFamily;
+            set => _uiFontFamily = value == NotoSansScUiFontFamily ? NotoSansScUiFontFamily : DefaultUiFontFamily;
+        }
+
+        [JsonPropertyName("ui_font_size")]
+        [JsonConverter(typeof(UiFontSizeJsonConverter))]
+        public int UiFontSize
+        {
+            get => _uiFontSize;
+            set => _uiFontSize = value >= MinimumUiFontSize && value <= MaximumUiFontSize ? value : DefaultUiFontSize;
+        }
 
         // Gets or sets system theme name.
         [JsonPropertyName("system_theme")]

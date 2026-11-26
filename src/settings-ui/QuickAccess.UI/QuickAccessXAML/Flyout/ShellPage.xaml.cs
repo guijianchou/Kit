@@ -2,11 +2,13 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using Kit.QuickAccess.Services;
 using Kit.QuickAccess.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Navigation;
 
 namespace Kit.QuickAccess.Flyout;
 
@@ -22,7 +24,10 @@ public sealed partial class ShellPage : Page
     public ShellPage()
     {
         InitializeComponent();
+        ContentFrame.Navigated += OnContentNavigated;
     }
+
+    internal event Action? ContentLoaded;
 
     public void Initialize(IQuickAccessCoordinator coordinator, LauncherViewModel launcherViewModel, AllAppsViewModel allAppsViewModel)
     {
@@ -51,5 +56,19 @@ public sealed partial class ShellPage : Page
     {
         _allAppsViewModel?.RefreshSettings();
         _launcherViewModel?.RefreshUpdateStatus();
+    }
+
+    private void OnContentNavigated(object sender, NavigationEventArgs args)
+    {
+        if (args.Content is FrameworkElement page)
+        {
+            page.Loaded += OnContentLoaded;
+        }
+    }
+
+    private void OnContentLoaded(object sender, RoutedEventArgs args)
+    {
+        ((FrameworkElement)sender).Loaded -= OnContentLoaded;
+        ContentLoaded?.Invoke();
     }
 }

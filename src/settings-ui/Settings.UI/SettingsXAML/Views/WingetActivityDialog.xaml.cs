@@ -7,6 +7,7 @@ using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace Kit.Settings.UI.Views;
 
@@ -44,6 +45,18 @@ public sealed partial class WingetActivityDialog : ContentDialog
     }
 
     public WingetViewModel ViewModel { get; }
+
+    protected override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+
+        // Let BackgroundElement draw one continuous rounded acrylic surface.
+        // The default footer otherwise paints a second, square copy of Background.
+        if (GetTemplateChild("CommandSpace") is Grid commandSpace)
+        {
+            commandSpace.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        }
+    }
 
     private async void OnClearHistoryClick(object sender, RoutedEventArgs e)
     {

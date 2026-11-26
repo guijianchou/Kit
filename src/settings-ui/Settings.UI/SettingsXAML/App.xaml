@@ -5,12 +5,14 @@
     xmlns:controls="using:Kit.Settings.UI.Controls"
     xmlns:converters="using:Kit.Settings.UI.Converters"
     xmlns:ptcontrols="using:Kit.Common.UI.Controls"
+    xmlns:services="using:Kit.Settings.UI.Services"
     xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
     xmlns:tkconverters="using:CommunityToolkit.WinUI.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <services:TypographyResources />
                 <ResourceDictionary Source="ms-appx:///Kit.Common.UI.Controls/Controls/IsEnabledTextBlock/IsEnabledTextBlock.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Themes/Colors.xaml" />
                 <ResourceDictionary Source="/SettingsXAML/Styles/TextBlock.xaml" />
@@ -81,7 +83,7 @@
                 InlineCodeBackground="{StaticResource ControlFillColorDefaultBrush}"
                 InlineCodeBorderBrush="{StaticResource ControlElevationBorderBrush}"
                 InlineCodeCornerRadius="2"
-                InlineCodeFontSize="12"
+                InlineCodeFontSize="{ThemeResource KitFontSize12}"
                 InlineCodeForeground="{StaticResource TextFillColorSecondaryBrush}"
                 InlineCodePadding="2,0,2,1" />
 

@@ -18,6 +18,7 @@ using Kit.GPOWrapper;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Services;
 using LocalServerHub.Core.Commands;
 using LocalServerHub.Core.Configuration;
 using LocalServerHub.Core.Logging;
@@ -34,15 +35,17 @@ using Windows.Foundation;
 
 namespace Kit.Settings.UI.ViewModels
 {
-    public sealed class EnvironmentCheckChipModel
+    public sealed class EnvironmentCheckChipModel : INotifyPropertyChanged, ILiveLocalizable
     {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
         public EnvironmentCheckItem Item { get; }
-        public string Label { get; }
+        public string Label { get; private set; } = string.Empty;
         public Brush Brush { get; }
         public Brush BackgroundBrush { get; }
         public Brush ForegroundBrush { get; }
         public string StatusGlyph { get; }
-        public string Tooltip { get; }
+        public string Tooltip { get; private set; } = string.Empty;
         public EnvironmentCheckFix? Fix { get; }
         public bool HasCommand => !string.IsNullOrWhiteSpace(Fix?.Command);
         public bool CanReleasePort => Fix is { Port: not null, ProcessId: not null, ProcessStartTimeUtcFileTime: not null };
@@ -54,22 +57,6 @@ namespace Kit.Settings.UI.ViewModels
         {
             ArgumentNullException.ThrowIfNull(item);
             Item = item;
-            string title = item.Name switch
-            {
-                "Working directory" => "Localserver_CheckWorkingDirectory".GetLocalized(),
-                "Executable" => "Localserver_CheckExecutable".GetLocalized(),
-                "Service health" => "Localserver_CheckServiceHealth".GetLocalized(),
-                "Health probe" => "Localserver_CheckHealthProbe".GetLocalized(),
-                "Port" => "Localserver_CheckPort".GetLocalized(),
-                _ => item.Name,
-            };
-            Label = title;
-            if (item.Name.StartsWith("Runtime: ", StringComparison.Ordinal))
-            {
-                Label = item.Name["Runtime: ".Length..];
-                title = LocalserverViewModel.FormatMessage("Localserver_CheckRuntimeTitle", "Runtime: {0}", Label);
-            }
-
             Brush = brush;
             string bgKey = item.Status switch
             {
@@ -95,13 +82,33 @@ namespace Kit.Settings.UI.ViewModels
                 _ => "\uE946",
             };
             Fix = item.Fix;
+            RefreshLocalization();
+        }
 
-            string tip = string.IsNullOrWhiteSpace(item.Summary) ? title : $"{title}\n{item.Summary}";
-            if (item.Fix is { } fix)
+        public void RefreshLocalization()
+        {
+            string title = Item.Name switch
+            {
+                "Working directory" => "Localserver_CheckWorkingDirectory".GetLocalized(),
+                "Executable" => "Localserver_CheckExecutable".GetLocalized(),
+                "Service health" => "Localserver_CheckServiceHealth".GetLocalized(),
+                "Health probe" => "Localserver_CheckHealthProbe".GetLocalized(),
+                "Port" => "Localserver_CheckPort".GetLocalized(),
+                _ => Item.Name,
+            };
+            Label = title;
+            if (Item.Name.StartsWith("Runtime: ", StringComparison.Ordinal))
+            {
+                Label = Item.Name["Runtime: ".Length..];
+                title = LocalserverViewModel.FormatMessage("Localserver_CheckRuntimeTitle", "Runtime: {0}", Label);
+            }
+
+            string tip = string.IsNullOrWhiteSpace(Item.Summary) ? title : $"{title}\n{Item.Summary.Relocalize()}";
+            if (Item.Fix is { } fix)
             {
                 if (!string.IsNullOrWhiteSpace(fix.Description))
                 {
-                    tip += $"\n\n{fix.Description}";
+                    tip += $"\n\n{fix.Description.Relocalize()}";
                 }
                 if (!string.IsNullOrWhiteSpace(fix.Command))
                 {
@@ -110,10 +117,12 @@ namespace Kit.Settings.UI.ViewModels
             }
 
             Tooltip = tip;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Tooltip)));
         }
     }
 
-    public sealed class LineRowViewModel : INotifyPropertyChanged, IDisposable
+    public sealed class LineRowViewModel : INotifyPropertyChanged, IDisposable, ILiveLocalizable
     {
         private readonly ServiceRunner _runner;
         private readonly LocalserverViewModel _parent;
@@ -159,6 +168,14 @@ namespace Kit.Settings.UI.ViewModels
             State.IsActive() ? ThemeBrushHelper.SuccessBrush : ThemeBrushHelper.SecondaryTextBrush);
         public string LockTooltip => "Localserver_LineLockedRunning".GetLocalized();
         public string PortHintText => PortValue > 0 ? string.Empty : "Localserver_PortNoneHint".GetLocalized();
+
+        public void RefreshLocalization()
+        {
+            OnPropertyChanged(nameof(StateLabel));
+            OnPropertyChanged(nameof(LockTooltip));
+            OnPropertyChanged(nameof(PortHintText));
+            OnPropertyChanged(nameof(AdoptedTooltip));
+        }
 
         public void RefreshThemeBrushes()
         {
@@ -761,7 +778,7 @@ namespace Kit.Settings.UI.ViewModels
         }
     }
 
-    public sealed partial class LocalserverViewModel : PageViewModelBase, IDisposable
+    public sealed partial class LocalserverViewModel : PageViewModelBase, IDisposable, ILiveLocalizable
     {
         protected override string ModuleName => LocalserverSettings.ModuleName;
 
@@ -802,13 +819,9 @@ namespace Kit.Settings.UI.ViewModels
 
         internal static string FormatMessage(string resourceKey, string fallback, params object?[] args)
         {
-            string format = resourceKey.GetLocalized();
-            if (string.IsNullOrWhiteSpace(format))
-            {
-                format = fallback;
-            }
-
-            return args.Length == 0 ? format : string.Format(CultureInfo.CurrentCulture, format, args);
+            return args.Length == 0
+                ? resourceKey.GetLocalizedOrFallback(fallback)
+                : resourceKey.FormatLocalized(fallback, args);
         }
 
         internal static string GetStateLabel(ServiceState state, bool? healthProbePassed = null)
@@ -1278,6 +1291,33 @@ namespace Kit.Settings.UI.ViewModels
 
         private string _envHealthBrushKey = "ControlStrongStrokeColorDefaultBrush";
         private string _envSummaryBrushKey = "SystemFillColorSuccessBrush";
+
+        public void RefreshLocalization()
+        {
+            foreach (var row in Lines)
+            {
+                row.RefreshLocalization();
+            }
+
+            foreach (var chip in EnvironmentCheckChips)
+            {
+                chip.RefreshLocalization();
+            }
+
+            EnvHealthText = EnvHealthText.Relocalize();
+            EnvRuntimesText = EnvRuntimesText.Relocalize();
+            EnvSummaryText = EnvSummaryText.Relocalize();
+            ErrorMessage = ErrorMessage.Relocalize();
+            StatusChartRangeText = StatusChartRangeText.Relocalize();
+            UpdateLogSubtitle();
+            OnPropertyChanged(nameof(EnvHealthText));
+            OnPropertyChanged(nameof(HealthStateText));
+            OnPropertyChanged(nameof(EnvRuntimesText));
+            OnPropertyChanged(nameof(EnvSummaryText));
+            OnPropertyChanged(nameof(EnvStateText));
+            OnPropertyChanged(nameof(ErrorMessage));
+            OnPropertyChanged(nameof(StatusChartRangeText));
+        }
 
         public void RefreshThemeBrushes(ElementTheme theme)
         {

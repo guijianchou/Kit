@@ -19,6 +19,7 @@ using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
 using Kit.Settings.UI.Library.Interfaces;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.Views;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
@@ -57,8 +58,15 @@ public static class NetMapHealthStylesStore
 
 public sealed class NetMapCard
 {
+    private readonly string titleKey;
+    private readonly ChannelState channelState;
+    private readonly bool isRunning;
+
     public NetMapCard(string title, ChannelState state, bool running, string? aiRoute = null, string? aiRouteSummary = null, string? aiRouteDetails = null)
     {
+        titleKey = title;
+        channelState = state;
+        isRunning = running;
         IsProxy = title == "Proxy";
         Title = NetMapViewModel.Text(title);
         var identity = state.LastSuccess?.Identity;
@@ -82,6 +90,8 @@ public sealed class NetMapCard
         AiRouteSummary = aiRouteSummary;
         AiRouteDetails = aiRouteDetails;
     }
+
+    public NetMapCard Relocalize() => new(titleKey, channelState, isRunning, AiRoute, AiRouteSummary, AiRouteDetails);
 
     public bool IsProxy { get; }
 
@@ -160,6 +170,13 @@ public sealed class NetMapServiceRow(string name) : Observable
     public string Latency => result?.ConsecutiveFailures >= 3 || (result == null && upstreamFailures >= 3) ? "N/A" :
         (result?.ElapsedMs ?? result?.LastKnownMs) is { } elapsed ? elapsed.ToString("F1", CultureInfo.CurrentCulture) + " ms" : "—";
 
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Proxy));
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(Latency));
+    }
+
     public void Update(ServiceResult? value, bool active, int failures)
     {
         if (result == value && running == active && upstreamFailures == failures)
@@ -186,7 +203,7 @@ public sealed class NetMapHopRow(int ttl) : Observable
     private HopResult? result;
     private bool running;
 
-    public string Ttl { get; } = ttl.ToString(CultureInfo.CurrentCulture);
+    public string Ttl => ttl.ToString(CultureInfo.CurrentCulture);
 
     public string Ip => !string.IsNullOrEmpty(result?.Ip) ? result.Ip : result?.ConsecutiveFailures >= 3 ? "N/A" : "*";
 
@@ -204,12 +221,55 @@ public sealed class NetMapHopRow(int ttl) : Observable
 
     public string Rtt => Format(result?.AverageMs);
 
-    public string MapLabel => $"{Ttl} · {Last} ms · {Loss}";
+    public string MapHeading => $"# {Ttl} · {Ip}";
 
-    public string Detail => $"{Ttl}: {Ip} · {Location} · " + string.Format(CultureInfo.CurrentCulture, NetMapViewModel.Text("HopDetail"), result?.Sent ?? 0, result?.NoResponsePercent ?? 0, Last, Rtt) +
-        " · " + NetMapViewModel.Text("BestWorst") + " " + Format(result?.BestMs) + " / " + Format(result?.WorstMs) + " ms" +
-        (result?.Geography?.Asn is { } asn ? $" · AS{asn} {result.Geography.Organization}" : string.Empty) +
+    public string MapLocation => Ip is "*" or "N/A" ? NetMapViewModel.Text("UnknownLocation") : Location;
+
+    public string MapAsn
+    {
+        get
+        {
+            if (Ip is not ("*" or "N/A") && result?.Geography?.Asn is { } asn && asn > 0)
+            {
+                string organization = result.Geography.Organization?.Trim() ?? string.Empty;
+                return "AS" + asn.ToString(CultureInfo.InvariantCulture) + (organization.Length > 0 ? " · " + organization : string.Empty);
+            }
+
+            string status = Ip is "*" or "N/A" ? "NotFound" : result?.Geography?.LookupStatus switch
+            {
+                "Pending" => "Pending",
+                "Private" => "Private",
+                "LocalUnavailable" => "LocalUnavailable",
+                "Unavailable" => "Unavailable",
+                "RateLimited" => "RateLimited",
+                _ => "NotFound",
+            };
+            return NetMapViewModel.Text("Asn_" + status);
+        }
+    }
+
+    public string MapMetrics => string.Format(CultureInfo.CurrentCulture, NetMapViewModel.Text("HopDetail"), result?.Sent ?? 0, result?.NoResponsePercent ?? 0, Last, Rtt) +
         (result?.LastMs == null && result?.LastKnownMs != null ? " · " + NetMapViewModel.Text("LastKnown") : string.Empty);
+
+    public string MapLabel => string.Join(Environment.NewLine, MapHeading, MapLocation, MapAsn, MapMetrics);
+
+    public string Detail => $"{MapHeading} · {MapLocation} · {MapAsn} · {MapMetrics}" +
+        " · " + NetMapViewModel.Text("BestWorst") + " " + Format(result?.BestMs) + " / " + Format(result?.WorstMs) + " ms";
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Ttl));
+        OnPropertyChanged(nameof(Location));
+        OnPropertyChanged(nameof(Loss));
+        OnPropertyChanged(nameof(Last));
+        OnPropertyChanged(nameof(Rtt));
+        OnPropertyChanged(nameof(Detail));
+        OnPropertyChanged(nameof(MapHeading));
+        OnPropertyChanged(nameof(MapLocation));
+        OnPropertyChanged(nameof(MapAsn));
+        OnPropertyChanged(nameof(MapMetrics));
+        OnPropertyChanged(nameof(MapLabel));
+    }
 
     public void Update(HopResult value, bool active)
     {
@@ -226,6 +286,10 @@ public sealed class NetMapHopRow(int ttl) : Observable
         OnPropertyChanged(nameof(Last));
         OnPropertyChanged(nameof(Rtt));
         OnPropertyChanged(nameof(Detail));
+        OnPropertyChanged(nameof(MapHeading));
+        OnPropertyChanged(nameof(MapLocation));
+        OnPropertyChanged(nameof(MapAsn));
+        OnPropertyChanged(nameof(MapMetrics));
         OnPropertyChanged(nameof(MapLabel));
         OnPropertyChanged(nameof(Health));
         OnPropertyChanged(nameof(DotStyle));
@@ -235,7 +299,7 @@ public sealed class NetMapHopRow(int ttl) : Observable
     private static string Format(double? value) => value?.ToString("F1", CultureInfo.CurrentCulture) ?? "—";
 }
 
-public sealed partial class NetMapViewModel : PageViewModelBase
+public sealed partial class NetMapViewModel : PageViewModelBase, ILiveLocalizable
 {
     protected override string ModuleName => NetMapSettings.ModuleName;
 
@@ -252,6 +316,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private bool pageActive;
     private bool disposed;
     private string message = string.Empty;
+    private string? messageResourceKey;
+    private string messageSuffix = string.Empty;
     private InfoBarSeverity messageSeverity = InfoBarSeverity.Informational;
     private string asnDatabase = string.Empty;
     private string cityDatabase = string.Empty;
@@ -262,6 +328,8 @@ public sealed partial class NetMapViewModel : PageViewModelBase
     private bool isUpdating;
     private double updateProgress;
     private string updateStatus = string.Empty;
+    private string? updateStatusResourceKey;
+    private string updateStatusSuffix = string.Empty;
     private bool isAiChecking;
     private bool mtrSnapshotFileExists;
     private string? aiRoute;
@@ -429,6 +497,12 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         get => message;
         private set
         {
+            if (string.IsNullOrEmpty(value))
+            {
+                messageResourceKey = null;
+                messageSuffix = string.Empty;
+            }
+
             if (Set(ref message, value))
             {
                 OnPropertyChanged(nameof(IsMessageOpen));
@@ -458,8 +532,61 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     public void ReportMessage(string text, InfoBarSeverity severity = InfoBarSeverity.Informational)
     {
+        messageResourceKey = null;
+        messageSuffix = string.Empty;
         MessageSeverity = severity;
         Message = text;
+    }
+
+    public void ReportLocalizedMessage(string resourceKey, InfoBarSeverity severity = InfoBarSeverity.Informational, string suffix = "")
+    {
+        ReportMessage(Text(resourceKey) + suffix, severity);
+        messageResourceKey = resourceKey;
+        messageSuffix = suffix;
+    }
+
+    public void RefreshLocalization()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        foreach (var row in Services)
+        {
+            row.RefreshLocalization();
+        }
+
+        foreach (var row in Hops)
+        {
+            row.RefreshLocalization();
+        }
+
+        if (messageResourceKey != null)
+        {
+            Message = Text(messageResourceKey) + messageSuffix;
+        }
+
+        if (updateStatusResourceKey != null)
+        {
+            UpdateStatus = Text(updateStatusResourceKey) + updateStatusSuffix;
+        }
+
+        OnPropertyChanged(nameof(Direct));
+        OnPropertyChanged(nameof(Proxy));
+        OnPropertyChanged(nameof(RunStatus));
+        OnPropertyChanged(nameof(EvidenceNote));
+        OnPropertyChanged(nameof(RouteTarget));
+        OnPropertyChanged(nameof(DatabaseStatus));
+        OnPropertyChanged(nameof(ServiceTimestamp));
+        OnPropertyChanged(nameof(TargetLatency));
+    }
+
+    private void SetLocalizedUpdateStatus(string resourceKey, string suffix = "")
+    {
+        updateStatusResourceKey = resourceKey;
+        updateStatusSuffix = suffix;
+        UpdateStatus = Text(resourceKey) + suffix;
     }
 
     public static string Text(string key)
@@ -554,7 +681,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         OnPropertyChanged(nameof(CanStart));
         IsDetectionOn = false;
         UpdateProgress = 0;
-        UpdateStatus = Text("UpdateWorking");
+        SetLocalizedUpdateStatus("UpdateWorking");
         var progress = new Progress<double>(value =>
         {
             if (ReferenceEquals(updateCancellation, source) && !source.IsCancellationRequested)
@@ -567,29 +694,29 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             await session.Completion.WaitAsync(source.Token);
             var result = await Task.Run(() => new AsnDatabaseUpdater(options).UpdateAsync(progress, source.Token));
             UpdateProgress = 100;
-            UpdateStatus = Text(result.AlreadyCurrent ? "UpdateCurrent" : "UpdateDone") + " · " + result.Version + "\nSHA-256: " + result.Sha256;
+            SetLocalizedUpdateStatus(result.AlreadyCurrent ? "UpdateCurrent" : "UpdateDone", " · " + result.Version + "\nSHA-256: " + result.Sha256);
         }
         catch (OperationCanceledException)
         {
-            UpdateStatus = Text(source.IsCancellationRequested ? "UpdateCancelled" : "UpdateTimeout");
+            SetLocalizedUpdateStatus(source.IsCancellationRequested ? "UpdateCancelled" : "UpdateTimeout");
         }
         catch (InvalidDataException ex)
         {
             string code = ex.Message is "HashUnavailable" or "HashMismatch" or "TooLarge" ? ex.Message : "InvalidData";
-            UpdateStatus = Text("Update" + code);
+            SetLocalizedUpdateStatus("Update" + code);
         }
         catch (HttpRequestException)
         {
-            UpdateStatus = Text("UpdateConnection");
+            SetLocalizedUpdateStatus("UpdateConnection");
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or MaxMind.Db.InvalidDatabaseException)
         {
-            UpdateStatus = Text("UpdateInvalidData");
+            SetLocalizedUpdateStatus("UpdateInvalidData");
         }
         catch (Exception)
         {
             // Keep paths, redirect query strings and server response bodies out of the UI and logs.
-            UpdateStatus = Text("UpdateFailed");
+            SetLocalizedUpdateStatus("UpdateFailed");
         }
         finally
         {
@@ -648,7 +775,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
         if (!File.Exists(NetMapAiService.MtrTempFilePath))
         {
-            ReportMessage(Text("AiNoMtrData"), InfoBarSeverity.Warning);
+            ReportLocalizedMessage("AiNoMtrData", InfoBarSeverity.Warning);
             return;
         }
 
@@ -690,7 +817,14 @@ public sealed partial class NetMapViewModel : PageViewModelBase
                 }
                 else
                 {
-                    ReportMessage(response.ErrorMessage ?? Text("AiCheckFailed"), InfoBarSeverity.Error);
+                    if (response.ErrorMessage != null)
+                    {
+                        ReportMessage(response.ErrorMessage, InfoBarSeverity.Error);
+                    }
+                    else
+                    {
+                        ReportLocalizedMessage("AiCheckFailed", InfoBarSeverity.Error);
+                    }
                 }
             });
         }
@@ -705,7 +839,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
             {
                 if (CanPublishAiResult(source, generation, token))
                 {
-                    ReportMessage(Text("AiCheckFailed") + ": " + ex.Message, InfoBarSeverity.Error);
+                    ReportLocalizedMessage("AiCheckFailed", InfoBarSeverity.Error, ": " + ex.Message);
                 }
             });
         }
@@ -750,7 +884,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
 
     private void NotifyAiRouteChanged(long previousGeneration, long currentGeneration)
     {
-        ReportMessage(Text("AiRouteChanged"), InfoBarSeverity.Warning);
+        ReportLocalizedMessage("AiRouteChanged", InfoBarSeverity.Warning);
         Logger.LogInfo($"NetMap AI cancelled: reason=route-generation-changed, previousGeneration={previousGeneration}, currentGeneration={currentGeneration}");
     }
 
@@ -759,7 +893,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         var draft = DraftOptions();
         if (!draft.IsValid)
         {
-            ReportMessage(Text("InvalidProxy"), InfoBarSeverity.Error);
+            ReportLocalizedMessage("InvalidProxy", InfoBarSeverity.Error);
             return;
         }
 
@@ -777,7 +911,7 @@ public sealed partial class NetMapViewModel : PageViewModelBase
         _moduleSettingsRepository.SettingsConfig = settings;
         var outgoing = new SndModuleSettings<SndNetMapSettings>(new SndNetMapSettings { Settings = settings });
         _sendConfigMsg(JsonSerializer.Serialize(outgoing, SettingsSerializationContext.Default.SndModuleSettingsSndNetMapSettings));
-        ReportMessage(Text("SettingsApplied"), InfoBarSeverity.Success);
+        ReportLocalizedMessage("SettingsApplied", InfoBarSeverity.Success);
     }
 
     public void SetPageActive(bool active)

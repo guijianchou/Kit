@@ -86,17 +86,7 @@ namespace Kit.Settings.UI
             Logger.InitializeLogger(@"\Settings\Logs");
             CrashLog.StartSession("Settings");
 
-            string appLanguage = LanguageHelper.LoadLanguage();
-            if (!string.IsNullOrEmpty(appLanguage))
-            {
-                Microsoft.Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = appLanguage;
-            }
-
-            string cultureName = string.IsNullOrEmpty(appLanguage) ? CultureInfo.CurrentUICulture.Name : appLanguage;
-            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo(
-                cultureName.StartsWith("zh-CN", StringComparison.OrdinalIgnoreCase)
-                || cultureName.StartsWith("zh-Hans", StringComparison.OrdinalIgnoreCase)
-                || cultureName.Equals("zh-SG", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en-US");
+            RuntimeLocalization.Initialize(LanguageHelper.LoadLanguage());
 
             InitializeComponent();
             LogStartupTiming("App InitializeComponent completed");
@@ -285,6 +275,7 @@ namespace Kit.Settings.UI
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
+            TypographyResources.ApplyNativeTextStyles(Resources);
             LogStartupTiming("OnLaunched");
             var cmdArgs = Environment.GetCommandLineArgs();
 

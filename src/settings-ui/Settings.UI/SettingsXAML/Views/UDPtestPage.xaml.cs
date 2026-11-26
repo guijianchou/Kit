@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -22,7 +23,7 @@ using Windows.Foundation;
 
 namespace Kit.Settings.UI.Views
 {
-    public sealed partial class UDPtestPage : NavigablePage, IRefreshablePage
+    public sealed partial class UDPtestPage : NavigablePage, IRefreshablePage, ILiveLocalizable
     {
         public UDPtestViewModel ViewModel { get; }
 
@@ -44,36 +45,58 @@ namespace Kit.Settings.UI.Views
             _settingsWindow.Activated += OnSettingsWindowActivated;
             Loaded += OnUDPtestLoaded;
             Unloaded += OnUDPtestUnloaded;
-            ActualThemeChanged += OnUDPtestActualThemeChanged;
 
             ViewModel.HealthChartNeedsRedraw += OnHealthChartNeedsRedraw;
+            TypographyResources.TypographyChanged += OnTypographyChanged;
         }
 
         private readonly MainWindow _settingsWindow;
         private int _chartRedrawQueued;
-        private ElementTheme _lastAppliedTheme = ElementTheme.Default;
+        private ElementTheme? _lastAppliedTheme;
         private (long Version, string? LineId, int Period, double Width, double Height, long WindowSecond)? _lastChartKey;
 
         private void OnUDPtestLoaded(object sender, RoutedEventArgs e)
         {
-            _lastAppliedTheme = ActualTheme;
+            // WinUI's native theme subscription can become inactive when a cached
+            // page leaves the tree. Re-register on attachment, as ProbeHistoryStrip does.
+            ActualThemeChanged -= OnUDPtestActualThemeChanged;
+            ActualThemeChanged += OnUDPtestActualThemeChanged;
             RefreshEnabledState();
+            ApplyCurrentTheme();
             ViewModel.SetPageActive(true);
         }
 
         private void OnUDPtestUnloaded(object sender, RoutedEventArgs e)
         {
+            if (IsLoaded)
+            {
+                return;
+            }
+
+            ActualThemeChanged -= OnUDPtestActualThemeChanged;
             InfoTeachingTip.IsOpen = false;
             ViewModel.SetPageActive(false);
         }
 
         private void OnUDPtestActualThemeChanged(FrameworkElement sender, object args)
         {
-            if (ActualTheme != _lastAppliedTheme)
+            if (IsLoaded)
             {
-                _lastAppliedTheme = ActualTheme;
-                ViewModel.RefreshThemeBrushes(ActualTheme);
+                ApplyCurrentTheme();
             }
+        }
+
+        private void ApplyCurrentTheme()
+        {
+            // Cached navigation retains the existing row bindings. Republish their
+            // brushes only on first load or when a theme actually changed while hidden.
+            if (_lastAppliedTheme == ActualTheme)
+            {
+                return;
+            }
+
+            _lastAppliedTheme = ActualTheme;
+            ViewModel.RefreshThemeBrushes(ActualTheme);
         }
 
         private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
@@ -92,6 +115,7 @@ namespace Kit.Settings.UI.Views
             _settingsWindow.Activated -= OnSettingsWindowActivated;
             ActualThemeChanged -= OnUDPtestActualThemeChanged;
             ViewModel.HealthChartNeedsRedraw -= OnHealthChartNeedsRedraw;
+            TypographyResources.TypographyChanged -= OnTypographyChanged;
             ViewModel.Dispose();
         }
 
@@ -106,6 +130,17 @@ namespace Kit.Settings.UI.Views
         public void RefreshEnabledState()
         {
             ViewModel.RefreshEnabledState();
+        }
+
+        public void RefreshLocalization()
+        {
+            _lastChartKey = null;
+            OnHealthChartNeedsRedraw();
+        }
+
+        private void OnTypographyChanged(object? sender, EventArgs e)
+        {
+            ViewModel.RefreshTypography();
         }
 
         private async void OnStartClicked(object sender, RoutedEventArgs e)

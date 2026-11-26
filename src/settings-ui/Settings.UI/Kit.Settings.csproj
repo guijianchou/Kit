@@ -43,6 +43,10 @@
 		<Content Include="Assets\Settings\Square44x44Logo.targetsize-24_altform-unplated.png" />
 		<Content Include="Assets\Settings\StoreLogo.png" />
 		<Content Include="Assets\Settings\Wide310x150Logo.scale-200.png" />
+		<Content Include="Assets\Fonts\NotoSansSC-Variable.ttf;Assets\Fonts\OFL.txt">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>

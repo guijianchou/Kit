@@ -8,10 +8,13 @@ param(
     [switch]$ColdStartDirectRoute,
     [ValidateSet('Enabled', 'Disabled', 'Failed')]
     [string]$ColdStartGeneral,
-    [string]$RuntimeRoot
+    [string]$RuntimeRoot,
+    [ValidateRange(30, 600)]
+    [int]$TimeoutSeconds = 60
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'AiHubDerivedStateFixture.ps1')
 if ($ColdStartDirectRoute -and $null -eq $ColdStartTab) { throw '-ColdStartDirectRoute requires -ColdStartTab.' }
 if ($ColdStartGeneral -and $null -ne $ColdStartTab) { throw 'Choose either -ColdStartGeneral or -ColdStartTab.' }
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
@@ -21,7 +24,7 @@ $runId = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewG
 $reportRoot = Join-Path $repoRoot "TestResults\PluginLifecycle\$Language\$runId"
 $testName = 'ModulePageSmoke'
 $temporaryFiles = @('.dll', '.exe', '.deps.json', '.runtimeconfig.json', '.pri') | ForEach-Object { Join-Path $runtimeRoot ($testName + $_) }
-if (@(Get-Process Kit,Kit.Settings,ModulePageSmoke -ErrorAction SilentlyContinue).Count) {
+if (@(Get-Process Kit,Kit.Settings,Kit.AIHubWorker,Kit.QuickAccess,Kit.WingetService,ModulePageSmoke -ErrorAction SilentlyContinue).Count) {
     throw 'Close Kit before running the page smoke test.'
 }
 foreach ($path in $temporaryFiles) {
@@ -53,16 +56,23 @@ $hostPack = Get-ChildItem (Join-Path $dotnetRoot 'packs\Microsoft.NETCore.App.Ho
     Where-Object { $_.Name -match '^10\.0\.\d+$' } | Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
 if (-not $hostPack) { throw '.NET 10 x64 apphost pack is required.' }
 $backups = @{}
-foreach ($name in @('settings.json', 'settings-placement.json', 'log_settings.json', 'language.json', 'AiHub\settings.json', 'AiHub\service-settings.json', 'AiHub\secrets.dat', 'AiHub\security.md', 'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md')) {
+foreach ($name in @('settings.json', 'settings-placement.json', 'log_settings.json', 'language.json', 'AiHub\settings.json', 'AiHub\service-settings.json', 'AiHub\secrets.dat', 'AiHub\security.md', 'AiHub\chains\security-audit\AGENTS.md', 'AiHub\chains\system-optimization\AGENTS.md', 'AiHub\chains\self-test\AGENTS.md', 'AiHub\State\audit_history.json', 'AiHub\State\optimization_history.json')) {
     $path = Join-Path $env:LOCALAPPDATA "Kit\$name"
     $backups[$path] = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllBytes($path) } else { $null }
 }
+$aiHubDerivedSnapshot = New-AiHubDerivedStateSnapshot (Join-Path $env:LOCALAPPDATA 'Kit\AiHub\State')
 $previousOutput = $env:KIT_MODULE_PAGE_TEST_OUTPUT
 $previousColdStartTab = $env:KIT_MODULE_PAGE_COLD_START_TAB
 $previousColdStartDirect = $env:KIT_MODULE_PAGE_COLD_START_DIRECT
 $previousColdStartGeneral = $env:KIT_MODULE_PAGE_COLD_START_GENERAL
 $testProcess = $null
 try {
+    Clear-AiHubDerivedStateFixture $aiHubDerivedSnapshot
+    foreach ($name in @('audit_history.json', 'optimization_history.json')) {
+        $path = Join-Path $env:LOCALAPPDATA "Kit\AiHub\State\$name"
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $path)) | Out-Null
+        [IO.File]::WriteAllText($path, '[]', [Text.UTF8Encoding]::new($false))
+    }
     [IO.File]::WriteAllText((Join-Path $env:LOCALAPPDATA 'Kit\language.json'), ('{"language":"' + $Language + '"}'))
     $compilerArgs = [Collections.Generic.List[string]]::new()
     foreach ($arg in @('/nostdlib+', '/target:exe', '/langversion:preview')) { $compilerArgs.Add($arg) }
@@ -105,19 +115,44 @@ try {
     $startInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
     foreach ($argument in $launchArguments) { $startInfo.ArgumentList.Add($argument) }
     $testProcess = [Diagnostics.Process]::Start($startInfo)
-    if (-not $testProcess.WaitForExit(60000)) {
-        Write-Host 'Page smoke test timed out after 60s; harness log tail:'
+    $harnessTimer = [Diagnostics.Stopwatch]::StartNew()
+    while (-not $testProcess.HasExited -and $harnessTimer.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
+        $null = $testProcess.WaitForExit(1000)
+    }
+    if (-not $testProcess.HasExited) {
+        Write-Host "Page smoke test timed out after ${TimeoutSeconds}s; harness log tail:"
         $harnessLog = Join-Path $reportRoot 'module-pages-smoke.log'
         if (Test-Path -LiteralPath $harnessLog) { Get-Content -LiteralPath $harnessLog -Tail 5 }
-        throw 'Page smoke test timed out.'
+        throw "Page smoke test timed out after ${TimeoutSeconds}s."
     }
+    Write-Host ("Page smoke process completed in {0:F1}s (limit {1}s)." -f $harnessTimer.Elapsed.TotalSeconds, $TimeoutSeconds)
     Get-Content -LiteralPath (Join-Path $reportRoot 'module-pages-smoke.log')
     if ($testProcess.ExitCode -ne 0) { throw "Page smoke test failed: $($testProcess.ExitCode)" }
     if ((Get-Content -LiteralPath (Join-Path $reportRoot 'module-pages-smoke.log') -Tail 1) -ne 'PASS') {
         throw 'Page smoke test exited before completing its assertions.'
     }
 } finally {
-    if ($testProcess -and -not $testProcess.HasExited) { $testProcess.Kill(); $testProcess.WaitForExit(5000) | Out-Null }
+    $cleanupResults = [Collections.Generic.List[string]]::new()
+    $cleanupFailures = [Collections.Generic.List[string]]::new()
+    if ($testProcess) {
+        try {
+            if (-not $testProcess.HasExited) {
+                try { $testProcess.Kill() }
+                catch { if (-not $testProcess.HasExited) { throw } }
+            }
+            if (-not $testProcess.WaitForExit(5000)) { throw 'Owned smoke process did not exit within 5 seconds.' }
+            $cleanupResults.Add('PASS owned smoke process exited.')
+        } catch {
+            $cleanupFailures.Add('Smoke process exit: ' + $_.Exception.Message)
+            $cleanupResults.Add('FAIL smoke process exit: ' + $_.Exception.Message)
+        } finally {
+            try { $testProcess.Dispose() }
+            catch {
+                $cleanupFailures.Add('Releasing smoke process handle: ' + $_.Exception.Message)
+                $cleanupResults.Add('FAIL releasing smoke process handle: ' + $_.Exception.Message)
+            }
+        }
+    }
     $env:KIT_MODULE_PAGE_TEST_OUTPUT = $previousOutput
     $env:KIT_MODULE_PAGE_COLD_START_TAB = $previousColdStartTab
     $env:KIT_MODULE_PAGE_COLD_START_DIRECT = $previousColdStartDirect
@@ -144,10 +179,64 @@ try {
             $restoreResults.Add('FAIL ' + $path + ': ' + $_.Exception.Message)
         }
     }
-    foreach ($path in $temporaryFiles) {
-        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }
+    # File mappings can briefly outlive process exit. Retry only this run's five
+    # exact temporary paths, and keep cleanup failures separate from restoration.
+    try {
+        $cleanupTimer = [Diagnostics.Stopwatch]::StartNew()
+        $pendingFiles = @($temporaryFiles)
+        $lastCleanupErrors = @{}
+        $cleanupAttempts = 0
+        do {
+            $cleanupAttempts++
+            $remainingFiles = [Collections.Generic.List[string]]::new()
+            foreach ($path in $pendingFiles) {
+                try {
+                    if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -ErrorAction Stop }
+                    if (Test-Path -LiteralPath $path) { throw 'Temporary file still exists after deletion.' }
+                    $lastCleanupErrors.Remove($path)
+                } catch {
+                    $lastCleanupErrors[$path] = $_.Exception.Message
+                    $remainingFiles.Add($path)
+                }
+            }
+            $pendingFiles = $remainingFiles.ToArray()
+            if (-not $pendingFiles.Count -or $cleanupTimer.Elapsed.TotalSeconds -ge 10) { break }
+            Start-Sleep -Milliseconds 250
+        } while ($true)
+
+        $residualFiles = @(foreach ($path in $temporaryFiles) {
+            if (Test-Path -LiteralPath $path) { $path }
+        })
+        $cleanupResults.Add("Temporary cleanup: attempts=$cleanupAttempts; remaining=$($residualFiles.Count).")
+        foreach ($path in $residualFiles) {
+            $detail = $path + ': ' + $lastCleanupErrors[$path]
+            $cleanupFailures.Add($detail)
+            $cleanupResults.Add('FAIL temporary file: ' + $detail)
+        }
+        if (-not $residualFiles.Count) { $cleanupResults.Add('PASS all temporary smoke files are absent.') }
+    } catch {
+        $cleanupFailures.Add('Temporary file cleanup: ' + $_.Exception.Message)
+        $cleanupResults.Add('FAIL temporary file cleanup: ' + $_.Exception.Message)
     }
-    [IO.File]::WriteAllLines((Join-Path $reportRoot 'restore-verification.log'), $restoreResults)
-    if ($restoreFailures.Count) { throw ('Settings restoration failed: ' + ($restoreFailures -join '; ')) }
-    Write-Host "Settings restore verified: $($restoreResults.Count) files, byte-for-byte or originally absent."
+    try {
+        Restore-AiHubDerivedStateFixture $aiHubDerivedSnapshot
+        $restoreResults.Add('PASS AI Hub derived-state restoration.')
+    } catch {
+        $restoreFailures.Add('AI Hub derived-state restoration failed: ' + $_.Exception.Message)
+        $restoreResults.Add('FAIL AI Hub derived-state restoration: ' + $_.Exception.Message)
+    }
+    try { [IO.File]::WriteAllLines((Join-Path $reportRoot 'restore-verification.log'), $restoreResults) }
+    catch { $restoreFailures.Add('Writing restoration verification: ' + $_.Exception.Message) }
+    try { [IO.File]::WriteAllLines((Join-Path $reportRoot 'cleanup-verification.log'), $cleanupResults) }
+    catch { $cleanupFailures.Add('Writing cleanup verification: ' + $_.Exception.Message) }
+    if (-not $restoreFailures.Count) {
+        Write-Host "Settings restore verified: $($backups.Count) files, byte-for-byte or originally absent; AI Hub derived state restored."
+    }
+    if ($restoreFailures.Count -or $cleanupFailures.Count) {
+        $failures = @()
+        if ($restoreFailures.Count) { $failures += 'Settings restoration failed: ' + ($restoreFailures -join '; ') }
+        if ($cleanupFailures.Count) { $failures += 'Smoke cleanup failed: ' + ($cleanupFailures -join '; ') }
+        throw ($failures -join ' | ')
+    }
+    Write-Host 'Smoke cleanup verified: remaining temporary files=0.'
 }

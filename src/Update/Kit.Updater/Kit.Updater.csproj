@@ -20,4 +20,11 @@
   <Target Name="PublishPortableUpdater" AfterTargets="Build" Condition="'$(NoBuild)' != 'true' and '$(DesignTimeBuild)' != 'true'">
     <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="NoBuild=true;BuildProjectReferences=false" />
   </Target>
+  <!-- Publishing creates a new single-file apphost outside TargetDir. It must not
+       inherit a Low integrity label from the checkout or lose AppData write access. -->
+  <Target Name="SetPublishedUpdaterIntegrity" AfterTargets="Publish"
+          Condition="'$(OS)' == 'Windows_NT' and '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="icacls.exe &quot;$(PublishDir)$(AssemblyName).exe&quot; /setintegritylevel M /L"
+          StandardOutputImportance="Low" />
+  </Target>
 </Project>

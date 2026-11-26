@@ -21,33 +21,32 @@ namespace ViewModelTests
     public class LightSwitch
     {
         [TestMethod]
-        public void ThemeShortcutPersistsUpstreamSchemaAndRefreshDoesNotSend()
+        public void LegacyThemeShortcutIsIgnoredAndScheduleRefreshDoesNotSend()
         {
+            const string legacySettings = """
+                { "name": "LightSwitch", "properties": {
+                    "toggle-theme-hotkey": { "value": { "ctrl": true, "alt": true, "code": 75 } },
+                    "scheduleMode": { "value": "FixedHours" }, "lightTime": { "value": 420 }
+                } }
+                """;
+            var settings = JsonSerializer.Deserialize(legacySettings, SettingsSerializationContext.Default.LightSwitchSettings);
+            Assert.IsNotNull(settings);
             var messages = new List<string>();
-            using var viewModel = CreateViewModel(new LightSwitchSettings(), message =>
+            using var viewModel = CreateViewModel(settings, message =>
             {
                 messages.Add(message);
                 return 0;
             });
-            viewModel.ToggleThemeActivationShortcut = new LightSwitchHotkey { Win = false, Ctrl = true, Alt = true, Shift = false, Code = 0x4B };
-            Assert.AreEqual(1, messages.Count);
-            using var json = JsonDocument.Parse(messages[0]);
-            var hotkey = json.RootElement.GetProperty("kit").GetProperty("LightSwitch")
-                .GetProperty("properties").GetProperty("toggle-theme-hotkey").GetProperty("value");
-            Assert.AreEqual(0x4B, hotkey.GetProperty("code").GetInt32());
-            Assert.IsTrue(hotkey.GetProperty("ctrl").GetBoolean());
-            Assert.IsTrue(hotkey.GetProperty("alt").GetBoolean());
-            Assert.IsFalse(hotkey.GetProperty("win").GetBoolean());
             var clone = (LightSwitchSettings)viewModel.ModuleSettings.Clone();
-            Assert.AreEqual(0x4B, clone.Properties.ToggleThemeHotkey.Value.Code);
-            clone.Properties.ToggleThemeHotkey.Value.Code = 0;
-            Assert.AreEqual(0x4B, viewModel.ToggleThemeActivationShortcut.Code, "Cloning must not alias the mutable shortcut.");
+            Assert.AreEqual(420, clone.Properties.LightTime.Value);
+            clone.Properties.LightTime.Value = 480;
+            Assert.AreEqual(420, viewModel.ModuleSettings.Properties.LightTime.Value, "Cloning must preserve independent schedule settings.");
 
-            var reloaded = new LightSwitchSettings();
-            reloaded.Properties.ToggleThemeHotkey.Value.Code = 0;
-            viewModel.ModuleSettings = reloaded;
-            Assert.AreEqual(string.Empty, viewModel.ToggleThemeShortcutText);
-            Assert.AreEqual(1, messages.Count, "External reload must not write the old shortcut back.");
+            viewModel.ModuleSettings = clone;
+            Assert.AreEqual(TimeSpan.FromMinutes(480), viewModel.LightTimePickerValue);
+            Assert.AreEqual(0, messages.Count, "External reload must not save settings or resurrect a removed shortcut.");
+            using var saved = JsonDocument.Parse(viewModel.ModuleSettings.ToJsonString());
+            Assert.IsFalse(saved.RootElement.GetProperty("properties").TryGetProperty("toggle-theme-hotkey", out _));
         }
 
         private static string FindSourceFile(params string[] relativePathParts)

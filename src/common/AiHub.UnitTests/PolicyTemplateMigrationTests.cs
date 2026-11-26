@@ -14,6 +14,30 @@ public sealed class PolicyTemplateMigrationTests
     [TestMethod]
     [DataRow(false, "\n")]
     [DataRow(true, "\r\n")]
+    public async Task OptimizationVersion2MigratesPicturesButPreservesCustomizedPolicies(bool bom, string newline)
+    {
+        using var fixture = new FixtureDirectory();
+        string data = fixture.PathFor("data");
+        string path = Path.Combine(data, "chains", "system-optimization", "AGENTS.md");
+        Write(path, TaskPolicyDefaults.Version2SystemOptimizationInstructions, bom, newline);
+        var service = new SecurityPolicyService(data, fixture.PathFor("modules"));
+        string migrated = await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization");
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, migrated);
+        StringAssert.Contains(migrated, "Pictures subfolder of Downloads");
+        StringAssert.Contains(migrated, "extensions, case-insensitively");
+        byte[] firstMigration = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(firstMigration, File.ReadAllBytes(path));
+
+        Write(path, TaskPolicyDefaults.Version2SystemOptimizationInstructions + "\nKeep my custom rule.", bom, newline);
+        byte[] customized = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(customized, File.ReadAllBytes(path), "Custom policies must never be overwritten by the category migration.");
+    }
+
+    [TestMethod]
+    [DataRow(false, "\n")]
+    [DataRow(true, "\r\n")]
     public async Task ShippedDefaultsMigrateTogetherAndAreIdempotent(bool bom, string newline)
     {
         using var fixture = new FixtureDirectory();

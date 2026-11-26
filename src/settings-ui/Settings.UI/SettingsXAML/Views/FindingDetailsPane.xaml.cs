@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using Kit.AIHubLib.Models;
 using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -15,7 +16,7 @@ using Windows.ApplicationModel.DataTransfer;
 
 namespace Kit.Settings.UI.Views;
 
-public sealed partial class FindingDetailsPane : UserControl
+public sealed partial class FindingDetailsPane : UserControl, ILiveLocalizable
 {
     private AuditIssueEnhanced _finding;
 
@@ -30,6 +31,12 @@ public sealed partial class FindingDetailsPane : UserControl
     public FindingDetailsPane()
     {
         InitializeComponent();
+        RefreshLocalization();
+        Loaded += (_, _) => RefreshLocalization();
+    }
+
+    public void RefreshLocalization()
+    {
         PaneTitleText.Text = "AIHub_Fluent_DetailsTitle".GetLocalizedOrFallback("Finding details");
         EventIdLabel.Text = "AIHub_Fluent_EventId".GetLocalizedOrFallback("Event ID");
         SourceLabel.Text = "AIHub_Fluent_EventSource".GetLocalizedOrFallback("Source");
@@ -44,6 +51,14 @@ public sealed partial class FindingDetailsPane : UserControl
         SetButtonLabel(PreviousButton, "AIHub_Fluent_PreviousFinding".GetLocalizedOrFallback("Previous finding"));
         SetButtonLabel(NextButton, "AIHub_Fluent_NextFinding".GetLocalizedOrFallback("Next finding"));
         AutomationProperties.SetName(CopyEvidenceButton, CopyEvidenceLabel.Text);
+        PositionText.Text = PositionText.Text.Relocalize();
+        CopyFeedbackText.Text = CopyFeedbackText.Text.Relocalize();
+        ActionHintText.Text = ActionHintText.Text.Relocalize();
+        ToolTipService.SetToolTip(AnalyzeButton, ActionHintText.Text);
+        if (_finding != null)
+        {
+            EvidenceText.Text = BuildEvidence(_finding);
+        }
     }
 
     public void SetFinding(AuditIssueEnhanced finding, string range, int index, int count, bool canAnalyze, string analysisHint)

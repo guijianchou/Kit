@@ -78,7 +78,7 @@ jobs:
           } elseif ($env:GITHUB_REF_TYPE -eq 'tag') {
             $tag = $env:GITHUB_REF_NAME
           } else {
-            throw 'workflow_dispatch requires the version input (for example 3.5.2).'
+            throw 'workflow_dispatch requires the version input (for example 3.6.0).'
           }
           if ($tag -match '^v?(\d+\.\d+\.\d+)$') {
             $requested = $Matches[1]
@@ -195,6 +195,15 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      - name: Verify staged Release contents
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/build/verify-runtime-artifacts.ps1 `
+            -Platform x64 -Configuration Release -OutputRoot 'bin/release/${{ steps.release.outputs.version }}'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & python tools/tests/Winget/Verify-WingetIcons.py --runtime-root 'bin/release/${{ steps.release.outputs.version }}'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Summarize the release package
         shell: pwsh
         run: |
@@ -255,6 +264,18 @@ jobs:
             bin/release-artifacts/kit_*.zip.sha256
             bin/release-artifacts/release-notes.md
             bin/release-artifacts/release-metadata.json
+            TestResults/FrameworkReview/Release-*.manifest.json
+
+      - name: Upload release diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-release-reports
+          if-no-files-found: warn
+          path: |
+            build.release.x64.all.log
+            build.release.x64.errors.log
+            build.release.x64.warnings.log
             TestResults/FrameworkReview/Release-*.manifest.json
 
       - name: Publish the GitHub Release

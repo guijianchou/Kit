@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -6,39 +6,39 @@ using System;
 using System.Threading.Tasks;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.ViewModels;
 using ManagedCommon;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Animation;
 
 namespace Kit.Settings.UI.Views
 {
     /// <summary>
     /// General Settings Page.
     /// </summary>
-    public sealed partial class GeneralPage : NavigablePage, IRefreshablePage, IDisposable
+    public sealed partial class GeneralPage : NavigablePage, IRefreshablePage, IDisposable, ILiveLocalizable
     {
         private static DateTime OkToHideBackupAndRestoreMessageTime { get; set; }
 
-        private readonly System.Collections.Generic.List<(Panel Panel, TransitionCollection Transitions)> _initialTransitions = new();
         private bool _backupStatusRefreshQueued;
-        private bool _initialContentPresented;
-        private bool _presentationQueued;
-        private bool _waitingForInitialRender;
-        private (double Width, double Height, double AiWidth, double AiHeight, double DiagnosticsY)? _initialLayout;
+        private bool _aiSettingsPresented;
+        private bool _aiPresentationQueued;
+        private bool _waitingForAiRender;
+        private string _pendingSettingsSection;
 
         /// <summary>
         /// Gets or sets view model.
         /// </summary>
         public GeneralViewModel ViewModel { get; set; }
 
-        public string UnsavedEndpointsTitle { get; }
+        public string UnsavedEndpointsTitle { get; private set; }
 
-        public string UnsavedEndpointsMessage { get; }
+        public string UnsavedEndpointsMessage { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GeneralPage"/> class.
@@ -94,183 +94,199 @@ namespace Kit.Settings.UI.Views
                 hideBackupAndRestoreMessageArea,
                 doRefreshBackupRestoreStatus,
                 PickSingleFolderDialog,
-                loader);
+                loader,
+                appliedUiFontFamily: TypographyResources.AppliedFontFamily,
+                appliedUiFontSize: TypographyResources.AppliedFontSize);
 
             DataContext = ViewModel;
             InitializeComponent();
 
-            // The first service configuration read runs off the dispatcher. Keep its
-            // provisional default state out of the visible page while controls still
-            // measure normally, then reveal the completed layout in one frame.
-            SuppressInitialTransitions(GeneralSettingsSurface);
-            Unloaded += OnInitialPresentationUnloaded;
+            // Appearance, startup and update settings are usable on the first frame.
+            // Only the AI section waits for its asynchronous configuration read.
+            Unloaded += OnPageUnloaded;
+            Loaded += OnSettingsPageLoaded;
+        }
 
-            this.Loaded += async (s, e) =>
+        private async void OnSettingsPageLoaded(object sender, RoutedEventArgs e)
+        {
+            try
             {
-                try
-                {
-                    ViewModel.OnPageLoaded();
+                ViewModel.OnPageLoaded();
+                ShellNavigationBadges.Current.IsKitUpdateAvailable = ViewModel.IsUpdateAvailable;
+                AiServiceSettingsLoadingRing.IsActive = !_aiSettingsPresented;
 
-                    if (!_backupStatusRefreshQueued)
+                if (!_backupStatusRefreshQueued)
+                {
+                    _backupStatusRefreshQueued = true;
+                    RefreshBackupRestoreStatus(500);
+                }
+
+                await ViewModel.AiServices.Initialization.ConfigureAwait(false);
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    if (!IsLoaded)
                     {
-                        _backupStatusRefreshQueued = true;
-                        doRefreshBackupRestoreStatus(500);
+                        return;
                     }
 
-                    SuppressInitialTransitions(GeneralSettingsSurface);
-                    await ViewModel.AiServices.Initialization.ConfigureAwait(false);
-                    DispatcherQueue.TryEnqueue(() =>
+                    if (ViewModel.AiServices.CanToggle)
                     {
-                        if (IsLoaded)
-                        {
-                            if (ViewModel.AiServices.CanToggle)
-                            {
-                                ApplyStoredApiKeys();
-                            }
+                        ApplyStoredApiKeys();
+                    }
 
-                            QueueInitialContentPresentation();
-                        }
-                    });
-                }
-                catch (Exception ex)
+                    QueueAiSettingsPresentation();
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to initialize AI service settings.", ex);
+                DispatcherQueue.TryEnqueue(() =>
                 {
-                    Logger.LogError("Failed to initialize general settings.", ex);
-                    DispatcherQueue.TryEnqueue(() =>
+                    if (IsLoaded)
                     {
-                        if (IsLoaded)
-                        {
-                            QueueInitialContentPresentation();
-                        }
-                    });
-                }
-            };
+                        // Configuration failures still expose the service's retry action.
+                        QueueAiSettingsPresentation();
+                    }
+                });
+            }
         }
 
-        private void SuppressInitialTransitions(DependencyObject root)
+        private void QueueAiSettingsPresentation()
         {
-            if (_initialContentPresented)
+            if (_aiSettingsPresented || _aiPresentationQueued || _waitingForAiRender)
             {
                 return;
             }
 
-            if (root is Panel panel && panel.ChildrenTransitions?.Count > 0)
+            _aiPresentationQueued = DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
             {
-                _initialTransitions.Add((panel, panel.ChildrenTransitions));
-                panel.ChildrenTransitions = null;
-            }
-
-            for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
-            {
-                SuppressInitialTransitions(VisualTreeHelper.GetChild(root, index));
-            }
-        }
-
-        private void QueueInitialContentPresentation()
-        {
-            if (_initialContentPresented || _presentationQueued || _waitingForInitialRender)
-            {
-                return;
-            }
-
-            _presentationQueued = true;
-            DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
-            {
-                _presentationQueued = false;
+                _aiPresentationQueued = false;
                 if (!IsLoaded)
                 {
                     return;
                 }
 
-                // Enabling controls can change their template states and invalidate
-                // measure. Apply it while hidden, before the initial render passes.
-                Bindings.Update();
-                GeneralSettingsSurface.IsEnabled = true;
-                SuppressInitialTransitions(GeneralSettingsSurface);
-                GeneralSettingsSurface.UpdateLayout();
-                _initialLayout = null;
-                _waitingForInitialRender = true;
-                CompositionTarget.Rendering += OnInitialContentRendering;
+                AiServiceSettingsSurface.IsEnabled = true;
+                _waitingForAiRender = true;
+                CompositionTarget.Rendering += OnAiSettingsRendering;
             });
         }
 
-        private void OnInitialContentRendering(object sender, object args)
+        private void OnAiSettingsRendering(object sender, object args)
         {
+            CancelAiSettingsRendering();
             if (!IsLoaded)
             {
-                CancelInitialContentRendering();
                 return;
             }
 
-            // Template size triggers can invalidate measure after UpdateLayout.
-            // Require matching layouts across actual render passes before exposing
-            // the content; no timer or assumed device/render speed is involved.
-            SuppressInitialTransitions(GeneralSettingsSurface);
-            GeneralSettingsSurface.UpdateLayout();
-            var content = (FrameworkElement)GeneralSettingsSurface.ModuleContent;
-            var layout = (content.ActualWidth, content.ActualHeight,
-                AiServicesGroup.ActualWidth, AiServicesGroup.ActualHeight,
-                DiagnosticsGroup.TransformToVisual(content).TransformPoint(default).Y);
-            if (_initialLayout == layout)
-            {
-                CancelInitialContentRendering();
-                PresentInitialContent();
-            }
-            else
-            {
-                _initialLayout = layout;
-            }
+            // The binding changes and enabled state share the next render pass;
+            // never force repeated whole-page measure passes from Rendering.
+            _aiSettingsPresented = true;
+            AiServiceSettingsSurface.Opacity = 1;
+            AiServiceSettingsSurface.IsHitTestVisible = true;
+            AiServiceSettingsLoadingRing.IsActive = false;
+            AiServiceSettingsLoading.Visibility = Visibility.Collapsed;
         }
 
-        private void OnInitialPresentationUnloaded(object sender, RoutedEventArgs e) => CancelInitialContentRendering();
-
-        private void CancelInitialContentRendering()
+        private void OnPageUnloaded(object sender, RoutedEventArgs e)
         {
-            if (_waitingForInitialRender)
-            {
-                CompositionTarget.Rendering -= OnInitialContentRendering;
-                _waitingForInitialRender = false;
-            }
-
-            _initialLayout = null;
+            _pendingSettingsSection = null;
+            AiServiceSettingsLoadingRing.IsActive = false;
+            CancelAiSettingsRendering();
         }
 
-        private void PresentInitialContent()
+        private void CancelAiSettingsRendering()
         {
-            _initialContentPresented = true;
-            GeneralSettingsSurface.Opacity = 1;
-            GeneralSettingsSurface.IsHitTestVisible = true;
-            GeneralSettingsLoadingRing.IsActive = false;
-            GeneralSettingsLoading.Visibility = Visibility.Collapsed;
-            ShellNavigationBadges.Current.IsKitUpdateAvailable = ViewModel.IsUpdateAvailable;
-            foreach (var (panel, transitions) in _initialTransitions)
+            if (_waitingForAiRender)
             {
-                panel.ChildrenTransitions = transitions;
+                CompositionTarget.Rendering -= OnAiSettingsRendering;
+                _waitingForAiRender = false;
             }
-
-            _initialTransitions.Clear();
         }
 
         public void Dispose()
         {
-            CancelInitialContentRendering();
+            CancelAiSettingsRendering();
             ViewModel.Dispose();
         }
 
         private void SettingsSection_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button { Tag: string sectionName } && FindName(sectionName) is FrameworkElement section)
+            if (sender is MenuFlyoutItem { Tag: string sectionName })
             {
+                _pendingSettingsSection = sectionName;
+            }
+        }
+
+        private void SettingsSectionMenu_Opening(object sender, object e)
+        {
+            if (sender is not MenuFlyout menu)
+            {
+                return;
+            }
+
+            foreach (var item in menu.Items)
+            {
+                if (item is MenuFlyoutItem { Tag: string sectionName } && FindName(sectionName) is Controls.SettingsGroup section)
+                {
+                    AutomationProperties.SetName(item, section.Header);
+                }
+            }
+        }
+
+        private void SettingsSectionMenu_Closed(object sender, object e)
+        {
+            var sectionName = _pendingSettingsSection;
+            _pendingSettingsSection = null;
+            if (sectionName == null)
+            {
+                return;
+            }
+
+            // The flyout restores focus to its owner when it closes. Move focus
+            // afterwards, then scroll the section heading into view so the focus
+            // change cannot replace the requested section position.
+            DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+            {
+                if (!IsLoaded || FindName(sectionName) is not FrameworkElement section)
+                {
+                    return;
+                }
+
+                Control focusTarget = sectionName switch
+                {
+                    nameof(AppearanceAndBehaviorGroup) => ThemeSelector,
+                    nameof(StartupAndPermissionsGroup) => StartupToggle,
+                    nameof(AiServicesGroup) => AiServiceToggle,
+                    nameof(DiagnosticsGroup) => DiagnosticsToggle,
+                    nameof(BackupAndRestoreGroup) => BackupButton,
+                    nameof(VersionAndUpdateGroup) => CheckForUpdatesButton,
+                    _ => null,
+                };
+
+                if (focusTarget?.Focus(FocusState.Keyboard) != true && FocusManager.FindFirstFocusableElement(section) is Control fallback)
+                {
+                    fallback.Focus(FocusState.Keyboard);
+                }
+
                 section.StartBringIntoView(new BringIntoViewOptions
                 {
-                    AnimationDesired = true,
+                    AnimationDesired = false,
                     VerticalAlignmentRatio = 0,
                     VerticalOffset = 8,
+                    TargetRect = new Windows.Foundation.Rect(0, 0, section.ActualWidth, Math.Min(section.ActualHeight, 96)),
                 });
+            });
+        }
 
-                if (FocusManager.FindFirstFocusableElement(section) is Control control)
-                {
-                    control.Focus(FocusState.Programmatic);
-                }
+        private void SettingEditorCard_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (sender is ContentControl { Content: FrameworkElement editor } card && e.NewSize.Width > 0)
+            {
+                // Preserve the desktop field width, but allow nested endpoint
+                // editors to fit the actual card width in narrow windows.
+                editor.MaxWidth = Math.Min(280, Math.Max(0, e.NewSize.Width - card.Padding.Left - card.Padding.Right));
             }
         }
 
@@ -319,9 +335,21 @@ namespace Kit.Settings.UI.Views
             return r;
         }
 
-        private void Click_LanguageRestart(object sender, RoutedEventArgs e)
+        public void RefreshLocalization()
         {
-            ViewModel.Restart();
+            var loader = ResourceLoaderInstance.ResourceLoader;
+            UnsavedEndpointsTitle = loader.GetString("AiHub_UnsavedEndpointsCard/Header");
+            UnsavedEndpointsMessage = loader.GetString("AiHub_UnsavedEndpointsCard/Description");
+            AiUnsavedEndpointsCard.Title = UnsavedEndpointsTitle;
+            AiUnsavedEndpointsCard.Message = UnsavedEndpointsMessage;
+        }
+
+        private void FontSizeSelector_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            if (!double.IsFinite(args.NewValue) || args.NewValue != Math.Truncate(args.NewValue))
+            {
+                sender.Value = ViewModel.UiFontSize;
+            }
         }
 
         public void RefreshEnabledState()

@@ -6,20 +6,26 @@
     x:Class="Kit.Settings.UI.Views.WingetActivityDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:services="using:Kit.Settings.UI.Services"
     xmlns:vm="using:Kit.Settings.UI.ViewModels"
+    Style="{StaticResource DefaultContentDialogStyle}"
+    Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+    CornerRadius="{ThemeResource OverlayCornerRadius}"
     DefaultButton="Close">
 
     <ContentDialog.Resources>
+        <!-- Keep the title and content on the same acrylic surface as the footer. -->
+        <SolidColorBrush x:Key="ContentDialogTopOverlay" Color="Transparent" />
         <DataTemplate x:Key="ActivityQueueTemplate" x:DataType="vm:WingetQueueRow">
             <Expander x:Name="QueueRowExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,4">
                 <Expander.Header>
                     <Grid Padding="4,2" ColumnDefinitions="2*,*,*" ColumnSpacing="12">
                         <StackPanel MinWidth="0">
                             <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{x:Bind Identity, Mode=OneWay}" FontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{x:Bind Identity, Mode=OneWay}" FontSize="{ThemeResource KitFontSize11}" services:TypographyResources.BaseFontSize="11" FontFamily="{StaticResource KitMonoFontFamily}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <Border Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Padding="7,2" CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <TextBlock Text="{x:Bind KindText, Mode=OneWay}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind KindText, Mode=OneWay}" FontSize="{ThemeResource KitFontSize11}" services:TypographyResources.BaseFontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                         </Border>
                         <TextBlock Grid.Column="2" Text="{x:Bind StateText, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                     </Grid>
@@ -27,13 +33,13 @@
                 <StackPanel Spacing="8">
                     <TextBlock
                         Text="{x:Bind WhenText, Mode=OneWay}"
-                        FontSize="12"
+                        FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Visibility="{x:Bind HasTimestamp, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                     <TextBlock Text="{x:Bind Message, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                     <Border Style="{StaticResource KitRecessedSurfaceStyle}">
                         <ScrollViewer MaxHeight="140" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-                            <TextBlock Text="{x:Bind Output, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            <TextBlock Text="{x:Bind Output, Mode=OneWay}" FontFamily="{StaticResource KitMonoFontFamily}" FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         </ScrollViewer>
                     </Border>
                 </StackPanel>
@@ -63,7 +69,7 @@
                 AutomationProperties.AutomationId="Winget_HistoryRetention" />
             <TextBlock
                 x:Name="HistoryCleanupHintText"
-                FontSize="12"
+                FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap" />
             <Button
@@ -76,7 +82,7 @@
             <TextBlock
                 x:Name="HistoryClearResultText"
                 Text="{x:Bind ViewModel.HistoryClearMessage, Mode=OneWay}"
-                FontSize="12"
+                FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
                 TextWrapping="Wrap"
                 IsTextSelectionEnabled="True"
                 AutomationProperties.AutomationId="Winget_HistoryClearResult"
@@ -94,7 +100,7 @@
             <TextBlock
                 x:Name="HistorySummaryText"
                 Text="{x:Bind ViewModel.HistoryFilterSummary, Mode=OneWay}"
-                FontSize="12"
+                FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="Wrap"
                 AutomationProperties.LiveSetting="Polite" />
@@ -107,7 +113,7 @@
                 <TextBlock
                     Text="{x:Bind ViewModel.Activity, Mode=OneWay}"
                     FontFamily="{StaticResource KitMonoFontFamily}"
-                    FontSize="12"
+                    FontSize="{ThemeResource KitFontSize12}" services:TypographyResources.BaseFontSize="12"
                     TextWrapping="Wrap"
                     IsTextSelectionEnabled="True" />
             </Border>

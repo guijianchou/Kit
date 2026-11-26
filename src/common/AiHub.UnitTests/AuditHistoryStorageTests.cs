@@ -176,10 +176,34 @@ public sealed class AuditHistoryStorageTests
     [TestMethod]
     public async Task IndependentWritersPreserveEveryResult()
     {
-        await Task.WhenAll(Enumerable.Range(0, 32).Select(index => Task.Run(() =>
-            new AuditHistoryStorage(_directory).SaveResult(new AuditResult { Timestamp = DateTime.UtcNow, HealthScore = index }))));
+        DateTime scanStart = DateTime.UtcNow.AddMinutes(-1);
+
+        // Timestamp is the snapshot identity. Concurrent wall-clock reads are not guaranteed
+        // to be unique and would intentionally update the same scan instead of adding one.
+        var snapshots = Enumerable.Range(0, 32).Select(index => new AuditResult
+        {
+            Timestamp = scanStart.AddTicks(index),
+            HealthScore = index,
+        }).ToArray();
+        await Task.WhenAll(snapshots.Select(snapshot => Task.Run(() =>
+            new AuditHistoryStorage(_directory).SaveResult(snapshot))));
         var history = new AuditHistoryStorage(_directory).LoadHistory();
         Assert.AreEqual(32, history.Count);
         Assert.AreEqual(32, history.Select(result => result.HealthScore).Distinct().Count());
+        CollectionAssert.AreEquivalent(snapshots.Select(result => result.Timestamp).ToArray(), history.Select(result => result.Timestamp).ToArray());
+
+        // Finishing one of these independent scans must replace exactly that stable identity.
+        new AuditHistoryStorage(_directory).SaveResult(new AuditResult
+        {
+            Timestamp = snapshots[7].Timestamp,
+            HealthScore = 99,
+            AnalysisOutcome = "ok",
+        });
+        var updated = new AuditHistoryStorage(_directory).LoadHistory();
+        Assert.AreEqual(32, updated.Count);
+        var completed = updated.Single(result => result.Timestamp == snapshots[7].Timestamp);
+        Assert.AreEqual(99, completed.HealthScore);
+        Assert.AreEqual("ok", completed.AnalysisOutcome);
+        CollectionAssert.AreEquivalent(snapshots.Select(result => result.Timestamp).ToArray(), updated.Select(result => result.Timestamp).ToArray());
     }
 }

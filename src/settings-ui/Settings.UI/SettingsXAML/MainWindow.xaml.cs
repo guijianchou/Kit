@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Kit.Settings.UI.Helpers;
 using Kit.Settings.UI.Library;
 using Kit.Settings.UI.Library.Helpers;
+using Kit.Settings.UI.Services;
 using Kit.Settings.UI.Views;
 using ManagedCommon;
 using Microsoft.UI;
@@ -144,6 +145,8 @@ namespace Kit.Settings.UI
             App.LogStartupTiming("MainWindow: callbacks registered");
 
             this.InitializeComponent();
+            WindowHelper.SetTheme(this, App.ThemeService.Theme);
+            AppearanceService.Attach(this);
             App.LogStartupTiming("MainWindow: InitializeComponent completed");
             SetTitleBar();
             App.LogStartupTiming("MainWindow: SetTitleBar completed");
@@ -254,6 +257,12 @@ namespace Kit.Settings.UI
             ShellPage.Navigate(type);
         }
 
+        internal void RefreshLocalization()
+        {
+            var loader = ResourceLoaderInstance.ResourceLoader;
+            Title = App.IsElevated ? loader.GetString("SettingsWindow_AdminTitle") : loader.GetString("SettingsWindow_Title");
+        }
+
         public void CloseHiddenWindow()
         {
             var hWnd = WindowNative.GetWindowHandle(this);
@@ -284,6 +293,7 @@ namespace Kit.Settings.UI
 
             if (KeepAliveForBackgroundWork?.Invoke() != true)
             {
+                AppearanceService.Detach(this);
                 this.AppWindow.Changed -= OnAppWindowChanged;
                 App.ThemeService.ThemeChanged -= OnThemeChanged;
                 shellPage.ActualThemeChanged -= OnShellActualThemeChanged;

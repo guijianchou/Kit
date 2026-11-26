@@ -11,13 +11,14 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Kit.Settings.UI.Helpers;
+using Kit.Settings.UI.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using UDPtestLib.Core;
 
 namespace Kit.Settings.UI.ViewModels
 {
-    public sealed class UDPtestLineRowViewModel : INotifyPropertyChanged
+    public sealed class UDPtestLineRowViewModel : INotifyPropertyChanged, ILiveLocalizable
     {
         private readonly BoundedObservableCollection<StatusBarViewModel> _recentBars = [];
         private int _recentBarCapacity = 240;
@@ -273,6 +274,19 @@ namespace Kit.Settings.UI.ViewModels
         public Brush SelectedRowBackgroundBrush => _isSelectedForChart
             ? ThemeBrushHelper.GetBrush("SubtleFillColorSecondaryBrush", ThemeBrushHelper.StrokeDefaultBrush)
             : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+
+        public void RefreshLocalization()
+        {
+            IpAddressDescription = IpAddressDescription.Relocalize();
+            LastErrorDisplay = string.IsNullOrEmpty(LastError) || LastError == "--"
+                ? "UDPtest_LastErrorEmpty".GetLocalizedOrFallback("Last error: --")
+                : "UDPtest_LastErrorFormat".FormatLocalized("Last error: {0}", FormatErrorDisplay(LastError));
+            ValidationErrorMessage = ValidationErrorMessage.Relocalize();
+            EditPortText = EditPortText.Relocalize();
+            UpdateEditCapability();
+            OnPropertyChanged(nameof(DisplayStatus));
+            OnPropertyChanged(nameof(ToggleLabel));
+        }
 
         public void RefreshThemeBrushes(ElementTheme theme)
         {

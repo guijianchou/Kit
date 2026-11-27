@@ -64,74 +64,96 @@ void ThemeListener::DelSystemThemeChangedHandler(THEME_HANDLE handle)
 
 void ThemeListener::CheckTheme()
 {
-    HANDLE hEvent;
-    HKEY hKey;
+    HKEY hKey = nullptr;
 
     // Open the Key to listen
-    RegOpenKeyEx(HKEY_CURRENT_USER, HKEY_WINDOWS_THEME, 0, KEY_NOTIFY, &hKey);
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, HKEY_WINDOWS_THEME, 0, KEY_NOTIFY, &hKey) != ERROR_SUCCESS)
+    {
+        return;
+    }
+
+    HANDLE hEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if (hEvent == nullptr)
+    {
+        RegCloseKey(hKey);
+        return;
+    }
+
+    auto checkAndDispatch = [&]() {
+        const auto _appTheme = ThemeHelpers::GetAppTheme();
+        const auto _systemTheme = ThemeHelpers::GetSystemTheme();
+
+        const bool appThemeChanged = (AppTheme != _appTheme);
+        const bool systemThemeChanged = (SystemTheme != _systemTheme);
+
+        if (!appThemeChanged && !systemThemeChanged)
+        {
+            return;
+        }
+
+        AppTheme = _appTheme;
+        SystemTheme = _systemTheme;
+
+        // Copy handlers under lock, then invoke outside lock to avoid deadlock
+        std::vector<THEME_HANDLE> handlesCopy;
+        std::vector<THEME_HANDLE> appThemeHandlesCopy;
+        std::vector<THEME_HANDLE> systemThemeHandlesCopy;
+
+        {
+            std::lock_guard<std::mutex> lock(handlesMutex);
+            handlesCopy = handles;
+            if (appThemeChanged)
+            {
+                appThemeHandlesCopy = appThemeHandles;
+            }
+            if (systemThemeChanged)
+            {
+                systemThemeHandlesCopy = systemThemeHandles;
+            }
+        }
+
+        // Call generic handlers (backward compatible)
+        for (const auto& handler : handlesCopy)
+        {
+            handler();
+        }
+
+        // Call app theme specific handlers
+        for (const auto& handler : appThemeHandlesCopy)
+        {
+            handler();
+        }
+
+        // Call system theme specific handlers
+        for (const auto& handler : systemThemeHandlesCopy)
+        {
+            handler();
+        }
+    };
 
     while (true)
     {
-        // Create an event.
-        hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-        if (hEvent != 0)
-        {
-            // Watch the registry key for a change of value.
-            RegNotifyChangeKeyValue(hKey,
-                                    TRUE,
+        // Arm the notification BEFORE reading the registry so changes that arrive
+        // between startup/handler execution and WaitForSingleObject are never missed.
+        if (RegNotifyChangeKeyValue(hKey,
+                                    FALSE,
                                     REG_NOTIFY_CHANGE_LAST_SET,
                                     hEvent,
-                                    TRUE);
-
-            WaitForSingleObject(hEvent, INFINITE);
-
-            auto _appTheme = ThemeHelpers::GetAppTheme();
-            auto _systemTheme = ThemeHelpers::GetSystemTheme();
-            
-            bool appThemeChanged = (AppTheme != _appTheme);
-            bool systemThemeChanged = (SystemTheme != _systemTheme);
-            
-            if (appThemeChanged || systemThemeChanged)
-            {
-                AppTheme = _appTheme;
-                SystemTheme = _systemTheme;
-                
-                // Copy handlers under lock, then invoke outside lock to avoid deadlock
-                std::vector<THEME_HANDLE> handlesCopy;
-                std::vector<THEME_HANDLE> appThemeHandlesCopy;
-                std::vector<THEME_HANDLE> systemThemeHandlesCopy;
-                
-                {
-                    std::lock_guard<std::mutex> lock(handlesMutex);
-                    handlesCopy = handles;
-                    if (appThemeChanged)
-                    {
-                        appThemeHandlesCopy = appThemeHandles;
-                    }
-                    if (systemThemeChanged)
-                    {
-                        systemThemeHandlesCopy = systemThemeHandles;
-                    }
-                }
-                
-                // Call generic handlers (backward compatible)
-                for (const auto& handler : handlesCopy)
-                {
-                    handler();
-                }
-                
-                // Call app theme specific handlers
-                for (const auto& handler : appThemeHandlesCopy)
-                {
-                    handler();
-                }
-                
-                // Call system theme specific handlers
-                for (const auto& handler : systemThemeHandlesCopy)
-                {
-                    handler();
-                }
-            }
+                                    TRUE) != ERROR_SUCCESS)
+        {
+            break;
         }
+
+        checkAndDispatch();
+
+        if (WaitForSingleObject(hEvent, INFINITE) != WAIT_OBJECT_0)
+        {
+            break;
+        }
+
+        checkAndDispatch();
     }
+
+    CloseHandle(hEvent);
+    RegCloseKey(hKey);
 }

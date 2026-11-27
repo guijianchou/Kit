@@ -38,6 +38,46 @@ public sealed class PolicyTemplateMigrationTests
     [TestMethod]
     [DataRow(false, "\n")]
     [DataRow(true, "\r\n")]
+    public async Task OptimizationVersion3MigratesOthersFallbackAndResiduals(bool bom, string newline)
+    {
+        using var fixture = new FixtureDirectory();
+        string data = fixture.PathFor("data");
+        string path = Path.Combine(data, "chains", "system-optimization", "AGENTS.md");
+        Write(path, TaskPolicyDefaults.Version3SystemOptimizationInstructions, bom, newline);
+        var service = new SecurityPolicyService(data, fixture.PathFor("modules"));
+        string migrated = await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization");
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, migrated);
+        StringAssert.Contains(migrated, "Others subfolder of");
+        StringAssert.Contains(migrated, "download-fallback");
+        StringAssert.Contains(migrated, "temp-residual");
+        StringAssert.Contains(migrated, "automatically skipped");
+    }
+
+    [TestMethod]
+    [DataRow(false, "\n")]
+    [DataRow(true, "\r\n")]
+    public async Task OptimizationVersion4MigratesSemanticTempBucketsAndPreservesCustomPolicies(bool bom, string newline)
+    {
+        using var fixture = new FixtureDirectory();
+        string data = fixture.PathFor("data");
+        string path = Path.Combine(data, "chains", "system-optimization", "AGENTS.md");
+        Write(path, TaskPolicyDefaults.Version4SystemOptimizationInstructions, bom, newline);
+        var service = new SecurityPolicyService(data, fixture.PathFor("modules"));
+        string migrated = await service.LoadTaskAgentsPolicyAsync("aihub", "system-optimization");
+        Assert.AreEqual(TaskPolicyDefaults.DefaultSystemOptimizationInstructions, migrated);
+        StringAssert.Contains(migrated, "version 5");
+        StringAssert.Contains(migrated, "documents-credentials");
+        StringAssert.Contains(migrated, "build-binaries-cache");
+
+        Write(path, TaskPolicyDefaults.Version4SystemOptimizationInstructions + "\nCustom user rule.", bom, newline);
+        byte[] customized = File.ReadAllBytes(path);
+        service.EnsureDefaultPolicyExists();
+        CollectionAssert.AreEqual(customized, File.ReadAllBytes(path));
+    }
+
+    [TestMethod]
+    [DataRow(false, "\n")]
+    [DataRow(true, "\r\n")]
     public async Task ShippedDefaultsMigrateTogetherAndAreIdempotent(bool bom, string newline)
     {
         using var fixture = new FixtureDirectory();

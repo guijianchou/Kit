@@ -10,6 +10,16 @@ namespace Kit.AIHubLib.Services;
 
 public sealed class DownloadOrganizerService
 {
+    public const string OthersCategory = "Others";
+    internal static readonly HashSet<string> KnownCategories = new(StringComparer.Ordinal)
+    {
+        "Documents", "Compressed", "Programs", "Music", "Video", "Pictures",
+    };
+    internal static readonly HashSet<string> AllowedCategories = new(StringComparer.Ordinal)
+    {
+        "Documents", "Compressed", "Programs", "Music", "Video", "Pictures", OthersCategory,
+    };
+
     private static readonly TimeSpan MinimumAge = TimeSpan.FromMinutes(10);
     private readonly string? _downloadsRoot;
     public bool ScanTruncated { get; private set; }
@@ -18,7 +28,7 @@ public sealed class DownloadOrganizerService
 
     static DownloadOrganizerService()
     {
-        // IDM-style categories with Pictures; unrecognized extensions stay where they are.
+        // IDM-style categories with Pictures; unrecognized loose files fall back to Others (or AI category).
         AddCategory("Documents", ".doc .docx .xls .xlsx .ppt .pptx .pdf .txt .rtf .odt .ods .odp .csv .md .epub .mobi .azw .azw3 .chm .djvu");
         AddCategory("Compressed", ".zip .rar .7z .tar .gz .gzip .bz2 .xz .tgz .tbz .tbz2 .txz .z .lz .lzma .zst .cab .arj .ace");
         AddCategory("Programs", ".exe .msi .msix .msixbundle .appx .appxbundle .msu .msp .iso .img .com");
@@ -26,6 +36,9 @@ public sealed class DownloadOrganizerService
         AddCategory("Video", ".mp4 .m4v .mkv .avi .mov .wmv .mpg .mpeg .mpe .webm .flv .f4v .3gp .3g2 .vob .asf .rm .rmvb .m2ts .mts");
         AddCategory("Pictures", ".jpg .jpeg .jpe .jfif .png .apng .gif .bmp .dib .tif .tiff .webp .avif .heic .heif .svg .ico");
     }
+
+    internal static bool TryGetKnownCategory(string extension, out string? category) =>
+        ExtensionToCategory.TryGetValue(extension, out category);
 
     public DownloadOrganizerService() { }
 
@@ -84,8 +97,11 @@ public sealed class DownloadOrganizerService
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                if (!ExtensionToCategory.TryGetValue(file.Extension, out string? category) ||
-                    !OptimizationFileSafety.IsEligible(file, MinimumAge)) continue;
+                if (!OptimizationFileSafety.IsEligible(file, MinimumAge)) continue;
+
+                bool known = ExtensionToCategory.TryGetValue(file.Extension, out string? category);
+                string resolvedCategory = known ? category! : OthersCategory;
+                string extensionLabel = string.IsNullOrEmpty(file.Extension) ? "extensionless" : file.Extension;
 
                 results.Add(new TempFileInfo
                 {
@@ -94,12 +110,17 @@ public sealed class DownloadOrganizerService
                     FileName = file.Name,
                     SizeInBytes = file.Length,
                     LastModified = file.LastWriteTimeUtc,
-                    Category = category,
+                    Category = resolvedCategory,
+                    EvidenceKind = known ? "download-extension" : "download-fallback",
                     Risk = RiskLevel.Low,
                     Action = "move",
-                    TargetRelativePath = category,
-                    ReasonEn = $"Unchanged for at least 10 minutes; organize by {file.Extension} into {category}",
-                    ReasonZh = $"至少 10 分钟未修改；按 {file.Extension} 类型整理至 {category}"
+                    TargetRelativePath = resolvedCategory,
+                    ReasonEn = known
+                        ? $"Unchanged for at least 10 minutes; organize by {file.Extension} into {resolvedCategory}"
+                        : $"Unchanged for at least 10 minutes; unrecognized {extensionLabel} file routed to Others fallback or AI category",
+                    ReasonZh = known
+                        ? $"至少 10 分钟未修改；按 {file.Extension} 类型整理至 {resolvedCategory}"
+                        : $"至少 10 分钟未修改；未识别类型（{extensionLabel}），默认兜底整理至 Others 或由 AI 归类",
                 });
             }
             catch (IOException) { }
@@ -145,10 +166,33 @@ public sealed class DownloadOrganizerService
 
             root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
             var file = new FileInfo(item.FilePath);
-            if (!string.Equals(file.DirectoryName, root, StringComparison.OrdinalIgnoreCase) ||
-                !ExtensionToCategory.TryGetValue(file.Extension, out string? category) ||
-                !string.Equals(item.TargetRelativePath, category, StringComparison.Ordinal) ||
-                !OptimizationFileSafety.IsEligible(file, MinimumAge, item)) return (false, null, "File is outside the download rules, in use, or changed since scanning; scan again.");
+            if (!string.Equals(file.DirectoryName, root, StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, null, "File is outside the download rules, in use, or changed since scanning; scan again.");
+            }
+
+            string? category;
+            if (ExtensionToCategory.TryGetValue(file.Extension, out string? knownCategory))
+            {
+                if (!string.Equals(item.TargetRelativePath, knownCategory, StringComparison.Ordinal))
+                {
+                    return (false, null, "File is outside the download rules, in use, or changed since scanning; scan again.");
+                }
+                category = knownCategory;
+            }
+            else if (!string.IsNullOrEmpty(item.TargetRelativePath) && AllowedCategories.Contains(item.TargetRelativePath))
+            {
+                category = item.TargetRelativePath;
+            }
+            else
+            {
+                return (false, null, "File is outside the download rules, in use, or changed since scanning; scan again.");
+            }
+
+            if (!OptimizationFileSafety.IsEligible(file, MinimumAge, item))
+            {
+                return (false, null, "File is outside the download rules, in use, or changed since scanning; scan again.");
+            }
 
             string targetDir = Path.Combine(root, category);
             if (!OptimizationFileSafety.HasNoReparsePoints(targetDir)) return (false, null, "The destination contains a reparse point.");

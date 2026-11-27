@@ -56,6 +56,48 @@ public sealed class OptimizationExecutionTests
     }
 
     [TestMethod]
+    public async Task LockedTempFileIsSkippedWithoutFailingRun()
+    {
+        using var fixture = new FixtureDirectory();
+        string temp = fixture.PathFor("Temp");
+        string unlocked = Path.Combine(temp, "free.tmp");
+        string locked = Path.Combine(temp, "busy.log");
+        Old(unlocked);
+        Old(locked);
+
+        var cache = new CacheCleanupService(fixture.PathFor("Local"), temp, CacheCleanupService.DeleteFile);
+        var organizer = new DownloadOrganizerService(fixture.PathFor("Downloads"));
+        var items = await cache.ScanAsync();
+        Assert.AreEqual(2, items.Count);
+        foreach (var item in items)
+        {
+            item.ReviewState = "approved";
+        }
+
+        var storage = new OptimizationHistoryStorage(fixture.PathFor("State"));
+        var service = new OptimizationExecutionService(cache, organizer, storage);
+        using var held = File.Open(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        var result = await service.ExecuteAsync(items);
+
+        Assert.AreEqual("completed", result.Record.State);
+        Assert.AreEqual(2, result.Record.ProcessedCount);
+        Assert.AreEqual(1, result.Record.SucceededCount);
+        Assert.AreEqual(1, result.Record.SkippedCount);
+        Assert.AreEqual(0, result.Record.FailedCount);
+        Assert.AreEqual(1, result.SucceededItems.Count);
+        Assert.AreEqual(1, result.Skipped.Count);
+        Assert.AreEqual(0, result.FailedItems.Count);
+        Assert.IsFalse(File.Exists(unlocked));
+        Assert.IsTrue(File.Exists(locked));
+        Assert.AreEqual("skipped", result.Record.Items.Single(entry => entry.FileName == "busy.log").State);
+
+        var reloaded = (await storage.LoadAsync()).Single();
+        Assert.AreEqual(1, reloaded.SkippedCount);
+        Assert.AreEqual("completed", reloaded.State);
+    }
+
+    [TestMethod]
     public async Task CancellationKeepsCompletedReceiptAndDoesNotStartNextFile()
     {
         using var fixture = new FixtureDirectory();

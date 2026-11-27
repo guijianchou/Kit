@@ -304,16 +304,47 @@ namespace ViewModelTests
             Assert.IsFalse(trayIcon.Contains("#include <common/updating/updateState.h>", StringComparison.Ordinal), "Tray startup should not depend on update state disk I/O.");
             Assert.IsFalse(trayIcon.Contains("UpdateState::read", StringComparison.Ordinal), "Tray startup should not read update state when the updater is disabled.");
             StringAssert.Contains(trayIcon, "update_available = false;");
-            StringAssert.Contains(trayIcon, "LoadIcon(h_instance, MAKEINTRESOURCE(update_available ? APPICON_UPDATE : APPICON))");
+            StringAssert.Contains(trayIcon, "MAKEINTRESOURCEW(has_update ? APPICON_UPDATE : APPICON)");
             StringAssert.Contains(trayIcon, "InsertMenuW(h_sub_menu, 0, MF_BYPOSITION | MF_STRING, ID_UPDATE_MENU_COMMAND");
             StringAssert.Contains(trayIcon, "void set_tray_icon_update_available(bool available)");
             StringAssert.Contains(trayIcon, "update_available = available;");
-            StringAssert.Contains(trayIcon, "LoadIcon(h_instance, MAKEINTRESOURCE(available ? APPICON_UPDATE : APPICON))");
+            StringAssert.Contains(trayIcon, "apply_tray_icon_on_ui_thread(true);");
             StringAssert.Contains(trayIcon, "Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);");
             StringAssert.Contains(runnerProject, @"..\common\updating\updateState.cpp", "Runner should reuse upstream's update-state file boundary so Settings can watch UpdateState.json.");
             StringAssert.Contains(updateState, @"Local\\KitRunnerUpdateStateMutex");
             Assert.IsFalse(runnerProject.Contains(@"..\common\updating\updating.vcxproj", StringComparison.Ordinal), "Runner should not restore the GitHub updater project reference just to show the badge.");
             Assert.IsFalse(updateState.Contains("PowerToysRunnerUpdateStateMutex", StringComparison.Ordinal), "Kit update-state mutex must not share the PowerToys runner mutex.");
+        }
+
+        [TestMethod]
+        public void TrayIconShouldTrackSystemThemeChangesOnUiThreadWithoutStartupRace()
+        {
+            var trayIcon = File.ReadAllText(FindSourceFile("src", "runner", "tray_icon.cpp"));
+            var themeListener = File.ReadAllText(FindSourceFile("src", "common", "Themes", "theme_listener.cpp"));
+
+            StringAssert.Contains(trayIcon, "case WM_SETTINGCHANGE:");
+            StringAssert.Contains(trayIcon, "L\"ImmersiveColorSet\"");
+            StringAssert.Contains(trayIcon, "case WM_THEMECHANGED:");
+            StringAssert.Contains(trayIcon, "dispatch_run_on_main_ui_thread(&handle_theme_change_on_ui_thread, nullptr);");
+            StringAssert.Contains(trayIcon, "PowerToysWhite.ico");
+            StringAssert.Contains(trayIcon, "PowerToysDark.ico");
+            Assert.IsFalse(trayIcon.Contains("LR_LOADFROMFILE | LR_DEFAULTSIZE | LR_SHARED", StringComparison.Ordinal), "File-loaded monochrome tray icons must not combine LR_LOADFROMFILE with LR_SHARED.");
+
+            var startTrayIndex = trayIcon.IndexOf("void start_tray_icon(", StringComparison.Ordinal);
+            var subscribeIndex = trayIcon.IndexOf("theme_listener.AddSystemThemeChangedHandler(&handle_theme_change);", startTrayIndex, StringComparison.Ordinal);
+            var addIconIndex = trayIcon.IndexOf("tray_icon_created = add_tray_icon_with_retry();", startTrayIndex, StringComparison.Ordinal);
+            var postAddRecheckIndex = trayIcon.IndexOf("apply_tray_icon_on_ui_thread(false);", addIconIndex, StringComparison.Ordinal);
+            Assert.IsTrue(
+                startTrayIndex >= 0 && subscribeIndex > startTrayIndex && addIconIndex > subscribeIndex && postAddRecheckIndex > addIconIndex,
+                "start_tray_icon must register the theme listener before adding the tray icon and re-check system theme after NIM_ADD.");
+
+            StringAssert.Contains(themeListener, "CloseHandle(hEvent);");
+            var armIndex = themeListener.IndexOf("RegNotifyChangeKeyValue(", StringComparison.Ordinal);
+            var waitIndex = themeListener.IndexOf("WaitForSingleObject(hEvent, INFINITE)", StringComparison.Ordinal);
+            var preWaitCheckIndex = themeListener.IndexOf("checkAndDispatch();", armIndex, StringComparison.Ordinal);
+            Assert.IsTrue(
+                armIndex >= 0 && preWaitCheckIndex > armIndex && waitIndex > preWaitCheckIndex,
+                "ThemeListener must arm RegNotifyChangeKeyValue before re-checking registry values so rapid changes are never missed.");
         }
 
         [TestMethod]

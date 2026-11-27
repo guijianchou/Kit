@@ -820,7 +820,7 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
     public string SafetyBoundaryLabel => "AIHub_SafetyBoundaryLabel".GetLocalizedOrFallback("Safety boundary");
     public string DownloadsLabel => "AIHub_DownloadsLabel".GetLocalizedOrFallback("Downloads");
     public string DownloadsRootOnlyLabel => "AIHub_DownloadsRootOnlyLabel".GetLocalizedOrFallback("Downloads root only");
-    public string DownloadsDescription => "AIHub_DownloadsDescription".GetLocalizedOrFallback("Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music, Video or Pictures within Downloads. Leave unknown types and incomplete downloads in place.");
+    public string DownloadsDescription => "AIHub_DownloadsDescription".GetLocalizedOrFallback("Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music, Video, Pictures, or Others (AI fallback) within Downloads. Incomplete downloads stay in place.");
     public string TemporaryFilesLabel => "AIHub_TemporaryFilesLabel".GetLocalizedOrFallback("Caches & temporary files");
     public string WhitelistOnlyLabel => "AIHub_WhitelistOnlyLabel".GetLocalizedOrFallback("Whitelist only");
     public string CacheDescription => "AIHub_CacheDescription".GetLocalizedOrFallback("Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; delete confirmed files individually.");
@@ -3514,6 +3514,13 @@ public sealed partial class AIHubPageViewModel : Observable, IDisposable, ILiveL
             foreach (var item in remaining)
             {
                 OptimizationCandidates.Add(item);
+            }
+            foreach (var skippedItem in result.Skipped)
+            {
+                skippedItem.Item.IsSelected = false;
+                skippedItem.Item.ReviewState = "skipped";
+                skippedItem.Item.ReasonEn = "Skipped because the file is currently in use.";
+                skippedItem.Item.ReasonZh = "文件正在被占用，已跳过。";
             }
             foreach (var failure in result.FailedItems)
             {

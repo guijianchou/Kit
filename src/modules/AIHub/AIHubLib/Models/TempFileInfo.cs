@@ -25,6 +25,7 @@ public sealed partial class TempFileInfo : INotifyPropertyChanged
     public string CacheRoot { get; set; } = string.Empty;
     public string DevelopmentRepository { get; set; } = string.Empty;
     public string BuildManifestPath { get; set; } = string.Empty;
+    public string EvidenceKind { get; set; } = string.Empty;
     public string ReviewState { get; set; } = "pending";
     public bool IsActionable => ReviewState == "approved" && Action is "delete" or "move";
     public string ExecutionError { get; set; } = string.Empty;

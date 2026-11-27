@@ -31,20 +31,16 @@
             <!-- 更新可用徽章点（原 InfoBadge UpdateInfoBadgeStyle） -->
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="#F09A2A" />
 
-            <!-- 主页顶部 Kit Update 紧凑圆形图标（与 Windows 11 设置首页统一，贴合 Mica 底面） -->
-            <LinearGradientBrush x:Key="KitUpdateStatusNormalBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
-                <GradientStop Offset="0.0" Color="#FF29A8F2" />
-                <GradientStop Offset="1.0" Color="#FF0072C6" />
-            </LinearGradientBrush>
-            <LinearGradientBrush x:Key="KitUpdateStatusAttentionBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
-                <GradientStop Offset="0.0" Color="#FFF2B035" />
-                <GradientStop Offset="1.0" Color="#FFD17408" />
-            </LinearGradientBrush>
-            <LinearGradientBrush x:Key="KitUpdateStatusErrorBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
-                <GradientStop Offset="0.0" Color="#FFE86464" />
-                <GradientStop Offset="1.0" Color="#FFC42B1C" />
-            </LinearGradientBrush>
-            <SolidColorBrush x:Key="KitUpdateStatusGlyphBrush" Color="#FFFFFFFF" />
+            <!-- 主页顶部 Kit Update 统一主题配色图标（与系统强调色、开关色及 Mica 语义徽章体系一致） -->
+            <SolidColorBrush x:Key="KitUpdateStatusNormalBadgeBrush" Opacity="0.14" Color="{ThemeResource SystemAccentColorLight2}" />
+            <SolidColorBrush x:Key="KitUpdateStatusNormalBorderBrush" Opacity="0.24" Color="{ThemeResource SystemAccentColorLight2}" />
+            <SolidColorBrush x:Key="KitUpdateStatusNormalGlyphBrush" Color="{ThemeResource SystemAccentColorLight2}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionBadgeBrush" Color="{StaticResource SystemFillColorCautionBackground}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionBorderBrush" Opacity="0.26" Color="{StaticResource SystemFillColorCaution}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionGlyphBrush" Color="{StaticResource SystemFillColorCaution}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorBadgeBrush" Color="{StaticResource SystemFillColorCriticalBackground}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorBorderBrush" Opacity="0.26" Color="{StaticResource SystemFillColorCritical}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorGlyphBrush" Color="{StaticResource SystemFillColorCritical}" />
 
             <!-- 设置导航标签柔和淡彩体系（低饱和度，兼容任意 Mica 壁纸底色） -->
             <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FFC7A6DB" />
@@ -104,20 +100,16 @@
 
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="#F09A2A" />
 
-            <!-- 主页顶部 Kit Update 紧凑圆形图标（与 Windows 11 设置首页统一，贴合 Mica 底面） -->
-            <LinearGradientBrush x:Key="KitUpdateStatusNormalBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
-                <GradientStop Offset="0.0" Color="#FF1E9CEB" />
-                <GradientStop Offset="1.0" Color="#FF006CC1" />
-            </LinearGradientBrush>
-            <LinearGradientBrush x:Key="KitUpdateStatusAttentionBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
-                <GradientStop Offset="0.0" Color="#FFE8A225" />
-                <GradientStop Offset="1.0" Color="#FFC76A00" />
-            </LinearGradientBrush>
-            <LinearGradientBrush x:Key="KitUpdateStatusErrorBadgeBrush" StartPoint="0.15,0.1" EndPoint="0.85,0.9">
-                <GradientStop Offset="0.0" Color="#FFE05252" />
-                <GradientStop Offset="1.0" Color="#FFB82318" />
-            </LinearGradientBrush>
-            <SolidColorBrush x:Key="KitUpdateStatusGlyphBrush" Color="#FFFFFFFF" />
+            <!-- 主页顶部 Kit Update 统一主题配色图标（与系统强调色、开关色及 Mica 语义徽章体系一致） -->
+            <SolidColorBrush x:Key="KitUpdateStatusNormalBadgeBrush" Opacity="0.11" Color="{ThemeResource SystemAccentColorDark1}" />
+            <SolidColorBrush x:Key="KitUpdateStatusNormalBorderBrush" Opacity="0.20" Color="{ThemeResource SystemAccentColorDark1}" />
+            <SolidColorBrush x:Key="KitUpdateStatusNormalGlyphBrush" Color="{ThemeResource SystemAccentColorDark1}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionBadgeBrush" Color="{StaticResource SystemFillColorCautionBackground}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionBorderBrush" Opacity="0.24" Color="{StaticResource SystemFillColorCaution}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionGlyphBrush" Color="{StaticResource SystemFillColorCaution}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorBadgeBrush" Color="{StaticResource SystemFillColorCriticalBackground}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorBorderBrush" Opacity="0.24" Color="{StaticResource SystemFillColorCritical}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorGlyphBrush" Color="{StaticResource SystemFillColorCritical}" />
 
             <!-- 设置导航标签柔和淡彩体系（低饱和度，兼容任意 Mica 壁纸底色） -->
             <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="#FF785596" />
@@ -172,10 +164,15 @@
 
             <SolidColorBrush x:Key="KitUpdateBadgeBrush" Color="{StaticResource SystemColorWindowTextColor}" />
 
-            <SolidColorBrush x:Key="KitUpdateStatusNormalBadgeBrush" Color="{StaticResource SystemColorHighlightColor}" />
-            <SolidColorBrush x:Key="KitUpdateStatusAttentionBadgeBrush" Color="{StaticResource SystemColorHighlightColor}" />
-            <SolidColorBrush x:Key="KitUpdateStatusErrorBadgeBrush" Color="{StaticResource SystemColorHighlightColor}" />
-            <SolidColorBrush x:Key="KitUpdateStatusGlyphBrush" Color="{StaticResource SystemColorHighlightTextColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusNormalBadgeBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusNormalBorderBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusNormalGlyphBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionBadgeBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionBorderBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusAttentionGlyphBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorBadgeBrush" Color="{StaticResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorBorderBrush" Color="{StaticResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="KitUpdateStatusErrorGlyphBrush" Color="{StaticResource SystemColorWindowTextColor}" />
 
             <SolidColorBrush x:Key="SectionAppearanceForegroundBrush" Color="{StaticResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="SectionAppearanceTintBrush" Color="{StaticResource SystemColorWindowColor}" />

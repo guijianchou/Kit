@@ -178,16 +178,31 @@
         </Style>
     </ResourceDictionary>
 
-    <!-- 主页顶部 Kit Update 圆形图标底色与副标题语义样式（响应运行时浅/深/高对比主题切换） -->
+    <!-- 主页顶部 Kit Update 圆形图标底色、细描边与矢量前景（跟随系统强调色及语义徽章体系，响应运行时浅/深/高对比主题切换） -->
     <ResourceDictionary x:Key="KitUpdateBadgeStyles">
         <Style x:Key="NormalBadge" TargetType="Border">
             <Setter Property="Background" Value="{ThemeResource KitUpdateStatusNormalBadgeBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource KitUpdateStatusNormalBorderBrush}" />
         </Style>
         <Style x:Key="AttentionBadge" TargetType="Border">
             <Setter Property="Background" Value="{ThemeResource KitUpdateStatusAttentionBadgeBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource KitUpdateStatusAttentionBorderBrush}" />
         </Style>
         <Style x:Key="ErrorBadge" TargetType="Border">
             <Setter Property="Background" Value="{ThemeResource KitUpdateStatusErrorBadgeBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource KitUpdateStatusErrorBorderBrush}" />
+        </Style>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="KitUpdateGlyphStyles">
+        <Style x:Key="NormalGlyph" TargetType="Path">
+            <Setter Property="Stroke" Value="{ThemeResource KitUpdateStatusNormalGlyphBrush}" />
+        </Style>
+        <Style x:Key="AttentionGlyph" TargetType="Path">
+            <Setter Property="Stroke" Value="{ThemeResource KitUpdateStatusAttentionGlyphBrush}" />
+        </Style>
+        <Style x:Key="ErrorGlyph" TargetType="Path">
+            <Setter Property="Stroke" Value="{ThemeResource KitUpdateStatusErrorGlyphBrush}" />
         </Style>
     </ResourceDictionary>
 

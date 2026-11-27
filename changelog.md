@@ -4,6 +4,12 @@
 
 ## English
 
+### 3.6.3 (2026-11-26)
+
+- Aligned the Home top-right `Kit Update` control with the subtitle baseline (`Monitor your system...`) and redesigned its icon badge with theme-adaptive translucent accent/semantic surfaces and crisp Fluent strokes unified across Light, Dark, and High Contrast themes.
+- Fixed the theme-adaptive monochrome system tray icon (`PowerToysWhite.ico` / `PowerToysDark.ico`) failing to follow Windows system theme switches by eliminating the startup race with `LightSwitchService`, handling `WM_SETTINGCHANGE`/`WM_THEMECHANGED`/`WM_DPICHANGED` on the tray UI thread, loading DPI-matched icons without `LR_SHARED`, and fixing `ThemeListener` event-handle leaks.
+- Upgraded AI Hub System Optimization (`AGENTS.md` v5): unmatched loose Downloads files (≥10 min unchanged) now fall back to AI classification or `Downloads\Others` instead of remaining orphaned; `%TEMP%` residuals and expanded modern Windows caches (`pnpm-cache`, `go-build`, `Yarn\Cache`, `Cargo` registry cache, `LocalLow\NVIDIA\PerDriverVersion\DXCache`, `CrashDumps`, `WER`, `uv\cache`, `Gradle`, multi-profile Chromium/Firefox/VS Code caches, ≥7 days unchanged) are grouped into compact semantic buckets (`BatchSize = 32`) so AI approves disposable scratch/cache buckets in ~1 batch while isolating personal documents/credentials; local pre-scan & storage inventory now run in parallel with single-pass root/NuGet traversal, zero redundant per-file reparse/sidecar syscalls, and Win32 `CreateFileW(DELETE, 0)` exclusive lock probing (avoiding synchronous AV content scans); locked/in-use temp and cache files are automatically skipped during both scan and execution without failing the run.
+
 ### 3.6.2 (2026-11-26)
 
 - Restored a unified, divider-free full-width quick-jump bar below the Settings heading with low-saturation section icons and a left-to-right fading translucent Mica accent wash that adapts to Light, Dark, and High Contrast themes.
@@ -1043,6 +1049,12 @@
 ## 中文
 
 ## 更新日志
+
+### 3.6.3（2026-11-26）
+
+- 将主页右上角 `Kit Update` 整体下移使 `Last checked` 与左侧简介行（`Monitor your system...`）基线齐平，并重构更新图标为跟随系统强调色与语义徽章体系的柔和半透明描边徽章，统一浅色、深色与高对比度整体配色。
+- 修复系统托盘单色自适应图标（`PowerToysWhite.ico` / `PowerToysDark.ico`）未跟随 Windows 系统主题切换的问题：消除与 `LightSwitchService` 的启动竞态、在托盘主 UI 线程响应 `WM_SETTINGCHANGE`/`WM_THEMECHANGED`/`WM_DPICHANGED`、按任务栏 DPI 加载独立图标句柄并修复 `ThemeListener` 事件句柄泄漏。
+- 升级 AI Hub 系统优化策略与扫描性能（`AGENTS.md` v5）：Downloads 未匹配已知扩展名的散文件（≥10 分钟未改）支持 AI 兜底归类或自动归入 `Downloads\Others`；`%TEMP%` 残留与现代 Windows 缓存目录（新增 `pnpm-cache`、`go-build`、`Yarn\Cache`、`Cargo` 包缓存、`LocalLow\NVIDIA\PerDriverVersion\DXCache`、`CrashDumps`、`WER`、`uv\cache`、`Gradle`、多配置浏览器与 VS Code 缓存等，≥7 天未改）按语义分桶合并（`BatchSize = 32`），避免扩展名碎片化导致的多批次长耗时与误跳过，同时将文档/凭据扩展名独立隔离；本地预扫与目录占用统计改为并行单遍遍历，消除海量重复符号链接/边车文件检查，并改用 Win32 `CreateFileW(DELETE, 0)` 独占探测避免触发同步杀毒内容扫描；被占用的临时/缓存文件在扫描和执行阶段均自动跳过（`Skipped`），不再导致整次清理失败。
 
 ### 3.6.2（2026-11-26）
 

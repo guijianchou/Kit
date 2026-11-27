@@ -3032,7 +3032,7 @@
     <value>仅根目录</value>
   </data>
   <data name="AIHub_DownloadsDescription" xml:space="preserve">
-    <value>仅整理至少 10 分钟未修改的散文件至 Downloads 内的 Documents、Compressed、Programs、Music、Video 或 Pictures；未知类型和未完成下载留在原处。</value>
+    <value>整理至少 10 分钟未修改的散文件至 Downloads 内的 Documents、Compressed、Programs、Music、Video、Pictures，未匹配类型由 AI 兜底归类或移至 Others；未完成下载留在原处。</value>
   </data>
   <data name="AIHub_TemporaryFilesLabel" xml:space="preserve">
     <value>缓存与临时文件</value>
@@ -3041,7 +3041,7 @@
     <value>仅白名单</value>
   </data>
   <data name="AIHub_CacheDescription" xml:space="preserve">
-    <value>仅扫描白名单中至少 7 天未修改的缓存文件及 Temp 内 .tmp/.temp 文件；跳过占用文件和目录链接，确认后逐文件删除。</value>
+    <value>扫描白名单及 Temp/缓存目录中至少 7 天未修改的文件，残留文件由 AI 建议决定是否清理；被占用的文件和目录链接自动跳过，确认后逐文件删除。</value>
   </data>
   <data name="AIHub_ScanButtonLabel" xml:space="preserve">
     <value>扫描</value>
@@ -3748,6 +3748,9 @@
   <data name="AIHub_Execution_Summary" xml:space="preserve">
     <value>{0} · 删除 {1:N0} · 移动 {2:N0} · 失败 {3:N0} · 未处理 {4:N0}</value>
   </data>
+  <data name="AIHub_Execution_SummaryWithSkipped" xml:space="preserve">
+    <value>{0} · 删除 {1:N0} · 移动 {2:N0} · 跳过 {3:N0} · 失败 {4:N0} · 未处理 {5:N0}</value>
+  </data>
   <data name="AIHub_Execution_Details" xml:space="preserve">
     <value>删除文件大小 {0} · 保留 {1:N0}/{2:N0} 项详情。本机保留最近 20 次记录。</value>
   </data>
@@ -3756,6 +3759,9 @@
   </data>
   <data name="AIHub_ExecutionItem_Moved" xml:space="preserve">
     <value>已移动</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Skipped" xml:space="preserve">
+    <value>已跳过（被占用）</value>
   </data>
   <data name="AIHub_ExecutionItem_Failed" xml:space="preserve">
     <value>失败</value>

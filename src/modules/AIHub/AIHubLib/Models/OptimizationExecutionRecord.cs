@@ -14,6 +14,7 @@ public sealed class OptimizationExecutionRecord
     public int ProcessedCount { get; set; }
     public int SucceededCount { get; set; }
     public int FailedCount { get; set; }
+    public int SkippedCount { get; set; }
     public int MovedCount { get; set; }
     public int DeletedCount { get; set; }
     public long FreedBytes { get; set; }
@@ -47,4 +48,8 @@ public sealed record OptimizationExecutionProgress(
 public sealed record OptimizationExecutionResult(
     OptimizationExecutionRecord Record,
     IReadOnlyList<TempFileInfo> SucceededItems,
-    IReadOnlyList<OptimizationExecutionFailure> FailedItems);
+    IReadOnlyList<OptimizationExecutionFailure> FailedItems,
+    IReadOnlyList<OptimizationExecutionFailure>? SkippedItems = null)
+{
+    public IReadOnlyList<OptimizationExecutionFailure> Skipped { get; } = SkippedItems ?? Array.Empty<OptimizationExecutionFailure>();
+}

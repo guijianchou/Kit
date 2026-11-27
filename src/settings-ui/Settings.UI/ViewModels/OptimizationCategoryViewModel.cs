@@ -73,8 +73,8 @@ public sealed class OptimizationCategoryViewModel : Observable
     }
     public string Family => Name.StartsWith("VS Code", StringComparison.Ordinal) || Name == "Visual Studio indexes" ? "editors"
         : !string.IsNullOrEmpty(Items[0].DevelopmentRepository) ? "development"
-        : Name.StartsWith(".NET workload", StringComparison.Ordinal) || Name.StartsWith("uv cache", StringComparison.Ordinal) || Name.StartsWith("NuGet", StringComparison.Ordinal) || Name.StartsWith("pip", StringComparison.Ordinal) || Name.StartsWith("npm", StringComparison.Ordinal) || Name.StartsWith("pnpm", StringComparison.Ordinal) ? "packages"
-        : Name.StartsWith("Edge", StringComparison.Ordinal) || Name.StartsWith("Chrome", StringComparison.Ordinal) ? "browsers" : "system";
+        : Name.StartsWith(".NET workload", StringComparison.Ordinal) || Name.StartsWith("uv cache", StringComparison.Ordinal) || Name.StartsWith("NuGet", StringComparison.Ordinal) || Name.StartsWith("Gradle", StringComparison.Ordinal) || Name.StartsWith("pip", StringComparison.Ordinal) || Name.StartsWith("npm", StringComparison.Ordinal) || Name.StartsWith("pnpm", StringComparison.Ordinal) || Name.StartsWith("Go build", StringComparison.Ordinal) || Name.StartsWith("Yarn", StringComparison.Ordinal) || Name.StartsWith("Cargo", StringComparison.Ordinal) ? "packages"
+        : Name.StartsWith("Edge", StringComparison.Ordinal) || Name.StartsWith("Chrome", StringComparison.Ordinal) || Name.StartsWith("Brave", StringComparison.Ordinal) || Name.StartsWith("Firefox", StringComparison.Ordinal) ? "browsers" : "system";
     public int ApprovedCount { get; }
     public string Destination => Items[0].Action == "move" ? $"{Path} → {Items[0].Category}" : Path;
     public string LocationLabel => string.IsNullOrEmpty(Items[0].DevelopmentRepository) ? Destination

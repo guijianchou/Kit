@@ -38,9 +38,13 @@ public sealed class OptimizationRunViewModel : INotifyPropertyChanged, ILiveLoca
         "failed" => "AIHub_Execution_Failed".GetLocalizedOrFallback("Stopped with errors"),
         _ => "AIHub_Execution_Interrupted".GetLocalizedOrFallback("Interrupted — verify files before retrying"),
     };
-    public string Summary => "AIHub_Execution_Summary".FormatLocalized(
-        "{0} · {1:N0} deleted · {2:N0} moved · {3:N0} failed · {4:N0} remaining",
-        StateLabel, Record.DeletedCount, Record.MovedCount, Record.FailedCount, Record.RemainingCount);
+    public string Summary => Record.SkippedCount > 0
+        ? "AIHub_Execution_SummaryWithSkipped".FormatLocalized(
+            "{0} · {1:N0} deleted · {2:N0} moved · {3:N0} skipped · {4:N0} failed · {5:N0} remaining",
+            StateLabel, Record.DeletedCount, Record.MovedCount, Record.SkippedCount, Record.FailedCount, Record.RemainingCount)
+        : "AIHub_Execution_Summary".FormatLocalized(
+            "{0} · {1:N0} deleted · {2:N0} moved · {3:N0} failed · {4:N0} remaining",
+            StateLabel, Record.DeletedCount, Record.MovedCount, Record.FailedCount, Record.RemainingCount);
     public string DetailsSummary => string.Join(Environment.NewLine, new[]
     {
         "AIHub_Execution_Details".FormatLocalized("{0} freed · {1:N0}/{2:N0} item details retained. Latest 20 runs are kept locally.", new TempFileInfo { SizeInBytes = Record.FreedBytes }.SizeFormatted, Record.Items.Count, Record.ProcessedCount),
@@ -83,6 +87,7 @@ public sealed class OptimizationExecutionItemViewModel : INotifyPropertyChanged,
         "deleted" => "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
         "moved" => "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved"),
         "succeeded" or "completed" => action == "move" ? "AIHub_ExecutionItem_Moved".GetLocalizedOrFallback("Moved") : "AIHub_ExecutionItem_Deleted".GetLocalizedOrFallback("Deleted"),
+        "skipped" => "AIHub_ExecutionItem_Skipped".GetLocalizedOrFallback("Skipped (in use)"),
         "failed" => "AIHub_ExecutionItem_Failed".GetLocalizedOrFallback("Failed"),
         _ => "AIHub_ExecutionItem_Pending".GetLocalizedOrFallback("Not completed"),
     };

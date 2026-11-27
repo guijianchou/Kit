@@ -53,6 +53,7 @@ public sealed class OptimizationExecutionService
         var record = new OptimizationExecutionRecord { TotalCount = plan.Count };
         var succeeded = new List<TempFileInfo>();
         var failed = new List<OptimizationExecutionFailure>();
+        var skipped = new List<OptimizationExecutionFailure>();
         var progressClock = Stopwatch.StartNew();
         long lastProgressMilliseconds = -100;
         long lastCheckpointMilliseconds = 0;
@@ -101,6 +102,7 @@ public sealed class OptimizationExecutionService
                     token.ThrowIfCancellationRequested();
                     var item = planned.Snapshot;
                     bool success = false;
+                    bool itemSkipped = false;
                     string? destination = null;
                     string? error = null;
                     try
@@ -113,7 +115,7 @@ public sealed class OptimizationExecutionService
                         {
                             // Require any NuGet marker to be explicitly selected and
                             // processed first; hidden side-effect deletions have no receipt.
-                            (success, error) = _cache.CleanupItem(item, ignoredPaths, allowImplicitMarkerDeletion: false, token);
+                            (success, itemSkipped, error) = _cache.CleanupItemDetailed(item, ignoredPaths, allowImplicitMarkerDeletion: false, token);
                         }
                         else
                         {
@@ -141,6 +143,11 @@ public sealed class OptimizationExecutionService
                             record.FreedBytes += Math.Max(0, item.SizeInBytes);
                         }
                     }
+                    else if (itemSkipped)
+                    {
+                        record.SkippedCount++;
+                        skipped.Add(new(planned.Original, error ?? "Skipped because the file is currently in use. / 文件正在被占用，已跳过。"));
+                    }
                     else
                     {
                         record.FailedCount++;
@@ -155,7 +162,7 @@ public sealed class OptimizationExecutionService
                             SourcePath = item.FilePath,
                             DestinationPath = destination,
                             Action = item.Action,
-                            State = success ? "succeeded" : "failed",
+                            State = success ? "succeeded" : itemSkipped ? "skipped" : "failed",
                             Bytes = success ? Math.Max(0, item.SizeInBytes) : 0,
                             Reason = success ? null : error ?? "The action did not complete; scan again.",
                             CompletedUtc = DateTime.UtcNow,
@@ -194,7 +201,7 @@ public sealed class OptimizationExecutionService
             if (entered) ExecutionGate.Release();
             ReportProgress(force: true);
         }
-        return new(record, succeeded, failed);
+        return new(record, succeeded, failed, skipped);
     }
 
     private static TempFileInfo Snapshot(TempFileInfo item)
@@ -206,6 +213,7 @@ public sealed class OptimizationExecutionService
             SizeInBytes = item.SizeInBytes, LastModified = item.LastModified,
             Category = item.Category, CacheRoot = item.CacheRoot,
             DevelopmentRepository = item.DevelopmentRepository, BuildManifestPath = item.BuildManifestPath,
+            EvidenceKind = item.EvidenceKind,
             ReviewState = item.ReviewState, Risk = item.Risk, IsSelected = item.IsSelected,
             Action = item.Action, TargetRelativePath = item.TargetRelativePath,
         };

@@ -15,7 +15,7 @@ using Kit.AiHub.Storage;
 public sealed class SecurityPolicyService
 {
     public const int MaximumPolicyBytes = 64 * 1024;
-    public const string CurrentTemplateVersion = "3";
+    public const string CurrentTemplateVersion = "5";
     private static readonly UTF8Encoding PolicyEncoding = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private readonly AiHubStorageFiles _files;
     private readonly string _pluginPackagesDirectory;
@@ -114,7 +114,9 @@ public sealed class SecurityPolicyService
                     content == TaskPolicyDefaults.GroupedSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == TaskPolicyDefaults.ProjectSystemOptimizationInstructions.ReplaceLineEndings("\n").Trim() ||
                     content == NormalizePolicy(TaskPolicyDefaults.SnapshotSystemOptimizationInstructions) ||
-                    content == NormalizePolicy(TaskPolicyDefaults.Version2SystemOptimizationInstructions),
+                    content == NormalizePolicy(TaskPolicyDefaults.Version2SystemOptimizationInstructions) ||
+                    content == NormalizePolicy(TaskPolicyDefaults.Version3SystemOptimizationInstructions) ||
+                    content == NormalizePolicy(TaskPolicyDefaults.Version4SystemOptimizationInstructions),
                 SelfTestPolicy.TaskId => content == NormalizePolicy(SelfTestPolicy.PreviousInstructions),
                 _ => false,
             };

@@ -115,8 +115,8 @@
                 AutomationProperties.HeadingLevel="1"
                 VerticalAlignment="Center" TextWrapping="Wrap"
                 Style="{StaticResource TitleTextBlockStyle}" />
-            <Grid x:Name="DashboardVersionPanel" Grid.Column="1" HorizontalAlignment="Right"
-                  VerticalAlignment="Center" Margin="0,2,0,0" MaxWidth="340">
+            <Grid x:Name="DashboardVersionPanel" Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" HorizontalAlignment="Right"
+                  VerticalAlignment="Bottom" Margin="0,0,0,-2" MaxWidth="340">
                 <Button x:Name="DashboardUpdateNoticeButton"
                         Click="UpdateNotice_Click"
                         Style="{StaticResource KitHeaderStatusButtonStyle}"
@@ -126,45 +126,46 @@
                         ToolTipService.ToolTip="{x:Bind ViewModel.KitUpdateTooltip, Mode=OneWay}">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" VerticalAlignment="Center">
                         <Border x:Name="DashboardUpdateBadge"
-                                Width="24" Height="24" CornerRadius="12"
+                                Width="28" Height="28" CornerRadius="14"
+                                BorderThickness="1"
                                 VerticalAlignment="Center"
                                 Style="{x:Bind UpdateBadgeStyle(ViewModel.KitUpdateStatusKind), Mode=OneWay}">
                             <Grid>
-                                <Viewbox Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                <Viewbox Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"
                                          AutomationProperties.AccessibilityView="Raw"
                                          Visibility="{x:Bind ViewModel.IsKitUpdateChecking, Mode=OneWay, Converter={StaticResource ReverseBoolToVisibilityConverter}}">
                                     <Canvas Width="24" Height="24">
-                                        <!-- Windows 11 风格精巧双向同步箭头 -->
+                                        <!-- Fluent 柔和细线双向同步箭头（随系统强调色与主题自适应） -->
                                         <Path x:Name="DashboardUpdateSyncIcon"
-                                              Stroke="{ThemeResource KitUpdateStatusGlyphBrush}"
-                                              StrokeThickness="2.1"
+                                              Style="{x:Bind UpdateGlyphStyle(ViewModel.KitUpdateStatusKind), Mode=OneWay}"
+                                              StrokeThickness="1.85"
                                               StrokeStartLineCap="Round"
                                               StrokeEndLineCap="Round"
                                               StrokeLineJoin="Round"
-                                              Data="M 6.0,10.0 A 6.3,6.3 0 0 1 17.4,8.6 M 14.3,8.8 L 17.6,8.8 L 17.6,5.5 M 18.0,14.0 A 6.3,6.3 0 0 1 6.6,15.4 M 9.7,15.2 L 6.4,15.2 L 6.4,18.5"
+                                              Data="M 5.8,9.8 A 6.5,6.5 0 0 1 17.5,8.4 M 14.3,8.6 L 17.7,8.6 L 17.7,5.2 M 18.2,14.2 A 6.5,6.5 0 0 1 6.5,15.6 M 9.7,15.4 L 6.3,15.4 L 6.3,18.8"
                                               Visibility="{x:Bind ViewModel.IsKitUpdateSyncIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                         <!-- 有可用更新：下载箭头 -->
                                         <Path x:Name="DashboardUpdateDownloadIcon"
-                                              Stroke="{ThemeResource KitUpdateStatusGlyphBrush}"
-                                              StrokeThickness="2.1"
+                                              Style="{x:Bind UpdateGlyphStyle(ViewModel.KitUpdateStatusKind), Mode=OneWay}"
+                                              StrokeThickness="1.85"
                                               StrokeStartLineCap="Round"
                                               StrokeEndLineCap="Round"
                                               StrokeLineJoin="Round"
-                                              Data="M 12,5.6 L 12,14.4 M 8.2,10.8 L 12,14.6 L 15.8,10.8 M 6.6,17.8 L 17.4,17.8"
+                                              Data="M 12,5.4 L 12,14.4 M 8.2,10.7 L 12,14.6 L 15.8,10.7 M 6.6,18.0 L 17.4,18.0"
                                               Visibility="{x:Bind ViewModel.IsKitUpdateDownloadIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                         <!-- 检查失败/需要恢复：感叹号 -->
                                         <Path x:Name="DashboardUpdateErrorIcon"
-                                              Stroke="{ThemeResource KitUpdateStatusGlyphBrush}"
-                                              StrokeThickness="2.2"
+                                              Style="{x:Bind UpdateGlyphStyle(ViewModel.KitUpdateStatusKind), Mode=OneWay}"
+                                              StrokeThickness="2.0"
                                               StrokeStartLineCap="Round"
                                               StrokeEndLineCap="Round"
-                                              Data="M 12,6.6 L 12,13.4 M 12,17.0 L 12,17.05"
+                                              Data="M 12,6.4 L 12,13.4 M 12,17.2 L 12,17.25"
                                               Visibility="{x:Bind ViewModel.IsKitUpdateErrorIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                     </Canvas>
                                 </Viewbox>
                                 <ProgressRing x:Name="DashboardUpdateProgressRing"
-                                              Width="12" Height="12"
-                                              Foreground="{ThemeResource KitUpdateStatusGlyphBrush}"
+                                              Width="14" Height="14"
+                                              Foreground="{ThemeResource KitUpdateStatusNormalGlyphBrush}"
                                               IsActive="{x:Bind ViewModel.IsKitUpdateChecking, Mode=OneWay}"
                                               Visibility="{x:Bind ViewModel.IsKitUpdateChecking, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                             </Grid>
@@ -194,7 +195,7 @@
                 </Button>
             </Grid>
             <TextBlock
-                x:Name="DashboardIntroduction" Grid.Row="1" Grid.ColumnSpan="2"
+                x:Name="DashboardIntroduction" Grid.Row="1" Grid.Column="0"
                 x:Uid="DashboardIntro" services:RuntimeLocalization.Uid="DashboardIntro"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 TextWrapping="WrapWholeWords"
@@ -429,9 +430,13 @@
                     <VisualState.Setters>
                         <Setter Target="DashboardHeading.(Grid.ColumnSpan)" Value="2" />
                         <Setter Target="DashboardVersionPanel.(Grid.Row)" Value="1" />
+                        <Setter Target="DashboardVersionPanel.(Grid.RowSpan)" Value="1" />
                         <Setter Target="DashboardVersionPanel.(Grid.Column)" Value="0" />
                         <Setter Target="DashboardVersionPanel.(Grid.ColumnSpan)" Value="2" />
+                        <Setter Target="DashboardVersionPanel.VerticalAlignment" Value="Center" />
+                        <Setter Target="DashboardVersionPanel.Margin" Value="0" />
                         <Setter Target="DashboardIntroduction.(Grid.Row)" Value="2" />
+                        <Setter Target="DashboardIntroduction.(Grid.ColumnSpan)" Value="2" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>

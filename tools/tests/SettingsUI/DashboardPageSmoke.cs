@@ -355,7 +355,7 @@ internal static class DashboardPageSmoke
         var sectionNavigation = (Grid)general.FindName("SettingsSectionNavigation");
         var sectionLinks = sectionNavigation.Children.OfType<Button>().ToArray();
         string[] expectedLabels = chinese ? ["外观主题", "启动权限", "AI 服务", "诊断日志", "备份还原", "版本更新"] : ["Appearance", "Startup", "AI service", "Diagnostics", "Backup", "Updates"];
-        Require(sectionLinks.Length == 6 && sectionLinks.Select(link => Descendants(link).OfType<TextBlock>().Single().Text).SequenceEqual(expectedLabels), "Settings section bar retains all six localized destinations.");
+        Require(sectionLinks.Length == 6 && sectionLinks.Select(link => ((StackPanel)link.Content).Children.OfType<TextBlock>().Single().Text).SequenceEqual(expectedLabels), "Settings section bar retains all six localized destinations.");
         Require(sectionLinks.All(link => Descendants(link).OfType<FontIcon>().Any() && link.IsTabStop), "Each section pill retains a colored icon and keyboard navigation.");
         Require(sectionLinks.All(link => Microsoft.UI.Xaml.Automation.AutomationProperties.GetName(link) == (string)general.FindName((string)link.Tag).GetType().GetProperty("Header").GetValue(general.FindName((string)link.Tag))), "Settings destinations retain full group names for accessibility.");
         var search = (AutoSuggestBox)root.FindName("SearchBox");
@@ -619,7 +619,7 @@ internal static class DashboardPageSmoke
         element.TransformToVisual(relativeTo).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
 
     private static void ApplyUpdateState(DashboardViewModel vm, UpdatingSettings settings) =>
-        typeof(DashboardViewModel).GetMethod("ApplyUpdateState", PrivateInstance).Invoke(vm, new object[] { settings });
+        typeof(DashboardViewModel).GetMethod("ApplyUpdateState", PrivateInstance, null, new[] { typeof(UpdatingSettings) }, null).Invoke(vm, new object[] { settings });
 
     private static void VerifyUpdateNotices(DashboardPage page, bool chinese)
     {
@@ -677,18 +677,26 @@ internal static class DashboardPageSmoke
     {
         var header = (Grid)page.FindName("DashboardHeader");
         var title = (TextBlock)page.FindName("DashboardHeading");
+        var intro = (TextBlock)page.FindName("DashboardIntroduction");
         var panel = (FrameworkElement)page.FindName("DashboardVersionPanel");
         var version = (TextBlock)page.FindName("DashboardVersionText");
         var notice = (TextBlock)page.FindName("DashboardUpdateNoticeText");
         var utilities = (FrameworkElement)page.FindName("UtilitiesCard");
         var titleBounds = Bounds(title, page);
+        var introBounds = Bounds(intro, page);
         var panelBounds = Bounds(panel, page);
         Require(Math.Abs(panelBounds.Right - Bounds(utilities, page).Right) <= 1.5,
             $"Home version/update right edge aligns with Utilities at width={width}, font={TypographyResources.AppliedFontSize}: panel={panelBounds}, utilities={Bounds(utilities, page)}.");
         Require(Grid.GetRow(panel) == 0
-                ? panelBounds.Left >= titleBounds.Right + 23
+                ? panelBounds.Left >= titleBounds.Right + 23 && panelBounds.Left >= introBounds.Right + 23
                 : panelBounds.Top >= titleBounds.Bottom - 1,
             $"Home title and version/update never overlap at width={width}, font={TypographyResources.AppliedFontSize}.");
+        if (Grid.GetRow(panel) == 0)
+        {
+            var noticeBounds = Bounds(notice, page);
+            Require(Math.Abs(noticeBounds.Bottom - introBounds.Bottom) <= 4.0,
+                $"Home Last checked line aligns with intro line at width={width}, font={TypographyResources.AppliedFontSize}: notice={noticeBounds}, intro={introBounds}.");
+        }
         Require(header.ActualWidth < TypographyResources.FontSize(480)
                 ? Grid.GetRow(panel) == 1 : Grid.GetRow(panel) == 0,
             "The Home header changes rows according to available width and text size.");

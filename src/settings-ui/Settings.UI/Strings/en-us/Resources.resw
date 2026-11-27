@@ -3377,7 +3377,7 @@
     <value>Downloads root only</value>
   </data>
   <data name="AIHub_DownloadsDescription" xml:space="preserve">
-    <value>Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music, Video or Pictures within Downloads. Leave unknown types and incomplete downloads in place.</value>
+    <value>Move loose files unchanged for 10 minutes into Documents, Compressed, Programs, Music, Video, Pictures, or Others (AI fallback) within Downloads. Incomplete downloads stay in place.</value>
   </data>
   <data name="AIHub_TemporaryFilesLabel" xml:space="preserve">
     <value>Caches &amp; temporary files</value>
@@ -3386,7 +3386,7 @@
     <value>Whitelist only</value>
   </data>
   <data name="AIHub_CacheDescription" xml:space="preserve">
-    <value>Review whitelisted cache files and Temp .tmp/.temp files unchanged for 7 days. Skip files in use and links; delete confirmed files individually.</value>
+    <value>Review whitelisted cache files and Temp/cache residuals unchanged for 7 days via AI suggestions. Locked or in-use files and links are skipped automatically; delete confirmed files individually.</value>
   </data>
   <data name="AIHub_ScanButtonLabel" xml:space="preserve">
     <value>Scan</value>
@@ -4093,6 +4093,9 @@
   <data name="AIHub_Execution_Summary" xml:space="preserve">
     <value>{0} · {1:N0} deleted · {2:N0} moved · {3:N0} failed · {4:N0} remaining</value>
   </data>
+  <data name="AIHub_Execution_SummaryWithSkipped" xml:space="preserve">
+    <value>{0} · {1:N0} deleted · {2:N0} moved · {3:N0} skipped · {4:N0} failed · {5:N0} remaining</value>
+  </data>
   <data name="AIHub_Execution_Details" xml:space="preserve">
     <value>{0} deleted · {1:N0}/{2:N0} item details retained. Latest 20 runs are kept locally.</value>
   </data>
@@ -4101,6 +4104,9 @@
   </data>
   <data name="AIHub_ExecutionItem_Moved" xml:space="preserve">
     <value>Moved</value>
+  </data>
+  <data name="AIHub_ExecutionItem_Skipped" xml:space="preserve">
+    <value>Skipped (in use)</value>
   </data>
   <data name="AIHub_ExecutionItem_Failed" xml:space="preserve">
     <value>Failed</value>

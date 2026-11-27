@@ -78,7 +78,7 @@ public sealed class DownloadOrganizerServiceTests
 
         var knownCategories = new HashSet<string>(StringComparer.Ordinal)
         {
-            "Documents", "Compressed", "Programs", "Music", "Video", "Pictures",
+            "Documents", "Compressed", "Programs", "Music", "Video", "Pictures", DownloadOrganizerService.OthersCategory,
         };
 
         foreach (var item in items)
@@ -162,8 +162,14 @@ public sealed class DownloadOrganizerServiceTests
         WriteOld(Path.Combine(root, "nested", "photo.jpg"), "nested");
         using var held = File.Open(Path.Combine(root, "locked.gif"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         var service = new DownloadOrganizerService(root);
-        var item = (await service.ScanAsync()).Single();
-        Assert.AreEqual("ready.PnG", item.FileName);
+        var scanned = await service.ScanAsync();
+        Assert.AreEqual(2, scanned.Count);
+        var item = scanned.Single(candidate => candidate.FileName == "ready.PnG");
+        var fallbackItem = scanned.Single(candidate => candidate.FileName == "unknown.image");
+        Assert.AreEqual("Pictures", item.Category);
+        Assert.AreEqual("download-extension", item.EvidenceKind);
+        Assert.AreEqual(DownloadOrganizerService.OthersCategory, fallbackItem.Category);
+        Assert.AreEqual("download-fallback", fallbackItem.EvidenceKind);
         item.TargetRelativePath = "Documents";
         Assert.IsFalse(service.OrganizeItem(item));
         item.TargetRelativePath = "../Pictures";
@@ -173,6 +179,14 @@ public sealed class DownloadOrganizerServiceTests
         Assert.IsFalse(service.OrganizeItem(item));
         Assert.IsTrue(File.Exists(item.FilePath));
         Assert.IsFalse(Directory.Exists(Path.Combine(root, "Pictures")), "Rejected execution must not create the destination.");
+
+        fallbackItem.TargetRelativePath = "../Others";
+        Assert.IsFalse(service.OrganizeItem(fallbackItem));
+        fallbackItem.TargetRelativePath = DownloadOrganizerService.OthersCategory;
+        var movedFallback = service.OrganizeItemDetailed(fallbackItem);
+        Assert.IsTrue(movedFallback.Success, movedFallback.Error);
+        Assert.AreEqual(Path.Combine(root, "Others", "unknown.image"), movedFallback.DestinationPath);
+        Assert.IsTrue(File.Exists(movedFallback.DestinationPath));
     }
 
     private static void WriteOld(string path, string content)

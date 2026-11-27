@@ -43,6 +43,166 @@ public sealed class OptimizationAnalysisTests
     }
 
     [TestMethod]
+    [DataRow("Others", true)]
+    [DataRow("Pictures", true)]
+    [DataRow("Documents", true)]
+    [DataRow("../Others", false)]
+    [DataRow("ArbitraryFolder", false)]
+    public async Task DownloadFallbackAllowsOthersOrKnownCategoryAndRejectsUnsafeTargets(string target, bool expectedSuccess)
+    {
+        using var engine = new FakeEngine { Edit = output => output.Recommendations[0].TargetRelative = target };
+        var item = Candidate("move");
+        item.FilePath = @"C:\private-name\asset.raw";
+        item.FileName = "asset.raw";
+        item.Category = DownloadOrganizerService.OthersCategory;
+        item.TargetRelativePath = DownloadOrganizerService.OthersCategory;
+        item.EvidenceKind = "download-fallback";
+        var result = await new OptimizationAnalysisService(engine).AnalyzeAsync([item], "en-US");
+
+        Assert.AreEqual(expectedSuccess, result.IsSuccess);
+        Assert.AreEqual("download-fallback", engine.Inputs.Single().Evidence);
+        Assert.AreEqual("Others", engine.Inputs.Single().CategoryHint);
+        if (expectedSuccess)
+        {
+            Assert.IsTrue(item.IsSelected);
+            Assert.AreEqual(target, item.Category);
+            Assert.AreEqual(target, item.TargetRelativePath);
+        }
+        else
+        {
+            Assert.IsFalse(item.IsSelected);
+            Assert.AreEqual("Others", item.TargetRelativePath);
+        }
+    }
+
+    [TestMethod]
+    public async Task TempResidualsAreGroupedByExtensionSoAiCanDeleteLogsAndSkipDocuments()
+    {
+        using var engine = new FakeEngine();
+        engine.Edit = output =>
+        {
+            foreach (var rec in output.Recommendations)
+            {
+                var input = engine.Inputs.Single(i => i.ItemId == rec.ItemId);
+                if (input.Extension == ".docx")
+                {
+                    rec.Action = "skip";
+                    rec.TargetRelative = null;
+                    rec.ReasonEn = "Possible user document in Temp; skip.";
+                    rec.ReasonZh = "Temp 中疑似用户文档，建议跳过。";
+                }
+            }
+        };
+        var log1 = Candidate("delete");
+        log1.FilePath = @"C:\private\Temp\a.log";
+        log1.FileName = "a.log";
+        log1.Category = "Temporary residuals";
+        log1.CacheRoot = @"C:\private\Temp";
+        log1.EvidenceKind = "temp-residual";
+        var log2 = Candidate("delete");
+        log2.FilePath = @"C:\private\Temp\b.log";
+        log2.FileName = "b.log";
+        log2.Category = "Temporary residuals";
+        log2.CacheRoot = @"C:\private\Temp";
+        log2.EvidenceKind = "temp-residual";
+        var doc = Candidate("delete");
+        doc.FilePath = @"C:\private\Temp\notes.docx";
+        doc.FileName = "notes.docx";
+        doc.Category = "Temporary residuals";
+        doc.CacheRoot = @"C:\private\Temp";
+        doc.EvidenceKind = "temp-residual";
+
+        var result = await new OptimizationAnalysisService(engine).AnalyzeAsync([log1, log2, doc], "zh-CN");
+        Assert.IsTrue(result.IsSuccess);
+        Assert.AreEqual(2, engine.Inputs.Count, "Different residual extensions must be reviewed separately.");
+        Assert.AreEqual(2, result.Items.Count);
+        Assert.AreEqual(1, result.SkippedCount);
+        Assert.AreEqual("approved", log1.ReviewState);
+        Assert.AreEqual("approved", log2.ReviewState);
+        Assert.AreEqual("skipped", doc.ReviewState);
+        Assert.IsFalse(doc.IsSelected);
+    }
+
+    [TestMethod]
+    public async Task ManyTempResidualExtensionsCollapseIntoBoundedSemanticBucketsWhileIsolatingDocuments()
+    {
+        using var engine = new FakeEngine();
+        engine.Edit = output =>
+        {
+            foreach (var rec in output.Recommendations)
+            {
+                var input = engine.Inputs.Single(i => i.ItemId == rec.ItemId);
+                if (input.Extension.Contains("documents-credentials", StringComparison.Ordinal) || input.Extension is ".docx" or ".pem")
+                {
+                    rec.Action = "skip";
+                    rec.TargetRelative = null;
+                    rec.ReasonEn = "Potential document or credential in Temp; skip.";
+                    rec.ReasonZh = "Temp 中可能存在用户文档或凭据，建议跳过。";
+                }
+            }
+        };
+
+        string[] extensions =
+        [
+            ".log", ".dmp", ".txt", ".tlog",
+            ".cab", ".msi", ".exe", ".zip",
+            ".pdb", ".dll", ".obj", ".lib", ".winmd", ".mui", ".cache",
+            ".png", ".jpg", ".ico",
+            ".cs", ".cpp", ".h", ".json", ".ps1", ".md", ".xml", ".props", ".targets", ".mszyml", string.Empty,
+            ".docx", ".pem",
+        ];
+        var items = extensions.Select((ext, index) =>
+        {
+            var item = Candidate("delete");
+            item.FileName = $"file-{index}{ext}";
+            item.FilePath = $@"C:\private\Temp\file-{index}{ext}";
+            item.Category = "Temporary residuals";
+            item.CacheRoot = @"C:\private\Temp";
+            item.EvidenceKind = "temp-residual";
+            return item;
+        }).ToArray();
+
+        var result = await new OptimizationAnalysisService(engine).AnalyzeAsync(items, "zh-CN");
+        Assert.IsTrue(result.IsSuccess);
+        Assert.AreEqual(6, engine.Inputs.Count, "31 distinct Temp extensions must collapse into 6 semantic buckets instead of fragmenting AI batches.");
+        Assert.AreEqual(32, engine.Options!.BatchSize);
+        Assert.AreEqual(extensions.Length - 2, result.Items.Count);
+        Assert.AreEqual(2, result.SkippedCount);
+        Assert.IsTrue(items.Where(i => i.FileName.EndsWith(".docx", StringComparison.Ordinal) || i.FileName.EndsWith(".pem", StringComparison.Ordinal)).All(i => i.ReviewState == "skipped"));
+        Assert.IsTrue(items.Where(i => !i.FileName.EndsWith(".docx", StringComparison.Ordinal) && !i.FileName.EndsWith(".pem", StringComparison.Ordinal)).All(i => i.ReviewState == "approved"));
+    }
+
+    [TestMethod]
+    public async Task CacheResidualsGroupByCacheRootWhileIsolatingDocuments()
+    {
+        using var engine = new FakeEngine();
+        var f1 = Candidate("delete");
+        f1.FilePath = @"C:\private\LocalLow\NVIDIA\PerDriverVersion\DXCache\a.bin";
+        f1.FileName = "a.bin";
+        f1.Category = "NVIDIA DXCache";
+        f1.CacheRoot = @"C:\private\LocalLow\NVIDIA\PerDriverVersion\DXCache";
+        f1.EvidenceKind = "cache-residual";
+        var f2 = Candidate("delete");
+        f2.FilePath = @"C:\private\LocalLow\NVIDIA\PerDriverVersion\DXCache\b.toc";
+        f2.FileName = "b.toc";
+        f2.Category = "NVIDIA DXCache";
+        f2.CacheRoot = @"C:\private\LocalLow\NVIDIA\PerDriverVersion\DXCache";
+        f2.EvidenceKind = "cache-residual";
+        var f3 = Candidate("delete");
+        f3.FilePath = @"C:\private\LocalLow\NVIDIA\PerDriverVersion\DXCache\unexpected.pdf";
+        f3.FileName = "unexpected.pdf";
+        f3.Category = "NVIDIA DXCache";
+        f3.CacheRoot = @"C:\private\LocalLow\NVIDIA\PerDriverVersion\DXCache";
+        f3.EvidenceKind = "cache-residual";
+
+        var result = await new OptimizationAnalysisService(engine).AnalyzeAsync([f1, f2, f3], "en-US");
+        Assert.IsTrue(result.IsSuccess);
+        Assert.AreEqual(2, engine.Inputs.Count, "Dedicated cache roots should coalesce cache files into one bucket while isolating document extensions.");
+        Assert.IsTrue(engine.Inputs.Any(i => i.FileCount == 2 && i.Extension.StartsWith("bucket:cache-data", StringComparison.Ordinal)));
+        Assert.IsTrue(engine.Inputs.Any(i => i.FileCount == 1 && i.Extension == ".pdf"));
+    }
+
+    [TestMethod]
     public async Task CacheGroupsReviewOneScopeAndExpandOnlyItsOriginalSnapshot()
     {
         using var engine = new FakeEngine();

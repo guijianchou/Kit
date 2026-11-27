@@ -94,11 +94,12 @@ public sealed class OptimizationInventoryService
                 locations[index] = locations[index] with { Disposition = "protected" };
         }
 
+        var locationRoots = new HashSet<string>(locations.Select(item => item.Path), StringComparer.OrdinalIgnoreCase);
         var scopes = new List<OptimizationInventoryScope>(locations.Count);
         foreach (OptimizationInventoryLocation location in locations)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            scopes.Add(Inspect(location, locations, budget));
+            scopes.Add(Inspect(location, locationRoots, budget));
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -112,7 +113,7 @@ public sealed class OptimizationInventoryService
         };
     }
 
-    private OptimizationInventoryScope Inspect(OptimizationInventoryLocation location, IReadOnlyList<OptimizationInventoryLocation> locations, ScanBudget budget)
+    private OptimizationInventoryScope Inspect(OptimizationInventoryLocation location, HashSet<string> locationRoots, ScanBudget budget)
     {
         var scope = Describe(location);
         if (location.Disposition == "protected") return scope with { State = "protected" };
@@ -140,6 +141,8 @@ public sealed class OptimizationInventoryService
         bool partial = false;
         bool enumeratedRoot = false;
         DateTime now = DateTime.UtcNow;
+        DateTime recentCutoff = now.AddDays(-7);
+        DateTime olderCutoff = now.AddDays(-30);
         var largest = new List<OptimizationInventoryFile>(_maximumTopFiles + 1);
         var pending = new Stack<string>();
         pending.Push(location.Path);
@@ -155,13 +158,6 @@ public sealed class OptimizationInventoryService
             string directory = pending.Pop();
             try
             {
-                if (!OptimizationFileSafety.HasNoReparsePoints(directory))
-                {
-                    skipped++;
-                    partial = true;
-                    continue;
-                }
-
                 foreach (FileSystemInfo entry in _enumerate(directory))
                 {
                     budget.CancellationToken.ThrowIfCancellationRequested();
@@ -193,15 +189,14 @@ public sealed class OptimizationInventoryService
                             continue;
                         }
 
-                        if (entry is DirectoryInfo && locations.Any(other => !ReferenceEquals(other, location)
-                            && string.Equals(path, other.Path, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            skipped++;
-                            continue;
-                        }
-
                         if (entry is DirectoryInfo)
                         {
+                            if (locationRoots.Contains(path))
+                            {
+                                skipped++;
+                                continue;
+                            }
+
                             pending.Push(path);
                             continue;
                         }
@@ -211,9 +206,9 @@ public sealed class OptimizationInventoryService
                         DateTime modified = file.LastWriteTimeUtc;
                         bytes = Add(bytes, length);
                         files++;
-                        if (modified > now.AddDays(-7)) recent = Add(recent, length);
-                        if (modified <= now.AddDays(-30)) older = Add(older, length);
-                        if (_maximumTopFiles > 0)
+                        if (modified > recentCutoff) recent = Add(recent, length);
+                        if (modified <= olderCutoff) older = Add(older, length);
+                        if (_maximumTopFiles > 0 && (largest.Count < _maximumTopFiles || length > largest[^1].SizeInBytes))
                         {
                             largest.Add(new OptimizationInventoryFile { Name = file.Name, Path = file.FullName, SizeInBytes = length, LastModifiedUtc = new DateTimeOffset(modified, TimeSpan.Zero) });
                             largest.Sort((left, right) => right.SizeInBytes.CompareTo(left.SizeInBytes));
@@ -378,12 +373,16 @@ public sealed class OptimizationInventoryService
             ("npm-local", "npm content cache", "npm 内容缓存", @"npm-cache\_cacache"),
             ("pip-local", "pip cache", "pip 缓存", @"pip\cache"),
             ("pnpm-local", "pnpm cache", "pnpm 缓存", @"pnpm\cache"),
+            ("pnpm-v9-local", "pnpm cache (v9+)", "pnpm 缓存 (v9+)", "pnpm-cache"),
+            ("go-build-local", "Go build cache", "Go 编译缓存", "go-build"),
+            ("yarn-local", "Yarn cache", "Yarn 缓存", @"Yarn\Cache"),
             ("nuget-http", "NuGet HTTP cache", "NuGet HTTP 缓存", @"NuGet\v3-cache"),
             ("uv-local", "uv cache", "uv 缓存", @"uv\cache"),
         }) yield return At(entry.Item1, "packages", entry.Item2, entry.Item3, Path.Combine(local, entry.Item4));
 
         if (!string.IsNullOrEmpty(user))
         {
+            yield return At("shader-nvidia-locallow-dx", "system", "NVIDIA LocalLow DirectX cache", "NVIDIA LocalLow DirectX 缓存", Path.Combine(user, "AppData", "LocalLow", "NVIDIA", "PerDriverVersion", "DXCache"));
             foreach (var entry in new[]
             {
                 ("nuget-packages", "NuGet packages", "NuGet 包缓存", @".nuget\packages"),
@@ -393,6 +392,7 @@ public sealed class OptimizationInventoryService
                 ("npm-user", "npm user cache", "npm 用户缓存", @".npm\_cacache"),
                 ("pip-user", "pip user cache", "pip 用户缓存", @".cache\pip"),
                 ("gradle-cache", "Gradle caches", "Gradle 缓存", @".gradle\caches"),
+                ("cargo-cache", "Cargo registry cache", "Cargo 依赖包缓存", @".cargo\registry\cache"),
                 ("maven-cache", "Maven local repository", "Maven 本地包仓库", @".m2\repository"),
             }) yield return At(entry.Item1, "packages", entry.Item2, entry.Item3, Path.Combine(user, entry.Item4));
             foreach (var entry in new[]

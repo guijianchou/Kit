@@ -100,7 +100,8 @@ public sealed class OptimizationHistoryStorage
             ?? throw new JsonException("Optimization history must contain a record list.");
         if (records.Any(record => record is null || record.Items is null || record.Items.Any(item => item is null) ||
             record.TotalCount < 0 || record.ProcessedCount < 0 || record.ProcessedCount > record.TotalCount ||
-            record.SucceededCount < 0 || record.FailedCount < 0 || (long)record.SucceededCount + record.FailedCount != record.ProcessedCount))
+            record.SucceededCount < 0 || record.FailedCount < 0 || record.SkippedCount < 0 ||
+            (long)record.SucceededCount + record.FailedCount + record.SkippedCount != record.ProcessedCount))
             throw new JsonException("Invalid optimization history record.");
         foreach (var record in records) record.Items = record.Items.Take(MaximumDetailedItems).ToList();
         return records.Take(MaximumRecords).ToList();

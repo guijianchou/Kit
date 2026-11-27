@@ -129,6 +129,15 @@ namespace
     static ThemeListener theme_listener;
     static bool theme_adaptive_enabled = false;
     static bool update_available = false;
+    static HICON owned_tray_icon = nullptr;
+    static std::optional<Theme> applied_system_theme;
+    static bool applied_theme_adaptive = false;
+    static bool applied_update_available = false;
+    static UINT applied_icon_dpi = 0;
+    static DWORD tray_ui_thread_id = 0;
+
+    static void handle_theme_change();
+    static bool apply_tray_icon_on_ui_thread(bool force_reload);
 }
 
 // Struct to fill with callback and the data. The window_proc is responsible for cleaning it.
@@ -253,6 +262,7 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         }
         break;
     case WM_DESTROY:
+        theme_listener.DelSystemThemeChangedHandler(&handle_theme_change);
         KillTimer(window, tray_click_timer_id);
         double_click_timer_running = false;
         double_clicked = false;
@@ -267,7 +277,30 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
             }
             close_settings_window();
         }
+        if (owned_tray_icon != nullptr)
+        {
+            DestroyIcon(owned_tray_icon);
+            owned_tray_icon = nullptr;
+            tray_icon_data.hIcon = nullptr;
+        }
+        tray_icon_hwnd = NULL;
         PostQuitMessage(0);
+        break;
+    case WM_SETTINGCHANGE:
+        if (theme_adaptive_enabled &&
+            (lparam == 0 || _wcsicmp(reinterpret_cast<LPCWSTR>(lparam), L"ImmersiveColorSet") == 0))
+        {
+            apply_tray_icon_on_ui_thread(false);
+        }
+        break;
+    case WM_THEMECHANGED:
+        if (theme_adaptive_enabled)
+        {
+            apply_tray_icon_on_ui_thread(false);
+        }
+        break;
+    case WM_DPICHANGED:
+        apply_tray_icon_on_ui_thread(true);
         break;
     case WM_CLOSE:
         DestroyWindow(window);
@@ -293,6 +326,7 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
     {
         if (!tray_icon_created && s_tray_icon_visible && tray_icon_data.hWnd != nullptr)
         {
+            apply_tray_icon_on_ui_thread(false);
             tray_icon_created = add_tray_icon_with_retry();
         }
         break;
@@ -429,6 +463,7 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
         {
             if (s_tray_icon_visible && tray_icon_data.hWnd != nullptr)
             {
+                apply_tray_icon_on_ui_thread(false);
                 tray_icon_created = add_tray_icon_with_retry();
             }
             break;
@@ -437,54 +472,179 @@ LRESULT __stdcall tray_icon_window_proc(HWND window, UINT message, WPARAM wparam
     return DefWindowProc(window, message, wparam, lparam);
 }
 
-static HICON get_icon(Theme theme)
+namespace
 {
-    std::wstring icon_path = get_module_folderpath();
-    if (theme == Theme::Dark)
+    static HICON load_theme_adaptive_icon(Theme theme, bool has_update, int cx, int cy)
     {
-        icon_path += update_available ? L"\\svgs\\PowerToysWhiteUpdate.ico" : L"\\svgs\\PowerToysWhite.ico";
-    }
-    else
-    {
-        icon_path += update_available ? L"\\svgs\\PowerToysDarkUpdate.ico" : L"\\svgs\\PowerToysDark.ico";
-    }
-    Logger::trace(L"get_icon: Loading icon from path: {}", icon_path);
+        std::wstring icon_path = get_module_folderpath();
+        if (theme == Theme::Dark)
+        {
+            icon_path += has_update ? L"\\svgs\\PowerToysWhiteUpdate.ico" : L"\\svgs\\PowerToysWhite.ico";
+        }
+        else
+        {
+            icon_path += has_update ? L"\\svgs\\PowerToysDarkUpdate.ico" : L"\\svgs\\PowerToysDark.ico";
+        }
+        Logger::trace(L"get_icon: Loading icon from path: {} ({}x{})", icon_path, cx, cy);
 
-    HICON icon = static_cast<HICON>(LoadImage(NULL,
-                                        icon_path.c_str(),
-                                        IMAGE_ICON,
-                                        0,
-                                        0,
-                                        LR_LOADFROMFILE | LR_DEFAULTSIZE | LR_SHARED));
-    if (!icon)
-    {
-        Logger::warn(L"get_icon: Failed to load icon from {}, error: {}", icon_path, GetLastError());
+        HICON icon = static_cast<HICON>(LoadImageW(nullptr,
+                                                   icon_path.c_str(),
+                                                   IMAGE_ICON,
+                                                   cx,
+                                                   cy,
+                                                   LR_LOADFROMFILE));
+        if (!icon)
+        {
+            Logger::warn(L"get_icon: Failed to load icon from {}, error: {}", icon_path, GetLastError());
+        }
+        return icon;
     }
-    return icon;
-}
 
-
-static void handle_theme_change()
-{
-    if (theme_adaptive_enabled)
+    static HICON load_default_tray_icon(bool has_update, int cx, int cy)
     {
-        tray_icon_data.hIcon = get_icon(ThemeHelpers::GetSystemTheme());
-        if (!tray_icon_data.hIcon) tray_icon_data.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-        Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
+        auto h_instance = reinterpret_cast<HINSTANCE>(&__ImageBase);
+        const UINT flags = LR_SHARED | ((cx == 0 && cy == 0) ? LR_DEFAULTSIZE : 0);
+        HICON icon = static_cast<HICON>(LoadImageW(h_instance,
+                                                   MAKEINTRESOURCEW(has_update ? APPICON_UPDATE : APPICON),
+                                                   IMAGE_ICON,
+                                                   cx,
+                                                   cy,
+                                                   flags));
+        if (!icon)
+        {
+            icon = LoadIconW(h_instance, MAKEINTRESOURCEW(has_update ? APPICON_UPDATE : APPICON));
+        }
+        if (!icon)
+        {
+            icon = LoadIconW(nullptr, IDI_APPLICATION);
+        }
+        return icon;
+    }
+
+    static UINT get_tray_icon_dpi()
+    {
+        if (tray_icon_hwnd != nullptr)
+        {
+            const UINT dpi = GetDpiForWindow(tray_icon_hwnd);
+            if (dpi != 0)
+            {
+                return dpi;
+            }
+        }
+        return USER_DEFAULT_SCREEN_DPI;
+    }
+
+    static bool apply_tray_icon_on_ui_thread(bool force_reload)
+    {
+        const Theme system_theme = ThemeHelpers::GetSystemTheme();
+        const UINT dpi = get_tray_icon_dpi();
+
+        if (!force_reload &&
+            tray_icon_data.hIcon != nullptr &&
+            applied_theme_adaptive == theme_adaptive_enabled &&
+            applied_update_available == update_available &&
+            (!theme_adaptive_enabled || applied_system_theme == system_theme) &&
+            applied_icon_dpi == dpi)
+        {
+            return true;
+        }
+
+        int cx = GetSystemMetricsForDpi(SM_CXSMICON, dpi);
+        int cy = GetSystemMetricsForDpi(SM_CYSMICON, dpi);
+        if (cx <= 0 || cy <= 0)
+        {
+            cx = GetSystemMetrics(SM_CXSMICON);
+            cy = GetSystemMetrics(SM_CYSMICON);
+        }
+
+        bool new_owned = false;
+        HICON new_icon = nullptr;
+        bool effective_adaptive = theme_adaptive_enabled;
+
+        if (theme_adaptive_enabled)
+        {
+            new_icon = load_theme_adaptive_icon(system_theme, update_available, cx, cy);
+            if (new_icon)
+            {
+                new_owned = true;
+            }
+            else
+            {
+                Logger::warn(L"apply_tray_icon_on_ui_thread: Failed to load theme adaptive icon, falling back to default");
+                effective_adaptive = false;
+            }
+        }
+
+        if (!new_icon)
+        {
+            new_icon = load_default_tray_icon(update_available, cx, cy);
+        }
+
+        if (!new_icon)
+        {
+            Logger::error(L"apply_tray_icon_on_ui_thread: Failed to load any tray icon");
+            return false;
+        }
+
+        HICON previous_owned = owned_tray_icon;
+        tray_icon_data.hIcon = new_icon;
+        tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+        owned_tray_icon = new_owned ? new_icon : nullptr;
+        applied_system_theme = system_theme;
+        applied_theme_adaptive = effective_adaptive;
+        applied_update_available = update_available;
+        applied_icon_dpi = dpi;
+
+        BOOL modify_result = TRUE;
+        if (tray_icon_created)
+        {
+            modify_result = Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
+            if (!modify_result)
+            {
+                Logger::warn(L"apply_tray_icon_on_ui_thread: Shell_NotifyIcon(NIM_MODIFY) failed, error={:#010x}", GetLastError());
+            }
+        }
+
+        if (previous_owned != nullptr && previous_owned != new_icon)
+        {
+            DestroyIcon(previous_owned);
+        }
+
+        Logger::info(L"tray_icon: Applied icon (theme_adaptive={}, system_theme={}, update_available={}, dpi={}, size={}x{}, tray_created={}, modify_ok={})",
+                     effective_adaptive,
+                     system_theme == Theme::Dark ? L"dark" : L"light",
+                     update_available,
+                     dpi,
+                     cx,
+                     cy,
+                     tray_icon_created,
+                     modify_result != FALSE);
+        return modify_result != FALSE;
+    }
+
+    static void handle_theme_change_on_ui_thread(PVOID)
+    {
+        if (theme_adaptive_enabled)
+        {
+            apply_tray_icon_on_ui_thread(false);
+        }
+    }
+
+    static void handle_theme_change()
+    {
+        dispatch_run_on_main_ui_thread(&handle_theme_change_on_ui_thread, nullptr);
     }
 }
 
 void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
 {
+    tray_ui_thread_id = GetCurrentThreadId();
     theme_adaptive_enabled = theme_adaptive;
     auto h_instance = reinterpret_cast<HINSTANCE>(&__ImageBase);
 
     update_available = false;
 
-    HICON icon = theme_adaptive
-                           ? get_icon(ThemeHelpers::GetSystemTheme())
-                           : LoadIcon(h_instance, MAKEINTRESOURCE(update_available ? APPICON_UPDATE : APPICON));
-    if (!icon) icon = LoadIcon(nullptr, IDI_APPLICATION);
+    HICON class_icon = load_default_tray_icon(false, 0, 0);
     {
         UINT id_tray_icon = 1;
 
@@ -494,7 +654,7 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
         wc.lpszClassName = pt_tray_icon_window_class;
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.lpfnWndProc = tray_icon_window_proc;
-        wc.hIcon = icon;
+        wc.hIcon = class_icon;
         RegisterClass(&wc);
         auto hwnd = CreateWindowW(wc.lpszClassName,
                                   pt_tray_icon_window_class,
@@ -512,7 +672,6 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
         tray_icon_hwnd = hwnd;
         memset(&tray_icon_data, 0, sizeof(tray_icon_data));
         tray_icon_data.cbSize = sizeof(tray_icon_data);
-        tray_icon_data.hIcon = icon;
         tray_icon_data.hWnd = hwnd;
         tray_icon_data.uID = id_tray_icon;
         tray_icon_data.uCallbackMessage = wm_icon_notify;
@@ -529,22 +688,43 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive)
         tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
         ChangeWindowMessageFilterEx(hwnd, settings_activation_message(), MSGFLT_ALLOW, nullptr);
 
+        // Subscribe before sampling the initial theme so a concurrent LightSwitch
+        // or Windows theme change during startup cannot be missed.
+        theme_listener.AddSystemThemeChangedHandler(&handle_theme_change);
+
+        apply_tray_icon_on_ui_thread(true);
+
         if (s_tray_icon_visible)
         {
             tray_icon_created = add_tray_icon_with_retry();
+            // Re-check after NIM_ADD in case the system theme flipped while Explorer
+            // was registering the tray icon.
+            apply_tray_icon_on_ui_thread(false);
         }
-        theme_listener.AddSystemThemeChangedHandler(&handle_theme_change);
-
     }
 }
 
 void set_tray_icon_visible(bool shouldIconBeVisible)
 {
+    if (tray_icon_hwnd != nullptr && tray_ui_thread_id != 0 && GetCurrentThreadId() != tray_ui_thread_id)
+    {
+        auto value = std::make_unique<bool>(shouldIconBeVisible);
+        if (dispatch_run_on_main_ui_thread([](PVOID data) {
+                std::unique_ptr<bool> visible{ static_cast<bool*>(data) };
+                set_tray_icon_visible(*visible);
+            }, value.get()))
+        {
+            value.release();
+        }
+        return;
+    }
+
     s_tray_icon_visible = shouldIconBeVisible;
     if (shouldIconBeVisible)
     {
         if (!tray_icon_created && tray_icon_data.hWnd != nullptr)
         {
+            apply_tray_icon_on_ui_thread(false);
             tray_icon_created = add_tray_icon_with_retry();
         }
     }
@@ -560,6 +740,19 @@ void set_tray_icon_visible(bool shouldIconBeVisible)
 
 void set_tray_icon_update_available(bool available)
 {
+    if (tray_icon_hwnd != nullptr && tray_ui_thread_id != 0 && GetCurrentThreadId() != tray_ui_thread_id)
+    {
+        auto value = std::make_unique<bool>(available);
+        if (dispatch_run_on_main_ui_thread([](PVOID data) {
+                std::unique_ptr<bool> flag{ static_cast<bool*>(data) };
+                set_tray_icon_update_available(*flag);
+            }, value.get()))
+        {
+            value.release();
+        }
+        return;
+    }
+
     if (update_available == available)
     {
         return;
@@ -567,71 +760,31 @@ void set_tray_icon_update_available(bool available)
 
     update_available = available;
     Logger::info(L"set_tray_icon_update_available: update_available={}", update_available);
-
-    if (theme_adaptive_enabled)
-    {
-        tray_icon_data.hIcon = get_icon(ThemeHelpers::GetSystemTheme());
-        if (!tray_icon_data.hIcon) tray_icon_data.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-    }
-    else
-    {
-        auto h_instance = reinterpret_cast<HINSTANCE>(&__ImageBase);
-        tray_icon_data.hIcon = LoadIcon(h_instance, MAKEINTRESOURCE(available ? APPICON_UPDATE : APPICON));
-    }
-
-    tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-    if (tray_icon_created)
-    {
-        Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
-    }
+    apply_tray_icon_on_ui_thread(true);
 }
 
 void set_tray_icon_theme_adaptive(bool theme_adaptive)
 {
+    if (tray_icon_hwnd != nullptr && tray_ui_thread_id != 0 && GetCurrentThreadId() != tray_ui_thread_id)
+    {
+        auto value = std::make_unique<bool>(theme_adaptive);
+        if (dispatch_run_on_main_ui_thread([](PVOID data) {
+                std::unique_ptr<bool> flag{ static_cast<bool*>(data) };
+                set_tray_icon_theme_adaptive(*flag);
+            }, value.get()))
+        {
+            value.release();
+        }
+        return;
+    }
+
     Logger::info(L"set_tray_icon_theme_adaptive: Called with theme_adaptive={}, current theme_adaptive_enabled={}",
                  theme_adaptive, theme_adaptive_enabled);
 
-    auto h_instance = reinterpret_cast<HINSTANCE>(&__ImageBase);
-    HICON icon = nullptr;
-
-    if (theme_adaptive)
-    {
-        icon = get_icon(ThemeHelpers::GetSystemTheme());
-        if (!icon)
-        {
-            Logger::warn(L"set_tray_icon_theme_adaptive: Failed to load theme adaptive icon, falling back to default");
-        }
-    }
-
-    // If not requesting adaptive icon, or if adaptive icon failed to load, use default icon
-    if (!icon)
-    {
-        icon = LoadIcon(h_instance, MAKEINTRESOURCE(update_available ? APPICON_UPDATE : APPICON));
-        if (theme_adaptive && icon)
-        {
-            // We requested adaptive but had to fall back, so update the flag
-            theme_adaptive = false;
-            Logger::info(L"set_tray_icon_theme_adaptive: Using default icon as fallback");
-        }
-    }
-
     theme_adaptive_enabled = theme_adaptive;
-
-    if (icon)
+    if (tray_icon_hwnd != nullptr)
     {
-        tray_icon_data.hIcon = icon;
-        tray_icon_data.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
-        BOOL result = FALSE;
-        if (tray_icon_created)
-        {
-            result = Shell_NotifyIcon(NIM_MODIFY, &tray_icon_data);
-        }
-        Logger::info(L"set_tray_icon_theme_adaptive: Icon updated, theme_adaptive_enabled={}, Shell_NotifyIcon result={}",
-                     theme_adaptive_enabled, result);
-    }
-    else
-    {
-        Logger::error(L"set_tray_icon_theme_adaptive: Failed to load any icon");
+        apply_tray_icon_on_ui_thread(true);
     }
 }
 

@@ -162,6 +162,14 @@ namespace Kit.Settings.UI.Views
             _ => "NormalBadge",
         }];
 
+        /// <summary>Maps an update status kind to its themed vector glyph style.</summary>
+        public Style UpdateGlyphStyle(DashboardUpdateStatusKind kind) => (Style)((ResourceDictionary)Application.Current.Resources["KitUpdateGlyphStyles"])[kind switch
+        {
+            DashboardUpdateStatusKind.Attention => "AttentionGlyph",
+            DashboardUpdateStatusKind.Error => "ErrorGlyph",
+            _ => "NormalGlyph",
+        }];
+
         /// <summary>Maps an update status kind to its themed subtitle text style.</summary>
         public Style UpdateStatusTextStyle(DashboardUpdateStatusKind kind) => (Style)((ResourceDictionary)Application.Current.Resources["KitUpdateStatusTextStyles"])[kind switch
         {

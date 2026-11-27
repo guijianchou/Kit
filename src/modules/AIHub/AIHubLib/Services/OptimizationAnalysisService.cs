@@ -14,6 +14,39 @@ namespace Kit.AIHubLib.Services;
 
 public sealed class OptimizationAnalysisService
 {
+    private static readonly HashSet<string> LogDiagnosticExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".log", ".dmp", ".mdmp", ".hdmp", ".wer", ".etl", ".evtx", ".diagcab", ".trace", ".err", ".out", ".tlog", ".txt",
+    };
+
+    private static readonly HashSet<string> InstallerArchiveExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".msi", ".msp", ".mst", ".cab", ".exe", ".msix", ".msixbundle", ".appx", ".appxbundle", ".nupkg", ".whl",
+        ".zip", ".7z", ".rar", ".gz", ".tar", ".bz2", ".xz", ".tgz",
+    };
+
+    private static readonly HashSet<string> BuildBinaryCacheExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".pdb", ".dll", ".obj", ".lib", ".ilk", ".exp", ".pch", ".pchast", ".idb", ".winmd", ".mui", ".ocx", ".sys",
+        ".node", ".so", ".pyd", ".pyc", ".o", ".a", ".class", ".jar", ".cache", ".bak", ".old", ".dat", ".bin", ".db",
+        ".sqlite", ".sqlite3", ".wal", ".shm", ".lock", ".pid", ".idx", ".pack", ".pak", ".v8", ".wasm", ".map",
+        ".res", ".tlb", ".sbr", ".bsc", ".suo", ".ipch",
+    };
+
+    private static readonly HashSet<string> DocumentCredentialExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".rtf", ".odt", ".ods", ".odp", ".pages",
+        ".numbers", ".key", ".pem", ".pfx", ".p12", ".cer", ".crt", ".jks", ".kdbx", ".env", ".pst", ".ost",
+        ".mbox", ".eml", ".msg", ".one", ".vsdx", ".psd", ".ai", ".sketch", ".fig", ".blend", ".dwg", ".dxf",
+    };
+
+    private static readonly HashSet<string> MediaAssetExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".jpe", ".jfif", ".gif", ".bmp", ".webp", ".avif", ".heic", ".heif", ".ico", ".svg",
+        ".tif", ".tiff", ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm", ".mp3", ".wav", ".flac", ".aac", ".ogg",
+        ".m4a", ".ttf", ".otf", ".woff", ".woff2",
+    };
+
     private readonly IAiTaskEngine _engine;
 
     public OptimizationAnalysisService() : this(AiHubEngine.Current) { }
@@ -34,23 +67,47 @@ public sealed class OptimizationAnalysisService
 
         // IDs follow the engine's request-wide envelope order, not each scanner's IDs.
         var groups = candidates.Select((item, index) => (item, index))
-            .GroupBy(entry => entry.item.Action == "delete" && !string.IsNullOrEmpty(entry.item.CacheRoot)
-                ? $"{(string.IsNullOrEmpty(entry.item.DevelopmentRepository) ? entry.item.CacheRoot : entry.item.DevelopmentRepository)}|{entry.item.Category}|{entry.item.Risk}|{!string.IsNullOrEmpty(entry.item.BuildManifestPath)}"
-                : $"file:{entry.index}", StringComparer.OrdinalIgnoreCase)
+            .GroupBy(entry =>
+            {
+                if (entry.item.Action != "delete" || string.IsNullOrEmpty(entry.item.CacheRoot))
+                {
+                    return $"file:{entry.index}";
+                }
+
+                string evidence = ResolveEvidence(entry.item);
+                string scope = string.IsNullOrEmpty(entry.item.DevelopmentRepository) ? entry.item.CacheRoot : entry.item.DevelopmentRepository;
+                if (evidence == "temp-residual")
+                {
+                    string bucket = ClassifyTempResidualBucket(NormalizeExtension(entry.item.FilePath));
+                    return $"{scope}|{entry.item.Category}|{entry.item.Risk}|{evidence}|{bucket}";
+                }
+
+                if (evidence == "cache-residual")
+                {
+                    string ext = NormalizeExtension(entry.item.FilePath);
+                    string bucket = DocumentCredentialExtensions.Contains(ext) ? "documents-credentials" : "cache-data";
+                    return $"{scope}|{entry.item.Category}|{entry.item.Risk}|{evidence}|{bucket}";
+                }
+
+                return $"{scope}|{entry.item.Category}|{entry.item.Risk}|{!string.IsNullOrEmpty(entry.item.BuildManifestPath)}";
+            }, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.Select(entry => entry.item).ToList()).ToList();
-        var inputs = groups.Select((group, index) => new OptimizationItemInput
+        var inputs = groups.Select((group, index) =>
         {
-            ItemId = $"item-{index + 1:D6}",
-            Extension = group.Count == 1 ? Path.GetExtension(group[0].FilePath).ToLowerInvariant() : "mixed",
-            FileCount = group.Count,
-            LocalRisk = group[0].Risk.ToString().ToLowerInvariant(),
-            MinimumAgeMinutes = group[0].Action == "move" ? 10 : string.IsNullOrEmpty(group[0].DevelopmentRepository) ? 10080 : 60,
-            Evidence = group[0].Action == "move" ? "download-extension" : string.IsNullOrEmpty(group[0].DevelopmentRepository) ? "cache-whitelist"
-                : group.All(item => !string.IsNullOrEmpty(item.BuildManifestPath)) ? "msbuild-output-list" : "project-artifact",
-            SizeInBytes = group.Sum(item => item.SizeInBytes),
-            LastModifiedUtc = group.Max(item => item.LastModified).ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
-            CategoryHint = group[0].Category,
-            AllowedAction = group[0].Action,
+            string evidence = ResolveEvidence(group[0]);
+            return new OptimizationItemInput
+            {
+                ItemId = $"item-{index + 1:D6}",
+                Extension = DescribeGroupExtensions(group, evidence),
+                FileCount = group.Count,
+                LocalRisk = group[0].Risk.ToString().ToLowerInvariant(),
+                MinimumAgeMinutes = group[0].Action == "move" ? 10 : string.IsNullOrEmpty(group[0].DevelopmentRepository) ? 10080 : 60,
+                Evidence = evidence,
+                SizeInBytes = group.Sum(item => item.SizeInBytes),
+                LastModifiedUtc = group.Max(item => item.LastModified).ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+                CategoryHint = group[0].Category,
+                AllowedAction = group[0].Action,
+            };
         }).ToList();
         var byId = inputs.ToDictionary(item => item.ItemId, StringComparer.Ordinal);
         foreach (var item in candidates)
@@ -75,7 +132,7 @@ public sealed class OptimizationAnalysisService
             new AiTaskOptions
             {
                 Language = language,
-                BatchSize = 16,
+                BatchSize = 32,
                 TimeoutSeconds = 600,
                 RouteTimeoutSeconds = 120,
                 AllowPartialResults = true,
@@ -129,6 +186,11 @@ public sealed class OptimizationAnalysisService
                 item.ItemId = input.ItemId;
                 item.ReasonEn = recommendation.ReasonEn;
                 item.ReasonZh = recommendation.ReasonZh;
+                if (recommendation.Action == "move" && input.Evidence == "download-fallback" && !string.IsNullOrEmpty(recommendation.TargetRelative))
+                {
+                    item.Category = recommendation.TargetRelative;
+                    item.TargetRelativePath = recommendation.TargetRelative;
+                }
                 // AI may raise risk, but cannot lower the local scanner's assessment.
                 if (recommendation.Risk == "medium" && item.Risk < RiskLevel.Medium)
                 {
@@ -173,12 +235,92 @@ public sealed class OptimizationAnalysisService
 
             if (item.Action != input.AllowedAction || item.Action is not ("move" or "delete")) return false;
             if (item.Action == "delete" && item.TargetRelative is not null) return false;
-            if (item.Action == "move" &&
-                (input.CategoryHint is not ("Documents" or "Compressed" or "Programs" or "Music" or "Video" or "Pictures") ||
-                 item.TargetRelative != input.CategoryHint)) return false;
+            if (item.Action == "move")
+            {
+                if (input.Evidence == "download-fallback")
+                {
+                    if (item.TargetRelative is null || !DownloadOrganizerService.AllowedCategories.Contains(item.TargetRelative))
+                    {
+                        return false;
+                    }
+                }
+                else if (!DownloadOrganizerService.KnownCategories.Contains(input.CategoryHint) ||
+                         item.TargetRelative != input.CategoryHint)
+                {
+                    return false;
+                }
+            }
         }
 
         return true;
+    }
+
+    private static string ResolveEvidence(TempFileInfo item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.EvidenceKind))
+        {
+            return item.EvidenceKind;
+        }
+
+        if (item.Action == "move")
+        {
+            return string.Equals(item.Category, DownloadOrganizerService.OthersCategory, StringComparison.Ordinal)
+                ? "download-fallback"
+                : "download-extension";
+        }
+
+        return string.IsNullOrEmpty(item.DevelopmentRepository)
+            ? "cache-whitelist"
+            : !string.IsNullOrEmpty(item.BuildManifestPath) ? "msbuild-output-list" : "project-artifact";
+    }
+
+    private static string ClassifyTempResidualBucket(string ext)
+    {
+        if (DocumentCredentialExtensions.Contains(ext)) return "documents-credentials";
+        if (LogDiagnosticExtensions.Contains(ext)) return "logs-diagnostics";
+        if (InstallerArchiveExtensions.Contains(ext)) return "installers-archives";
+        if (BuildBinaryCacheExtensions.Contains(ext)) return "build-binaries-cache";
+        if (MediaAssetExtensions.Contains(ext)) return "media-assets";
+        return "scratch-other";
+    }
+
+    private static string DescribeGroupExtensions(List<TempFileInfo> group, string evidence)
+    {
+        var extCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in group)
+        {
+            string ext = NormalizeExtension(item.FilePath);
+            extCounts[ext] = extCounts.TryGetValue(ext, out int existing) ? existing + 1 : 1;
+        }
+
+        if (extCounts.Count == 1)
+        {
+            return extCounts.Keys.First();
+        }
+
+        if (evidence == "temp-residual")
+        {
+            string bucket = ClassifyTempResidualBucket(extCounts.Keys.First());
+            var top = extCounts.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase).Take(3).Select(pair => pair.Key).ToArray();
+            string extra = extCounts.Count > top.Length ? $",+{extCounts.Count - top.Length}" : string.Empty;
+            return $"bucket:{bucket} ({string.Join(",", top)}{extra})";
+        }
+
+        if (evidence == "cache-residual")
+        {
+            string bucket = DocumentCredentialExtensions.Contains(extCounts.Keys.First()) ? "documents-credentials" : "cache-data";
+            var top = extCounts.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase).Take(3).Select(pair => pair.Key).ToArray();
+            string extra = extCounts.Count > top.Length ? $",+{extCounts.Count - top.Length}" : string.Empty;
+            return $"bucket:{bucket} ({string.Join(",", top)}{extra})";
+        }
+
+        return "mixed";
+    }
+
+    private static string NormalizeExtension(string filePath)
+    {
+        string ext = Path.GetExtension(filePath).ToLowerInvariant();
+        return string.IsNullOrEmpty(ext) ? "(none)" : ext;
     }
 
     private static bool ValidReason(string? reason) =>

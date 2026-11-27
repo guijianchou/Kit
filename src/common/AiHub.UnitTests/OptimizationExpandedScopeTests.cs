@@ -193,6 +193,29 @@ public sealed class OptimizationExpandedScopeTests
         Assert.IsTrue(runtimeSummary.Contains("No verified cache path", StringComparison.Ordinal) || runtimeSummary.Contains("未发现已验证缓存路径", StringComparison.Ordinal));
     }
 
+    [TestMethod]
+    public async Task ModernWindowsPackageAndShaderCachesAreDiscoveredSafely()
+    {
+        using var fixture = new FixtureDirectory();
+        string local = fixture.PathFor("Local");
+        string user = fixture.PathFor("User");
+        string pnpm = Path.Combine(local, "pnpm-cache", "v11", "pkg.tgz");
+        string goBuild = Path.Combine(local, "go-build", "00", "artifact");
+        string nvidia = Path.Combine(user, "AppData", "LocalLow", "NVIDIA", "PerDriverVersion", "DXCache", "shader.bin");
+        string cargoBin = Path.Combine(user, ".cargo", "bin", "tool.exe");
+        string cargoCache = Path.Combine(user, ".cargo", "registry", "cache", "index", "crate.crate");
+        foreach (string path in new[] { pnpm, goBuild, nvidia, cargoBin, cargoCache })
+        {
+            Old(path);
+        }
+
+        var service = new CacheCleanupService(local, fixture.PathFor("Temp"), CacheCleanupService.DeleteFile, user);
+        var items = await service.ScanAsync();
+        CollectionAssert.AreEquivalent(new[] { pnpm, goBuild, nvidia, cargoCache }, items.Select(i => i.FilePath).ToArray());
+        Assert.IsTrue(items.All(i => i.EvidenceKind == "cache-residual"));
+        Assert.IsFalse(items.Any(i => i.FilePath == cargoBin), "Installed Cargo binaries must never be offered for cleanup.");
+    }
+
     private static void Old(string path, string content = "fixture")
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

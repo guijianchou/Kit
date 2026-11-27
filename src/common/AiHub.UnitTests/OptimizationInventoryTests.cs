@@ -387,18 +387,23 @@ public sealed class OptimizationInventoryTests
     {
         using var fixture = new FixtureDirectory();
         string local = fixture.PathFor("Local");
+        string user = fixture.PathFor("User");
         string crash = Write(Path.Combine(local, "CrashDumps"), "crash.dmp", 20, 40);
         string brave = Write(Path.Combine(local, "BraveSoftware", "Brave-Browser", "User Data", "Default", "Cache"), "payload", 30, 40);
+        string guest = Write(Path.Combine(local, "Google", "Chrome", "User Data", "Guest Profile", "Cache"), "guest", 25, 40);
+        string maven = Write(Path.Combine(user, ".m2", "repository", "pkg"), "lib.jar", 35, 40);
+        string pi = Write(Path.Combine(user, ".pi"), "credentials.json", 40, 40);
         int deletions = 0;
         var service = new CacheCleanupService(local, Path.Combine(local, "Temp"), _ =>
         {
             deletions++;
             return (true, null);
-        });
+        }, user);
         var candidates = await service.ScanAsync();
-        Assert.AreEqual(0, candidates.Count);
+        CollectionAssert.AreEquivalent(new[] { crash, brave }, candidates.Select(c => c.FilePath).ToArray());
+        Assert.IsTrue(candidates.All(c => c.EvidenceKind == "cache-residual" && c.Risk == RiskLevel.Medium && c.ReviewState == "pending"));
         Assert.IsTrue(service.InventoryReport.Scopes.Any(scope => scope.ObservedBytes == 20));
-        foreach (string path in new[] { crash, brave })
+        foreach (string path in new[] { crash, brave, guest, maven, pi })
         {
             var file = new FileInfo(path);
             var forged = new TempFileInfo
@@ -406,7 +411,7 @@ public sealed class OptimizationInventoryTests
                 FilePath = path, FileName = file.Name, CacheRoot = file.DirectoryName!, Category = "Temporary files",
                 Action = "delete", ReviewState = "approved", Risk = RiskLevel.Low, SizeInBytes = file.Length, LastModified = file.LastWriteTimeUtc,
             };
-            Assert.IsFalse(service.CleanupItem(forged).Success);
+            Assert.IsFalse(service.CleanupItem(forged).Success, $"Forged Temporary files approval must not delete {path}");
             Assert.IsTrue(File.Exists(path));
         }
 
